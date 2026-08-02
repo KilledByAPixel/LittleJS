@@ -121,6 +121,13 @@ let showSplashScreen = false;
  *  @memberof Settings */
 let headlessMode = false;
 
+/** Disables the automatic requestAnimationFrame loop so the engine only
+ *  advances when engineStep is called, for tests and frame-stepping tools
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let engineManualStep = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
 
@@ -470,6 +477,12 @@ function setShowSplashScreen(show) { showSplashScreen = show; }
  *  @param {boolean} headless
  *  @memberof Settings */
 function setHeadlessMode(headless) { headlessMode = headless; }
+
+/** Set if the engine only advances when engineStep is called
+ *  Must be set before engineInit
+ *  @param {boolean} [enable]
+ *  @memberof Settings */
+function setEngineManualStep(enable=true) { engineManualStep = enable; }
 
 /** Set if WebGL rendering is enabled
  *  @param {boolean} enable

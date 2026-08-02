@@ -30,3 +30,8 @@ globalThis.Image = class Image {};
 // so tile() / audio paths / input setup all take their headless branches.
 const { setHeadlessMode } = await import('../dist/littlejs.esm.js');
 setHeadlessMode(true);
+
+// Minimal document stub. engineInit touches document.body before its
+// headless early-return, and resolves rootElement from it. In headless mode
+// nothing is ever appended to or styled on that element.
+globalThis.document = { body: {} };

@@ -92,6 +92,7 @@ function setPaused(isPaused=true) { paused = isPaused; }
 
 // Engine internal variables
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
+let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
 let showEngineVersion = true;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -280,7 +281,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
         if (!debugVideoCaptureIsActive())
             renderFrame();
-        requestAnimationFrame(engineUpdate);
+        if (!engineManualStep)
+            requestAnimationFrame(engineUpdate);
 
         function renderFrame()
         {
@@ -308,6 +310,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             primitiveCount = 0;
         }
     }
+    engineUpdateInternal = engineUpdate;
 
     function updateCanvas()
     {
@@ -462,8 +465,29 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     {
         // wait for gameInit to load
         await gameInit();
-        engineUpdate();
+        engineManualStep || engineUpdate();
     }
+}
+
+/** Advance the engine by a number of frames
+ *  Requires setEngineManualStep(true) before engineInit
+ *  Respects paused exactly as the normal update loop does
+ *  @param {number} [frames] - number of fixed updates to advance
+ *  @example
+ *  setHeadlessMode(true);
+ *  setEngineManualStep(true);
+ *  await engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+ *  engineStep(600); // advance 10 seconds of game time
+ *  @memberof Engine */
+function engineStep(frames=1)
+{
+    ASSERT(engineManualStep,
+        'engineStep requires setEngineManualStep(true) before engineInit');
+    ASSERT(engineUpdateInternal, 'engineStep requires engineInit to complete');
+    ASSERT(isNumber(frames) && frames >= 0 && frames === Math.trunc(frames),
+        'engineStep requires a non-negative whole frame count');
+    for (let i = frames; i--;)
+        engineUpdateInternal(frameTimeLastMS + 1e3 / frameRate);
 }
 
 /** Update each engine object, remove destroyed objects, and update time
@@ -2199,6 +2223,13 @@ let showSplashScreen = false;
  *  @memberof Settings */
 let headlessMode = false;
 
+/** Disables the automatic requestAnimationFrame loop so the engine only
+ *  advances when engineStep is called, for tests and frame-stepping tools
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let engineManualStep = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
 
@@ -2548,6 +2579,12 @@ function setShowSplashScreen(show) { showSplashScreen = show; }
  *  @param {boolean} headless
  *  @memberof Settings */
 function setHeadlessMode(headless) { headlessMode = headless; }
+
+/** Set if the engine only advances when engineStep is called
+ *  Must be set before engineInit
+ *  @param {boolean} [enable]
+ *  @memberof Settings */
+function setEngineManualStep(enable=true) { engineManualStep = enable; }
 
 /** Set if WebGL rendering is enabled
  *  @param {boolean} enable

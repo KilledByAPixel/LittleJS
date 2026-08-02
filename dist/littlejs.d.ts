@@ -146,6 +146,17 @@ declare module "littlejsengine" {
      *  );
      *  @memberof Engine */
     export function engineInit(gameInit: GameInitCallback, gameUpdate: GameCallback, gameUpdatePost: GameCallback, gameRender: GameCallback, gameRenderPost: GameCallback, imageSources?: Array<string>, rootElement?: HTMLElement): Promise<void>;
+    /** Advance the engine by a number of frames
+     *  Requires setEngineManualStep(true) before engineInit
+     *  Respects paused exactly as the normal update loop does
+     *  @param {number} [frames] - number of fixed updates to advance
+     *  @example
+     *  setHeadlessMode(true);
+     *  setEngineManualStep(true);
+     *  await engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+     *  engineStep(600); // advance 10 seconds of game time
+     *  @memberof Engine */
+    export function engineStep(frames?: number): void;
     /** Update each engine object, remove destroyed objects, and update time
      * can be called manually if objects need to be updated outside of main loop
      *  @memberof Engine */
@@ -417,6 +428,12 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let headlessMode: boolean;
+    /** Disables the automatic requestAnimationFrame loop so the engine only
+     *  advances when engineStep is called, for tests and frame-stepping tools
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let engineManualStep: boolean;
     /** Default size of tiles in pixels
      *  @type {Vector2}
      *  @default Vector2(16,16)
@@ -690,6 +707,11 @@ declare module "littlejsengine" {
      *  @param {boolean} headless
      *  @memberof Settings */
     export function setHeadlessMode(headless: boolean): void;
+    /** Set if the engine only advances when engineStep is called
+     *  Must be set before engineInit
+     *  @param {boolean} [enable]
+     *  @memberof Settings */
+    export function setEngineManualStep(enable?: boolean): void;
     /** Set if WebGL rendering is enabled
      *  @param {boolean} enable
      *  @memberof Settings */
