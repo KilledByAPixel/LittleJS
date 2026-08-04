@@ -8,7 +8,7 @@
 
 ## 🚂 All aboard!
 
-[LittleJS](https://github.com/KilledByAPixel/LittleJS) is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance. This branch is a size-optimized fork of it for size coding competitions like [JS13K](https://js13kgames.com/) — it exists so the main line engine can keep growing while this version stays small enough to keep minifying.
+[LittleJS](https://github.com/KilledByAPixel/LittleJS) is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance. This branch is a size-optimized fork of it for size coding competitions like [JS13K](https://js13kgames.com/) — it exists so the main line engine can keep growing while this version stays small enough to keep minifying. Many JS13K games have been made with LittleJS, including several top 10 finishers — see [the list below](#-js13k-games-made-with-littlejs).
 
 **The starter builds to a ~7700 byte zip against the 13312 byte limit** — 58% of the budget, with the whole engine included: WebGL rendering, physics, particles, tile layers, sound, medals and input. Turning off features you do not use frees up nearly 2KB more.
 
@@ -145,8 +145,6 @@ sound.stop();                              instance.stop(fadeTime); // optional 
 ## 🧙 [LittleJS13k Wizard](https://github.com/eoinmcg/create-js13k-littlejs) by [eoinmcg](https://github.com/eoinmcg)
 
 ## 🎮 JS13K games made with LittleJS
-
-Many amazing JS13K games have been made using LittleJS, including a few in the top 10...
 
 - [Space Huggers](https://js13kgames.com/2021/games/space-huggers) - Roguelike platformer shoot-em-up game with procedural levels. by KilledByAPixel
 - [Black Cat Squadron](https://js13kgames.com/games/black-cat-squadron) - One button shooter based on a WW2 Navy squadron. by repsej
