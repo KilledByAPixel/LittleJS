@@ -1,4 +1,4 @@
-# LittleJS Engine - Special Js13k Branch
+# LittleJS Engine - Special JS13k Branch
 
 <div align='center' markdown='1'>
     
