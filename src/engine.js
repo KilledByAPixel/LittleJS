@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.13.1-js13k';
+const engineVersion = '1.18.25-js13k';
 
 /** Frames per second to update
  *  @type {Number}

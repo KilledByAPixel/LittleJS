@@ -138,9 +138,7 @@ sound.stop();                              instance.stop(fadeTime); // optional 
 
 ### Version
 
-`engineVersion` is `1.13.1-js13k` — the release the source is *derived from*, not the current upstream (1.18.25). The gap is deliberate: this branch does not track mainline release for release, it takes fixes, renames and structural changes selectively when they do not cost bytes. The migration notes above are current regardless, verified against 1.18.25.
-
-Not taken from upstream: the large `engineDraw` / `engineInput` / `engineWebGL` feature growth, and the plugin system.
+`engineVersion` is `1.18.25-js13k` — the mainline release this branch's API is aligned with and the migration notes are verified against. The branch does not track mainline release for release; it takes fixes, renames, and structural changes selectively when they do not cost bytes, and skips the large `engineDraw` / `engineInput` / `engineWebGL` feature growth and the plugin system.
 
 ## 💥 [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
 ## 🛠️ [Main LittleJS Repo](https://killedbyapixel.github.io/LittleJS)
