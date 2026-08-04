@@ -114,11 +114,16 @@ Verified name by name against **LittleJS 1.18.25**. Anything in `main` that does
 This branch has a single global collision grid instead of `main`'s `TileCollisionLayer` objects. Converting is a simple find and replace:
 
 ```js
-// here                                    // main
-initTileCollision(vec2(w, h));             const layer = new TileCollisionLayer(pos, size);
-setTileCollisionData(pos, data);           layer.setCollisionData(pos, data);
-getTileCollisionData(pos);                 layer.getCollisionData(pos);
-const layer = new TileLayer(pos, size);    // visuals and collision are the same object
+// here
+initTileCollision(vec2(w, h));
+setTileCollisionData(pos, data);
+getTileCollisionData(pos);
+const layer = new TileLayer(pos, size);
+
+// main, the layer handles visuals and collision as one object
+const layer = new TileCollisionLayer(pos, size);
+layer.setCollisionData(pos, data);
+layer.getCollisionData(pos);
 ```
 
 Everything else about tiles ports unchanged: `TileLayer` takes `(position, size, tileInfo, renderOrder)` in both, and `tileCollisionTest` / `tileCollisionRaycast` have the same signatures and return the same hit points. One nuance: `tileCollisionTest` returns a `Boolean` here and the hit layer (or `undefined`) in `main`, so truthiness tests port fine but `=== true` does not.
@@ -128,10 +133,15 @@ Everything else about tiles ports unchanged: `TileLayer` takes `(position, size,
 `sound.play()` returns the raw `AudioBufferSourceNode` here; in `main` it returns a `SoundInstance` object with its own playback controls. The `Sound` methods that act on the most recently played instance here (`stop()`, `setVolume()`, `getSource()`) do not exist on `Sound` in `main`. Keep the return value of `play()` and call them on that instead:
 
 ```js
-// here                                    // main
-const source = sound.play(pos);            const instance = sound.play(pos);
-sound.setVolume(.5);                       instance.setVolume(.5);
-sound.stop();                              instance.stop(fadeTime); // optional fade out
+// here
+const source = sound.play(pos);
+sound.setVolume(.5);
+sound.stop();
+
+// main
+const instance = sound.play(pos);
+instance.setVolume(.5);
+instance.stop(fadeTime); // optional fade out
 ```
 
 `SoundInstance` also adds `pause()` / `resume()` / `isPlaying()` and friends, which have no equivalent here.
