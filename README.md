@@ -14,7 +14,7 @@ LittleJS is a fast, lightweight, and fully open source HTML5 game engine designe
 
 A size-optimized fork of LittleJS for size coding competitions like [JS13K](https://js13kgames.com/). It exists so the main line engine can keep growing while this version stays small enough to keep minifying.
 
-**The starter builds to a ~7735 byte zip against the 13312 byte limit** — 57% of the budget, with the whole engine included: WebGL rendering, physics, particles, tile layers, sound, medals and input. Turning off features you do not use frees up nearly 2KB more.
+**The starter builds to a ~7700 byte zip against the 13312 byte limit** — 58% of the budget, with the whole engine included: WebGL rendering, physics, particles, tile layers, sound, medals and input. Turning off features you do not use frees up nearly 2KB more.
 
 Games written here are meant to port back to regular LittleJS after the compo — see [Migrating to main LittleJS](#-migrating-to-main-littlejs).
 
@@ -152,5 +152,5 @@ Many amazing JS13K games have been made using LittleJS, including a few in the t
 - [L1ttL3 Paws](https://js13kgames.com/2025/games/l1ttl3-paws) - Cat glider with procedural art and levels. by Frank Force
 - [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button flapping platformer. by repsej
 - [KleptoKitty](https://js13kgames.com/games/kleptokitty) - Cat themed heist puzzle. by eoinmcg
-- [Wendol Village](https://js13kgames.com/games/dead-again) - Warcraft inspired RTS game. by sanojian
+- [Wendol Village](https://js13kgames.com/games/wendol-village) - Warcraft inspired RTS game. by sanojian
 - [Dead Again](https://js13kgames.com/games/dead-again) - Top down survival horror. by sanojian & repsej

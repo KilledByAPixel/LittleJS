@@ -73,7 +73,7 @@ function percent(value, valueA, valueB)
  *  @memberof Math */
 function lerp(valueA, valueB, percent)
 {
-    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
+    if (debug && valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
         console.warn('lerp() parameter order changed! use lerp(start, end, p)');
     return valueA + clamp(percent) * (valueB-valueA);
  }
@@ -107,7 +107,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
  *  @memberof Math */
 function lerpWrap(valueA, valueB, percent, wrapSize=1)
 {
-    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
+    if (debug && valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
         console.warn('lerpWrap() parameter order changed! use lerpWrap(start, end, p)');
     return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize);
 }
