@@ -132,6 +132,7 @@ sound.stop();                              instance.stop(fadeTime); // optional 
 
 - **Particles are `EngineObject`s here**, updated by the engine like everything else; in `main` they are lightweight objects owned and updated by their emitter. The `ParticleEmitter` API is the same in both, but per-particle physics tweaks made in `particleCreateCallback` (like changing one particle's `damping`) become emitter-level settings on port.
 - **`inputPreventDefault` covers less here** — it only suppresses middle/right mouse clicks, while `main` also uses it to prevent arrow keys, space, and tab from scrolling or refocusing the page, and to guard touch `preventDefault` (always on here).
+- **`Vector2.toString()` and `Timer.toString()` are debug-only here** — they format on the dev page but return `undefined` in the built zip (`toString` is the one method name Closure cannot delete, so the body is stripped instead). `Color.toString()` works everywhere. In `main` they always format.
 
 ### Version
 
