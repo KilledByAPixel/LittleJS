@@ -1,9 +1,7 @@
 # LittleJS Engine - Special Js13k Branch
 
 <div align="center">
-
-![LittleJS Screenshot](examples/logo.png)
-
+![LittleJS Logo](examples/logo.png)
 </div>
 
 ## 🚂 All aboard!
@@ -13,6 +11,10 @@
 **The starter builds to a ~7700 byte zip against the 13312 byte limit** — 58% of the budget, with the whole engine included: WebGL rendering, physics, particles, tile layers, sound, medals and input. Turning off features you do not use frees up nearly 2KB more.
 
 Games written here are meant to port back to regular LittleJS after the compo — see [Migrating to main LittleJS](#-migrating-to-main-littlejs).
+
+<div align="center">
+![LittleJS Screenshot](examples/screenshot.jpg)
+</div>
 
 ## 🚀 Quick start
 
