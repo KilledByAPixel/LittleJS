@@ -83,14 +83,14 @@ const FEATURES =
 };
 ```
 
-| Disabled | What you lose | Saving |
-|---|---|---:|
-| `touch` | Touch input and the on-screen touch gamepad | 154 |
-| `gamepad` | Gamepad input with multiple controller support | 254 |
-| `webgl` | WebGL sprite batching, rendering falls back to canvas 2D | **733** |
-| `sound` | All audio: ZzFX sounds, music, and speech | **808** |
-| `physics` | Object vs object collision, tile collision still works | **554** |
-| all five | A silent keyboard-and-mouse game drawn with canvas 2D | **~2500** |
+| Disabled | Saving | What you lose |
+|---|---:|---|
+| `touch` | 154 | Touch input and the on-screen touch gamepad |
+| `gamepad` | 254 | Gamepad input with multiple controller support |
+| `webgl` | **733** | WebGL sprite batching, rendering falls back to canvas 2D |
+| `sound` | **808** | All audio: ZzFX sounds, music, and speech |
+| `physics` | **554** | Object vs object collision, tile collision still works |
+| all five | **~2500** | A silent keyboard-and-mouse game drawn with canvas 2D |
 
 Around 2.5KB, roughly 19% of the budget, for a silent keyboard-and-mouse game that only needs tile collision.
 
