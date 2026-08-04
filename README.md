@@ -115,9 +115,23 @@ const layer = new TileLayer(pos, size);    // visuals and collision are the same
 
 Everything else about tiles ports unchanged — `TileLayer` takes `(position, size, tileInfo, renderOrder)` in both, and `tileCollisionTest` / `tileCollisionRaycast` have the same signatures and return the same hit points. One nuance: `tileCollisionTest` returns a `Boolean` here and the hit layer (or `undefined`) in `main`, so truthiness tests port fine but `=== true` does not.
 
+### Sound instances
+
+`sound.play()` returns the raw `AudioBufferSourceNode` here; in `main` it returns a `SoundInstance` object with its own playback controls. The `Sound` methods that act on the most recently played instance here — `stop()`, `setVolume()`, `getSource()` — do not exist on `Sound` in `main`. Keep the return value of `play()` and call them on that instead:
+
+```js
+// here                                    // main
+const source = sound.play(pos);            const instance = sound.play(pos);
+sound.setVolume(.5);                       instance.setVolume(.5);
+sound.stop();                              instance.stop(fadeTime); // optional fade out
+```
+
+`SoundInstance` also adds `pause()` / `resume()` / `isPlaying()` and friends, which have no equivalent here.
+
 ### Behavior differences
 
-- **`Sound.stop()` takes no fade time here**; `main` accepts a `fadeTime`.
+- **Particles are `EngineObject`s here**, updated by the engine like everything else; in `main` they are lightweight objects owned and updated by their emitter. The `ParticleEmitter` API is the same in both, but per-particle physics tweaks made in `particleCreateCallback` (like changing one particle's `damping`) become emitter-level settings on port.
+- **`inputPreventDefault` covers less here** — it only suppresses middle/right mouse clicks, while `main` also uses it to prevent arrow keys, space, and tab from scrolling or refocusing the page, and to guard touch `preventDefault` (always on here).
 
 ### Version
 
