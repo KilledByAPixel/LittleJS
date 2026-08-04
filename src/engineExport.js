@@ -222,7 +222,7 @@ export {
 	drawText,
 	drawTextOverlay,
 	drawTextScreen,
-	setBlendMode,
+	setAdditiveBlendMode,
 	combineCanvases,
 	isFullscreen,
 	toggleFullscreen,

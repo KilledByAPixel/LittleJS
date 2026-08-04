@@ -55,9 +55,10 @@ function getTileCollisionData(pos)
  *  @param {Vector2}      pos
  *  @param {Vector2}      [size=(0,0)]
  *  @param {EngineObject} [object]
+ *  @param {Boolean}      [solidOnly] - Ignored, all tiles are solid in this version
  *  @return {Boolean}
  *  @memberof TileCollision */
-function tileCollisionTest(pos, size=vec2(), object)
+function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
 {
     const minX = max(pos.x - size.x/2|0, 0);
     const minY = max(pos.y - size.y/2|0, 0);
@@ -73,51 +74,31 @@ function tileCollisionTest(pos, size=vec2(), object)
     return false;
 }
 
-/** Return the center of first tile hit, undefined if nothing was hit.
- *  This does not return the exact intersection, but the center of the tile hit.
+/** Return the exact position of the boundary of the first tile hit, undefined if nothing was hit.
+ *  The point will be inside the colliding tile if it hits
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object]
+ *  @param {Vector2}      [normal] - If passed, set to the normal of the surface hit
+ *  @param {Boolean}      [solidOnly] - Ignored, all tiles are solid in this version
  *  @return {Vector2}
  *  @memberof TileCollision */
-function tileCollisionRaycast(posStart, posEnd, object)
+function tileCollisionRaycast(posStart, posEnd, object, normal, solidOnly=true)
 {
-    // test if a ray collides with tiles from start to end
-    // todo: a way to get the exact hit point, it must still be inside the hit tile
-    const delta = posEnd.subtract(posStart);
-    const totalLength = delta.length();
-    const normalizedDelta = delta.normalize();
-    const unit = vec2(abs(1/normalizedDelta.x), abs(1/normalizedDelta.y));
-    const flooredPosStart = posStart.floor();
-
-    // setup iteration variables
-    let pos = flooredPosStart;
-    let xi = unit.x * (delta.x < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1);
-    let yi = unit.y * (delta.y < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1);
-
-    while (true)
+    // use line test against tile collision
+    const hitPos = lineTest(posStart, posEnd, (pos)=>
     {
-        // check for tile collision
         const tileData = getTileCollisionData(pos);
-        if (tileData && (!object || object.collideWithTile(tileData, pos)))
-        {
-            debugRaycast && debugLine(posStart, posEnd, '#f00', .02);
-            debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0');
-            return pos.add(vec2(.5));
-        }
+        return tileData && (!object || object.collideWithTile(tileData, pos));
+    }, normal);
 
-        // check if past the end
-        if (xi >= totalLength && yi >= totalLength)
-            break;
-
-        // get coordinates of the next tile to check
-        if (xi > yi)
-            pos.y += sign(delta.y), yi += unit.y;
-        else
-            pos.x += sign(delta.x), xi += unit.x;
+    if (debugRaycast)
+    {
+        debugLine(posStart, posEnd, hitPos ? '#f00' : '#00f', .02);
+        hitPos && debugPoint(hitPos, '#ff0');
+        hitPos && normal && debugLine(hitPos, hitPos.add(normal), '#ff0', .02);
     }
-
-    debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
+    return hitPos;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -171,12 +152,12 @@ class TileLayerData
 class TileLayer extends EngineObject
 {
     /** Create a tile layer object
-    *  @param {Vector2}  [position=(0,0)]     - World space position
-    *  @param {Vector2}  [size=tileCollisionSize] - World space size
+    *  @param {Vector2}  position     - World space position
+    *  @param {Vector2}  size         - World space size
     *  @param {TileInfo} [tileInfo]   - Tile info for layer
     *  @param {Number}   [renderOrder] - Objects are sorted by renderOrder
     */
-    constructor(position, size=tileCollisionSize, tileInfo=tile(), renderOrder=0)
+    constructor(position, size, tileInfo=tile(), renderOrder=0)
     {
         super(position, size, tileInfo, 0, undefined, renderOrder);
 
@@ -333,7 +314,7 @@ class TileLayer extends EngineObject
         {
             ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
             const pos = layerPos.add(vec2(.5));
-            const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex, this.tileInfo.padding);
+            const tileInfo = tile(d.tile, s, this.tileInfo.textureInfo, this.tileInfo.padding);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
         }
     }

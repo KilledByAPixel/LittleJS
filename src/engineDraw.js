@@ -57,13 +57,13 @@ let drawCount;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
  * @param {(Number|Vector2)} [pos=0]                - Index of tile in sheet
  * @param {(Number|Vector2)} [size=tileSizeDefault] - Size of tile in pixels
- * @param {Number} [textureIndex]                   - Texture index to use
+ * @param {Number|TextureInfo} [texture]            - Texture index or texture info to use
  * @param {Number} [padding]                        - How many pixels padding around tiles
  * @return {TileInfo}
  * @example
@@ -73,7 +73,7 @@ let drawCount;
  * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
  * @memberof Draw
  */
-function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
+function tile(pos=vec2(), size=tileSizeDefault, texture=0, padding=0)
 {
     if (headlessMode)
         return new TileInfo;
@@ -86,7 +86,7 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
     }
 
     // use pos as a tile index
-    const textureInfo = textureInfos[textureIndex];
+    const textureInfo = typeof texture === 'number' ? textureInfos[texture] : texture;
     ASSERT(!!textureInfo, 'Texture not loaded');
     const sizePadded = size.add(vec2(padding*2));
     if (typeof pos === 'number')
@@ -97,10 +97,10 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
     pos = vec2(pos.x*sizePadded.x+padding, pos.y*sizePadded.y+padding);
 
     // return a tile info object
-    return new TileInfo(pos, size, textureIndex, padding); 
+    return new TileInfo(pos, size, textureInfo, padding);
 }
 
-/** 
+/**
  * Tile Info - Stores info about how to draw a tile
  */
 class TileInfo
@@ -108,17 +108,17 @@ class TileInfo
     /** Create a tile info object
      *  @param {Vector2} [pos=(0,0)]            - Top left corner of tile in pixels
      *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
-     *  @param {Number}  [textureIndex]         - Texture index to use
+     *  @param {TextureInfo} [textureInfo=textureInfos[0]] - Texture info to use
      *  @param {Number}  [padding]              - How many pixels padding around tiles
      */
-    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
+    constructor(pos=vec2(), size=tileSizeDefault, textureInfo=textureInfos[0], padding=0)
     {
         /** @property {Vector2} - Top left corner of tile in pixels */
         this.pos = pos.copy();
         /** @property {Vector2} - Size of tile in pixels */
         this.size = size.copy();
-        /** @property {Number} - Texture index to use */
-        this.textureIndex = textureIndex;
+        /** @property {TextureInfo} - The texture info for this tile */
+        this.textureInfo = textureInfo;
         /** @property {Number} - How many pixels padding around tiles */
         this.padding = padding;
     }
@@ -128,7 +128,7 @@ class TileInfo
     *  @return {TileInfo}
     */
     offset(offset)
-    { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex); }
+    { return new TileInfo(this.pos.add(offset), this.size, this.textureInfo, this.padding); }
 
     /** Returns a copy of this tile offset by a number of animation frames
     *  @param {Number} frame - Offset to apply in animation frames
@@ -139,12 +139,6 @@ class TileInfo
         ASSERT(typeof frame == 'number');
         return this.offset(vec2(frame*(this.size.x+this.padding*2), 0));
     }
-
-    /** The texture info for this tile
-    *  @return {TextureInfo}
-    */
-    get textureInfo()
-    { return textureInfos[this.textureIndex]; }
 }
 
 /** Texture Info - Stores info about each texture */
@@ -574,7 +568,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
-function setBlendMode(additive, useWebGL=glEnable, context)
+function setAdditiveBlendMode(additive=true, useWebGL=glEnable, context)
 {
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     if (useWebGL)

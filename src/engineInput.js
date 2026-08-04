@@ -205,6 +205,14 @@ function inputInit()
             if (inputWASDEmulateDirection)
                 inputData[0][remapKey(e.code)] = 3;
         }
+
+        // prevent default browser handling of game keys, but not browser shortcuts
+        if (inputPreventDefault && !e.ctrlKey && !e.metaKey && !e.altKey)
+        {
+            const preventDefaultKeys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Tab','Backspace'];
+            if (preventDefaultKeys.includes(e.code) || e.key.length == 1)
+                e.preventDefault();
+        }
     }
 
     onkeyup = (e)=>
@@ -234,7 +242,7 @@ function inputInit()
         isUsingGamepad = false;
         inputData[0][e.button] = 3;
         mousePosScreen = mouseEventToScreen(e);
-        inputPreventDefault && e.button && e.preventDefault();
+        inputPreventDefault && document.hasFocus() && e.preventDefault();
     }
     onmouseup     = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
     onmousemove   = (e)=> mousePosScreen = mouseEventToScreen(e);
@@ -422,7 +430,7 @@ function touchInputInit()
         wasTouching = touching;
 
         // prevent default handling like copy and magnifier lens
-        if (document.hasFocus()) // allow document to get focus
+        if (inputPreventDefault && document.hasFocus()) // allow document to get focus
             e.preventDefault();
         
         // must return true so the document will get focus

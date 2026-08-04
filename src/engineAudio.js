@@ -419,7 +419,8 @@ function zzfxG
         x2 = 0, x1 = 0, y2 = 0, y1 = 0;
 
     // scale by sample rate
-    attack = attack * sampleRate + 9; // minimum attack to prevent pop
+    const minAttack = 9; // prevent pop if attack is 0
+    attack = attack * sampleRate || minAttack;
     decay *= sampleRate;
     sustain *= sampleRate;
     release *= sampleRate;

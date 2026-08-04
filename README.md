@@ -97,19 +97,13 @@ Finally: every entry in `dataFiles` goes in the zip. `tiles.png` is already PNG-
 
 ## 🔀 Migrating to main LittleJS
 
-Build during the compo here, port to regular LittleJS after. **Use the [regular LittleJS docs](https://killedbyapixel.github.io/LittleJS/docs) as your API reference** — the names and argument orders match, and anything not listed below behaves the same. This list is meant to be enough to do the whole conversion from, including by an AI assistant given only this section.
+Build during the compo here, port to regular LittleJS after. **Use the [regular LittleJS docs](https://killedbyapixel.github.io/LittleJS/docs) as your API reference** — the names, argument orders, and defaults match, and anything not listed below behaves the same. This list is meant to be enough to do the whole conversion from, including by an AI assistant given only this section.
 
 Verified name by name against **LittleJS 1.18.25**. Anything in `main` that does not exist here (plugins, `CanvasLayer`, `ImageFont`, pointer lock, ...) is purely additive — a game written here cannot be using it, so it simply becomes available on port.
 
-### Present here — change these on port
+### Tile collision
 
-| Here | On port |
-|---|---|
-| `new TileInfo(pos, size, textureIndex)` | The 3rd constructor argument is a `TextureInfo` **object** in `main`, not an index. The `tile(...)` helper takes an index in both — prefer it and nothing changes. |
-
-### Tile collision — the one part that is real work
-
-This branch has a **single global collision grid**; `main` has **`TileCollisionLayer` objects** that each own their collision data:
+This branch has a single global collision grid instead of `main`'s `TileCollisionLayer` objects. Converting is a simple find and replace:
 
 ```js
 // here                                    // main
@@ -119,20 +113,10 @@ getTileCollisionData(pos);                 layer.getCollisionData(pos);
 const layer = new TileLayer(pos, size);    // visuals and collision are the same object
 ```
 
-Create a `TileCollisionLayer` instead of the `initTileCollision` + `TileLayer` pair and move the data calls onto it. If your game had one grid — the usual case, since it is all this branch supports — that is close to mechanical. If you relied on the grid being reachable from anywhere without a reference, you need to decide who owns the layer.
-
-The free functions `tileCollisionTest` and `tileCollisionRaycast` **survive unchanged**, and `TileLayer`'s argument order matches `main` (`position, size, tileInfo, renderOrder`). The remaining differences:
-
-- **`size` has a default here** (`tileCollisionSize`) and none in `main` — a call that omits it throws after porting, so it fails loudly.
-- **`tileCollisionTest` returns a `Boolean` here** and the hit layer (or `undefined`) in `main`, so truthiness tests are fine but `=== true` is not.
-- **`solidOnly` parameters** on the free functions exist only in `main`; their default `true` matches this branch's behavior.
-- **Raycast hit point:** `tileCollisionRaycast` returns the center of the hit tile here; `main` returns the exact boundary point and can fill in a surface `normal` out-parameter.
+Everything else about tiles ports unchanged — `TileLayer` takes `(position, size, tileInfo, renderOrder)` in both, and `tileCollisionTest` / `tileCollisionRaycast` have the same signatures and return the same hit points. One nuance: `tileCollisionTest` returns a `Boolean` here and the hit layer (or `undefined`) in `main`, so truthiness tests port fine but `=== true` does not.
 
 ### Behavior differences
 
-- **Keyboard `preventDefault` is gone**, matching `main`. What remains is `inputPreventDefault && e.button && e.preventDefault()` on mousedown, and since `e.button` is `0` for the primary button the flag only ever suppresses middle and right clicks. If you relied on it to stop arrow keys scrolling the page, call `preventDefault` in your own key handler.
-- **Touch events always `preventDefault` here.** `main` guards its touch handler with `inputPreventDefault` as well, so `setInputPreventDefault(false)` starts releasing touch events after you port.
-- **ZzFX with a non-zero `attack` sounds very slightly different** — this branch adds a fixed 9-sample ramp, `main` replaces it. About 0.2ms; inaudible but real. Sounds with the default `attack` of 0 are identical.
 - **`main` has extra ZzFX wave shapes** (shape 5 and the `shape > 4` curve branch). Anything you write here plays the same there.
 - **`Sound.stop()` takes no fade time here**; `main` accepts a `fadeTime`.
 
