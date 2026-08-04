@@ -1,7 +1,9 @@
 # LittleJS Engine - Special Js13k Branch
 
-<div align="center">
+<div align='center' markdown='1'>
+    
 ![LittleJS Logo](examples/logo.png)
+    
 </div>
 
 ## 🚂 All aboard!
@@ -12,8 +14,10 @@
 
 Games written here are meant to port back to regular LittleJS after the compo — see [Migrating to main LittleJS](#-migrating-to-main-littlejs).
 
-<div align="center">
+<div align='center' markdown='1'>
+    
 ![LittleJS Screenshot](examples/screenshot.jpg)
+
 </div>
 
 ## 🚀 Quick start
