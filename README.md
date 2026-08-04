@@ -86,7 +86,7 @@ const FEATURES =
 | Disabled | What you lose | Saving |
 |---|---|---:|
 | `touch` | Touch input and the on-screen touch gamepad | 154 |
-| `gamepad` | Gamepad input | 254 |
+| `gamepad` | Gamepad input with multiple controller support | 254 |
 | `webgl` | WebGL sprite batching, rendering falls back to canvas 2D | **733** |
 | `sound` | All audio: ZzFX sounds, music, and speech | **808** |
 | `physics` | Object vs object collision, tile collision still works | **554** |
