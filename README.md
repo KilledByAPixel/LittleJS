@@ -8,11 +8,7 @@
 
 ## 🚂 All aboard!
 
-LittleJS is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance. Its small footprint is packed with a comprehensive feature set including rendering, physics, particles, sound, and input handling. The code is very clean and well documented with many examples to get you started quickly.
-
-## 🤝 Js13k + LittleJS
-
-A size-optimized fork of LittleJS for size coding competitions like [JS13K](https://js13kgames.com/). It exists so the main line engine can keep growing while this version stays small enough to keep minifying.
+[LittleJS](https://github.com/KilledByAPixel/LittleJS) is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance. This branch is a size-optimized fork of it for size coding competitions like [JS13K](https://js13kgames.com/) — it exists so the main line engine can keep growing while this version stays small enough to keep minifying.
 
 **The starter builds to a ~7700 byte zip against the 13312 byte limit** — 58% of the budget, with the whole engine included: WebGL rendering, physics, particles, tile layers, sound, medals and input. Turning off features you do not use frees up nearly 2KB more.
 
@@ -27,7 +23,13 @@ npm install
 npm start
 ```
 
-Open **http://localhost:8000/examples/starter/**, edit `examples/starter/game.js`, reload. When you want a compo-ready zip:
+Open **http://localhost:8000/examples/starter/**, edit `examples/starter/game.js`, reload.
+
+Your whole game lives in `game.js`: `engineInit` starts the engine with five callbacks (init, update, post update, render, post render), and entities are classes extending `EngineObject` that the engine updates, moves, and renders automatically — the starter shows the pattern with tiles, particles, sound, and physics in about 100 lines. **Use the [LittleJS docs](https://killedbyapixel.github.io/LittleJS/docs) as your API reference** — this branch matches the main engine's API (details in [Migrating to main LittleJS](#-migrating-to-main-littlejs)).
+
+The dev page runs the debug build: press `Esc` for the debug overlay, then `1`/`2` for physics and particle debug, `5` for a screenshot, `6` to record video. All debug tooling compiles out of the release zip.
+
+When you want a compo-ready zip:
 
 ```bash
 npm run build
