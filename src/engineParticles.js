@@ -170,16 +170,9 @@ class ParticleEmitter extends EngineObject
         else if (!this.particles.length)
             this.destroy();
 
-        // update particles and remove destroyed ones in place
-        const particles = this.particles;
-        let alive = 0;
-        for (const particle of particles)
-        {
-            particle.update();
-            if (!particle.destroyed)
-                particles[alive++] = particle;
-        }
-        particles.length = alive;
+        // update particles and remove destroyed ones
+        this.particles = this.particles.filter(particle=>
+            (particle.update(), !particle.destroyed));
 
         if (debugParticles)
         {
@@ -283,7 +276,7 @@ class Particle
         /** @property {Vector2} - Size of the particle */
         this.size = vec2(sizeStart);
         /** @property {Color} - Current color of the particle */
-        this.color = colorStart.copy();
+        this.color = colorStart;
         /** @property {Color} - Color at start of life */
         this.colorStart = colorStart;
         /** @property {Color} - Color at end of life */
@@ -313,10 +306,7 @@ class Particle
     {
         // destroy particle when its time runs out
         if (this.lifeTime > 0 && time - this.spawnTime > this.lifeTime)
-        {
-            this.destroy();
-            return;
-        }
+            return this.destroy();
 
         // apply physics using the emitter's settings
         const emitter = this.emitter;
@@ -331,38 +321,28 @@ class Particle
         if (!enablePhysicsSolver || !emitter.collideTiles)
             return;
 
-        // apply max circular speed to prevent going through collision
-        const length2 = this.velocity.lengthSquared();
-        if (length2 > objectMaxSpeed*objectMaxSpeed)
-        {
-            const s = objectMaxSpeed / length2**.5;
-            this.velocity.x *= s;
-            this.velocity.y *= s;
-        }
+        // clamp max speed to prevent going through collision
+        this.velocity = this.velocity.clampLength(objectMaxSpeed);
 
-        // check collision against tiles
-        if (tileCollisionTest(this.pos))
+        // bounce if it hit a tile and was not already stuck in collision
+        if (tileCollisionTest(this.pos) && !tileCollisionTest(oldPos))
         {
-            // if already was stuck in collision, don't do anything
-            if (!tileCollisionTest(oldPos))
+            // test which side we bounced off (or both if a corner)
+            const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y));
+            const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y));
+            if (isBlockedX)
             {
-                // test which side we bounced off (or both if a corner)
-                const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y));
-                const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y));
-                if (isBlockedX)
-                {
-                    // move to previous X position and bounce
-                    this.pos.x = oldPos.x;
-                    this.velocity.x *= -emitter.restitution;
-                    this.velocity.y *= emitter.friction;
-                }
-                if (isBlockedY || !isBlockedX)
-                {
-                    // move to previous Y position and bounce
-                    this.pos.y = oldPos.y;
-                    this.velocity.y *= -emitter.restitution;
-                    this.velocity.x *= emitter.friction;
-                }
+                // move to previous X position and bounce
+                this.pos.x = oldPos.x;
+                this.velocity.x *= -emitter.restitution;
+                this.velocity.y *= emitter.friction;
+            }
+            if (isBlockedY || !isBlockedX)
+            {
+                // move to previous Y position and bounce
+                this.pos.y = oldPos.y;
+                this.velocity.y *= -emitter.restitution;
+                this.velocity.x *= emitter.friction;
             }
         }
     }
@@ -370,9 +350,8 @@ class Particle
     /** Destroy this particle */
     destroy()
     {
-        const c = this.colorEnd;
-        this.color.set(c.r, c.g, c.b, c.a);
-        this.size.set(this.sizeEnd, this.sizeEnd);
+        this.color = this.colorEnd.copy();
+        this.size = vec2(this.sizeEnd);
         this.destroyed = true;
         const destroyCallback = this.emitter.particleDestroyCallback;
         destroyCallback && destroyCallback(this);
@@ -384,16 +363,10 @@ class Particle
         // modulate size and color
         const emitter = this.emitter;
         const p = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1;
-        const radius = this.sizeStart + p * (this.sizeEnd - this.sizeStart);
-        const size = vec2(radius);
+        const size = vec2(lerp(this.sizeStart, this.sizeEnd, p));
         const fadeRate = emitter.fadeRate/2;
-        const colorStart = this.colorStart, colorEnd = this.colorEnd;
-        const color = new Color(
-            colorStart.r + p * (colorEnd.r - colorStart.r),
-            colorStart.g + p * (colorEnd.g - colorStart.g),
-            colorStart.b + p * (colorEnd.b - colorStart.b),
-            (colorStart.a + p * (colorEnd.a - colorStart.a)) *
-             (p < fadeRate ? p/fadeRate : p > 1-fadeRate ? (1-p)/fadeRate : 1)); // fade alpha
+        const color = this.color = this.colorStart.lerp(this.colorEnd, p);
+        color.a *= p < fadeRate ? p/fadeRate : p > 1-fadeRate ? (1-p)/fadeRate : 1; // fade alpha
 
         // update the position and angle for drawing
         let pos = this.pos, angle = this.angle;

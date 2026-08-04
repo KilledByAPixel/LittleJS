@@ -437,7 +437,8 @@ function zzfxG
     {
         if (!(++c%(bitCrush*100|0)))                   // bit crush
         {
-            s = shape? shape>1? shape>2? shape>3?      // wave shape
+            s = shape? shape>1? shape>2? shape>3? shape>4? // wave shape
+                (t/PI2%1 < shapeCurve/2? 1 : -1):      // 5 square duty
                 Math.sin(t**3) :                       // 4 noise
                 clamp(Math.tan(t),-1,1):               // 3 tan
                 1-(2*t/PI2%2+2)%2:                     // 2 saw
@@ -447,7 +448,7 @@ function zzfxG
             s = (repeatTime ?
                     1 - tremolo + tremolo*Math.sin(PI2*i/repeatTime) // tremolo
                     : 1) *
-                sign(s)*(abs(s)**shapeCurve) *           // curve
+                (shape>4? s : sign(s)*(abs(s)**shapeCurve)) * // shape curve
                 (i < attack ? i/attack :                 // attack
                 i < attack + decay ?                     // decay
                 1-((i-attack)/decay)*(1-sustainVolume) : // decay falloff

@@ -117,7 +117,6 @@ Everything else about tiles ports unchanged — `TileLayer` takes `(position, si
 
 ### Behavior differences
 
-- **`main` has extra ZzFX wave shapes** (shape 5 and the `shape > 4` curve branch). Anything you write here plays the same there.
 - **`Sound.stop()` takes no fade time here**; `main` accepts a `fadeTime`.
 
 ### Version
