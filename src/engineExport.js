@@ -70,7 +70,6 @@ export {
 	gravity,
 	particleEmitRateScale,
 	glEnable,
-	glOverlay,
 	gamepadsEnable,
 	gamepadDirectionEmulateStick,
 	inputWASDEmulateDirection,
@@ -86,7 +85,6 @@ export {
 	medalDisplayTime,
 	medalDisplaySlideTime,
 	medalDisplaySize,
-	medalDisplayIconSize,
 
 	// Setters for globals
 	setCameraPos,
@@ -100,7 +98,6 @@ export {
 	setShowSplashScreen,
 	setHeadlessMode,
 	setGLEnable,
-	setGlOverlay,
 	setTileSizeDefault,
 	setTileFixBleedScale,
 	setEnablePhysicsSolver,
@@ -128,7 +125,6 @@ export {
 	setMedalDisplayTime,
 	setMedalDisplaySlideTime,
 	setMedalDisplaySize,
-	setMedalDisplayIconSize,
 	setMedalsPreventUnlock,
 	setShowWatermark,
 	setDebugKey,
@@ -228,8 +224,6 @@ export {
 	drawTextScreen,
 	setBlendMode,
 	combineCanvases,
-	engineFontImage,
-	FontImage,
 	isFullscreen,
 	toggleFullscreen,
 	setCursor,
@@ -286,7 +280,7 @@ export {
 	// Audio
 	Sound,
 	SoundWave,
-	Music,
+	ZzFXMusic,
 	playAudioFile,
 	speak,
 	speakStop,
@@ -294,6 +288,7 @@ export {
 	audioContext,
 	playSamples,
 	zzfx,
+	audioDefaultSampleRate,
 
 	// Base Object
 	EngineObject,

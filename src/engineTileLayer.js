@@ -13,12 +13,12 @@
 'use strict';
 
 /** The tile collision layer grid, use setTileCollisionData and getTileCollisionData to access
- *  @type {Array} 
+ *  @type {Array}
  *  @memberof TileCollision */
 let tileCollision = [];
 
 /** Size of the tile collision layer 2d grid
- *  @type {Vector2} 
+ *  @type {Vector2}
  *  @memberof TileCollision */
 let tileCollisionSize = vec2();
 
@@ -173,11 +173,10 @@ class TileLayer extends EngineObject
     /** Create a tile layer object
     *  @param {Vector2}  [position=(0,0)]     - World space position
     *  @param {Vector2}  [size=tileCollisionSize] - World space size
-    *  @param {TileInfo} [tileInfo]    - Tile info for layer
-    *  @param {Vector2}  [scale=(1,1)] - How much to scale this layer when rendered
+    *  @param {TileInfo} [tileInfo]   - Tile info for layer
     *  @param {Number}   [renderOrder] - Objects are sorted by renderOrder
     */
-    constructor(position, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderOrder=0)
+    constructor(position, size=tileCollisionSize, tileInfo=tile(), renderOrder=0)
     {
         super(position, size, tileInfo, 0, undefined, renderOrder);
 
@@ -185,10 +184,6 @@ class TileLayer extends EngineObject
         this.canvas = document.createElement('canvas');
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
-        /** @property {Vector2} - How much to scale this layer when rendered */
-        this.scale = scale;
-        /** @property {Boolean} - If true this layer will render to overlay canvas and appear above all objects */
-        this.isOverlay = false;
 
         // init tile data
         this.data = [];
@@ -234,12 +229,9 @@ class TileLayer extends EngineObject
     {
         ASSERT(mainContext != this.context, 'must call redrawEnd() after drawing tiles');
 
-        // flush and copy gl canvas because tile canvas does not use webgl
-        !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
-        
         // draw the entire cached level onto the canvas
-        const context = this.isOverlay ? overlayContext : mainContext;
-        const sx = this.size.x*this.scale.x, sy = this.size.y*this.scale.y;
+        const context = mainContext;
+        const sx = this.size.x, sy = this.size.y;
         const w = cameraScale*sx, h = cameraScale*sy;
 
         if (cameraAngle)
@@ -376,7 +368,7 @@ class TileLayer extends EngineObject
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            const textureInfo = tileInfo && tileInfo.getTextureInfo();
+            const textureInfo = tileInfo && tileInfo.textureInfo;
             if (textureInfo)
             {
                 context.globalAlpha = color.a; // only alpha is supported
@@ -399,6 +391,6 @@ class TileLayer extends EngineObject
      *  @param {Vector2} [size=(1,1)]
      *  @param {Color}   [color=(1,1,1,1)]
      *  @param {Number}  [angle=0] */
-    drawRect(pos, size, color, angle) 
+    drawRect(pos, size, color, angle)
     { this.drawTile(pos, size, undefined, color, angle); }
 }

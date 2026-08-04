@@ -82,12 +82,6 @@ let headlessMode = false;
  *  @memberof Settings */
 let glEnable = true;
 
-/** Fixes slow rendering in some browsers by not compositing the WebGL canvas
- *  @type {Boolean}
- *  @default
- *  @memberof Settings */
-let glOverlay = true;
-
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
 
@@ -268,12 +262,6 @@ let medalDisplaySlideTime = .5;
  *  @memberof Settings */
 let medalDisplaySize = vec2(640, 80);
 
-/** Size of icon in medal display
- *  @type {Number}
- *  @default
- *  @memberof Settings */
-let medalDisplayIconSize = 50;
-
 /** Set to stop medals from being unlockable (like if cheats are enabled)
  *  @type {Boolean}
  *  @default
@@ -337,11 +325,6 @@ function setHeadlessMode(headless) { headlessMode = headless; }
  *  @param {Boolean} enable
  *  @memberof Settings */
 function setGLEnable(enable) { glEnable = enable; }
-
-/** Set to not composite the WebGL canvas
- *  @param {Boolean} overlay
- *  @memberof Settings */
-function setGlOverlay(overlay) { glOverlay = overlay; }
 
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
@@ -482,11 +465,6 @@ function setMedalDisplaySlideTime(time) { medalDisplaySlideTime = time; }
  *  @param {Vector2} size
  *  @memberof Settings */
 function setMedalDisplaySize(size) { medalDisplaySize = size; }
-
-/** Set size of icon in medal display
- *  @param {Number} size
- *  @memberof Settings */
-function setMedalDisplayIconSize(size) { medalDisplayIconSize = size; }
 
 /** Set to stop medals from being unlockable
  *  @param {Boolean} preventUnlock

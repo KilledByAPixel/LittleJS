@@ -49,7 +49,7 @@ function glInit()
 
     // some browsers are much faster without copying the gl buffer so we just overlay it instead
     const rootElement = mainCanvas.parentElement;
-    glOverlay && rootElement.appendChild(glCanvas);
+    rootElement.appendChild(glCanvas);
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
@@ -272,8 +272,8 @@ function glCopyToContext(context, forceDraw=false)
 
     glFlush();
 
-    // do not draw in overlay mode because the canvas is visible
-    if (!glOverlay || forceDraw)
+    // the gl canvas is overlaid so only draw when forced (like for screenshots)
+    if (forceDraw)
         context.drawImage(glCanvas, 0, 0);
 }
 

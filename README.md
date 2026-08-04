@@ -97,26 +97,15 @@ Finally: every entry in `dataFiles` goes in the zip. `tiles.png` is already PNG-
 
 ## 🔀 Migrating to main LittleJS
 
-Build during the compo here, port to regular LittleJS after. **Use the [regular LittleJS docs](https://killedbyapixel.github.io/LittleJS/docs) as your API reference** — the names match, and anything not listed below behaves the same. This list is meant to be enough to do the whole conversion from, including by an AI assistant given only this section.
+Build during the compo here, port to regular LittleJS after. **Use the [regular LittleJS docs](https://killedbyapixel.github.io/LittleJS/docs) as your API reference** — the names and argument orders match, and anything not listed below behaves the same. This list is meant to be enough to do the whole conversion from, including by an AI assistant given only this section.
 
-Verified name by name against **LittleJS 1.18.24**.
-
-### Absent here — purely additive, nothing to do
-
-Pointer lock, `mouseDelta`/`mouseDeltaScreen`, `CanvasLayer` (here `TileLayer` extends `EngineObject` directly), `TileInfo.setFullImage`, `debugScreenshot`, `glDeleteTexture`/`glSetTextureData`, the redirectable draw target (`drawCanvas`/`drawContext`), and all plugins. A game written here cannot be using any of them, so they simply become available.
+Verified name by name against **LittleJS 1.18.25**. Anything in `main` that does not exist here (plugins, `CanvasLayer`, `ImageFont`, pointer lock, ...) is purely additive — a game written here cannot be using it, so it simply becomes available on port.
 
 ### Present here — change these on port
 
 | Here | On port |
 |---|---|
-| `glOverlay` / `setGlOverlay` | Delete — `main` removed WebGL overlay compositing. |
-| `medalDisplayIconSize` / `setMedalDisplayIconSize` | Delete — `main` derives the icon size from the display height. |
-| `class Music` | Rename to `ZzFXMusic` and include `plugins/zzfxm.js`. Same constructor, same `playMusic(volume, loop)`. |
-| Medals (built into the engine) | Include `plugins/medalSystem.js`. Same `medalsInit` and `Medal` API, different file. |
-| `tileInfo.getTextureInfo()` | Becomes the property `tileInfo.textureInfo`. |
-| `class FontImage` | Becomes `ImageFont`, and **the constructor changed too**: `FontImage(image, tileSize, paddingSize, context)` here versus `ImageFont(tileInfo)` in `main`. Renaming alone compiles and then misbehaves — rework the call. |
-| `zzfxR` | Renamed to `audioDefaultSampleRate`. |
-| `isVector2`, `isNumber` | Still exist in `main` but are not exported, so an ESM consumer needs another way to reach them. |
+| `new TileInfo(pos, size, textureIndex)` | The 3rd constructor argument is a `TextureInfo` **object** in `main`, not an index. The `tile(...)` helper takes an index in both — prefer it and nothing changes. |
 
 ### Tile collision — the one part that is real work
 
@@ -132,13 +121,12 @@ const layer = new TileLayer(pos, size);    // visuals and collision are the same
 
 Create a `TileCollisionLayer` instead of the `initTileCollision` + `TileLayer` pair and move the data calls onto it. If your game had one grid — the usual case, since it is all this branch supports — that is close to mechanical. If you relied on the grid being reachable from anywhere without a reference, you need to decide who owns the layer.
 
-The free functions `tileCollisionTest` and `tileCollisionRaycast` **survive unchanged**; `main` only adds an optional trailing `solidOnly=true`. One nuance: `tileCollisionTest` returns a `Boolean` here and the hit layer (or `undefined`) in `main`, so truthiness tests are fine but `=== true` is not.
+The free functions `tileCollisionTest` and `tileCollisionRaycast` **survive unchanged**, and `TileLayer`'s argument order matches `main` (`position, size, tileInfo, renderOrder`). The remaining differences:
 
-**Three things port silently wrong if you are not careful:**
-
-- **Constructor argument order.** Here `TileLayer(position, size, tileInfo, scale, renderOrder)`; in `main` `TileCollisionLayer(position, size, tileInfo, renderOrder, useWebGL)`. The 4th and 5th arguments mean different things and both still type-check, so nothing throws — the layer just gets the wrong render order, loses its scale, and never creates a WebGL texture. Re-check each call site by hand. Also `size` has a default here and none in `main`.
-- **`layer.isOverlay`** is js13k-only. A layer drawn above all objects loses that on port; use `renderOrder` or the overlay canvas instead.
-- **`layer.scale`** works here but is a dead parameter in `main` — accepted and never used. A non-unit scale is silently ignored after porting.
+- **`size` has a default here** (`tileCollisionSize`) and none in `main` — a call that omits it throws after porting, so it fails loudly.
+- **`tileCollisionTest` returns a `Boolean` here** and the hit layer (or `undefined`) in `main`, so truthiness tests are fine but `=== true` is not.
+- **`solidOnly` parameters** on the free functions exist only in `main`; their default `true` matches this branch's behavior.
+- **Raycast hit point:** `tileCollisionRaycast` returns the center of the hit tile here; `main` returns the exact boundary point and can fill in a surface `normal` out-parameter.
 
 ### Behavior differences
 
@@ -150,7 +138,7 @@ The free functions `tileCollisionTest` and `tileCollisionRaycast` **survive unch
 
 ### Version
 
-`engineVersion` is `1.13.1-js13k` — the release the source is *derived from*, not the current upstream (1.18.24). The gap is deliberate: this branch does not track mainline release for release, it takes fixes, renames and structural changes selectively when they do not cost bytes. The migration notes above are current regardless, verified against 1.18.24.
+`engineVersion` is `1.13.1-js13k` — the release the source is *derived from*, not the current upstream (1.18.25). The gap is deliberate: this branch does not track mainline release for release, it takes fixes, renames and structural changes selectively when they do not cost bytes. The migration notes above are current regardless, verified against 1.18.25.
 
 Not taken from upstream: the large `engineDraw` / `engineInput` / `engineWebGL` feature growth, and the plugin system.
 

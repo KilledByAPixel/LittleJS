@@ -27,7 +27,7 @@ function gameInit()
     const tileImage = textureInfos[0].image;
     mainContext.drawImage(tileImage, 0, 0);
     const imageData = mainContext.getImageData(0, 0, tileImage.width, tileImage.height).data;
-    
+
     for (pos.x = tileCollisionSize.x; pos.x--;)
     for (pos.y = tileCollisionSize.y; pos.y--;)
     {
@@ -35,7 +35,7 @@ function gameInit()
         const i = pos.x + tileImage.width*(17 + tileCollisionSize.y - pos.y);
         if (!imageData[4*i])
             continue;
-        
+
         // set tile data
         const tileIndex = 1;
         const direction = randInt(4)

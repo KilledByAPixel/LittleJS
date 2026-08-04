@@ -140,10 +140,10 @@ class TileInfo
         return this.offset(vec2(frame*(this.size.x+this.padding*2), 0));
     }
 
-    /** Returns the texture info for this tile
+    /** The texture info for this tile
     *  @return {TextureInfo}
     */
-    getTextureInfo()
+    get textureInfo()
     { return textureInfos[this.textureIndex]; }
 }
 
@@ -308,7 +308,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     ASSERT(typeof tileInfo !== 'number' || !tileInfo, 
         'this is an old style calls, to fix replace it with tile(tileIndex, tileSize)');
 
-    const textureInfo = tileInfo && tileInfo.getTextureInfo();
+    const textureInfo = tileInfo && tileInfo.textureInfo;
     if (useWebGL)
     {
         if (screenSpace)
@@ -599,94 +599,6 @@ function combineCanvases()
     // clear canvases
     glClearCanvas();
     overlayCanvas.width |= 0;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-let engineFontImage;
-
-/** 
- * Font Image Object - Draw text on a 2D canvas by using characters in an image
- * - 96 characters (from space to tilde) are stored in an image
- * - Uses a default 8x8 font if none is supplied
- * - You can also use fonts from the main tile sheet
- * @example
- * // use built in font
- * const font = new FontImage;
- * 
- * // draw text
- * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
- */
-class FontImage
-{
-    /** Create an image font
-     *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
-     *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
-     *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext] - context to draw to
-     */
-    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)
-    {
-        // load default font image
-        if (!engineFontImage)
-        {
-            engineFontImage = new Image
-            engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
-        }
-
-        this.image = image || engineFontImage;
-        this.tileSize = tileSize;
-        this.paddingSize = paddingSize;
-        this.context = context;
-    }
-
-    /** Draw text in world space using the image font
-     *  @param {String}  text
-     *  @param {Vector2} pos
-     *  @param {Number}  [scale=.25]
-     *  @param {Boolean} [center]
-     */
-    drawText(text, pos, scale=1, center)
-    {
-        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center);
-    }
-
-    /** Draw text in screen space using the image font
-     *  @param {String}  text
-     *  @param {Vector2} pos
-     *  @param {Number}  [scale]
-     *  @param {Boolean} [center]
-     */
-    drawTextScreen(text, pos, scale=4, center)
-    {
-        const context = this.context;
-        context.save();
-
-        const size = this.tileSize;
-        const drawSize = size.add(this.paddingSize).scale(scale);
-        const cols = this.image.width / this.tileSize.x |0;
-        (text+'').split('\n').forEach((line, i)=>
-        {
-            const centerOffset = center ? line.length * size.x * scale / 2 |0 : 0;
-            for(let j=line.length; j--;)
-            {
-                // draw each character
-                let charCode = line[j].charCodeAt(0);
-                if (charCode < 32 || charCode > 127)
-                    charCode = 127; // unknown character
-
-                // get the character source location and draw it
-                const tile = charCode - 32;
-                const x = tile % cols;
-                const y = tile / cols |0;
-                const drawPos = pos.add(vec2(j,i).multiply(drawSize));
-                context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y, 
-                    drawPos.x - centerOffset, drawPos.y, size.x * scale, size.y * scale);
-            }
-        });
-
-        context.restore();
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

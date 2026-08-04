@@ -148,9 +148,10 @@ class Medal
         context.stroke();
         context.clip();
 
-        // draw the icon and text
-        this.renderIcon(vec2(x+15+medalDisplayIconSize/2, y+medalDisplaySize.y/2));
-        const pos = vec2(x+medalDisplayIconSize+30, y+28);
+        // draw the icon and text, icon size is derived from display height
+        const iconSize = medalDisplaySize.y - 30;
+        this.renderIcon(vec2(x+15+iconSize/2, y+medalDisplaySize.y/2), iconSize);
+        const pos = vec2(x+iconSize+30, y+28);
         drawTextScreen(this.name, pos, 38, new Color(0,0,0), 0, undefined, 'left');
         pos.y += 32;
         drawTextScreen(this.description, pos, 24, new Color(0,0,0), 0, undefined, 'left');
@@ -159,9 +160,9 @@ class Medal
 
     /** Render the icon for a medal
      *  @param {Vector2} pos - Screen space position
-     *  @param {Number} [size=medalDisplayIconSize] - Screen space size
+     *  @param {Number} size - Screen space size
      */
-    renderIcon(pos, size=medalDisplayIconSize)
+    renderIcon(pos, size)
     {
         // draw the image or icon
         if (this.image)

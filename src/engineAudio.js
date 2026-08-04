@@ -71,7 +71,7 @@ class Sound
             this.randomness = zzfxSound[1] != undefined ? zzfxSound[1] : defaultRandomness;
             zzfxSound[1] = 0; // generate without randomness
             this.sampleChannels = [zzfxG(...zzfxSound)];
-            this.sampleRate = zzfxR;
+            this.sampleRate = audioDefaultSampleRate;
         }
     }
 
@@ -209,12 +209,12 @@ function playAudioFile(filename, volume=1, loop=false)
 }
 
 /**
- * Music Object - Stores a zzfx music track for later use
+ * ZzFX Music Object - Stores a zzfx music track for later use
  * 
  * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
  * @example
  * // create some music
- * const music_example = new Music(
+ * const music_example = new ZzFXMusic(
  * [
  *     [                         // instruments
  *       [,0,400]                // simple note
@@ -238,7 +238,7 @@ function playAudioFile(filename, volume=1, loop=false)
  * // play the music
  * music_example.play();
  */
-class Music extends Sound
+class ZzFXMusic extends Sound
 {
     /** Create a music object and cache the zzfx music samples for later use
      *  @param {[Array, Array, Array, Number]} zzfxMusic - Array of zzfx music parameters
@@ -250,16 +250,16 @@ class Music extends Sound
         if (!soundEnable || headlessMode) return;
         this.randomness = 0;
         this.sampleChannels = zzfxM(...zzfxMusic);
-        this.sampleRate = zzfxR;
+        this.sampleRate = audioDefaultSampleRate;
     }
 
-    /** Play the music
-     *  @param {Number}  [volume=1] - How much to scale volume by
+    /** Play the music that loops by default
+     *  @param {Number}  [volume] - How much to scale volume by
      *  @param {Boolean} [loop] - True if the music should loop
      *  @return {AudioBufferSourceNode} - The audio source node
      */
-    playMusic(volume, loop=false)
-    { return super.play(undefined, volume, 1, 1, loop); }
+    playMusic(volume=1, loop=true)
+    { return super.play(undefined, volume, 1, 0, loop); }
 }
 
 /** Speak text with passed in settings
@@ -313,7 +313,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR, gainNode) 
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode)
 {
     if (!soundEnable || headlessMode) return;
 
@@ -362,10 +362,10 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
  *  @memberof Audio */
 function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
 
-/** Sample rate used for all ZzFX sounds
+/** Default sample rate used for all ZzFX sounds
  *  @default 44100
  *  @memberof Audio */
-const zzfxR = 44100; 
+const audioDefaultSampleRate = 44100;
 
 /** Generate samples for a ZzFX sound
  *  @param {Number}  [volume] - Volume scale (percent)
@@ -404,7 +404,7 @@ function zzfxG
     // LJS Note: ZZFX modded so randomness is handled by Sound class
 
     // init parameters
-    let PI2 = PI*2, sampleRate = zzfxR,
+    let PI2 = PI*2, sampleRate = audioDefaultSampleRate,
         startSlide = slide *= 500 * PI2 / sampleRate / sampleRate,
         startFrequency = frequency *= 
             rand(1 + randomness, 1-randomness) * PI2 / sampleRate,
@@ -519,7 +519,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   let panning = 0;
   let hasMore = 1;
   let sampleCache = {};
-  let beatLength = zzfxR / BPM * 60 >> 2;
+  let beatLength = audioDefaultSampleRate / BPM * 60 >> 2;
 
   // for each channel in order until there are no more
   for (; hasMore; channelIndex++) {
