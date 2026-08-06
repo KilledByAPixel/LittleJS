@@ -79,27 +79,27 @@ const FEATURES =
     touch:   true, // touch input and the on screen touch gamepad
     gamepad: true, // gamepad input
     sound:   true, // all audio
-    physics: true, // object vs object collision, tile collision still works
+    physics: true, // collision response, both object vs object and object vs tile
 };
 ```
 
 | Disabled | What you lose | Saving |
 |---|---|---:|
-| `touch` | Touch input and the on-screen touch gamepad | 154 |
-| `gamepad` | Gamepad input with multiple controller support | 254 |
-| `webgl` | WebGL sprite batching, rendering falls back to canvas 2D | **733** |
-| `sound` | All audio: ZzFX sounds, music, and speech | **808** |
-| `physics` | Object vs object collision, tile collision still works | **554** |
+| `touch` | Touch input and the on-screen touch gamepad | 152 |
+| `gamepad` | Gamepad input with multiple controller support | 247 |
+| `webgl` | WebGL sprite batching, rendering falls back to canvas 2D | **792** |
+| `sound` | All audio: ZzFX sounds, music, and speech | **794** |
+| `physics` | All collision response, object vs object and object vs tile | **488** |
 | all five | A silent keyboard-and-mouse game drawn with canvas 2D | **~2500** |
 
-Around 2.5KB, roughly 19% of the budget, for a silent keyboard-and-mouse game that only needs tile collision.
+Around 2.5KB, roughly 19% of the budget, for a silent keyboard-and-mouse game. Disabling `physics` removes the automatic collision response including tile bouncing, but query functions you call yourself, like `tileCollisionTest` or `getTileCollisionData`, always survive because your game references them.
 
 Two things worth knowing:
 
 - **Setting `glEnable = false` in your own code costs 50 bytes instead of saving any.** The flag is still mutable, and you have added an assignment. Use `FEATURES`.
 - **`FEATURES` only affects the built zip.** `npm start` loads `src/` directly, so the dev page always has everything on. To develop against what you ship, call the setter in `gameInit`. `setGLEnable(false)` compiles to nothing in the build.
 
-Beyond that you can delete an unused engine file from `sourceFiles`, but the saving comes from your game not using the feature, not from deleting the file: once Closure sees `ParticleEmitter` is unreachable it removes all of it, and dropping the file afterwards gains nothing. The exception is `engineTileLayer.js`, which leaves a 72 byte residue because `engineObject.js` calls `tileCollisionTest` inside `if (this.collideTiles)`. Nothing warns you if you remove a file something still references, you just get a `ReferenceError` at runtime instead of a build error.
+Beyond that you can delete an unused engine file from `sourceFiles`, but the saving comes from your game not using the feature, not from deleting the file: once Closure sees `ParticleEmitter` is unreachable it removes all of it, and dropping the file afterwards gains nothing. The exception is `engineTileLayer.js`, which leaves a 72 byte residue because `engineObject.js` calls `tileCollisionTest` inside `if (this.collideTiles)`. Disabling `physics` compiles that reference out too, so the residue disappears with it. Nothing warns you if you remove a file something still references, you just get a `ReferenceError` at runtime instead of a build error.
 
 Finally: every entry in `dataFiles` goes in the zip. `tiles.png` is already PNG-compressed so `ect` can only shave a little. Shrinking the image or generating art procedurally is often the cheapest win left.
 

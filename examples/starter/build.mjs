@@ -31,7 +31,7 @@ const FEATURES =
     touch:   true, // touch input and the on screen touch gamepad
     gamepad: true, // gamepad input
     sound:   true, // all audio
-    physics: true, // object vs object collision, tile collision still works
+    physics: true, // collision response, both object vs object and object vs tile
 };
 
 // feature name -> [engine flag, its setter]
