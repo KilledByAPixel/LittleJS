@@ -83,14 +83,14 @@ const FEATURES =
 };
 ```
 
-| Disabled | What you lose | Saving |
-|---|---|---:|
-| `touch` | Touch input and the on-screen touch gamepad | 152 |
-| `gamepad` | Gamepad input with multiple controller support | 247 |
-| `webgl` | WebGL sprite batching, rendering falls back to canvas 2D | **792** |
-| `sound` | All audio: ZzFX sounds, music, and speech | **794** |
-| `physics` | All collision response, object vs object and object vs tile | **488** |
-| all five | A silent keyboard-and-mouse game drawn with canvas 2D | **~2500** |
+| Disabled | Saving | What you lose |
+|---|---:|---|
+| `touch` | 152 | Touch input and the on-screen touch gamepad |
+| `gamepad` | 247 | Gamepad input with multiple controller support |
+| `webgl` | **792** | WebGL sprite batching, rendering falls back to canvas 2D |
+| `sound` | **794** | All audio: ZzFX sounds, music, and speech |
+| `physics` | **488** | All collision response, object vs object and object vs tile |
+| all five | **~2500** | A silent keyboard-and-mouse game drawn with canvas 2D |
 
 Around 2.5KB, roughly 19% of the budget, for a silent keyboard-and-mouse game. Disabling `physics` removes the automatic collision response including tile bouncing, but query functions you call yourself, like `tileCollisionTest` or `getTileCollisionData`, always survive because your game references them.
 
