@@ -45,7 +45,7 @@ That writes `examples/starter/game.zip` and prints the size against the limit, f
 
 **Use `npm start` rather than opening `index.html` directly.** Over `file://` the browser treats `tiles.png` as cross-origin, so the WebGL texture upload throws a `SecurityError` and nothing renders. `serve.js` is a dependency-free static server that exists only to avoid that. Set `PORT` to change the port.
 
-`npm run build:engine` generates the `dist/` bundles and TypeScript definitions. You do not need it to make a game.
+`npm run build:engine` generates the `dist/` bundles and TypeScript definitions, and `npm test` runs a quick headless engine smoke test. You do not need either to make a game.
 
 ## 🔧 How the build works
 
@@ -157,7 +157,7 @@ instance.stop(fadeTime); // optional fade out
 `engineVersion` is `1.18.25-js13k`, the mainline release this branch's API is aligned with and the migration notes are verified against. The branch does not track mainline release for release; it takes fixes, renames, and structural changes selectively when they do not cost bytes, and skips the large `engineDraw` / `engineInput` / `engineWebGL` feature growth and the plugin system.
 
 ## 💥 [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
-## 🛠️ [Main LittleJS Repo](https://killedbyapixel.github.io/LittleJS)
+## 🛠️ [Main LittleJS Repo](https://github.com/KilledByAPixel/LittleJS)
 ## 🧙 [LittleJS13k Wizard](https://github.com/eoinmcg/create-js13k-littlejs) by [eoinmcg](https://github.com/eoinmcg)
 
 ## 🎮 JS13K games made with LittleJS
