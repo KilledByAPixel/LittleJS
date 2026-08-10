@@ -38,6 +38,7 @@ const exampleList =
     new ExampleInfo('Image Font', 'imageFont.js', 'Bitmap font system with built-in system font', false, 'text, characters'),
     new ExampleInfo('Particles', 'particles.js', 'Particle system', false, 'effects, emitter, physics, fire, smoke, comet'),
     new ExampleInfo('Tile Layer', 'tileLayer.js', 'Tile layer rendering system', false, 'level, map, grid, particles'),
+    new ExampleInfo('Low Resolution', 'lowRes.js', 'Crisp low resolution rendering', false, 'pixelated, retro, canvasFixedSize, pixel art'),
     new ExampleInfo('Clock', 'clock.js', 'Animated analog clock', false, 'time, rotation, lines, rectangle'),
     new ExampleInfo('Starfield', 'starfield.js', 'Animated parallax starfield', false, 'space, movement, depth, rectangle'),
     new ExampleInfo('Parallax', 'parallax.js', 'Parallax scrolling mountains', false, 'generative, canvas, background'),
