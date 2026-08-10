@@ -40,11 +40,13 @@ function gameInit()
 {
     gravity.y = -.01;
     new Player(vec2(0,5));
-    canvasClearColor = hsl(.6,1,.8);
 }
 
 function gameRender()
 {
+    // background gradient
+    drawRectGradient(cameraPos, vec2(32), WHITE, BLUE);
+
     // draw ground as a series of thin rectangles
     const h = 100, w = 20;
     const pos = vec2();
