@@ -1463,9 +1463,15 @@ class ImageFont
                 tileInfo.pos.x = x*sizePaddedX + padding;
                 tileInfo.pos.y = y*sizePaddedY + padding;
 
-                // draw the tile
-                drawPos.x = pos.x + i * size.x - centerOffset |0;
-                drawPos.y = pos.y + j * size.y |0;
+                // snap the glyph edges to whole pixels
+                // tiles are drawn from their center, so snapping the center
+                // to a whole pixel puts the edges on half pixels when the
+                // size is even, and a row or column of the glyph then has
+                // no pixel center inside it and is not rasterized at all
+                // ceil picks the nearest aligned position, breaking ties
+                // downward to match how this used to truncate
+                drawPos.x = ceil(pos.x + i * size.x - centerOffset - size.x/2) + size.x/2 - .5;
+                drawPos.y = ceil(pos.y + j * size.y - size.y/2) + size.y/2 - .5;
                 drawTile(drawPos, size, tileInfo, color, 0, false, undefined, useWebGL, true, context);
             }
         });
