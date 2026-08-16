@@ -4119,6 +4119,12 @@ let workReadCanvas;
  *  @memberof Draw */
 let workReadContext;
 
+/** Extra canvas to composite behind the engine canvases when combining canvases
+ *  Set by plugins that render to their own canvas below the LittleJS canvases
+ *  @type {HTMLCanvasElement}
+ *  @memberof Draw */
+let backgroundCanvas;
+
 /** The size of the main canvas (and other secondary canvases)
  *  @type {Vector2}
  *  @memberof Draw */
@@ -5270,6 +5276,13 @@ function setAdditiveBlendMode(additive=true)
     drawContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
+/** Set an extra canvas to composite behind the engine canvases when combining
+ *  Plugins that insert their own canvas below the LittleJS canvases should set
+ *  this so it appears in screenshots and video capture
+ *  @param {HTMLCanvasElement} [canvas]
+ *  @memberof Draw */
+function setBackgroundCanvas(canvas) { backgroundCanvas = canvas; }
+
 /** Combines LittleJS canvases onto the main canvas
  *  This is necessary for things like screenshots and video
  *  @memberof Draw */
@@ -5282,6 +5295,8 @@ function combineCanvases()
     // leaving workContext.fillStyle transparent can't silently no-op this
     workContext.fillStyle = '#000';
     workContext.fillRect(0,0,w,h);
+    if (backgroundCanvas)
+        workContext.drawImage(backgroundCanvas, 0, 0, w, h);
     glCopyToContext(workContext);
     workContext.drawImage(mainCanvas, 0, 0);
     mainContext.drawImage(workCanvas, 0, 0);
@@ -16808,6 +16823,9 @@ class ThreeJSPlugin
         rootElement.insertBefore(threeCanvas, rootElement.firstChild);
         threeCanvas.style.cssText = mainCanvas.style.cssText;
 
+        // composite the 3D canvas into screenshots and video capture
+        setBackgroundCanvas(threeCanvas);
+
         // render automatically each frame after the engine renders
         engineAddPlugin(undefined, ()=> this.render());
     }
@@ -17163,6 +17181,7 @@ export
     workContext,
     workReadCanvas,
     workReadContext,
+    backgroundCanvas,
     mainCanvasSize,
     textureInfos,
     drawCount,
@@ -17188,6 +17207,7 @@ export
     drawText,
     drawTextScreen,
     setAdditiveBlendMode,
+    setBackgroundCanvas,
     combineCanvases,
     engineImageFont,
     ImageFont,

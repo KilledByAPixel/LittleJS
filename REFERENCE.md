@@ -310,6 +310,8 @@ mainCanvas / mainContext     // The main 2D canvas and its context
 drawContext                  // Context currently being drawn to
 glCanvas / glContext         // The WebGL canvas and context
 mainCanvasSize               // Size of the main canvas in pixels
+backgroundCanvas             // Extra canvas composited behind the engine canvases
+setBackgroundCanvas(canvas)  // Set a plugin canvas to include when combining
 setCursor(cursorStyle)       // Set the CSS cursor style
 isOnScreen(pos, size)        // Is a world space area visible on screen?
 combineCanvases()            // Combine all canvases onto mainCanvas (for screenshots)

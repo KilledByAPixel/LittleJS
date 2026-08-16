@@ -1817,6 +1817,11 @@ declare module "littlejsengine" {
      *  @type {OffscreenCanvasRenderingContext2D}
      *  @memberof Draw */
     export let workReadContext: OffscreenCanvasRenderingContext2D;
+    /** Extra canvas to composite behind the engine canvases when combining canvases
+     *  Set by plugins that render to their own canvas below the LittleJS canvases
+     *  @type {HTMLCanvasElement}
+     *  @memberof Draw */
+    export let backgroundCanvas: HTMLCanvasElement;
     /** The size of the main canvas (and other secondary canvases)
      *  @type {Vector2}
      *  @memberof Draw */
@@ -2050,6 +2055,12 @@ declare module "littlejsengine" {
      *  @param {boolean} [additive]
      *  @memberof Draw */
     export function setAdditiveBlendMode(additive?: boolean): void;
+    /** Set an extra canvas to composite behind the engine canvases when combining
+     *  Plugins that insert their own canvas below the LittleJS canvases should set
+     *  this so it appears in screenshots and video capture
+     *  @param {HTMLCanvasElement} [canvas]
+     *  @memberof Draw */
+    export function setBackgroundCanvas(canvas?: HTMLCanvasElement): void;
     /** Combines LittleJS canvases onto the main canvas
      *  This is necessary for things like screenshots and video
      *  @memberof Draw */
