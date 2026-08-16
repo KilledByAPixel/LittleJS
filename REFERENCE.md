@@ -444,6 +444,7 @@ vibrateStop()                         // Stop all vibration
 // Input settings
 gamepadsEnable = true                 // Should gamepads be allowed?
 gamepadDirectionEmulateStick = true   // Should dpad be routed to the left analog stick?
+gamepadAxisFilterEnable = true        // Ignore axes that don't rest near center (steering wheels)
 inputWASDEmulateDirection = true      // Should WASD keys be routed to the direction keys?
 inputPreventDefault = true            // Should input events prevent default browser handling?
 inputMouseMoveThreshold = 6           // Screen-px mouse movement per frame that counts as mouse use

@@ -3037,6 +3037,14 @@ let gamepadsEnable = true;
  *  @memberof Settings */
 let gamepadDirectionEmulateStick = true;
 
+/** If true, axes that do not rest near center are ignored on gamepads without
+ *  standard mapping. Steering wheels and flight sticks report pedal and throttle
+ *  axes that rest at full deflection, which otherwise reads as a stick held down.
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let gamepadAxisFilterEnable = true;
+
 /** If true the WASD keys are also routed to the direction keys (for better accessibility)
  *  @type {boolean}
  *  @default
@@ -3374,6 +3382,11 @@ function setGamepadsEnable(enable) { gamepadsEnable = enable; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setGamepadDirectionEmulateStick(enable) { gamepadDirectionEmulateStick = enable; }
+
+/** Set if axes that do not rest near center are ignored on non-standard gamepads
+ *  @param {boolean} enable
+ *  @memberof Settings */
+function setGamepadAxisFilterEnable(enable) { gamepadAxisFilterEnable = enable; }
 
 /** Set if true the WASD keys are also routed to the direction keys
  *  @param {boolean} enable
@@ -5695,6 +5708,7 @@ function inputClear()
     touchGamepadStickPointerId.length = 0; // release floating sticks so they re-anchor
     gamepadStickData.length = 0;
     gamepadDpadData.length = 0;
+    gamepadAxisCentered.length = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -5932,6 +5946,11 @@ const inputData = [[]];
 
 // gamepad internal variables
 const gamepadStickData = [], gamepadDpadData = [], gamepadHadInput = [];
+// per gamepad, how many consecutive frames each axis has rested inside the
+// dead zone, used to tell stick axes from axes that rest at full deflection
+const gamepadAxisCentered = [];
+// how long an axis must rest inside the dead zone before it counts as a stick
+const gamepadAxisCenteredFrames = 15;
 
 // touch gamepad internal variables
 const touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadSticks = [];
@@ -6208,12 +6227,12 @@ function inputUpdate()
     // gamepads are updated by engine every frame automatically
     function gamepadsUpdate()
     {
+        const deadZoneMin=.3, deadZoneMax=.8;
         const applyDeadZones = (v)=>
         {
-            const min=.3, max=.8;
             const deadZone = (v)=>
-                v > min ? percent(v, min, max) :
-                v < -min ? -percent(-v, min, max) : 0;
+                v > deadZoneMin ? percent(v, deadZoneMin, deadZoneMax) :
+                v < -deadZoneMin ? -percent(-v, deadZoneMin, deadZoneMax) : 0;
             return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
         };
 
@@ -6297,6 +6316,7 @@ function inputUpdate()
                 gamepadStickData[i] = undefined;
                 gamepadDpadData[i] = undefined;
                 gamepadHadInput[i] = undefined;
+                gamepadAxisCentered[i] = undefined;
                 continue;
             }
 
@@ -6305,8 +6325,30 @@ function inputUpdate()
             const dpad = gamepadDpadData[i] ?? (gamepadDpadData[i] = vec2());
 
             // read analog sticks
+            // gamepads without standard mapping (steering wheels, flight sticks)
+            // can report axes that rest at full deflection instead of center,
+            // which would otherwise read as a stick held down forever, so only
+            // trust an axis once it has rested inside the dead zone for a moment
+            const isStandard = gamepad.mapping === 'standard';
+            const centered = gamepadAxisCentered[i] ?? (gamepadAxisCentered[i] = []);
+            const readAxis = (j)=>
+            {
+                const v = gamepad.axes[j];
+                if (isStandard && j < 4)
+                    return v; // spec guarantees axes 0-3 are the two sticks
+                if (!gamepadAxisFilterEnable)
+                    return v;
+
+                // once an axis has proven it rests at center it stays trusted,
+                // otherwise moving it would immediately disqualify it again
+                const frames = centered[j] | 0;
+                if (frames > gamepadAxisCenteredFrames)
+                    return v;
+                centered[j] = abs(v) < deadZoneMin ? frames + 1 : 0;
+                return 0;
+            };
             for (let j = 0; j < gamepad.axes.length-1; j+=2)
-                sticks[j>>1] = applyDeadZones(vec2(gamepad.axes[j],gamepad.axes[j+1]));
+                sticks[j>>1] = applyDeadZones(vec2(readAxis(j), readAxis(j+1)));
 
             // read buttons
             let hadInput = false;
@@ -17010,6 +17052,7 @@ export
     glCircleSides,
     gamepadsEnable,
     gamepadDirectionEmulateStick,
+    gamepadAxisFilterEnable,
     inputWASDEmulateDirection,
     touchInputEnable,
     touchGamepadEnable,
@@ -17066,6 +17109,7 @@ export
     setTouchInputEnable,
     setGamepadsEnable,
     setGamepadDirectionEmulateStick,
+    setGamepadAxisFilterEnable,
     setInputWASDEmulateDirection,
     setTouchGamepadEnable,
     setTouchGamepadPassthrough,

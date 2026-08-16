@@ -49,6 +49,18 @@ test('inputClear and inputClearKey are safe to call', () =>
     assert.equal(LJS.keyIsDown('Space'), false);
 });
 
+// The non-centering axis filter is on by default and can be turned off, for
+// devices where ignoring axes that rest away from center is the wrong call.
+test('setGamepadAxisFilterEnable updates gamepadAxisFilterEnable', () =>
+{
+    assert.equal(LJS.gamepadAxisFilterEnable, true); // default
+    assert.equal(typeof LJS.setGamepadAxisFilterEnable, 'function');
+    LJS.setGamepadAxisFilterEnable(false);
+    assert.equal(LJS.gamepadAxisFilterEnable, false);
+    LJS.setGamepadAxisFilterEnable(true);
+    assert.equal(LJS.gamepadAxisFilterEnable, true);
+});
+
 // All retained touch-gamepad setters stay exported and are callable in headless
 // mode without throwing or creating DOM (headless guards short-circuit).
 test('retained touch gamepad setters are exported and headless-safe', () =>

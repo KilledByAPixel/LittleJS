@@ -514,6 +514,13 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let gamepadDirectionEmulateStick: boolean;
+    /** If true, axes that do not rest near center are ignored on gamepads without
+     *  standard mapping. Steering wheels and flight sticks report pedal and throttle
+     *  axes that rest at full deflection, which otherwise reads as a stick held down.
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let gamepadAxisFilterEnable: boolean;
     /** If true the WASD keys are also routed to the direction keys (for better accessibility)
      *  @type {boolean}
      *  @default
@@ -780,6 +787,10 @@ declare module "littlejsengine" {
      *  @param {boolean} enable
      *  @memberof Settings */
     export function setGamepadDirectionEmulateStick(enable: boolean): void;
+    /** Set if axes that do not rest near center are ignored on non-standard gamepads
+     *  @param {boolean} enable
+     *  @memberof Settings */
+    export function setGamepadAxisFilterEnable(enable: boolean): void;
     /** Set if true the WASD keys are also routed to the direction keys
      *  @param {boolean} enable
      *  @memberof Settings */
