@@ -5489,7 +5489,7 @@ function inputUpdate()
         // gamepad: any button held or stick moved
         let gamepadActive = false;
         for (let s = gamepadStickCount(); s-- && !gamepadActive;)
-            gamepadActive = gamepadStick(s).lengthSquared() > .04;
+            gamepadActive = gamepadStick(s).lengthSquared() > .2;
         for (let b = 17; b-- && !gamepadActive;)
             gamepadActive = gamepadIsDown(b);
 
