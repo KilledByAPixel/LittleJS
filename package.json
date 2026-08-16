@@ -39,6 +39,7 @@
   "scripts": {
     "build": "node src/engineBuild.mjs",
     "build-docs": "node tools/buildDocs.mjs",
+    "build-release": "node tools/buildRelease.mjs",
     "test": "node --test --import ./test/setup.mjs \"test/**/*.test.mjs\""
   },
   "engines": {

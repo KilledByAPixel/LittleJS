@@ -5,6 +5,9 @@ package-lock.json
 # local files
 local/
 
+# release builds
+/LittleJS-*.zip
+
 # example builds
 examples/starter/build
 examples/starter/*.zip
