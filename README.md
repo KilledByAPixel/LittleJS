@@ -107,7 +107,7 @@ Finally: every entry in `dataFiles` goes in the zip. `tiles.png` is already PNG-
 
 Build during the compo here, port to regular LittleJS after. **Use the [regular LittleJS docs](https://killedbyapixel.github.io/LittleJS/docs) as your API reference.** The names, argument orders, and defaults match, and anything not listed below behaves the same. This list is meant to be enough to do the whole conversion from, including by an AI assistant given only this section.
 
-Verified name by name against **LittleJS 1.18.25**. Anything in `main` that does not exist here (plugins, `CanvasLayer`, `ImageFont`, pointer lock, ...) is purely additive. A game written here cannot be using it, so it simply becomes available on port.
+Verified name by name against **LittleJS 1.18.25**. Anything in `main` that does not exist here (plugins, `CanvasLayer`, pointer lock, ...) is purely additive. A game written here cannot be using it, so it simply becomes available on port.
 
 ### Tile collision
 
@@ -151,6 +151,7 @@ instance.stop(fadeTime); // optional fade out
 - **Particles are `EngineObject`s here**, updated by the engine like everything else; in `main` they are lightweight objects owned and updated by their emitter. The `ParticleEmitter` API is the same in both, but per-particle physics tweaks made in `particleCreateCallback` (like changing one particle's `damping`) become emitter-level settings on port.
 - **`inputPreventDefault` covers less here.** It only suppresses middle/right mouse clicks, while `main` also uses it to prevent arrow keys, space, and tab from scrolling or refocusing the page, and to guard touch `preventDefault` (always on here).
 - **`Vector2.toString()` and `Timer.toString()` are debug-only here.** They format on the dev page but return `undefined` in the built zip, since `toString` is the one method name Closure cannot delete, so the body is stripped instead. `Color.toString()` works everywhere. In `main` they always format.
+- **`ImageFont` draws untinted canvas 2d here.** The `color` and `useWebGL` arguments are accepted but ignored, so a color passed here silently starts applying after the port. The no-argument built-in 8x8 font is also js13k-only; `main` requires a `tileInfo`. Fonts passed as a `tileInfo` work the same in both.
 
 ### Version
 

@@ -596,6 +596,99 @@ function combineCanvases()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+let engineFontImage;
+
+/**
+ * Image Font Object - Draw text on a 2D canvas by using characters in an image
+ * - 96 characters (from space to tilde) are stored in an image
+ * - Uses a default 8x8 font if no tile info is supplied
+ * - You can also use fonts from the main tile sheet
+ * @example
+ * // use built in font
+ * const font = new ImageFont;
+ *
+ * // draw text
+ * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50), 32);
+ */
+class ImageFont
+{
+    /** Create an image font
+     *  @param {TileInfo} [tileInfo] - Tile info of first character in font, if undefined the built in 8x8 font is used
+     */
+    constructor(tileInfo)
+    {
+        if (!tileInfo && !engineFontImage)
+        {
+            // load default font image
+            engineFontImage = new Image
+            engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
+        }
+
+        /** @property {TileInfo} - Tile info for the font, undefined to use the built in font */
+        this.tileInfo = tileInfo;
+    }
+
+    /** Draw text in world space using the image font
+     *  @param {String}  text
+     *  @param {Vector2} pos
+     *  @param {Vector2|Number} [size] - Size of characters in world space
+     *  @param {Boolean} [center]
+     *  @param {Color}   [color] - Not supported by this version, tint on port
+     *  @param {Boolean} [useWebGL] - Not supported by this version
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+     */
+    drawText(text, pos, size=1, center, color, useWebGL, context)
+    {
+        size = typeof size == 'number' ? vec2(size) : size;
+        this.drawTextScreen(text, worldToScreen(pos).floor(), size.scale(cameraScale).floor(), center, color, useWebGL, context);
+    }
+
+    /** Draw text in screen space using the image font
+     *  @param {String}  text
+     *  @param {Vector2} pos
+     *  @param {Vector2|Number} size - Size of characters in pixels
+     *  @param {Boolean} [center]
+     *  @param {Color}   [color] - Not supported by this version, tint on port
+     *  @param {Boolean} [useWebGL] - Not supported by this version
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+     */
+    drawTextScreen(text, pos, size, center=true, color, useWebGL, context=overlayContext)
+    {
+        size = typeof size == 'number' ? vec2(size) : size;
+
+        // get font image info, use the built in font if no tile info
+        const tileInfo = this.tileInfo;
+        const image = tileInfo ? tileInfo.textureInfo.image : engineFontImage;
+        const tileSize = tileInfo ? tileInfo.size : vec2(8);
+        const padding = tileInfo ? tileInfo.padding : 0;
+        const sizePaddedX = tileSize.x + padding*2;
+        const sizePaddedY = tileSize.y + padding*2;
+        const cols = image.width / sizePaddedX |0;
+
+        context.save();
+        (text+'').split('\n').forEach((line, j)=>
+        {
+            const centerOffset = center ? (line.length-1) * size.x / 2 |0 : 0;
+            for (let i=line.length; i--;)
+            {
+                // get the character index, use last character if out of range
+                const charCode = line.charCodeAt(i);
+                const index = charCode < 32 || charCode > 127 ? 95 : charCode - 32;
+
+                // get the character source location and draw it
+                const x = index % cols;
+                const y = index / cols |0;
+                context.drawImage(image,
+                    x*sizePaddedX + padding, y*sizePaddedY + padding, tileSize.x, tileSize.y,
+                    pos.x + i*size.x - centerOffset |0, pos.y + j*size.y |0, size.x, size.y);
+            }
+        });
+        context.restore();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Display functions
 
 /** Returns true if fullscreen mode is active

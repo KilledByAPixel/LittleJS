@@ -224,6 +224,7 @@ export {
 	drawTextScreen,
 	setAdditiveBlendMode,
 	combineCanvases,
+	ImageFont,
 	isFullscreen,
 	toggleFullscreen,
 	setCursor,

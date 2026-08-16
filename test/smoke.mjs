@@ -104,6 +104,12 @@ function gameInit()
     emitter.destroy();
     if (!emitter.destroyed) throw 'emitter destroy failed';
 
+    // image font matches main's constructor, with a js13k-only default font
+    const font = new ImageFont;
+    if (font.tileInfo !== undefined) throw 'default ImageFont should have no tileInfo';
+    const font2 = new ImageFont(ti);
+    if (font2.tileInfo !== ti) throw 'ImageFont tileInfo not stored';
+
     // blend mode uses main's name
     if (typeof setAdditiveBlendMode != 'function') throw 'setAdditiveBlendMode missing';
 
