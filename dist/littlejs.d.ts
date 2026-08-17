@@ -2587,11 +2587,14 @@ declare module "littlejsengine" {
         randomness: any;
         /** @property {number} - Sample rate for this sound */
         sampleRate: number;
-        /** @property {number} - Percentage of this sound currently loaded */
+        /** @property {Array<Array<number>|Float32Array>} - Sample data for each channel, undefined until loaded
+         *  @type {Array<Array<number>|Float32Array>} */
+        sampleChannels: Array<Array<number> | Float32Array>;
+        /** @property {number} - Percentage of this sound currently loaded, sounds
+         *  fetched from a url stay at 0 until decoding completes */
         loadedPercent: number;
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         onloadCallback: (sound: Sound) => Sound;
-        sampleChannels: any[][];
         /** Play the sound
          *  Sounds may not play until a user interaction occurs
          *  @param {Vector2} [pos] - World space position to play the sound if any

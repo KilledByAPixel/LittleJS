@@ -98,7 +98,11 @@ class Sound
         this.randomness = randomness ?? 0;
         /** @property {number} - Sample rate for this sound */
         this.sampleRate = audioDefaultSampleRate;
-        /** @property {number} - Percentage of this sound currently loaded */
+        /** @property {Array<Array<number>|Float32Array>} - Sample data for each channel, undefined until loaded
+         *  @type {Array<Array<number>|Float32Array>} */
+        this.sampleChannels = undefined;
+        /** @property {number} - Percentage of this sound currently loaded, sounds
+         *  fetched from a url stay at 0 until decoding completes */
         this.loadedPercent = 0;
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
@@ -230,33 +234,13 @@ class Sound
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         
-        // convert audio buffer to sample channels across multiple frames
+        // take the decoded channel data directly, it is already in the format
+        // playSamples needs, copying it into a plain array cost a long stall
         const channelCount = audioBuffer.numberOfChannels;
-        const samplesPerFrame = 1e5;
         const sampleChannels = [];
         for (let channel = 0; channel < channelCount; channel++)
-        {
-            const channelData = audioBuffer.getChannelData(channel);
-            const channelLength = channelData.length;
-            sampleChannels[channel] = new Array(channelLength);
-            let sampleIndex = 0;
-            while (sampleIndex < channelLength)
-            {
-                // yield to next frame
-                await new Promise(resolve => setTimeout(resolve, 0));
+            sampleChannels[channel] = audioBuffer.getChannelData(channel);
 
-                // copy chunk of samples
-                const endIndex = min(sampleIndex + samplesPerFrame, channelLength);
-                for (; sampleIndex < endIndex; sampleIndex++)
-                    sampleChannels[channel][sampleIndex] = channelData[sampleIndex];
-
-                // update loaded percent
-                const samplesTotal = channelCount * channelLength;
-                const samplesProcessed = channel * channelLength + sampleIndex;
-                this.loadedPercent = samplesProcessed / samplesTotal;
-            }
-        }
-        
         // setup the sound to be played
         this.sampleRate = audioBuffer.sampleRate;
         this.sampleChannels = sampleChannels;
