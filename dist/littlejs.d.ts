@@ -2587,14 +2587,29 @@ declare module "littlejsengine" {
         randomness: any;
         /** @property {number} - Sample rate for this sound */
         sampleRate: number;
-        /** @property {Array<Array<number>|Float32Array>} - Sample data for each channel, undefined until loaded
-         *  @type {Array<Array<number>|Float32Array>} */
-        sampleChannels: Array<Array<number> | Float32Array>;
+        /** @property {number} - How many samples per channel this sound has */
+        sampleLength: number;
+        /** @property {AudioBuffer} - Decoded audio shared by every play of this sound
+         *  @type {AudioBuffer} */
+        sampleBuffer: AudioBuffer;
+        /** @private @type {Array<Array<number>|Float32Array>} */
+        private _sampleChannels;
         /** @property {number} - Percentage of this sound currently loaded, sounds
          *  fetched from a url stay at 0 until decoding completes */
         loadedPercent: number;
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         onloadCallback: (sound: Sound) => Sound;
+        /** @param {Array<Array<number>|Float32Array>} sampleChannels */
+        set sampleChannels(arg: (number[] | Float32Array)[]);
+        /** Sample data for each channel
+         *  Sounds keep their samples in an audio buffer, so reading this rebuilds
+         *  the arrays from it and caches them. The copies are safe to hold onto,
+         *  playing a sound detaches the buffer's own channel arrays.
+         *  @type {Array<Array<number>|Float32Array>} */
+        get sampleChannels(): (number[] | Float32Array)[];
+        /** Move this sound's samples into an audio buffer that every play can share
+         *  Does nothing if there is already a buffer or no samples to build one from */
+        buildSampleBuffer(): void;
         /** Play the sound
          *  Sounds may not play until a user interaction occurs
          *  @param {Vector2} [pos] - World space position to play the sound if any
@@ -2747,6 +2762,25 @@ declare module "littlejsengine" {
      *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
      *  @memberof Audio */
     export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback): AudioBufferSourceNode;
+    /** Play an audio buffer with given settings
+     *  The buffer can be shared by any number of sounds playing at once
+     *  @param {AudioBuffer} buffer - The audio buffer to play
+     *  @param {number}   [volume] - How much to scale volume by
+     *  @param {number}   [rate] - The playback rate to use
+     *  @param {number}   [pan] - How much to apply stereo panning
+     *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
+     *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
+     *  @param {number}   [offset] - Offset in seconds to start playback from
+     *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
+     *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
+     *  @memberof Audio */
+    export function playAudioBuffer(buffer: AudioBuffer, volume?: number, rate?: number, pan?: number, loop?: boolean, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback): AudioBufferSourceNode;
+    /** Copy arrays of samples into a new audio buffer
+     *  @param {Array}  sampleChannels - Array of arrays of samples (for stereo playback)
+     *  @param {number} [sampleRate=44100] - Sample rate for the sound
+     *  @return {AudioBuffer} - The audio buffer holding the samples
+     *  @memberof Audio */
+    export function createAudioBuffer(sampleChannels: any[], sampleRate?: number): AudioBuffer;
     /** Generate and play a ZzFX sound
      *
      *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>

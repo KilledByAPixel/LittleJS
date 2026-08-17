@@ -98,9 +98,13 @@ class Sound
         this.randomness = randomness ?? 0;
         /** @property {number} - Sample rate for this sound */
         this.sampleRate = audioDefaultSampleRate;
-        /** @property {Array<Array<number>|Float32Array>} - Sample data for each channel, undefined until loaded
-         *  @type {Array<Array<number>|Float32Array>} */
-        this.sampleChannels = undefined;
+        /** @property {number} - How many samples per channel this sound has */
+        this.sampleLength = 0;
+        /** @property {AudioBuffer} - Decoded audio shared by every play of this sound
+         *  @type {AudioBuffer} */
+        this.sampleBuffer = undefined;
+        /** @private @type {Array<Array<number>|Float32Array>} */
+        this._sampleChannels = undefined;
         /** @property {number} - Percentage of this sound currently loaded, sounds
          *  fetched from a url stay at 0 until decoding completes */
         this.loadedPercent = 0;
@@ -118,8 +122,10 @@ class Sound
             this.randomness = zzfxSound[randomnessIndex] ?? defaultRandomness;
             zzfxSound[randomnessIndex] = 0;
 
-            // generate the zzfx samples
+            // generate the zzfx samples, then hand them to an audio buffer so
+            // the plain arrays can be released and every play shares the buffer
             this.sampleChannels = [zzfxG(...zzfxSound)];
+            this.buildSampleBuffer();
             this.loadedPercent = 1;
             onloadCallback?.(this);
         }
@@ -129,6 +135,45 @@ class Sound
             const filename = asset;
             this.loadSound(filename);
         }
+    }
+
+    /** Sample data for each channel
+     *  Sounds keep their samples in an audio buffer, so reading this rebuilds
+     *  the arrays from it and caches them. The copies are safe to hold onto,
+     *  playing a sound detaches the buffer's own channel arrays.
+     *  @type {Array<Array<number>|Float32Array>} */
+    get sampleChannels()
+    {
+        const buffer = this.sampleBuffer;
+        if (!this._sampleChannels && buffer)
+        {
+            const channels = [];
+            for (let i = 0; i < buffer.numberOfChannels; i++)
+                channels.push(buffer.getChannelData(i).slice());
+            this._sampleChannels = channels;
+        }
+        return this._sampleChannels;
+    }
+
+    /** @param {Array<Array<number>|Float32Array>} sampleChannels */
+    set sampleChannels(sampleChannels)
+    {
+        // new samples invalidate the buffer built from the old ones
+        this._sampleChannels = sampleChannels;
+        this.sampleBuffer = undefined;
+        this.sampleLength = sampleChannels?.[0]?.length || 0;
+    }
+
+    /** Move this sound's samples into an audio buffer that every play can share
+     *  Does nothing if there is already a buffer or no samples to build one from */
+    buildSampleBuffer()
+    {
+        if (this.sampleBuffer || !this._sampleChannels || headlessMode) return;
+
+        this.sampleBuffer = createAudioBuffer(this._sampleChannels, this.sampleRate);
+
+        // the buffer owns the samples now, release the arrays we built it from
+        this._sampleChannels = undefined;
     }
 
     /** Play the sound
@@ -149,7 +194,7 @@ class Sound
         ASSERT(isNumber(randomnessScale), 'randomnessScale must be a number');
 
         if (!soundEnable || headlessMode) return;
-        if (!this.sampleChannels) return;
+        if (!this.sampleBuffer && !this._sampleChannels) return;
 
         let pan;
         if (pos)
@@ -216,7 +261,7 @@ class Sound
      *  @return {number} - How long the sound is in seconds (0 if loading)
      */
     getDuration()
-    { return this.sampleChannels?.[0]?.length / this.sampleRate || 0; }
+    { return this.sampleLength / this.sampleRate || 0; }
 
     /** Check if sound is loaded, for sounds fetched from a url
      *  @return {boolean} - True if sound is loaded and ready to play
@@ -234,16 +279,11 @@ class Sound
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         
-        // take the decoded channel data directly, it is already in the format
-        // playSamples needs, copying it into a plain array cost a long stall
-        const channelCount = audioBuffer.numberOfChannels;
-        const sampleChannels = [];
-        for (let channel = 0; channel < channelCount; channel++)
-            sampleChannels[channel] = audioBuffer.getChannelData(channel);
-
-        // setup the sound to be played
+        // keep the decoded buffer as is, it is exactly what playback needs and
+        // every play shares it, no channel data is read or copied
         this.sampleRate = audioBuffer.sampleRate;
-        this.sampleChannels = sampleChannels;
+        this.sampleLength = audioBuffer.length;
+        this.sampleBuffer = audioBuffer;
         this.loadedPercent = 1;
         this.onloadCallback?.(this);
     }
@@ -319,7 +359,12 @@ class SoundInstance
         if (this.isPlaying())
             this.stop();
         this.gainNode = audioContext.createGain();
-        this.source = playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback);
+
+        // build the shared buffer if it was not made at load time, then play it
+        this.sound.buildSampleBuffer();
+        this.source = this.sound.sampleBuffer ?
+            playAudioBuffer(this.sound.sampleBuffer, this.volume, this.rate, this.pan, this.loop, this.gainNode, offset, this.onendedCallback) :
+            playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback);
         if (this.source)
         {
             this.startTime = audioContext.currentTime - offset;
@@ -494,19 +539,54 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
 
     if (!audioIsRunning())
     {
+        // fix stalled audio, don't build a buffer that can't be played
+        audioContext.resume();
+        return;
+    }
+
+    const buffer = createAudioBuffer(sampleChannels, sampleRate);
+    return playAudioBuffer(buffer, volume, rate, pan, loop, gainNode, offset, onended);
+}
+
+/** Copy arrays of samples into a new audio buffer
+ *  @param {Array}  sampleChannels - Array of arrays of samples (for stereo playback)
+ *  @param {number} [sampleRate=44100] - Sample rate for the sound
+ *  @return {AudioBuffer} - The audio buffer holding the samples
+ *  @memberof Audio */
+function createAudioBuffer(sampleChannels, sampleRate=audioDefaultSampleRate)
+{
+    const channelCount = sampleChannels.length;
+    const sampleLength = sampleChannels[0].length;
+    const buffer = audioContext.createBuffer(channelCount, sampleLength, sampleRate);
+    sampleChannels.forEach((c,i)=> buffer.getChannelData(i).set(c));
+    return buffer;
+}
+
+/** Play an audio buffer with given settings
+ *  The buffer can be shared by any number of sounds playing at once
+ *  @param {AudioBuffer} buffer - The audio buffer to play
+ *  @param {number}   [volume] - How much to scale volume by
+ *  @param {number}   [rate] - The playback rate to use
+ *  @param {number}   [pan] - How much to apply stereo panning
+ *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
+ *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
+ *  @param {number}   [offset] - Offset in seconds to start playback from
+ *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
+ *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
+ *  @memberof Audio */
+function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended)
+{
+    if (!soundEnable || headlessMode) return;
+
+    if (!audioIsRunning())
+    {
         // fix stalled audio, this sound won't be able to play
         audioContext.resume();
         return;
     }
 
-    // create buffer and source
-    const channelCount = sampleChannels.length;
-    const sampleLength = sampleChannels[0].length;
-    const buffer = audioContext.createBuffer(channelCount, sampleLength, sampleRate);
+    // setup source, many sources can share one buffer
     const source = audioContext.createBufferSource();
-
-    // copy samples to buffer and setup source
-    sampleChannels.forEach((c,i)=> buffer.getChannelData(i).set(c));
     source.buffer = buffer;
     source.playbackRate.value = rate;
     source.loop = loop;

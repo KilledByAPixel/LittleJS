@@ -368,6 +368,8 @@ audioContext            // The shared Web Audio context
 audioMasterGain         // Master gain node all sound routes through
 audioIsRunning()        // Is the audio context running? (requires user interaction)
 playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate, gainNode, offset=0, onended) // Low level sample playback
+createAudioBuffer(sampleChannels, sampleRate) // Copy arrays of samples into an audio buffer
+playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended) // Play an audio buffer, shareable between sounds
 ```
 
 ## LittleJS Input System

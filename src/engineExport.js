@@ -371,6 +371,8 @@ export
     speakStop,
     getNoteFrequency,
     playSamples,
+    playAudioBuffer,
+    createAudioBuffer,
     zzfx,
     zzfxG,
 
