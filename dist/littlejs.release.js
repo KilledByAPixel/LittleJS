@@ -6316,9 +6316,11 @@ class Sound
         }
         else if (typeof asset === 'string')
         {
-            // load the audio file
+            // load the audio file, report failures rather than leaving an
+            // unhandled rejection, the sound just stays unloaded and silent
             const filename = asset;
-            this.loadSound(filename);
+            this.loadSound(filename).catch(e=>
+                LOG('Sound load failed for', filename, '-', e.message));
         }
     }
 
@@ -6675,7 +6677,7 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
     // build utterance and speak
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
-    utterance.volume = 2*volume*soundVolume;
+    utterance.volume = volume*soundVolume;
     utterance.rate = rate;
     utterance.pitch = pitch;
     speechSynthesis.speak(utterance);

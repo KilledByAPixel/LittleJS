@@ -154,6 +154,24 @@ test('zzfx sounds build a shared buffer and release their arrays', () =>
     instance.stop();
 });
 
+// a bad filename used to reject into nothing, surfacing as an uncaught promise
+// error with no way for the game to tell. node's test runner fails a file on
+// unhandled rejections, so this test failing that way is the regression signal.
+test('a failed load is reported, not thrown into the void', async () =>
+{
+    const okFetch = globalThis.fetch;
+    globalThis.fetch = async ()=> ({ ok: false, status: 404, statusText: 'Not Found' });
+
+    const missing = new LJS.Sound('missing.ogg');
+    await new Promise(resolve => realSetTimeout(resolve, 20));
+
+    assert.equal(missing.isLoaded(), false, 'the sound should stay unloaded');
+    assert.equal(missing.sampleBuffer, undefined);
+    assert.equal(missing.play(), undefined, 'playing an unloaded sound does nothing');
+
+    globalThis.fetch = okFetch;
+});
+
 // assigning new samples has to invalidate the buffer built from the old ones,
 // which is how plugins/zzfxm.js hands its generated music to a Sound
 test('assigning sampleChannels rebuilds the buffer', () =>
