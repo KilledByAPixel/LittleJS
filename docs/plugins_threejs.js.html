@@ -59,6 +59,9 @@ class ThreeJSPlugin
         rootElement.insertBefore(threeCanvas, rootElement.firstChild);
         threeCanvas.style.cssText = mainCanvas.style.cssText;
 
+        // composite the 3D canvas into screenshots and video capture
+        setBackgroundCanvas(threeCanvas);
+
         // render automatically each frame after the engine renders
         engineAddPlugin(undefined, ()=> this.render());
     }
