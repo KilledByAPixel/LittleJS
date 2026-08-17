@@ -180,7 +180,7 @@ function gameInit()
     scene.background = new THREE.Color(0x66aaee);
     scene.fog = new THREE.Fog(0x66aaee, 40, 90);
     const sun = new THREE.DirectionalLight(0xffffff, 3);
-    sun.position.set(2, 1, 4);
+    sun.position.set(-2, -1, 4);
     scene.add(sun);
     scene.add(new THREE.AmbientLight(0x668866));
 
