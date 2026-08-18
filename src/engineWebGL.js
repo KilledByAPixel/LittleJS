@@ -244,9 +244,13 @@ function glPreRender(clear=true)
 
     if (!glRenderTarget)
     {
-        // set to same size as main canvas
-        glCanvas.width = mainCanvasSize.x;
-        glCanvas.height = mainCanvasSize.y;
+        // set to same size as main canvas, only when it changes because
+        // setting it reallocates the drawing buffer and invalidates the frame
+        if (glCanvas.width !== mainCanvasSize.x || glCanvas.height !== mainCanvasSize.y)
+        {
+            glCanvas.width = mainCanvasSize.x;
+            glCanvas.height = mainCanvasSize.y;
+        }
     }
     glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
     clear && glClearCanvas();

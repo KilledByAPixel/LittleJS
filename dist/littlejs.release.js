@@ -92,6 +92,7 @@ function setPaused(isPaused=true) { paused = isPaused; }
 
 // Engine internal variables
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
+let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
 let showEngineVersion = true;
 
@@ -279,7 +280,22 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             frameTimeBufferMS += deltaSmooth;
         }
 
-        if (!debugVideoCaptureIsActive())
+        // check if the window changed so a resize is picked up even when
+        // the game is not updating, for example when timeScale is 0
+        let windowChanged = false;
+        if (!headlessMode)
+        {
+            const dpr = devicePixelRatio;
+            windowChanged = windowWidthLast !== innerWidth ||
+                windowHeightLast !== innerHeight || windowPixelRatioLast !== dpr;
+            windowWidthLast = innerWidth;
+            windowHeightLast = innerHeight;
+            windowPixelRatioLast = dpr;
+        }
+
+        // render only when something changed, displays that refresh faster
+        // than the fixed update rate would otherwise redraw identical frames
+        if (!debugVideoCaptureIsActive() && (wasUpdated || windowChanged))
             renderFrame();
         if (!engineManualStep)
             requestAnimationFrame(engineUpdate);
@@ -374,8 +390,20 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         }
 
         // clear main canvas and set size
-        mainCanvas.width  = mainCanvasSize.x;
-        mainCanvas.height = mainCanvasSize.y;
+        // only set the size when it changes, setting it invalidates the canvas
+        // frame which makes the browser rebuild the display list for the page
+        if (mainCanvas.width !== mainCanvasSize.x || mainCanvas.height !== mainCanvasSize.y)
+        {
+            mainCanvas.width  = mainCanvasSize.x;
+            mainCanvas.height = mainCanvasSize.y;
+        }
+        else
+        {
+            // setting the size also resets the context state, match that
+            mainContext.setTransform(1, 0, 0, 1, 0, 0);
+            mainContext.globalCompositeOperation = 'source-over';
+            mainContext.clearRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+        }
 
         // apply the clear color to main canvas
         if (canvasClearColor.a > 0 && !glEnable)
@@ -8476,9 +8504,13 @@ function glPreRender(clear=true)
 
     if (!glRenderTarget)
     {
-        // set to same size as main canvas
-        glCanvas.width = mainCanvasSize.x;
-        glCanvas.height = mainCanvasSize.y;
+        // set to same size as main canvas, only when it changes because
+        // setting it reallocates the drawing buffer and invalidates the frame
+        if (glCanvas.width !== mainCanvasSize.x || glCanvas.height !== mainCanvasSize.y)
+        {
+            glCanvas.width = mainCanvasSize.x;
+            glCanvas.height = mainCanvasSize.y;
+        }
     }
     glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
     clear && glClearCanvas();
