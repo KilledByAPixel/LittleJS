@@ -216,25 +216,47 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         const debugScale = debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
 
         // apply time deltas
+        const frameTimeDeltaUnscaledMS = frameTimeDeltaMS;
         timeReal += frameTimeDeltaMS * debugScale / 1e3;
         const combinedScale = timeScale * debugScale;
         frameTimeDeltaMS *= combinedScale;
-        frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
-        if (combinedScale <= 1)
+        // when paused tick on unscaled time so the pause update rate stays
+        // fixed instead of following however fast the display refreshes
+        frameTimeBufferMS += paused ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
+        if (paused || combinedScale <= 1)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
 
-        let wasUpdated = false;
-        if (paused)
+        // apply time delta smoothing, improves smoothness of framerate in some browsers
+        let wasUpdated = false, deltaSmooth = 0;
+        if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
         {
-            // update everything except the game and objects
+            // force at least one update each frame since it is waiting for refresh
+            deltaSmooth = frameTimeBufferMS;
+            frameTimeBufferMS = 0;
+        }
+
+        // update multiple frames if necessary in case of slow framerate
+        for (; frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
+        {
+            // increment frame and update time, paused does not advance time
+            if (!paused)
+                time = frame++ / frameRate;
+
+            // update game and objects, when paused update everything except them
             wasUpdated = true;
             updateCanvas();
             inputUpdate();
+            if (!paused)
+                gameUpdate();
             pluginList.forEach(plugin=>plugin.update?.());
-
-            // update object transforms even when paused
-            for (const o of engineObjects)
-                o.parent || o.updateTransforms();
+            if (paused)
+            {
+                // update object transforms even when paused
+                for (const o of engineObjects)
+                    o.parent || o.updateTransforms();
+            }
+            else
+                engineObjectsUpdate();
 
             // do post update
             debugUpdate();
@@ -243,42 +265,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (debugVideoCaptureIsActive())
                 renderFrame();
         }
-        else
-        {
-            // apply time delta smoothing, improves smoothness of framerate in some browsers
-            let deltaSmooth = 0;
-            if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
-            {
-                // force at least one update each frame since it is waiting for refresh
-                deltaSmooth = frameTimeBufferMS;
-                frameTimeBufferMS = 0;
-            }
 
-            // update multiple frames if necessary in case of slow framerate
-            for (; frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
-            {
-                // increment frame and update time
-                time = frame++ / frameRate;
-
-                // update game and objects
-                wasUpdated = true;
-                updateCanvas();
-                inputUpdate();
-                gameUpdate();
-                pluginList.forEach(plugin=>plugin.update?.());
-                engineObjectsUpdate();
-
-                // do post update
-                debugUpdate();
-                gameUpdatePost();
-                inputUpdatePost();
-                if (debugVideoCaptureIsActive())
-                    renderFrame();
-            }
-
-            // add the time smoothing back in
-            frameTimeBufferMS += deltaSmooth;
-        }
+        // add the time smoothing back in
+        frameTimeBufferMS += deltaSmooth;
 
         // check if the window changed so a resize is picked up even when
         // the game is not updating, for example when timeScale is 0
