@@ -48,7 +48,13 @@ const FEATURE_FLAGS =
 const DEBUG_BUILD = false;
 // Roadroller shrinks the code a lot but is the slowest step
 const USE_ROADROLLER = true;
+// Pinned roadroller parameters, or empty to search for new ones every build.
+// The search is randomized, so an unpinned build is not reproducible and small
+// changes cannot be measured. Paste in the "use ... to replicate" arguments an
+// unpinned build prints, then search again after the game has changed a lot.
+const ROADROLLER_ARGS = '';
 // Extreme mode takes over a minute and usually saves only a few bytes
+// - it minimizes roadroller's own output, not the zip, so judge it by the zip
 const ROADROLLER_EXTREME = false;
 
 const sourceFiles =
@@ -127,6 +133,14 @@ function Build(outputFile, files=[], buildSteps=[])
     for (const file of files)
         buffer += fs.readFileSync(file) + '\n';
 
+    // normalize line endings before anything else looks at the source
+    // - git checks out CRLF on windows and LF everywhere else, so without this
+    //   the same commit builds differently on different machines
+    // - it also keeps any pattern matched below from silently missing on a
+    //   CRLF checkout, which is the worst kind of build bug because the zip
+    //   still builds, just bigger
+    buffer = buffer.replace(/\r/g, '');
+
     // strip out disabled features before minifying
     buffer = applyFeatureFlags(buffer);
 
@@ -198,10 +212,12 @@ function uglifyBuildStep(filename)
 function roadrollerBuildStep(filename)
 {
     console.log(`Running roadroller...`);
-    const optimize = ROADROLLER_EXTREME ? ' --optimize 2' : '';
+    let args = ROADROLLER_ARGS;
+    if (ROADROLLER_EXTREME)
+        args += ' --optimize 2';
     try
     {
-        execSync(`npx roadroller ${filename} -o ${filename}${optimize}`, {stdio: 'inherit'});
+        execSync(`npx roadroller ${filename} -o ${filename} ${args}`, {stdio: 'inherit'});
     }
     catch (e) { handleError(e, 'Roadroller step failed!'); }
 };
@@ -211,15 +227,19 @@ function htmlBuildStep(filename)
     console.log(`Building html...`);
 
     // create html file
-    let buffer = '<!DOCTYPE html>';
-    buffer += '<head>';
-    buffer += `<title>${PROGRAM_TITLE}</title>`;
-    buffer += '<meta charset=utf-8>';
-    buffer += '</head>';
-    buffer += '<body>';
+    // - no doctype and no head, the parser infers both, see README.md
+    // - quirks mode is fine here because the engine sizes the canvas from
+    //   innerWidth/innerHeight, which quirks mode does not change
+    // - keep the charset for the day roadroller emits a high byte
+    // - keep the viewport meta or phones lay out a 980px page and scale it down
+    let buffer = '<meta charset=utf-8>';
+    buffer += '<meta name=viewport content="width=device-width,initial-scale=1">';
+    if (PROGRAM_TITLE)
+        buffer += `<title>${PROGRAM_TITLE}</title>`;
+    buffer += '<body>'; // required, without it document.body is null
     buffer += '<script>';
     buffer += fs.readFileSync(filename);
-    buffer += '</script>';
+    buffer += '</script>'; // required, a script left open at EOF never runs
 
     // output html file
     fs.writeFileSync(`${BUILD_FOLDER}/index.html`, buffer, {flag: 'w+'});

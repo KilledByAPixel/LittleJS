@@ -309,7 +309,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
     // set canvas style
     const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
-        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
+        'inset:0;margin:auto'; // center on screen
     mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;

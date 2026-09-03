@@ -47,24 +47,31 @@ That writes `examples/starter/game.zip` and prints the size against the limit, f
 
 `npm run build:engine` generates the `dist/` bundles and TypeScript definitions, and `npm test` runs a quick headless engine smoke test. You do not need either to make a game.
 
+**`npm run test:release` builds the zip and then drives the built page in headless Chrome**, failing on any page error or on a page that stops animating. This is the only test that looks at what you actually submit. The dev page and `npm test` both run the readable sources, so neither can see a Closure rename that broke a DOM call, a `FEATURES` strip that took too much, or an HTML shell that parses but never runs the script. Those bugs are invisible until someone opens the zip. It skips with a notice if you have no Chrome or Edge, and `CHROME_PATH` points it at any other Chromium build. Add steps to `WALK_STEPS` in [test/release.mjs](test/release.mjs) as your game grows so the walk reaches every screen.
+
 ## 🔧 How the build works
 
 `examples/starter/build.mjs` is a plain Node script, no bundler:
 
 | Stage | What it does |
 |---|---|
-| Concatenate | Joins `sourceFiles` into one file. No modules, everything shares one global scope. |
+| Concatenate | Joins `sourceFiles` into one file and strips CR so a CRLF checkout builds the same bytes as an LF one. No modules, everything shares one global scope. |
 | Feature flags | Rewrites anything disabled in `FEATURES` to a compile time constant so the next stage can delete it. |
 | Closure Compiler | `ADVANCED` mode. Renames everything and deletes every function the game never calls. |
 | UglifyJS | A second `-c -m --toplevel` pass. `--toplevel` also mangles and drops top level names, worth 54 bytes. Safe here because the build inlines everything into one script that nothing external references, but if you hand-write an HTML page with its own `<script>` calling into your game, remove it. |
 | Roadroller | Re-encodes the JavaScript as self-extracting compressed data. Slowest stage, biggest win. |
+| Inline HTML | Wraps the payload in the smallest shell that still works: no doctype, no `<head>`, no `</body>`. |
 | ect zip | Zips the inlined HTML plus `dataFiles`. This is what you submit. |
 
 Also at the top of `build.mjs`: `DEBUG_BUILD` keeps the intermediate files so you can see what each stage produced, `USE_ROADROLLER` turns off the slow stage while iterating, and `ROADROLLER_EXTREME` passes `--optimize 2`, which takes a minute of work for a few bytes, so save it for the end.
 
+**`ROADROLLER_ARGS` pins the compressor.** Left empty, roadroller runs a randomized ~30 attempt parameter search on every build, so the same source packs to a different size each time. That spread was 7 bytes on the starter, which is more than most single changes are worth, and it makes A/B measurement meaningless. Once your game is roughly stable, copy the ``use `-Zab32 -Zdy0 ...` to replicate`` arguments a build prints into `ROADROLLER_ARGS`. Builds then become reproducible and every byte you see is real. Empty it and re-search after the source has moved a lot, and judge the new arguments by the zip size, not by the number the search prints.
+
 Add your own files to `sourceFiles`, and runtime assets to `dataFiles`.
 
 ## 📦 Saving space
+
+**[SIZECODING.md](SIZECODING.md) is the long version:** what actually made a real 13,312 byte game smaller, what did not, and how to tell the difference, all measured on a shipped JS13K entry. This section only covers the switches already wired into the starter. Read the other one when you are close to the limit, not before.
 
 **Start by not worrying about it.** Closure in `ADVANCED` mode already deletes every engine function your game never calls, so unused features mostly cost nothing.
 
@@ -101,7 +108,13 @@ Two things worth knowing:
 
 Beyond that you can delete an unused engine file from `sourceFiles`, but the saving comes from your game not using the feature, not from deleting the file: once Closure sees `ParticleEmitter` is unreachable it removes all of it, and dropping the file afterwards gains nothing. The exception is `engineTileLayer.js`, which leaves a 72 byte residue because `engineObject.js` calls `tileCollisionTest` inside `if (this.collideTiles)`. Disabling `physics` compiles that reference out too, so the residue disappears with it. Nothing warns you if you remove a file something still references, you just get a `ReferenceError` at runtime instead of a build error.
 
+**The HTML shell is already as small as it can safely get.** There is no doctype, no `<head>`, and no `</body>`, which the parser all infers, and that is worth 19 bytes. Quirks mode is harmless here because the engine sizes the canvas from `innerWidth`/`innerHeight`, which quirks mode does not change. Two pieces are load bearing and should stay: `</script>` (a script left open at end of file is never executed at all, so dropping it produces a smaller zip that does nothing) and the viewport meta (without it phones lay the page out at 980px and scale the result down). The viewport meta costs 41 bytes, which is the most expensive line in the shell, but it is the difference between a game that looks right on a phone and one that does not.
+
+**Setting `PROGRAM_TITLE = ''` drops the `<title>` and saves 28 bytes.** Nothing on the JS13K site shows it, so this is nearly free if you are not also publishing the game somewhere it gets its own tab. The dev page keeps its title either way.
+
 Finally: every entry in `dataFiles` goes in the zip. `tiles.png` is already PNG-compressed so `ect` can only shave a little. Shrinking the image or generating art procedurally is often the cheapest win left.
+
+Numbers in this section were measured on the starter with `ROADROLLER_ARGS` pinned. Yours will differ. That is the whole point of [SIZECODING.md](SIZECODING.md): build it, then decide.
 
 ## 🔀 Migrating to main LittleJS
 
@@ -157,6 +170,7 @@ instance.stop(fadeTime); // optional fade out
 
 `engineVersion` is `1.18.25-js13k`, the mainline release this branch's API is aligned with and the migration notes are verified against. The branch does not track mainline release for release; it takes fixes, renames, and structural changes selectively when they do not cost bytes, and skips the large `engineDraw` / `engineInput` / `engineWebGL` feature growth and the plugin system.
 
+## 📏 [Size Coding for JS13K](SIZECODING.md)
 ## 💥 [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
 ## 🛠️ [Main LittleJS Repo](https://github.com/KilledByAPixel/LittleJS)
 ## 🧙 [LittleJS13k Wizard](https://github.com/eoinmcg/create-js13k-littlejs) by [eoinmcg](https://github.com/eoinmcg)
