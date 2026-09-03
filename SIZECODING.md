@@ -121,14 +121,17 @@ no `<title>` −22; then no `<head>`, `</head>`, `</body>` a further −8
 doctype −18 more (quirks mode was already what the dev page ran in, so the
 release now matches it — but quirks mode changes what the DOM reports, see
 section 6). What ships:
-`<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><body><script>…`
+`<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><body><script>…</script>`
 The opening `<body>` is required (without it the script runs with
-`document.body === null`); the closing tag is not. Keep the viewport meta
-or phones lay out a 980px page and shrink it. Keep `initial-scale=1`
-(old iOS loses the zoom on rotation without it). Keep `<meta charset>`
-even when the payload is pure ASCII: the day roadroller emits a high byte
-it corrupts silently. Canvas centring: `inset:0;margin:auto` beat the
-`top:50%;left:50%;transform` idiom by 19.
+`document.body === null`); `</body>` is not. `</script>` IS: a script the
+parser reaches EOF inside is marked "already started" and never executed
+at all, so dropping those nine bytes builds a smaller zip that does
+nothing, and no test that loads the sources instead of the zip will tell
+you. Keep the viewport meta or phones lay out a 980px page and shrink it.
+Keep `initial-scale=1` (old iOS loses the zoom on rotation without it).
+Keep `<meta charset>` even when the payload is pure ASCII: the day
+roadroller emits a high byte it corrupts silently. Canvas centring:
+`inset:0;margin:auto` beat the `top:50%;left:50%;transform` idiom by 19.
 
 **Dev vs release.** Everything debug lives behind `if (debug)`, with `debug`
 a compile-time 0 in the release build (a separate `engineRelease.js` is
