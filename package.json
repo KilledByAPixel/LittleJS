@@ -26,7 +26,8 @@
     "start": "node serve.js",
     "build": "node examples/starter/build.mjs",
     "build:engine": "node src/engineBuild.mjs",
-    "test": "node test/smoke.mjs"
+    "test": "node test/smoke.mjs",
+    "test:release": "npm run build && node test/release.mjs"
   },
   "devDependencies": {
     "ect-bin": "~1.4.1",
