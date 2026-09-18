@@ -49,9 +49,9 @@ function gameInit()
 
 function gameUpdate()
 {
-    // a few puffs of each kind per frame from the fire pit
-    for (let i = 3; i--;)
-        new Puff(vec3(rand(-.5, .5), .2, rand(-.5, .5)), i > 0);
+    // one puff of each kind per frame from the fire pit
+    new Puff(vec3(rand(-.5, .5), .2, rand(-.5, .5)), true);
+    new Puff(vec3(rand(-.5, .5), .2, rand(-.5, .5)), false);
 
     orbit += mouseIsDown(0) ? mouseDeltaScreen.x * .01 : .003;
     render3D.camera.pos = vec3(Math.sin(orbit) * 9, 4, Math.cos(orbit) * 9);

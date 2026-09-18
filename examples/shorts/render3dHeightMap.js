@@ -33,9 +33,9 @@ function makeTerrainImages(size)
     for (let y = 0; y < size; ++y)
     for (let x = 0; x < size; ++x)
     {
-        // rolling hills from two octaves of noise, rising toward the edges
+        // rolling hills from two octaves of 0-1 noise, rising toward the edges
         const edge = Math.hypot(x / size - .5, y / size - .5) * 1.5;
-        const h = clamp(noise2D(x / 12, y / 12) * .3 + noise2D(x / 5, y / 5) * .1 + .3 + edge * edge);
+        const h = clamp(noise2D(x / 12, y / 12) * .5 + noise2D(x / 5, y / 5) * .15 - .15 + edge * edge);
         heightContext.fillStyle = hsl(0, 0, h);
         heightContext.fillRect(x, y, 1, 1);
         // grass low, rock high, snow on top
