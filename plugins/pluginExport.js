@@ -119,6 +119,7 @@ export
     EngineObject3D,
     Mesh,
     buildLathe,
+    buildCylinder,
     buildSphere,
     buildBox,
     buildGrid,

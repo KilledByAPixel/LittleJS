@@ -48,7 +48,7 @@ function gameInit()
     ballMesh = buildSphere();
     floorMesh = buildGrid(16, 16, 8, 8, undefined, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? rgb(.5, .5, .5) : rgb(.4, .4, .4), false); // flat for crisp checkers
     boxMesh = buildBox(boxSize);
-    cylinderMesh = buildLathe([[cylinderRadius, -cylinderHeight / 2], [cylinderRadius, cylinderHeight / 2]], 16);
+    cylinderMesh = buildCylinder(cylinderRadius, cylinderHeight, 16);
     for (let i = 0; i < 12; ++i)
         balls.push(new Ball(vec3(rand(-6, 6), rand(3, 8), rand(-6, 6))));
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildSphere, buildBox, buildGrid, buildLoft, buildSky, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -758,4 +758,35 @@ test('transparent stage queues every draw by distance and replays far to near wi
     assert.equal(render3D.lighting, true);
     assert.equal(render3D.additive, false);
     render3D.specular = 0;
+});
+
+test('capped lathes close the ends that have a radius with outward flat discs', () =>
+{
+    const open = buildLathe([[1, -1], [1, 1]], 8, false);
+    const closed = buildLathe([[1, -1], [1, 1]], 8, false, true);
+    assert.equal(closed.vertexCount, open.vertexCount + 2 * (8 + 2)); // one 8 point strip per cap
+    assertOutward(closed, 'capped cylinder');
+    const capNormals = closed.normals.slice(open.vertexCount);
+    assert.ok(capNormals.slice(0, 10).every(n => n.y === -1), 'bottom cap faces down');
+    assert.ok(capNormals.slice(10).every(n => n.y === 1), 'top cap faces up');
+    // a smooth cylinder keeps a hard edge at the rim, the cap normals are not averaged in
+    const smooth = buildLathe([[1, -1], [1, 1]], 8, true, true);
+    assert.equal(smooth.vertexCount, 2 * 9 + 2 + 2 * 10);
+    assertOutward(smooth, 'smooth capped cylinder');
+    // a cone gets a cap only on its open end
+    const cone = buildLathe([[1, -1], [0, 1]], 4, false, true);
+    assert.equal(cone.vertexCount, 4 * 6 + 4 + 2);
+    assertOutward(cone, 'capped cone');
+});
+
+test('buildCylinder is a capped lathe centered on the origin', () =>
+{
+    const c = buildCylinder(2, 4, 6, false);
+    assert.equal(c.vertexCount, 6 * 6 + 2 * (6 + 2));
+    assertOutward(c, 'cylinder');
+    let top = -1e9, bottom = 1e9, radius = 0;
+    for (const p of c.points)
+        top = Math.max(top, p.y), bottom = Math.min(bottom, p.y), radius = Math.max(radius, Math.hypot(p.x, p.z));
+    near(top, 2); near(bottom, -2); near(radius, 2);
+    assert.equal(buildCylinder(2, 4, 6, false, false).vertexCount, 6 * 6);
 });

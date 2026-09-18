@@ -6459,13 +6459,26 @@ declare module "littlejsengine" {
      * Build a surface of revolution about the Y axis
      * - profile is [[radius, y], ...] from bottom to top
      * - [[r,-h],[r,h]] is a cylinder, [[0,-1],[1,0],[0,1]] with 4 sides is an octahedron
+     * - capped closes each end that has a radius with a flat disc, so a cylinder or a cone is solid
      * @param {Array<Array<number>>} profile
      * @param {number} [sides] - Segments around the axis
      * @param {boolean} [smooth] - Vertex normals and shared vertices, otherwise one normal per face, defaults to render3DSmoothShading
+     * @param {boolean} [capped] - Close the ends with flat discs
      * @return {Mesh}
      * @memberof Render3D
      */
-    export function buildLathe(profile: Array<Array<number>>, sides?: number, smooth?: boolean): Mesh;
+    export function buildLathe(profile: Array<Array<number>>, sides?: number, smooth?: boolean, capped?: boolean): Mesh;
+    /**
+     * Build a cylinder standing on the Y axis, centered on the origin, capped by default
+     * @param {number} [radius]
+     * @param {number} [height]
+     * @param {number} [sides]
+     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @param {boolean} [capped]
+     * @return {Mesh}
+     * @memberof Render3D
+     */
+    export function buildCylinder(radius?: number, height?: number, sides?: number, smooth?: boolean, capped?: boolean): Mesh;
     /**
      * Build a sphere of diameter 1
      * @param {number} [segments] - Around

@@ -847,7 +847,8 @@ mesh.dirty = true                             // re-upload on the next draw afte
 render3D.drawMesh(mesh, matrix, color, tileInfo)
 
 // Shape builders - return a Mesh centered on the origin, smooth defaults to render3DSmoothShading
-buildLathe(profile, sides=8, smooth)          // profile [[radius, y], ...] bottom to top, revolved about Y
+buildLathe(profile, sides=8, smooth, capped)  // profile [[radius, y], ...] bottom to top, revolved about Y; capped closes the ends
+buildCylinder(radius=.5, height=1, sides=12, smooth, capped=true)
 buildSphere(segments=12, rings=6, smooth)     // diameter 1
 buildBox(size=vec3(1))                        // six faces with uvs, always flat
 buildGrid(sizeX, sizeZ, segmentsX, segmentsZ, heightFunction, colorFunction, smooth) // heightfield in XZ

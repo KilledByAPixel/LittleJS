@@ -23,7 +23,7 @@ function buildShapes()
     const meshes = [
         buildBox(vec3(1.5)),
         buildLathe([[0, -1], [1, 0], [0, 1]], 4),                          // octahedron
-        buildLathe([[.5, -1], [.5, 1]], 12),                               // cylinder
+        buildCylinder(.5, 2),
         buildLathe([[0, -1], [.8, -.3], [.9, .2], [.4, .6], [0, 1]], 10),  // vase
         buildSphere(),
         buildLoft([[1.2, .2, .2, -.1], [0, .7, .5, -.4], [-1, .5, .3, -.3]]), // hull, always flat

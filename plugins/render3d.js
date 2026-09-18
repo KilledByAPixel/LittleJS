@@ -1003,13 +1003,15 @@ class Mesh
  * Build a surface of revolution about the Y axis
  * - profile is [[radius, y], ...] from bottom to top
  * - [[r,-h],[r,h]] is a cylinder, [[0,-1],[1,0],[0,1]] with 4 sides is an octahedron
+ * - capped closes each end that has a radius with a flat disc, so a cylinder or a cone is solid
  * @param {Array<Array<number>>} profile
  * @param {number} [sides] - Segments around the axis
  * @param {boolean} [smooth] - Vertex normals and shared vertices, otherwise one normal per face, defaults to render3DSmoothShading
+ * @param {boolean} [capped] - Close the ends with flat discs
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildLathe(profile, sides=8, smooth=render3DSmoothShading)
+function buildLathe(profile, sides=8, smooth=render3DSmoothShading, capped=false)
 {
     ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
     ASSERT(sides > 2, 'lathe needs at least 3 sides');
@@ -1072,7 +1074,50 @@ function buildLathe(profile, sides=8, smooth=render3DSmoothShading)
             }
         }
     }
+
+    // flat discs close the ends that have a radius, a hard edge even when the sides are smooth
+    if (capped)
+        for (const [i, up] of [[0, false], [rings - 1, true]])
+        {
+            if (!profile[i][0]) continue;
+            const points = [], uvs = [];
+            for (let j = 0; j < sides; ++j)
+            {
+                const a = (up ? j : -j) / sides * 2 * PI; // counter clockwise seen from outside
+                points.push(point(i, a));
+                uvs.push(vec2(sin(a) * .5 + .5, cos(a) * .5 + .5));
+            }
+            mesh.addStrip(render3DPolygonStrip(points), vec3(0, up ? 1 : -1, 0), render3DPolygonStrip(uvs));
+        }
     return mesh;
+}
+
+// reorder a convex polygon's points, counter clockwise from outside, into one triangle strip
+function render3DPolygonStrip(points)
+{
+    const strip = [points[0]];
+    for (let i = 1, j = points.length - 1; i <= j; ++i, --j)
+    {
+        strip.push(points[i]);
+        if (i !== j)
+            strip.push(points[j]);
+    }
+    return strip;
+}
+
+/**
+ * Build a cylinder standing on the Y axis, centered on the origin, capped by default
+ * @param {number} [radius]
+ * @param {number} [height]
+ * @param {number} [sides]
+ * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+ * @param {boolean} [capped]
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildCylinder(radius=.5, height=1, sides=12, smooth=render3DSmoothShading, capped=true)
+{
+    return buildLathe([[radius, -height / 2], [radius, height / 2]], sides, smooth, capped);
 }
 
 /**
