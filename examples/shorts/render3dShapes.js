@@ -1,5 +1,3 @@
-// Render3D plugin: shape builders, lighting, fog, sky and the shading toggle
-
 class Spinner extends EngineObject3D
 {
     constructor(pos, color, speed)
@@ -15,7 +13,7 @@ class Spinner extends EngineObject3D
     }
 }
 
-let floorMesh, spinners = [], orbit = 0;
+let spinners = [], orbit = 0;
 
 function buildShapes()
 {
@@ -40,18 +38,15 @@ function gameInit()
     render3D.fogEnd = 40;
     render3D.lightDirection = vec3(-.5, -1, -.3).normalize();
     render3D.ambientColor = rgb(.35, .35, .4);
-    floorMesh = buildGrid(30, 30, 15, 15, undefined, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? rgb(.35, .5, .35) : rgb(.3, .45, .3));
 
-    // a ring of shapes, buildShapes assigns their meshes
+    // a checkerboard floor and a ring of shapes, buildShapes assigns their meshes
+    new EngineObject3D(vec3(), buildGrid(30, 30, 15, 15, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? rgb(.35, .5, .35) : rgb(.3, .45, .3)));
     for (let i = 0; i < 6; ++i)
     {
         const a = i / 6 * 2 * PI;
-        spinners.push(new Spinner(vec3(Math.sin(a) * 5, 2.5, Math.cos(a) * 5), hsl(i / 6, .7, .6), .01 + i * .004));
+        spinners.push(new Spinner(vec3(sin(a) * 5, 2.5, cos(a) * 5), hsl(i / 6, .7, .6), .01 + i * .004));
     }
     buildShapes();
-
-    // the floor is drawn outside of objects in the opaque stage, shadows in the transparent stage
-    render3D.onRender = ()=> floorMesh.render();
     render3D.onRenderTransparent = ()=> spinners.forEach(s => render3D.drawShadow(s.pos3D, 1.5));
 }
 
@@ -67,8 +62,7 @@ function gameUpdate()
 
     // orbit the camera, drag to turn it
     orbit += mouseIsDown(0) ? mouseDeltaScreen.x * .01 : .003;
-    render3D.camera.pos = vec3(Math.sin(orbit) * 12, 6, Math.cos(orbit) * 12);
-    render3D.camera.lookAt(vec3(0, 1, 0));
+    render3D.camera.orbit(vec3(0, 1, 0), 13, orbit, .4);
 }
 
 function gameRenderPost()

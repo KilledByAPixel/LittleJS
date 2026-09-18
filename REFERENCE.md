@@ -797,8 +797,8 @@ raycastBox(origin, direction, pos, size)       // distance t to the box, or unde
 - Requires the 3D Math plugin. One shader: directional + ambient light, specular, fog, textures, vertex colors
 - Meshes are triangle strips drawn by matrix; immediate mode pushes batch into a stream
 - EngineObject3D extends EngineObject, so update, destroy, timers and renderOrder all work; addChild parents 3D transforms when the parent is an EngineObject3D; the 2D pos is ignored by rendering
-- 2D physics still runs on the inherited pos and velocity, handy for pseudo-3D games that copy pos into pos3D
-- See the `examples/shorts/render3d*.js` demos: shapes, billboards, height map terrain, and collision with picking
+- velocity3D is added to pos3D each frame, there is no other 3D physics; 2D physics still runs on the inherited pos and velocity, handy for pseudo-3D games that copy pos into pos3D
+- See the `examples/shorts/render3d*.js` demos: shapes, billboards, blending, height map terrain, and collision with picking
 
 ```javascript
 // Setup (call in gameInit)
@@ -809,6 +809,10 @@ render3D.camera.pos = vec3(0, 5, 10)  // Camera3D: pos, rotation (pitch, yaw, ro
 render3D.camera.lookAt(target)        // point at a target, clears roll
 render3D.camera.align2D = true        // lock to the 2D camera so the z=0 plane matches world space
 render3D.camera.forward() .right() .up()
+render3D.camera.orbit(target, distance, yaw, pitch=.5) // park the camera on an orbit looking at the target
+render3D.cameraRight .cameraUp .cameraForward  // this frame's camera axes, read only
+render3D.viewMatrix .projectionMatrix .viewProjection // this frame's matrices, read only
+render3D.updateMatrices()             // rebuild them now, automatic each frame
 render3D.worldToScreen(pos)           // Vector3 -> screen pixels, undefined when behind the camera
 render3D.worldToClip(pos)             // Vector3 -> clip space -1..1, undefined when behind the camera
 
@@ -831,11 +835,11 @@ render3D.onRender = ()=> {}           // opaque stage, after the opaque objects:
 render3D.onRenderTransparent = ()=> {} // transparent stage, blending on and depth writes off: billboards, glows, shadows
 // every draw in the transparent stage (objects and pushes alike) is sorted far to near before it lands, so alpha and additive mix correctly
 render3D.sky = buildSky(topColor, horizonColor, bottomColor) // sky dome drawn around the camera behind everything
-render3D.screenToRay(screenPos)       // {pos, direction} world ray under a screen point, for picking with raycast*
+render3D.screenToRay(screenPos)       // {origin, direction} world ray under a screen point, for picking with raycast*
 setRender3DSmoothShading(true)        // default for every builder's smooth argument (render3DSmoothShading)
 
 // Meshes - triangle strips, uploaded on first render, drawn by matrix
-const mesh = new Mesh()
+const mesh = new Mesh
 mesh.addStrip(points, normals, uvs, colors)   // one strip; normals/uvs/colors are one value or one per point
 mesh.combine(otherMesh, matrix, color)        // append a transformed mesh (weld a static world)
 mesh.computeNormals(smooth=false)             // derive normals from the triangles
@@ -843,6 +847,7 @@ mesh.render(matrix, color, tileInfo)          // one draw call with the current 
 mesh.dispose()                                // free the GPU buffer, the CPU data stays
 mesh.upload()                                 // upload now instead of on first render
 mesh.vertexCount
+mesh.points mesh.normals mesh.uvs mesh.colors // the vertex arrays, one entry per strip vertex
 mesh.dirty = true                             // re-upload on the next draw after editing the arrays directly
 render3D.drawMesh(mesh, matrix, color, tileInfo)
 
@@ -851,7 +856,7 @@ buildLathe(profile, sides=8, smooth, capped)  // profile [[radius, y], ...] bott
 buildCylinder(radius=.5, height=1, sides=12, smooth, capped=true)
 buildSphere(segments=12, rings=6, smooth)     // diameter 1
 buildBox(size=vec3(1))                        // six faces with uvs, always flat
-buildGrid(sizeX, sizeZ, segmentsX, segmentsZ, heightFunction, colorFunction, smooth) // heightfield in XZ
+buildGrid(sizeX, sizeZ, segmentsX, segmentsZ, color, heightFunction, smooth) // XZ plane, color is a Color or (x, z)=> Color, height is (x, z)=> y
 buildLoft(stations)                           // [[z, halfWidth, top, bottom, sideHeight], ...] nose first, always flat
 buildSky(topColor, horizonColor, bottomColor) // dome colored by height, set as render3D.sky
 
@@ -860,17 +865,18 @@ const terrain = new HeightMap(heightsOrImage, size=vec2(1), height=1, colorsOrIm
 terrain.buildMesh(smooth)                     // one vertex per sample, centered on the origin
 terrain.getHeight(x, z)                       // interpolated world height, to stand things on it
 terrain.getColor(x, z)                        // nearest sample color
+terrain.rows terrain.columns                  // samples along Z and X
 
 // All 3D draws happen inside the 3D pass: from render3D.onRender or an EngineObject3D's render3D()
-// Argument order: billboards take tileInfo before color like drawTile; geometry draws (drawMesh, drawQuad3D, pushStrip, mesh.render) take color before tileInfo
+// Argument order: billboards take tileInfo before color like drawTile; geometry draws (drawMesh, drawQuad, pushStrip, mesh.render) take color before tileInfo
 // Immediate mode - pushes batch into one strip per flush, textured pushes flush on texture change
 render3D.pushStrip(points, normals, uvs, colors, tileInfo)
 render3D.pushStripUnlit(points, normals, uvs, colors, tileInfo) // same with lighting off
 render3D.drawBillboard(pos, size, tileInfo, color, angle) // camera facing quad, unlit, size is a Vector2
-render3D.drawQuad3D(a, b, c, d, color, tileInfo)          // corners in loop order, a is the texture's top left
-render3D.drawTriangle3D(a, b, c, color)
-render3D.drawLine3D(start, end, thickness, color)         // camera facing ribbon, unlit
-render3D.drawSoftDisc(pos, normal, radius, color, sides)  // fades to transparent at the rim, unlit
+render3D.drawQuad(a, b, c, d, color, tileInfo)            // corners in loop order, a is the texture's top left
+render3D.drawTriangle(a, b, c, color)
+render3D.drawLine(start, end, thickness, color)           // camera facing ribbon, unlit
+render3D.drawSoftDisc(pos, radius, color, normal, sides)  // fades to transparent at the rim, unlit, faces the camera unless a normal is given
 render3D.drawShadow(pos, radius, floorHeight, color)      // soft blob shadow on the floor under pos, unlit
 render3D.flush()                                          // draw what is pending, automatic when needed
 render3D.bake(()=> { ...pushes... })                      // returns the pushes as a Mesh
@@ -878,6 +884,7 @@ render3D.bake(()=> { ...pushes... })                      // returns the pushes 
 // Objects - EngineObject with a 3D transform, drawn by the 3D pass
 new EngineObject3D(pos3D, mesh, color, tileInfo)
 obj.pos3D obj.rotation3D obj.scale3D   // Vector3, rotation is (pitch, yaw, roll)
+obj.velocity3D                          // added to pos3D each frame
 obj.mesh obj.color obj.tileInfo         // what to draw and how
 obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
 obj.renderOrder                         // sorts the opaque stage

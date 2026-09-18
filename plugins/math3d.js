@@ -431,6 +431,8 @@ class Matrix4
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
 /**
  * Build an object matrix: translate, then rotate, then scale (scale is applied to points first)
  * @param {Vector3} [pos]
@@ -451,6 +453,7 @@ function buildMatrix(pos, rotation, scale)
 ///////////////////////////////////////////////////////////////////////////////
 // 3D collision: axis aligned boxes are centered at pos with full size, cylinders
 // stand on the Y axis centered at pos with full height, all functions are pure
+// names take a 3D suffix only where the 2D engine already uses the name
 
 /**
  * Check if a point is inside an axis aligned box, boundary is inclusive

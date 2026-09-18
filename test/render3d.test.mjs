@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects } from '../dist/littlejs.esm.js';
 
+// the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
 
@@ -26,6 +27,7 @@ test('Render3DPlugin has the documented defaults', () =>
     assert.equal(render3D.specular, 0);
     assert.equal(render3D.fogEnd, 0);
     assert.equal(render3D.fogColor, undefined);
+    assert.equal(render3D.isRendering, false);
 });
 
 test('Camera3D defaults look down -Z from +Z', () =>
@@ -277,7 +279,7 @@ test('buildBox has six axis aligned faces', () =>
 
 test('buildGrid samples the height and color functions and faces up', () =>
 {
-    const m = buildGrid(4, 2, 2, 1, (x, z)=> x + 10*z, (x, z)=> rgb((x + 2) / 4, 0, 0), true);
+    const m = buildGrid(4, 2, 2, 1, (x, z)=> rgb((x + 2) / 4, 0, 0), (x, z)=> x + 10*z, true);
     assert.equal(m.vertexCount, 1 * (2 * 3 + 2));
     // corners: x in -2..2, z in -1..1
     const corner = m.points.find(p => Math.abs(p.x + 2) < 1e-6 && Math.abs(p.z + 1) < 1e-6);
@@ -322,10 +324,10 @@ test('drawing helpers push the expected vertex counts when baked', () =>
     render3D.camera.pos = vec3(0, 0, 10);
     render3D.camera.rotation = vec3();
     render3D.updateMatrices(1);
-    const quad = render3D.bake(()=> render3D.drawQuad3D(vec3(-1, 1, 0), vec3(-1, -1, 0), vec3(1, -1, 0), vec3(1, 1, 0)));
+    const quad = render3D.bake(()=> render3D.drawQuad(vec3(-1, 1, 0), vec3(-1, -1, 0), vec3(1, -1, 0), vec3(1, 1, 0)));
     assert.equal(quad.vertexCount, 6);
     nearVec(quad.normals[1], 0, 0, 1); // counter clockwise from +Z
-    const tri = render3D.bake(()=> render3D.drawTriangle3D(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0)));
+    const tri = render3D.bake(()=> render3D.drawTriangle(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0)));
     assert.equal(tri.vertexCount, 6);
     nearVec(tri.normals[1], 0, 0, 1);
     const bb = render3D.bake(()=> render3D.drawBillboard(vec3(0, 0, 0), vec2(2, 4)));
@@ -333,10 +335,10 @@ test('drawing helpers push the expected vertex counts when baked', () =>
     nearVec(bb.points[1], -1, 2, 0);   // top left faces the camera on +Z
     nearVec(bb.points[4], 1, -2, 0);   // bottom right
     nearVec(bb.normals[1], 0, 0, 1);   // toward the camera
-    const line = render3D.bake(()=> render3D.drawLine3D(vec3(0, 0, 0), vec3(4, 0, 0), .5));
+    const line = render3D.bake(()=> render3D.drawLine(vec3(0, 0, 0), vec3(4, 0, 0), .5));
     assert.equal(line.vertexCount, 6);
     near(Math.abs(line.points[1].y), .25); // ribbon width across the line, in the screen plane
-    const disc = render3D.bake(()=> render3D.drawSoftDisc(vec3(), vec3(0, 0, 1), 1, WHITE, 8));
+    const disc = render3D.bake(()=> render3D.drawSoftDisc(vec3(), 1, WHITE, vec3(0, 0, 1), 8));
     assert.equal(disc.vertexCount, 3 * (2 * 9 + 2));
     // each ring strip alternates outer, inner; the last real vertex is inner, the one before is the transparent rim
     near(disc.colors[disc.vertexCount - 3].a, 0);
@@ -353,19 +355,11 @@ test('billboard angle rotates in the camera plane', () =>
     nearVec(bb.points[1], -1, -1, 0);
 });
 
-test('isRendering defaults to false and a headless render is a no-op', () =>
-{
-    assert.equal(render3D.isRendering, false);
-    const mesh = new Mesh;
-    mesh.addStrip([vec3(), vec3(1), vec3(2), vec3(3)]);
-    assert.doesNotThrow(()=> mesh.render()); // headless: no shader, returns before the guard
-});
-
 test('drawSoftDisc triangles face the supplied normal', () =>
 {
     for (const n of [vec3(0, 0, 1), vec3(0, 1, 0), vec3(1, 0, 0), vec3(1, 1, 1).normalize()])
     {
-        const disc = render3D.bake(()=> render3D.drawSoftDisc(vec3(), n, 1, WHITE, 8));
+        const disc = render3D.bake(()=> render3D.drawSoftDisc(vec3(), 1, WHITE, n, 8));
         const p = disc.points;
         let checked = 0;
         for (let i = 0; i + 2 < p.length; ++i)
@@ -384,8 +378,8 @@ test('an odd strip does not flip the winding of the strips after it', () =>
 {
     const mesh = render3D.bake(()=>
     {
-        render3D.drawTriangle3D(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0));
-        render3D.drawQuad3D(vec3(0, 0, 1), vec3(1, 0, 1), vec3(1, 1, 1), vec3(0, 1, 1));
+        render3D.drawTriangle(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0));
+        render3D.drawQuad(vec3(0, 0, 1), vec3(1, 0, 1), vec3(1, 1, 1), vec3(0, 1, 1));
     });
     mesh.computeNormals(false);
     const p = mesh.points;
@@ -508,8 +502,8 @@ test('render3D stages draw the sky, opaque by renderOrder, onRender, then the tr
     assert.deepEqual(names, ['sky', 'a:O', 'b:O', 'onRender', 'near:T', 'far:T', 'onRenderTransparent:T']);
     assert.ok(!names.includes('dead:O'), 'destroyed objects are skipped');
     assert.ok(order.every(o => o.additive === false && o.depthTest === true), 'both stages draw with additive off and depth test on');
-    assert.equal(render3D.blend, true);       // left in the transparent stage's state
-    assert.equal(render3D.depthWrite, false);
+    assert.equal(render3D.blend, false);      // the stage leaves the fields honest afterward
+    assert.equal(render3D.depthWrite, true);
     render3D.onRender = undefined;
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
@@ -534,7 +528,7 @@ test('render3DSmoothShading sets the default for the builders', () =>
 
 test('flat buildGrid faces up with one normal per cell', () =>
 {
-    const m = buildGrid(4, 4, 2, 2, (x, z)=> x * .5, undefined, false);
+    const m = buildGrid(4, 4, 2, 2, undefined, (x, z)=> x * .5, false);
     for (let i = 0; i < m.vertexCount; ++i)
     {
         assert.ok(m.normals[i].y > 0);
@@ -622,7 +616,7 @@ test('screenToRay points forward at the center and right of it toward +x', () =>
     render3D.updateMatrices(16/9);
     const size = vec2(960, 540);
     const center = render3D.screenToRay(vec2(480, 270), size);
-    nearVec(center.pos, 1, 2, 10);
+    nearVec(center.origin, 1, 2, 10);
     nearVec(center.direction, 0, 0, -1);
     const right = render3D.screenToRay(vec2(960, 270), size);
     assert.ok(right.direction.x > 0 && Math.abs(right.direction.y) < 1e-6);
@@ -648,7 +642,7 @@ test('drawShadow is a soft disc facing up just above the floor', () =>
     near(Math.min(...distances), 0);
 });
 
-test('Mesh.dirty is set by edits and cleared only by upload', () =>
+test('Mesh.dirty is set by every edit', () =>
 {
     const m = new Mesh;
     assert.equal(m.dirty, false);
@@ -660,7 +654,7 @@ test('Mesh.dirty is set by edits and cleared only by upload', () =>
     m.dirty = false;
     m.computeNormals();
     assert.equal(m.dirty, true);
-    m.upload(); // headless: no shader, stays dirty until a real upload
+    m.upload(); // a no-op with no GL context, so it stays dirty
     assert.equal(m.dirty, true);
 });
 
@@ -711,7 +705,7 @@ test('pushStripUnlit turns lighting off for the push and restores it, even on a 
         capture.addStrip = (...args)=> { seen.push(render3D.lighting); return addStrip(...args); };
         render3D.pushStripUnlit([vec3(), vec3(1), vec3(2)]);
         render3D.drawBillboard(vec3(), vec2(1));
-        render3D.drawLine3D(vec3(), vec3(1));
+        render3D.drawLine(vec3(), vec3(1));
         render3D.drawShadow(vec3(), 1);
         render3D.pushStrip([vec3(), vec3(1), vec3(2)]);
     });
@@ -789,4 +783,36 @@ test('buildCylinder is a capped lathe centered on the origin', () =>
         top = Math.max(top, p.y), bottom = Math.min(bottom, p.y), radius = Math.max(radius, Math.hypot(p.x, p.z));
     near(top, 2); near(bottom, -2); near(radius, 2);
     assert.equal(buildCylinder(2, 4, 6, false, false).vertexCount, 6 * 6);
+});
+
+test('Camera3D.orbit parks the camera at the distance and angles and looks at the target', () =>
+{
+    const c = new Camera3D;
+    c.orbit(vec3(1, 2, 3), 10, 0, 0);
+    nearVec(c.pos, 1, 2, 13);
+    nearVec(c.forward(), 0, 0, -1);
+    c.orbit(vec3(), 10, PI / 2, PI / 4);
+    near(c.pos.distance(vec3()), 10);
+    near(c.pos.y, 10 * Math.SQRT1_2);
+    near(c.pos.x, 10 * Math.SQRT1_2);
+    nearVec(c.forward(), -c.pos.x / 10, -c.pos.y / 10, 0);
+});
+
+test('EngineObject3D integrates velocity3D in updatePhysics', () =>
+{
+    const o = new EngineObject3D(vec3(1, 2, 3));
+    o.velocity3D = vec3(.1, 0, -.1);
+    o.updatePhysics();
+    nearVec(o.pos3D, 1.1, 2, 2.9);
+    near(o.pos.x, 0); // the 2D body is untouched
+    o.destroy();
+});
+
+test('buildGrid takes a flat color or a color function', () =>
+{
+    const flat = buildGrid(2, 2, 1, 1, RED);
+    assert.ok(flat.colors.every(c => c.r === 1 && c.g === 0));
+    const fn = buildGrid(2, 2, 2, 1, (x, z)=> x < 0 ? RED : WHITE, undefined, false);
+    assert.ok(fn.colors.slice(0, 6).every(c => c.g === 0) && fn.colors.slice(6).every(c => c.g === 1));
+    assert.ok(buildGrid(2, 2).colors.every(c => c.g === 1));
 });

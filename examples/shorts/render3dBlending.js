@@ -1,5 +1,3 @@
-// Render3D plugin: alpha smoke and additive fire in one scene, the transparent stage sorts them far to near
-
 class Puff extends EngineObject3D
 {
     constructor(pos, additive)
@@ -12,23 +10,23 @@ class Puff extends EngineObject3D
     }
     update()
     {
-        this.pos3D = this.pos3D.add(this.velocity3D);
         this.life -= .01;
         if (this.life <= 0)
             this.destroy();
     }
     render3D()
     {
-        // fire is an additive glow that fades as it rises, smoke is an alpha blended soft disc that grows
+        // fire is an additive glow that fades as it rises, smoke is an alpha blended puff that grows
         render3D.additive = this.additive;
-        const size = this.additive ? .8 : .8 + (1 - this.life) * 1.5;
-        const color = this.additive ? hsl(.08 * this.life, 1, .5, this.life * .4) : rgb(.5, .5, .55, this.life * .4);
-        render3D.drawSoftDisc(this.pos3D, render3D.cameraForward.scale(-1), size, color, 8);
+        if (this.additive)
+            render3D.drawSoftDisc(this.pos3D, .8, hsl(.08 * this.life, 1, .5, this.life * .4), undefined, 8);
+        else
+            render3D.drawSoftDisc(this.pos3D, .8 + (1 - this.life) * 1.5, rgb(.5, .5, .55, this.life * .4), undefined, 8);
         render3D.additive = false;
     }
 }
 
-let floorMesh, pillarMesh, orbit = 0;
+let orbit = 0;
 
 function gameInit()
 {
@@ -36,15 +34,15 @@ function gameInit()
     render3D.sky = buildSky(rgb(.05, .05, .1), rgb(.2, .1, .1), rgb(.05, .05, .05));
     render3D.ambientColor = rgb(.2, .2, .25);
     render3D.lightDirection = vec3(.3, -1, .5).normalize();
-    floorMesh = buildGrid(20, 20, 1, 1, undefined, ()=> rgb(.2, .2, .22));
-    pillarMesh = buildLathe([[.6, 0], [.5, 4]], 8);
+
+    // a floor and pillars around the fire, puffs pass in front of and behind them
+    new EngineObject3D(vec3(), buildGrid(20, 20, 1, 1, rgb(.2, .2, .22)));
+    const pillar = buildCylinder(.5, 4, 8);
     for (let i = 0; i < 4; ++i)
     {
-        // pillars around the fire, sprites in front of and behind them show the sorting
         const a = i / 4 * 2 * PI + PI / 4;
-        new EngineObject3D(vec3(Math.sin(a) * 3, 0, Math.cos(a) * 3), pillarMesh, rgb(.5, .45, .4));
+        new EngineObject3D(vec3(sin(a) * 3, 2, cos(a) * 3), pillar, rgb(.5, .45, .4));
     }
-    render3D.onRender = ()=> floorMesh.render();
 }
 
 function gameUpdate()
@@ -54,8 +52,7 @@ function gameUpdate()
     new Puff(vec3(rand(-.5, .5), .2, rand(-.5, .5)), false);
 
     orbit += mouseIsDown(0) ? mouseDeltaScreen.x * .01 : .003;
-    render3D.camera.pos = vec3(Math.sin(orbit) * 9, 4, Math.cos(orbit) * 9);
-    render3D.camera.lookAt(vec3(0, 1.5, 0));
+    render3D.camera.orbit(vec3(0, 1.5, 0), 10, orbit, .3);
 }
 
 function gameRenderPost()

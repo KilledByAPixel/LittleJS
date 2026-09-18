@@ -6232,13 +6232,22 @@ declare module "littlejsengine" {
          *  @param {Vector3} pos
          *  @return {Vector2|undefined} - undefined when behind the camera */
         worldToScreen(pos: Vector3): Vector2 | undefined;
+        /** Get the world space ray under a screen position, for picking with the raycast functions
+         *  - uses the camera as it is now, so it is safe to call from gameUpdate after moving the camera
+         *  @param {Vector2} screenPos - Same space as mousePosScreen
+         *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
+         *  @return {{origin: Vector3, direction: Vector3}} - Ray start and unit direction, for the raycast functions */
+        screenToRay(screenPos: Vector2, canvasSize?: Vector2): {
+            origin: Vector3;
+            direction: Vector3;
+        };
         /** Draw a mesh with the current state, flushes the stream first so draw order holds
          *  @param {Mesh} mesh
          *  @param {Matrix4} [matrix] - Object transform
          *  @param {Color} [color] - Tint
          *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
         drawMesh(mesh: Mesh, matrix?: Matrix4, color?: Color, tileInfo?: TileInfo): void;
-        /** Push a strip into the stream, or into the mesh being baked
+        /** Push a strip into the stream, into the mesh being baked, or onto the transparent queue during that stage
          *  - the first three points wound counter clockwise from outside are a front face
          *  @param {Array<Vector3>} points - Strip order
          *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
@@ -6250,26 +6259,21 @@ declare module "littlejsengine" {
         flush(): void;
         /** Run a draw function with every push captured into a new mesh instead of the stream
          *  - pushes inside a bake ignore their tileInfo, the baked mesh takes its texture at render time
-         *  - drawMesh calls inside a bake draw immediately rather than being captured
+         *  - drawMesh is not captured: inside the pass it draws immediately, outside it does nothing
          *  @param {Function} drawFunction
          *  @return {Mesh} */
         bake(drawFunction: Function): Mesh;
         /** Run the opaque and transparent stages over every EngineObject3D, called automatically by the 3D pass */
         renderStages(): void;
+        /** Queue a draw for the transparent stage, replayed far to near with the current draw state
+         *  @param {Vector3} pos - Where the draw is, for sorting
+         *  @param {Function} draw */
+        queueTransparent(pos: Vector3, draw: Function): void;
         /** Draw the queued transparent draws far to near with the state each was pushed under, called automatically at the end of the transparent stage */
         flushTransparentQueue(): void;
         /** Draw a sky dome around the camera, unlit, unfogged and behind everything, called automatically when render3D.sky is set
          *  @param {Mesh} mesh - From buildSky */
         drawSky(mesh: Mesh): void;
-        /** Get the world space ray under a screen position, for picking with the raycast functions
-         *  - uses the camera as it is now, so it is safe to call from gameUpdate after moving the camera
-         *  @param {Vector2} screenPos - Same space as mousePosScreen
-         *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
-         *  @return {{pos: Vector3, direction: Vector3}} - Ray start and unit direction */
-        screenToRay(screenPos: Vector2, canvasSize?: Vector2): {
-            pos: Vector3;
-            direction: Vector3;
-        };
         /** Push a strip with lighting off, for camera facing shapes where the light direction means nothing
          *  @param {Array<Vector3>} points - Strip order
          *  @param {Vector3|Array<Vector3>} [normals]
@@ -6291,32 +6295,32 @@ declare module "littlejsengine" {
          *  @param {Vector3} d
          *  @param {Color} [color]
          *  @param {TileInfo} [tileInfo] */
-        drawQuad3D(a: Vector3, b: Vector3, c: Vector3, d: Vector3, color?: Color, tileInfo?: TileInfo): void;
+        drawQuad(a: Vector3, b: Vector3, c: Vector3, d: Vector3, color?: Color, tileInfo?: TileInfo): void;
         /** Draw a triangle, counter clockwise from outside is the front
          *  @param {Vector3} a
          *  @param {Vector3} b
          *  @param {Vector3} c
          *  @param {Color} [color] */
-        drawTriangle3D(a: Vector3, b: Vector3, c: Vector3, color?: Color): void;
+        drawTriangle(a: Vector3, b: Vector3, c: Vector3, color?: Color): void;
         /** Draw a line as a camera facing ribbon, unlit
          *  @param {Vector3} start
          *  @param {Vector3} end
          *  @param {number} [thickness] - World units
          *  @param {Color} [color] */
-        drawLine3D(start: Vector3, end: Vector3, thickness?: number, color?: Color): void;
+        drawLine(start: Vector3, end: Vector3, thickness?: number, color?: Color): void;
         /** Draw a soft round shadow on the floor under a position, unlit; draw it in the transparent stage
          *  @param {Vector3} pos - Position of the thing casting the shadow
          *  @param {number} radius
          *  @param {number} [floorHeight] - World height of the floor under pos
          *  @param {Color} [color] */
         drawShadow(pos: Vector3, radius: number, floorHeight?: number, color?: Color): void;
-        /** Draw a disc that fades to transparent at the rim, unlit, for shadows, glows and sky dots
+        /** Draw a disc that fades to transparent at the rim, unlit, for glows, puffs, shadows and sky dots
          *  @param {Vector3} pos - Center
-         *  @param {Vector3} normal - Facing direction
          *  @param {number} radius
          *  @param {Color} [color]
+         *  @param {Vector3} [normal] - Facing direction, faces the camera by default
          *  @param {number} [sides] */
-        drawSoftDisc(pos: Vector3, normal: Vector3, radius: number, color?: Color, sides?: number): void;
+        drawSoftDisc(pos: Vector3, radius: number, color?: Color, normal?: Vector3, sides?: number): void;
     }
     /**
      * Camera3D - Position, rotation and lens for the 3D view
@@ -6358,6 +6362,12 @@ declare module "littlejsengine" {
         /** Point the camera at a target, sets pitch and yaw and clears roll
          *  @param {Vector3} target */
         lookAt(target: Vector3): void;
+        /** Put the camera on an orbit around a target, looking at it
+         *  @param {Vector3} target
+         *  @param {number} distance
+         *  @param {number} yaw - Radians around Y
+         *  @param {number} [pitch] - Radians above the horizon */
+        orbit(target: Vector3, distance: number, yaw: number, pitch?: number): void;
         /** Park the camera so the z=0 plane matches LittleJS 2D world space, called automatically when align2D is set
          *  @param {number} [canvasHeight] - Defaults to the main canvas height */
         update2D(canvasHeight?: number): void;
@@ -6365,7 +6375,8 @@ declare module "littlejsengine" {
     /**
      * EngineObject3D - An EngineObject with a 3D transform and a mesh
      * - Inherits update, children, timers, destroy and renderOrder from EngineObject, children that are EngineObject3D follow the parent's 3D transform
-     * - The inherited 2D pos and physics are ignored by rendering, copy pos into pos3D for pseudo-3D games
+     * - velocity3D is added to pos3D each frame, there is no other 3D physics, games do their own
+     * - The 2D pos, velocity and physics still run but rendering ignores them, copy pos into pos3D for pseudo-3D games
      * - render() is empty, override render3D() for custom drawing
      * @extends EngineObject
      * @memberof Render3D
@@ -6389,6 +6400,8 @@ declare module "littlejsengine" {
         rotation3D: Vector3;
         /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
         scale3D: Vector3;
+        /** @property {Vector3} - Added to pos3D each frame */
+        velocity3D: Vector3;
         /** @property {Mesh} - Mesh to draw */
         mesh: Mesh;
         /** @property {boolean} - Draw in the transparent stage, sorted far to near with depth writes off */
@@ -6503,13 +6516,13 @@ declare module "littlejsengine" {
      * @param {number} sizeZ
      * @param {number} [segmentsX]
      * @param {number} [segmentsZ]
+     * @param {Color|Function} [color] - A Color for the whole grid or (x, z) => Color, default white
      * @param {Function} [heightFunction] - (x, z) => y, default flat
-     * @param {Function} [colorFunction] - (x, z) => Color, default white
      * @param {boolean} [smooth] - Defaults to render3DSmoothShading
      * @return {Mesh}
      * @memberof Render3D
      */
-    export function buildGrid(sizeX: number, sizeZ: number, segmentsX?: number, segmentsZ?: number, heightFunction?: Function, colorFunction?: Function, smooth?: boolean): Mesh;
+    export function buildGrid(sizeX: number, sizeZ: number, segmentsX?: number, segmentsZ?: number, color?: Color | Function, heightFunction?: Function, smooth?: boolean): Mesh;
     /**
      * Build a loft: diamond cross sections swept along Z, quads between them, capped both ends
      * - station = [z, halfWidth, top, bottom, sideHeight] with sideHeight 0-1 placing the side points between bottom and top (default .5)
