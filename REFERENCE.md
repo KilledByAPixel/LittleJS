@@ -844,6 +844,16 @@ render3D.drawLine3D(start, end, thickness, color)         // camera facing ribbo
 render3D.drawSoftDisc(pos, normal, radius, color, sides)  // fades to transparent at the rim
 render3D.flush()                                          // draw what is pending, automatic when needed
 render3D.bake(()=> { ...pushes... })                      // returns the pushes as a Mesh
+
+// Objects - EngineObject with a 3D transform, drawn by the 3D pass
+new EngineObject3D(pos3D, mesh, color, tileInfo)
+obj.pos3D obj.rotation3D obj.scale3D   // Vector3, rotation is (pitch, yaw, roll)
+obj.mesh obj.color obj.tileInfo         // what to draw and how
+obj.transparent = true                  // draw in the transparent stage, sorted far to near, no depth writes
+obj.renderOrder                         // sorts the opaque stage
+obj.getMatrix()                         // buildMatrix(pos3D, rotation3D, scale3D)
+obj.render3D()                          // override for custom drawing; render() is empty by default
+render3D.renderStages()                 // the two stages, called automatically each frame
 ```
 
 ## LittleJS Three.js Integration

@@ -6151,6 +6151,8 @@ declare module "littlejsengine" {
          *  @param {Function} drawFunction
          *  @return {Mesh} */
         bake(drawFunction: Function): Mesh;
+        /** Run the opaque and transparent stages over every EngineObject3D, called automatically by the 3D pass */
+        renderStages(): void;
         /** Draw a camera facing quad
          *  @param {Vector3} pos - Center
          *  @param {Vector2} size - World units
@@ -6229,6 +6231,43 @@ declare module "littlejsengine" {
         /** Park the camera so the z=0 plane matches LittleJS 2D world space, called automatically when align2D is set
          *  @param {number} [canvasHeight] - Defaults to the main canvas height */
         update2D(canvasHeight?: number): void;
+    }
+    /**
+     * EngineObject3D - An EngineObject with a 3D transform and a mesh
+     * - Inherits update, children, timers, destroy and renderOrder from EngineObject
+     * - The inherited 2D pos and physics are ignored by rendering, copy pos into pos3D for pseudo-3D games
+     * - render() is empty, override render3D() for custom drawing
+     * @extends EngineObject
+     * @memberof Render3D
+     * @example
+     * class Spinner extends EngineObject3D
+     * {
+     *     constructor(pos) { super(pos, buildBox(), RED); }
+     *     update() { this.rotation3D.y += .02; }
+     * }
+     */
+    export class EngineObject3D extends EngineObject {
+        /** Create a 3D object and add it to the object list
+         *  @param {Vector3} [pos3D] - World space position
+         *  @param {Mesh} [mesh] - Mesh to draw, undefined draws nothing
+         *  @param {Color} [color] - Tint
+         *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
+        constructor(pos3D?: Vector3, mesh?: Mesh, color?: Color, tileInfo?: TileInfo);
+        /** @property {Vector3} - World space position */
+        pos3D: Vector3;
+        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians */
+        rotation3D: Vector3;
+        /** @property {Vector3} - Scale */
+        scale3D: Vector3;
+        /** @property {Mesh} - Mesh to draw */
+        mesh: Mesh;
+        /** @property {boolean} - Draw in the transparent stage, sorted far to near with depth writes off */
+        transparent: boolean;
+        /** Returns the object's world transform
+         *  @return {Matrix4} */
+        getMatrix(): Matrix4;
+        /** Draw the object in 3D, called by the 3D pass, draws the mesh by default */
+        render3D(): void;
     }
     /**
      * Mesh - A triangle strip with positions, normals, uvs and colors, uploaded once and drawn by matrix

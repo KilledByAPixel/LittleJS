@@ -17614,6 +17614,35 @@ class Render3DPlugin
         return mesh;
     }
 
+    /** Run the opaque and transparent stages over every EngineObject3D, called automatically by the 3D pass */
+    renderStages()
+    {
+        const opaque = [], transparent = [];
+        for (const o of engineObjects)
+            if (!o.destroyed && o instanceof EngineObject3D)
+                (o.transparent ? transparent : opaque).push(o);
+
+        // opaque: no blending, depth writes on, by render order
+        this.blend = this.additive = false;
+        this.depthTest = this.depthWrite = true;
+        opaque.sort((a, b)=> a.renderOrder - b.renderOrder);
+        for (const o of opaque)
+            o.render3D();
+        this.onRender?.();
+
+        // transparent: blending on, depth writes off, far to near
+        this.flush();
+        this.blend = true;
+        this.additive = false;
+        this.depthTest = true;
+        this.depthWrite = false;
+        const c = this.camera.pos;
+        transparent.sort((a, b)=> b.pos3D.distanceSquared(c) - a.pos3D.distanceSquared(c));
+        for (const o of transparent)
+            o.render3D();
+        this.flush();
+    }
+
     /** Draw a camera facing quad
      *  @param {Vector3} pos - Center
      *  @param {Vector2} size - World units
@@ -17949,7 +17978,7 @@ function render3DPreRender()
 
     // stages are filled in by the objects task
     r.isRendering = true;
-    render3DRenderStages();
+    r.renderStages();
     r.isRendering = false;
 
     // hand the state back to the engine's 2D batching
@@ -17962,9 +17991,6 @@ function render3DPreRender()
     gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer);
     glSetInstancedMode(true);
 }
-
-// the opaque and transparent stages, replaced by the objects task
-function render3DRenderStages() {}
 
 function render3DContextLost()
 {
@@ -18371,6 +18397,61 @@ function buildLoft(stations)
     quad(tail[0], tail[1], tail[2], tail[3]);
     quad(nose[3], nose[2], nose[1], nose[0]);
     return mesh;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * EngineObject3D - An EngineObject with a 3D transform and a mesh
+ * - Inherits update, children, timers, destroy and renderOrder from EngineObject
+ * - The inherited 2D pos and physics are ignored by rendering, copy pos into pos3D for pseudo-3D games
+ * - render() is empty, override render3D() for custom drawing
+ * @extends EngineObject
+ * @memberof Render3D
+ * @example
+ * class Spinner extends EngineObject3D
+ * {
+ *     constructor(pos) { super(pos, buildBox(), RED); }
+ *     update() { this.rotation3D.y += .02; }
+ * }
+ */
+class EngineObject3D extends EngineObject
+{
+    /** Create a 3D object and add it to the object list
+     *  @param {Vector3} [pos3D] - World space position
+     *  @param {Mesh} [mesh] - Mesh to draw, undefined draws nothing
+     *  @param {Color} [color] - Tint
+     *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
+    constructor(pos3D=vec3(), mesh, color=WHITE, tileInfo)
+    {
+        super(vec2(), vec2(1), tileInfo, 0, color);
+        ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
+        ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
+
+        /** @property {Vector3} - World space position */
+        this.pos3D = pos3D.copy();
+        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians */
+        this.rotation3D = vec3();
+        /** @property {Vector3} - Scale */
+        this.scale3D = vec3(1);
+        /** @property {Mesh} - Mesh to draw */
+        this.mesh = mesh;
+        /** @property {boolean} - Draw in the transparent stage, sorted far to near with depth writes off */
+        this.transparent = false;
+    }
+
+    /** Returns the object's world transform
+     *  @return {Matrix4} */
+    getMatrix() { return buildMatrix(this.pos3D, this.rotation3D, this.scale3D); }
+
+    /** 2D rendering is skipped, the mesh is drawn by render3D during the 3D pass */
+    render() {}
+
+    /** Draw the object in 3D, called by the 3D pass, draws the mesh by default */
+    render3D()
+    {
+        if (this.mesh)
+            render3D.drawMesh(this.mesh, this.getMatrix(), this.color, this.tileInfo);
+    }
 }
 
 /**
@@ -19037,6 +19118,7 @@ export
     render3D,
     Render3DPlugin,
     Camera3D,
+    EngineObject3D,
     Mesh,
     buildLathe,
     buildSphere,

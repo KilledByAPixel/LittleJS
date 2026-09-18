@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, buildLathe, buildSphere, buildBox, buildGrid, buildLoft } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, buildLathe, buildSphere, buildBox, buildGrid, buildLoft, EngineObject3D, EngineObject, engineObjects } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -366,4 +366,88 @@ test('drawSoftDisc triangles face the supplied normal', () =>
         }
         assert.ok(checked > 0);
     }
+});
+
+test('EngineObject3D extends EngineObject and has a 3D transform', () =>
+{
+    const mesh = buildBox();
+    const o = new EngineObject3D(vec3(1, 2, 3), mesh, RED);
+    assert.ok(o instanceof EngineObject);
+    assert.ok(engineObjects.includes(o));
+    nearVec(o.pos3D, 1, 2, 3);
+    nearVec(o.rotation3D, 0, 0, 0);
+    nearVec(o.scale3D, 1, 1, 1);
+    assert.equal(o.mesh, mesh);
+    assert.equal(o.color.r, 1);
+    assert.equal(o.color.g, 0);
+    assert.equal(o.transparent, false);
+    near(o.pos.x, 0); near(o.pos.y, 0); // 2D pos unused
+    assert.ok(o.pos3D !== undefined && o.pos3D.x === 1);
+    o.destroy();
+    assert.ok(o.destroyed);
+});
+
+test('EngineObject3D getMatrix places the origin at pos3D with rotation and scale', () =>
+{
+    const o = new EngineObject3D(vec3(5, 0, 0));
+    o.rotation3D = vec3(0, PI/2, 0);
+    o.scale3D = vec3(2);
+    nearVec(o.getMatrix().transformPoint(vec3()), 5, 0, 0);
+    nearVec(o.getMatrix().transformPoint(vec3(0, 0, 1)), 7, 0, 0);
+    o.destroy();
+});
+
+test('EngineObject3D render is a no-op and render3D draws the mesh through the plugin', () =>
+{
+    let drawn;
+    const saved = render3D.drawMesh;
+    render3D.drawMesh = (mesh, matrix, color, tileInfo)=> drawn = {mesh, matrix, color, tileInfo};
+    const mesh = buildBox();
+    const o = new EngineObject3D(vec3(1, 0, 0), mesh);
+    o.render();
+    assert.equal(drawn, undefined);
+    o.render3D();
+    assert.equal(drawn.mesh, mesh);
+    nearVec(drawn.matrix.getTranslation(), 1, 0, 0);
+    const empty = new EngineObject3D(vec3());
+    drawn = undefined;
+    empty.render3D(); // no mesh, nothing drawn
+    assert.equal(drawn, undefined);
+    render3D.drawMesh = saved;
+    o.destroy(); empty.destroy();
+});
+
+test('render3D stages draw opaque by renderOrder, then onRender, then transparent far to near', () =>
+{
+    // clean out earlier objects
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+
+    const order = [];
+    class Tracked extends EngineObject3D
+    {
+        constructor(name, pos, transparent, renderOrder=0)
+        {
+            super(pos);
+            this.name = name;
+            this.transparent = transparent;
+            this.renderOrder = renderOrder;
+        }
+        render3D() { order.push(this.name + ':' + (render3D.blend ? 'T' : 'O')); }
+    }
+    render3D.camera.pos = vec3(0, 0, 10);
+    render3D.camera.rotation = vec3();
+    new Tracked('b', vec3(), false, 2);
+    new Tracked('a', vec3(), false, 1);
+    new Tracked('near', vec3(0, 0, 5), true);
+    new Tracked('far', vec3(0, 0, -5), true);
+    render3D.onRender = ()=> order.push('onRender');
+    render3D.updateMatrices(1);
+    render3D.renderStages();
+    assert.deepEqual(order, ['a:O', 'b:O', 'onRender', 'far:T', 'near:T']);
+    assert.equal(render3D.blend, true);       // left in the transparent stage's state
+    assert.equal(render3D.depthWrite, false);
+    render3D.onRender = undefined;
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
 });

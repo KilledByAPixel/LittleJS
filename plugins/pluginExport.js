@@ -107,6 +107,7 @@ export
     render3D,
     Render3DPlugin,
     Camera3D,
+    EngineObject3D,
     Mesh,
     buildLathe,
     buildSphere,
