@@ -99,12 +99,13 @@ let showEngineVersion = true;
 const pluginList = [];
 class EnginePlugin
 {
-    constructor(update, render, glContextLost, glContextRestored)
+    constructor(update, render, glContextLost, glContextRestored, preRender)
     {
         this.update = update;
         this.render = render;
         this.glContextLost = glContextLost;
         this.glContextRestored = glContextRestored;
+        this.preRender = preRender;
     }
 }
 
@@ -118,16 +119,18 @@ class EnginePlugin
  *  @param {PluginCallback} [render]
  *  @param {PluginCallback} [glContextLost]
  *  @param {PluginCallback} [glContextRestored]
+ *  @param {PluginCallback} [preRender] - Called after the canvas is cleared and before gameRender
  *  @memberof Engine */
-function engineAddPlugin(update, render, glContextLost, glContextRestored)
+function engineAddPlugin(update, render, glContextLost, glContextRestored, preRender)
 {
     // make sure plugin functions are unique
     ASSERT(!pluginList.find(p=>
         p.update === update && p.render === render &&
         p.glContextLost === glContextLost &&
-        p.glContextRestored === glContextRestored));
+        p.glContextRestored === glContextRestored &&
+        p.preRender === preRender));
 
-    const plugin = new EnginePlugin(update, render, glContextLost, glContextRestored);
+    const plugin = new EnginePlugin(update, render, glContextLost, glContextRestored, preRender);
     pluginList.push(plugin);
 }
 
@@ -195,6 +198,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
         // setup gl rendering if enabled
         glPreRender();
+
+        // plugins that draw underneath the 2D layer
+        pluginList.forEach(plugin=>plugin.preRender?.());
     }
 
     // internal update loop for engine
