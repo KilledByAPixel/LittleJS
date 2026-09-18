@@ -18029,7 +18029,8 @@ function buildBox(size=vec3(1))
 
 /**
  * Build a heightfield grid in the XZ plane centered on the origin
- * - smooth is one ribbon strip per row with slope normals, flat is one strip per cell with a face normal
+ * - smooth is one ribbon strip per row with slope normals and a color per vertex
+ * - flat is one strip per cell with a face normal and one color sampled at the cell center, so checkerboards stay crisp
  * @param {number} sizeX
  * @param {number} sizeZ
  * @param {number} [segmentsX]
@@ -18073,13 +18074,12 @@ function buildGrid(sizeX, sizeZ, segmentsX=1, segmentsZ=1, heightFunction=()=>0,
         }
         else
         {
-            // one quad per cell with its face normal
+            // one quad per cell with its face normal and one color sampled at its center
             for (let i = 0; i < segmentsX; ++i)
             {
                 const a = point(i, j), b = point(i, j + 1), c = point(i + 1, j + 1), d = point(i + 1, j);
                 mesh.addStrip([a, b, d, c], render3DQuadNormal(a, b, c, d),
-                    [uv(i, j), uv(i, j + 1), uv(i + 1, j), uv(i + 1, j + 1)],
-                    [color(i, j), color(i, j + 1), color(i + 1, j), color(i + 1, j + 1)]);
+                    [uv(i, j), uv(i, j + 1), uv(i + 1, j), uv(i + 1, j + 1)], color(i + .5, j + .5));
             }
         }
     }

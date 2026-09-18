@@ -19,11 +19,11 @@ class Puff extends EngineObject3D
     }
     render3D()
     {
-        // fire is an additive glow, smoke is an alpha blended soft disc, both face the camera
+        // fire is an additive glow that fades as it rises, smoke is an alpha blended soft disc that grows
         render3D.additive = this.additive;
-        const size = 1 + (1 - this.life) * 2;
-        const color = this.additive ? hsl(.08 * this.life, 1, .5, this.life) : rgb(.3, .3, .35, this.life * .5);
-        render3D.drawSoftDisc(this.pos3D, render3D.cameraForward.scale(-1), size, color);
+        const size = this.additive ? .8 : .8 + (1 - this.life) * 1.5;
+        const color = this.additive ? hsl(.08 * this.life, 1, .5, this.life * .4) : rgb(.5, .5, .55, this.life * .4);
+        render3D.drawSoftDisc(this.pos3D, render3D.cameraForward.scale(-1), size, color, 8);
         render3D.additive = false;
     }
 }

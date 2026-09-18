@@ -6484,7 +6484,8 @@ declare module "littlejsengine" {
     export function buildBox(size?: Vector3): Mesh;
     /**
      * Build a heightfield grid in the XZ plane centered on the origin
-     * - smooth is one ribbon strip per row with slope normals, flat is one strip per cell with a face normal
+     * - smooth is one ribbon strip per row with slope normals and a color per vertex
+     * - flat is one strip per cell with a face normal and one color sampled at the cell center, so checkerboards stay crisp
      * @param {number} sizeX
      * @param {number} sizeZ
      * @param {number} [segmentsX]
