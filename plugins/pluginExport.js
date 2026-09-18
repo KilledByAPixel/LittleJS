@@ -102,6 +102,15 @@ export
     Vector3,
     Matrix4,
     buildMatrix,
+    isPointInBox3D,
+    isOverlapping3D,
+    collideSphereSphere,
+    collideSphereBox,
+    collideSphereCylinder,
+    collideBoxBox,
+    raycastSphere,
+    raycastPlane,
+    raycastBox,
 
     // Render3D
     render3D,
@@ -114,6 +123,10 @@ export
     buildBox,
     buildGrid,
     buildLoft,
+    buildSky,
+    HeightMap,
+    render3DSmoothShading,
+    setRender3DSmoothShading,
 
     // Three.js
     threeJS,

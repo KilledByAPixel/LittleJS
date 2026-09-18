@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { vec3, isVector3, Vector3, Matrix4, buildMatrix, PI } from '../dist/littlejs.esm.js';
+import { vec3, isVector3, Vector3, Matrix4, buildMatrix, PI,
+    isPointInBox3D, isOverlapping3D, collideSphereSphere, collideSphereBox, collideSphereCylinder,
+    collideBoxBox, raycastSphere, raycastPlane, raycastBox } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-6, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -180,4 +182,78 @@ test('Vector3 transform helpers use the matrix', () =>
     const m = Matrix4.translation(vec3(1, 1, 1));
     nearVec(vec3(1, 2, 3).transform(m), 2, 3, 4);
     nearVec(vec3(1, 2, 3).transformDirection(m), 1, 2, 3);
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// 3D collision
+
+test('isPointInBox3D checks each axis and includes the boundary', () =>
+{
+    const pos = vec3(0, 0, 0), size = vec3(2, 4, 6); // half = (1, 2, 3)
+    assert.ok(isPointInBox3D(vec3(.5, 1, 2), pos, size));
+    assert.ok(isPointInBox3D(vec3(1, 2, 3), pos, size)); // boundary is inclusive
+    assert.ok(!isPointInBox3D(vec3(1.01, 0, 0), pos, size));
+    assert.ok(!isPointInBox3D(vec3(0, 2.01, 0), pos, size));
+    assert.ok(!isPointInBox3D(vec3(0, 0, 3.01), pos, size));
+});
+
+test('isOverlapping3D matches touching vs overlapping boxes', () =>
+{
+    const sizeA = vec3(2, 2, 2), sizeB = vec3(2, 2, 2); // half = 1 each, sum of halves = 2
+    assert.ok(isOverlapping3D(vec3(0, 0, 0), sizeA, vec3(1.9, 0, 0), sizeB));
+    assert.ok(!isOverlapping3D(vec3(0, 0, 0), sizeA, vec3(2, 0, 0), sizeB)); // exactly touching
+});
+
+test('collideSphereSphere pushes A away from B by the penetration', () =>
+{
+    assert.equal(collideSphereSphere(vec3(3, 0, 0), 1, vec3(0, 0, 0), 1), undefined); // not touching
+    nearVec(collideSphereSphere(vec3(1, 0, 0), 1, vec3(0, 0, 0), 1), 1, 0, 0);
+    nearVec(collideSphereSphere(vec3(0, 0, 0), 1, vec3(0, 0, 0), 1), 0, 2, 0); // coincident centers push +Y
+});
+
+test('collideSphereBox pushes out from outside and from inside', () =>
+{
+    const boxPos = vec3(0, 0, 0), boxSize = vec3(2, 2, 2); // half = 1
+    assert.equal(collideSphereBox(vec3(3, 0, 0), 1, boxPos, boxSize), undefined); // not touching
+    nearVec(collideSphereBox(vec3(2, 0, 0), 1.5, boxPos, boxSize), .5, 0, 0); // outside on X
+    nearVec(collideSphereBox(vec3(.3, 0, 0), 1, boxPos, boxSize), 1.7, 0, 0); // inside, X is least penetration
+});
+
+test('collideSphereCylinder hits the side and the cap', () =>
+{
+    const cylPos = vec3(0, 0, 0), cylRadius = 1, cylHeight = 2; // Y range -1..1
+    nearVec(collideSphereCylinder(vec3(1.5, 0, 0), 1, cylPos, cylRadius, cylHeight), .5, 0, 0); // side
+    nearVec(collideSphereCylinder(vec3(0, 1.5, 0), 1, cylPos, cylRadius, cylHeight), 0, .5, 0); // cap
+    assert.equal(collideSphereCylinder(vec3(5, 0, 0), 1, cylPos, cylRadius, cylHeight), undefined);
+});
+
+test('collideBoxBox returns the minimum translation vector on the smallest axis', () =>
+{
+    const sizeA = vec3(4, 4, 4), sizeB = vec3(4, 4, 4); // half = 2 each
+    assert.equal(collideBoxBox(vec3(5, 0, 0), sizeA, vec3(0, 0, 0), sizeB), undefined); // not touching
+    nearVec(collideBoxBox(vec3(0, 0, 0), sizeA, vec3(3, .5, 0), sizeB), -1, 0, 0); // X is smallest overlap
+});
+
+test('raycastSphere handles hit, miss, inside and behind', () =>
+{
+    near(raycastSphere(vec3(0, 0, -5), vec3(0, 0, 1), vec3(0, 0, 0), 1), 4);
+    assert.equal(raycastSphere(vec3(5, 5, -5), vec3(0, 0, 1), vec3(0, 0, 0), 1), undefined);
+    assert.equal(raycastSphere(vec3(0, 0, 0), vec3(0, 0, 1), vec3(0, 0, 0), 1), 0); // origin inside
+    assert.equal(raycastSphere(vec3(0, 0, 5), vec3(0, 0, 1), vec3(0, 0, 0), 1), undefined); // behind origin
+});
+
+test('raycastPlane handles hit, parallel and behind', () =>
+{
+    near(raycastPlane(vec3(0, 0, 0), vec3(0, 1, 0), vec3(0, 5, 0), vec3(0, 1, 0)), 5);
+    assert.equal(raycastPlane(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 5, 0), vec3(0, 1, 0)), undefined); // parallel
+    assert.equal(raycastPlane(vec3(0, 10, 0), vec3(0, 1, 0), vec3(0, 5, 0), vec3(0, 1, 0)), undefined); // behind
+});
+
+test('raycastBox handles hit, miss, inside and a zero ray component through the slab', () =>
+{
+    const pos = vec3(0, 0, 0), size = vec3(2, 2, 2); // half = 1
+    near(raycastBox(vec3(-5, 0, 0), vec3(1, 0, 0), pos, size), 4); // hit distance equals distance to near face
+    assert.equal(raycastBox(vec3(10, 0, 0), vec3(1, 0, 0), pos, size), undefined); // box is behind the ray
+    assert.equal(raycastBox(vec3(0, 0, 0), vec3(1, 0, 0), pos, size), 0); // origin inside
+    near(raycastBox(vec3(-5, .5, 0), vec3(1, 0, 0), pos, size), 4); // zero Y/Z direction still passes through
 });

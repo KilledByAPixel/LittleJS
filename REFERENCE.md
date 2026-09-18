@@ -779,6 +779,17 @@ m.invert() m.transpose()       // in place, return self
 m.copy() m.transformPoint(v) m.transformDirection(v) m.getTranslation()
 buildMatrix(pos, rotation, scale)              // translate * rotate * scale, any arg optional
 // euler is vec3(pitch, yaw, roll): applied to points as roll (Z), then pitch (X), then yaw (Y)
+
+// Collision - boxes are centered with full size, cylinders stand on Y
+isPointInBox3D(point, pos, size)               // true if point is in the box, boundary inclusive
+isOverlapping3D(posA, sizeA, posB, sizeB)      // box vs box, touching edges do not overlap
+collideSphereSphere(posA, radiusA, posB, radiusB)          // push A out of B, or undefined
+collideSphereBox(pos, radius, boxPos, boxSize)             // push a sphere out of a box, or undefined
+collideSphereCylinder(pos, radius, cylPos, cylRadius, cylHeight) // push a sphere out of a cylinder
+collideBoxBox(posA, sizeA, posB, sizeB)        // minimum translation vector for A, or undefined
+raycastSphere(origin, direction, pos, radius)  // distance t to the sphere, or undefined
+raycastPlane(origin, direction, planePos, planeNormal)     // distance t to the plane, or undefined
+raycastBox(origin, direction, pos, size)       // distance t to the box, or undefined
 ```
 
 ## LittleJS 3D Rendering
@@ -816,7 +827,11 @@ render3D.additive = false             // additive blending when blend is on
 render3D.depthTest = true; render3D.depthWrite = true
 render3D.cullBackFaces = false
 render3D.specular = 0                 // Phong highlight strength
-render3D.onRender = ()=> {}           // called between the opaque and transparent stages
+render3D.onRender = ()=> {}           // opaque stage, after the opaque objects: world geometry outside of objects
+render3D.onRenderTransparent = ()=> {} // transparent stage, blending on and depth writes off: billboards, glows, shadows
+render3D.sky = buildSky(topColor, horizonColor, bottomColor) // sky dome drawn around the camera behind everything
+render3D.screenToRay(screenPos)       // {pos, direction} world ray under a screen point, for picking with raycast*
+setRender3DSmoothShading(true)        // default for every builder's smooth argument (render3DSmoothShading)
 
 // Meshes - triangle strips, uploaded on first render, drawn by matrix
 const mesh = new Mesh()
@@ -829,22 +844,31 @@ mesh.upload()                                 // upload now instead of on first 
 mesh.vertexCount
 render3D.drawMesh(mesh, matrix, color, tileInfo)
 
-// Shape builders - return a Mesh centered on the origin
-buildLathe(profile, sides=8, smooth=false)    // profile [[radius, y], ...] bottom to top, revolved about Y
-buildSphere(segments=12, rings=6, smooth=true) // diameter 1
-buildBox(size=vec3(1))                        // six faces with uvs
-buildGrid(sizeX, sizeZ, segmentsX, segmentsZ, heightFunction, colorFunction) // heightfield in XZ
-buildLoft(stations)                           // [[z, halfWidth, top, bottom, sideHeight], ...] nose first
+// Shape builders - return a Mesh centered on the origin, smooth defaults to render3DSmoothShading
+buildLathe(profile, sides=8, smooth)          // profile [[radius, y], ...] bottom to top, revolved about Y
+buildSphere(segments=12, rings=6, smooth)     // diameter 1
+buildBox(size=vec3(1))                        // six faces with uvs, always flat
+buildGrid(sizeX, sizeZ, segmentsX, segmentsZ, heightFunction, colorFunction, smooth) // heightfield in XZ
+buildLoft(stations)                           // [[z, halfWidth, top, bottom, sideHeight], ...] nose first, always flat
+buildSky(topColor, horizonColor, bottomColor) // dome colored by height, set as render3D.sky
+
+// Height map terrain - from a 2D array [row][column] of 0-1 heights or an image's red channel
+const terrain = new HeightMap(heightsOrImage, size=vec2(1), height=1, colorsOrImage)
+terrain.buildMesh(smooth)                     // one vertex per sample, centered on the origin
+terrain.getHeight(x, z)                       // interpolated world height, to stand things on it
+terrain.getColor(x, z)                        // nearest sample color
 
 // All 3D draws happen inside the 3D pass: from render3D.onRender or an EngineObject3D's render3D()
 // Argument order: billboards take tileInfo before color like drawTile; geometry draws (drawMesh, drawQuad3D, pushStrip, mesh.render) take color before tileInfo
 // Immediate mode - pushes batch into one strip per flush, textured pushes flush on texture change
 render3D.pushStrip(points, normals, uvs, colors, tileInfo)
-render3D.drawBillboard(pos, size, tileInfo, color, angle) // camera facing quad, size is a Vector2
+render3D.pushStripUnlit(points, normals, uvs, colors, tileInfo) // same with lighting off
+render3D.drawBillboard(pos, size, tileInfo, color, angle) // camera facing quad, unlit, size is a Vector2
 render3D.drawQuad3D(a, b, c, d, color, tileInfo)          // corners in loop order, a is the texture's top left
 render3D.drawTriangle3D(a, b, c, color)
-render3D.drawLine3D(start, end, thickness, color)         // camera facing ribbon
-render3D.drawSoftDisc(pos, normal, radius, color, sides)  // fades to transparent at the rim
+render3D.drawLine3D(start, end, thickness, color)         // camera facing ribbon, unlit
+render3D.drawSoftDisc(pos, normal, radius, color, sides)  // fades to transparent at the rim, unlit
+render3D.drawShadow(pos, radius, floorHeight, color)      // soft blob shadow on the floor under pos, unlit
 render3D.flush()                                          // draw what is pending, automatic when needed
 render3D.bake(()=> { ...pushes... })                      // returns the pushes as a Mesh
 

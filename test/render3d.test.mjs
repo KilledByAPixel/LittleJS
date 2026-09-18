@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildSphere, buildBox, buildGrid, buildLoft, EngineObject3D, EngineObject, engineObjects } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildSphere, buildBox, buildGrid, buildLoft, buildSky, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -244,7 +244,7 @@ test('buildLathe octahedron with 4 sides winds outward', () =>
 
 test('buildSphere is unit diameter and outward', () =>
 {
-    const m = buildSphere(8, 4);
+    const m = buildSphere(8, 4, true);
     assertOutward(m, 'sphere');
     let maxR = 0;
     for (const p of m.points)
@@ -277,7 +277,7 @@ test('buildBox has six axis aligned faces', () =>
 
 test('buildGrid samples the height and color functions and faces up', () =>
 {
-    const m = buildGrid(4, 2, 2, 1, (x, z)=> x + 10*z, (x, z)=> rgb((x + 2) / 4, 0, 0));
+    const m = buildGrid(4, 2, 2, 1, (x, z)=> x + 10*z, (x, z)=> rgb((x + 2) / 4, 0, 0), true);
     assert.equal(m.vertexCount, 1 * (2 * 3 + 2));
     // corners: x in -2..2, z in -1..1
     const corner = m.points.find(p => Math.abs(p.x + 2) < 1e-6 && Math.abs(p.z + 1) < 1e-6);
@@ -495,10 +495,17 @@ test('render3D stages draw opaque by renderOrder, then onRender, then transparen
     const dead = new Tracked('dead', vec3(), false);
     dead.destroy();
     render3D.onRender = ()=> record('onRender');
+    render3D.onRenderTransparent = ()=> record('onRenderTransparent:' + (render3D.blend ? 'T' : 'O'));
+    render3D.sky = new Mesh;
+    const savedDrawSky = render3D.drawSky;
+    render3D.drawSky = ()=> record('sky');
     render3D.updateMatrices(1);
     render3D.renderStages();
+    render3D.drawSky = savedDrawSky;
+    render3D.sky = undefined;
+    render3D.onRenderTransparent = undefined;
     const names = order.map(o => o.name);
-    assert.deepEqual(names, ['a:O', 'b:O', 'onRender', 'far:T', 'near:T']);
+    assert.deepEqual(names, ['sky', 'a:O', 'b:O', 'onRender', 'far:T', 'near:T', 'onRenderTransparent:T']);
     assert.ok(!names.includes('dead:O'), 'destroyed objects are skipped');
     assert.ok(order.every(o => o.additive === false && o.depthTest === true), 'both stages draw with additive off and depth test on');
     assert.equal(render3D.blend, true);       // left in the transparent stage's state
@@ -510,4 +517,149 @@ test('render3D stages draw opaque by renderOrder, then onRender, then transparen
     render3D.depthWrite = true;
     render3D.additive = false;
     render3D.depthTest = true;
+});
+
+test('render3DSmoothShading sets the default for the builders', () =>
+{
+    const cylinder = [[1, -1], [1, 1]];
+    setRender3DSmoothShading(true);
+    assert.equal(buildLathe(cylinder, 8).vertexCount, 2 * 9 + 2);   // one ribbon
+    assert.equal(buildGrid(2, 2, 2, 2).vertexCount, 2 * (2 * 3 + 2)); // one ribbon per row
+    setRender3DSmoothShading(false);
+    assert.equal(buildLathe(cylinder, 8).vertexCount, 8 * 6);       // one strip per quad
+    assert.equal(buildGrid(2, 2, 2, 2).vertexCount, 4 * 6);         // one strip per cell
+    // an explicit argument wins over the default
+    assert.equal(buildLathe(cylinder, 8, true).vertexCount, 2 * 9 + 2);
+});
+
+test('flat buildGrid faces up with one normal per cell', () =>
+{
+    const m = buildGrid(4, 4, 2, 2, (x, z)=> x * .5, undefined, false);
+    for (let i = 0; i < m.vertexCount; ++i)
+    {
+        assert.ok(m.normals[i].y > 0);
+        near(m.normals[i].length(), 1);
+        near(m.normals[i].x, -m.normals[i].y * .5); // slope of .5 along x tilts the normal back
+    }
+    // every real triangle winds so its face normal points up and matches the stored normal
+    const p = m.points;
+    let checked = 0;
+    for (let i = 0; i + 2 < p.length; ++i)
+    {
+        let f = p[i+1].subtract(p[i]).cross(p[i+2].subtract(p[i]));
+        if (f.lengthSquared() < 1e-9) continue;
+        f = f.scale(i & 1 ? 1 : -1);
+        assert.ok(f.y > 0, `grid triangle ${i} faces down`);
+        assert.ok(f.dot(m.normals[i]) > 0);
+        ++checked;
+    }
+    assert.equal(checked, 8);
+});
+
+test('HeightMap samples heights bilinearly and colors nearest', () =>
+{
+    const heights = [[0, 1, 0], [0, 0, 0], [1, 1, 1]];
+    const colors = [[RED, WHITE, RED], [WHITE, WHITE, WHITE], [RED, RED, RED]];
+    const map = new HeightMap(heights, vec2(4, 2), 10, colors);
+    assert.equal(map.rows, 3);
+    assert.equal(map.columns, 3);
+    near(map.getHeight(-2, -1), 0);      // far left corner, row 0 column 0
+    near(map.getHeight(0, -1), 10);      // far middle, row 0 column 1
+    near(map.getHeight(2, 1), 10);       // near right corner, row 2 column 2
+    near(map.getHeight(-1, -1), 5);      // halfway between 0 and 1 along the far row
+    near(map.getHeight(0, 0), 0);        // middle row is flat
+    near(map.getHeight(0, .5), 5);       // halfway between the middle and near rows
+    near(map.getHeight(-9, 9), 10);      // clamped to the near left corner
+    assert.equal(map.getColor(-2, -1), RED);
+    assert.equal(map.getColor(0, -1), WHITE);
+    assert.equal(map.getColor(0, 1), RED);
+    assert.equal(new HeightMap(heights).getColor(0, 0), WHITE);
+});
+
+test('HeightMap.buildMesh puts one vertex per sample at the sampled height', () =>
+{
+    const map = new HeightMap([[0, 1], [1, 0]], vec2(2, 2), 3);
+    const mesh = map.buildMesh(true);
+    assert.equal(mesh.vertexCount, 1 * (2 * 2 + 2));
+    const corner = mesh.points.find(p => Math.abs(p.x - 1) < 1e-6 && Math.abs(p.z + 1) < 1e-6);
+    near(corner.y, 3); // row 0 column 1 is at +x, -z
+    assert.equal(map.buildMesh(false).vertexCount, 6);
+    assert.throws(()=> new HeightMap([[1]]));
+});
+
+test('buildSky colors by height and faces inward', () =>
+{
+    const top = rgb(0, 0, 1), horizon = rgb(1, 1, 1), bottom = rgb(0, 0, 0);
+    const sky = buildSky(top, horizon, bottom, 8, 4);
+    assert.equal(sky.vertexCount, 4 * (2 * 9 + 2));
+    for (let i = 0; i < sky.vertexCount; ++i)
+    {
+        const p = sky.points[i], c = sky.colors[i];
+        near(p.length(), 1);
+        if (Math.abs(p.y - 1) < 1e-6) near(c.b, 1), near(c.r, 0);       // top
+        if (Math.abs(p.y) < 1e-6) near(c.r, 1), near(c.b, 1);           // horizon
+        if (Math.abs(p.y + 1) < 1e-6) near(c.r, 0), near(c.b, 0);       // bottom
+    }
+    // every real triangle's front faces the center, the parity rule mirrors computeNormals
+    const p = sky.points;
+    let checked = 0;
+    for (let i = 0; i + 2 < p.length; ++i)
+    {
+        let n = p[i+1].subtract(p[i]).cross(p[i+2].subtract(p[i]));
+        if (n.lengthSquared() < 1e-9) continue;
+        n = n.scale(i & 1 ? 1 : -1);
+        const center = p[i].add(p[i+1]).add(p[i+2]);
+        assert.ok(n.dot(center) < 0, `sky triangle ${i} faces outward`);
+        ++checked;
+    }
+    assert.ok(checked > 0);
+});
+
+test('screenToRay points forward at the center and right of it toward +x', () =>
+{
+    render3D.camera.pos = vec3(1, 2, 10);
+    render3D.camera.rotation = vec3();
+    render3D.updateMatrices(16/9);
+    const size = vec2(960, 540);
+    const center = render3D.screenToRay(vec2(480, 270), size);
+    nearVec(center.pos, 1, 2, 10);
+    nearVec(center.direction, 0, 0, -1);
+    const right = render3D.screenToRay(vec2(960, 270), size);
+    assert.ok(right.direction.x > 0 && Math.abs(right.direction.y) < 1e-6);
+    near(right.direction.length(), 1);
+    const up = render3D.screenToRay(vec2(480, 0), size);
+    assert.ok(up.direction.y > 0);
+    // the top edge ray makes half the vertical fov with the forward axis
+    near(Math.atan2(up.direction.y, -up.direction.z), render3D.camera.fov / 2);
+});
+
+test('drawShadow is a soft disc facing up just above the floor', () =>
+{
+    const disc = render3D.bake(()=> render3D.drawShadow(vec3(3, 5, -2), 2, 1));
+    assert.equal(disc.vertexCount, 3 * (2 * 17 + 2));
+    for (let i = 0; i < disc.vertexCount; ++i)
+    {
+        near(disc.points[i].y, 1.01);
+        nearVec(disc.normals[i], 0, 1, 0);
+    }
+    // the rings run from the center out to the full radius, centered under pos
+    const distances = disc.points.map(p => Math.hypot(p.x - 3, p.z + 2));
+    near(Math.max(...distances), 2);
+    near(Math.min(...distances), 0);
+});
+
+test('Mesh.dirty is set by edits and cleared only by upload', () =>
+{
+    const m = new Mesh;
+    assert.equal(m.dirty, false);
+    m.addStrip([vec3(), vec3(1), vec3(2), vec3(3)]);
+    assert.equal(m.dirty, true);
+    m.dirty = false;
+    m.combine(buildBox());
+    assert.equal(m.dirty, true);
+    m.dirty = false;
+    m.computeNormals();
+    assert.equal(m.dirty, true);
+    m.upload(); // headless: no shader, stays dirty until a real upload
+    assert.equal(m.dirty, true);
 });

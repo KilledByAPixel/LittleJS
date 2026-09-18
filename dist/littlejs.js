@@ -17349,11 +17349,254 @@ function buildMatrix(pos, rotation, scale)
     return m;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// 3D collision: axis aligned boxes are centered at pos with full size, cylinders
+// stand on the Y axis centered at pos with full height, all functions are pure
+
+/**
+ * Check if a point is inside an axis aligned box, boundary is inclusive
+ * @param {Vector3} point
+ * @param {Vector3} pos - Center of the box
+ * @param {Vector3} size - Full size of the box
+ * @return {boolean}
+ * @memberof Math3D
+ */
+function isPointInBox3D(point, pos, size)
+{
+    const h = size.scale(.5);
+    return abs(point.x - pos.x) <= h.x &&
+        abs(point.y - pos.y) <= h.y &&
+        abs(point.z - pos.z) <= h.z;
+}
+
+/**
+ * Check if two axis aligned boxes are overlapping, touching edges do not overlap
+ * @param {Vector3} posA
+ * @param {Vector3} sizeA - Full size of box A
+ * @param {Vector3} posB
+ * @param {Vector3} sizeB - Full size of box B
+ * @return {boolean}
+ * @memberof Math3D
+ */
+function isOverlapping3D(posA, sizeA, posB, sizeB)
+{
+    const d = posA.subtract(posB);
+    return abs(d.x) < (sizeA.x + sizeB.x)/2 &&
+        abs(d.y) < (sizeA.y + sizeB.y)/2 &&
+        abs(d.z) < (sizeA.z + sizeB.z)/2;
+}
+
+/**
+ * Returns the vector to move sphere A by so it no longer overlaps sphere B, or undefined
+ * @param {Vector3} posA
+ * @param {number} radiusA
+ * @param {Vector3} posB
+ * @param {number} radiusB
+ * @return {Vector3|undefined}
+ * @memberof Math3D
+ */
+function collideSphereSphere(posA, radiusA, posB, radiusB)
+{
+    const d = posA.subtract(posB);
+    const r = radiusA + radiusB;
+    const dist = d.length();
+    if (dist >= r)
+        return undefined;
+    if (!dist)
+        return vec3(0, r, 0); // coincident centers, push straight up
+    return d.normalize(r - dist);
+}
+
+/**
+ * Returns the vector to move a sphere out of an axis aligned box, or undefined
+ * @param {Vector3} pos - Sphere center
+ * @param {number} radius
+ * @param {Vector3} boxPos
+ * @param {Vector3} boxSize - Full size of the box
+ * @return {Vector3|undefined}
+ * @memberof Math3D
+ */
+function collideSphereBox(pos, radius, boxPos, boxSize)
+{
+    const h = boxSize.scale(.5);
+    const closest = vec3(
+        clamp(pos.x, boxPos.x - h.x, boxPos.x + h.x),
+        clamp(pos.y, boxPos.y - h.y, boxPos.y + h.y),
+        clamp(pos.z, boxPos.z - h.z, boxPos.z + h.z));
+    const d = pos.subtract(closest);
+    const distSq = d.lengthSquared();
+    if (distSq)
+    {
+        if (distSq >= radius*radius)
+            return undefined;
+        return d.normalize(radius - distSq**.5);
+    }
+
+    // center is inside the box, push out along the axis of least penetration
+    const offset = pos.subtract(boxPos);
+    const penX = h.x - abs(offset.x);
+    const penY = h.y - abs(offset.y);
+    const penZ = h.z - abs(offset.z);
+    if (penX <= penY && penX <= penZ)
+        return vec3((offset.x >= 0 ? 1 : -1)*(penX + radius), 0, 0);
+    if (penY <= penZ)
+        return vec3(0, (offset.y >= 0 ? 1 : -1)*(penY + radius), 0);
+    return vec3(0, 0, (offset.z >= 0 ? 1 : -1)*(penZ + radius));
+}
+
+/**
+ * Returns the vector to move a sphere out of a vertical cylinder, or undefined
+ * @param {Vector3} pos - Sphere center
+ * @param {number} radius
+ * @param {Vector3} cylinderPos
+ * @param {number} cylinderRadius
+ * @param {number} cylinderHeight - Full height along Y
+ * @return {Vector3|undefined}
+ * @memberof Math3D
+ */
+function collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinderHeight)
+{
+    const halfHeight = cylinderHeight/2;
+    const offsetX = pos.x - cylinderPos.x;
+    const offsetZ = pos.z - cylinderPos.z;
+    const offsetY = pos.y - cylinderPos.y;
+    const radialDist = (offsetX**2 + offsetZ**2)**.5;
+    const radialScale = radialDist ? min(radialDist, cylinderRadius)/radialDist : 0;
+    const closest = vec3(
+        cylinderPos.x + offsetX*radialScale,
+        clamp(pos.y, cylinderPos.y - halfHeight, cylinderPos.y + halfHeight),
+        cylinderPos.z + offsetZ*radialScale);
+    const d = pos.subtract(closest);
+    const distSq = d.lengthSquared();
+    if (distSq)
+    {
+        if (distSq >= radius*radius)
+            return undefined;
+        return d.normalize(radius - distSq**.5);
+    }
+
+    // center is inside the cylinder, push out through the nearer surface
+    const sidePen = cylinderRadius - radialDist;
+    const capPen = halfHeight - abs(offsetY);
+    if (sidePen <= capPen)
+    {
+        const dir = radialDist ? vec3(offsetX/radialDist, 0, offsetZ/radialDist) : vec3(1, 0, 0);
+        return dir.scale(sidePen + radius);
+    }
+    return vec3(0, (offsetY >= 0 ? 1 : -1)*(capPen + radius), 0);
+}
+
+/**
+ * Returns the minimum translation vector to move box A out of box B, or undefined
+ * @param {Vector3} posA
+ * @param {Vector3} sizeA - Full size of box A
+ * @param {Vector3} posB
+ * @param {Vector3} sizeB - Full size of box B
+ * @return {Vector3|undefined}
+ * @memberof Math3D
+ */
+function collideBoxBox(posA, sizeA, posB, sizeB)
+{
+    const d = posA.subtract(posB);
+    const overlapX = (sizeA.x + sizeB.x)/2 - abs(d.x);
+    const overlapY = (sizeA.y + sizeB.y)/2 - abs(d.y);
+    const overlapZ = (sizeA.z + sizeB.z)/2 - abs(d.z);
+    if (overlapX <= 0 || overlapY <= 0 || overlapZ <= 0)
+        return undefined;
+    if (overlapX <= overlapY && overlapX <= overlapZ)
+        return vec3((d.x >= 0 ? 1 : -1)*overlapX, 0, 0);
+    if (overlapY <= overlapZ)
+        return vec3(0, (d.y >= 0 ? 1 : -1)*overlapY, 0);
+    return vec3(0, 0, (d.z >= 0 ? 1 : -1)*overlapZ);
+}
+
+/**
+ * Returns the distance along the ray to the first intersection with a sphere, or undefined
+ * @param {Vector3} origin
+ * @param {Vector3} direction - Need not be normalized
+ * @param {Vector3} pos - Sphere center
+ * @param {number} radius
+ * @return {number|undefined}
+ * @memberof Math3D
+ */
+function raycastSphere(origin, direction, pos, radius)
+{
+    const oc = origin.subtract(pos);
+    const a = direction.dot(direction);
+    if (!a)
+        return undefined;
+    const c = oc.dot(oc) - radius*radius;
+    if (c < 0)
+        return 0; // origin is inside the sphere
+    const b = 2*oc.dot(direction);
+    const discriminant = b*b - 4*a*c;
+    if (discriminant < 0)
+        return undefined;
+    const t = (-b - discriminant**.5)/(2*a);
+    return t >= 0 ? t : undefined;
+}
+
+/**
+ * Returns the distance along the ray to a plane, or undefined if parallel or behind
+ * @param {Vector3} origin
+ * @param {Vector3} direction - Need not be normalized
+ * @param {Vector3} planePos
+ * @param {Vector3} planeNormal
+ * @return {number|undefined}
+ * @memberof Math3D
+ */
+function raycastPlane(origin, direction, planePos, planeNormal)
+{
+    const denominator = direction.dot(planeNormal);
+    if (abs(denominator) < 1e-9)
+        return undefined;
+    const t = planePos.subtract(origin).dot(planeNormal)/denominator;
+    return t < 0 ? undefined : t;
+}
+
+/**
+ * Returns the distance along the ray to the first intersection with an axis aligned box, or undefined
+ * @param {Vector3} origin
+ * @param {Vector3} direction - Need not be normalized
+ * @param {Vector3} pos - Center of the box
+ * @param {Vector3} size - Full size of the box
+ * @return {number|undefined}
+ * @memberof Math3D
+ */
+function raycastBox(origin, direction, pos, size)
+{
+    const h = size.scale(.5);
+    const boxMin = pos.subtract(h), boxMax = pos.add(h);
+    const axes = ['x', 'y', 'z'];
+    let tMin = 0, tMax = Infinity;
+    for (const axis of axes)
+    {
+        const o = origin[axis], d = direction[axis];
+        const mn = boxMin[axis], mx = boxMax[axis];
+        if (!d)
+        {
+            if (o < mn || o > mx)
+                return undefined; // ray is parallel to this slab and outside it
+            continue;
+        }
+        let t0 = (mn - o)/d;
+        let t1 = (mx - o)/d;
+        if (t0 > t1)
+            [t0, t1] = [t1, t0];
+        tMin = max(tMin, t0);
+        tMax = min(tMax, t1);
+        if (tMin > tMax)
+            return undefined;
+    }
+    return tMin;
+}
+
 /**
  * LittleJS 3D Rendering Plugin
  * - Draws meshes, billboards and lines into the engine's WebGL canvas underneath the 2D layer
  * - One shader: directional + ambient light, optional specular, fog, textures, vertex colors
  * - Meshes are static triangle strips drawn by matrix, the stream batches immediate mode pushes
+ * - Shape builders, height map terrain, a sky dome, billboards, soft discs, shadows and lines
  * - EngineObject3D is an EngineObject with a 3D transform and a mesh
  * - Requires the Math3D plugin, call new Render3DPlugin() in gameInit
  * @namespace Render3D
@@ -17375,12 +17618,31 @@ const RENDER3D_FULL_UV_RECT = Object.freeze({x:0, y:0, w:1, h:1});
 const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
 const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
 
-// a key for the state fields a stream batch is drawn under, so a change flushes first
-function render3DStateKey()
+/** Default shading for the shape builders, true for smooth vertex normals, false for flat faceted faces
+ *  @type {boolean}
+ *  @default
+ *  @memberof Render3D */
+let render3DSmoothShading = false;
+
+/** Set the default shading for the shape builders, each builder can still be given its own smooth argument
+ *  @param {boolean} smooth
+ *  @memberof Render3D */
+function setRender3DSmoothShading(smooth) { render3DSmoothShading = smooth; }
+
+// the draw state fields a stream batch is drawn under, captured when the batch starts
+// and applied when it flushes, so changing a field between pushes just works
+function render3DCaptureState()
 {
     const r = render3D;
-    return (r.blend ? 1 : 0) | (r.additive ? 2 : 0) | (r.depthTest ? 4 : 0) | (r.depthWrite ? 8 : 0)
-        | (r.cullBackFaces ? 16 : 0) | (r.lighting ? 32 : 0) | (r.specular * 1024 | 0) << 6;
+    return {blend: r.blend, additive: r.additive, depthTest: r.depthTest, depthWrite: r.depthWrite,
+        cullBackFaces: r.cullBackFaces, lighting: r.lighting, specular: r.specular};
+}
+
+// a key for a captured state, so a change flushes the pending batch first
+function render3DStateKey(s)
+{
+    return (s.blend ? 1 : 0) | (s.additive ? 2 : 0) | (s.depthTest ? 4 : 0) | (s.depthWrite ? 8 : 0)
+        | (s.cullBackFaces ? 16 : 0) | (s.lighting ? 32 : 0) | (s.specular * 1024 | 0) << 6;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -17431,8 +17693,12 @@ class Render3DPlugin
         this.cullBackFaces = false;
         /** @property {number} - Phong highlight strength for the next draws */
         this.specular = 0;
-        /** @property {Function} - Called after the opaque objects and before the transparent ones, for drawing outside of objects */
+        /** @property {Function} - Called in the opaque stage after the opaque objects, for drawing world geometry outside of objects */
         this.onRender = undefined;
+        /** @property {Function} - Called in the transparent stage after the transparent objects, with blending on and depth writes off, for billboards, glows and shadows outside of objects */
+        this.onRenderTransparent = undefined;
+        /** @property {Mesh} - Sky dome from buildSky, drawn around the camera behind everything when set */
+        this.sky = undefined;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then, read only */
         this.isRendering = false;
 
@@ -17468,7 +17734,8 @@ class Render3DPlugin
         this.streamInts = new Uint32Array(this.streamData);
         this.streamCount = 0;
         this.streamTileInfo = undefined;
-        this.streamState = undefined;
+        this.streamState = undefined; // captured state the pending batch was pushed under
+        this.streamStateKey = 0;
         this.capture = undefined;
 
         render3DInitGL();
@@ -17528,7 +17795,8 @@ class Render3DPlugin
         ASSERT(this.isRendering, '3D draws are only valid during the 3D pass, use render3D.onRender or EngineObject3D.render3D');
         if (!this.isRendering) return;
         this.flush();
-        mesh.buffer || mesh.upload();
+        if (!mesh.buffer || mesh.dirty)
+            mesh.upload();
         if (!mesh.bufferCount) return;
 
         const gl = glContext;
@@ -17561,14 +17829,15 @@ class Render3DPlugin
         if (!this.isRendering) return;
 
         // flush when the texture or state differs from the pending batch, or it would overflow
-        const state = render3DStateKey();
+        const state = render3DCaptureState(), stateKey = render3DStateKey(state);
         const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
         const needed = points.length + 3;
-        if (this.streamCount && (textureInfo !== this.streamTileInfo || state !== this.streamState
+        if (this.streamCount && (textureInfo !== this.streamTileInfo || stateKey !== this.streamStateKey
             || this.streamCount + needed > RENDER3D_MAX_BATCH))
             this.flush();
         this.streamTileInfo = textureInfo;
         this.streamState = state;
+        this.streamStateKey = stateKey;
 
         const uvRect = render3DGetTileUVs(tileInfo);
         const floats = this.streamFloats, ints = this.streamInts;
@@ -17583,7 +17852,7 @@ class Render3DPlugin
         });
     }
 
-    /** Draw the pending stream vertices as one strip, called automatically when needed */
+    /** Draw the pending stream vertices as one strip with the state they were pushed under, called automatically when needed */
     flush()
     {
         if (!this.streamCount || !this.shader) return;
@@ -17593,7 +17862,7 @@ class Render3DPlugin
         const identity = new Matrix4;
         gl.uniformMatrix4fv(render3DUniform('model'), false, identity.m);
         gl.uniformMatrix4fv(render3DUniform('normalMat'), false, identity.m);
-        render3DApplyState(this.streamTileInfo, WHITE, RENDER3D_FULL_UV_RECT);
+        render3DApplyState(this.streamTileInfo, WHITE, RENDER3D_FULL_UV_RECT, this.streamState);
         render3DBindVertexBuffer(this.streamBuffer);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.streamFloats, 0, this.streamCount * RENDER3D_VERTEX_FLOATS);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.streamCount);
@@ -17626,6 +17895,9 @@ class Render3DPlugin
             if (!o.destroyed && o instanceof EngineObject3D)
                 (o.transparent ? transparent : opaque).push(o);
 
+        // sky first, behind everything
+        this.sky && this.drawSky(this.sky);
+
         // opaque: no blending, depth writes on, by render order
         this.blend = this.additive = false;
         this.depthTest = this.depthWrite = true;
@@ -17644,10 +17916,54 @@ class Render3DPlugin
         transparent.sort((a, b)=> b.pos3D.distanceSquared(c) - a.pos3D.distanceSquared(c));
         for (const o of transparent)
             o.render3D();
+        this.onRenderTransparent?.();
         this.flush();
     }
 
-    /** Draw a camera facing quad
+    /** Draw a sky dome around the camera, unlit, unfogged and behind everything, called automatically when render3D.sky is set
+     *  @param {Mesh} mesh - From buildSky */
+    drawSky(mesh)
+    {
+        const state = render3DCaptureState(), fogEnd = this.fogEnd;
+        this.lighting = this.blend = this.depthTest = this.depthWrite = false;
+        this.fogEnd = 0;
+        const radius = (this.camera.near + this.camera.far) / 2;
+        mesh.render(buildMatrix(this.camera.pos, undefined, vec3(radius)));
+        this.fogEnd = fogEnd;
+        Object.assign(this, state);
+    }
+
+    /** Get the world space ray under a screen position, for picking with the raycast functions
+     *  @param {Vector2} screenPos - Same space as mousePosScreen
+     *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
+     *  @return {{pos: Vector3, direction: Vector3}} - Ray start and unit direction */
+    screenToRay(screenPos, canvasSize=mainCanvasSize)
+    {
+        const clipX = screenPos.x / canvasSize.x * 2 - 1;
+        const clipY = 1 - screenPos.y / canvasSize.y * 2;
+        const tanHalf = tan(this.camera.fov / 2);
+        const aspect = canvasSize.x / canvasSize.y || 1;
+        const direction = this.cameraForward
+            .add(this.cameraRight.scale(clipX * tanHalf * aspect))
+            .add(this.cameraUp.scale(clipY * tanHalf)).normalize();
+        return {pos: this.camera.pos.copy(), direction};
+    }
+
+    /** Push a strip with lighting off, for camera facing shapes where the light direction means nothing
+     *  @param {Array<Vector3>} points - Strip order
+     *  @param {Vector3|Array<Vector3>} [normals]
+     *  @param {Vector2|Array<Vector2>} [uvs]
+     *  @param {Color|Array<Color>} [colors]
+     *  @param {TileInfo} [tileInfo] */
+    pushStripUnlit(points, normals, uvs, colors, tileInfo)
+    {
+        const lighting = this.lighting;
+        this.lighting = false;
+        this.pushStrip(points, normals, uvs, colors, tileInfo);
+        this.lighting = lighting;
+    }
+
+    /** Draw a camera facing quad, unlit so it keeps its own colors; draw it in the transparent stage for alpha
      *  @param {Vector3} pos - Center
      *  @param {Vector2} size - World units
      *  @param {TileInfo} [tileInfo]
@@ -17658,7 +17974,7 @@ class Render3DPlugin
         const c = cos(angle), s = sin(angle);
         const right = this.cameraRight.scale(c).add(this.cameraUp.scale(s)).scale(size.x / 2);
         const up = this.cameraUp.scale(c).subtract(this.cameraRight.scale(s)).scale(size.y / 2);
-        this.pushStrip(
+        this.pushStripUnlit(
             [pos.subtract(right).add(up), pos.subtract(right).subtract(up), pos.add(right).add(up), pos.add(right).subtract(up)],
             this.cameraForward.scale(-1),
             RENDER3D_QUAD_UVS, color, tileInfo);
@@ -17690,7 +18006,7 @@ class Render3DPlugin
         this.pushStrip([a, b, c], normal, undefined, color);
     }
 
-    /** Draw a line as a camera facing ribbon
+    /** Draw a line as a camera facing ribbon, unlit
      *  @param {Vector3} start
      *  @param {Vector3} end
      *  @param {number} [thickness] - World units
@@ -17698,12 +18014,22 @@ class Render3DPlugin
     drawLine3D(start, end, thickness=.1, color=WHITE)
     {
         const side = end.subtract(start).cross(this.cameraForward).normalize(thickness / 2);
-        this.pushStrip(
+        this.pushStripUnlit(
             [start.add(side), start.subtract(side), end.add(side), end.subtract(side)],
             this.cameraForward.scale(-1), undefined, color);
     }
 
-    /** Draw a disc that fades to transparent at the rim, for shadows, glows and sky dots
+    /** Draw a soft round shadow on the floor under a position, unlit; draw it in the transparent stage
+     *  @param {Vector3} pos - Position of the thing casting the shadow
+     *  @param {number} radius
+     *  @param {number} [floorHeight] - World height of the floor under pos
+     *  @param {Color} [color] */
+    drawShadow(pos, radius, floorHeight=0, color=rgb(0, 0, 0, .5))
+    {
+        this.drawSoftDisc(vec3(pos.x, floorHeight + .01, pos.z), RENDER3D_DEFAULT_NORMAL, radius, color);
+    }
+
+    /** Draw a disc that fades to transparent at the rim, unlit, for shadows, glows and sky dots
      *  @param {Vector3} pos - Center
      *  @param {Vector3} normal - Facing direction
      *  @param {number} radius
@@ -17728,7 +18054,7 @@ class Render3DPlugin
                 points.push(pos.add(dir.scale(r1)), pos.add(dir.scale(r0)));
                 colors.push(c1, c0);
             }
-            this.pushStrip(points, n, undefined, colors);
+            this.pushStripUnlit(points, n, undefined, colors);
         }
     }
 }
@@ -17922,26 +18248,27 @@ function render3DGetTileUVs(tileInfo)
         h: tileInfo.size.y * inv.y - 2*bleedY };
 }
 
-// apply the plugin's state fields and the per draw uniforms before a draw call
+// apply draw state and the per draw uniforms before a draw call
 // tileInfo may be a TileInfo, a TextureInfo, or undefined for the white texture
-function render3DApplyState(tileInfo, tint=WHITE, uvRect)
+// state is the plugin's current fields, or the captured state of a stream batch
+function render3DApplyState(tileInfo, tint=WHITE, uvRect, state=render3D)
 {
     const gl = glContext, r = render3D, uniform = render3DUniform;
 
     // blending, matches the engine's 2D blend functions
-    if (r.blend)
+    if (state.blend)
     {
         gl.enable(gl.BLEND);
-        const destBlend = r.additive ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA;
+        const destBlend = state.additive ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA;
         gl.blendFuncSeparate(gl.SRC_ALPHA, destBlend, gl.ONE, destBlend);
     }
     else
         gl.disable(gl.BLEND);
 
     // depth and culling
-    r.depthTest ? gl.enable(gl.DEPTH_TEST) : gl.disable(gl.DEPTH_TEST);
-    gl.depthMask(r.depthWrite);
-    r.cullBackFaces ? gl.enable(gl.CULL_FACE) : gl.disable(gl.CULL_FACE);
+    state.depthTest ? gl.enable(gl.DEPTH_TEST) : gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(state.depthWrite);
+    state.cullBackFaces ? gl.enable(gl.CULL_FACE) : gl.disable(gl.CULL_FACE);
 
     // texture
     let texture = r.whiteTexture;
@@ -17955,11 +18282,11 @@ function render3DApplyState(tileInfo, tint=WHITE, uvRect)
     uvRect ||= render3DGetTileUVs(tileInfo);
     gl.uniform4f(uniform('uvRect'), uvRect.x, uvRect.y, uvRect.w, uvRect.h);
 
-    // per draw uniforms
+    // per draw uniforms, lights and fog are scene state read from the plugin at draw time
     gl.uniform4f(uniform('tint'), tint.r, tint.g, tint.b, tint.a);
     const l = r.lightDirection, lc = r.lightColor, ac = r.ambientColor, fc = r.fogColor || canvasClearColor;
-    gl.uniform4f(uniform('lightDir'), l.x, l.y, l.z, r.lighting ? 1 : 0);
-    gl.uniform4f(uniform('lightColor'), lc.r, lc.g, lc.b, r.specular);
+    gl.uniform4f(uniform('lightDir'), l.x, l.y, l.z, state.lighting ? 1 : 0);
+    gl.uniform4f(uniform('lightColor'), lc.r, lc.g, lc.b, state.specular);
     ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
     gl.uniform4f(uniform('ambientColor'), ac.r, ac.g, ac.b, r.fogEnd);
     gl.uniform4f(uniform('fogColor'), fc.r, fc.g, fc.b, r.fogStart);
@@ -18063,6 +18390,8 @@ class Mesh
         this.buffer = undefined;
         /** @property {number} - Vertices in the GPU buffer */
         this.bufferCount = 0;
+        /** @property {boolean} - The CPU data changed since the last upload, set by addStrip, combine and computeNormals, or set it after editing the arrays directly */
+        this.dirty = false;
     }
 
     /** Number of vertices in the mesh
@@ -18085,6 +18414,7 @@ class Mesh
             this.uvs.push(uv);
             this.colors.push(c);
         });
+        this.dirty = true;
         return this;
     }
 
@@ -18103,6 +18433,7 @@ class Mesh
             this.uvs.push(mesh.uvs[i]);
             this.colors.push(mesh.colors[i].multiply(color));
         }
+        this.dirty = true;
         return this;
     }
 
@@ -18155,6 +18486,7 @@ class Mesh
             }
         }
         this.normals = normals;
+        this.dirty = true;
         return this;
     }
 
@@ -18178,6 +18510,7 @@ class Mesh
         }
         this.buffer = glContext.createBuffer();
         this.bufferCount = count;
+        this.dirty = false;
         glContext.bindBuffer(glContext.ARRAY_BUFFER, this.buffer);
         glContext.bufferData(glContext.ARRAY_BUFFER, data, glContext.STATIC_DRAW);
         render3D.uploadedMeshes.add(this);
@@ -18211,11 +18544,11 @@ class Mesh
  * - [[r,-h],[r,h]] is a cylinder, [[0,-1],[1,0],[0,1]] with 4 sides is an octahedron
  * @param {Array<Array<number>>} profile
  * @param {number} [sides] - Segments around the axis
- * @param {boolean} [smooth] - Vertex normals and shared vertices, otherwise one normal per face
+ * @param {boolean} [smooth] - Vertex normals and shared vertices, otherwise one normal per face, defaults to render3DSmoothShading
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildLathe(profile, sides=8, smooth=false)
+function buildLathe(profile, sides=8, smooth=render3DSmoothShading)
 {
     ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
     ASSERT(sides > 2, 'lathe needs at least 3 sides');
@@ -18289,7 +18622,7 @@ function buildLathe(profile, sides=8, smooth=false)
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildSphere(segments=12, rings=6, smooth=true)
+function buildSphere(segments=12, rings=6, smooth=render3DSmoothShading)
 {
     ASSERT(rings > 1, 'sphere needs at least 2 rings');
     const profile = [];
@@ -18344,7 +18677,7 @@ function buildBox(size=vec3(1))
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildGrid(sizeX, sizeZ, segmentsX=1, segmentsZ=1, heightFunction=()=>0, colorFunction)
+function buildGrid(sizeX, sizeZ, segmentsX=1, segmentsZ=1, heightFunction=()=>0, colorFunction, smooth=render3DSmoothShading)
 {
     ASSERT(segmentsX > 0 && segmentsZ > 0, 'grid needs at least one segment per axis');
     const mesh = new Mesh;
@@ -18358,18 +18691,183 @@ function buildGrid(sizeX, sizeZ, segmentsX=1, segmentsZ=1, heightFunction=()=>0,
         const dz = (heightFunction(x, z + ez) - heightFunction(x, z - ez)) / (2 * ez);
         return vec3(-dx, 1, -dz).normalize();
     };
+    const uv = (i, j)=> vec2(i / segmentsX, j / segmentsZ);
     const color = (i, j)=> colorFunction ? colorFunction(px(i), pz(j)) : WHITE;
     for (let j = 0; j < segmentsZ; ++j)
     {
-        const points = [], normals = [], uvs = [], colors = [];
-        for (let i = 0; i <= segmentsX; ++i)
+        if (smooth)
         {
-            points.push(point(i, j), point(i, j + 1));
-            normals.push(normal(i, j), normal(i, j + 1));
-            uvs.push(vec2(i / segmentsX, j / segmentsZ), vec2(i / segmentsX, (j + 1) / segmentsZ));
-            colors.push(color(i, j), color(i, j + 1));
+            // one ribbon per row with vertex normals from the slope
+            const points = [], normals = [], uvs = [], colors = [];
+            for (let i = 0; i <= segmentsX; ++i)
+            {
+                points.push(point(i, j), point(i, j + 1));
+                normals.push(normal(i, j), normal(i, j + 1));
+                uvs.push(uv(i, j), uv(i, j + 1));
+                colors.push(color(i, j), color(i, j + 1));
+            }
+            mesh.addStrip(points, normals, uvs, colors);
         }
-        mesh.addStrip(points, normals, uvs, colors);
+        else
+        {
+            // one quad per cell with its face normal
+            for (let i = 0; i < segmentsX; ++i)
+            {
+                const a = point(i, j), b = point(i, j + 1), c = point(i + 1, j + 1), d = point(i + 1, j);
+                const n = c.subtract(a).cross(d.subtract(b)).normalize();
+                mesh.addStrip([a, b, d, c], n,
+                    [uv(i, j), uv(i, j + 1), uv(i + 1, j), uv(i + 1, j + 1)],
+                    [color(i, j), color(i, j + 1), color(i + 1, j), color(i + 1, j + 1)]);
+            }
+        }
+    }
+    return mesh;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * HeightMap - Terrain from a grid of heights, with a mesh builder and height lookup
+ * - heights is a 2D array [row][column] of 0-1 values, rows run along Z and columns along X
+ * - or an image, where the red channel is the height and row 0 is the far edge (-Z)
+ * - colors is an optional 2D array of Colors or an image, sampled per vertex
+ * @memberof Render3D
+ * @example
+ * const terrain = new HeightMap(heightImage, vec2(100, 100), 10, colorImage);
+ * new EngineObject3D(vec3(), terrain.buildMesh());
+ * const y = terrain.getHeight(x, z); // stand things on it
+ */
+class HeightMap
+{
+    /** Create a height map from an array or an image
+     *  @param {Array<Array<number>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} heights
+     *  @param {Vector2} [size] - World size along X and Z
+     *  @param {number} [height] - World height of a full value
+     *  @param {Array<Array<Color>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} [colors] */
+    constructor(heights, size=vec2(1), height=1, colors)
+    {
+        if (!isArray(heights))
+            heights = render3DImageToArray(heights, (r)=> r / 255);
+        if (colors && !isArray(colors))
+            colors = render3DImageToArray(colors, (r, g, b, a)=> rgb(r / 255, g / 255, b / 255, a / 255));
+        ASSERT(isArray(heights) && heights.length > 1 && isArray(heights[0]) && heights[0].length > 1, 'height map needs at least 2 rows and 2 columns');
+
+        /** @property {Array<Array<number>>} - Heights 0-1 as [row][column], rows along Z */
+        this.heights = heights;
+        /** @property {Array<Array<Color>>} - Vertex colors as [row][column], undefined for white */
+        this.colors = colors;
+        /** @property {Vector2} - World size along X and Z */
+        this.size = size.copy();
+        /** @property {number} - World height of a full value */
+        this.height = height;
+    }
+
+    /** Number of rows, along Z
+     *  @return {number} */
+    get rows() { return this.heights.length; }
+
+    /** Number of columns, along X
+     *  @return {number} */
+    get columns() { return this.heights[0].length; }
+
+    /** World height at a position, interpolated between samples and clamped at the edges
+     *  @param {number} x
+     *  @param {number} z
+     *  @return {number} */
+    getHeight(x, z)
+    {
+        const columns = this.columns, rows = this.rows, h = this.heights;
+        const u = clamp((x / this.size.x + .5) * (columns - 1), 0, columns - 1);
+        const v = clamp((z / this.size.y + .5) * (rows - 1), 0, rows - 1);
+        const i = min(floor(u), columns - 2), j = min(floor(v), rows - 2);
+        const far = lerp(h[j][i], h[j][i+1], u - i), near = lerp(h[j+1][i], h[j+1][i+1], u - i);
+        return lerp(far, near, v - j) * this.height;
+    }
+
+    /** Color of the nearest sample to a position, white when there are no colors
+     *  @param {number} x
+     *  @param {number} z
+     *  @return {Color} */
+    getColor(x, z)
+    {
+        const c = this.colors;
+        if (!c) return WHITE;
+        const columns = c[0].length, rows = c.length;
+        const i = clamp(round((x / this.size.x + .5) * (columns - 1)), 0, columns - 1);
+        const j = clamp(round((z / this.size.y + .5) * (rows - 1)), 0, rows - 1);
+        return c[j][i];
+    }
+
+    /** Build the terrain mesh, one vertex per sample, centered on the origin
+     *  @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     *  @return {Mesh} */
+    buildMesh(smooth=render3DSmoothShading)
+    {
+        return buildGrid(this.size.x, this.size.y, this.columns - 1, this.rows - 1,
+            (x, z)=> this.getHeight(x, z), this.colors && ((x, z)=> this.getColor(x, z)), smooth);
+    }
+}
+
+// read an image into a 2D array [row][column] through the engine's work canvas
+// sample is called with (r, g, b, a) bytes for each pixel
+function render3DImageToArray(image, sample)
+{
+    if (image instanceof TextureInfo)
+        image = image.image;
+    ASSERT(image && image.width && image.height, 'image is not loaded');
+    ASSERT(workCanvas, 'reading an image needs a canvas, pass arrays in headless mode');
+    const width = image.width, height = image.height;
+    workCanvas.width = width;
+    workCanvas.height = height;
+    workContext.drawImage(image, 0, 0);
+    const data = workContext.getImageData(0, 0, width, height).data;
+    const rows = [];
+    for (let y = 0; y < height; ++y)
+    {
+        const row = rows[y] = [];
+        for (let x = 0; x < width; ++x)
+        {
+            const k = (y * width + x) * 4;
+            row.push(sample(data[k], data[k+1], data[k+2], data[k+3]));
+        }
+    }
+    return rows;
+}
+
+/**
+ * Build a sky dome: a sphere colored by height, wound to be seen from inside
+ * - set it as render3D.sky and the pass draws it around the camera behind everything
+ * @param {Color} [topColor]
+ * @param {Color} [horizonColor]
+ * @param {Color} [bottomColor] - Defaults to the horizon color
+ * @param {number} [segments] - Around
+ * @param {number} [rings] - Top to bottom
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildSky(topColor=rgb(.2, .4, .9), horizonColor=rgb(.8, .9, 1), bottomColor=horizonColor, segments=16, rings=8)
+{
+    const mesh = new Mesh;
+    const point = (i, a)=>
+    {
+        const e = i / rings * PI - PI/2;
+        return vec3(sin(a) * cos(e), sin(e), cos(a) * cos(e));
+    };
+    const color = (i)=>
+    {
+        const y = point(i, 0).y;
+        return y < 0 ? horizonColor.lerp(bottomColor, -y) : horizonColor.lerp(topColor, y);
+    };
+    for (let i = 0; i < rings; ++i)
+    {
+        // bottom point then top point per column, the reverse of the lathe, so the front faces inward
+        const points = [], colors = [];
+        for (let j = 0; j <= segments; ++j)
+        {
+            const a = j / segments * 2 * PI;
+            points.push(point(i, a), point(i + 1, a));
+            colors.push(color(i), color(i + 1));
+        }
+        mesh.addStrip(points, undefined, undefined, colors);
     }
     return mesh;
 }

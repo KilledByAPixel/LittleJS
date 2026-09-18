@@ -447,3 +447,245 @@ function buildMatrix(pos, rotation, scale)
     scale && m.scale(scale);
     return m;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// 3D collision: axis aligned boxes are centered at pos with full size, cylinders
+// stand on the Y axis centered at pos with full height, all functions are pure
+
+/**
+ * Check if a point is inside an axis aligned box, boundary is inclusive
+ * @param {Vector3} point
+ * @param {Vector3} pos - Center of the box
+ * @param {Vector3} size - Full size of the box
+ * @return {boolean}
+ * @memberof Math3D
+ */
+function isPointInBox3D(point, pos, size)
+{
+    const h = size.scale(.5);
+    return abs(point.x - pos.x) <= h.x &&
+        abs(point.y - pos.y) <= h.y &&
+        abs(point.z - pos.z) <= h.z;
+}
+
+/**
+ * Check if two axis aligned boxes are overlapping, touching edges do not overlap
+ * @param {Vector3} posA
+ * @param {Vector3} sizeA - Full size of box A
+ * @param {Vector3} posB
+ * @param {Vector3} sizeB - Full size of box B
+ * @return {boolean}
+ * @memberof Math3D
+ */
+function isOverlapping3D(posA, sizeA, posB, sizeB)
+{
+    const d = posA.subtract(posB);
+    return abs(d.x) < (sizeA.x + sizeB.x)/2 &&
+        abs(d.y) < (sizeA.y + sizeB.y)/2 &&
+        abs(d.z) < (sizeA.z + sizeB.z)/2;
+}
+
+/**
+ * Returns the vector to move sphere A by so it no longer overlaps sphere B, or undefined
+ * @param {Vector3} posA
+ * @param {number} radiusA
+ * @param {Vector3} posB
+ * @param {number} radiusB
+ * @return {Vector3|undefined}
+ * @memberof Math3D
+ */
+function collideSphereSphere(posA, radiusA, posB, radiusB)
+{
+    const d = posA.subtract(posB);
+    const r = radiusA + radiusB;
+    const dist = d.length();
+    if (dist >= r)
+        return undefined;
+    if (!dist)
+        return vec3(0, r, 0); // coincident centers, push straight up
+    return d.normalize(r - dist);
+}
+
+/**
+ * Returns the vector to move a sphere out of an axis aligned box, or undefined
+ * @param {Vector3} pos - Sphere center
+ * @param {number} radius
+ * @param {Vector3} boxPos
+ * @param {Vector3} boxSize - Full size of the box
+ * @return {Vector3|undefined}
+ * @memberof Math3D
+ */
+function collideSphereBox(pos, radius, boxPos, boxSize)
+{
+    const h = boxSize.scale(.5);
+    const closest = vec3(
+        clamp(pos.x, boxPos.x - h.x, boxPos.x + h.x),
+        clamp(pos.y, boxPos.y - h.y, boxPos.y + h.y),
+        clamp(pos.z, boxPos.z - h.z, boxPos.z + h.z));
+    const d = pos.subtract(closest);
+    const distSq = d.lengthSquared();
+    if (distSq)
+    {
+        if (distSq >= radius*radius)
+            return undefined;
+        return d.normalize(radius - distSq**.5);
+    }
+
+    // center is inside the box, push out along the axis of least penetration
+    const offset = pos.subtract(boxPos);
+    const penX = h.x - abs(offset.x);
+    const penY = h.y - abs(offset.y);
+    const penZ = h.z - abs(offset.z);
+    if (penX <= penY && penX <= penZ)
+        return vec3((offset.x >= 0 ? 1 : -1)*(penX + radius), 0, 0);
+    if (penY <= penZ)
+        return vec3(0, (offset.y >= 0 ? 1 : -1)*(penY + radius), 0);
+    return vec3(0, 0, (offset.z >= 0 ? 1 : -1)*(penZ + radius));
+}
+
+/**
+ * Returns the vector to move a sphere out of a vertical cylinder, or undefined
+ * @param {Vector3} pos - Sphere center
+ * @param {number} radius
+ * @param {Vector3} cylinderPos
+ * @param {number} cylinderRadius
+ * @param {number} cylinderHeight - Full height along Y
+ * @return {Vector3|undefined}
+ * @memberof Math3D
+ */
+function collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinderHeight)
+{
+    const halfHeight = cylinderHeight/2;
+    const offsetX = pos.x - cylinderPos.x;
+    const offsetZ = pos.z - cylinderPos.z;
+    const offsetY = pos.y - cylinderPos.y;
+    const radialDist = (offsetX**2 + offsetZ**2)**.5;
+    const radialScale = radialDist ? min(radialDist, cylinderRadius)/radialDist : 0;
+    const closest = vec3(
+        cylinderPos.x + offsetX*radialScale,
+        clamp(pos.y, cylinderPos.y - halfHeight, cylinderPos.y + halfHeight),
+        cylinderPos.z + offsetZ*radialScale);
+    const d = pos.subtract(closest);
+    const distSq = d.lengthSquared();
+    if (distSq)
+    {
+        if (distSq >= radius*radius)
+            return undefined;
+        return d.normalize(radius - distSq**.5);
+    }
+
+    // center is inside the cylinder, push out through the nearer surface
+    const sidePen = cylinderRadius - radialDist;
+    const capPen = halfHeight - abs(offsetY);
+    if (sidePen <= capPen)
+    {
+        const dir = radialDist ? vec3(offsetX/radialDist, 0, offsetZ/radialDist) : vec3(1, 0, 0);
+        return dir.scale(sidePen + radius);
+    }
+    return vec3(0, (offsetY >= 0 ? 1 : -1)*(capPen + radius), 0);
+}
+
+/**
+ * Returns the minimum translation vector to move box A out of box B, or undefined
+ * @param {Vector3} posA
+ * @param {Vector3} sizeA - Full size of box A
+ * @param {Vector3} posB
+ * @param {Vector3} sizeB - Full size of box B
+ * @return {Vector3|undefined}
+ * @memberof Math3D
+ */
+function collideBoxBox(posA, sizeA, posB, sizeB)
+{
+    const d = posA.subtract(posB);
+    const overlapX = (sizeA.x + sizeB.x)/2 - abs(d.x);
+    const overlapY = (sizeA.y + sizeB.y)/2 - abs(d.y);
+    const overlapZ = (sizeA.z + sizeB.z)/2 - abs(d.z);
+    if (overlapX <= 0 || overlapY <= 0 || overlapZ <= 0)
+        return undefined;
+    if (overlapX <= overlapY && overlapX <= overlapZ)
+        return vec3((d.x >= 0 ? 1 : -1)*overlapX, 0, 0);
+    if (overlapY <= overlapZ)
+        return vec3(0, (d.y >= 0 ? 1 : -1)*overlapY, 0);
+    return vec3(0, 0, (d.z >= 0 ? 1 : -1)*overlapZ);
+}
+
+/**
+ * Returns the distance along the ray to the first intersection with a sphere, or undefined
+ * @param {Vector3} origin
+ * @param {Vector3} direction - Need not be normalized
+ * @param {Vector3} pos - Sphere center
+ * @param {number} radius
+ * @return {number|undefined}
+ * @memberof Math3D
+ */
+function raycastSphere(origin, direction, pos, radius)
+{
+    const oc = origin.subtract(pos);
+    const a = direction.dot(direction);
+    if (!a)
+        return undefined;
+    const c = oc.dot(oc) - radius*radius;
+    if (c < 0)
+        return 0; // origin is inside the sphere
+    const b = 2*oc.dot(direction);
+    const discriminant = b*b - 4*a*c;
+    if (discriminant < 0)
+        return undefined;
+    const t = (-b - discriminant**.5)/(2*a);
+    return t >= 0 ? t : undefined;
+}
+
+/**
+ * Returns the distance along the ray to a plane, or undefined if parallel or behind
+ * @param {Vector3} origin
+ * @param {Vector3} direction - Need not be normalized
+ * @param {Vector3} planePos
+ * @param {Vector3} planeNormal
+ * @return {number|undefined}
+ * @memberof Math3D
+ */
+function raycastPlane(origin, direction, planePos, planeNormal)
+{
+    const denominator = direction.dot(planeNormal);
+    if (abs(denominator) < 1e-9)
+        return undefined;
+    const t = planePos.subtract(origin).dot(planeNormal)/denominator;
+    return t < 0 ? undefined : t;
+}
+
+/**
+ * Returns the distance along the ray to the first intersection with an axis aligned box, or undefined
+ * @param {Vector3} origin
+ * @param {Vector3} direction - Need not be normalized
+ * @param {Vector3} pos - Center of the box
+ * @param {Vector3} size - Full size of the box
+ * @return {number|undefined}
+ * @memberof Math3D
+ */
+function raycastBox(origin, direction, pos, size)
+{
+    const h = size.scale(.5);
+    const boxMin = pos.subtract(h), boxMax = pos.add(h);
+    const axes = ['x', 'y', 'z'];
+    let tMin = 0, tMax = Infinity;
+    for (const axis of axes)
+    {
+        const o = origin[axis], d = direction[axis];
+        const mn = boxMin[axis], mx = boxMax[axis];
+        if (!d)
+        {
+            if (o < mn || o > mx)
+                return undefined; // ray is parallel to this slab and outside it
+            continue;
+        }
+        let t0 = (mn - o)/d;
+        let t1 = (mx - o)/d;
+        if (t0 > t1)
+            [t0, t1] = [t1, t0];
+        tMin = max(tMin, t0);
+        tMax = min(tMax, t1);
+        if (tMin > tMax)
+            return undefined;
+    }
+    return tMin;
+}
