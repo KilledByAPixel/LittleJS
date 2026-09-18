@@ -202,8 +202,9 @@ declare module "littlejsengine" {
      *  @param {PluginCallback} [render]
      *  @param {PluginCallback} [glContextLost]
      *  @param {PluginCallback} [glContextRestored]
+     *  @param {PluginCallback} [preRender] - Called after the canvas is cleared and before gameRender
      *  @memberof Engine */
-    export function engineAddPlugin(update?: PluginCallback, render?: PluginCallback, glContextLost?: PluginCallback, glContextRestored?: PluginCallback): void;
+    export function engineAddPlugin(update?: PluginCallback, render?: PluginCallback, glContextLost?: PluginCallback, glContextRestored?: PluginCallback, preRender?: PluginCallback): void;
     /**
      * LittleJS Debug System
      * - Press Esc to toggle debug overlay with object picking
