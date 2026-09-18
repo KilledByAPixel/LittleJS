@@ -21,8 +21,10 @@ let render3D;
 const RENDER3D_VERTEX_FLOATS = 9;
 const RENDER3D_VERTEX_BYTES = RENDER3D_VERTEX_FLOATS * 4;
 const RENDER3D_MAX_BATCH = 32768; // stream vertices per flush
-const RENDER3D_QUAD_UVS = [vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)];
-const RENDER3D_FULL_UV_RECT = {x:0, y:0, w:1, h:1};
+const RENDER3D_QUAD_UVS = Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv)));
+const RENDER3D_FULL_UV_RECT = Object.freeze({x:0, y:0, w:1, h:1});
+const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
+const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
 
 // a key for the state fields a stream batch is drawn under, so a change flushes first
 function render3DStateKey()
@@ -54,13 +56,13 @@ class Render3DPlugin
 
         /** @property {Camera3D} - The camera */
         this.camera = new Camera3D;
-        /** @property {Vector3} - Direction the directional light travels */
+        /** @property {Vector3} - Direction the directional light travels, read when a draw is issued or the stream flushes, so set lights and fog before drawing */
         this.lightDirection = vec3(.5, -1, .3).normalize();
         /** @property {Color} - Directional light color */
         this.lightColor = WHITE.copy();
         /** @property {Color} - Ambient light color */
         this.ambientColor = rgb(.3, .3, .3);
-        /** @property {Color} - Fog color, uses canvasClearColor when undefined */
+        /** @property {Color} - Fog color, uses canvasClearColor when undefined, read when a draw is issued or the stream flushes, so set lights and fog before drawing */
         this.fogColor = undefined;
         /** @property {number} - Distance from the camera where fog starts */
         this.fogStart = 0;
@@ -98,13 +100,13 @@ class Render3DPlugin
         /** @property {Vector3} - Camera forward axis this frame, read only */
         this.cameraForward = vec3(0, 0, -1);
 
-        /** @property {WebGLProgram} - The shader, undefined when not available */
+        // the shader, undefined when not available
         this.shader = undefined;
-        /** @property {WebGLVertexArrayObject} - Vertex array object */
+        // vertex array object
         this.vao = undefined;
-        /** @property {WebGLTexture} - 1x1 white texture used when no tile is given */
+        // 1x1 white texture used when no tile is given
         this.whiteTexture = undefined;
-        /** @property {Set<Mesh>} - Uploaded meshes, so context loss can drop their buffers */
+        // uploaded meshes, so context loss can drop their buffers
         this.uploadedMeshes = new Set;
 
         // cached shader locations, reset when the shader is rebuilt
@@ -199,6 +201,7 @@ class Render3DPlugin
      *  @param {TileInfo} [tileInfo] - Texture for this strip */
     pushStrip(points, normals, uvs, colors, tileInfo)
     {
+        ASSERT(points.length + 3 <= RENDER3D_MAX_BATCH, 'strip is too large for the stream, bake it into a mesh');
         if (this.capture)
         {
             this.capture.addStrip(points, normals, uvs, colors);
@@ -251,6 +254,8 @@ class Render3DPlugin
     }
 
     /** Run a draw function with every push captured into a new mesh instead of the stream
+     *  - pushes inside a bake ignore their tileInfo, the baked mesh takes its texture at render time
+     *  - drawMesh calls inside a bake draw immediately rather than being captured
      *  @param {Function} drawFunction
      *  @return {Mesh} */
     bake(drawFunction)
@@ -258,9 +263,9 @@ class Render3DPlugin
         this.flush();
         ASSERT(!this.capture, 'bake cannot be nested');
         this.capture = new Mesh;
-        drawFunction();
         const mesh = this.capture;
-        this.capture = undefined;
+        try { drawFunction(); }
+        finally { this.capture = undefined; }
         return mesh;
     }
 
@@ -319,7 +324,8 @@ class Render3DPlugin
      *  @param {TileInfo} [tileInfo] */
     drawQuad3D(a, b, c, d, color=WHITE, tileInfo)
     {
-        const normal = b.subtract(a).cross(d.subtract(a)).normalize();
+        const n = b.subtract(a).cross(d.subtract(a));
+        const normal = n.lengthSquared() ? n.normalize() : RENDER3D_DEFAULT_NORMAL;
         this.pushStrip([a, b, d, c], normal, RENDER3D_QUAD_UVS, color, tileInfo);
     }
 
@@ -330,7 +336,8 @@ class Render3DPlugin
      *  @param {Color} [color] */
     drawTriangle3D(a, b, c, color=WHITE)
     {
-        const normal = b.subtract(a).cross(c.subtract(a)).normalize();
+        const n = b.subtract(a).cross(c.subtract(a));
+        const normal = n.lengthSquared() ? n.normalize() : RENDER3D_DEFAULT_NORMAL;
         this.pushStrip([a, b, c], normal, undefined, color);
     }
 
@@ -454,7 +461,7 @@ function render3DInitGL()
     if (headlessMode) return;
     if (!glEnable || !glContext)
     {
-        console.warn('Render3DPlugin: WebGL not enabled!');
+        console.warn('Render3DPlugin: WebGL not enabled, construct the plugin in gameInit with glEnable set');
         return;
     }
 
@@ -494,7 +501,7 @@ function render3DInitGL()
         'vec3 e=normalize(cameraPos-P);' +
         'vec3 r=reflect(lightDir.xyz,n);' +
         'c.rgb*=ambientColor.rgb+lightColor.rgb*d;' +
-        'c.rgb+=lightColor.rgb*pow(max(dot(r,e),0.),16.)*lightColor.a;' +
+        'c.rgb+=lightColor.rgb*pow(max(dot(r,e),0.),16.)*lightColor.a*step(0.,d);' +
         '}' +
         'if(ambientColor.a>0.){' +
         'float z=distance(cameraPos,P);' +
@@ -520,10 +527,7 @@ function render3DInitGL()
     // white texture for untextured draws
     render3D.whiteTexture = glCreateTexture();
 
-    // strips get one leading repeat, which shifts real triangles to odd indices, so front faces read as clockwise
-    glContext.frontFace(glContext.CW);
-
-    // leave the engine's array buffer bound, a context restore can land mid-frame
+    // leave the engine's array buffer bound, its 2D batch writes through this binding
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
 }
 
@@ -557,7 +561,7 @@ function render3DBindVertexBuffer(buffer)
 function render3DGetTileUVs(tileInfo)
 {
     if (!tileInfo || !(tileInfo instanceof TileInfo))
-        return {x:0, y:0, w:1, h:1};
+        return RENDER3D_FULL_UV_RECT;
     const textureInfo = tileInfo.textureInfo;
     const inv = textureInfo.sizeInverse;
     const bleedX = inv.x * tileInfo.bleed, bleedY = inv.y * tileInfo.bleed;
@@ -606,6 +610,7 @@ function render3DApplyState(tileInfo, tint=WHITE, uvRect)
     const l = r.lightDirection, lc = r.lightColor, ac = r.ambientColor, fc = r.fogColor || canvasClearColor;
     gl.uniform4f(uniform('lightDir'), l.x, l.y, l.z, r.lighting ? 1 : 0);
     gl.uniform4f(uniform('lightColor'), lc.r, lc.g, lc.b, r.specular);
+    ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
     gl.uniform4f(uniform('ambientColor'), ac.r, ac.g, ac.b, r.fogEnd);
     gl.uniform4f(uniform('fogColor'), fc.r, fc.g, fc.b, r.fogStart);
 }
@@ -620,6 +625,8 @@ function render3DPreRender()
     // take over the gl state
     gl.useProgram(r.shader);
     gl.bindVertexArray(r.vao);
+    // strips get one leading repeat, which shifts real triangles to odd indices, so front faces read as clockwise
+    gl.frontFace(gl.CW);
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.uniformMatrix4fv(render3DUniform('viewProj'), false, r.viewProjection.m);
@@ -678,8 +685,6 @@ function render3DForEachStripVertex(points, normals, uvs, colors, callback)
     if (n & 1)
         emit(last);
 }
-const RENDER3D_DEFAULT_NORMAL = vec3(0, 1, 0);
-const RENDER3D_DEFAULT_UV = vec2();
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
@@ -752,7 +757,7 @@ class Mesh
     }
 
     /** Derive normals from the strip's triangles
-     *  @param {boolean} [smooth] - Average normals at shared positions, otherwise one normal per face
+     *  @param {boolean} [smooth] - Average normals at shared positions, otherwise each vertex takes the normal of the last face that touches it, which is one normal per face when every quad is its own strip
      *  @return {Mesh} */
     computeNormals(smooth=false)
     {
@@ -826,6 +831,7 @@ class Mesh
         glContext.bindBuffer(glContext.ARRAY_BUFFER, this.buffer);
         glContext.bufferData(glContext.ARRAY_BUFFER, data, glContext.STATIC_DRAW);
         render3D.uploadedMeshes.add(this);
+        glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer); // the engine's 2D batch writes through this binding
         return this;
     }
 
@@ -854,7 +860,7 @@ class Mesh
  * - profile is [[radius, y], ...] from bottom to top
  * - [[r,-h],[r,h]] is a cylinder, [[0,-1],[1,0],[0,1]] with 4 sides is an octahedron
  * @param {Array<Array<number>>} profile
- * @param {number} [sides]
+ * @param {number} [sides] - Segments around the axis
  * @param {boolean} [smooth] - Vertex normals and shared vertices, otherwise one normal per face
  * @return {Mesh}
  * @memberof Render3D
@@ -862,6 +868,7 @@ class Mesh
 function buildLathe(profile, sides=8, smooth=false)
 {
     ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
+    ASSERT(sides > 2, 'lathe needs at least 3 sides');
     const mesh = new Mesh;
     const rings = profile.length;
     const point = (i, a)=> vec3(sin(a) * profile[i][0], profile[i][1], cos(a) * profile[i][0]);
@@ -886,7 +893,7 @@ function buildLathe(profile, sides=8, smooth=false)
     // v runs along the profile by arc length
     const lengths = [0];
     for (let i = 1; i < rings; ++i)
-        lengths[i] = lengths[i-1] + Math.hypot(profile[i][0] - profile[i-1][0], profile[i][1] - profile[i-1][1]);
+        lengths[i] = lengths[i-1] + hypot(profile[i][0] - profile[i-1][0], profile[i][1] - profile[i-1][1]);
     const total = lengths[rings - 1] || 1;
     const v = (i)=> 1 - lengths[i] / total;
 
@@ -934,6 +941,7 @@ function buildLathe(profile, sides=8, smooth=false)
  */
 function buildSphere(segments=12, rings=6, smooth=true)
 {
+    ASSERT(rings > 1, 'sphere needs at least 2 rings');
     const profile = [];
     for (let i = 0; i <= rings; ++i)
     {
@@ -988,6 +996,7 @@ function buildBox(size=vec3(1))
  */
 function buildGrid(sizeX, sizeZ, segmentsX=1, segmentsZ=1, heightFunction=()=>0, colorFunction)
 {
+    ASSERT(segmentsX > 0 && segmentsZ > 0, 'grid needs at least one segment per axis');
     const mesh = new Mesh;
     const cellX = sizeX / segmentsX, cellZ = sizeZ / segmentsZ;
     const px = (i)=> i * cellX - sizeX / 2, pz = (j)=> j * cellZ - sizeZ / 2;
@@ -1051,7 +1060,7 @@ function buildLoft(stations)
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * EngineObject3D - An EngineObject with a 3D transform and a mesh
- * - Inherits update, children, timers, destroy and renderOrder from EngineObject
+ * - Inherits update, children, timers, destroy and renderOrder from EngineObject, children that are EngineObject3D follow the parent's 3D transform
  * - The inherited 2D pos and physics are ignored by rendering, copy pos into pos3D for pseudo-3D games
  * - render() is empty, override render3D() for custom drawing
  * @extends EngineObject
@@ -1072,15 +1081,15 @@ class EngineObject3D extends EngineObject
      *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
     constructor(pos3D=vec3(), mesh, color=WHITE, tileInfo)
     {
-        super(vec2(), vec2(1), tileInfo, 0, color);
+        super(vec2(), vec2(), tileInfo, 0, color);
         ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
         ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
 
-        /** @property {Vector3} - World space position */
+        /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
         this.pos3D = pos3D.copy();
-        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians */
+        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, local to the parent when attached to an EngineObject3D */
         this.rotation3D = vec3();
-        /** @property {Vector3} - Scale */
+        /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
         this.scale3D = vec3(1);
         /** @property {Mesh} - Mesh to draw */
         this.mesh = mesh;
@@ -1088,9 +1097,13 @@ class EngineObject3D extends EngineObject
         this.transparent = false;
     }
 
-    /** Returns the object's world transform
+    /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
      *  @return {Matrix4} */
-    getMatrix() { return buildMatrix(this.pos3D, this.rotation3D, this.scale3D); }
+    getMatrix()
+    {
+        const matrix = buildMatrix(this.pos3D, this.rotation3D, this.scale3D);
+        return this.parent instanceof EngineObject3D ? this.parent.getMatrix().multiply(matrix) : matrix;
+    }
 
     /** 2D rendering is skipped, the mesh is drawn by render3D during the 3D pass */
     render() {}

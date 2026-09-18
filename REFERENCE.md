@@ -785,7 +785,7 @@ buildMatrix(pos, rotation, scale)              // translate * rotate * scale, an
 - Optional plugin that draws meshes, billboards and lines into the engine's WebGL canvas, under the 2D layer
 - Requires the 3D Math plugin. One shader: directional + ambient light, specular, fog, textures, vertex colors
 - Meshes are triangle strips drawn by matrix; immediate mode pushes batch into a stream
-- `EngineObject3D` extends `EngineObject`, so update, children, destroy and renderOrder all work; the 2D pos is ignored by rendering
+- EngineObject3D extends EngineObject, so update, destroy, timers and renderOrder all work; addChild parents 3D transforms when the parent is an EngineObject3D; the 2D pos is ignored by rendering
 - 2D physics still runs on the inherited pos and velocity, handy for pseudo-3D games that copy pos into pos3D
 - See `examples/shorts/render3d.js` for a demo
 
@@ -803,10 +803,11 @@ render3D.worldToClip(pos)             // Vector3 -> clip space -1..1, undefined 
 
 // Lights and fog
 render3D.lightDirection = vec3(.5, -1, .3).normalize()  // direction the light travels
-render3D.lightColor  = WHITE
+render3D.lightColor = WHITE
 render3D.ambientColor = rgb(.3, .3, .3)
 render3D.fogColor = undefined         // uses canvasClearColor when undefined
 render3D.fogStart = 20; render3D.fogEnd = 100   // by camera distance, fogEnd 0 disables fog
+// Lights and fog are read when a draw is issued or the stream flushes, set them before drawing
 
 // Draw state, read at each draw (set before drawing)
 render3D.lighting = true              // false draws plain vertex color times texture
@@ -824,17 +825,19 @@ mesh.combine(otherMesh, matrix, color)        // append a transformed mesh (weld
 mesh.computeNormals(smooth=false)             // derive normals from the triangles
 mesh.render(matrix, color, tileInfo)          // one draw call with the current render3D state
 mesh.dispose()                                // free the GPU buffer, the CPU data stays
+mesh.upload()                                 // upload now instead of on first render
 mesh.vertexCount
 render3D.drawMesh(mesh, matrix, color, tileInfo)
 
 // Shape builders - return a Mesh centered on the origin
 buildLathe(profile, sides=8, smooth=false)    // profile [[radius, y], ...] bottom to top, revolved about Y
-buildSphere(segments=12, rings=6, smooth=true)// diameter 1
+buildSphere(segments=12, rings=6, smooth=true) // diameter 1
 buildBox(size=vec3(1))                        // six faces with uvs
 buildGrid(sizeX, sizeZ, segmentsX, segmentsZ, heightFunction, colorFunction) // heightfield in XZ
 buildLoft(stations)                           // [[z, halfWidth, top, bottom, sideHeight], ...] nose first
 
 // All 3D draws happen inside the 3D pass: from render3D.onRender or an EngineObject3D's render3D()
+// Argument order: billboards take tileInfo before color like drawTile; geometry draws (drawMesh, drawQuad3D, pushStrip, mesh.render) take color before tileInfo
 // Immediate mode - pushes batch into one strip per flush, textured pushes flush on texture change
 render3D.pushStrip(points, normals, uvs, colors, tileInfo)
 render3D.drawBillboard(pos, size, tileInfo, color, angle) // camera facing quad, size is a Vector2
@@ -852,6 +855,7 @@ obj.mesh obj.color obj.tileInfo         // what to draw and how
 obj.transparent = true                  // draw in the transparent stage, sorted far to near, no depth writes
 obj.renderOrder                         // sorts the opaque stage
 obj.getMatrix()                         // buildMatrix(pos3D, rotation3D, scale3D)
+// children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local
 obj.render3D()                          // override for custom drawing; render() is empty by default
 render3D.renderStages()                 // the two stages, called automatically each frame
 ```

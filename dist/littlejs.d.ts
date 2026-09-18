@@ -6060,13 +6060,13 @@ declare module "littlejsengine" {
     export class Render3DPlugin {
         /** @property {Camera3D} - The camera */
         camera: Camera3D;
-        /** @property {Vector3} - Direction the directional light travels */
+        /** @property {Vector3} - Direction the directional light travels, read when a draw is issued or the stream flushes, so set lights and fog before drawing */
         lightDirection: Vector3;
         /** @property {Color} - Directional light color */
         lightColor: Color;
         /** @property {Color} - Ambient light color */
         ambientColor: Color;
-        /** @property {Color} - Fog color, uses canvasClearColor when undefined */
+        /** @property {Color} - Fog color, uses canvasClearColor when undefined, read when a draw is issued or the stream flushes, so set lights and fog before drawing */
         fogColor: any;
         /** @property {number} - Distance from the camera where fog starts */
         fogStart: number;
@@ -6102,13 +6102,9 @@ declare module "littlejsengine" {
         cameraUp: Vector3;
         /** @property {Vector3} - Camera forward axis this frame, read only */
         cameraForward: Vector3;
-        /** @property {WebGLProgram} - The shader, undefined when not available */
         shader: any;
-        /** @property {WebGLVertexArrayObject} - Vertex array object */
         vao: any;
-        /** @property {WebGLTexture} - 1x1 white texture used when no tile is given */
         whiteTexture: any;
-        /** @property {Set<Mesh>} - Uploaded meshes, so context loss can drop their buffers */
         uploadedMeshes: Set<any>;
         uniforms: {};
         attribs: any;
@@ -6148,6 +6144,8 @@ declare module "littlejsengine" {
         /** Draw the pending stream vertices as one strip, called automatically when needed */
         flush(): void;
         /** Run a draw function with every push captured into a new mesh instead of the stream
+         *  - pushes inside a bake ignore their tileInfo, the baked mesh takes its texture at render time
+         *  - drawMesh calls inside a bake draw immediately rather than being captured
          *  @param {Function} drawFunction
          *  @return {Mesh} */
         bake(drawFunction: Function): Mesh;
@@ -6234,7 +6232,7 @@ declare module "littlejsengine" {
     }
     /**
      * EngineObject3D - An EngineObject with a 3D transform and a mesh
-     * - Inherits update, children, timers, destroy and renderOrder from EngineObject
+     * - Inherits update, children, timers, destroy and renderOrder from EngineObject, children that are EngineObject3D follow the parent's 3D transform
      * - The inherited 2D pos and physics are ignored by rendering, copy pos into pos3D for pseudo-3D games
      * - render() is empty, override render3D() for custom drawing
      * @extends EngineObject
@@ -6253,17 +6251,17 @@ declare module "littlejsengine" {
          *  @param {Color} [color] - Tint
          *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
         constructor(pos3D?: Vector3, mesh?: Mesh, color?: Color, tileInfo?: TileInfo);
-        /** @property {Vector3} - World space position */
+        /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
         pos3D: Vector3;
-        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians */
+        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, local to the parent when attached to an EngineObject3D */
         rotation3D: Vector3;
-        /** @property {Vector3} - Scale */
+        /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
         scale3D: Vector3;
         /** @property {Mesh} - Mesh to draw */
         mesh: Mesh;
         /** @property {boolean} - Draw in the transparent stage, sorted far to near with depth writes off */
         transparent: boolean;
-        /** Returns the object's world transform
+        /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
          *  @return {Matrix4} */
         getMatrix(): Matrix4;
         /** Draw the object in 3D, called by the 3D pass, draws the mesh by default */
@@ -6309,7 +6307,7 @@ declare module "littlejsengine" {
          *  @return {Mesh} */
         combine(mesh: Mesh, matrix?: Matrix4, color?: Color): Mesh;
         /** Derive normals from the strip's triangles
-         *  @param {boolean} [smooth] - Average normals at shared positions, otherwise one normal per face
+         *  @param {boolean} [smooth] - Average normals at shared positions, otherwise each vertex takes the normal of the last face that touches it, which is one normal per face when every quad is its own strip
          *  @return {Mesh} */
         computeNormals(smooth?: boolean): Mesh;
         /** Pack the vertices and create the GPU buffer, called automatically by render
@@ -6328,7 +6326,7 @@ declare module "littlejsengine" {
      * - profile is [[radius, y], ...] from bottom to top
      * - [[r,-h],[r,h]] is a cylinder, [[0,-1],[1,0],[0,1]] with 4 sides is an octahedron
      * @param {Array<Array<number>>} profile
-     * @param {number} [sides]
+     * @param {number} [sides] - Segments around the axis
      * @param {boolean} [smooth] - Vertex normals and shared vertices, otherwise one normal per face
      * @return {Mesh}
      * @memberof Render3D

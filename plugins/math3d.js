@@ -324,7 +324,7 @@ class Matrix4
         for (let j = 0; j < 4; ++j)
         for (let i = 0; i < 4; ++i)
             r[j*4 + i] = a[i]*b[j*4] + a[4 + i]*b[j*4 + 1] + a[8 + i]*b[j*4 + 2] + a[12 + i]*b[j*4 + 3];
-        this.m = r;
+        this.m.set(r);
         return this;
     }
 
