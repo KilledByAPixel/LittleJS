@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, buildLathe, buildSphere, buildBox, buildGrid, buildLoft, EngineObject3D, EngineObject, engineObjects } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildSphere, buildBox, buildGrid, buildLoft, EngineObject3D, EngineObject, engineObjects } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -151,6 +151,19 @@ test('Mesh.combine transforms points, rotates normals, tints colors', () =>
     dst.combine(src, Matrix4.identity());
     assert.equal(dst.vertexCount, 12);
     nearVec(dst.points[8], 1, 0, 0);
+});
+
+test('Mesh.combine keeps normals correct under non-uniform scale', () =>
+{
+    const src = new Mesh;
+    src.addStrip([vec3(-1, 1, 0), vec3(-1, -1, 0), vec3(1, 1, 0), vec3(1, -1, 0)], vec3(0, 0, 1)); // faces +Z
+    const dst = new Mesh().combine(src, buildMatrix(undefined, undefined, vec3(2, 1, 1)));
+    assert.equal(dst.vertexCount, 6);
+    for (let i = 0; i < dst.vertexCount; ++i)
+    {
+        nearVec(dst.normals[i], 0, 0, 1);
+        near(dst.normals[i].length(), 1);
+    }
 });
 
 test('Mesh.computeNormals gives outward flat normals for a counter clockwise quad', () =>
@@ -341,7 +354,7 @@ test('billboard angle rotates in the camera plane', () =>
     nearVec(bb.points[1], -1, -1, 0);
 });
 
-test('3D draws outside the pass are rejected', () =>
+test('isRendering defaults to false and a headless render is a no-op', () =>
 {
     assert.equal(render3D.isRendering, false);
     const mesh = new Mesh;
@@ -366,6 +379,28 @@ test('drawSoftDisc triangles face the supplied normal', () =>
         }
         assert.ok(checked > 0);
     }
+});
+
+test('an odd strip does not flip the winding of the strips after it', () =>
+{
+    const mesh = render3D.bake(()=>
+    {
+        render3D.drawTriangle3D(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0));
+        render3D.drawQuad3D(vec3(0, 0, 1), vec3(1, 0, 1), vec3(1, 1, 1), vec3(0, 1, 1));
+    });
+    mesh.computeNormals(false);
+    const p = mesh.points;
+    let checked = 0;
+    for (let i = 0; i + 2 < p.length; ++i)
+    {
+        let f = p[i+1].subtract(p[i]).cross(p[i+2].subtract(p[i]));
+        if (f.lengthSquared() < 1e-9) continue;  // degenerate join
+        f = f.scale(i & 1 ? 1 : -1);             // real triangles sit at odd strip indices
+        for (let j = 0; j < 3; ++j)
+            assert.ok(mesh.normals[i + j].dot(f) > 0, `normal ${i + j} disagrees with face ${i}`);
+        ++checked;
+    }
+    assert.ok(checked > 2, 'the triangle and both quad triangles are checked');
 });
 
 test('EngineObject3D extends EngineObject and has a 3D transform', () =>
@@ -397,18 +432,33 @@ test('EngineObject3D getMatrix places the origin at pos3D with rotation and scal
     o.destroy();
 });
 
+test('EngineObject3D getMatrix follows an EngineObject3D parent', () =>
+{
+    const parent = new EngineObject3D(vec3(10, 0, 0));
+    parent.rotation3D = vec3(0, PI/2, 0);
+    const child = new EngineObject3D(vec3(0, 0, 1));
+    parent.addChild(child);
+    assert.equal(child.parent, parent);
+    nearVec(child.getMatrix().transformPoint(vec3()), 11, 0, 0); // local +Z yawed to the parent's +X
+    child.destroy();
+    parent.destroy();
+});
+
 test('EngineObject3D render is a no-op and render3D draws the mesh through the plugin', () =>
 {
     let drawn;
     const saved = render3D.drawMesh;
     render3D.drawMesh = (mesh, matrix, color, tileInfo)=> drawn = {mesh, matrix, color, tileInfo};
     const mesh = buildBox();
-    const o = new EngineObject3D(vec3(1, 0, 0), mesh);
+    const tileInfo = new TileInfo(vec2(), vec2(16));
+    const o = new EngineObject3D(vec3(1, 0, 0), mesh, RED, tileInfo);
     o.render();
     assert.equal(drawn, undefined);
     o.render3D();
     assert.equal(drawn.mesh, mesh);
     nearVec(drawn.matrix.getTranslation(), 1, 0, 0);
+    assert.ok(drawn.color.r === 1 && drawn.color.g === 0, 'color passes through');
+    assert.equal(drawn.tileInfo, tileInfo);
     const empty = new EngineObject3D(vec3());
     drawn = undefined;
     empty.render3D(); // no mesh, nothing drawn
@@ -424,6 +474,7 @@ test('render3D stages draw opaque by renderOrder, then onRender, then transparen
     engineObjects.length = 0;
 
     const order = [];
+    const record = (name)=> order.push({name, additive: render3D.additive, depthTest: render3D.depthTest});
     class Tracked extends EngineObject3D
     {
         constructor(name, pos, transparent, renderOrder=0)
@@ -433,7 +484,7 @@ test('render3D stages draw opaque by renderOrder, then onRender, then transparen
             this.transparent = transparent;
             this.renderOrder = renderOrder;
         }
-        render3D() { order.push(this.name + ':' + (render3D.blend ? 'T' : 'O')); }
+        render3D() { record(this.name + ':' + (render3D.blend ? 'T' : 'O')); }
     }
     render3D.camera.pos = vec3(0, 0, 10);
     render3D.camera.rotation = vec3();
@@ -441,13 +492,22 @@ test('render3D stages draw opaque by renderOrder, then onRender, then transparen
     new Tracked('a', vec3(), false, 1);
     new Tracked('near', vec3(0, 0, 5), true);
     new Tracked('far', vec3(0, 0, -5), true);
-    render3D.onRender = ()=> order.push('onRender');
+    const dead = new Tracked('dead', vec3(), false);
+    dead.destroy();
+    render3D.onRender = ()=> record('onRender');
     render3D.updateMatrices(1);
     render3D.renderStages();
-    assert.deepEqual(order, ['a:O', 'b:O', 'onRender', 'far:T', 'near:T']);
+    const names = order.map(o => o.name);
+    assert.deepEqual(names, ['a:O', 'b:O', 'onRender', 'far:T', 'near:T']);
+    assert.ok(!names.includes('dead:O'), 'destroyed objects are skipped');
+    assert.ok(order.every(o => o.additive === false && o.depthTest === true), 'both stages draw with additive off and depth test on');
     assert.equal(render3D.blend, true);       // left in the transparent stage's state
     assert.equal(render3D.depthWrite, false);
     render3D.onRender = undefined;
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
+    render3D.blend = false;
+    render3D.depthWrite = true;
+    render3D.additive = false;
+    render3D.depthTest = true;
 });
