@@ -46,7 +46,7 @@ function gameInit()
     for (let i = 0; i < 6; ++i)
     {
         const a = i / 6 * 2 * PI;
-        spinners.push(new Spinner(vec3(Math.sin(a) * 5, 1.5, Math.cos(a) * 5), hsl(i / 6, .7, .6), .01 + i * .004));
+        spinners.push(new Spinner(vec3(Math.sin(a) * 5, 2.5, Math.cos(a) * 5), hsl(i / 6, .7, .6), .01 + i * .004));
     }
     buildShapes();
 

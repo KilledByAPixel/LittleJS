@@ -747,11 +747,15 @@ test('transparent stage queues every draw by distance and replays far to near wi
     const order = [];
     for (const item of queue)
         item.draw = ()=> order.push([item.distance, render3D.additive, render3D.lighting]);
+    render3D.specular = .3; // not captured by any item, must survive the replay
     render3D.flushTransparentQueue();
     assert.equal(render3D.transparentQueue, undefined);
     assert.deepEqual(order.map(o => o[0] > 399 ? 'mesh' : o[0] > 99 ? 'billboard' : 'strip'), ['mesh', 'billboard', 'strip']);
     assert.deepEqual(order.map(o => o[1]), [true, false, false]);   // additive only for the mesh
     assert.deepEqual(order.map(o => o[2]), [true, false, true]);    // unlit only for the billboard
-    render3D.additive = false;
-    render3D.lighting = true;
+    // the replay leaves the state as it found it, so the last item cannot unlight the next frame
+    assert.equal(render3D.specular, .3);
+    assert.equal(render3D.lighting, true);
+    assert.equal(render3D.additive, false);
+    render3D.specular = 0;
 });

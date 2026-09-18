@@ -366,11 +366,16 @@ class Render3DPlugin
         if (!queue) return;
         this.transparentQueue = undefined;
         queue.sort((a, b)=> b.distance - a.distance);
-        for (const item of queue)
+        const state = render3DCaptureState();
+        try
         {
-            Object.assign(this, item.state);
-            item.draw();
+            for (const item of queue)
+            {
+                Object.assign(this, item.state);
+                item.draw();
+            }
         }
+        finally { Object.assign(this, state); } // the last item's state must not leak into the next frame
     }
 
     /** Draw a sky dome around the camera, unlit, unfogged and behind everything, called automatically when render3D.sky is set
