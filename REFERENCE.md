@@ -126,8 +126,8 @@ isVector2(v)    // Is it a valid Vector2?
 isColor(c)      // Is it a valid Color?
 
 // Utility functions
-noise1D(x)                            // Smooth 1D value noise (-1 to 1)
-noise2D(x, y)                         // Smooth 2D value noise (-1 to 1)
+noise1D(x)                            // Smooth 1D value noise (0 to 1)
+noise2D(x, y)                         // Smooth 2D value noise (0 to 1)
 fetchJSON(url)                        // Fetch and parse a JSON file (async)
 shareURL(title, url, callback)        // Share a URL via the navigator share API
 readSaveData(saveName, defaultSaveData) // Read game save data from localStorage, default must be an object
