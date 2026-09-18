@@ -39,7 +39,7 @@ function gameInit()
 {
     new Render3DPlugin;
     setRender3DSmoothShading(true);
-    render3D.sky = buildSky(rgb(.2, .3, .6), rgb(.7, .8, .9));
+    render3D.setSky(rgb(.2, .3, .6), rgb(.7, .8, .9));
     render3D.ambientColor = rgb(.4, .4, .45);
 
     // a checkerboard floor (flat for crisp cells), a box, a cylinder and a dozen balls

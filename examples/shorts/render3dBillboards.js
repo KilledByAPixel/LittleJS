@@ -15,8 +15,9 @@ class Sprite extends EngineObject3D
     }
     render3D()
     {
-        // billboards are unlit and keep their own colors
-        render3D.drawBillboard(this.pos3D, vec2(2), this.tileInfo, this.color, sin(time + this.phase) * .2);
+        // billboards are unlit and keep their own colors, tileInfo.frame animates through the sheet
+        const animated = this.tileInfo.frame(mod(time * 4 + this.phase, 4) | 0); // cycle the four tiles
+        render3D.drawBillboard(this.pos3D, vec2(2), animated, this.color, sin(time + this.phase) * .2);
         render3D.drawShadow(this.pos3D, 1);
         render3D.drawLine(this.pos3D, vec3(0, 3, 0), .05, this.color.withAlpha(.5));
     }
@@ -27,8 +28,7 @@ let orbit = 0;
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.sky = buildSky(rgb(.1, .1, .3), rgb(.4, .2, .5), rgb(.1, .1, .2));
-    render3D.fogColor = rgb(.4, .2, .5);
+    render3D.setSky(rgb(.1, .1, .3), rgb(.4, .2, .5), rgb(.1, .1, .2));
     render3D.fogStart = 15;
     render3D.fogEnd = 40;
     render3D.ambientColor = rgb(.4, .4, .5);
@@ -38,7 +38,7 @@ function gameInit()
     for (let i = 0; i < 12; ++i)
     {
         const a = i / 12 * 2 * PI;
-        new Sprite(vec3(sin(a) * 6, 2, cos(a) * 6), tile(i % 4, 16), hsl(i / 12, .8, .7));
+        new Sprite(vec3(sin(a) * 6, 2, cos(a) * 6), tile(0, 16), hsl(i / 12, .8, .7));
     }
     new EngineObject3D(vec3(0, 1, 0), buildBox(vec3(2)), rgb(.6, .6, .7));
 }
@@ -51,5 +51,5 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    drawTextScreen('3D billboards - sprites with alpha, shadows and lines, drag to orbit', vec2(mainCanvasSize.x / 2, 40), 28);
+    drawTextScreen('3D billboards - animated sprites with alpha, shadows and lines, drag to orbit', vec2(mainCanvasSize.x / 2, 40), 28);
 }

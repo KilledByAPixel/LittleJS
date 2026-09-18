@@ -31,7 +31,7 @@ let orbit = 0;
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.sky = buildSky(rgb(.05, .05, .1), rgb(.2, .1, .1), rgb(.05, .05, .05));
+    render3D.setSky(rgb(.05, .05, .1), rgb(.2, .1, .1), rgb(.05, .05, .05));
     render3D.ambientColor = rgb(.2, .2, .25);
     render3D.lightDirection = vec3(.3, -1, .5).normalize();
 

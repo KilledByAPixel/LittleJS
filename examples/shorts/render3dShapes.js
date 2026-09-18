@@ -32,8 +32,7 @@ function buildShapes()
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.sky = buildSky(rgb(.2, .4, .9), rgb(.8, .9, 1));
-    render3D.fogColor = rgb(.8, .9, 1);
+    render3D.setSky(rgb(.2, .4, .9), rgb(.8, .9, 1));
     render3D.fogStart = 15;
     render3D.fogEnd = 40;
     render3D.lightDirection = vec3(-.5, -1, -.3).normalize();

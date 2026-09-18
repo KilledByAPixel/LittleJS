@@ -44,8 +44,7 @@ function makeTerrainImages(size)
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.sky = buildSky(rgb(.3, .5, .9), rgb(.8, .9, 1));
-    render3D.fogColor = rgb(.8, .9, 1);
+    render3D.setSky(rgb(.3, .5, .9), rgb(.8, .9, 1));
     render3D.fogStart = 20;
     render3D.fogEnd = 60;
     render3D.lightDirection = vec3(-.4, -1, -.5).normalize();
