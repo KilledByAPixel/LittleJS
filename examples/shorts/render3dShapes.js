@@ -27,7 +27,8 @@ function buildShapes()
         buildSphere(),
         buildLoft([[1.2, .2, .2, -.1], [0, .7, .5, -.4], [-1, .5, .3, -.3]]), // hull, always flat
     ];
-    spinners.forEach((s, i)=> s.mesh = meshes[i]);
+    spinners.forEach((s, i)=> { s.mesh?.dispose(); s.mesh = meshes[i]; });
+    floorMesh?.dispose();
     floorMesh = buildGrid(30, 30, 30, 30, (x, z)=> Math.sin(x / 3) * Math.cos(z / 3) * .4,
         (x, z)=> hsl(.3, .5, .35 + Math.sin(x / 3) * Math.cos(z / 3) * .1));
 }

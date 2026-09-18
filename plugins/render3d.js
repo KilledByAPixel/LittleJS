@@ -26,6 +26,14 @@ const RENDER3D_QUAD_UVS = Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec
 const RENDER3D_FULL_UV_RECT = Object.freeze({x:0, y:0, w:1, h:1});
 const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
 const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
+const RENDER3D_SHADOW_COLOR = Object.freeze(rgb(0, 0, 0, .5));
+
+// outward normal of a quad given its corners in loop order, from the diagonals so a collapsed corner still works
+function render3DQuadNormal(a, b, c, d)
+{
+    const n = c.subtract(a).cross(d.subtract(b));
+    return n.lengthSquared() ? n.normalize() : RENDER3D_DEFAULT_NORMAL;
+}
 
 /** Default shading for the shape builders, true for smooth vertex normals, false for flat faceted faces
  *  @type {boolean}
@@ -337,17 +345,22 @@ class Render3DPlugin
         this.lighting = this.blend = this.depthTest = this.depthWrite = false;
         this.fogEnd = 0;
         const radius = (this.camera.near + this.camera.far) / 2;
-        mesh.render(buildMatrix(this.camera.pos, undefined, vec3(radius)));
-        this.fogEnd = fogEnd;
-        Object.assign(this, state);
+        try { mesh.render(buildMatrix(this.camera.pos, undefined, vec3(radius))); }
+        finally
+        {
+            this.fogEnd = fogEnd;
+            Object.assign(this, state);
+        }
     }
 
     /** Get the world space ray under a screen position, for picking with the raycast functions
+     *  - uses the camera as it is now, so it is safe to call from gameUpdate after moving the camera
      *  @param {Vector2} screenPos - Same space as mousePosScreen
      *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
      *  @return {{pos: Vector3, direction: Vector3}} - Ray start and unit direction */
     screenToRay(screenPos, canvasSize=mainCanvasSize)
     {
+        this.updateMatrices();
         const clipX = screenPos.x / canvasSize.x * 2 - 1;
         const clipY = 1 - screenPos.y / canvasSize.y * 2;
         const tanHalf = tan(this.camera.fov / 2);
@@ -368,8 +381,8 @@ class Render3DPlugin
     {
         const lighting = this.lighting;
         this.lighting = false;
-        this.pushStrip(points, normals, uvs, colors, tileInfo);
-        this.lighting = lighting;
+        try { this.pushStrip(points, normals, uvs, colors, tileInfo); }
+        finally { this.lighting = lighting; }
     }
 
     /** Draw a camera facing quad, unlit so it keeps its own colors; draw it in the transparent stage for alpha
@@ -398,9 +411,7 @@ class Render3DPlugin
      *  @param {TileInfo} [tileInfo] */
     drawQuad3D(a, b, c, d, color=WHITE, tileInfo)
     {
-        const n = b.subtract(a).cross(d.subtract(a));
-        const normal = n.lengthSquared() ? n.normalize() : RENDER3D_DEFAULT_NORMAL;
-        this.pushStrip([a, b, d, c], normal, RENDER3D_QUAD_UVS, color, tileInfo);
+        this.pushStrip([a, b, d, c], render3DQuadNormal(a, b, c, d), RENDER3D_QUAD_UVS, color, tileInfo);
     }
 
     /** Draw a triangle, counter clockwise from outside is the front
@@ -433,7 +444,7 @@ class Render3DPlugin
      *  @param {number} radius
      *  @param {number} [floorHeight] - World height of the floor under pos
      *  @param {Color} [color] */
-    drawShadow(pos, radius, floorHeight=0, color=rgb(0, 0, 0, .5))
+    drawShadow(pos, radius, floorHeight=0, color=RENDER3D_SHADOW_COLOR)
     {
         this.drawSoftDisc(vec3(pos.x, floorHeight + .01, pos.z), RENDER3D_DEFAULT_NORMAL, radius, color);
     }
@@ -1027,7 +1038,7 @@ function buildLathe(profile, sides=8, smooth=render3DSmoothShading)
  * Build a sphere of diameter 1
  * @param {number} [segments] - Around
  * @param {number} [rings] - Top to bottom
- * @param {boolean} [smooth]
+ * @param {boolean} [smooth] - Defaults to render3DSmoothShading
  * @return {Mesh}
  * @memberof Render3D
  */
@@ -1076,13 +1087,15 @@ function buildBox(size=vec3(1))
 }
 
 /**
- * Build a heightfield grid in the XZ plane centered on the origin, one strip per row
+ * Build a heightfield grid in the XZ plane centered on the origin
+ * - smooth is one ribbon strip per row with slope normals, flat is one strip per cell with a face normal
  * @param {number} sizeX
  * @param {number} sizeZ
  * @param {number} [segmentsX]
  * @param {number} [segmentsZ]
  * @param {Function} [heightFunction] - (x, z) => y, default flat
  * @param {Function} [colorFunction] - (x, z) => Color, default white
+ * @param {boolean} [smooth] - Defaults to render3DSmoothShading
  * @return {Mesh}
  * @memberof Render3D
  */
@@ -1123,8 +1136,7 @@ function buildGrid(sizeX, sizeZ, segmentsX=1, segmentsZ=1, heightFunction=()=>0,
             for (let i = 0; i < segmentsX; ++i)
             {
                 const a = point(i, j), b = point(i, j + 1), c = point(i + 1, j + 1), d = point(i + 1, j);
-                const n = c.subtract(a).cross(d.subtract(b)).normalize();
-                mesh.addStrip([a, b, d, c], n,
+                mesh.addStrip([a, b, d, c], render3DQuadNormal(a, b, c, d),
                     [uv(i, j), uv(i, j + 1), uv(i + 1, j), uv(i + 1, j + 1)],
                     [color(i, j), color(i, j + 1), color(i + 1, j), color(i + 1, j + 1)]);
             }
@@ -1139,6 +1151,7 @@ function buildGrid(sizeX, sizeZ, segmentsX=1, segmentsZ=1, heightFunction=()=>0,
  * - heights is a 2D array [row][column] of 0-1 values, rows run along Z and columns along X
  * - or an image, where the red channel is the height and row 0 is the far edge (-Z)
  * - colors is an optional 2D array of Colors or an image, sampled per vertex
+ * - images are read through a canvas, so they must be same origin or loaded with crossOrigin set
  * @memberof Render3D
  * @example
  * const terrain = new HeightMap(heightImage, vec2(100, 100), 10, colorImage);
@@ -1223,12 +1236,12 @@ function render3DImageToArray(image, sample)
     if (image instanceof TextureInfo)
         image = image.image;
     ASSERT(image && image.width && image.height, 'image is not loaded');
-    ASSERT(workCanvas, 'reading an image needs a canvas, pass arrays in headless mode');
+    ASSERT(workReadCanvas, 'reading an image needs a canvas, pass arrays in headless mode');
     const width = image.width, height = image.height;
-    workCanvas.width = width;
-    workCanvas.height = height;
-    workContext.drawImage(image, 0, 0);
-    const data = workContext.getImageData(0, 0, width, height).data;
+    workReadCanvas.width = width;
+    workReadCanvas.height = height;
+    workReadContext.drawImage(image, 0, 0);
+    const data = workReadContext.getImageData(0, 0, width, height).data;
     const rows = [];
     for (let y = 0; y < height; ++y)
     {
@@ -1299,8 +1312,7 @@ function buildLoft(stations)
     // quad a,b,c,d in loop order with the diagonal cross as its normal, which survives a collapsed corner
     const quad = (a, b, c, d)=>
     {
-        const n = c.subtract(a).cross(d.subtract(b)).normalize();
-        mesh.addStrip([a, b, d, c], n, [vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)]);
+        mesh.addStrip([a, b, d, c], render3DQuadNormal(a, b, c, d), RENDER3D_QUAD_UVS);
     };
     for (let i = 0; i + 1 < stations.length; ++i)
     {

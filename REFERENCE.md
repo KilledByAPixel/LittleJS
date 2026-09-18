@@ -785,7 +785,7 @@ isPointInBox3D(point, pos, size)               // true if point is in the box, b
 isOverlapping3D(posA, sizeA, posB, sizeB)      // box vs box, touching edges do not overlap
 collideSphereSphere(posA, radiusA, posB, radiusB)          // push A out of B, or undefined
 collideSphereBox(pos, radius, boxPos, boxSize)             // push a sphere out of a box, or undefined
-collideSphereCylinder(pos, radius, cylPos, cylRadius, cylHeight) // push a sphere out of a cylinder
+collideSphereCylinder(pos, radius, cylPos, cylRadius, cylHeight) // push a sphere out of a cylinder, or undefined
 collideBoxBox(posA, sizeA, posB, sizeB)        // minimum translation vector for A, or undefined
 raycastSphere(origin, direction, pos, radius)  // distance t to the sphere, or undefined
 raycastPlane(origin, direction, planePos, planeNormal)     // distance t to the plane, or undefined
@@ -798,7 +798,7 @@ raycastBox(origin, direction, pos, size)       // distance t to the box, or unde
 - Meshes are triangle strips drawn by matrix; immediate mode pushes batch into a stream
 - EngineObject3D extends EngineObject, so update, destroy, timers and renderOrder all work; addChild parents 3D transforms when the parent is an EngineObject3D; the 2D pos is ignored by rendering
 - 2D physics still runs on the inherited pos and velocity, handy for pseudo-3D games that copy pos into pos3D
-- See `examples/shorts/render3d.js` for a demo
+- See the `examples/shorts/render3d*.js` demos: shapes, billboards, height map terrain, and collision with picking
 
 ```javascript
 // Setup (call in gameInit)
@@ -842,6 +842,7 @@ mesh.render(matrix, color, tileInfo)          // one draw call with the current 
 mesh.dispose()                                // free the GPU buffer, the CPU data stays
 mesh.upload()                                 // upload now instead of on first render
 mesh.vertexCount
+mesh.dirty = true                             // re-upload on the next draw after editing the arrays directly
 render3D.drawMesh(mesh, matrix, color, tileInfo)
 
 // Shape builders - return a Mesh centered on the origin, smooth defaults to render3DSmoothShading

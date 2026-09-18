@@ -6259,6 +6259,7 @@ declare module "littlejsengine" {
          *  @param {Mesh} mesh - From buildSky */
         drawSky(mesh: Mesh): void;
         /** Get the world space ray under a screen position, for picking with the raycast functions
+         *  - uses the camera as it is now, so it is safe to call from gameUpdate after moving the camera
          *  @param {Vector2} screenPos - Same space as mousePosScreen
          *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
          *  @return {{pos: Vector3, direction: Vector3}} - Ray start and unit direction */
@@ -6466,7 +6467,7 @@ declare module "littlejsengine" {
      * Build a sphere of diameter 1
      * @param {number} [segments] - Around
      * @param {number} [rings] - Top to bottom
-     * @param {boolean} [smooth]
+     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
      * @return {Mesh}
      * @memberof Render3D
      */
@@ -6479,13 +6480,15 @@ declare module "littlejsengine" {
      */
     export function buildBox(size?: Vector3): Mesh;
     /**
-     * Build a heightfield grid in the XZ plane centered on the origin, one strip per row
+     * Build a heightfield grid in the XZ plane centered on the origin
+     * - smooth is one ribbon strip per row with slope normals, flat is one strip per cell with a face normal
      * @param {number} sizeX
      * @param {number} sizeZ
      * @param {number} [segmentsX]
      * @param {number} [segmentsZ]
      * @param {Function} [heightFunction] - (x, z) => y, default flat
      * @param {Function} [colorFunction] - (x, z) => Color, default white
+     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
      * @return {Mesh}
      * @memberof Render3D
      */
@@ -6516,6 +6519,7 @@ declare module "littlejsengine" {
      * - heights is a 2D array [row][column] of 0-1 values, rows run along Z and columns along X
      * - or an image, where the red channel is the height and row 0 is the far edge (-Z)
      * - colors is an optional 2D array of Colors or an image, sampled per vertex
+     * - images are read through a canvas, so they must be same origin or loaded with crossOrigin set
      * @memberof Render3D
      * @example
      * const terrain = new HeightMap(heightImage, vec2(100, 100), 10, colorImage);

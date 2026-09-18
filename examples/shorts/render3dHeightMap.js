@@ -94,6 +94,7 @@ function gameUpdate()
     if (keyWasPressed('Space'))
     {
         setRender3DSmoothShading(!render3DSmoothShading);
+        terrainMesh.dispose();
         terrainMesh = terrain.buildMesh();
     }
     orbit += mouseIsDown(0) ? mouseDeltaScreen.x * .01 : .002;

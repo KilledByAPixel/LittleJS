@@ -497,11 +497,10 @@ test('render3D stages draw opaque by renderOrder, then onRender, then transparen
     render3D.onRender = ()=> record('onRender');
     render3D.onRenderTransparent = ()=> record('onRenderTransparent:' + (render3D.blend ? 'T' : 'O'));
     render3D.sky = new Mesh;
-    const savedDrawSky = render3D.drawSky;
     render3D.drawSky = ()=> record('sky');
     render3D.updateMatrices(1);
     render3D.renderStages();
-    render3D.drawSky = savedDrawSky;
+    delete render3D.drawSky; // back to the prototype method
     render3D.sky = undefined;
     render3D.onRenderTransparent = undefined;
     const names = order.map(o => o.name);
@@ -662,4 +661,61 @@ test('Mesh.dirty is set by edits and cleared only by upload', () =>
     assert.equal(m.dirty, true);
     m.upload(); // headless: no shader, stays dirty until a real upload
     assert.equal(m.dirty, true);
+});
+
+test('drawSky draws unlit and unfogged with depth off, then restores every field', () =>
+{
+    let seen;
+    const sky = new Mesh;
+    sky.render = (matrix)=>
+    {
+        seen = {lighting: render3D.lighting, blend: render3D.blend, depthTest: render3D.depthTest,
+            depthWrite: render3D.depthWrite, fogEnd: render3D.fogEnd, matrix};
+    };
+    render3D.camera.pos = vec3(1, 2, 3);
+    render3D.fogEnd = 50;
+    render3D.lighting = true;
+    render3D.specular = .5;
+    render3D.cullBackFaces = true;
+    render3D.drawSky(sky);
+    assert.deepEqual([seen.lighting, seen.blend, seen.depthTest, seen.depthWrite, seen.fogEnd], [false, false, false, false, 0]);
+    nearVec(seen.matrix.getTranslation(), 1, 2, 3); // around the camera
+    const radius = (render3D.camera.near + render3D.camera.far) / 2;
+    const scaled = seen.matrix.transformDirection(vec3(1, 0, 0));
+    assert.ok(Math.abs(scaled.x - radius) < radius * 1e-5 && scaled.y === 0 && scaled.z === 0); // Float32 matrix
+    assert.equal(render3D.fogEnd, 50);
+    assert.equal(render3D.lighting, true);
+    assert.equal(render3D.specular, .5);
+    assert.equal(render3D.cullBackFaces, true);
+    assert.equal(render3D.depthTest, true);
+    assert.equal(render3D.depthWrite, true);
+    // restored even when the draw throws
+    sky.render = ()=> { throw new Error('boom'); };
+    assert.throws(()=> render3D.drawSky(sky), /boom/);
+    assert.equal(render3D.fogEnd, 50);
+    assert.equal(render3D.lighting, true);
+    render3D.fogEnd = 0;
+    render3D.specular = 0;
+    render3D.cullBackFaces = false;
+});
+
+test('pushStripUnlit turns lighting off for the push and restores it, even on a throw', () =>
+{
+    const seen = [];
+    render3D.lighting = true;
+    render3D.bake(()=>
+    {
+        const capture = render3D.capture;
+        const addStrip = capture.addStrip.bind(capture);
+        capture.addStrip = (...args)=> { seen.push(render3D.lighting); return addStrip(...args); };
+        render3D.pushStripUnlit([vec3(), vec3(1), vec3(2)]);
+        render3D.drawBillboard(vec3(), vec2(1));
+        render3D.drawLine3D(vec3(), vec3(1));
+        render3D.drawShadow(vec3(), 1);
+        render3D.pushStrip([vec3(), vec3(1), vec3(2)]);
+    });
+    assert.deepEqual(seen, [false, false, false, false, false, false, true]); // three disc rings in the shadow
+    assert.equal(render3D.lighting, true);
+    assert.throws(()=> render3D.bake(()=> render3D.pushStripUnlit([vec3(), vec3(1)]))); // too few points asserts
+    assert.equal(render3D.lighting, true);
 });
