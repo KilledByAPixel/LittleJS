@@ -111,7 +111,6 @@ class Render3DPlugin
         this.uniforms = {};
         this.attribs = undefined;
 
-        // the stream, filled in by the stream task
         this.streamBuffer = undefined;
         this.streamData = new ArrayBuffer(RENDER3D_MAX_BATCH * RENDER3D_VERTEX_BYTES);
         this.streamFloats = new Float32Array(this.streamData);
@@ -627,7 +626,6 @@ function render3DPreRender()
     const c = r.camera.pos;
     gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
 
-    // stages are filled in by the objects task
     r.isRendering = true;
     r.renderStages();
     r.isRendering = false;
