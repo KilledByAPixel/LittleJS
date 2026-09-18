@@ -816,6 +816,16 @@ render3D.depthTest = true; render3D.depthWrite = true
 render3D.cullBackFaces = false
 render3D.specular = 0                 // Phong highlight strength
 render3D.onRender = ()=> {}           // called between the opaque and transparent stages
+
+// Meshes - triangle strips, uploaded on first render, drawn by matrix
+const mesh = new Mesh()
+mesh.addStrip(points, normals, uvs, colors)   // one strip; normals/uvs/colors are one value or one per point
+mesh.combine(otherMesh, matrix, color)        // append a transformed mesh (weld a static world)
+mesh.computeNormals(smooth=false)             // derive normals from the triangles
+mesh.render(matrix, color, tileInfo)          // one draw call with the current render3D state
+mesh.dispose()                                // free the GPU buffer, the CPU data stays
+mesh.vertexCount
+render3D.drawMesh(mesh, matrix, color, tileInfo)
 ```
 
 ## LittleJS Three.js Integration

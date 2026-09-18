@@ -6129,6 +6129,14 @@ declare module "littlejsengine" {
          *  @param {Vector3} pos
          *  @return {Vector2|undefined} - undefined when behind the camera */
         worldToScreen(pos: Vector3): Vector2 | undefined;
+        /** Draw a mesh with the current state, flushes the stream first so draw order holds
+         *  @param {Mesh} mesh
+         *  @param {Matrix4} [matrix] - Object transform
+         *  @param {Color} [color] - Tint
+         *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
+        drawMesh(mesh: Mesh, matrix?: Matrix4, color?: Color, tileInfo?: TileInfo): void;
+        /** Draw the pending stream vertices as one strip, called automatically when needed */
+        flush(): void;
     }
     /**
      * Camera3D - Position, rotation and lens for the 3D view
@@ -6173,6 +6181,60 @@ declare module "littlejsengine" {
         /** Park the camera so the z=0 plane matches LittleJS 2D world space, called automatically when align2D is set
          *  @param {number} [canvasHeight] - Defaults to the main canvas height */
         update2D(canvasHeight?: number): void;
+    }
+    /**
+     * Mesh - A triangle strip with positions, normals, uvs and colors, uploaded once and drawn by matrix
+     * - Build with addStrip, combine or the shape builders, then render each frame
+     * - The GPU buffer is created lazily on first render and dropped by dispose
+     * @memberof Render3D
+     * @example
+     * const mesh = buildLathe([[0, -1], [1, 0], [0, 1]], 4); // octahedron
+     * mesh.render(buildMatrix(vec3(0, 1, 0)), RED);
+     */
+    export class Mesh {
+        /** @property {Array<Vector3>} - Vertex positions in strip order */
+        points: any[];
+        /** @property {Array<Vector3>} - Vertex normals */
+        normals: any[];
+        /** @property {Array<Vector2>} - Vertex texture coords, 0-1 across the tile */
+        uvs: any[];
+        /** @property {Array<Color>} - Vertex colors */
+        colors: any[];
+        /** @property {WebGLBuffer} - GPU buffer, created by upload */
+        buffer: WebGLBuffer;
+        /** @property {number} - Vertices in the GPU buffer */
+        bufferCount: number;
+        /** Number of vertices in the mesh
+         *  @return {number} */
+        get vertexCount(): number;
+        /** Add a triangle strip, joined to the previous one with degenerate triangles
+         *  - the first three points wound counter clockwise from outside are a front face
+         *  @param {Array<Vector3>} points - Strip order
+         *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
+         *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, default zero
+         *  @param {Color|Array<Color>} [colors] - One for all or one per point, default white
+         *  @return {Mesh} */
+        addStrip(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>): Mesh;
+        /** Append another mesh transformed by a matrix, for welding a static world together
+         *  @param {Mesh} mesh
+         *  @param {Matrix4} [matrix]
+         *  @param {Color} [color] - Multiplies the appended vertex colors
+         *  @return {Mesh} */
+        combine(mesh: Mesh, matrix?: Matrix4, color?: Color): Mesh;
+        /** Derive normals from the strip's triangles
+         *  @param {boolean} [smooth] - Average normals at shared positions, otherwise one normal per face
+         *  @return {Mesh} */
+        computeNormals(smooth?: boolean): Mesh;
+        /** Pack the vertices and create the GPU buffer, called automatically by render
+         *  @return {Mesh} */
+        upload(): Mesh;
+        /** Draw the mesh, one draw call with the current render3D state
+         *  @param {Matrix4} [matrix] - Object transform
+         *  @param {Color} [color] - Tint
+         *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
+        render(matrix?: Matrix4, color?: Color, tileInfo?: TileInfo): void;
+        /** Delete the GPU buffer, the CPU arrays stay so the mesh can be rendered again */
+        dispose(): void;
     }
     /**
      * LittleJS Three.js Plugin

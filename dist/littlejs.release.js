@@ -16812,6 +16812,31 @@ class Render3DPlugin
             return;
         return vec2((clip.x + 1) / 2 * mainCanvasSize.x, (1 - clip.y) / 2 * mainCanvasSize.y);
     }
+
+    /** Draw a mesh with the current state, flushes the stream first so draw order holds
+     *  @param {Mesh} mesh
+     *  @param {Matrix4} [matrix] - Object transform
+     *  @param {Color} [color] - Tint
+     *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
+    drawMesh(mesh, matrix=new Matrix4, color=WHITE, tileInfo)
+    {
+        if (!this.shader) return;
+        this.flush();
+        mesh.buffer || mesh.upload();
+        if (!mesh.bufferCount) return;
+
+        const gl = glContext;
+        gl.uniformMatrix4fv(render3DUniform('model'), false, matrix.m);
+        gl.uniformMatrix4fv(render3DUniform('normalMat'), false, matrix.copy().invert().transpose().m);
+        render3DApplyState(tileInfo, color);
+        render3DBindVertexBuffer(mesh.buffer);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, mesh.bufferCount);
+        ++drawCount;
+        primitiveCount += mesh.bufferCount;
+    }
+
+    /** Draw the pending stream vertices as one strip, called automatically when needed */
+    flush() {} // filled in by the stream task
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -17094,6 +17119,195 @@ function render3DContextLost()
 function render3DContextRestored()
 {
     render3DInitGL();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Strips: every strip gets a leading repeat of its first vertex and a trailing
+// repeat of its last, which joins it to its neighbours with degenerate
+// triangles, plus one more trailing repeat when the count is odd so winding
+// parity holds across a whole mesh or batch
+
+// walk a strip's vertices with the repeats applied, calling back with (point, normal, uv, color)
+// normals, uvs and colors may be one value for all points, an array per point, or undefined
+function render3DForEachStripVertex(points, normals, uvs, colors, callback)
+{
+    ASSERT(isArray(points) && points.length > 2, 'strip needs at least 3 points');
+    const pick = (a, i, d)=> a === undefined ? d : isArray(a) ? a[i] : a;
+    const emit = (i)=> callback(points[i], pick(normals, i, RENDER3D_DEFAULT_NORMAL), pick(uvs, i, RENDER3D_DEFAULT_UV), pick(colors, i, WHITE));
+    const n = points.length, last = n - 1;
+    emit(0);
+    for (let i = 0; i < n; ++i)
+        emit(i);
+    emit(last);
+    if (n & 1)
+        emit(last);
+}
+const RENDER3D_DEFAULT_NORMAL = vec3(0, 1, 0);
+const RENDER3D_DEFAULT_UV = vec2();
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Mesh - A triangle strip with positions, normals, uvs and colors, uploaded once and drawn by matrix
+ * - Build with addStrip, combine or the shape builders, then render each frame
+ * - The GPU buffer is created lazily on first render and dropped by dispose
+ * @memberof Render3D
+ * @example
+ * const mesh = buildLathe([[0, -1], [1, 0], [0, 1]], 4); // octahedron
+ * mesh.render(buildMatrix(vec3(0, 1, 0)), RED);
+ */
+class Mesh
+{
+    /** Create an empty mesh */
+    constructor()
+    {
+        /** @property {Array<Vector3>} - Vertex positions in strip order */
+        this.points = [];
+        /** @property {Array<Vector3>} - Vertex normals */
+        this.normals = [];
+        /** @property {Array<Vector2>} - Vertex texture coords, 0-1 across the tile */
+        this.uvs = [];
+        /** @property {Array<Color>} - Vertex colors */
+        this.colors = [];
+        /** @property {WebGLBuffer} - GPU buffer, created by upload */
+        this.buffer = undefined;
+        /** @property {number} - Vertices in the GPU buffer */
+        this.bufferCount = 0;
+    }
+
+    /** Number of vertices in the mesh
+     *  @return {number} */
+    get vertexCount() { return this.points.length; }
+
+    /** Add a triangle strip, joined to the previous one with degenerate triangles
+     *  - the first three points wound counter clockwise from outside are a front face
+     *  @param {Array<Vector3>} points - Strip order
+     *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
+     *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, default zero
+     *  @param {Color|Array<Color>} [colors] - One for all or one per point, default white
+     *  @return {Mesh} */
+    addStrip(points, normals, uvs, colors)
+    {
+        render3DForEachStripVertex(points, normals, uvs, colors, (p, n, uv, c)=>
+        {
+            this.points.push(p);
+            this.normals.push(n);
+            this.uvs.push(uv);
+            this.colors.push(c);
+        });
+        return this;
+    }
+
+    /** Append another mesh transformed by a matrix, for welding a static world together
+     *  @param {Mesh} mesh
+     *  @param {Matrix4} [matrix]
+     *  @param {Color} [color] - Multiplies the appended vertex colors
+     *  @return {Mesh} */
+    combine(mesh, matrix=new Matrix4, color=WHITE)
+    {
+        const normalMatrix = matrix.copy().invert().transpose();
+        for (let i = 0; i < mesh.points.length; ++i)
+        {
+            this.points.push(matrix.transformPoint(mesh.points[i]));
+            this.normals.push(normalMatrix.transformDirection(mesh.normals[i]).normalize());
+            this.uvs.push(mesh.uvs[i]);
+            this.colors.push(mesh.colors[i].multiply(color));
+        }
+        return this;
+    }
+
+    /** Derive normals from the strip's triangles
+     *  @param {boolean} [smooth] - Average normals at shared positions, otherwise one normal per face
+     *  @return {Mesh} */
+    computeNormals(smooth=false)
+    {
+        const points = this.points, n = points.length;
+        const faceNormals = [];
+        for (let i = 0; i + 2 < n; ++i)
+        {
+            const a = points[i], b = points[i+1], c = points[i+2];
+            let normal = b.subtract(a).cross(c.subtract(a));
+            if (!normal.lengthSquared())
+            {
+                faceNormals.push(undefined); // degenerate join
+                continue;
+            }
+            // real triangles sit at odd strip indices, see render3DForEachStripVertex
+            faceNormals.push(normal.normalize(i & 1 ? 1 : -1));
+        }
+        const normals = [];
+        if (smooth)
+        {
+            const sums = new Map;
+            const key = (p)=> `${p.x.toFixed(5)},${p.y.toFixed(5)},${p.z.toFixed(5)}`;
+            for (let i = 0; i + 2 < n; ++i)
+            {
+                const f = faceNormals[i];
+                if (!f) continue;
+                for (let j = 0; j < 3; ++j)
+                {
+                    const k = key(points[i + j]);
+                    sums.set(k, (sums.get(k) || vec3()).add(f));
+                }
+            }
+            for (let i = 0; i < n; ++i)
+                normals[i] = (sums.get(key(points[i])) || RENDER3D_DEFAULT_NORMAL).normalize();
+        }
+        else
+        {
+            for (let i = 0; i < n; ++i)
+                normals[i] = RENDER3D_DEFAULT_NORMAL;
+            for (let i = 0; i + 2 < n; ++i)
+            {
+                const f = faceNormals[i];
+                if (!f) continue;
+                normals[i] = normals[i+1] = normals[i+2] = f;
+            }
+        }
+        this.normals = normals;
+        return this;
+    }
+
+    /** Pack the vertices and create the GPU buffer, called automatically by render
+     *  @return {Mesh} */
+    upload()
+    {
+        if (!render3D?.shader) return this;
+        this.dispose();
+        const count = this.points.length;
+        const data = new ArrayBuffer(count * RENDER3D_VERTEX_BYTES);
+        const floats = new Float32Array(data), ints = new Uint32Array(data);
+        for (let i = 0; i < count; ++i)
+        {
+            const j = i * RENDER3D_VERTEX_FLOATS;
+            const p = this.points[i], n = this.normals[i], uv = this.uvs[i];
+            floats[j]   = p.x; floats[j+1] = p.y; floats[j+2] = p.z;
+            floats[j+3] = n.x; floats[j+4] = n.y; floats[j+5] = n.z;
+            floats[j+6] = uv.x; floats[j+7] = uv.y;
+            ints[j+8] = this.colors[i].rgbaInt();
+        }
+        this.buffer = glContext.createBuffer();
+        this.bufferCount = count;
+        glContext.bindBuffer(glContext.ARRAY_BUFFER, this.buffer);
+        glContext.bufferData(glContext.ARRAY_BUFFER, data, glContext.STATIC_DRAW);
+        render3D.uploadedMeshes.add(this);
+        return this;
+    }
+
+    /** Draw the mesh, one draw call with the current render3D state
+     *  @param {Matrix4} [matrix] - Object transform
+     *  @param {Color} [color] - Tint
+     *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
+    render(matrix, color, tileInfo) { render3D?.drawMesh(this, matrix, color, tileInfo); }
+
+    /** Delete the GPU buffer, the CPU arrays stay so the mesh can be rendered again */
+    dispose()
+    {
+        if (!this.buffer) return;
+        glContext?.deleteBuffer(this.buffer);
+        this.buffer = undefined;
+        this.bufferCount = 0;
+        render3D?.uploadedMeshes.delete(this);
+    }
 }
 
 /**
