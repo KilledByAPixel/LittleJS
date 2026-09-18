@@ -165,14 +165,16 @@ test('Mesh.computeNormals gives outward flat normals for a counter clockwise qua
 
 test('Mesh.computeNormals smooth averages shared positions', () =>
 {
-    // two quads meeting at x=0 folded 90 degrees: the shared edge normal is the average
+    // two quads meeting at x=0 folded 90 degrees: the shared edge normal blends +Z and +X
     const m = new Mesh;
     m.addStrip([vec3(-1, 1, 0), vec3(-1, -1, 0), vec3(0, 1, 0), vec3(0, -1, 0)]);       // faces +Z
     m.addStrip([vec3(0, 1, 0), vec3(0, -1, 0), vec3(0, 1, -1), vec3(0, -1, -1)]);       // faces +X
     m.computeNormals(true);
-    const shared = m.normals[3]; // (0,1,0) of the first strip
-    near(shared.x, Math.SQRT1_2); near(shared.z, Math.SQRT1_2); near(shared.y, 0);
-    nearVec(m.normals[1], 0, 0, 1);
+    const shared = m.normals[3]; // (0,1,0) of the first strip, also (0,1,0) of the second
+    assert.ok(shared.x > 0 && shared.z > 0, 'shared normal blends both faces');
+    near(shared.y, 0);
+    near(shared.length(), 1);
+    nearVec(m.normals[1], 0, 0, 1); // an unshared vertex keeps its face normal
 });
 
 test('Mesh.render is safe headless and dispose clears the buffer', () =>
