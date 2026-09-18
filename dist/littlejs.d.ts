@@ -6088,6 +6088,8 @@ declare module "littlejsengine" {
         specular: number;
         /** @property {Function} - Called after the opaque objects and before the transparent ones, for drawing outside of objects */
         onRender: any;
+        /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then, read only */
+        isRendering: boolean;
         /** @property {Matrix4} - This frame's view matrix, read only */
         viewMatrix: Matrix4;
         /** @property {Matrix4} - This frame's projection matrix, read only */
@@ -6116,8 +6118,8 @@ declare module "littlejsengine" {
         streamInts: Uint32Array;
         streamCount: number;
         streamTileInfo: any;
-        streamState: any;
-        capture: any;
+        streamState: number;
+        capture: Mesh;
         /** Rebuild the view and projection matrices from the camera, called automatically each frame
          *  @param {number} [aspect] - Width over height, defaults to the main canvas */
         updateMatrices(aspect?: number): void;
@@ -6135,8 +6137,54 @@ declare module "littlejsengine" {
          *  @param {Color} [color] - Tint
          *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
         drawMesh(mesh: Mesh, matrix?: Matrix4, color?: Color, tileInfo?: TileInfo): void;
+        /** Push a strip into the stream, or into the mesh being baked
+         *  - the first three points wound counter clockwise from outside are a front face
+         *  @param {Array<Vector3>} points - Strip order
+         *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
+         *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, 0-1 across the tile
+         *  @param {Color|Array<Color>} [colors] - One for all or one per point
+         *  @param {TileInfo} [tileInfo] - Texture for this strip */
+        pushStrip(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>, tileInfo?: TileInfo): void;
         /** Draw the pending stream vertices as one strip, called automatically when needed */
         flush(): void;
+        /** Run a draw function with every push captured into a new mesh instead of the stream
+         *  @param {Function} drawFunction
+         *  @return {Mesh} */
+        bake(drawFunction: Function): Mesh;
+        /** Draw a camera facing quad
+         *  @param {Vector3} pos - Center
+         *  @param {Vector2} size - World units
+         *  @param {TileInfo} [tileInfo]
+         *  @param {Color} [color]
+         *  @param {number} [angle] - Rotation in the camera plane, counter clockwise */
+        drawBillboard(pos: Vector3, size: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number): void;
+        /** Draw a quad from four corners in loop order, a is the top left of the texture
+         *  @param {Vector3} a
+         *  @param {Vector3} b
+         *  @param {Vector3} c
+         *  @param {Vector3} d
+         *  @param {Color} [color]
+         *  @param {TileInfo} [tileInfo] */
+        drawQuad3D(a: Vector3, b: Vector3, c: Vector3, d: Vector3, color?: Color, tileInfo?: TileInfo): void;
+        /** Draw a triangle, counter clockwise from outside is the front
+         *  @param {Vector3} a
+         *  @param {Vector3} b
+         *  @param {Vector3} c
+         *  @param {Color} [color] */
+        drawTriangle3D(a: Vector3, b: Vector3, c: Vector3, color?: Color): void;
+        /** Draw a line as a camera facing ribbon
+         *  @param {Vector3} start
+         *  @param {Vector3} end
+         *  @param {number} [thickness] - World units
+         *  @param {Color} [color] */
+        drawLine3D(start: Vector3, end: Vector3, thickness?: number, color?: Color): void;
+        /** Draw a disc that fades to transparent at the rim, for shadows, glows and sky dots
+         *  @param {Vector3} pos - Center
+         *  @param {Vector3} normal - Facing direction
+         *  @param {number} radius
+         *  @param {Color} [color]
+         *  @param {number} [sides] */
+        drawSoftDisc(pos: Vector3, normal: Vector3, radius: number, color?: Color, sides?: number): void;
     }
     /**
      * Camera3D - Position, rotation and lens for the 3D view

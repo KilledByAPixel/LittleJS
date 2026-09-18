@@ -291,3 +291,60 @@ test('buildLoft closes both ends and winds outward', () =>
     for (let i = 0; i < m.vertexCount; ++i)
         near(m.normals[i].length(), 1);
 });
+
+test('pushStrip and bake capture into a mesh headless', () =>
+{
+    const mesh = render3D.bake(()=>
+    {
+        render3D.pushStrip([vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0), vec3(1, 1, 0)]);
+        render3D.pushStrip([vec3(0, 0, 1), vec3(1, 0, 1), vec3(0, 1, 1)]);
+    });
+    assert.ok(mesh instanceof Mesh);
+    assert.equal(mesh.vertexCount, 12);
+    assert.equal(render3D.capture, undefined);
+    assert.equal(render3D.streamCount, 0);
+});
+
+test('drawing helpers push the expected vertex counts when baked', () =>
+{
+    render3D.camera.pos = vec3(0, 0, 10);
+    render3D.camera.rotation = vec3();
+    render3D.updateMatrices(1);
+    const quad = render3D.bake(()=> render3D.drawQuad3D(vec3(-1, 1, 0), vec3(-1, -1, 0), vec3(1, -1, 0), vec3(1, 1, 0)));
+    assert.equal(quad.vertexCount, 6);
+    nearVec(quad.normals[1], 0, 0, 1); // counter clockwise from +Z
+    const tri = render3D.bake(()=> render3D.drawTriangle3D(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0)));
+    assert.equal(tri.vertexCount, 6);
+    nearVec(tri.normals[1], 0, 0, 1);
+    const bb = render3D.bake(()=> render3D.drawBillboard(vec3(0, 0, 0), vec2(2, 4)));
+    assert.equal(bb.vertexCount, 6);
+    nearVec(bb.points[1], -1, 2, 0);   // top left faces the camera on +Z
+    nearVec(bb.points[4], 1, -2, 0);   // bottom right
+    nearVec(bb.normals[1], 0, 0, 1);   // toward the camera
+    const line = render3D.bake(()=> render3D.drawLine3D(vec3(0, 0, 0), vec3(4, 0, 0), .5));
+    assert.equal(line.vertexCount, 6);
+    near(Math.abs(line.points[1].y), .25); // ribbon width across the line, in the screen plane
+    const disc = render3D.bake(()=> render3D.drawSoftDisc(vec3(), vec3(0, 0, 1), 1, WHITE, 8));
+    assert.equal(disc.vertexCount, 3 * (2 * 9 + 2));
+    // each ring strip alternates outer, inner; the last real vertex is inner, the one before is the transparent rim
+    near(disc.colors[disc.vertexCount - 3].a, 0);
+    near(disc.colors[disc.vertexCount - 2].a, .7);
+});
+
+test('billboard angle rotates in the camera plane', () =>
+{
+    render3D.camera.pos = vec3(0, 0, 10);
+    render3D.camera.rotation = vec3();
+    render3D.updateMatrices(1);
+    const bb = render3D.bake(()=> render3D.drawBillboard(vec3(), vec2(2, 2), undefined, WHITE, PI/2));
+    // top left corner (-1, 1) rotated 90 degrees counter clockwise is (-1, -1)
+    nearVec(bb.points[1], -1, -1, 0);
+});
+
+test('3D draws outside the pass are rejected', () =>
+{
+    assert.equal(render3D.isRendering, false);
+    const mesh = new Mesh;
+    mesh.addStrip([vec3(), vec3(1), vec3(2), vec3(3)]);
+    assert.doesNotThrow(()=> mesh.render()); // headless: no shader, returns before the guard
+});

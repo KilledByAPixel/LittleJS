@@ -16679,6 +16679,16 @@ let render3D;
 const RENDER3D_VERTEX_FLOATS = 9;
 const RENDER3D_VERTEX_BYTES = RENDER3D_VERTEX_FLOATS * 4;
 const RENDER3D_MAX_BATCH = 32768; // stream vertices per flush
+const RENDER3D_QUAD_UVS = [vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)];
+const RENDER3D_FULL_UV_RECT = {x:0, y:0, w:1, h:1};
+
+// a key for the state fields a stream batch is drawn under, so a change flushes first
+function render3DStateKey()
+{
+    const r = render3D;
+    return (r.blend ? 1 : 0) | (r.additive ? 2 : 0) | (r.depthTest ? 4 : 0) | (r.depthWrite ? 8 : 0)
+        | (r.cullBackFaces ? 16 : 0) | (r.lighting ? 32 : 0) | (r.specular * 1024 | 0) << 6;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
@@ -16730,6 +16740,8 @@ class Render3DPlugin
         this.specular = 0;
         /** @property {Function} - Called after the opaque objects and before the transparent ones, for drawing outside of objects */
         this.onRender = undefined;
+        /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then, read only */
+        this.isRendering = false;
 
         /** @property {Matrix4} - This frame's view matrix, read only */
         this.viewMatrix = new Matrix4;
@@ -16821,6 +16833,8 @@ class Render3DPlugin
     drawMesh(mesh, matrix=new Matrix4, color=WHITE, tileInfo)
     {
         if (!this.shader) return;
+        ASSERT(this.isRendering, '3D draws are only valid during the 3D pass, use render3D.onRender or EngineObject3D.render3D');
+        if (!this.isRendering) return;
         this.flush();
         mesh.buffer || mesh.upload();
         if (!mesh.bufferCount) return;
@@ -16835,8 +16849,162 @@ class Render3DPlugin
         primitiveCount += mesh.bufferCount;
     }
 
+    /** Push a strip into the stream, or into the mesh being baked
+     *  - the first three points wound counter clockwise from outside are a front face
+     *  @param {Array<Vector3>} points - Strip order
+     *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
+     *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, 0-1 across the tile
+     *  @param {Color|Array<Color>} [colors] - One for all or one per point
+     *  @param {TileInfo} [tileInfo] - Texture for this strip */
+    pushStrip(points, normals, uvs, colors, tileInfo)
+    {
+        if (this.capture)
+        {
+            this.capture.addStrip(points, normals, uvs, colors);
+            return;
+        }
+        if (!this.shader) return;
+        ASSERT(this.isRendering, '3D draws are only valid during the 3D pass, use render3D.onRender or EngineObject3D.render3D');
+        if (!this.isRendering) return;
+
+        // flush when the texture or state differs from the pending batch, or it would overflow
+        const state = render3DStateKey();
+        const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
+        const needed = points.length + 3;
+        if (this.streamCount && (textureInfo !== this.streamTileInfo || state !== this.streamState
+            || this.streamCount + needed > RENDER3D_MAX_BATCH))
+            this.flush();
+        this.streamTileInfo = textureInfo;
+        this.streamState = state;
+
+        const uvRect = render3DGetTileUVs(tileInfo);
+        const floats = this.streamFloats, ints = this.streamInts;
+        render3DForEachStripVertex(points, normals, uvs, colors, (p, n, uv, c)=>
+        {
+            const j = this.streamCount++ * RENDER3D_VERTEX_FLOATS;
+            floats[j]   = p.x; floats[j+1] = p.y; floats[j+2] = p.z;
+            floats[j+3] = n.x; floats[j+4] = n.y; floats[j+5] = n.z;
+            floats[j+6] = uvRect.x + uv.x * uvRect.w;
+            floats[j+7] = uvRect.y + uv.y * uvRect.h;
+            ints[j+8] = c.rgbaInt();
+        });
+    }
+
     /** Draw the pending stream vertices as one strip, called automatically when needed */
-    flush() {} // filled in by the stream task
+    flush()
+    {
+        if (!this.streamCount || !this.shader) return;
+        ASSERT(this.isRendering, '3D draws are only valid during the 3D pass, use render3D.onRender or EngineObject3D.render3D');
+        if (!this.isRendering) return;
+        const gl = glContext;
+        const identity = new Matrix4;
+        gl.uniformMatrix4fv(render3DUniform('model'), false, identity.m);
+        gl.uniformMatrix4fv(render3DUniform('normalMat'), false, identity.m);
+        render3DApplyState(this.streamTileInfo, WHITE, RENDER3D_FULL_UV_RECT);
+        render3DBindVertexBuffer(this.streamBuffer);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.streamFloats, 0, this.streamCount * RENDER3D_VERTEX_FLOATS);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.streamCount);
+        ++drawCount;
+        primitiveCount += this.streamCount;
+        this.streamCount = 0;
+    }
+
+    /** Run a draw function with every push captured into a new mesh instead of the stream
+     *  @param {Function} drawFunction
+     *  @return {Mesh} */
+    bake(drawFunction)
+    {
+        this.flush();
+        ASSERT(!this.capture, 'bake cannot be nested');
+        this.capture = new Mesh;
+        drawFunction();
+        const mesh = this.capture;
+        this.capture = undefined;
+        return mesh;
+    }
+
+    /** Draw a camera facing quad
+     *  @param {Vector3} pos - Center
+     *  @param {Vector2} size - World units
+     *  @param {TileInfo} [tileInfo]
+     *  @param {Color} [color]
+     *  @param {number} [angle] - Rotation in the camera plane, counter clockwise */
+    drawBillboard(pos, size, tileInfo, color=WHITE, angle=0)
+    {
+        const c = cos(angle), s = sin(angle);
+        const right = this.cameraRight.scale(c).add(this.cameraUp.scale(s)).scale(size.x / 2);
+        const up = this.cameraUp.scale(c).subtract(this.cameraRight.scale(s)).scale(size.y / 2);
+        this.pushStrip(
+            [pos.subtract(right).add(up), pos.subtract(right).subtract(up), pos.add(right).add(up), pos.add(right).subtract(up)],
+            this.cameraForward.scale(-1),
+            RENDER3D_QUAD_UVS, color, tileInfo);
+    }
+
+    /** Draw a quad from four corners in loop order, a is the top left of the texture
+     *  @param {Vector3} a
+     *  @param {Vector3} b
+     *  @param {Vector3} c
+     *  @param {Vector3} d
+     *  @param {Color} [color]
+     *  @param {TileInfo} [tileInfo] */
+    drawQuad3D(a, b, c, d, color=WHITE, tileInfo)
+    {
+        const normal = b.subtract(a).cross(d.subtract(a)).normalize();
+        this.pushStrip([a, b, d, c], normal, RENDER3D_QUAD_UVS, color, tileInfo);
+    }
+
+    /** Draw a triangle, counter clockwise from outside is the front
+     *  @param {Vector3} a
+     *  @param {Vector3} b
+     *  @param {Vector3} c
+     *  @param {Color} [color] */
+    drawTriangle3D(a, b, c, color=WHITE)
+    {
+        const normal = b.subtract(a).cross(c.subtract(a)).normalize();
+        this.pushStrip([a, b, c], normal, undefined, color);
+    }
+
+    /** Draw a line as a camera facing ribbon
+     *  @param {Vector3} start
+     *  @param {Vector3} end
+     *  @param {number} [thickness] - World units
+     *  @param {Color} [color] */
+    drawLine3D(start, end, thickness=.1, color=WHITE)
+    {
+        const side = end.subtract(start).cross(this.cameraForward).normalize(thickness / 2);
+        this.pushStrip(
+            [start.add(side), start.subtract(side), end.add(side), end.subtract(side)],
+            this.cameraForward.scale(-1), undefined, color);
+    }
+
+    /** Draw a disc that fades to transparent at the rim, for shadows, glows and sky dots
+     *  @param {Vector3} pos - Center
+     *  @param {Vector3} normal - Facing direction
+     *  @param {number} radius
+     *  @param {Color} [color]
+     *  @param {number} [sides] */
+    drawSoftDisc(pos, normal, radius, color=WHITE, sides=16)
+    {
+        // basis in the disc's plane
+        const n = normal.normalize();
+        const helper = abs(n.y) < .9 ? vec3(0, 1, 0) : vec3(1, 0, 0);
+        const u = helper.cross(n).normalize(), w = n.cross(u);
+        const alpha = [1, .9, .7, 0]; // by ring, center to rim
+        for (let k = 0; k < 3; ++k)
+        {
+            const points = [], colors = [];
+            const c0 = color.withAlpha(color.a * alpha[k]), c1 = color.withAlpha(color.a * alpha[k+1]);
+            const r0 = radius * k / 3, r1 = radius * (k + 1) / 3;
+            for (let i = 0; i <= sides; ++i)
+            {
+                const a = i / sides * 2 * PI;
+                const dir = u.scale(cos(a)).add(w.scale(sin(a)));
+                points.push(pos.add(dir.scale(r1)), pos.add(dir.scale(r0)));
+                colors.push(c1, c0);
+            }
+            this.pushStrip(points, n, undefined, colors);
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -17089,7 +17257,9 @@ function render3DPreRender()
     gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
 
     // stages are filled in by the objects task
+    r.isRendering = true;
     render3DRenderStages();
+    r.isRendering = false;
 
     // hand the state back to the engine's 2D batching
     gl.disable(gl.DEPTH_TEST);

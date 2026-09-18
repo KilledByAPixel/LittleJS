@@ -833,6 +833,17 @@ buildSphere(segments=12, rings=6, smooth=true)// diameter 1
 buildBox(size=vec3(1))                        // six faces with uvs
 buildGrid(sizeX, sizeZ, segmentsX, segmentsZ, heightFunction, colorFunction) // heightfield in XZ
 buildLoft(stations)                           // [[z, halfWidth, top, bottom, sideHeight], ...] nose first
+
+// All 3D draws happen inside the 3D pass: from render3D.onRender or an EngineObject3D's render3D()
+// Immediate mode - pushes batch into one strip per flush, textured pushes flush on texture change
+render3D.pushStrip(points, normals, uvs, colors, tileInfo)
+render3D.drawBillboard(pos, size, tileInfo, color, angle) // camera facing quad, size is a Vector2
+render3D.drawQuad3D(a, b, c, d, color, tileInfo)          // corners in loop order, a is the texture's top left
+render3D.drawTriangle3D(a, b, c, color)
+render3D.drawLine3D(start, end, thickness, color)         // camera facing ribbon
+render3D.drawSoftDisc(pos, normal, radius, color, sides)  // fades to transparent at the rim
+render3D.flush()                                          // draw what is pending, automatic when needed
+render3D.bake(()=> { ...pushes... })                      // returns the pushes as a Mesh
 ```
 
 ## LittleJS Three.js Integration
