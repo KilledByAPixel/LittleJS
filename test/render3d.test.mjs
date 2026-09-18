@@ -348,3 +348,22 @@ test('3D draws outside the pass are rejected', () =>
     mesh.addStrip([vec3(), vec3(1), vec3(2), vec3(3)]);
     assert.doesNotThrow(()=> mesh.render()); // headless: no shader, returns before the guard
 });
+
+test('drawSoftDisc triangles face the supplied normal', () =>
+{
+    for (const n of [vec3(0, 0, 1), vec3(0, 1, 0), vec3(1, 0, 0), vec3(1, 1, 1).normalize()])
+    {
+        const disc = render3D.bake(()=> render3D.drawSoftDisc(vec3(), n, 1, WHITE, 8));
+        const p = disc.points;
+        let checked = 0;
+        for (let i = 0; i + 2 < p.length; ++i)
+        {
+            let f = p[i+1].subtract(p[i]).cross(p[i+2].subtract(p[i]));
+            if (f.lengthSquared() < 1e-9) continue; // degenerate join
+            f = f.scale(i & 1 ? 1 : -1);      // real triangles sit at odd strip indices
+            assert.ok(f.dot(n) > 0, `disc triangle ${i} faces away from ${n}`);
+            ++checked;
+        }
+        assert.ok(checked > 0);
+    }
+});

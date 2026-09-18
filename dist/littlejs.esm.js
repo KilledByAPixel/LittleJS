@@ -17679,7 +17679,7 @@ class Render3DPlugin
         // basis in the disc's plane
         const n = normal.normalize();
         const helper = abs(n.y) < .9 ? vec3(0, 1, 0) : vec3(1, 0, 0);
-        const u = helper.cross(n).normalize(), w = n.cross(u);
+        const u = helper.cross(n).normalize(), w = u.cross(n);
         const alpha = [1, .9, .7, 0]; // by ring, center to rim
         for (let k = 0; k < 3; ++k)
         {
