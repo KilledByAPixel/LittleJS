@@ -6034,6 +6034,147 @@ declare module "littlejsengine" {
      */
     export function buildMatrix(pos?: Vector3, rotation?: Vector3, scale?: Vector3): Matrix4;
     /**
+     * LittleJS 3D Rendering Plugin
+     * - Draws meshes, billboards and lines into the engine's WebGL canvas underneath the 2D layer
+     * - One shader: directional + ambient light, optional specular, fog, textures, vertex colors
+     * - Meshes are static triangle strips drawn by matrix, the stream batches immediate mode pushes
+     * - EngineObject3D is an EngineObject with a 3D transform and a mesh
+     * - Requires the Math3D plugin, call new Render3DPlugin() in gameInit
+     * @namespace Render3D
+     */
+    /** Global Render3D plugin object
+     *  @type {Render3DPlugin}
+     *  @memberof Render3D */
+    export let render3D: Render3DPlugin;
+    /**
+     * Render3D Plugin - The 3D renderer, camera, lights, fog and draw state
+     * - State fields are read at each draw, so set them before drawing
+     * - The 3D pass runs before gameRender, so 2D drawing lands on top
+     * @memberof Render3D
+     * @example
+     * new Render3DPlugin();
+     * render3D.camera.pos = vec3(0, 5, 10);
+     * render3D.camera.lookAt(vec3());
+     * new EngineObject3D(vec3(), buildBox());
+     */
+    export class Render3DPlugin {
+        /** @property {Camera3D} - The camera */
+        camera: Camera3D;
+        /** @property {Vector3} - Direction the directional light travels */
+        lightDirection: Vector3;
+        /** @property {Color} - Directional light color */
+        lightColor: Color;
+        /** @property {Color} - Ambient light color */
+        ambientColor: Color;
+        /** @property {Color} - Fog color, uses canvasClearColor when undefined */
+        fogColor: any;
+        /** @property {number} - Distance from the camera where fog starts */
+        fogStart: number;
+        /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
+        fogEnd: number;
+        /** @property {boolean} - Apply lighting, when false draws plain vertex color times texture */
+        lighting: boolean;
+        /** @property {boolean} - Blend with the frame, the opaque stage sets this false and the transparent stage true */
+        blend: boolean;
+        /** @property {boolean} - Additive blending instead of alpha, only when blend is on */
+        additive: boolean;
+        /** @property {boolean} - Test against the depth buffer */
+        depthTest: boolean;
+        /** @property {boolean} - Write to the depth buffer */
+        depthWrite: boolean;
+        /** @property {boolean} - Skip faces that point away from the camera */
+        cullBackFaces: boolean;
+        /** @property {number} - Phong highlight strength for the next draws */
+        specular: number;
+        /** @property {Function} - Called after the opaque objects and before the transparent ones, for drawing outside of objects */
+        onRender: any;
+        /** @property {Matrix4} - This frame's view matrix, read only */
+        viewMatrix: Matrix4;
+        /** @property {Matrix4} - This frame's projection matrix, read only */
+        projectionMatrix: Matrix4;
+        /** @property {Matrix4} - This frame's combined view projection, read only */
+        viewProjection: Matrix4;
+        /** @property {Vector3} - Camera right axis this frame, read only */
+        cameraRight: Vector3;
+        /** @property {Vector3} - Camera up axis this frame, read only */
+        cameraUp: Vector3;
+        /** @property {Vector3} - Camera forward axis this frame, read only */
+        cameraForward: Vector3;
+        /** @property {WebGLProgram} - The shader, undefined when not available */
+        shader: any;
+        /** @property {WebGLVertexArrayObject} - Vertex array object */
+        vao: any;
+        /** @property {WebGLTexture} - 1x1 white texture used when no tile is given */
+        whiteTexture: any;
+        /** @property {Set<Mesh>} - Uploaded meshes, so context loss can drop their buffers */
+        uploadedMeshes: Set<any>;
+        uniforms: {};
+        attribs: any;
+        streamBuffer: any;
+        streamData: ArrayBuffer;
+        streamFloats: Float32Array;
+        streamInts: Uint32Array;
+        streamCount: number;
+        streamTileInfo: any;
+        streamState: any;
+        capture: any;
+        /** Rebuild the view and projection matrices from the camera, called automatically each frame
+         *  @param {number} [aspect] - Width over height, defaults to the main canvas */
+        updateMatrices(aspect?: number): void;
+        /** Project a world point to clip space, x and y in -1 to 1, z is depth
+         *  @param {Vector3} pos
+         *  @return {Vector3|undefined} - undefined when behind the camera */
+        worldToClip(pos: Vector3): Vector3 | undefined;
+        /** Project a world point to screen space pixels, same space as mousePosScreen
+         *  @param {Vector3} pos
+         *  @return {Vector2|undefined} - undefined when behind the camera */
+        worldToScreen(pos: Vector3): Vector2 | undefined;
+    }
+    /**
+     * Camera3D - Position, rotation and lens for the 3D view
+     * - Looks down its -Z axis, rotation is vec3(pitch, yaw, roll)
+     * @memberof Render3D
+     */
+    export class Camera3D {
+        /** @property {Vector3} - World position */
+        pos: Vector3;
+        /** @property {Vector3} - Euler rotation, vec3(pitch, yaw, roll) in radians */
+        rotation: Vector3;
+        /** @property {number} - Vertical field of view in radians */
+        fov: number;
+        /** @property {number} - Near clip distance */
+        near: number;
+        /** @property {number} - Far clip distance */
+        far: number;
+        /** @property {boolean} - Each frame park the camera so the z=0 plane matches LittleJS 2D world space */
+        align2D: boolean;
+        /** Returns the camera's world transform
+         *  @return {Matrix4} */
+        getMatrix(): Matrix4;
+        /** Returns the view matrix, world to camera space
+         *  @return {Matrix4} */
+        getViewMatrix(): Matrix4;
+        /** Returns the projection matrix
+         *  @param {number} aspect - Width over height
+         *  @return {Matrix4} */
+        getProjectionMatrix(aspect: number): Matrix4;
+        /** Returns the direction the camera looks
+         *  @return {Vector3} */
+        forward(): Vector3;
+        /** Returns the camera's right axis
+         *  @return {Vector3} */
+        right(): Vector3;
+        /** Returns the camera's up axis
+         *  @return {Vector3} */
+        up(): Vector3;
+        /** Point the camera at a target, sets pitch and yaw and clears roll
+         *  @param {Vector3} target */
+        lookAt(target: Vector3): void;
+        /** Park the camera so the z=0 plane matches LittleJS 2D world space, called automatically when align2D is set
+         *  @param {number} [canvasHeight] - Defaults to the main canvas height */
+        update2D(canvasHeight?: number): void;
+    }
+    /**
      * LittleJS Three.js Plugin
      * - Renders a three.js scene on a canvas behind the LittleJS canvases
      * - The three.js module is passed in by the user, nothing is bundled

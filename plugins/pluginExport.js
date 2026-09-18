@@ -103,6 +103,11 @@ export
     Matrix4,
     buildMatrix,
 
+    // Render3D
+    render3D,
+    Render3DPlugin,
+    Camera3D,
+
     // Three.js
     threeJS,
     ThreeJSPlugin,

@@ -781,6 +781,43 @@ buildMatrix(pos, rotation, scale)              // translate * rotate * scale, an
 // euler is vec3(pitch, yaw, roll): applied to points as roll (Z), then pitch (X), then yaw (Y)
 ```
 
+## LittleJS 3D Rendering
+- Optional plugin that draws meshes, billboards and lines into the engine's WebGL canvas, under the 2D layer
+- Requires the 3D Math plugin. One shader: directional + ambient light, specular, fog, textures, vertex colors
+- Meshes are triangle strips drawn by matrix; immediate mode pushes batch into a stream
+- `EngineObject3D` extends `EngineObject`, so update, children, destroy and renderOrder all work; the 2D pos is ignored by rendering
+- 2D physics still runs on the inherited pos and velocity, handy for pseudo-3D games that copy pos into pos3D
+- See `examples/shorts/render3d.js` for a demo
+
+```javascript
+// Setup (call in gameInit)
+new Render3DPlugin()                  // creates global render3D, renders automatically before gameRender
+
+// Camera
+render3D.camera.pos = vec3(0, 5, 10)  // Camera3D: pos, rotation (pitch, yaw, roll), fov, near, far
+render3D.camera.lookAt(target)        // point at a target, clears roll
+render3D.camera.align2D = true        // lock to the 2D camera so the z=0 plane matches world space
+render3D.camera.forward() .right() .up()
+render3D.worldToScreen(pos)           // Vector3 -> screen pixels, undefined when behind the camera
+render3D.worldToClip(pos)             // Vector3 -> clip space -1..1, undefined when behind the camera
+
+// Lights and fog
+render3D.lightDirection = vec3(.5, -1, .3).normalize()  // direction the light travels
+render3D.lightColor  = WHITE
+render3D.ambientColor = rgb(.3, .3, .3)
+render3D.fogColor = undefined         // uses canvasClearColor when undefined
+render3D.fogStart = 20; render3D.fogEnd = 100   // by camera distance, fogEnd 0 disables fog
+
+// Draw state, read at each draw (set before drawing)
+render3D.lighting = true              // false draws plain vertex color times texture
+render3D.blend = false                // opaque stage sets false, transparent stage sets true
+render3D.additive = false             // additive blending when blend is on
+render3D.depthTest = true; render3D.depthWrite = true
+render3D.cullBackFaces = false
+render3D.specular = 0                 // Phong highlight strength
+render3D.onRender = ()=> {}           // called between the opaque and transparent stages
+```
+
 ## LittleJS Three.js Integration
 - Optional plugin that renders a three.js scene on a canvas behind the LittleJS canvas
 - You load three.js yourself (import map or bundler) and pass the module in
