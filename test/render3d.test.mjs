@@ -1060,3 +1060,46 @@ test('buildExtrude merges pixel runs into quads with outward walls and pixel col
     // the engine font is not loaded headless
     assert.throws(()=> buildText3D('A'));
 });
+
+test('shadow settings default off and objects cast by default', () =>
+{
+    assert.equal(render3D.shadows, false);
+    assert.equal(render3D.shadowMapSize, 1024);
+    assert.equal(render3D.shadowRange, 40);
+    assert.equal(render3D.shadowCenter, undefined);
+    near(render3D.shadowBias, .003);
+    assert.equal(render3D.shadowPass, false);
+    const o = new EngineObject3D;
+    assert.equal(o.castShadow, true);
+    o.destroy();
+});
+
+test('updateShadowMatrix fits an orthographic box around the center, snapped to texels', () =>
+{
+    render3D.lightDirection = vec3(0, -1, 0);
+    render3D.shadowCenter = vec3(0, 0, 0);
+    render3D.shadowRange = 40;
+    render3D.updateShadowMatrix();
+    const m = render3D.shadowMatrix;
+    // the center lands in the middle of the map and halfway through the depth range
+    nearVec(m.transformPoint(vec3()), 0, 0, 0);
+    // the edge of the range is the edge of the map, above and below are the depth limits
+    near(Math.abs(m.transformPoint(vec3(20, 0, 0)).x), 1);
+    near(Math.abs(m.transformPoint(vec3(0, 0, 20)).y), 1);
+    near(m.transformPoint(vec3(0, 40, 0)).z, -1);
+    near(m.transformPoint(vec3(0, -40, 0)).z, 1);
+    // a center between texels snaps: the origin maps to a whole number of texels, two clip units per map
+    render3D.shadowCenter = vec3(.0123, 0, .0456);
+    render3D.updateShadowMatrix();
+    const p = render3D.shadowMatrix.transformPoint(vec3());
+    const texels = p.x / (2 / 1024);
+    near(texels, Math.round(texels));
+    // the default center follows the camera
+    render3D.shadowCenter = undefined;
+    render3D.camera.pos = vec3(100, 0, 0);
+    render3D.camera.rotation = vec3();
+    render3D.updateMatrices(1);
+    render3D.updateShadowMatrix();
+    near(Math.abs(render3D.shadowMatrix.transformPoint(vec3(100, 0, -16)).x), 0);
+    render3D.lightDirection = vec3(.5, -1, .3).normalize();
+});

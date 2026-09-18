@@ -824,6 +824,15 @@ render3D.fogColor = undefined         // uses canvasClearColor when undefined
 render3D.fogStart = 20; render3D.fogEnd = 100   // by camera distance, fogEnd 0 disables fog
 // Lights and fog are read when a draw is issued or the stream flushes, set them before drawing
 
+// Shadows - one shadow map from the directional light, lit opaque meshes and pushes cast, everything lit receives
+render3D.shadows = true               // off by default and free when off, blob shadows (drawShadow) still work alongside
+render3D.shadowMapSize = 1024         // texels, rebuilt when it changes
+render3D.shadowRange = 40             // world size the map covers around shadowCenter, smaller is sharper
+render3D.shadowCenter = undefined     // Vector3 center of the shadowed area, undefined follows the camera
+render3D.shadowBias = .003            // raise for speckled self shadowing, lower if shadows float away from their casters
+render3D.shadowSoftness = 1           // blur radius in texels
+render3D.shadowMatrix                 // this frame's light view projection, read only
+
 // Draw state, read at each draw (set before drawing)
 render3D.lighting = true              // false draws plain vertex color times texture
 render3D.blend = false                // opaque stage sets false, transparent stage sets true
@@ -912,6 +921,7 @@ obj.pos3D obj.rotation3D obj.scale3D   // Vector3, rotation is (pitch, yaw, roll
 obj.velocity3D                          // added to pos3D each frame
 obj.mesh obj.color obj.tileInfo         // what to draw and how
 obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
+obj.castShadow = false                  // keep an object out of the shadow map
 obj.renderOrder                         // sorts the opaque stage
 obj.getMatrix()                         // buildMatrix(pos3D, rotation3D, scale3D)
 // children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local

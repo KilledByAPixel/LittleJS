@@ -13,6 +13,7 @@ let orbit = 0, title;
 function gameInit()
 {
     new Render3DPlugin;
+    render3D.shadows = true; // a shadow map from the sun, every lit opaque mesh casts and receives
     render3D.setSky(rgb(.1, .1, .25), rgb(.5, .3, .4), rgb(.1, .1, .15));
     render3D.ambientColor = rgb(.35, .35, .4);
     render3D.specular = .3;

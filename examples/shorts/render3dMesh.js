@@ -26,6 +26,7 @@ let model, orbit = 0, name = 'house';
 function gameInit()
 {
     new Render3DPlugin;
+    render3D.shadows = true; // a shadow map from the sun, every lit opaque mesh casts and receives
     render3D.setSky(rgb(.3, .5, .9), rgb(.8, .9, 1));
     render3D.fogStart = 20;
     render3D.fogEnd = 50;

@@ -17737,6 +17737,23 @@ class Render3DPlugin
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then, read only */
         this.isRendering = false;
 
+        /** @property {boolean} - Draw a shadow map from the directional light, so lit opaque meshes shadow everything lit, off by default and free when off */
+        this.shadows = false;
+        /** @property {number} - Shadow map width and height in texels, rebuilt when it changes */
+        this.shadowMapSize = 1024;
+        /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper */
+        this.shadowRange = 40;
+        /** @property {Vector3} - Center of the shadowed area, undefined follows the camera */
+        this.shadowCenter = undefined;
+        /** @property {number} - Depth offset that keeps surfaces from shadowing themselves, raise it for speckles, lower it if shadows float away from their casters */
+        this.shadowBias = .003;
+        /** @property {number} - Blur radius in shadow map texels */
+        this.shadowSoftness = 1;
+        /** @property {Matrix4} - This frame's light view projection, read only */
+        this.shadowMatrix = new Matrix4;
+        /** @property {boolean} - True while the shadow map is being drawn, draws go to the depth only shader, read only */
+        this.shadowPass = false;
+
         /** @property {Matrix4} - This frame's view matrix, read only */
         this.viewMatrix = new Matrix4;
         /** @property {Matrix4} - This frame's projection matrix, read only */
@@ -17759,9 +17776,14 @@ class Render3DPlugin
         // uploaded meshes, so context loss can drop their buffers
         this.uploadedMeshes = new Set;
 
-        // cached shader locations, reset when the shader is rebuilt
-        this.uniforms = {};
-        this.attribs = undefined;
+        // the depth only shader, framebuffer and depth texture for the shadow map
+        this.shadowShader = undefined;
+        this.shadowFramebuffer = undefined;
+        this.shadowTexture = undefined;
+        this.shadowTextureSize = 0;
+
+        // cached uniform locations by program, reset when the shaders are rebuilt
+        this.uniforms = new Map;
 
         this.streamBuffer = undefined;
         this.streamData = new ArrayBuffer(RENDER3D_MAX_STREAM_VERTS * RENDER3D_VERTEX_BYTES);
@@ -17792,6 +17814,21 @@ class Render3DPlugin
         this.cameraRight = cameraMatrix.transformDirection(vec3(1, 0, 0));
         this.cameraUp = cameraMatrix.transformDirection(vec3(0, 1, 0));
         this.cameraForward = cameraMatrix.transformDirection(vec3(0, 0, -1));
+    }
+
+    /** Rebuild the light's view projection around the shadow center, called automatically each frame shadows are on */
+    updateShadowMatrix()
+    {
+        const range = this.shadowRange, half = range / 2;
+        const direction = this.lightDirection.normalize();
+        const center = this.shadowCenter || this.camera.pos.add(this.cameraForward.scale(half * .8));
+        const up = abs(direction.y) > .99 ? vec3(0, 0, 1) : vec3(0, 1, 0);
+        const view = Matrix4.lookAt(center.subtract(direction.scale(range)), center, up).invert();
+        // snap the view to whole texels so shadow edges hold still as the camera moves
+        const texel = range / this.shadowMapSize, m = view.m;
+        m[12] = round(m[12] / texel) * texel;
+        m[13] = round(m[13] / texel) * texel;
+        this.shadowMatrix = Matrix4.orthographic(-half, half, -half, half, 0, range * 2).multiply(view);
     }
 
     /** Project a world point to clip space, x and y in -1 to 1, z is depth
@@ -17848,15 +17885,21 @@ class Render3DPlugin
         if (this.transparentQueue)
             return this.queueTransparent(matrix.getTranslation(), ()=> this.drawMesh(mesh, matrix, color, tileInfo));
         if (!render3DCanDraw()) return;
+        if (this.shadowPass && !this.lighting) return; // unlit things cast no shadow
         this.flush();
         if (!mesh.buffer || mesh.dirty)
             mesh.upload();
         if (!mesh.bufferCount) return;
 
         const gl = glContext;
-        gl.uniformMatrix4fv(render3DUniform('model'), false, matrix.m);
-        gl.uniformMatrix4fv(render3DUniform('normalMat'), false, matrix.copy().invert().transpose().m);
-        render3DApplyState(tileInfo, color);
+        if (this.shadowPass)
+            gl.uniformMatrix4fv(render3DUniform('model', this.shadowShader), false, matrix.m);
+        else
+        {
+            gl.uniformMatrix4fv(render3DUniform('model'), false, matrix.m);
+            gl.uniformMatrix4fv(render3DUniform('normalMat'), false, matrix.copy().invert().transpose().m);
+            render3DApplyState(tileInfo, color);
+        }
         render3DBindVertexBuffer(mesh.buffer);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, mesh.bufferCount);
         ++drawCount;
@@ -17917,10 +17960,22 @@ class Render3DPlugin
     {
         if (!this.streamCount || !render3DCanDraw()) return;
         const gl = glContext;
-        gl.uniformMatrix4fv(render3DUniform('model'), false, RENDER3D_IDENTITY.m);
-        gl.uniformMatrix4fv(render3DUniform('normalMat'), false, RENDER3D_IDENTITY.m);
-        // the tile rect was applied to each uv at push time, so the whole texture maps here
-        render3DApplyState(this.streamTileInfo, WHITE, RENDER3D_FULL_UV_RECT, this.streamState);
+        if (this.shadowPass)
+        {
+            if (!this.streamState.lighting) // unlit pushes cast no shadow
+            {
+                this.streamCount = 0;
+                return;
+            }
+            gl.uniformMatrix4fv(render3DUniform('model', this.shadowShader), false, RENDER3D_IDENTITY.m);
+        }
+        else
+        {
+            gl.uniformMatrix4fv(render3DUniform('model'), false, RENDER3D_IDENTITY.m);
+            gl.uniformMatrix4fv(render3DUniform('normalMat'), false, RENDER3D_IDENTITY.m);
+            // the tile rect was applied to each uv at push time, so the whole texture maps here
+            render3DApplyState(this.streamTileInfo, WHITE, RENDER3D_FULL_UV_RECT, this.streamState);
+        }
         render3DBindVertexBuffer(this.streamBuffer);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.streamFloats, 0, this.streamCount * RENDER3D_VERTEX_FLOATS);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.streamCount);
@@ -18263,22 +18318,22 @@ function render3DInitGL()
         return;
     }
 
-    // cached locations belong to the shader built below
-    render3D.uniforms = {};
-    render3D.attribs = undefined;
+    // cached locations belong to the shaders built below
+    render3D.uniforms = new Map;
 
     // the shader
-    // attributes: p position, n normal, t uv, c color
-    // vertex uniforms: viewProj, model, normalMat (inverse transpose of model)
+    // attributes: p position, n normal, t uv, c color, at fixed locations shared with the depth shader
+    // vertex uniforms: viewProj, model, normalMat (inverse transpose of model), lightViewProj
     // fragment uniforms: tint, lightDir (xyz, w = lighting on), lightColor (rgb, a = specular),
-    //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, uvRect, tex
+    //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, uvRect, tex,
+    //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space)
     render3D.shader = glCreateProgram(
         '#version 300 es\n' +
         'precision highp float;' +
-        'uniform mat4 viewProj,model,normalMat;' +
+        'uniform mat4 viewProj,model,normalMat,lightViewProj;' +
         'uniform vec4 uvRect;' +
-        'in vec3 p,n;in vec2 t;in vec4 c;' +
-        'out vec3 P,N;out vec2 T;out vec4 C;' +
+        'layout(location=0) in vec3 p;layout(location=1) in vec3 n;layout(location=2) in vec2 t;layout(location=3) in vec4 c;' +
+        'out vec3 P,N;out vec2 T;out vec4 C,S;' +
         'void main(){' +
         'vec4 w=model*vec4(p,1.);' +
         'gl_Position=viewProj*w;' +
@@ -18286,16 +18341,18 @@ function render3DInitGL()
         'N=mat3(normalMat)*n;' +
         'T=uvRect.xy+t*uvRect.zw;' +
         'C=c;' +
+        'S=lightViewProj*w;' +
         '}'
         ,
         '#version 300 es\n' +
         'precision highp float;' +
-        'uniform vec4 tint,lightDir,lightColor,ambientColor,fogColor;' +
+        'uniform vec4 tint,lightDir,lightColor,ambientColor,fogColor,shadowParams;' +
         'uniform vec4 pointLights[' + RENDER3D_MAX_POINT_LIGHTS + '],pointLightColors[' + RENDER3D_MAX_POINT_LIGHTS + '];' +
         'uniform int pointLightCount;' +
         'uniform vec3 cameraPos;' +
         'uniform sampler2D tex;' +
-        'in vec3 P,N;in vec2 T;in vec4 C;' +
+        'uniform highp sampler2DShadow shadowMap;' +
+        'in vec3 P,N;in vec2 T;in vec4 C,S;' +
         'out vec4 o;' +
         'void main(){' +
         'vec4 c=C*tint*texture(tex,T);' +
@@ -18305,7 +18362,18 @@ function render3DInitGL()
         'float d=max(nl,0.);' +
         'vec3 e=normalize(cameraPos-P);' +
         'vec3 r=reflect(lightDir.xyz,n);' +
-        'vec3 l=ambientColor.rgb+lightColor.rgb*d;' +
+        // shadow: compare against the light's depth map with a 3x3 blur, outside the map is lit
+        'float s=1.;' +
+        'if(shadowParams.x>0.){' +
+        'vec3 q=S.xyz/S.w*.5+.5;' +
+        'if(all(lessThan(abs(q-.5),vec3(.5)))){' +
+        'q.z-=shadowParams.y;' +
+        's=0.;' +
+        'for(int x=-1;x<=1;++x)for(int y=-1;y<=1;++y)' +
+        's+=texture(shadowMap,vec3(q.xy+vec2(x,y)*shadowParams.z,q.z));' +
+        's/=9.;' +
+        '}}' +
+        'vec3 l=ambientColor.rgb+lightColor.rgb*d*s;' +
         // point lights: linear falloff squared, diffuse only
         'for(int i=0;i<' + RENDER3D_MAX_POINT_LIGHTS + ';++i){' +
         'if(i>=pointLightCount)break;' +
@@ -18314,7 +18382,7 @@ function render3DInitGL()
         'l+=pointLightColors[i].rgb*pointLightColors[i].a*a*a*max(0.,dot(n,normalize(v)));' +
         '}' +
         'c.rgb*=l;' +
-        'c.rgb+=lightColor.rgb*pow(max(dot(r,e),0.),16.)*lightColor.a*step(0.,nl);' +
+        'c.rgb+=lightColor.rgb*pow(max(dot(r,e),0.),16.)*lightColor.a*step(0.,nl)*s;' +
         '}' +
         'if(ambientColor.a>0.){' +
         'float z=distance(cameraPos,P);' +
@@ -18323,6 +18391,21 @@ function render3DInitGL()
         'o=c;' +
         '}'
     );
+
+    // the depth only shader for the shadow map, same vertex layout, position only
+    render3D.shadowShader = glCreateProgram(
+        '#version 300 es\n' +
+        'precision highp float;' +
+        'uniform mat4 viewProj,model;' +
+        'layout(location=0) in vec3 p;' +
+        'void main(){gl_Position=viewProj*model*vec4(p,1.);}'
+        ,
+        '#version 300 es\n' +
+        'precision highp float;' +
+        'void main(){}'
+    );
+    // a one texel shadow map keeps the shadow sampler valid until shadows are turned on
+    render3DUpdateShadowMap(1);
 
     // the vertex array object, attribute pointers are set per buffer by render3DBindVertexBuffer
     render3D.vao = glContext.createVertexArray();
@@ -18341,30 +18424,94 @@ function render3DInitGL()
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
 }
 
-// a uniform location, looked up once per shader
-function render3DUniform(name)
+// a uniform location, looked up once per program
+function render3DUniform(name, program=render3D.shader)
 {
     const u = render3D.uniforms;
-    return u[name] ??= glContext.getUniformLocation(render3D.shader, name);
+    let cache = u.get(program);
+    cache || u.set(program, cache = {});
+    return cache[name] ??= glContext.getUniformLocation(program, name);
 }
 
-// bind a vertex buffer and point the four attributes at its 36 byte vertices
+// the four attributes of a 36 byte vertex at the fixed locations the shaders declare: location, size, type, normalize, byte offset
+const RENDER3D_ATTRIBS = [[0, 3, 5126, false, 0], [1, 3, 5126, false, 12], [2, 2, 5126, false, 24], [3, 4, 5121, true, 32]];
+
+// bind a vertex buffer and point the attributes at it
 function render3DBindVertexBuffer(buffer)
 {
-    const gl = glContext, r = render3D;
+    const gl = glContext;
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    // name, size, type, normalize, byte offset
-    r.attribs ||= [
-        ['p', 3, gl.FLOAT, false, 0],
-        ['n', 3, gl.FLOAT, false, 12],
-        ['t', 2, gl.FLOAT, false, 24],
-        ['c', 4, gl.UNSIGNED_BYTE, true, 32],
-    ].map(([name, ...rest])=> [gl.getAttribLocation(r.shader, name), ...rest]);
-    for (const [location, size, type, normalize, offset] of r.attribs)
+    for (const [location, size, type, normalize, offset] of RENDER3D_ATTRIBS)
     {
         gl.enableVertexAttribArray(location);
         gl.vertexAttribPointer(location, size, type, normalize, RENDER3D_VERTEX_BYTES, offset);
     }
+}
+
+// create the shadow map depth texture and framebuffer at a size, or keep them when the size matches
+function render3DUpdateShadowMap(size)
+{
+    const gl = glContext, r = render3D;
+    if (r.shadowTexture && r.shadowTextureSize === size) return;
+    r.shadowTexture && gl.deleteTexture(r.shadowTexture);
+    r.shadowFramebuffer && gl.deleteFramebuffer(r.shadowFramebuffer);
+    const texture = r.shadowTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, size, size, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); // linear on a compare texture filters the comparison, softer edges for free
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+    gl.activeTexture(gl.TEXTURE0);
+    const framebuffer = r.shadowFramebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, texture, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    r.shadowTextureSize = size;
+}
+
+// draw the lit opaque casters from the light into the shadow map with the depth only shader
+function render3DRenderShadowMap()
+{
+    const gl = glContext, r = render3D;
+    render3DUpdateShadowMap(r.shadowMapSize | 0);
+    r.updateShadowMatrix();
+
+    // the map can not be read while it is drawn
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, r.shadowFramebuffer);
+    gl.viewport(0, 0, r.shadowTextureSize, r.shadowTextureSize);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(r.shadowShader);
+    gl.uniformMatrix4fv(render3DUniform('viewProj', r.shadowShader), false, r.shadowMatrix.m);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+    gl.disable(gl.CULL_FACE);
+
+    r.shadowPass = true;
+    try
+    {
+        for (const o of engineObjects)
+            if (!o.destroyed && o instanceof EngineObject3D && o.castShadow && !o.transparent)
+                o.render3D();
+        r.onRender?.();
+        r.flush();
+    }
+    finally { r.shadowPass = false; }
+
+    // back to the frame with the map ready to sample
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    gl.useProgram(r.shader);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture);
+    gl.activeTexture(gl.TEXTURE0);
 }
 
 // uv rect of a tile in texture space with bleed, or the whole texture
@@ -18477,6 +18624,11 @@ function render3DRenderPass()
     }
 
     r.isRendering = true;
+    // the shadow map from the light, then the stages sample it
+    r.shadows && render3DRenderShadowMap();
+    gl.uniform1i(render3DUniform('shadowMap'), 1);
+    gl.uniformMatrix4fv(render3DUniform('lightViewProj'), false, r.shadowMatrix.m);
+    gl.uniform4f(render3DUniform('shadowParams'), r.shadows ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, 0);
     r.renderStages();
     r.isRendering = false;
 
@@ -18494,8 +18646,10 @@ function render3DRenderPass()
 function render3DContextLost()
 {
     const r = render3D;
-    r.shader = r.vao = r.streamBuffer = r.whiteTexture = r.attribs = undefined;
-    r.uniforms = {};
+    r.shader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
+    r.shadowShader = r.shadowFramebuffer = r.shadowTexture = undefined;
+    r.shadowTextureSize = 0;
+    r.uniforms = new Map;
     r.streamCount = 0;
     for (const mesh of r.uploadedMeshes)
         mesh.buffer = undefined;
@@ -19297,6 +19451,8 @@ class EngineObject3D extends EngineObject
         this.mesh = mesh;
         /** @property {boolean} - Draw in the transparent stage, sorted far to near with depth writes off */
         this.transparent = false;
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, opaque lit objects only */
+        this.castShadow = true;
     }
 
     /** Apply the 3D velocity, then the inherited 2D physics, called automatically each frame */

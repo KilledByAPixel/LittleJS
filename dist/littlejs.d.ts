@@ -6187,6 +6187,22 @@ declare module "littlejsengine" {
         sky: Mesh;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then, read only */
         isRendering: boolean;
+        /** @property {boolean} - Draw a shadow map from the directional light, so lit opaque meshes shadow everything lit, off by default and free when off */
+        shadows: boolean;
+        /** @property {number} - Shadow map width and height in texels, rebuilt when it changes */
+        shadowMapSize: number;
+        /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper */
+        shadowRange: number;
+        /** @property {Vector3} - Center of the shadowed area, undefined follows the camera */
+        shadowCenter: any;
+        /** @property {number} - Depth offset that keeps surfaces from shadowing themselves, raise it for speckles, lower it if shadows float away from their casters */
+        shadowBias: number;
+        /** @property {number} - Blur radius in shadow map texels */
+        shadowSoftness: number;
+        /** @property {Matrix4} - This frame's light view projection, read only */
+        shadowMatrix: Matrix4;
+        /** @property {boolean} - True while the shadow map is being drawn, draws go to the depth only shader, read only */
+        shadowPass: boolean;
         /** @property {Matrix4} - This frame's view matrix, read only */
         viewMatrix: Matrix4;
         /** @property {Matrix4} - This frame's projection matrix, read only */
@@ -6203,8 +6219,11 @@ declare module "littlejsengine" {
         vao: any;
         whiteTexture: any;
         uploadedMeshes: Set<any>;
-        uniforms: {};
-        attribs: any;
+        shadowShader: any;
+        shadowFramebuffer: any;
+        shadowTexture: any;
+        shadowTextureSize: number;
+        uniforms: Map<any, any>;
         streamBuffer: any;
         streamData: ArrayBuffer;
         streamFloats: Float32Array;
@@ -6226,6 +6245,8 @@ declare module "littlejsengine" {
         /** Rebuild the view and projection matrices from the camera, called automatically each frame
          *  @param {number} [aspect] - Width over height, defaults to the main canvas */
         updateMatrices(aspect?: number): void;
+        /** Rebuild the light's view projection around the shadow center, called automatically each frame shadows are on */
+        updateShadowMatrix(): void;
         /** Project a world point to clip space, x and y in -1 to 1, z is depth
          *  @param {Vector3} pos
          *  @return {Vector3|undefined} - undefined when behind the camera */
@@ -6423,6 +6444,8 @@ declare module "littlejsengine" {
         mesh: Mesh;
         /** @property {boolean} - Draw in the transparent stage, sorted far to near with depth writes off */
         transparent: boolean;
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, opaque lit objects only */
+        castShadow: boolean;
         /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
          *  @return {Matrix4} */
         getMatrix(): Matrix4;
