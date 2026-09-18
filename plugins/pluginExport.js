@@ -108,6 +108,11 @@ export
     Render3DPlugin,
     Camera3D,
     Mesh,
+    buildLathe,
+    buildSphere,
+    buildBox,
+    buildGrid,
+    buildLoft,
 
     // Three.js
     threeJS,

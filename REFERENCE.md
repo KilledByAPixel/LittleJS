@@ -826,6 +826,13 @@ mesh.render(matrix, color, tileInfo)          // one draw call with the current 
 mesh.dispose()                                // free the GPU buffer, the CPU data stays
 mesh.vertexCount
 render3D.drawMesh(mesh, matrix, color, tileInfo)
+
+// Shape builders - return a Mesh centered on the origin
+buildLathe(profile, sides=8, smooth=false)    // profile [[radius, y], ...] bottom to top, revolved about Y
+buildSphere(segments=12, rings=6, smooth=true)// diameter 1
+buildBox(size=vec3(1))                        // six faces with uvs
+buildGrid(sizeX, sizeZ, segmentsX, segmentsZ, heightFunction, colorFunction) // heightfield in XZ
+buildLoft(stations)                           // [[z, halfWidth, top, bottom, sideHeight], ...] nose first
 ```
 
 ## LittleJS Three.js Integration

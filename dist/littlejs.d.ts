@@ -6237,6 +6237,54 @@ declare module "littlejsengine" {
         dispose(): void;
     }
     /**
+     * Build a surface of revolution about the Y axis
+     * - profile is [[radius, y], ...] from bottom to top
+     * - [[r,-h],[r,h]] is a cylinder, [[0,-1],[1,0],[0,1]] with 4 sides is an octahedron
+     * @param {Array<Array<number>>} profile
+     * @param {number} [sides]
+     * @param {boolean} [smooth] - Vertex normals and shared vertices, otherwise one normal per face
+     * @return {Mesh}
+     * @memberof Render3D
+     */
+    export function buildLathe(profile: Array<Array<number>>, sides?: number, smooth?: boolean): Mesh;
+    /**
+     * Build a sphere of diameter 1
+     * @param {number} [segments] - Around
+     * @param {number} [rings] - Top to bottom
+     * @param {boolean} [smooth]
+     * @return {Mesh}
+     * @memberof Render3D
+     */
+    export function buildSphere(segments?: number, rings?: number, smooth?: boolean): Mesh;
+    /**
+     * Build a box centered on the origin, six flat faces with uvs covering each face
+     * @param {Vector3} [size]
+     * @return {Mesh}
+     * @memberof Render3D
+     */
+    export function buildBox(size?: Vector3): Mesh;
+    /**
+     * Build a heightfield grid in the XZ plane centered on the origin, one strip per row
+     * @param {number} sizeX
+     * @param {number} sizeZ
+     * @param {number} [segmentsX]
+     * @param {number} [segmentsZ]
+     * @param {Function} [heightFunction] - (x, z) => y, default flat
+     * @param {Function} [colorFunction] - (x, z) => Color, default white
+     * @return {Mesh}
+     * @memberof Render3D
+     */
+    export function buildGrid(sizeX: number, sizeZ: number, segmentsX?: number, segmentsZ?: number, heightFunction?: Function, colorFunction?: Function): Mesh;
+    /**
+     * Build a loft: diamond cross sections swept along Z, quads between them, capped both ends
+     * - station = [z, halfWidth, top, bottom, sideHeight] with sideHeight 0-1 placing the side points between bottom and top (default .5)
+     * - stations are ordered nose first, nose at the largest z
+     * @param {Array<Array<number>>} stations
+     * @return {Mesh}
+     * @memberof Render3D
+     */
+    export function buildLoft(stations: Array<Array<number>>): Mesh;
+    /**
      * LittleJS Three.js Plugin
      * - Renders a three.js scene on a canvas behind the LittleJS canvases
      * - The three.js module is passed in by the user, nothing is bundled

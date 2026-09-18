@@ -651,3 +651,205 @@ class Mesh
         render3D?.uploadedMeshes.delete(this);
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Shape builders, all centered on the origin so buildMatrix does placement
+
+/**
+ * Build a surface of revolution about the Y axis
+ * - profile is [[radius, y], ...] from bottom to top
+ * - [[r,-h],[r,h]] is a cylinder, [[0,-1],[1,0],[0,1]] with 4 sides is an octahedron
+ * @param {Array<Array<number>>} profile
+ * @param {number} [sides]
+ * @param {boolean} [smooth] - Vertex normals and shared vertices, otherwise one normal per face
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildLathe(profile, sides=8, smooth=false)
+{
+    ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
+    const mesh = new Mesh;
+    const rings = profile.length;
+    const point = (i, a)=> vec3(sin(a) * profile[i][0], profile[i][1], cos(a) * profile[i][0]);
+
+    // 2D outward normal of each profile segment, in (radius, y) space
+    const segmentNormal = (i)=>
+    {
+        const [r0, y0] = profile[i], [r1, y1] = profile[i+1];
+        const n = vec2(y1 - y0, r0 - r1);
+        return n.length() ? n.normalize() : vec2(1, 0);
+    };
+    // vertex normal: average of the adjacent segment normals
+    const vertexNormal = (i)=>
+    {
+        let n = vec2();
+        if (i > 0) n = n.add(segmentNormal(i - 1));
+        if (i < rings - 1) n = n.add(segmentNormal(i));
+        return n.normalize();
+    };
+    const normal3D = (n, a)=> vec3(sin(a) * n.x, n.y, cos(a) * n.x);
+
+    // v runs along the profile by arc length
+    const lengths = [0];
+    for (let i = 1; i < rings; ++i)
+        lengths[i] = lengths[i-1] + Math.hypot(profile[i][0] - profile[i-1][0], profile[i][1] - profile[i-1][1]);
+    const total = lengths[rings - 1] || 1;
+    const v = (i)=> 1 - lengths[i] / total;
+
+    for (let i = 0; i + 1 < rings; ++i)
+    {
+        if (smooth)
+        {
+            // one ribbon around the ring pair, top point then bottom point per column
+            const points = [], normals = [], uvs = [];
+            const n0 = vertexNormal(i), n1 = vertexNormal(i + 1);
+            for (let j = 0; j <= sides; ++j)
+            {
+                const a = j / sides * 2 * PI, u = j / sides;
+                points.push(point(i + 1, a), point(i, a));
+                normals.push(normal3D(n1, a), normal3D(n0, a));
+                uvs.push(vec2(u, v(i + 1)), vec2(u, v(i)));
+            }
+            mesh.addStrip(points, normals, uvs);
+        }
+        else
+        {
+            // one quad per side with its face normal
+            const n = segmentNormal(i);
+            for (let j = 0; j < sides; ++j)
+            {
+                const a0 = j / sides * 2 * PI, a1 = (j + 1) / sides * 2 * PI;
+                const u0 = j / sides, u1 = (j + 1) / sides;
+                mesh.addStrip(
+                    [point(i + 1, a0), point(i, a0), point(i + 1, a1), point(i, a1)],
+                    normal3D(n, (a0 + a1) / 2),
+                    [vec2(u0, v(i + 1)), vec2(u0, v(i)), vec2(u1, v(i + 1)), vec2(u1, v(i))]);
+            }
+        }
+    }
+    return mesh;
+}
+
+/**
+ * Build a sphere of diameter 1
+ * @param {number} [segments] - Around
+ * @param {number} [rings] - Top to bottom
+ * @param {boolean} [smooth]
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildSphere(segments=12, rings=6, smooth=true)
+{
+    const profile = [];
+    for (let i = 0; i <= rings; ++i)
+    {
+        const a = i / rings * PI - PI/2;
+        profile.push([cos(a) * .5, sin(a) * .5]);
+    }
+    return buildLathe(profile, segments, smooth);
+}
+
+/**
+ * Build a box centered on the origin, six flat faces with uvs covering each face
+ * @param {Vector3} [size]
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildBox(size=vec3(1))
+{
+    const mesh = new Mesh;
+    const half = size.scale(.5);
+    // each face: normal, right axis, up axis (right cross up = normal)
+    const faces = [
+        [vec3(0, 0, 1),  vec3(1, 0, 0),  vec3(0, 1, 0)],
+        [vec3(0, 0, -1), vec3(-1, 0, 0), vec3(0, 1, 0)],
+        [vec3(1, 0, 0),  vec3(0, 0, -1), vec3(0, 1, 0)],
+        [vec3(-1, 0, 0), vec3(0, 0, 1),  vec3(0, 1, 0)],
+        [vec3(0, 1, 0),  vec3(1, 0, 0),  vec3(0, 0, -1)],
+        [vec3(0, -1, 0), vec3(1, 0, 0),  vec3(0, 0, 1)],
+    ];
+    for (const [n, r, u] of faces)
+    {
+        const center = n.multiply(half);
+        const right = r.multiply(half), up = u.multiply(half);
+        mesh.addStrip(
+            [center.subtract(right).add(up), center.subtract(right).subtract(up),
+             center.add(right).add(up), center.add(right).subtract(up)],
+            n,
+            [vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)]);
+    }
+    return mesh;
+}
+
+/**
+ * Build a heightfield grid in the XZ plane centered on the origin, one strip per row
+ * @param {number} sizeX
+ * @param {number} sizeZ
+ * @param {number} [segmentsX]
+ * @param {number} [segmentsZ]
+ * @param {Function} [heightFunction] - (x, z) => y, default flat
+ * @param {Function} [colorFunction] - (x, z) => Color, default white
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildGrid(sizeX, sizeZ, segmentsX=1, segmentsZ=1, heightFunction=()=>0, colorFunction)
+{
+    const mesh = new Mesh;
+    const cellX = sizeX / segmentsX, cellZ = sizeZ / segmentsZ;
+    const px = (i)=> i * cellX - sizeX / 2, pz = (j)=> j * cellZ - sizeZ / 2;
+    const point = (i, j)=> { const x = px(i), z = pz(j); return vec3(x, heightFunction(x, z), z); };
+    const normal = (i, j)=>
+    {
+        const x = px(i), z = pz(j), ex = cellX / 2, ez = cellZ / 2;
+        const dx = (heightFunction(x + ex, z) - heightFunction(x - ex, z)) / (2 * ex);
+        const dz = (heightFunction(x, z + ez) - heightFunction(x, z - ez)) / (2 * ez);
+        return vec3(-dx, 1, -dz).normalize();
+    };
+    const color = (i, j)=> colorFunction ? colorFunction(px(i), pz(j)) : WHITE;
+    for (let j = 0; j < segmentsZ; ++j)
+    {
+        const points = [], normals = [], uvs = [], colors = [];
+        for (let i = 0; i <= segmentsX; ++i)
+        {
+            points.push(point(i, j), point(i, j + 1));
+            normals.push(normal(i, j), normal(i, j + 1));
+            uvs.push(vec2(i / segmentsX, j / segmentsZ), vec2(i / segmentsX, (j + 1) / segmentsZ));
+            colors.push(color(i, j), color(i, j + 1));
+        }
+        mesh.addStrip(points, normals, uvs, colors);
+    }
+    return mesh;
+}
+
+/**
+ * Build a loft: diamond cross sections swept along Z, quads between them, capped both ends
+ * - station = [z, halfWidth, top, bottom, sideHeight] with sideHeight 0-1 placing the side points between bottom and top (default .5)
+ * - stations are ordered nose first, nose at the largest z
+ * @param {Array<Array<number>>} stations
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildLoft(stations)
+{
+    ASSERT(isArray(stations) && stations.length > 1, 'loft needs at least 2 stations');
+    const mesh = new Mesh;
+    // section points: left, top, right, bottom, wound clockwise seen from +z
+    const section = ([z, w, t, b, m=.5])=>
+        [vec3(-w, lerp(b, t, m), z), vec3(0, t, z), vec3(w, lerp(b, t, m), z), vec3(0, b, z)];
+    // quad a,b,c,d in loop order with the diagonal cross as its normal, which survives a collapsed corner
+    const quad = (a, b, c, d)=>
+    {
+        const n = c.subtract(a).cross(d.subtract(b)).normalize();
+        mesh.addStrip([a, b, d, c], n, [vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)]);
+    };
+    for (let i = 0; i + 1 < stations.length; ++i)
+    {
+        const s1 = section(stations[i]), s2 = section(stations[i + 1]);
+        for (let k = 0; k < 4; ++k)
+            quad(s1[k], s1[(k + 1) % 4], s2[(k + 1) % 4], s2[k]);
+    }
+    const tail = section(stations[stations.length - 1]), nose = section(stations[0]);
+    quad(tail[0], tail[1], tail[2], tail[3]);
+    quad(nose[3], nose[2], nose[1], nose[0]);
+    return mesh;
+}

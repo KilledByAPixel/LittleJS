@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, buildLathe, buildSphere, buildBox, buildGrid, buildLoft } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -185,4 +185,109 @@ test('Mesh.render is safe headless and dispose clears the buffer', () =>
     assert.doesNotThrow(()=> m.render(Matrix4.identity(), RED));
     assert.equal(m.buffer, undefined);
     assert.doesNotThrow(()=> m.dispose());
+});
+
+// every real triangle's outward normal must point away from the origin for a convex shape
+function assertOutward(mesh, msg)
+{
+    const p = mesh.points;
+    for (let i = 0; i + 2 < p.length; ++i)
+    {
+        const a = p[i], b = p[i+1], c = p[i+2];
+        let n = b.subtract(a).cross(c.subtract(a));
+        if (n.lengthSquared() < 1e-9) continue; // degenerate join
+        n = n.scale(i & 1 ? 1 : -1);
+        const center = a.add(b).add(c).scale(1/3);
+        assert.ok(n.dot(center) > 0, `${msg}: triangle ${i} winds inward`);
+        // and the stored normals agree with the face
+        for (let j = 0; j < 3; ++j)
+            assert.ok(mesh.normals[i + j].dot(n) > 0, `${msg}: normal ${i + j} disagrees with its face`);
+    }
+}
+
+test('buildLathe cylinder has the expected vertex counts and winds outward', () =>
+{
+    const flat = buildLathe([[1, -1], [1, 1]], 8, false);
+    assert.equal(flat.vertexCount, 8 * 6);
+    assertOutward(flat, 'flat cylinder');
+    const smooth = buildLathe([[1, -1], [1, 1]], 8, true);
+    assert.equal(smooth.vertexCount, 2 * 9 + 2);
+    assertOutward(smooth, 'smooth cylinder');
+    // smooth normals are radial on a cylinder
+    for (let i = 1; i < smooth.vertexCount - 1; ++i)
+        near(smooth.normals[i].y, 0);
+    // uvs run around and along
+    near(smooth.uvs[1].x, 0);
+    near(smooth.uvs[smooth.vertexCount - 2].x, 1);
+});
+
+test('buildLathe octahedron with 4 sides winds outward', () =>
+{
+    const m = buildLathe([[0, -1], [1, 0], [0, 1]], 4);
+    assert.equal(m.vertexCount, 2 * 4 * 6);
+    assertOutward(m, 'octahedron');
+    for (const p of m.points)
+        assert.ok(p.length() <= 1 + 1e-6);
+});
+
+test('buildSphere is unit diameter and outward', () =>
+{
+    const m = buildSphere(8, 4);
+    assertOutward(m, 'sphere');
+    let maxR = 0;
+    for (const p of m.points)
+        maxR = Math.max(maxR, p.length());
+    near(maxR, .5);
+    // smooth normals on a sphere point along the position
+    for (let i = 0; i < m.vertexCount; ++i)
+        if (m.points[i].lengthSquared() > 1e-6)
+            assert.ok(m.normals[i].dot(m.points[i].normalize()) > .9);
+});
+
+test('buildBox has six axis aligned faces', () =>
+{
+    const m = buildBox(vec3(2, 4, 6));
+    assert.equal(m.vertexCount, 36);
+    assertOutward(m, 'box');
+    const seen = new Set;
+    for (let i = 0; i < 36; ++i)
+    {
+        const n = m.normals[i];
+        seen.add(`${Math.round(n.x)},${Math.round(n.y)},${Math.round(n.z)}`);
+        const p = m.points[i];
+        near(Math.abs(p.x), 1); near(Math.abs(p.y), 2); near(Math.abs(p.z), 3);
+    }
+    assert.equal(seen.size, 6);
+    // uvs cover the tile on each face
+    assert.ok(m.uvs.some(uv => uv.x == 1 && uv.y == 1));
+    assert.ok(m.uvs.some(uv => uv.x == 0 && uv.y == 0));
+});
+
+test('buildGrid samples the height and color functions and faces up', () =>
+{
+    const m = buildGrid(4, 2, 2, 1, (x, z)=> x + 10*z, (x, z)=> rgb((x + 2) / 4, 0, 0));
+    assert.equal(m.vertexCount, 1 * (2 * 3 + 2));
+    // corners: x in -2..2, z in -1..1
+    const corner = m.points.find(p => Math.abs(p.x + 2) < 1e-6 && Math.abs(p.z + 1) < 1e-6);
+    near(corner.y, -2 - 10);
+    near(m.colors[1].r, (m.points[1].x + 2) / 4);
+    for (let i = 1; i < m.vertexCount - 1; ++i)
+        assert.ok(m.normals[i].y > 0, 'grid normal points up');
+    // winding: a flat grid faces +Y
+    const flat = buildGrid(2, 2, 1, 1);
+    const p = flat.points;
+    const n = p[2].subtract(p[1]).cross(p[3].subtract(p[1])); // first real triangle at index 1
+    assert.ok(n.y > 0, 'flat grid first triangle faces up');
+    nearVec(flat.normals[1], 0, 1, 0);
+});
+
+test('buildLoft closes both ends and winds outward', () =>
+{
+    // a symmetric hull: nose at +z, tail at -z, diamond sections
+    const m = buildLoft([[1, .1, .1, -.1], [0, 1, .5, -.5], [-1, .8, .4, -.4]]);
+    // 2 station pairs x 4 sides + 2 caps = 10 quads of 6 vertices
+    assert.equal(m.vertexCount, 10 * 6);
+    assertOutward(m, 'loft');
+    for (let i = 0; i < m.vertexCount; ++i)
+        near(m.normals[i].length(), 1);
 });
