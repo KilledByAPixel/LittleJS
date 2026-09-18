@@ -633,7 +633,7 @@ test('drawShadow is a soft disc facing up just above the floor', () =>
     assert.equal(disc.vertexCount, 3 * (2 * 17 + 2));
     for (let i = 0; i < disc.vertexCount; ++i)
     {
-        near(disc.points[i].y, 1.01);
+        near(disc.points[i].y, 1.02);
         nearVec(disc.normals[i], 0, 1, 0);
     }
     // the rings run from the center out to the full radius, centered under pos
@@ -945,4 +945,29 @@ test('setSky builds the dome, keeps it, and matches the fog color to the horizon
 test('renderAfter2D defaults off', () =>
 {
     assert.equal(render3D.renderAfter2D, false);
+});
+
+test('HeightMap.getHeight matches the mesh triangles, split from (i, j) to (i+1, j+1)', () =>
+{
+    // a saddle: two opposite corners high, the split diagonal runs between the low corners
+    const map = new HeightMap([[0, 1], [1, 0]], vec2(2, 2), 1);
+    near(map.getHeight(-.5, -.5), .5);  // on the first triangle
+    near(map.getHeight(.5, .5), .5);    // on the second
+    near(map.getHeight(.5, -.5), 1);    // on the shared edge between the high corners
+    near(map.getHeight(0, 0), 1);       // the cell center is on that edge too, not the bilinear .5
+    // the mesh has a vertex at every sample height
+    const mesh = map.buildMesh(false);
+    for (const p of mesh.points)
+        near(p.y, map.getHeight(p.x, p.z));
+});
+
+test('drawShadow follows a height function and lifts by the given amount', () =>
+{
+    const disc = render3D.bake(()=> render3D.drawShadow(vec3(2, 9, 3), 1, (x, z)=> x + z, WHITE, .5));
+    assert.equal(disc.vertexCount, 3 * (2 * 17 + 2));
+    for (const p of disc.points)
+        near(p.y, p.x + p.z + .5);
+    const flat = render3D.bake(()=> render3D.drawShadow(vec3(2, 9, 3), 1, 4));
+    for (const p of flat.points)
+        near(p.y, 4.02);
 });

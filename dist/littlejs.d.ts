@@ -6316,12 +6316,13 @@ declare module "littlejsengine" {
          *  @param {number} [thickness] - World units
          *  @param {Color} [color] */
         drawLine(start: Vector3, end: Vector3, thickness?: number, color?: Color): void;
-        /** Draw a soft round shadow on the floor under a position, unlit; draw it in the transparent stage
+        /** Draw a soft round shadow on the ground under a position, unlit; draw it in the transparent stage
          *  @param {Vector3} pos - Position of the thing casting the shadow
          *  @param {number} radius
-         *  @param {number} [floorHeight] - World height of the floor under pos
-         *  @param {Color} [color] */
-        drawShadow(pos: Vector3, radius: number, floorHeight?: number, color?: Color): void;
+         *  @param {number|Function} [floorHeight] - Height of the ground, or (x, z) => y so the shadow follows terrain
+         *  @param {Color} [color]
+         *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground */
+        drawShadow(pos: Vector3, radius: number, floorHeight?: number | Function, color?: Color, lift?: number): void;
         /** Draw a disc that fades to transparent at the rim, unlit, for glows, puffs, shadows and sky dots
          *  @param {Vector3} pos - Center
          *  @param {number} radius
@@ -6585,7 +6586,7 @@ declare module "littlejsengine" {
         /** Number of columns, along X
          *  @return {number} */
         get columns(): number;
-        /** World height at a position, interpolated between samples and clamped at the edges
+        /** World height at a position, exactly the height of the mesh buildMesh draws there, clamped at the edges
          *  @param {number} x
          *  @param {number} z
          *  @return {number} */

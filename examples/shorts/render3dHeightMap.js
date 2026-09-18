@@ -66,7 +66,7 @@ function gameInit()
             new EngineObject3D(vec3(x, terrain.getHeight(x, z), z), tree).rotation3D.y = rand(2 * PI);
     }
     ball = new Ball;
-    render3D.onRenderTransparent = ()=> render3D.drawShadow(ball.pos3D, 1, terrain.getHeight(ball.pos3D.x, ball.pos3D.z));
+    render3D.onRenderTransparent = ()=> render3D.drawShadow(ball.pos3D, 1, (x, z)=> terrain.getHeight(x, z)); // the shadow follows the ground
 }
 
 function gameUpdate()

@@ -865,7 +865,7 @@ buildSky(topColor, horizonColor, bottomColor) // dome colored by height, set as 
 // Height map terrain - from a 2D array [row][column] of 0-1 heights or an image's red channel
 const terrain = new HeightMap(heightsOrImage, size=vec2(1), height=1, colorsOrImage)
 terrain.buildMesh(smooth)                     // one vertex per sample, centered on the origin
-terrain.getHeight(x, z)                       // interpolated world height, to stand things on it
+terrain.getHeight(x, z)                       // world height of the drawn mesh there, to stand things on it
 terrain.getColor(x, z)                        // nearest sample color
 terrain.rows terrain.columns                  // samples along Z and X
 
@@ -879,7 +879,7 @@ render3D.drawQuad(a, b, c, d, color, tileInfo)            // corners in loop ord
 render3D.drawTriangle(a, b, c, color)
 render3D.drawLine(start, end, thickness, color)           // camera facing ribbon, unlit
 render3D.drawSoftDisc(pos, radius, color, normal, sides)  // fades to transparent at the rim, unlit, faces the camera unless a normal is given
-render3D.drawShadow(pos, radius, floorHeight, color)      // soft blob shadow on the floor under pos, unlit
+render3D.drawShadow(pos, radius, floorHeight, color, lift) // soft blob shadow under pos, unlit; floorHeight can be (x, z)=> y to follow terrain
 render3D.flush()                                          // draw what is pending, automatic when needed
 render3D.bake(()=> { ...pushes... })                      // returns the pushes as a Mesh
 

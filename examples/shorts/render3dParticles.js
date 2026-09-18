@@ -18,7 +18,7 @@ function gameInit()
         3, 1.5, 4, .03, .98, 0, .5, .2);
 
     // sparks: fast, gravity, every direction, textured with a tile from the sheet
-    new ParticleEmitter3D(vec3(4, .5, 0), 0, 0, 40, PI, tile(3, 16),
+    new ParticleEmitter3D(vec3(4, .5, 0), 0, 0, 40, PI, tile(0, 16),
         rgb(1, 1, .6), rgb(1, .8, .4), rgb(1, .5, 0, 0), rgb(1, .5, 0, 0),
         1.5, .3, .1, .2, .98, -.006, .2, .3, true);
 

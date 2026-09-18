@@ -18107,14 +18107,20 @@ class Render3DPlugin
             this.cameraForward.scale(-1), undefined, color);
     }
 
-    /** Draw a soft round shadow on the floor under a position, unlit; draw it in the transparent stage
+    /** Draw a soft round shadow on the ground under a position, unlit; draw it in the transparent stage
      *  @param {Vector3} pos - Position of the thing casting the shadow
      *  @param {number} radius
-     *  @param {number} [floorHeight] - World height of the floor under pos
-     *  @param {Color} [color] */
-    drawShadow(pos, radius, floorHeight=0, color=RENDER3D_SHADOW_COLOR)
+     *  @param {number|Function} [floorHeight] - Height of the ground, or (x, z) => y so the shadow follows terrain
+     *  @param {Color} [color]
+     *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground */
+    drawShadow(pos, radius, floorHeight=0, color=RENDER3D_SHADOW_COLOR, lift=.02)
     {
-        this.drawSoftDisc(vec3(pos.x, floorHeight + .01, pos.z), radius, color, vec3(0, 1, 0));
+        const height = isNumber(floorHeight) ? ()=> floorHeight : floorHeight;
+        render3DPushSoftDisc(this, radius, color, 16, RENDER3D_DEFAULT_NORMAL, (dir, r)=>
+        {
+            const x = pos.x + dir.x * r, z = pos.z + dir.y * r;
+            return vec3(x, height(x, z) + lift, z);
+        });
     }
 
     /** Draw a disc that fades to transparent at the rim, unlit, for glows, puffs, shadows and sky dots
@@ -18129,21 +18135,7 @@ class Render3DPlugin
         const n = normal.normalize();
         const helper = abs(n.y) < .9 ? vec3(0, 1, 0) : vec3(1, 0, 0);
         const u = helper.cross(n).normalize(), w = u.cross(n);
-        const alpha = [1, .9, .7, 0]; // by ring, center to rim
-        for (let k = 0; k < 3; ++k)
-        {
-            const points = [], colors = [];
-            const c0 = color.withAlpha(color.a * alpha[k]), c1 = color.withAlpha(color.a * alpha[k+1]);
-            const r0 = radius * k / 3, r1 = radius * (k + 1) / 3;
-            for (let i = 0; i <= sides; ++i)
-            {
-                const a = i / sides * 2 * PI;
-                const dir = u.scale(cos(a)).add(w.scale(sin(a)));
-                points.push(pos.add(dir.scale(r1)), pos.add(dir.scale(r0)));
-                colors.push(c1, c0);
-            }
-            this.pushStripUnlit(points, n, undefined, colors);
-        }
+        render3DPushSoftDisc(this, radius, color, sides, n, (dir, r)=> pos.add(u.scale(dir.x * r)).add(w.scale(dir.y * r)));
     }
 }
 
@@ -19030,7 +19022,7 @@ class HeightMap
      *  @return {number} */
     get columns() { return this.heights[0].length; }
 
-    /** World height at a position, interpolated between samples and clamped at the edges
+    /** World height at a position, exactly the height of the mesh buildMesh draws there, clamped at the edges
      *  @param {number} x
      *  @param {number} z
      *  @return {number} */
@@ -19040,8 +19032,11 @@ class HeightMap
         const u = clamp((x / this.size.x + .5) * (columns - 1), 0, columns - 1);
         const v = clamp((z / this.size.y + .5) * (rows - 1), 0, rows - 1);
         const i = min(floor(u), columns - 2), j = min(floor(v), rows - 2);
-        const far = lerp(h[j][i], h[j][i+1], u - i), near = lerp(h[j+1][i], h[j+1][i+1], u - i);
-        return lerp(far, near, v - j) * this.height;
+        const fu = u - i, fv = v - j;
+        // each cell is two triangles split from (i, j) to (i+1, j+1), the same split buildGrid uses
+        const a = h[j][i], b = h[j+1][i], c = h[j+1][i+1], d = h[j][i+1];
+        const height = fu + fv <= 1 ? a + fu * (d - a) + fv * (b - a) : c + (1 - fu) * (b - c) + (1 - fv) * (d - c);
+        return height * this.height;
     }
 
     /** Color of the nearest sample to a position, white when there are no colors
@@ -19340,6 +19335,25 @@ class ParticleEmitter3D extends EngineObject3D
                 render3D.drawSoftDisc(p.pos, size / 2, color, undefined, 8); // untextured particles are round puffs
         }
         render3D.additive = additive;
+    }
+}
+
+// push the three rings of a soft disc, pointAt maps a unit direction in the disc's plane and a radius to a world point
+function render3DPushSoftDisc(r, radius, color, sides, normal, pointAt)
+{
+    const alpha = [1, .9, .7, 0]; // by ring, center to rim
+    for (let k = 0; k < 3; ++k)
+    {
+        const points = [], colors = [];
+        const c0 = color.withAlpha(color.a * alpha[k]), c1 = color.withAlpha(color.a * alpha[k+1]);
+        const r0 = radius * k / 3, r1 = radius * (k + 1) / 3;
+        for (let i = 0; i <= sides; ++i)
+        {
+            const a = i / sides * 2 * PI, dir = vec2(cos(a), sin(a));
+            points.push(pointAt(dir, r1), pointAt(dir, r0));
+            colors.push(c1, c0);
+        }
+        r.pushStripUnlit(points, normal, undefined, colors);
     }
 }
 
