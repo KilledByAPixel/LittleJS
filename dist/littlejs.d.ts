@@ -6179,7 +6179,7 @@ declare module "littlejsengine" {
         specular: number;
         /** @property {Function} - Called in the opaque stage after the opaque objects, for drawing world geometry outside of objects */
         onRender: any;
-        /** @property {Function} - Called in the transparent stage after the transparent objects, with blending on and depth writes off, for billboards, glows and shadows outside of objects */
+        /** @property {Function} - Called in the transparent stage, with blending on and depth writes off, for billboards, glows and shadows outside of objects; every transparent draw is sorted far to near before it lands, so alpha and additive mix correctly */
         onRenderTransparent: any;
         /** @property {Mesh} - Sky dome from buildSky, drawn around the camera behind everything when set */
         sky: any;
@@ -6220,6 +6220,7 @@ declare module "littlejsengine" {
         };
         streamStateKey: number;
         capture: Mesh;
+        transparentQueue: any[];
         /** Rebuild the view and projection matrices from the camera, called automatically each frame
          *  @param {number} [aspect] - Width over height, defaults to the main canvas */
         updateMatrices(aspect?: number): void;
@@ -6255,6 +6256,8 @@ declare module "littlejsengine" {
         bake(drawFunction: Function): Mesh;
         /** Run the opaque and transparent stages over every EngineObject3D, called automatically by the 3D pass */
         renderStages(): void;
+        /** Draw the queued transparent draws far to near with the state each was pushed under, called automatically at the end of the transparent stage */
+        flushTransparentQueue(): void;
         /** Draw a sky dome around the camera, unlit, unfogged and behind everything, called automatically when render3D.sky is set
          *  @param {Mesh} mesh - From buildSky */
         drawSky(mesh: Mesh): void;

@@ -829,6 +829,7 @@ render3D.cullBackFaces = false
 render3D.specular = 0                 // Phong highlight strength
 render3D.onRender = ()=> {}           // opaque stage, after the opaque objects: world geometry outside of objects
 render3D.onRenderTransparent = ()=> {} // transparent stage, blending on and depth writes off: billboards, glows, shadows
+// every draw in the transparent stage (objects and pushes alike) is sorted far to near before it lands, so alpha and additive mix correctly
 render3D.sky = buildSky(topColor, horizonColor, bottomColor) // sky dome drawn around the camera behind everything
 render3D.screenToRay(screenPos)       // {pos, direction} world ray under a screen point, for picking with raycast*
 setRender3DSmoothShading(true)        // default for every builder's smooth argument (render3DSmoothShading)
@@ -877,7 +878,7 @@ render3D.bake(()=> { ...pushes... })                      // returns the pushes 
 new EngineObject3D(pos3D, mesh, color, tileInfo)
 obj.pos3D obj.rotation3D obj.scale3D   // Vector3, rotation is (pitch, yaw, roll)
 obj.mesh obj.color obj.tileInfo         // what to draw and how
-obj.transparent = true                  // draw in the transparent stage, sorted far to near, no depth writes
+obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
 obj.renderOrder                         // sorts the opaque stage
 obj.getMatrix()                         // buildMatrix(pos3D, rotation3D, scale3D)
 // children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local

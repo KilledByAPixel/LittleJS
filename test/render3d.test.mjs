@@ -467,7 +467,7 @@ test('EngineObject3D render is a no-op and render3D draws the mesh through the p
     o.destroy(); empty.destroy();
 });
 
-test('render3D stages draw opaque by renderOrder, then onRender, then transparent far to near', () =>
+test('render3D stages draw the sky, opaque by renderOrder, onRender, then the transparent stage', () =>
 {
     // clean out earlier objects
     for (const o of engineObjects) o.destroy();
@@ -504,7 +504,8 @@ test('render3D stages draw opaque by renderOrder, then onRender, then transparen
     render3D.sky = undefined;
     render3D.onRenderTransparent = undefined;
     const names = order.map(o => o.name);
-    assert.deepEqual(names, ['sky', 'a:O', 'b:O', 'onRender', 'far:T', 'near:T', 'onRenderTransparent:T']);
+    // transparent objects are called in list order, their draws are what gets sorted far to near
+    assert.deepEqual(names, ['sky', 'a:O', 'b:O', 'onRender', 'near:T', 'far:T', 'onRenderTransparent:T']);
     assert.ok(!names.includes('dead:O'), 'destroyed objects are skipped');
     assert.ok(order.every(o => o.additive === false && o.depthTest === true), 'both stages draw with additive off and depth test on');
     assert.equal(render3D.blend, true);       // left in the transparent stage's state
@@ -718,4 +719,39 @@ test('pushStripUnlit turns lighting off for the push and restores it, even on a 
     assert.equal(render3D.lighting, true);
     assert.throws(()=> render3D.bake(()=> render3D.pushStripUnlit([vec3(), vec3(1)]))); // too few points asserts
     assert.equal(render3D.lighting, true);
+});
+
+test('transparent stage queues every draw by distance and replays far to near with its own state', () =>
+{
+    render3D.camera.pos = vec3(0, 0, 10);
+    render3D.camera.rotation = vec3();
+    render3D.updateMatrices(1);
+
+    // queue a mesh draw and a strip push at different distances, the queue check comes before the shader guard
+    render3D.transparentQueue = [];
+    render3D.additive = true;
+    render3D.drawMesh(new Mesh, buildMatrix(vec3(0, 0, -10)));   // 20 away
+    render3D.additive = false;
+    render3D.pushStrip([vec3(-1, 0, 5), vec3(1, 0, 5), vec3(0, 1, 5)]); // center (0, .33, 5): 5 away
+    render3D.drawBillboard(vec3(0, 0, 0), vec2(1));                    // 10 away, unlit
+    const queue = render3D.transparentQueue;
+    assert.equal(queue.length, 3);
+    near(queue[0].distance, 400);
+    assert.equal(queue[0].state.additive, true);
+    near(queue[1].distance, 1/9 + 25);
+    assert.equal(queue[1].state.additive, false);
+    near(queue[2].distance, 100);
+    assert.equal(queue[2].state.lighting, false);
+
+    // replay runs the farthest first and applies each item's captured state as it runs
+    const order = [];
+    for (const item of queue)
+        item.draw = ()=> order.push([item.distance, render3D.additive, render3D.lighting]);
+    render3D.flushTransparentQueue();
+    assert.equal(render3D.transparentQueue, undefined);
+    assert.deepEqual(order.map(o => o[0] > 399 ? 'mesh' : o[0] > 99 ? 'billboard' : 'strip'), ['mesh', 'billboard', 'strip']);
+    assert.deepEqual(order.map(o => o[1]), [true, false, false]);   // additive only for the mesh
+    assert.deepEqual(order.map(o => o[2]), [true, false, true]);    // unlit only for the billboard
+    render3D.additive = false;
+    render3D.lighting = true;
 });

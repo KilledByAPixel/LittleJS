@@ -112,7 +112,7 @@ class Render3DPlugin
         this.specular = 0;
         /** @property {Function} - Called in the opaque stage after the opaque objects, for drawing world geometry outside of objects */
         this.onRender = undefined;
-        /** @property {Function} - Called in the transparent stage after the transparent objects, with blending on and depth writes off, for billboards, glows and shadows outside of objects */
+        /** @property {Function} - Called in the transparent stage, with blending on and depth writes off, for billboards, glows and shadows outside of objects; every transparent draw is sorted far to near before it lands, so alpha and additive mix correctly */
         this.onRenderTransparent = undefined;
         /** @property {Mesh} - Sky dome from buildSky, drawn around the camera behind everything when set */
         this.sky = undefined;
@@ -154,6 +154,7 @@ class Render3DPlugin
         this.streamState = undefined; // captured state the pending batch was pushed under
         this.streamStateKey = 0;
         this.capture = undefined;
+        this.transparentQueue = undefined; // draws queued during the transparent stage, replayed far to near
 
         render3DInitGL();
         engineAddPlugin(undefined, undefined, render3DContextLost, render3DContextRestored, render3DPreRender);
@@ -208,6 +209,13 @@ class Render3DPlugin
      *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
     drawMesh(mesh, matrix=new Matrix4, color=WHITE, tileInfo)
     {
+        if (this.transparentQueue)
+        {
+            // transparent stage: queue it by distance, replayed far to near
+            const distance = matrix.getTranslation().distanceSquared(this.camera.pos);
+            this.transparentQueue.push({distance, state: render3DCaptureState(), draw: ()=> this.drawMesh(mesh, matrix, color, tileInfo)});
+            return;
+        }
         if (!this.shader) return;
         ASSERT(this.isRendering, '3D draws are only valid during the 3D pass, use render3D.onRender or EngineObject3D.render3D');
         if (!this.isRendering) return;
@@ -241,6 +249,17 @@ class Render3DPlugin
             return;
         }
         ASSERT(points.length + 3 <= RENDER3D_MAX_BATCH, 'strip is too large for the stream, bake it into a mesh');
+        if (this.transparentQueue)
+        {
+            // transparent stage: queue it by the distance of its center, replayed far to near
+            let x = 0, y = 0, z = 0;
+            for (const p of points)
+                x += p.x, y += p.y, z += p.z;
+            const n = points.length, c = this.camera.pos;
+            const distance = (x / n - c.x)**2 + (y / n - c.y)**2 + (z / n - c.z)**2;
+            this.transparentQueue.push({distance, state: render3DCaptureState(), draw: ()=> this.pushStrip(points, normals, uvs, colors, tileInfo)});
+            return;
+        }
         if (!this.shader) return;
         ASSERT(this.isRendering, '3D draws are only valid during the 3D pass, use render3D.onRender or EngineObject3D.render3D');
         if (!this.isRendering) return;
@@ -323,18 +342,35 @@ class Render3DPlugin
             o.render3D();
         this.onRender?.();
 
-        // transparent: blending on, depth writes off, far to near
+        // transparent: blending on, depth writes off, every draw queued then replayed far to near
         this.flush();
         this.blend = true;
         this.additive = false;
         this.depthTest = true;
         this.depthWrite = false;
-        const c = this.camera.pos;
-        transparent.sort((a, b)=> b.pos3D.distanceSquared(c) - a.pos3D.distanceSquared(c));
-        for (const o of transparent)
-            o.render3D();
-        this.onRenderTransparent?.();
+        this.transparentQueue = [];
+        try
+        {
+            for (const o of transparent)
+                o.render3D();
+            this.onRenderTransparent?.();
+        }
+        finally { this.flushTransparentQueue(); }
         this.flush();
+    }
+
+    /** Draw the queued transparent draws far to near with the state each was pushed under, called automatically at the end of the transparent stage */
+    flushTransparentQueue()
+    {
+        const queue = this.transparentQueue;
+        if (!queue) return;
+        this.transparentQueue = undefined;
+        queue.sort((a, b)=> b.distance - a.distance);
+        for (const item of queue)
+        {
+            Object.assign(this, item.state);
+            item.draw();
+        }
     }
 
     /** Draw a sky dome around the camera, unlit, unfogged and behind everything, called automatically when render3D.sky is set
