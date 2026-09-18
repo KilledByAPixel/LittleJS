@@ -6183,6 +6183,10 @@ declare module "littlejsengine" {
         onRenderTransparent: any;
         /** @property {boolean} - Draw the 3D pass after the 2D scene instead of before it, for 3D on top of a 2D game */
         renderAfter2D: boolean;
+        /** @property {boolean} - Sort the transparent stage far to near, when false transparent draws land in object order like the opaque stage */
+        sortTransparent: boolean;
+        /** @property {boolean} - Skip meshes whose bounding sphere is outside the view, on by default */
+        frustumCulling: boolean;
         /** @property {Mesh} - Sky dome from buildSky, drawn around the camera behind everything when set */
         sky: Mesh;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then, read only */
@@ -6215,6 +6219,10 @@ declare module "littlejsengine" {
         cameraUp: Vector3;
         /** @property {Vector3} - Camera forward axis this frame, read only */
         cameraForward: Vector3;
+        /** @property {Array<Array<number>>} - This frame's view frustum as six planes [x, y, z, w] facing inward, read only */
+        frustumPlanes: any[];
+        /** @property {Array<Array<number>>} - The shadow map's box as six planes, read only */
+        shadowPlanes: any[];
         shader: any;
         vao: any;
         whiteTexture: any;
@@ -6245,6 +6253,11 @@ declare module "littlejsengine" {
         /** Rebuild the view and projection matrices from the camera, called automatically each frame
          *  @param {number} [aspect] - Width over height, defaults to the main canvas */
         updateMatrices(aspect?: number): void;
+        /** Is a sphere at least partly inside the view this frame, the test drawMesh uses to skip meshes off screen; inside the shadow pass it tests the shadow map's box
+         *  @param {Vector3} center
+         *  @param {number} radius
+         *  @return {boolean} */
+        isSphereVisible(center: Vector3, radius: number): boolean;
         /** Rebuild the light's view projection around the shadow center, called automatically each frame shadows are on */
         updateShadowMatrix(): void;
         /** Project a world point to clip space, x and y in -1 to 1, z is depth
@@ -6446,6 +6459,8 @@ declare module "littlejsengine" {
         transparent: boolean;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, opaque lit objects only */
         castShadow: boolean;
+        /** @property {boolean} - Draw with lighting off, plain vertex color times texture, for lamps and glowing things; unlit objects cast no shadow */
+        unlit: boolean;
         /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
          *  @return {Matrix4} */
         getMatrix(): Matrix4;
@@ -6476,6 +6491,8 @@ declare module "littlejsengine" {
         bufferCount: number;
         /** @property {boolean} - The CPU data changed since the last upload, set by addStrip, combine and computeNormals, or set it after editing the arrays directly */
         dirty: boolean;
+        /** @property {number} - Bounding sphere radius around the origin, for culling, computed by upload */
+        radius: number;
         /** Number of vertices in the mesh
          *  @return {number} */
         get vertexCount(): number;
@@ -6493,6 +6510,20 @@ declare module "littlejsengine" {
          *  @param {Color} [color] - Multiplies the appended vertex colors
          *  @return {Mesh} */
         combine(mesh: Mesh, matrix?: Matrix4, color?: Color): Mesh;
+        /** Move every vertex in place, points by the matrix and normals by its inverse transpose
+         *  @param {Matrix4} matrix
+         *  @return {Mesh} */
+        transform(matrix: Matrix4): Mesh;
+        /** Turn the mesh inside out, for rooms and domes seen from within: negates the normals and shifts the strip so every face winds the other way
+         *  @return {Mesh} */
+        flipNormals(): Mesh;
+        /** Set every vertex color
+         *  @param {Color} color
+         *  @return {Mesh} */
+        setColor(color: Color): Mesh;
+        /** Measure the bounding sphere around the origin into radius, called by upload
+         *  @return {number} */
+        computeRadius(): number;
         /** Derive normals from the strip's triangles
          *  @param {boolean} [smooth] - Average normals at shared positions, otherwise each vertex takes the normal of the last face that touches it, which is one normal per face when every quad is its own strip
          *  @return {Mesh} */
@@ -6541,6 +6572,39 @@ declare module "littlejsengine" {
      * @memberof Render3D
      */
     export function buildSphere(segments?: number, rings?: number, smooth?: boolean): Mesh;
+    /**
+     * Build a cone standing on the Y axis, centered on the origin, the point up
+     * @param {number} [radius] - Of the base
+     * @param {number} [height]
+     * @param {number} [sides]
+     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @param {boolean} [capped] - Close the base
+     * @return {Mesh}
+     * @memberof Render3D
+     */
+    export function buildCone(radius?: number, height?: number, sides?: number, smooth?: boolean, capped?: boolean): Mesh;
+    /**
+     * Build a capsule standing on the Y axis, centered on the origin: a cylinder with a half sphere on each end
+     * @param {number} [radius]
+     * @param {number} [height] - Of the straight part, the whole capsule is height plus twice the radius
+     * @param {number} [segments] - Around
+     * @param {number} [rings] - On each end cap
+     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @return {Mesh}
+     * @memberof Render3D
+     */
+    export function buildCapsule(radius?: number, height?: number, segments?: number, rings?: number, smooth?: boolean): Mesh;
+    /**
+     * Build a torus lying flat around the Y axis, a circle profile revolved
+     * @param {number} [radius] - From the center to the middle of the tube
+     * @param {number} [tubeRadius]
+     * @param {number} [segments] - Around the ring
+     * @param {number} [sides] - Around the tube
+     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @return {Mesh}
+     * @memberof Render3D
+     */
+    export function buildTorus(radius?: number, tubeRadius?: number, segments?: number, sides?: number, smooth?: boolean): Mesh;
     /**
      * Build a box centered on the origin, six flat faces with uvs covering each face
      * @param {Vector3} [size]
@@ -6645,6 +6709,11 @@ declare module "littlejsengine" {
         /** Number of columns, along X
          *  @return {number} */
         get columns(): number;
+        /** Distance along a ray to where it meets the terrain, or undefined; walks the ray half a cell at a time then narrows in
+         *  @param {Vector3} origin
+         *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
+         *  @return {number|undefined} */
+        raycast(origin: Vector3, direction: Vector3): number | undefined;
         /** World height at a position, exactly the height of the mesh buildMesh draws there, clamped at the edges
          *  @param {number} x
          *  @param {number} z

@@ -7,6 +7,7 @@ class Lamp extends EngineObject3D
         this.scale3D = vec3(.4);
         this.light = new Light3D(vec3(), 8, color);
         this.addChild(this.light); // the light follows the lamp
+        this.unlit = true; // drawn in its own color so the lamp reads as bright
     }
     update()
     {

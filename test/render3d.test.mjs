@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -1102,4 +1102,102 @@ test('updateShadowMatrix fits an orthographic box around the center, snapped to 
     render3D.updateShadowMatrix();
     near(Math.abs(render3D.shadowMatrix.transformPoint(vec3(100, 0, -16)).x), 0);
     render3D.lightDirection = vec3(.5, -1, .3).normalize();
+});
+
+test('buildCone, buildCapsule and buildTorus are outward shapes of the documented size', () =>
+{
+    const cone = buildCone(.5, 1, 8, false);
+    assertOutward(cone, 'cone');
+    near(Math.max(...cone.points.map(p => p.y)), .5);
+    near(Math.min(...cone.points.map(p => p.y)), -.5);
+    assert.equal(buildCone(.5, 1, 8, false, false).vertexCount, 8 * 6); // no base
+    const capsule = buildCapsule(.5, 1, 8, 2, false);
+    assertOutward(capsule, 'capsule');
+    near(Math.max(...capsule.points.map(p => p.y)), 1);
+    near(Math.min(...capsule.points.map(p => p.y)), -1);
+    // every torus normal points away from the middle of the tube, and the smooth seam matches its neighbours
+    assert.equal(buildTorus(.5, .15, 8, 4, false).vertexCount, 4 * 8 * 6); // a quad per side per segment
+    assert.equal(buildTorus(.5, .15, 8, 4, true).vertexCount, 4 * (2 * 9 + 2));  // a ribbon per segment
+    for (const torus of [buildTorus(.5, .15, 8, 4, false), buildTorus(.5, .15, 8, 4, true)])
+    {
+        torus.points.forEach((p, i) =>
+        {
+            const c = vec3(p.x, 0, p.z).normalize(.5), n = torus.normals[i];
+            assert.ok(n.dot(p.subtract(c).normalize()) > .5, 'torus normal points out of the tube');
+        });
+    }
+    const smooth = buildTorus(.5, .15, 8, 4, true);
+    smooth.points.forEach((p, i) =>
+    {
+        const c = vec3(p.x, 0, p.z).normalize(.5);
+        near(smooth.normals[i].dot(p.subtract(c).normalize()), 1); // exactly radial, including the seam
+    });
+});
+
+test('Mesh transform, flipNormals, setColor and computeRadius', () =>
+{
+    const box = buildBox(vec3(2));
+    const moved = new Mesh().combine(box).transform(Matrix4.translation(vec3(1, 2, 3)));
+    nearVec(moved.points[1], box.points[1].x + 1, box.points[1].y + 2, box.points[1].z + 3);
+    nearVec(moved.normals[1], box.normals[1].x, box.normals[1].y, box.normals[1].z);
+    assert.equal(moved.dirty, true);
+    // inside out: two more vertices, opposite normals, and the faces wind inward
+    const flipped = new Mesh().combine(box).flipNormals();
+    assert.equal(flipped.vertexCount, box.vertexCount + 2);
+    nearVec(flipped.normals[2], -box.normals[1].x, -box.normals[1].y, -box.normals[1].z);
+    assert.throws(()=> assertOutward(flipped, 'flipped'));
+    assertOutward(new Mesh().combine(box).flipNormals().flipNormals(), 'flipped twice');
+    // colors and bounds
+    assert.ok(new Mesh().combine(box).setColor(RED).colors.every(c => c.r === 1 && c.g === 0));
+    near(box.computeRadius(), Math.sqrt(3));
+    near(box.radius, Math.sqrt(3));
+});
+
+test('isSphereVisible tests the view frustum and drawMesh culls with it', () =>
+{
+    render3D.camera.pos = vec3(0, 0, 10);
+    render3D.camera.rotation = vec3();
+    render3D.updateMatrices(1);
+    assert.equal(render3D.frustumPlanes.length, 6);
+    assert.equal(render3D.isSphereVisible(vec3(), 1), true);
+    assert.equal(render3D.isSphereVisible(vec3(0, 0, 20), 1), false);   // behind the camera
+    assert.equal(render3D.isSphereVisible(vec3(100, 0, 0), 1), false);  // off to the side
+    assert.equal(render3D.isSphereVisible(vec3(100, 0, 0), 200), true); // but a big enough sphere reaches in
+    assert.equal(render3D.isSphereVisible(vec3(0, 0, -2000), 1), false); // past the far plane
+    assert.equal(render3D.frustumCulling, true);
+    assert.equal(render3D.sortTransparent, true);
+});
+
+test('HeightMap.raycast finds the ground along a ray', () =>
+{
+    const flat = new HeightMap([[0, 0], [0, 0]], vec2(10, 10), 1);
+    const close = (a, b)=> assert.ok(Math.abs(a - b) < 1e-3, a + " != " + b);
+    close(flat.raycast(vec3(0, 5, 0), vec3(0, -1, 0)), 5);
+    close(flat.raycast(vec3(0, 5, 0), vec3(0, -2, 0)), 2.5); // in units of the direction
+    assert.equal(flat.raycast(vec3(0, 5, 0), vec3(0, 1, 0)), undefined); // away from it
+    assert.equal(flat.raycast(vec3(20, 5, 0), vec3(0, -1, 0)), undefined); // beside it
+    assert.equal(flat.raycast(vec3(-20, 1, 0), vec3(1, 0, 0)), undefined); // across it, above the ground
+    // a slope from 10 high at the back to 0 at the front, straight down at the middle meets it at 5
+    const slope = new HeightMap([[1, 1], [0, 0]], vec2(10, 10), 10);
+    const t = slope.raycast(vec3(0, 20, 0), vec3(0, -1, 0));
+    close(t, 15); assert.ok(true, `${t}`);
+    // a ray from the side hits the slope face, not the clamped ground beyond the edge
+    const side = slope.raycast(vec3(0, 2.5, 20), vec3(0, 0, -1));
+    close(side, 17.5); assert.ok(true, `${side}`);
+});
+
+test('unlit objects draw with lighting off and leave it on afterward', () =>
+{
+    const o = new EngineObject3D(vec3(), buildBox());
+    assert.equal(o.unlit, false);
+    o.unlit = true;
+    render3D.lighting = true;
+    let seen;
+    const drawMesh = render3D.drawMesh;
+    render3D.drawMesh = ()=> seen = render3D.lighting;
+    try { o.render3D(); }
+    finally { render3D.drawMesh = drawMesh; }
+    assert.equal(seen, false);
+    assert.equal(render3D.lighting, true);
+    o.destroy();
 });

@@ -79,9 +79,18 @@ function gameUpdate()
     }
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x * .01 : .002;
     render3D.camera.orbit(vec3(0, 3, 0), 35, orbit, .45);
+
+    // right click drops the ball where the mouse ray meets the terrain
+    if (mouseWasPressed(2))
+    {
+        const ray = render3D.screenToRay(mousePosScreen);
+        const t = terrain.raycast(ray.origin, ray.direction);
+        if (t !== undefined)
+            ball.pos3D = ray.origin.add(ray.direction.scale(t)), ball.velocity3D = vec3();
+    }
 }
 
 function gameRenderPost()
 {
-    drawTextScreen('3D height map - terrain from an image, space toggles shading, drag to orbit', vec2(mainCanvasSize.x / 2, 40), 28);
+    drawTextScreen('3D height map - terrain from an image, right click to drop the ball, drag to orbit', vec2(mainCanvasSize.x / 2, 40), 28);
 }

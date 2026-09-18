@@ -25,6 +25,9 @@ function buildShapes()
         buildLathe([[0, -1], [.8, -.3], [.9, .2], [.4, .6], [0, 1]], 10),  // vase
         buildSphere(),
         buildLoft([[1.2, .2, .2, -.1], [0, .7, .5, -.4], [-1, .5, .3, -.3]]), // hull, always flat
+        buildTorus(.7, .25),
+        buildCone(.7, 1.6),
+        buildCapsule(.4, 1),
     ];
     spinners.forEach((s, i)=> { s.mesh?.dispose(); s.mesh = meshes[i]; });
 }
@@ -41,10 +44,10 @@ function gameInit()
 
     // a checkerboard floor and a ring of shapes, buildShapes assigns their meshes
     new EngineObject3D(vec3(), buildGrid(30, 30, 15, 15, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? rgb(.35, .5, .35) : rgb(.3, .45, .3)));
-    for (let i = 0; i < 6; ++i)
+    for (let i = 0; i < 9; ++i)
     {
-        const a = i / 6 * 2 * PI;
-        spinners.push(new Spinner(vec3(sin(a) * 5, 2.5, cos(a) * 5), hsl(i / 6, .7, .6), .01 + i * .004));
+        const a = i / 9 * 2 * PI;
+        spinners.push(new Spinner(vec3(sin(a) * 6, 2.5, cos(a) * 6), hsl(i / 9, .7, .6), .01 + i * .003));
     }
     buildShapes();
     render3D.onRenderTransparent = ()=> spinners.forEach(s => render3D.drawShadow(s.pos3D, 1.5));
@@ -62,7 +65,7 @@ function gameUpdate()
 
     // orbit the camera, drag to turn it
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x * .01 : .003;
-    render3D.camera.orbit(vec3(0, 1, 0), 13, orbit, .4);
+    render3D.camera.orbit(vec3(0, 1, 0), 15, orbit, .4);
 }
 
 function gameRenderPost()

@@ -846,6 +846,9 @@ render3D.onRenderTransparent = ()=> {} // transparent stage, blending on and dep
 render3D.sky = buildSky(topColor, horizonColor, bottomColor) // sky dome drawn around the camera behind everything
 render3D.setSky(topColor, horizonColor, bottomColor) // build the dome, set it as the sky, and match the fog color to the horizon
 render3D.renderAfter2D = false        // true draws the 3D pass on top of the 2D scene instead of under it
+render3D.sortTransparent = true       // false draws the transparent stage in object order with no far to near sort
+render3D.frustumCulling = true        // drawMesh skips meshes whose bounding sphere is outside the view
+render3D.isSphereVisible(center, radius) // the same test, for culling your own pushes
 render3D.screenToRay(screenPos)       // {origin, direction} world ray under a screen point, for picking with raycast*
 setRender3DSmoothShading(true)        // default for every builder's smooth argument (render3DSmoothShading)
 
@@ -853,7 +856,11 @@ setRender3DSmoothShading(true)        // default for every builder's smooth argu
 const mesh = new Mesh
 mesh.addStrip(points, normals, uvs, colors)   // one strip; normals/uvs/colors are one value or one per point
 mesh.combine(otherMesh, matrix, color)        // append a transformed mesh (weld a static world)
+mesh.transform(matrix)                        // move every vertex in place
+mesh.flipNormals()                            // turn it inside out, for rooms and domes seen from within
+mesh.setColor(color)                          // every vertex color
 mesh.computeNormals(smooth=false)             // derive normals from the triangles
+mesh.radius                                   // bounding sphere for culling, computed by upload or computeRadius()
 mesh.render(matrix, color, tileInfo)          // one draw call with the current render3D state
 mesh.dispose()                                // free the GPU buffer, the CPU data stays
 mesh.upload()                                 // upload now instead of on first render
@@ -866,6 +873,9 @@ render3D.drawMesh(mesh, matrix, color, tileInfo)
 buildLathe(profile, sides=8, smooth, capped)  // profile [[radius, y], ...] bottom to top, revolved about Y; capped closes the ends
 buildCylinder(radius=.5, height=1, sides=12, smooth, capped=true)
 buildSphere(segments=12, rings=6, smooth)     // diameter 1
+buildCone(radius=.5, height=1, sides=12, smooth, capped=true)   // point up
+buildCapsule(radius=.5, height=1, segments=12, rings=4, smooth) // height is the straight part
+buildTorus(radius=.5, tubeRadius=.15, segments=16, sides=8, smooth) // flat around Y
 buildBox(size=vec3(1))                        // six faces with uvs, always flat
 buildGrid(sizeX, sizeZ, segmentsX, segmentsZ, color, heightFunction, smooth) // XZ plane, color is a Color or (x, z)=> Color, height is (x, z)=> y
 buildLoft(stations)                           // [[z, halfWidth, top, bottom, sideHeight], ...] nose first, always flat
@@ -879,6 +889,7 @@ terrain.buildMesh(smooth)                     // one vertex per sample, centered
 buildExtrude(tileInfo, size, depth)           // any tile from a loaded texture, or rows of pixels (Color, truthy for white, falsy for empty)
 buildText3D(text, size, depth, font)          // extruded glyphs from an ImageFont, the white engine font by default so the object color tints it
 terrain.getHeight(x, z)                       // world height of the drawn mesh there, to stand things on it
+terrain.raycast(origin, direction)            // distance along a ray to the ground or undefined, for clicking on terrain
 terrain.getColor(x, z)                        // nearest sample color
 terrain.rows terrain.columns                  // samples along Z and X
 
@@ -922,6 +933,7 @@ obj.velocity3D                          // added to pos3D each frame
 obj.mesh obj.color obj.tileInfo         // what to draw and how
 obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
 obj.castShadow = false                  // keep an object out of the shadow map
+obj.unlit = true                        // draw with lighting off, for lamps and glowing things
 obj.renderOrder                         // sorts the opaque stage
 obj.getMatrix()                         // buildMatrix(pos3D, rotation3D, scale3D)
 // children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local

@@ -17041,6 +17041,10 @@ class Render3DPlugin
         this.onRenderTransparent = undefined;
         /** @property {boolean} - Draw the 3D pass after the 2D scene instead of before it, for 3D on top of a 2D game */
         this.renderAfter2D = false;
+        /** @property {boolean} - Sort the transparent stage far to near, when false transparent draws land in object order like the opaque stage */
+        this.sortTransparent = true;
+        /** @property {boolean} - Skip meshes whose bounding sphere is outside the view, on by default */
+        this.frustumCulling = true;
         /** @property {Mesh} - Sky dome from buildSky, drawn around the camera behind everything when set */
         this.sky = undefined;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then, read only */
@@ -17075,6 +17079,10 @@ class Render3DPlugin
         this.cameraUp = vec3(0, 1, 0);
         /** @property {Vector3} - Camera forward axis this frame, read only */
         this.cameraForward = vec3(0, 0, -1);
+        /** @property {Array<Array<number>>} - This frame's view frustum as six planes [x, y, z, w] facing inward, read only */
+        this.frustumPlanes = [];
+        /** @property {Array<Array<number>>} - The shadow map's box as six planes, read only */
+        this.shadowPlanes = [];
 
         // the shader, undefined when not available
         this.shader = undefined;
@@ -17123,6 +17131,19 @@ class Render3DPlugin
         this.cameraRight = cameraMatrix.transformDirection(vec3(1, 0, 0));
         this.cameraUp = cameraMatrix.transformDirection(vec3(0, 1, 0));
         this.cameraForward = cameraMatrix.transformDirection(vec3(0, 0, -1));
+        this.frustumPlanes = render3DFrustumPlanes(this.viewProjection);
+    }
+
+    /** Is a sphere at least partly inside the view this frame, the test drawMesh uses to skip meshes off screen; inside the shadow pass it tests the shadow map's box
+     *  @param {Vector3} center
+     *  @param {number} radius
+     *  @return {boolean} */
+    isSphereVisible(center, radius)
+    {
+        for (const p of this.shadowPass ? this.shadowPlanes : this.frustumPlanes)
+            if (p[0] * center.x + p[1] * center.y + p[2] * center.z + p[3] < -radius)
+                return false;
+        return true;
     }
 
     /** Rebuild the light's view projection around the shadow center, called automatically each frame shadows are on */
@@ -17138,6 +17159,7 @@ class Render3DPlugin
         m[12] = round(m[12] / texel) * texel;
         m[13] = round(m[13] / texel) * texel;
         this.shadowMatrix = Matrix4.orthographic(-half, half, -half, half, 0, range * 2).multiply(view);
+        this.shadowPlanes = render3DFrustumPlanes(this.shadowMatrix);
     }
 
     /** Project a world point to clip space, x and y in -1 to 1, z is depth
@@ -17200,13 +17222,19 @@ class Render3DPlugin
             mesh.upload();
         if (!mesh.bufferCount) return;
 
-        const gl = glContext;
+        // the model's scale along each axis, squared: the bounding sphere grows by the largest
+        const gl = glContext, m = matrix.m;
+        const sx = m[0]*m[0] + m[1]*m[1] + m[2]*m[2], sy = m[4]*m[4] + m[5]*m[5] + m[6]*m[6], sz = m[8]*m[8] + m[9]*m[9] + m[10]*m[10];
+        if (this.frustumCulling && !this.isSphereVisible(matrix.getTranslation(), mesh.radius * max(sx, sy, sz) ** .5))
+            return;
         if (this.shadowPass)
-            gl.uniformMatrix4fv(render3DUniform('model', this.shadowShader), false, matrix.m);
+            gl.uniformMatrix4fv(render3DUniform('model', this.shadowShader), false, m);
         else
         {
-            gl.uniformMatrix4fv(render3DUniform('model'), false, matrix.m);
-            gl.uniformMatrix4fv(render3DUniform('normalMat'), false, matrix.copy().invert().transpose().m);
+            gl.uniformMatrix4fv(render3DUniform('model'), false, m);
+            // the shader normalizes, so a uniformly scaled rotation is its own normal matrix; only uneven scale needs the inverse transpose
+            const uniform = abs(sx - sy) < 1e-6 * sx && abs(sx - sz) < 1e-6 * sx;
+            gl.uniformMatrix4fv(render3DUniform('normalMat'), false, uniform ? m : matrix.copy().invert().transpose().m);
             render3DApplyState(tileInfo, color);
         }
         render3DBindVertexBuffer(mesh.buffer);
@@ -17334,7 +17362,7 @@ class Render3DPlugin
         this.additive = false;
         this.depthTest = true;
         this.depthWrite = false;
-        this.transparentQueue = [];
+        this.transparentQueue = this.sortTransparent ? [] : undefined;
         try
         {
             for (const o of transparent)
@@ -17733,6 +17761,20 @@ function render3DInitGL()
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
 }
 
+// the six planes of a view projection as [x, y, z, w] with unit normals facing inward, a point is inside when x*px + y*py + z*pz + w >= 0
+function render3DFrustumPlanes(matrix)
+{
+    const m = matrix.m, planes = [];
+    for (let i = 0; i < 3; ++i)
+    for (const sign of [1, -1])
+    {
+        const p = [m[3] + sign * m[i], m[7] + sign * m[4+i], m[11] + sign * m[8+i], m[15] + sign * m[12+i]];
+        const l = hypot(p[0], p[1], p[2]) || 1;
+        planes.push(p.map(v => v / l));
+    }
+    return planes;
+}
+
 // a uniform location, looked up once per program
 function render3DUniform(name, program=render3D.shader)
 {
@@ -18034,6 +18076,8 @@ class Mesh
         this.bufferCount = 0;
         /** @property {boolean} - The CPU data changed since the last upload, set by addStrip, combine and computeNormals, or set it after editing the arrays directly */
         this.dirty = false;
+        /** @property {number} - Bounding sphere radius around the origin, for culling, computed by upload */
+        this.radius = 0;
     }
 
     /** Number of vertices in the mesh
@@ -18077,6 +18121,57 @@ class Mesh
         }
         this.dirty = true;
         return this;
+    }
+
+    /** Move every vertex in place, points by the matrix and normals by its inverse transpose
+     *  @param {Matrix4} matrix
+     *  @return {Mesh} */
+    transform(matrix)
+    {
+        const normalMatrix = matrix.copy().invert().transpose();
+        for (let i = 0; i < this.points.length; ++i)
+        {
+            this.points[i] = matrix.transformPoint(this.points[i]);
+            this.normals[i] = normalMatrix.transformDirection(this.normals[i]).normalize();
+        }
+        this.dirty = true;
+        return this;
+    }
+
+    /** Turn the mesh inside out, for rooms and domes seen from within: negates the normals and shifts the strip so every face winds the other way
+     *  @return {Mesh} */
+    flipNormals()
+    {
+        // one more leading repeat moves every triangle to the other parity, one more trailing repeat keeps the count even
+        for (const key of ['points', 'normals', 'uvs', 'colors'])
+        {
+            const a = this[key];
+            if (a.length)
+                a.unshift(a[0]), a.push(a[a.length - 1]);
+        }
+        this.normals = this.normals.map(n => n.scale(-1));
+        this.dirty = true;
+        return this;
+    }
+
+    /** Set every vertex color
+     *  @param {Color} color
+     *  @return {Mesh} */
+    setColor(color)
+    {
+        this.colors = this.colors.map(()=> color);
+        this.dirty = true;
+        return this;
+    }
+
+    /** Measure the bounding sphere around the origin into radius, called by upload
+     *  @return {number} */
+    computeRadius()
+    {
+        let r = 0;
+        for (const p of this.points)
+            r = max(r, p.lengthSquared());
+        return this.radius = r ** .5;
     }
 
     /** Derive normals from the strip's triangles
@@ -18136,6 +18231,7 @@ class Mesh
      *  @return {Mesh} */
     upload()
     {
+        this.computeRadius();
         if (!render3D?.shader) return this;
         this.dispose();
         const count = this.points.length;
@@ -18207,12 +18303,15 @@ function buildLathe(profile, sides=8, smooth=render3DSmoothShading, capped=false
         const n = vec2(y1 - y0, r0 - r1);
         return n.length() ? n.normalize() : vec2(1, 0);
     };
-    // vertex normal: average of the adjacent segment normals
+    // vertex normal: average of the adjacent segment normals, a profile that ends where it starts is closed and averages across the seam
+    const closed = rings > 2 && abs(profile[0][0] - profile[rings-1][0]) < 1e-9 && abs(profile[0][1] - profile[rings-1][1]) < 1e-9;
     const vertexNormal = (i)=>
     {
         let n = vec2();
         if (i > 0) n = n.add(segmentNormal(i - 1));
+        else if (closed) n = n.add(segmentNormal(rings - 2));
         if (i < rings - 1) n = n.add(segmentNormal(i));
+        else if (closed) n = n.add(segmentNormal(0));
         return n.normalize();
     };
     const normal3D = (n, a)=> vec3(sin(a) * n.x, n.y, cos(a) * n.x);
@@ -18304,6 +18403,68 @@ function buildSphere(segments=12, rings=6, smooth=render3DSmoothShading)
     {
         const a = i / rings * PI - PI/2;
         profile.push([cos(a) * .5, sin(a) * .5]);
+    }
+    return buildLathe(profile, segments, smooth);
+}
+
+/**
+ * Build a cone standing on the Y axis, centered on the origin, the point up
+ * @param {number} [radius] - Of the base
+ * @param {number} [height]
+ * @param {number} [sides]
+ * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+ * @param {boolean} [capped] - Close the base
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildCone(radius=.5, height=1, sides=12, smooth=render3DSmoothShading, capped=true)
+{
+    return buildLathe([[radius, -height / 2], [0, height / 2]], sides, smooth, capped);
+}
+
+/**
+ * Build a capsule standing on the Y axis, centered on the origin: a cylinder with a half sphere on each end
+ * @param {number} [radius]
+ * @param {number} [height] - Of the straight part, the whole capsule is height plus twice the radius
+ * @param {number} [segments] - Around
+ * @param {number} [rings] - On each end cap
+ * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildCapsule(radius=.5, height=1, segments=12, rings=4, smooth=render3DSmoothShading)
+{
+    const profile = [];
+    for (let i = 0; i <= rings; ++i)
+    {
+        const a = i / rings * PI / 2;
+        profile.push([radius * sin(a), -height / 2 - radius * cos(a)]);
+    }
+    for (let i = 0; i <= rings; ++i)
+    {
+        const a = i / rings * PI / 2;
+        profile.push([radius * cos(a), height / 2 + radius * sin(a)]);
+    }
+    return buildLathe(profile, segments, smooth);
+}
+
+/**
+ * Build a torus lying flat around the Y axis, a circle profile revolved
+ * @param {number} [radius] - From the center to the middle of the tube
+ * @param {number} [tubeRadius]
+ * @param {number} [segments] - Around the ring
+ * @param {number} [sides] - Around the tube
+ * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildTorus(radius=.5, tubeRadius=.15, segments=16, sides=8, smooth=render3DSmoothShading)
+{
+    const profile = [];
+    for (let i = 0; i <= sides; ++i)
+    {
+        const a = i / sides * 2 * PI;
+        profile.push([radius + tubeRadius * cos(a), tubeRadius * sin(a)]);
     }
     return buildLathe(profile, segments, smooth);
 }
@@ -18641,6 +18802,40 @@ class HeightMap
      *  @return {number} */
     get columns() { return this.heights[0].length; }
 
+    /** Distance along a ray to where it meets the terrain, or undefined; walks the ray half a cell at a time then narrows in
+     *  @param {Vector3} origin
+     *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
+     *  @return {number|undefined} */
+    raycast(origin, direction)
+    {
+        const size = this.size, height = this.height, length = direction.length();
+        if (!length) return;
+        // clip to the box around the terrain, then step until the ray dips under the ground or leaves the map
+        let t = raycastBox(origin, direction, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
+        if (t === undefined) return;
+        const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
+        const step = cell / 2 / length, end = t + hypot(size.x, size.y, height) / length;
+        const under = (t)=>
+        {
+            const p = origin.add(direction.scale(t));
+            if (abs(p.x) > size.x / 2 || abs(p.z) > size.y / 2) return;
+            return p.y <= this.getHeight(p.x, p.z);
+        };
+        if (under(t)) return t;
+        for (; t < end; t += step)
+        {
+            const u = under(t + step);
+            if (u === undefined) return;
+            if (u)
+            {
+                let a = t, b = t + step;
+                for (let i = 0; i < 16; ++i)
+                    under((a + b) / 2) ? b = (a + b) / 2 : a = (a + b) / 2;
+                return b;
+            }
+        }
+    }
+
     /** World height at a position, exactly the height of the mesh buildMesh draws there, clamped at the edges
      *  @param {number} x
      *  @param {number} z
@@ -18762,6 +18957,8 @@ class EngineObject3D extends EngineObject
         this.transparent = false;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, opaque lit objects only */
         this.castShadow = true;
+        /** @property {boolean} - Draw with lighting off, plain vertex color times texture, for lamps and glowing things; unlit objects cast no shadow */
+        this.unlit = false;
     }
 
     /** Apply the 3D velocity, then the inherited 2D physics, called automatically each frame */
@@ -18785,8 +18982,11 @@ class EngineObject3D extends EngineObject
     /** Draw the object in 3D, called by the 3D pass, draws the mesh by default */
     render3D()
     {
-        if (this.mesh)
-            render3D.drawMesh(this.mesh, this.getMatrix(), this.color, this.tileInfo);
+        if (!this.mesh) return;
+        const lighting = render3D.lighting;
+        this.unlit && (render3D.lighting = false);
+        render3D.drawMesh(this.mesh, this.getMatrix(), this.color, this.tileInfo);
+        render3D.lighting = lighting;
     }
 }
 
