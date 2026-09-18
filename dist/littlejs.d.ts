@@ -5932,9 +5932,107 @@ declare module "littlejsengine" {
          *  @return {string} */
         toString(digits?: number): string;
     }
+    /**
+     * 4x4 transform matrix, column major in a Float32Array so it uploads straight to WebGL
+     * - Static builders return new matrices, instance methods modify in place and return self
+     * - multiply(m2) appends m2, so it is applied to points before this matrix
+     * @memberof Math3D
+     * @example
+     * const m = buildMatrix(vec3(0, 1, 0), vec3(0, PI/2, 0)); // rotate then move up
+     * const p = m.transformPoint(vec3(1, 0, 0));
+     */
     export class Matrix4 {
+        /** Returns a new identity matrix
+         *  @return {Matrix4} */
+        static identity(): Matrix4;
+        /** Returns a new translation matrix
+         *  @param {Vector3} v
+         *  @return {Matrix4} */
+        static translation(v: Vector3): Matrix4;
+        /** Returns a new rotation matrix from euler angles, applied to points as roll (Z), pitch (X), then yaw (Y)
+         *  @param {Vector3} euler - vec3(pitch, yaw, roll) in radians
+         *  @return {Matrix4} */
+        static rotation(euler: Vector3): Matrix4;
+        /** Returns a new scale matrix
+         *  @param {Vector3} v
+         *  @return {Matrix4} */
+        static scaling(v: Vector3): Matrix4;
+        /** Returns a new perspective projection, camera looks down -Z
+         *  @param {number} fov - Vertical field of view in radians
+         *  @param {number} aspect - Width divided by height
+         *  @param {number} near
+         *  @param {number} far
+         *  @return {Matrix4} */
+        static perspective(fov: number, aspect: number, near: number, far: number): Matrix4;
+        /** Returns a new orthographic projection, camera looks down -Z
+         *  @param {number} left
+         *  @param {number} right
+         *  @param {number} bottom
+         *  @param {number} top
+         *  @param {number} near
+         *  @param {number} far
+         *  @return {Matrix4} */
+        static orthographic(left: number, right: number, bottom: number, top: number, near: number, far: number): Matrix4;
+        /** Returns the transform of an object at eye facing target with its -Z axis, invert it for a view matrix
+         *  @param {Vector3} eye
+         *  @param {Vector3} target
+         *  @param {Vector3} [up]
+         *  @return {Matrix4} */
+        static lookAt(eye: Vector3, target: Vector3, up?: Vector3): Matrix4;
+        /** Create a matrix, identity by default
+         *  @param {Float32Array|Array<number>} [m] - 16 column major values */
+        constructor(m?: Float32Array | Array<number>);
+        /** @property {Float32Array} - The 16 column major values */
+        m: Float32Array;
+        /** Returns a new matrix that is a copy of this
+         *  @return {Matrix4} */
+        copy(): Matrix4;
+        /** Multiply this matrix by another, the other is applied to points first, returns self
+         *  @param {Matrix4} matrix
+         *  @return {Matrix4} */
+        multiply(matrix: Matrix4): Matrix4;
+        /** Append a translation, returns self
+         *  @param {Vector3} v
+         *  @return {Matrix4} */
+        translate(v: Vector3): Matrix4;
+        /** Append a rotation, returns self
+         *  @param {Vector3} euler - vec3(pitch, yaw, roll) in radians
+         *  @return {Matrix4} */
+        rotate(euler: Vector3): Matrix4;
+        /** Append a scale, returns self
+         *  @param {Vector3} v
+         *  @return {Matrix4} */
+        scale(v: Vector3): Matrix4;
+        /** Transpose this matrix in place, returns self
+         *  @return {Matrix4} */
+        transpose(): Matrix4;
+        /** Invert this matrix in place, returns self, leaves the matrix alone if singular
+         *  @return {Matrix4} */
+        invert(): Matrix4;
+        /** Transform a point, translation included
+         *  @param {Vector3} v
+         *  @return {Vector3} */
+        transformPoint(v: Vector3): Vector3;
+        /** Transform a direction, rotation and scale only
+         *  @param {Vector3} v
+         *  @return {Vector3} */
+        transformDirection(v: Vector3): Vector3;
+        /** Returns the translation part of this matrix
+         *  @return {Vector3} */
+        getTranslation(): Vector3;
+        /** Returns a string representation of this matrix for debugging
+         *  @return {string} */
+        toString(): string;
     }
-    export function buildMatrix(): void;
+    /**
+     * Build an object matrix: translate, then rotate, then scale (scale is applied to points first)
+     * @param {Vector3} [pos]
+     * @param {Vector3} [rotation] - vec3(pitch, yaw, roll) in radians
+     * @param {Vector3} [scale]
+     * @return {Matrix4}
+     * @memberof Math3D
+     */
+    export function buildMatrix(pos?: Vector3, rotation?: Vector3, scale?: Vector3): Matrix4;
     /**
      * LittleJS Three.js Plugin
      * - Renders a three.js scene on a canvas behind the LittleJS canvases
