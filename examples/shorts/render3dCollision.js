@@ -46,7 +46,7 @@ function gameInit()
     render3D.sky = buildSky(rgb(.2, .3, .6), rgb(.7, .8, .9));
     render3D.ambientColor = rgb(.4, .4, .45);
     ballMesh = buildSphere();
-    floorMesh = buildGrid(16, 16, 8, 8, undefined, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? rgb(.5, .5, .5) : rgb(.4, .4, .4));
+    floorMesh = buildGrid(16, 16, 8, 8, undefined, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? rgb(.5, .5, .5) : rgb(.4, .4, .4), false); // flat for crisp checkers
     boxMesh = buildBox(boxSize);
     cylinderMesh = buildLathe([[cylinderRadius, -cylinderHeight / 2], [cylinderRadius, cylinderHeight / 2]], 16);
     for (let i = 0; i < 12; ++i)
@@ -99,5 +99,5 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    drawTextScreen('3D collision - sphere, box and cylinder helpers, hover to pick, click to toss, right drag to orbit', vec2(mainCanvasSize.x / 2, 40), 28);
+    drawTextScreen('3D collision - hover to pick a ball, click to toss it, right drag to orbit', vec2(mainCanvasSize.x / 2, 40), 28);
 }
