@@ -301,6 +301,9 @@ function render3DInitGL()
 
     // strips get one leading repeat, which shifts real triangles to odd indices, so front faces read as clockwise
     glContext.frontFace(glContext.CW);
+
+    // leave the engine's array buffer bound, a context restore can land mid-frame
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
 }
 
 // a uniform location, looked up once per shader
@@ -411,6 +414,8 @@ function render3DPreRender()
     gl.depthMask(true);
     if (glActiveTexture)
         gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+    // ARRAY_BUFFER is not part of VAO state in WebGL2, so bindVertexArray above did not restore it
+    gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer);
     glSetInstancedMode(true);
 }
 
