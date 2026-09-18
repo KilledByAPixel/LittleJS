@@ -17622,6 +17622,17 @@ const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
 const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
 const RENDER3D_SHADOW_COLOR = Object.freeze(rgb(0, 0, 0, .5));
 const RENDER3D_IDENTITY = new Matrix4; // never modified
+const RENDER3D_MAX_POINT_LIGHTS = 8; // per frame, the shader loops over this many
+
+// the Light3D objects the shader gets this frame, the first ones in the object list
+function render3DCollectLights()
+{
+    const lights = [];
+    for (const o of engineObjects)
+        if (!o.destroyed && o instanceof Light3D && lights.length < RENDER3D_MAX_POINT_LIGHTS)
+            lights.push(o);
+    return lights;
+}
 
 // outward normal of a triangle or a quad given its corners in loop order,
 // from the diagonals so a collapsed corner still works
@@ -17719,6 +17730,8 @@ class Render3DPlugin
         this.onRender = undefined;
         /** @property {Function} - Called in the transparent stage, with blending on and depth writes off, for billboards, glows and shadows outside of objects; every transparent draw is sorted far to near before it lands, so alpha and additive mix correctly */
         this.onRenderTransparent = undefined;
+        /** @property {boolean} - Draw the 3D pass after the 2D scene instead of before it, for 3D on top of a 2D game */
+        this.renderAfter2D = false;
         /** @property {Mesh} - Sky dome from buildSky, drawn around the camera behind everything when set */
         this.sky = undefined;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then, read only */
@@ -17762,7 +17775,7 @@ class Render3DPlugin
         this.transparentQueue = undefined; // draws queued during the transparent stage, replayed far to near
 
         render3DInitGL();
-        engineAddPlugin(undefined, undefined, render3DContextLost, render3DContextRestored, render3DPreRender);
+        engineAddPlugin(undefined, render3DRender, render3DContextLost, render3DContextRestored, render3DPreRender);
     }
 
     /** Rebuild the view and projection matrices from the camera, called automatically each frame
@@ -17997,6 +18010,19 @@ class Render3DPlugin
             }
         }
         finally { Object.assign(this, state); } // the last item's state must not leak into the next frame
+    }
+
+    /** Build a sky dome, set it as the sky and match the fog color to the horizon
+     *  @param {Color} [topColor]
+     *  @param {Color} [horizonColor]
+     *  @param {Color} [bottomColor] - Defaults to the horizon color
+     *  @return {Mesh} - The dome, also in render3D.sky */
+    setSky(topColor, horizonColor, bottomColor)
+    {
+        this.sky?.dispose();
+        this.sky = buildSky(topColor, horizonColor, bottomColor);
+        this.fogColor = horizonColor ? horizonColor.copy() : undefined;
+        return this.sky;
     }
 
     /** Draw a sky dome around the camera, unlit, unfogged and behind everything, called automatically when render3D.sky is set
@@ -18242,6 +18268,8 @@ function render3DInitGL()
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform vec4 tint,lightDir,lightColor,ambientColor,fogColor;' +
+        'uniform vec4 pointLights[' + RENDER3D_MAX_POINT_LIGHTS + '],pointLightColors[' + RENDER3D_MAX_POINT_LIGHTS + '];' +
+        'uniform int pointLightCount;' +
         'uniform vec3 cameraPos;' +
         'uniform sampler2D tex;' +
         'in vec3 P,N;in vec2 T;in vec4 C;' +
@@ -18254,7 +18282,15 @@ function render3DInitGL()
         'float d=max(nl,0.);' +
         'vec3 e=normalize(cameraPos-P);' +
         'vec3 r=reflect(lightDir.xyz,n);' +
-        'c.rgb*=ambientColor.rgb+lightColor.rgb*d;' +
+        'vec3 l=ambientColor.rgb+lightColor.rgb*d;' +
+        // point lights: linear falloff squared, diffuse only
+        'for(int i=0;i<' + RENDER3D_MAX_POINT_LIGHTS + ';++i){' +
+        'if(i>=pointLightCount)break;' +
+        'vec3 v=pointLights[i].xyz-P;' +
+        'float a=max(0.,1.-length(v)/pointLights[i].w);' +
+        'l+=pointLightColors[i].rgb*pointLightColors[i].a*a*a*max(0.,dot(n,normalize(v)));' +
+        '}' +
+        'c.rgb*=l;' +
         'c.rgb+=lightColor.rgb*pow(max(dot(r,e),0.),16.)*lightColor.a*step(0.,nl);' +
         '}' +
         'if(ambientColor.a>0.){' +
@@ -18370,8 +18406,24 @@ function render3DApplyState(tileInfo, tint=WHITE, uvRect, state=render3D)
 // the 3D pass, runs from the preRender hook before gameRender
 function render3DPreRender()
 {
-    const gl = glContext, r = render3D;
+    const r = render3D;
     r.updateMatrices();
+    r.renderAfter2D || render3DRenderPass();
+}
+
+// the plugin render hook, after gameRenderPost: the 3D pass lands on top of the 2D scene when asked
+function render3DRender()
+{
+    const r = render3D;
+    if (!r.renderAfter2D) return;
+    glFlush(); // the 2D sprites drawn so far go under the 3D
+    render3DRenderPass();
+}
+
+// the 3D pass itself: take over the gl state, draw the stages, hand the state back
+function render3DRenderPass()
+{
+    const gl = glContext, r = render3D;
     if (!r.shader) return; // headless, gl disabled, or context lost
 
     // take over the gl state
@@ -18384,6 +18436,22 @@ function render3DPreRender()
     gl.uniformMatrix4fv(render3DUniform('viewProj'), false, r.viewProjection.m);
     const c = r.camera.pos;
     gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
+
+    // point lights: the first few Light3D objects
+    const lights = render3DCollectLights();
+    gl.uniform1i(render3DUniform('pointLightCount'), lights.length);
+    if (lights.length)
+    {
+        const positions = new Float32Array(lights.length * 4), colors = new Float32Array(lights.length * 4);
+        lights.forEach((light, i)=>
+        {
+            const p = light.getMatrix().getTranslation();
+            positions.set([p.x, p.y, p.z, light.radius], i * 4);
+            colors.set([light.color.r, light.color.g, light.color.b, light.color.a], i * 4);
+        });
+        gl.uniform4fv(render3DUniform('pointLights'), positions);
+        gl.uniform4fv(render3DUniform('pointLightColors'), colors);
+    }
 
     r.isRendering = true;
     r.renderStages();
@@ -19093,6 +19161,255 @@ class EngineObject3D extends EngineObject
         if (this.mesh)
             render3D.drawMesh(this.mesh, this.getMatrix(), this.color, this.tileInfo);
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Light3D - A point light that lights nearby surfaces, an EngineObject3D so it can move or follow a parent
+ * - The first 8 in the object list light the frame, radius is where the light reaches zero
+ * - Draws nothing itself, add a glow with drawSoftDisc or a small emissive mesh if it should be seen
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * const torch = new Light3D(vec3(0, 3, 0), 10, rgb(1, .7, .3));
+ */
+class Light3D extends EngineObject3D
+{
+    /** Create a point light
+     *  @param {Vector3} [pos3D]
+     *  @param {number} [radius] - Distance where the light fades to nothing
+     *  @param {Color} [color] - Light color, alpha scales the brightness */
+    constructor(pos3D=vec3(), radius=5, color=WHITE)
+    {
+        super(pos3D, undefined, color);
+        /** @property {number} - Distance where the light fades to nothing */
+        this.radius = radius;
+    }
+
+    /** Lights draw nothing */
+    render3D() {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
+ * - Particles are billboards, or soft round discs when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
+ * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitCone
+ * - Speeds are per frame like the 2D emitter, gravity is a per frame change to velocity y
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * // fire: a stream upward, yellow fading to transparent red, additive
+ * new ParticleEmitter3D(vec3(), .5, 0, 100, .3, undefined, rgb(1, .8, .2), rgb(1, .5, 0), rgb(1, 0, 0, 0), rgb(.5, 0, 0, 0), 1, .5, 1.5, .05, .95, 0, .3, .2, true);
+ */
+class ParticleEmitter3D extends EngineObject3D
+{
+    /** Create a particle emitter
+     *  @param {Vector3} [pos3D] - World space position of the emitter
+     *  @param {number|Vector3} [emitSize] - Spawn area, a number for a sphere diameter or a vec3 for a box
+     *  @param {number} [emitTime] - How long to keep emitting, 0 is forever
+     *  @param {number} [emitRate] - Particles per second, 0 does not emit
+     *  @param {number} [emitCone] - Half angle around the emit direction, PI is every direction
+     *  @param {TileInfo} [tileInfo] - Tile to render particles with, undefined is untextured
+     *  @param {Color} [colorStartA] - Color at start of life, randomized between the start colors
+     *  @param {Color} [colorStartB]
+     *  @param {Color} [colorEndA] - Color at end of life, randomized between the end colors
+     *  @param {Color} [colorEndB]
+     *  @param {number} [particleTime] - How long particles live in seconds
+     *  @param {number} [sizeStart] - Particle size at start of life
+     *  @param {number} [sizeEnd] - Particle size at end of life
+     *  @param {number} [speed] - Spawn speed in world units per frame
+     *  @param {number} [damping] - Per frame velocity multiplier, 1 is none
+     *  @param {number} [gravity] - Per frame change to velocity y, negative pulls down
+     *  @param {number} [fadeRate] - Fraction of life spent fading, half in and half out
+     *  @param {number} [randomness] - Extra randomness applied to speed, size and life
+     *  @param {boolean} [additive] - Additive blending */
+    constructor(pos3D=vec3(), emitSize=0, emitTime=0, emitRate=100, emitCone=PI, tileInfo,
+        colorStartA=WHITE, colorStartB=WHITE, colorEndA=CLEAR_WHITE, colorEndB=CLEAR_WHITE,
+        particleTime=.5, sizeStart=.1, sizeEnd=1, speed=.1, damping=1, gravity=0, fadeRate=.1, randomness=.2, additive=false)
+    {
+        super(pos3D, undefined, WHITE, tileInfo);
+        this.transparent = true;
+
+        /** @property {number|Vector3} - Spawn area, a number for a sphere diameter or a vec3 for a box */
+        this.emitSize = emitSize;
+        /** @property {number} - How long to keep emitting, 0 is forever */
+        this.emitTime = emitTime;
+        /** @property {number} - Particles per second, 0 does not emit */
+        this.emitRate = emitRate;
+        /** @property {number} - Half angle around the emit direction, PI is every direction */
+        this.emitCone = emitCone;
+        /** @property {Color} - Color at start of life, randomized between the start colors */
+        this.colorStartA = colorStartA;
+        /** @property {Color} - Color at start of life, randomized between the start colors */
+        this.colorStartB = colorStartB;
+        /** @property {Color} - Color at end of life, randomized between the end colors */
+        this.colorEndA = colorEndA;
+        /** @property {Color} - Color at end of life, randomized between the end colors */
+        this.colorEndB = colorEndB;
+        /** @property {number} - How long particles live in seconds */
+        this.particleTime = particleTime;
+        /** @property {number} - Particle size at start of life */
+        this.sizeStart = sizeStart;
+        /** @property {number} - Particle size at end of life */
+        this.sizeEnd = sizeEnd;
+        /** @property {number} - Spawn speed in world units per frame */
+        this.speed = speed;
+        /** @property {number} - Per frame velocity multiplier */
+        this.damping = damping;
+        /** @property {number} - Per frame change to velocity y */
+        this.gravity = gravity;
+        /** @property {number} - Fraction of life spent fading, half in and half out */
+        this.fadeRate = fadeRate;
+        /** @property {number} - Extra randomness applied to speed, size and life */
+        this.randomness = randomness;
+        /** @property {boolean} - Additive blending */
+        this.additive = additive;
+        /** @property {Array<Object>} - Live particles */
+        this.particles = [];
+        this.emitTimeBuffer = 0;
+    }
+
+    /** Spawn new particles, move the live ones, and go away when done */
+    update()
+    {
+        // emit at the rate until the emit time is up
+        if (this.emitRate && (!this.emitTime || this.getAliveTime() <= this.emitTime))
+        {
+            this.emitTimeBuffer += this.emitRate * timeDelta;
+            for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
+                this.emitParticle();
+        }
+        else if (this.emitTime && !this.particles.length)
+            this.destroy();
+
+        // move the particles and drop the dead ones
+        const particles = this.particles;
+        for (let i = particles.length; i--;)
+        {
+            const p = particles[i];
+            p.velocity.y += this.gravity;
+            p.velocity = p.velocity.scale(this.damping);
+            p.pos = p.pos.add(p.velocity);
+            if ((p.age += timeDelta) >= p.life)
+                particles[i] = particles[particles.length - 1], particles.pop();
+        }
+    }
+
+    /** Spawn one particle now */
+    emitParticle()
+    {
+        const random = ()=> rand(1 - this.randomness, 1 + this.randomness);
+        const matrix = this.getMatrix();
+
+        // spawn offset: inside a box or a sphere
+        const size = this.emitSize;
+        const offset = isVector3(size) ? vec3(rand(-.5, .5) * size.x, rand(-.5, .5) * size.y, rand(-.5, .5) * size.z)
+            : render3DRandomDirection().scale(rand() ** (1/3) * size / 2);
+
+        // direction inside the cone around local +Y, uniform over the spherical cap
+        const z = rand(cos(this.emitCone), 1), s = (1 - z * z) ** .5, a = rand(2 * PI);
+        const direction = matrix.transformDirection(vec3(s * cos(a), z, s * sin(a))).normalize();
+
+        this.particles.push({
+            pos: matrix.transformPoint(offset),
+            velocity: direction.scale(this.speed * random()),
+            colorStart: randColor(this.colorStartA, this.colorStartB, true),
+            colorEnd: randColor(this.colorEndA, this.colorEndB, true),
+            sizeStart: this.sizeStart * random(),
+            sizeEnd: this.sizeEnd * random(),
+            life: this.particleTime * random(),
+            age: 0 });
+    }
+
+    /** Draw the particles as billboards */
+    render3D()
+    {
+        const additive = render3D.additive;
+        render3D.additive = this.additive;
+        const fade = this.fadeRate / 2;
+        for (const p of this.particles)
+        {
+            const t = p.age / p.life;
+            const alpha = t < fade ? t / fade : t > 1 - fade ? (1 - t) / fade : 1;
+            const color = p.colorStart.lerp(p.colorEnd, t), size = lerp(p.sizeStart, p.sizeEnd, t);
+            color.a *= alpha;
+            if (this.tileInfo)
+                render3D.drawBillboard(p.pos, vec2(size), this.tileInfo, color);
+            else
+                render3D.drawSoftDisc(p.pos, size / 2, color, undefined, 8); // untextured particles are round puffs
+        }
+        render3D.additive = additive;
+    }
+}
+
+// a random unit vector, uniform over the sphere
+function render3DRandomDirection()
+{
+    const z = rand(-1, 1), s = (1 - z * z) ** .5, a = rand(2 * PI);
+    return vec3(s * cos(a), z, s * sin(a));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// OBJ meshes
+
+/**
+ * Parse Wavefront OBJ text into a Mesh
+ * - Reads v, vt, vn and f lines with convex polygons of any size, materials and groups are ignored
+ * - Normals come from the file when every corner of a face has one, otherwise from the face
+ * @param {string} text
+ * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3DSmoothShading
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * new EngineObject3D(vec3(), parseOBJ(objText));
+ */
+function parseOBJ(text, smooth=render3DSmoothShading)
+{
+    const positions = [], normals = [], uvs = [], mesh = new Mesh;
+    let fileNormals = false;
+    const lookup = (s, list)=> { const i = parseInt(s); return list[i < 0 ? list.length + i : i - 1]; }; // 1 based, negatives count from the end
+    for (const line of text.split('\n'))
+    {
+        const parts = line.trim().split(/\s+/);
+        switch (parts[0])
+        {
+            case 'v':  positions.push(vec3(+parts[1], +parts[2], +parts[3])); break;
+            case 'vn': normals.push(vec3(+parts[1], +parts[2], +parts[3])); break;
+            case 'vt': uvs.push(vec2(+parts[1], 1 - +parts[2])); break; // OBJ v runs up, tiles run down
+            case 'f':
+            {
+                const corners = parts.slice(1).map(c => c.split('/'));
+                if (corners.length < 3) break;
+                const points = corners.map(c => lookup(c[0], positions));
+                const uv = corners.map(c => c[1] ? lookup(c[1], uvs) : RENDER3D_DEFAULT_UV);
+                const hasNormals = corners.every(c => c[2]);
+                fileNormals ||= hasNormals;
+                const n = hasNormals ? render3DPolygonStrip(corners.map(c => lookup(c[2], normals)))
+                    : render3DFaceNormal(points[0], points[1], points[2], points[3] || points[0]);
+                mesh.addStrip(render3DPolygonStrip(points), n, render3DPolygonStrip(uv));
+            }
+        }
+    }
+    if (!fileNormals && smooth)
+        mesh.computeNormals(true);
+    return mesh;
+}
+
+/**
+ * Fetch and parse an OBJ file
+ * @param {string} url
+ * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3DSmoothShading
+ * @return {Promise<Mesh>}
+ * @memberof Render3D
+ * @example
+ * const mesh = await loadOBJ('ship.obj'); // in an async gameInit
+ */
+async function loadOBJ(url, smooth=render3DSmoothShading)
+{
+    const response = await fetch(url);
+    ASSERT(response.ok, 'loadOBJ failed: ' + url);
+    return parseOBJ(await response.text(), smooth);
 }
 
 /**

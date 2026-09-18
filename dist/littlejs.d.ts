@@ -6158,7 +6158,7 @@ declare module "littlejsengine" {
         /** @property {Color} - Ambient light color */
         ambientColor: Color;
         /** @property {Color} - Fog color, uses canvasClearColor when undefined, read when a draw is issued or the stream flushes, so set lights and fog before drawing */
-        fogColor: any;
+        fogColor: Color;
         /** @property {number} - Distance from the camera where fog starts */
         fogStart: number;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
@@ -6181,8 +6181,10 @@ declare module "littlejsengine" {
         onRender: any;
         /** @property {Function} - Called in the transparent stage, with blending on and depth writes off, for billboards, glows and shadows outside of objects; every transparent draw is sorted far to near before it lands, so alpha and additive mix correctly */
         onRenderTransparent: any;
+        /** @property {boolean} - Draw the 3D pass after the 2D scene instead of before it, for 3D on top of a 2D game */
+        renderAfter2D: boolean;
         /** @property {Mesh} - Sky dome from buildSky, drawn around the camera behind everything when set */
-        sky: any;
+        sky: Mesh;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then, read only */
         isRendering: boolean;
         /** @property {Matrix4} - This frame's view matrix, read only */
@@ -6271,6 +6273,12 @@ declare module "littlejsengine" {
         queueTransparent(pos: Vector3, draw: Function): void;
         /** Draw the queued transparent draws far to near with the state each was pushed under, called automatically at the end of the transparent stage */
         flushTransparentQueue(): void;
+        /** Build a sky dome, set it as the sky and match the fog color to the horizon
+         *  @param {Color} [topColor]
+         *  @param {Color} [horizonColor]
+         *  @param {Color} [bottomColor] - Defaults to the horizon color
+         *  @return {Mesh} - The dome, also in render3D.sky */
+        setSky(topColor?: Color, horizonColor?: Color, bottomColor?: Color): Mesh;
         /** Draw a sky dome around the camera, unlit, unfogged and behind everything, called automatically when render3D.sky is set
          *  @param {Mesh} mesh - From buildSky */
         drawSky(mesh: Mesh): void;
@@ -6592,6 +6600,117 @@ declare module "littlejsengine" {
          *  @return {Mesh} */
         buildMesh(smooth?: boolean): Mesh;
     }
+    /**
+     * Light3D - A point light that lights nearby surfaces, an EngineObject3D so it can move or follow a parent
+     * - The first 8 in the object list light the frame, radius is where the light reaches zero
+     * - Draws nothing itself, add a glow with drawSoftDisc or a small emissive mesh if it should be seen
+     * @extends EngineObject3D
+     * @memberof Render3D
+     * @example
+     * const torch = new Light3D(vec3(0, 3, 0), 10, rgb(1, .7, .3));
+     */
+    export class Light3D extends EngineObject3D {
+        /** Create a point light
+         *  @param {Vector3} [pos3D]
+         *  @param {number} [radius] - Distance where the light fades to nothing
+         *  @param {Color} [color] - Light color, alpha scales the brightness */
+        constructor(pos3D?: Vector3, radius?: number, color?: Color);
+        /** @property {number} - Distance where the light fades to nothing */
+        radius: number;
+    }
+    /**
+     * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
+     * - Particles are billboards, or soft round discs when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
+     * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitCone
+     * - Speeds are per frame like the 2D emitter, gravity is a per frame change to velocity y
+     * @extends EngineObject3D
+     * @memberof Render3D
+     * @example
+     * // fire: a stream upward, yellow fading to transparent red, additive
+     * new ParticleEmitter3D(vec3(), .5, 0, 100, .3, undefined, rgb(1, .8, .2), rgb(1, .5, 0), rgb(1, 0, 0, 0), rgb(.5, 0, 0, 0), 1, .5, 1.5, .05, .95, 0, .3, .2, true);
+     */
+    export class ParticleEmitter3D extends EngineObject3D {
+        /** Create a particle emitter
+         *  @param {Vector3} [pos3D] - World space position of the emitter
+         *  @param {number|Vector3} [emitSize] - Spawn area, a number for a sphere diameter or a vec3 for a box
+         *  @param {number} [emitTime] - How long to keep emitting, 0 is forever
+         *  @param {number} [emitRate] - Particles per second, 0 does not emit
+         *  @param {number} [emitCone] - Half angle around the emit direction, PI is every direction
+         *  @param {TileInfo} [tileInfo] - Tile to render particles with, undefined is untextured
+         *  @param {Color} [colorStartA] - Color at start of life, randomized between the start colors
+         *  @param {Color} [colorStartB]
+         *  @param {Color} [colorEndA] - Color at end of life, randomized between the end colors
+         *  @param {Color} [colorEndB]
+         *  @param {number} [particleTime] - How long particles live in seconds
+         *  @param {number} [sizeStart] - Particle size at start of life
+         *  @param {number} [sizeEnd] - Particle size at end of life
+         *  @param {number} [speed] - Spawn speed in world units per frame
+         *  @param {number} [damping] - Per frame velocity multiplier, 1 is none
+         *  @param {number} [gravity] - Per frame change to velocity y, negative pulls down
+         *  @param {number} [fadeRate] - Fraction of life spent fading, half in and half out
+         *  @param {number} [randomness] - Extra randomness applied to speed, size and life
+         *  @param {boolean} [additive] - Additive blending */
+        constructor(pos3D?: Vector3, emitSize?: number | Vector3, emitTime?: number, emitRate?: number, emitCone?: number, tileInfo?: TileInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, damping?: number, gravity?: number, fadeRate?: number, randomness?: number, additive?: boolean);
+        /** @property {number|Vector3} - Spawn area, a number for a sphere diameter or a vec3 for a box */
+        emitSize: number | Vector3;
+        /** @property {number} - How long to keep emitting, 0 is forever */
+        emitTime: number;
+        /** @property {number} - Particles per second, 0 does not emit */
+        emitRate: number;
+        /** @property {number} - Half angle around the emit direction, PI is every direction */
+        emitCone: number;
+        /** @property {Color} - Color at start of life, randomized between the start colors */
+        colorStartA: Color;
+        /** @property {Color} - Color at start of life, randomized between the start colors */
+        colorStartB: Color;
+        /** @property {Color} - Color at end of life, randomized between the end colors */
+        colorEndA: Color;
+        /** @property {Color} - Color at end of life, randomized between the end colors */
+        colorEndB: Color;
+        /** @property {number} - How long particles live in seconds */
+        particleTime: number;
+        /** @property {number} - Particle size at start of life */
+        sizeStart: number;
+        /** @property {number} - Particle size at end of life */
+        sizeEnd: number;
+        /** @property {number} - Spawn speed in world units per frame */
+        speed: number;
+        /** @property {number} - Per frame change to velocity y */
+        gravity: number;
+        /** @property {number} - Fraction of life spent fading, half in and half out */
+        fadeRate: number;
+        /** @property {number} - Extra randomness applied to speed, size and life */
+        randomness: number;
+        /** @property {boolean} - Additive blending */
+        additive: boolean;
+        /** @property {Array<Object>} - Live particles */
+        particles: any[];
+        emitTimeBuffer: number;
+        /** Spawn one particle now */
+        emitParticle(): void;
+    }
+    /**
+     * Parse Wavefront OBJ text into a Mesh
+     * - Reads v, vt, vn and f lines with convex polygons of any size, materials and groups are ignored
+     * - Normals come from the file when every corner of a face has one, otherwise from the face
+     * @param {string} text
+     * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3DSmoothShading
+     * @return {Mesh}
+     * @memberof Render3D
+     * @example
+     * new EngineObject3D(vec3(), parseOBJ(objText));
+     */
+    export function parseOBJ(text: string, smooth?: boolean): Mesh;
+    /**
+     * Fetch and parse an OBJ file
+     * @param {string} url
+     * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3DSmoothShading
+     * @return {Promise<Mesh>}
+     * @memberof Render3D
+     * @example
+     * const mesh = await loadOBJ('ship.obj'); // in an async gameInit
+     */
+    export function loadOBJ(url: string, smooth?: boolean): Promise<Mesh>;
     /** Default shading for the shape builders, true for smooth vertex normals, false for flat faceted faces
      *  @type {boolean}
      *  @default

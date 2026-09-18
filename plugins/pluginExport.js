@@ -126,6 +126,10 @@ export
     buildLoft,
     buildSky,
     HeightMap,
+    Light3D,
+    ParticleEmitter3D,
+    parseOBJ,
+    loadOBJ,
     render3DSmoothShading,
     setRender3DSmoothShading,
 

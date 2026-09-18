@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, parseOBJ } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -815,4 +815,134 @@ test('buildGrid takes a flat color or a color function', () =>
     const fn = buildGrid(2, 2, 2, 1, (x, z)=> x < 0 ? RED : WHITE, undefined, false);
     assert.ok(fn.colors.slice(0, 6).every(c => c.g === 0) && fn.colors.slice(6).every(c => c.g === 1));
     assert.ok(buildGrid(2, 2).colors.every(c => c.g === 1));
+});
+
+test('Light3D is an EngineObject3D that draws nothing and follows a parent', () =>
+{
+    const light = new Light3D(vec3(1, 2, 3), 7, RED);
+    assert.ok(light instanceof EngineObject3D);
+    assert.equal(light.radius, 7);
+    assert.equal(light.color.r, 1);
+    assert.equal(light.color.g, 0);
+    const baked = render3D.bake(()=> light.render3D());
+    assert.equal(baked.vertexCount, 0);
+    const lamp = new EngineObject3D(vec3(10, 0, 0));
+    lamp.addChild(light);
+    light.pos3D = vec3(0, 1, 0);
+    nearVec(light.getMatrix().getTranslation(), 10, 1, 0);
+    light.destroy();
+    lamp.destroy();
+});
+
+test('ParticleEmitter3D emits at its rate along its rotated axis and moves particles', () =>
+{
+    // 600 per second is 10 per frame, cone 0 sends them straight along local +Y
+    const e = new ParticleEmitter3D(vec3(5, 0, 0), 0, 0, 600, 0, undefined, RED, RED, WHITE, WHITE, 1, .5, 1, .2, 1, -.01, .1, 0);
+    e.rotation3D.z = PI / 2; // local +Y becomes world -X
+    e.update();
+    assert.equal(e.particles.length, 10);
+    const p = e.particles[0];
+    nearVec(p.velocity, -.2, -.01, 0);       // speed .2 along -X, one frame of gravity
+    nearVec(p.pos, 4.8, -.01, 0);            // spawned at the emitter and moved once
+    near(p.life, 1); near(p.sizeStart, .5); near(p.sizeEnd, 1);
+    assert.equal(p.colorStart.r, 1); assert.equal(p.colorStart.g, 0);
+    e.update();
+    assert.equal(e.particles.length, 20);
+    nearVec(e.particles[0].velocity, -.2, -.02, 0);
+    // untextured particles render as 8 sided soft discs, textured ones as billboards, and the additive flag is left alone
+    render3D.updateMatrices(1);
+    render3D.additive = false;
+    const baked = render3D.bake(()=> e.render3D());
+    assert.equal(baked.vertexCount, 20 * 3 * (2 * 9 + 2));
+    assert.equal(render3D.additive, false);
+    e.tileInfo = new TileInfo(vec2(), vec2(16));
+    assert.equal(render3D.bake(()=> e.render3D()).vertexCount, 20 * 6);
+    // an emitter with no rate never spawns, a box emit size spawns inside the box
+    const box = new ParticleEmitter3D(vec3(), vec3(2, 4, 6), 0, 600, PI);
+    box.update();
+    assert.ok(box.particles.every(q => Math.abs(q.pos.x) <= 1 + .3 && Math.abs(q.pos.y) <= 2 + .3 && Math.abs(q.pos.z) <= 3 + .3));
+    e.destroy(); box.destroy();
+});
+
+test('ParticleEmitter3D particles die after their life', () =>
+{
+    // particles age on the frame they spawn, so a 3 frame life survives two more updates
+    const e = new ParticleEmitter3D(vec3(), 0, 0, 60, PI, undefined, WHITE, WHITE, WHITE, WHITE, 3 / 60, 1, 1, 0, 1, 0, .1, 0);
+    e.update(); // spawns 1, age 1
+    assert.equal(e.particles.length, 1);
+    e.update(); // spawns 1, ages 2 and 1
+    assert.equal(e.particles.length, 2);
+    e.update(); // spawns 1, the first reaches 3 and dies
+    assert.equal(e.particles.length, 2);
+    e.destroy();
+});
+
+const houseOBJ = `
+v -1 -1 -1
+v  1 -1 -1
+v  1 -1  1
+v -1 -1  1
+v -1 1 -1
+v  1 1 -1
+v  1 1  1
+v -1 1  1
+f 1 5 6 2
+f 2 6 7 3
+f 3 7 8 4
+f 4 8 5 1
+f 1 2 3 4
+f 8 7 6 5
+`;
+
+test('parseOBJ reads vertices and faces into outward strips with flat normals', () =>
+{
+    const m = parseOBJ(houseOBJ, false);
+    assert.equal(m.vertexCount, 6 * 6); // six quads
+    assertOutward(m, 'obj box');
+    nearVec(m.normals[1], 0, 0, -1); // first face is the -Z wall
+    for (const p of m.points)
+        assert.ok(Math.abs(p.x) === 1 && Math.abs(p.y) === 1 && Math.abs(p.z) === 1);
+    assert.ok(m.uvs.every(uv => uv.x === 0 && uv.y === 0)); // no vt, default uvs
+});
+
+test('parseOBJ uses file normals and uvs, negative indices, and smooths when asked', () =>
+{
+    const text = `
+v 0 0 0
+v 1 0 0
+v 0 1 0
+vt 0 0
+vt 1 0
+vt 0 1
+vn 0 0 1
+f -3/-3/-1 -2/-2/-1 -1/-1/-1
+`;
+    const m = parseOBJ(text, true);
+    assert.equal(m.vertexCount, 6); // one triangle
+    nearVec(m.normals[1], 0, 0, 1);  // the file normal, not recomputed even though smooth is set
+    near(m.uvs[1].y, 1);             // OBJ v runs up, so vt 0 0 lands at the bottom of the tile
+    near(m.uvs[3].y, 0);             // vt 0 1 is the top
+    // without file normals, smooth computes averaged vertex normals
+    const smooth = parseOBJ(houseOBJ, true);
+    const corner = smooth.points.findIndex(p => p.x === 1 && p.y === 1 && p.z === 1);
+    assert.ok(smooth.normals[corner].x > 0 && smooth.normals[corner].y > 0 && smooth.normals[corner].z > 0);
+    near(smooth.normals[corner].length(), 1);
+});
+
+test('setSky builds the dome, keeps it, and matches the fog color to the horizon', () =>
+{
+    const horizon = rgb(.5, .6, .7);
+    const sky = render3D.setSky(rgb(0, 0, 1), horizon);
+    assert.ok(sky instanceof Mesh && render3D.sky === sky);
+    assert.equal(render3D.fogColor.r, .5);
+    assert.ok(render3D.fogColor !== horizon); // a copy
+    render3D.setSky();
+    assert.ok(render3D.sky !== sky);
+    render3D.sky = undefined;
+    render3D.fogColor = undefined;
+});
+
+test('renderAfter2D defaults off', () =>
+{
+    assert.equal(render3D.renderAfter2D, false);
 });

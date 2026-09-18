@@ -798,7 +798,7 @@ raycastBox(origin, direction, pos, size)       // distance t to the box, or unde
 - Meshes are triangle strips drawn by matrix; immediate mode pushes batch into a stream
 - EngineObject3D extends EngineObject, so update, destroy, timers and renderOrder all work; addChild parents 3D transforms when the parent is an EngineObject3D; the 2D pos is ignored by rendering
 - velocity3D is added to pos3D each frame, there is no other 3D physics; 2D physics still runs on the inherited pos and velocity, handy for pseudo-3D games that copy pos into pos3D
-- See the `examples/shorts/render3d*.js` demos: shapes, billboards, blending, height map terrain, and collision with picking
+- See the `examples/shorts/render3d*.js` demos: shapes, billboards, blending, height map terrain, collision with picking, lights, particles, and OBJ mesh loading
 
 ```javascript
 // Setup (call in gameInit)
@@ -835,6 +835,8 @@ render3D.onRender = ()=> {}           // opaque stage, after the opaque objects:
 render3D.onRenderTransparent = ()=> {} // transparent stage, blending on and depth writes off: billboards, glows, shadows
 // every draw in the transparent stage (objects and pushes alike) is sorted far to near before it lands, so alpha and additive mix correctly
 render3D.sky = buildSky(topColor, horizonColor, bottomColor) // sky dome drawn around the camera behind everything
+render3D.setSky(topColor, horizonColor, bottomColor) // build the dome, set it as the sky, and match the fog color to the horizon
+render3D.renderAfter2D = false        // true draws the 3D pass on top of the 2D scene instead of under it
 render3D.screenToRay(screenPos)       // {origin, direction} world ray under a screen point, for picking with raycast*
 setRender3DSmoothShading(true)        // default for every builder's smooth argument (render3DSmoothShading)
 
@@ -880,6 +882,19 @@ render3D.drawSoftDisc(pos, radius, color, normal, sides)  // fades to transparen
 render3D.drawShadow(pos, radius, floorHeight, color)      // soft blob shadow on the floor under pos, unlit
 render3D.flush()                                          // draw what is pending, automatic when needed
 render3D.bake(()=> { ...pushes... })                      // returns the pushes as a Mesh
+
+// OBJ meshes - v, vt, vn and f lines, convex polygons, no materials; scale with scale3D
+parseOBJ(text, smooth)                        // Mesh from OBJ text, smooth normals when the file has none
+await loadOBJ(url, smooth)                    // fetch then parse, in an async gameInit
+
+// Point lights - EngineObject3D so they move, parent and destroy like anything else, the first 8 light the frame
+new Light3D(pos3D, radius, color)             // radius is where the light reaches zero, alpha scales brightness
+
+// Particles - the 3D twin of ParticleEmitter, camera facing billboards sorted with everything transparent
+new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitCone, tileInfo,
+    colorStartA, colorStartB, colorEndA, colorEndB, particleTime, sizeStart, sizeEnd,
+    speed, damping, gravity, fadeRate, randomness, additive)
+// emits along local +Y turned by rotation3D, emitSize is a sphere diameter or a vec3 box, gravity changes velocity y per frame
 
 // Objects - EngineObject with a 3D transform, drawn by the 3D pass
 new EngineObject3D(pos3D, mesh, color, tileInfo)
