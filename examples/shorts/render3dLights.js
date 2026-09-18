@@ -23,7 +23,7 @@ class Lamp extends EngineObject3D
     }
 }
 
-let orbit = 0, useAfter2D = false;
+let orbit = 0;
 
 function gameInit()
 {
@@ -49,20 +49,11 @@ function gameInit()
 
 function gameUpdate()
 {
-    if (keyWasPressed('Space'))
-        render3D.renderAfter2D = useAfter2D = !useAfter2D;
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x * .01 : .002;
     render3D.camera.orbit(vec3(0, 1, 0), 15, orbit, .5);
 }
 
-function gameRender()
-{
-    // a 2D sprite in the middle: under the 3D by default, on top when renderAfter2D is set
-    drawTile(vec2(), vec2(4), tile(1, 16), WHITE);
-}
-
 function gameRenderPost()
 {
-    const order = useAfter2D ? '3D on top of 2D' : '2D on top of 3D';
-    drawTextScreen('3D lights - three point lights on the move, space toggles ' + order + ', drag to orbit', vec2(mainCanvasSize.x / 2, 40), 28);
+    drawTextScreen('3D lights - three point lights on the move, drag to orbit', vec2(mainCanvasSize.x / 2, 40), 28);
 }
