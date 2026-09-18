@@ -96,6 +96,13 @@ export
     PathFinder,
     PathFinderNode,
 
+    // Math3D
+    vec3,
+    isVector3,
+    Vector3,
+    Matrix4,
+    buildMatrix,
+
     // Three.js
     threeJS,
     ThreeJSPlugin,

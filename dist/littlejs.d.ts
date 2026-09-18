@@ -5800,6 +5800,142 @@ declare module "littlejsengine" {
         isClear(): boolean;
     }
     /**
+     * LittleJS 3D Math Plugin
+     * - Vector3 and Matrix4 for 3D games and plugins
+     * - Right handed, Y up, angles in radians
+     * - Used by the Render3D plugin, but has no rendering dependencies
+     * @namespace Math3D
+     */
+    /**
+     * Create a 3D vector, can take 0, 1, 2 or 3 numbers
+     * - vec3() is zero, vec3(s) fills all three, vec3(x, y) sets z to 0
+     * @param {number} [x]
+     * @param {number} [y]
+     * @param {number} [z]
+     * @return {Vector3}
+     * @memberof Math3D
+     */
+    export function vec3(x?: number, y?: number, z?: number): Vector3;
+    /**
+     * Check if the object is a valid Vector3
+     * @param {any} v
+     * @return {boolean}
+     * @memberof Math3D
+     */
+    export function isVector3(v: any): boolean;
+    /**
+     * 3D Vector object, right handed with Y up
+     * - Methods return new vectors except set
+     * @memberof Math3D
+     * @example
+     * const a = vec3(1, 2, 3);
+     * const b = a.add(vec3(0, 1, 0)).normalize();
+     */
+    export class Vector3 {
+        /** Create a 3D vector
+         *  @param {number} [x]
+         *  @param {number} [y]
+         *  @param {number} [z] */
+        constructor(x?: number, y?: number, z?: number);
+        /** @property {number} - X axis location */
+        x: number;
+        /** @property {number} - Y axis location */
+        y: number;
+        /** @property {number} - Z axis location */
+        z: number;
+        /** Sets values of this vector and returns self
+         *  @param {number} [x]
+         *  @param {number} [y]
+         *  @param {number} [z]
+         *  @return {Vector3} */
+        set(x?: number, y?: number, z?: number): Vector3;
+        /** Returns a new vector that is a copy of this
+         *  @return {Vector3} */
+        copy(): Vector3;
+        /** Returns a copy of this vector plus the vector passed in
+         *  @param {Vector3} v
+         *  @return {Vector3} */
+        add(v: Vector3): Vector3;
+        /** Returns a copy of this vector minus the vector passed in
+         *  @param {Vector3} v
+         *  @return {Vector3} */
+        subtract(v: Vector3): Vector3;
+        /** Returns a copy of this vector times the vector passed in
+         *  @param {Vector3} v
+         *  @return {Vector3} */
+        multiply(v: Vector3): Vector3;
+        /** Returns a copy of this vector divided by the vector passed in
+         *  @param {Vector3} v
+         *  @return {Vector3} */
+        divide(v: Vector3): Vector3;
+        /** Returns a copy of this vector scaled by the number passed in
+         *  @param {number} s
+         *  @return {Vector3} */
+        scale(s: number): Vector3;
+        /** Returns the length of this vector
+         *  @return {number} */
+        length(): number;
+        /** Returns the length of this vector squared
+         *  @return {number} */
+        lengthSquared(): number;
+        /** Returns the distance from this vector to the vector passed in
+         *  @param {Vector3} v
+         *  @return {number} */
+        distance(v: Vector3): number;
+        /** Returns the distance squared from this vector to the vector passed in
+         *  @param {Vector3} v
+         *  @return {number} */
+        distanceSquared(v: Vector3): number;
+        /** Returns a new vector in the same direction with the length passed in, zero stays zero
+         *  @param {number} [length]
+         *  @return {Vector3} */
+        normalize(length?: number): Vector3;
+        /** Returns a new vector clamped to the length passed in
+         *  @param {number} [length]
+         *  @return {Vector3} */
+        clampLength(length?: number): Vector3;
+        /** Returns the dot product of this vector and the vector passed in
+         *  @param {Vector3} v
+         *  @return {number} */
+        dot(v: Vector3): number;
+        /** Returns the cross product of this vector and the vector passed in (right hand rule)
+         *  @param {Vector3} v
+         *  @return {Vector3} */
+        cross(v: Vector3): Vector3;
+        /** Returns a new vector interpolated between this and the vector passed in, percent is not clamped
+         *  @param {Vector3} v
+         *  @param {number} percent
+         *  @return {Vector3} */
+        lerp(v: Vector3, percent: number): Vector3;
+        /** Returns a new vector with the absolute value of each component
+         *  @return {Vector3} */
+        abs(): Vector3;
+        /** Returns a new vector with each component floored
+         *  @return {Vector3} */
+        floor(): Vector3;
+        /** Returns a new vector with each component rounded
+         *  @return {Vector3} */
+        round(): Vector3;
+        /** Returns this point transformed by a matrix, translation included
+         *  @param {Matrix4} matrix
+         *  @return {Vector3} */
+        transform(matrix: Matrix4): Vector3;
+        /** Returns this direction transformed by a matrix, rotation and scale only
+         *  @param {Matrix4} matrix
+         *  @return {Vector3} */
+        transformDirection(matrix: Matrix4): Vector3;
+        /** Checks if this is a valid vector
+         *  @return {boolean} */
+        isValid(): boolean;
+        /** Returns a string representation of this vector for debugging
+         *  @param {number} [digits] - Number of digits to display
+         *  @return {string} */
+        toString(digits?: number): string;
+    }
+    export class Matrix4 {
+    }
+    export function buildMatrix(): void;
+    /**
      * LittleJS Three.js Plugin
      * - Renders a three.js scene on a canvas behind the LittleJS canvases
      * - The three.js module is passed in by the user, nothing is bundled

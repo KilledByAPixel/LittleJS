@@ -49,6 +49,7 @@ const enginePluginFiles =
     `${PLUGIN_FOLDER}/textureSheet.js`,
     `${PLUGIN_FOLDER}/tweenSystem.js`,
     `${PLUGIN_FOLDER}/pathFinder.js`,
+    `${PLUGIN_FOLDER}/math3d.js`,
     `${PLUGIN_FOLDER}/threejs.js`,
 ];
 const engineExtraFiles =

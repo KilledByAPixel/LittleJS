@@ -752,6 +752,35 @@ new PostProcessPlugin(shaderCode, includeMainCanvas=false, feedbackTexture=false
 postProcess                    // Global instance created by the plugin
 ```
 
+## LittleJS 3D Math
+- Optional plugin with `Vector3` and `Matrix4` for 3D games and plugins
+- Right handed, Y up, camera looks down -Z, angles in radians
+- Used by the Render3D plugin, but has no rendering dependencies
+
+```javascript
+// Vectors
+vec3(x, y, z)                  // vec3() is zero, vec3(s) fills all, vec3(x, y) has z=0
+isVector3(v)                   // true if v is a Vector3
+v.add(v2) v.subtract(v2) v.multiply(v2) v.divide(v2) v.scale(s)
+v.dot(v2) v.cross(v2) v.length() v.lengthSquared() v.distance(v2) v.distanceSquared(v2)
+v.normalize(length=1) v.clampLength(length=1) v.lerp(v2, percent)
+v.abs() v.floor() v.round() v.copy() v.set(x, y, z) v.isValid()
+v.transform(matrix)            // point through a Matrix4, translation included
+v.transformDirection(matrix)   // direction through a Matrix4, rotation and scale only
+
+// Matrices - column major Float32Array(16) in m.m, uploads straight to WebGL
+Matrix4.identity() Matrix4.translation(v) Matrix4.rotation(euler) Matrix4.scaling(v)
+Matrix4.perspective(fov, aspect, near, far)    // fov is vertical, radians
+Matrix4.orthographic(left, right, bottom, top, near, far)
+Matrix4.lookAt(eye, target, up)                // transform of an object at eye facing target
+m.multiply(m2)                 // m = m * m2, m2 is applied to points first
+m.translate(v) m.rotate(euler) m.scale(v)      // append a transform, returns self
+m.invert() m.transpose()       // in place, return self
+m.copy() m.transformPoint(v) m.transformDirection(v) m.getTranslation()
+buildMatrix(pos, rotation, scale)              // translate * rotate * scale, any arg optional
+// euler is vec3(pitch, yaw, roll): applied to points as roll (Z), then pitch (X), then yaw (Y)
+```
+
 ## LittleJS Three.js Integration
 - Optional plugin that renders a three.js scene on a canvas behind the LittleJS canvas
 - You load three.js yourself (import map or bundler) and pass the module in
