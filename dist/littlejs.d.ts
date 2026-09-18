@@ -6562,6 +6562,34 @@ declare module "littlejsengine" {
      */
     export function buildSky(topColor?: Color, horizonColor?: Color, bottomColor?: Color, segments?: number, rings?: number): Mesh;
     /**
+     * Build a mesh by extruding the solid pixels of a tile, a 3D sprite
+     * - A pixel is solid when its alpha is over half, its color becomes the vertex color so sprites keep their colors and white glyphs take the tint
+     * - Faces and walls are merged along runs of same colored pixels, walls only appear where a solid pixel meets an empty one
+     * - Pixels can also be an array of rows, each a Color, a truthy value for white, or a falsy value for empty
+     * @param {TileInfo|Array<Array<Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels
+     * @param {Vector2} [size] - World width and height of the whole tile, centered like buildBox
+     * @param {number} [depth] - Thickness along Z
+     * @return {Mesh}
+     * @memberof Render3D
+     * @example
+     * new EngineObject3D(vec3(), buildExtrude(tile(3, 16), vec2(2), .5)); // a chunky version of tile 3
+     */
+    export function buildExtrude(pixels: TileInfo | Array<Array<Color | number | boolean>>, size?: Vector2, depth?: number): Mesh;
+    /**
+     * Build a mesh of extruded text from an image font, the engine font by default so it needs no assets
+     * - Each glyph is extruded once per font and reused, the block is centered, newlines stack downward
+     * - Glyphs are white in the engine font, so the object's color tints the text
+     * @param {string|number} text
+     * @param {number} [size] - Character height in world units
+     * @param {number} [depth] - Thickness along Z
+     * @param {ImageFont} [font] - Defaults to engineImageFont
+     * @return {Mesh}
+     * @memberof Render3D
+     * @example
+     * new EngineObject3D(vec3(0, 2, 0), buildText3D('HELLO'), YELLOW);
+     */
+    export function buildText3D(text: string | number, size?: number, depth?: number, font?: ImageFont): Mesh;
+    /**
      * HeightMap - Terrain from a grid of heights, with a mesh builder and height lookup
      * - heights is a 2D array [row][column] of 0-1 values, rows run along Z and columns along X
      * - or an image, where the red channel is the height and row 0 is the far edge (-Z)

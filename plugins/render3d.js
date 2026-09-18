@@ -1413,6 +1413,131 @@ function buildSky(topColor=rgb(.2, .4, .9), horizonColor=rgb(.8, .9, 1), bottomC
     return mesh;
 }
 
+/**
+ * Build a mesh by extruding the solid pixels of a tile, a 3D sprite
+ * - A pixel is solid when its alpha is over half, its color becomes the vertex color so sprites keep their colors and white glyphs take the tint
+ * - Faces and walls are merged along runs of same colored pixels, walls only appear where a solid pixel meets an empty one
+ * - Pixels can also be an array of rows, each a Color, a truthy value for white, or a falsy value for empty
+ * @param {TileInfo|Array<Array<Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels
+ * @param {Vector2} [size] - World width and height of the whole tile, centered like buildBox
+ * @param {number} [depth] - Thickness along Z
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * new EngineObject3D(vec3(), buildExtrude(tile(3, 16), vec2(2), .5)); // a chunky version of tile 3
+ */
+function buildExtrude(pixels, size=vec2(1), depth=1)
+{
+    let rows = pixels, x0 = 0, y0 = 0, width, height;
+    if (pixels instanceof TileInfo)
+    {
+        rows = render3DReadPixels(pixels.textureInfo);
+        x0 = pixels.pos.x | 0, y0 = pixels.pos.y | 0;
+        width = pixels.size.x | 0, height = pixels.size.y | 0;
+    }
+    else
+    {
+        ASSERT(isArray(pixels) && pixels.length, 'pixels must be a TileInfo or rows of pixels');
+        height = rows.length, width = rows[0].length;
+    }
+
+    // the color of a solid pixel, undefined outside or where it is empty
+    const solid = (x, y)=>
+    {
+        if (x < 0 || y < 0 || x >= width || y >= height) return;
+        const c = rows[y0 + y] && rows[y0 + y][x0 + x];
+        return c ? isColor(c) ? c : WHITE : undefined;
+    };
+    const same = (a, b)=> a === b || !!a && !!b && a.rgbaInt() === b.rgbaInt();
+
+    // call emit(start, end, color) for each run of same colored pixels, colorAt(i) undefined breaks the run
+    const runs = (count, colorAt, emit)=>
+    {
+        let start = 0, color;
+        for (let i = 0; i <= count; ++i)
+        {
+            const c = i < count ? colorAt(i) : undefined;
+            if (same(c, color)) continue;
+            if (color) emit(start, i, color);
+            start = i, color = c;
+        }
+    };
+
+    // pixel edges in world space, y runs down the image
+    const mesh = new Mesh, sx = size.x / width, sy = size.y / height, hz = depth / 2;
+    const px = x => x * sx - size.x / 2, py = y => size.y / 2 - y * sy;
+    const quad = (origin, right, up, normal, color)=> mesh.addStrip(
+        [origin.add(up), origin, origin.add(right).add(up), origin.add(right)], normal, RENDER3D_QUAD_UVS, color);
+    const X = vec3(1, 0, 0), Y = vec3(0, 1, 0), Z = vec3(0, 0, 1);
+    for (let y = 0; y < height; ++y)
+    {
+        // front and back faces along each row
+        runs(width, x => solid(x, y), (a, b, c)=>
+        {
+            const w = X.scale((b - a) * sx), h = Y.scale(sy);
+            quad(vec3(px(a), py(y + 1), hz), w, h, Z, c);
+            quad(vec3(px(b), py(y + 1), -hz), w.scale(-1), h, Z.scale(-1), c);
+        });
+        // walls facing up and down where the pixel above or below is empty
+        runs(width, x => solid(x, y - 1) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(a), py(y), hz), X.scale((b - a) * sx), Z.scale(-depth), Y, c));
+        runs(width, x => solid(x, y + 1) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(a), py(y + 1), -hz), X.scale((b - a) * sx), Z.scale(depth), Y.scale(-1), c));
+    }
+    for (let x = 0; x < width; ++x)
+    {
+        // walls facing left and right where the pixel beside is empty
+        runs(height, y => solid(x - 1, y) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(x), py(b), -hz), Z.scale(depth), Y.scale((b - a) * sy), X.scale(-1), c));
+        runs(height, y => solid(x + 1, y) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(x + 1), py(b), hz), Z.scale(-depth), Y.scale((b - a) * sy), X, c));
+    }
+    return mesh;
+}
+
+/**
+ * Build a mesh of extruded text from an image font, the engine font by default so it needs no assets
+ * - Each glyph is extruded once per font and reused, the block is centered, newlines stack downward
+ * - Glyphs are white in the engine font, so the object's color tints the text
+ * @param {string|number} text
+ * @param {number} [size] - Character height in world units
+ * @param {number} [depth] - Thickness along Z
+ * @param {ImageFont} [font] - Defaults to engineImageFont
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * new EngineObject3D(vec3(0, 2, 0), buildText3D('HELLO'), YELLOW);
+ */
+function buildText3D(text, size=1, depth=.2, font=engineImageFont)
+{
+    ASSERT(font instanceof ImageFont, 'font must be an ImageFont, the engine font loads before gameInit');
+    const tileInfo = font.tileInfo, padding = tileInfo.padding;
+    const paddedX = tileInfo.size.x + padding * 2, paddedY = tileInfo.size.y + padding * 2;
+    const columns = tileInfo.textureInfo.size.x / paddedX | 0;
+    const glyphs = font.extrudedGlyphs || (font.extrudedGlyphs = new Map); // unit sized, scaled when combined
+    const charSize = vec2(size * tileInfo.size.x / tileInfo.size.y, size);
+    const mesh = new Mesh, lines = (text + '').split('\n');
+    lines.forEach((line, j)=>
+    {
+        const y = ((lines.length - 1) / 2 - j) * charSize.y;
+        for (let i = 0; i < line.length; ++i)
+        {
+            const charCode = line.charCodeAt(i);
+            const index = charCode < 32 || charCode > 127 ? 95 : charCode - 32; // like ImageFont
+            if (!index) continue; // space
+            let glyph = glyphs.get(index);
+            if (!glyph)
+            {
+                const pos = vec2(index % columns * paddedX + padding, (index / columns | 0) * paddedY + padding);
+                glyphs.set(index, glyph = buildExtrude(new TileInfo(pos, tileInfo.size, tileInfo.textureInfo)));
+            }
+            const x = (i - (line.length - 1) / 2) * charSize.x;
+            mesh.combine(glyph, buildMatrix(vec3(x, y, 0), vec3(), vec3(charSize.x, charSize.y, depth)));
+        }
+    });
+    return mesh;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * HeightMap - Terrain from a grid of heights, with a mesh builder and height lookup
@@ -1523,6 +1648,17 @@ function render3DImageToArray(image, sample)
             row.push(sample(data[k], data[k+1], data[k+2], data[k+3]));
         }
     }
+    return rows;
+}
+
+// the pixels of a texture as rows of Color, undefined where alpha is half or less, read once per image
+const render3DPixelCache = new WeakMap;
+function render3DReadPixels(textureInfo)
+{
+    const image = textureInfo.image;
+    let rows = render3DPixelCache.get(image);
+    if (!rows)
+        render3DPixelCache.set(image, rows = render3DImageToArray(image, (r, g, b, a)=> a > 127 ? rgb(r / 255, g / 255, b / 255) : undefined));
     return rows;
 }
 

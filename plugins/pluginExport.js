@@ -125,6 +125,8 @@ export
     buildGrid,
     buildLoft,
     buildSky,
+    buildExtrude,
+    buildText3D,
     HeightMap,
     Light3D,
     ParticleEmitter3D,

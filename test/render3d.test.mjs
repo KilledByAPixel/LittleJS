@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -1036,4 +1036,27 @@ test('ParticleEmitter3D trailTime keeps a path per particle and draws ribbons', 
     e.tileInfo = new TileInfo(vec2(), vec2(16));
     assert.equal(render3D.bake(()=> e.render3D()).vertexCount, 8 + 8 + 6 + 6);
     e.destroy();
+});
+
+test('buildExtrude merges pixel runs into quads with outward walls and pixel colors', () =>
+{
+    // a solid 2x2 block: 2 front, 2 back and 4 walls merged along their runs
+    const block = buildExtrude([[1, 1], [1, 1]], vec2(2), 1);
+    assert.equal(block.vertexCount, 8 * 6);
+    assertOutward(block, 'block');
+    for (const p of block.points)
+        assert.ok(Math.abs(p.x) <= 1 + 1e-6 && Math.abs(p.y) <= 1 + 1e-6 && Math.abs(p.z) <= .5 + 1e-6);
+    // an L keeps its colors: 2 front, 2 back, 2 up, 1 down, 1 left, 2 right
+    const l = buildExtrude([[RED, 0], [RED, RED]]);
+    assert.equal(l.vertexCount, 10 * 6);
+    assert.ok(l.colors.every(c => c.r === 1 && c.g === 0));
+    // a color change splits every run
+    assert.equal(buildExtrude([[RED, WHITE]]).vertexCount, 10 * 6);
+    // the first row is the top of the image, the first pixel is on the left
+    const corner = buildExtrude([[1, 0], [0, 0]], vec2(2), 1);
+    assert.equal(corner.vertexCount, 6 * 6);
+    for (const p of corner.points)
+        assert.ok(p.x <= 1e-6 && p.y >= -1e-6);
+    // the engine font is not loaded headless
+    assert.throws(()=> buildText3D('A'));
 });
