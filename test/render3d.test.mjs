@@ -156,14 +156,13 @@ test('Mesh.combine transforms points, rotates normals, tints colors', () =>
 test('Mesh.combine keeps normals correct under non-uniform scale', () =>
 {
     const src = new Mesh;
-    src.addStrip([vec3(-1, 1, 0), vec3(-1, -1, 0), vec3(1, 1, 0), vec3(1, -1, 0)], vec3(0, 0, 1)); // faces +Z
+    // a quad tilted 45 degrees about Y, facing (1, 0, 1)
+    src.addStrip([vec3(-1, 1, 1), vec3(-1, -1, 1), vec3(1, 1, -1), vec3(1, -1, -1)], vec3(1, 0, 1).normalize());
     const dst = new Mesh().combine(src, buildMatrix(undefined, undefined, vec3(2, 1, 1)));
     assert.equal(dst.vertexCount, 6);
-    for (let i = 0; i < dst.vertexCount; ++i)
-    {
-        nearVec(dst.normals[i], 0, 0, 1);
-        near(dst.normals[i].length(), 1);
-    }
+    // the inverse transpose scales the normal by (1/2, 1, 1), so (1,0,1) becomes (1,0,2) normalized
+    nearVec(dst.normals[1], 1/Math.sqrt(5), 0, 2/Math.sqrt(5));
+    near(dst.normals[1].length(), 1);
 });
 
 test('Mesh.computeNormals gives outward flat normals for a counter clockwise quad', () =>
@@ -396,6 +395,7 @@ test('an odd strip does not flip the winding of the strips after it', () =>
         let f = p[i+1].subtract(p[i]).cross(p[i+2].subtract(p[i]));
         if (f.lengthSquared() < 1e-9) continue;  // degenerate join
         f = f.scale(i & 1 ? 1 : -1);             // real triangles sit at odd strip indices
+        nearVec(mesh.normals[i], 0, 0, 1);       // both shapes are wound to face +Z
         for (let j = 0; j < 3; ++j)
             assert.ok(mesh.normals[i + j].dot(f) > 0, `normal ${i + j} disagrees with face ${i}`);
         ++checked;

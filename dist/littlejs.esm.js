@@ -17550,12 +17550,12 @@ class Render3DPlugin
      *  @param {TileInfo} [tileInfo] - Texture for this strip */
     pushStrip(points, normals, uvs, colors, tileInfo)
     {
-        ASSERT(points.length + 3 <= RENDER3D_MAX_BATCH, 'strip is too large for the stream, bake it into a mesh');
         if (this.capture)
         {
             this.capture.addStrip(points, normals, uvs, colors);
             return;
         }
+        ASSERT(points.length + 3 <= RENDER3D_MAX_BATCH, 'strip is too large for the stream, bake it into a mesh');
         if (!this.shader) return;
         ASSERT(this.isRendering, '3D draws are only valid during the 3D pass, use render3D.onRender or EngineObject3D.render3D');
         if (!this.isRendering) return;
@@ -17846,11 +17846,12 @@ function render3DInitGL()
         'vec4 c=C*tint*texture(tex,T);' +
         'if(lightDir.w>0.){' +
         'vec3 n=normalize(N);' +
-        'float d=max(dot(n,-lightDir.xyz),0.);' +
+        'float nl=dot(n,-lightDir.xyz);' +
+        'float d=max(nl,0.);' +
         'vec3 e=normalize(cameraPos-P);' +
         'vec3 r=reflect(lightDir.xyz,n);' +
         'c.rgb*=ambientColor.rgb+lightColor.rgb*d;' +
-        'c.rgb+=lightColor.rgb*pow(max(dot(r,e),0.),16.)*lightColor.a*step(0.,d);' +
+        'c.rgb+=lightColor.rgb*pow(max(dot(r,e),0.),16.)*lightColor.a*step(0.,nl);' +
         '}' +
         'if(ambientColor.a>0.){' +
         'float z=distance(cameraPos,P);' +
