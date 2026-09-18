@@ -507,10 +507,41 @@ class Render3DPlugin
      *  @param {Color} [color] */
     drawLine(start, end, thickness=.1, color=WHITE)
     {
-        const side = end.subtract(start).cross(this.cameraForward).normalize(thickness / 2);
-        this.pushStripUnlit(
-            [start.add(side), start.subtract(side), end.add(side), end.subtract(side)],
-            this.cameraForward.scale(-1), undefined, color);
+        this.drawRibbon([start, end], thickness, color);
+    }
+
+    /** Draw a ribbon along a path, unlit and visible from both sides; width and color can change along it
+     *  - The texture runs along the length, u from the first point to the last
+     *  @param {Array<Vector3>} points - Center line in order, at least two
+     *  @param {number|Array<number>} [width] - Full width, one for all or one per point
+     *  @param {Color|Array<Color>} [color] - One for all or one per point
+     *  @param {TileInfo} [tileInfo]
+     *  @param {Vector3|Array<Vector3>} [side] - Direction across the ribbon, one for all or one per point, default faces the camera */
+    drawRibbon(points, width=.1, color=WHITE, tileInfo, side)
+    {
+        const count = points.length;
+        ASSERT(count > 1, 'a ribbon needs at least two points');
+        const strip = [], uvs = [], colors = [], forward = this.cameraForward;
+        let across = vec3(1, 0, 0); // kept from the last point where the direction vanishes
+        for (let i = 0; i < count; ++i)
+        {
+            const p = points[i], u = i / (count - 1);
+            const w = isArray(width) ? width[i] : width;
+            const c = isArray(color) ? color[i] : color;
+            const s = side && (isArray(side) ? side[i] : side);
+            // across the path in the camera plane unless a side is given
+            const dir = s || points[min(i + 1, count - 1)].subtract(points[max(i - 1, 0)]).cross(forward);
+            if (dir.lengthSquared() > 1e-12)
+                across = dir.normalize();
+            const half = across.scale(w / 2);
+            strip.push(p.add(half), p.subtract(half));
+            uvs.push(vec2(u, 0), vec2(u, 1));
+            colors.push(c, c);
+        }
+        const cullBackFaces = this.cullBackFaces;
+        this.cullBackFaces = false;
+        try { this.pushStripUnlit(strip, forward.scale(-1), tileInfo ? uvs : undefined, colors, tileInfo); }
+        finally { this.cullBackFaces = cullBackFaces; }
     }
 
     /** Draw a soft round shadow on the ground under a position, unlit; draw it in the transparent stage
@@ -1595,6 +1626,7 @@ class Light3D extends EngineObject3D
 /**
  * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
  * - Particles are billboards, or soft round discs when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
+ * - Set trailTime to draw each particle as a ribbon along its recent path instead, for sparks and streaks
  * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitCone
  * - Speeds are per frame like the 2D emitter, gravity is a per frame change to velocity y
  * @extends EngineObject3D
@@ -1666,6 +1698,8 @@ class ParticleEmitter3D extends EngineObject3D
         this.randomness = randomness;
         /** @property {boolean} - Additive blending */
         this.additive = additive;
+        /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards */
+        this.trailTime = 0;
         /** @property {Array<Object>} - Live particles */
         this.particles = [];
         this.emitTimeBuffer = 0;
@@ -1692,6 +1726,14 @@ class ParticleEmitter3D extends EngineObject3D
             p.velocity.y += this.gravity;
             p.velocity = p.velocity.scale(this.damping);
             p.pos = p.pos.add(p.velocity);
+            if (this.trailTime)
+            {
+                // remember where it has been, oldest first
+                const trail = p.trail || (p.trail = []);
+                trail.push(p.pos);
+                while (trail.length > this.trailTime / timeDelta)
+                    trail.shift();
+            }
             if ((p.age += timeDelta) >= p.life)
                 particles[i] = particles[particles.length - 1], particles.pop();
         }
@@ -1723,7 +1765,7 @@ class ParticleEmitter3D extends EngineObject3D
             age: 0 });
     }
 
-    /** Draw the particles as billboards */
+    /** Draw the particles as billboards, or as ribbons along their trails */
     render3D()
     {
         const additive = render3D.additive;
@@ -1735,7 +1777,20 @@ class ParticleEmitter3D extends EngineObject3D
             const alpha = t < fade ? t / fade : t > 1 - fade ? (1 - t) / fade : 1;
             const color = p.colorStart.lerp(p.colorEnd, t), size = lerp(p.sizeStart, p.sizeEnd, t);
             color.a *= alpha;
-            if (this.tileInfo)
+            const trail = p.trail;
+            if (trail && trail.length > 1)
+            {
+                // a ribbon from the tail to the head, the tail thins and fades out
+                const widths = [], colors = [];
+                for (let i = 0; i < trail.length; ++i)
+                {
+                    const s = (i + 1) / trail.length;
+                    widths.push(size * s);
+                    colors.push(color.scale(1, s));
+                }
+                render3D.drawRibbon(trail, widths, colors, this.tileInfo);
+            }
+            else if (this.tileInfo)
                 render3D.drawBillboard(p.pos, vec2(size), this.tileInfo, color);
             else
                 render3D.drawSoftDisc(p.pos, size / 2, color, undefined, 8); // untextured particles are round puffs
@@ -1768,6 +1823,78 @@ function render3DRandomDirection()
 {
     const z = rand(-1, 1), s = (1 - z * z) ** .5, a = rand(2 * PI);
     return vec3(s * cos(a), z, s * sin(a));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Trail3D - A ribbon through where the object has been, thinning and fading with age
+ * - Records its world position each frame it moves, so parent it to something that moves or set pos3D yourself
+ * - Drawn unlit in the transparent stage, dies down on its own once the object stops
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * const trail = new Trail3D(vec3(), 1, .3, undefined, rgb(1, .5, 0), rgb(1, 0, 0, 0), true);
+ * ball.addChild(trail); // follows the ball
+ */
+class Trail3D extends EngineObject3D
+{
+    /** Create a trail
+     *  @param {Vector3} [pos3D]
+     *  @param {number} [lifeTime] - Seconds a sample lasts, the length of the trail in time
+     *  @param {number} [width] - Width at the head, it thins to nothing at the tail
+     *  @param {TileInfo} [tileInfo] - Texture stretched along the trail, undefined is untextured
+     *  @param {Color} [color] - Color at the head
+     *  @param {Color} [colorEnd] - Color at the tail
+     *  @param {boolean} [additive] - Additive blending */
+    constructor(pos3D=vec3(), lifeTime=1, width=.2, tileInfo, color=WHITE, colorEnd=CLEAR_WHITE, additive=false)
+    {
+        super(pos3D, undefined, color, tileInfo);
+        this.transparent = true;
+
+        /** @property {number} - Seconds a sample lasts */
+        this.lifeTime = lifeTime;
+        /** @property {number} - Width at the head */
+        this.width = width;
+        /** @property {Color} - Color at the tail */
+        this.colorEnd = colorEnd;
+        /** @property {boolean} - Additive blending */
+        this.additive = additive;
+        /** @property {Vector3} - Direction across the ribbon, recorded with each sample, undefined faces the camera */
+        this.side = undefined;
+        /** @property {Array<Object>} - Recorded samples, oldest first */
+        this.samples = [];
+    }
+
+    /** Record the position when it moved and drop old samples, called automatically each frame */
+    update()
+    {
+        const samples = this.samples, pos = this.getMatrix().getTranslation();
+        const last = samples[samples.length - 1];
+        if (!last || pos.distanceSquared(last.pos) > 1e-8)
+            samples.push({pos, side: this.side?.copy(), time});
+        while (samples.length && time - samples[0].time > this.lifeTime)
+            samples.shift();
+    }
+
+    /** Draw the ribbon */
+    render3D()
+    {
+        const samples = this.samples;
+        if (samples.length < 2) return;
+        const points = [], widths = [], colors = [], sides = this.side ? [] : undefined;
+        for (const s of samples)
+        {
+            const age = clamp((time - s.time) / this.lifeTime);
+            points.push(s.pos);
+            widths.push(this.width * (1 - age));
+            colors.push(this.color.lerp(this.colorEnd, age));
+            sides?.push(s.side);
+        }
+        const additive = render3D.additive;
+        render3D.additive = this.additive;
+        render3D.drawRibbon(points, widths, colors, this.tileInfo, sides);
+        render3D.additive = additive;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

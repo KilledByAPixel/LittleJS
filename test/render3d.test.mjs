@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, parseOBJ } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -970,4 +970,70 @@ test('drawShadow follows a height function and lifts by the given amount', () =>
     const flat = render3D.bake(()=> render3D.drawShadow(vec3(2, 9, 3), 1, 4));
     for (const p of flat.points)
         near(p.y, 4.02);
+});
+
+test('drawRibbon builds a strip with width and color per point, uvs along it, and a given side', () =>
+{
+    render3D.camera.pos = vec3(0, 0, 10);
+    render3D.camera.rotation = vec3();
+    render3D.updateMatrices(1);
+    const points = [vec3(0, 0, 0), vec3(2, 0, 0), vec3(4, 0, 0)];
+    const tileInfo = new TileInfo(vec2(), vec2(16));
+    const r = render3D.bake(()=> render3D.drawRibbon(points, [1, .5, 0], [RED, WHITE, RED], tileInfo));
+    assert.equal(r.vertexCount, 2 * 3 + 2);
+    // pairs across the path in the camera plane, the first is the wide end
+    nearVec(r.points[1], 0, .5, 0); nearVec(r.points[2], 0, -.5, 0);
+    nearVec(r.points[3], 2, .25, 0); nearVec(r.points[4], 2, -.25, 0);
+    nearVec(r.points[5], 4, 0, 0);
+    near(r.uvs[1].x, 0); near(r.uvs[3].x, .5); near(r.uvs[5].x, 1); near(r.uvs[2].y, 1);
+    assert.equal(r.colors[3].g, 1); assert.equal(r.colors[5].g, 0);
+    // a side pins the ribbon's plane, culling is left as it was
+    render3D.cullBackFaces = true;
+    const s = render3D.bake(()=> render3D.drawRibbon(points, 1, WHITE, undefined, vec3(0, 0, 5)));
+    nearVec(s.points[1], 0, 0, .5);
+    assert.equal(render3D.cullBackFaces, true);
+    render3D.cullBackFaces = false;
+    assert.equal(render3D.bake(()=> render3D.drawLine(vec3(), vec3(4, 0, 0), .5)).vertexCount, 6);
+});
+
+test('Trail3D records where it moved, drops old samples and draws a ribbon that thins to the tail', () =>
+{
+    const trail = new Trail3D(vec3(), 1, .4, undefined, WHITE, rgb(0, 0, 0, 0));
+    trail.update();
+    trail.pos3D = vec3(1, 0, 0); trail.update();
+    trail.pos3D = vec3(2, 0, 0); trail.update();
+    trail.update(); // did not move, no new sample
+    assert.equal(trail.samples.length, 3);
+    render3D.camera.pos = vec3(0, 0, 10); render3D.camera.rotation = vec3(); render3D.updateMatrices(1);
+    const r = render3D.bake(()=> trail.render3D());
+    assert.equal(r.vertexCount, 2 * 3 + 2);
+    near(Math.abs(r.points[5].y), .2); // full width at the head, nothing has aged in a test
+    // a sample older than lifeTime is dropped on the next update
+    trail.samples[0].time = -5;
+    trail.update();
+    assert.equal(trail.samples.length, 2);
+    // a parent moves it
+    const parent = new EngineObject3D(vec3(10, 0, 0));
+    parent.addChild(trail);
+    trail.pos3D = vec3();
+    trail.update();
+    nearVec(trail.samples[2].pos, 10, 0, 0);
+    trail.destroy(); parent.destroy();
+});
+
+test('ParticleEmitter3D trailTime keeps a path per particle and draws ribbons', () =>
+{
+    // one particle a frame, straight along +Y, three frames of trail
+    const e = new ParticleEmitter3D(vec3(), 0, 0, 60, 0, undefined, WHITE, WHITE, WHITE, WHITE, 10, 1, 1, .1, 1, 0, 0, 0);
+    e.trailTime = 3 / 60;
+    for (let i = 4; i--;)
+        e.update();
+    assert.deepEqual(e.particles.map(p => p.trail.length).sort(), [1, 2, 3, 3]);
+    nearVec(e.particles[0].trail[0], 0, .2, 0); // the oldest kept point, the two before it were dropped
+    render3D.updateMatrices(1);
+    // trails of 3, 3 and 2 draw ribbons, the newest with one point is still a soft disc
+    assert.equal(render3D.bake(()=> e.render3D()).vertexCount, 8 + 8 + 6 + 3 * (2 * 9 + 2));
+    e.tileInfo = new TileInfo(vec2(), vec2(16));
+    assert.equal(render3D.bake(()=> e.render3D()).vertexCount, 8 + 8 + 6 + 6);
+    e.destroy();
 });

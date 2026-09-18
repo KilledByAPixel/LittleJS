@@ -128,6 +128,7 @@ export
     HeightMap,
     Light3D,
     ParticleEmitter3D,
+    Trail3D,
     parseOBJ,
     loadOBJ,
     render3DSmoothShading,

@@ -51,7 +51,7 @@ function gameUpdate()
 {
     if (keyWasPressed('Space'))
         render3D.renderAfter2D = useAfter2D = !useAfter2D;
-    orbit += mouseIsDown(0) ? mouseDeltaScreen.x * .01 : .002;
+    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x * .01 : .002;
     render3D.camera.orbit(vec3(0, 1, 0), 15, orbit, .5);
 }
 

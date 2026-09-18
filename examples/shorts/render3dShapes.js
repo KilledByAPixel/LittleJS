@@ -60,7 +60,7 @@ function gameUpdate()
     render3D.specular = keyIsDown('KeyS') ? 1 : 0;
 
     // orbit the camera, drag to turn it
-    orbit += mouseIsDown(0) ? mouseDeltaScreen.x * .01 : .003;
+    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x * .01 : .003;
     render3D.camera.orbit(vec3(0, 1, 0), 13, orbit, .4);
 }
 

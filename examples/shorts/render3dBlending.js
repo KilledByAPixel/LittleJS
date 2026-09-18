@@ -51,7 +51,7 @@ function gameUpdate()
     new Puff(vec3(rand(-.5, .5), .2, rand(-.5, .5)), true);
     new Puff(vec3(rand(-.5, .5), .2, rand(-.5, .5)), false);
 
-    orbit += mouseIsDown(0) ? mouseDeltaScreen.x * .01 : .003;
+    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x * .01 : .003;
     render3D.camera.orbit(vec3(0, 1.5, 0), 10, orbit, .3);
 }
 

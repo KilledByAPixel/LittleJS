@@ -67,7 +67,7 @@ function gameUpdate()
         model.mesh.computeNormals(render3DSmoothShading); // recompute from the faces either way
     }
     model.rotation3D.y += .005;
-    orbit += mouseIsDown(0) ? mouseDeltaScreen.x * .01 : 0;
+    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x * .01 : 0;
     render3D.camera.orbit(vec3(0, 2, 0), 10, orbit, .35);
 }
 

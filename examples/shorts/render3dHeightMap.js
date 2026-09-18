@@ -77,7 +77,7 @@ function gameUpdate()
         terrainMesh.dispose();
         terrainMesh = terrain.buildMesh();
     }
-    orbit += mouseIsDown(0) ? mouseDeltaScreen.x * .01 : .002;
+    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x * .01 : .002;
     render3D.camera.orbit(vec3(0, 3, 0), 35, orbit, .45);
 }
 

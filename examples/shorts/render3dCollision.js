@@ -85,7 +85,7 @@ function gameUpdate()
         picked.velocity3D = picked.velocity3D.add(vec3(rand(-.1, .1), .3, rand(-.1, .1)));
 
     // slow orbit, right drag to turn
-    orbit += mouseIsDown(2) ? mouseDeltaScreen.x * .01 : .002;
+    orbit += mouseIsDown(2) ? -mouseDeltaScreen.x * .01 : .002;
     render3D.camera.orbit(vec3(0, 1, 0), 16, orbit, .5);
 }
 

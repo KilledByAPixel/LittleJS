@@ -6316,6 +6316,14 @@ declare module "littlejsengine" {
          *  @param {number} [thickness] - World units
          *  @param {Color} [color] */
         drawLine(start: Vector3, end: Vector3, thickness?: number, color?: Color): void;
+        /** Draw a ribbon along a path, unlit and visible from both sides; width and color can change along it
+         *  - The texture runs along the length, u from the first point to the last
+         *  @param {Array<Vector3>} points - Center line in order, at least two
+         *  @param {number|Array<number>} [width] - Full width, one for all or one per point
+         *  @param {Color|Array<Color>} [color] - One for all or one per point
+         *  @param {TileInfo} [tileInfo]
+         *  @param {Vector3|Array<Vector3>} [side] - Direction across the ribbon, one for all or one per point, default faces the camera */
+        drawRibbon(points: Array<Vector3>, width?: number | Array<number>, color?: Color | Array<Color>, tileInfo?: TileInfo, side?: Vector3 | Array<Vector3>): void;
         /** Draw a soft round shadow on the ground under a position, unlit; draw it in the transparent stage
          *  @param {Vector3} pos - Position of the thing casting the shadow
          *  @param {number} radius
@@ -6622,6 +6630,7 @@ declare module "littlejsengine" {
     /**
      * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
      * - Particles are billboards, or soft round discs when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
+     * - Set trailTime to draw each particle as a ribbon along its recent path instead, for sparks and streaks
      * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitCone
      * - Speeds are per frame like the 2D emitter, gravity is a per frame change to velocity y
      * @extends EngineObject3D
@@ -6684,11 +6693,46 @@ declare module "littlejsengine" {
         randomness: number;
         /** @property {boolean} - Additive blending */
         additive: boolean;
+        /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards */
+        trailTime: number;
         /** @property {Array<Object>} - Live particles */
         particles: any[];
         emitTimeBuffer: number;
         /** Spawn one particle now */
         emitParticle(): void;
+    }
+    /**
+     * Trail3D - A ribbon through where the object has been, thinning and fading with age
+     * - Records its world position each frame it moves, so parent it to something that moves or set pos3D yourself
+     * - Drawn unlit in the transparent stage, dies down on its own once the object stops
+     * @extends EngineObject3D
+     * @memberof Render3D
+     * @example
+     * const trail = new Trail3D(vec3(), 1, .3, undefined, rgb(1, .5, 0), rgb(1, 0, 0, 0), true);
+     * ball.addChild(trail); // follows the ball
+     */
+    export class Trail3D extends EngineObject3D {
+        /** Create a trail
+         *  @param {Vector3} [pos3D]
+         *  @param {number} [lifeTime] - Seconds a sample lasts, the length of the trail in time
+         *  @param {number} [width] - Width at the head, it thins to nothing at the tail
+         *  @param {TileInfo} [tileInfo] - Texture stretched along the trail, undefined is untextured
+         *  @param {Color} [color] - Color at the head
+         *  @param {Color} [colorEnd] - Color at the tail
+         *  @param {boolean} [additive] - Additive blending */
+        constructor(pos3D?: Vector3, lifeTime?: number, width?: number, tileInfo?: TileInfo, color?: Color, colorEnd?: Color, additive?: boolean);
+        /** @property {number} - Seconds a sample lasts */
+        lifeTime: number;
+        /** @property {number} - Width at the head */
+        width: number;
+        /** @property {Color} - Color at the tail */
+        colorEnd: Color;
+        /** @property {boolean} - Additive blending */
+        additive: boolean;
+        /** @property {Vector3} - Direction across the ribbon, recorded with each sample, undefined faces the camera */
+        side: any;
+        /** @property {Array<Object>} - Recorded samples, oldest first */
+        samples: any[];
     }
     /**
      * Parse Wavefront OBJ text into a Mesh

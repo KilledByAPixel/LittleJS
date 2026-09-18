@@ -17,10 +17,11 @@ function gameInit()
         rgb(.5, .5, .55, .3), rgb(.3, .3, .35, .3), rgb(.4, .4, .45, 0), rgb(.4, .4, .45, 0),
         3, 1.5, 4, .03, .98, 0, .5, .2);
 
-    // sparks: fast, gravity, every direction, textured with a tile from the sheet
-    new ParticleEmitter3D(vec3(4, .5, 0), 0, 0, 40, PI, tile(0, 16),
+    // sparks: fast, gravity, every direction, each one a ribbon along its last .15 seconds with the dot texture stretched along it
+    const sparks = new ParticleEmitter3D(vec3(4, .5, 0), 0, 0, 40, PI, tile(0, 16),
         rgb(1, 1, .6), rgb(1, .8, .4), rgb(1, .5, 0, 0), rgb(1, .5, 0, 0),
         1.5, .3, .1, .2, .98, -.006, .2, .3, true);
+    sparks.trailTime = .15;
 
     // a fountain that tilts with the camera: emits along its local +Y, so rotation3D aims it
     fountain = new ParticleEmitter3D(vec3(0, .5, 4), 0, 0, 120, .15, undefined,
@@ -31,7 +32,7 @@ function gameInit()
 function gameUpdate()
 {
     fountain.rotation3D.z = sin(time) * .5;
-    orbit += mouseIsDown(0) ? mouseDeltaScreen.x * .01 : .002;
+    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x * .01 : .002;
     render3D.camera.orbit(vec3(0, 2, 0), 14, orbit, .3);
 }
 

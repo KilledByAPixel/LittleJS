@@ -878,6 +878,7 @@ render3D.drawBillboard(pos, size, tileInfo, color, angle) // camera facing quad,
 render3D.drawQuad(a, b, c, d, color, tileInfo)            // corners in loop order, a is the texture's top left
 render3D.drawTriangle(a, b, c, color)
 render3D.drawLine(start, end, thickness, color)           // camera facing ribbon, unlit
+render3D.drawRibbon(points, width, color, tileInfo, side) // strip along a path, unlit, two sided; width and color one or per point, texture runs along it, side faces the camera unless given
 render3D.drawSoftDisc(pos, radius, color, normal, sides)  // fades to transparent at the rim, unlit, faces the camera unless a normal is given
 render3D.drawShadow(pos, radius, floorHeight, color, lift) // soft blob shadow under pos, unlit; floorHeight can be (x, z)=> y to follow terrain
 render3D.flush()                                          // draw what is pending, automatic when needed
@@ -895,6 +896,11 @@ new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitCone, tileInfo,
     colorStartA, colorStartB, colorEndA, colorEndB, particleTime, sizeStart, sizeEnd,
     speed, damping, gravity, fadeRate, randomness, additive)
 // emits along local +Y turned by rotation3D, emitSize is a sphere diameter or a vec3 box, gravity changes velocity y per frame
+emitter.trailTime = .2                        // draw each particle as a ribbon along its last .2 seconds instead, the texture stretches along it
+
+// Trails - a ribbon through where the object has been, parent it to something that moves
+new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over lifeTime seconds
+trail.side                                    // Vector3 across the ribbon recorded per sample, undefined faces the camera
 
 // Objects - EngineObject with a 3D transform, drawn by the 3D pass
 new EngineObject3D(pos3D, mesh, color, tileInfo)

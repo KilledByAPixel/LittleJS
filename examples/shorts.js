@@ -82,6 +82,7 @@ const exampleList =
     new ExampleInfo('3D Collision', 'render3dCollision.js', 'Sphere, box and cylinder collision helpers with mouse picking', false, '3d, collision, sphere, box, cylinder, raycast, picking, webgl'),
     new ExampleInfo('3D Lights', 'render3dLights.js', 'Moving point lights and the 2D over 3D order switch', false, '3d, light, point light, color, order, webgl'),
     new ExampleInfo('3D Particles', 'render3dParticles.js', 'Fire, smoke, sparks and a fountain from ParticleEmitter3D', false, '3d, particles, emitter, fire, smoke, additive, webgl'),
+    new ExampleInfo('3D Trails', 'render3dTrails.js', 'Trail3D ribbons, drawRibbon and a mesh deformed every frame', false, '3d, trail, ribbon, dynamic, mesh, deform, flag, webgl'),
     new ExampleInfo('3D Mesh', 'render3dMesh.js', 'Load an OBJ model, drop your own on the page', false, '3d, obj, mesh, model, load, file, webgl'),
     new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball bouncing', false, 'objects, collision'),

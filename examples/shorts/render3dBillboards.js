@@ -44,7 +44,7 @@ function gameInit()
 
 function gameUpdate()
 {
-    orbit += mouseIsDown(0) ? mouseDeltaScreen.x * .01 : .003;
+    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x * .01 : .003;
     render3D.camera.orbit(vec3(0, 1.5, 0), 13, orbit, .3);
 }
 
