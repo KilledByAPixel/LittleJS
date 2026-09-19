@@ -6199,7 +6199,7 @@ declare module "littlejsengine" {
         fogStart: number;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
         fogEnd: number;
-        /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale */
+        /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale; sync2D objects use the 2D gravity */
         gravity: Vector3;
         /** @property {number|Function} - Floor height for objects with a softShadow, a number or (x, z) => y for terrain */
         softShadowHeight: number;
@@ -6276,6 +6276,8 @@ declare module "littlejsengine" {
         shadowMapDrawn: boolean;
         passIsDefault: boolean;
         boxMesh: any;
+        lightPositions: Float32Array;
+        lightColors: Float32Array;
         sphereMesh: any;
         streamBuffer: any;
         streamData: ArrayBuffer;
@@ -6292,7 +6294,7 @@ declare module "littlejsengine" {
         /** Where a world point lands on screen as -1 to 1 across and up, with z as depth
          *  - Uses this frame's camera, call updateMatrices first if the camera just moved
          *  @param {Vector3} pos
-         *  @return {Vector3|undefined} - undefined when behind the camera */
+         *  @return {Vector3|undefined} - undefined when behind the camera or closer than the near plane */
         worldToClip(pos: Vector3): Vector3 | undefined;
         /** Project a world point to screen space pixels, same space as mousePosScreen
          *  @param {Vector3} pos
@@ -6365,7 +6367,7 @@ declare module "littlejsengine" {
         /** Build a mesh once out of draw calls, instead of redrawing the shapes every frame
          *  - Call the same drawStrip, drawQuad and drawBox calls inside, and get a mesh back
          *  - Strips inside a bake ignore their tileInfo, the finished mesh picks the texture when it draws
-         *  - drawMesh is not collected, it draws right away
+         *  - drawMesh, drawBox and drawSphere copy their mesh in, moved and tinted
          *  @param {Function} drawFunction
          *  @return {Mesh} */
         bake(drawFunction: Function): Mesh;
@@ -6558,7 +6560,7 @@ declare module "littlejsengine" {
         upright: boolean;
         /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D looks; set mass to use 2D physics */
         sync2D: boolean;
-        /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off */
+        /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off; on for a sprite */
         transparent: boolean;
         /** @property {boolean} - Additive blending, in the transparent stage */
         additive: boolean;
@@ -7000,6 +7002,7 @@ declare module "littlejsengine" {
         /** @property {Array<Object>} - Live particles */
         particles: any[];
         emitTimeBuffer: number;
+        finishing: boolean;
         /** Spawn one particle now */
         emitParticle(): void;
         /** Draw the particles, as flat squares or as streaks when trailTime is set
@@ -7038,6 +7041,7 @@ declare module "littlejsengine" {
         samples: any[];
         /** Forget the trail so far, for when the object teleports */
         clear(): void;
+        finishing: boolean;
     }
     /**
      * Collect the EngineObject3D objects whose boxes overlap a box, sizes are full sizes

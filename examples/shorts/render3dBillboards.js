@@ -3,7 +3,6 @@ class Sprite extends EngineObject3D
     constructor(pos, tileInfo, color, upright)
     {
         super(pos, undefined, tileInfo, color); // a tile and no mesh draws a billboard
-        this.transparent = true; // so the tile's alpha blends
         this.size3D = vec3(2);
         this.upright = upright; // stand up, or tilt to face the camera
         this.softShadow = 2;

@@ -17139,6 +17139,7 @@ function render3DCollectLights()
 const render3DCircleCache = new Map;
 function render3DCircle(sides)
 {
+    sides |= 0;
     let circle = render3DCircleCache.get(sides);
     if (!circle)
     {
@@ -17167,10 +17168,11 @@ function render3DSoftDot()
     return render3DSoftDotTexture = new TextureInfo(canvas);
 }
 
-// the rotation that points -Z along a direction, as vec3(pitch, yaw, 0)
-function render3DLookRotation(direction)
+// the rotation that points -Z along a direction, as vec3(pitch, yaw, 0); a zero direction keeps the current one
+function render3DLookRotation(direction, current)
 {
     const d = direction.normalize();
+    if (!d.lengthSquared()) return current;
     return vec3(Math.asin(clamp(d.y, -1, 1)), atan2(-d.x, -d.z), 0);
 }
 
@@ -17213,7 +17215,7 @@ class Render3DPlugin
         this.fogStart = 0;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
         this.fogEnd = 0;
-        /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale */
+        /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale; sync2D objects use the 2D gravity */
         this.gravity = vec3();
         /** @property {number|Function} - Floor height for objects with a softShadow, a number or (x, z) => y for terrain */
         this.softShadowHeight = 0;
@@ -17300,6 +17302,8 @@ class Render3DPlugin
         this.shadowMapDrawn = false; // the shadow map is drawn by the first pass of the frame
         this.passIsDefault = true;   // the running pass is the default layer, the only one shadowed
         this.boxMesh = undefined;    // unit shapes for drawBox and drawSphere
+        this.lightPositions = new Float32Array(RENDER3D_MAX_POINT_LIGHTS * 4); // point light uniforms, filled each pass
+        this.lightColors = new Float32Array(RENDER3D_MAX_POINT_LIGHTS * 4);
         this.sphereMesh = undefined;
 
         // the stream of immediate mode draws
@@ -17342,7 +17346,7 @@ class Render3DPlugin
     /** Where a world point lands on screen as -1 to 1 across and up, with z as depth
      *  - Uses this frame's camera, call updateMatrices first if the camera just moved
      *  @param {Vector3} pos
-     *  @return {Vector3|undefined} - undefined when behind the camera */
+     *  @return {Vector3|undefined} - undefined when behind the camera or closer than the near plane */
     worldToClip(pos)
     {
         const m = this.viewProjection.m;
@@ -17374,9 +17378,10 @@ class Render3DPlugin
     screenToRay(screenPos, canvasSize=mainCanvasSize)
     {
         this.updateMatrices();
-        const clipX = screenPos.x / canvasSize.x * 2 - 1;
-        const clipY = 1 - screenPos.y / canvasSize.y * 2;
-        const aspect = canvasSize.x / canvasSize.y || 1, camera = this.camera;
+        const width = canvasSize.x || 1, height = canvasSize.y || 1; // a zero canvas gives the center ray
+        const clipX = screenPos.x / width * 2 - 1;
+        const clipY = 1 - screenPos.y / height * 2;
+        const aspect = width / height, camera = this.camera;
         // the screen offset moves a parallel ray's origin, or bends a perspective ray's direction
         const h = camera.orthographic ? camera.orthographic / 2 : tan(camera.fov / 2);
         const offset = this.cameraRight.scale(clipX * h * aspect).add(this.cameraUp.scale(clipY * h));
@@ -17407,9 +17412,10 @@ class Render3DPlugin
         let nearest;
         for (const o of objects)
         {
-            if (o.destroyed || !(o instanceof EngineObject3D) || !o.mesh) continue;
-            const matrix = o.getMatrix();
-            const radius = (o.mesh.radius || o.mesh.computeRadius()) * render3DMaxScale(matrix.m);
+            if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) continue;
+            const matrix = o.getMatrix(), mesh = o.mesh; // a sprite is picked by its size3D
+            const radius = (mesh ? mesh.radius || mesh.computeRadius() : o.size3D.length() / 2) * render3DMaxScale(matrix.m);
+            if (!(radius > 0)) continue; // nothing to hit
             const distance = raycastSphere(origin, direction, matrix.getTranslation(), radius);
             if (distance !== undefined && (!nearest || distance < nearest.distance))
                 nearest = {object: o, distance};
@@ -17470,6 +17476,8 @@ class Render3DPlugin
     {
         ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo, it comes before color');
         ASSERT(isColor(color), 'color must be a Color');
+        if (this.capture)
+            return void this.capture.combine(mesh, matrix, color);
         if (this.transparentQueue)
             return this.queueTransparent(matrix.getTranslation(), ()=> this.drawMesh(mesh, matrix, tileInfo, color));
         if (!render3DCanDraw()) return;
@@ -17561,7 +17569,7 @@ class Render3DPlugin
     /** Build a mesh once out of draw calls, instead of redrawing the shapes every frame
      *  - Call the same drawStrip, drawQuad and drawBox calls inside, and get a mesh back
      *  - Strips inside a bake ignore their tileInfo, the finished mesh picks the texture when it draws
-     *  - drawMesh is not collected, it draws right away
+     *  - drawMesh, drawBox and drawSphere copy their mesh in, moved and tinted
      *  @param {Function} drawFunction
      *  @return {Mesh} */
     bake(drawFunction)
@@ -17662,7 +17670,8 @@ class Render3DPlugin
     /** Rebuild the light's view projection around the shadow center, called automatically each frame shadows are on */
     updateShadowMatrix()
     {
-        const range = this.shadowRange, half = range / 2;
+        ASSERT(this.shadowRange > 0, 'shadowRange must be positive');
+        const range = this.shadowRange > 0 ? this.shadowRange : 1, half = range / 2;
         const direction = this.lightDirection.normalize();
         const center = this.shadowCenter || this.camera.pos.add(this.cameraForward.scale(half * .8));
         const view = Matrix4.lookAt(center.subtract(direction.scale(range)), center).invert();
@@ -17728,9 +17737,9 @@ class Render3DPlugin
 
         // the particle path: six stream vertices written straight in, unlit
         const lighting = this.lighting;
-        this.lighting = false;
-        const uvRect = render3DBeginStrip(6, tileInfo);
-        this.lighting = lighting;
+        let uvRect;
+        try { this.lighting = false; uvRect = render3DBeginStrip(6, tileInfo); }
+        finally { this.lighting = lighting; }
         if (!uvRect) return;
         const corners = render3DBillboardCorners(pos, size, angle, upright), rgba = color.rgbaInt();
         const floats = this.streamFloats, ints = this.streamInts;
@@ -18020,7 +18029,7 @@ class Camera3D
 
     /** Point the camera at a target, sets pitch and yaw and clears roll
      *  @param {Vector3} target */
-    lookAt(target) { this.rotation = render3DLookRotation(target.subtract(this.pos)); }
+    lookAt(target) { this.rotation = render3DLookRotation(target.subtract(this.pos), this.rotation); }
 
     /** Put the camera on an orbit around a target, looking at it
      *  @param {Vector3} target
@@ -18110,7 +18119,7 @@ function render3DInitGL()
         'void main(){' +
         'vec4 c=C*tint*texture(tex,T);' +
         'if(lightDir.w>0.){' +
-        'vec3 n=normalize(N);' +
+        'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'float nl=dot(n,-lightDir.xyz);' +
         // shadow: compare against the light's depth map with a 3x3 blur, outside the map is lit
         'float s=1.;' +
@@ -18176,9 +18185,9 @@ function render3DInitGL()
     r.whiteTexture = glCreateTexture();
     render3DUpdateShadowMap(1);
 
-    // hand the engine back its own vertex array and buffer
-    glSetInstancedMode(true);
+    // hand the engine back its own buffer and vertex array, in that order so a pending 2D batch flushes right
     gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer);
+    glSetInstancedMode(true);
 }
 
 function render3DContextLost()
@@ -18188,8 +18197,7 @@ function render3DContextLost()
     r.shadowFramebuffer = r.shadowTexture = undefined;
     r.shadowTextureSize = 0;
     r.streamCount = 0;
-    ++r.contextGeneration; // every uploaded mesh is stale now
-    render3DSoftDotTexture = undefined;
+    ++r.contextGeneration; // every uploaded mesh is stale now, the soft dot is a TextureInfo the engine restores
 }
 
 function render3DContextRestored()
@@ -18366,15 +18374,15 @@ function render3DRenderPass(after2D)
     gl.uniform1i(render3DUniform('pointLightCount'), lights.length);
     if (lights.length)
     {
-        const positions = new Float32Array(lights.length * 4), colors = new Float32Array(lights.length * 4);
+        const positions = r.lightPositions, colors = r.lightColors;
         lights.forEach((light, i)=>
         {
-            const p = light.getWorldPos3D();
-            positions.set([p.x, p.y, p.z, light.radius], i * 4);
-            colors.set([light.color.r, light.color.g, light.color.b, light.color.a], i * 4);
+            const p = light.getWorldPos3D(), c = light.color, k = i * 4;
+            positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z, positions[k+3] = light.radius;
+            colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a;
         });
-        gl.uniform4fv(render3DUniform('pointLights'), positions);
-        gl.uniform4fv(render3DUniform('pointLightColors'), colors);
+        gl.uniform4fv(render3DUniform('pointLights'), positions, 0, lights.length * 4);
+        gl.uniform4fv(render3DUniform('pointLightColors'), colors, 0, lights.length * 4);
     }
 
     r.isRendering = true;
@@ -18431,6 +18439,7 @@ function render3DUpdateShadowMap(size)
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, texture, 0);
     gl.drawBuffers([gl.NONE]); // depth only
     gl.readBuffer(gl.NONE);
+    ASSERT(gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE, 'shadow map framebuffer is incomplete, try a smaller shadowMapSize');
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     r.shadowTextureSize = size;
 }
@@ -18510,7 +18519,11 @@ function render3DBillboardCorners(pos, size, angle, upright)
     // an upright quad stands on world up and only turns to face the camera
     let r = render3D.cameraRight, u = render3D.cameraUp;
     if (upright)
-        r = vec3(r.x, 0, r.z).normalize(), u = RENDER3D_DEFAULT_NORMAL;
+    {
+        const flat = vec3(r.x, 0, r.z);
+        r = flat.lengthSquared() ? flat.normalize() : vec3(1, 0, 0); // a rolled camera has no flat right
+        u = RENDER3D_DEFAULT_NORMAL;
+    }
     const c = cos(angle), s = sin(angle), w = size.x / 2, h = size.y / 2;
     const rx = (r.x * c + u.x * s) * w, ry = (r.y * c + u.y * s) * w, rz = (r.z * c + u.z * s) * w;
     const ux = (u.x * c - r.x * s) * h, uy = (u.y * c - r.y * s) * h, uz = (u.z * c - r.z * s) * h;
@@ -19238,9 +19251,21 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
     let rows = pixels, x0 = 0, y0 = 0, width, height;
     if (pixels instanceof TileInfo)
     {
-        rows = render3DReadPixels(pixels.textureInfo);
+        // colors for the tile's pixels only, undefined where alpha is half or less
+        const image = render3DReadPixels(pixels.textureInfo), data = image.data;
         x0 = pixels.pos.x | 0, y0 = pixels.pos.y | 0;
         width = pixels.size.x | 0, height = pixels.size.y | 0;
+        rows = [];
+        for (let y = 0; y < height; ++y)
+        {
+            const row = rows[y] = [];
+            for (let x = 0; x < width; ++x)
+            {
+                const k = ((y0 + y) * image.width + x0 + x) * 4;
+                row.push(data[k + 3] > 127 ? rgb(data[k] / 255, data[k + 1] / 255, data[k + 2] / 255) : undefined);
+            }
+        }
+        x0 = y0 = 0;
     }
     else
     {
@@ -19451,6 +19476,7 @@ class HeightMap
         if (t === undefined) return;
         const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
         const step = cell / 2 / length, end = t + hypot(size.x, size.y, height) / length;
+        if (!(step > 0)) return; // a zero size
         const under = (t)=>
         {
             const p = origin.add(direction.scale(t));
@@ -19485,9 +19511,8 @@ class HeightMap
     }
 }
 
-// read an image into a 2D array [row][column] through the engine's work canvas
-// sample is called with (r, g, b, a) bytes for each pixel
-function render3DImageToArray(image, sample)
+// read an image's pixel bytes through the engine's work canvas, as {data, width, height}
+function render3DImageData(image)
 {
     if (image instanceof TextureInfo)
         image = image.image;
@@ -19497,7 +19522,13 @@ function render3DImageToArray(image, sample)
     workReadCanvas.width = width;
     workReadCanvas.height = height;
     workReadContext.drawImage(image, 0, 0);
-    const data = workReadContext.getImageData(0, 0, width, height).data;
+    return workReadContext.getImageData(0, 0, width, height);
+}
+
+// read an image into a 2D array [row][column], sample is called with (r, g, b, a) bytes for each pixel
+function render3DImageToArray(image, sample)
+{
+    const {data, width, height} = render3DImageData(image);
     const rows = [];
     for (let y = 0; y < height; ++y)
     {
@@ -19511,15 +19542,15 @@ function render3DImageToArray(image, sample)
     return rows;
 }
 
-// extruded glyph meshes by font, and the pixels of a texture as rows of Color, undefined where alpha is half or less, read once per image
+// extruded glyph meshes by font, and the pixel bytes of a texture, read once per image
 const render3DGlyphCache = new WeakMap, render3DPixelCache = new WeakMap;
 function render3DReadPixels(textureInfo)
 {
     const image = textureInfo.image;
-    let rows = render3DPixelCache.get(image);
-    if (!rows)
-        render3DPixelCache.set(image, rows = render3DImageToArray(image, (r, g, b, a)=> a > 127 ? rgb(r / 255, g / 255, b / 255) : undefined));
-    return rows;
+    let pixels = render3DPixelCache.get(image);
+    if (!pixels)
+        render3DPixelCache.set(image, pixels = render3DImageData(image));
+    return pixels;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -19578,8 +19609,8 @@ class EngineObject3D extends EngineObject
         this.upright = false;
         /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D looks; set mass to use 2D physics */
         this.sync2D = false;
-        /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off */
-        this.transparent = false;
+        /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off; on for a sprite */
+        this.transparent = !mesh && !!tileInfo;
         /** @property {boolean} - Additive blending, in the transparent stage */
         this.additive = false;
         /** @property {boolean} - Draw with lighting off, plain vertex color times texture, for lamps and glowing things; unlit objects cast no shadow */
@@ -19602,7 +19633,7 @@ class EngineObject3D extends EngineObject
         if (!paused)
         {
             // an object with mass falls with render3D.gravity and slows by its damping, like the 2D physics
-            if (this.mass)
+            if (this.mass && !this.sync2D) // a 2D driven object gets the 2D gravity instead
             {
                 const v = this.velocity3D, g = render3D.gravity, s = this.gravityScale, d = this.damping;
                 this.velocity3D = vec3((v.x + g.x * s) * d, (v.y + g.y * s) * d, (v.z + g.z * s) * d);
@@ -19641,7 +19672,7 @@ class EngineObject3D extends EngineObject
 
     /** Turn the object so its -Z axis points at a target, sets pitch and yaw and clears roll
      *  @param {Vector3} target */
-    lookAt(target) { this.rotation3D = render3DLookRotation(target.subtract(this.pos3D)); }
+    lookAt(target) { this.rotation3D = render3DLookRotation(target.subtract(this.pos3D), this.rotation3D); }
 
     /** 2D rendering is skipped, the mesh is drawn by render3D during the 3D pass */
     render() {}
@@ -19651,7 +19682,7 @@ class EngineObject3D extends EngineObject
     {
         if (this.mesh)
             render3D.drawMesh(this.mesh, this.getMatrix(), this.tileInfo, this.color);
-        else if (this.tileInfo) // a sprite, set transparent for its alpha
+        else if (this.tileInfo) // a sprite
             render3D.drawBillboard(this.getWorldPos3D(), vec2(this.size3D.x, this.size3D.y), this.tileInfo, this.color, 0, this.upright);
     }
 }
@@ -19669,8 +19700,13 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects)
     size = render3DSize3(size);
     const collected = [];
     for (const o of objects)
-        if (o instanceof EngineObject3D && !o.destroyed && isOverlapping3D(pos, size, o.getWorldPos3D(), o.size3D.multiply(o.scale3D)))
+    {
+        if (!(o instanceof EngineObject3D) || o.destroyed) continue;
+        const m = o.getMatrix().m, s = o.size3D; // the box in world space, scaled by the object and its parents
+        const worldSize = vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
+        if (isOverlapping3D(pos, size, vec3(m[12], m[13], m[14]), worldSize))
             collected.push(o);
+    }
     return collected;
 }
 
@@ -19705,6 +19741,7 @@ class Light3D extends EngineObject3D
     constructor(pos3D=vec3(), radius=5, color=WHITE)
     {
         super(pos3D, undefined, undefined, color);
+        ASSERT(radius > 0, 'light radius must be positive');
         /** @property {number} - Distance where the light fades to nothing */
         this.radius = radius;
     }
@@ -19757,6 +19794,7 @@ class ParticleEmitter3D extends EngineObject3D
     {
         super(pos3D, undefined, tileInfo);
         this.transparent = true;
+        this.size3D = vec3(); // not a solid thing to pick or collect
 
         /** @property {number|Vector3} - Spawn area, a number for a sphere diameter or a vec3 for a box */
         this.emitSize = emitSize;
@@ -19809,7 +19847,7 @@ class ParticleEmitter3D extends EngineObject3D
             for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
                 this.emitParticle();
         }
-        else if (this.emitTime && !this.particles.length)
+        else if ((this.emitTime || this.finishing) && !this.particles.length)
             this.destroy();
 
         // move the particles and drop the dead ones
@@ -19831,6 +19869,17 @@ class ParticleEmitter3D extends EngineObject3D
             if ((p.age += timeDelta) >= p.life)
                 particles[i] = particles[particles.length - 1], particles.pop();
         }
+    }
+
+    /** Stop emitting, and go away once the particles already out have finished like the 2D emitter's do
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        if (!this.particles.length || this.destroyed)
+            return super.destroy(immediate);
+        this.emitRate = 0;
+        this.finishing = true;
+        this.parent?.removeChild(this); // the particles are in world space, they no longer need the parent
     }
 
     /** Spawn one particle now */
@@ -19919,6 +19968,7 @@ class Trail3D extends EngineObject3D
         super(pos3D, undefined, tileInfo, color);
         this.transparent = true;
         this.additive = additive;
+        this.size3D = vec3(); // not a solid thing to pick or collect
 
         /** @property {number} - Seconds a sample lasts */
         this.lifeTime = lifeTime;
@@ -19935,15 +19985,29 @@ class Trail3D extends EngineObject3D
     /** Forget the trail so far, for when the object teleports */
     clear() { this.samples.length = 0; }
 
+    /** Stop recording, and go away once the ribbon has faded
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        if (!this.samples.length || this.destroyed)
+            return super.destroy(immediate);
+        this.finishing = true;
+        this.parent?.removeChild(this); // the samples are in world space, they no longer need the parent
+    }
+
     /** Record the position when it moved and drop old samples, called automatically each frame */
     update()
     {
-        const samples = this.samples, pos = this.getWorldPos3D();
-        const last = samples[samples.length - 1];
-        if (!last || pos.distanceSquared(last.pos) > 1e-8)
-            samples.push({pos, side: this.side?.copy(), time});
+        const samples = this.samples;
+        if (!this.finishing)
+        {
+            const pos = this.getWorldPos3D(), last = samples[samples.length - 1];
+            if (!last || pos.distanceSquared(last.pos) > 1e-8)
+                samples.push({pos, side: this.side?.copy(), time});
+        }
         while (samples.length && time - samples[0].time > this.lifeTime)
             samples.shift();
+        this.finishing && !samples.length && this.destroy();
     }
 
     /** Draw the ribbon */

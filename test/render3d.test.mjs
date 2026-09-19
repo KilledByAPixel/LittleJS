@@ -1582,3 +1582,97 @@ test('objects with a softShadow get one drawn in the transparent stage, and Trai
     assert.equal(trail.samples.length, 0);
     trail.destroy();
 });
+
+test('drawBox, drawSphere and drawMesh bake into the mesh, moved and tinted', () =>
+{
+    const baked = render3D.bake(()=>
+    {
+        render3D.drawBox(vec3(10, 0, 0), 2, RED);
+        render3D.drawSphere(vec3(), 1);
+        render3D.drawMesh(buildBox(), Matrix4.translation(vec3(0, 5, 0)));
+    });
+    assert.equal(baked.vertexCount, buildBox().vertexCount * 2 + buildSphere(1, 12, 6, true).vertexCount);
+    assert.ok(baked.points.some(p=> p.x > 10.9), 'the box moved');
+    assert.ok(baked.points.some(p=> p.y > 5.4), 'the mesh moved');
+    assert.equal(baked.colors[0].rgbaInt(), RED.rgbaInt());
+});
+
+test('sprite objects blend by default and are picked by their size3D, lights and emitters are not', () =>
+{
+    const sprite = new EngineObject3D(vec3(0, 0, -5), undefined, new TileInfo(vec2(), vec2(16)));
+    sprite.size3D = vec3(2);
+    assert.ok(sprite.transparent);
+    assert.ok(!new EngineObject3D(vec3(), buildBox()).transparent);
+    const light = new Light3D(vec3(0, 0, -2)), emitter = new ParticleEmitter3D(vec3(0, 0, -3), 0, 0, 0, PI, new TileInfo(vec2(), vec2(16)));
+    const hit = render3D.raycastObjects(vec3(), vec3(0, 0, -1), [light, emitter, sprite]);
+    assert.equal(hit.object, sprite);
+    near(hit.distance, 5 - vec3(2).length() / 2); // half the size3D diagonal
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});
+
+test('engineObjectsCollect3D uses the world scale of parented objects', () =>
+{
+    const parent = new EngineObject3D(vec3(10, 0, 0));
+    parent.scale3D = vec3(3);
+    const child = new EngineObject3D(vec3(1, 0, 0));
+    parent.addChild(child);
+    child.size3D = vec3(1); // 3 wide in the world, centered at x = 13, so it reaches 14.5
+    assert.deepEqual(engineObjectsCollect3D(vec3(14.5, 0, 0), 1, [child]), [child]);
+    assert.deepEqual(engineObjectsCollect3D(vec3(15.5, 0, 0), 1, [child]), []);
+    parent.destroy();
+    engineObjects.length = 0;
+});
+
+test('destroying an emitter or trail lets what is already out finish, like the 2D particles', () =>
+{
+    const ship = new EngineObject3D(vec3(5, 0, 0)), emitter = new ParticleEmitter3D(vec3(), 0, 0, 60, PI);
+    ship.addChild(emitter);
+    emitter.emitParticle(); emitter.emitParticle();
+    ship.destroy();
+    assert.ok(!emitter.destroyed && emitter.parent === undefined && emitter.emitRate === 0);
+    assert.equal(emitter.particles.length, 2);
+    emitter.particles.length = 0;
+    emitter.update();
+    assert.ok(emitter.destroyed);
+    const empty = new ParticleEmitter3D(vec3(), 0, 0, 60, PI);
+    empty.destroy();
+    assert.ok(empty.destroyed, 'nothing to wait for');
+    const trail = new Trail3D(vec3(), 1);
+    trail.update(); trail.pos3D = vec3(1); trail.update();
+    trail.destroy();
+    assert.ok(!trail.destroyed && trail.finishing);
+    trail.pos3D = vec3(2); trail.update();
+    assert.equal(trail.samples.length, 2, 'stopped recording');
+    trail.samples.length = 0; trail.update();
+    assert.ok(trail.destroyed);
+    engineObjects.length = 0;
+});
+
+test('lookAt at your own position keeps the rotation, upright sprites survive a rolled camera, zero canvas rays are finite', () =>
+{
+    const o = new EngineObject3D(vec3(1, 2, 3));
+    o.rotation3D = vec3(.1, .2, .3);
+    o.lookAt(vec3(1, 2, 3));
+    nearVec(o.rotation3D, .1, .2, .3);
+    o.destroy(); engineObjects.length = 0;
+    render3D.camera.pos = vec3(0, 10, 0); render3D.camera.rotation = vec3(-PI/2, 0, PI/2); render3D.updateMatrices(1);
+    const quad = render3D.bake(()=> render3D.drawBillboard(vec3(), vec2(2), undefined, WHITE, 0, true));
+    assert.ok(quad.points[1].distance(quad.points[3]) > 1, 'the corners did not collapse');
+    render3D.camera.pos = vec3(0, 0, 10); render3D.camera.rotation = vec3(); render3D.updateMatrices(1);
+    const ray = render3D.screenToRay(vec2(), vec2());
+    assert.ok(ray.direction.isValid());
+    const heightMap = new HeightMap([[0, 0], [0, 0]], vec2(0, 4));
+    assert.equal(heightMap.raycast(vec3(0, 5, 0), vec3(0, -1, 0)), undefined);
+});
+
+test('a sync2D object with mass takes the 2D gravity, not the 3D one', () =>
+{
+    render3D.gravity = vec3(0, -1, 0);
+    const o = new EngineObject3D(vec3());
+    o.mass = 1; o.sync2D = true;
+    o.updateTransforms();
+    nearVec(o.velocity3D, 0, 0, 0);
+    render3D.gravity = vec3();
+    o.destroy(); engineObjects.length = 0;
+});
