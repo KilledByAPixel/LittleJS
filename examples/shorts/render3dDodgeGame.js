@@ -65,7 +65,7 @@ class Box extends EngineObject3D
 function buildScoreText()
 {
     scoreObject.mesh?.dispose();
-    scoreObject.mesh = buildText3D('SCORE ' + score, 3, .6);
+    scoreObject.mesh = buildText3D('SCORE ' + score + '\nBEST ' + best, 2, .6);
 }
 
 function endRound()
@@ -97,15 +97,16 @@ function gameInit()
     render3D.lightDirection = vec3(.4,-1,.3).normalize();
     render3D.shadows = true;
 
-    // checkered ground, the player with a trail and a light, and the floating score
+    // checkered ground, the player with a trail and a light, and the score in lit 3D text
     const checker = (x, z)=> (floor(x/2) + floor(z/2)) & 1 ? hsl(.3,.4,.42) : hsl(.3,.4,.3);
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 20, checker));
     boxMesh = buildBox(2);
     player = new Player;
     player.addChild(new Trail3D(vec3(0,-1,0), .4, .6, undefined, hsl(.55,1,.7,.5), hsl(.55,1,.7,0), true));
     playerLight = new Light3D(vec3(), 12, hsl(.15,1,.6));
-    scoreObject = new EngineObject3D(vec3(0,4,-arenaSize/2), undefined, undefined, hsl(.15,1,.7));
-    scoreObject.unlit = true;
+    scoreObject = new EngineObject3D(vec3(0,5,-arenaSize/2), undefined, undefined, hsl(.15,1,.6));
+    scoreObject.specular = .5;
+    scoreObject.rotation3D.x = -.4; // lean back into the light
     buildScoreText();
 }
 
@@ -127,6 +128,5 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    drawTextScreen('Score ' + score + '   Best ' + best, vec2(mainCanvasSize.x/2, 40), 40);
     drawTextScreen('arrow keys: dodge', vec2(mainCanvasSize.x/2, mainCanvasSize.y - 30), 24);
 }
