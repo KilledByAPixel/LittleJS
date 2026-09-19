@@ -19018,7 +19018,8 @@ function render3DInitGL()
         'float z=distance(cameraPos,P);' +
         'c.rgb=mix(c.rgb,fogColor.rgb,smoothstep(fogColor.a,ambientColor.a,z));' +
         '}' +
-        'o=c;' +
+        'o=vec4(c.rgb,shadowParams.w>0.?1.:c.a);' + // an opaque draw stays opaque whatever the tint alpha says
+
         '}'
     );
 
@@ -20591,7 +20592,7 @@ class EngineObject3D extends EngineObject
         this.specular = 0;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         this.castShadow = true;
-        /** @property {boolean} - Push apart from other collideSolid3D objects each frame as balls the size of their largest side, heavier objects move less and mass 0 stays put */
+        /** @property {boolean} - Push apart from other collideSolid3D objects each frame as balls the size of their largest side, heavier objects move less and mass 0 stays put; a parented object moves in its parent's space */
         this.collideSolid3D = false;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
@@ -20621,6 +20622,9 @@ class EngineObject3D extends EngineObject
         }
         super.updateTransforms();
     }
+
+    /** The 2D physics only run for a sync2D object, everything else moves by velocity3D, called automatically each frame */
+    updatePhysics() { this.sync2D && super.updatePhysics(); }
 
     /** Returns the world position
      *  @return {Vector3} */
@@ -20659,20 +20663,28 @@ class EngineObject3D extends EngineObject
         if (this.mesh)
             render3D.drawMesh(this.mesh, this.getMatrix(), this.tileInfo, this.color);
         else if (this.tileInfo) // a sprite
-            render3D.drawBillboard(this.getWorldPos3D(), vec2(this.size3D.x, this.size3D.y), this.tileInfo, this.color, 0, this.upright);
+            render3D.drawBillboard(this.getWorldPos3D(), vec2(this.size3D.x, this.size3D.y), this.tileInfo, this.color, this.rotation3D.z, this.upright);
     }
+}
+
+// where a solid object is in the world and how big its ball is there, its largest side scaled by its parents
+function render3DSolidBall(o)
+{
+    const m = o.getMatrix().m;
+    const radius = max(o.size3D.x, o.size3D.y, o.size3D.z) / 2 * render3DMaxScale(m);
+    return {pos: vec3(m[12], m[13], m[14]), radius};
 }
 
 // push a solid object out of the solids updated before it this frame, so each pair is resolved once
 function render3DCollideSolid(a)
 {
-    const radius = (o)=> max(o.size3D.x, o.size3D.y, o.size3D.z) * max(o.scale3D.x, o.scale3D.y, o.scale3D.z) / 2;
-    const ra = radius(a);
+    const ballA = render3DSolidBall(a);
     for (const b of engineObjects)
     {
         if (b === a) break; // the ones after this update later and test against this one then
         if (!b.collideSolid3D || b.destroyed) continue;
-        const push = collideSphereSphere(a.pos3D, ra, b.pos3D, radius(b));
+        const ballB = render3DSolidBall(b);
+        const push = collideSphereSphere(ballA.pos, ballA.radius, ballB.pos, ballB.radius);
         if (!push) continue;
 
         // heavier objects move less, mass 0 stays put; then bounce apart when moving toward each other

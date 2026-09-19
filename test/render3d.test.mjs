@@ -1804,3 +1804,26 @@ test('a Light3D is a point light until directional is set, then it shines along 
     light.destroy();
     engineObjects.length = 0;
 });
+
+test('a sprite object turns with its roll and only a sync2D object runs the 2D physics', () =>
+{
+    render3D.camera.pos = vec3(0, 0, 10); render3D.camera.rotation = vec3(); render3D.updateMatrices(1);
+    const sprite = new EngineObject3D(vec3(), undefined, new TileInfo(vec2(), vec2(16)));
+    sprite.size3D = vec3(4, 2, 1);
+    const flat = render3D.bake(()=> sprite.render3D());
+    sprite.rotation3D.z = PI/2;
+    const turned = render3D.bake(()=> sprite.render3D());
+    const widest = (mesh)=> mesh.points.reduce((w, p)=> Math.max(w, Math.abs(p.x)), 0);
+    near(widest(flat), 2); near(widest(turned), 1); // the long side is upright now
+
+    const o = new EngineObject3D(vec3());
+    o.mass = 1;
+    o.velocity = vec2(1, 0);
+    o.updatePhysics();
+    near(o.pos.x, 0); // a 3D object moves by velocity3D, the 2D physics are skipped
+    o.sync2D = true;
+    o.updatePhysics();
+    assert.ok(o.pos.x > 0);
+    for (const object of engineObjects) object.destroy();
+    engineObjects.length = 0;
+});

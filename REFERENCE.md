@@ -910,7 +910,8 @@ render3D.sky = buildSky(topColor, horizonColor, bottomColor, sides, rings) // or
 // callback, so set it inside those, or use the object flags below
 render3D.lighting = true              // false draws plain vertex color times texture
 render3D.additive = false             // additive blending in the transparent stage
-render3D.specular = 0                 // Phong highlight strength, the shiny spot where the light reflects
+render3D.specular = 0                 // Phong highlight strength, the shiny spot where the directional light
+                                      // reflects; a Light3D adds no highlight
 render3D.receiveShadow = true         // false keeps the next draws out of the shadow map's darkening
 render3D.cullBackFaces = false // off by default so one sided meshes like grids and ribbons do not vanish; true skips
                                // faces pointing away, faster for closed meshes
@@ -951,7 +952,9 @@ obj.collideSolid3D = true               // push apart from other solid objects a
                                         // heavier objects move less, mass 0 stays put, velocities bounce by restitution
 obj.softShadow = 2                      // a soft shadow of that diameter under the object on render3D.softShadowHeight
 obj.upright = true                      // a sprite stands on world up instead of tilting toward the camera
-obj.sync2D = true // copy the 2D pos and angle into pos3D and rotation3D each frame, set mass for 2D physics
+                                        // a sprite also turns with rotation3D.z, like a 2D object turns with angle
+obj.sync2D = true // copy the 2D pos and angle into pos3D and rotation3D each frame; the 2D physics only run for a
+                  // sync2D object, so set its mass to have them move it
 obj.mesh obj.tileInfo obj.color         // what to draw and how
 obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
 obj.additive = true                     // additive blending, implies the transparent stage
