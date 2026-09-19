@@ -5,6 +5,7 @@ class Ball extends EngineObject3D
     constructor()
     {
         super(vec3(), buildSphere(1, 12, 6, true), undefined, RED);
+        this.softShadow = 2;
     }
     update()
     {
@@ -67,10 +68,9 @@ function gameInit()
             new EngineObject3D(vec3(x,y,z), tree).rotation3D.y = rand(2*PI);
     }
 
-    // the ball's shadow follows the ground
+    // soft shadows follow the ground
     ball = new Ball;
-    const groundHeight = (x, z)=> terrain.getHeight(x, z);
-    render3D.onRenderTransparent = ()=> render3D.drawSoftShadow(ball.pos3D, 2, groundHeight);
+    render3D.softShadowHeight = (x, z)=> terrain.getHeight(x, z);
 }
 
 function gameUpdate()

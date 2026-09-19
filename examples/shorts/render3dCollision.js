@@ -9,6 +9,7 @@ class Ball extends EngineObject3D
         super(pos, ballMesh, undefined, hsl(rand(),.7,.6));
         this.radius = rand(.4,.8);
         this.scale3D = vec3(this.radius*2);
+        this.softShadow = this.radius*2;
         this.velocity3D = vec3(rand(-.1,.1), 0, rand(-.1,.1));
     }
     update()
@@ -51,7 +52,6 @@ function gameInit()
     ballMesh = buildSphere();
     for (let i = 0; i < 12; ++i)
         balls.push(new Ball(vec3(rand(-6,6), rand(3,8), rand(-6,6))));
-    render3D.onRenderTransparent = ()=> balls.forEach(b=> render3D.drawSoftShadow(b.pos3D, b.radius*2));
 }
 
 function gameUpdate()

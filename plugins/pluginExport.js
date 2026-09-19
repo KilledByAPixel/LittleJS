@@ -136,6 +136,8 @@ export
     Light3D,
     ParticleEmitter3D,
     Trail3D,
+    engineObjectsCollect3D,
+    engineObjectsCallback3D,
     parseOBJ,
     loadOBJ,
     debugBox3D,

@@ -6183,6 +6183,10 @@ declare module "littlejsengine" {
         fogStart: number;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
         fogEnd: number;
+        /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale */
+        gravity: Vector3;
+        /** @property {number|Function} - Floor height for objects with a softShadow, a number or (x, z) => y for terrain */
+        softShadowHeight: number;
         /** @property {boolean} - Cast real shadows from the directional light, off by default and free when off */
         shadows: boolean;
         /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
@@ -6387,8 +6391,9 @@ declare module "littlejsengine" {
          *  @param {Vector2} size - World units
          *  @param {TileInfo|TextureInfo} [tileInfo]
          *  @param {Color} [color]
-         *  @param {number} [angle] - Rotation in the camera plane, counter clockwise */
-        drawBillboard(pos: Vector3, size?: Vector2, tileInfo?: TileInfo | TextureInfo, color?: Color, angle?: number): any;
+         *  @param {number} [angle] - Rotation in the camera plane, counter clockwise
+         *  @param {boolean} [upright] - Stand on world up and only turn to face the camera, for sprites on the ground */
+        drawBillboard(pos: Vector3, size?: Vector2, tileInfo?: TileInfo | TextureInfo, color?: Color, angle?: number, upright?: boolean): any;
         /** Draw a quad from four corners in loop order, counter clockwise seen from the front, a is the top left of the texture
          *  @param {Vector3} a
          *  @param {Vector3} b
@@ -6497,7 +6502,7 @@ declare module "littlejsengine" {
      * - velocity3D is added to pos3D each frame, that is all the 3D physics there is
      * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
      * - The 2D pos and velocity are still there but nothing draws them
-     * - For a pseudo-3D game, copy pos into pos3D each frame
+     * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D
      * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
      * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
      * @extends EngineObject
@@ -6529,6 +6534,14 @@ declare module "littlejsengine" {
         angleVelocity3D: Vector3;
         /** @property {Mesh|undefined} - Mesh to draw */
         mesh: Mesh;
+        /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo and no mesh */
+        size3D: Vector3;
+        /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none */
+        softShadow: number;
+        /** @property {boolean} - A sprite stands on world up instead of tilting toward the camera */
+        upright: boolean;
+        /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D looks; set mass to use 2D physics */
+        sync2D: boolean;
         /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off */
         transparent: boolean;
         /** @property {boolean} - Additive blending, in the transparent stage */
@@ -6548,6 +6561,15 @@ declare module "littlejsengine" {
         /** Returns the world position
          *  @return {Vector3} */
         getWorldPos3D(): Vector3;
+        /** Returns the direction the object faces, its -Z axis in the world
+         *  @return {Vector3} */
+        getForward3D(): Vector3;
+        /** Returns the object's right axis in the world
+         *  @return {Vector3} */
+        getRight3D(): Vector3;
+        /** Returns the object's up axis in the world
+         *  @return {Vector3} */
+        getUp3D(): Vector3;
         /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
          *  @return {Matrix4} */
         getMatrix(): Matrix4;
@@ -6998,7 +7020,27 @@ declare module "littlejsengine" {
         side: any;
         /** @property {Array<Object>} - Recorded samples, oldest first */
         samples: any[];
+        /** Forget the trail so far, for when the object teleports */
+        clear(): void;
     }
+    /**
+     * Collect the EngineObject3D objects whose boxes overlap a box, sizes are full sizes
+     * @param {Vector3} pos - Center of the box
+     * @param {Vector3|number} size - Full size of the box, a number for a cube
+     * @param {Array<EngineObject>} [objects] - Defaults to every object
+     * @return {Array<EngineObject3D>}
+     * @memberof Render3D
+     */
+    export function engineObjectsCollect3D(pos: Vector3, size: Vector3 | number, objects?: Array<EngineObject>): Array<EngineObject3D>;
+    /**
+     * Call a function for each EngineObject3D whose box overlaps a box
+     * @param {Vector3} pos - Center of the box
+     * @param {Vector3|number} size - Full size of the box, a number for a cube
+     * @param {Function} callback
+     * @param {Array<EngineObject>} [objects] - Defaults to every object
+     * @memberof Render3D
+     */
+    export function engineObjectsCallback3D(pos: Vector3, size: Vector3 | number, callback: Function, objects?: Array<EngineObject>): void;
     /**
      * Parse Wavefront OBJ text into a Mesh
      * - Reads v, vt, vn and f lines with convex polygons of any size, materials and groups are ignored

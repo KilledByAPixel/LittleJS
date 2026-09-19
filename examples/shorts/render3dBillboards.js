@@ -1,9 +1,12 @@
 class Sprite extends EngineObject3D
 {
-    constructor(pos, tileInfo, color)
+    constructor(pos, tileInfo, color, upright)
     {
-        super(pos, undefined, tileInfo, color);
+        super(pos, undefined, tileInfo, color); // a tile and no mesh draws a billboard
         this.transparent = true; // so the tile's alpha blends
+        this.size3D = vec3(2);
+        this.upright = upright; // stand up, or tilt to face the camera
+        this.softShadow = 2;
         this.spawnPos = pos.copy();
         this.phase = rand(2*PI);
     }
@@ -15,9 +18,7 @@ class Sprite extends EngineObject3D
     }
     render3D()
     {
-        // billboards are unlit and keep their own colors
-        render3D.drawBillboard(this.pos3D, vec2(2), this.tileInfo, this.color, sin(time + this.phase)*.2);
-        render3D.drawSoftShadow(this.pos3D, 2);
+        super.render3D(); // the billboard, unlit so it keeps its own colors
         render3D.drawLine(this.pos3D, vec3(0,3,0), .05, this.color.withAlpha(.5));
     }
 }
@@ -37,7 +38,7 @@ function gameInit()
     for (let i = 0; i < 12; ++i)
     {
         const a = i/12*2*PI;
-        new Sprite(vec3(sin(a)*6, 2, cos(a)*6), tile(i%4, 16), hsl(i/12,.8,.7));
+        new Sprite(vec3(sin(a)*6, 2, cos(a)*6), tile(i%4, 16), hsl(i/12,.8,.7), i%2 == 1);
     }
     new EngineObject3D(vec3(0,1,0), buildBox(vec3(2)), undefined, rgb(.6,.6,.7));
 }
@@ -50,6 +51,6 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    const text = '3D Billboards\nsprites with alpha, shadows and lines, drag: orbit';
+    const text = '3D Billboards\nsprites, half of them upright, with shadows and lines, drag: orbit';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 50), 24);
 }

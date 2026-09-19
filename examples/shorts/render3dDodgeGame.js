@@ -2,7 +2,7 @@
 const arenaSize = 40;
 const soundNearMiss = new Sound([,,900,,.02,.08,1,1.5,,,,,,,,,,.5]);
 const soundHit = new Sound([,,120,.05,.2,.4,4,2,,,,,,5]);
-let player, playerLight, scoreObject, boxMesh;
+let player, trail, scoreObject, boxMesh;
 let score = 0, best = 0, spawnTimer = new Timer(1);
 
 class Player extends EngineObject3D
@@ -32,6 +32,8 @@ class Box extends EngineObject3D
     constructor(pos)
     {
         super(pos, boxMesh, undefined, hsl(rand(), .7, .5));
+        this.size3D = vec3(2);
+        this.mass = 1; // falls
         this.velocity3D = player.pos3D.subtract(pos).normalize(rand(.12,.22));
         this.velocity3D.y = rand(.1,.2);
         this.angleVelocity3D = randVector3(.1);
@@ -39,8 +41,7 @@ class Box extends EngineObject3D
     }
     update()
     {
-        // fall and bounce off the ground
-        this.velocity3D.y -= .01;
+        // bounce off the ground, gravity is the engine's
         if (this.pos3D.y < 1)
         {
             this.pos3D.y = 1;
@@ -48,7 +49,7 @@ class Box extends EngineObject3D
         }
 
         // a hit ends the round, a near miss scores once
-        if (collideSphereBox(player.pos3D, .8, this.pos3D, vec3(2)))
+        if (collideSphereBox(player.pos3D, .8, this.pos3D, this.size3D))
             endRound();
         else if (!this.missed && player.pos3D.distance(this.pos3D) < 3)
         {
@@ -85,6 +86,7 @@ function endRound()
     buildScoreText();
     engineObjects.forEach(o=> o instanceof Box && o.destroy());
     player.pos3D = vec3(0,1.3,0);
+    trail.clear();
 }
 
 function gameInit()
@@ -96,15 +98,16 @@ function gameInit()
     render3D.ambientColor = rgb(.35,.35,.45);
     render3D.lightDirection = vec3(.4,-1,.3).normalize();
     render3D.shadows = true;
+    render3D.gravity = vec3(0,-.01,0);
 
     // checkered ground, the player with a trail and a light, and the score in lit 3D text
     const checker = (x, z)=> (floor(x/2) + floor(z/2)) & 1 ? hsl(.3,.4,.42) : hsl(.3,.4,.3);
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 20, checker));
     boxMesh = buildBox(2);
     player = new Player;
-    const trail = new Trail3D(vec3(0,-1,0), .4, .6, undefined, hsl(.55,1,.7,.5), hsl(.55,1,.7,0), true);
+    trail = new Trail3D(vec3(0,-1,0), .4, .6, undefined, hsl(.55,1,.7,.5), hsl(.55,1,.7,0), true);
     player.addChild(trail);
-    playerLight = new Light3D(vec3(), 12, hsl(.15,1,.6));
+    player.addChild(new Light3D(vec3(0,3,0), 12, hsl(.15,1,.6)));
     scoreObject = new EngineObject3D(vec3(0,5,-arenaSize/2), undefined, undefined, hsl(.15,1,.6));
     scoreObject.specular = .5;
     scoreObject.rotation3D.x = -.4; // lean back into the light
@@ -120,9 +123,11 @@ function gameUpdate()
         const angle = rand(2*PI), r = arenaSize/2 + 2;
         new Box(vec3(sin(angle)*r, rand(1,6), cos(angle)*r));
     }
+}
 
-    // the light, the shadows and the camera follow the player
-    playerLight.pos3D = player.pos3D.add(vec3(0,3,0));
+function gameUpdatePost()
+{
+    // the shadows and the camera follow the player, after it has moved
     render3D.shadowCenter = player.pos3D;
     render3D.camera.follow(player.pos3D.add(vec3(0,1,0)), vec3(0,9,16), .1);
 }

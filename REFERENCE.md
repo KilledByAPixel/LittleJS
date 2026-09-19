@@ -827,6 +827,7 @@ render3D.lightColor = rgb(1, .95, .9)
 render3D.ambientColor = rgb(.3, .3, .3)
 render3D.fogColor = undefined         // uses canvasClearColor when undefined
 render3D.fogStart = 20; render3D.fogEnd = 100   // by camera distance, fogEnd 0 disables fog
+render3D.gravity = vec3(0, -.01, 0)   // objects with a mass fall by this each frame, times their gravityScale, and slow by their damping
 new Light3D(pos3D, radius, color)     // point light, an EngineObject3D; the 8 nearest the camera light the frame, alpha scales brightness, the falloff is steep so small lights need bright colors
 
 // Shadows - one shadow map from the directional light; lit opaque objects and draws on the default side of the 2D scene cast and receive
@@ -859,9 +860,14 @@ render3D.renderAfter2D = false        // true draws the 3D scene on top of the 2
 setRender3DSmoothShading(true)        // default for every builder's smooth argument (render3DSmoothShading)
 
 // Objects - EngineObject with a 3D transform, drawn by the 3D pass
-new EngineObject3D(pos3D, mesh, tileInfo, color)
+new EngineObject3D(pos3D, mesh, tileInfo, color)  // a tileInfo with no mesh draws a sprite billboard of size3D, set transparent for its alpha
 obj.pos3D obj.rotation3D obj.scale3D   // Vector3, rotation is (pitch, yaw, roll); change them in place or assign new ones
 obj.velocity3D obj.angleVelocity3D      // added to pos3D and rotation3D by the engine after update, no super.update() needed
+obj.mass = 1                            // objects start with no mass and stay put; with a mass render3D.gravity, gravityScale and damping act on velocity3D
+obj.size3D                              // full size for engineObjectsCollect3D and sprites
+obj.softShadow = 2                      // a soft shadow of that diameter under the object on render3D.softShadowHeight
+obj.upright = true                      // a sprite stands on world up instead of tilting toward the camera
+obj.sync2D = true                       // copy the 2D pos and angle into pos3D and rotation3D each frame, set mass for 2D physics
 // the ground is the XZ plane, so 2D input maps to it as vec3(move.x, 0, -move.y); an object faces -Z, forward for a yaw is vec3(-sin(yaw), 0, -cos(yaw))
 obj.mesh obj.tileInfo obj.color         // what to draw and how
 obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
@@ -876,6 +882,9 @@ obj.renderAfter2D = true                // this object on top of the 2D scene, o
 // each side of the 2D scene is its own pass with its own depth; the sky, callbacks and debug primitives draw with the default side
 obj.getMatrix()                         // buildMatrix(pos3D, rotation3D, scale3D), composed with an EngineObject3D parent's
 obj.getWorldPos3D()                     // world position, pos3D is local when parented
+obj.getForward3D() .getRight3D() .getUp3D() // the object's axes in the world, forward is -Z
+engineObjectsCollect3D(pos, size, objects)  // the EngineObject3D objects whose boxes overlap a box, size a vec3 or a number
+engineObjectsCallback3D(pos, size, callback, objects)
 obj.lookAt(target)                      // turn -Z toward a point
 obj.render3D()                          // override for custom drawing, the draw state is already set from the flags; render() is empty
 // children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local; addChild's 2D offset arguments do nothing in 3D
@@ -884,7 +893,7 @@ obj.render3D()                          // override for custom drawing, the draw
 render3D.drawBox(pos, size, color, rotation)              // size is a vec3 or a number, untextured
 render3D.drawSphere(pos, size, color)                     // size is the diameter, untextured
 render3D.drawMesh(mesh, matrix, tileInfo, color)          // any mesh, one draw call; tileInfo can be a TextureInfo for the whole texture
-render3D.drawBillboard(pos, size, tileInfo, color, angle) // camera facing quad, unlit, size is a Vector2
+render3D.drawBillboard(pos, size, tileInfo, color, angle, upright) // camera facing quad, unlit, size is a Vector2; upright stands on world up
 render3D.drawQuad(a, b, c, d, tileInfo, color)            // corners in loop order, a is the texture's top left
 render3D.drawTriangle(a, b, c, color)
 render3D.drawLine(posA, posB, width, color)               // camera facing ribbon, unlit
@@ -892,6 +901,7 @@ render3D.drawRibbon(points, width, color, tileInfo, side) // strip along a path,
 // soft discs and shadows fade to transparent, so draw them from a transparent object or onRenderTransparent
 render3D.drawSoftDisc(pos, size, color, normal, sides)    // fades to transparent at the rim, unlit, faces the camera unless a normal is given
 render3D.drawSoftShadow(pos, size, floorHeight, color, lift)  // soft blob shadow under pos, unlit; floorHeight can be (x, z)=> y to follow terrain
+render3D.softShadowHeight = 0                             // floor for objects with a softShadow, a number or (x, z)=> y
 render3D.drawStrip(points, normals, uvs, colors, tileInfo) // a raw triangle strip; normals, uvs and colors are one value or one per point
 render3D.drawStripUnlit(points, normals, uvs, colors, tileInfo) // same with lighting off
 render3D.flush()                                          // draw what is pending, automatic when needed
@@ -961,6 +971,7 @@ emitter.trailTime = .2                        // draw each particle as a ribbon 
 // Trails - a ribbon through where the object has been, parent it to something that moves
 new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over lifeTime seconds
 trail.side                                    // Vector3 across the ribbon recorded per sample, undefined faces the camera
+trail.clear()                                 // forget the trail, for when the object teleports
 ```
 
 ## LittleJS Three.js Integration

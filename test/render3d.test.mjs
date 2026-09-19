@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -1495,4 +1495,90 @@ test('the stream splits a batch when the draw state changes between strips', () 
         render3D.streamCount = 0;
         render3D.specular = 0;
     }
+});
+
+test('render3D.gravity and the inherited damping move objects like the 2D physics, sync2D copies the 2D transform', () =>
+{
+    render3D.gravity = vec3(0, -.1, 0);
+    const o = new EngineObject3D(vec3(0, 10, 0));
+    o.velocity3D = vec3(1, 0, 0);
+    o.updateTransforms();
+    nearVec(o.velocity3D, 1, 0, 0); // no mass, no gravity or damping
+    o.pos3D = vec3(0, 10, 0);
+    o.mass = 1;
+    o.damping = .5;
+    o.updateTransforms();
+    nearVec(o.velocity3D, .5, -.05, 0);
+    nearVec(o.pos3D, .5, 9.95, 0);
+    o.gravityScale = 0;
+    o.updateTransforms();
+    near(o.velocity3D.y, -.025); // damped, no more gravity
+    o.sync2D = true;
+    o.pos = vec2(3, 4);
+    o.angle = .5;
+    o.updateTransforms();
+    near(o.pos3D.x, 3); near(o.pos3D.y, 4); near(o.rotation3D.z, -.5);
+    render3D.gravity = vec3();
+    o.destroy();
+});
+
+test('EngineObject3D axes, sprite objects and the collect helpers', () =>
+{
+    const o = new EngineObject3D(vec3(1, 2, 3));
+    o.rotation3D = vec3(0, PI / 2, 0);
+    nearVec(o.getForward3D(), -1, 0, 0);
+    nearVec(o.getRight3D(), 0, 0, -1);
+    nearVec(o.getUp3D(), 0, 1, 0);
+    o.size3D = vec3(2);
+    const far = new EngineObject3D(vec3(10, 0, 0));
+    assert.deepEqual(engineObjectsCollect3D(vec3(0, 2, 3), 1), [o]);
+    assert.deepEqual(engineObjectsCollect3D(vec3(9.5, 0, 0), vec3(1)), [far]);
+    assert.deepEqual(engineObjectsCollect3D(vec3(9, 0, 0), vec3(1)), []); // touching edges do not overlap
+    let called = 0;
+    engineObjectsCallback3D(vec3(), 100, ()=> ++called, [o, far]);
+    assert.equal(called, 2);
+    // a tile and no mesh draws a billboard the size of size3D
+    render3D.camera.pos = vec3(0, 0, 10); render3D.camera.rotation = vec3(); render3D.updateMatrices(1);
+    const sprite = new EngineObject3D(vec3(), undefined, new TileInfo(vec2(), vec2(16)));
+    sprite.size3D = vec3(4, 2, 1);
+    const baked = render3D.bake(()=> sprite.render3D());
+    assert.equal(baked.vertexCount, 6);
+    near(baked.points[1].x, -2); near(baked.points[1].y, 1);
+    o.destroy(); far.destroy(); sprite.destroy();
+});
+
+test('upright billboards stand on world up under a pitched camera', () =>
+{
+    render3D.camera.pos = vec3(0, 10, 10);
+    render3D.camera.lookAt(vec3());
+    render3D.updateMatrices(1);
+    const tilted = render3D.bake(()=> render3D.drawBillboard(vec3(), vec2(2), undefined, WHITE, 0, false));
+    const upright = render3D.bake(()=> render3D.drawBillboard(vec3(), vec2(2), undefined, WHITE, 0, true));
+    assert.ok(Math.abs(tilted.points[1].z) > .1, 'a camera facing quad leans back');
+    near(upright.points[1].z, 0); near(upright.points[1].y, 1); // straight up
+    render3D.camera.pos = vec3(0, 0, 10); render3D.camera.rotation = vec3(); render3D.updateMatrices(1);
+});
+
+test('objects with a softShadow get one drawn in the transparent stage, and Trail3D.clear forgets the samples', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const o = new EngineObject3D(vec3(1, 5, 2), buildBox());
+    o.softShadow = 3;
+    const shadows = [], drawSoftShadow = render3D.drawSoftShadow;
+    render3D.drawSoftShadow = (pos, size, floor)=> shadows.push([pos, size, floor]);
+    render3D.softShadowHeight = 1;
+    try { render3D.renderStages([o]); }
+    finally { render3D.drawSoftShadow = drawSoftShadow; render3D.softShadowHeight = 0; }
+    assert.equal(shadows.length, 1);
+    nearVec(shadows[0][0], 1, 5, 2); assert.equal(shadows[0][1], 3); assert.equal(shadows[0][2], 1);
+    o.destroy();
+    engineObjects.length = 0;
+    const trail = new Trail3D(vec3());
+    trail.update();
+    trail.pos3D = vec3(1); trail.update();
+    assert.equal(trail.samples.length, 2);
+    trail.clear();
+    assert.equal(trail.samples.length, 0);
+    trail.destroy();
 });

@@ -240,6 +240,10 @@ class Render3DPlugin
         this.fogStart = 0;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
         this.fogEnd = 0;
+        /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale */
+        this.gravity = vec3();
+        /** @property {number|Function} - Floor height for objects with a softShadow, a number or (x, z) => y for terrain */
+        this.softShadowHeight = 0;
 
         // shadows
         /** @property {boolean} - Cast real shadows from the directional light, off by default and free when off */
@@ -630,6 +634,8 @@ class Render3DPlugin
         try
         {
             render3DDrawObjects(transparent);
+            for (const o of objects)
+                o.softShadow && this.drawSoftShadow(o.getWorldPos3D(), o.softShadow, this.softShadowHeight);
             isDefault && this.onRenderTransparent?.();
         }
         finally { this.flushTransparentQueue(); }
@@ -739,13 +745,14 @@ class Render3DPlugin
      *  @param {Vector2} size - World units
      *  @param {TileInfo|TextureInfo} [tileInfo]
      *  @param {Color} [color]
-     *  @param {number} [angle] - Rotation in the camera plane, counter clockwise */
-    drawBillboard(pos, size=vec2(1), tileInfo, color=WHITE, angle=0)
+     *  @param {number} [angle] - Rotation in the camera plane, counter clockwise
+     *  @param {boolean} [upright] - Stand on world up and only turn to face the camera, for sprites on the ground */
+    drawBillboard(pos, size=vec2(1), tileInfo, color=WHITE, angle=0, upright=false)
     {
         if (this.transparentQueue && !this.capture) // sort by the exact position, a shadow under it sorts by the floor
-            return this.queueTransparent(pos, ()=> this.drawBillboard(pos, size, tileInfo, color, angle));
+            return this.queueTransparent(pos, ()=> this.drawBillboard(pos, size, tileInfo, color, angle, upright));
         if (this.capture)
-            return this.drawStripUnlit(render3DBillboardCorners(pos, size, angle), this.cameraBack, RENDER3D_QUAD_UVS, color, tileInfo);
+            return this.drawStripUnlit(render3DBillboardCorners(pos, size, angle, upright), this.cameraBack, RENDER3D_QUAD_UVS, color, tileInfo);
 
         // the particle path: six stream vertices written straight in, unlit
         const lighting = this.lighting;
@@ -753,7 +760,7 @@ class Render3DPlugin
         const uvRect = render3DBeginStrip(6, tileInfo);
         this.lighting = lighting;
         if (!uvRect) return;
-        const corners = render3DBillboardCorners(pos, size, angle), rgba = color.rgbaInt();
+        const corners = render3DBillboardCorners(pos, size, angle, upright), rgba = color.rgbaInt();
         const floats = this.streamFloats, ints = this.streamInts;
         for (let k = 0; k < 6; ++k)
         {
@@ -1526,9 +1533,13 @@ function render3DBeginStrip(count, tileInfo)
 }
 
 // the four corners of a camera facing quad in strip order
-function render3DBillboardCorners(pos, size, angle)
+function render3DBillboardCorners(pos, size, angle, upright)
 {
-    const c = cos(angle), s = sin(angle), r = render3D.cameraRight, u = render3D.cameraUp, w = size.x / 2, h = size.y / 2;
+    // an upright quad stands on world up and only turns to face the camera
+    let r = render3D.cameraRight, u = render3D.cameraUp;
+    if (upright)
+        r = vec3(r.x, 0, r.z).normalize(), u = RENDER3D_DEFAULT_NORMAL;
+    const c = cos(angle), s = sin(angle), w = size.x / 2, h = size.y / 2;
     const rx = (r.x * c + u.x * s) * w, ry = (r.y * c + u.y * s) * w, rz = (r.z * c + u.z * s) * w;
     const ux = (u.x * c - r.x * s) * h, uy = (u.y * c - r.y * s) * h, uz = (u.z * c - r.z * s) * h;
     return [
@@ -2547,7 +2558,7 @@ function render3DReadPixels(textureInfo)
  * - velocity3D is added to pos3D each frame, that is all the 3D physics there is
  * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
  * - The 2D pos and velocity are still there but nothing draws them
- * - For a pseudo-3D game, copy pos into pos3D each frame
+ * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D
  * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
  * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
  * @extends EngineObject
@@ -2573,7 +2584,7 @@ class EngineObject3D extends EngineObject
         ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
         ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo, it comes before color');
         this.tileInfo = tileInfo; // set after super so a whole TextureInfo is allowed
-        this.mass = 0; // 3D objects skip 2D physics
+        this.mass = 0; // static: no 2D physics, and no 3D gravity until a mass is set
 
         /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
         this.pos3D = pos3D.copy();
@@ -2587,6 +2598,14 @@ class EngineObject3D extends EngineObject
         this.angleVelocity3D = vec3();
         /** @property {Mesh|undefined} - Mesh to draw */
         this.mesh = mesh;
+        /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo and no mesh */
+        this.size3D = vec3(1);
+        /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none */
+        this.softShadow = 0;
+        /** @property {boolean} - A sprite stands on world up instead of tilting toward the camera */
+        this.upright = false;
+        /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D looks; set mass to use 2D physics */
+        this.sync2D = false;
         /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off */
         this.transparent = false;
         /** @property {boolean} - Additive blending, in the transparent stage */
@@ -2610,8 +2629,16 @@ class EngineObject3D extends EngineObject
     {
         if (!paused)
         {
+            // an object with mass falls with render3D.gravity and slows by its damping, like the 2D physics
+            if (this.mass)
+            {
+                const v = this.velocity3D, g = render3D.gravity, s = this.gravityScale, d = this.damping;
+                this.velocity3D = vec3((v.x + g.x * s) * d, (v.y + g.y * s) * d, (v.z + g.z * s) * d);
+            }
             this.pos3D = this.pos3D.add(this.velocity3D);
             this.rotation3D = this.rotation3D.add(this.angleVelocity3D);
+            if (this.sync2D)
+                this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
         }
         super.updateTransforms();
     }
@@ -2619,6 +2646,18 @@ class EngineObject3D extends EngineObject
     /** Returns the world position
      *  @return {Vector3} */
     getWorldPos3D() { return this.getMatrix().getTranslation(); }
+
+    /** Returns the direction the object faces, its -Z axis in the world
+     *  @return {Vector3} */
+    getForward3D() { const m = this.getMatrix().m; return vec3(-m[8], -m[9], -m[10]).normalize(); }
+
+    /** Returns the object's right axis in the world
+     *  @return {Vector3} */
+    getRight3D() { const m = this.getMatrix().m; return vec3(m[0], m[1], m[2]).normalize(); }
+
+    /** Returns the object's up axis in the world
+     *  @return {Vector3} */
+    getUp3D() { const m = this.getMatrix().m; return vec3(m[4], m[5], m[6]).normalize(); }
 
     /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
      *  @return {Matrix4} */
@@ -2640,8 +2679,39 @@ class EngineObject3D extends EngineObject
     {
         if (this.mesh)
             render3D.drawMesh(this.mesh, this.getMatrix(), this.tileInfo, this.color);
+        else if (this.tileInfo) // a sprite, set transparent for its alpha
+            render3D.drawBillboard(this.getWorldPos3D(), vec2(this.size3D.x, this.size3D.y), this.tileInfo, this.color, 0, this.upright);
     }
 }
+
+/**
+ * Collect the EngineObject3D objects whose boxes overlap a box, sizes are full sizes
+ * @param {Vector3} pos - Center of the box
+ * @param {Vector3|number} size - Full size of the box, a number for a cube
+ * @param {Array<EngineObject>} [objects] - Defaults to every object
+ * @return {Array<EngineObject3D>}
+ * @memberof Render3D
+ */
+function engineObjectsCollect3D(pos, size, objects=engineObjects)
+{
+    size = render3DSize3(size);
+    const collected = [];
+    for (const o of objects)
+        if (o instanceof EngineObject3D && !o.destroyed && isOverlapping3D(pos, size, o.getWorldPos3D(), o.size3D.multiply(o.scale3D)))
+            collected.push(o);
+    return collected;
+}
+
+/**
+ * Call a function for each EngineObject3D whose box overlaps a box
+ * @param {Vector3} pos - Center of the box
+ * @param {Vector3|number} size - Full size of the box, a number for a cube
+ * @param {Function} callback
+ * @param {Array<EngineObject>} [objects] - Defaults to every object
+ * @memberof Render3D
+ */
+function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
+{ engineObjectsCollect3D(pos, size, objects).forEach(callback); }
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
@@ -2889,6 +2959,9 @@ class Trail3D extends EngineObject3D
         /** @property {Array<Object>} - Recorded samples, oldest first */
         this.samples = [];
     }
+
+    /** Forget the trail so far, for when the object teleports */
+    clear() { this.samples.length = 0; }
 
     /** Record the position when it moved and drop old samples, called automatically each frame */
     update()

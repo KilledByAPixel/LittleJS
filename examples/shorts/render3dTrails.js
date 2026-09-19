@@ -4,6 +4,7 @@ class Comet extends EngineObject3D
     {
         super(vec3(), buildSphere(1, 8, 4), undefined, color);
         this.phase = phase;
+        this.softShadow = 1.5;
         // the trail is a child so it follows, additive, fading over 1.5 seconds
         this.addChild(new Trail3D(vec3(), 1.5, .5, undefined, color, color.withAlpha(0), true));
     }
@@ -33,7 +34,7 @@ class Flag extends EngineObject3D
     }
 }
 
-let comets = [], orbit = 0;
+let orbit = 0;
 
 function gameInit()
 {
@@ -43,8 +44,8 @@ function gameInit()
     new EngineObject3D(vec3(), buildGrid(vec2(30), 1, rgb(.2,.2,.25)));
     new Flag(vec3(0,4.5,0));
     for (let i = 0; i < 3; ++i)
-        comets.push(new Comet(hsl(i/3,1,.6), i*2*PI/3));
-    render3D.onRenderTransparent = renderTransparent;
+        new Comet(hsl(i/3,1,.6), i*2*PI/3);
+    render3D.onRenderTransparent = drawRainbow;
 }
 
 function gameUpdate()
@@ -53,12 +54,8 @@ function gameUpdate()
     render3D.camera.orbit(vec3(0,3,0), 16, orbit, .3);
 }
 
-function renderTransparent()
+function drawRainbow()
 {
-    // soft shadows under the comets
-    for (const c of comets)
-        render3D.drawSoftShadow(c.pos3D, 1.5);
-
     // a rainbow ring drawn fresh each frame, width and color change along it
     const points = [], widths = [], colors = [];
     for (let i = 0; i <= 60; ++i)
