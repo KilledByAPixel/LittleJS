@@ -3685,6 +3685,28 @@ declare module "littlejsengine" {
         vao: any;
     }
     /**
+     * Set up post processing with a bloom effect, so bright colors and lights glow
+     * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+     * @param {number} [strength] - How much glow to add
+     * @param {number} [size] - How far the glow spreads in pixels
+     * @param {boolean} [includeMainCanvas] - Glow the 2D canvas too, on by default so sprites and text glow as well
+     * @return {PostProcessPlugin}
+     * @memberof PostProcess
+     * @example
+     * postProcessBloom(); // in gameInit, after any Render3DPlugin
+     */
+    export function postProcessBloom(threshold?: number, strength?: number, size?: number, includeMainCanvas?: boolean): PostProcessPlugin;
+    /**
+     * Shader code for a bloom effect, the bright parts of the image blurred back over it
+     * - Pass it to PostProcessPlugin, or edit the string to build an effect on top of it
+     * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+     * @param {number} [strength] - How much glow to add
+     * @param {number} [size] - How far the glow spreads in pixels
+     * @return {string}
+     * @memberof PostProcess
+     */
+    export function postProcessBloomShader(threshold?: number, strength?: number, size?: number): string;
+    /**
      * LittleJS Light System Plugin
      * - Adds 2D dynamic lighting to the scene
      * - Lights are first-class EngineObjects (the Light class)

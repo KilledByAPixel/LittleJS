@@ -10675,6 +10675,52 @@ class PostProcessPlugin
         }
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Shader code for a bloom effect, the bright parts of the image blurred back over it
+ * - Pass it to PostProcessPlugin, or edit the string to build an effect on top of it
+ * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+ * @param {number} [strength] - How much glow to add
+ * @param {number} [size] - How far the glow spreads in pixels
+ * @return {string}
+ * @memberof PostProcess
+ */
+function postProcessBloomShader(threshold=.6, strength=1, size=6)
+{
+    // two rings of samples around each pixel, the outer one wider and dimmer
+    return `
+    void mainImage(out vec4 color, vec2 pixel)
+    {
+        vec2 uv = pixel / iResolution.xy;
+        color = texture(iChannel0, uv);
+        vec3 glow = vec3(0);
+        for (int i = 0; i < 8; ++i)
+        {
+            float a = float(i) * 3.14159 / 4.;
+            vec2 d = vec2(cos(a), sin(a)) / iResolution.xy;
+            glow += max(vec3(0), texture(iChannel0, uv + d * ${size.toFixed(3)}).rgb - ${threshold.toFixed(3)});
+            glow += max(vec3(0), texture(iChannel0, uv + d * ${(size / 2).toFixed(3)}).rgb - ${threshold.toFixed(3)});
+        }
+        color.rgb += glow * ${(strength / 16).toFixed(5)};
+    }`;
+}
+
+/**
+ * Set up post processing with a bloom effect, so bright colors and lights glow
+ * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+ * @param {number} [strength] - How much glow to add
+ * @param {number} [size] - How far the glow spreads in pixels
+ * @param {boolean} [includeMainCanvas] - Glow the 2D canvas too, on by default so sprites and text glow as well
+ * @return {PostProcessPlugin}
+ * @memberof PostProcess
+ * @example
+ * postProcessBloom(); // in gameInit, after any Render3DPlugin
+ */
+function postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=true)
+{ return new PostProcessPlugin(postProcessBloomShader(threshold, strength, size), includeMainCanvas); }
+
 /**
  * LittleJS Light System Plugin
  * - Adds 2D dynamic lighting to the scene
@@ -21701,6 +21747,8 @@ export
     // Post Process
     postProcess,
     PostProcessPlugin,
+    postProcessBloom,
+    postProcessBloomShader,
 
     // Light System
     lightSystem,

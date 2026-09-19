@@ -750,6 +750,9 @@ class LavaTile extends EngineObject {
 ```javascript
 new PostProcessPlugin(shaderCode, includeMainCanvas=false, feedbackTexture=false)
 postProcess                    // Global instance created by the plugin
+postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=true) // set up a ready made bloom effect,
+                               // so bright colors and lights glow; threshold is where the glow starts
+postProcessBloomShader(threshold, strength, size) // its shader code, to pass to PostProcessPlugin or build on
 ```
 
 ## LittleJS 3D Math
@@ -816,8 +819,8 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 - Builders and draws take full sizes (diameters) like buildBox and drawCircle; collision helpers and lights take radii
 - Textures sample through mipmaps in 3D so floors do not shimmer in the distance, crisp up close when tilesPixelated
   is on; render3D.mipmaps = false keeps each texture's own filtering, and 2D sprites always do
-- The 3D scene is on the engine's WebGL canvas, so the post processing plugin shaders it too: new PostProcessPlugin
-  after new Render3DPlugin, see the render3dGlow demo for bloom
+- The 3D scene is on the engine's WebGL canvas, so the post processing plugin shaders it too: call postProcessBloom()
+  after new Render3DPlugin to make lights glow, see the render3dGlow demo
 - Opaque draws drop texels under half alpha, so cut out art like a fence or a leafy tree works and its shadow matches;
   see through draws blend instead, set obj.transparent for a sprite that fades
 - A texture comes before its tint like drawTile, except where per vertex colors are part of the geometry (drawStrip,

@@ -27,6 +27,8 @@ export
     // Post Process
     postProcess,
     PostProcessPlugin,
+    postProcessBloom,
+    postProcessBloomShader,
 
     // Light System
     lightSystem,
