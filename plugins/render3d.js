@@ -1,11 +1,12 @@
 /**
  * LittleJS 3D Rendering Plugin
- * - Draws meshes, billboards, lines and particles into the engine's WebGL canvas, under the 2D layer by default
- * - One shader: directional and ambient light, point lights, specular, fog, shadows, textures and vertex colors
- * - Meshes are triangle strips uploaded once and drawn by matrix, immediate mode draws batch into a stream
- * - Shape builders, extruded sprites and text, height map terrain, a sky dome and OBJ loading
- * - EngineObject3D is an EngineObject with a 3D transform and a mesh, with lights, particles and trails built on it
- * - Requires the Math3D plugin, call new Render3DPlugin() in gameInit
+ * - Adds a 3D scene that draws into the same WebGL canvas as the 2D game
+ * - Call new Render3DPlugin() in gameInit, then move render3D.camera and make EngineObject3D objects
+ * - EngineObject3D is an EngineObject with a 3D position, rotation and mesh
+ * - The 3D scene draws under the 2D sprites, so HUD and text land on top
+ * - Lighting is one directional light plus ambient, with optional point lights, fog and shadows
+ * - Build shapes with buildBox, buildSphere and friends, or load a model with loadOBJ
+ * - Requires the Math3D plugin
  * @namespace Render3D
  */
 
@@ -104,7 +105,7 @@ function render3DIsAfter2D(o) { return !!(o.renderAfter2D ?? render3D.renderAfte
 // a size given as a number or a vec3
 function render3DSize3(size) { return isNumber(size) ? vec3(size) : size; }
 
-// the matrix that transforms normals for a model matrix
+// the matrix that keeps normals pointing out when an object is scaled unevenly
 function render3DNormalMatrix(matrix) { return matrix.copy().invert().transpose(); }
 
 // the largest axis scale of a matrix, how much it grows a bounding sphere
@@ -202,9 +203,12 @@ function render3DLookRotation(direction)
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * Render3D Plugin - The 3D renderer, camera, lights, shadows, fog and draw state
- * - The 3D pass runs before gameRender, so 2D drawing lands on top; renderAfter2D flips that
- * - Draw state fields are read at each draw, the pass sets them from each object's flags and resets them for the callbacks
+ * Render3D Plugin - The 3D renderer, camera, lights, shadows and fog
+ * - There is one of these, in the global render3D
+ * - It draws the 3D scene before gameRender, so 2D drawing lands on top
+ * - Set renderAfter2D to draw the 3D scene over the 2D scene instead
+ * - Settings like lighting and specular are read as each thing draws
+ * - Every object sets them from its own flags, so you rarely touch them
  * @memberof Render3D
  * @example
  * new Render3DPlugin();
@@ -238,17 +242,17 @@ class Render3DPlugin
         this.fogEnd = 0;
 
         // shadows
-        /** @property {boolean} - Draw a shadow map from the directional light so lit opaque meshes shadow everything lit, off by default and free when off */
+        /** @property {boolean} - Cast real shadows from the directional light, off by default and free when off */
         this.shadows = false;
-        /** @property {number} - Shadow map width and height in texels, rebuilt when it changes */
+        /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
         this.shadowMapSize = 1024;
         /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper */
         this.shadowRange = 40;
         /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera */
         this.shadowCenter = undefined;
-        /** @property {number} - Depth offset that keeps surfaces from shadowing themselves, raise it for speckles, lower it if shadows float away from their casters */
+        /** @property {number} - Stops surfaces shadowing themselves, raise for speckles, lower if shadows drift off */
         this.shadowBias = .003;
-        /** @property {number} - Blur radius in shadow map texels */
+        /** @property {number} - How much to blur the shadow edges */
         this.shadowSoftness = 1;
 
         // draw state, read at each draw
@@ -262,21 +266,21 @@ class Render3DPlugin
         this.depthWrite = true;
         /** @property {boolean} - Skip faces that point away from the camera, set per object with its cullBackFaces flag */
         this.cullBackFaces = false;
-        /** @property {number} - Phong highlight strength */
+        /** @property {number} - How shiny the surface is, 0 is flat and matte */
         this.specular = 0;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
         this.receiveShadow = true;
 
         // the pass
-        /** @property {Function|undefined} - Called in the opaque stage after the opaque objects, for world geometry drawn outside of objects; called again in the shadow pass when shadows are on, so keep it to drawing */
+        /** @property {Function|undefined} - Draw solid world here, it runs again for shadows so only draw in it */
         this.onRenderOpaque = undefined;
-        /** @property {Function|undefined} - Called in the transparent stage after the transparent objects, for billboards, glows and shadows drawn outside of objects */
+        /** @property {Function|undefined} - Draw see through things here, like glows, billboards and soft shadows */
         this.onRenderTransparent = undefined;
         /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything */
         this.sky = undefined;
-        /** @property {boolean} - Draw the 3D scene after the 2D scene instead of before it, the default for objects that do not set their own renderAfter2D */
+        /** @property {boolean} - Draw the 3D scene on top of the 2D scene instead of under it */
         this.renderAfter2D = false;
-        /** @property {boolean} - Sort the transparent stage far to near so alpha and additive mix correctly, when false transparent draws land in object order */
+        /** @property {boolean} - Draw see through things far to near so they blend correctly */
         this.sortTransparent = true;
         /** @property {boolean} - Skip meshes whose bounding sphere is outside the view */
         this.frustumCulling = true;
@@ -358,7 +362,8 @@ class Render3DPlugin
         this.frustumPlanes = render3DFrustumPlanes(this.viewProjection);
     }
 
-    /** Project a world point to clip space, x and y in -1 to 1, z is depth; uses this frame's matrices, call updateMatrices after moving the camera
+    /** Where a world point lands on screen as -1 to 1 across and up, with z as depth
+     *  - Uses this frame's camera, call updateMatrices first if the camera just moved
      *  @param {Vector3} pos
      *  @return {Vector3|undefined} - undefined when behind the camera */
     worldToClip(pos)
@@ -384,8 +389,8 @@ class Render3DPlugin
         return vec2((clip.x + 1) / 2 * mainCanvasSize.x, (1 - clip.y) / 2 * mainCanvasSize.y);
     }
 
-    /** Get the world space ray under a screen position, for picking with the raycast functions; always returns a ray
-     *  - uses the camera as it is now, so it is safe to call from gameUpdate after moving the camera
+    /** Get the world ray under a screen position, for clicking on things in 3D
+     *  - Uses the camera where it is right now, so it is fine to call from gameUpdate
      *  @param {Vector2} screenPos - Same space as mousePosScreen
      *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
      *  @return {{origin: Vector3, direction: Vector3}} - Ray start and unit direction */
@@ -414,7 +419,8 @@ class Render3DPlugin
         return t === undefined ? undefined : ray.origin.add(ray.direction.scale(t));
     }
 
-    /** Find the nearest object whose bounding sphere a ray hits, for picking; the test is against each mesh's bounding sphere, not its triangles
+    /** Find the nearest object a ray hits, for clicking on things
+     *  - Each object is tested as a ball around its mesh, not triangle by triangle
      *  @param {Vector3} origin
      *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
      *  @param {Array<EngineObject>} [objects] - Defaults to every EngineObject3D with a mesh, other objects are skipped
@@ -462,7 +468,8 @@ class Render3DPlugin
         return new SoundInstance(sound, volume, rate, pan, loop);
     }
 
-    /** Is a sphere at least partly inside the view this frame, the test drawMesh uses to skip meshes off screen; inside the shadow pass it tests the shadow map's box
+    /** Is any part of a sphere on screen this frame, the test that skips meshes the camera cannot see
+     *  - While the shadow map is drawing it tests the shadow area instead
      *  @param {Vector3} center
      *  @param {number} radius
      *  @return {boolean} */
@@ -504,7 +511,8 @@ class Render3DPlugin
     }
 
     /** Draw a triangle strip, batched into the stream with the current draw state
-     *  - the first three points wound counter clockwise from outside are a front face
+     *  - List the first three points counter clockwise as seen from the front, or the face points away
+     *    and may vanish when back faces are culled
      *  - inside a bake the strip goes into the mesh instead, in the transparent stage it is queued for sorting
      *  @param {Array<Vector3>} points - Strip order
      *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
@@ -573,9 +581,10 @@ class Render3DPlugin
         this.streamCount = 0;
     }
 
-    /** Run a draw function with every strip captured into a new mesh instead of the stream
-     *  - strips inside a bake ignore their tileInfo, the baked mesh takes its texture at render time
-     *  - drawMesh is not captured: inside the pass it draws immediately, outside it asserts like any draw
+    /** Build a mesh once out of draw calls, instead of redrawing the shapes every frame
+     *  - Call the same drawStrip, drawQuad and drawBox calls inside, and get a mesh back
+     *  - Strips inside a bake ignore their tileInfo, the finished mesh picks the texture when it draws
+     *  - drawMesh is not collected, it draws right away
      *  @param {Function} drawFunction
      *  @return {Mesh} */
     bake(drawFunction)
@@ -591,7 +600,8 @@ class Render3DPlugin
     ///////////////////////////////////////////////////////////////////////////
     // The stages, run by the pass
 
-    /** Run the opaque and transparent stages over a layer's objects, called automatically by the pass; the default layer also gets the sky, the callbacks and the debug primitives
+    /** Draw a layer's objects, solid ones first and see through ones after, called automatically
+     *  - The main layer also draws the sky, the render callbacks and the debug shapes
      *  @param {Array<EngineObject3D>} objects
      *  @param {boolean} [isDefault] */
     renderStages(objects, isDefault=true)
@@ -678,8 +688,8 @@ class Render3DPlugin
         const center = this.shadowCenter || this.camera.pos.add(this.cameraForward.scale(half * .8));
         const up = abs(direction.y) > .99 ? vec3(0, 0, 1) : vec3(0, 1, 0);
         const view = Matrix4.lookAt(center.subtract(direction.scale(range)), center, up).invert();
-        // snap the view to whole texels so shadow edges hold still as the camera moves
-        const texel = range / (this.shadowTextureSize || this.shadowMapSize), m = view.m; // no texture headless
+        // move the light's view in whole pixel steps so shadow edges do not crawl as the camera moves
+        const texel = range / (this.shadowTextureSize || this.shadowMapSize), m = view.m; // no texture in headless mode
         m[12] = round(m[12] / texel) * texel;
         m[13] = round(m[13] / texel) * texel;
         this.shadowMatrix = Matrix4.orthographic(-half, half, -half, half, 0, range * 2).multiply(view);
@@ -723,7 +733,8 @@ class Render3DPlugin
         this.drawMesh(this.sphereMesh, buildMatrix(pos, undefined, vec3(size)), undefined, color);
     }
 
-    /** Draw a camera facing quad, unlit so it keeps its own colors; draw it in the transparent stage for alpha
+    /** Draw a flat square that always faces the camera, unlit so it keeps its own colors
+     *  - Draw it from onRenderTransparent or a transparent object so it can fade
      *  @param {Vector3} pos - Center
      *  @param {Vector2} size - World units
      *  @param {TileInfo|TextureInfo} [tileInfo]
@@ -834,7 +845,8 @@ class Render3DPlugin
             vec3(pos.x + (u.x * c + w.x * s) * r, pos.y + (u.y * c + w.y * s) * r, pos.z + (u.z * c + w.z * s) * r));
     }
 
-    /** Draw a soft round shadow on the ground under a position, unlit, cheaper than the shadow map and fine alongside it; draw it in the transparent stage
+    /** Draw a soft round shadow on the ground under something, much cheaper than a real shadow
+     *  - Draw it from onRenderTransparent or from a transparent object
      *  @param {Vector3} pos - Position of the thing casting the shadow
      *  @param {number} [size] - Diameter
      *  @param {number|Function} [floorHeight] - Height of the ground, or (x, z) => y so the shadow follows terrain
@@ -994,7 +1006,7 @@ class Camera3D
         this.far = 1e3;
         /** @property {number} - Visible height in world units for an orthographic view, 0 is perspective */
         this.orthographic = 0;
-        /** @property {boolean} - Each frame park the camera so the z=0 plane matches LittleJS 2D world space */
+        /** @property {boolean} - Line the 3D camera up with the 2D camera, so 3D things at z=0 sit on the 2D sprites */
         this.align2D = false;
     }
 
@@ -1053,7 +1065,7 @@ class Camera3D
         this.lookAt(target);
     }
 
-    /** Park the camera so the z=0 plane matches LittleJS 2D world space, called automatically when align2D is set
+    /** Line the 3D camera up with the 2D camera, called automatically when align2D is set
      *  @param {number} [canvasHeight] - Defaults to the main canvas height */
     update2D(canvasHeight=mainCanvasSize.y)
     {
@@ -1061,7 +1073,7 @@ class Camera3D
         const distance = halfHeight / tan(this.fov/2);
         this.orthographic &&= halfHeight * 2; // an orthographic view shows the same height
         this.pos = vec3(cameraPos.x, cameraPos.y, distance);
-        this.rotation = vec3(0, 0, -cameraAngle); // littlejs 2D angles are clockwise
+        this.rotation = vec3(0, 0, -cameraAngle); // 2D angles turn the other way
     }
 }
 
@@ -1084,8 +1096,8 @@ function render3DInitGL()
     r.uniformValues = {};
 
     // the shader
-    // attributes: p position, n normal, t uv, c color, at fixed locations shared with the depth shader
-    // vertex uniforms: viewProj, model, normalMat (inverse transpose of model), lightViewProj
+    // attributes: p position, n normal, t uv, c color, at fixed slots the depth shader also uses
+    // vertex uniforms: viewProj, model, normalMat (the fixed up matrix for normals), lightViewProj
     // fragment uniforms: tint, lightDir (xyz, w = lighting on), lightColor (rgb, a = specular),
     //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, uvRect, tex,
     //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space)
@@ -1234,7 +1246,8 @@ function render3DBindVertexBuffer(buffer)
         gl.vertexAttribPointer(a[0], a[1], a[2], a[3], RENDER3D_VERTEX_BYTES, a[4]);
 }
 
-// uv rect of a tile in texture space with bleed, or the whole texture; one shared rect, use it before the next call
+// where a tile sits in its texture, pulled in slightly at the edges so neighbours do not bleed in
+// this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 function render3DGetTileUVs(tileInfo)
 {
@@ -1262,7 +1275,8 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     }
     gl.uniformMatrix4fv(render3DUniform('model'), false, m);
 
-    // the shader normalizes, so a uniformly scaled rotation is its own normal matrix; only uneven scale needs the inverse transpose
+    // scaling an object unevenly would tilt its normals, so those need a fixed up matrix
+    // an even scale leaves normals pointing the right way, so the model matrix does
     const sx = m[0]*m[0] + m[1]*m[1] + m[2]*m[2], sy = m[4]*m[4] + m[5]*m[5] + m[6]*m[6], sz = m[8]*m[8] + m[9]*m[9] + m[10]*m[10];
     const mirrored = m[0] * (m[5]*m[10] - m[6]*m[9]) - m[4] * (m[1]*m[10] - m[2]*m[9]) + m[8] * (m[1]*m[6] - m[2]*m[5]) < 0;
     const uniform = !mirrored && abs(sx - sy) < 1e-6 * sx && abs(sx - sz) < 1e-6 * sx;
@@ -1303,7 +1317,8 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     render3DUniform4f('shadowParams', r.shadows && r.passIsDefault && state.receiveShadow ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, 0);
 }
 
-// the six planes of a view projection as [x, y, z, w] with unit normals facing inward, a point is inside when x*px + y*py + z*pz + w >= 0
+// the six flat sides of the camera's visible box, each as [x, y, z, w] facing inward
+// a point is inside when x*px + y*py + z*pz + w is zero or more
 function render3DFrustumPlanes(matrix)
 {
     const m = matrix.m, planes = [];
@@ -1355,7 +1370,8 @@ function render3DRenderPass(after2D)
     // take over the gl state
     gl.useProgram(r.shader);
     gl.bindVertexArray(r.vao);
-    // strips get one leading repeat, which shifts real triangles to odd indices, so front faces read as clockwise
+    // the leading repeat on every strip shifts the triangles by one, which flips
+    // which way they read, so tell WebGL that clockwise is the front here
     gl.frontFace(gl.CW);
     gl.activeTexture(gl.TEXTURE0);
     gl.depthMask(true);
@@ -1424,7 +1440,7 @@ function render3DUpdateShadowMap(size)
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, size, size, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); // linear on a compare texture filters the comparison, softer edges for free
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); // smooth filtering softens shadow edges for free
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -1484,10 +1500,11 @@ function render3DRenderShadowMap()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Strips: every strip gets a leading repeat of its first vertex and a trailing
-// repeat of its last, which joins it to its neighbours with degenerate
-// triangles, plus one more trailing repeat when the count is odd so winding
-// parity holds across a whole mesh or batch
+// Strips: every strip repeats its first point once at the start and its last
+// point once at the end. Those repeats make flat triangles with no area, which
+// are invisible, and they let one strip run straight into the next.
+// An odd count gets one more repeat at the end. Triangles in a strip alternate
+// which way they face, so keeping the count even keeps every strip facing out.
 
 // make room in the stream for a strip of count vertices under the current state and texture, flushing a batch that
 // differs first; returns the uv rect to map the vertices with, or undefined when nothing can be drawn
@@ -1589,7 +1606,7 @@ class Mesh
         this.buffer = undefined;
         /** @property {number} - Vertices in the GPU buffer */
         this.bufferCount = 0;
-        /** @property {boolean} - The CPU data changed since the last upload, set by every method that edits the arrays, or set it yourself after editing them directly */
+        /** @property {boolean} - The mesh changed and needs uploading again, set it yourself if you edit the arrays */
         this.dirty = false;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
         this.radius = 0;
@@ -1601,7 +1618,8 @@ class Mesh
     get vertexCount() { return this.points.length; }
 
     /** Add a triangle strip, joined to the previous one with degenerate triangles
-     *  - the first three points wound counter clockwise from outside are a front face
+     *  - List the first three points counter clockwise as seen from the front, or the face points away
+     *    and may vanish when back faces are culled
      *  @param {Array<Vector3>} points - Strip order
      *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
      *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, default zero
@@ -1653,7 +1671,7 @@ class Mesh
         return this;
     }
 
-    /** Move every vertex in place, points by the matrix and normals by its inverse transpose
+    /** Move, turn or scale every vertex in place, normals follow along
      *  @param {Matrix4} matrix
      *  @return {Mesh} */
     transform(matrix)
@@ -1668,11 +1686,11 @@ class Mesh
         return this;
     }
 
-    /** Turn the mesh inside out, for rooms and domes seen from within: negates the normals and shifts the strip so every face winds the other way
+    /** Turn the mesh inside out so it is lit and drawn from within, for rooms and domes
      *  @return {Mesh} */
     flipNormals()
     {
-        // one more leading repeat moves every triangle to the other parity, one more trailing repeat keeps the count even
+        // one extra point at each end flips which way every triangle faces, and keeps the count even
         for (const key of ['points', 'normals', 'uvs', 'colors'])
         {
             const a = this[key];
@@ -1739,7 +1757,7 @@ class Mesh
     }
 
     /** Derive normals from the strip's triangles
-     *  @param {boolean} [smooth] - Average normals at shared positions, otherwise each vertex takes the normal of the last face that touches it, which is one normal per face when every quad is its own strip
+     *  @param {boolean} [smooth] - Round the lighting across faces instead of giving each face a hard edge
      *  @return {Mesh} */
     computeNormals(smooth=false)
     {
@@ -1749,7 +1767,8 @@ class Mesh
         {
             const a = points[i], b = points[i+1], c = points[i+2];
             const normal = b.subtract(a).cross(c.subtract(a));
-            // real triangles sit at odd strip indices, see render3DForEachStripVertex; a zero normal is a degenerate join
+            // the real triangles sit at odd positions, see render3DForEachStripVertex
+            // a zero normal means a flat triangle joining two strips, so skip it
             faceNormals.push(normal.lengthSquared() ? normal.normalize(i & 1 ? 1 : -1) : undefined);
         }
         const normals = [];
@@ -1833,8 +1852,9 @@ class Mesh
 // Sizes are full sizes like buildBox and the 2D drawCircle, sides go around an axis and rings along it
 
 /**
- * Build a surface of revolution about the Y axis
- * - profile is [[radius, y], ...] from bottom to top, a profile that ends where it starts is closed like a torus
+ * Spin a flat outline around the Y axis to make a round shape, like a vase or a wheel
+ * - profile is [[radius, y], ...] from bottom to top
+ * - A profile that ends where it starts makes a closed ring like a donut
  * @param {Array<Array<number>>} profile
  * @param {number} [sides] - Around the axis
  * @param {boolean} [smooth] - Defaults to render3DSmoothShading
@@ -2006,8 +2026,8 @@ function buildCapsule(size=1, height=1, sides=12, rings=4, smooth=render3DSmooth
 }
 
 /**
- * Build a torus lying flat around the Y axis, a circle profile revolved
- * @param {number} [size] - Diameter from the outside of the tube to the outside of the tube
+ * Build a donut lying flat around the Y axis
+ * @param {number} [size] - Diameter of the whole donut, outside edge to outside edge
  * @param {number} [tubeSize] - Diameter of the tube
  * @param {number} [sides] - Around the ring
  * @param {number} [tubeSides] - Around the tube
@@ -2090,11 +2110,11 @@ function buildRibbon(points, width=1, color=WHITE, closed=false, up=vec3(0, 1, 0
 
 /**
  * Build a heightfield grid in the XZ plane centered on the origin
- * - smooth is one ribbon strip per row with slope normals and a color per vertex
- * - flat is one quad per cell with a face normal and one color sampled at the cell center, so checkerboards stay crisp
+ * - smooth rounds the lighting across cells and colors each corner
+ * - flat lights and colors each cell on its own, so a checkerboard stays crisp
  * @param {Vector2} [size] - World size along X and Z
  * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
- * @param {Color|Function} [color] - A Color for the whole grid or (x, z) => Color in mesh units, called per vertex when smooth and once per cell at its center when flat
+ * @param {Color|Function} [color] - One Color for the whole grid, or (x, z) => Color
  * @param {Function} [heightFunction] - (x, z) => y, default flat
  * @param {boolean} [smooth] - Defaults to render3DSmoothShading
  * @return {Mesh}
@@ -2148,9 +2168,10 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
 }
 
 /**
- * Build a loft: diamond cross sections swept along Z, quads between them, capped both ends
- * - station = [z, width, top, bottom, sideHeight] with sideHeight 0-1 placing the side points between bottom and top (default .5)
- * - stations are ordered nose first, nose at the largest z
+ * Build a hull from a row of diamond shaped slices along Z, for ships, planes and cars
+ * - Each slice is [z, width, top, bottom, sideHeight]
+ * - sideHeight is 0 to 1 and puts the side corners between the bottom and the top
+ * - List the slices nose first, with the nose at the largest z
  * @param {Array<Array<number>>} stations
  * @return {Mesh}
  * @memberof Render3D
@@ -2216,9 +2237,10 @@ function buildSky(topColor=rgb(.2, .4, .9), horizonColor=rgb(.8, .9, 1), bottomC
 }
 
 /**
- * Build a mesh by extruding the solid pixels of a tile, a 3D sprite
- * - A pixel is solid when its alpha is over half, its color becomes the vertex color so sprites keep their colors and white glyphs take the tint
- * - Faces and walls are merged along runs of same colored pixels, walls only appear where a solid pixel meets an empty one
+ * Turn a sprite into a 3D block model by giving its pixels thickness
+ * - A pixel counts as solid when it is more than half opaque
+ * - Each pixel keeps its own color, so white art takes the object's tint
+ * - Runs of matching pixels merge into one face, and side walls appear only at the sprite's edges
  * - Pixels can also be an array of rows, each a Color, a truthy value for white, or a falsy value for empty
  * @param {TileInfo|Array<Array<Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels
  * @param {Vector2} [size] - World width and height of the whole tile, centered like buildBox
@@ -2344,9 +2366,10 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * HeightMap - Terrain from a grid of heights, with a mesh builder, height lookup and a raycast
- * - heights is a 2D array [row][column] of 0-1 values; row 0 is the far edge at -Z, column 0 is the left edge at -X
- * - or an image, where the red channel is the height, laid out the same way
+ * HeightMap - Terrain built from a grid of heights, with a mesh, a height lookup and a raycast
+ * - heights is a 2D array [row][column] of 0 to 1 values
+ * - Row 0 is the far edge at -Z and column 0 is the left edge at -X
+ * - It can be an image instead, where the red channel is the height
  * - colors is an optional 2D array of Colors or an image, sampled per vertex
  * - images are read through a canvas, so they must be same origin or loaded with crossOrigin set
  * @memberof Render3D
@@ -2431,7 +2454,8 @@ class HeightMap
         return c[j][i];
     }
 
-    /** Distance along a ray to where it meets the terrain, or undefined; walks the ray half a cell at a time then narrows in
+    /** Distance along a ray to where it hits the terrain, or undefined for a miss
+     *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
      *  @param {Vector3} origin
      *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
      *  @return {number|undefined} */
@@ -2518,11 +2542,14 @@ function render3DReadPixels(textureInfo)
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * EngineObject3D - An EngineObject with a 3D transform and a mesh
- * - Inherits update, children, timers, destroy and renderOrder from EngineObject; children that are EngineObject3D follow the parent's 3D transform
- * - velocity3D is added to pos3D each frame, there is no other 3D physics, games do their own
- * - An object faces -Z like the camera: its forward is getMatrix().transformDirection(vec3(0, 0, -1)), or vec3(-sin(yaw), 0, -cos(yaw)) when only yawed
- * - The 2D pos and velocity still exist but rendering ignores them and mass is 0 so 2D physics leaves them alone; copy pos into pos3D for pseudo-3D games
- * - addChild parents the 3D transform, pos3D is then local to the parent; the 2D offset arguments of addChild do nothing in 3D, set the child's pos3D instead
+ * - Set pos3D, rotation3D and scale3D instead of the 2D pos, size and angle
+ * - Gets update, children, timers, destroy and renderOrder from EngineObject
+ * - velocity3D is added to pos3D each frame, that is all the 3D physics there is
+ * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
+ * - The 2D pos and velocity are still there but nothing draws them
+ * - For a pseudo-3D game, copy pos into pos3D each frame
+ * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
+ * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
  * @extends EngineObject
  * @memberof Render3D
  * @example
@@ -2545,8 +2572,8 @@ class EngineObject3D extends EngineObject
         ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
         ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
         ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo, it comes before color');
-        this.tileInfo = tileInfo; // set after super, a whole TextureInfo is allowed here
-        this.mass = 0; // no 2D physics
+        this.tileInfo = tileInfo; // set after super so a whole TextureInfo is allowed
+        this.mass = 0; // 3D objects skip 2D physics
 
         /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
         this.pos3D = pos3D.copy();
@@ -2566,7 +2593,7 @@ class EngineObject3D extends EngineObject
         this.additive = false;
         /** @property {boolean} - Draw with lighting off, plain vertex color times texture, for lamps and glowing things; unlit objects cast no shadow */
         this.unlit = false;
-        /** @property {number} - Phong highlight strength */
+        /** @property {number} - How shiny the surface is, 0 is flat and matte */
         this.specular = 0;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, lit opaque objects only */
         this.castShadow = true;
@@ -2574,7 +2601,7 @@ class EngineObject3D extends EngineObject
         this.receiveShadow = true;
         /** @property {boolean} - Skip faces that point away from the camera, faster for closed meshes */
         this.cullBackFaces = false;
-        /** @property {boolean|undefined} - Draw this object after the 2D scene instead of before it, undefined follows render3D.renderAfter2D; set it back to undefined to follow the default again */
+        /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D */
         this.renderAfter2D = undefined;
     }
 
@@ -2619,7 +2646,8 @@ class EngineObject3D extends EngineObject
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Light3D - A point light that lights nearby surfaces, an EngineObject3D so it can move or follow a parent
- * - The 8 nearest to the camera light the frame, radius is where the light reaches zero; the falloff is steep, so a small radius needs a bright color
+ * - Only the 8 lights nearest the camera are used each frame
+ * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
  * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
  * @extends EngineObject3D
  * @memberof Render3D
@@ -2646,10 +2674,12 @@ class Light3D extends EngineObject3D
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
- * - Particles are billboards of the tile, or of a built in soft dot when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
- * - Set trailTime to draw each particle as a ribbon along its recent path instead, for sparks and streaks
- * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitConeAngle
- * - Speeds are per frame and sizes are world units like the 2D emitter; gravity is a per frame change to velocity y, not a scale of the engine's 2D gravity
+ * - Each particle is a flat square facing the camera, with a soft round dot when no tile is given
+ * - Set trailTime to draw each particle as a streak along where it has been, for sparks
+ * - Particles shoot out along the emitter's own up axis, turned by rotation3D
+ * - emitConeAngle spreads them, PI sprays in every direction
+ * - Speeds are per frame and sizes are world units, the same as the 2D emitter
+ * - gravity here is added to velocity y each frame, it does not use the engine's 2D gravity
  * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
  * @extends EngineObject3D
  * @memberof Render3D
@@ -2787,7 +2817,8 @@ class ParticleEmitter3D extends EngineObject3D
             age: 0 });
     }
 
-    /** Draw the particles as billboards, soft dots, or ribbons along their trails; the emitter sorts as one draw, its particles are not sorted against each other */
+    /** Draw the particles, as flat squares or as streaks when trailTime is set
+     *  - The whole emitter sorts as one thing, its particles are not sorted against each other */
     render3D()
     {
         if (render3D.transparentQueue)

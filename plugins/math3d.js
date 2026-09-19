@@ -33,7 +33,7 @@ function vec3(x=0, y, z)
 function isVector3(v) { return v instanceof Vector3 && v.isValid(); }
 
 /**
- * Returns a random Vector3 with the given length, uniform over the sphere
+ * Returns a random Vector3 of a given length, pointing any direction evenly
  * @param {number} [length]
  * @return {Vector3}
  * @memberof Math3D
@@ -152,7 +152,7 @@ class Vector3
      *  @return {number} */
     dot(v) { return this.x*v.x + this.y*v.y + this.z*v.z; }
 
-    /** Returns the cross product of this vector and the vector passed in (right hand rule)
+    /** Returns a vector at right angles to both this and the one passed in
      *  @param {Vector3} v
      *  @return {Vector3} */
     cross(v)
@@ -211,9 +211,11 @@ class Vector3
 const matrix4Scratch = new Float32Array(16);
 
 /**
- * 4x4 transform matrix, column major in a Float32Array so it uploads straight to WebGL
- * - Static builders return new matrices, instance methods modify in place and return self
- * - multiply(m2) appends m2, so it is applied to points before this matrix
+ * 4x4 transform matrix for moving, rotating and scaling points in 3D
+ * - Static builders like Matrix4.translation return a new matrix
+ * - Methods on a matrix change it in place and return it, so calls can chain
+ * - a.multiply(b) means b happens first, then a
+ * - Stored the way WebGL wants it, so it can be sent to a shader as is
  * @memberof Math3D
  * @example
  * const m = buildMatrix(vec3(0, 1, 0), vec3(0, PI/2, 0)); // rotate then move up
@@ -247,7 +249,7 @@ class Matrix4
         return r;
     }
 
-    /** Returns a new rotation matrix from euler angles, applied to points as roll (Z), pitch (X), then yaw (Y)
+    /** Returns a new rotation matrix, rolled first, then pitched, then yawed
      *  @param {Vector3} euler - vec3(pitch, yaw, roll) in radians
      *  @return {Matrix4} */
     static rotation(euler)
@@ -277,8 +279,8 @@ class Matrix4
     /** Returns a new perspective projection, camera looks down -Z
      *  @param {number} fov - Vertical field of view in radians
      *  @param {number} aspect - Width divided by height
-     *  @param {number} near
-     *  @param {number} far
+     *  @param {number} near - Closest visible distance
+     *  @param {number} far - Furthest visible distance
      *  @return {Matrix4} */
     static perspective(fov, aspect, near, far)
     {
@@ -295,12 +297,12 @@ class Matrix4
     }
 
     /** Returns a new orthographic projection, camera looks down -Z
-     *  @param {number} left
-     *  @param {number} right
-     *  @param {number} bottom
-     *  @param {number} top
-     *  @param {number} near
-     *  @param {number} far
+     *  @param {number} left - Edge of the visible box
+     *  @param {number} right - Edge of the visible box
+     *  @param {number} bottom - Edge of the visible box
+     *  @param {number} top - Edge of the visible box
+     *  @param {number} near - Closest visible distance
+     *  @param {number} far - Furthest visible distance
      *  @return {Matrix4} */
     static orthographic(left, right, bottom, top, near, far)
     {
@@ -315,7 +317,8 @@ class Matrix4
         return r;
     }
 
-    /** Returns the transform of an object at eye facing target with its -Z axis, invert it for a view matrix
+    /** Returns the transform of something at eye turned to face target
+     *  - Invert it to get a view matrix for a camera there
      *  @param {Vector3} eye
      *  @param {Vector3} target
      *  @param {Vector3} [up]
@@ -336,7 +339,7 @@ class Matrix4
      *  @return {Matrix4} */
     copy() { return new Matrix4(this.m); }
 
-    /** Multiply this matrix by another, the other is applied to points first, returns self
+    /** Multiply this matrix by another and return this, the other happens first
      *  @param {Matrix4} matrix
      *  @return {Matrix4} */
     multiply(matrix)
@@ -379,7 +382,7 @@ class Matrix4
         return this;
     }
 
-    /** Invert this matrix in place, returns self, leaves the matrix alone if singular
+    /** Flip this matrix so it undoes itself, returns this and does nothing if it cannot be inverted
      *  @return {Matrix4} */
     invert()
     {
@@ -455,7 +458,8 @@ class Matrix4
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * Build an object matrix: translate, then rotate, then scale (scale is applied to points first)
+ * Build a transform for an object from its position, rotation and scale
+ * - A point is scaled first, then rotated, then moved, which is what you want for a game object
  * @param {Vector3} [pos]
  * @param {Vector3} [rotation] - vec3(pitch, yaw, roll) in radians
  * @param {Vector3} [scale]
@@ -464,7 +468,7 @@ class Matrix4
  */
 function buildMatrix(pos, rotation, scale)
 {
-    // the rotation's columns scaled, then the translation, without the general products
+    // scale the rotation columns and drop the position in, instead of multiplying three matrices
     const matrix = rotation ? Matrix4.rotation(rotation) : new Matrix4, m = matrix.m;
     if (scale)
     {
@@ -478,9 +482,10 @@ function buildMatrix(pos, rotation, scale)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// 3D collision: axis aligned boxes are centered at pos with full size, cylinders
-// stand on the Y axis centered at pos with full height, all functions are pure
-// names take a 3D suffix only where the 2D engine already uses the name
+// 3D collision helpers, none of them change anything that is passed in
+// Boxes sit centered on pos and take a full size, like drawRect
+// Cylinders stand up the Y axis, centered on pos, with a full height
+// Only the names the 2D engine already uses get a 3D suffix
 
 /**
  * Check if a point is inside an axis aligned box, boundary is inclusive

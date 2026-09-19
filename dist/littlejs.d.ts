@@ -5824,7 +5824,7 @@ declare module "littlejsengine" {
      */
     export function isVector3(v: any): boolean;
     /**
-     * Returns a random Vector3 with the given length, uniform over the sphere
+     * Returns a random Vector3 of a given length, pointing any direction evenly
      * @param {number} [length]
      * @return {Vector3}
      * @memberof Math3D
@@ -5910,7 +5910,7 @@ declare module "littlejsengine" {
          *  @param {Vector3} v
          *  @return {number} */
         dot(v: Vector3): number;
-        /** Returns the cross product of this vector and the vector passed in (right hand rule)
+        /** Returns a vector at right angles to both this and the one passed in
          *  @param {Vector3} v
          *  @return {Vector3} */
         cross(v: Vector3): Vector3;
@@ -5945,9 +5945,11 @@ declare module "littlejsengine" {
         toString(digits?: number): string;
     }
     /**
-     * 4x4 transform matrix, column major in a Float32Array so it uploads straight to WebGL
-     * - Static builders return new matrices, instance methods modify in place and return self
-     * - multiply(m2) appends m2, so it is applied to points before this matrix
+     * 4x4 transform matrix for moving, rotating and scaling points in 3D
+     * - Static builders like Matrix4.translation return a new matrix
+     * - Methods on a matrix change it in place and return it, so calls can chain
+     * - a.multiply(b) means b happens first, then a
+     * - Stored the way WebGL wants it, so it can be sent to a shader as is
      * @memberof Math3D
      * @example
      * const m = buildMatrix(vec3(0, 1, 0), vec3(0, PI/2, 0)); // rotate then move up
@@ -5961,7 +5963,7 @@ declare module "littlejsengine" {
          *  @param {Vector3} v
          *  @return {Matrix4} */
         static translation(v: Vector3): Matrix4;
-        /** Returns a new rotation matrix from euler angles, applied to points as roll (Z), pitch (X), then yaw (Y)
+        /** Returns a new rotation matrix, rolled first, then pitched, then yawed
          *  @param {Vector3} euler - vec3(pitch, yaw, roll) in radians
          *  @return {Matrix4} */
         static rotation(euler: Vector3): Matrix4;
@@ -5972,20 +5974,21 @@ declare module "littlejsengine" {
         /** Returns a new perspective projection, camera looks down -Z
          *  @param {number} fov - Vertical field of view in radians
          *  @param {number} aspect - Width divided by height
-         *  @param {number} near
-         *  @param {number} far
+         *  @param {number} near - Closest visible distance
+         *  @param {number} far - Furthest visible distance
          *  @return {Matrix4} */
         static perspective(fov: number, aspect: number, near: number, far: number): Matrix4;
         /** Returns a new orthographic projection, camera looks down -Z
-         *  @param {number} left
-         *  @param {number} right
-         *  @param {number} bottom
-         *  @param {number} top
-         *  @param {number} near
-         *  @param {number} far
+         *  @param {number} left - Edge of the visible box
+         *  @param {number} right - Edge of the visible box
+         *  @param {number} bottom - Edge of the visible box
+         *  @param {number} top - Edge of the visible box
+         *  @param {number} near - Closest visible distance
+         *  @param {number} far - Furthest visible distance
          *  @return {Matrix4} */
         static orthographic(left: number, right: number, bottom: number, top: number, near: number, far: number): Matrix4;
-        /** Returns the transform of an object at eye facing target with its -Z axis, invert it for a view matrix
+        /** Returns the transform of something at eye turned to face target
+         *  - Invert it to get a view matrix for a camera there
          *  @param {Vector3} eye
          *  @param {Vector3} target
          *  @param {Vector3} [up]
@@ -5999,7 +6002,7 @@ declare module "littlejsengine" {
         /** Returns a new matrix that is a copy of this
          *  @return {Matrix4} */
         copy(): Matrix4;
-        /** Multiply this matrix by another, the other is applied to points first, returns self
+        /** Multiply this matrix by another and return this, the other happens first
          *  @param {Matrix4} matrix
          *  @return {Matrix4} */
         multiply(matrix: Matrix4): Matrix4;
@@ -6018,7 +6021,7 @@ declare module "littlejsengine" {
         /** Transpose this matrix in place, returns self
          *  @return {Matrix4} */
         transpose(): Matrix4;
-        /** Invert this matrix in place, returns self, leaves the matrix alone if singular
+        /** Flip this matrix so it undoes itself, returns this and does nothing if it cannot be inverted
          *  @return {Matrix4} */
         invert(): Matrix4;
         /** Transform a point, translation included
@@ -6037,7 +6040,8 @@ declare module "littlejsengine" {
         toString(): string;
     }
     /**
-     * Build an object matrix: translate, then rotate, then scale (scale is applied to points first)
+     * Build a transform for an object from its position, rotation and scale
+     * - A point is scaled first, then rotated, then moved, which is what you want for a game object
      * @param {Vector3} [pos]
      * @param {Vector3} [rotation] - vec3(pitch, yaw, roll) in radians
      * @param {Vector3} [scale]
@@ -6137,12 +6141,13 @@ declare module "littlejsengine" {
     export function raycastBox(origin: Vector3, direction: Vector3, pos: Vector3, size: Vector3): number | undefined;
     /**
      * LittleJS 3D Rendering Plugin
-     * - Draws meshes, billboards, lines and particles into the engine's WebGL canvas, under the 2D layer by default
-     * - One shader: directional and ambient light, point lights, specular, fog, shadows, textures and vertex colors
-     * - Meshes are triangle strips uploaded once and drawn by matrix, immediate mode draws batch into a stream
-     * - Shape builders, extruded sprites and text, height map terrain, a sky dome and OBJ loading
-     * - EngineObject3D is an EngineObject with a 3D transform and a mesh, with lights, particles and trails built on it
-     * - Requires the Math3D plugin, call new Render3DPlugin() in gameInit
+     * - Adds a 3D scene that draws into the same WebGL canvas as the 2D game
+     * - Call new Render3DPlugin() in gameInit, then move render3D.camera and make EngineObject3D objects
+     * - EngineObject3D is an EngineObject with a 3D position, rotation and mesh
+     * - The 3D scene draws under the 2D sprites, so HUD and text land on top
+     * - Lighting is one directional light plus ambient, with optional point lights, fog and shadows
+     * - Build shapes with buildBox, buildSphere and friends, or load a model with loadOBJ
+     * - Requires the Math3D plugin
      * @namespace Render3D
      */
     /** Global Render3D plugin object
@@ -6150,9 +6155,12 @@ declare module "littlejsengine" {
      *  @memberof Render3D */
     export let render3D: Render3DPlugin;
     /**
-     * Render3D Plugin - The 3D renderer, camera, lights, shadows, fog and draw state
-     * - The 3D pass runs before gameRender, so 2D drawing lands on top; renderAfter2D flips that
-     * - Draw state fields are read at each draw, the pass sets them from each object's flags and resets them for the callbacks
+     * Render3D Plugin - The 3D renderer, camera, lights, shadows and fog
+     * - There is one of these, in the global render3D
+     * - It draws the 3D scene before gameRender, so 2D drawing lands on top
+     * - Set renderAfter2D to draw the 3D scene over the 2D scene instead
+     * - Settings like lighting and specular are read as each thing draws
+     * - Every object sets them from its own flags, so you rarely touch them
      * @memberof Render3D
      * @example
      * new Render3DPlugin();
@@ -6175,17 +6183,17 @@ declare module "littlejsengine" {
         fogStart: number;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
         fogEnd: number;
-        /** @property {boolean} - Draw a shadow map from the directional light so lit opaque meshes shadow everything lit, off by default and free when off */
+        /** @property {boolean} - Cast real shadows from the directional light, off by default and free when off */
         shadows: boolean;
-        /** @property {number} - Shadow map width and height in texels, rebuilt when it changes */
+        /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
         shadowMapSize: number;
         /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper */
         shadowRange: number;
         /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera */
         shadowCenter: any;
-        /** @property {number} - Depth offset that keeps surfaces from shadowing themselves, raise it for speckles, lower it if shadows float away from their casters */
+        /** @property {number} - Stops surfaces shadowing themselves, raise for speckles, lower if shadows drift off */
         shadowBias: number;
-        /** @property {number} - Blur radius in shadow map texels */
+        /** @property {number} - How much to blur the shadow edges */
         shadowSoftness: number;
         /** @property {boolean} - Apply lighting, when false draws plain vertex color times texture */
         lighting: boolean;
@@ -6197,19 +6205,19 @@ declare module "littlejsengine" {
         depthWrite: boolean;
         /** @property {boolean} - Skip faces that point away from the camera, set per object with its cullBackFaces flag */
         cullBackFaces: boolean;
-        /** @property {number} - Phong highlight strength */
+        /** @property {number} - How shiny the surface is, 0 is flat and matte */
         specular: number;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
         receiveShadow: boolean;
-        /** @property {Function|undefined} - Called in the opaque stage after the opaque objects, for world geometry drawn outside of objects; called again in the shadow pass when shadows are on, so keep it to drawing */
+        /** @property {Function|undefined} - Draw solid world here, it runs again for shadows so only draw in it */
         onRenderOpaque: any;
-        /** @property {Function|undefined} - Called in the transparent stage after the transparent objects, for billboards, glows and shadows drawn outside of objects */
+        /** @property {Function|undefined} - Draw see through things here, like glows, billboards and soft shadows */
         onRenderTransparent: any;
         /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything */
         sky: Mesh;
-        /** @property {boolean} - Draw the 3D scene after the 2D scene instead of before it, the default for objects that do not set their own renderAfter2D */
+        /** @property {boolean} - Draw the 3D scene on top of the 2D scene instead of under it */
         renderAfter2D: boolean;
-        /** @property {boolean} - Sort the transparent stage far to near so alpha and additive mix correctly, when false transparent draws land in object order */
+        /** @property {boolean} - Draw see through things far to near so they blend correctly */
         sortTransparent: boolean;
         /** @property {boolean} - Skip meshes whose bounding sphere is outside the view */
         frustumCulling: boolean;
@@ -6261,7 +6269,8 @@ declare module "littlejsengine" {
         /** Rebuild the view and projection matrices from the camera, called automatically each frame
          *  @param {number} [aspect] - Width over height, defaults to the main canvas */
         updateMatrices(aspect?: number): void;
-        /** Project a world point to clip space, x and y in -1 to 1, z is depth; uses this frame's matrices, call updateMatrices after moving the camera
+        /** Where a world point lands on screen as -1 to 1 across and up, with z as depth
+         *  - Uses this frame's camera, call updateMatrices first if the camera just moved
          *  @param {Vector3} pos
          *  @return {Vector3|undefined} - undefined when behind the camera */
         worldToClip(pos: Vector3): Vector3 | undefined;
@@ -6269,8 +6278,8 @@ declare module "littlejsengine" {
          *  @param {Vector3} pos
          *  @return {Vector2|undefined} - undefined when behind the camera */
         worldToScreen(pos: Vector3): Vector2 | undefined;
-        /** Get the world space ray under a screen position, for picking with the raycast functions; always returns a ray
-         *  - uses the camera as it is now, so it is safe to call from gameUpdate after moving the camera
+        /** Get the world ray under a screen position, for clicking on things in 3D
+         *  - Uses the camera where it is right now, so it is fine to call from gameUpdate
          *  @param {Vector2} screenPos - Same space as mousePosScreen
          *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
          *  @return {{origin: Vector3, direction: Vector3}} - Ray start and unit direction */
@@ -6283,7 +6292,8 @@ declare module "littlejsengine" {
          *  @param {number} [groundHeight] - World height of the ground plane
          *  @return {Vector3|undefined} - undefined when the ray misses the plane */
         screenToGround(screenPos: Vector2, groundHeight?: number): Vector3 | undefined;
-        /** Find the nearest object whose bounding sphere a ray hits, for picking; the test is against each mesh's bounding sphere, not its triangles
+        /** Find the nearest object a ray hits, for clicking on things
+         *  - Each object is tested as a ball around its mesh, not triangle by triangle
          *  @param {Vector3} origin
          *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
          *  @param {Array<EngineObject>} [objects] - Defaults to every EngineObject3D with a mesh, other objects are skipped
@@ -6301,7 +6311,8 @@ declare module "littlejsengine" {
          *  @param {boolean} [loop]
          *  @return {SoundInstance|undefined} - undefined when out of range or sound is off */
         playSound(sound: Sound, pos3D: Vector3, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean): SoundInstance | undefined;
-        /** Is a sphere at least partly inside the view this frame, the test drawMesh uses to skip meshes off screen; inside the shadow pass it tests the shadow map's box
+        /** Is any part of a sphere on screen this frame, the test that skips meshes the camera cannot see
+         *  - While the shadow map is drawing it tests the shadow area instead
          *  @param {Vector3} center
          *  @param {number} radius
          *  @return {boolean} */
@@ -6313,7 +6324,8 @@ declare module "littlejsengine" {
          *  @param {Color} [color] - Tint */
         drawMesh(mesh: Mesh, matrix?: Matrix4, tileInfo?: TileInfo | TextureInfo, color?: Color): any;
         /** Draw a triangle strip, batched into the stream with the current draw state
-         *  - the first three points wound counter clockwise from outside are a front face
+         *  - List the first three points counter clockwise as seen from the front, or the face points away
+         *    and may vanish when back faces are culled
          *  - inside a bake the strip goes into the mesh instead, in the transparent stage it is queued for sorting
          *  @param {Array<Vector3>} points - Strip order
          *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
@@ -6330,13 +6342,15 @@ declare module "littlejsengine" {
         drawStripUnlit(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>, tileInfo?: TileInfo | TextureInfo): void;
         /** Draw the pending stream vertices as one strip with the state they were drawn under, called automatically when needed */
         flush(): void;
-        /** Run a draw function with every strip captured into a new mesh instead of the stream
-         *  - strips inside a bake ignore their tileInfo, the baked mesh takes its texture at render time
-         *  - drawMesh is not captured: inside the pass it draws immediately, outside it asserts like any draw
+        /** Build a mesh once out of draw calls, instead of redrawing the shapes every frame
+         *  - Call the same drawStrip, drawQuad and drawBox calls inside, and get a mesh back
+         *  - Strips inside a bake ignore their tileInfo, the finished mesh picks the texture when it draws
+         *  - drawMesh is not collected, it draws right away
          *  @param {Function} drawFunction
          *  @return {Mesh} */
         bake(drawFunction: Function): Mesh;
-        /** Run the opaque and transparent stages over a layer's objects, called automatically by the pass; the default layer also gets the sky, the callbacks and the debug primitives
+        /** Draw a layer's objects, solid ones first and see through ones after, called automatically
+         *  - The main layer also draws the sky, the render callbacks and the debug shapes
          *  @param {Array<EngineObject3D>} objects
          *  @param {boolean} [isDefault] */
         renderStages(objects: Array<EngineObject3D>, isDefault?: boolean): void;
@@ -6367,7 +6381,8 @@ declare module "littlejsengine" {
          *  @param {number} [size] - Diameter
          *  @param {Color} [color] */
         drawSphere(pos: Vector3, size?: number, color?: Color): void;
-        /** Draw a camera facing quad, unlit so it keeps its own colors; draw it in the transparent stage for alpha
+        /** Draw a flat square that always faces the camera, unlit so it keeps its own colors
+         *  - Draw it from onRenderTransparent or a transparent object so it can fade
          *  @param {Vector3} pos - Center
          *  @param {Vector2} size - World units
          *  @param {TileInfo|TextureInfo} [tileInfo]
@@ -6409,7 +6424,8 @@ declare module "littlejsengine" {
          *  @param {Vector3} [normal] - Facing direction, faces the camera by default
          *  @param {number} [sides] */
         drawSoftDisc(pos: Vector3, size?: number, color?: Color, normal?: Vector3, sides?: number): any;
-        /** Draw a soft round shadow on the ground under a position, unlit, cheaper than the shadow map and fine alongside it; draw it in the transparent stage
+        /** Draw a soft round shadow on the ground under something, much cheaper than a real shadow
+         *  - Draw it from onRenderTransparent or from a transparent object
          *  @param {Vector3} pos - Position of the thing casting the shadow
          *  @param {number} [size] - Diameter
          *  @param {number|Function} [floorHeight] - Height of the ground, or (x, z) => y so the shadow follows terrain
@@ -6435,7 +6451,7 @@ declare module "littlejsengine" {
         far: number;
         /** @property {number} - Visible height in world units for an orthographic view, 0 is perspective */
         orthographic: number;
-        /** @property {boolean} - Each frame park the camera so the z=0 plane matches LittleJS 2D world space */
+        /** @property {boolean} - Line the 3D camera up with the 2D camera, so 3D things at z=0 sit on the 2D sprites */
         align2D: boolean;
         /** Returns the camera's world transform
          *  @return {Matrix4} */
@@ -6470,17 +6486,20 @@ declare module "littlejsengine" {
          *  @param {Vector3} offset - Where to sit relative to the target
          *  @param {number} [percent] - How far to move toward the spot each call, 1 snaps */
         follow(target: Vector3, offset: Vector3, percent?: number): void;
-        /** Park the camera so the z=0 plane matches LittleJS 2D world space, called automatically when align2D is set
+        /** Line the 3D camera up with the 2D camera, called automatically when align2D is set
          *  @param {number} [canvasHeight] - Defaults to the main canvas height */
         update2D(canvasHeight?: number): void;
     }
     /**
      * EngineObject3D - An EngineObject with a 3D transform and a mesh
-     * - Inherits update, children, timers, destroy and renderOrder from EngineObject; children that are EngineObject3D follow the parent's 3D transform
-     * - velocity3D is added to pos3D each frame, there is no other 3D physics, games do their own
-     * - An object faces -Z like the camera: its forward is getMatrix().transformDirection(vec3(0, 0, -1)), or vec3(-sin(yaw), 0, -cos(yaw)) when only yawed
-     * - The 2D pos and velocity still exist but rendering ignores them and mass is 0 so 2D physics leaves them alone; copy pos into pos3D for pseudo-3D games
-     * - addChild parents the 3D transform, pos3D is then local to the parent; the 2D offset arguments of addChild do nothing in 3D, set the child's pos3D instead
+     * - Set pos3D, rotation3D and scale3D instead of the 2D pos, size and angle
+     * - Gets update, children, timers, destroy and renderOrder from EngineObject
+     * - velocity3D is added to pos3D each frame, that is all the 3D physics there is
+     * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
+     * - The 2D pos and velocity are still there but nothing draws them
+     * - For a pseudo-3D game, copy pos into pos3D each frame
+     * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
+     * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
      * @extends EngineObject
      * @memberof Render3D
      * @example
@@ -6516,7 +6535,7 @@ declare module "littlejsengine" {
         additive: boolean;
         /** @property {boolean} - Draw with lighting off, plain vertex color times texture, for lamps and glowing things; unlit objects cast no shadow */
         unlit: boolean;
-        /** @property {number} - Phong highlight strength */
+        /** @property {number} - How shiny the surface is, 0 is flat and matte */
         specular: number;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, lit opaque objects only */
         castShadow: boolean;
@@ -6524,7 +6543,7 @@ declare module "littlejsengine" {
         receiveShadow: boolean;
         /** @property {boolean} - Skip faces that point away from the camera, faster for closed meshes */
         cullBackFaces: boolean;
-        /** @property {boolean|undefined} - Draw this object after the 2D scene instead of before it, undefined follows render3D.renderAfter2D; set it back to undefined to follow the default again */
+        /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D */
         renderAfter2D: any;
         /** Returns the world position
          *  @return {Vector3} */
@@ -6560,7 +6579,7 @@ declare module "littlejsengine" {
         buffer: WebGLBuffer;
         /** @property {number} - Vertices in the GPU buffer */
         bufferCount: number;
-        /** @property {boolean} - The CPU data changed since the last upload, set by every method that edits the arrays, or set it yourself after editing them directly */
+        /** @property {boolean} - The mesh changed and needs uploading again, set it yourself if you edit the arrays */
         dirty: boolean;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
         radius: number;
@@ -6569,7 +6588,8 @@ declare module "littlejsengine" {
          *  @return {number} */
         get vertexCount(): number;
         /** Add a triangle strip, joined to the previous one with degenerate triangles
-         *  - the first three points wound counter clockwise from outside are a front face
+         *  - List the first three points counter clockwise as seen from the front, or the face points away
+         *    and may vanish when back faces are culled
          *  @param {Array<Vector3>} points - Strip order
          *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
          *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, default zero
@@ -6591,11 +6611,11 @@ declare module "littlejsengine" {
          *  @param {Color} [color] - Multiplies the appended vertex colors
          *  @return {Mesh} */
         combine(mesh: Mesh, matrix?: Matrix4, color?: Color): Mesh;
-        /** Move every vertex in place, points by the matrix and normals by its inverse transpose
+        /** Move, turn or scale every vertex in place, normals follow along
          *  @param {Matrix4} matrix
          *  @return {Mesh} */
         transform(matrix: Matrix4): Mesh;
-        /** Turn the mesh inside out, for rooms and domes seen from within: negates the normals and shifts the strip so every face winds the other way
+        /** Turn the mesh inside out so it is lit and drawn from within, for rooms and domes
          *  @return {Mesh} */
         flipNormals(): Mesh;
         /** Set every vertex color
@@ -6619,7 +6639,7 @@ declare module "littlejsengine" {
          *  @return {number} */
         computeRadius(): number;
         /** Derive normals from the strip's triangles
-         *  @param {boolean} [smooth] - Average normals at shared positions, otherwise each vertex takes the normal of the last face that touches it, which is one normal per face when every quad is its own strip
+         *  @param {boolean} [smooth] - Round the lighting across faces instead of giving each face a hard edge
          *  @return {Mesh} */
         computeNormals(smooth?: boolean): Mesh;
         /** Pack the vertices and create the GPU buffer, called automatically by render
@@ -6634,8 +6654,9 @@ declare module "littlejsengine" {
         dispose(): void;
     }
     /**
-     * Build a surface of revolution about the Y axis
-     * - profile is [[radius, y], ...] from bottom to top, a profile that ends where it starts is closed like a torus
+     * Spin a flat outline around the Y axis to make a round shape, like a vase or a wheel
+     * - profile is [[radius, y], ...] from bottom to top
+     * - A profile that ends where it starts makes a closed ring like a donut
      * @param {Array<Array<number>>} profile
      * @param {number} [sides] - Around the axis
      * @param {boolean} [smooth] - Defaults to render3DSmoothShading
@@ -6690,8 +6711,8 @@ declare module "littlejsengine" {
      */
     export function buildCapsule(size?: number, height?: number, sides?: number, rings?: number, smooth?: boolean): Mesh;
     /**
-     * Build a torus lying flat around the Y axis, a circle profile revolved
-     * @param {number} [size] - Diameter from the outside of the tube to the outside of the tube
+     * Build a donut lying flat around the Y axis
+     * @param {number} [size] - Diameter of the whole donut, outside edge to outside edge
      * @param {number} [tubeSize] - Diameter of the tube
      * @param {number} [sides] - Around the ring
      * @param {number} [tubeSides] - Around the tube
@@ -6709,11 +6730,11 @@ declare module "littlejsengine" {
     export function buildBox(size?: Vector3 | number): Mesh;
     /**
      * Build a heightfield grid in the XZ plane centered on the origin
-     * - smooth is one ribbon strip per row with slope normals and a color per vertex
-     * - flat is one quad per cell with a face normal and one color sampled at the cell center, so checkerboards stay crisp
+     * - smooth rounds the lighting across cells and colors each corner
+     * - flat lights and colors each cell on its own, so a checkerboard stays crisp
      * @param {Vector2} [size] - World size along X and Z
      * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
-     * @param {Color|Function} [color] - A Color for the whole grid or (x, z) => Color in mesh units, called per vertex when smooth and once per cell at its center when flat
+     * @param {Color|Function} [color] - One Color for the whole grid, or (x, z) => Color
      * @param {Function} [heightFunction] - (x, z) => y, default flat
      * @param {boolean} [smooth] - Defaults to render3DSmoothShading
      * @return {Mesh}
@@ -6737,9 +6758,10 @@ declare module "littlejsengine" {
      */
     export function buildRibbon(points: Array<Vector3>, width?: number | Array<number>, color?: Color | Array<Color>, closed?: boolean, up?: Vector3): Mesh;
     /**
-     * Build a loft: diamond cross sections swept along Z, quads between them, capped both ends
-     * - station = [z, width, top, bottom, sideHeight] with sideHeight 0-1 placing the side points between bottom and top (default .5)
-     * - stations are ordered nose first, nose at the largest z
+     * Build a hull from a row of diamond shaped slices along Z, for ships, planes and cars
+     * - Each slice is [z, width, top, bottom, sideHeight]
+     * - sideHeight is 0 to 1 and puts the side corners between the bottom and the top
+     * - List the slices nose first, with the nose at the largest z
      * @param {Array<Array<number>>} stations
      * @return {Mesh}
      * @memberof Render3D
@@ -6760,9 +6782,10 @@ declare module "littlejsengine" {
      */
     export function buildSky(topColor?: Color, horizonColor?: Color, bottomColor?: Color, sides?: number, rings?: number): Mesh;
     /**
-     * Build a mesh by extruding the solid pixels of a tile, a 3D sprite
-     * - A pixel is solid when its alpha is over half, its color becomes the vertex color so sprites keep their colors and white glyphs take the tint
-     * - Faces and walls are merged along runs of same colored pixels, walls only appear where a solid pixel meets an empty one
+     * Turn a sprite into a 3D block model by giving its pixels thickness
+     * - A pixel counts as solid when it is more than half opaque
+     * - Each pixel keeps its own color, so white art takes the object's tint
+     * - Runs of matching pixels merge into one face, and side walls appear only at the sprite's edges
      * - Pixels can also be an array of rows, each a Color, a truthy value for white, or a falsy value for empty
      * @param {TileInfo|Array<Array<Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels
      * @param {Vector2} [size] - World width and height of the whole tile, centered like buildBox
@@ -6789,9 +6812,10 @@ declare module "littlejsengine" {
      */
     export function buildText3D(text: string | number, size?: number, depth?: number, font?: ImageFont): Mesh;
     /**
-     * HeightMap - Terrain from a grid of heights, with a mesh builder, height lookup and a raycast
-     * - heights is a 2D array [row][column] of 0-1 values; row 0 is the far edge at -Z, column 0 is the left edge at -X
-     * - or an image, where the red channel is the height, laid out the same way
+     * HeightMap - Terrain built from a grid of heights, with a mesh, a height lookup and a raycast
+     * - heights is a 2D array [row][column] of 0 to 1 values
+     * - Row 0 is the far edge at -Z and column 0 is the left edge at -X
+     * - It can be an image instead, where the red channel is the height
      * - colors is an optional 2D array of Colors or an image, sampled per vertex
      * - images are read through a canvas, so they must be same origin or loaded with crossOrigin set
      * @memberof Render3D
@@ -6836,7 +6860,8 @@ declare module "littlejsengine" {
          *  @param {number} z
          *  @return {Color} */
         getColor(x: number, z: number): Color;
-        /** Distance along a ray to where it meets the terrain, or undefined; walks the ray half a cell at a time then narrows in
+        /** Distance along a ray to where it hits the terrain, or undefined for a miss
+         *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
          *  @param {Vector3} origin
          *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
          *  @return {number|undefined} */
@@ -6848,7 +6873,8 @@ declare module "littlejsengine" {
     }
     /**
      * Light3D - A point light that lights nearby surfaces, an EngineObject3D so it can move or follow a parent
-     * - The 8 nearest to the camera light the frame, radius is where the light reaches zero; the falloff is steep, so a small radius needs a bright color
+     * - Only the 8 lights nearest the camera are used each frame
+     * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
      * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
      * @extends EngineObject3D
      * @memberof Render3D
@@ -6866,10 +6892,12 @@ declare module "littlejsengine" {
     }
     /**
      * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
-     * - Particles are billboards of the tile, or of a built in soft dot when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
-     * - Set trailTime to draw each particle as a ribbon along its recent path instead, for sparks and streaks
-     * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitConeAngle
-     * - Speeds are per frame and sizes are world units like the 2D emitter; gravity is a per frame change to velocity y, not a scale of the engine's 2D gravity
+     * - Each particle is a flat square facing the camera, with a soft round dot when no tile is given
+     * - Set trailTime to draw each particle as a streak along where it has been, for sparks
+     * - Particles shoot out along the emitter's own up axis, turned by rotation3D
+     * - emitConeAngle spreads them, PI sprays in every direction
+     * - Speeds are per frame and sizes are world units, the same as the 2D emitter
+     * - gravity here is added to velocity y each frame, it does not use the engine's 2D gravity
      * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
      * @extends EngineObject3D
      * @memberof Render3D
@@ -6936,7 +6964,8 @@ declare module "littlejsengine" {
         emitTimeBuffer: number;
         /** Spawn one particle now */
         emitParticle(): void;
-        /** Draw the particles as billboards, soft dots, or ribbons along their trails; the emitter sorts as one draw, its particles are not sorted against each other */
+        /** Draw the particles, as flat squares or as streaks when trailTime is set
+         *  - The whole emitter sorts as one thing, its particles are not sorted against each other */
         render3D(): any;
     }
     /**
