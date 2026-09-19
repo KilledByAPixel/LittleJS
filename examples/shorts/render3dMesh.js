@@ -64,7 +64,7 @@ function gameUpdate()
         setRender3DSmoothShading(!render3DSmoothShading);
         model.mesh.computeNormals(render3DSmoothShading);
     }
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : 0;
+    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : 0; // no idle spin, the model is for inspecting
     render3D.camera.orbit(vec3(0,2,0), 10, orbit, .35);
 }
 

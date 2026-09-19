@@ -50,9 +50,22 @@ test('Vector3 length, distance, normalize', () =>
     near(vec3(1, 0, 0).clampLength(2).length(), 1);
 });
 
-test('Vector3 lerp takes percent last and is unclamped like Vector2', () =>
+test('Vector3 lerp takes percent last and clamps it like Vector2', () =>
 {
     nearVec(vec3(0, 0, 0).lerp(vec3(10, 20, 30), .5), 5, 10, 15);
+    nearVec(vec3(0, 0, 0).lerp(vec3(10, 20, 30), 2), 10, 20, 30);
+    nearVec(vec3(0, 0, 0).lerp(vec3(10, 20, 30), -1), 0, 0, 0);
+});
+
+test('Vector3 setFrom, snap, rotate about an axis, and toString on bad values', () =>
+{
+    nearVec(vec3(9).setFrom(vec3(1, 2, 3)), 1, 2, 3);
+    nearVec(vec3(1.26, -1.26, 3.9).snap(2), 1, -1.5, 3.5);
+    nearVec(vec3(1, 0, 0).rotate(vec3(0, 1, 0), PI/2), 0, 0, -1); // counter clockwise seen from +Y
+    nearVec(vec3(0, 0, 1).rotate(vec3(0, 0, 1), 1), 0, 0, 1);      // along the axis is unchanged
+    assert.equal(typeof new Vector3(1, 2, 3).toString(), 'string');
+    const bad = vec3(); bad.x = undefined;
+    assert.ok(bad.toString().includes('undefined'));
 });
 
 test('Vector3 rounding and abs', () =>
@@ -166,6 +179,46 @@ test('Matrix4 orthographic maps the box to clip space', () =>
     nearVec(m.transformPoint(vec3(-10, -5, -100)), -1, -1, 1);
 });
 
+test('Matrix4 lookAt keeps an orthonormal basis when up is along the view direction', () =>
+{
+    const check = (m)=>
+    {
+        const x = m.transformDirection(vec3(1, 0, 0)), y = m.transformDirection(vec3(0, 1, 0)), z = m.transformDirection(vec3(0, 0, 1));
+        near(x.length(), 1); near(y.length(), 1); near(z.length(), 1);
+        near(x.dot(y), 0); near(y.dot(z), 0); near(x.dot(z), 0);
+    };
+    check(Matrix4.lookAt(vec3(5, 0, 0), vec3(), vec3(1, 0, 0)));   // up is the view direction, not Y
+    check(Matrix4.lookAt(vec3(0, 5, 0), vec3()));                  // straight down with the default up
+    check(Matrix4.lookAt(vec3(0, -5, 0), vec3()));                 // straight up
+    const down = Matrix4.lookAt(vec3(0, 5, 0), vec3());
+    nearVec(down.transformDirection(vec3(0, 0, -1)), 0, -1, 0);   // still faces the target
+});
+
+test('Matrix4 chaining matches buildMatrix, the constructor checks its input, and multiply can alias', () =>
+{
+    const pos = vec3(1, 2, 3), rot = vec3(.3, .5, .7), scale = vec3(2, 3, 4);
+    const chained = Matrix4.identity().translate(pos).rotate(rot).scale(scale), built = buildMatrix(pos, rot, scale);
+    for (let i = 16; i--;) near(chained.m[i], built.m[i]);
+    const m = built.copy(), aliased = m.multiply(m), twice = built.copy().multiply(built.copy());
+    for (let i = 16; i--;) near(aliased.m[i], twice.m[i]);
+    assert.throws(()=> new Matrix4(built));
+    assert.throws(()=> new Matrix4([1, 2, 3]));
+});
+
+test('Matrix4 invert handles a sheared matrix, a projection and an infinite far plane', () =>
+{
+    const sheared = new Matrix4([1,2,0,0, 0,1,3,0, 4,0,1,0, 5,6,7,1]);
+    const round = sheared.copy().invert().multiply(sheared);
+    for (let i = 16; i--;) near(round.m[i], i % 5 ? 0 : 1);
+    const proj = Matrix4.perspective(1, 1.5, .5, 50), projRound = proj.copy().invert().multiply(proj);
+    for (let i = 16; i--;) near(projRound.m[i], i % 5 ? 0 : 1);
+    const inf = Matrix4.perspective(1, 1, .5, Infinity);
+    assert.ok(inf.m.every(Number.isFinite));
+    near(inf.m[10], -1); near(inf.m[14], -1);
+    const singular = Matrix4.scaling(vec3(1, 0, 1)), same = singular.copy().invert();
+    for (let i = 16; i--;) near(same.m[i], singular.m[i]); // returned unchanged, not NaN
+});
+
 test('Matrix4 lookAt faces the target down -Z with Y up', () =>
 {
     const m = Matrix4.lookAt(vec3(0, 0, 0), vec3(10, 0, 0), vec3(0, 1, 0));
@@ -202,6 +255,15 @@ test('isOverlapping3D matches touching vs overlapping boxes', () =>
     const sizeA = vec3(2, 2, 2), sizeB = vec3(2, 2, 2); // half = 1 each, sum of halves = 2
     assert.ok(isOverlapping3D(vec3(0, 0, 0), sizeA, vec3(1.9, 0, 0), sizeB));
     assert.ok(!isOverlapping3D(vec3(0, 0, 0), sizeA, vec3(2, 0, 0), sizeB)); // exactly touching
+    assert.ok(isOverlapping3D(vec3(0, 0, 0), sizeA, vec3(.5, .5, .5)));      // a point, like the 2D one
+});
+
+test('raycast distances are in units of the direction length', () =>
+{
+    const o = vec3(0, 0, 5), d = vec3(0, 0, -1), d2 = vec3(0, 0, -2);
+    near(raycastSphere(o, d, vec3(), 1), 4);          near(raycastSphere(o, d2, vec3(), 1), 2);
+    near(raycastPlane(o, d, vec3(), vec3(0, 0, 1)), 5); near(raycastPlane(o, d2, vec3(), vec3(0, 0, 1)), 2.5);
+    near(raycastBox(o, d, vec3(), vec3(2)), 4);        near(raycastBox(o, d2, vec3(), vec3(2)), 2);
 });
 
 test('collideSphereSphere pushes A away from B by the penetration', () =>

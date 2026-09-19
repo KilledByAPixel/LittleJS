@@ -31,6 +31,6 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    const text = '3D Text\nextruded from the engine font and the tile sheet, drag: orbit';
+    const text = '3D Text\nextruded from the font and the tile sheet, drag: orbit';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 50), 24);
 }

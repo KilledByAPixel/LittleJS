@@ -32,6 +32,9 @@ function vec3(x=0, y, z)
  */
 function isVector3(v) { return v instanceof Vector3 && v.isValid(); }
 
+// debug check that a value is a usable Vector3, stripped in release like the 2D one
+function ASSERT_VECTOR3_VALID(v) { ASSERT(isVector3(v), 'Vector3 is invalid.', v); }
+
 /**
  * Returns a random Vector3 of a given length, pointing any direction evenly
  * @param {number} [length]
@@ -74,7 +77,12 @@ class Vector3
      *  @param {number} [y]
      *  @param {number} [z]
      *  @return {Vector3} */
-    set(x=0, y=0, z=0) { this.x = x; this.y = y; this.z = z; return this; }
+    set(x=0, y=0, z=0) { this.x = x; this.y = y; this.z = z; ASSERT_VECTOR3_VALID(this); return this; }
+
+    /** Copies the values of another vector into this one and returns self
+     *  @param {Vector3} v
+     *  @return {Vector3} */
+    setFrom(v) { return this.set(v.x, v.y, v.z); }
 
     /** Returns a new vector that is a copy of this
      *  @return {Vector3} */
@@ -163,11 +171,26 @@ class Vector3
             this.x*v.y - this.y*v.x);
     }
 
-    /** Returns a new vector interpolated between this and the vector passed in, percent is not clamped
+    /** Returns a new vector interpolated between this and the vector passed in, percent is clamped to 0-1
      *  @param {Vector3} v
      *  @param {number} percent
      *  @return {Vector3} */
-    lerp(v, percent) { return this.add(v.subtract(this).scale(percent)); }
+    lerp(v, percent)
+    {
+        ASSERT_VECTOR3_VALID(v);
+        return this.add(v.subtract(this).scale(clamp(percent)));
+    }
+
+    /** Returns a new vector turned around an axis, counter clockwise looking down the axis
+     *  @param {Vector3} axis - Unit length
+     *  @param {number} angle - Radians
+     *  @return {Vector3} */
+    rotate(axis, angle)
+    {
+        // Rodrigues' formula: the part along the axis stays, the rest turns
+        const c = cos(angle), s = sin(angle), d = axis.dot(this) * (1 - c);
+        return this.scale(c).add(axis.cross(this).scale(s)).add(axis.scale(d));
+    }
 
     /** Returns a new vector with the absolute value of each component
      *  @return {Vector3} */
@@ -180,6 +203,11 @@ class Vector3
     /** Returns a new vector with each component rounded
      *  @return {Vector3} */
     round() { return new Vector3(round(this.x), round(this.y), round(this.z)); }
+
+    /** Returns a new vector snapped down to a grid, grid is the number of steps per unit like Vector2.snap
+     *  @param {number} grid - Snap steps per unit, 2 snaps to halves
+     *  @return {Vector3} */
+    snap(grid) { return new Vector3(floor(this.x*grid)/grid, floor(this.y*grid)/grid, floor(this.z*grid)/grid); }
 
     /** Returns this point transformed by a matrix, translation included
      *  @param {Matrix4} matrix
@@ -200,6 +228,8 @@ class Vector3
      *  @return {string} */
     toString(digits=3)
     {
+        if (!this.isValid())
+            return `(${this.x},${this.y},${this.z})`; // show the bad values instead of throwing
         const f = (v)=> (v < 0 ? '' : ' ') + v.toFixed(digits);
         return `(${f(this.x)},${f(this.y)},${f(this.z)} )`;
     }
@@ -229,6 +259,7 @@ class Matrix4
     {
         /** @property {Float32Array} - The 16 column major values */
         this.m = new Float32Array(16);
+        ASSERT(!m || m.length == 16, 'Matrix4 takes 16 values, use copy() to duplicate a matrix');
         if (m)
             this.m.set(m);
         else
@@ -244,6 +275,7 @@ class Matrix4
      *  @return {Matrix4} */
     static translation(v)
     {
+        ASSERT_VECTOR3_VALID(v);
         const r = new Matrix4;
         r.m[12] = v.x; r.m[13] = v.y; r.m[14] = v.z;
         return r;
@@ -254,6 +286,7 @@ class Matrix4
      *  @return {Matrix4} */
     static rotation(euler)
     {
+        ASSERT_VECTOR3_VALID(euler);
         const cx = cos(euler.x), sx = sin(euler.x);
         const cy = cos(euler.y), sy = sin(euler.y);
         const cz = cos(euler.z), sz = sin(euler.z);
@@ -271,6 +304,7 @@ class Matrix4
      *  @return {Matrix4} */
     static scaling(v)
     {
+        ASSERT_VECTOR3_VALID(v);
         const r = new Matrix4;
         r.m[0] = v.x; r.m[5] = v.y; r.m[10] = v.z;
         return r;
@@ -280,7 +314,7 @@ class Matrix4
      *  @param {number} fov - Vertical field of view in radians
      *  @param {number} aspect - Width divided by height
      *  @param {number} near - Closest visible distance
-     *  @param {number} far - Furthest visible distance
+     *  @param {number} far - Furthest visible distance, Infinity is allowed
      *  @return {Matrix4} */
     static perspective(fov, aspect, near, far)
     {
@@ -289,9 +323,9 @@ class Matrix4
         const m = r.m;
         m[0] = f / aspect;
         m[5] = f;
-        m[10] = (far + near) / (near - far);
+        m[10] = far == Infinity ? -1 : (far + near) / (near - far);
         m[11] = -1;
-        m[14] = 2 * far * near / (near - far);
+        m[14] = far == Infinity ? -2 * near : 2 * far * near / (near - far);
         m[15] = 0;
         return r;
     }
@@ -329,8 +363,8 @@ class Matrix4
         if (!z.lengthSquared())
             z = vec3(0, 0, 1); // eye is on the target, face -Z
         let x = up.cross(z).normalize();
-        if (!x.lengthSquared())
-            x = vec3(1, 0, 0); // up is parallel to the view direction
+        if (!x.lengthSquared()) // up is along the view direction, pick another
+            x = (abs(z.y) > .99 ? vec3(0, 0, 1) : vec3(0, 1, 0)).cross(z).normalize();
         const y = z.cross(x);
         return new Matrix4([x.x, x.y, x.z, 0,  y.x, y.y, y.z, 0,  z.x, z.y, z.z, 0,  eye.x, eye.y, eye.z, 1]);
     }
@@ -468,6 +502,8 @@ class Matrix4
  */
 function buildMatrix(pos, rotation, scale)
 {
+    ASSERT(!pos || isVector3(pos), 'pos must be a Vector3', pos);
+    ASSERT(!scale || isVector3(scale), 'scale must be a Vector3', scale);
     // scale the rotation columns and drop the position in, instead of multiplying three matrices
     const matrix = rotation ? Matrix4.rotation(rotation) : new Matrix4, m = matrix.m;
     if (scale)
@@ -485,7 +521,7 @@ function buildMatrix(pos, rotation, scale)
 // 3D collision helpers, none of them change anything that is passed in
 // Boxes sit centered on pos and take a full size, like drawRect
 // Cylinders stand up the Y axis, centered on pos, with a full height
-// Only the names the 2D engine already uses get a 3D suffix
+// Names that could be mistaken for 2D functions get a 3D suffix
 
 /**
  * Check if a point is inside an axis aligned box, boundary is inclusive
@@ -508,11 +544,11 @@ function isPointInBox3D(point, pos, size)
  * @param {Vector3} posA
  * @param {Vector3} sizeA - Full size of box A
  * @param {Vector3} posB
- * @param {Vector3} sizeB - Full size of box B
+ * @param {Vector3} [sizeB] - Full size of box B, zero for a point
  * @return {boolean}
  * @memberof Math3D
  */
-function isOverlapping3D(posA, sizeA, posB, sizeB)
+function isOverlapping3D(posA, sizeA, posB, sizeB=vec3())
 {
     const d = posA.subtract(posB);
     return abs(d.x) < (sizeA.x + sizeB.x)/2 &&
@@ -646,6 +682,7 @@ function collideBoxBox(posA, sizeA, posB, sizeB)
 
 /**
  * Returns the distance along the ray to the first intersection with a sphere, or undefined
+ * - The hit is origin + direction * distance, so a direction that is not unit length scales it
  * @param {Vector3} origin
  * @param {Vector3} direction - Need not be normalized
  * @param {Vector3} pos - Sphere center
@@ -672,6 +709,7 @@ function raycastSphere(origin, direction, pos, radius)
 
 /**
  * Returns the distance along the ray to a plane, or undefined if parallel or behind
+ * - The hit is origin + direction * distance, so a direction that is not unit length scales it
  * @param {Vector3} origin
  * @param {Vector3} direction - Need not be normalized
  * @param {Vector3} planePos
@@ -690,6 +728,7 @@ function raycastPlane(origin, direction, planePos, planeNormal)
 
 /**
  * Returns the distance along the ray to the first intersection with an axis aligned box, or undefined
+ * - The hit is origin + direction * distance, so a direction that is not unit length scales it
  * @param {Vector3} origin
  * @param {Vector3} direction - Need not be normalized
  * @param {Vector3} pos - Center of the box
@@ -701,9 +740,8 @@ function raycastBox(origin, direction, pos, size)
 {
     const h = size.scale(.5);
     const boxMin = pos.subtract(h), boxMax = pos.add(h);
-    const axes = ['x', 'y', 'z'];
     let tMin = 0, tMax = Infinity;
-    for (const axis of axes)
+    for (const axis of 'xyz')
     {
         const o = origin[axis], d = direction[axis];
         const mn = boxMin[axis], mx = boxMax[axis];

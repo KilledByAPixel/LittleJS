@@ -53,8 +53,14 @@ class Goal extends GridObject
         // light up while a block sits on the pad, with a burst the moment it lands
         const lit = !!boxAt(this.cell.x, this.cell.y);
         if (lit && !this.lit)
-            new ParticleEmitter3D(cellPos(this.cell.x, this.cell.y, .5), .6, .1, 80, PI, undefined,
-                litColor, WHITE, rgb(1,.5,0,0), rgb(1,1,0,0), .7, .3, 0, .07, .95, -.004, .1, .5, true);
+            new ParticleEmitter3D(
+                cellPos(this.cell.x, this.cell.y, .5), // pos
+                .6, .1, 80, PI, undefined,            // emitSize, emitTime, rate, cone, tileInfo
+                litColor, WHITE,                      // colorStartA, colorStartB
+                rgb(1,.5,0,0), rgb(1,1,0,0),          // colorEndA, colorEndB
+                .7, .3, 0, .07, .95,                  // time, sizeStart, sizeEnd, speed, damping
+                -.004, .1, .5, true                   // gravity, fade, randomness, additive
+            );
         this.lit = lit;
         this.color = lit ? litColor : padColor;
         this.unlit = lit;

@@ -51,6 +51,6 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    const text = '3D Billboards\nsprites, half of them upright, with shadows and lines, drag: orbit';
+    const text = '3D Billboards\nsprites, half upright, with shadows and lines, drag: orbit';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 50), 24);
 }

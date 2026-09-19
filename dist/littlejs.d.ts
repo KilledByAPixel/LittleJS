@@ -5856,6 +5856,10 @@ declare module "littlejsengine" {
          *  @param {number} [z]
          *  @return {Vector3} */
         set(x?: number, y?: number, z?: number): Vector3;
+        /** Copies the values of another vector into this one and returns self
+         *  @param {Vector3} v
+         *  @return {Vector3} */
+        setFrom(v: Vector3): Vector3;
         /** Returns a new vector that is a copy of this
          *  @return {Vector3} */
         copy(): Vector3;
@@ -5914,11 +5918,16 @@ declare module "littlejsengine" {
          *  @param {Vector3} v
          *  @return {Vector3} */
         cross(v: Vector3): Vector3;
-        /** Returns a new vector interpolated between this and the vector passed in, percent is not clamped
+        /** Returns a new vector interpolated between this and the vector passed in, percent is clamped to 0-1
          *  @param {Vector3} v
          *  @param {number} percent
          *  @return {Vector3} */
         lerp(v: Vector3, percent: number): Vector3;
+        /** Returns a new vector turned around an axis, counter clockwise looking down the axis
+         *  @param {Vector3} axis - Unit length
+         *  @param {number} angle - Radians
+         *  @return {Vector3} */
+        rotate(axis: Vector3, angle: number): Vector3;
         /** Returns a new vector with the absolute value of each component
          *  @return {Vector3} */
         abs(): Vector3;
@@ -5928,6 +5937,10 @@ declare module "littlejsengine" {
         /** Returns a new vector with each component rounded
          *  @return {Vector3} */
         round(): Vector3;
+        /** Returns a new vector snapped down to a grid, grid is the number of steps per unit like Vector2.snap
+         *  @param {number} grid - Snap steps per unit, 2 snaps to halves
+         *  @return {Vector3} */
+        snap(grid: number): Vector3;
         /** Returns this point transformed by a matrix, translation included
          *  @param {Matrix4} matrix
          *  @return {Vector3} */
@@ -5975,7 +5988,7 @@ declare module "littlejsengine" {
          *  @param {number} fov - Vertical field of view in radians
          *  @param {number} aspect - Width divided by height
          *  @param {number} near - Closest visible distance
-         *  @param {number} far - Furthest visible distance
+         *  @param {number} far - Furthest visible distance, Infinity is allowed
          *  @return {Matrix4} */
         static perspective(fov: number, aspect: number, near: number, far: number): Matrix4;
         /** Returns a new orthographic projection, camera looks down -Z
@@ -6063,11 +6076,11 @@ declare module "littlejsengine" {
      * @param {Vector3} posA
      * @param {Vector3} sizeA - Full size of box A
      * @param {Vector3} posB
-     * @param {Vector3} sizeB - Full size of box B
+     * @param {Vector3} [sizeB] - Full size of box B, zero for a point
      * @return {boolean}
      * @memberof Math3D
      */
-    export function isOverlapping3D(posA: Vector3, sizeA: Vector3, posB: Vector3, sizeB: Vector3): boolean;
+    export function isOverlapping3D(posA: Vector3, sizeA: Vector3, posB: Vector3, sizeB?: Vector3): boolean;
     /**
      * Returns the vector to move sphere A by so it no longer overlaps sphere B, or undefined
      * @param {Vector3} posA
@@ -6111,6 +6124,7 @@ declare module "littlejsengine" {
     export function collideBoxBox(posA: Vector3, sizeA: Vector3, posB: Vector3, sizeB: Vector3): Vector3 | undefined;
     /**
      * Returns the distance along the ray to the first intersection with a sphere, or undefined
+     * - The hit is origin + direction * distance, so a direction that is not unit length scales it
      * @param {Vector3} origin
      * @param {Vector3} direction - Need not be normalized
      * @param {Vector3} pos - Sphere center
@@ -6121,6 +6135,7 @@ declare module "littlejsengine" {
     export function raycastSphere(origin: Vector3, direction: Vector3, pos: Vector3, radius: number): number | undefined;
     /**
      * Returns the distance along the ray to a plane, or undefined if parallel or behind
+     * - The hit is origin + direction * distance, so a direction that is not unit length scales it
      * @param {Vector3} origin
      * @param {Vector3} direction - Need not be normalized
      * @param {Vector3} planePos
@@ -6131,6 +6146,7 @@ declare module "littlejsengine" {
     export function raycastPlane(origin: Vector3, direction: Vector3, planePos: Vector3, planeNormal: Vector3): number | undefined;
     /**
      * Returns the distance along the ray to the first intersection with an axis aligned box, or undefined
+     * - The hit is origin + direction * distance, so a direction that is not unit length scales it
      * @param {Vector3} origin
      * @param {Vector3} direction - Need not be normalized
      * @param {Vector3} pos - Center of the box
@@ -6388,7 +6404,7 @@ declare module "littlejsengine" {
         /** Draw a flat square that always faces the camera, unlit so it keeps its own colors
          *  - Draw it from onRenderTransparent or a transparent object so it can fade
          *  @param {Vector3} pos - Center
-         *  @param {Vector2} size - World units
+         *  @param {Vector2} [size] - World units
          *  @param {TileInfo|TextureInfo} [tileInfo]
          *  @param {Color} [color]
          *  @param {number} [angle] - Rotation in the camera plane, counter clockwise

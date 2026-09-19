@@ -692,8 +692,7 @@ class Render3DPlugin
         const range = this.shadowRange, half = range / 2;
         const direction = this.lightDirection.normalize();
         const center = this.shadowCenter || this.camera.pos.add(this.cameraForward.scale(half * .8));
-        const up = abs(direction.y) > .99 ? vec3(0, 0, 1) : vec3(0, 1, 0);
-        const view = Matrix4.lookAt(center.subtract(direction.scale(range)), center, up).invert();
+        const view = Matrix4.lookAt(center.subtract(direction.scale(range)), center).invert();
         // move the light's view in whole pixel steps so shadow edges do not crawl as the camera moves
         const texel = range / (this.shadowTextureSize || this.shadowMapSize), m = view.m; // no texture in headless mode
         m[12] = round(m[12] / texel) * texel;
@@ -742,7 +741,7 @@ class Render3DPlugin
     /** Draw a flat square that always faces the camera, unlit so it keeps its own colors
      *  - Draw it from onRenderTransparent or a transparent object so it can fade
      *  @param {Vector3} pos - Center
-     *  @param {Vector2} size - World units
+     *  @param {Vector2} [size] - World units
      *  @param {TileInfo|TextureInfo} [tileInfo]
      *  @param {Color} [color]
      *  @param {number} [angle] - Rotation in the camera plane, counter clockwise
@@ -1253,7 +1252,7 @@ function render3DBindVertexBuffer(buffer)
         gl.vertexAttribPointer(a[0], a[1], a[2], a[3], RENDER3D_VERTEX_BYTES, a[4]);
 }
 
-// where a tile sits in its texture, pulled in slightly at the edges so neighbours do not bleed in
+// where a tile sits in its texture, pulled in slightly at the edges so neighbors do not bleed in
 // this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 function render3DGetTileUVs(tileInfo)

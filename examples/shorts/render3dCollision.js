@@ -47,7 +47,7 @@ function gameInit()
     const checker = (x, z)=> (floor(x/2) + floor(z/2)) & 1 ? rgb(.5,.5,.5) : rgb(.4,.4,.4);
     new EngineObject3D(vec3(), buildGrid(vec2(16), 8, checker, undefined, false));
     new EngineObject3D(boxPos, buildBox(boxSize), undefined, rgb(.6,.4,.3));
-    const cylinder = buildCylinder(cylinderRadius*2, cylinderHeight, 16);
+    const cylinder = buildCylinder(cylinderRadius*2, cylinderHeight, 16); // builders take full sizes, collision takes radii
     new EngineObject3D(cylinderPos, cylinder, undefined, rgb(.3,.5,.6));
     ballMesh = buildSphere();
     for (let i = 0; i < 12; ++i)
@@ -76,7 +76,7 @@ function gameUpdate()
             picked.velocity3D = picked.velocity3D.add(vec3(rand(-.1,.1), .3, rand(-.1,.1)));
     }
 
-    // right drag to orbit
+    // right drag to orbit, the left button tosses balls
     orbit += mouseIsDown(2) ? -mouseDeltaScreen.x*.01 : .002;
     render3D.camera.orbit(vec3(0,1,0), 16, orbit, .5);
 }
