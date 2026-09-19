@@ -1595,6 +1595,12 @@ test('drawBox, drawSphere and drawMesh bake into the mesh, moved and tinted', ()
     assert.ok(baked.points.some(p=> p.x > 10.9), 'the box moved');
     assert.ok(baked.points.some(p=> p.y > 5.4), 'the mesh moved');
     assert.equal(baked.colors[0].rgbaInt(), RED.rgbaInt());
+    const bare = new Mesh; // points and normals only
+    bare.points.push(vec3(), vec3(1, 0, 0), vec3(0, 1, 0));
+    bare.normals.push(vec3(0, 0, 1), vec3(0, 0, 1), vec3(0, 0, 1));
+    const baked2 = render3D.bake(()=> render3D.drawMesh(bare));
+    assert.equal(baked2.vertexCount, 3);
+    assert.equal(baked2.colors[0].rgbaInt(), WHITE.rgbaInt());
 });
 
 test('sprite objects blend by default and are picked by their size3D, lights and emitters are not', () =>
@@ -1606,7 +1612,7 @@ test('sprite objects blend by default and are picked by their size3D, lights and
     const light = new Light3D(vec3(0, 0, -2)), emitter = new ParticleEmitter3D(vec3(0, 0, -3), 0, 0, 0, PI, new TileInfo(vec2(), vec2(16)));
     const hit = render3D.raycastObjects(vec3(), vec3(0, 0, -1), [light, emitter, sprite]);
     assert.equal(hit.object, sprite);
-    near(hit.distance, 5 - vec3(2).length() / 2); // half the size3D diagonal
+    near(hit.distance, 5 - Math.hypot(2, 2) / 2); // half the drawn diagonal, size3D.z is not drawn
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
 });
@@ -1620,6 +1626,9 @@ test('engineObjectsCollect3D uses the world scale of parented objects', () =>
     child.size3D = vec3(1); // 3 wide in the world, centered at x = 13, so it reaches 14.5
     assert.deepEqual(engineObjectsCollect3D(vec3(14.5, 0, 0), 1, [child]), [child]);
     assert.deepEqual(engineObjectsCollect3D(vec3(15.5, 0, 0), 1, [child]), []);
+    const light = new Light3D(vec3(14.5, 0, 0));
+    assert.deepEqual(engineObjectsCollect3D(vec3(14.5, 0, 0), 1, [light]), [], 'lights have no size');
+    light.destroy();
     parent.destroy();
     engineObjects.length = 0;
 });
@@ -1629,15 +1638,25 @@ test('destroying an emitter or trail lets what is already out finish, like the 2
     const ship = new EngineObject3D(vec3(5, 0, 0)), emitter = new ParticleEmitter3D(vec3(), 0, 0, 60, PI);
     ship.addChild(emitter);
     emitter.emitParticle(); emitter.emitParticle();
+    emitter.update(); // emits one more at 60 a second, and remembers where it is
     ship.destroy();
-    assert.ok(!emitter.destroyed && emitter.parent === undefined && emitter.emitRate === 0);
-    assert.equal(emitter.particles.length, 2);
+    assert.ok(!emitter.destroyed && emitter.parent === undefined && emitter.emitTime < 0);
+    nearVec(emitter.pos3D, 5, 0, 0); // keeps its world position when detached
+    assert.equal(emitter.particles.length, 3);
+    emitter.update();
+    assert.equal(emitter.particles.length, 3, 'stopped emitting');
     emitter.particles.length = 0;
     emitter.update();
     assert.ok(emitter.destroyed);
     const empty = new ParticleEmitter3D(vec3(), 0, 0, 60, PI);
     empty.destroy();
     assert.ok(empty.destroyed, 'nothing to wait for');
+    const now = new ParticleEmitter3D(vec3(), 0, 0, 60, PI);
+    now.emitParticle(); now.destroy(true);
+    assert.ok(now.destroyed, 'immediate wins');
+    const forever = new Trail3D(vec3(), Infinity);
+    forever.update(); forever.pos3D = vec3(1); forever.update(); forever.destroy();
+    assert.ok(forever.destroyed, 'an endless trail cannot fade, so it goes now');
     const trail = new Trail3D(vec3(), 1);
     trail.update(); trail.pos3D = vec3(1); trail.update();
     trail.destroy();

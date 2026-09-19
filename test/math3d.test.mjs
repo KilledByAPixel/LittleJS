@@ -328,4 +328,6 @@ test('Vector3.reflect bounces off a normal and randVector3 is a unit direction',
     assert.ok(Math.abs(slide.y) < 1e-9 && slide.x === 1);
     for (let i = 0; i < 20; ++i)
         assert.ok(Math.abs(randVector3(2).length() - 2) < 1e-9);
+    for (let i = 0; i < 20; ++i)
+        assert.ok(randVector3(1, .3).y >= Math.cos(.3) - 1e-9, 'inside the cone around +Y');
 });

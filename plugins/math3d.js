@@ -36,15 +36,17 @@ function isVector3(v) { return v instanceof Vector3 && v.isValid(); }
 function ASSERT_VECTOR3_VALID(v) { ASSERT(isVector3(v), 'Vector3 is invalid.', v); }
 
 /**
- * Returns a random Vector3 of a given length, pointing any direction evenly
+ * Returns a random Vector3 of a given length, pointing any direction evenly, or within a cone around +Y
  * @param {number} [length]
+ * @param {number} [coneAngle] - Half angle of the cone around +Y in radians, PI is every direction
  * @return {Vector3}
  * @memberof Math3D
  */
-function randVector3(length=1)
+function randVector3(length=1, coneAngle=PI)
 {
-    const z = rand(-1, 1), s = (1 - z * z) ** .5, a = rand(2 * PI);
-    return new Vector3(s * cos(a) * length, z * length, s * sin(a) * length);
+    // a random height on the sphere is uniform over its surface, then a random turn around Y
+    const y = rand(cos(coneAngle), 1), s = (1 - y * y) ** .5, a = rand(2 * PI);
+    return new Vector3(s * cos(a) * length, y * length, s * sin(a) * length);
 }
 
 /**
@@ -181,12 +183,13 @@ class Vector3
         return this.add(v.subtract(this).scale(clamp(percent)));
     }
 
-    /** Returns a new vector turned around an axis, counter clockwise looking down the axis
+    /** Returns a new vector turned around an axis, counter clockwise when the axis points at you
      *  @param {Vector3} axis - Unit length
      *  @param {number} angle - Radians
      *  @return {Vector3} */
     rotate(axis, angle)
     {
+        ASSERT_VECTOR3_VALID(axis); // unlike Vector2.rotate this takes an axis first
         // Rodrigues' formula: the part along the axis stays, the rest turns
         const c = cos(angle), s = sin(angle), d = axis.dot(this) * (1 - c);
         return this.scale(c).add(axis.cross(this).scale(s)).add(axis.scale(d));
@@ -207,7 +210,7 @@ class Vector3
     /** Returns a new vector snapped down to a grid, grid is the number of steps per unit like Vector2.snap
      *  @param {number} grid - Snap steps per unit, 2 snaps to halves
      *  @return {Vector3} */
-    snap(grid) { return new Vector3(floor(this.x*grid)/grid, floor(this.y*grid)/grid, floor(this.z*grid)/grid); }
+    snap(grid) { ASSERT_NUMBER_VALID(grid); return new Vector3(floor(this.x*grid)/grid, floor(this.y*grid)/grid, floor(this.z*grid)/grid); }
 
     /** Returns this point transformed by a matrix, translation included
      *  @param {Matrix4} matrix
@@ -323,7 +326,7 @@ class Matrix4
         const m = r.m;
         m[0] = f / aspect;
         m[5] = f;
-        m[10] = far == Infinity ? -1 : (far + near) / (near - far);
+        m[10] = far == Infinity ? -1 : (far + near) / (near - far); // the infinite case is the limit of the formula
         m[11] = -1;
         m[14] = far == Infinity ? -2 * near : 2 * far * near / (near - far);
         m[15] = 0;
@@ -533,10 +536,9 @@ function buildMatrix(pos, rotation, scale)
  */
 function isPointInBox3D(point, pos, size)
 {
-    const h = size.scale(.5);
-    return abs(point.x - pos.x) <= h.x &&
-        abs(point.y - pos.y) <= h.y &&
-        abs(point.z - pos.z) <= h.z;
+    return abs(point.x - pos.x) <= size.x/2 &&
+        abs(point.y - pos.y) <= size.y/2 &&
+        abs(point.z - pos.z) <= size.z/2;
 }
 
 /**
@@ -593,25 +595,24 @@ function collideSphereBox(pos, radius, boxPos, boxSize)
         clamp(pos.x, boxPos.x - h.x, boxPos.x + h.x),
         clamp(pos.y, boxPos.y - h.y, boxPos.y + h.y),
         clamp(pos.z, boxPos.z - h.z, boxPos.z + h.z));
-    const d = pos.subtract(closest);
-    const distSq = d.lengthSquared();
+    const d = pos.subtract(closest), distSq = d.lengthSquared();
     if (distSq)
-    {
-        if (distSq >= radius*radius)
-            return undefined;
-        return d.normalize(radius - distSq**.5);
-    }
+        return distSq >= radius*radius ? undefined : d.normalize(radius - distSq**.5);
 
     // center is inside the box, push out along the axis of least penetration
     const offset = pos.subtract(boxPos);
-    const penX = h.x - abs(offset.x);
-    const penY = h.y - abs(offset.y);
-    const penZ = h.z - abs(offset.z);
+    return pushOutAxis(offset, h.x - abs(offset.x), h.y - abs(offset.y), h.z - abs(offset.z), radius);
+}
+
+// the axis with the smallest penetration, pointing the way d does, with extra distance added
+function pushOutAxis(d, penX, penY, penZ, extra=0)
+{
+    const s = (v)=> v >= 0 ? 1 : -1; // sign() gives 0 on a tie, which would be no push
     if (penX <= penY && penX <= penZ)
-        return vec3((offset.x >= 0 ? 1 : -1)*(penX + radius), 0, 0);
+        return vec3(s(d.x)*(penX + extra), 0, 0);
     if (penY <= penZ)
-        return vec3(0, (offset.y >= 0 ? 1 : -1)*(penY + radius), 0);
-    return vec3(0, 0, (offset.z >= 0 ? 1 : -1)*(penZ + radius));
+        return vec3(0, s(d.y)*(penY + extra), 0);
+    return vec3(0, 0, s(d.z)*(penZ + extra));
 }
 
 /**
@@ -631,19 +632,14 @@ function collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinde
     const offsetZ = pos.z - cylinderPos.z;
     const offsetY = pos.y - cylinderPos.y;
     const radialDist = (offsetX**2 + offsetZ**2)**.5;
-    const radialScale = radialDist ? min(radialDist, cylinderRadius)/radialDist : 0;
+    const radialScale = radialDist ? min(radialDist, cylinderRadius)/radialDist : 0; // pull the point onto the wall, or the axis
     const closest = vec3(
         cylinderPos.x + offsetX*radialScale,
         clamp(pos.y, cylinderPos.y - halfHeight, cylinderPos.y + halfHeight),
         cylinderPos.z + offsetZ*radialScale);
-    const d = pos.subtract(closest);
-    const distSq = d.lengthSquared();
+    const d = pos.subtract(closest), distSq = d.lengthSquared();
     if (distSq)
-    {
-        if (distSq >= radius*radius)
-            return undefined;
-        return d.normalize(radius - distSq**.5);
-    }
+        return distSq >= radius*radius ? undefined : d.normalize(radius - distSq**.5);
 
     // center is inside the cylinder, push out through the nearer surface
     const sidePen = cylinderRadius - radialDist;
@@ -673,11 +669,7 @@ function collideBoxBox(posA, sizeA, posB, sizeB)
     const overlapZ = (sizeA.z + sizeB.z)/2 - abs(d.z);
     if (overlapX <= 0 || overlapY <= 0 || overlapZ <= 0)
         return undefined;
-    if (overlapX <= overlapY && overlapX <= overlapZ)
-        return vec3((d.x >= 0 ? 1 : -1)*overlapX, 0, 0);
-    if (overlapY <= overlapZ)
-        return vec3(0, (d.y >= 0 ? 1 : -1)*overlapY, 0);
-    return vec3(0, 0, (d.z >= 0 ? 1 : -1)*overlapZ);
+    return pushOutAxis(d, overlapX, overlapY, overlapZ);
 }
 
 /**

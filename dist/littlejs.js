@@ -16937,15 +16937,17 @@ function isVector3(v) { return v instanceof Vector3 && v.isValid(); }
 function ASSERT_VECTOR3_VALID(v) { ASSERT(isVector3(v), 'Vector3 is invalid.', v); }
 
 /**
- * Returns a random Vector3 of a given length, pointing any direction evenly
+ * Returns a random Vector3 of a given length, pointing any direction evenly, or within a cone around +Y
  * @param {number} [length]
+ * @param {number} [coneAngle] - Half angle of the cone around +Y in radians, PI is every direction
  * @return {Vector3}
  * @memberof Math3D
  */
-function randVector3(length=1)
+function randVector3(length=1, coneAngle=PI)
 {
-    const z = rand(-1, 1), s = (1 - z * z) ** .5, a = rand(2 * PI);
-    return new Vector3(s * cos(a) * length, z * length, s * sin(a) * length);
+    // a random height on the sphere is uniform over its surface, then a random turn around Y
+    const y = rand(cos(coneAngle), 1), s = (1 - y * y) ** .5, a = rand(2 * PI);
+    return new Vector3(s * cos(a) * length, y * length, s * sin(a) * length);
 }
 
 /**
@@ -17082,12 +17084,13 @@ class Vector3
         return this.add(v.subtract(this).scale(clamp(percent)));
     }
 
-    /** Returns a new vector turned around an axis, counter clockwise looking down the axis
+    /** Returns a new vector turned around an axis, counter clockwise when the axis points at you
      *  @param {Vector3} axis - Unit length
      *  @param {number} angle - Radians
      *  @return {Vector3} */
     rotate(axis, angle)
     {
+        ASSERT_VECTOR3_VALID(axis); // unlike Vector2.rotate this takes an axis first
         // Rodrigues' formula: the part along the axis stays, the rest turns
         const c = cos(angle), s = sin(angle), d = axis.dot(this) * (1 - c);
         return this.scale(c).add(axis.cross(this).scale(s)).add(axis.scale(d));
@@ -17108,7 +17111,7 @@ class Vector3
     /** Returns a new vector snapped down to a grid, grid is the number of steps per unit like Vector2.snap
      *  @param {number} grid - Snap steps per unit, 2 snaps to halves
      *  @return {Vector3} */
-    snap(grid) { return new Vector3(floor(this.x*grid)/grid, floor(this.y*grid)/grid, floor(this.z*grid)/grid); }
+    snap(grid) { ASSERT_NUMBER_VALID(grid); return new Vector3(floor(this.x*grid)/grid, floor(this.y*grid)/grid, floor(this.z*grid)/grid); }
 
     /** Returns this point transformed by a matrix, translation included
      *  @param {Matrix4} matrix
@@ -17224,7 +17227,7 @@ class Matrix4
         const m = r.m;
         m[0] = f / aspect;
         m[5] = f;
-        m[10] = far == Infinity ? -1 : (far + near) / (near - far);
+        m[10] = far == Infinity ? -1 : (far + near) / (near - far); // the infinite case is the limit of the formula
         m[11] = -1;
         m[14] = far == Infinity ? -2 * near : 2 * far * near / (near - far);
         m[15] = 0;
@@ -17434,10 +17437,9 @@ function buildMatrix(pos, rotation, scale)
  */
 function isPointInBox3D(point, pos, size)
 {
-    const h = size.scale(.5);
-    return abs(point.x - pos.x) <= h.x &&
-        abs(point.y - pos.y) <= h.y &&
-        abs(point.z - pos.z) <= h.z;
+    return abs(point.x - pos.x) <= size.x/2 &&
+        abs(point.y - pos.y) <= size.y/2 &&
+        abs(point.z - pos.z) <= size.z/2;
 }
 
 /**
@@ -17494,25 +17496,24 @@ function collideSphereBox(pos, radius, boxPos, boxSize)
         clamp(pos.x, boxPos.x - h.x, boxPos.x + h.x),
         clamp(pos.y, boxPos.y - h.y, boxPos.y + h.y),
         clamp(pos.z, boxPos.z - h.z, boxPos.z + h.z));
-    const d = pos.subtract(closest);
-    const distSq = d.lengthSquared();
+    const d = pos.subtract(closest), distSq = d.lengthSquared();
     if (distSq)
-    {
-        if (distSq >= radius*radius)
-            return undefined;
-        return d.normalize(radius - distSq**.5);
-    }
+        return distSq >= radius*radius ? undefined : d.normalize(radius - distSq**.5);
 
     // center is inside the box, push out along the axis of least penetration
     const offset = pos.subtract(boxPos);
-    const penX = h.x - abs(offset.x);
-    const penY = h.y - abs(offset.y);
-    const penZ = h.z - abs(offset.z);
+    return pushOutAxis(offset, h.x - abs(offset.x), h.y - abs(offset.y), h.z - abs(offset.z), radius);
+}
+
+// the axis with the smallest penetration, pointing the way d does, with extra distance added
+function pushOutAxis(d, penX, penY, penZ, extra=0)
+{
+    const s = (v)=> v >= 0 ? 1 : -1; // sign() gives 0 on a tie, which would be no push
     if (penX <= penY && penX <= penZ)
-        return vec3((offset.x >= 0 ? 1 : -1)*(penX + radius), 0, 0);
+        return vec3(s(d.x)*(penX + extra), 0, 0);
     if (penY <= penZ)
-        return vec3(0, (offset.y >= 0 ? 1 : -1)*(penY + radius), 0);
-    return vec3(0, 0, (offset.z >= 0 ? 1 : -1)*(penZ + radius));
+        return vec3(0, s(d.y)*(penY + extra), 0);
+    return vec3(0, 0, s(d.z)*(penZ + extra));
 }
 
 /**
@@ -17532,19 +17533,14 @@ function collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinde
     const offsetZ = pos.z - cylinderPos.z;
     const offsetY = pos.y - cylinderPos.y;
     const radialDist = (offsetX**2 + offsetZ**2)**.5;
-    const radialScale = radialDist ? min(radialDist, cylinderRadius)/radialDist : 0;
+    const radialScale = radialDist ? min(radialDist, cylinderRadius)/radialDist : 0; // pull the point onto the wall, or the axis
     const closest = vec3(
         cylinderPos.x + offsetX*radialScale,
         clamp(pos.y, cylinderPos.y - halfHeight, cylinderPos.y + halfHeight),
         cylinderPos.z + offsetZ*radialScale);
-    const d = pos.subtract(closest);
-    const distSq = d.lengthSquared();
+    const d = pos.subtract(closest), distSq = d.lengthSquared();
     if (distSq)
-    {
-        if (distSq >= radius*radius)
-            return undefined;
-        return d.normalize(radius - distSq**.5);
-    }
+        return distSq >= radius*radius ? undefined : d.normalize(radius - distSq**.5);
 
     // center is inside the cylinder, push out through the nearer surface
     const sidePen = cylinderRadius - radialDist;
@@ -17574,11 +17570,7 @@ function collideBoxBox(posA, sizeA, posB, sizeB)
     const overlapZ = (sizeA.z + sizeB.z)/2 - abs(d.z);
     if (overlapX <= 0 || overlapY <= 0 || overlapZ <= 0)
         return undefined;
-    if (overlapX <= overlapY && overlapX <= overlapZ)
-        return vec3((d.x >= 0 ? 1 : -1)*overlapX, 0, 0);
-    if (overlapY <= overlapZ)
-        return vec3(0, (d.y >= 0 ? 1 : -1)*overlapY, 0);
-    return vec3(0, 0, (d.z >= 0 ? 1 : -1)*overlapZ);
+    return pushOutAxis(d, overlapX, overlapY, overlapZ);
 }
 
 /**
@@ -17772,6 +17764,17 @@ function render3DSize3(size) { return isNumber(size) ? vec3(size) : size; }
 // the matrix that keeps normals pointing out when an object is scaled unevenly
 function render3DNormalMatrix(matrix) { return matrix.copy().invert().transpose(); }
 
+// a column of a matrix as a direction: 0 is the right axis, 4 up, 8 back
+function render3DAxis(m, i) { return vec3(m[i], m[i+1], m[i+2]); }
+
+// surface normal from the slope of a height function, sampled half a cell each way
+function render3DSlopeNormal(heightFunction, x, z, ex, ez)
+{
+    const dx = (heightFunction(x + ex, z) - heightFunction(x - ex, z)) / (2 * ex);
+    const dz = (heightFunction(x, z + ez) - heightFunction(x, z - ez)) / (2 * ez);
+    return vec3(-dx, 1, -dz).normalize();
+}
+
 // the largest axis scale of a matrix, how much it grows a bounding sphere
 function render3DMaxScale(m)
 {
@@ -17808,15 +17811,27 @@ function render3DDrawObjects(objects)
     render3DSetObjectState();
 }
 
+// let go of the parent but stay where the object was in the world; a destroyed parent has already let go, so the
+// position remembered by the last update stands in
+function render3DDetach(o)
+{
+    if (o.parent)
+        o.pos3D = o.getWorldPos3D(), o.parent.removeChild(o);
+    else if (o.worldPos3D)
+        o.pos3D = o.worldPos3D;
+}
+
+// the live objects drawn on one side of the 2D scene
+function render3DLayerObjects(after2D)
+{ return engineObjects.filter(o => !o.destroyed && o instanceof EngineObject3D && render3DIsAfter2D(o) === after2D); }
+
 // the point lights the shader gets this frame, the nearest to the camera
 function render3DCollectLights()
 {
-    const lights = [];
-    for (const o of engineObjects)
-        if (!o.destroyed && o instanceof Light3D)
-            lights.push(o);
+    const lights = engineObjects.filter(o => !o.destroyed && o instanceof Light3D);
     if (lights.length > RENDER3D_MAX_POINT_LIGHTS)
     {
+        // distances cached once, getWorldPos3D walks the parent chain and the sort asks many times
         const cameraPos = render3D.camera.pos, distances = new Map;
         for (const light of lights)
             distances.set(light, light.getWorldPos3D().distanceSquared(cameraPos));
@@ -17992,10 +18007,9 @@ class Render3DPlugin
         this.uniformValues = {};     // last values sent for the cached vec4 uniforms
         this.shadowMapDrawn = false; // the shadow map is drawn by the first pass of the frame
         this.passIsDefault = true;   // the running pass is the default layer, the only one shadowed
-        this.boxMesh = undefined;    // unit shapes for drawBox and drawSphere
+        this.boxMesh = this.sphereMesh = undefined; // unit shapes for drawBox and drawSphere
         this.lightPositions = new Float32Array(RENDER3D_MAX_POINT_LIGHTS * 4); // point light uniforms, filled each pass
         this.lightColors = new Float32Array(RENDER3D_MAX_POINT_LIGHTS * 4);
-        this.sphereMesh = undefined;
 
         // the stream of immediate mode draws
         this.streamBuffer = undefined;
@@ -18026,11 +18040,11 @@ class Render3DPlugin
         this.viewMatrix = cameraMatrix.copy().invert();
         this.projectionMatrix = camera.getProjectionMatrix(aspect);
         this.viewProjection = this.projectionMatrix.copy().multiply(this.viewMatrix);
-        const m = cameraMatrix.m; // the axes are its columns
-        this.cameraRight = vec3(m[0], m[1], m[2]);
-        this.cameraUp = vec3(m[4], m[5], m[6]);
-        this.cameraForward = vec3(-m[8], -m[9], -m[10]);
-        this.cameraBack = vec3(m[8], m[9], m[10]); // the normal of anything facing the camera
+        const m = cameraMatrix.m;
+        this.cameraRight = render3DAxis(m, 0);
+        this.cameraUp = render3DAxis(m, 4);
+        this.cameraBack = render3DAxis(m, 8); // the normal of anything facing the camera
+        this.cameraForward = this.cameraBack.scale(-1);
         this.frustumPlanes = render3DFrustumPlanes(this.viewProjection);
     }
 
@@ -18093,10 +18107,10 @@ class Render3DPlugin
     }
 
     /** Find the nearest object a ray hits, for clicking on things
-     *  - Each object is tested as a ball around its mesh, not triangle by triangle
+     *  - Each object is tested as a ball around its mesh, or around a sprite's size3D, not triangle by triangle
      *  @param {Vector3} origin
      *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
-     *  @param {Array<EngineObject>} [objects] - Defaults to every EngineObject3D with a mesh, other objects are skipped
+     *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
      *  @return {{object: EngineObject3D, distance: number}|undefined} */
     raycastObjects(origin, direction, objects=engineObjects)
     {
@@ -18105,7 +18119,7 @@ class Render3DPlugin
         {
             if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) continue;
             const matrix = o.getMatrix(), mesh = o.mesh; // a sprite is picked by its size3D
-            const radius = (mesh ? mesh.radius || mesh.computeRadius() : o.size3D.length() / 2) * render3DMaxScale(matrix.m);
+            const radius = (mesh ? mesh.radius || mesh.computeRadius() : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxScale(matrix.m);
             if (!(radius > 0)) continue; // nothing to hit
             const distance = raycastSphere(origin, direction, matrix.getTranslation(), radius);
             if (distance !== undefined && (!nearest || distance < nearest.distance))
@@ -18187,10 +18201,11 @@ class Render3DPlugin
     }
 
     /** Draw a triangle strip, batched into the stream with the current draw state
+     *  - Strip order: the first three points make a triangle, then each point makes another with the two before it
      *  - List the first three points counter clockwise as seen from the front, or the face points away
      *    and may vanish when back faces are culled
      *  - inside a bake the strip goes into the mesh instead, in the transparent stage it is queued for sorting
-     *  @param {Array<Vector3>} points - Strip order
+     *  @param {Array<Vector3>} points - In strip order
      *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
      *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, 0-1 across the tile
      *  @param {Color|Array<Color>} [colors] - One for all or one per point, vertex colors come before the texture
@@ -18236,12 +18251,7 @@ class Render3DPlugin
      *  @param {Color|Array<Color>} [colors]
      *  @param {TileInfo|TextureInfo} [tileInfo] */
     drawStripUnlit(points, normals, uvs, colors, tileInfo)
-    {
-        const lighting = this.lighting;
-        this.lighting = false;
-        try { this.drawStrip(points, normals, uvs, colors, tileInfo); }
-        finally { this.lighting = lighting; }
-    }
+    { render3DWithState({lighting: false}, ()=> this.drawStrip(points, normals, uvs, colors, tileInfo)); }
 
     /** Draw the pending stream vertices as one strip with the state they were drawn under, called automatically when needed */
     flush()
@@ -18260,7 +18270,7 @@ class Render3DPlugin
     /** Build a mesh once out of draw calls, instead of redrawing the shapes every frame
      *  - Call the same drawStrip, drawQuad and drawBox calls inside, and get a mesh back
      *  - Strips inside a bake ignore their tileInfo, the finished mesh picks the texture when it draws
-     *  - drawMesh, drawBox and drawSphere copy their mesh in, moved and tinted
+     *  - drawMesh, drawBox and drawSphere copy their mesh in, moved and tinted, their tileInfo dropped too
      *  @param {Function} drawFunction
      *  @return {Mesh} */
     bake(drawFunction)
@@ -18286,7 +18296,6 @@ class Render3DPlugin
         for (const o of objects)
             (o.transparent || o.additive ? transparent : opaque).push(o);
 
-        // sky first, behind everything
         isDefault && this.sky && this.drawSky();
 
         // opaque: no blending, depth writes on, by render order
@@ -18337,16 +18346,8 @@ class Render3DPlugin
         if (!queue) return;
         this.transparentQueue = undefined;
         queue.sort((a, b)=> b.distance - a.distance);
-        const state = render3DCaptureBatchState();
-        try
-        {
-            for (const item of queue)
-            {
-                Object.assign(this, item.state);
-                item.draw();
-            }
-        }
-        finally { Object.assign(this, state); } // the last item's state must not leak
+        for (const item of queue)
+            render3DWithState(item.state, item.draw); // each under the state it was queued with
     }
 
     /** Draw render3D.sky around the camera, unlit, unfogged and behind everything, called automatically by the pass */
@@ -18421,22 +18422,20 @@ class Render3DPlugin
      *  @param {boolean} [upright] - Stand on world up and only turn to face the camera, for sprites on the ground */
     drawBillboard(pos, size=vec2(1), tileInfo, color=WHITE, angle=0, upright=false)
     {
-        if (this.transparentQueue && !this.capture) // sort by the exact position, a shadow under it sorts by the floor
-            return this.queueTransparent(pos, ()=> this.drawBillboard(pos, size, tileInfo, color, angle, upright));
         if (this.capture)
             return this.drawStripUnlit(render3DBillboardCorners(pos, size, angle, upright), this.cameraBack, RENDER3D_QUAD_UVS, color, tileInfo);
+        if (this.transparentQueue) // sort by the exact position, a shadow under it sorts by the floor
+            return this.queueTransparent(pos, ()=> this.drawBillboard(pos, size, tileInfo, color, angle, upright));
 
-        // the particle path: six stream vertices written straight in, unlit
-        const lighting = this.lighting;
-        let uvRect;
-        try { this.lighting = false; uvRect = render3DBeginStrip(6, tileInfo); }
-        finally { this.lighting = lighting; }
+        // the particle path: the quad's six stream vertices written straight in, unlit
+        const count = render3DStripCount(4);
+        const uvRect = render3DWithState({lighting: false}, ()=> render3DBeginStrip(count, tileInfo));
         if (!uvRect) return;
         const corners = render3DBillboardCorners(pos, size, angle, upright), rgba = color.rgbaInt();
         const floats = this.streamFloats, ints = this.streamInts;
-        for (let k = 0; k < 6; ++k)
+        for (let k = 0; k < count; ++k)
         {
-            const i = k < 1 ? 0 : k <= 4 ? k - 1 : 3, uv = RENDER3D_QUAD_UVS[i]; // one leading and one trailing repeat
+            const i = render3DStripIndex(k, 4), uv = RENDER3D_QUAD_UVS[i];
             render3DWriteVertex(floats, ints, this.streamCount++ * RENDER3D_VERTEX_FLOATS, corners[i], this.cameraBack,
                 uvRect.x + uv.x * uvRect.w, uvRect.y + uv.y * uvRect.h, rgba);
         }
@@ -18584,13 +18583,13 @@ function render3DRenderDebug()
         for (const p of render3DDebugPrimitives)
             p.draw();
     });
-    render3DDebugPrimitives = render3DDebugPrimitives.filter(p => p.timer < 0);
+    render3DDebugPrimitives = render3DDebugPrimitives.filter(p => p.timer < 0); // a Timer compares as negative until it elapses
 }
 
 // record a debug draw for a time
 function render3DDebugPush(duration, draw)
 {
-    ASSERT(isNumber(duration), 'time must be a number');
+    ASSERT(isNumber(duration), 'duration must be a number');
     debug && render3D?.shader && render3DDebugPrimitives.push({timer: new Timer(duration), draw});
 }
 
@@ -18708,15 +18707,15 @@ class Camera3D
 
     /** Returns the direction the camera looks
      *  @return {Vector3} */
-    forward() { const m = this.getMatrix().m; return vec3(-m[8], -m[9], -m[10]); }
+    forward() { return render3DAxis(this.getMatrix().m, 8).scale(-1); }
 
     /** Returns the camera's right axis
      *  @return {Vector3} */
-    right() { const m = this.getMatrix().m; return vec3(m[0], m[1], m[2]); }
+    right() { return render3DAxis(this.getMatrix().m, 0); }
 
     /** Returns the camera's up axis
      *  @return {Vector3} */
-    up() { const m = this.getMatrix().m; return vec3(m[4], m[5], m[6]); }
+    up() { return render3DAxis(this.getMatrix().m, 4); }
 
     /** Point the camera at a target, sets pitch and yaw and clears roll
      *  @param {Vector3} target */
@@ -18750,7 +18749,7 @@ class Camera3D
     {
         const halfHeight = canvasHeight / 2 / cameraScale; // half visible height in world units
         const distance = halfHeight / tan(this.fov/2);
-        this.orthographic &&= halfHeight * 2; // an orthographic view shows the same height
+        this.orthographic &&= halfHeight * 2; // an orthographic camera stays orthographic and shows the same height
         this.pos = vec3(cameraPos.x, cameraPos.y, distance);
         this.rotation = vec3(0, 0, -cameraAngle); // 2D angles turn the other way
     }
@@ -18957,7 +18956,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     // an even scale leaves normals pointing the right way, so the model matrix does
     const sx = m[0]*m[0] + m[1]*m[1] + m[2]*m[2], sy = m[4]*m[4] + m[5]*m[5] + m[6]*m[6], sz = m[8]*m[8] + m[9]*m[9] + m[10]*m[10];
     const mirrored = m[0] * (m[5]*m[10] - m[6]*m[9]) - m[4] * (m[1]*m[10] - m[2]*m[9]) + m[8] * (m[1]*m[6] - m[2]*m[5]) < 0;
-    const uniform = !mirrored && abs(sx - sy) < 1e-6 * sx && abs(sx - sz) < 1e-6 * sx;
+    const uniform = !mirrored && abs(sx - sy) < 1e-6 * sx && abs(sx - sz) < 1e-6 * sx; // within a relative tolerance
     gl.uniformMatrix4fv(render3DUniform('normalMat'), false, uniform ? m : render3DNormalMatrix(matrix).m);
 
     // blending, matches the engine's 2D blend functions
@@ -19033,10 +19032,7 @@ function render3DRenderPass(after2D)
     if (!r.shader) return; // headless, gl disabled, or context lost
     ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
     ASSERT(!glRenderTarget, 'the 3D pass needs the canvas depth buffer, it can not draw into a render target');
-    const isDefault = after2D === !!r.renderAfter2D, objects = [];
-    for (const o of engineObjects)
-        if (!o.destroyed && o instanceof EngineObject3D && render3DIsAfter2D(o) === after2D)
-            objects.push(o);
+    const isDefault = after2D === !!r.renderAfter2D, objects = render3DLayerObjects(after2D);
     if (!isDefault && !objects.length) return;
     r.passIsDefault = isDefault;
     after2D && glFlush(); // the 2D sprites drawn so far go under this layer
@@ -19159,8 +19155,7 @@ function render3DRenderShadowMap()
     r.shadowPass = true;
     try
     {
-        const casters = engineObjects.filter(o => !o.destroyed && o instanceof EngineObject3D && o.castShadow
-            && !o.transparent && !o.additive && render3DIsAfter2D(o) === !!r.renderAfter2D); // the other layer is a different scene
+        const casters = render3DLayerObjects(!!r.renderAfter2D).filter(o => o.castShadow && !o.transparent && !o.additive);
         render3DDrawObjects(casters);
         r.onRenderOpaque?.();
         r.flush();
@@ -19304,7 +19299,8 @@ class Mesh
      *  @return {number} */
     get vertexCount() { return this.points.length; }
 
-    /** Add a triangle strip, joined to the previous one with degenerate triangles
+    /** Add a triangle strip, joined to the previous one by invisible flat triangles so one mesh holds many strips
+     *  - Strip order: the first three points make a triangle, then each point makes another with the two before it
      *  - List the first three points counter clockwise as seen from the front, or the face points away
      *    and may vanish when back faces are culled
      *  @param {Array<Vector3>} points - Strip order
@@ -19351,8 +19347,8 @@ class Mesh
         {
             this.points.push(matrix.transformPoint(mesh.points[i]));
             this.normals.push(normalMatrix.transformDirection(mesh.normals[i]).normalize());
-            this.uvs.push(mesh.uvs[i]);
-            this.colors.push(mesh.colors[i].multiply(color));
+            this.uvs.push((mesh.uvs[i] || RENDER3D_DEFAULT_UV).copy());
+            this.colors.push((mesh.colors[i] || WHITE).multiply(color));
         }
         this.dirty = true;
         return this;
@@ -19458,35 +19454,22 @@ class Mesh
             // a zero normal means a flat triangle joining two strips, so skip it
             faceNormals.push(normal.lengthSquared() ? normal.normalize(i & 1 ? 1 : -1) : undefined);
         }
-        const normals = [];
+        const normals = points.map(()=> RENDER3D_DEFAULT_NORMAL);
         if (smooth)
         {
+            // add up the face normals meeting at each position, then normalize
             const sums = new Map;
             const key = (p)=> `${p.x.toFixed(5)},${p.y.toFixed(5)},${p.z.toFixed(5)}`;
-            for (let i = 0; i + 2 < n; ++i)
+            faceNormals.forEach((f, i)=> f && [0, 1, 2].forEach(j=>
             {
-                const f = faceNormals[i];
-                if (!f) continue;
-                for (let j = 0; j < 3; ++j)
-                {
-                    const k = key(points[i + j]);
-                    sums.set(k, (sums.get(k) || vec3()).add(f));
-                }
-            }
+                const k = key(points[i + j]);
+                sums.set(k, (sums.get(k) || vec3()).add(f));
+            }));
             for (let i = 0; i < n; ++i)
                 normals[i] = (sums.get(key(points[i])) || RENDER3D_DEFAULT_NORMAL).normalize();
         }
         else
-        {
-            for (let i = 0; i < n; ++i)
-                normals[i] = RENDER3D_DEFAULT_NORMAL;
-            for (let i = 0; i + 2 < n; ++i)
-            {
-                const f = faceNormals[i];
-                if (f)
-                    normals[i] = normals[i+1] = normals[i+2] = f;
-            }
-        }
+            faceNormals.forEach((f, i)=> f && (normals[i] = normals[i+1] = normals[i+2] = f));
         this.normals = normals;
         this.dirty = true;
         return this;
@@ -19504,8 +19487,8 @@ class Mesh
         const floats = new Float32Array(data), ints = new Uint32Array(data);
         for (let i = 0; i < count; ++i)
         {
-            const uv = this.uvs[i];
-            render3DWriteVertex(floats, ints, i * RENDER3D_VERTEX_FLOATS, this.points[i], this.normals[i], uv.x, uv.y, this.colors[i].rgbaInt());
+            const uv = this.uvs[i] || RENDER3D_DEFAULT_UV; // a hand built mesh may leave uvs and colors empty
+            render3DWriteVertex(floats, ints, i * RENDER3D_VERTEX_FLOATS, this.points[i], this.normals[i], uv.x, uv.y, (this.colors[i] || WHITE).rgbaInt());
         }
         const gl = glContext;
         this.buffer = gl.createBuffer();
@@ -19566,7 +19549,8 @@ function buildLathe(profile, sides=12, smooth=render3DSmoothShading, capped=true
         const n = vec2(y1 - y0, r0 - r1);
         return n.length() ? n.normalize() : vec2(1, 0);
     };
-    // vertex normal: average of the adjacent segment normals, across the seam when the profile is closed
+    // vertex normal: average of the adjacent segment normals, across the seam when the profile is closed,
+    // and a closed profile needs no caps
     const closed = rings > 2 && abs(profile[0][0] - profile[rings-1][0]) < 1e-9 && abs(profile[0][1] - profile[rings-1][1]) < 1e-9;
     const vertexNormal = (i)=>
     {
@@ -19819,13 +19803,7 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
     const cellX = size.x / segmentsX, cellZ = size.y / segmentsZ;
     const px = (i)=> i * cellX - size.x / 2, pz = (j)=> j * cellZ - size.y / 2;
     const point = (i, j)=> { const x = px(i), z = pz(j); return vec3(x, heightFunction(x, z), z); };
-    const normal = (i, j)=>
-    {
-        const x = px(i), z = pz(j), ex = cellX / 2, ez = cellZ / 2;
-        const dx = (heightFunction(x + ex, z) - heightFunction(x - ex, z)) / (2 * ex);
-        const dz = (heightFunction(x, z + ez) - heightFunction(x, z - ez)) / (2 * ez);
-        return vec3(-dx, 1, -dz).normalize();
-    };
+    const normal = (i, j)=> render3DSlopeNormal(heightFunction, px(i), pz(j), cellX / 2, cellZ / 2);
     const uv = (i, j)=> vec2(i / segmentsX, j / segmentsZ);
     const cellColor = (i, j)=> !color ? WHITE : isColor(color) ? color : color(px(i), pz(j));
     for (let j = 0; j < segmentsZ; ++j)
@@ -19939,12 +19917,12 @@ function buildSky(topColor=rgb(.2, .4, .9), horizonColor=rgb(.8, .9, 1), bottomC
  */
 function buildExtrude(pixels, size=vec2(1), depth=1)
 {
-    let rows = pixels, x0 = 0, y0 = 0, width, height;
+    let rows = pixels, width, height;
     if (pixels instanceof TileInfo)
     {
         // colors for the tile's pixels only, undefined where alpha is half or less
         const image = render3DReadPixels(pixels.textureInfo), data = image.data;
-        x0 = pixels.pos.x | 0, y0 = pixels.pos.y | 0;
+        const x0 = pixels.pos.x | 0, y0 = pixels.pos.y | 0;
         width = pixels.size.x | 0, height = pixels.size.y | 0;
         rows = [];
         for (let y = 0; y < height; ++y)
@@ -19956,7 +19934,6 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
                 row.push(data[k + 3] > 127 ? rgb(data[k] / 255, data[k + 1] / 255, data[k + 2] / 255) : undefined);
             }
         }
-        x0 = y0 = 0;
     }
     else
     {
@@ -19968,7 +19945,7 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
     const solid = (x, y)=>
     {
         if (x < 0 || y < 0 || x >= width || y >= height) return;
-        const c = rows[y0 + y] && rows[y0 + y][x0 + x];
+        const c = rows[y] && rows[y][x];
         return c ? isColor(c) ? c : WHITE : undefined;
     };
     const same = (a, b)=> a === b || !!a && !!b && a.rgbaInt() === b.rgbaInt();
@@ -20133,10 +20110,8 @@ class HeightMap
      *  @return {Vector3} */
     getNormal(x, z)
     {
-        const dx = this.size.x / (this.columns - 1) / 2, dz = this.size.y / (this.rows - 1) / 2;
-        const slopeX = (this.getHeight(x + dx, z) - this.getHeight(x - dx, z)) / (2 * dx);
-        const slopeZ = (this.getHeight(x, z + dz) - this.getHeight(x, z - dz)) / (2 * dz);
-        return vec3(-slopeX, 1, -slopeZ).normalize();
+        const ex = this.size.x / (this.columns - 1) / 2, ez = this.size.y / (this.rows - 1) / 2;
+        return render3DSlopeNormal((x, z)=> this.getHeight(x, z), x, z, ex, ez);
     }
 
     /** Color of the nearest sample to a position, white when there are no colors
@@ -20168,9 +20143,9 @@ class HeightMap
         const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
         const step = cell / 2 / length, end = t + hypot(size.x, size.y, height) / length;
         if (!(step > 0)) return; // a zero size
-        const under = (t)=>
+        const under = (at)=>
         {
-            const p = origin.add(direction.scale(t));
+            const p = origin.add(direction.scale(at));
             if (abs(p.x) > size.x / 2 || abs(p.z) > size.y / 2) return;
             return p.y <= this.getHeight(p.x, p.z);
         };
@@ -20343,15 +20318,15 @@ class EngineObject3D extends EngineObject
 
     /** Returns the direction the object faces, its -Z axis in the world
      *  @return {Vector3} */
-    getForward3D() { const m = this.getMatrix().m; return vec3(-m[8], -m[9], -m[10]).normalize(); }
+    getForward3D() { return render3DAxis(this.getMatrix().m, 8).normalize(-1); }
 
     /** Returns the object's right axis in the world
      *  @return {Vector3} */
-    getRight3D() { const m = this.getMatrix().m; return vec3(m[0], m[1], m[2]).normalize(); }
+    getRight3D() { return render3DAxis(this.getMatrix().m, 0).normalize(); }
 
     /** Returns the object's up axis in the world
      *  @return {Vector3} */
-    getUp3D() { const m = this.getMatrix().m; return vec3(m[4], m[5], m[6]).normalize(); }
+    getUp3D() { return render3DAxis(this.getMatrix().m, 4).normalize(); }
 
     /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
      *  @return {Matrix4} */
@@ -20380,6 +20355,7 @@ class EngineObject3D extends EngineObject
 
 /**
  * Collect the EngineObject3D objects whose boxes overlap a box, sizes are full sizes
+ * - Boxes are axis aligned around the world position, rotation3D is ignored; lights, emitters and trails have no size
  * @param {Vector3} pos - Center of the box
  * @param {Vector3|number} size - Full size of the box, a number for a cube
  * @param {Array<EngineObject>} [objects] - Defaults to every object
@@ -20394,6 +20370,7 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects)
     {
         if (!(o instanceof EngineObject3D) || o.destroyed) continue;
         const m = o.getMatrix().m, s = o.size3D; // the box in world space, scaled by the object and its parents
+        if (!(s.x || s.y || s.z)) continue;
         const worldSize = vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
         if (isOverlapping3D(pos, size, vec3(m[12], m[13], m[14]), worldSize))
             collected.push(o);
@@ -20433,6 +20410,7 @@ class Light3D extends EngineObject3D
     {
         super(pos3D, undefined, undefined, color);
         ASSERT(radius > 0, 'light radius must be positive');
+        this.size3D = vec3(); // not a solid thing to pick or collect
         /** @property {number} - Distance where the light fades to nothing */
         this.radius = radius;
     }
@@ -20531,6 +20509,8 @@ class ParticleEmitter3D extends EngineObject3D
     /** Spawn new particles, move the live ones, and go away when done */
     update()
     {
+        this.worldPos3D = this.getWorldPos3D(); // remembered for when the parent is destroyed
+
         // emit at the rate until the emit time is up
         if (this.emitRate && particleEmitRateScale && (!this.emitTime || this.getAliveTime() <= this.emitTime))
         {
@@ -20538,7 +20518,7 @@ class ParticleEmitter3D extends EngineObject3D
             for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
                 this.emitParticle();
         }
-        else if ((this.emitTime || this.finishing) && !this.particles.length)
+        else if (this.emitTime && !this.particles.length)
             this.destroy();
 
         // move the particles and drop the dead ones
@@ -20558,7 +20538,7 @@ class ParticleEmitter3D extends EngineObject3D
                 extra > 0 && trail.splice(0, extra);
             }
             if ((p.age += timeDelta) >= p.life)
-                particles[i] = particles[particles.length - 1], particles.pop();
+                particles[i] = particles[particles.length - 1], particles.pop(); // swap with the last, order does not matter
         }
     }
 
@@ -20566,11 +20546,10 @@ class ParticleEmitter3D extends EngineObject3D
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        if (!this.particles.length || this.destroyed)
+        if (immediate || !this.particles.length || this.destroyed)
             return super.destroy(immediate);
-        this.emitRate = 0;
-        this.finishing = true;
-        this.parent?.removeChild(this); // the particles are in world space, they no longer need the parent
+        this.emitTime = -1; // stops emitting, and update destroys it once the particles are gone
+        render3DDetach(this); // the particles are in world space, they no longer need the parent
     }
 
     /** Spawn one particle now */
@@ -20584,9 +20563,8 @@ class ParticleEmitter3D extends EngineObject3D
         const offset = isVector3(size) ? vec3(rand(-.5, .5) * size.x, rand(-.5, .5) * size.y, rand(-.5, .5) * size.z)
             : randVector3(rand() ** (1/3) * size / 2);
 
-        // direction inside the cone around local +Y, uniform over the spherical cap
-        const z = rand(cos(this.emitConeAngle), 1), s = (1 - z * z) ** .5, a = rand(2 * PI);
-        const direction = matrix.transformDirection(vec3(s * cos(a), z, s * sin(a))).normalize();
+        // direction inside the cone around local +Y
+        const direction = matrix.transformDirection(randVector3(1, this.emitConeAngle)).normalize();
 
         this.particles.push({
             pos: matrix.transformPoint(offset),
@@ -20605,7 +20583,7 @@ class ParticleEmitter3D extends EngineObject3D
     {
         if (render3D.transparentQueue)
             return render3D.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
-        const fade = this.fadeRate / 2;
+        const fade = this.fadeRate / 2, texture = this.tileInfo || render3DSoftDot(); // no dot headless
         for (const p of this.particles)
         {
             const t = p.age / p.life;
@@ -20625,8 +20603,8 @@ class ParticleEmitter3D extends EngineObject3D
                 }
                 render3D.drawRibbon(trail, widths, colors, this.tileInfo);
             }
-            else if (this.tileInfo || render3DSoftDot())
-                render3D.drawBillboard(p.pos, vec2(size), this.tileInfo || render3DSoftDot(), color);
+            else if (texture)
+                render3D.drawBillboard(p.pos, vec2(size), texture, color);
             else
                 render3D.drawSoftDisc(p.pos, size, color, undefined, 8); // no canvas for the dot, headless
         }
@@ -20648,7 +20626,7 @@ class Trail3D extends EngineObject3D
 {
     /** Create a trail
      *  @param {Vector3} [pos3D]
-     *  @param {number} [lifeTime] - Seconds a sample lasts, the length of the trail in time
+     *  @param {number} [lifeTime] - Seconds the ribbon takes to thin and fade from head to tail
      *  @param {number} [width] - Width at the head, it thins to nothing at the tail
      *  @param {TileInfo} [tileInfo] - Texture stretched along the trail, undefined is untextured
      *  @param {Color} [color] - Color at the head
@@ -20660,8 +20638,9 @@ class Trail3D extends EngineObject3D
         this.transparent = true;
         this.additive = additive;
         this.size3D = vec3(); // not a solid thing to pick or collect
+        this.finishing = false; // set by destroy, the ribbon fades out then goes away
 
-        /** @property {number} - Seconds a sample lasts */
+        /** @property {number} - Seconds the ribbon takes to thin and fade from head to tail */
         this.lifeTime = lifeTime;
         /** @property {number} - Width at the head */
         this.width = width;
@@ -20680,10 +20659,10 @@ class Trail3D extends EngineObject3D
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        if (!this.samples.length || this.destroyed)
+        if (immediate || !this.samples.length || this.destroyed || this.lifeTime == Infinity)
             return super.destroy(immediate);
         this.finishing = true;
-        this.parent?.removeChild(this); // the samples are in world space, they no longer need the parent
+        render3DDetach(this); // the samples are in world space, they no longer need the parent
     }
 
     /** Record the position when it moved and drop old samples, called automatically each frame */
@@ -20692,7 +20671,7 @@ class Trail3D extends EngineObject3D
         const samples = this.samples;
         if (!this.finishing)
         {
-            const pos = this.getWorldPos3D(), last = samples[samples.length - 1];
+            const pos = this.worldPos3D = this.getWorldPos3D(), last = samples[samples.length - 1];
             if (!last || pos.distanceSquared(last.pos) > 1e-8)
                 samples.push({pos, side: this.side?.copy(), time});
         }
@@ -20756,7 +20735,7 @@ function parseOBJ(text, smooth=render3DSmoothShading)
                 const hasNormals = corners.every(c => c[2]);
                 fileNormals ||= hasNormals;
                 const n = hasNormals ? render3DPolygonStrip(corners.map(c => lookup(c[2], normals)))
-                    : render3DFaceNormal(points[0], points[1], points[2], points[3] || points[0]);
+                    : render3DFaceNormal(points[0], points[1], points[2], points[3]);
                 mesh.addStrip(render3DPolygonStrip(points), n, render3DPolygonStrip(uv));
             }
         }

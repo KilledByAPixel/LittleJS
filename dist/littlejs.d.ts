@@ -5824,12 +5824,13 @@ declare module "littlejsengine" {
      */
     export function isVector3(v: any): boolean;
     /**
-     * Returns a random Vector3 of a given length, pointing any direction evenly
+     * Returns a random Vector3 of a given length, pointing any direction evenly, or within a cone around +Y
      * @param {number} [length]
+     * @param {number} [coneAngle] - Half angle of the cone around +Y in radians, PI is every direction
      * @return {Vector3}
      * @memberof Math3D
      */
-    export function randVector3(length?: number): Vector3;
+    export function randVector3(length?: number, coneAngle?: number): Vector3;
     /**
      * 3D Vector object, right handed with Y up
      * - Methods return new vectors except set
@@ -5923,7 +5924,7 @@ declare module "littlejsengine" {
          *  @param {number} percent
          *  @return {Vector3} */
         lerp(v: Vector3, percent: number): Vector3;
-        /** Returns a new vector turned around an axis, counter clockwise looking down the axis
+        /** Returns a new vector turned around an axis, counter clockwise when the axis points at you
          *  @param {Vector3} axis - Unit length
          *  @param {number} angle - Radians
          *  @return {Vector3} */
@@ -6276,9 +6277,9 @@ declare module "littlejsengine" {
         shadowMapDrawn: boolean;
         passIsDefault: boolean;
         boxMesh: any;
+        sphereMesh: any;
         lightPositions: Float32Array;
         lightColors: Float32Array;
-        sphereMesh: any;
         streamBuffer: any;
         streamData: ArrayBuffer;
         streamFloats: Float32Array;
@@ -6315,10 +6316,10 @@ declare module "littlejsengine" {
          *  @return {Vector3|undefined} - undefined when the ray misses the plane */
         screenToGround(screenPos: Vector2, groundHeight?: number): Vector3 | undefined;
         /** Find the nearest object a ray hits, for clicking on things
-         *  - Each object is tested as a ball around its mesh, not triangle by triangle
+         *  - Each object is tested as a ball around its mesh, or around a sprite's size3D, not triangle by triangle
          *  @param {Vector3} origin
          *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
-         *  @param {Array<EngineObject>} [objects] - Defaults to every EngineObject3D with a mesh, other objects are skipped
+         *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
          *  @return {{object: EngineObject3D, distance: number}|undefined} */
         raycastObjects(origin: Vector3, direction: Vector3, objects?: Array<EngineObject>): {
             object: EngineObject3D;
@@ -6346,10 +6347,11 @@ declare module "littlejsengine" {
          *  @param {Color} [color] - Tint */
         drawMesh(mesh: Mesh, matrix?: Matrix4, tileInfo?: TileInfo | TextureInfo, color?: Color): any;
         /** Draw a triangle strip, batched into the stream with the current draw state
+         *  - Strip order: the first three points make a triangle, then each point makes another with the two before it
          *  - List the first three points counter clockwise as seen from the front, or the face points away
          *    and may vanish when back faces are culled
          *  - inside a bake the strip goes into the mesh instead, in the transparent stage it is queued for sorting
-         *  @param {Array<Vector3>} points - Strip order
+         *  @param {Array<Vector3>} points - In strip order
          *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
          *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, 0-1 across the tile
          *  @param {Color|Array<Color>} [colors] - One for all or one per point, vertex colors come before the texture
@@ -6367,7 +6369,7 @@ declare module "littlejsengine" {
         /** Build a mesh once out of draw calls, instead of redrawing the shapes every frame
          *  - Call the same drawStrip, drawQuad and drawBox calls inside, and get a mesh back
          *  - Strips inside a bake ignore their tileInfo, the finished mesh picks the texture when it draws
-         *  - drawMesh, drawBox and drawSphere copy their mesh in, moved and tinted
+         *  - drawMesh, drawBox and drawSphere copy their mesh in, moved and tinted, their tileInfo dropped too
          *  @param {Function} drawFunction
          *  @return {Mesh} */
         bake(drawFunction: Function): Mesh;
@@ -6627,7 +6629,8 @@ declare module "littlejsengine" {
         /** Number of vertices in the mesh
          *  @return {number} */
         get vertexCount(): number;
-        /** Add a triangle strip, joined to the previous one with degenerate triangles
+        /** Add a triangle strip, joined to the previous one by invisible flat triangles so one mesh holds many strips
+         *  - Strip order: the first three points make a triangle, then each point makes another with the two before it
          *  - List the first three points counter clockwise as seen from the front, or the face points away
          *    and may vanish when back faces are culled
          *  @param {Array<Vector3>} points - Strip order
@@ -7002,7 +7005,7 @@ declare module "littlejsengine" {
         /** @property {Array<Object>} - Live particles */
         particles: any[];
         emitTimeBuffer: number;
-        finishing: boolean;
+        worldPos3D: Vector3;
         /** Spawn one particle now */
         emitParticle(): void;
         /** Draw the particles, as flat squares or as streaks when trailTime is set
@@ -7022,14 +7025,15 @@ declare module "littlejsengine" {
     export class Trail3D extends EngineObject3D {
         /** Create a trail
          *  @param {Vector3} [pos3D]
-         *  @param {number} [lifeTime] - Seconds a sample lasts, the length of the trail in time
+         *  @param {number} [lifeTime] - Seconds the ribbon takes to thin and fade from head to tail
          *  @param {number} [width] - Width at the head, it thins to nothing at the tail
          *  @param {TileInfo} [tileInfo] - Texture stretched along the trail, undefined is untextured
          *  @param {Color} [color] - Color at the head
          *  @param {Color} [colorEnd] - Color at the tail
          *  @param {boolean} [additive] - Additive blending */
         constructor(pos3D?: Vector3, lifeTime?: number, width?: number, tileInfo?: TileInfo, color?: Color, colorEnd?: Color, additive?: boolean);
-        /** @property {number} - Seconds a sample lasts */
+        finishing: boolean;
+        /** @property {number} - Seconds the ribbon takes to thin and fade from head to tail */
         lifeTime: number;
         /** @property {number} - Width at the head */
         width: number;
@@ -7041,10 +7045,11 @@ declare module "littlejsengine" {
         samples: any[];
         /** Forget the trail so far, for when the object teleports */
         clear(): void;
-        finishing: boolean;
+        worldPos3D: Vector3;
     }
     /**
      * Collect the EngineObject3D objects whose boxes overlap a box, sizes are full sizes
+     * - Boxes are axis aligned around the world position, rotation3D is ignored; lights, emitters and trails have no size
      * @param {Vector3} pos - Center of the box
      * @param {Vector3|number} size - Full size of the box, a number for a cube
      * @param {Array<EngineObject>} [objects] - Defaults to every object
