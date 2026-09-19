@@ -142,6 +142,7 @@ LittleJS comes with several demos both for learning and using as starter project
 - [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
 - [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data
 - [Box2D Demo](https://killedbyapixel.github.io/LittleJS/examples/box2d/) - Box2D plugin demonstration and testbed
+- [3D Example](https://killedbyapixel.github.io/LittleJS/examples/3d/) - The 3D plugin in one scene: terrain, shadows, lights, sprites, particles and bloom
 - [3D Racer](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Racer%20Game) - Built-in 3D plugin: terrain, shadows and a chase camera in one short file
 - [Three.js Side Scroller](https://killedbyapixel.github.io/LittleJS/examples/threejs/sideScroller/) - 3D rendering with Three.js behind the 2D canvas
 - [Three.js Platformer](https://killedbyapixel.github.io/LittleJS/examples/threejs/platformer/) - 3D platformer with LittleJS gameplay and Three.js rendering
