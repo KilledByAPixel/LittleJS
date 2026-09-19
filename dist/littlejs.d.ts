@@ -6282,6 +6282,10 @@ declare module "littlejsengine" {
         frustumCulling: boolean;
         /** @property {boolean} - Draw every use of a mesh in the opaque stage as one instanced call, mesh.instanced overrides it per mesh */
         instancing: boolean;
+        /** @property {boolean} - Sample textures through mipmaps so they do not shimmer in the distance, false uses each texture's own filtering like 2D */
+        mipmaps: boolean;
+        /** @property {number} - Anisotropic filtering for textures seen at an angle, 1 to 16, 1 is off; needs mipmaps */
+        anisotropy: number;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
         isRendering: boolean;
         /** @property {boolean} - True while the shadow map is being drawn, draws go to the depth only shader */

@@ -1787,3 +1787,9 @@ test('scaleUVs repeats a texture across a mesh', () =>
     const box = buildBox().scaleUVs(vec2(2, 3));
     assert.ok(box.uvs.some(uv=> uv.x === 2 && uv.y === 3));
 });
+
+test('texture filtering settings have their defaults', () =>
+{
+    assert.equal(render3D.mipmaps, true);
+    assert.equal(render3D.anisotropy, 4);
+});

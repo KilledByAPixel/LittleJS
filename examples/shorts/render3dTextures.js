@@ -35,7 +35,15 @@ function gameInit()
 
 function gameUpdate()
 {
-    // drag to orbit
+    // space toggles mipmaps, drag to orbit
+    if (keyWasPressed('Space'))
+        render3D.mipmaps = !render3D.mipmaps;
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
     render3D.camera.orbit(vec3(0,1,0), 14, orbit, .4);
+}
+
+function gameRenderPost()
+{
+    const text = 'space: toggle mipmaps / mipmaps ' + (render3D.mipmaps ? 'on' : 'off');
+    drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

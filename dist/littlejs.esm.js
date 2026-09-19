@@ -18113,6 +18113,10 @@ class Render3DPlugin
         this.frustumCulling = true;
         /** @property {boolean} - Draw every use of a mesh in the opaque stage as one instanced call, mesh.instanced overrides it per mesh */
         this.instancing = true;
+        /** @property {boolean} - Sample textures through mipmaps so they do not shimmer in the distance, false uses each texture's own filtering like 2D */
+        this.mipmaps = true;
+        /** @property {number} - Anisotropic filtering for textures seen at an angle, 1 to 16, 1 is off; needs mipmaps */
+        this.anisotropy = 4;
 
         // read only
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
@@ -19048,19 +19052,8 @@ function render3DInitGL()
     r.whiteTexture = glCreateTexture();
     r.mipmapped = new WeakSet;
 
-    // textures in 3D shrink into the distance far more than sprites do, so they sample through their mipmaps here;
-    // a sampler sets the filtering for the 3D pass only and leaves the engine's textures as they are for 2D
-    const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
-    r.samplers = [gl.CLAMP_TO_EDGE, gl.REPEAT].map(wrap =>
-    {
-        const sampler = gl.createSampler();
-        gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, tilesPixelated ? gl.NEAREST : gl.LINEAR);
-        gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
-        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrap);
-        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrap);
-        anisotropy && gl.samplerParameterf(sampler, anisotropy.TEXTURE_MAX_ANISOTROPY_EXT, min(4, gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
-        return sampler;
-    });
+    r.samplers = [];
+    r.samplerKey = undefined;
     render3DUpdateShadowMap(1);
 
     // hand the engine back its own buffer and vertex array, in that order so a pending 2D batch flushes right
@@ -19073,6 +19066,7 @@ function render3DContextLost()
     const r = render3D;
     r.shader = r.shadowShader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
     r.instanceBuffers = r.samplers = [];
+    r.samplerKey = undefined;
     render3DClearInstances();
     r.shadowFramebuffer = r.shadowTexture = undefined;
     r.shadowTextureSize = 0;
@@ -19146,6 +19140,31 @@ function render3DNormalMatrix3(m, out, offset)
     return out;
 }
 
+// textures in 3D shrink into the distance far more than sprites do, so the pass samples them through their mipmaps;
+// a sampler sets the filtering for the 3D pass only and leaves the engine's textures as they are for 2D, one for
+// clamped textures and one for wrapping ones, rebuilt when the settings change
+function render3DUpdateSamplers()
+{
+    const gl = glContext, r = render3D, key = tilesPixelated + ' ' + r.anisotropy;
+    if (r.samplerKey === key) return;
+    r.samplerKey = key;
+    const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
+    r.samplers = [gl.CLAMP_TO_EDGE, gl.REPEAT].map(wrap =>
+    {
+        const sampler = gl.createSampler();
+        gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, tilesPixelated ? gl.NEAREST : gl.LINEAR);
+        gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
+        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrap);
+        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrap);
+        if (anisotropy)
+        {
+            const most = gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+            gl.samplerParameterf(sampler, anisotropy.TEXTURE_MAX_ANISOTROPY_EXT, clamp(r.anisotropy, 1, most));
+        }
+        return sampler;
+    });
+}
+
 // bind the texture of a tile or texture, white when there is none or it is not loaded, with the 3D sampler that
 // matches its wrap mode; the first time a texture is used in 3D it gets its mipmaps
 function render3DBindTexture(tileInfo)
@@ -19154,6 +19173,8 @@ function render3DBindTexture(tileInfo)
     const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
     const texture = textureInfo?.glTexture || r.whiteTexture;
     gl.bindTexture(gl.TEXTURE_2D, texture);
+    if (!r.mipmaps)
+        return gl.bindSampler(0, null); // the texture's own filtering, as in 2D
     gl.bindSampler(0, r.samplers[textureInfo?.wrap ? 1 : 0]);
     if (!r.mipmapped.has(texture))
     {
@@ -19269,6 +19290,7 @@ function render3DRenderPass(after2D)
 {
     const gl = glContext, r = render3D;
     if (!r.shader) return; // headless, gl disabled, or context lost
+    render3DUpdateSamplers();
     ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
     ASSERT(!glRenderTarget, 'the 3D pass needs the canvas depth buffer, it can not draw into a render target');
     const isDefault = after2D === !!r.renderAfter2D, objects = render3DLayerObjects(after2D);

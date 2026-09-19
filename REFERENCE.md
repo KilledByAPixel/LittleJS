@@ -815,7 +815,7 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
   drawing from `gameRender` asserts, and anything that fades (soft discs, soft shadows) must be in the transparent stage
 - Builders and draws take full sizes (diameters) like buildBox and drawCircle; collision helpers and lights take radii
 - Textures sample through mipmaps in 3D so floors do not shimmer in the distance, crisp up close when tilesPixelated
-  is on; the 2D sprites keep their own filtering
+  is on; render3D.mipmaps = false keeps each texture's own filtering, and 2D sprites always do
 - A texture comes before its tint like drawTile, except where per vertex colors are part of the geometry (drawStrip,
   drawRibbon)
 - Y is up and -Z is forward, so the ground is the XZ plane: 2D input maps to it as vec3(move.x, 0, -move.y), forward for
@@ -920,6 +920,9 @@ render3D.sortTransparent = true // transparent draws sort far to near so alpha a
                                 // order
 render3D.frustumCulling = true // drawMesh skips meshes whose bounding sphere is outside the frustum, the wedge of
                                // space the camera can see
+render3D.mipmaps = true        // textures sample through mipmaps so they do not shimmer far away, false keeps each
+                               // texture's own filtering like 2D; magnification follows tilesPixelated either way
+render3D.anisotropy = 4        // sharper textures seen at an angle, 1 to 16, 1 is off; needs mipmaps
 render3D.instancing = true     // every use of a mesh in the opaque stage is one draw call however many there are,
                                // mesh.instanced = false keeps one mesh drawing in object order instead
 render3D.renderAfter2D = false // true draws the 3D scene on top of the 2D scene instead of under it; objects that do
