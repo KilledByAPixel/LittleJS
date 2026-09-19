@@ -88,6 +88,7 @@ const exampleList =
     new ExampleInfo('3D Racer Game', 'render3dRacerGame.js', 'A small game: laps around a hilly track with a road ribbon, trees, skid marks and a chase camera', false, '3d, game, racer, terrain, heightmap, ribbon, trail, chase camera, webgl'),
     new ExampleInfo('3D Puzzle Game', 'render3dPuzzleGame.js', 'A small game: push blocks onto pads under an orthographic camera with mouse picking', false, '3d, game, puzzle, orthographic, picking, layers, webgl'),
     new ExampleInfo('3D Mesh', 'render3dMesh.js', 'Load an OBJ model, drop your own on the page', false, '3d, obj, mesh, model, load, file, webgl'),
+    new ExampleInfo('3D Instancing', 'render3dInstancing.js', 'Thousands of tumbling cubes drawn in one call', false, '3d, instancing, batch, performance, stress, webgl'),
     new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball bouncing', false, 'objects, collision'),
     new ExampleInfo('Flappy Game', 'flappyGame.js', 'Flappy bird style game', false, 'objects, obstacles'),

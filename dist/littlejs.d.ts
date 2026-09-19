@@ -6280,6 +6280,8 @@ declare module "littlejsengine" {
         sortTransparent: boolean;
         /** @property {boolean} - Skip meshes whose bounding sphere is outside the view */
         frustumCulling: boolean;
+        /** @property {boolean} - Draw every use of a mesh in the opaque stage as one instanced call, mesh.instanced overrides it per mesh */
+        instancing: boolean;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
         isRendering: boolean;
         /** @property {boolean} - True while the shadow map is being drawn, draws go to the depth only shader */
@@ -6319,6 +6321,10 @@ declare module "littlejsengine" {
         lightPositions: Float32Array;
         lightColors: Float32Array;
         streamBuffer: any;
+        instanceBuffers: any[];
+        instanceBufferIndex: number;
+        instanceMeshes: any[];
+        attribValues: any[];
         streamData: ArrayBuffer;
         streamFloats: Float32Array;
         streamInts: Uint32Array;
@@ -6664,6 +6670,10 @@ declare module "littlejsengine" {
         bufferCount: number;
         /** @property {boolean} - The mesh changed and needs uploading again, set it yourself if you edit the arrays */
         dirty: boolean;
+        /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call, undefined follows render3D.instancing */
+        instanced: any;
+        instanceCount: number;
+        instanceData: any;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
         radius: number;
         contextGeneration: number;

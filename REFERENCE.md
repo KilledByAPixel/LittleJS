@@ -821,8 +821,8 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 - Below, a comment that says `e.g.` marks the value on that line as an example, not the default
 - See the `examples/shorts/render3d*.js` demos - features: render3dShapes, render3dBillboards, render3dHeightMap
   terrain, render3dCollision with picking, render3dLights, render3dParticles, render3dTrails, render3dText,
-  render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene; games: render3dDodgeGame, render3dRacerGame,
-  render3dPuzzleGame
+  render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene, render3dInstancing; games:
+  render3dDodgeGame, render3dRacerGame, render3dPuzzleGame
 
 ```javascript
 // Setup (call in gameInit)
@@ -917,6 +917,8 @@ render3D.sortTransparent = true // transparent draws sort far to near so alpha a
                                 // order
 render3D.frustumCulling = true // drawMesh skips meshes whose bounding sphere is outside the frustum, the wedge of
                                // space the camera can see
+render3D.instancing = true     // every use of a mesh in the opaque stage is one draw call however many there are,
+                               // mesh.instanced = false keeps one mesh drawing in object order instead
 render3D.renderAfter2D = false // true draws the 3D scene on top of the 2D scene instead of under it; objects that do
                                // not set their own renderAfter2D follow this
 render3D.smoothShading = true  // default for every builder's smooth argument, flat by default;
@@ -1016,6 +1018,7 @@ mesh.center() mesh.fit(size) // move the bounds onto the origin, scale the large
 mesh.render(matrix, tileInfo, color)          // one draw call with the current draw state
 mesh.dispose()                                // free the GPU buffer, the CPU data stays
 mesh.points mesh.normals mesh.uvs mesh.colors // the vertex arrays, one entry per strip vertex
+mesh.instanced = false           // draw this mesh one call per use, in object order, instead of batching it
 mesh.dirty = true; mesh.upload() // re-upload edited arrays on the next draw, or upload now; upload also measures
                                  // mesh.radius; transform, setColor and computeNormals set dirty themselves
 mesh.vertexCount mesh.radius                  // vertices, and the bounding sphere for culling and picking

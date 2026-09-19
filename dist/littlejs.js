@@ -17741,6 +17741,17 @@ let render3D;
 // vertex format: position xyz, normal xyz, uv, rgba bytes
 const RENDER3D_VERTEX_FLOATS = 9;
 const RENDER3D_VERTEX_BYTES = RENDER3D_VERTEX_FLOATS * 4;
+
+// per draw values the shaders read as vertex attributes: the model matrix columns (4-7), the normal matrix columns
+// (8-10), the tint (11) and the uv rect (12); constants for one draw, one per instance for a batch
+const RENDER3D_INSTANCE_FLOATS = 33;
+const RENDER3D_INSTANCE_BYTES = RENDER3D_INSTANCE_FLOATS * 4;
+const RENDER3D_INSTANCE_ATTRIBS = [[4, 4, 0], [5, 4, 16], [6, 4, 32], [7, 4, 48], [8, 3, 64], [9, 3, 76], [10, 3, 88], [11, 4, 100], [12, 4, 116]];
+const RENDER3D_VERTEX_INPUTS =
+    'layout(location=0) in vec3 p;layout(location=1) in vec3 n;layout(location=2) in vec2 t;layout(location=3) in vec4 c;' +
+    'layout(location=4) in vec4 m0;layout(location=5) in vec4 m1;layout(location=6) in vec4 m2;layout(location=7) in vec4 m3;' +
+    'layout(location=8) in vec3 n0;layout(location=9) in vec3 n1;layout(location=10) in vec3 n2;' +
+    'layout(location=11) in vec4 tint;layout(location=12) in vec4 uvRect;';
 const RENDER3D_MAX_STREAM_VERTS = 32768;
 const RENDER3D_MAX_POINT_LIGHTS = 8; // per frame, the shader loops over this many
 const RENDER3D_QUAD_UVS = Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv))); // strip order
@@ -17872,6 +17883,80 @@ function render3DDetach(o)
         o.pos3D = o.getWorldPos3D(), o.parent.removeChild(o);
     else if (o.worldPos3D)
         o.pos3D = o.worldPos3D;
+}
+
+// add a draw of a mesh to its batch; a batch is one mesh under one texture and draw state, so a change flushes it
+function render3DInstance(mesh, matrix, tileInfo, color)
+{
+    const r = render3D, textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
+    if (mesh.instanceCount && (mesh.instanceTextureInfo !== textureInfo || render3DStateChanged(mesh.instanceState)))
+        render3DFlushInstances(mesh);
+    if (!mesh.instanceCount)
+    {
+        mesh.instanceTextureInfo = textureInfo;
+        mesh.instanceState = render3DCaptureBatchState();
+        r.instanceMeshes.push(mesh);
+    }
+
+    // room for one more, doubling as the batch grows
+    let data = mesh.instanceData;
+    const k = mesh.instanceCount++ * RENDER3D_INSTANCE_FLOATS;
+    if (!data || data.length < k + RENDER3D_INSTANCE_FLOATS)
+    {
+        const grown = new Float32Array(max(64 * RENDER3D_INSTANCE_FLOATS, data ? data.length * 2 : 0));
+        data && grown.set(data);
+        mesh.instanceData = data = grown;
+    }
+    data.set(matrix.m, k);
+    render3DNormalMatrix3(matrix.m, data, k + 16);
+    data[k+25] = color.r; data[k+26] = color.g; data[k+27] = color.b; data[k+28] = color.a;
+    const uv = render3DGetTileUVs(tileInfo);
+    data[k+29] = uv.x; data[k+30] = uv.y; data[k+31] = uv.w; data[k+32] = uv.h;
+}
+
+// draw the pending batches, or just one mesh's, each as a single instanced call
+function render3DFlushInstances(only)
+{
+    const r = render3D, gl = glContext;
+    for (const mesh of only ? [only] : r.instanceMeshes)
+    {
+        const count = mesh.instanceCount;
+        mesh.instanceCount = 0;
+        if (!count || !mesh.buffer) continue;
+
+        // the per instance values on top of the constant attributes, then the mesh under them
+        // a ring of buffers with fresh storage each time, so the driver never waits for a draw still reading one
+        const buffers = r.instanceBuffers;
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers[r.instanceBufferIndex = (r.instanceBufferIndex + 1) % buffers.length]);
+        gl.bufferData(gl.ARRAY_BUFFER, mesh.instanceData, gl.DYNAMIC_DRAW, 0, count * RENDER3D_INSTANCE_FLOATS);
+        for (const [location, size, offset] of RENDER3D_INSTANCE_ATTRIBS)
+        {
+            gl.vertexAttribPointer(location, size, gl.FLOAT, false, RENDER3D_INSTANCE_BYTES, offset);
+            gl.enableVertexAttribArray(location);
+        }
+        render3DSetDrawUniforms(RENDER3D_IDENTITY, mesh.instanceTextureInfo, WHITE, RENDER3D_FULL_UV_RECT, mesh.instanceState);
+        render3DBindVertexBuffer(mesh.buffer);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, mesh.bufferCount, count);
+        for (const [location] of RENDER3D_INSTANCE_ATTRIBS)
+            gl.disableVertexAttribArray(location);
+        ++drawCount;
+        primitiveCount += mesh.bufferCount * count;
+    }
+    if (!only)
+        r.instanceMeshes.length = 0;
+    else
+    {
+        const i = r.instanceMeshes.indexOf(only);
+        i < 0 || r.instanceMeshes.splice(i, 1);
+    }
+}
+
+// forget the pending batches, for a frame that threw or a lost context
+function render3DClearInstances()
+{
+    for (const mesh of render3D.instanceMeshes)
+        mesh.instanceCount = 0;
+    render3D.instanceMeshes.length = 0;
 }
 
 // the live objects drawn on one side of the 2D scene
@@ -18026,6 +18111,8 @@ class Render3DPlugin
         this.sortTransparent = true;
         /** @property {boolean} - Skip meshes whose bounding sphere is outside the view */
         this.frustumCulling = true;
+        /** @property {boolean} - Draw every use of a mesh in the opaque stage as one instanced call, mesh.instanced overrides it per mesh */
+        this.instancing = true;
 
         // read only
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
@@ -18070,6 +18157,10 @@ class Render3DPlugin
 
         // the stream of immediate mode draws
         this.streamBuffer = undefined;
+        this.instanceBuffers = [];       // the per instance values of the batches being drawn, used in turn
+        this.instanceBufferIndex = 0;
+        this.instanceMeshes = [];        // meshes with a batch pending this stage
+        this.attribValues = [];          // last values sent for the cached constant attributes
         this.streamData = new ArrayBuffer(RENDER3D_MAX_STREAM_VERTS * RENDER3D_VERTEX_BYTES);
         this.streamFloats = new Float32Array(this.streamData);
         this.streamInts = new Uint32Array(this.streamData);
@@ -18248,6 +18339,8 @@ class Render3DPlugin
         if (!mesh.bufferCount) return;
         if (this.frustumCulling && !this.isSphereVisible(matrix.getTranslation(), mesh.radius * render3DMaxScale(matrix.m)))
             return;
+        if (!this.blend && (mesh.instanced ?? this.instancing)) // the stage draws the whole batch at its end
+            return render3DInstance(mesh, matrix, tileInfo, color);
         this.flush();
         render3DSetDrawUniforms(matrix, tileInfo, color);
         render3DBindVertexBuffer(mesh.buffer);
@@ -18363,6 +18456,7 @@ class Render3DPlugin
         render3DDrawObjects(opaque);
         isDefault && this.onRenderOpaque?.();
         this.flush();
+        render3DFlushInstances();
 
         // transparent: blending on, depth writes off, every draw queued then replayed far to near
         this.blend = true;
@@ -18845,30 +18939,30 @@ function render3DInitGL()
 
     // the shader
     // attributes: p position, n normal, t uv, c color, at fixed slots the depth shader also uses
-    // vertex uniforms: viewProj, model, normalMat (the fixed up matrix for normals), lightViewProj
-    // fragment uniforms: tint, lightDir (xyz, w = lighting on), lightColor (rgb, a = specular),
-    //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, uvRect, tex,
+    // vertex uniforms: viewProj, lightViewProj; the model matrix, the normal matrix (the fixed up one for normals),
+    //   the tint and the uv rect are vertex attributes, see RENDER3D_VERTEX_INPUTS
+    // fragment uniforms: lightDir (xyz, w = lighting on), lightColor (rgb, a = specular),
+    //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, tex,
     //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space)
     r.shader = glCreateProgram(
         '#version 300 es\n' +
         'precision highp float;' +
-        'uniform mat4 viewProj,model,normalMat,lightViewProj;' +
-        'uniform vec4 uvRect;' +
-        'layout(location=0) in vec3 p;layout(location=1) in vec3 n;layout(location=2) in vec2 t;layout(location=3) in vec4 c;' +
+        'uniform mat4 viewProj,lightViewProj;' +
+        RENDER3D_VERTEX_INPUTS +
         'out vec3 P,N;out vec2 T;out vec4 C,S;' +
         'void main(){' +
-        'vec4 w=model*vec4(p,1.);' +
+        'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
         'gl_Position=viewProj*w;' +
         'P=w.xyz;' +
-        'N=mat3(normalMat)*n;' +
+        'N=mat3(n0,n1,n2)*n;' +
         'T=uvRect.xy+t*uvRect.zw;' +
-        'C=c;' +
+        'C=c*tint;' +
         'S=lightViewProj*w;' +
         '}'
         ,
         '#version 300 es\n' +
         'precision highp float;' +
-        'uniform vec4 tint,lightDir,lightColor,ambientColor,fogColor,shadowParams;' +
+        'uniform vec4 lightDir,lightColor,ambientColor,fogColor,shadowParams;' +
         'uniform vec4 pointLights[' + RENDER3D_MAX_POINT_LIGHTS + '],pointLightColors[' + RENDER3D_MAX_POINT_LIGHTS + '];' +
         'uniform int pointLightCount;' +
         'uniform vec3 cameraPos;' +
@@ -18877,7 +18971,7 @@ function render3DInitGL()
         'in vec3 P,N;in vec2 T;in vec4 C,S;' +
         'out vec4 o;' +
         'void main(){' +
-        'vec4 c=C*tint*texture(tex,T);' +
+        'vec4 c=C*texture(tex,T);' +
         'if(lightDir.w>0.){' +
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'float nl=dot(n,-lightDir.xyz);' +
@@ -18921,11 +19015,10 @@ function render3DInitGL()
     r.shadowShader = glCreateProgram(
         '#version 300 es\n' +
         'precision highp float;' +
-        'uniform mat4 viewProj,model;' +
-        'uniform vec4 uvRect;' +
-        'layout(location=0) in vec3 p;layout(location=2) in vec2 t;' +
+        'uniform mat4 viewProj;' +
+        RENDER3D_VERTEX_INPUTS +
         'out vec2 T;' +
-        'void main(){T=uvRect.xy+t*uvRect.zw;gl_Position=viewProj*model*vec4(p,1.);}'
+        'void main(){T=uvRect.xy+t*uvRect.zw;gl_Position=viewProj*mat4(m0,m1,m2,m3)*vec4(p,1.);}'
         ,
         '#version 300 es\n' +
         'precision highp float;' +
@@ -18939,12 +19032,15 @@ function render3DInitGL()
     gl.bindVertexArray(r.vao);
     for (const [location] of RENDER3D_ATTRIBS)
         gl.enableVertexAttribArray(location);
+    for (const [location] of RENDER3D_INSTANCE_ATTRIBS)
+        gl.vertexAttribDivisor(location, 1); // one value per instance whenever a batch turns these arrays on
 
     // the stream buffer
     r.streamBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, r.streamBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, r.streamData.byteLength, gl.DYNAMIC_DRAW);
     r.streamCount = 0;
+    r.instanceBuffers = [gl.createBuffer(), gl.createBuffer(), gl.createBuffer()];
 
     // white texture for untextured draws, and a one texel shadow map that keeps the shadow sampler valid until shadows are on
     r.whiteTexture = glCreateTexture();
@@ -18959,6 +19055,8 @@ function render3DContextLost()
 {
     const r = render3D;
     r.shader = r.shadowShader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
+    r.instanceBuffers = [];
+    render3DClearInstances();
     r.shadowFramebuffer = r.shadowTexture = undefined;
     r.shadowTextureSize = 0;
     r.streamCount = 0;
@@ -18980,6 +19078,57 @@ function render3DUniform(name, program=render3D.shader)
 }
 
 // send a vec4 uniform of the main shader only when its value changed since the last send
+// the model matrix, its normal matrix, the tint and the uv rect as constant attributes for one draw
+const render3DNormalScratch = new Float32Array(9);
+function render3DDrawAttribs(m, tint, uvRect)
+{
+    const gl = glContext;
+    gl.vertexAttrib4f(4, m[0], m[1], m[2], m[3]);
+    gl.vertexAttrib4f(5, m[4], m[5], m[6], m[7]);
+    gl.vertexAttrib4f(6, m[8], m[9], m[10], m[11]);
+    gl.vertexAttrib4f(7, m[12], m[13], m[14], m[15]);
+    if (!render3D.shadowPass) // the shadow map has no lighting
+    {
+        const n = render3DNormalMatrix3(m, render3DNormalScratch, 0);
+        gl.vertexAttrib3f(8, n[0], n[1], n[2]);
+        gl.vertexAttrib3f(9, n[3], n[4], n[5]);
+        gl.vertexAttrib3f(10, n[6], n[7], n[8]);
+    }
+    render3DAttrib4f(11, tint.r, tint.g, tint.b, tint.a);
+    render3DAttrib4f(12, uvRect.x, uvRect.y, uvRect.w, uvRect.h);
+}
+
+// set a constant vec4 attribute only when its value changed since the last time
+function render3DAttrib4f(location, x, y, z, w)
+{
+    const values = render3D.attribValues, last = values[location];
+    if (last && last[0] === x && last[1] === y && last[2] === z && last[3] === w)
+        return;
+    values[location] = [x, y, z, w];
+    glContext.vertexAttrib4f(location, x, y, z, w);
+}
+
+// write the 3x3 matrix that keeps normals pointing out when the model matrix scales unevenly, the inverse transpose
+// of its top left 3x3 by cofactors; a flat model with no inverse keeps its own axes
+function render3DNormalMatrix3(m, out, offset)
+{
+    const a = m[0], b = m[1], c = m[2], d = m[4], e = m[5], f = m[6], g = m[8], h = m[9], i = m[10];
+    const c00 = e*i - h*f, c01 = h*c - b*i, c02 = b*f - e*c;
+    const det = a*c00 + d*c01 + g*c02;
+    if (abs(det) < 1e-12)
+    {
+        out[offset] = a; out[offset+1] = b; out[offset+2] = c;
+        out[offset+3] = d; out[offset+4] = e; out[offset+5] = f;
+        out[offset+6] = g; out[offset+7] = h; out[offset+8] = i;
+        return out;
+    }
+    const s = 1 / det;
+    out[offset]   = c00 * s;             out[offset+1] = (g*f - d*i) * s;   out[offset+2] = (d*h - g*e) * s;
+    out[offset+3] = c01 * s;             out[offset+4] = (a*i - g*c) * s;   out[offset+5] = (g*b - a*h) * s;
+    out[offset+6] = c02 * s;             out[offset+7] = (d*c - a*f) * s;   out[offset+8] = (a*e - d*b) * s;
+    return out;
+}
+
 // the GL texture of a tile or texture, white when there is none or it is not loaded
 function render3DTexture(tileInfo)
 {
@@ -19026,24 +19175,13 @@ function render3DGetTileUVs(tileInfo)
 // state is the plugin's current fields, or the captured state of a stream batch
 function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
 {
-    const gl = glContext, r = render3D, m = matrix.m;
-    if (r.shadowPass)
-    {
-        // the shadow map only needs the transform and the texture for its alpha
-        gl.uniformMatrix4fv(render3DUniform('model', r.shadowShader), false, m);
-        gl.bindTexture(gl.TEXTURE_2D, render3DTexture(tileInfo));
-        uvRect ||= render3DGetTileUVs(tileInfo);
-        gl.uniform4f(render3DUniform('uvRect', r.shadowShader), uvRect.x, uvRect.y, uvRect.w, uvRect.h);
-        return;
-    }
-    gl.uniformMatrix4fv(render3DUniform('model'), false, m);
+    const gl = glContext, r = render3D;
 
-    // scaling an object unevenly would tilt its normals, so those need a fixed up matrix
-    // an even scale leaves normals pointing the right way, so the model matrix does
-    const sx = m[0]*m[0] + m[1]*m[1] + m[2]*m[2], sy = m[4]*m[4] + m[5]*m[5] + m[6]*m[6], sz = m[8]*m[8] + m[9]*m[9] + m[10]*m[10];
-    const mirrored = m[0] * (m[5]*m[10] - m[6]*m[9]) - m[4] * (m[1]*m[10] - m[2]*m[9]) + m[8] * (m[1]*m[6] - m[2]*m[5]) < 0;
-    const uniform = !mirrored && abs(sx - sy) < 1e-6 * sx && abs(sx - sz) < 1e-6 * sx; // within a relative tolerance
-    gl.uniformMatrix4fv(render3DUniform('normalMat'), false, uniform ? m : render3DNormalMatrix(matrix).m);
+    // the per draw values are constant vertex attributes, a batch turns on a per instance array over them
+    uvRect ||= render3DGetTileUVs(tileInfo);
+    render3DDrawAttribs(matrix.m, tint, uvRect);
+    gl.bindTexture(gl.TEXTURE_2D, render3DTexture(tileInfo));
+    if (r.shadowPass) return; // the shadow map needs nothing else
 
     // blending, matches the engine's 2D blend functions
     if (state.blend)
@@ -19059,12 +19197,6 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     state.depthTest ? gl.enable(gl.DEPTH_TEST) : gl.disable(gl.DEPTH_TEST);
     gl.depthMask(state.depthWrite);
     state.cullBackFaces ? gl.enable(gl.CULL_FACE) : gl.disable(gl.CULL_FACE);
-
-    // texture, on unit 0 with the shadow map on unit 1
-    gl.bindTexture(gl.TEXTURE_2D, render3DTexture(tileInfo));
-    uvRect ||= render3DGetTileUVs(tileInfo);
-    render3DUniform4f('uvRect', uvRect.x, uvRect.y, uvRect.w, uvRect.h);
-    render3DUniform4f('tint', tint.r, tint.g, tint.b, tint.a);
 
     // lights, fog and shadows are scene state read at draw time, sent only when they change
     const l = r.lightDirection, ll = l.length() || 1, lc = r.lightColor, ac = r.ambientColor, fc = r.fogColor || canvasClearColor;
@@ -19121,6 +19253,7 @@ function render3DRenderPass(after2D)
     // a previous frame that threw must not leave anything pending
     r.streamCount = 0;
     r.capture = r.transparentQueue = undefined;
+    render3DClearInstances();
 
     // take over the gl state
     gl.useProgram(r.shader);
@@ -19241,6 +19374,7 @@ function render3DRenderShadowMap()
         render3DDrawObjects(casters);
         r.onRenderOpaque?.();
         r.flush();
+        render3DFlushInstances();
     }
     finally
     {
@@ -19372,6 +19506,10 @@ class Mesh
         this.bufferCount = 0;
         /** @property {boolean} - The mesh changed and needs uploading again, set it yourself if you edit the arrays */
         this.dirty = false;
+        /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call, undefined follows render3D.instancing */
+        this.instanced = undefined;
+        this.instanceCount = 0; // draws waiting in this mesh's batch, with their values, texture and draw state
+        this.instanceData = undefined;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
         this.radius = 0;
         this.contextGeneration = 0; // the context the buffer belongs to, see render3D.contextGeneration

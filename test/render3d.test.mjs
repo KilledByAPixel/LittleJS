@@ -1767,3 +1767,14 @@ test('collideSolid3D objects push apart by mass and bounce off each other', () =
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
 });
+
+test('instancing is on by default and a mesh can opt out', () =>
+{
+    assert.equal(render3D.instancing, true);
+    assert.equal(new Mesh().instanced, undefined);
+    const mesh = buildBox();
+    mesh.instanced = false;
+    assert.equal(mesh.instanced, false);
+    const baked = render3D.bake(()=> render3D.drawMesh(mesh)); // a bake still copies the mesh in
+    assert.equal(baked.vertexCount, mesh.vertexCount);
+});

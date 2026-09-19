@@ -83,7 +83,7 @@ The code is very clean and well documented with many examples to get you started
 - [LittleJS AI Tools](https://github.com/KilledByAPixel/LittleJS-AI) - Templates, examples, and prompts tuned for AI + LittleJS workflows
 - [LittleJS GPT](https://chatgpt.com/g/g-67c7c080b5bc81919736bc8815836be6-littlejs-game-maker) - Build LittleJS games right inside ChatGPT
 
-### 🧊 3D
+### 🧊 LittleJS 3D
 
 - Optional 3D rendering plugin with no dependencies: shape builders, OBJ models, lighting, shadows, fog, height map terrain, 3D particles and text
 - `EngineObject3D` is an `EngineObject` with a mesh, so update, children, timers and sound work as they do in 2D
