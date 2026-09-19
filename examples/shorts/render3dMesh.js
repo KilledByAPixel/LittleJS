@@ -33,6 +33,7 @@ function gameInit()
     const checker = (x, z)=> (floor(x/2) + floor(z/2)) & 1 ? rgb(.4,.55,.4) : rgb(.35,.5,.35);
     new EngineObject3D(vec3(), buildGrid(vec2(20), 10, checker));
     model = new EngineObject3D(vec3(), undefined, undefined, rgb(.9,.7,.5));
+    model.angleVelocity3D = vec3(0, .005, 0);
     setModel(parseOBJ(houseOBJ));
 
     // drop any .obj file on the page to see it
@@ -63,7 +64,6 @@ function gameUpdate()
         setRender3DSmoothShading(!render3DSmoothShading);
         model.mesh.computeNormals(render3DSmoothShading);
     }
-    model.rotation3D.y += .005;
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : 0;
     render3D.camera.orbit(vec3(0,2,0), 10, orbit, .35);
 }

@@ -57,7 +57,7 @@ function renderTransparent()
 {
     // soft shadows under the comets
     for (const c of comets)
-        render3D.drawShadow(c.pos3D, 1.5);
+        render3D.drawSoftShadow(c.pos3D, 1.5);
 
     // a rainbow ring drawn fresh each frame, width and color change along it
     const points = [], widths = [], colors = [];

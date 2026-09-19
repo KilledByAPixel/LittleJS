@@ -1,13 +1,3 @@
-class Spinner extends EngineObject3D
-{
-    constructor(pos, mesh, speed)
-    {
-        super(pos, mesh);
-        this.speed = speed;
-    }
-    update() { this.rotation3D.y += this.speed; }
-}
-
 let orbit = 0, title;
 
 function gameInit()
@@ -26,7 +16,10 @@ function gameInit()
 
     // tiles from the sheet extruded the same way, their pixel colors carry through
     for (let i = 0; i < 4; ++i)
-        new Spinner(vec3(i*3 - 4.5, 1, 4.5), buildExtrude(tile(i,16), vec2(2), .5), .02 + i*.01);
+    {
+        const sprite = new EngineObject3D(vec3(i*3 - 4.5, 1, 4.5), buildExtrude(tile(i,16), vec2(2), .5));
+        sprite.angleVelocity3D = vec3(0, .02 + i*.01, 0);
+    }
 }
 
 function gameUpdate()

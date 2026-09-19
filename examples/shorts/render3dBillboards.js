@@ -17,7 +17,7 @@ class Sprite extends EngineObject3D
     {
         // billboards are unlit and keep their own colors
         render3D.drawBillboard(this.pos3D, vec2(2), this.tileInfo, this.color, sin(time + this.phase)*.2);
-        render3D.drawShadow(this.pos3D, 2);
+        render3D.drawSoftShadow(this.pos3D, 2);
         render3D.drawLine(this.pos3D, vec3(0,3,0), .05, this.color.withAlpha(.5));
     }
 }

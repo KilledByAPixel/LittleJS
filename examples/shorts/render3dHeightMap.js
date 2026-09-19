@@ -1,4 +1,4 @@
-let terrain, terrainMesh, ball, orbit = 0;
+let terrain, ground, ball, orbit = 0;
 
 class Ball extends EngineObject3D
 {
@@ -51,11 +51,10 @@ function gameInit()
     render3D.lightDirection = vec3(-.4,-1,-.5).normalize();
     setRender3DSmoothShading(true);
 
-    // 48x48 samples over 50 units, 12 tall, drawn from the callback so it can be rebuilt
+    // 48x48 samples over 50 units, 12 tall
     const [heightImage, colorImage] = makeTerrainImages(48);
     terrain = new HeightMap(heightImage, vec2(50), 12, colorImage);
-    terrainMesh = terrain.buildMesh();
-    render3D.onRenderOpaque = ()=> terrainMesh.render();
+    ground = new EngineObject3D(vec3(), terrain.buildMesh());
 
     // trees on the grass, a trunk and a cone welded into one mesh
     const tree = new Mesh()
@@ -70,7 +69,8 @@ function gameInit()
 
     // the ball's shadow follows the ground
     ball = new Ball;
-    render3D.onRenderTransparent = ()=> render3D.drawShadow(ball.pos3D, 2, (x, z)=> terrain.getHeight(x, z));
+    const groundHeight = (x, z)=> terrain.getHeight(x, z);
+    render3D.onRenderTransparent = ()=> render3D.drawSoftShadow(ball.pos3D, 2, groundHeight);
 }
 
 function gameUpdate()
@@ -79,8 +79,8 @@ function gameUpdate()
     if (keyWasPressed('Space'))
     {
         setRender3DSmoothShading(!render3DSmoothShading);
-        terrainMesh.dispose();
-        terrainMesh = terrain.buildMesh();
+        ground.mesh.dispose();
+        ground.mesh = terrain.buildMesh();
     }
     if (mouseWasPressed(2))
     {

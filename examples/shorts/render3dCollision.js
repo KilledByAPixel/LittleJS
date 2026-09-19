@@ -51,7 +51,7 @@ function gameInit()
     ballMesh = buildSphere();
     for (let i = 0; i < 12; ++i)
         balls.push(new Ball(vec3(rand(-6,6), rand(3,8), rand(-6,6))));
-    render3D.onRenderTransparent = ()=> balls.forEach(b=> render3D.drawShadow(b.pos3D, b.radius*2));
+    render3D.onRenderTransparent = ()=> balls.forEach(b=> render3D.drawSoftShadow(b.pos3D, b.radius*2));
 }
 
 function gameUpdate()

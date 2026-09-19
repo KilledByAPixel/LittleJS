@@ -3,13 +3,8 @@ class Spinner extends EngineObject3D
     constructor(pos, color, speed)
     {
         super(pos, undefined, undefined, color);
-        this.speed = speed;
         this.scale3D = vec3(1.5);
-    }
-    update()
-    {
-        this.rotation3D.y += this.speed;
-        this.rotation3D.x += this.speed/3;
+        this.angleVelocity3D = vec3(speed/3, speed, 0);
     }
 }
 
@@ -24,10 +19,10 @@ function buildShapes()
         buildCylinder(1, 2),
         buildLathe([[0,-1], [.8,-.3], [.9,.2], [.4,.6], [0,1]], 10), // vase
         buildSphere(),
-        buildLoft([[1.2,.2,.2,-.1], [0,.7,.5,-.4], [-1,.5,.3,-.3]]), // hull
+        buildLoft([[1.2,.4,.2,-.1], [0,1.4,.5,-.4], [-1,1,.3,-.3]]), // hull
         buildTorus(1.4, .5),
         buildCone(1.4, 1.6),
-        buildCapsule(.8, 1),
+        buildCapsule(.8, 1.8),
     ];
     spinners.forEach((s, i)=> { s.mesh?.dispose(); s.mesh = meshes[i]; });
 }

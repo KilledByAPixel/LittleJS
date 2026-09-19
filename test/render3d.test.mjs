@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -627,9 +627,9 @@ test('screenToRay points forward at the center and right of it toward +x', () =>
     near(Math.atan2(up.direction.y, -up.direction.z), render3D.camera.fov / 2);
 });
 
-test('drawShadow is a soft disc facing up just above the floor', () =>
+test('drawSoftShadow is a soft disc facing up just above the floor', () =>
 {
-    const disc = render3D.bake(()=> render3D.drawShadow(vec3(3, 5, -2), 4, 1));
+    const disc = render3D.bake(()=> render3D.drawSoftShadow(vec3(3, 5, -2), 4, 1));
     assert.equal(disc.vertexCount, 3 * (2 * 17 + 2));
     for (let i = 0; i < disc.vertexCount; ++i)
     {
@@ -709,7 +709,7 @@ test('drawStripUnlit turns lighting off for the push and restores it, even on a 
         render3D.drawStripUnlit([vec3(), vec3(1), vec3(2)]);
         render3D.drawBillboard(vec3(), vec2(1));
         render3D.drawLine(vec3(), vec3(1));
-        render3D.drawShadow(vec3(), 1);
+        render3D.drawSoftShadow(vec3(), 1);
         render3D.drawStrip([vec3(), vec3(1), vec3(2)]);
     });
     assert.deepEqual(seen, [false, false, false, false, false, false, true]); // three disc rings in the shadow
@@ -960,9 +960,9 @@ test('renderAfter2D defaults off and objects follow it unless they set their own
     o.destroy();
 });
 
-test('HeightMap.getHeight matches the mesh triangles, split from (i, j) to (i+1, j+1)', () =>
+test('HeightMap.getHeight matches the mesh triangles, split from (i, j+1) to (i+1, j)', () =>
 {
-    // a saddle: two opposite corners high, the split diagonal runs between the low corners
+    // a saddle: two opposite corners high, the split diagonal runs between the high corners
     const map = new HeightMap([[0, 1], [1, 0]], vec2(2, 2), 1);
     near(map.getHeight(-.5, -.5), .5);  // on the first triangle
     near(map.getHeight(.5, .5), .5);    // on the second
@@ -974,13 +974,13 @@ test('HeightMap.getHeight matches the mesh triangles, split from (i, j) to (i+1,
         near(p.y, map.getHeight(p.x, p.z));
 });
 
-test('drawShadow follows a height function and lifts by the given amount', () =>
+test('drawSoftShadow follows a height function and lifts by the given amount', () =>
 {
-    const disc = render3D.bake(()=> render3D.drawShadow(vec3(2, 9, 3), 2, (x, z)=> x + z, WHITE, .5));
+    const disc = render3D.bake(()=> render3D.drawSoftShadow(vec3(2, 9, 3), 2, (x, z)=> x + z, WHITE, .5));
     assert.equal(disc.vertexCount, 3 * (2 * 17 + 2));
     for (const p of disc.points)
         near(p.y, p.x + p.z + .5);
-    const flat = render3D.bake(()=> render3D.drawShadow(vec3(2, 9, 3), 2, 4));
+    const flat = render3D.bake(()=> render3D.drawSoftShadow(vec3(2, 9, 3), 2, 4));
     for (const p of flat.points)
         near(p.y, 4.02);
 });
@@ -1124,7 +1124,7 @@ test('buildCone, buildCapsule and buildTorus are outward shapes of the documente
     near(Math.max(...cone.points.map(p => p.y)), .5);
     near(Math.min(...cone.points.map(p => p.y)), -.5);
     assert.equal(buildCone(.5, 1, 8, false, false).vertexCount, 8 * 6); // no base
-    const capsule = buildCapsule(1, 1, 8, 2, false);
+    const capsule = buildCapsule(1, 2, 8, 2, false);
     assertOutward(capsule, 'capsule');
     near(Math.max(...capsule.points.map(p => p.y)), 1);
     near(Math.min(...capsule.points.map(p => p.y)), -1);
@@ -1206,12 +1206,12 @@ test('the stage loop sets the draw state from each object, so render3D overrides
     const seen = {};
     class Probe extends EngineObject3D
     {
-        render3D() { seen[this.name] = {lighting: render3D.lighting, additive: render3D.additive, specular: render3D.specular, receiveShadow: render3D.receiveShadow, blend: render3D.blend}; }
+        render3D() { seen[this.name] = {lighting: render3D.lighting, additive: render3D.additive, specular: render3D.specular, receiveShadow: render3D.receiveShadow, blend: render3D.blend, cull: render3D.cullBackFaces}; }
     }
     const plain = new Probe, lamp = new Probe, shiny = new Probe, glow = new Probe;
     plain.name = 'plain';
     lamp.name = 'lamp', lamp.unlit = true, lamp.receiveShadow = false;
-    shiny.name = 'shiny', shiny.specular = .7;
+    shiny.name = 'shiny', shiny.specular = .7, shiny.cullBackFaces = true;
     glow.name = 'glow', glow.additive = true; // additive alone puts it in the transparent stage
     assert.equal(plain.unlit, false); assert.equal(plain.receiveShadow, true); assert.equal(plain.specular, 0); assert.equal(plain.additive, false);
     render3D.camera.pos = vec3(0, 0, 10);
@@ -1219,10 +1219,10 @@ test('the stage loop sets the draw state from each object, so render3D overrides
     render3D.updateMatrices(1);
     render3D.specular = .5; // a stray setting must not reach the objects
     render3D.renderStages(engineObjects.filter(o => o instanceof EngineObject3D && !o.destroyed));
-    assert.deepEqual(seen.plain, {lighting: true, additive: false, specular: 0, receiveShadow: true, blend: false});
-    assert.deepEqual(seen.lamp, {lighting: false, additive: false, specular: 0, receiveShadow: false, blend: false});
-    assert.deepEqual(seen.shiny, {lighting: true, additive: false, specular: .7, receiveShadow: true, blend: false});
-    assert.deepEqual(seen.glow, {lighting: true, additive: true, specular: 0, receiveShadow: true, blend: true});
+    assert.deepEqual(seen.plain, {lighting: true, additive: false, specular: 0, receiveShadow: true, blend: false, cull: false});
+    assert.deepEqual(seen.lamp, {lighting: false, additive: false, specular: 0, receiveShadow: false, blend: false, cull: false});
+    assert.deepEqual(seen.shiny, {lighting: true, additive: false, specular: .7, receiveShadow: true, blend: false, cull: true});
+    assert.deepEqual(seen.glow, {lighting: true, additive: true, specular: 0, receiveShadow: true, blend: true, cull: false});
     // and the pass leaves the defaults behind
     assert.equal(render3D.specular, 0);
     assert.equal(render3D.lighting, true);
@@ -1277,4 +1277,137 @@ test('debug primitives can be recorded headless', () =>
         debugLine3D(vec3(), vec3(1));
         debugPoint3D(vec3(1));
     });
+});
+
+test('buildBox takes a number, buildCapsule height is the total, buildLoft widths are full widths', () =>
+{
+    near(buildBox(2).getBounds().max.x, 1);
+    const capsule = buildCapsule(1, 3, 8, 2, false);
+    near(capsule.getBounds().max.y, 1.5); near(capsule.getBounds().min.y, -1.5);
+    near(buildCapsule(1, .5, 8, 2, false).getBounds().max.y, .5); // never shorter than the size
+    const loft = buildLoft([[1, 2, 1, -1], [-1, 2, 1, -1]]);
+    near(loft.getBounds().max.x, 1); near(loft.getBounds().min.x, -1);
+    assert.equal(buildLathe([[0, -1], [1, 0], [0, 1]]).vertexCount, 2 * 12 * 6); // 12 sides by default
+});
+
+test('isVector3 rejects NaN like isVector2', () =>
+{
+    assert.equal(isVector3(vec3(1, 2, 3)), true);
+    const bad = vec3(); bad.x = NaN;
+    assert.equal(isVector3(bad), false);
+    assert.equal(isVector3(vec2()), false);
+});
+
+test('an orthographic camera projects parallel rays', () =>
+{
+    const c = render3D.camera;
+    c.pos = vec3(0, 0, 10); c.rotation = vec3(); c.orthographic = 20;
+    render3D.updateMatrices(2);
+    // x spans the visible width, y the visible height, no perspective on z
+    near(render3D.worldToClip(vec3(20, 10, 0)).x, 1);
+    near(render3D.worldToClip(vec3(20, 10, 0)).y, 1);
+    near(render3D.worldToClip(vec3(20, 0, -50)).x, 1);
+    const ray = render3D.screenToRay(vec2(0, 0), vec2(200, 100)); // top left of a 2:1 canvas
+    nearVec(ray.direction, 0, 0, -1);
+    nearVec(ray.origin, -20, 10, 10);
+    c.orthographic = 0;
+    render3D.updateMatrices(1);
+});
+
+test('angleVelocity3D turns objects each frame and getWorldPos3D composes with the parent', () =>
+{
+    const parent = new EngineObject3D(vec3(10, 0, 0));
+    const child = new EngineObject3D(vec3(0, 0, 1));
+    parent.addChild(child);
+    parent.angleVelocity3D = vec3(0, PI / 2, 0);
+    parent.updateTransforms();
+    near(parent.rotation3D.y, PI / 2);
+    nearVec(child.getWorldPos3D(), 11, 0, 0);
+    nearVec(parent.getWorldPos3D(), 10, 0, 0);
+    child.destroy(); parent.destroy();
+});
+
+test('soft discs and shadows assert in the opaque stage but bake and queue fine', () =>
+{
+    assert.doesNotThrow(()=> render3D.bake(()=> render3D.drawSoftShadow(vec3(), 1)));
+    render3D.isRendering = true;
+    render3D.blend = false;
+    try { assert.throws(()=> render3D.drawSoftDisc(vec3(), 1)); }
+    finally { render3D.isRendering = false; }
+});
+
+test('playSound is quiet headless and asserts on bad arguments', () =>
+{
+    const sound = new Sound([1, 0]);
+    assert.equal(render3D.playSound(sound, vec3(1, 2, 3)), undefined);
+    assert.throws(()=> render3D.playSound(sound, vec2()));
+});
+
+test('the non default layer draws its objects without the sky, the callbacks or the debug primitives', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const seen = [];
+    class Probe extends EngineObject3D { render3D() { seen.push(this.name); } }
+    const a = new Probe, b = new Probe;
+    a.name = 'a', b.name = 'b', b.renderAfter2D = true;
+    render3D.onRenderOpaque = ()=> seen.push('opaque');
+    render3D.onRenderTransparent = ()=> seen.push('transparent');
+    render3D.sky = new Mesh;
+    const drawMesh = render3D.drawMesh;
+    render3D.drawMesh = ()=> seen.push('sky');
+    try
+    {
+        render3D.updateMatrices(1);
+        render3D.renderStages([b], false);
+        assert.deepEqual(seen, ['b']);
+        seen.length = 0;
+        render3D.renderStages([a], true);
+        assert.deepEqual(seen, ['sky', 'a', 'opaque', 'transparent']);
+    }
+    finally
+    {
+        render3D.drawMesh = drawMesh;
+        render3D.sky = render3D.onRenderOpaque = render3D.onRenderTransparent = undefined;
+        for (const o of engineObjects) o.destroy();
+        engineObjects.length = 0;
+    }
+});
+
+test('sortTransparent off draws transparent objects in render order with no queue', () =>
+{
+    const seen = [];
+    class Probe extends EngineObject3D { render3D() { seen.push([this.name, render3D.transparentQueue === undefined, render3D.blend]); } }
+    const a = new Probe, b = new Probe;
+    a.name = 'a', a.transparent = true, a.renderOrder = 2;
+    b.name = 'b', b.transparent = true, b.renderOrder = 1;
+    render3D.sortTransparent = false;
+    try { render3D.renderStages([a, b]); }
+    finally { render3D.sortTransparent = true; a.destroy(); b.destroy(); }
+    assert.deepEqual(seen, [['b', true, true], ['a', true, true]]);
+});
+
+test('soft discs and shadows queue once in the transparent stage and bake even inside it', () =>
+{
+    render3D.transparentQueue = [];
+    render3D.drawSoftDisc(vec3(), 1);
+    render3D.drawSoftShadow(vec3(), 1);
+    assert.equal(render3D.transparentQueue.length, 2);
+    const baked = render3D.bake(()=> render3D.drawSoftDisc(vec3(), 1, WHITE, vec3(0, 0, 1), 8));
+    assert.equal(baked.vertexCount, 3 * (2 * 9 + 2));
+    assert.equal(render3D.transparentQueue.length, 2);
+    render3D.transparentQueue = undefined;
+});
+
+test('Mesh.addQuad takes colors and uvs in corner order', () =>
+{
+    const m = new Mesh().addQuad(vec3(0, 1, 0), vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 1, 0), [RED, WHITE, RED, WHITE], [vec2(0, 0), vec2(0, 1), vec2(1, 1), vec2(1, 0)]);
+    // strip vertices are a, b, d, c with the leading repeat first
+    nearVec(m.points[3], 1, 1, 0);
+    assert.equal(m.colors[3].g, 1); // d is the fourth corner, white
+    assert.equal(m.colors[4].g, 0); // c is the third corner, red
+    near(m.uvs[3].x, 1); near(m.uvs[3].y, 0);
+    near(m.uvs[4].x, 1); near(m.uvs[4].y, 1);
+    assert.equal(new Mesh().getBounds().min.x, 0); // an empty mesh has empty bounds
+    assert.equal(buildSphere(1, 8, 4, false).vertexCount, 4 * 8 * 6); // no polar caps
 });

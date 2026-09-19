@@ -30,7 +30,7 @@ function vec3(x=0, y, z)
  * @return {boolean}
  * @memberof Math3D
  */
-function isVector3(v) { return v instanceof Vector3; }
+function isVector3(v) { return v instanceof Vector3 && v.isValid(); }
 
 /**
  * Returns a random Vector3 with the given length, uniform over the sphere
