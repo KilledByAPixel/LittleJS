@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -1268,7 +1268,7 @@ test('EngineObject3D.lookAt turns the object toward a target', () =>
     o.destroy();
 });
 
-test('debug primitives can be recorded headless', () =>
+test('debug primitives are ignored headless without a renderer', () =>
 {
     assert.doesNotThrow(()=>
     {
@@ -1421,4 +1421,78 @@ test('Camera3D.follow eases toward the offset spot and looks at the target', () 
     c.follow(vec3(10, 0, 0), vec3(0, 0, 4));
     nearVec(c.pos, 10, 0, 4);
     nearVec(c.forward(), 0, 0, -1);
+});
+
+test('buildRibbon lays lit quads along a path, open or closed, with per point widths and colors', () =>
+{
+    const points = [vec3(0, 0, 0), vec3(2, 0, 0), vec3(4, 0, 0)];
+    const open = buildRibbon(points, 1);
+    assert.equal(open.vertexCount, 2 * 6);
+    assertOutward(new Mesh().combine(open, Matrix4.translation(vec3(-2, 1, 0))), 'ribbon faces up'); // lifted so the origin is under it
+    for (const p of open.points)
+        assert.ok(Math.abs(p.z) <= .5 + 1e-6 && p.y === 0);
+    const closed = buildRibbon([vec3(-1, 0, -1), vec3(1, 0, -1), vec3(1, 0, 1), vec3(-1, 0, 1)], [1, 1, 2, 2], [RED, RED, WHITE, WHITE], true);
+    assert.equal(closed.vertexCount, 4 * 6);
+    assert.ok(closed.colors.some(c => c.g === 0) && closed.colors.some(c => c.g === 1));
+    assert.throws(()=> buildRibbon([vec3()]));
+});
+
+test('HeightMap.getNormal tilts with the slope and screenToGround finds the floor', () =>
+{
+    const slope = new HeightMap([[1, 1], [0, 0]], vec2(10, 10), 10); // falls toward +Z
+    const n = slope.getNormal(0, 0);
+    assert.ok(n.y > 0 && n.z > 0 && Math.abs(n.x) < 1e-6);
+    nearVec(new HeightMap([[0, 0], [0, 0]], vec2(10, 10), 1).getNormal(1, 1), 0, 1, 0);
+    // the ground hit comes from the screen ray, stand one in since there is no canvas headless
+    const screenToRay = render3D.screenToRay;
+    render3D.screenToRay = ()=> ({origin: vec3(0, 10, 0), direction: vec3(1, -1, 0).normalize()});
+    try
+    {
+        nearVec(render3D.screenToGround(vec2()), 10, 0, 0);
+        nearVec(render3D.screenToGround(vec2(), 5), 5, 5, 0);
+        assert.equal(render3D.screenToGround(vec2(), 20), undefined); // ground above the camera
+    }
+    finally { render3D.screenToRay = screenToRay; }
+});
+
+test('worldToClip returns undefined behind an orthographic camera and drawQuad takes corner colors', () =>
+{
+    render3D.camera.pos = vec3(0, 0, 10);
+    render3D.camera.rotation = vec3();
+    render3D.camera.orthographic = 20;
+    render3D.updateMatrices(1);
+    assert.equal(render3D.worldToClip(vec3(0, 0, 20)), undefined);
+    assert.ok(render3D.worldToClip(vec3(0, 0, 0)));
+    render3D.camera.orthographic = 0;
+    render3D.updateMatrices(1);
+    const quad = render3D.bake(()=> render3D.drawQuad(vec3(-1, 1, 0), vec3(-1, -1, 0), vec3(1, -1, 0), vec3(1, 1, 0), undefined, [RED, RED, WHITE, RED]));
+    assert.equal(quad.colors[4].g, 1); // the third corner is the fourth strip vertex
+});
+
+test('the stream splits a batch when the draw state changes between strips', () =>
+{
+    render3D.isRendering = true;
+    render3D.shader = {}; // a stand in so drawStrip writes to the stream, flush does nothing without gl
+    const flush = render3D.flush;
+    let flushes = 0;
+    render3D.flush = ()=> { ++flushes; render3D.streamCount = 0; };
+    try
+    {
+        const tri = [vec3(), vec3(1), vec3(2)];
+        render3D.drawStrip(tri);
+        render3D.drawStrip(tri);
+        assert.equal(flushes, 0);
+        render3D.specular = .5;
+        render3D.drawStrip(tri); // a different state flushes the pending batch first
+        assert.equal(flushes, 1);
+        assert.equal(render3D.streamState.specular, .5);
+    }
+    finally
+    {
+        render3D.flush = flush;
+        render3D.shader = undefined;
+        render3D.isRendering = false;
+        render3D.streamCount = 0;
+        render3D.specular = 0;
+    }
 });

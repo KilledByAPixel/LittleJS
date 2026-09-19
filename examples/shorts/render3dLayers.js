@@ -6,6 +6,7 @@ class Coin extends EngineObject3D
         super(vec3(pos.x, pos.y, 0), buildTorus(1.5, .5), undefined, YELLOW);
         this.rotation3D.x = PI/2; // face the camera
         this.angleVelocity3D = vec3(0, .04, 0);
+        this.specular = 1;
         this.renderAfter2D = above; // in front of the 2D scene, or behind it
     }
 }
@@ -15,7 +16,6 @@ function gameInit()
     new Render3DPlugin;
     render3D.camera.align2D = true; // follow the 2D camera so world units match
     render3D.ambientColor = rgb(.5,.5,.5);
-    render3D.specular = 1;
     canvasClearColor = hsl(.6,.3,.3);
 
     // coins behind the bars and coins in front of them

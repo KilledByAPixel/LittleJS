@@ -6245,6 +6245,7 @@ declare module "littlejsengine" {
         uniforms: Map<any, any>;
         uniformValues: {};
         shadowMapDrawn: boolean;
+        passIsDefault: boolean;
         boxMesh: any;
         sphereMesh: any;
         streamBuffer: any;
@@ -6267,7 +6268,7 @@ declare module "littlejsengine" {
          *  @param {Vector3} pos
          *  @return {Vector2|undefined} - undefined when behind the camera */
         worldToScreen(pos: Vector3): Vector2 | undefined;
-        /** Get the world space ray under a screen position, for picking with the raycast functions
+        /** Get the world space ray under a screen position, for picking with the raycast functions; always returns a ray
          *  - uses the camera as it is now, so it is safe to call from gameUpdate after moving the camera
          *  @param {Vector2} screenPos - Same space as mousePosScreen
          *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
@@ -6276,7 +6277,12 @@ declare module "littlejsengine" {
             origin: Vector3;
             direction: Vector3;
         };
-        /** Find the nearest object whose bounding sphere a ray hits, for picking
+        /** Where a screen position lands on a flat ground plane, for top down games; use HeightMap.raycast for terrain
+         *  @param {Vector2} screenPos - Same space as mousePosScreen
+         *  @param {number} [groundHeight] - World height of the ground plane
+         *  @return {Vector3|undefined} - undefined when the ray misses the plane */
+        screenToGround(screenPos: Vector2, groundHeight?: number): Vector3 | undefined;
+        /** Find the nearest object whose bounding sphere a ray hits, for picking; the test is against each mesh's bounding sphere, not its triangles
          *  @param {Vector3} origin
          *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
          *  @param {Array<EngineObject>} [objects] - Defaults to every EngineObject3D with a mesh, other objects are skipped
@@ -6343,10 +6349,10 @@ declare module "littlejsengine" {
         drawSky(): void;
         /** Rebuild the light's view projection around the shadow center, called automatically each frame shadows are on */
         updateShadowMatrix(): void;
-        /** Build a sky dome, set it as the sky and match the fog color to the horizon
-         *  @param {Color} [topColor]
-         *  @param {Color} [horizonColor]
-         *  @param {Color} [bottomColor] - Defaults to the horizon color
+        /** Build a sky dome, set it as the sky and set the fog color to the horizon color
+         *  @param {Color} [topColor] - Straight up
+         *  @param {Color} [horizonColor] - Level with the camera
+         *  @param {Color} [bottomColor] - Straight down, defaults to the horizon color
          *  @return {Mesh} - The dome, also in render3D.sky */
         setSky(topColor?: Color, horizonColor?: Color, bottomColor?: Color): Mesh;
         /** Draw a box, untextured, for blocking out a scene without meshes or objects
@@ -6367,14 +6373,14 @@ declare module "littlejsengine" {
          *  @param {Color} [color]
          *  @param {number} [angle] - Rotation in the camera plane, counter clockwise */
         drawBillboard(pos: Vector3, size?: Vector2, tileInfo?: TileInfo | TextureInfo, color?: Color, angle?: number): void;
-        /** Draw a quad from four corners in loop order, a is the top left of the texture
+        /** Draw a quad from four corners in loop order, counter clockwise seen from the front, a is the top left of the texture
          *  @param {Vector3} a
          *  @param {Vector3} b
          *  @param {Vector3} c
          *  @param {Vector3} d
          *  @param {TileInfo|TextureInfo} [tileInfo]
-         *  @param {Color} [color] */
-        drawQuad(a: Vector3, b: Vector3, c: Vector3, d: Vector3, tileInfo?: TileInfo | TextureInfo, color?: Color): void;
+         *  @param {Color|Array<Color>} [color] - One for all or one per corner */
+        drawQuad(a: Vector3, b: Vector3, c: Vector3, d: Vector3, tileInfo?: TileInfo | TextureInfo, color?: Color | Array<Color>): void;
         /** Draw a triangle, counter clockwise from outside is the front
          *  @param {Vector3} a
          *  @param {Vector3} b
@@ -6471,6 +6477,7 @@ declare module "littlejsengine" {
      * EngineObject3D - An EngineObject with a 3D transform and a mesh
      * - Inherits update, children, timers, destroy and renderOrder from EngineObject; children that are EngineObject3D follow the parent's 3D transform
      * - velocity3D is added to pos3D each frame, there is no other 3D physics, games do their own
+     * - An object faces -Z like the camera: its forward is getMatrix().transformDirection(vec3(0, 0, -1)), or vec3(-sin(yaw), 0, -cos(yaw)) when only yawed
      * - The 2D pos and velocity still exist but rendering ignores them and mass is 0 so 2D physics leaves them alone; copy pos into pos3D for pseudo-3D games
      * - addChild parents the 3D transform, pos3D is then local to the parent; the 2D offset arguments of addChild do nothing in 3D, set the child's pos3D instead
      * @extends EngineObject
@@ -6568,7 +6575,7 @@ declare module "littlejsengine" {
          *  @param {Color|Array<Color>} [colors] - One for all or one per point, default white
          *  @return {Mesh} */
         addStrip(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>): Mesh;
-        /** Add a flat quad from four corners in loop order, a is the top left of the texture
+        /** Add a flat quad from four corners in loop order, counter clockwise seen from the front, a is the top left of the texture
          *  @param {Vector3} a
          *  @param {Vector3} b
          *  @param {Vector3} c
@@ -6715,6 +6722,20 @@ declare module "littlejsengine" {
      */
     export function buildGrid(size?: Vector2, segments?: Vector2 | number, color?: Color | Function, heightFunction?: Function, smooth?: boolean): Mesh;
     /**
+     * Build a lit ribbon along a path, for roads, tracks and walls
+     * - Each segment is a flat quad, the sides are across the path in the plane of the up vector
+     * @param {Array<Vector3>} points - Center line in order
+     * @param {number|Array<number>} [width] - Full width, one for all or one per point
+     * @param {Color|Array<Color>} [color] - One for all or one per point
+     * @param {boolean} [closed] - Join the last point back to the first
+     * @param {Vector3} [up] - Which way the ribbon faces
+     * @return {Mesh}
+     * @memberof Render3D
+     * @example
+     * const road = buildRibbon(trackPoints, 8, GRAY, true); // a loop of road
+     */
+    export function buildRibbon(points: Array<Vector3>, width?: number | Array<number>, color?: Color | Array<Color>, closed?: boolean, up?: Vector3): Mesh;
+    /**
      * Build a loft: diamond cross sections swept along Z, quads between them, capped both ends
      * - station = [z, width, top, bottom, sideHeight] with sideHeight 0-1 placing the side points between bottom and top (default .5)
      * - stations are ordered nose first, nose at the largest z
@@ -6726,11 +6747,11 @@ declare module "littlejsengine" {
      */
     export function buildLoft(stations: Array<Array<number>>): Mesh;
     /**
-     * Build a sky dome: a sphere colored by height, wound to be seen from inside
+     * Build a sky dome: a sphere colored by direction, wound to be seen from inside
      * - set it as render3D.sky and the pass draws it around the camera behind everything
-     * @param {Color} [topColor]
-     * @param {Color} [horizonColor]
-     * @param {Color} [bottomColor] - Defaults to the horizon color
+     * @param {Color} [topColor] - Straight up
+     * @param {Color} [horizonColor] - Level with the camera
+     * @param {Color} [bottomColor] - Straight down, what a camera looking at the ground sees past its edge; defaults to the horizon color
      * @param {number} [sides] - Around
      * @param {number} [rings] - Top to bottom
      * @return {Mesh}
@@ -6768,8 +6789,8 @@ declare module "littlejsengine" {
     export function buildText3D(text: string | number, size?: number, depth?: number, font?: ImageFont): Mesh;
     /**
      * HeightMap - Terrain from a grid of heights, with a mesh builder, height lookup and a raycast
-     * - heights is a 2D array [row][column] of 0-1 values, rows run along Z and columns along X
-     * - or an image, where the red channel is the height and row 0 is the far edge (-Z)
+     * - heights is a 2D array [row][column] of 0-1 values; row 0 is the far edge at -Z, column 0 is the left edge at -X
+     * - or an image, where the red channel is the height, laid out the same way
      * - colors is an optional 2D array of Colors or an image, sampled per vertex
      * - images are read through a canvas, so they must be same origin or loaded with crossOrigin set
      * @memberof Render3D
@@ -6804,6 +6825,11 @@ declare module "littlejsengine" {
          *  @param {number} z
          *  @return {number} */
         getHeight(x: number, z: number): number;
+        /** Surface normal at a position, from the slope across a sample
+         *  @param {number} x
+         *  @param {number} z
+         *  @return {Vector3} */
+        getNormal(x: number, z: number): Vector3;
         /** Color of the nearest sample to a position, white when there are no colors
          *  @param {number} x
          *  @param {number} z
@@ -6821,7 +6847,7 @@ declare module "littlejsengine" {
     }
     /**
      * Light3D - A point light that lights nearby surfaces, an EngineObject3D so it can move or follow a parent
-     * - The 8 nearest to the camera light the frame, radius is where the light reaches zero
+     * - The 8 nearest to the camera light the frame, radius is where the light reaches zero; the falloff is steep, so a small radius needs a bright color
      * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
      * @extends EngineObject3D
      * @memberof Render3D

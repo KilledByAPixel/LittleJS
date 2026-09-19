@@ -127,6 +127,7 @@ export
     buildTorus,
     buildBox,
     buildGrid,
+    buildRibbon,
     buildLoft,
     buildSky,
     buildExtrude,

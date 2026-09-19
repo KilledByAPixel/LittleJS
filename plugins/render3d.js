@@ -56,6 +56,9 @@ function render3DFaceNormal(a, b, c, d=a)
 // a quad's corners in loop order as a strip, the one place that knows the order
 function render3DQuadStrip(a, b, c, d) { return [a, b, d, c]; }
 
+// per corner values (colors, uvs) into strip order, a single value passes through
+function render3DQuadValues(v) { return isArray(v) ? render3DQuadStrip(...v) : v; }
+
 // 3D draws are only valid during the pass with a live shader
 function render3DCanDraw()
 {
@@ -149,8 +152,10 @@ function render3DCollectLights()
             lights.push(o);
     if (lights.length > RENDER3D_MAX_POINT_LIGHTS)
     {
-        const cameraPos = render3D.camera.pos;
-        lights.sort((a, b)=> a.getWorldPos3D().distanceSquared(cameraPos) - b.getWorldPos3D().distanceSquared(cameraPos));
+        const cameraPos = render3D.camera.pos, distances = new Map;
+        for (const light of lights)
+            distances.set(light, light.getWorldPos3D().distanceSquared(cameraPos));
+        lights.sort((a, b)=> distances.get(a) - distances.get(b));
         lights.length = RENDER3D_MAX_POINT_LIGHTS;
     }
     return lights;
@@ -297,6 +302,7 @@ class Render3DPlugin
         this.uniforms = new Map;     // uniform locations by program
         this.uniformValues = {};     // last values sent for the cached vec4 uniforms
         this.shadowMapDrawn = false; // the shadow map is drawn by the first pass of the frame
+        this.passIsDefault = true;   // the running pass is the default layer, the only one shadowed
         this.boxMesh = undefined;    // unit shapes for drawBox and drawSphere
         this.sphereMesh = undefined;
 
@@ -343,12 +349,12 @@ class Render3DPlugin
     {
         const m = this.viewProjection.m;
         const w = m[3]*pos.x + m[7]*pos.y + m[11]*pos.z + m[15];
-        if (w <= 0)
-            return;
+        const z = (m[2]*pos.x + m[6]*pos.y + m[10]*pos.z + m[14]) / w;
+        if (w <= 0 || z < -1)
+            return; // behind the camera, or in front of the near plane
         return vec3(
             (m[0]*pos.x + m[4]*pos.y + m[8]*pos.z  + m[12]) / w,
-            (m[1]*pos.x + m[5]*pos.y + m[9]*pos.z  + m[13]) / w,
-            (m[2]*pos.x + m[6]*pos.y + m[10]*pos.z + m[14]) / w);
+            (m[1]*pos.x + m[5]*pos.y + m[9]*pos.z  + m[13]) / w, z);
     }
 
     /** Project a world point to screen space pixels, same space as mousePosScreen
@@ -362,7 +368,7 @@ class Render3DPlugin
         return vec2((clip.x + 1) / 2 * mainCanvasSize.x, (1 - clip.y) / 2 * mainCanvasSize.y);
     }
 
-    /** Get the world space ray under a screen position, for picking with the raycast functions
+    /** Get the world space ray under a screen position, for picking with the raycast functions; always returns a ray
      *  - uses the camera as it is now, so it is safe to call from gameUpdate after moving the camera
      *  @param {Vector2} screenPos - Same space as mousePosScreen
      *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
@@ -381,7 +387,18 @@ class Render3DPlugin
             : {origin: camera.pos.copy(), direction: this.cameraForward.add(offset).normalize()};
     }
 
-    /** Find the nearest object whose bounding sphere a ray hits, for picking
+    /** Where a screen position lands on a flat ground plane, for top down games; use HeightMap.raycast for terrain
+     *  @param {Vector2} screenPos - Same space as mousePosScreen
+     *  @param {number} [groundHeight] - World height of the ground plane
+     *  @return {Vector3|undefined} - undefined when the ray misses the plane */
+    screenToGround(screenPos, groundHeight=0)
+    {
+        const ray = this.screenToRay(screenPos);
+        const t = raycastPlane(ray.origin, ray.direction, vec3(0, groundHeight, 0), RENDER3D_DEFAULT_NORMAL);
+        return t === undefined ? undefined : ray.origin.add(ray.direction.scale(t));
+    }
+
+    /** Find the nearest object whose bounding sphere a ray hits, for picking; the test is against each mesh's bounding sphere, not its triangles
      *  @param {Vector3} origin
      *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
      *  @param {Array<EngineObject>} [objects] - Defaults to every EngineObject3D with a mesh, other objects are skipped
@@ -415,6 +432,7 @@ class Render3DPlugin
         ASSERT(sound instanceof Sound, 'sound must be a Sound');
         ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
         if (!soundEnable || headlessMode) return;
+        if (!sound.sampleBuffer && !sound._sampleChannels) return; // still loading
         const offset = pos3D.subtract(this.camera.pos), range = sound.range;
         if (range)
         {
@@ -456,13 +474,12 @@ class Render3DPlugin
             return this.queueTransparent(matrix.getTranslation(), ()=> this.drawMesh(mesh, matrix, tileInfo, color));
         if (!render3DCanDraw()) return;
         if (this.shadowPass && !this.lighting) return; // unlit things cast no shadow
-        const radius = mesh.dirty ? mesh.computeRadius() : mesh.radius;
-        if (this.frustumCulling && !this.isSphereVisible(matrix.getTranslation(), radius * render3DMaxScale(matrix.m)))
-            return;
-        this.flush();
         if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== this.contextGeneration)
             mesh.upload();
         if (!mesh.bufferCount) return;
+        if (this.frustumCulling && !this.isSphereVisible(matrix.getTranslation(), mesh.radius * render3DMaxScale(matrix.m)))
+            return;
+        this.flush();
         render3DSetDrawUniforms(matrix, tileInfo, color);
         render3DBindVertexBuffer(mesh.buffer);
         glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, mesh.bufferCount);
@@ -646,17 +663,17 @@ class Render3DPlugin
         const up = abs(direction.y) > .99 ? vec3(0, 0, 1) : vec3(0, 1, 0);
         const view = Matrix4.lookAt(center.subtract(direction.scale(range)), center, up).invert();
         // snap the view to whole texels so shadow edges hold still as the camera moves
-        const texel = range / (this.shadowTextureSize || this.shadowMapSize), m = view.m;
+        const texel = range / (this.shadowTextureSize || this.shadowMapSize), m = view.m; // no texture headless
         m[12] = round(m[12] / texel) * texel;
         m[13] = round(m[13] / texel) * texel;
         this.shadowMatrix = Matrix4.orthographic(-half, half, -half, half, 0, range * 2).multiply(view);
         this.shadowPlanes = render3DFrustumPlanes(this.shadowMatrix);
     }
 
-    /** Build a sky dome, set it as the sky and match the fog color to the horizon
-     *  @param {Color} [topColor]
-     *  @param {Color} [horizonColor]
-     *  @param {Color} [bottomColor] - Defaults to the horizon color
+    /** Build a sky dome, set it as the sky and set the fog color to the horizon color
+     *  @param {Color} [topColor] - Straight up
+     *  @param {Color} [horizonColor] - Level with the camera
+     *  @param {Color} [bottomColor] - Straight down, defaults to the horizon color
      *  @return {Mesh} - The dome, also in render3D.sky */
     setSky(topColor, horizonColor=rgb(.8, .9, 1), bottomColor)
     {
@@ -704,16 +721,16 @@ class Render3DPlugin
         this.drawStripUnlit(render3DQuadAxes(pos, right, up), this.cameraForward.scale(-1), RENDER3D_QUAD_UVS, color, tileInfo);
     }
 
-    /** Draw a quad from four corners in loop order, a is the top left of the texture
+    /** Draw a quad from four corners in loop order, counter clockwise seen from the front, a is the top left of the texture
      *  @param {Vector3} a
      *  @param {Vector3} b
      *  @param {Vector3} c
      *  @param {Vector3} d
      *  @param {TileInfo|TextureInfo} [tileInfo]
-     *  @param {Color} [color] */
+     *  @param {Color|Array<Color>} [color] - One for all or one per corner */
     drawQuad(a, b, c, d, tileInfo, color=WHITE)
     {
-        this.drawStrip(render3DQuadStrip(a, b, c, d), render3DFaceNormal(a, b, c, d), RENDER3D_QUAD_UVS, color, tileInfo);
+        this.drawStrip(render3DQuadStrip(a, b, c, d), render3DFaceNormal(a, b, c, d), RENDER3D_QUAD_UVS, render3DQuadValues(color), tileInfo);
     }
 
     /** Draw a triangle, counter clockwise from outside is the front
@@ -1011,6 +1028,7 @@ class Camera3D
     {
         const halfHeight = canvasHeight / 2 / cameraScale; // half visible height in world units
         const distance = halfHeight / tan(this.fov/2);
+        this.orthographic &&= halfHeight * 2; // an orthographic view shows the same height
         this.pos = vec3(cameraPos.x, cameraPos.y, distance);
         this.rotation = vec3(0, 0, -cameraAngle); // littlejs 2D angles are clockwise
     }
@@ -1249,7 +1267,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     render3DUniform4f('lightColor', lc.r, lc.g, lc.b, state.specular);
     render3DUniform4f('ambientColor', ac.r, ac.g, ac.b, r.fogEnd);
     render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogStart);
-    render3DUniform4f('shadowParams', r.shadows && state.receiveShadow ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, 0);
+    render3DUniform4f('shadowParams', r.shadows && r.passIsDefault && state.receiveShadow ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, 0);
 }
 
 // the six planes of a view projection as [x, y, z, w] with unit normals facing inward, a point is inside when x*px + y*py + z*pz + w >= 0
@@ -1294,6 +1312,7 @@ function render3DRenderPass(after2D)
         if (!o.destroyed && o instanceof EngineObject3D && render3DIsAfter2D(o) === after2D)
             objects.push(o);
     if (!isDefault && !objects.length) return;
+    r.passIsDefault = isDefault;
     after2D && glFlush(); // the 2D sprites drawn so far go under this layer
 
     // a previous frame that threw must not leave anything pending
@@ -1384,7 +1403,7 @@ function render3DUpdateShadowMap(size)
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, texture, 0);
     gl.drawBuffers([gl.NONE]); // depth only
     gl.readBuffer(gl.NONE);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, glRenderTarget ? glFramebuffer : null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     r.shadowTextureSize = size;
 }
 
@@ -1422,7 +1441,7 @@ function render3DRenderShadowMap()
     {
         // back to the frame with the map ready to sample
         r.shadowPass = false;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, glRenderTarget ? glFramebuffer : null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
         gl.useProgram(r.shader);
         gl.activeTexture(gl.TEXTURE1);
@@ -1536,7 +1555,7 @@ class Mesh
         return this;
     }
 
-    /** Add a flat quad from four corners in loop order, a is the top left of the texture
+    /** Add a flat quad from four corners in loop order, counter clockwise seen from the front, a is the top left of the texture
      *  @param {Vector3} a
      *  @param {Vector3} b
      *  @param {Vector3} c
@@ -1546,8 +1565,8 @@ class Mesh
      *  @return {Mesh} */
     addQuad(a, b, c, d, color, uvs)
     {
-        const strip = (v)=> isArray(v) ? render3DQuadStrip(...v) : v; // per corner values into strip order
-        return this.addStrip(render3DQuadStrip(a, b, c, d), render3DFaceNormal(a, b, c, d), uvs ? strip(uvs) : RENDER3D_QUAD_UVS, strip(color));
+        return this.addStrip(render3DQuadStrip(a, b, c, d), render3DFaceNormal(a, b, c, d),
+            uvs ? render3DQuadValues(uvs) : RENDER3D_QUAD_UVS, render3DQuadValues(color));
     }
 
     /** Append another mesh transformed by a matrix, for welding shapes into one draw call
@@ -1971,6 +1990,40 @@ function buildBox(size=1)
 }
 
 /**
+ * Build a lit ribbon along a path, for roads, tracks and walls
+ * - Each segment is a flat quad, the sides are across the path in the plane of the up vector
+ * @param {Array<Vector3>} points - Center line in order
+ * @param {number|Array<number>} [width] - Full width, one for all or one per point
+ * @param {Color|Array<Color>} [color] - One for all or one per point
+ * @param {boolean} [closed] - Join the last point back to the first
+ * @param {Vector3} [up] - Which way the ribbon faces
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * const road = buildRibbon(trackPoints, 8, GRAY, true); // a loop of road
+ */
+function buildRibbon(points, width=1, color=WHITE, closed=false, up=vec3(0, 1, 0))
+{
+    ASSERT(isArray(points) && points.length > 1, 'ribbon needs at least 2 points');
+    const mesh = new Mesh, count = points.length, edges = [];
+    for (let i = 0; i < count; ++i)
+    {
+        // across the path, from the tangent through this point
+        const next = points[closed ? (i + 1) % count : min(i + 1, count - 1)];
+        const last = points[closed ? (i + count - 1) % count : max(i - 1, 0)];
+        const across = next.subtract(last).cross(up).normalize((isArray(width) ? width[i] : width) / 2);
+        edges.push([points[i].subtract(across), points[i].add(across)]);
+    }
+    for (let i = 0; i + 1 < count + (closed ? 1 : 0); ++i)
+    {
+        const j = (i + 1) % count, a = edges[i], b = edges[j];
+        const c = isArray(color) ? [color[i], color[i], color[j], color[j]] : color;
+        mesh.addQuad(a[0], a[1], b[1], b[0], c); // counter clockwise seen from above
+    }
+    return mesh;
+}
+
+/**
  * Build a heightfield grid in the XZ plane centered on the origin
  * - smooth is one ribbon strip per row with slope normals and a color per vertex
  * - flat is one quad per cell with a face normal and one color sampled at the cell center, so checkerboards stay crisp
@@ -2059,11 +2112,11 @@ function buildLoft(stations)
 }
 
 /**
- * Build a sky dome: a sphere colored by height, wound to be seen from inside
+ * Build a sky dome: a sphere colored by direction, wound to be seen from inside
  * - set it as render3D.sky and the pass draws it around the camera behind everything
- * @param {Color} [topColor]
- * @param {Color} [horizonColor]
- * @param {Color} [bottomColor] - Defaults to the horizon color
+ * @param {Color} [topColor] - Straight up
+ * @param {Color} [horizonColor] - Level with the camera
+ * @param {Color} [bottomColor] - Straight down, what a camera looking at the ground sees past its edge; defaults to the horizon color
  * @param {number} [sides] - Around
  * @param {number} [rings] - Top to bottom
  * @return {Mesh}
@@ -2227,8 +2280,8 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * HeightMap - Terrain from a grid of heights, with a mesh builder, height lookup and a raycast
- * - heights is a 2D array [row][column] of 0-1 values, rows run along Z and columns along X
- * - or an image, where the red channel is the height and row 0 is the far edge (-Z)
+ * - heights is a 2D array [row][column] of 0-1 values; row 0 is the far edge at -Z, column 0 is the left edge at -X
+ * - or an image, where the red channel is the height, laid out the same way
  * - colors is an optional 2D array of Colors or an image, sampled per vertex
  * - images are read through a canvas, so they must be same origin or loaded with crossOrigin set
  * @memberof Render3D
@@ -2285,6 +2338,18 @@ class HeightMap
         const a = h[j][i], b = h[j+1][i], c = h[j+1][i+1], d = h[j][i+1];
         const height = fu + fv <= 1 ? a + fu * (d - a) + fv * (b - a) : c + (1 - fu) * (b - c) + (1 - fv) * (d - c);
         return height * this.height;
+    }
+
+    /** Surface normal at a position, from the slope across a sample
+     *  @param {number} x
+     *  @param {number} z
+     *  @return {Vector3} */
+    getNormal(x, z)
+    {
+        const dx = this.size.x / (this.columns - 1) / 2, dz = this.size.y / (this.rows - 1) / 2;
+        const slopeX = (this.getHeight(x + dx, z) - this.getHeight(x - dx, z)) / (2 * dx);
+        const slopeZ = (this.getHeight(x, z + dz) - this.getHeight(x, z - dz)) / (2 * dz);
+        return vec3(-slopeX, 1, -slopeZ).normalize();
     }
 
     /** Color of the nearest sample to a position, white when there are no colors
@@ -2390,6 +2455,7 @@ function render3DReadPixels(textureInfo)
  * EngineObject3D - An EngineObject with a 3D transform and a mesh
  * - Inherits update, children, timers, destroy and renderOrder from EngineObject; children that are EngineObject3D follow the parent's 3D transform
  * - velocity3D is added to pos3D each frame, there is no other 3D physics, games do their own
+ * - An object faces -Z like the camera: its forward is getMatrix().transformDirection(vec3(0, 0, -1)), or vec3(-sin(yaw), 0, -cos(yaw)) when only yawed
  * - The 2D pos and velocity still exist but rendering ignores them and mass is 0 so 2D physics leaves them alone; copy pos into pos3D for pseudo-3D games
  * - addChild parents the 3D transform, pos3D is then local to the parent; the 2D offset arguments of addChild do nothing in 3D, set the child's pos3D instead
  * @extends EngineObject
@@ -2488,7 +2554,7 @@ class EngineObject3D extends EngineObject
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Light3D - A point light that lights nearby surfaces, an EngineObject3D so it can move or follow a parent
- * - The 8 nearest to the camera light the frame, radius is where the light reaches zero
+ * - The 8 nearest to the camera light the frame, radius is where the light reaches zero; the falloff is steep, so a small radius needs a bright color
  * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
  * @extends EngineObject3D
  * @memberof Render3D

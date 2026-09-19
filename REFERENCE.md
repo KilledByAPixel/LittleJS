@@ -815,8 +815,9 @@ render3D.camera.forward() .right() .up()       // now; render3D.cameraRight .cam
 render3D.viewMatrix .projectionMatrix .viewProjection // this frame's matrices, rebuilt by render3D.updateMatrices()
 render3D.worldToScreen(pos)           // Vector3 -> screen pixels, undefined when behind the camera
 render3D.worldToClip(pos)             // Vector3 -> clip space -1..1, undefined when behind the camera
-render3D.screenToRay(screenPos)       // {origin, direction} world ray under a screen point
-render3D.raycastObjects(origin, direction, objects) // {object, distance} of the nearest EngineObject3D hit, for picking
+render3D.screenToRay(screenPos)       // {origin, direction} world ray under a screen point, always returns one
+render3D.screenToGround(screenPos, y=0) // where that ray meets a flat ground plane, or undefined; terrain has HeightMap.raycast
+render3D.raycastObjects(origin, direction, objects) // {object, distance} of the nearest EngineObject3D whose bounding sphere the ray hits
 render3D.playSound(sound, pos3D, volume, pitch)  // like sound.play(pos): quieter with distance from the camera, panned by side
 render3D.isSphereVisible(center, radius) // the frustum test drawMesh uses, for culling your own draws
 
@@ -826,9 +827,9 @@ render3D.lightColor = rgb(1, .95, .9)
 render3D.ambientColor = rgb(.3, .3, .3)
 render3D.fogColor = undefined         // uses canvasClearColor when undefined
 render3D.fogStart = 20; render3D.fogEnd = 100   // by camera distance, fogEnd 0 disables fog
-new Light3D(pos3D, radius, color)     // point light, an EngineObject3D; the 8 nearest the camera light the frame, alpha scales brightness
+new Light3D(pos3D, radius, color)     // point light, an EngineObject3D; the 8 nearest the camera light the frame, alpha scales brightness, the falloff is steep so small lights need bright colors
 
-// Shadows - one shadow map from the directional light, lit opaque objects and draws cast, everything lit receives
+// Shadows - one shadow map from the directional light; lit opaque objects and draws on the default side of the 2D scene cast and receive
 render3D.shadows = true               // off by default and free when off, soft shadows (drawSoftShadow) still work alongside
 render3D.shadowMapSize = 1024         // texels, rebuilt when it changes
 render3D.shadowRange = 40             // world size the map covers around shadowCenter, smaller is sharper
@@ -837,7 +838,7 @@ render3D.shadowBias = .003            // raise for speckled self shadowing, lowe
 render3D.shadowSoftness = 1           // blur radius in texels
 
 // Sky
-render3D.setSky(topColor, horizonColor, bottomColor) // build a dome, set it as render3D.sky, match the fog color to the horizon
+render3D.setSky(topColor, horizonColor, bottomColor) // dome colors straight up, level and straight down; sets render3D.sky and fogColor
 render3D.sky = buildSky(topColor, horizonColor, bottomColor, sides, rings) // or set a dome yourself
 
 // Draw state, read at each draw; the pass sets it from each object's flags before render3D() and resets it before each callback,
@@ -861,7 +862,7 @@ setRender3DSmoothShading(true)        // default for every builder's smooth argu
 new EngineObject3D(pos3D, mesh, tileInfo, color)
 obj.pos3D obj.rotation3D obj.scale3D   // Vector3, rotation is (pitch, yaw, roll); change them in place or assign new ones
 obj.velocity3D obj.angleVelocity3D      // added to pos3D and rotation3D by the engine after update, no super.update() needed
-// the ground is the XZ plane, so 2D input maps to it as vec3(move.x, 0, -move.y)
+// the ground is the XZ plane, so 2D input maps to it as vec3(move.x, 0, -move.y); an object faces -Z, forward for a yaw is vec3(-sin(yaw), 0, -cos(yaw))
 obj.mesh obj.tileInfo obj.color         // what to draw and how
 obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
 obj.additive = true                     // additive blending, implies the transparent stage
@@ -905,7 +906,7 @@ debugPoint3D(pos, color, time, size)
 // Meshes - triangle strips, uploaded on first render, drawn by matrix; dispose a mesh you stop using to free its GPU buffer
 const mesh = new Mesh
 mesh.addStrip(points, normals, uvs, colors)   // one strip; normals, uvs and colors are one value or one per point
-mesh.addQuad(a, b, c, d, color, uvs)          // corners in loop order, flat normal
+mesh.addQuad(a, b, c, d, color, uvs)          // corners in loop order, counter clockwise seen from the front; color and uvs one or per corner
 mesh.combine(otherMesh, matrix, color)        // append a transformed, tinted copy: many shapes in one draw call
 mesh.transform(matrix)                        // move every vertex in place
 mesh.flipNormals()                            // turn it inside out, for rooms and domes seen from within
@@ -927,6 +928,7 @@ buildCone(size=1, height=1, sides=12, smooth, capped=true)      // point up
 buildCapsule(size=1, height=1, sides=12, rings=4, smooth)      // total height, at least the size
 buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth) // flat around Y
 buildLathe(profile, sides=12, smooth, capped=true) // profile [[radius, y], ...] bottom to top revolved about Y, a closed profile is a ring
+buildRibbon(points, width=1, color, closed, up) // lit quads along a path, for roads and tracks; width and color one or per point
 buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth) // XZ plane; segments a number or vec2, height is (x, z)=> y
 // color is a Color or (x, z)=> Color in mesh units, called per vertex when smooth and once per cell center when flat, so a checker needs cell sized steps
 buildLoft(stations)                           // [[z, width, top, bottom, sideHeight], ...] nose first, always flat
@@ -934,10 +936,11 @@ buildSky(topColor, horizonColor, bottomColor) // dome colored by height, set as 
 buildExtrude(tileInfo, size, depth)           // 3D sprite: the solid pixels of a tile extruded, colors kept; or rows of pixels (Color, truthy for white, falsy for empty)
 buildText3D(text, size, depth, font)          // extruded glyphs from an ImageFont, the white engine font by default so the object color tints it; centered, faces +Z, a new mesh each call
 
-// Height map terrain - from a 2D array [row][column] of 0-1 heights or an image's red channel
+// Height map terrain - from a 2D array [row][column] of 0-1 heights or an image's red channel; row 0 is the far edge at -Z, column 0 the left edge at -X
 const terrain = new HeightMap(heightsOrImage, size=vec2(1), height=1, colorsOrImage)
 terrain.buildMesh(smooth)                     // one vertex per sample, centered on the origin
 terrain.getHeight(x, z)                       // world height of the drawn mesh there, to stand things on it
+terrain.getNormal(x, z)                       // surface normal there, to tilt things to the slope
 terrain.raycast(origin, direction)            // distance along a ray to the ground or undefined, for clicking on terrain
 terrain.getColor(x, z)                        // nearest sample color
 terrain.rows terrain.columns                  // samples along Z and X
