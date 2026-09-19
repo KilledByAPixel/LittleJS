@@ -41,7 +41,7 @@ The code is very clean and well documented with many examples to get you started
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 - Load sprites and animations into texture sheets at runtime, or import [TexturePacker](https://www.codeandweb.com/texturepacker) and [Aseprite](https://www.aseprite.org) atlases
-- Optional 3D rendering with the [Three.js](https://threejs.org) plugin
+- Optional 3D plugin with meshes, lights, shadows, fog and particles in the same canvas as the 2D scene
 
 ### 🔊 Audio
 
@@ -83,11 +83,12 @@ The code is very clean and well documented with many examples to get you started
 - [LittleJS AI Tools](https://github.com/KilledByAPixel/LittleJS-AI) - Templates, examples, and prompts tuned for AI + LittleJS workflows
 - [LittleJS GPT](https://chatgpt.com/g/g-67c7c080b5bc81919736bc8815836be6-littlejs-game-maker) - Build LittleJS games right inside ChatGPT
 
-### 🧊 3D with Three.js
+### 🧊 3D
 
-- Optional [Three.js](https://threejs.org) plugin renders a 3D scene behind the LittleJS canvas
-- 2D camera and 3D camera stay aligned so sprites and meshes share the same world space
-- LittleJS physics drive Three.js meshes with `ThreeJSObject`
+- Optional 3D rendering plugin with no dependencies: shape builders, OBJ models, lighting, shadows, fog, height map terrain, 3D particles and text
+- `EngineObject3D` is an `EngineObject` with a mesh, so update, children, timers and sound work as they do in 2D
+- Draws into the same WebGL canvas, so 3D can sit behind the 2D scene, in front of it, or both
+- Or use the [Three.js](https://threejs.org) plugin to render a Three.js scene behind the LittleJS canvas, with `ThreeJSObject` letting LittleJS physics drive its meshes
 
 ## How To Use LittleJS
 
@@ -141,6 +142,7 @@ LittleJS comes with several demos both for learning and using as starter project
 - [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
 - [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data
 - [Box2D Demo](https://killedbyapixel.github.io/LittleJS/examples/box2d/) - Box2D plugin demonstration and testbed
+- [3D Racer](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Racer%20Game) - Built-in 3D plugin: terrain, shadows and a chase camera in one short file
 - [Three.js Side Scroller](https://killedbyapixel.github.io/LittleJS/examples/threejs/sideScroller/) - 3D rendering with Three.js behind the 2D canvas
 - [Three.js Platformer](https://killedbyapixel.github.io/LittleJS/examples/threejs/platformer/) - 3D platformer with LittleJS gameplay and Three.js rendering
 - [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Sprite rendering benchmark and music system demo

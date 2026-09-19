@@ -157,7 +157,8 @@ function gameInit()
         const pos = vec3(x, terrain.getHeight(x, z) + 1.5, z);
         forest.combine(tree, buildMatrix(pos, vec3(0, rand(2*PI)), vec3(rand(.7,1.3))));
     }
-    new EngineObject3D(vec3(), forest).cullBackFaces = true;
+    const forestObject = new EngineObject3D(vec3(), forest);
+    forestObject.cullBackFaces = true;
     car = new Car(trackPoint(0));
     lapTime = time;
 }
