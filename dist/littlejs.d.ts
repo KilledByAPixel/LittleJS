@@ -6231,6 +6231,7 @@ declare module "littlejsengine" {
         cameraUp: Vector3;
         /** @property {Vector3} - Camera forward axis this frame */
         cameraForward: Vector3;
+        cameraBack: Vector3;
         blend: boolean;
         frustumPlanes: any[];
         shadowPlanes: any[];
@@ -6254,7 +6255,7 @@ declare module "littlejsengine" {
         streamInts: Uint32Array;
         streamCount: number;
         streamTileInfo: any;
-        streamState: {};
+        streamState: any;
         capture: Mesh;
         transparentQueue: any[];
         /** Rebuild the view and projection matrices from the camera, called automatically each frame
@@ -6372,7 +6373,7 @@ declare module "littlejsengine" {
          *  @param {TileInfo|TextureInfo} [tileInfo]
          *  @param {Color} [color]
          *  @param {number} [angle] - Rotation in the camera plane, counter clockwise */
-        drawBillboard(pos: Vector3, size?: Vector2, tileInfo?: TileInfo | TextureInfo, color?: Color, angle?: number): void;
+        drawBillboard(pos: Vector3, size?: Vector2, tileInfo?: TileInfo | TextureInfo, color?: Color, angle?: number): any;
         /** Draw a quad from four corners in loop order, counter clockwise seen from the front, a is the top left of the texture
          *  @param {Vector3} a
          *  @param {Vector3} b
@@ -6865,7 +6866,7 @@ declare module "littlejsengine" {
     }
     /**
      * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
-     * - Particles are billboards, or soft round discs when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
+     * - Particles are billboards of the tile, or of a built in soft dot when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
      * - Set trailTime to draw each particle as a ribbon along its recent path instead, for sparks and streaks
      * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitConeAngle
      * - Speeds are per frame and sizes are world units like the 2D emitter; gravity is a per frame change to velocity y, not a scale of the engine's 2D gravity
@@ -6935,6 +6936,8 @@ declare module "littlejsengine" {
         emitTimeBuffer: number;
         /** Spawn one particle now */
         emitParticle(): void;
+        /** Draw the particles as billboards, soft dots, or ribbons along their trails; the emitter sorts as one draw, its particles are not sorted against each other */
+        render3D(): any;
     }
     /**
      * Trail3D - A ribbon through where the object has been, thinning and fading with age

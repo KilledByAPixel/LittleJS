@@ -27,7 +27,8 @@ function buildTerrain()
             const flat = .3 + .1*sin(atan2(z, x)*2 + 1);
             const blend = smoothStep(clamp((trackDistance(x, z) - roadWidth/2)/12));
             heightRow.push(lerp(flat, hills, blend));
-            colorRow.push(blend < .4 ? rgb(.3,.29,.27) : rgb(.22,.45,.2).lerp(rgb(.5,.47,.35), hills));
+            const grass = rgb(.22,.45,.2).lerp(rgb(.5,.47,.35), hills);
+            colorRow.push(blend < .4 ? rgb(.3,.29,.27) : grass);
         }
         heights.push(heightRow);
         colors.push(colorRow);
@@ -68,8 +69,9 @@ class Car extends EngineObject3D
         this.cullBackFaces = true;
 
         // a skid mark from each rear wheel, lying flat instead of facing the camera
+        const mark = rgb(.1,.1,.1,.7), faded = rgb(.1,.1,.1,0);
         this.trails = [-.9, .9].map(x =>
-            this.addChild(new Trail3D(vec3(x,-.65,1.3), 1.5, .35, undefined, rgb(.1,.1,.1,.7), rgb(.1,.1,.1,0))));
+            this.addChild(new Trail3D(vec3(x,-.65,1.3), 1.5, .35, undefined, mark, faded)));
     }
     update()
     {
@@ -85,7 +87,8 @@ class Car extends EngineObject3D
         const forward = vec3(-sin(this.yaw), 0, -cos(this.yaw));
         this.pos3D = this.pos3D.add(forward.scale(this.speed));
         this.pos3D.y = terrain.getHeight(this.pos3D.x, this.pos3D.z) + .85;
-        const ahead = this.pos3D.add(forward.scale(1.5)), behind = this.pos3D.subtract(forward.scale(1.5));
+        const ahead = this.pos3D.add(forward.scale(1.5));
+        const behind = this.pos3D.subtract(forward.scale(1.5));
         const rise = terrain.getHeight(ahead.x, ahead.z) - terrain.getHeight(behind.x, behind.z);
         this.rotation3D = vec3(atan2(rise, 3), this.yaw, -input.x*this.speed*.6);
         for (const trail of this.trails)
@@ -123,7 +126,7 @@ function gameInit()
     terrain = buildTerrain();
     new EngineObject3D(vec3(), terrain.buildMesh(true));
 
-    // the road is a ribbon laid along the center line just above the ground, striped every few segments
+    // the road is a ribbon along the center line just above the ground, striped
     const points = [], colors = [];
     for (let i = 0; i < 120; ++i)
     {

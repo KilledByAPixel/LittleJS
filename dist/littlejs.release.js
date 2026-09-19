@@ -17109,6 +17109,20 @@ function render3DCircle(sides)
     return circle;
 }
 
+// a soft white dot for untextured particles, made once from a canvas, undefined headless or without a canvas
+let render3DSoftDotTexture;
+function render3DSoftDot()
+{
+    if (render3DSoftDotTexture || !glContext || typeof OffscreenCanvas == 'undefined') return render3DSoftDotTexture;
+    const size = 32, canvas = new OffscreenCanvas(size, size), context = canvas.getContext('2d');
+    const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    for (const [stop, alpha] of [[0, 1], [.33, .9], [.67, .7], [1, 0]]) // the same falloff as a soft disc
+        gradient.addColorStop(stop, 'rgba(255,255,255,' + alpha + ')');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, size, size);
+    return render3DSoftDotTexture = new TextureInfo(canvas);
+}
+
 // the rotation that points -Z along a direction, as vec3(pitch, yaw, 0)
 function render3DLookRotation(direction)
 {
@@ -17216,6 +17230,7 @@ class Render3DPlugin
         this.cameraUp = vec3(0, 1, 0);
         /** @property {Vector3} - Camera forward axis this frame */
         this.cameraForward = vec3(0, 0, -1);
+        this.cameraBack = vec3(0, 0, 1); // its opposite, the normal of camera facing draws
 
         // internal state
         this.blend = false;          // blending on, set by the stages
@@ -17269,6 +17284,7 @@ class Render3DPlugin
         this.cameraRight = vec3(m[0], m[1], m[2]);
         this.cameraUp = vec3(m[4], m[5], m[6]);
         this.cameraForward = vec3(-m[8], -m[9], -m[10]);
+        this.cameraBack = vec3(m[8], m[9], m[10]); // the normal of anything facing the camera
         this.frustumPlanes = render3DFrustumPlanes(this.viewProjection);
     }
 
@@ -17440,26 +17456,23 @@ class Render3DPlugin
                 x += p.x, y += p.y, z += p.z;
             return this.queueTransparent(vec3(x, y, z).scale(1 / points.length), ()=> this.drawStrip(points, normals, uvs, colors, tileInfo));
         }
-        if (!render3DCanDraw()) return;
-        if (this.shadowPass && !this.lighting) return; // unlit things cast no shadow
-        ASSERT(points.length + 3 <= RENDER3D_MAX_STREAM_VERTS, 'strip is too large for the stream, bake it into a mesh');
-        if (points.length + 3 > RENDER3D_MAX_STREAM_VERTS) return;
-
-        // flush when the texture or state differs from the pending batch, or it would overflow
-        const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
-        if (this.streamCount && (textureInfo !== this.streamTileInfo || render3DStateChanged(this.streamState)
-            || this.streamCount + points.length + 3 > RENDER3D_MAX_STREAM_VERTS))
-            this.flush();
-        if (!this.streamCount)
-            this.streamState = render3DCaptureBatchState();
-        this.streamTileInfo = textureInfo;
+        ASSERT(isArray(points) && points.length > 2, 'strip needs at least 3 points');
+        const n = points.length, count = render3DStripCount(n);
+        const uvRect = render3DBeginStrip(count, tileInfo);
+        if (!uvRect) return;
 
         // the tile rect is applied to each uv now, so the whole texture maps at flush
-        const uvRect = render3DGetTileUVs(tileInfo);
         const floats = this.streamFloats, ints = this.streamInts;
-        render3DForEachStripVertex(points, normals, uvs, colors, (p, n, uv, c)=>
-            render3DWriteVertex(floats, ints, this.streamCount++ * RENDER3D_VERTEX_FLOATS, p, n,
-                uvRect.x + uv.x * uvRect.w, uvRect.y + uv.y * uvRect.h, c.rgbaInt()));
+        const normalArray = isArray(normals), uvArray = isArray(uvs), colorArray = isArray(colors);
+        const rgba = colorArray ? 0 : (colors || WHITE).rgbaInt();
+        for (let k = 0; k < count; ++k)
+        {
+            const i = render3DStripIndex(k, n);
+            const uv = uvArray ? uvs[i] : uvs || RENDER3D_DEFAULT_UV;
+            render3DWriteVertex(floats, ints, this.streamCount++ * RENDER3D_VERTEX_FLOATS, points[i],
+                normalArray ? normals[i] : normals || RENDER3D_DEFAULT_NORMAL,
+                uvRect.x + uv.x * uvRect.w, uvRect.y + uv.y * uvRect.h, colorArray ? colors[i].rgbaInt() : rgba);
+        }
     }
 
     /** Draw a strip with lighting off, for camera facing shapes where the light direction means nothing
@@ -17470,7 +17483,10 @@ class Render3DPlugin
      *  @param {TileInfo|TextureInfo} [tileInfo] */
     drawStripUnlit(points, normals, uvs, colors, tileInfo)
     {
-        render3DWithState({lighting: false}, ()=> this.drawStrip(points, normals, uvs, colors, tileInfo));
+        const lighting = this.lighting;
+        this.lighting = false;
+        try { this.drawStrip(points, normals, uvs, colors, tileInfo); }
+        finally { this.lighting = lighting; }
     }
 
     /** Draw the pending stream vertices as one strip with the state they were drawn under, called automatically when needed */
@@ -17645,10 +17661,25 @@ class Render3DPlugin
      *  @param {number} [angle] - Rotation in the camera plane, counter clockwise */
     drawBillboard(pos, size=vec2(1), tileInfo, color=WHITE, angle=0)
     {
-        const c = cos(angle), s = sin(angle);
-        const right = this.cameraRight.scale(c).add(this.cameraUp.scale(s)).scale(size.x / 2);
-        const up = this.cameraUp.scale(c).subtract(this.cameraRight.scale(s)).scale(size.y / 2);
-        this.drawStripUnlit(render3DQuadAxes(pos, right, up), this.cameraForward.scale(-1), RENDER3D_QUAD_UVS, color, tileInfo);
+        if (this.transparentQueue && !this.capture) // sort by the exact position, a shadow under it sorts by the floor
+            return this.queueTransparent(pos, ()=> this.drawBillboard(pos, size, tileInfo, color, angle));
+        if (this.capture)
+            return this.drawStripUnlit(render3DBillboardCorners(pos, size, angle), this.cameraBack, RENDER3D_QUAD_UVS, color, tileInfo);
+
+        // the particle path: six stream vertices written straight in, unlit
+        const lighting = this.lighting;
+        this.lighting = false;
+        const uvRect = render3DBeginStrip(6, tileInfo);
+        this.lighting = lighting;
+        if (!uvRect) return;
+        const corners = render3DBillboardCorners(pos, size, angle), rgba = color.rgbaInt();
+        const floats = this.streamFloats, ints = this.streamInts;
+        for (let k = 0; k < 6; ++k)
+        {
+            const i = k < 1 ? 0 : k <= 4 ? k - 1 : 3, uv = RENDER3D_QUAD_UVS[i]; // one leading and one trailing repeat
+            render3DWriteVertex(floats, ints, this.streamCount++ * RENDER3D_VERTEX_FLOATS, corners[i], this.cameraBack,
+                uvRect.x + uv.x * uvRect.w, uvRect.y + uv.y * uvRect.h, rgba);
+        }
     }
 
     /** Draw a quad from four corners in loop order, counter clockwise seen from the front, a is the top left of the texture
@@ -17720,7 +17751,7 @@ class Render3DPlugin
      *  @param {Color} [color]
      *  @param {Vector3} [normal] - Facing direction, faces the camera by default
      *  @param {number} [sides] */
-    drawSoftDisc(pos, size=1, color=WHITE, normal=this.cameraForward.scale(-1), sides=16)
+    drawSoftDisc(pos, size=1, color=WHITE, normal=this.cameraBack, sides=16)
     {
         render3DAssertBlending();
         if (this.transparentQueue && !this.capture)
@@ -17742,9 +17773,9 @@ class Render3DPlugin
     drawSoftShadow(pos, size=1, floorHeight=0, color=RENDER3D_SHADOW_COLOR, lift=.02)
     {
         render3DAssertBlending();
-        if (this.transparentQueue && !this.capture)
-            return this.queueTransparent(pos, ()=> this.drawSoftShadow(pos, size, floorHeight, color, lift));
         const height = isNumber(floorHeight) ? ()=> floorHeight : floorHeight;
+        if (this.transparentQueue && !this.capture) // sort from the floor, under whatever casts it
+            return this.queueTransparent(vec3(pos.x, height(pos.x, pos.z) + lift, pos.z), ()=> this.drawSoftShadow(pos, size, floorHeight, color, lift));
         render3DDrawSoftDisc(size / 2, color, 16, RENDER3D_DEFAULT_NORMAL, (c, s, r)=>
         {
             const x = pos.x + c * r, z = pos.z + s * r;
@@ -18097,6 +18128,7 @@ function render3DContextLost()
     r.shadowTextureSize = 0;
     r.streamCount = 0;
     ++r.contextGeneration; // every uploaded mesh is stale now
+    render3DSoftDotTexture = undefined;
 }
 
 function render3DContextRestored()
@@ -18132,18 +18164,19 @@ function render3DBindVertexBuffer(buffer)
         gl.vertexAttribPointer(a[0], a[1], a[2], a[3], RENDER3D_VERTEX_BYTES, a[4]);
 }
 
-// uv rect of a tile in texture space with bleed, or the whole texture
+// uv rect of a tile in texture space with bleed, or the whole texture; one shared rect, use it before the next call
+const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 function render3DGetTileUVs(tileInfo)
 {
     if (!(tileInfo instanceof TileInfo))
         return RENDER3D_FULL_UV_RECT;
-    const inv = tileInfo.textureInfo.sizeInverse;
+    const inv = tileInfo.textureInfo.sizeInverse, rect = render3DTileUVRect;
     const bleedX = inv.x * tileInfo.bleed, bleedY = inv.y * tileInfo.bleed;
-    return {
-        x: tileInfo.pos.x * inv.x + bleedX,
-        y: tileInfo.pos.y * inv.y + bleedY,
-        w: tileInfo.size.x * inv.x - 2*bleedX,
-        h: tileInfo.size.y * inv.y - 2*bleedY };
+    rect.x = tileInfo.pos.x * inv.x + bleedX;
+    rect.y = tileInfo.pos.y * inv.y + bleedY;
+    rect.w = tileInfo.size.x * inv.x - 2*bleedX;
+    rect.h = tileInfo.size.y * inv.y - 2*bleedY;
+    return rect;
 }
 
 // set the per draw uniforms and gl state for a draw, in the shadow pass only the model matrix of the depth shader
@@ -18386,23 +18419,55 @@ function render3DRenderShadowMap()
 // triangles, plus one more trailing repeat when the count is odd so winding
 // parity holds across a whole mesh or batch
 
+// make room in the stream for a strip of count vertices under the current state and texture, flushing a batch that
+// differs first; returns the uv rect to map the vertices with, or undefined when nothing can be drawn
+function render3DBeginStrip(count, tileInfo)
+{
+    const r = render3D;
+    if (!render3DCanDraw()) return;
+    if (r.shadowPass && !r.lighting) return; // unlit things cast no shadow
+    ASSERT(count <= RENDER3D_MAX_STREAM_VERTS, 'strip is too large for the stream, bake it into a mesh');
+    if (count > RENDER3D_MAX_STREAM_VERTS) return;
+    const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
+    if (r.streamCount && (textureInfo !== r.streamTileInfo || render3DStateChanged(r.streamState)
+        || r.streamCount + count > RENDER3D_MAX_STREAM_VERTS))
+        r.flush();
+    if (!r.streamCount)
+        r.streamState = render3DCaptureBatchState();
+    r.streamTileInfo = textureInfo;
+    return render3DGetTileUVs(tileInfo);
+}
+
+// the four corners of a camera facing quad in strip order
+function render3DBillboardCorners(pos, size, angle)
+{
+    const c = cos(angle), s = sin(angle), r = render3D.cameraRight, u = render3D.cameraUp, w = size.x / 2, h = size.y / 2;
+    const rx = (r.x * c + u.x * s) * w, ry = (r.y * c + u.y * s) * w, rz = (r.z * c + u.z * s) * w;
+    const ux = (u.x * c - r.x * s) * h, uy = (u.y * c - r.y * s) * h, uz = (u.z * c - r.z * s) * h;
+    return [
+        vec3(pos.x - rx + ux, pos.y - ry + uy, pos.z - rz + uz), vec3(pos.x - rx - ux, pos.y - ry - uy, pos.z - rz - uz),
+        vec3(pos.x + rx + ux, pos.y + ry + uy, pos.z + rz + uz), vec3(pos.x + rx - ux, pos.y + ry - uy, pos.z + rz - uz)];
+}
+
+// how many vertices a strip of n points takes with its repeats, and which point vertex k of it is
+function render3DStripCount(n) { return n + 2 + (n & 1); }
+function render3DStripIndex(k, n) { return k < 1 ? 0 : k <= n ? k - 1 : n - 1; }
+
 // walk a strip's vertices with the repeats applied, calling back with (point, normal, uv, color)
 // normals, uvs and colors may be one value for all points, an array per point, or undefined
 function render3DForEachStripVertex(points, normals, uvs, colors, callback)
 {
     ASSERT(isArray(points) && points.length > 2, 'strip needs at least 3 points');
-    const n = points.length, last = n - 1;
+    const n = points.length, count = render3DStripCount(n);
     const normalArray = isArray(normals), uvArray = isArray(uvs), colorArray = isArray(colors);
-    const emit = (i)=> callback(points[i],
-        normalArray ? normals[i] : normals || RENDER3D_DEFAULT_NORMAL,
-        uvArray ? uvs[i] : uvs || RENDER3D_DEFAULT_UV,
-        colorArray ? colors[i] : colors || WHITE);
-    emit(0);
-    for (let i = 0; i < n; ++i)
-        emit(i);
-    emit(last);
-    if (n & 1)
-        emit(last);
+    for (let k = 0; k < count; ++k)
+    {
+        const i = render3DStripIndex(k, n);
+        callback(points[i],
+            normalArray ? normals[i] : normals || RENDER3D_DEFAULT_NORMAL,
+            uvArray ? uvs[i] : uvs || RENDER3D_DEFAULT_UV,
+            colorArray ? colors[i] : colors || WHITE);
+    }
 }
 
 // write one vertex into a packed buffer at float index j
@@ -19511,7 +19576,7 @@ class Light3D extends EngineObject3D
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
- * - Particles are billboards, or soft round discs when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
+ * - Particles are billboards of the tile, or of a built in soft dot when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
  * - Set trailTime to draw each particle as a ribbon along its recent path instead, for sparks and streaks
  * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitConeAngle
  * - Speeds are per frame and sizes are world units like the 2D emitter; gravity is a per frame change to velocity y, not a scale of the engine's 2D gravity
@@ -19609,10 +19674,10 @@ class ParticleEmitter3D extends EngineObject3D
         const particles = this.particles;
         for (let i = particles.length; i--;)
         {
-            const p = particles[i];
-            p.velocity.y += this.gravity;
-            p.velocity = p.velocity.scale(this.damping);
-            p.pos = p.pos.add(p.velocity);
+            const p = particles[i], v = p.velocity;
+            v.y += this.gravity;
+            v.x *= this.damping, v.y *= this.damping, v.z *= this.damping; // in place, this runs per particle
+            p.pos = p.pos.add(v);
             if (this.trailTime)
             {
                 // remember where it has been, oldest first
@@ -19652,9 +19717,11 @@ class ParticleEmitter3D extends EngineObject3D
             age: 0 });
     }
 
-    /** Draw the particles as billboards, soft discs, or ribbons along their trails */
+    /** Draw the particles as billboards, soft dots, or ribbons along their trails; the emitter sorts as one draw, its particles are not sorted against each other */
     render3D()
     {
+        if (render3D.transparentQueue)
+            return render3D.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
         const fade = this.fadeRate / 2;
         for (const p of this.particles)
         {
@@ -19675,10 +19742,10 @@ class ParticleEmitter3D extends EngineObject3D
                 }
                 render3D.drawRibbon(trail, widths, colors, this.tileInfo);
             }
-            else if (this.tileInfo)
-                render3D.drawBillboard(p.pos, vec2(size), this.tileInfo, color);
+            else if (this.tileInfo || render3DSoftDot())
+                render3D.drawBillboard(p.pos, vec2(size), this.tileInfo || render3DSoftDot(), color);
             else
-                render3D.drawSoftDisc(p.pos, size, color, undefined, 8); // untextured particles are round puffs
+                render3D.drawSoftDisc(p.pos, size, color, undefined, 8); // no canvas for the dot, headless
         }
     }
 }

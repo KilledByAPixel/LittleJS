@@ -955,7 +955,7 @@ new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileIn
     speed, damping, gravity, fadeRate, randomness, additive)
 // emits along local +Y turned by rotation3D, emitSize is a sphere diameter or a vec3 box; speeds are per frame, sizes are world units, gravity changes velocity y per frame so it is negative to fall
 // an emitter with an emitTime destroys itself once its last particle is gone, so a burst is fire and forget
-// untextured particles are soft round discs, textured ones are billboards of the tile
+// untextured particles are soft round dots, textured ones are billboards of the tile
 emitter.trailTime = .2                        // draw each particle as a ribbon along its last .2 seconds instead, the texture stretches along it
 
 // Trails - a ribbon through where the object has been, parent it to something that moves

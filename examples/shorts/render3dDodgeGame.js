@@ -102,7 +102,8 @@ function gameInit()
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 20, checker));
     boxMesh = buildBox(2);
     player = new Player;
-    player.addChild(new Trail3D(vec3(0,-1,0), .4, .6, undefined, hsl(.55,1,.7,.5), hsl(.55,1,.7,0), true));
+    const trail = new Trail3D(vec3(0,-1,0), .4, .6, undefined, hsl(.55,1,.7,.5), hsl(.55,1,.7,0), true);
+    player.addChild(trail);
     playerLight = new Light3D(vec3(), 12, hsl(.15,1,.6));
     scoreObject = new EngineObject3D(vec3(0,5,-arenaSize/2), undefined, undefined, hsl(.15,1,.6));
     scoreObject.specular = .5;
