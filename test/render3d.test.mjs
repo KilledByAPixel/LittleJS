@@ -493,7 +493,7 @@ test('render3D stages draw the sky, opaque by renderOrder, onRender, then the tr
     render3D.sky = new Mesh;
     render3D.drawSky = ()=> record('sky');
     render3D.updateMatrices(1);
-    render3D.renderStages();
+    render3D.renderStages(engineObjects.filter(o => o instanceof EngineObject3D && !o.destroyed));
     delete render3D.drawSky; // back to the prototype method
     render3D.sky = undefined;
     render3D.onRenderTransparent = undefined;
@@ -952,9 +952,12 @@ test('setSky builds the dome, keeps it, and matches the fog color to the horizon
     render3D.fogColor = undefined;
 });
 
-test('renderAfter2D defaults off', () =>
+test('renderAfter2D defaults off and objects follow it unless they set their own', () =>
 {
     assert.equal(render3D.renderAfter2D, false);
+    const o = new EngineObject3D;
+    assert.equal(o.renderAfter2D, undefined);
+    o.destroy();
 });
 
 test('HeightMap.getHeight matches the mesh triangles, split from (i, j) to (i+1, j+1)', () =>
@@ -1215,7 +1218,7 @@ test('the stage loop sets the draw state from each object, so render3D overrides
     render3D.camera.rotation = vec3();
     render3D.updateMatrices(1);
     render3D.specular = .5; // a stray setting must not reach the objects
-    render3D.renderStages();
+    render3D.renderStages(engineObjects.filter(o => o instanceof EngineObject3D && !o.destroyed));
     assert.deepEqual(seen.plain, {lighting: true, additive: false, specular: 0, receiveShadow: true, blend: false});
     assert.deepEqual(seen.lamp, {lighting: false, additive: false, specular: 0, receiveShadow: false, blend: false});
     assert.deepEqual(seen.shiny, {lighting: true, additive: false, specular: .7, receiveShadow: true, blend: false});

@@ -17776,7 +17776,7 @@ function render3DRandomDirection()
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Render3D Plugin - The 3D renderer, camera, lights, shadows, fog and draw state
- * - The 3D pass runs before gameRender, so 2D drawing lands on top; set renderAfter2D for the reverse
+ * - The 3D pass runs before gameRender, so 2D drawing lands on top; renderAfter2D flips that for all objects or one at a time
  * - Draw state fields are read at each draw, the pass resets them before each object and stage callback
  * @memberof Render3D
  * @example
@@ -17847,7 +17847,7 @@ class Render3DPlugin
         this.onRenderTransparent = undefined;
         /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything */
         this.sky = undefined;
-        /** @property {boolean} - Draw the 3D pass after the 2D scene instead of before it, for 3D on top of a 2D game */
+        /** @property {boolean} - Draw the 3D scene after the 2D scene instead of before it, the default for objects that do not set their own renderAfter2D */
         this.renderAfter2D = false;
         /** @property {boolean} - Sort the transparent stage far to near so alpha and additive mix correctly, when false transparent draws land in object order */
         this.sortTransparent = true;
@@ -17888,6 +17888,7 @@ class Render3DPlugin
         this.uploadedMeshes = new Set; // so context loss can drop their buffers
         this.uniforms = new Map;     // uniform locations by program
         this.uniformValues = {};     // last values sent for the cached vec4 uniforms
+        this.shadowMapDrawn = false; // the shadow map is drawn by the first pass of the frame
         this.boxMesh = undefined;    // unit shapes for drawBox and drawSphere
         this.sphereMesh = undefined;
 
@@ -18126,16 +18127,15 @@ class Render3DPlugin
     ///////////////////////////////////////////////////////////////////////////
     // The stages, run by the pass
 
-    // the opaque and transparent stages over every EngineObject3D, then the debug primitives
-    renderStages()
+    // the opaque and transparent stages over a layer's objects; the default layer also gets the sky, the callbacks and the debug primitives
+    renderStages(objects, isDefault=true)
     {
         const opaque = [], transparent = [];
-        for (const o of engineObjects)
-            if (!o.destroyed && o instanceof EngineObject3D)
-                (o.transparent || o.additive ? transparent : opaque).push(o);
+        for (const o of objects)
+            (o.transparent || o.additive ? transparent : opaque).push(o);
 
         // sky first, behind everything
-        this.sky && this.drawSky();
+        isDefault && this.sky && this.drawSky();
 
         // opaque: no blending, depth writes on, by render order
         this.blend = false;
@@ -18147,7 +18147,7 @@ class Render3DPlugin
             o.render3D();
         }
         render3DSetObjectState();
-        this.onRenderOpaque?.();
+        isDefault && this.onRenderOpaque?.();
         this.flush();
 
         // transparent: blending on, depth writes off, every draw queued then replayed far to near
@@ -18162,10 +18162,10 @@ class Render3DPlugin
                 o.render3D();
             }
             render3DSetObjectState();
-            this.onRenderTransparent?.();
+            isDefault && this.onRenderTransparent?.();
         }
         finally { this.flushTransparentQueue(); }
-        render3DRenderDebug();
+        isDefault && render3DRenderDebug();
         this.flush();
 
         // leave the fields at the opaque defaults for anything reading them outside the pass
@@ -18817,29 +18817,34 @@ function render3DFrustumPlanes(matrix)
     return planes;
 }
 
-// the 3D pass, runs from the preRender hook before gameRender
+// the preRender hook, before gameRender: the layer under the 2D scene
 function render3DPreRender()
 {
     const r = render3D;
     r.updateMatrices();
-    r.renderAfter2D || render3DRenderPass();
+    r.shadowMapDrawn = false;
+    render3DRenderPass(false);
 }
 
-// the plugin render hook, after gameRenderPost: the 3D pass lands on top of the 2D scene when asked
+// the render hook, after gameRenderPost: the layer on top of the 2D scene
 function render3DRender()
 {
-    const r = render3D;
-    if (!r.renderAfter2D) return;
-    glFlush(); // the 2D sprites drawn so far go under the 3D
-    render3DRenderPass();
+    render3DRenderPass(true);
 }
 
-// the 3D pass itself: take over the gl state, draw the shadow map and the stages, hand the state back
-function render3DRenderPass()
+// one 3D pass for the objects of a layer: take over the gl state, draw the shadow map once a frame and the stages, hand the state back
+// the layer matching render3D.renderAfter2D is the default and always runs, the other only when an object asks for it
+function render3DRenderPass(after2D)
 {
     const gl = glContext, r = render3D;
     if (!r.shader) return; // headless, gl disabled, or context lost
     ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
+    const isDefault = after2D === r.renderAfter2D, objects = [];
+    for (const o of engineObjects)
+        if (!o.destroyed && o instanceof EngineObject3D && (o.renderAfter2D ?? r.renderAfter2D) === after2D)
+            objects.push(o);
+    if (!isDefault && !objects.length) return;
+    after2D && glFlush(); // the 2D sprites drawn so far go under this layer
 
     // a previous frame that threw must not leave anything pending
     r.streamCount = 0;
@@ -18878,10 +18883,14 @@ function render3DRenderPass()
     r.isRendering = true;
     try
     {
-        // the shadow map from the light, then the stages sample it
-        r.shadows && render3DRenderShadowMap();
+        // the shadow map from the light once a frame, then the stages sample it
+        if (r.shadows && !r.shadowMapDrawn)
+        {
+            render3DRenderShadowMap();
+            r.shadowMapDrawn = true;
+        }
         gl.uniformMatrix4fv(render3DUniform('lightViewProj'), false, r.shadowMatrix.m);
-        r.renderStages();
+        r.renderStages(objects, isDefault);
     }
     finally
     {
@@ -19976,6 +19985,8 @@ class EngineObject3D extends EngineObject
         this.castShadow = true;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
+        /** @property {boolean|undefined} - Draw this object after the 2D scene instead of before it, undefined follows render3D.renderAfter2D */
+        this.renderAfter2D = undefined;
     }
 
     /** Apply the 3D velocity, then update the children, called automatically each frame */

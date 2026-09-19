@@ -6151,7 +6151,7 @@ declare module "littlejsengine" {
     export let render3D: Render3DPlugin;
     /**
      * Render3D Plugin - The 3D renderer, camera, lights, shadows, fog and draw state
-     * - The 3D pass runs before gameRender, so 2D drawing lands on top; set renderAfter2D for the reverse
+     * - The 3D pass runs before gameRender, so 2D drawing lands on top; renderAfter2D flips that for all objects or one at a time
      * - Draw state fields are read at each draw, the pass resets them before each object and stage callback
      * @memberof Render3D
      * @example
@@ -6207,7 +6207,7 @@ declare module "littlejsengine" {
         onRenderTransparent: any;
         /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything */
         sky: Mesh;
-        /** @property {boolean} - Draw the 3D pass after the 2D scene instead of before it, for 3D on top of a 2D game */
+        /** @property {boolean} - Draw the 3D scene after the 2D scene instead of before it, the default for objects that do not set their own renderAfter2D */
         renderAfter2D: boolean;
         /** @property {boolean} - Sort the transparent stage far to near so alpha and additive mix correctly, when false transparent draws land in object order */
         sortTransparent: boolean;
@@ -6244,6 +6244,7 @@ declare module "littlejsengine" {
         uploadedMeshes: Set<any>;
         uniforms: Map<any, any>;
         uniformValues: {};
+        shadowMapDrawn: boolean;
         boxMesh: any;
         sphereMesh: any;
         streamBuffer: any;
@@ -6329,7 +6330,7 @@ declare module "littlejsengine" {
          *  @param {Function} drawFunction
          *  @return {Mesh} */
         bake(drawFunction: Function): Mesh;
-        renderStages(): void;
+        renderStages(objects: any, isDefault?: boolean): void;
         queueTransparent(pos: any, draw: any): any;
         flushTransparentQueue(): void;
         drawSky(): void;
@@ -6495,6 +6496,8 @@ declare module "littlejsengine" {
         castShadow: boolean;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         receiveShadow: boolean;
+        /** @property {boolean|undefined} - Draw this object after the 2D scene instead of before it, undefined follows render3D.renderAfter2D */
+        renderAfter2D: any;
         /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
          *  @return {Matrix4} */
         getMatrix(): Matrix4;

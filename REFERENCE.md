@@ -856,7 +856,7 @@ render3D.onRenderTransparent = ()=> {} // after the transparent objects: billboa
 // every transparent draw is sorted far to near before it lands, so alpha and additive mix correctly
 render3D.sortTransparent = true       // false draws the transparent stage in object order with no sort
 render3D.frustumCulling = true        // drawMesh skips meshes whose bounding sphere is outside the view
-render3D.renderAfter2D = false        // true draws the 3D pass on top of the 2D scene instead of under it
+render3D.renderAfter2D = false        // true draws the 3D scene on top of the 2D scene instead of under it, the default for objects
 render3D.isRendering render3D.shadowPass // true inside the pass and inside the shadow map pass, read only
 setRender3DSmoothShading(true)        // default for every builder's smooth argument (render3DSmoothShading)
 
@@ -872,6 +872,8 @@ obj.specular = .5                       // highlight strength
 obj.castShadow = false                  // keep it out of the shadow map
 obj.receiveShadow = false               // draw it without the shadow map's darkening
 obj.renderOrder                         // sorts the opaque stage
+obj.renderAfter2D = true                // this object on top of the 2D scene, or false for under it; undefined follows render3D.renderAfter2D
+// objects above and below the 2D scene draw in two passes with their own depth, so a 3D layer can sit on each side of the 2D one
 obj.getMatrix()                         // buildMatrix(pos3D, rotation3D, scale3D), composed with an EngineObject3D parent's
 obj.lookAt(target)                      // turn -Z toward a point
 obj.render3D()                          // override for custom drawing, the draw state is already set from the flags; render() is empty
