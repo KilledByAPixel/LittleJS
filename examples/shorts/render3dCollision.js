@@ -12,21 +12,18 @@ class Ball extends EngineObject3D
         this.radius = rand(.4,.8);
         this.scale3D = vec3(this.radius*2);
         this.softShadow = this.radius*2;
-        this.velocity3D = vec3(rand(-.1,.1), 0, rand(-.1,.1));
+        this.velocity3D = randVector3(.1);
         this.mass = 1; // falls with render3D.gravity
     }
     update()
     {
-        // bounce off the floor, the walls, the box and the cylinder
+        // bounce off the floor and walls, then the box and the cylinder
         const p = this.pos3D, r = this.radius, limit = arenaSize/2 - r;
-        if (p.y < r)
-            this.bounce(vec3(0, r - p.y, 0));
-        if (abs(p.x) > limit)
-            this.bounce(vec3(sign(p.x)*limit - p.x, 0, 0));
-        if (abs(p.z) > limit)
-            this.bounce(vec3(0, 0, sign(p.z)*limit - p.z));
-        const hit = collideSphereBox(p, r, boxPos, boxSize)
-            || collideSphereCylinder(p, r, cylinderPos, cylinderRadius, cylinderHeight);
+        const inside = vec3(clamp(p.x, -limit, limit), max(p.y, r), clamp(p.z, -limit, limit));
+        if (p.distance(inside))
+            this.bounce(inside.subtract(p));
+        const hit = collideSphereBox(this.pos3D, r, boxPos, boxSize)
+            || collideSphereCylinder(this.pos3D, r, cylinderPos, cylinderRadius, cylinderHeight);
         if (hit)
             this.bounce(hit);
     }

@@ -78,7 +78,7 @@ function gameInit()
 
     // soft shadows follow the ground
     ball = new Ball;
-    render3D.softShadowHeight = (x, z)=> terrain.getHeight(x, z);
+    render3D.softShadowHeight = terrain;
 }
 
 function gameUpdate()

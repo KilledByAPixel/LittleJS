@@ -1739,3 +1739,11 @@ test('setFog sets the distances and only changes the color when one is passed', 
     assert.equal(render3D.fogColor.rgbaInt(), WHITE.rgbaInt());
     render3D.fogColor = undefined;
 });
+
+test('a soft shadow can sit on a HeightMap directly', () =>
+{
+    const flat = new HeightMap([[1, 1], [1, 1]], vec2(10), 3); // 3 high everywhere
+    const disc = render3D.bake(()=> render3D.drawSoftShadow(vec3(), 2, flat));
+    for (const p of disc.points)
+        near(p.y, 3.02);
+});

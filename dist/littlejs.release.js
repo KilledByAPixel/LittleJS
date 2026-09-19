@@ -17287,7 +17287,7 @@ class Render3DPlugin
         this.fogEnd = 0;
         /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale; sync2D objects use the 2D gravity */
         this.gravity = vec3();
-        /** @property {number|Function} - Floor height for objects with a softShadow, a number or (x, z) => y for terrain */
+        /** @property {number|HeightMap|Function} - Floor for objects with a softShadow: a height, a HeightMap, or (x, z) => y */
         this.softShadowHeight = 0;
         /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for flat faces */
         this.smoothShading = false;
@@ -17904,13 +17904,14 @@ class Render3DPlugin
      *  - Draw it from onRenderTransparent or from a transparent object
      *  @param {Vector3} pos - Position of the thing casting the shadow
      *  @param {number} [size] - Diameter
-     *  @param {number|Function} [floorHeight] - Height of the ground, or (x, z) => y so the shadow follows terrain
+     *  @param {number|HeightMap|Function} [floorHeight] - Height of the ground, a HeightMap, or (x, z) => y to follow terrain
      *  @param {Color} [color]
      *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground */
     drawSoftShadow(pos, size=1, floorHeight=0, color=RENDER3D_SHADOW_COLOR, lift=.02)
     {
         render3DAssertBlending();
-        const height = isNumber(floorHeight) ? ()=> floorHeight : floorHeight;
+        const height = isNumber(floorHeight) ? ()=> floorHeight
+            : floorHeight instanceof HeightMap ? (x, z)=> floorHeight.getHeight(x, z) : floorHeight;
         if (this.transparentQueue && !this.capture) // sort from the floor, under whatever casts it
             return this.queueTransparent(vec3(pos.x, height(pos.x, pos.z) + lift, pos.z), ()=> this.drawSoftShadow(pos, size, floorHeight, color, lift));
         render3DDrawSoftDisc(size / 2, color, 16, RENDER3D_DEFAULT_NORMAL, (c, s, r)=>

@@ -6238,7 +6238,7 @@ declare module "littlejsengine" {
         fogEnd: number;
         /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale; sync2D objects use the 2D gravity */
         gravity: Vector3;
-        /** @property {number|Function} - Floor height for objects with a softShadow, a number or (x, z) => y for terrain */
+        /** @property {number|HeightMap|Function} - Floor for objects with a softShadow: a height, a HeightMap, or (x, z) => y */
         softShadowHeight: number;
         /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for flat faces */
         smoothShading: boolean;
@@ -6492,10 +6492,10 @@ declare module "littlejsengine" {
          *  - Draw it from onRenderTransparent or from a transparent object
          *  @param {Vector3} pos - Position of the thing casting the shadow
          *  @param {number} [size] - Diameter
-         *  @param {number|Function} [floorHeight] - Height of the ground, or (x, z) => y so the shadow follows terrain
+         *  @param {number|HeightMap|Function} [floorHeight] - Height of the ground, a HeightMap, or (x, z) => y to follow terrain
          *  @param {Color} [color]
          *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground */
-        drawSoftShadow(pos: Vector3, size?: number, floorHeight?: number | Function, color?: Color, lift?: number): any;
+        drawSoftShadow(pos: Vector3, size?: number, floorHeight?: number | HeightMap | Function, color?: Color, lift?: number): any;
     }
     /**
      * Camera3D - Position, rotation and lens for the 3D view

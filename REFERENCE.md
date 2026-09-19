@@ -979,7 +979,8 @@ render3D.drawSoftDisc(pos, size, color, normal, sides) // fades to transparent a
                                                        // unless a normal is given
 render3D.drawSoftShadow(pos, size, floorHeight, color, lift) // soft blob shadow under pos, unlit; floorHeight can be
                                                              // (x, z)=> y to follow terrain
-render3D.softShadowHeight = 0                             // floor for objects with a softShadow, a number or (x, z)=> y
+render3D.softShadowHeight = 0                             // floor for objects with a softShadow: a height, a HeightMap,
+                                                          // or (x, z)=> y
 // strip order, counter clockwise as seen from the front: the first three points make a triangle, then every extra
 // point makes another with the two before it, so the shape is walked in pairs
 render3D.drawStrip(points, normals, uvs, colors, tileInfo) // a raw triangle strip; normals, uvs and colors are one
