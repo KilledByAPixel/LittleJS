@@ -26,14 +26,16 @@ let model, orbit = 0, name = 'house';
 function gameInit()
 {
     new Render3DPlugin;
+    render3D.setSky(hsl(.6,.7,.6), hsl(.6,.6,.9));
+    render3D.setFog(20, 50);
     render3D.shadows = true;
-    render3D.setSky(rgb(.3,.5,.9), rgb(.8,.9,1));
-    render3D.fogStart = 20;
-    render3D.fogEnd = 50;
-    const checker = (x, z)=> (floor(x/2) + floor(z/2)) & 1 ? rgb(.4,.55,.4) : rgb(.35,.5,.35);
+
+    // a checkerboard floor and the model
+    const checker = (x, z)=> hsl(.3, .2, (x+z)/2&1 ? .45 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(20), 10, checker));
-    model = new EngineObject3D(vec3(), undefined, undefined, rgb(.9,.7,.5));
-    model.angleVelocity3D = vec3(0, .005, 0);
+    model = new EngineObject3D(vec3());
+    model.color = hsl(.08,.6,.7);
+    model.angleVelocity3D = vec3(0, .005);
     setModel(parseOBJ(houseOBJ));
 
     // drop any .obj file on the page to see it
@@ -52,24 +54,24 @@ function gameInit()
 // center the model, make it 4 units across, and stand it on the floor
 function setModel(mesh)
 {
-    model.mesh?.dispose();
     model.mesh = mesh.center().fit(4);
-    model.pos3D = vec3(0, -mesh.getBounds().min.y, 0);
+    model.pos3D = vec3(0, -mesh.getBounds().min.y);
 }
 
 function gameUpdate()
 {
+    // space toggles shading, drag to orbit with no idle spin, the model is for inspecting
     if (keyWasPressed('Space'))
     {
         setRender3DSmoothShading(!render3DSmoothShading);
         model.mesh.computeNormals(render3DSmoothShading);
     }
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : 0; // no idle spin, the model is for inspecting
+    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : 0;
     render3D.camera.orbit(vec3(0,2,0), 10, orbit, .35);
 }
 
 function gameRenderPost()
 {
-    const text = '3D Mesh: ' + name + '\ndrop an .obj file here, space: shading, drag: orbit';
-    drawTextScreen(text, vec2(mainCanvasSize.x/2, 50), 24);
+    const text = name + ' - drop an .obj file here, space: shading, drag: orbit';
+    drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

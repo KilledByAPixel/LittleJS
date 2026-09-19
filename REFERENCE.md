@@ -766,6 +766,7 @@ v.add(v2) v.subtract(v2) v.multiply(v2) v.divide(v2) v.scale(s)
 v.dot(v2) v.cross(v2) v.length() v.lengthSquared() v.distance(v2) v.distanceSquared(v2)
 v.normalize(length=1) v.clampLength(length=1) v.lerp(v2, percent) // percent is clamped like lerp
 v.rotate(axis, angle)          // turned around a unit axis, counter clockwise when the axis points at you
+v.rotateX(angle) v.rotateY(angle) v.rotateZ(angle) // turned around one axis, the way rotation3D turns things
 v.reflect(normal, restitution=1) // bounce off a surface, 0 slides along it
 v.abs() v.floor() v.round() v.snap(grid) v.copy() v.set(x, y, z) v.setFrom(v2) v.isValid() v.toString(digits=3)
 
@@ -889,6 +890,7 @@ render3D.shadowSoftness = 1           // how far to blur the shadow edge, in sha
 // Sky
 render3D.setSky(topColor, horizonColor, bottomColor) // dome colors straight up, level and straight down; sets
                                                      // render3D.sky and fogColor
+render3D.setFog(fogStart, fogEnd, fogColor) // the fog distances and color at once, no color keeps the current one
 render3D.sky = buildSky(topColor, horizonColor, bottomColor, sides, rings) // or set a dome yourself
 
 // Draw state, read at each draw; the pass sets it from each object's flags before render3D() and resets it before each

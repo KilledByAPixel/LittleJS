@@ -40,7 +40,7 @@ function gameInit()
     render3D.ambientColor = rgb(.35,.35,.4);
 
     // checkerboard floor and a ring of shapes
-    const checker = (x, z)=> hsl(.3, .2, (x/2^z/2)&1 ? .5 : .4);
+    const checker = (x, z)=> hsl(.3, .2, (x+z)/2&1 ? .5 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(30), 15, checker));
     for (let i = 9; i--;)
     {

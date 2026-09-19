@@ -331,3 +331,14 @@ test('Vector3.reflect bounces off a normal and randVector3 is a unit direction',
     for (let i = 0; i < 20; ++i)
         assert.ok(randVector3(1, .3).y >= Math.cos(.3) - 1e-9, 'inside the cone around +Y');
 });
+
+test('rotateX, rotateY and rotateZ turn the way Matrix4.rotation does', () =>
+{
+    const v = vec3(1, 2, 3), a = .7;
+    const byMatrix = (euler)=> Matrix4.rotation(euler).transformDirection(v);
+    nearVec(v.rotateX(a), ...Object.values(byMatrix(vec3(a, 0, 0))));
+    nearVec(v.rotateY(a), ...Object.values(byMatrix(vec3(0, a, 0))));
+    nearVec(v.rotateZ(a), ...Object.values(byMatrix(vec3(0, 0, a))));
+    nearVec(v.rotateY(a), ...Object.values(v.rotate(vec3(0, 1, 0), a)));
+    nearVec(vec3(6, 3).rotateY(PI / 2), 0, 3, -6); // -Z is forward, a quarter turn takes +X there
+});

@@ -17096,13 +17096,31 @@ class Vector3
         return this.scale(c).add(axis.cross(this).scale(s)).add(axis.scale(d));
     }
 
+        /** Returns a new vector turned around the X axis, the way a positive pitch in rotation3D turns things
+     *  @param {number} angle - Radians
+     *  @return {Vector3} */
+    rotateX(angle)
+    {
+        const c = cos(angle), s = sin(angle);
+        return new Vector3(this.x, this.y*c - this.z*s, this.y*s + this.z*c);
+    }
+
+    /** Returns a new vector turned around the Y axis, the way a positive yaw in rotation3D turns things
+     *  @param {number} angle - Radians
+     *  @return {Vector3} */
     rotateY(angle)
     {
         const c = cos(angle), s = sin(angle);
-        return new Vector3(
-            this.x*c + this.z*s,
-            this.y,
-            -this.x*s + this.z*c);
+        return new Vector3(this.x*c + this.z*s, this.y, this.z*c - this.x*s);
+    }
+
+    /** Returns a new vector turned around the Z axis, the way a positive roll in rotation3D turns things
+     *  @param {number} angle - Radians
+     *  @return {Vector3} */
+    rotateZ(angle)
+    {
+        const c = cos(angle), s = sin(angle);
+        return new Vector3(this.x*c - this.y*s, this.x*s + this.y*c, this.z);
     }
 
     /** Returns a new vector with the absolute value of each component
@@ -18398,6 +18416,18 @@ class Render3DPlugin
         this.sky = buildSky(topColor, horizonColor, bottomColor);
         this.fogColor = horizonColor.copy();
         return this.sky;
+    }
+
+    /** Set where fog starts and ends, and its color
+     *  @param {number} fogStart - Distance from the camera where fog starts
+     *  @param {number} fogEnd - Distance where fog is total, 0 disables fog
+     *  @param {Color} [fogColor] - Leaves the color alone when not passed, setSky sets it to the horizon */
+    setFog(fogStart, fogEnd, fogColor)
+    {
+        this.fogStart = fogStart;
+        this.fogEnd = fogEnd;
+        if (fogColor)
+            this.fogColor = fogColor.copy();
     }
 
     ///////////////////////////////////////////////////////////////////////////

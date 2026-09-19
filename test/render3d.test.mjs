@@ -1728,3 +1728,14 @@ test('HeightMap.getNormal measures the same slope at the edge as in the middle, 
     near(o.rotation3D.x, PI / 2); near(o.rotation3D.y, .7);
     o.destroy(); engineObjects.length = 0;
 });
+
+test('setFog sets the distances and only changes the color when one is passed', () =>
+{
+    render3D.fogColor = RED.copy();
+    render3D.setFog(5, 50);
+    assert.equal(render3D.fogStart, 5); assert.equal(render3D.fogEnd, 50);
+    assert.equal(render3D.fogColor.rgbaInt(), RED.rgbaInt());
+    render3D.setFog(0, 0, WHITE);
+    assert.equal(render3D.fogColor.rgbaInt(), WHITE.rgbaInt());
+    render3D.fogColor = undefined;
+});

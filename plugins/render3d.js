@@ -735,6 +735,18 @@ class Render3DPlugin
         return this.sky;
     }
 
+    /** Set where fog starts and ends, and its color
+     *  @param {number} fogStart - Distance from the camera where fog starts
+     *  @param {number} fogEnd - Distance where fog is total, 0 disables fog
+     *  @param {Color} [fogColor] - Leaves the color alone when not passed, setSky sets it to the horizon */
+    setFog(fogStart, fogEnd, fogColor)
+    {
+        this.fogStart = fogStart;
+        this.fogEnd = fogEnd;
+        if (fogColor)
+            this.fogColor = fogColor.copy();
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Immediate mode shapes
 

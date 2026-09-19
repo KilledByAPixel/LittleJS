@@ -5929,7 +5929,18 @@ declare module "littlejsengine" {
          *  @param {number} angle - Radians
          *  @return {Vector3} */
         rotate(axis: Vector3, angle: number): Vector3;
-        rotateY(angle: any): Vector3;
+        /** Returns a new vector turned around the X axis, the way a positive pitch in rotation3D turns things
+     *  @param {number} angle - Radians
+     *  @return {Vector3} */
+        rotateX(angle: number): Vector3;
+        /** Returns a new vector turned around the Y axis, the way a positive yaw in rotation3D turns things
+         *  @param {number} angle - Radians
+         *  @return {Vector3} */
+        rotateY(angle: number): Vector3;
+        /** Returns a new vector turned around the Z axis, the way a positive roll in rotation3D turns things
+         *  @param {number} angle - Radians
+         *  @return {Vector3} */
+        rotateZ(angle: number): Vector3;
         /** Returns a new vector with the absolute value of each component
          *  @return {Vector3} */
         abs(): Vector3;
@@ -6395,6 +6406,11 @@ declare module "littlejsengine" {
          *  @param {Color} [bottomColor] - Straight down, defaults to the horizon color
          *  @return {Mesh} - The dome, also in render3D.sky */
         setSky(topColor?: Color, horizonColor?: Color, bottomColor?: Color): Mesh;
+        /** Set where fog starts and ends, and its color
+         *  @param {number} fogStart - Distance from the camera where fog starts
+         *  @param {number} fogEnd - Distance where fog is total, 0 disables fog
+         *  @param {Color} [fogColor] - Leaves the color alone when not passed, setSky sets it to the horizon */
+        setFog(fogStart: number, fogEnd: number, fogColor?: Color): void;
         /** Draw a box, untextured, for blocking out a scene without meshes or objects
          *  @param {Vector3} pos - Center
          *  @param {Vector3|number} [size] - Full size, a number for a cube

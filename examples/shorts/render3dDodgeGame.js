@@ -1,5 +1,5 @@
 // dodge the tumbling boxes with the arrow keys
-const arenaSize = 40;
+const arenaSize = 40, playerStart = vec3(0,1.3,0);
 const soundNearMiss = new Sound([,,900,,.02,.08,1,1.5,,,,,,,,,,.5]);
 const soundHit = new Sound([,,120,.05,.2,.4,4,2,,,,,,5]);
 let player, trail, scoreObject, boxMesh;
@@ -9,7 +9,8 @@ class Player extends EngineObject3D
 {
     constructor()
     {
-        super(vec3(0,1.3,0), buildCapsule(1.4, 2.6), undefined, hsl(.55,.8,.6));
+        super(playerStart, buildCapsule(1.4, 2.6));
+        this.color = hsl(.55,.8,.6);
         this.specular = .6;
         this.cullBackFaces = true;
     }
@@ -31,9 +32,10 @@ class Box extends EngineObject3D
 {
     constructor(pos)
     {
-        super(pos, boxMesh, undefined, hsl(rand(), .7, .5));
+        super(pos, boxMesh);
+        this.color = hsl(rand(),.7,.5);
         this.size3D = vec3(2);
-        this.mass = 1; // falls
+        this.mass = 1; // falls with render3D.gravity
         this.velocity3D = player.pos3D.subtract(pos).normalize(rand(.12,.22));
         this.velocity3D.y = rand(.1,.2);
         this.angleVelocity3D = randVector3(.1);
@@ -41,7 +43,7 @@ class Box extends EngineObject3D
     }
     update()
     {
-        // bounce off the ground, gravity is the engine's
+        // bounce off the ground
         if (this.pos3D.y < 1)
         {
             this.pos3D.y = 1;
@@ -65,7 +67,6 @@ class Box extends EngineObject3D
 
 function buildScoreText()
 {
-    scoreObject.mesh?.dispose();
     scoreObject.mesh = buildText3D('SCORE ' + score + '\nBEST ' + best, 2, .6);
 }
 
@@ -85,7 +86,7 @@ function endRound()
     score = 0;
     buildScoreText();
     engineObjects.forEach(o=> o instanceof Box && o.destroy());
-    player.pos3D = vec3(0,1.3,0);
+    player.pos3D = playerStart.copy();
     trail.clear();
 }
 
@@ -93,22 +94,22 @@ function gameInit()
 {
     new Render3DPlugin;
     render3D.setSky(hsl(.6,.6,.5), hsl(.55,.4,.75), hsl(.1,.3,.4));
-    render3D.fogStart = 30;
-    render3D.fogEnd = 80;
-    render3D.ambientColor = rgb(.35,.35,.45);
+    render3D.setFog(30, 80);
+    render3D.ambientColor = hsl(.65,.12,.4);
     render3D.lightDirection = vec3(.4,-1,.3).normalize();
     render3D.shadows = true;
-    render3D.gravity = vec3(0,-.01,0);
+    render3D.gravity = vec3(0,-.01);
 
-    // checkered ground, the player with a trail and a light, and the score in lit 3D text
-    const checker = (x, z)=> (floor(x/2) + floor(z/2)) & 1 ? hsl(.3,.4,.42) : hsl(.3,.4,.3);
+    // a checkered ground, the player with a trail and a light, and the score in lit 3D text
+    const checker = (x, z)=> hsl(.3, .4, (x+z)/2&1 ? .42 : .3);
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 20, checker));
     boxMesh = buildBox(2);
     player = new Player;
     trail = new Trail3D(vec3(0,-1,0), .4, .6, undefined, hsl(.55,1,.7,.5), hsl(.55,1,.7,0), true);
     player.addChild(trail);
     player.addChild(new Light3D(vec3(0,3,0), 12, hsl(.15,1,.6)));
-    scoreObject = new EngineObject3D(vec3(0,5,-arenaSize/2), undefined, undefined, hsl(.15,1,.6));
+    scoreObject = new EngineObject3D(vec3(0,5,-arenaSize/2));
+    scoreObject.color = hsl(.15,1,.6);
     scoreObject.specular = .5;
     scoreObject.rotation3D.x = -.4; // lean back into the light
     buildScoreText();
@@ -120,8 +121,8 @@ function gameUpdate()
     if (spawnTimer.elapsed())
     {
         spawnTimer.set(rand(.25,.6));
-        const angle = rand(2*PI), r = arenaSize/2 + 2;
-        new Box(vec3(sin(angle)*r, rand(1,6), cos(angle)*r));
+        const pos = vec3(arenaSize/2 + 2, rand(1,6)).rotateY(rand(2*PI));
+        new Box(pos);
     }
 }
 
@@ -134,5 +135,5 @@ function gameUpdatePost()
 
 function gameRenderPost()
 {
-    drawTextScreen('arrow keys: dodge', vec2(mainCanvasSize.x/2, mainCanvasSize.y - 30), 24);
+    drawTextScreen('arrow keys: dodge', vec2(mainCanvasSize.x/2, mainCanvasSize.y - 30), 30);
 }

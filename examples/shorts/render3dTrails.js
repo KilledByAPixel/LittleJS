@@ -2,7 +2,8 @@ class Comet extends EngineObject3D
 {
     constructor(color, phase)
     {
-        super(vec3(), buildSphere(1, 8, 4), undefined, color);
+        super(vec3(), buildSphere(1, 8, 4));
+        this.color = color;
         this.phase = phase;
         this.softShadow = 1.5;
         // the trail is a child so it follows, additive, fading over 1.5 seconds
@@ -20,10 +21,10 @@ class Flag extends EngineObject3D
 {
     constructor(pos)
     {
-        super(pos, buildGrid(vec2(4,2.5), vec2(16,10), rgb(1,.3,.3)));
+        super(pos, buildGrid(vec2(4,2.5), vec2(16,10), hsl(0,.7,.6)));
         this.rotation3D.x = PI/2; // stand the grid up
-        const pole = buildCylinder(.16, pos.y + 1.5, 8);
-        new EngineObject3D(pos.add(vec3(-2,-pos.y/2,0)), pole, undefined, rgb(.5,.4,.3));
+        const pole = buildCylinder(.16, pos.y + 1.5, 8).setColor(hsl(.08,.3,.4));
+        new EngineObject3D(pos.add(vec3(-2,-pos.y/2)), pole);
     }
     update()
     {
@@ -39,17 +40,18 @@ let orbit = 0;
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky(rgb(.05,.05,.15), rgb(.3,.15,.3), rgb(.05,.05,.1));
-    render3D.ambientColor = rgb(.5,.5,.55);
-    new EngineObject3D(vec3(), buildGrid(vec2(30), 1, rgb(.2,.2,.25)));
-    new Flag(vec3(0,4.5,0));
-    for (let i = 0; i < 3; ++i)
-        new Comet(hsl(i/3,1,.6), i*2*PI/3);
+    render3D.setSky(hsl(.65,.5,.1), hsl(.85,.35,.22), hsl(.65,.3,.07));
+    render3D.ambientColor = hsl(.65,.05,.52);
     render3D.onRenderTransparent = drawRainbow;
+    new EngineObject3D(vec3(), buildGrid(vec2(30), 1, hsl(.65,.1,.22)));
+    new Flag(vec3(0,4.5,0));
+    for (let i = 3; i--;)
+        new Comet(hsl(i/3,1,.6), i*2*PI/3);
 }
 
 function gameUpdate()
 {
+    // drag to orbit
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
     render3D.camera.orbit(vec3(0,3,0), 16, orbit, .3);
 }
@@ -70,6 +72,5 @@ function drawRainbow()
 
 function gameRenderPost()
 {
-    const text = '3D Trails\nribbons, trails and a waving flag, drag: orbit';
-    drawTextScreen(text, vec2(mainCanvasSize.x/2, 50), 24);
+    drawTextScreen('drag: orbit', vec2(mainCanvasSize.x/2, 40), 30);
 }
