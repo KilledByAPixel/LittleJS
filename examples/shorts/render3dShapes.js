@@ -15,7 +15,7 @@ function buildShapes()
 {
     // builders use render3DSmoothShading by default
     const box = buildBox(vec3(1));
-    const octahedron = buildLathe([[0,-1], [1,0], [0,1]], 4);
+    const oct = buildLathe([[0,-1], [1,0], [0,1]], 4);
     const cylinder = buildCylinder(1, 2);
     const vase = buildLathe([[0,-1], [.4,-.2], [.7,.2], [.4,.6], [0,1]], 8);
     const sphere = buildSphere();
@@ -25,7 +25,7 @@ function buildShapes()
     const capsule = buildCapsule(.8, 2);
 
     const meshes = 
-        [box, octahedron, cylinder, vase, sphere, hull, torus, cone, capsule];
+        [box, oct, cylinder, vase, sphere, hull, torus, cone, capsule];
     spinners.forEach((s, i)=> s.mesh = meshes[i]);
 }
 
@@ -39,9 +39,11 @@ function gameInit()
     render3D.lightDirection = vec3(-.5,-1,-.3).normalize();
     render3D.ambientColor = rgb(.35,.35,.4);
 
-    // checkerboard floor and a ring of shapes
+    // checkerboard floor
     const checker = (x, z)=> hsl(.3, .2, (x+z)/2&1 ? .5 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(30), 15, checker));
+
+    // ring of shapes
     for (let i = 9; i--;)
     {
         const a = i/9*2*PI;
