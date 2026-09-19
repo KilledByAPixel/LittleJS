@@ -17452,6 +17452,8 @@ class Render3DPlugin
         this.shadowShader = undefined;
         this.vao = undefined;
         this.whiteTexture = undefined; // 1x1 white for untextured draws
+        this.samplers = [];            // how textures are filtered in 3D, clamped and wrapping, see render3DInitGL
+        this.mipmapped = new WeakSet;  // textures given mipmaps for the 3D pass
         this.shadowTexture = undefined;
         this.shadowFramebuffer = undefined;
         this.shadowTextureSize = 0;
@@ -18353,6 +18355,21 @@ function render3DInitGL()
 
     // white texture for untextured draws, and a one texel shadow map that keeps the shadow sampler valid until shadows are on
     r.whiteTexture = glCreateTexture();
+    r.mipmapped = new WeakSet;
+
+    // textures in 3D shrink into the distance far more than sprites do, so they sample through their mipmaps here;
+    // a sampler sets the filtering for the 3D pass only and leaves the engine's textures as they are for 2D
+    const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
+    r.samplers = [gl.CLAMP_TO_EDGE, gl.REPEAT].map(wrap =>
+    {
+        const sampler = gl.createSampler();
+        gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, tilesPixelated ? gl.NEAREST : gl.LINEAR);
+        gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
+        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrap);
+        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrap);
+        anisotropy && gl.samplerParameterf(sampler, anisotropy.TEXTURE_MAX_ANISOTROPY_EXT, min(4, gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+        return sampler;
+    });
     render3DUpdateShadowMap(1);
 
     // hand the engine back its own buffer and vertex array, in that order so a pending 2D batch flushes right
@@ -18364,7 +18381,7 @@ function render3DContextLost()
 {
     const r = render3D;
     r.shader = r.shadowShader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
-    r.instanceBuffers = [];
+    r.instanceBuffers = r.samplers = [];
     render3DClearInstances();
     r.shadowFramebuffer = r.shadowTexture = undefined;
     r.shadowTextureSize = 0;
@@ -18438,11 +18455,20 @@ function render3DNormalMatrix3(m, out, offset)
     return out;
 }
 
-// the GL texture of a tile or texture, white when there is none or it is not loaded
-function render3DTexture(tileInfo)
+// bind the texture of a tile or texture, white when there is none or it is not loaded, with the 3D sampler that
+// matches its wrap mode; the first time a texture is used in 3D it gets its mipmaps
+function render3DBindTexture(tileInfo)
 {
+    const gl = glContext, r = render3D;
     const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
-    return textureInfo?.glTexture || render3D.whiteTexture;
+    const texture = textureInfo?.glTexture || r.whiteTexture;
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.bindSampler(0, r.samplers[textureInfo?.wrap ? 1 : 0]);
+    if (!r.mipmapped.has(texture))
+    {
+        r.mipmapped.add(texture);
+        gl.generateMipmap(gl.TEXTURE_2D);
+    }
 }
 
 function render3DUniform4f(name, x, y, z, w)
@@ -18489,7 +18515,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     // the per draw values are constant vertex attributes, a batch turns on a per instance array over them
     uvRect ||= render3DGetTileUVs(tileInfo);
     render3DDrawAttribs(matrix.m, tint, uvRect);
-    gl.bindTexture(gl.TEXTURE_2D, render3DTexture(tileInfo));
+    render3DBindTexture(tileInfo);
     if (r.shadowPass) return; // the shadow map needs nothing else
 
     // blending, matches the engine's 2D blend functions
@@ -18617,6 +18643,7 @@ function render3DRenderPass(after2D)
         gl.disable(gl.CULL_FACE);
         gl.depthMask(true);
         gl.frontFace(gl.CCW);
+        gl.bindSampler(0, null); // back to the textures' own filtering for 2D
         if (glActiveTexture)
             gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
         // ARRAY_BUFFER is not part of VAO state in WebGL2, so bindVertexArray alone would not restore it

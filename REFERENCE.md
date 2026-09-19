@@ -814,6 +814,8 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 - 3D draws only work inside the 3D pass, from an object's `render3D()` or from `onRenderOpaque` / `onRenderTransparent`;
   drawing from `gameRender` asserts, and anything that fades (soft discs, soft shadows) must be in the transparent stage
 - Builders and draws take full sizes (diameters) like buildBox and drawCircle; collision helpers and lights take radii
+- Textures sample through mipmaps in 3D so floors do not shimmer in the distance, crisp up close when tilesPixelated
+  is on; the 2D sprites keep their own filtering
 - A texture comes before its tint like drawTile, except where per vertex colors are part of the geometry (drawStrip,
   drawRibbon)
 - Y is up and -Z is forward, so the ground is the XZ plane: 2D input maps to it as vec3(move.x, 0, -move.y), forward for

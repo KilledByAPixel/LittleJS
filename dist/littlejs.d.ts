@@ -6308,6 +6308,8 @@ declare module "littlejsengine" {
         shadowShader: any;
         vao: any;
         whiteTexture: any;
+        samplers: any[];
+        mipmapped: WeakSet<object>;
         shadowTexture: any;
         shadowFramebuffer: any;
         shadowTextureSize: number;
