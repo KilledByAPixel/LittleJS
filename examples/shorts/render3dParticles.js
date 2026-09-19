@@ -5,7 +5,7 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky(rgb(.05, .05, .1), rgb(.2, .1, .1), rgb(.05, .05, .05));
     render3D.ambientColor = rgb(.25, .25, .3);
-    new EngineObject3D(vec3(), buildGrid(20, 20, 1, 1, rgb(.2, .2, .22)));
+    new EngineObject3D(vec3(), buildGrid(vec2(20), 1, rgb(.2, .2, .22)));
 
     // fire: additive, up, yellow to transparent red
     new ParticleEmitter3D(vec3(-4, .2, 0), .6, 0, 40, .3, undefined,

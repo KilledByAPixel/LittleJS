@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { vec3, isVector3, Vector3, Matrix4, buildMatrix, PI,
     isPointInBox3D, isOverlapping3D, collideSphereSphere, collideSphereBox, collideSphereCylinder,
-    collideBoxBox, raycastSphere, raycastPlane, raycastBox } from '../dist/littlejs.esm.js';
+    collideBoxBox, raycastSphere, raycastPlane, raycastBox, randVector3 } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-6, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -256,4 +256,14 @@ test('raycastBox handles hit, miss, inside and a zero ray component through the 
     assert.equal(raycastBox(vec3(10, 0, 0), vec3(1, 0, 0), pos, size), undefined); // box is behind the ray
     assert.equal(raycastBox(vec3(0, 0, 0), vec3(1, 0, 0), pos, size), 0); // origin inside
     near(raycastBox(vec3(-5, .5, 0), vec3(1, 0, 0), pos, size), 4); // zero Y/Z direction still passes through
+});
+
+test('Vector3.reflect bounces off a normal and randVector3 is a unit direction', () =>
+{
+    const v = vec3(1, -1, 0).reflect(vec3(0, 1, 0));
+    assert.ok(Math.abs(v.x - 1) < 1e-9 && Math.abs(v.y - 1) < 1e-9 && v.z === 0);
+    const slide = vec3(1, -1, 0).reflect(vec3(0, 1, 0), 0);
+    assert.ok(Math.abs(slide.y) < 1e-9 && slide.x === 1);
+    for (let i = 0; i < 20; ++i)
+        assert.ok(Math.abs(randVector3(2).length() - 2) < 1e-9);
 });

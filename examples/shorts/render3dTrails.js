@@ -2,7 +2,7 @@ class Comet extends EngineObject3D
 {
     constructor(color, phase)
     {
-        super(vec3(), buildSphere(8, 4), color);
+        super(vec3(), buildSphere(1, 8, 4), undefined, color);
         this.phase = phase;
         // the trail is a child so it follows, additive, fading to transparent over 1.5 seconds
         this.addChild(new Trail3D(vec3(), 1.5, .5, undefined, color, color.withAlpha(0), true));
@@ -19,18 +19,16 @@ class Flag extends EngineObject3D
 {
     constructor(pos)
     {
-        super(pos, buildGrid(4, 2.5, 16, 10, rgb(1, .3, .3)));
+        super(pos, buildGrid(vec2(4, 2.5), vec2(16, 10), rgb(1, .3, .3)));
         this.rotation3D.x = PI / 2; // stand the grid up, its x runs out from the pole
-        new EngineObject3D(pos.add(vec3(-2, -pos.y / 2, 0)), buildCylinder(.08, pos.y + 1.5, 8), rgb(.5, .4, .3));
+        new EngineObject3D(pos.add(vec3(-2, -pos.y / 2, 0)), buildCylinder(.16, pos.y + 1.5, 8), undefined, rgb(.5, .4, .3));
     }
     update()
     {
         // ripple the cloth in place and re-upload it, the edge on the pole stays still
-        const mesh = this.mesh;
-        for (const p of mesh.points)
+        for (const p of this.mesh.points)
             p.y = sin(p.x * 2 - time * 6) * .08 * (p.x + 2);
-        mesh.computeNormals(false);
-        mesh.dirty = true;
+        this.mesh.computeNormals(false); // marks the mesh dirty, so it uploads again on the next draw
     }
 }
 
@@ -41,7 +39,7 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky(rgb(.05, .05, .15), rgb(.3, .15, .3), rgb(.05, .05, .1));
     render3D.ambientColor = rgb(.5, .5, .55); // enough that the back of the flag still reads
-    new EngineObject3D(vec3(), buildGrid(30, 30, 1, 1, rgb(.2, .2, .25)));
+    new EngineObject3D(vec3(), buildGrid(vec2(30), 1, rgb(.2, .2, .25)));
     new Flag(vec3(0, 4.5, 0));
     for (let i = 0; i < 3; ++i)
         new Comet(hsl(i / 3, 1, .6), i * 2 * PI / 3);

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -196,7 +196,7 @@ test('Mesh.render is safe headless and dispose clears the buffer', () =>
     const m = new Mesh;
     m.addStrip([vec3(), vec3(1), vec3(2), vec3(3)]);
     assert.doesNotThrow(()=> m.render());
-    assert.doesNotThrow(()=> m.render(Matrix4.identity(), RED));
+    assert.doesNotThrow(()=> m.render(Matrix4.identity(), undefined, RED));
     assert.equal(m.buffer, undefined);
     assert.doesNotThrow(()=> m.dispose());
 });
@@ -221,10 +221,10 @@ function assertOutward(mesh, msg)
 
 test('buildLathe cylinder has the expected vertex counts and winds outward', () =>
 {
-    const flat = buildLathe([[1, -1], [1, 1]], 8, false);
+    const flat = buildLathe([[1, -1], [1, 1]], 8, false, false);
     assert.equal(flat.vertexCount, 8 * 6);
     assertOutward(flat, 'flat cylinder');
-    const smooth = buildLathe([[1, -1], [1, 1]], 8, true);
+    const smooth = buildLathe([[1, -1], [1, 1]], 8, true, false);
     assert.equal(smooth.vertexCount, 2 * 9 + 2);
     assertOutward(smooth, 'smooth cylinder');
     // smooth normals are radial on a cylinder
@@ -246,7 +246,7 @@ test('buildLathe octahedron with 4 sides winds outward', () =>
 
 test('buildSphere is unit diameter and outward', () =>
 {
-    const m = buildSphere(8, 4, true);
+    const m = buildSphere(1, 8, 4, true);
     assertOutward(m, 'sphere');
     let maxR = 0;
     for (const p of m.points)
@@ -279,7 +279,7 @@ test('buildBox has six axis aligned faces', () =>
 
 test('buildGrid samples the height and color functions and faces up', () =>
 {
-    const m = buildGrid(4, 2, 2, 1, (x, z)=> rgb((x + 2) / 4, 0, 0), (x, z)=> x + 10*z, true);
+    const m = buildGrid(vec2(4, 2), vec2(2, 1), (x, z)=> rgb((x + 2) / 4, 0, 0), (x, z)=> x + 10*z, true);
     assert.equal(m.vertexCount, 1 * (2 * 3 + 2));
     // corners: x in -2..2, z in -1..1
     const corner = m.points.find(p => Math.abs(p.x + 2) < 1e-6 && Math.abs(p.z + 1) < 1e-6);
@@ -288,7 +288,7 @@ test('buildGrid samples the height and color functions and faces up', () =>
     for (let i = 1; i < m.vertexCount - 1; ++i)
         assert.ok(m.normals[i].y > 0, 'grid normal points up');
     // winding: a flat grid faces +Y
-    const flat = buildGrid(2, 2, 1, 1);
+    const flat = buildGrid(vec2(2));
     const p = flat.points;
     const n = p[2].subtract(p[1]).cross(p[3].subtract(p[1])); // first real triangle at index 1
     assert.ok(n.y > 0, 'flat grid first triangle faces up');
@@ -306,12 +306,12 @@ test('buildLoft closes both ends and winds outward', () =>
         near(m.normals[i].length(), 1);
 });
 
-test('pushStrip and bake capture into a mesh headless', () =>
+test('drawStrip and bake capture into a mesh headless', () =>
 {
     const mesh = render3D.bake(()=>
     {
-        render3D.pushStrip([vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0), vec3(1, 1, 0)]);
-        render3D.pushStrip([vec3(0, 0, 1), vec3(1, 0, 1), vec3(0, 1, 1)]);
+        render3D.drawStrip([vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0), vec3(1, 1, 0)]);
+        render3D.drawStrip([vec3(0, 0, 1), vec3(1, 0, 1), vec3(0, 1, 1)]);
     });
     assert.ok(mesh instanceof Mesh);
     assert.equal(mesh.vertexCount, 12);
@@ -338,7 +338,7 @@ test('drawing helpers push the expected vertex counts when baked', () =>
     const line = render3D.bake(()=> render3D.drawLine(vec3(0, 0, 0), vec3(4, 0, 0), .5));
     assert.equal(line.vertexCount, 6);
     near(Math.abs(line.points[1].y), .25); // ribbon width across the line, in the screen plane
-    const disc = render3D.bake(()=> render3D.drawSoftDisc(vec3(), 1, WHITE, vec3(0, 0, 1), 8));
+    const disc = render3D.bake(()=> render3D.drawSoftDisc(vec3(), 2, WHITE, vec3(0, 0, 1), 8));
     assert.equal(disc.vertexCount, 3 * (2 * 9 + 2));
     // each ring strip alternates outer, inner; the last real vertex is inner, the one before is the transparent rim
     near(disc.colors[disc.vertexCount - 3].a, 0);
@@ -359,7 +359,7 @@ test('drawSoftDisc triangles face the supplied normal', () =>
 {
     for (const n of [vec3(0, 0, 1), vec3(0, 1, 0), vec3(1, 0, 0), vec3(1, 1, 1).normalize()])
     {
-        const disc = render3D.bake(()=> render3D.drawSoftDisc(vec3(), 1, WHITE, n, 8));
+        const disc = render3D.bake(()=> render3D.drawSoftDisc(vec3(), 2, WHITE, n, 8));
         const p = disc.points;
         let checked = 0;
         for (let i = 0; i + 2 < p.length; ++i)
@@ -400,7 +400,7 @@ test('an odd strip does not flip the winding of the strips after it', () =>
 test('EngineObject3D extends EngineObject and has a 3D transform', () =>
 {
     const mesh = buildBox();
-    const o = new EngineObject3D(vec3(1, 2, 3), mesh, RED);
+    const o = new EngineObject3D(vec3(1, 2, 3), mesh, undefined, RED);
     assert.ok(o instanceof EngineObject);
     assert.ok(engineObjects.includes(o));
     nearVec(o.pos3D, 1, 2, 3);
@@ -442,10 +442,10 @@ test('EngineObject3D render is a no-op and render3D draws the mesh through the p
 {
     let drawn;
     const saved = render3D.drawMesh;
-    render3D.drawMesh = (mesh, matrix, color, tileInfo)=> drawn = {mesh, matrix, color, tileInfo};
+    render3D.drawMesh = (mesh, matrix, tileInfo, color)=> drawn = {mesh, matrix, tileInfo, color};
     const mesh = buildBox();
     const tileInfo = new TileInfo(vec2(), vec2(16));
-    const o = new EngineObject3D(vec3(1, 0, 0), mesh, RED, tileInfo);
+    const o = new EngineObject3D(vec3(1, 0, 0), mesh, tileInfo, RED);
     o.render();
     assert.equal(drawn, undefined);
     o.render3D();
@@ -488,7 +488,7 @@ test('render3D stages draw the sky, opaque by renderOrder, onRender, then the tr
     new Tracked('far', vec3(0, 0, -5), true);
     const dead = new Tracked('dead', vec3(), false);
     dead.destroy();
-    render3D.onRender = ()=> record('onRender');
+    render3D.onRenderOpaque = ()=> record('onRender');
     render3D.onRenderTransparent = ()=> record('onRenderTransparent:' + (render3D.blend ? 'T' : 'O'));
     render3D.sky = new Mesh;
     render3D.drawSky = ()=> record('sky');
@@ -504,7 +504,7 @@ test('render3D stages draw the sky, opaque by renderOrder, onRender, then the tr
     assert.ok(order.every(o => o.additive === false && o.depthTest === true), 'both stages draw with additive off and depth test on');
     assert.equal(render3D.blend, false);      // the stage leaves the fields honest afterward
     assert.equal(render3D.depthWrite, true);
-    render3D.onRender = undefined;
+    render3D.onRenderOpaque = undefined;
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
     render3D.blend = false;
@@ -517,18 +517,18 @@ test('render3DSmoothShading sets the default for the builders', () =>
 {
     const cylinder = [[1, -1], [1, 1]];
     setRender3DSmoothShading(true);
-    assert.equal(buildLathe(cylinder, 8).vertexCount, 2 * 9 + 2);   // one ribbon
-    assert.equal(buildGrid(2, 2, 2, 2).vertexCount, 2 * (2 * 3 + 2)); // one ribbon per row
+    assert.equal(buildLathe(cylinder, 8, undefined, false).vertexCount, 2 * 9 + 2);   // one ribbon
+    assert.equal(buildGrid(vec2(2), 2).vertexCount, 2 * (2 * 3 + 2)); // one ribbon per row
     setRender3DSmoothShading(false);
-    assert.equal(buildLathe(cylinder, 8).vertexCount, 8 * 6);       // one strip per quad
-    assert.equal(buildGrid(2, 2, 2, 2).vertexCount, 4 * 6);         // one strip per cell
+    assert.equal(buildLathe(cylinder, 8, undefined, false).vertexCount, 8 * 6);       // one strip per quad
+    assert.equal(buildGrid(vec2(2), 2).vertexCount, 4 * 6);         // one strip per cell
     // an explicit argument wins over the default
-    assert.equal(buildLathe(cylinder, 8, true).vertexCount, 2 * 9 + 2);
+    assert.equal(buildLathe(cylinder, 8, true, false).vertexCount, 2 * 9 + 2);
 });
 
 test('flat buildGrid faces up with one normal per cell', () =>
 {
-    const m = buildGrid(4, 4, 2, 2, undefined, (x, z)=> x * .5, false);
+    const m = buildGrid(vec2(4), 2, undefined, (x, z)=> x * .5, false);
     for (let i = 0; i < m.vertexCount; ++i)
     {
         assert.ok(m.normals[i].y > 0);
@@ -629,7 +629,7 @@ test('screenToRay points forward at the center and right of it toward +x', () =>
 
 test('drawShadow is a soft disc facing up just above the floor', () =>
 {
-    const disc = render3D.bake(()=> render3D.drawShadow(vec3(3, 5, -2), 2, 1));
+    const disc = render3D.bake(()=> render3D.drawShadow(vec3(3, 5, -2), 4, 1));
     assert.equal(disc.vertexCount, 3 * (2 * 17 + 2));
     for (let i = 0; i < disc.vertexCount; ++i)
     {
@@ -661,18 +661,19 @@ test('Mesh.dirty is set by every edit', () =>
 test('drawSky draws unlit and unfogged with depth off, then restores every field', () =>
 {
     let seen;
-    const sky = new Mesh;
-    sky.render = (matrix)=>
+    const drawMesh = render3D.drawMesh;
+    render3D.drawMesh = (mesh, matrix)=>
     {
         seen = {lighting: render3D.lighting, blend: render3D.blend, depthTest: render3D.depthTest,
             depthWrite: render3D.depthWrite, fogEnd: render3D.fogEnd, matrix};
     };
+    render3D.sky = new Mesh;
     render3D.camera.pos = vec3(1, 2, 3);
     render3D.fogEnd = 50;
     render3D.lighting = true;
     render3D.specular = .5;
     render3D.cullBackFaces = true;
-    render3D.drawSky(sky);
+    render3D.drawSky();
     assert.deepEqual([seen.lighting, seen.blend, seen.depthTest, seen.depthWrite, seen.fogEnd], [false, false, false, false, 0]);
     nearVec(seen.matrix.getTranslation(), 1, 2, 3); // around the camera
     const radius = (render3D.camera.near + render3D.camera.far) / 2;
@@ -685,8 +686,10 @@ test('drawSky draws unlit and unfogged with depth off, then restores every field
     assert.equal(render3D.depthTest, true);
     assert.equal(render3D.depthWrite, true);
     // restored even when the draw throws
-    sky.render = ()=> { throw new Error('boom'); };
-    assert.throws(()=> render3D.drawSky(sky), /boom/);
+    render3D.drawMesh = ()=> { throw new Error('boom'); };
+    assert.throws(()=> render3D.drawSky(), /boom/);
+    render3D.drawMesh = drawMesh;
+    render3D.sky = undefined;
     assert.equal(render3D.fogEnd, 50);
     assert.equal(render3D.lighting, true);
     render3D.fogEnd = 0;
@@ -694,7 +697,7 @@ test('drawSky draws unlit and unfogged with depth off, then restores every field
     render3D.cullBackFaces = false;
 });
 
-test('pushStripUnlit turns lighting off for the push and restores it, even on a throw', () =>
+test('drawStripUnlit turns lighting off for the push and restores it, even on a throw', () =>
 {
     const seen = [];
     render3D.lighting = true;
@@ -703,15 +706,15 @@ test('pushStripUnlit turns lighting off for the push and restores it, even on a 
         const capture = render3D.capture;
         const addStrip = capture.addStrip.bind(capture);
         capture.addStrip = (...args)=> { seen.push(render3D.lighting); return addStrip(...args); };
-        render3D.pushStripUnlit([vec3(), vec3(1), vec3(2)]);
+        render3D.drawStripUnlit([vec3(), vec3(1), vec3(2)]);
         render3D.drawBillboard(vec3(), vec2(1));
         render3D.drawLine(vec3(), vec3(1));
         render3D.drawShadow(vec3(), 1);
-        render3D.pushStrip([vec3(), vec3(1), vec3(2)]);
+        render3D.drawStrip([vec3(), vec3(1), vec3(2)]);
     });
     assert.deepEqual(seen, [false, false, false, false, false, false, true]); // three disc rings in the shadow
     assert.equal(render3D.lighting, true);
-    assert.throws(()=> render3D.bake(()=> render3D.pushStripUnlit([vec3(), vec3(1)]))); // too few points asserts
+    assert.throws(()=> render3D.bake(()=> render3D.drawStripUnlit([vec3(), vec3(1)]))); // too few points asserts
     assert.equal(render3D.lighting, true);
 });
 
@@ -726,7 +729,7 @@ test('transparent stage queues every draw by distance and replays far to near wi
     render3D.additive = true;
     render3D.drawMesh(new Mesh, buildMatrix(vec3(0, 0, -10)));   // 20 away
     render3D.additive = false;
-    render3D.pushStrip([vec3(-1, 0, 5), vec3(1, 0, 5), vec3(0, 1, 5)]); // center (0, .33, 5): 5 away
+    render3D.drawStrip([vec3(-1, 0, 5), vec3(1, 0, 5), vec3(0, 1, 5)]); // center (0, .33, 5): 5 away
     render3D.drawBillboard(vec3(0, 0, 0), vec2(1));                    // 10 away, unlit
     const queue = render3D.transparentQueue;
     assert.equal(queue.length, 3);
@@ -756,7 +759,7 @@ test('transparent stage queues every draw by distance and replays far to near wi
 
 test('capped lathes close the ends that have a radius with outward flat discs', () =>
 {
-    const open = buildLathe([[1, -1], [1, 1]], 8, false);
+    const open = buildLathe([[1, -1], [1, 1]], 8, false, false);
     const closed = buildLathe([[1, -1], [1, 1]], 8, false, true);
     assert.equal(closed.vertexCount, open.vertexCount + 2 * (8 + 2)); // one 8 point strip per cap
     assertOutward(closed, 'capped cylinder');
@@ -775,14 +778,14 @@ test('capped lathes close the ends that have a radius with outward flat discs', 
 
 test('buildCylinder is a capped lathe centered on the origin', () =>
 {
-    const c = buildCylinder(2, 4, 6, false);
+    const c = buildCylinder(4, 4, 6, false);
     assert.equal(c.vertexCount, 6 * 6 + 2 * (6 + 2));
     assertOutward(c, 'cylinder');
     let top = -1e9, bottom = 1e9, radius = 0;
     for (const p of c.points)
         top = Math.max(top, p.y), bottom = Math.min(bottom, p.y), radius = Math.max(radius, Math.hypot(p.x, p.z));
     near(top, 2); near(bottom, -2); near(radius, 2);
-    assert.equal(buildCylinder(2, 4, 6, false, false).vertexCount, 6 * 6);
+    assert.equal(buildCylinder(4, 4, 6, false, false).vertexCount, 6 * 6);
 });
 
 test('Camera3D.orbit parks the camera at the distance and angles and looks at the target', () =>
@@ -798,23 +801,30 @@ test('Camera3D.orbit parks the camera at the distance and angles and looks at th
     nearVec(c.forward(), -c.pos.x / 10, -c.pos.y / 10, 0);
 });
 
-test('EngineObject3D integrates velocity3D in updatePhysics', () =>
+test('EngineObject3D integrates velocity3D in updateTransforms, for children too, and has no 2D mass', () =>
 {
     const o = new EngineObject3D(vec3(1, 2, 3));
     o.velocity3D = vec3(.1, 0, -.1);
-    o.updatePhysics();
+    o.updateTransforms();
     nearVec(o.pos3D, 1.1, 2, 2.9);
     near(o.pos.x, 0); // the 2D body is untouched
+    assert.equal(o.mass, 0);
+    const child = new EngineObject3D(vec3(0, 0, 1));
+    o.addChild(child);
+    child.velocity3D = vec3(0, 1, 0);
+    o.updateTransforms(); // the engine only calls the root, it recurses into the children
+    nearVec(child.pos3D, 0, 1, 1);
+    child.destroy();
     o.destroy();
 });
 
 test('buildGrid takes a flat color or a color function', () =>
 {
-    const flat = buildGrid(2, 2, 1, 1, RED);
+    const flat = buildGrid(vec2(2), 1, RED);
     assert.ok(flat.colors.every(c => c.r === 1 && c.g === 0));
-    const fn = buildGrid(2, 2, 2, 1, (x, z)=> x < 0 ? RED : WHITE, undefined, false);
+    const fn = buildGrid(vec2(2), vec2(2, 1), (x, z)=> x < 0 ? RED : WHITE, undefined, false);
     assert.ok(fn.colors.slice(0, 6).every(c => c.g === 0) && fn.colors.slice(6).every(c => c.g === 1));
-    assert.ok(buildGrid(2, 2).colors.every(c => c.g === 1));
+    assert.ok(buildGrid(vec2(2)).colors.every(c => c.g === 1));
 });
 
 test('Light3D is an EngineObject3D that draws nothing and follows a parent', () =>
@@ -963,11 +973,11 @@ test('HeightMap.getHeight matches the mesh triangles, split from (i, j) to (i+1,
 
 test('drawShadow follows a height function and lifts by the given amount', () =>
 {
-    const disc = render3D.bake(()=> render3D.drawShadow(vec3(2, 9, 3), 1, (x, z)=> x + z, WHITE, .5));
+    const disc = render3D.bake(()=> render3D.drawShadow(vec3(2, 9, 3), 2, (x, z)=> x + z, WHITE, .5));
     assert.equal(disc.vertexCount, 3 * (2 * 17 + 2));
     for (const p of disc.points)
         near(p.y, p.x + p.z + .5);
-    const flat = render3D.bake(()=> render3D.drawShadow(vec3(2, 9, 3), 1, 4));
+    const flat = render3D.bake(()=> render3D.drawShadow(vec3(2, 9, 3), 2, 4));
     for (const p of flat.points)
         near(p.y, 4.02);
 });
@@ -1106,19 +1116,19 @@ test('updateShadowMatrix fits an orthographic box around the center, snapped to 
 
 test('buildCone, buildCapsule and buildTorus are outward shapes of the documented size', () =>
 {
-    const cone = buildCone(.5, 1, 8, false);
+    const cone = buildCone(1, 1, 8, false);
     assertOutward(cone, 'cone');
     near(Math.max(...cone.points.map(p => p.y)), .5);
     near(Math.min(...cone.points.map(p => p.y)), -.5);
     assert.equal(buildCone(.5, 1, 8, false, false).vertexCount, 8 * 6); // no base
-    const capsule = buildCapsule(.5, 1, 8, 2, false);
+    const capsule = buildCapsule(1, 1, 8, 2, false);
     assertOutward(capsule, 'capsule');
     near(Math.max(...capsule.points.map(p => p.y)), 1);
     near(Math.min(...capsule.points.map(p => p.y)), -1);
     // every torus normal points away from the middle of the tube, and the smooth seam matches its neighbours
-    assert.equal(buildTorus(.5, .15, 8, 4, false).vertexCount, 4 * 8 * 6); // a quad per side per segment
-    assert.equal(buildTorus(.5, .15, 8, 4, true).vertexCount, 4 * (2 * 9 + 2));  // a ribbon per segment
-    for (const torus of [buildTorus(.5, .15, 8, 4, false), buildTorus(.5, .15, 8, 4, true)])
+    assert.equal(buildTorus(1.3, .3, 8, 4, false).vertexCount, 4 * 8 * 6); // a quad per side per segment
+    assert.equal(buildTorus(1.3, .3, 8, 4, true).vertexCount, 4 * (2 * 9 + 2));  // a ribbon per segment
+    for (const torus of [buildTorus(1.3, .3, 8, 4, false), buildTorus(1.3, .3, 8, 4, true)])
     {
         torus.points.forEach((p, i) =>
         {
@@ -1126,7 +1136,7 @@ test('buildCone, buildCapsule and buildTorus are outward shapes of the documente
             assert.ok(n.dot(p.subtract(c).normalize()) > .5, 'torus normal points out of the tube');
         });
     }
-    const smooth = buildTorus(.5, .15, 8, 4, true);
+    const smooth = buildTorus(1.3, .3, 8, 4, true);
     smooth.points.forEach((p, i) =>
     {
         const c = vec3(p.x, 0, p.z).normalize(.5);
@@ -1186,34 +1196,82 @@ test('HeightMap.raycast finds the ground along a ray', () =>
     close(side, 17.5); assert.ok(true, `${side}`);
 });
 
-test('unlit objects draw with lighting off and leave it on afterward', () =>
+test('the stage loop sets the draw state from each object, so render3D overrides inherit it', () =>
 {
-    const o = new EngineObject3D(vec3(), buildBox());
-    assert.equal(o.unlit, false);
-    o.unlit = true;
-    render3D.lighting = true;
-    let seen;
-    const drawMesh = render3D.drawMesh;
-    render3D.drawMesh = ()=> seen = render3D.lighting;
-    try { o.render3D(); }
-    finally { render3D.drawMesh = drawMesh; }
-    assert.equal(seen, false);
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const seen = {};
+    class Probe extends EngineObject3D
+    {
+        render3D() { seen[this.name] = {lighting: render3D.lighting, additive: render3D.additive, specular: render3D.specular, receiveShadow: render3D.receiveShadow, blend: render3D.blend}; }
+    }
+    const plain = new Probe, lamp = new Probe, shiny = new Probe, glow = new Probe;
+    plain.name = 'plain';
+    lamp.name = 'lamp', lamp.unlit = true, lamp.receiveShadow = false;
+    shiny.name = 'shiny', shiny.specular = .7;
+    glow.name = 'glow', glow.additive = true; // additive alone puts it in the transparent stage
+    assert.equal(plain.unlit, false); assert.equal(plain.receiveShadow, true); assert.equal(plain.specular, 0); assert.equal(plain.additive, false);
+    render3D.camera.pos = vec3(0, 0, 10);
+    render3D.camera.rotation = vec3();
+    render3D.updateMatrices(1);
+    render3D.specular = .5; // a stray setting must not reach the objects
+    render3D.renderStages();
+    assert.deepEqual(seen.plain, {lighting: true, additive: false, specular: 0, receiveShadow: true, blend: false});
+    assert.deepEqual(seen.lamp, {lighting: false, additive: false, specular: 0, receiveShadow: false, blend: false});
+    assert.deepEqual(seen.shiny, {lighting: true, additive: false, specular: .7, receiveShadow: true, blend: false});
+    assert.deepEqual(seen.glow, {lighting: true, additive: true, specular: 0, receiveShadow: true, blend: true});
+    // and the pass leaves the defaults behind
+    assert.equal(render3D.specular, 0);
     assert.equal(render3D.lighting, true);
+    assert.equal(render3D.receiveShadow, true);
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});
+
+test('drawBox and drawSphere build their unit meshes once, raycastObjects picks the nearest object', () =>
+{
+    assert.doesNotThrow(()=> render3D.drawBox(vec3(), 2, RED, vec3(0, 1, 0)));
+    assert.doesNotThrow(()=> render3D.drawSphere(vec3(), 2, RED));
+    assert.ok(render3D.boxMesh instanceof Mesh && render3D.sphereMesh instanceof Mesh);
+    const nearObject = new EngineObject3D(vec3(0, 0, -5), buildBox()), farObject = new EngineObject3D(vec3(0, 0, -12), buildBox());
+    farObject.scale3D = vec3(2);
+    const miss = new EngineObject3D(vec3(5, 0, -5), buildBox());
+    const hit = render3D.raycastObjects(vec3(), vec3(0, 0, -1));
+    assert.equal(hit.object, nearObject);
+    near(hit.distance, 5 - Math.sqrt(.75)); // to the bounding sphere
+    assert.equal(render3D.raycastObjects(vec3(), vec3(0, 0, -1), [farObject]).object, farObject);
+    assert.equal(render3D.raycastObjects(vec3(), vec3(0, 1, 0)), undefined);
+    nearObject.destroy(); farObject.destroy(); miss.destroy();
+});
+
+test('Mesh getBounds, center and fit', () =>
+{
+    const m = new Mesh().combine(buildBox(vec3(2, 4, 6)), Matrix4.translation(vec3(10, 0, 0)));
+    const {min, max} = m.getBounds();
+    nearVec(min, 9, -2, -3); nearVec(max, 11, 2, 3);
+    m.center();
+    nearVec(m.getBounds().min, -1, -2, -3);
+    m.fit(3);
+    nearVec(m.getBounds().max, .5, 1, 1.5);
+});
+
+test('EngineObject3D.lookAt turns the object toward a target', () =>
+{
+    const o = new EngineObject3D(vec3());
+    o.lookAt(vec3(5, 0, 0));
+    nearVec(o.getMatrix().transformDirection(vec3(0, 0, -1)), 1, 0, 0);
+    o.lookAt(vec3(0, 5, 0));
+    nearVec(o.getMatrix().transformDirection(vec3(0, 0, -1)), 0, 1, 0);
     o.destroy();
 });
 
-test('receiveShadow objects and the receiveShadows state keep draws out of the shadow darkening', () =>
+test('debug primitives can be recorded headless', () =>
 {
-    assert.equal(render3D.receiveShadows, true);
-    const o = new EngineObject3D(vec3(), buildBox());
-    assert.equal(o.receiveShadow, true);
-    o.receiveShadow = false;
-    let seen;
-    const drawMesh = render3D.drawMesh;
-    render3D.drawMesh = ()=> seen = render3D.receiveShadows;
-    try { o.render3D(); }
-    finally { render3D.drawMesh = drawMesh; }
-    assert.equal(seen, false);
-    assert.equal(render3D.receiveShadows, true);
-    o.destroy();
+    assert.doesNotThrow(()=>
+    {
+        debugBox3D(vec3(), 2, RED, 1, vec3(0, 1, 0));
+        debugSphere3D(vec3(), 2);
+        debugLine3D(vec3(), vec3(1));
+        debugPoint3D(vec3(1));
+    });
 });

@@ -761,9 +761,11 @@ postProcess                    // Global instance created by the plugin
 // Vectors
 vec3(x, y, z)                  // vec3() is zero, vec3(s) fills all, vec3(x, y) has z=0
 isVector3(v)                   // true if v is a Vector3
+randVector3(length=1)          // random direction, uniform over the sphere
 v.add(v2) v.subtract(v2) v.multiply(v2) v.divide(v2) v.scale(s)
 v.dot(v2) v.cross(v2) v.length() v.lengthSquared() v.distance(v2) v.distanceSquared(v2)
 v.normalize(length=1) v.clampLength(length=1) v.lerp(v2, percent)
+v.reflect(normal, restitution=1) // bounce off a surface, 0 slides along it
 v.abs() v.floor() v.round() v.copy() v.set(x, y, z) v.isValid()
 v.transform(matrix)            // point through a Matrix4, translation included
 v.transformDirection(matrix)   // direction through a Matrix4, rotation and scale only
@@ -780,7 +782,7 @@ m.copy() m.transformPoint(v) m.transformDirection(v) m.getTranslation()
 buildMatrix(pos, rotation, scale)              // translate * rotate * scale, any arg optional
 // euler is vec3(pitch, yaw, roll): applied to points as roll (Z), then pitch (X), then yaw (Y)
 
-// Collision - boxes are centered with full size, cylinders stand on Y
+// Collision - boxes are centered with full size, spheres and cylinders take a radius, cylinders stand on Y
 isPointInBox3D(point, pos, size)               // true if point is in the box, boundary inclusive
 isOverlapping3D(posA, sizeA, posB, sizeB)      // box vs box, touching edges do not overlap
 collideSphereSphere(posA, radiusA, posB, radiusB)          // push A out of B, or undefined
@@ -793,12 +795,13 @@ raycastBox(origin, direction, pos, size)       // distance t to the box, or unde
 ```
 
 ## LittleJS 3D Rendering
-- Optional plugin that draws meshes, billboards and lines into the engine's WebGL canvas, under the 2D layer
-- Requires the 3D Math plugin. One shader: directional + ambient light, specular, fog, textures, vertex colors
-- Meshes are triangle strips drawn by matrix; immediate mode pushes batch into a stream
-- EngineObject3D extends EngineObject, so update, destroy, timers and renderOrder all work; addChild parents 3D transforms when the parent is an EngineObject3D; the 2D pos is ignored by rendering
-- velocity3D is added to pos3D each frame, there is no other 3D physics; 2D physics still runs on the inherited pos and velocity, handy for pseudo-3D games that copy pos into pos3D
-- See the `examples/shorts/render3d*.js` demos: shapes, billboards, blending, height map terrain, collision with picking, lights, particles, and OBJ mesh loading
+- Optional plugin that draws meshes, billboards, lines and particles into the engine's WebGL canvas, under the 2D layer
+- Requires the 3D Math plugin. One shader: directional, ambient and point lights, specular, fog, shadows, textures, vertex colors
+- Meshes are triangle strips uploaded once and drawn by matrix; immediate mode draws batch into a stream
+- EngineObject3D extends EngineObject, so update, destroy, timers, children and renderOrder all work; the 2D pos is ignored by rendering
+- The pass has an opaque stage and a transparent stage; every object and callback runs with the draw state set from the object's flags
+- Sizes are full sizes like buildBox and drawCircle; a texture always comes before its tint like drawTile
+- See the `examples/shorts/render3d*.js` demos: shapes, billboards, height map terrain, collision with picking, lights, particles, trails, text and OBJ loading
 
 ```javascript
 // Setup (call in gameInit)
@@ -807,117 +810,141 @@ new Render3DPlugin()                  // creates global render3D, renders automa
 // Camera
 render3D.camera.pos = vec3(0, 5, 10)  // Camera3D: pos, rotation (pitch, yaw, roll), fov, near, far
 render3D.camera.lookAt(target)        // point at a target, clears roll
+render3D.camera.orbit(target, distance, yaw, pitch=.5) // park the camera on an orbit looking at the target
 render3D.camera.align2D = true        // lock to the 2D camera so the z=0 plane matches world space
 render3D.camera.forward() .right() .up()
-render3D.camera.orbit(target, distance, yaw, pitch=.5) // park the camera on an orbit looking at the target
 render3D.cameraRight .cameraUp .cameraForward  // this frame's camera axes, read only
 render3D.viewMatrix .projectionMatrix .viewProjection // this frame's matrices, read only
 render3D.updateMatrices()             // rebuild them now, automatic each frame
 render3D.worldToScreen(pos)           // Vector3 -> screen pixels, undefined when behind the camera
 render3D.worldToClip(pos)             // Vector3 -> clip space -1..1, undefined when behind the camera
+render3D.screenToRay(screenPos)       // {origin, direction} world ray under a screen point
+render3D.raycastObjects(origin, direction, objects) // {object, distance} of the nearest EngineObject3D hit, for picking
+render3D.isSphereVisible(center, radius) // the frustum test drawMesh uses, for culling your own draws
 
-// Lights and fog
+// Lights and fog, read at each draw
 render3D.lightDirection = vec3(.5, -1, .3).normalize()  // direction the light travels
 render3D.lightColor = WHITE
 render3D.ambientColor = rgb(.3, .3, .3)
 render3D.fogColor = undefined         // uses canvasClearColor when undefined
 render3D.fogStart = 20; render3D.fogEnd = 100   // by camera distance, fogEnd 0 disables fog
-// Lights and fog are read when a draw is issued or the stream flushes, set them before drawing
+new Light3D(pos3D, radius, color)     // point light, an EngineObject3D; the 8 nearest the camera light the frame, alpha scales brightness
 
-// Shadows - one shadow map from the directional light, lit opaque meshes and pushes cast, everything lit receives
+// Shadows - one shadow map from the directional light, lit opaque objects and draws cast, everything lit receives
 render3D.shadows = true               // off by default and free when off, blob shadows (drawShadow) still work alongside
 render3D.shadowMapSize = 1024         // texels, rebuilt when it changes
 render3D.shadowRange = 40             // world size the map covers around shadowCenter, smaller is sharper
 render3D.shadowCenter = undefined     // Vector3 center of the shadowed area, undefined follows the camera
 render3D.shadowBias = .003            // raise for speckled self shadowing, lower if shadows float away from their casters
 render3D.shadowSoftness = 1           // blur radius in texels
-render3D.shadowMatrix                 // this frame's light view projection, read only
 
-// Draw state, read at each draw (set before drawing)
+// Sky
+render3D.setSky(topColor, horizonColor, bottomColor) // build a dome, set it as render3D.sky, match the fog color to the horizon
+render3D.sky = buildSky(topColor, horizonColor, bottomColor, sides, rings) // or set a dome yourself
+
+// Draw state, set before drawing; the pass sets it from each object's flags and resets it for the callbacks
 render3D.lighting = true              // false draws plain vertex color times texture
-render3D.blend = false                // opaque stage sets false, transparent stage sets true
-render3D.additive = false             // additive blending when blend is on
-render3D.depthTest = true; render3D.depthWrite = true
-render3D.cullBackFaces = false
+render3D.additive = false             // additive blending in the transparent stage
 render3D.specular = 0                 // Phong highlight strength
-render3D.receiveShadows = true        // false keeps the next draws out of the shadow map's darkening
-render3D.onRender = ()=> {}           // opaque stage, after the opaque objects: world geometry outside of objects
-render3D.onRenderTransparent = ()=> {} // transparent stage, blending on and depth writes off: billboards, glows, shadows
-// every draw in the transparent stage (objects and pushes alike) is sorted far to near before it lands, so alpha and additive mix correctly
-render3D.sky = buildSky(topColor, horizonColor, bottomColor) // sky dome drawn around the camera behind everything
-render3D.setSky(topColor, horizonColor, bottomColor) // build the dome, set it as the sky, and match the fog color to the horizon
-render3D.renderAfter2D = false        // true draws the 3D pass on top of the 2D scene instead of under it
-render3D.sortTransparent = true       // false draws the transparent stage in object order with no far to near sort
+render3D.receiveShadow = true         // false keeps the next draws out of the shadow map's darkening
+render3D.depthTest = true; render3D.depthWrite = true // the transparent stage turns depth writes off
+render3D.cullBackFaces = false
+
+// The pass
+render3D.onRenderOpaque = ()=> {}     // after the opaque objects: world geometry drawn outside of objects, also called for the shadow map
+render3D.onRenderTransparent = ()=> {} // after the transparent objects: billboards, glows and shadows drawn outside of objects
+// every transparent draw is sorted far to near before it lands, so alpha and additive mix correctly
+render3D.sortTransparent = true       // false draws the transparent stage in object order with no sort
 render3D.frustumCulling = true        // drawMesh skips meshes whose bounding sphere is outside the view
-render3D.isSphereVisible(center, radius) // the same test, for culling your own pushes
-render3D.screenToRay(screenPos)       // {origin, direction} world ray under a screen point, for picking with raycast*
+render3D.renderAfter2D = false        // true draws the 3D pass on top of the 2D scene instead of under it
+render3D.isRendering render3D.shadowPass // true inside the pass and inside the shadow map pass, read only
 setRender3DSmoothShading(true)        // default for every builder's smooth argument (render3DSmoothShading)
+
+// Objects - EngineObject with a 3D transform, drawn by the 3D pass
+new EngineObject3D(pos3D, mesh, tileInfo, color)
+obj.pos3D obj.rotation3D obj.scale3D   // Vector3, rotation is (pitch, yaw, roll)
+obj.velocity3D                          // added to pos3D each frame, children too
+obj.mesh obj.tileInfo obj.color         // what to draw and how
+obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
+obj.additive = true                     // additive blending, implies the transparent stage
+obj.unlit = true                        // draw with lighting off, for lamps and glowing things
+obj.specular = .5                       // highlight strength
+obj.castShadow = false                  // keep it out of the shadow map
+obj.receiveShadow = false               // draw it without the shadow map's darkening
+obj.renderOrder                         // sorts the opaque stage
+obj.getMatrix()                         // buildMatrix(pos3D, rotation3D, scale3D), composed with an EngineObject3D parent's
+obj.lookAt(target)                      // turn -Z toward a point
+obj.render3D()                          // override for custom drawing, the draw state is already set from the flags; render() is empty
+// children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local
+
+// Immediate mode - inside render3D() or a pass callback; strips batch into one draw per texture and state
+render3D.drawBox(pos, size, color, rotation)              // size is a vec3 or a number, untextured
+render3D.drawSphere(pos, size, color)                     // size is the diameter, untextured
+render3D.drawMesh(mesh, matrix, tileInfo, color)          // any mesh, one draw call
+render3D.drawBillboard(pos, size, tileInfo, color, angle) // camera facing quad, unlit, size is a Vector2
+render3D.drawQuad(a, b, c, d, tileInfo, color)            // corners in loop order, a is the texture's top left
+render3D.drawTriangle(a, b, c, color)
+render3D.drawLine(posA, posB, width, color)               // camera facing ribbon, unlit
+render3D.drawRibbon(points, width, color, tileInfo, side) // strip along a path, unlit, two sided; width and color one or per point, texture runs along it, side faces the camera unless given
+render3D.drawSoftDisc(pos, size, color, normal, sides)    // fades to transparent at the rim, unlit, faces the camera unless a normal is given
+render3D.drawShadow(pos, size, floorHeight, color, lift)  // soft blob shadow under pos, unlit; floorHeight can be (x, z)=> y to follow terrain
+render3D.drawStrip(points, normals, uvs, colors, tileInfo) // a raw triangle strip; normals, uvs and colors are one value or one per point
+render3D.drawStripUnlit(points, normals, uvs, colors, tileInfo) // same with lighting off
+render3D.flush()                                          // draw what is pending, automatic when needed
+render3D.bake(()=> { ...draws... })                       // returns the strips drawn inside as a Mesh
+
+// Debug primitives - like debugRect and friends, drawn on top of the scene in debug builds
+debugBox3D(pos, size, color, time, rotation)
+debugSphere3D(pos, size, color, time)
+debugLine3D(posA, posB, color, width, time)
+debugPoint3D(pos, color, time, size)
 
 // Meshes - triangle strips, uploaded on first render, drawn by matrix
 const mesh = new Mesh
-mesh.addStrip(points, normals, uvs, colors)   // one strip; normals/uvs/colors are one value or one per point
-mesh.combine(otherMesh, matrix, color)        // append a transformed mesh (weld a static world)
+mesh.addStrip(points, normals, uvs, colors)   // one strip; normals, uvs and colors are one value or one per point
+mesh.addQuad(a, b, c, d, color, uvs)          // corners in loop order, flat normal
+mesh.combine(otherMesh, matrix, color)        // append a transformed, tinted copy: many shapes in one draw call
 mesh.transform(matrix)                        // move every vertex in place
 mesh.flipNormals()                            // turn it inside out, for rooms and domes seen from within
 mesh.setColor(color)                          // every vertex color
 mesh.computeNormals(smooth=false)             // derive normals from the triangles
-mesh.radius                                   // bounding sphere for culling, computed by upload or computeRadius()
-mesh.render(matrix, color, tileInfo)          // one draw call with the current render3D state
+mesh.getBounds()                              // {min, max} around the vertices
+mesh.center() mesh.fit(size)                  // move the bounds onto the origin, scale the largest extent to size
+mesh.render(matrix, tileInfo, color)          // one draw call with the current draw state
 mesh.dispose()                                // free the GPU buffer, the CPU data stays
-mesh.upload()                                 // upload now instead of on first render
-mesh.vertexCount
+mesh.upload()                                 // upload now instead of on first render, also measures mesh.radius
+mesh.vertexCount mesh.radius                  // vertices, and the bounding sphere for culling and picking
 mesh.points mesh.normals mesh.uvs mesh.colors // the vertex arrays, one entry per strip vertex
 mesh.dirty = true                             // re-upload on the next draw after editing the arrays directly
-render3D.drawMesh(mesh, matrix, color, tileInfo)
 
-// Shape builders - return a Mesh centered on the origin, smooth defaults to render3DSmoothShading
-buildLathe(profile, sides=8, smooth, capped)  // profile [[radius, y], ...] bottom to top, revolved about Y; capped closes the ends
-buildCylinder(radius=.5, height=1, sides=12, smooth, capped=true)
-buildSphere(segments=12, rings=6, smooth)     // diameter 1
-buildCone(radius=.5, height=1, sides=12, smooth, capped=true)   // point up
-buildCapsule(radius=.5, height=1, segments=12, rings=4, smooth) // height is the straight part
-buildTorus(radius=.5, tubeRadius=.15, segments=16, sides=8, smooth) // flat around Y
+// Shape builders - return a Mesh centered on the origin, sizes are full sizes, smooth defaults to render3DSmoothShading
 buildBox(size=vec3(1))                        // six faces with uvs, always flat
-buildGrid(sizeX, sizeZ, segmentsX, segmentsZ, color, heightFunction, smooth) // XZ plane, color is a Color or (x, z)=> Color, height is (x, z)=> y
+buildSphere(size=1, sides=12, rings=6, smooth)
+buildCylinder(size=1, height=1, sides=12, smooth, capped=true)
+buildCone(size=1, height=1, sides=12, smooth, capped=true)      // point up
+buildCapsule(size=1, height=1, sides=12, rings=4, smooth)      // height is the straight part
+buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth) // flat around Y
+buildLathe(profile, sides=8, smooth, capped=true) // profile [[radius, y], ...] bottom to top revolved about Y, a closed profile is a ring
+buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth) // XZ plane; segments a number or vec2, color a Color or (x, z)=> Color, height (x, z)=> y
 buildLoft(stations)                           // [[z, halfWidth, top, bottom, sideHeight], ...] nose first, always flat
 buildSky(topColor, horizonColor, bottomColor) // dome colored by height, set as render3D.sky
+buildExtrude(tileInfo, size, depth)           // 3D sprite: the solid pixels of a tile extruded, colors kept; or rows of pixels (Color, truthy for white, falsy for empty)
+buildText3D(text, size, depth, font)          // extruded glyphs from an ImageFont, the white engine font by default so the object color tints it
 
 // Height map terrain - from a 2D array [row][column] of 0-1 heights or an image's red channel
 const terrain = new HeightMap(heightsOrImage, size=vec2(1), height=1, colorsOrImage)
 terrain.buildMesh(smooth)                     // one vertex per sample, centered on the origin
-
-// 3D sprites and text - extrude the solid pixels of a tile, faces and walls merged along runs, pixel colors become vertex colors
-buildExtrude(tileInfo, size, depth)           // any tile from a loaded texture, or rows of pixels (Color, truthy for white, falsy for empty)
-buildText3D(text, size, depth, font)          // extruded glyphs from an ImageFont, the white engine font by default so the object color tints it
 terrain.getHeight(x, z)                       // world height of the drawn mesh there, to stand things on it
 terrain.raycast(origin, direction)            // distance along a ray to the ground or undefined, for clicking on terrain
 terrain.getColor(x, z)                        // nearest sample color
 terrain.rows terrain.columns                  // samples along Z and X
 
-// All 3D draws happen inside the 3D pass: from render3D.onRender or an EngineObject3D's render3D()
-// Argument order: billboards take tileInfo before color like drawTile; geometry draws (drawMesh, drawQuad, pushStrip, mesh.render) take color before tileInfo
-// Immediate mode - pushes batch into one strip per flush, textured pushes flush on texture change
-render3D.pushStrip(points, normals, uvs, colors, tileInfo)
-render3D.pushStripUnlit(points, normals, uvs, colors, tileInfo) // same with lighting off
-render3D.drawBillboard(pos, size, tileInfo, color, angle) // camera facing quad, unlit, size is a Vector2
-render3D.drawQuad(a, b, c, d, color, tileInfo)            // corners in loop order, a is the texture's top left
-render3D.drawTriangle(a, b, c, color)
-render3D.drawLine(start, end, thickness, color)           // camera facing ribbon, unlit
-render3D.drawRibbon(points, width, color, tileInfo, side) // strip along a path, unlit, two sided; width and color one or per point, texture runs along it, side faces the camera unless given
-render3D.drawSoftDisc(pos, radius, color, normal, sides)  // fades to transparent at the rim, unlit, faces the camera unless a normal is given
-render3D.drawShadow(pos, radius, floorHeight, color, lift) // soft blob shadow under pos, unlit; floorHeight can be (x, z)=> y to follow terrain
-render3D.flush()                                          // draw what is pending, automatic when needed
-render3D.bake(()=> { ...pushes... })                      // returns the pushes as a Mesh
-
-// OBJ meshes - v, vt, vn and f lines, convex polygons, no materials; scale with scale3D
+// OBJ meshes - v, vt, vn and f lines, convex polygons, no materials
 parseOBJ(text, smooth)                        // Mesh from OBJ text, smooth normals when the file has none
-await loadOBJ(url, smooth)                    // fetch then parse, in an async gameInit
-
-// Point lights - EngineObject3D so they move, parent and destroy like anything else, the first 8 light the frame
-new Light3D(pos3D, radius, color)             // radius is where the light reaches zero, alpha scales brightness
+await loadOBJ(url, smooth)                    // fetch then parse, in an async gameInit; chain .center().fit(size) for models of unknown units
 
 // Particles - the 3D twin of ParticleEmitter, camera facing billboards sorted with everything transparent
-new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitCone, tileInfo,
+new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileInfo,
     colorStartA, colorStartB, colorEndA, colorEndB, particleTime, sizeStart, sizeEnd,
     speed, damping, gravity, fadeRate, randomness, additive)
 // emits along local +Y turned by rotation3D, emitSize is a sphere diameter or a vec3 box, gravity changes velocity y per frame
@@ -926,21 +953,6 @@ emitter.trailTime = .2                        // draw each particle as a ribbon 
 // Trails - a ribbon through where the object has been, parent it to something that moves
 new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over lifeTime seconds
 trail.side                                    // Vector3 across the ribbon recorded per sample, undefined faces the camera
-
-// Objects - EngineObject with a 3D transform, drawn by the 3D pass
-new EngineObject3D(pos3D, mesh, color, tileInfo)
-obj.pos3D obj.rotation3D obj.scale3D   // Vector3, rotation is (pitch, yaw, roll)
-obj.velocity3D                          // added to pos3D each frame
-obj.mesh obj.color obj.tileInfo         // what to draw and how
-obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
-obj.castShadow = false                  // keep an object out of the shadow map
-obj.receiveShadow = false               // draw it without the shadow map's darkening
-obj.unlit = true                        // draw with lighting off, for lamps and glowing things
-obj.renderOrder                         // sorts the opaque stage
-obj.getMatrix()                         // buildMatrix(pos3D, rotation3D, scale3D)
-// children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local
-obj.render3D()                          // override for custom drawing; render() is empty by default
-render3D.renderStages()                 // the two stages, called automatically each frame
 ```
 
 ## LittleJS Three.js Integration

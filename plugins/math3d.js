@@ -33,6 +33,18 @@ function vec3(x=0, y, z)
 function isVector3(v) { return v instanceof Vector3; }
 
 /**
+ * Returns a random Vector3 with the given length, uniform over the sphere
+ * @param {number} [length]
+ * @return {Vector3}
+ * @memberof Math3D
+ */
+function randVector3(length=1)
+{
+    const z = rand(-1, 1), s = (1 - z * z) ** .5, a = rand(2 * PI);
+    return new Vector3(s * cos(a) * length, z * length, s * sin(a) * length);
+}
+
+/**
  * 3D Vector object, right handed with Y up
  * - Methods return new vectors except set
  * @memberof Math3D
@@ -100,6 +112,12 @@ class Vector3
     /** Returns the length of this vector squared
      *  @return {number} */
     lengthSquared() { return this.x**2 + this.y**2 + this.z**2; }
+
+    /** Returns a copy of this vector reflected by a surface normal
+     *  @param {Vector3} normal - Surface normal, should be normalized
+     *  @param {number} [restitution] - How much to bounce, 1 is a perfect bounce, 0 slides along the surface
+     *  @return {Vector3} */
+    reflect(normal, restitution=1) { return this.subtract(normal.scale((1 + restitution) * this.dot(normal))); }
 
     /** Returns the distance from this vector to the vector passed in
      *  @param {Vector3} v
@@ -188,6 +206,9 @@ class Vector3
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// scratch for multiply, nothing keeps a reference to it
+const matrix4Scratch = new Float32Array(16);
 
 /**
  * 4x4 transform matrix, column major in a Float32Array so it uploads straight to WebGL
@@ -320,7 +341,7 @@ class Matrix4
      *  @return {Matrix4} */
     multiply(matrix)
     {
-        const a = this.m, b = matrix.m, r = new Float32Array(16);
+        const a = this.m, b = matrix.m, r = matrix4Scratch;
         for (let j = 0; j < 4; ++j)
         for (let i = 0; i < 4; ++i)
             r[j*4 + i] = a[i]*b[j*4] + a[4 + i]*b[j*4 + 1] + a[8 + i]*b[j*4 + 2] + a[12 + i]*b[j*4 + 3];
@@ -443,11 +464,17 @@ class Matrix4
  */
 function buildMatrix(pos, rotation, scale)
 {
-    const m = new Matrix4;
-    pos && m.translate(pos);
-    rotation && m.rotate(rotation);
-    scale && m.scale(scale);
-    return m;
+    // the rotation's columns scaled, then the translation, without the general products
+    const matrix = rotation ? Matrix4.rotation(rotation) : new Matrix4, m = matrix.m;
+    if (scale)
+    {
+        m[0] *= scale.x; m[1] *= scale.x; m[2]  *= scale.x;
+        m[4] *= scale.y; m[5] *= scale.y; m[6]  *= scale.y;
+        m[8] *= scale.z; m[9] *= scale.z; m[10] *= scale.z;
+    }
+    if (pos)
+        m[12] = pos.x, m[13] = pos.y, m[14] = pos.z;
+    return matrix;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

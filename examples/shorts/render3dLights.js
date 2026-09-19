@@ -2,25 +2,16 @@ class Lamp extends EngineObject3D
 {
     constructor(angle, color)
     {
-        super(vec3(), buildSphere(8, 4), color);
-        this.angle3D = angle;
-        this.scale3D = vec3(.4);
-        this.light = new Light3D(vec3(), 8, color);
-        this.addChild(this.light); // the light follows the lamp
+        super(vec3(), buildSphere(.4, 8, 4), undefined, color);
+        this.orbitAngle = angle;
         this.unlit = true; // drawn in its own color so the lamp reads as bright
+        this.addChild(new Light3D(vec3(), 8, color)); // the light follows the lamp
     }
     update()
     {
         // circle the floor at different speeds and heights
-        const a = this.angle3D += .01;
+        const a = this.orbitAngle += .01;
         this.pos3D = vec3(sin(a) * 5, 2 + sin(a * 3), cos(a) * 5);
-    }
-    render3D()
-    {
-        // an unlit glow so the lamp reads as bright
-        render3D.lighting = false;
-        render3D.drawMesh(this.mesh, this.getMatrix(), this.color);
-        render3D.lighting = true;
     }
 }
 
@@ -35,14 +26,14 @@ function gameInit()
     setRender3DSmoothShading(true);
 
     // a floor, some pillars to catch the light, and three colored lamps
-    new EngineObject3D(vec3(), buildGrid(24, 24, 12, 12, rgb(.6, .6, .65)));
-    const pillar = buildCylinder(.5, 3, 12);
+    new EngineObject3D(vec3(), buildGrid(vec2(24), 12, rgb(.6, .6, .65)));
+    const pillar = buildCylinder(1, 3, 12);
     for (let i = 0; i < 8; ++i)
     {
         const a = i / 8 * 2 * PI;
-        new EngineObject3D(vec3(sin(a) * 7, 1.5, cos(a) * 7), pillar, rgb(.7, .7, .7));
+        new EngineObject3D(vec3(sin(a) * 7, 1.5, cos(a) * 7), pillar, undefined, rgb(.7, .7, .7));
     }
-    new EngineObject3D(vec3(0, 1, 0), buildBox(vec3(2)), rgb(.8, .8, .8));
+    new EngineObject3D(vec3(0, 1, 0), buildBox(vec3(2)), undefined, rgb(.8, .8, .8));
     new Lamp(0, rgb(1, .4, .3));
     new Lamp(2, rgb(.3, 1, .4));
     new Lamp(4, rgb(.4, .5, 1));

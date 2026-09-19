@@ -1,8 +1,8 @@
 class Spinner extends EngineObject3D
 {
-    constructor(pos, mesh, color, speed)
+    constructor(pos, mesh, speed)
     {
-        super(pos, mesh, color);
+        super(pos, mesh);
         this.speed = speed;
     }
     update() { this.rotation3D.y += this.speed; }
@@ -16,16 +16,16 @@ function gameInit()
     render3D.shadows = true; // a shadow map from the sun, every lit opaque mesh casts and receives
     render3D.setSky(rgb(.1, .1, .25), rgb(.5, .3, .4), rgb(.1, .1, .15));
     render3D.ambientColor = rgb(.35, .35, .4);
-    render3D.specular = .3;
-    new EngineObject3D(vec3(), buildGrid(30, 30, 1, 1, rgb(.25, .25, .3)));
+    new EngineObject3D(vec3(), buildGrid(vec2(30), 1, rgb(.25, .25, .3)));
 
     // the engine font extruded, glyphs are white so the object color tints them
-    title = new EngineObject3D(vec3(0, 4, 0), buildText3D('LITTLEJS', 1.5, .6), rgb(1, .8, .2));
-    new EngineObject3D(vec3(0, 2.4, 0), buildText3D('3D TEXT\nFROM THE ENGINE FONT', .6, .3), rgb(.5, .8, 1));
+    title = new EngineObject3D(vec3(0, 4, 0), buildText3D('LITTLEJS', 1.5, .6), undefined, rgb(1, .8, .2));
+    title.specular = .3;
+    new EngineObject3D(vec3(0, 2.4, 0), buildText3D('3D TEXT\nFROM THE ENGINE FONT', .6, .3), undefined, rgb(.5, .8, 1));
 
     // tiles from the sheet extruded the same way, their pixel colors carry through
     for (let i = 0; i < 4; ++i)
-        new Spinner(vec3(i * 3 - 4.5, 1, 4.5), buildExtrude(tile(i, 16), vec2(2), .5), WHITE, .02 + i * .01);
+        new Spinner(vec3(i * 3 - 4.5, 1, 4.5), buildExtrude(tile(i, 16), vec2(2), .5), .02 + i * .01);
 }
 
 function gameUpdate()

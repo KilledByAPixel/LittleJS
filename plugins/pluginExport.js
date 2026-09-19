@@ -99,6 +99,7 @@ export
     // Math3D
     vec3,
     isVector3,
+    randVector3,
     Vector3,
     Matrix4,
     buildMatrix,
@@ -136,6 +137,10 @@ export
     Trail3D,
     parseOBJ,
     loadOBJ,
+    debugBox3D,
+    debugSphere3D,
+    debugLine3D,
+    debugPoint3D,
     render3DSmoothShading,
     setRender3DSmoothShading,
 

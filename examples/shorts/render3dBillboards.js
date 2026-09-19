@@ -2,7 +2,7 @@ class Sprite extends EngineObject3D
 {
     constructor(pos, tileInfo, color)
     {
-        super(pos, undefined, color, tileInfo);
+        super(pos, undefined, tileInfo, color);
         this.transparent = true; // draw in the transparent stage so the tile's alpha blends
         this.spawnPos = pos.copy();
         this.phase = rand(2 * PI);
@@ -17,7 +17,7 @@ class Sprite extends EngineObject3D
     {
         // billboards are unlit and keep their own colors
         render3D.drawBillboard(this.pos3D, vec2(2), this.tileInfo, this.color, sin(time + this.phase) * .2);
-        render3D.drawShadow(this.pos3D, 1);
+        render3D.drawShadow(this.pos3D, 2);
         render3D.drawLine(this.pos3D, vec3(0, 3, 0), .05, this.color.withAlpha(.5));
     }
 }
@@ -33,13 +33,13 @@ function gameInit()
     render3D.ambientColor = rgb(.4, .4, .5);
 
     // a floor, a ring of sprites from the tile sheet, and a lit box to compare against
-    new EngineObject3D(vec3(), buildGrid(30, 30, 1, 1, rgb(.25, .2, .3)));
+    new EngineObject3D(vec3(), buildGrid(vec2(30), 1, rgb(.25, .2, .3)));
     for (let i = 0; i < 12; ++i)
     {
         const a = i / 12 * 2 * PI;
         new Sprite(vec3(sin(a) * 6, 2, cos(a) * 6), tile(i % 4, 16), hsl(i / 12, .8, .7));
     }
-    new EngineObject3D(vec3(0, 1, 0), buildBox(vec3(2)), rgb(.6, .6, .7));
+    new EngineObject3D(vec3(0, 1, 0), buildBox(vec3(2)), undefined, rgb(.6, .6, .7));
 }
 
 function gameUpdate()

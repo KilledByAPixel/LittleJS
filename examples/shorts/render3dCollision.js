@@ -6,7 +6,7 @@ class Ball extends EngineObject3D
 {
     constructor(pos)
     {
-        super(pos, ballMesh, hsl(rand(), .7, .6));
+        super(pos, ballMesh, undefined, hsl(rand(), .7, .6));
         this.radius = rand(.4, .8);
         this.scale3D = vec3(this.radius * 2);
         this.velocity3D = vec3(rand(-.1, .1), 0, rand(-.1, .1));
@@ -28,10 +28,9 @@ class Ball extends EngineObject3D
     }
     bounce(pushOut)
     {
-        // move out and reflect the velocity along the push direction
+        // move out and reflect the velocity off the push direction, losing a little energy
         this.pos3D = this.pos3D.add(pushOut);
-        const n = pushOut.normalize();
-        this.velocity3D = this.velocity3D.subtract(n.scale(2 * this.velocity3D.dot(n))).scale(.8);
+        this.velocity3D = this.velocity3D.reflect(pushOut.normalize(), .6);
     }
 }
 
@@ -43,20 +42,13 @@ function gameInit()
     render3D.ambientColor = rgb(.4, .4, .45);
 
     // a checkerboard floor (flat for crisp cells), a box, a cylinder and a dozen balls
-    new EngineObject3D(vec3(), buildGrid(16, 16, 8, 8, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? rgb(.5, .5, .5) : rgb(.4, .4, .4), undefined, false));
-    new EngineObject3D(boxPos, buildBox(boxSize), rgb(.6, .4, .3));
-    new EngineObject3D(cylinderPos, buildCylinder(cylinderRadius, cylinderHeight, 16), rgb(.3, .5, .6));
+    new EngineObject3D(vec3(), buildGrid(vec2(16), 8, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? rgb(.5, .5, .5) : rgb(.4, .4, .4), undefined, false));
+    new EngineObject3D(boxPos, buildBox(boxSize), undefined, rgb(.6, .4, .3));
+    new EngineObject3D(cylinderPos, buildCylinder(cylinderRadius * 2, cylinderHeight, 16), undefined, rgb(.3, .5, .6));
     ballMesh = buildSphere();
     for (let i = 0; i < 12; ++i)
         balls.push(new Ball(vec3(rand(-6, 6), rand(3, 8), rand(-6, 6))));
-
-    render3D.onRenderTransparent = ()=>
-    {
-        for (const b of balls)
-            render3D.drawShadow(b.pos3D, b.radius);
-        if (picked) // a ring under the picked ball
-            render3D.drawSoftDisc(picked.pos3D.add(vec3(0, .02 - picked.radius, 0)), picked.radius + .5, YELLOW, vec3(0, 1, 0));
-    };
+    render3D.onRenderTransparent = ()=> balls.forEach(b => render3D.drawShadow(b.pos3D, b.radius * 2));
 }
 
 function gameUpdate()
@@ -71,18 +63,15 @@ function gameUpdate()
                 a.bounce(pushOut.scale(.5));
         }
 
-    // pick the nearest ball under the mouse, click to toss it up
+    // pick the ball under the mouse by its bounding sphere, show it with a debug sphere, click to toss it up
     const ray = render3D.screenToRay(mousePosScreen);
-    let nearest = Infinity;
-    picked = undefined;
-    for (const b of balls)
+    picked = render3D.raycastObjects(ray.origin, ray.direction, balls)?.object;
+    if (picked)
     {
-        const t = raycastSphere(ray.origin, ray.direction, b.pos3D, b.radius);
-        if (t !== undefined && t < nearest)
-            nearest = t, picked = b;
+        debugSphere3D(picked.pos3D, picked.radius * 2 + .2, YELLOW);
+        if (mouseWasPressed(0))
+            picked.velocity3D = picked.velocity3D.add(vec3(rand(-.1, .1), .3, rand(-.1, .1)));
     }
-    if (picked && mouseWasPressed(0))
-        picked.velocity3D = picked.velocity3D.add(vec3(rand(-.1, .1), .3, rand(-.1, .1)));
 
     // slow orbit, right drag to turn
     orbit += mouseIsDown(2) ? -mouseDeltaScreen.x * .01 : .002;

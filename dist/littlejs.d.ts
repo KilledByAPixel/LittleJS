@@ -5824,6 +5824,13 @@ declare module "littlejsengine" {
      */
     export function isVector3(v: any): boolean;
     /**
+     * Returns a random Vector3 with the given length, uniform over the sphere
+     * @param {number} [length]
+     * @return {Vector3}
+     * @memberof Math3D
+     */
+    export function randVector3(length?: number): Vector3;
+    /**
      * 3D Vector object, right handed with Y up
      * - Methods return new vectors except set
      * @memberof Math3D
@@ -5878,6 +5885,11 @@ declare module "littlejsengine" {
         /** Returns the length of this vector squared
          *  @return {number} */
         lengthSquared(): number;
+        /** Returns a copy of this vector reflected by a surface normal
+         *  @param {Vector3} normal - Surface normal, should be normalized
+         *  @param {number} [restitution] - How much to bounce, 1 is a perfect bounce, 0 slides along the surface
+         *  @return {Vector3} */
+        reflect(normal: Vector3, restitution?: number): Vector3;
         /** Returns the distance from this vector to the vector passed in
          *  @param {Vector3} v
          *  @return {number} */
@@ -6125,11 +6137,11 @@ declare module "littlejsengine" {
     export function raycastBox(origin: Vector3, direction: Vector3, pos: Vector3, size: Vector3): number | undefined;
     /**
      * LittleJS 3D Rendering Plugin
-     * - Draws meshes, billboards and lines into the engine's WebGL canvas underneath the 2D layer
-     * - One shader: directional + ambient light, optional specular, fog, textures, vertex colors
-     * - Meshes are static triangle strips drawn by matrix, the stream batches immediate mode pushes
-     * - Shape builders, height map terrain, a sky dome, billboards, soft discs, shadows and lines
-     * - EngineObject3D is an EngineObject with a 3D transform and a mesh
+     * - Draws meshes, billboards, lines and particles into the engine's WebGL canvas, under the 2D layer by default
+     * - One shader: directional and ambient light, point lights, specular, fog, shadows, textures and vertex colors
+     * - Meshes are triangle strips uploaded once and drawn by matrix, immediate mode draws batch into a stream
+     * - Shape builders, extruded sprites and text, height map terrain, a sky dome and OBJ loading
+     * - EngineObject3D is an EngineObject with a 3D transform and a mesh, with lights, particles and trails built on it
      * - Requires the Math3D plugin, call new Render3DPlugin() in gameInit
      * @namespace Render3D
      */
@@ -6138,9 +6150,9 @@ declare module "littlejsengine" {
      *  @memberof Render3D */
     export let render3D: Render3DPlugin;
     /**
-     * Render3D Plugin - The 3D renderer, camera, lights, fog and draw state
-     * - State fields are read at each draw, so set them before drawing
-     * - The 3D pass runs before gameRender, so 2D drawing lands on top
+     * Render3D Plugin - The 3D renderer, camera, lights, shadows, fog and draw state
+     * - The 3D pass runs before gameRender, so 2D drawing lands on top; set renderAfter2D for the reverse
+     * - Draw state fields are read at each draw, the pass resets them before each object and stage callback
      * @memberof Render3D
      * @example
      * new Render3DPlugin();
@@ -6151,89 +6163,89 @@ declare module "littlejsengine" {
     export class Render3DPlugin {
         /** @property {Camera3D} - The camera */
         camera: Camera3D;
-        /** @property {Vector3} - Direction the directional light travels, read when a draw is issued or the stream flushes, so set lights and fog before drawing */
+        /** @property {Vector3} - Direction the directional light travels, read at each draw */
         lightDirection: Vector3;
         /** @property {Color} - Directional light color */
         lightColor: Color;
         /** @property {Color} - Ambient light color */
         ambientColor: Color;
-        /** @property {Color} - Fog color, uses canvasClearColor when undefined, read when a draw is issued or the stream flushes, so set lights and fog before drawing */
+        /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined */
         fogColor: Color;
         /** @property {number} - Distance from the camera where fog starts */
         fogStart: number;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
         fogEnd: number;
-        /** @property {boolean} - Apply lighting, when false draws plain vertex color times texture */
-        lighting: boolean;
-        /** @property {boolean} - Blend with the frame, the opaque stage sets this false and the transparent stage true */
-        blend: boolean;
-        /** @property {boolean} - Additive blending instead of alpha, only when blend is on */
-        additive: boolean;
-        /** @property {boolean} - Test against the depth buffer */
-        depthTest: boolean;
-        /** @property {boolean} - Write to the depth buffer */
-        depthWrite: boolean;
-        /** @property {boolean} - Skip faces that point away from the camera */
-        cullBackFaces: boolean;
-        /** @property {boolean} - The next draws are darkened by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
-        receiveShadows: boolean;
-        /** @property {number} - Phong highlight strength for the next draws */
-        specular: number;
-        /** @property {Function} - Called in the opaque stage after the opaque objects, for drawing world geometry outside of objects */
-        onRender: any;
-        /** @property {Function} - Called in the transparent stage, with blending on and depth writes off, for billboards, glows and shadows outside of objects; every transparent draw is sorted far to near before it lands, so alpha and additive mix correctly */
-        onRenderTransparent: any;
-        /** @property {boolean} - Draw the 3D pass after the 2D scene instead of before it, for 3D on top of a 2D game */
-        renderAfter2D: boolean;
-        /** @property {boolean} - Sort the transparent stage far to near, when false transparent draws land in object order like the opaque stage */
-        sortTransparent: boolean;
-        /** @property {boolean} - Skip meshes whose bounding sphere is outside the view, on by default */
-        frustumCulling: boolean;
-        /** @property {Mesh} - Sky dome from buildSky, drawn around the camera behind everything when set */
-        sky: Mesh;
-        /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then, read only */
-        isRendering: boolean;
-        /** @property {boolean} - Draw a shadow map from the directional light, so lit opaque meshes shadow everything lit, off by default and free when off */
+        /** @property {boolean} - Draw a shadow map from the directional light so lit opaque meshes shadow everything lit, off by default and free when off */
         shadows: boolean;
         /** @property {number} - Shadow map width and height in texels, rebuilt when it changes */
         shadowMapSize: number;
         /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper */
         shadowRange: number;
-        /** @property {Vector3} - Center of the shadowed area, undefined follows the camera */
+        /** @property {Vector3|undefined} - Center of the shadowed area, undefined follows the camera */
         shadowCenter: any;
         /** @property {number} - Depth offset that keeps surfaces from shadowing themselves, raise it for speckles, lower it if shadows float away from their casters */
         shadowBias: number;
         /** @property {number} - Blur radius in shadow map texels */
         shadowSoftness: number;
-        /** @property {Matrix4} - This frame's light view projection, read only */
-        shadowMatrix: Matrix4;
-        /** @property {boolean} - True while the shadow map is being drawn, draws go to the depth only shader, read only */
+        /** @property {boolean} - Apply lighting, when false draws plain vertex color times texture */
+        lighting: boolean;
+        /** @property {boolean} - Additive blending instead of alpha, in the transparent stage */
+        additive: boolean;
+        /** @property {boolean} - Test against the depth buffer */
+        depthTest: boolean;
+        /** @property {boolean} - Write to the depth buffer, the transparent stage turns this off */
+        depthWrite: boolean;
+        /** @property {boolean} - Skip faces that point away from the camera */
+        cullBackFaces: boolean;
+        /** @property {number} - Phong highlight strength */
+        specular: number;
+        /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
+        receiveShadow: boolean;
+        /** @property {Function|undefined} - Called in the opaque stage after the opaque objects, for world geometry drawn outside of objects; called again in the shadow pass when shadows are on, so keep it to drawing */
+        onRenderOpaque: any;
+        /** @property {Function|undefined} - Called in the transparent stage after the transparent objects, for billboards, glows and shadows drawn outside of objects */
+        onRenderTransparent: any;
+        /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything */
+        sky: Mesh;
+        /** @property {boolean} - Draw the 3D pass after the 2D scene instead of before it, for 3D on top of a 2D game */
+        renderAfter2D: boolean;
+        /** @property {boolean} - Sort the transparent stage far to near so alpha and additive mix correctly, when false transparent draws land in object order */
+        sortTransparent: boolean;
+        /** @property {boolean} - Skip meshes whose bounding sphere is outside the view */
+        frustumCulling: boolean;
+        /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
+        isRendering: boolean;
+        /** @property {boolean} - True while the shadow map is being drawn, draws go to the depth only shader */
         shadowPass: boolean;
-        /** @property {Matrix4} - This frame's view matrix, read only */
+        /** @property {Matrix4} - This frame's view matrix */
         viewMatrix: Matrix4;
-        /** @property {Matrix4} - This frame's projection matrix, read only */
+        /** @property {Matrix4} - This frame's projection matrix */
         projectionMatrix: Matrix4;
-        /** @property {Matrix4} - This frame's combined view projection, read only */
+        /** @property {Matrix4} - This frame's combined view projection */
         viewProjection: Matrix4;
-        /** @property {Vector3} - Camera right axis this frame, read only */
+        /** @property {Matrix4} - This frame's light view projection for the shadow map */
+        shadowMatrix: Matrix4;
+        /** @property {Vector3} - Camera right axis this frame */
         cameraRight: Vector3;
-        /** @property {Vector3} - Camera up axis this frame, read only */
+        /** @property {Vector3} - Camera up axis this frame */
         cameraUp: Vector3;
-        /** @property {Vector3} - Camera forward axis this frame, read only */
+        /** @property {Vector3} - Camera forward axis this frame */
         cameraForward: Vector3;
-        /** @property {Array<Array<number>>} - This frame's view frustum as six planes [x, y, z, w] facing inward, read only */
+        blend: boolean;
         frustumPlanes: any[];
-        /** @property {Array<Array<number>>} - The shadow map's box as six planes, read only */
         shadowPlanes: any[];
         shader: any;
+        shadowShader: any;
         vao: any;
         whiteTexture: any;
-        uploadedMeshes: Set<any>;
-        shadowShader: any;
-        shadowFramebuffer: any;
         shadowTexture: any;
+        shadowFramebuffer: any;
         shadowTextureSize: number;
+        uploadedMeshes: Set<any>;
         uniforms: Map<any, any>;
+        uniformValues: {};
+        boxMesh: any;
+        sphereMesh: any;
         streamBuffer: any;
         streamData: ArrayBuffer;
         streamFloats: Float32Array;
@@ -6247,7 +6259,7 @@ declare module "littlejsengine" {
             depthWrite: boolean;
             cullBackFaces: boolean;
             lighting: boolean;
-            receiveShadows: boolean;
+            receiveShadow: boolean;
             specular: number;
         };
         streamStateKey: number;
@@ -6256,13 +6268,6 @@ declare module "littlejsengine" {
         /** Rebuild the view and projection matrices from the camera, called automatically each frame
          *  @param {number} [aspect] - Width over height, defaults to the main canvas */
         updateMatrices(aspect?: number): void;
-        /** Is a sphere at least partly inside the view this frame, the test drawMesh uses to skip meshes off screen; inside the shadow pass it tests the shadow map's box
-         *  @param {Vector3} center
-         *  @param {number} radius
-         *  @return {boolean} */
-        isSphereVisible(center: Vector3, radius: number): boolean;
-        /** Rebuild the light's view projection around the shadow center, called automatically each frame shadows are on */
-        updateShadowMatrix(): void;
         /** Project a world point to clip space, x and y in -1 to 1, z is depth
          *  @param {Vector3} pos
          *  @return {Vector3|undefined} - undefined when behind the camera */
@@ -6275,57 +6280,77 @@ declare module "littlejsengine" {
          *  - uses the camera as it is now, so it is safe to call from gameUpdate after moving the camera
          *  @param {Vector2} screenPos - Same space as mousePosScreen
          *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
-         *  @return {{origin: Vector3, direction: Vector3}} - Ray start and unit direction, for the raycast functions */
+         *  @return {{origin: Vector3, direction: Vector3}} - Ray start and unit direction */
         screenToRay(screenPos: Vector2, canvasSize?: Vector2): {
             origin: Vector3;
             direction: Vector3;
         };
-        /** Draw a mesh with the current state, flushes the stream first so draw order holds
+        /** Find the nearest object whose bounding sphere a ray hits, for picking
+         *  @param {Vector3} origin
+         *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
+         *  @param {Array<EngineObject3D>} [objects] - Defaults to every EngineObject3D with a mesh
+         *  @return {{object: EngineObject3D, distance: number}|undefined} */
+        raycastObjects(origin: Vector3, direction: Vector3, objects?: Array<EngineObject3D>): {
+            object: EngineObject3D;
+            distance: number;
+        } | undefined;
+        /** Is a sphere at least partly inside the view this frame, the test drawMesh uses to skip meshes off screen; inside the shadow pass it tests the shadow map's box
+         *  @param {Vector3} center
+         *  @param {number} radius
+         *  @return {boolean} */
+        isSphereVisible(center: Vector3, radius: number): boolean;
+        /** Draw a mesh with the current draw state, flushes the stream first so draw order holds
          *  @param {Mesh} mesh
          *  @param {Matrix4} [matrix] - Object transform
-         *  @param {Color} [color] - Tint
-         *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
-        drawMesh(mesh: Mesh, matrix?: Matrix4, color?: Color, tileInfo?: TileInfo): void;
-        /** Push a strip into the stream, into the mesh being baked, or onto the transparent queue during that stage
+         *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile
+         *  @param {Color} [color] - Tint */
+        drawMesh(mesh: Mesh, matrix?: Matrix4, tileInfo?: TileInfo, color?: Color): any;
+        /** Draw a triangle strip, batched into the stream with the current draw state
          *  - the first three points wound counter clockwise from outside are a front face
+         *  - inside a bake the strip goes into the mesh instead, in the transparent stage it is queued for sorting
          *  @param {Array<Vector3>} points - Strip order
          *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
          *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, 0-1 across the tile
-         *  @param {Color|Array<Color>} [colors] - One for all or one per point
+         *  @param {Color|Array<Color>} [colors] - One for all or one per point, vertex colors come before the texture
          *  @param {TileInfo} [tileInfo] - Texture for this strip */
-        pushStrip(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>, tileInfo?: TileInfo): void;
-        /** Draw the pending stream vertices as one strip with the state they were pushed under, called automatically when needed */
+        drawStrip(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>, tileInfo?: TileInfo): any;
+        /** Draw a strip with lighting off, for camera facing shapes where the light direction means nothing
+         *  @param {Array<Vector3>} points - Strip order
+         *  @param {Vector3|Array<Vector3>} [normals]
+         *  @param {Vector2|Array<Vector2>} [uvs]
+         *  @param {Color|Array<Color>} [colors]
+         *  @param {TileInfo} [tileInfo] */
+        drawStripUnlit(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>, tileInfo?: TileInfo): void;
+        /** Draw the pending stream vertices as one strip with the state they were drawn under, called automatically when needed */
         flush(): void;
-        /** Run a draw function with every push captured into a new mesh instead of the stream
-         *  - pushes inside a bake ignore their tileInfo, the baked mesh takes its texture at render time
+        /** Run a draw function with every strip captured into a new mesh instead of the stream
+         *  - strips inside a bake ignore their tileInfo, the baked mesh takes its texture at render time
          *  - drawMesh is not captured: inside the pass it draws immediately, outside it does nothing
          *  @param {Function} drawFunction
          *  @return {Mesh} */
         bake(drawFunction: Function): Mesh;
-        /** Run the opaque and transparent stages over every EngineObject3D, called automatically by the 3D pass */
         renderStages(): void;
-        /** Queue a draw for the transparent stage, replayed far to near with the current draw state
-         *  @param {Vector3} pos - Where the draw is, for sorting
-         *  @param {Function} draw */
-        queueTransparent(pos: Vector3, draw: Function): void;
-        /** Draw the queued transparent draws far to near with the state each was pushed under, called automatically at the end of the transparent stage */
+        queueTransparent(pos: any, draw: any): any;
         flushTransparentQueue(): void;
+        drawSky(): void;
+        updateShadowMatrix(): void;
         /** Build a sky dome, set it as the sky and match the fog color to the horizon
          *  @param {Color} [topColor]
          *  @param {Color} [horizonColor]
          *  @param {Color} [bottomColor] - Defaults to the horizon color
          *  @return {Mesh} - The dome, also in render3D.sky */
         setSky(topColor?: Color, horizonColor?: Color, bottomColor?: Color): Mesh;
-        /** Draw a sky dome around the camera, unlit, unfogged and behind everything, called automatically when render3D.sky is set
-         *  @param {Mesh} mesh - From buildSky */
-        drawSky(mesh: Mesh): void;
-        /** Push a strip with lighting off, for camera facing shapes where the light direction means nothing
-         *  @param {Array<Vector3>} points - Strip order
-         *  @param {Vector3|Array<Vector3>} [normals]
-         *  @param {Vector2|Array<Vector2>} [uvs]
-         *  @param {Color|Array<Color>} [colors]
-         *  @param {TileInfo} [tileInfo] */
-        pushStripUnlit(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>, tileInfo?: TileInfo): void;
+        /** Draw a box, untextured, for blocking out a scene without meshes or objects
+         *  @param {Vector3} pos - Center
+         *  @param {Vector3|number} [size] - Full size, a number for a cube
+         *  @param {Color} [color]
+         *  @param {Vector3} [rotation] - vec3(pitch, yaw, roll) */
+        drawBox(pos: Vector3, size?: Vector3 | number, color?: Color, rotation?: Vector3): void;
+        /** Draw a sphere, untextured and smooth shaded
+         *  @param {Vector3} pos - Center
+         *  @param {number} [size] - Diameter
+         *  @param {Color} [color] */
+        drawSphere(pos: Vector3, size?: number, color?: Color): void;
         /** Draw a camera facing quad, unlit so it keeps its own colors; draw it in the transparent stage for alpha
          *  @param {Vector3} pos - Center
          *  @param {Vector2} size - World units
@@ -6338,9 +6363,9 @@ declare module "littlejsengine" {
          *  @param {Vector3} b
          *  @param {Vector3} c
          *  @param {Vector3} d
-         *  @param {Color} [color]
-         *  @param {TileInfo} [tileInfo] */
-        drawQuad(a: Vector3, b: Vector3, c: Vector3, d: Vector3, color?: Color, tileInfo?: TileInfo): void;
+         *  @param {TileInfo} [tileInfo]
+         *  @param {Color} [color] */
+        drawQuad(a: Vector3, b: Vector3, c: Vector3, d: Vector3, tileInfo?: TileInfo, color?: Color): void;
         /** Draw a triangle, counter clockwise from outside is the front
          *  @param {Vector3} a
          *  @param {Vector3} b
@@ -6348,11 +6373,11 @@ declare module "littlejsengine" {
          *  @param {Color} [color] */
         drawTriangle(a: Vector3, b: Vector3, c: Vector3, color?: Color): void;
         /** Draw a line as a camera facing ribbon, unlit
-         *  @param {Vector3} start
-         *  @param {Vector3} end
-         *  @param {number} [thickness] - World units
+         *  @param {Vector3} posA
+         *  @param {Vector3} posB
+         *  @param {number} [width]
          *  @param {Color} [color] */
-        drawLine(start: Vector3, end: Vector3, thickness?: number, color?: Color): void;
+        drawLine(posA: Vector3, posB: Vector3, width?: number, color?: Color): void;
         /** Draw a ribbon along a path, unlit and visible from both sides; width and color can change along it
          *  - The texture runs along the length, u from the first point to the last
          *  @param {Array<Vector3>} points - Center line in order, at least two
@@ -6361,20 +6386,20 @@ declare module "littlejsengine" {
          *  @param {TileInfo} [tileInfo]
          *  @param {Vector3|Array<Vector3>} [side] - Direction across the ribbon, one for all or one per point, default faces the camera */
         drawRibbon(points: Array<Vector3>, width?: number | Array<number>, color?: Color | Array<Color>, tileInfo?: TileInfo, side?: Vector3 | Array<Vector3>): void;
-        /** Draw a soft round shadow on the ground under a position, unlit; draw it in the transparent stage
-         *  @param {Vector3} pos - Position of the thing casting the shadow
-         *  @param {number} radius
-         *  @param {number|Function} [floorHeight] - Height of the ground, or (x, z) => y so the shadow follows terrain
-         *  @param {Color} [color]
-         *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground */
-        drawShadow(pos: Vector3, radius: number, floorHeight?: number | Function, color?: Color, lift?: number): void;
-        /** Draw a disc that fades to transparent at the rim, unlit, for glows, puffs, shadows and sky dots
+        /** Draw a disc that fades to transparent at the rim, unlit, for glows, puffs and sky dots
          *  @param {Vector3} pos - Center
-         *  @param {number} radius
+         *  @param {number} [size] - Diameter
          *  @param {Color} [color]
          *  @param {Vector3} [normal] - Facing direction, faces the camera by default
          *  @param {number} [sides] */
-        drawSoftDisc(pos: Vector3, radius: number, color?: Color, normal?: Vector3, sides?: number): void;
+        drawSoftDisc(pos: Vector3, size?: number, color?: Color, normal?: Vector3, sides?: number): any;
+        /** Draw a soft round shadow on the ground under a position, unlit; draw it in the transparent stage
+         *  @param {Vector3} pos - Position of the thing casting the shadow
+         *  @param {number} [size] - Diameter
+         *  @param {number|Function} [floorHeight] - Height of the ground, or (x, z) => y so the shadow follows terrain
+         *  @param {Color} [color]
+         *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground */
+        drawShadow(pos: Vector3, size?: number, floorHeight?: number | Function, color?: Color, lift?: number): any;
     }
     /**
      * Camera3D - Position, rotation and lens for the 3D view
@@ -6428,16 +6453,16 @@ declare module "littlejsengine" {
     }
     /**
      * EngineObject3D - An EngineObject with a 3D transform and a mesh
-     * - Inherits update, children, timers, destroy and renderOrder from EngineObject, children that are EngineObject3D follow the parent's 3D transform
+     * - Inherits update, children, timers, destroy and renderOrder from EngineObject; children that are EngineObject3D follow the parent's 3D transform
      * - velocity3D is added to pos3D each frame, there is no other 3D physics, games do their own
-     * - The 2D pos, velocity and physics still run but rendering ignores them, copy pos into pos3D for pseudo-3D games
-     * - render() is empty, override render3D() for custom drawing
+     * - The 2D pos and velocity still exist but rendering ignores them and mass is 0 so 2D physics leaves them alone; copy pos into pos3D for pseudo-3D games
+     * - render() is empty, override render3D() for custom drawing; the pass sets the draw state from the object's flags before calling it
      * @extends EngineObject
      * @memberof Render3D
      * @example
      * class Spinner extends EngineObject3D
      * {
-     *     constructor(pos) { super(pos, buildBox(), RED); }
+     *     constructor(pos) { super(pos, buildBox(), undefined, RED); }
      *     update() { this.rotation3D.y += .02; }
      * }
      */
@@ -6445,9 +6470,9 @@ declare module "littlejsengine" {
         /** Create a 3D object and add it to the object list
          *  @param {Vector3} [pos3D] - World space position
          *  @param {Mesh} [mesh] - Mesh to draw, undefined draws nothing
-         *  @param {Color} [color] - Tint
-         *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
-        constructor(pos3D?: Vector3, mesh?: Mesh, color?: Color, tileInfo?: TileInfo);
+         *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile
+         *  @param {Color} [color] - Tint */
+        constructor(pos3D?: Vector3, mesh?: Mesh, tileInfo?: TileInfo, color?: Color);
         /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
         pos3D: Vector3;
         /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, local to the parent when attached to an EngineObject3D */
@@ -6456,30 +6481,37 @@ declare module "littlejsengine" {
         scale3D: Vector3;
         /** @property {Vector3} - Added to pos3D each frame */
         velocity3D: Vector3;
-        /** @property {Mesh} - Mesh to draw */
+        /** @property {Mesh|undefined} - Mesh to draw */
         mesh: Mesh;
-        /** @property {boolean} - Draw in the transparent stage, sorted far to near with depth writes off */
+        /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off */
         transparent: boolean;
-        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, opaque lit objects only */
-        castShadow: boolean;
+        /** @property {boolean} - Additive blending, in the transparent stage */
+        additive: boolean;
         /** @property {boolean} - Draw with lighting off, plain vertex color times texture, for lamps and glowing things; unlit objects cast no shadow */
         unlit: boolean;
+        /** @property {number} - Phong highlight strength */
+        specular: number;
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, lit opaque objects only */
+        castShadow: boolean;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         receiveShadow: boolean;
         /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
          *  @return {Matrix4} */
         getMatrix(): Matrix4;
-        /** Draw the object in 3D, called by the 3D pass, draws the mesh by default */
+        /** Turn the object so its -Z axis points at a target, sets pitch and yaw and clears roll
+         *  @param {Vector3} target */
+        lookAt(target: Vector3): void;
+        /** Draw the object in 3D, called by the 3D pass with the draw state set from this object's flags, draws the mesh by default */
         render3D(): void;
     }
     /**
      * Mesh - A triangle strip with positions, normals, uvs and colors, uploaded once and drawn by matrix
-     * - Build with addStrip, combine or the shape builders, then render each frame
+     * - Build with addStrip, addQuad, combine or the shape builders, then render each frame
      * - The GPU buffer is created lazily on first render and dropped by dispose
      * @memberof Render3D
      * @example
      * const mesh = buildLathe([[0, -1], [1, 0], [0, 1]], 4); // octahedron
-     * mesh.render(buildMatrix(vec3(0, 1, 0)), RED);
+     * mesh.render(buildMatrix(vec3(0, 1, 0)), undefined, RED);
      */
     export class Mesh {
         /** @property {Array<Vector3>} - Vertex positions in strip order */
@@ -6490,13 +6522,13 @@ declare module "littlejsengine" {
         uvs: any[];
         /** @property {Array<Color>} - Vertex colors */
         colors: any[];
-        /** @property {WebGLBuffer} - GPU buffer, created by upload */
+        /** @property {WebGLBuffer|undefined} - GPU buffer, created by upload */
         buffer: WebGLBuffer;
         /** @property {number} - Vertices in the GPU buffer */
         bufferCount: number;
-        /** @property {boolean} - The CPU data changed since the last upload, set by addStrip, combine and computeNormals, or set it after editing the arrays directly */
+        /** @property {boolean} - The CPU data changed since the last upload, set by every method that edits the arrays, or set it yourself after editing them directly */
         dirty: boolean;
-        /** @property {number} - Bounding sphere radius around the origin, for culling, computed by upload */
+        /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
         radius: number;
         /** Number of vertices in the mesh
          *  @return {number} */
@@ -6509,7 +6541,16 @@ declare module "littlejsengine" {
          *  @param {Color|Array<Color>} [colors] - One for all or one per point, default white
          *  @return {Mesh} */
         addStrip(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>): Mesh;
-        /** Append another mesh transformed by a matrix, for welding a static world together
+        /** Add a flat quad from four corners in loop order, a is the top left of the texture
+         *  @param {Vector3} a
+         *  @param {Vector3} b
+         *  @param {Vector3} c
+         *  @param {Vector3} d
+         *  @param {Color|Array<Color>} [color] - One for all or one per corner
+         *  @param {Array<Vector2>} [uvs] - One per corner, default across the tile
+         *  @return {Mesh} */
+        addQuad(a: Vector3, b: Vector3, c: Vector3, d: Vector3, color?: Color | Array<Color>, uvs?: Array<Vector2>): Mesh;
+        /** Append another mesh transformed by a matrix, for welding shapes into one draw call
          *  @param {Mesh} mesh
          *  @param {Matrix4} [matrix]
          *  @param {Color} [color] - Multiplies the appended vertex colors
@@ -6526,6 +6567,19 @@ declare module "littlejsengine" {
          *  @param {Color} color
          *  @return {Mesh} */
         setColor(color: Color): Mesh;
+        /** Measure the axis aligned box around the vertices
+         *  @return {{min: Vector3, max: Vector3}} */
+        getBounds(): {
+            min: Vector3;
+            max: Vector3;
+        };
+        /** Move the mesh so the center of its bounds is on the origin
+         *  @return {Mesh} */
+        center(): Mesh;
+        /** Scale the mesh evenly so its largest extent is a size, for loaded models of unknown units
+         *  @param {number} [size]
+         *  @return {Mesh} */
+        fit(size?: number): Mesh;
         /** Measure the bounding sphere around the origin into radius, called by upload
          *  @return {number} */
         computeRadius(): number;
@@ -6536,80 +6590,81 @@ declare module "littlejsengine" {
         /** Pack the vertices and create the GPU buffer, called automatically by render
          *  @return {Mesh} */
         upload(): Mesh;
-        /** Draw the mesh, one draw call with the current render3D state
+        /** Draw the mesh, one draw call with the current draw state
          *  @param {Matrix4} [matrix] - Object transform
-         *  @param {Color} [color] - Tint
-         *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile */
-        render(matrix?: Matrix4, color?: Color, tileInfo?: TileInfo): void;
+         *  @param {TileInfo} [tileInfo] - Texture, mesh uvs map across the tile
+         *  @param {Color} [color] - Tint */
+        render(matrix?: Matrix4, tileInfo?: TileInfo, color?: Color): void;
         /** Delete the GPU buffer, the CPU arrays stay so the mesh can be rendered again */
         dispose(): void;
     }
     /**
      * Build a surface of revolution about the Y axis
-     * - profile is [[radius, y], ...] from bottom to top
-     * - [[r,-h],[r,h]] is a cylinder, [[0,-1],[1,0],[0,1]] with 4 sides is an octahedron
-     * - capped closes each end that has a radius with a flat disc, so a cylinder or a cone is solid
+     * - profile is [[radius, y], ...] from bottom to top, a profile that ends where it starts is closed like a torus
      * @param {Array<Array<number>>} profile
-     * @param {number} [sides] - Segments around the axis
-     * @param {boolean} [smooth] - Vertex normals and shared vertices, otherwise one normal per face, defaults to render3DSmoothShading
-     * @param {boolean} [capped] - Close the ends with flat discs
+     * @param {number} [sides] - Around the axis
+     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @param {boolean} [capped] - Close the ends that have a radius with flat discs
      * @return {Mesh}
      * @memberof Render3D
+     * @example
+     * const vase = buildLathe([[0, -1], [.8, -.3], [.9, .2], [.4, .6], [0, 1]], 12);
      */
     export function buildLathe(profile: Array<Array<number>>, sides?: number, smooth?: boolean, capped?: boolean): Mesh;
     /**
-     * Build a cylinder standing on the Y axis, centered on the origin, capped by default
-     * @param {number} [radius]
+     * Build a cylinder standing on the Y axis, centered on the origin
+     * @param {number} [size] - Diameter
      * @param {number} [height]
-     * @param {number} [sides]
+     * @param {number} [sides] - Around
      * @param {boolean} [smooth] - Defaults to render3DSmoothShading
-     * @param {boolean} [capped]
+     * @param {boolean} [capped] - Close the ends
      * @return {Mesh}
      * @memberof Render3D
      */
-    export function buildCylinder(radius?: number, height?: number, sides?: number, smooth?: boolean, capped?: boolean): Mesh;
+    export function buildCylinder(size?: number, height?: number, sides?: number, smooth?: boolean, capped?: boolean): Mesh;
     /**
-     * Build a sphere of diameter 1
-     * @param {number} [segments] - Around
+     * Build a sphere centered on the origin
+     * @param {number} [size] - Diameter
+     * @param {number} [sides] - Around
      * @param {number} [rings] - Top to bottom
      * @param {boolean} [smooth] - Defaults to render3DSmoothShading
      * @return {Mesh}
      * @memberof Render3D
      */
-    export function buildSphere(segments?: number, rings?: number, smooth?: boolean): Mesh;
+    export function buildSphere(size?: number, sides?: number, rings?: number, smooth?: boolean): Mesh;
     /**
      * Build a cone standing on the Y axis, centered on the origin, the point up
-     * @param {number} [radius] - Of the base
+     * @param {number} [size] - Diameter of the base
      * @param {number} [height]
-     * @param {number} [sides]
+     * @param {number} [sides] - Around
      * @param {boolean} [smooth] - Defaults to render3DSmoothShading
      * @param {boolean} [capped] - Close the base
      * @return {Mesh}
      * @memberof Render3D
      */
-    export function buildCone(radius?: number, height?: number, sides?: number, smooth?: boolean, capped?: boolean): Mesh;
+    export function buildCone(size?: number, height?: number, sides?: number, smooth?: boolean, capped?: boolean): Mesh;
     /**
      * Build a capsule standing on the Y axis, centered on the origin: a cylinder with a half sphere on each end
-     * @param {number} [radius]
-     * @param {number} [height] - Of the straight part, the whole capsule is height plus twice the radius
-     * @param {number} [segments] - Around
-     * @param {number} [rings] - On each end cap
+     * @param {number} [size] - Diameter
+     * @param {number} [height] - Of the straight part, the whole capsule is height plus size
+     * @param {number} [sides] - Around
+     * @param {number} [rings] - On each end
      * @param {boolean} [smooth] - Defaults to render3DSmoothShading
      * @return {Mesh}
      * @memberof Render3D
      */
-    export function buildCapsule(radius?: number, height?: number, segments?: number, rings?: number, smooth?: boolean): Mesh;
+    export function buildCapsule(size?: number, height?: number, sides?: number, rings?: number, smooth?: boolean): Mesh;
     /**
      * Build a torus lying flat around the Y axis, a circle profile revolved
-     * @param {number} [radius] - From the center to the middle of the tube
-     * @param {number} [tubeRadius]
-     * @param {number} [segments] - Around the ring
-     * @param {number} [sides] - Around the tube
+     * @param {number} [size] - Diameter from the outside of the tube to the outside of the tube
+     * @param {number} [tubeSize] - Diameter of the tube
+     * @param {number} [sides] - Around the ring
+     * @param {number} [tubeSides] - Around the tube
      * @param {boolean} [smooth] - Defaults to render3DSmoothShading
      * @return {Mesh}
      * @memberof Render3D
      */
-    export function buildTorus(radius?: number, tubeRadius?: number, segments?: number, sides?: number, smooth?: boolean): Mesh;
+    export function buildTorus(size?: number, tubeSize?: number, sides?: number, tubeSides?: number, smooth?: boolean): Mesh;
     /**
      * Build a box centered on the origin, six flat faces with uvs covering each face
      * @param {Vector3} [size]
@@ -6620,18 +6675,18 @@ declare module "littlejsengine" {
     /**
      * Build a heightfield grid in the XZ plane centered on the origin
      * - smooth is one ribbon strip per row with slope normals and a color per vertex
-     * - flat is one strip per cell with a face normal and one color sampled at the cell center, so checkerboards stay crisp
-     * @param {number} sizeX
-     * @param {number} sizeZ
-     * @param {number} [segmentsX]
-     * @param {number} [segmentsZ]
+     * - flat is one quad per cell with a face normal and one color sampled at the cell center, so checkerboards stay crisp
+     * @param {Vector2} [size] - World size along X and Z
+     * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
      * @param {Color|Function} [color] - A Color for the whole grid or (x, z) => Color, default white
      * @param {Function} [heightFunction] - (x, z) => y, default flat
      * @param {boolean} [smooth] - Defaults to render3DSmoothShading
      * @return {Mesh}
      * @memberof Render3D
+     * @example
+     * const floor = buildGrid(vec2(20), 10, (x, z)=> (floor(x) + floor(z)) & 1 ? GRAY : WHITE); // a checkerboard
      */
-    export function buildGrid(sizeX: number, sizeZ: number, segmentsX?: number, segmentsZ?: number, color?: Color | Function, heightFunction?: Function, smooth?: boolean): Mesh;
+    export function buildGrid(size?: Vector2, segments?: Vector2 | number, color?: Color | Function, heightFunction?: Function, smooth?: boolean): Mesh;
     /**
      * Build a loft: diamond cross sections swept along Z, quads between them, capped both ends
      * - station = [z, halfWidth, top, bottom, sideHeight] with sideHeight 0-1 placing the side points between bottom and top (default .5)
@@ -6639,6 +6694,8 @@ declare module "littlejsengine" {
      * @param {Array<Array<number>>} stations
      * @return {Mesh}
      * @memberof Render3D
+     * @example
+     * const hull = buildLoft([[1.2, .2, .2, -.1], [0, .7, .5, -.4], [-1, .5, .3, -.3]]);
      */
     export function buildLoft(stations: Array<Array<number>>): Mesh;
     /**
@@ -6647,12 +6704,12 @@ declare module "littlejsengine" {
      * @param {Color} [topColor]
      * @param {Color} [horizonColor]
      * @param {Color} [bottomColor] - Defaults to the horizon color
-     * @param {number} [segments] - Around
+     * @param {number} [sides] - Around
      * @param {number} [rings] - Top to bottom
      * @return {Mesh}
      * @memberof Render3D
      */
-    export function buildSky(topColor?: Color, horizonColor?: Color, bottomColor?: Color, segments?: number, rings?: number): Mesh;
+    export function buildSky(topColor?: Color, horizonColor?: Color, bottomColor?: Color, sides?: number, rings?: number): Mesh;
     /**
      * Build a mesh by extruding the solid pixels of a tile, a 3D sprite
      * - A pixel is solid when its alpha is over half, its color becomes the vertex color so sprites keep their colors and white glyphs take the tint
@@ -6678,11 +6735,11 @@ declare module "littlejsengine" {
      * @return {Mesh}
      * @memberof Render3D
      * @example
-     * new EngineObject3D(vec3(0, 2, 0), buildText3D('HELLO'), YELLOW);
+     * new EngineObject3D(vec3(0, 2, 0), buildText3D('HELLO'), undefined, YELLOW);
      */
     export function buildText3D(text: string | number, size?: number, depth?: number, font?: ImageFont): Mesh;
     /**
-     * HeightMap - Terrain from a grid of heights, with a mesh builder and height lookup
+     * HeightMap - Terrain from a grid of heights, with a mesh builder, height lookup and a raycast
      * - heights is a 2D array [row][column] of 0-1 values, rows run along Z and columns along X
      * - or an image, where the red channel is the height and row 0 is the far edge (-Z)
      * - colors is an optional 2D array of Colors or an image, sampled per vertex
@@ -6702,7 +6759,7 @@ declare module "littlejsengine" {
         constructor(heights: Array<Array<number>> | HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | TextureInfo, size?: Vector2, height?: number, colors?: Array<Array<Color>> | HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | TextureInfo);
         /** @property {Array<Array<number>>} - Heights 0-1 as [row][column], rows along Z */
         heights: number[][];
-        /** @property {Array<Array<Color>>} - Vertex colors as [row][column], undefined for white */
+        /** @property {Array<Array<Color>>|undefined} - Vertex colors as [row][column], undefined for white */
         colors: OffscreenCanvas | HTMLCanvasElement | HTMLImageElement | TextureInfo | Color[][];
         /** @property {Vector2} - World size along X and Z */
         size: Vector2;
@@ -6714,11 +6771,6 @@ declare module "littlejsengine" {
         /** Number of columns, along X
          *  @return {number} */
         get columns(): number;
-        /** Distance along a ray to where it meets the terrain, or undefined; walks the ray half a cell at a time then narrows in
-         *  @param {Vector3} origin
-         *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
-         *  @return {number|undefined} */
-        raycast(origin: Vector3, direction: Vector3): number | undefined;
         /** World height at a position, exactly the height of the mesh buildMesh draws there, clamped at the edges
          *  @param {number} x
          *  @param {number} z
@@ -6729,6 +6781,11 @@ declare module "littlejsengine" {
          *  @param {number} z
          *  @return {Color} */
         getColor(x: number, z: number): Color;
+        /** Distance along a ray to where it meets the terrain, or undefined; walks the ray half a cell at a time then narrows in
+         *  @param {Vector3} origin
+         *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
+         *  @return {number|undefined} */
+        raycast(origin: Vector3, direction: Vector3): number | undefined;
         /** Build the terrain mesh, one vertex per sample, centered on the origin
          *  @param {boolean} [smooth] - Defaults to render3DSmoothShading
          *  @return {Mesh} */
@@ -6736,8 +6793,8 @@ declare module "littlejsengine" {
     }
     /**
      * Light3D - A point light that lights nearby surfaces, an EngineObject3D so it can move or follow a parent
-     * - The first 8 in the object list light the frame, radius is where the light reaches zero
-     * - Draws nothing itself, add a glow with drawSoftDisc or a small emissive mesh if it should be seen
+     * - The 8 nearest to the camera light the frame, radius is where the light reaches zero
+     * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
      * @extends EngineObject3D
      * @memberof Render3D
      * @example
@@ -6756,8 +6813,8 @@ declare module "littlejsengine" {
      * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
      * - Particles are billboards, or soft round discs when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
      * - Set trailTime to draw each particle as a ribbon along its recent path instead, for sparks and streaks
-     * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitCone
-     * - Speeds are per frame like the 2D emitter, gravity is a per frame change to velocity y
+     * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitConeAngle
+     * - Speeds are per frame like the 2D emitter; gravity is a per frame change to velocity y, not a scale of the engine's 2D gravity
      * @extends EngineObject3D
      * @memberof Render3D
      * @example
@@ -6770,7 +6827,7 @@ declare module "littlejsengine" {
          *  @param {number|Vector3} [emitSize] - Spawn area, a number for a sphere diameter or a vec3 for a box
          *  @param {number} [emitTime] - How long to keep emitting, 0 is forever
          *  @param {number} [emitRate] - Particles per second, 0 does not emit
-         *  @param {number} [emitCone] - Half angle around the emit direction, PI is every direction
+         *  @param {number} [emitConeAngle] - Half angle around the emit direction, PI is every direction
          *  @param {TileInfo} [tileInfo] - Tile to render particles with, undefined is untextured
          *  @param {Color} [colorStartA] - Color at start of life, randomized between the start colors
          *  @param {Color} [colorStartB]
@@ -6785,7 +6842,7 @@ declare module "littlejsengine" {
          *  @param {number} [fadeRate] - Fraction of life spent fading, half in and half out
          *  @param {number} [randomness] - Extra randomness applied to speed, size and life
          *  @param {boolean} [additive] - Additive blending */
-        constructor(pos3D?: Vector3, emitSize?: number | Vector3, emitTime?: number, emitRate?: number, emitCone?: number, tileInfo?: TileInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, damping?: number, gravity?: number, fadeRate?: number, randomness?: number, additive?: boolean);
+        constructor(pos3D?: Vector3, emitSize?: number | Vector3, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileInfo?: TileInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, damping?: number, gravity?: number, fadeRate?: number, randomness?: number, additive?: boolean);
         /** @property {number|Vector3} - Spawn area, a number for a sphere diameter or a vec3 for a box */
         emitSize: number | Vector3;
         /** @property {number} - How long to keep emitting, 0 is forever */
@@ -6793,7 +6850,7 @@ declare module "littlejsengine" {
         /** @property {number} - Particles per second, 0 does not emit */
         emitRate: number;
         /** @property {number} - Half angle around the emit direction, PI is every direction */
-        emitCone: number;
+        emitConeAngle: number;
         /** @property {Color} - Color at start of life, randomized between the start colors */
         colorStartA: Color;
         /** @property {Color} - Color at start of life, randomized between the start colors */
@@ -6816,8 +6873,6 @@ declare module "littlejsengine" {
         fadeRate: number;
         /** @property {number} - Extra randomness applied to speed, size and life */
         randomness: number;
-        /** @property {boolean} - Additive blending */
-        additive: boolean;
         /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards */
         trailTime: number;
         /** @property {Array<Object>} - Live particles */
@@ -6852,9 +6907,7 @@ declare module "littlejsengine" {
         width: number;
         /** @property {Color} - Color at the tail */
         colorEnd: Color;
-        /** @property {boolean} - Additive blending */
-        additive: boolean;
-        /** @property {Vector3} - Direction across the ribbon, recorded with each sample, undefined faces the camera */
+        /** @property {Vector3|undefined} - Direction across the ribbon, recorded with each sample, undefined faces the camera */
         side: any;
         /** @property {Array<Object>} - Recorded samples, oldest first */
         samples: any[];
@@ -6863,12 +6916,13 @@ declare module "littlejsengine" {
      * Parse Wavefront OBJ text into a Mesh
      * - Reads v, vt, vn and f lines with convex polygons of any size, materials and groups are ignored
      * - Normals come from the file when every corner of a face has one, otherwise from the face
+     * - Use mesh.center() and mesh.fit(size) to bring a model of unknown units to the origin
      * @param {string} text
      * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3DSmoothShading
      * @return {Mesh}
      * @memberof Render3D
      * @example
-     * new EngineObject3D(vec3(), parseOBJ(objText));
+     * new EngineObject3D(vec3(), parseOBJ(objText).center().fit(4));
      */
     export function parseOBJ(text: string, smooth?: boolean): Mesh;
     /**
@@ -6881,6 +6935,36 @@ declare module "littlejsengine" {
      * const mesh = await loadOBJ('ship.obj'); // in an async gameInit
      */
     export function loadOBJ(url: string, smooth?: boolean): Promise<Mesh>;
+    /** Draw a debug wireframe box
+     *  @param {Vector3} pos - Center
+     *  @param {Vector3|number} [size] - Full size, a number for a cube
+     *  @param {Color} [color]
+     *  @param {number} [time] - How long to show it, 0 is one frame
+     *  @param {Vector3} [rotation] - vec3(pitch, yaw, roll)
+     *  @memberof Render3D */
+    export function debugBox3D(pos: Vector3, size?: Vector3 | number, color?: Color, time?: number, rotation?: Vector3): void;
+    /** Draw a debug wireframe sphere as three rings
+     *  @param {Vector3} pos - Center
+     *  @param {number} [size] - Diameter
+     *  @param {Color} [color]
+     *  @param {number} [time] - How long to show it, 0 is one frame
+     *  @memberof Render3D */
+    export function debugSphere3D(pos: Vector3, size?: number, color?: Color, time?: number): void;
+    /** Draw a debug line
+     *  @param {Vector3} posA
+     *  @param {Vector3} posB
+     *  @param {Color} [color]
+     *  @param {number} [width]
+     *  @param {number} [time] - How long to show it, 0 is one frame
+     *  @memberof Render3D */
+    export function debugLine3D(posA: Vector3, posB: Vector3, color?: Color, width?: number, time?: number): void;
+    /** Draw a debug point as a small cross of three lines
+     *  @param {Vector3} pos
+     *  @param {Color} [color]
+     *  @param {number} [time] - How long to show it, 0 is one frame
+     *  @param {number} [size] - Length of the cross
+     *  @memberof Render3D */
+    export function debugPoint3D(pos: Vector3, color?: Color, time?: number, size?: number): void;
     /** Default shading for the shape builders, true for smooth vertex normals, false for flat faceted faces
      *  @type {boolean}
      *  @default
