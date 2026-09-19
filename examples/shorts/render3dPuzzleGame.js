@@ -37,8 +37,8 @@ class GridObject extends EngineObject3D
     update()
     {
         // slide into the new cell
-        const p = this.moveTimer.isSet() ? min(this.moveTimer.getPercent(), 1) : 1;
-        this.pos3D = this.startPos.lerp(cellPos(this.cell.x, this.cell.y, this.height), p);
+        const target = cellPos(this.cell.x, this.cell.y, this.height);
+        this.pos3D = this.startPos.lerp(target, this.moveTimer.getPercent());
     }
 }
 
@@ -164,7 +164,7 @@ function gameRender()
 
 function gameRenderPost()
 {
-    const text = 'arrows: move, R: reset, moves: ' + moves;
+    const text = 'arrows: move / R: reset / moves: ' + moves;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30);
     if (goals.every(g=> g.lit))
         drawTextScreen('SOLVED!', vec2(mainCanvasSize.x/2, mainCanvasSize.y - 50), 50, litColor);

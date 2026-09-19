@@ -91,6 +91,6 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    const text = 'hover: pick a ball, click: toss it, right drag: orbit';
+    const text = 'hover: pick a ball / click: toss it / right drag: orbit';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

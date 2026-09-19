@@ -60,7 +60,7 @@ function setModel(mesh)
 
 function gameUpdate()
 {
-    // space toggles shading, drag to orbit with no idle spin, the model is for inspecting
+    // space toggles shading, drag to orbit with no idle spin
     if (keyWasPressed('Space'))
     {
         render3D.smoothShading = !render3D.smoothShading;
@@ -72,6 +72,6 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    const text = name + ' - drop an .obj file here, space: shading, drag: orbit';
+    const text = name + ' / drop an .obj file here / space: toggle shading';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

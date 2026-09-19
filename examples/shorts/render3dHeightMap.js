@@ -54,7 +54,7 @@ function gameInit()
     render3D.setSky(hsl(.6,.7,.6), hsl(.6,.6,.9));
     render3D.setFog(20, 60);
     render3D.lightDirection = vec3(-.4,-1,-.5).normalize();
-    setRender3DSmoothShading(true);
+    render3D.smoothShading = true;
 
     // the terrain from the two images
     const [heightImage, colorImage] = makeTerrainImages(terrainSamples);
@@ -86,16 +86,16 @@ function gameUpdate()
     // space toggles shading, right click moves the ball
     if (keyWasPressed('Space'))
     {
-        setRender3DSmoothShading(!render3DSmoothShading);
+        render3D.smoothShading = !render3D.smoothShading;
         ground.mesh = terrain.buildMesh();
     }
     if (mouseWasPressed(2))
     {
         const ray = render3D.screenToRay(mousePosScreen);
-        const distance = terrain.raycast(ray.origin, ray.direction);
+        const distance = terrain.raycast(ray);
         if (distance)
         {
-            ball.pos3D = ray.origin.add(ray.direction.scale(distance));
+            ball.pos3D = ray.getPosition(distance);
             ball.velocity3D = vec3();
         }
     }

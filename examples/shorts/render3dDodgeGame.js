@@ -120,7 +120,7 @@ function gameUpdate()
     // boxes come in from a random edge
     if (spawnTimer.elapsed())
     {
-        spawnTimer.set(rand(.25,.6));
+        spawnTimer.set(rand(.3,.6));
         const pos = vec3(arenaSize/2 + 2, rand(1,6)).rotateY(rand(2*PI));
         new Box(pos);
     }

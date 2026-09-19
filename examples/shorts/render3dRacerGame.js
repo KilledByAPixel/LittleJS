@@ -78,10 +78,10 @@ class Car extends EngineObject3D
         // drive with the arrow keys, grass is slow
         const input = keyDirection();
         const offRoad = trackDistance(this.pos3D.x, this.pos3D.z) - roadWidth/2;
-        this.speed += input.y*.012;
-        this.speed *= offRoad < 0 ? .985 : .92;
+        this.speed += input.y*.01;
+        this.speed *= offRoad < 0 ? .98 : .9;
         this.speed = clamp(this.speed, -.15, offRoad < 0 ? .6 : .3);
-        this.yaw -= input.x*.035*clamp(abs(this.speed)*5)*sign(this.speed || 1);
+        this.yaw -= input.x*.03*clamp(abs(this.speed)*5)*sign(this.speed || 1);
 
         // follow the ground, the nose follows the slope
         const forward = vec3(0, 0, -1).rotateY(this.yaw);
