@@ -1695,3 +1695,36 @@ test('a sync2D object with mass takes the 2D gravity, not the 3D one', () =>
     render3D.gravity = vec3();
     o.destroy(); engineObjects.length = 0;
 });
+
+test('a ribbon along up keeps its width, lathe poles point along the axis, a capsule waist stays radial', () =>
+{
+    const upRibbon = buildRibbon([vec3(), vec3(0, 1, 0), vec3(0, 2, 0)], 1);
+    assert.ok(upRibbon.points.some(p=> Math.abs(p.z) > .49), 'the rails are apart');
+    const sphere = buildSphere(2, 12, 6, true);
+    const top = sphere.points.findIndex(p=> p.y > .999);
+    nearVec(sphere.normals[top], 0, 1, 0);
+    const capsule = buildCapsule(2, 4, 8, 3, true);
+    for (let i = 0; i < capsule.points.length; ++i)
+        if (Math.abs(Math.abs(capsule.points[i].y) - 1) < 1e-6)
+            assert.ok(Math.abs(capsule.normals[i].y) < .1, 'the junction ring is nearly radial: ' + capsule.normals[i]);
+});
+
+test('smooth normals weight each face by its corner angle, so a cube corner averages three faces evenly', () =>
+{
+    const box = buildBox().computeNormals(true);
+    for (const n of box.normals)
+        assert.ok(Math.abs(Math.abs(n.x) - Math.abs(n.y)) < 1e-6 && Math.abs(Math.abs(n.y) - Math.abs(n.z)) < 1e-6, '' + n);
+});
+
+test('HeightMap.getNormal measures the same slope at the edge as in the middle, lookAt straight up keeps the yaw', () =>
+{
+    const slope = new HeightMap([[0, 1], [0, 1]], vec2(2), 1);
+    const edge = slope.getNormal(-1, 0), middle = slope.getNormal(0, 0);
+    nearVec(edge, middle.x, middle.y, middle.z);
+    assert.ok(middle.x < -.4, 'sloped');
+    const o = new EngineObject3D(vec3());
+    o.rotation3D = vec3(0, .7, 0);
+    o.lookAt(vec3(0, 5, 0));
+    near(o.rotation3D.x, PI / 2); near(o.rotation3D.y, .7);
+    o.destroy(); engineObjects.length = 0;
+});

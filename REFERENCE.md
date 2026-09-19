@@ -935,7 +935,8 @@ obj.transparent = true                  // draw in the transparent stage, blende
 obj.additive = true                     // additive blending, implies the transparent stage
 obj.unlit = true                        // draw with lighting off, for lamps and glowing things
 obj.specular = .5                       // highlight strength
-obj.castShadow = false                  // keep it out of the shadow map
+obj.castShadow = false                  // keep it out of the shadow map; the map holds shapes, not texture alpha,
+                                        // so cut out art casts a solid shadow unless this is off
 obj.receiveShadow = false               // draw it without the shadow map's darkening
 obj.cullBackFaces = true                // skip faces pointing away from the camera, faster for closed meshes
 obj.renderOrder                         // sorts the opaque stage

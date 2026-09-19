@@ -6570,7 +6570,7 @@ declare module "littlejsengine" {
         unlit: boolean;
         /** @property {number} - How shiny the surface is, 0 is flat and matte */
         specular: number;
-        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, lit opaque objects only */
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, lit opaque objects only; the map holds the shape, not the texture's alpha, so turn it off for cut out art */
         castShadow: boolean;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         receiveShadow: boolean;
@@ -6783,7 +6783,7 @@ declare module "littlejsengine" {
      * @return {Mesh}
      * @memberof Render3D
      * @example
-     * const floor = buildGrid(vec2(20), 10, (x, z)=> (floor(x) + floor(z)) & 1 ? GRAY : WHITE); // a checkerboard
+     * const ground = buildGrid(vec2(20), 10, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? GRAY : WHITE); // 2 unit checks
      */
     export function buildGrid(size?: Vector2, segments?: Vector2 | number, color?: Color | Function, heightFunction?: Function, smooth?: boolean): Mesh;
     /**
@@ -6830,7 +6830,8 @@ declare module "littlejsengine" {
      * - Each pixel keeps its own color, so white art takes the object's tint
      * - Runs of matching pixels merge into one face, and side walls appear only at the sprite's edges
      * - Pixels can also be an array of rows, each a Color, a truthy value for white, or a falsy value for empty
-     * @param {TileInfo|Array<Array<Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels
+     * @param {TileInfo|Array<Array<Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels,
+     *  each a Color (empty when see through), a truthy value for white or a falsy value for empty
      * @param {Vector2} [size] - World width and height of the whole tile, centered like buildBox
      * @param {number} [depth] - Thickness along Z
      * @return {Mesh}

@@ -17076,11 +17076,12 @@ function render3DNormalMatrix(matrix) { return matrix.copy().invert().transpose(
 // a column of a matrix as a direction: 0 is the right axis, 4 up, 8 back
 function render3DAxis(m, i) { return vec3(m[i], m[i+1], m[i+2]); }
 
-// surface normal from the slope of a height function, sampled half a cell each way
-function render3DSlopeNormal(heightFunction, x, z, ex, ez)
+// surface normal from the slope of a height function, sampled half a cell each way but kept inside the half sizes
+function render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ)
 {
-    const dx = (heightFunction(x + ex, z) - heightFunction(x - ex, z)) / (2 * ex);
-    const dz = (heightFunction(x, z + ez) - heightFunction(x, z - ez)) / (2 * ez);
+    const x0 = max(x - ex, -halfX), x1 = min(x + ex, halfX), z0 = max(z - ez, -halfZ), z1 = min(z + ez, halfZ);
+    const dx = (heightFunction(x1, z) - heightFunction(x0, z)) / (x1 - x0 || 1);
+    const dz = (heightFunction(x, z1) - heightFunction(x, z0)) / (z1 - z0 || 1);
     return vec3(-dx, 1, -dz).normalize();
 }
 
@@ -17188,6 +17189,8 @@ function render3DLookRotation(direction, current)
 {
     const d = direction.normalize();
     if (!d.lengthSquared()) return current;
+    if (abs(d.x) + abs(d.z) < 1e-9) // straight up or down has no yaw of its own
+        return vec3(d.y > 0 ? PI / 2 : -PI / 2, current.y, 0);
     return vec3(Math.asin(clamp(d.y, -1, 1)), atan2(-d.x, -d.z), 0);
 }
 
@@ -18766,13 +18769,16 @@ class Mesh
         const normals = points.map(()=> RENDER3D_DEFAULT_NORMAL);
         if (smooth)
         {
-            // add up the face normals meeting at each position, then normalize
+            // add up the face normals meeting at each position, each weighted by its corner angle so a cube
+            // corner averages its three faces evenly however the strips cut them, then normalize
             const sums = new Map;
-            const key = (p)=> `${p.x.toFixed(5)},${p.y.toFixed(5)},${p.z.toFixed(5)}`;
+            const key = (p)=> `${round(p.x * 1e5)},${round(p.y * 1e5)},${round(p.z * 1e5)}`;
             faceNormals.forEach((f, i)=> f && [0, 1, 2].forEach(j=>
             {
-                const k = key(points[i + j]);
-                sums.set(k, (sums.get(k) || vec3()).add(f));
+                const a = points[i + j], u = points[i + (j + 1) % 3].subtract(a), v = points[i + (j + 2) % 3].subtract(a);
+                const angle = Math.acos(clamp(u.dot(v) / (u.length() * v.length() || 1), -1, 1));
+                const k = key(a);
+                sums.set(k, (sums.get(k) || vec3()).add(f.scale(angle)));
             }));
             for (let i = 0; i < n; ++i)
                 normals[i] = (sums.get(key(points[i])) || RENDER3D_DEFAULT_NORMAL).normalize();
@@ -18846,6 +18852,7 @@ class Mesh
 function buildLathe(profile, sides=12, smooth=render3DSmoothShading, capped=true)
 {
     ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
+    sides |= 0;
     ASSERT(sides > 2, 'lathe needs at least 3 sides');
     const mesh = new Mesh;
     const rings = profile.length;
@@ -18861,14 +18868,20 @@ function buildLathe(profile, sides=12, smooth=render3DSmoothShading, capped=true
     // vertex normal: average of the adjacent segment normals, across the seam when the profile is closed,
     // and a closed profile needs no caps
     const closed = rings > 2 && abs(profile[0][0] - profile[rings-1][0]) < 1e-9 && abs(profile[0][1] - profile[rings-1][1]) < 1e-9;
+    const segmentLength = (i)=> hypot(profile[i+1][0] - profile[i][0], profile[i+1][1] - profile[i][1]);
     const vertexNormal = (i)=>
     {
+        // an open end on the axis is a pole and points along it
+        if (!closed && (!i || i == rings - 1) && abs(profile[i][0]) < 1e-9)
+            return vec2(0, i ? 1 : -1);
+        // otherwise the neighbors weighted by their length, so a short band does not tilt a long wall
         let n = vec2();
-        if (i > 0) n = n.add(segmentNormal(i - 1));
-        else if (closed) n = n.add(segmentNormal(rings - 2));
-        if (i < rings - 1) n = n.add(segmentNormal(i));
-        else if (closed) n = n.add(segmentNormal(0));
-        return n.normalize();
+        const add = (s)=> n = n.add(segmentNormal(s).scale(segmentLength(s)));
+        if (i > 0) add(i - 1);
+        else if (closed) add(rings - 2);
+        if (i < rings - 1) add(i);
+        else if (closed) add(0);
+        return n.length() ? n.normalize() : vec2(1, 0);
     };
     const normal3D = (n, a)=> vec3(sin(a) * n.x, n.y, cos(a) * n.x);
 
@@ -19017,6 +19030,7 @@ function buildCapsule(size=1, height=1, sides=12, rings=4, smooth=render3DSmooth
  */
 function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3DSmoothShading)
 {
+    ASSERT(tubeSize <= size, 'the tube must fit inside the torus');
     const profile = [], radius = (size - tubeSize) / 2, tubeRadius = tubeSize / 2;
     for (let i = 0; i <= tubeSides; ++i)
     {
@@ -19071,13 +19085,17 @@ function buildRibbon(points, width=1, color=WHITE, closed=false, up=vec3(0, 1, 0
 {
     ASSERT(isArray(points) && points.length > 1, 'ribbon needs at least 2 points');
     const mesh = new Mesh, count = points.length, edges = [];
+    let across = (abs(up.y) < .9 ? vec3(0, 1, 0) : vec3(1, 0, 0)).cross(up).normalize(); // anything across up
     for (let i = 0; i < count; ++i)
     {
-        // across the path, from the tangent through this point
+        // across the path, from the tangent through this point; a step along up keeps the last across
         const next = points[closed ? (i + 1) % count : min(i + 1, count - 1)];
         const last = points[closed ? (i + count - 1) % count : max(i - 1, 0)];
-        const across = next.subtract(last).cross(up).normalize((isArray(width) ? width[i] : width) / 2);
-        edges.push([points[i].subtract(across), points[i].add(across)]);
+        const dir = next.subtract(last).cross(up);
+        if (dir.lengthSquared() > 1e-12)
+            across = dir.normalize();
+        const half = across.scale((isArray(width) ? width[i] : width) / 2);
+        edges.push([points[i].subtract(half), points[i].add(half)]);
     }
     for (let i = 0; i + 1 < count + (closed ? 1 : 0); ++i)
     {
@@ -19100,7 +19118,7 @@ function buildRibbon(points, width=1, color=WHITE, closed=false, up=vec3(0, 1, 0
  * @return {Mesh}
  * @memberof Render3D
  * @example
- * const floor = buildGrid(vec2(20), 10, (x, z)=> (floor(x) + floor(z)) & 1 ? GRAY : WHITE); // a checkerboard
+ * const ground = buildGrid(vec2(20), 10, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? GRAY : WHITE); // 2 unit checks
  */
 function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth=render3DSmoothShading)
 {
@@ -19112,7 +19130,7 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
     const cellX = size.x / segmentsX, cellZ = size.y / segmentsZ;
     const px = (i)=> i * cellX - size.x / 2, pz = (j)=> j * cellZ - size.y / 2;
     const point = (i, j)=> { const x = px(i), z = pz(j); return vec3(x, heightFunction(x, z), z); };
-    const normal = (i, j)=> render3DSlopeNormal(heightFunction, px(i), pz(j), cellX / 2, cellZ / 2);
+    const normal = (i, j)=> render3DSlopeNormal(heightFunction, px(i), pz(j), cellX / 2, cellZ / 2, size.x / 2, size.y / 2);
     const uv = (i, j)=> vec2(i / segmentsX, j / segmentsZ);
     const cellColor = (i, j)=> !color ? WHITE : isColor(color) ? color : color(px(i), pz(j));
     for (let j = 0; j < segmentsZ; ++j)
@@ -19216,7 +19234,8 @@ function buildSky(topColor=rgb(.2, .4, .9), horizonColor=rgb(.8, .9, 1), bottomC
  * - Each pixel keeps its own color, so white art takes the object's tint
  * - Runs of matching pixels merge into one face, and side walls appear only at the sprite's edges
  * - Pixels can also be an array of rows, each a Color, a truthy value for white, or a falsy value for empty
- * @param {TileInfo|Array<Array<Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels
+ * @param {TileInfo|Array<Array<Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels,
+ *  each a Color (empty when see through), a truthy value for white or a falsy value for empty
  * @param {Vector2} [size] - World width and height of the whole tile, centered like buildBox
  * @param {number} [depth] - Thickness along Z
  * @return {Mesh}
@@ -19255,7 +19274,8 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
     {
         if (x < 0 || y < 0 || x >= width || y >= height) return;
         const c = rows[y] && rows[y][x];
-        return c ? isColor(c) ? c : WHITE : undefined;
+        if (!c) return;
+        return isColor(c) ? (c.a > .5 ? c : undefined) : WHITE; // a see through Color is empty too
     };
     const same = (a, b)=> a === b || !!a && !!b && a.rgbaInt() === b.rgbaInt();
 
@@ -19420,7 +19440,7 @@ class HeightMap
     getNormal(x, z)
     {
         const ex = this.size.x / (this.columns - 1) / 2, ez = this.size.y / (this.rows - 1) / 2;
-        return render3DSlopeNormal((x, z)=> this.getHeight(x, z), x, z, ex, ez);
+        return render3DSlopeNormal((x, z)=> this.getHeight(x, z), x, z, ex, ez, this.size.x / 2, this.size.y / 2);
     }
 
     /** Color of the nearest sample to a position, white when there are no colors
@@ -19592,7 +19612,7 @@ class EngineObject3D extends EngineObject
         this.unlit = false;
         /** @property {number} - How shiny the surface is, 0 is flat and matte */
         this.specular = 0;
-        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, lit opaque objects only */
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, lit opaque objects only; the map holds the shape, not the texture's alpha, so turn it off for cut out art */
         this.castShadow = true;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
