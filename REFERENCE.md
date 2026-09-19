@@ -816,6 +816,8 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 - Builders and draws take full sizes (diameters) like buildBox and drawCircle; collision helpers and lights take radii
 - Textures sample through mipmaps in 3D so floors do not shimmer in the distance, crisp up close when tilesPixelated
   is on; render3D.mipmaps = false keeps each texture's own filtering, and 2D sprites always do
+- Opaque draws drop texels under half alpha, so cut out art like a fence or a leafy tree works and its shadow matches;
+  see through draws blend instead, set obj.transparent for a sprite that fades
 - A texture comes before its tint like drawTile, except where per vertex colors are part of the geometry (drawStrip,
   drawRibbon)
 - Y is up and -Z is forward, so the ground is the XZ plane: 2D input maps to it as vec3(move.x, 0, -move.y), forward for
@@ -878,9 +880,12 @@ render3D.fogStart = 20; render3D.fogEnd = 100 // e.g., both 0 by default which i
 render3D.gravity = vec3(0, -.01, 0) // e.g., vec3() by default so nothing falls; objects with a mass fall by this each
                                     // frame, times their gravityScale, and slow by their damping, which is 1 by
                                     // default for no slowing
-new Light3D(pos3D, radius, color) // point light, an EngineObject3D; the 8 nearest the camera light the frame, alpha
-                                  // scales brightness so alpha 0 is an off switch, brightness drops off fast so a
-                                  // small radius needs a bright color
+new Light3D(pos3D, radius, color) // point light, an EngineObject3D; alpha scales brightness so alpha 0 is an off
+                                  // switch, brightness drops off fast so a small radius needs a bright color
+light.directional = true          // shine from far away along the light's forward axis, no position and no falloff;
+                                  // aim it with light.lookAt(target) or rotation3D
+// 8 lights reach the shader each frame: every directional light first, then the point lights nearest the camera;
+// none of them cast shadows, only render3D.lightDirection does
 
 // Shadows - one shadow map from the directional light; lit opaque objects and draws on the default side of the 2D scene
 // cast and receive

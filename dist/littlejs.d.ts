@@ -6976,7 +6976,10 @@ declare module "littlejsengine" {
         buildMesh(smooth?: boolean): Mesh;
     }
     /**
-     * Light3D - A point light that lights nearby surfaces, an EngineObject3D so it can move or follow a parent
+     * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
+     * - A point light by default: it lights what is near it and fades out by its radius
+     * - Set directional to shine from far away along the light's forward axis instead, aim it with lookAt or rotation3D
+     * - Only render3D.lightDirection casts shadows, these light without shadowing
      * - Only the 8 lights nearest the camera are used each frame
      * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
      * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
@@ -6986,13 +6989,15 @@ declare module "littlejsengine" {
      * const torch = new Light3D(vec3(0, 3, 0), 10, rgb(1, .7, .3));
      */
     export class Light3D extends EngineObject3D {
-        /** Create a point light
+        /** Create a point light, set directional to make it shine from far away instead
          *  @param {Vector3} [pos3D]
-         *  @param {number} [radius] - Distance where the light fades to nothing
+         *  @param {number} [radius] - Distance where the light fades to nothing, ignored when directional
          *  @param {Color} [color] - Light color, alpha scales the brightness */
         constructor(pos3D?: Vector3, radius?: number, color?: Color);
         /** @property {number} - Distance where the light fades to nothing */
         radius: number;
+        /** @property {boolean} - Shine along the light's forward axis from far away instead of out from its position, with no falloff */
+        directional: boolean;
     }
     /**
      * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter

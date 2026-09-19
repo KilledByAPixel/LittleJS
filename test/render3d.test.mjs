@@ -1793,3 +1793,14 @@ test('texture filtering settings have their defaults', () =>
     assert.equal(render3D.mipmaps, true);
     assert.equal(render3D.anisotropy, 4);
 });
+
+test('a Light3D is a point light until directional is set, then it shines along its forward axis', () =>
+{
+    const light = new Light3D(vec3(0, 5, 0), 4, RED);
+    assert.equal(light.directional, false);
+    light.directional = true;
+    light.lookAt(vec3(0, 0, 0)); // straight down from above
+    nearVec(light.getForward3D(), 0, -1, 0);
+    light.destroy();
+    engineObjects.length = 0;
+});

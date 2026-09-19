@@ -17062,7 +17062,7 @@ const RENDER3D_VERTEX_INPUTS =
     'layout(location=8) in vec3 n0;layout(location=9) in vec3 n1;layout(location=10) in vec3 n2;' +
     'layout(location=11) in vec4 tint;layout(location=12) in vec4 uvRect;';
 const RENDER3D_MAX_STREAM_VERTS = 32768;
-const RENDER3D_MAX_POINT_LIGHTS = 8; // per frame, the shader loops over this many
+const RENDER3D_MAX_LIGHTS = 8; // Light3D objects per frame, the shader loops over this many
 const RENDER3D_QUAD_UVS = Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv))); // strip order
 const RENDER3D_FULL_UV_RECT = Object.freeze({x:0, y:0, w:1, h:1});
 const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
@@ -17272,18 +17272,19 @@ function render3DClearInstances()
 function render3DLayerObjects(after2D)
 { return engineObjects.filter(o => !o.destroyed && o instanceof EngineObject3D && render3DIsAfter2D(o) === after2D); }
 
-// the point lights the shader gets this frame, the nearest to the camera
+// the Light3D objects the shader gets this frame: directional lights light the whole scene so they come first,
+// then the point lights nearest the camera
 function render3DCollectLights()
 {
     const lights = engineObjects.filter(o => !o.destroyed && o instanceof Light3D);
-    if (lights.length > RENDER3D_MAX_POINT_LIGHTS)
+    if (lights.length > RENDER3D_MAX_LIGHTS)
     {
         // distances cached once, getWorldPos3D walks the parent chain and the sort asks many times
         const cameraPos = render3D.camera.pos, distances = new Map;
         for (const light of lights)
-            distances.set(light, light.getWorldPos3D().distanceSquared(cameraPos));
+            distances.set(light, light.directional ? -1 : light.getWorldPos3D().distanceSquared(cameraPos));
         lights.sort((a, b)=> distances.get(a) - distances.get(b));
-        lights.length = RENDER3D_MAX_POINT_LIGHTS;
+        lights.length = RENDER3D_MAX_LIGHTS;
     }
     return lights;
 }
@@ -17467,8 +17468,8 @@ class Render3DPlugin
         this.shadowMapDrawn = false; // the shadow map is drawn by the first pass of the frame
         this.passIsDefault = true;   // the running pass is the default layer, the only one shadowed
         this.boxMesh = this.sphereMesh = undefined; // unit shapes for drawBox and drawSphere
-        this.lightPositions = new Float32Array(RENDER3D_MAX_POINT_LIGHTS * 4); // point light uniforms, filled each pass
-        this.lightColors = new Float32Array(RENDER3D_MAX_POINT_LIGHTS * 4);
+        this.lightPositions = new Float32Array(RENDER3D_MAX_LIGHTS * 4); // Light3D uniforms, filled each pass
+        this.lightColors = new Float32Array(RENDER3D_MAX_LIGHTS * 4);
 
         // the stream of immediate mode draws
         this.streamBuffer = undefined;
@@ -18258,7 +18259,7 @@ function render3DInitGL()
     //   the tint and the uv rect are vertex attributes, see RENDER3D_VERTEX_INPUTS
     // fragment uniforms: lightDir (xyz, w = lighting on), lightColor (rgb, a = specular),
     //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, tex,
-    //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space)
+    //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space, w = alpha test)
     r.shader = glCreateProgram(
         '#version 300 es\n' +
         'precision highp float;' +
@@ -18278,15 +18279,17 @@ function render3DInitGL()
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform vec4 lightDir,lightColor,ambientColor,fogColor,shadowParams;' +
-        'uniform vec4 pointLights[' + RENDER3D_MAX_POINT_LIGHTS + '],pointLightColors[' + RENDER3D_MAX_POINT_LIGHTS + '];' +
-        'uniform int pointLightCount;' +
+        'uniform vec4 extraLights[' + RENDER3D_MAX_LIGHTS + '],extraLightColors[' + RENDER3D_MAX_LIGHTS + '];' +
+        'uniform int extraLightCount;' +
         'uniform vec3 cameraPos;' +
         'uniform sampler2D tex;' +
         'uniform highp sampler2DShadow shadowMap;' +
         'in vec3 P,N;in vec2 T;in vec4 C,S;' +
         'out vec4 o;' +
         'void main(){' +
-        'vec4 c=C*texture(tex,T);' +
+        'vec4 t=texture(tex,T);' +
+        'if(shadowParams.w>0.&&t.a<.5)discard;' + // an opaque draw drops see through texels, as the shadow map does
+        'vec4 c=C*t;' +
         'if(lightDir.w>0.){' +
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'float nl=dot(n,-lightDir.xyz);' +
@@ -18302,13 +18305,16 @@ function render3DInitGL()
         's/=9.;' +
         '}}' +
         'vec3 l=ambientColor.rgb+lightColor.rgb*max(nl,0.)*s;' +
-        // point lights: linear falloff squared, diffuse only
-        'for(int i=0;i<' + RENDER3D_MAX_POINT_LIGHTS + ';++i){' +
-        'if(i>=pointLightCount)break;' +
-        'vec3 v=pointLights[i].xyz-P;' +
+        // the Light3D objects, diffuse only: a point light falls off with distance, a directional one does not and
+        // carries the direction toward it in xyz, marked by a radius of zero
+        'for(int i=0;i<' + RENDER3D_MAX_LIGHTS + ';++i){' +
+        'if(i>=extraLightCount)break;' +
+        'vec4 L=extraLights[i];' +
+        'bool directional=L.w<=0.;' +
+        'vec3 v=directional?L.xyz:L.xyz-P;' +
         'float d=length(v);' +
-        'float a=max(0.,1.-d/pointLights[i].w);' +
-        'l+=pointLightColors[i].rgb*pointLightColors[i].a*a*a*max(0.,dot(n,v/max(d,1e-6)));' +
+        'float a=directional?1.:max(0.,1.-d/L.w);' +
+        'l+=extraLightColors[i].rgb*extraLightColors[i].a*a*a*max(0.,dot(n,v/max(d,1e-6)));' +
         '}' +
         'c.rgb*=l;' +
         // specular: only where the light hits, skipped entirely when the strength is zero
@@ -18560,7 +18566,8 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     render3DUniform4f('lightColor', lc.r, lc.g, lc.b, state.specular);
     render3DUniform4f('ambientColor', ac.r, ac.g, ac.b, r.fogEnd);
     render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogStart);
-    render3DUniform4f('shadowParams', r.shadows && r.passIsDefault && state.receiveShadow ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, 0);
+    const alphaTest = state.blend ? 0 : 1; // see through texels are blended away in the transparent stage instead
+    render3DUniform4f('shadowParams', r.shadows && r.passIsDefault && state.receiveShadow ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, alphaTest);
 }
 
 // the six flat sides of the camera's visible box, each as [x, y, z, w] facing inward
@@ -18627,20 +18634,22 @@ function render3DRenderPass(after2D)
     const c = r.camera.pos;
     gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
 
-    // point lights: the nearest Light3D objects
+    // the Light3D objects, a directional one sends the direction toward it and a radius of zero
     const lights = render3DCollectLights();
-    gl.uniform1i(render3DUniform('pointLightCount'), lights.length);
+    gl.uniform1i(render3DUniform('extraLightCount'), lights.length);
     if (lights.length)
     {
         const positions = r.lightPositions, colors = r.lightColors;
         lights.forEach((light, i)=>
         {
-            const p = light.getWorldPos3D(), c = light.color, k = i * 4;
-            positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z, positions[k+3] = light.radius;
+            const p = light.directional ? light.getForward3D().scale(-1) : light.getWorldPos3D();
+            const c = light.color, k = i * 4;
+            positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
+            positions[k+3] = light.directional ? 0 : light.radius;
             colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a;
         });
-        gl.uniform4fv(render3DUniform('pointLights'), positions, 0, lights.length * 4);
-        gl.uniform4fv(render3DUniform('pointLightColors'), colors, 0, lights.length * 4);
+        gl.uniform4fv(render3DUniform('extraLights'), positions, 0, lights.length * 4);
+        gl.uniform4fv(render3DUniform('extraLightColors'), colors, 0, lights.length * 4);
     }
 
     r.isRendering = true;
@@ -20027,7 +20036,10 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * Light3D - A point light that lights nearby surfaces, an EngineObject3D so it can move or follow a parent
+ * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
+ * - A point light by default: it lights what is near it and fades out by its radius
+ * - Set directional to shine from far away along the light's forward axis instead, aim it with lookAt or rotation3D
+ * - Only render3D.lightDirection casts shadows, these light without shadowing
  * - Only the 8 lights nearest the camera are used each frame
  * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
  * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
@@ -20038,9 +20050,9 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
  */
 class Light3D extends EngineObject3D
 {
-    /** Create a point light
+    /** Create a point light, set directional to make it shine from far away instead
      *  @param {Vector3} [pos3D]
-     *  @param {number} [radius] - Distance where the light fades to nothing
+     *  @param {number} [radius] - Distance where the light fades to nothing, ignored when directional
      *  @param {Color} [color] - Light color, alpha scales the brightness */
     constructor(pos3D=vec3(), radius=5, color=WHITE)
     {
@@ -20049,6 +20061,8 @@ class Light3D extends EngineObject3D
         this.size3D = vec3(); // not a solid thing to pick or collect
         /** @property {number} - Distance where the light fades to nothing */
         this.radius = radius;
+        /** @property {boolean} - Shine along the light's forward axis from far away instead of out from its position, with no falloff */
+        this.directional = false;
     }
 
     /** Lights draw nothing */

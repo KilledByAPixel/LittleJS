@@ -34,6 +34,11 @@ function gameInit()
     new EngineObject3D(vec3(0,1,0), buildBox(2).setColor(hsl(0,0,.8)));
     for (let i = 3; i--;)
         new Lamp(i*2, hsl(i/3,1,.6));
+
+    // a directional light shines along its forward axis from far away, a cold fill here
+    const fill = new Light3D(vec3(), 1, hsl(.6,1,.2));
+    fill.directional = true;
+    fill.lookAt(vec3(-1,-1,-.5));
 }
 
 function gameUpdate()
