@@ -84,6 +84,7 @@ const exampleList =
     new ExampleInfo('3D Trails', 'render3dTrails.js', 'Trail3D ribbons, drawRibbon and a mesh deformed every frame', false, '3d, trail, ribbon, dynamic, mesh, deform, flag, webgl'),
     new ExampleInfo('3D Text', 'render3dText.js', 'Text and sprites extruded from the engine font and the tile sheet', false, '3d, text, font, sprite, extrude, mesh, webgl'),
     new ExampleInfo('3D Layers', 'render3dLayers.js', '3D objects behind and in front of a 2D scene', false, '3d, 2d, layers, align2D, renderAfter2D, webgl'),
+    new ExampleInfo('3D Dodge Game', 'render3dDodgeGame.js', 'A small game: dodge tumbling boxes with a chase camera, shadows, sound and particles', false, '3d, game, chase camera, shadows, sound, particles, text, webgl'),
     new ExampleInfo('3D Mesh', 'render3dMesh.js', 'Load an OBJ model, drop your own on the page', false, '3d, obj, mesh, model, load, file, webgl'),
     new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball bouncing', false, 'objects, collision'),

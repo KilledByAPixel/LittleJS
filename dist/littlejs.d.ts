@@ -6151,9 +6151,8 @@ declare module "littlejsengine" {
     export let render3D: Render3DPlugin;
     /**
      * Render3D Plugin - The 3D renderer, camera, lights, shadows, fog and draw state
-     * - The 3D pass runs before gameRender, so 2D drawing lands on top; renderAfter2D flips that for all objects or one at a time
-     * - Objects on the other side of the 2D scene from the default get their own pass; the sky, the callbacks and the debug primitives draw with the default
-     * - Draw state fields are read at each draw, the pass resets them before each object and stage callback
+     * - The 3D pass runs before gameRender, so 2D drawing lands on top; renderAfter2D flips that
+     * - Draw state fields are read at each draw, the pass sets them from each object's flags and resets them for the callbacks
      * @memberof Render3D
      * @example
      * new Render3DPlugin();
@@ -6182,7 +6181,7 @@ declare module "littlejsengine" {
         shadowMapSize: number;
         /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper */
         shadowRange: number;
-        /** @property {Vector3|undefined} - Center of the shadowed area, undefined follows the camera */
+        /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera */
         shadowCenter: any;
         /** @property {number} - Depth offset that keeps surfaces from shadowing themselves, raise it for speckles, lower it if shadows float away from their casters */
         shadowBias: number;
@@ -6254,17 +6253,7 @@ declare module "littlejsengine" {
         streamInts: Uint32Array;
         streamCount: number;
         streamTileInfo: any;
-        streamState: {
-            blend: boolean;
-            additive: boolean;
-            depthTest: boolean;
-            depthWrite: boolean;
-            cullBackFaces: boolean;
-            lighting: boolean;
-            receiveShadow: boolean;
-            specular: number;
-        };
-        streamStateKey: number;
+        streamState: {};
         capture: Mesh;
         transparentQueue: any[];
         /** Rebuild the view and projection matrices from the camera, called automatically each frame
@@ -6469,6 +6458,11 @@ declare module "littlejsengine" {
          *  @param {number} yaw - Radians around Y
          *  @param {number} [pitch] - Radians above the horizon */
         orbit(target: Vector3, distance: number, yaw: number, pitch?: number): void;
+        /** Chase a target from an offset, easing toward it, and look at it
+         *  @param {Vector3} target
+         *  @param {Vector3} offset - Where to sit relative to the target
+         *  @param {number} [percent] - How far to move toward the spot each call, 1 snaps */
+        follow(target: Vector3, offset: Vector3, percent?: number): void;
         /** Park the camera so the z=0 plane matches LittleJS 2D world space, called automatically when align2D is set
          *  @param {number} [canvasHeight] - Defaults to the main canvas height */
         update2D(canvasHeight?: number): void;
@@ -6479,7 +6473,6 @@ declare module "littlejsengine" {
      * - velocity3D is added to pos3D each frame, there is no other 3D physics, games do their own
      * - The 2D pos and velocity still exist but rendering ignores them and mass is 0 so 2D physics leaves them alone; copy pos into pos3D for pseudo-3D games
      * - addChild parents the 3D transform, pos3D is then local to the parent; the 2D offset arguments of addChild do nothing in 3D, set the child's pos3D instead
-     * - render() is empty, override render3D() for custom drawing; the pass sets the draw state from the object's flags before calling it
      * @extends EngineObject
      * @memberof Render3D
      * @example
@@ -6503,9 +6496,9 @@ declare module "littlejsengine" {
         rotation3D: Vector3;
         /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
         scale3D: Vector3;
-        /** @property {Vector3} - Added to pos3D each frame */
+        /** @property {Vector3} - Added to pos3D each frame by the engine after update, no super call needed */
         velocity3D: Vector3;
-        /** @property {Vector3} - Added to rotation3D each frame */
+        /** @property {Vector3} - Added to rotation3D each frame by the engine after update */
         angleVelocity3D: Vector3;
         /** @property {Mesh|undefined} - Mesh to draw */
         mesh: Mesh;
@@ -6525,7 +6518,7 @@ declare module "littlejsengine" {
         cullBackFaces: boolean;
         /** @property {boolean|undefined} - Draw this object after the 2D scene instead of before it, undefined follows render3D.renderAfter2D; set it back to undefined to follow the default again */
         renderAfter2D: any;
-        /** Returns the world position, pos3D is local when attached to an EngineObject3D parent
+        /** Returns the world position
          *  @return {Vector3} */
         getWorldPos3D(): Vector3;
         /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
@@ -6712,7 +6705,7 @@ declare module "littlejsengine" {
      * - flat is one quad per cell with a face normal and one color sampled at the cell center, so checkerboards stay crisp
      * @param {Vector2} [size] - World size along X and Z
      * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
-     * @param {Color|Function} [color] - A Color for the whole grid or (x, z) => Color, default white
+     * @param {Color|Function} [color] - A Color for the whole grid or (x, z) => Color in mesh units, called per vertex when smooth and once per cell at its center when flat
      * @param {Function} [heightFunction] - (x, z) => y, default flat
      * @param {boolean} [smooth] - Defaults to render3DSmoothShading
      * @return {Mesh}
@@ -6760,7 +6753,8 @@ declare module "littlejsengine" {
     export function buildExtrude(pixels: TileInfo | Array<Array<Color | number | boolean>>, size?: Vector2, depth?: number): Mesh;
     /**
      * Build a mesh of extruded text from an image font, the engine font by default so it needs no assets
-     * - Each glyph is extruded once per font and reused, the block is centered, newlines stack downward
+     * - Each glyph is extruded once per font and reused, the block is centered and faces +Z, newlines stack downward
+     * - Every call builds a new mesh, dispose the old one when text changes often
      * - Glyphs are white in the engine font, so the object's color tints the text
      * @param {string|number} text
      * @param {number} [size] - Character height in world units
@@ -6848,7 +6842,8 @@ declare module "littlejsengine" {
      * - Particles are billboards, or soft round discs when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
      * - Set trailTime to draw each particle as a ribbon along its recent path instead, for sparks and streaks
      * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitConeAngle
-     * - Speeds are per frame like the 2D emitter; gravity is a per frame change to velocity y, not a scale of the engine's 2D gravity
+     * - Speeds are per frame and sizes are world units like the 2D emitter; gravity is a per frame change to velocity y, not a scale of the engine's 2D gravity
+     * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
      * @extends EngineObject3D
      * @memberof Render3D
      * @example

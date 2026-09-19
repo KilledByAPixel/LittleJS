@@ -1411,3 +1411,14 @@ test('Mesh.addQuad takes colors and uvs in corner order', () =>
     assert.equal(new Mesh().getBounds().min.x, 0); // an empty mesh has empty bounds
     assert.equal(buildSphere(1, 8, 4, false).vertexCount, 4 * 8 * 6); // no polar caps
 });
+
+test('Camera3D.follow eases toward the offset spot and looks at the target', () =>
+{
+    const c = new Camera3D;
+    c.pos = vec3(0, 0, 0);
+    c.follow(vec3(10, 0, 0), vec3(0, 0, 4), .5);
+    nearVec(c.pos, 5, 0, 2);
+    c.follow(vec3(10, 0, 0), vec3(0, 0, 4));
+    nearVec(c.pos, 10, 0, 4);
+    nearVec(c.forward(), 0, 0, -1);
+});

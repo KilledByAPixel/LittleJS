@@ -16965,7 +16965,6 @@ const RENDER3D_VERTEX_BYTES = RENDER3D_VERTEX_FLOATS * 4;
 const RENDER3D_MAX_STREAM_VERTS = 32768;
 const RENDER3D_MAX_POINT_LIGHTS = 8; // per frame, the shader loops over this many
 const RENDER3D_QUAD_UVS = Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv))); // strip order
-const RENDER3D_QUAD_CORNER_UVS = Object.freeze([RENDER3D_QUAD_UVS[0], RENDER3D_QUAD_UVS[1], RENDER3D_QUAD_UVS[3], RENDER3D_QUAD_UVS[2]]); // loop order
 const RENDER3D_FULL_UV_RECT = Object.freeze({x:0, y:0, w:1, h:1});
 const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
 const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
@@ -16995,29 +16994,25 @@ function render3DCanDraw()
     return render3D.isRendering;
 }
 
-// the draw state a stream batch is drawn under; a draw whose state differs flushes the pending
-// batch first, so each batch draws under the state its own draws shared
-// lights and fog are not captured, they are read live when the batch flushes
+// the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
+const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'lighting', 'receiveShadow', 'specular'];
+
+// a copy of the current draw state
 function render3DCaptureBatchState()
 {
-    const r = render3D;
-    return {blend: r.blend, additive: r.additive, depthTest: r.depthTest, depthWrite: r.depthWrite,
-        cullBackFaces: r.cullBackFaces, lighting: r.lighting, receiveShadow: r.receiveShadow, specular: r.specular};
+    const state = {};
+    for (const field of RENDER3D_STATE_FIELDS)
+        state[field] = render3D[field];
+    return state;
 }
 
-// a key for the current or a captured state, so a change flushes the pending batch first (specular in steps of 1/1024)
-function render3DStateKey(s=render3D)
+// true when the current draw state differs from a captured one, so a pending batch must flush first
+function render3DStateChanged(state)
 {
-    return (s.blend ? 1 : 0) | (s.additive ? 2 : 0) | (s.depthTest ? 4 : 0) | (s.depthWrite ? 8 : 0)
-        | (s.cullBackFaces ? 16 : 0) | (s.lighting ? 32 : 0) | (s.receiveShadow ? 64 : 0) | (s.specular * 1024 | 0) << 7;
-}
-
-// set the draw state fields from a captured state
-function render3DApplyState(s)
-{
-    const r = render3D;
-    r.blend = s.blend; r.additive = s.additive; r.depthTest = s.depthTest; r.depthWrite = s.depthWrite;
-    r.cullBackFaces = s.cullBackFaces; r.lighting = s.lighting; r.receiveShadow = s.receiveShadow; r.specular = s.specular;
+    for (const field of RENDER3D_STATE_FIELDS)
+        if (render3D[field] !== state[field])
+            return true;
+    return false;
 }
 
 // run a function with some draw state fields overridden, restored afterward even on a throw
@@ -17031,15 +17026,25 @@ function render3DWithState(fields, fn)
 }
 
 // which side of the 2D scene an object draws on, its own flag or the plugin default
-function render3DIsAfter2D(o)
-{
-    return !!(o.renderAfter2D === undefined ? render3D.renderAfter2D : o.renderAfter2D);
-}
+function render3DIsAfter2D(o) { return !!(o.renderAfter2D ?? render3D.renderAfter2D); }
+
+// a size given as a number or a vec3
+function render3DSize3(size) { return isNumber(size) ? vec3(size) : size; }
+
+// the matrix that transforms normals for a model matrix
+function render3DNormalMatrix(matrix) { return matrix.copy().invert().transpose(); }
 
 // the largest axis scale of a matrix, how much it grows a bounding sphere
 function render3DMaxScale(m)
 {
     return max(m[0]*m[0] + m[1]*m[1] + m[2]*m[2], m[4]*m[4] + m[5]*m[5] + m[6]*m[6], m[8]*m[8] + m[9]*m[9] + m[10]*m[10]) ** .5;
+}
+
+// a quad as a strip from its center and half axes, the same corner order as render3DQuadStrip
+function render3DQuadAxes(center, right, up)
+{
+    return [center.subtract(right).add(up), center.subtract(right).subtract(up),
+        center.add(right).add(up), center.add(right).subtract(up)];
 }
 
 // set the draw state for an object's render3D, or the defaults for the stage callbacks
@@ -17054,18 +17059,29 @@ function render3DSetObjectState(o)
     r.depthTest = true;
 }
 
+// draw objects each with the draw state set from its own flags, then reset to the defaults
+function render3DDrawObjects(objects)
+{
+    for (const o of objects)
+    {
+        render3DSetObjectState(o);
+        o.render3D();
+    }
+    render3DSetObjectState();
+}
+
 // the point lights the shader gets this frame, the nearest to the camera
 function render3DCollectLights()
 {
-    let lights = [];
+    const lights = [];
     for (const o of engineObjects)
         if (!o.destroyed && o instanceof Light3D)
             lights.push(o);
     if (lights.length > RENDER3D_MAX_POINT_LIGHTS)
     {
         const cameraPos = render3D.camera.pos;
-        const distance = (light)=> light.getWorldPos3D().distanceSquared(cameraPos);
-        lights = lights.map(light => [distance(light), light]).sort((a, b)=> a[0] - b[0]).slice(0, RENDER3D_MAX_POINT_LIGHTS).map(a => a[1]);
+        lights.sort((a, b)=> a.getWorldPos3D().distanceSquared(cameraPos) - b.getWorldPos3D().distanceSquared(cameraPos));
+        lights.length = RENDER3D_MAX_POINT_LIGHTS;
     }
     return lights;
 }
@@ -17098,9 +17114,8 @@ function render3DLookRotation(direction)
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Render3D Plugin - The 3D renderer, camera, lights, shadows, fog and draw state
- * - The 3D pass runs before gameRender, so 2D drawing lands on top; renderAfter2D flips that for all objects or one at a time
- * - Objects on the other side of the 2D scene from the default get their own pass; the sky, the callbacks and the debug primitives draw with the default
- * - Draw state fields are read at each draw, the pass resets them before each object and stage callback
+ * - The 3D pass runs before gameRender, so 2D drawing lands on top; renderAfter2D flips that
+ * - Draw state fields are read at each draw, the pass sets them from each object's flags and resets them for the callbacks
  * @memberof Render3D
  * @example
  * new Render3DPlugin();
@@ -17140,7 +17155,7 @@ class Render3DPlugin
         this.shadowMapSize = 1024;
         /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper */
         this.shadowRange = 40;
-        /** @property {Vector3|undefined} - Center of the shadowed area, undefined follows the camera */
+        /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera */
         this.shadowCenter = undefined;
         /** @property {number} - Depth offset that keeps surfaces from shadowing themselves, raise it for speckles, lower it if shadows float away from their casters */
         this.shadowBias = .003;
@@ -17223,7 +17238,6 @@ class Render3DPlugin
         this.streamCount = 0;
         this.streamTileInfo = undefined;
         this.streamState = undefined; // captured state the pending batch was drawn under
-        this.streamStateKey = 0;
         this.capture = undefined;     // the mesh a bake is filling
         this.transparentQueue = undefined; // draws queued during the transparent stage, replayed far to near
 
@@ -17245,9 +17259,10 @@ class Render3DPlugin
         this.viewMatrix = cameraMatrix.copy().invert();
         this.projectionMatrix = camera.getProjectionMatrix(aspect);
         this.viewProjection = this.projectionMatrix.copy().multiply(this.viewMatrix);
-        this.cameraRight = cameraMatrix.transformDirection(vec3(1, 0, 0));
-        this.cameraUp = cameraMatrix.transformDirection(vec3(0, 1, 0));
-        this.cameraForward = cameraMatrix.transformDirection(vec3(0, 0, -1));
+        const m = cameraMatrix.m; // the axes are its columns
+        this.cameraRight = vec3(m[0], m[1], m[2]);
+        this.cameraUp = vec3(m[4], m[5], m[6]);
+        this.cameraForward = vec3(-m[8], -m[9], -m[10]);
         this.frustumPlanes = render3DFrustumPlanes(this.viewProjection);
     }
 
@@ -17288,18 +17303,12 @@ class Render3DPlugin
         const clipX = screenPos.x / canvasSize.x * 2 - 1;
         const clipY = 1 - screenPos.y / canvasSize.y * 2;
         const aspect = canvasSize.x / canvasSize.y || 1, camera = this.camera;
-        if (camera.orthographic)
-        {
-            // parallel rays from a point on the view plane
-            const h = camera.orthographic / 2;
-            const origin = camera.pos.add(this.cameraRight.scale(clipX * h * aspect)).add(this.cameraUp.scale(clipY * h));
-            return {origin, direction: this.cameraForward.copy()};
-        }
-        const tanHalf = tan(camera.fov / 2);
-        const direction = this.cameraForward
-            .add(this.cameraRight.scale(clipX * tanHalf * aspect))
-            .add(this.cameraUp.scale(clipY * tanHalf)).normalize();
-        return {origin: camera.pos.copy(), direction};
+        // the screen offset moves a parallel ray's origin, or bends a perspective ray's direction
+        const h = camera.orthographic ? camera.orthographic / 2 : tan(camera.fov / 2);
+        const offset = this.cameraRight.scale(clipX * h * aspect).add(this.cameraUp.scale(clipY * h));
+        return camera.orthographic
+            ? {origin: camera.pos.add(offset), direction: this.cameraForward.copy()}
+            : {origin: camera.pos.copy(), direction: this.cameraForward.add(offset).normalize()};
     }
 
     /** Find the nearest object whose bounding sphere a ray hits, for picking
@@ -17332,6 +17341,7 @@ class Render3DPlugin
      *  @return {SoundInstance|undefined} - undefined when out of range or sound is off */
     playSound(sound, pos3D, volume=1, pitch=1, randomnessScale=1, loop=false)
     {
+        // keep in step with Sound.play, only the pan differs
         ASSERT(sound instanceof Sound, 'sound must be a Sound');
         ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
         if (!soundEnable || headlessMode) return;
@@ -17419,15 +17429,13 @@ class Render3DPlugin
         if (points.length + 3 > RENDER3D_MAX_STREAM_VERTS) return;
 
         // flush when the texture or state differs from the pending batch, or it would overflow
-        const stateKey = render3DStateKey();
         const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
-        if (this.streamCount && (textureInfo !== this.streamTileInfo || stateKey !== this.streamStateKey
+        if (this.streamCount && (textureInfo !== this.streamTileInfo || render3DStateChanged(this.streamState)
             || this.streamCount + points.length + 3 > RENDER3D_MAX_STREAM_VERTS))
             this.flush();
-        if (!this.streamCount || stateKey !== this.streamStateKey)
+        if (!this.streamCount)
             this.streamState = render3DCaptureBatchState();
         this.streamTileInfo = textureInfo;
-        this.streamStateKey = stateKey;
 
         // the tile rect is applied to each uv now, so the whole texture maps at flush
         const uvRect = render3DGetTileUVs(tileInfo);
@@ -17498,12 +17506,7 @@ class Render3DPlugin
         const byOrder = (a, b)=> a.renderOrder - b.renderOrder;
         opaque.sort(byOrder);
         transparent.sort(byOrder);
-        for (const o of opaque)
-        {
-            render3DSetObjectState(o);
-            o.render3D();
-        }
-        render3DSetObjectState();
+        render3DDrawObjects(opaque);
         isDefault && this.onRenderOpaque?.();
         this.flush();
 
@@ -17513,12 +17516,7 @@ class Render3DPlugin
         this.transparentQueue = this.sortTransparent ? [] : undefined;
         try
         {
-            for (const o of transparent)
-            {
-                render3DSetObjectState(o);
-                o.render3D();
-            }
-            render3DSetObjectState();
+            render3DDrawObjects(transparent);
             isDefault && this.onRenderTransparent?.();
         }
         finally { this.flushTransparentQueue(); }
@@ -17553,11 +17551,11 @@ class Render3DPlugin
         {
             for (const item of queue)
             {
-                render3DApplyState(item.state);
+                Object.assign(this, item.state);
                 item.draw();
             }
         }
-        finally { render3DApplyState(state); } // the last item's state must not leak
+        finally { Object.assign(this, state); } // the last item's state must not leak
     }
 
     /** Draw render3D.sky around the camera, unlit, unfogged and behind everything, called automatically by the pass */
@@ -17609,7 +17607,7 @@ class Render3DPlugin
     drawBox(pos, size=1, color=WHITE, rotation)
     {
         this.boxMesh ||= buildBox();
-        this.drawMesh(this.boxMesh, buildMatrix(pos, rotation, isNumber(size) ? vec3(size) : size), undefined, color);
+        this.drawMesh(this.boxMesh, buildMatrix(pos, rotation, render3DSize3(size)), undefined, color);
     }
 
     /** Draw a sphere, untextured and smooth shaded
@@ -17633,9 +17631,7 @@ class Render3DPlugin
         const c = cos(angle), s = sin(angle);
         const right = this.cameraRight.scale(c).add(this.cameraUp.scale(s)).scale(size.x / 2);
         const up = this.cameraUp.scale(c).subtract(this.cameraRight.scale(s)).scale(size.y / 2);
-        this.drawStripUnlit(
-            [pos.subtract(right).add(up), pos.subtract(right).subtract(up), pos.add(right).add(up), pos.add(right).subtract(up)],
-            this.cameraForward.scale(-1), RENDER3D_QUAD_UVS, color, tileInfo);
+        this.drawStripUnlit(render3DQuadAxes(pos, right, up), this.cameraForward.scale(-1), RENDER3D_QUAD_UVS, color, tileInfo);
     }
 
     /** Draw a quad from four corners in loop order, a is the top left of the texture
@@ -17740,7 +17736,6 @@ class Render3DPlugin
     }
 }
 
-// soft discs fade to transparent, which needs the blending of the transparent stage
 function render3DAssertBlending()
 {
     const r = render3D;
@@ -17799,7 +17794,7 @@ function render3DDebugPush(duration, draw)
  *  @memberof Render3D */
 function debugBox3D(pos, size=1, color=WHITE, time=0, rotation)
 {
-    const matrix = buildMatrix(pos, rotation, isNumber(size) ? vec3(size) : size);
+    const matrix = buildMatrix(pos, rotation, render3DSize3(size));
     const corner = (i)=> matrix.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
     render3DDebugPush(time, ()=>
     {
@@ -17904,15 +17899,15 @@ class Camera3D
 
     /** Returns the direction the camera looks
      *  @return {Vector3} */
-    forward() { return this.getMatrix().transformDirection(vec3(0, 0, -1)); }
+    forward() { const m = this.getMatrix().m; return vec3(-m[8], -m[9], -m[10]); }
 
     /** Returns the camera's right axis
      *  @return {Vector3} */
-    right() { return this.getMatrix().transformDirection(vec3(1, 0, 0)); }
+    right() { const m = this.getMatrix().m; return vec3(m[0], m[1], m[2]); }
 
     /** Returns the camera's up axis
      *  @return {Vector3} */
-    up() { return this.getMatrix().transformDirection(vec3(0, 1, 0)); }
+    up() { const m = this.getMatrix().m; return vec3(m[4], m[5], m[6]); }
 
     /** Point the camera at a target, sets pitch and yaw and clears roll
      *  @param {Vector3} target */
@@ -17927,6 +17922,16 @@ class Camera3D
     {
         const r = cos(pitch) * distance;
         this.pos = target.add(vec3(sin(yaw) * r, sin(pitch) * distance, cos(yaw) * r));
+        this.lookAt(target);
+    }
+
+    /** Chase a target from an offset, easing toward it, and look at it
+     *  @param {Vector3} target
+     *  @param {Vector3} offset - Where to sit relative to the target
+     *  @param {number} [percent] - How far to move toward the spot each call, 1 snaps */
+    follow(target, offset, percent=1)
+    {
+        this.pos = this.pos.lerp(target.add(offset), percent);
         this.lookAt(target);
     }
 
@@ -18140,7 +18145,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     const sx = m[0]*m[0] + m[1]*m[1] + m[2]*m[2], sy = m[4]*m[4] + m[5]*m[5] + m[6]*m[6], sz = m[8]*m[8] + m[9]*m[9] + m[10]*m[10];
     const mirrored = m[0] * (m[5]*m[10] - m[6]*m[9]) - m[4] * (m[1]*m[10] - m[2]*m[9]) + m[8] * (m[1]*m[6] - m[2]*m[5]) < 0;
     const uniform = !mirrored && abs(sx - sy) < 1e-6 * sx && abs(sx - sz) < 1e-6 * sx;
-    gl.uniformMatrix4fv(render3DUniform('normalMat'), false, uniform ? m : matrix.copy().invert().transpose().m);
+    gl.uniformMatrix4fv(render3DUniform('normalMat'), false, uniform ? m : render3DNormalMatrix(matrix).m);
 
     // blending, matches the engine's 2D blend functions
     if (state.blend)
@@ -18247,7 +18252,7 @@ function render3DRenderPass(after2D)
         const positions = new Float32Array(lights.length * 4), colors = new Float32Array(lights.length * 4);
         lights.forEach((light, i)=>
         {
-            const p = light.getMatrix().getTranslation();
+            const p = light.getWorldPos3D();
             positions.set([p.x, p.y, p.z, light.radius], i * 4);
             colors.set([light.color.r, light.color.g, light.color.b, light.color.a], i * 4);
         });
@@ -18337,14 +18342,9 @@ function render3DRenderShadowMap()
     r.shadowPass = true;
     try
     {
-        for (const o of engineObjects)
-            if (!o.destroyed && o instanceof EngineObject3D && o.castShadow && !o.transparent && !o.additive
-                && render3DIsAfter2D(o) === !!r.renderAfter2D) // the other layer is a different scene
-            {
-                render3DSetObjectState(o);
-                o.render3D();
-            }
-        render3DSetObjectState();
+        const casters = engineObjects.filter(o => !o.destroyed && o instanceof EngineObject3D && o.castShadow
+            && !o.transparent && !o.additive && render3DIsAfter2D(o) === !!r.renderAfter2D); // the other layer is a different scene
+        render3DDrawObjects(casters);
         r.onRenderOpaque?.();
         r.flush();
     }
@@ -18474,10 +18474,10 @@ class Mesh
      *  @param {Color|Array<Color>} [color] - One for all or one per corner
      *  @param {Array<Vector2>} [uvs] - One per corner, default across the tile
      *  @return {Mesh} */
-    addQuad(a, b, c, d, color, uvs=RENDER3D_QUAD_CORNER_UVS)
+    addQuad(a, b, c, d, color, uvs)
     {
         const strip = (v)=> isArray(v) ? render3DQuadStrip(...v) : v; // per corner values into strip order
-        return this.addStrip(render3DQuadStrip(a, b, c, d), render3DFaceNormal(a, b, c, d), strip(uvs), strip(color));
+        return this.addStrip(render3DQuadStrip(a, b, c, d), render3DFaceNormal(a, b, c, d), uvs ? strip(uvs) : RENDER3D_QUAD_UVS, strip(color));
     }
 
     /** Append another mesh transformed by a matrix, for welding shapes into one draw call
@@ -18487,7 +18487,7 @@ class Mesh
      *  @return {Mesh} */
     combine(mesh, matrix=RENDER3D_IDENTITY, color=WHITE)
     {
-        const normalMatrix = matrix.copy().invert().transpose();
+        const normalMatrix = render3DNormalMatrix(matrix);
         for (let i = 0; i < mesh.points.length; ++i)
         {
             this.points.push(matrix.transformPoint(mesh.points[i]));
@@ -18504,7 +18504,7 @@ class Mesh
      *  @return {Mesh} */
     transform(matrix)
     {
-        const normalMatrix = matrix.copy().invert().transpose();
+        const normalMatrix = render3DNormalMatrix(matrix);
         for (let i = 0; i < this.points.length; ++i)
         {
             this.points[i] = matrix.transformPoint(this.points[i]);
@@ -18881,7 +18881,7 @@ function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3DS
 function buildBox(size=1)
 {
     const mesh = new Mesh;
-    const half = (isNumber(size) ? vec3(size) : size).scale(.5);
+    const half = render3DSize3(size).scale(.5);
     // each face: normal, right axis, up axis (right cross up = normal)
     const faces = [
         [vec3(0, 0, 1),  vec3(1, 0, 0),  vec3(0, 1, 0)],
@@ -18895,10 +18895,7 @@ function buildBox(size=1)
     {
         const center = n.multiply(half);
         const right = r.multiply(half), up = u.multiply(half);
-        mesh.addStrip(
-            [center.subtract(right).add(up), center.subtract(right).subtract(up),
-             center.add(right).add(up), center.add(right).subtract(up)],
-            n, RENDER3D_QUAD_UVS);
+        mesh.addStrip(render3DQuadAxes(center, right, up), n, RENDER3D_QUAD_UVS);
     }
     return mesh;
 }
@@ -18909,7 +18906,7 @@ function buildBox(size=1)
  * - flat is one quad per cell with a face normal and one color sampled at the cell center, so checkerboards stay crisp
  * @param {Vector2} [size] - World size along X and Z
  * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
- * @param {Color|Function} [color] - A Color for the whole grid or (x, z) => Color, default white
+ * @param {Color|Function} [color] - A Color for the whole grid or (x, z) => Color in mesh units, called per vertex when smooth and once per cell at its center when flat
  * @param {Function} [heightFunction] - (x, z) => y, default flat
  * @param {boolean} [smooth] - Defaults to render3DSmoothShading
  * @return {Mesh}
@@ -19083,8 +19080,8 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
     // pixel edges in world space, y runs down the image
     const mesh = new Mesh, sx = size.x / width, sy = size.y / height, hz = depth / 2;
     const px = x => x * sx - size.x / 2, py = y => size.y / 2 - y * sy;
-    const quad = (origin, right, up, normal, color)=> mesh.addStrip(
-        [origin.add(up), origin, origin.add(right).add(up), origin.add(right)], normal, RENDER3D_QUAD_UVS, color);
+    const quad = (origin, right, up, normal, color)=>
+        mesh.addStrip(render3DQuadAxes(origin.add(right.scale(.5)).add(up.scale(.5)), right.scale(.5), up.scale(.5)), normal, RENDER3D_QUAD_UVS, color);
     const X = vec3(1, 0, 0), Y = vec3(0, 1, 0), Z = vec3(0, 0, 1);
     for (let y = 0; y < height; ++y)
     {
@@ -19114,7 +19111,8 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
 
 /**
  * Build a mesh of extruded text from an image font, the engine font by default so it needs no assets
- * - Each glyph is extruded once per font and reused, the block is centered, newlines stack downward
+ * - Each glyph is extruded once per font and reused, the block is centered and faces +Z, newlines stack downward
+ * - Every call builds a new mesh, dispose the old one when text changes often
  * - Glyphs are white in the engine font, so the object's color tints the text
  * @param {string|number} text
  * @param {number} [size] - Character height in world units
@@ -19261,7 +19259,10 @@ class HeightMap
             {
                 let a = t, b = t + step;
                 for (let i = 0; i < 16; ++i)
-                    under((a + b) / 2) ? b = (a + b) / 2 : a = (a + b) / 2;
+                {
+                    const mid = (a + b) / 2;
+                    under(mid) ? b = mid : a = mid;
+                }
                 return b;
             }
         }
@@ -19321,7 +19322,6 @@ function render3DReadPixels(textureInfo)
  * - velocity3D is added to pos3D each frame, there is no other 3D physics, games do their own
  * - The 2D pos and velocity still exist but rendering ignores them and mass is 0 so 2D physics leaves them alone; copy pos into pos3D for pseudo-3D games
  * - addChild parents the 3D transform, pos3D is then local to the parent; the 2D offset arguments of addChild do nothing in 3D, set the child's pos3D instead
- * - render() is empty, override render3D() for custom drawing; the pass sets the draw state from the object's flags before calling it
  * @extends EngineObject
  * @memberof Render3D
  * @example
@@ -19340,11 +19340,11 @@ class EngineObject3D extends EngineObject
      *  @param {Color} [color] - Tint */
     constructor(pos3D=vec3(), mesh, tileInfo, color=WHITE)
     {
-        super(vec2(), vec2(), tileInfo instanceof TileInfo ? tileInfo : undefined, 0, color);
+        super(vec2(), vec2(), undefined, 0, color);
         ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
         ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
         ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo, it comes before color');
-        this.tileInfo = tileInfo;
+        this.tileInfo = tileInfo; // set after super, a whole TextureInfo is allowed here
         this.mass = 0; // no 2D physics
 
         /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
@@ -19353,9 +19353,9 @@ class EngineObject3D extends EngineObject
         this.rotation3D = vec3();
         /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
         this.scale3D = vec3(1);
-        /** @property {Vector3} - Added to pos3D each frame */
+        /** @property {Vector3} - Added to pos3D each frame by the engine after update, no super call needed */
         this.velocity3D = vec3();
-        /** @property {Vector3} - Added to rotation3D each frame */
+        /** @property {Vector3} - Added to rotation3D each frame by the engine after update */
         this.angleVelocity3D = vec3();
         /** @property {Mesh|undefined} - Mesh to draw */
         this.mesh = mesh;
@@ -19388,7 +19388,7 @@ class EngineObject3D extends EngineObject
         super.updateTransforms();
     }
 
-    /** Returns the world position, pos3D is local when attached to an EngineObject3D parent
+    /** Returns the world position
      *  @return {Vector3} */
     getWorldPos3D() { return this.getMatrix().getTranslation(); }
 
@@ -19448,7 +19448,8 @@ class Light3D extends EngineObject3D
  * - Particles are billboards, or soft round discs when there is no tile, drawn in the transparent stage so alpha and additive sort correctly
  * - Set trailTime to draw each particle as a ribbon along its recent path instead, for sparks and streaks
  * - Emits along the emitter's local +Y, turned by rotation3D, spread by emitConeAngle
- * - Speeds are per frame like the 2D emitter; gravity is a per frame change to velocity y, not a scale of the engine's 2D gravity
+ * - Speeds are per frame and sizes are world units like the 2D emitter; gravity is a per frame change to velocity y, not a scale of the engine's 2D gravity
+ * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -19529,9 +19530,9 @@ class ParticleEmitter3D extends EngineObject3D
     update()
     {
         // emit at the rate until the emit time is up
-        if (this.emitRate && (!this.emitTime || this.getAliveTime() <= this.emitTime))
+        if (this.emitRate && particleEmitRateScale && (!this.emitTime || this.getAliveTime() <= this.emitTime))
         {
-            this.emitTimeBuffer += this.emitRate * timeDelta;
+            this.emitTimeBuffer += this.emitRate * particleEmitRateScale * timeDelta;
             for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
                 this.emitParticle();
         }
