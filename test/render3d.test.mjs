@@ -1201,3 +1201,19 @@ test('unlit objects draw with lighting off and leave it on afterward', () =>
     assert.equal(render3D.lighting, true);
     o.destroy();
 });
+
+test('receiveShadow objects and the receiveShadows state keep draws out of the shadow darkening', () =>
+{
+    assert.equal(render3D.receiveShadows, true);
+    const o = new EngineObject3D(vec3(), buildBox());
+    assert.equal(o.receiveShadow, true);
+    o.receiveShadow = false;
+    let seen;
+    const drawMesh = render3D.drawMesh;
+    render3D.drawMesh = ()=> seen = render3D.receiveShadows;
+    try { o.render3D(); }
+    finally { render3D.drawMesh = drawMesh; }
+    assert.equal(seen, false);
+    assert.equal(render3D.receiveShadows, true);
+    o.destroy();
+});

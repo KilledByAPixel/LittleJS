@@ -840,6 +840,7 @@ render3D.additive = false             // additive blending when blend is on
 render3D.depthTest = true; render3D.depthWrite = true
 render3D.cullBackFaces = false
 render3D.specular = 0                 // Phong highlight strength
+render3D.receiveShadows = true        // false keeps the next draws out of the shadow map's darkening
 render3D.onRender = ()=> {}           // opaque stage, after the opaque objects: world geometry outside of objects
 render3D.onRenderTransparent = ()=> {} // transparent stage, blending on and depth writes off: billboards, glows, shadows
 // every draw in the transparent stage (objects and pushes alike) is sorted far to near before it lands, so alpha and additive mix correctly
@@ -933,6 +934,7 @@ obj.velocity3D                          // added to pos3D each frame
 obj.mesh obj.color obj.tileInfo         // what to draw and how
 obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
 obj.castShadow = false                  // keep an object out of the shadow map
+obj.receiveShadow = false               // draw it without the shadow map's darkening
 obj.unlit = true                        // draw with lighting off, for lamps and glowing things
 obj.renderOrder                         // sorts the opaque stage
 obj.getMatrix()                         // buildMatrix(pos3D, rotation3D, scale3D)

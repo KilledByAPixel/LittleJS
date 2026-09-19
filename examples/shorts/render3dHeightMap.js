@@ -48,6 +48,7 @@ function gameInit()
     render3D.fogStart = 20;
     render3D.fogEnd = 60;
     render3D.lightDirection = vec3(-.4, -1, -.5).normalize();
+    setRender3DSmoothShading(true); // rolling terrain reads best smooth, space still toggles it
 
     // 48x48 samples over a 50 unit square, 12 units tall, drawn from onRender so it can be rebuilt
     const [heightImage, colorImage] = makeTerrainImages(48);
@@ -92,5 +93,5 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    drawTextScreen('3D height map - terrain from an image, right click to drop the ball, drag to orbit', vec2(mainCanvasSize.x / 2, 40), 28);
+    drawTextScreen('3D height map - right click to drop the ball, drag to orbit', vec2(mainCanvasSize.x / 2, 40), 28);
 }

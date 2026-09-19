@@ -74,14 +74,14 @@ function render3DCaptureBatchState()
 {
     const r = render3D;
     return {blend: r.blend, additive: r.additive, depthTest: r.depthTest, depthWrite: r.depthWrite,
-        cullBackFaces: r.cullBackFaces, lighting: r.lighting, specular: r.specular};
+        cullBackFaces: r.cullBackFaces, lighting: r.lighting, receiveShadows: r.receiveShadows, specular: r.specular};
 }
 
 // a key for a captured state, so a change flushes the pending batch first (specular in steps of 1/1024)
 function render3DStateKey(s)
 {
     return (s.blend ? 1 : 0) | (s.additive ? 2 : 0) | (s.depthTest ? 4 : 0) | (s.depthWrite ? 8 : 0)
-        | (s.cullBackFaces ? 16 : 0) | (s.lighting ? 32 : 0) | (s.specular * 1024 | 0) << 6;
+        | (s.cullBackFaces ? 16 : 0) | (s.lighting ? 32 : 0) | (s.receiveShadows ? 64 : 0) | (s.specular * 1024 | 0) << 7;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -130,6 +130,8 @@ class Render3DPlugin
         this.depthWrite = true;
         /** @property {boolean} - Skip faces that point away from the camera */
         this.cullBackFaces = false;
+        /** @property {boolean} - The next draws are darkened by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
+        this.receiveShadows = true;
         /** @property {number} - Phong highlight strength for the next draws */
         this.specular = 0;
         /** @property {Function} - Called in the opaque stage after the opaque objects, for drawing world geometry outside of objects */
@@ -1019,6 +1021,7 @@ function render3DApplyState(tileInfo, tint=WHITE, uvRect, state=render3D)
     ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
     gl.uniform4f(uniform('ambientColor'), ac.r, ac.g, ac.b, r.fogEnd);
     gl.uniform4f(uniform('fogColor'), fc.r, fc.g, fc.b, r.fogStart);
+    gl.uniform4f(uniform('shadowParams'), r.shadows && state.receiveShadows ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, 0);
 }
 
 // the 3D pass, runs from the preRender hook before gameRender
@@ -2056,6 +2059,8 @@ class EngineObject3D extends EngineObject
         this.castShadow = true;
         /** @property {boolean} - Draw with lighting off, plain vertex color times texture, for lamps and glowing things; unlit objects cast no shadow */
         this.unlit = false;
+        /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
+        this.receiveShadow = true;
     }
 
     /** Apply the 3D velocity, then the inherited 2D physics, called automatically each frame */
@@ -2080,10 +2085,12 @@ class EngineObject3D extends EngineObject
     render3D()
     {
         if (!this.mesh) return;
-        const lighting = render3D.lighting;
+        const lighting = render3D.lighting, receiveShadows = render3D.receiveShadows;
         this.unlit && (render3D.lighting = false);
+        this.receiveShadow || (render3D.receiveShadows = false);
         render3D.drawMesh(this.mesh, this.getMatrix(), this.color, this.tileInfo);
         render3D.lighting = lighting;
+        render3D.receiveShadows = receiveShadows;
     }
 }
 

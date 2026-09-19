@@ -6175,6 +6175,8 @@ declare module "littlejsengine" {
         depthWrite: boolean;
         /** @property {boolean} - Skip faces that point away from the camera */
         cullBackFaces: boolean;
+        /** @property {boolean} - The next draws are darkened by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
+        receiveShadows: boolean;
         /** @property {number} - Phong highlight strength for the next draws */
         specular: number;
         /** @property {Function} - Called in the opaque stage after the opaque objects, for drawing world geometry outside of objects */
@@ -6245,6 +6247,7 @@ declare module "littlejsengine" {
             depthWrite: boolean;
             cullBackFaces: boolean;
             lighting: boolean;
+            receiveShadows: boolean;
             specular: number;
         };
         streamStateKey: number;
@@ -6461,6 +6464,8 @@ declare module "littlejsengine" {
         castShadow: boolean;
         /** @property {boolean} - Draw with lighting off, plain vertex color times texture, for lamps and glowing things; unlit objects cast no shadow */
         unlit: boolean;
+        /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
+        receiveShadow: boolean;
         /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
          *  @return {Matrix4} */
         getMatrix(): Matrix4;
