@@ -147,7 +147,7 @@ function gameUpdate()
 
     // the cell under the mouse: a block if the ray hits one, else where it meets the floor
     const ray = render3D.screenToRay(mousePosScreen);
-    const picked = render3D.raycastObjects(ray.origin, ray.direction, boxes)?.object;
+    const picked = render3D.raycastObjects(ray, boxes)?.object;
     const ground = render3D.screenToGround(mousePosScreen);
     const groundCell = ground && vec2(floor(ground.x + levelSize/2), floor(ground.z + levelSize/2));
     hoverCell = picked ? picked.cell : groundCell;

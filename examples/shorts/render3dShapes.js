@@ -13,7 +13,7 @@ let spinners = [], orbit = 0;
 
 function buildShapes()
 {
-    // builders use render3DSmoothShading by default
+    // builders use render3D.smoothShading by default
     const box = buildBox(vec3(1));
     const oct = buildLathe([[0,-1], [1,0], [0,1]], 4);
     const cylinder = buildCylinder(1, 2);
@@ -60,7 +60,7 @@ function gameUpdate()
     // space toggles shading, S toggles specular
     if (keyWasPressed('Space'))
     {
-        setRender3DSmoothShading(!render3DSmoothShading);
+        render3D.smoothShading = !render3D.smoothShading;
         buildShapes();
     }
     for (const s of spinners)
@@ -73,7 +73,7 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    const shading = render3DSmoothShading ? 'smooth' : 'flat';
+    const shading = render3D.smoothShading ? 'smooth' : 'flat';
     const text = 'space: ' + shading + ' shading / hold S: specular';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

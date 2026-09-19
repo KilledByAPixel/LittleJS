@@ -793,10 +793,12 @@ collideSphereBox(pos, radius, boxPos, boxSize)             // push a sphere out 
 collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinderHeight) // push a sphere out of a cylinder,
                                                                                 // or undefined
 collideBoxBox(posA, sizeA, posB, sizeB)        // minimum translation vector for A, or undefined
-// raycasts return the distance t where the hit is origin + direction * t, so scale direction and t scales too
-raycastSphere(origin, direction, pos, radius)  // distance t to the sphere, or undefined
-raycastPlane(origin, direction, planePos, planeNormal)     // distance t to the plane, or undefined
-raycastBox(origin, direction, pos, size)       // distance t to the box, or undefined
+// raycasts return the distance t where the hit is ray.getPosition(t), so scale direction and t scales too
+new Ray3D(origin, direction)                   // a start and a direction, what screenToRay returns
+ray.getPosition(distance)                      // the point a distance along it, distance is what the raycasts return
+raycastSphere(ray, pos, radius)                // distance t to the sphere, or undefined
+raycastPlane(ray, planePos, planeNormal)       // distance t to the plane, or undefined
+raycastBox(ray, pos, size)                     // distance t to the box, or undefined
 ```
 
 ## LittleJS 3D Rendering
@@ -854,10 +856,10 @@ render3D.camera.getMatrix() .getViewMatrix() .getProjectionMatrix(aspect) // bui
 render3D.worldToScreen(pos)           // Vector3 -> screen pixels, undefined when behind the camera
 render3D.worldToClip(pos)             // Vector3 -> -1 to 1 across and up the screen, z is depth; undefined when behind
                                       // the camera
-render3D.screenToRay(screenPos)       // {origin, direction} world ray under a screen point, always returns one
+render3D.screenToRay(screenPos)       // Ray3D under a screen point, always returns one
 render3D.screenToGround(screenPos, groundHeight=0) // where that ray meets a flat ground plane, or undefined;
                                                    // terrain has HeightMap.raycast
-render3D.raycastObjects(origin, direction, objects) // {object, distance} of the nearest object whose bounding sphere
+render3D.raycastObjects(ray, objects)              // {object, distance} of the nearest object whose bounding sphere
                                                     // the ray hits, around its mesh or a sprite's size3D
 render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop) // like sound.play(pos): quieter with
                                                 // distance from the camera, panned by side
@@ -917,7 +919,7 @@ render3D.frustumCulling = true // drawMesh skips meshes whose bounding sphere is
                                // space the camera can see
 render3D.renderAfter2D = false // true draws the 3D scene on top of the 2D scene instead of under it; objects that do
                                // not set their own renderAfter2D follow this
-setRender3DSmoothShading(true) // default for every builder's smooth argument (render3DSmoothShading), flat by default;
+render3D.smoothShading = true  // default for every builder's smooth argument, flat by default;
                                // meshes already built keep the normals they have
 
 // Objects - EngineObject with a 3D transform, drawn by the 3D pass
@@ -1016,7 +1018,7 @@ mesh.dirty = true; mesh.upload() // re-upload edited arrays on the next draw, or
 mesh.vertexCount mesh.radius                  // vertices, and the bounding sphere for culling and picking
 mesh.computeRadius()                          // measure mesh.radius now, without uploading
 
-// Shape builders - return a Mesh centered on the origin, sizes are full sizes, smooth defaults to render3DSmoothShading
+// Shape builders - return a Mesh centered on the origin, sizes are full sizes, smooth defaults to the plugin setting
 buildBox(size=1)                              // a vec3 or a number, six faces with uvs, always flat
 buildSphere(size=1, sides=12, rings=6, smooth)
 buildCylinder(size=1, height=1, sides=12, smooth, capped=true)
@@ -1050,7 +1052,7 @@ const terrain = new HeightMap(heights, size=vec2(1), height=1, colors) // height
 terrain.buildMesh(smooth)                     // one vertex per sample, centered on the origin
 terrain.getHeight(x, z)                       // world height of the drawn mesh there, to stand things on it
 terrain.getNormal(x, z)                       // surface normal there, to tilt things to the slope
-terrain.raycast(origin, direction) // distance along a ray to the ground or undefined, for clicking on terrain
+terrain.raycast(ray)               // distance along a ray to the ground or undefined, for clicking on terrain
 terrain.getColor(x, z)                        // nearest sample color
 terrain.rows terrain.columns                  // samples along Z and X
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, setRender3DSmoothShading, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, Ray3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -513,13 +513,13 @@ test('render3D stages draw the sky, opaque by renderOrder, onRender, then the tr
     render3D.depthTest = true;
 });
 
-test('render3DSmoothShading sets the default for the builders', () =>
+test('render3D.smoothShading sets the default for the builders', () =>
 {
     const cylinder = [[1, -1], [1, 1]];
-    setRender3DSmoothShading(true);
+    render3D.smoothShading = true;
     assert.equal(buildLathe(cylinder, 8, undefined, false).vertexCount, 2 * 9 + 2);   // one ribbon
     assert.equal(buildGrid(vec2(2), 2).vertexCount, 2 * (2 * 3 + 2)); // one ribbon per row
-    setRender3DSmoothShading(false);
+    render3D.smoothShading = false;
     assert.equal(buildLathe(cylinder, 8, undefined, false).vertexCount, 8 * 6);       // one strip per quad
     assert.equal(buildGrid(vec2(2), 2).vertexCount, 4 * 6);         // one strip per cell
     // an explicit argument wins over the default
@@ -1185,17 +1185,17 @@ test('HeightMap.raycast finds the ground along a ray', () =>
 {
     const flat = new HeightMap([[0, 0], [0, 0]], vec2(10, 10), 1);
     const close = (a, b)=> assert.ok(Math.abs(a - b) < 1e-3, a + " != " + b);
-    close(flat.raycast(vec3(0, 5, 0), vec3(0, -1, 0)), 5);
-    close(flat.raycast(vec3(0, 5, 0), vec3(0, -2, 0)), 2.5); // in units of the direction
-    assert.equal(flat.raycast(vec3(0, 5, 0), vec3(0, 1, 0)), undefined); // away from it
-    assert.equal(flat.raycast(vec3(20, 5, 0), vec3(0, -1, 0)), undefined); // beside it
-    assert.equal(flat.raycast(vec3(-20, 1, 0), vec3(1, 0, 0)), undefined); // across it, above the ground
+    close(flat.raycast(new Ray3D(vec3(0, 5, 0), vec3(0, -1, 0))), 5);
+    close(flat.raycast(new Ray3D(vec3(0, 5, 0), vec3(0, -2, 0))), 2.5); // in units of the direction
+    assert.equal(flat.raycast(new Ray3D(vec3(0, 5, 0), vec3(0, 1, 0))), undefined); // away from it
+    assert.equal(flat.raycast(new Ray3D(vec3(20, 5, 0), vec3(0, -1, 0))), undefined); // beside it
+    assert.equal(flat.raycast(new Ray3D(vec3(-20, 1, 0), vec3(1, 0, 0))), undefined); // across it, above the ground
     // a slope from 10 high at the back to 0 at the front, straight down at the middle meets it at 5
     const slope = new HeightMap([[1, 1], [0, 0]], vec2(10, 10), 10);
-    const t = slope.raycast(vec3(0, 20, 0), vec3(0, -1, 0));
+    const t = slope.raycast(new Ray3D(vec3(0, 20, 0), vec3(0, -1, 0)));
     close(t, 15); assert.ok(true, `${t}`);
     // a ray from the side hits the slope face, not the clamped ground beyond the edge
-    const side = slope.raycast(vec3(0, 2.5, 20), vec3(0, 0, -1));
+    const side = slope.raycast(new Ray3D(vec3(0, 2.5, 20), vec3(0, 0, -1)));
     close(side, 17.5); assert.ok(true, `${side}`);
 });
 
@@ -1239,11 +1239,11 @@ test('drawBox and drawSphere build their unit meshes once, raycastObjects picks 
     const nearObject = new EngineObject3D(vec3(0, 0, -5), buildBox()), farObject = new EngineObject3D(vec3(0, 0, -12), buildBox());
     farObject.scale3D = vec3(2);
     const miss = new EngineObject3D(vec3(5, 0, -5), buildBox());
-    const hit = render3D.raycastObjects(vec3(), vec3(0, 0, -1));
+    const hit = render3D.raycastObjects(new Ray3D(vec3(), vec3(0, 0, -1)));
     assert.equal(hit.object, nearObject);
     near(hit.distance, 5 - Math.sqrt(.75)); // to the bounding sphere
-    assert.equal(render3D.raycastObjects(vec3(), vec3(0, 0, -1), [farObject]).object, farObject);
-    assert.equal(render3D.raycastObjects(vec3(), vec3(0, 1, 0)), undefined);
+    assert.equal(render3D.raycastObjects(new Ray3D(vec3(), vec3(0, 0, -1)), [farObject]).object, farObject);
+    assert.equal(render3D.raycastObjects(new Ray3D(vec3(), vec3(0, 1, 0))), undefined);
     nearObject.destroy(); farObject.destroy(); miss.destroy();
 });
 
@@ -1445,7 +1445,7 @@ test('HeightMap.getNormal tilts with the slope and screenToGround finds the floo
     nearVec(new HeightMap([[0, 0], [0, 0]], vec2(10, 10), 1).getNormal(1, 1), 0, 1, 0);
     // the ground hit comes from the screen ray, stand one in since there is no canvas headless
     const screenToRay = render3D.screenToRay;
-    render3D.screenToRay = ()=> ({origin: vec3(0, 10, 0), direction: vec3(1, -1, 0).normalize()});
+    render3D.screenToRay = ()=> new Ray3D(vec3(0, 10, 0), vec3(1, -1, 0).normalize());
     try
     {
         nearVec(render3D.screenToGround(vec2()), 10, 0, 0);
@@ -1610,7 +1610,7 @@ test('sprite objects blend by default and are picked by their size3D, lights and
     assert.ok(sprite.transparent);
     assert.ok(!new EngineObject3D(vec3(), buildBox()).transparent);
     const light = new Light3D(vec3(0, 0, -2)), emitter = new ParticleEmitter3D(vec3(0, 0, -3), 0, 0, 0, PI, new TileInfo(vec2(), vec2(16)));
-    const hit = render3D.raycastObjects(vec3(), vec3(0, 0, -1), [light, emitter, sprite]);
+    const hit = render3D.raycastObjects(new Ray3D(vec3(), vec3(0, 0, -1)), [light, emitter, sprite]);
     assert.equal(hit.object, sprite);
     near(hit.distance, 5 - Math.hypot(2, 2) / 2); // half the drawn diagonal, size3D.z is not drawn
     for (const o of engineObjects) o.destroy();
@@ -1682,7 +1682,7 @@ test('lookAt at your own position keeps the rotation, upright sprites survive a 
     const ray = render3D.screenToRay(vec2(), vec2());
     assert.ok(ray.direction.isValid());
     const heightMap = new HeightMap([[0, 0], [0, 0]], vec2(0, 4));
-    assert.equal(heightMap.raycast(vec3(0, 5, 0), vec3(0, -1, 0)), undefined);
+    assert.equal(heightMap.raycast(new Ray3D(vec3(0, 5, 0), vec3(0, -1, 0))), undefined);
 });
 
 test('a sync2D object with mass takes the 2D gravity, not the 3D one', () =>

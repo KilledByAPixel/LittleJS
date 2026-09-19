@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { vec3, isVector3, Vector3, Matrix4, buildMatrix, PI,
     isPointInBox3D, isOverlapping3D, collideSphereSphere, collideSphereBox, collideSphereCylinder,
-    collideBoxBox, raycastSphere, raycastPlane, raycastBox, randVector3 } from '../dist/littlejs.esm.js';
+    collideBoxBox, raycastSphere, raycastPlane, raycastBox, randVector3, Ray3D } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-6, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -261,9 +261,9 @@ test('isOverlapping3D matches touching vs overlapping boxes', () =>
 test('raycast distances are in units of the direction length', () =>
 {
     const o = vec3(0, 0, 5), d = vec3(0, 0, -1), d2 = vec3(0, 0, -2);
-    near(raycastSphere(o, d, vec3(), 1), 4);          near(raycastSphere(o, d2, vec3(), 1), 2);
-    near(raycastPlane(o, d, vec3(), vec3(0, 0, 1)), 5); near(raycastPlane(o, d2, vec3(), vec3(0, 0, 1)), 2.5);
-    near(raycastBox(o, d, vec3(), vec3(2)), 4);        near(raycastBox(o, d2, vec3(), vec3(2)), 2);
+    near(raycastSphere(new Ray3D(o, d), vec3(), 1), 4);          near(raycastSphere(new Ray3D(o, d2), vec3(), 1), 2);
+    near(raycastPlane(new Ray3D(o, d), vec3(), vec3(0, 0, 1)), 5); near(raycastPlane(new Ray3D(o, d2), vec3(), vec3(0, 0, 1)), 2.5);
+    near(raycastBox(new Ray3D(o, d), vec3(), vec3(2)), 4);        near(raycastBox(new Ray3D(o, d2), vec3(), vec3(2)), 2);
 });
 
 test('collideSphereSphere pushes A away from B by the penetration', () =>
@@ -298,26 +298,26 @@ test('collideBoxBox returns the minimum translation vector on the smallest axis'
 
 test('raycastSphere handles hit, miss, inside and behind', () =>
 {
-    near(raycastSphere(vec3(0, 0, -5), vec3(0, 0, 1), vec3(0, 0, 0), 1), 4);
-    assert.equal(raycastSphere(vec3(5, 5, -5), vec3(0, 0, 1), vec3(0, 0, 0), 1), undefined);
-    assert.equal(raycastSphere(vec3(0, 0, 0), vec3(0, 0, 1), vec3(0, 0, 0), 1), 0); // origin inside
-    assert.equal(raycastSphere(vec3(0, 0, 5), vec3(0, 0, 1), vec3(0, 0, 0), 1), undefined); // behind origin
+    near(raycastSphere(new Ray3D(vec3(0, 0, -5), vec3(0, 0, 1)), vec3(0, 0, 0), 1), 4);
+    assert.equal(raycastSphere(new Ray3D(vec3(5, 5, -5), vec3(0, 0, 1)), vec3(0, 0, 0), 1), undefined);
+    assert.equal(raycastSphere(new Ray3D(vec3(0, 0, 0), vec3(0, 0, 1)), vec3(0, 0, 0), 1), 0); // origin inside
+    assert.equal(raycastSphere(new Ray3D(vec3(0, 0, 5), vec3(0, 0, 1)), vec3(0, 0, 0), 1), undefined); // behind origin
 });
 
 test('raycastPlane handles hit, parallel and behind', () =>
 {
-    near(raycastPlane(vec3(0, 0, 0), vec3(0, 1, 0), vec3(0, 5, 0), vec3(0, 1, 0)), 5);
-    assert.equal(raycastPlane(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 5, 0), vec3(0, 1, 0)), undefined); // parallel
-    assert.equal(raycastPlane(vec3(0, 10, 0), vec3(0, 1, 0), vec3(0, 5, 0), vec3(0, 1, 0)), undefined); // behind
+    near(raycastPlane(new Ray3D(vec3(0, 0, 0), vec3(0, 1, 0)), vec3(0, 5, 0), vec3(0, 1, 0)), 5);
+    assert.equal(raycastPlane(new Ray3D(vec3(0, 0, 0), vec3(1, 0, 0)), vec3(0, 5, 0), vec3(0, 1, 0)), undefined); // parallel
+    assert.equal(raycastPlane(new Ray3D(vec3(0, 10, 0), vec3(0, 1, 0)), vec3(0, 5, 0), vec3(0, 1, 0)), undefined); // behind
 });
 
 test('raycastBox handles hit, miss, inside and a zero ray component through the slab', () =>
 {
     const pos = vec3(0, 0, 0), size = vec3(2, 2, 2); // half = 1
-    near(raycastBox(vec3(-5, 0, 0), vec3(1, 0, 0), pos, size), 4); // hit distance equals distance to near face
-    assert.equal(raycastBox(vec3(10, 0, 0), vec3(1, 0, 0), pos, size), undefined); // box is behind the ray
-    assert.equal(raycastBox(vec3(0, 0, 0), vec3(1, 0, 0), pos, size), 0); // origin inside
-    near(raycastBox(vec3(-5, .5, 0), vec3(1, 0, 0), pos, size), 4); // zero Y/Z direction still passes through
+    near(raycastBox(new Ray3D(vec3(-5, 0, 0), vec3(1, 0, 0)), pos, size), 4); // hit distance equals distance to near face
+    assert.equal(raycastBox(new Ray3D(vec3(10, 0, 0), vec3(1, 0, 0)), pos, size), undefined); // box is behind the ray
+    assert.equal(raycastBox(new Ray3D(vec3(0, 0, 0), vec3(1, 0, 0)), pos, size), 0); // origin inside
+    near(raycastBox(new Ray3D(vec3(-5, .5, 0), vec3(1, 0, 0)), pos, size), 4); // zero Y/Z direction still passes through
 });
 
 test('Vector3.reflect bounces off a normal and randVector3 is a unit direction', () =>
@@ -341,4 +341,13 @@ test('rotateX, rotateY and rotateZ turn the way Matrix4.rotation does', () =>
     nearVec(v.rotateZ(a), ...Object.values(byMatrix(vec3(0, 0, a))));
     nearVec(v.rotateY(a), ...Object.values(v.rotate(vec3(0, 1, 0), a)));
     nearVec(vec3(6, 3).rotateY(PI / 2), 0, 3, -6); // -Z is forward, a quarter turn takes +X there
+});
+
+test('Ray3D.getPosition walks the ray by the distance the raycasts return', () =>
+{
+    const ray = new Ray3D(vec3(0, 0, 5), vec3(0, 0, -2));
+    const distance = raycastSphere(ray, vec3(), 1);
+    nearVec(ray.getPosition(distance), 0, 0, 1);
+    nearVec(new Ray3D().direction, 0, 0, -1);
+    nearVec(ray.copy().origin, 0, 0, 5);
 });

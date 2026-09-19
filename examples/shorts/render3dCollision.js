@@ -48,7 +48,7 @@ function gameInit()
     // a checkerboard floor, flat so the cells stay crisp
     const checker = (x, z)=> hsl(0, 0, (x+z)/2&1 ? .5 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 8, checker));
-    setRender3DSmoothShading(true);
+    render3D.smoothShading = true;
 
     // a box, a cylinder and a dozen balls, builders take full sizes and collision takes radii
     new EngineObject3D(boxPos, buildBox(boxSize).setColor(hsl(.1,.4,.5)));
@@ -76,7 +76,7 @@ function gameUpdate()
 
     // pick the ball under the mouse, click to toss it up
     const ray = render3D.screenToRay(mousePosScreen);
-    const picked = render3D.raycastObjects(ray.origin, ray.direction, balls)?.object;
+    const picked = render3D.raycastObjects(ray, balls)?.object;
     if (picked)
     {
         debugSphere3D(picked.pos3D, picked.radius*2 + .2, YELLOW);

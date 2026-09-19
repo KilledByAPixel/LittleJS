@@ -548,6 +548,42 @@ function buildMatrix(pos, rotation, scale)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/**
+ * Ray3D - A start point and a direction, what screenToRay returns and the raycast helpers take
+ * - The direction need not be unit length, the distances that come back are in units of it
+ * @memberof Math3D
+ * @example
+ * const ray = render3D.screenToRay(mousePosScreen);
+ * const distance = raycastPlane(ray, vec3(), vec3(0, 1, 0));
+ * if (distance !== undefined)
+ *     ball.pos3D = ray.getPosition(distance);
+ */
+class Ray3D
+{
+    /** Create a ray
+     *  @param {Vector3} [origin]
+     *  @param {Vector3} [direction] - Defaults to -Z, forward */
+    constructor(origin=vec3(), direction=vec3(0, 0, -1))
+    {
+        ASSERT_VECTOR3_VALID(origin);
+        ASSERT_VECTOR3_VALID(direction);
+        /** @property {Vector3} - Where the ray starts */
+        this.origin = origin;
+        /** @property {Vector3} - Which way it goes */
+        this.direction = direction;
+    }
+
+    /** Returns the point a distance along the ray
+     *  @param {number} distance - What the raycast helpers return
+     *  @return {Vector3} */
+    getPosition(distance) { return this.origin.add(this.direction.scale(distance)); }
+
+    /** Returns a new ray that is a copy of this
+     *  @return {Ray3D} */
+    copy() { return new Ray3D(this.origin.copy(), this.direction.copy()); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // 3D collision helpers, none of them change anything that is passed in
 // Boxes sit centered on pos and take a full size, like drawRect
 // Cylinders stand up the Y axis, centered on pos, with a full height
@@ -701,16 +737,16 @@ function collideBoxBox(posA, sizeA, posB, sizeB)
 
 /**
  * Returns the distance along the ray to the first intersection with a sphere, or undefined
- * - The hit is origin + direction * distance, so a direction that is not unit length scales it
- * @param {Vector3} origin
- * @param {Vector3} direction - Need not be normalized
+ * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
+ * @param {Ray3D} ray
  * @param {Vector3} pos - Sphere center
  * @param {number} radius
  * @return {number|undefined}
  * @memberof Math3D
  */
-function raycastSphere(origin, direction, pos, radius)
+function raycastSphere(ray, pos, radius)
 {
+    const {origin, direction} = ray;
     const oc = origin.subtract(pos);
     const a = direction.dot(direction);
     if (!a)
@@ -728,16 +764,16 @@ function raycastSphere(origin, direction, pos, radius)
 
 /**
  * Returns the distance along the ray to a plane, or undefined if parallel or behind
- * - The hit is origin + direction * distance, so a direction that is not unit length scales it
- * @param {Vector3} origin
- * @param {Vector3} direction - Need not be normalized
+ * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
+ * @param {Ray3D} ray
  * @param {Vector3} planePos
  * @param {Vector3} planeNormal
  * @return {number|undefined}
  * @memberof Math3D
  */
-function raycastPlane(origin, direction, planePos, planeNormal)
+function raycastPlane(ray, planePos, planeNormal)
 {
+    const {origin, direction} = ray;
     const denominator = direction.dot(planeNormal);
     if (abs(denominator) < 1e-9)
         return undefined;
@@ -747,16 +783,16 @@ function raycastPlane(origin, direction, planePos, planeNormal)
 
 /**
  * Returns the distance along the ray to the first intersection with an axis aligned box, or undefined
- * - The hit is origin + direction * distance, so a direction that is not unit length scales it
- * @param {Vector3} origin
- * @param {Vector3} direction - Need not be normalized
+ * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
+ * @param {Ray3D} ray
  * @param {Vector3} pos - Center of the box
  * @param {Vector3} size - Full size of the box
  * @return {number|undefined}
  * @memberof Math3D
  */
-function raycastBox(origin, direction, pos, size)
+function raycastBox(ray, pos, size)
 {
+    const {origin, direction} = ray;
     const h = size.scale(.5);
     const boxMin = pos.subtract(h), boxMax = pos.add(h);
     let tMin = 0, tMax = Infinity;

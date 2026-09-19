@@ -24,7 +24,7 @@ function gameInit()
     render3D.setSky(hsl(.6,.5,.03), hsl(.6,.4,.08));
     render3D.lightColor = hsl(.6,.2,.15); // a dim moon so the point lights carry the scene
     render3D.ambientColor = hsl(.6,.2,.1);
-    setRender3DSmoothShading(true);
+    render3D.smoothShading = true;
 
     // a floor, pillars to catch the light, and three colored lamps
     new EngineObject3D(vec3(), buildGrid(vec2(24), 12, hsl(0,0,.6)));

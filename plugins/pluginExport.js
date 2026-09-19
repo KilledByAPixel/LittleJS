@@ -102,6 +102,7 @@ export
     randVector3,
     Vector3,
     Matrix4,
+    Ray3D,
     buildMatrix,
     isPointInBox3D,
     isOverlapping3D,
@@ -144,8 +145,6 @@ export
     debugSphere3D,
     debugLine3D,
     debugPoint3D,
-    render3DSmoothShading,
-    setRender3DSmoothShading,
 
     // Three.js
     threeJS,

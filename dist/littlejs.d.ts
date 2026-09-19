@@ -6066,6 +6066,33 @@ declare module "littlejsengine" {
         toString(): string;
     }
     /**
+     * Ray3D - A start point and a direction, what screenToRay returns and the raycast helpers take
+     * - The direction need not be unit length, the distances that come back are in units of it
+     * @memberof Math3D
+     * @example
+     * const ray = render3D.screenToRay(mousePosScreen);
+     * const distance = raycastPlane(ray, vec3(), vec3(0, 1, 0));
+     * if (distance !== undefined)
+     *     ball.pos3D = ray.getPosition(distance);
+     */
+    export class Ray3D {
+        /** Create a ray
+         *  @param {Vector3} [origin]
+         *  @param {Vector3} [direction] - Defaults to -Z, forward */
+        constructor(origin?: Vector3, direction?: Vector3);
+        /** @property {Vector3} - Where the ray starts */
+        origin: Vector3;
+        /** @property {Vector3} - Which way it goes */
+        direction: Vector3;
+        /** Returns the point a distance along the ray
+         *  @param {number} distance - What the raycast helpers return
+         *  @return {Vector3} */
+        getPosition(distance: number): Vector3;
+        /** Returns a new ray that is a copy of this
+         *  @return {Ray3D} */
+        copy(): Ray3D;
+    }
+    /**
      * Build a transform for an object from its position, rotation and scale
      * - A point is scaled first, then rotated, then moved, which is what you want for a game object
      * @param {Vector3} [pos]
@@ -6137,37 +6164,34 @@ declare module "littlejsengine" {
     export function collideBoxBox(posA: Vector3, sizeA: Vector3, posB: Vector3, sizeB: Vector3): Vector3 | undefined;
     /**
      * Returns the distance along the ray to the first intersection with a sphere, or undefined
-     * - The hit is origin + direction * distance, so a direction that is not unit length scales it
-     * @param {Vector3} origin
-     * @param {Vector3} direction - Need not be normalized
+     * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
+     * @param {Ray3D} ray
      * @param {Vector3} pos - Sphere center
      * @param {number} radius
      * @return {number|undefined}
      * @memberof Math3D
      */
-    export function raycastSphere(origin: Vector3, direction: Vector3, pos: Vector3, radius: number): number | undefined;
+    export function raycastSphere(ray: Ray3D, pos: Vector3, radius: number): number | undefined;
     /**
      * Returns the distance along the ray to a plane, or undefined if parallel or behind
-     * - The hit is origin + direction * distance, so a direction that is not unit length scales it
-     * @param {Vector3} origin
-     * @param {Vector3} direction - Need not be normalized
+     * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
+     * @param {Ray3D} ray
      * @param {Vector3} planePos
      * @param {Vector3} planeNormal
      * @return {number|undefined}
      * @memberof Math3D
      */
-    export function raycastPlane(origin: Vector3, direction: Vector3, planePos: Vector3, planeNormal: Vector3): number | undefined;
+    export function raycastPlane(ray: Ray3D, planePos: Vector3, planeNormal: Vector3): number | undefined;
     /**
      * Returns the distance along the ray to the first intersection with an axis aligned box, or undefined
-     * - The hit is origin + direction * distance, so a direction that is not unit length scales it
-     * @param {Vector3} origin
-     * @param {Vector3} direction - Need not be normalized
+     * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
+     * @param {Ray3D} ray
      * @param {Vector3} pos - Center of the box
      * @param {Vector3} size - Full size of the box
      * @return {number|undefined}
      * @memberof Math3D
      */
-    export function raycastBox(origin: Vector3, direction: Vector3, pos: Vector3, size: Vector3): number | undefined;
+    export function raycastBox(ray: Ray3D, pos: Vector3, size: Vector3): number | undefined;
     /**
      * LittleJS 3D Rendering Plugin
      * - Adds a 3D scene that draws into the same WebGL canvas as the 2D game
@@ -6216,6 +6240,8 @@ declare module "littlejsengine" {
         gravity: Vector3;
         /** @property {number|Function} - Floor height for objects with a softShadow, a number or (x, z) => y for terrain */
         softShadowHeight: number;
+        /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for flat faces */
+        smoothShading: boolean;
         /** @property {boolean} - Cast real shadows from the directional light, off by default and free when off */
         shadows: boolean;
         /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
@@ -6317,11 +6343,8 @@ declare module "littlejsengine" {
          *  - Uses the camera where it is right now, so it is fine to call from gameUpdate
          *  @param {Vector2} screenPos - Same space as mousePosScreen
          *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
-         *  @return {{origin: Vector3, direction: Vector3}} - Ray start and unit direction */
-        screenToRay(screenPos: Vector2, canvasSize?: Vector2): {
-            origin: Vector3;
-            direction: Vector3;
-        };
+         *  @return {Ray3D} - Starts at the camera with a unit direction, or on the camera plane when orthographic */
+        screenToRay(screenPos: Vector2, canvasSize?: Vector2): Ray3D;
         /** Where a screen position lands on a flat ground plane, for top down games; use HeightMap.raycast for terrain
          *  @param {Vector2} screenPos - Same space as mousePosScreen
          *  @param {number} [groundHeight] - World height of the ground plane
@@ -6329,11 +6352,10 @@ declare module "littlejsengine" {
         screenToGround(screenPos: Vector2, groundHeight?: number): Vector3 | undefined;
         /** Find the nearest object a ray hits, for clicking on things
          *  - Each object is tested as a ball around its mesh, or around a sprite's size3D, not triangle by triangle
-         *  @param {Vector3} origin
-         *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
+         *  @param {Ray3D} ray - From screenToRay, or any ray
          *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
          *  @return {{object: EngineObject3D, distance: number}|undefined} */
-        raycastObjects(origin: Vector3, direction: Vector3, objects?: Array<EngineObject>): {
+        raycastObjects(ray: Ray3D, objects?: Array<EngineObject>): {
             object: EngineObject3D;
             distance: number;
         } | undefined;
@@ -6719,7 +6741,7 @@ declare module "littlejsengine" {
      * - A profile that ends where it starts makes a closed ring like a donut
      * @param {Array<Array<number>>} profile
      * @param {number} [sides] - Around the axis
-     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @param {boolean} [smooth] - Defaults to render3D.smoothShading
      * @param {boolean} [capped] - Close the ends that have a radius with flat discs
      * @return {Mesh}
      * @memberof Render3D
@@ -6732,7 +6754,7 @@ declare module "littlejsengine" {
      * @param {number} [size] - Diameter
      * @param {number} [height]
      * @param {number} [sides] - Around
-     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @param {boolean} [smooth] - Defaults to render3D.smoothShading
      * @param {boolean} [capped] - Close the ends
      * @return {Mesh}
      * @memberof Render3D
@@ -6743,7 +6765,7 @@ declare module "littlejsengine" {
      * @param {number} [size] - Diameter
      * @param {number} [sides] - Around
      * @param {number} [rings] - Top to bottom
-     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @param {boolean} [smooth] - Defaults to render3D.smoothShading
      * @return {Mesh}
      * @memberof Render3D
      */
@@ -6753,7 +6775,7 @@ declare module "littlejsengine" {
      * @param {number} [size] - Diameter of the base
      * @param {number} [height]
      * @param {number} [sides] - Around
-     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @param {boolean} [smooth] - Defaults to render3D.smoothShading
      * @param {boolean} [capped] - Close the base
      * @return {Mesh}
      * @memberof Render3D
@@ -6765,7 +6787,7 @@ declare module "littlejsengine" {
      * @param {number} [height] - Total height including the rounded ends, at least the size
      * @param {number} [sides] - Around
      * @param {number} [rings] - On each end
-     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @param {boolean} [smooth] - Defaults to render3D.smoothShading
      * @return {Mesh}
      * @memberof Render3D
      */
@@ -6776,7 +6798,7 @@ declare module "littlejsengine" {
      * @param {number} [tubeSize] - Diameter of the tube
      * @param {number} [sides] - Around the ring
      * @param {number} [tubeSides] - Around the tube
-     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @param {boolean} [smooth] - Defaults to render3D.smoothShading
      * @return {Mesh}
      * @memberof Render3D
      */
@@ -6796,7 +6818,7 @@ declare module "littlejsengine" {
      * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
      * @param {Color|Function} [color] - One Color for the whole grid, or (x, z) => Color
      * @param {Function} [heightFunction] - (x, z) => y, default flat
-     * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     * @param {boolean} [smooth] - Defaults to render3D.smoothShading
      * @return {Mesh}
      * @memberof Render3D
      * @example
@@ -6923,12 +6945,11 @@ declare module "littlejsengine" {
         getColor(x: number, z: number): Color;
         /** Distance along a ray to where it hits the terrain, or undefined for a miss
          *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
-         *  @param {Vector3} origin
-         *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
+         *  @param {Ray3D} ray - From screenToRay, or any ray
          *  @return {number|undefined} */
-        raycast(origin: Vector3, direction: Vector3): number | undefined;
+        raycast(ray: Ray3D): number | undefined;
         /** Build the terrain mesh, one vertex per sample, centered on the origin
-         *  @param {boolean} [smooth] - Defaults to render3DSmoothShading
+         *  @param {boolean} [smooth] - Defaults to render3D.smoothShading
          *  @return {Mesh} */
         buildMesh(smooth?: boolean): Mesh;
     }
@@ -7090,7 +7111,7 @@ declare module "littlejsengine" {
      * - Normals come from the file when every corner of a face has one, otherwise from the face
      * - Use mesh.center() and mesh.fit(size) to bring a model of unknown units to the origin
      * @param {string} text
-     * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3DSmoothShading
+     * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3D.smoothShading
      * @return {Mesh}
      * @memberof Render3D
      * @example
@@ -7100,7 +7121,7 @@ declare module "littlejsengine" {
     /**
      * Fetch and parse an OBJ file
      * @param {string} url
-     * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3DSmoothShading
+     * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3D.smoothShading
      * @return {Promise<Mesh>}
      * @memberof Render3D
      * @example
@@ -7137,15 +7158,6 @@ declare module "littlejsengine" {
      *  @param {number} [size] - Length of the cross
      *  @memberof Render3D */
     export function debugPoint3D(pos: Vector3, color?: Color, time?: number, size?: number): void;
-    /** Default shading for the shape builders, true for smooth vertex normals, false for flat faceted faces
-     *  @type {boolean}
-     *  @default
-     *  @memberof Render3D */
-    export let render3DSmoothShading: boolean;
-    /** Set the default shading for the shape builders, each builder can still be given its own smooth argument
-     *  @param {boolean} smooth
-     *  @memberof Render3D */
-    export function setRender3DSmoothShading(smooth: boolean): void;
     /**
      * LittleJS Three.js Plugin
      * - Renders a three.js scene on a canvas behind the LittleJS canvases

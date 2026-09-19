@@ -63,8 +63,8 @@ function gameUpdate()
     // space toggles shading, drag to orbit with no idle spin, the model is for inspecting
     if (keyWasPressed('Space'))
     {
-        setRender3DSmoothShading(!render3DSmoothShading);
-        model.mesh.computeNormals(render3DSmoothShading);
+        render3D.smoothShading = !render3D.smoothShading;
+        model.mesh.computeNormals(render3D.smoothShading);
     }
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : 0;
     render3D.camera.orbit(vec3(0,2,0), 10, orbit, .35);

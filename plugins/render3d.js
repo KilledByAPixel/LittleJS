@@ -19,17 +19,6 @@
  *  @memberof Render3D */
 let render3D;
 
-/** Default shading for the shape builders, true for smooth vertex normals, false for flat faceted faces
- *  @type {boolean}
- *  @default
- *  @memberof Render3D */
-let render3DSmoothShading = false;
-
-/** Set the default shading for the shape builders, each builder can still be given its own smooth argument
- *  @param {boolean} smooth
- *  @memberof Render3D */
-function setRender3DSmoothShading(smooth) { render3DSmoothShading = smooth; }
-
 // vertex format: position xyz, normal xyz, uv, rgba bytes
 const RENDER3D_VERTEX_FLOATS = 9;
 const RENDER3D_VERTEX_BYTES = RENDER3D_VERTEX_FLOATS * 4;
@@ -272,6 +261,8 @@ class Render3DPlugin
         this.gravity = vec3();
         /** @property {number|Function} - Floor height for objects with a softShadow, a number or (x, z) => y for terrain */
         this.softShadowHeight = 0;
+        /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for flat faces */
+        this.smoothShading = false;
 
         // shadows
         /** @property {boolean} - Cast real shadows from the directional light, off by default and free when off */
@@ -426,7 +417,7 @@ class Render3DPlugin
      *  - Uses the camera where it is right now, so it is fine to call from gameUpdate
      *  @param {Vector2} screenPos - Same space as mousePosScreen
      *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
-     *  @return {{origin: Vector3, direction: Vector3}} - Ray start and unit direction */
+     *  @return {Ray3D} - Starts at the camera with a unit direction, or on the camera plane when orthographic */
     screenToRay(screenPos, canvasSize=mainCanvasSize)
     {
         this.updateMatrices();
@@ -438,8 +429,8 @@ class Render3DPlugin
         const h = camera.orthographic ? camera.orthographic / 2 : tan(camera.fov / 2);
         const offset = this.cameraRight.scale(clipX * h * aspect).add(this.cameraUp.scale(clipY * h));
         return camera.orthographic
-            ? {origin: camera.pos.add(offset), direction: this.cameraForward.copy()}
-            : {origin: camera.pos.copy(), direction: this.cameraForward.add(offset).normalize()};
+            ? new Ray3D(camera.pos.add(offset), this.cameraForward.copy())
+            : new Ray3D(camera.pos.copy(), this.cameraForward.add(offset).normalize());
     }
 
     /** Where a screen position lands on a flat ground plane, for top down games; use HeightMap.raycast for terrain
@@ -449,17 +440,16 @@ class Render3DPlugin
     screenToGround(screenPos, groundHeight=0)
     {
         const ray = this.screenToRay(screenPos);
-        const t = raycastPlane(ray.origin, ray.direction, vec3(0, groundHeight, 0), RENDER3D_DEFAULT_NORMAL);
-        return t === undefined ? undefined : ray.origin.add(ray.direction.scale(t));
+        const t = raycastPlane(ray, vec3(0, groundHeight, 0), RENDER3D_DEFAULT_NORMAL);
+        return t === undefined ? undefined : ray.getPosition(t);
     }
 
     /** Find the nearest object a ray hits, for clicking on things
      *  - Each object is tested as a ball around its mesh, or around a sprite's size3D, not triangle by triangle
-     *  @param {Vector3} origin
-     *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
+     *  @param {Ray3D} ray - From screenToRay, or any ray
      *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
      *  @return {{object: EngineObject3D, distance: number}|undefined} */
-    raycastObjects(origin, direction, objects=engineObjects)
+    raycastObjects(ray, objects=engineObjects)
     {
         let nearest;
         for (const o of objects)
@@ -468,7 +458,7 @@ class Render3DPlugin
             const matrix = o.getMatrix(), mesh = o.mesh; // a sprite is picked by its size3D
             const radius = (mesh ? mesh.radius || mesh.computeRadius() : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxScale(matrix.m);
             if (!(radius > 0)) continue; // nothing to hit
-            const distance = raycastSphere(origin, direction, matrix.getTranslation(), radius);
+            const distance = raycastSphere(ray, matrix.getTranslation(), radius);
             if (distance !== undefined && (!nearest || distance < nearest.distance))
                 nearest = {object: o, distance};
         }
@@ -1889,14 +1879,14 @@ class Mesh
  * - A profile that ends where it starts makes a closed ring like a donut
  * @param {Array<Array<number>>} profile
  * @param {number} [sides] - Around the axis
- * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @param {boolean} [capped] - Close the ends that have a radius with flat discs
  * @return {Mesh}
  * @memberof Render3D
  * @example
  * const vase = buildLathe([[0, -1], [.8, -.3], [.9, .2], [.4, .6], [0, 1]], 12);
  */
-function buildLathe(profile, sides=12, smooth=render3DSmoothShading, capped=true)
+function buildLathe(profile, sides=12, smooth=render3D?.smoothShading, capped=true)
 {
     ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
     sides |= 0;
@@ -1993,12 +1983,12 @@ function buildLathe(profile, sides=12, smooth=render3DSmoothShading, capped=true
  * @param {number} [size] - Diameter
  * @param {number} [height]
  * @param {number} [sides] - Around
- * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @param {boolean} [capped] - Close the ends
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildCylinder(size=1, height=1, sides=12, smooth=render3DSmoothShading, capped=true)
+function buildCylinder(size=1, height=1, sides=12, smooth=render3D?.smoothShading, capped=true)
 {
     return buildLathe([[size / 2, -height / 2], [size / 2, height / 2]], sides, smooth, capped);
 }
@@ -2008,12 +1998,12 @@ function buildCylinder(size=1, height=1, sides=12, smooth=render3DSmoothShading,
  * @param {number} [size] - Diameter of the base
  * @param {number} [height]
  * @param {number} [sides] - Around
- * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @param {boolean} [capped] - Close the base
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildCone(size=1, height=1, sides=12, smooth=render3DSmoothShading, capped=true)
+function buildCone(size=1, height=1, sides=12, smooth=render3D?.smoothShading, capped=true)
 {
     return buildLathe([[size / 2, -height / 2], [0, height / 2]], sides, smooth, capped);
 }
@@ -2023,11 +2013,11 @@ function buildCone(size=1, height=1, sides=12, smooth=render3DSmoothShading, cap
  * @param {number} [size] - Diameter
  * @param {number} [sides] - Around
  * @param {number} [rings] - Top to bottom
- * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildSphere(size=1, sides=12, rings=6, smooth=render3DSmoothShading)
+function buildSphere(size=1, sides=12, rings=6, smooth=render3D?.smoothShading)
 {
     ASSERT(rings > 1, 'sphere needs at least 2 rings');
     const profile = [];
@@ -2045,11 +2035,11 @@ function buildSphere(size=1, sides=12, rings=6, smooth=render3DSmoothShading)
  * @param {number} [height] - Total height including the rounded ends, at least the size
  * @param {number} [sides] - Around
  * @param {number} [rings] - On each end
- * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildCapsule(size=1, height=1, sides=12, rings=4, smooth=render3DSmoothShading)
+function buildCapsule(size=1, height=1, sides=12, rings=4, smooth=render3D?.smoothShading)
 {
     const profile = [], r = size / 2, straight = max(0, height - size) / 2;
     for (let i = 0; i <= rings; ++i)
@@ -2071,11 +2061,11 @@ function buildCapsule(size=1, height=1, sides=12, rings=4, smooth=render3DSmooth
  * @param {number} [tubeSize] - Diameter of the tube
  * @param {number} [sides] - Around the ring
  * @param {number} [tubeSides] - Around the tube
- * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3DSmoothShading)
+function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3D?.smoothShading)
 {
     ASSERT(tubeSize <= size, 'the tube must fit inside the torus');
     const profile = [], radius = (size - tubeSize) / 2, tubeRadius = tubeSize / 2;
@@ -2161,13 +2151,13 @@ function buildRibbon(points, width=1, color=WHITE, closed=false, up=vec3(0, 1, 0
  * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
  * @param {Color|Function} [color] - One Color for the whole grid, or (x, z) => Color
  * @param {Function} [heightFunction] - (x, z) => y, default flat
- * @param {boolean} [smooth] - Defaults to render3DSmoothShading
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @return {Mesh}
  * @memberof Render3D
  * @example
  * const ground = buildGrid(vec2(20), 10, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? GRAY : WHITE); // 2 unit checks
  */
-function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth=render3DSmoothShading)
+function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth=render3D?.smoothShading)
 {
     if (isNumber(segments))
         segments = vec2(segments);
@@ -2506,15 +2496,15 @@ class HeightMap
 
     /** Distance along a ray to where it hits the terrain, or undefined for a miss
      *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
-     *  @param {Vector3} origin
-     *  @param {Vector3} direction - Need not be normalized, the distance is in units of it
+     *  @param {Ray3D} ray - From screenToRay, or any ray
      *  @return {number|undefined} */
-    raycast(origin, direction)
+    raycast(ray)
     {
+        const {origin, direction} = ray;
         const size = this.size, height = this.height, length = direction.length();
         if (!length) return;
         // clip to the box around the terrain, then step until the ray dips under the ground or leaves the map
-        let t = raycastBox(origin, direction, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
+        let t = raycastBox(ray, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
         if (t === undefined) return;
         const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
         const step = cell / 2 / length, end = t + hypot(size.x, size.y, height) / length;
@@ -2544,9 +2534,9 @@ class HeightMap
     }
 
     /** Build the terrain mesh, one vertex per sample, centered on the origin
-     *  @param {boolean} [smooth] - Defaults to render3DSmoothShading
+     *  @param {boolean} [smooth] - Defaults to render3D.smoothShading
      *  @return {Mesh} */
-    buildMesh(smooth=render3DSmoothShading)
+    buildMesh(smooth=render3D?.smoothShading)
     {
         return buildGrid(this.size, vec2(this.columns - 1, this.rows - 1),
             this.colors && ((x, z)=> this.getColor(x, z)), (x, z)=> this.getHeight(x, z), smooth);
@@ -3083,13 +3073,13 @@ class Trail3D extends EngineObject3D
  * - Normals come from the file when every corner of a face has one, otherwise from the face
  * - Use mesh.center() and mesh.fit(size) to bring a model of unknown units to the origin
  * @param {string} text
- * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3DSmoothShading
+ * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3D.smoothShading
  * @return {Mesh}
  * @memberof Render3D
  * @example
  * new EngineObject3D(vec3(), parseOBJ(objText).center().fit(4));
  */
-function parseOBJ(text, smooth=render3DSmoothShading)
+function parseOBJ(text, smooth=render3D?.smoothShading)
 {
     const positions = [], normals = [], uvs = [], mesh = new Mesh;
     let fileNormals = false;
@@ -3124,13 +3114,13 @@ function parseOBJ(text, smooth=render3DSmoothShading)
 /**
  * Fetch and parse an OBJ file
  * @param {string} url
- * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3DSmoothShading
+ * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3D.smoothShading
  * @return {Promise<Mesh>}
  * @memberof Render3D
  * @example
  * const mesh = await loadOBJ('ship.obj'); // in an async gameInit
  */
-async function loadOBJ(url, smooth=render3DSmoothShading)
+async function loadOBJ(url, smooth=render3D?.smoothShading)
 {
     const response = await fetch(url);
     if (!response.ok)
