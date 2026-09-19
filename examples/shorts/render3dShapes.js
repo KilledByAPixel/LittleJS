@@ -1,10 +1,11 @@
 class Spinner extends EngineObject3D
 {
-    constructor(pos, color, speed)
+    constructor(pos, color)
     {
-        super(pos, undefined, undefined, color);
+        super(pos);
+        this.color = color;
         this.scale3D = vec3(1.5);
-        this.angleVelocity3D = vec3(speed/3, speed, 0);
+        this.angleVelocity3D = vec3(.01, .02);
     }
 }
 
@@ -12,52 +13,55 @@ let spinners = [], orbit = 0;
 
 function buildShapes()
 {
-    // builders use render3DSmoothShading unless told otherwise
-    const meshes = [
-        buildBox(vec3(1.5)),
-        buildLathe([[0,-1], [1,0], [0,1]], 4), // octahedron
-        buildCylinder(1, 2),
-        buildLathe([[0,-1], [.8,-.3], [.9,.2], [.4,.6], [0,1]], 10), // vase
-        buildSphere(),
-        buildLoft([[1.2,.4,.2,-.1], [0,1.4,.5,-.4], [-1,1,.3,-.3]]), // hull
-        buildTorus(1.4, .5),
-        buildCone(1.4, 1.6),
-        buildCapsule(.8, 1.8),
-    ];
-    spinners.forEach((s, i)=> { s.mesh?.dispose(); s.mesh = meshes[i]; });
+    // builders use render3DSmoothShading by default
+    const box = buildBox(vec3(1));
+    const octahedron = buildLathe([[0,-1], [1,0], [0,1]], 4);
+    const cylinder = buildCylinder(1, 2);
+    const vase = buildLathe([[0,-1], [.4,-.2], [.7,.2], [.4,.6], [0,1]], 8);
+    const sphere = buildSphere();
+    const hull = buildLoft([[1,.4,.2,-.1], [0,2,.5,-.4], [-1,1,.3,-.3]]);
+    const torus = buildTorus(1.4, .5);
+    const cone = buildCone(1.4, 1.6);
+    const capsule = buildCapsule(.8, 2);
+
+    const meshes = 
+        [box, octahedron, cylinder, vase, sphere, hull, torus, cone, capsule];
+    spinners.forEach((s, i)=> s.mesh = meshes[i]);
 }
 
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.shadows = true;
     render3D.setSky(rgb(.2,.4,.9), rgb(.8,.9,1));
+    render3D.shadows = true;
     render3D.fogStart = 15;
     render3D.fogEnd = 40;
     render3D.lightDirection = vec3(-.5,-1,-.3).normalize();
     render3D.ambientColor = rgb(.35,.35,.4);
 
     // checkerboard floor and a ring of shapes
-    const checker = (x, z)=> (floor(x/2) + floor(z/2)) & 1 ? rgb(.35,.5,.35) : rgb(.3,.45,.3);
+    const checker = (x, z)=> hsl(.3, .2, (x/2^z/2)&1 ? .5 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(30), 15, checker));
-    for (let i = 0; i < 9; ++i)
+    for (let i = 9; i--;)
     {
         const a = i/9*2*PI;
-        spinners.push(new Spinner(vec3(sin(a)*6, 2.5, cos(a)*6), hsl(i/9,.7,.6), .01 + i*.003));
+        const pos = vec3(6, 3).rotateY(a);
+        const spinner = new Spinner(pos, hsl(i/9,.7,.6));
+        spinners.push(spinner);
     }
     buildShapes();
 }
 
 function gameUpdate()
 {
-    // space rebuilds with the other shading, S adds specular
+    // space toggles shading, S toggles specular
     if (keyWasPressed('Space'))
     {
         setRender3DSmoothShading(!render3DSmoothShading);
         buildShapes();
     }
     for (const s of spinners)
-        s.specular = keyIsDown('KeyS') ? 1 : 0;
+        s.specular = keyIsDown('KeyS');
 
     // drag to orbit
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .003;
@@ -67,6 +71,6 @@ function gameUpdate()
 function gameRenderPost()
 {
     const shading = render3DSmoothShading ? 'smooth' : 'flat';
-    const text = '3D Shapes\nspace: ' + shading + ' shading, hold S: specular, drag: orbit';
-    drawTextScreen(text, vec2(mainCanvasSize.x/2, 50), 24);
+    const text = 'space: ' + shading + ' shading, hold S: specular, drag: orbit';
+    drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

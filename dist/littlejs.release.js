@@ -16405,6 +16405,15 @@ class Vector3
         return this.scale(c).add(axis.cross(this).scale(s)).add(axis.scale(d));
     }
 
+    rotateY(angle)
+    {
+        const c = cos(angle), s = sin(angle);
+        return new Vector3(
+            this.x*c + this.z*s,
+            this.y,
+            -this.x*s + this.z*c);
+    }
+
     /** Returns a new vector with the absolute value of each component
      *  @return {Vector3} */
     abs() { return new Vector3(abs(this.x), abs(this.y), abs(this.z)); }

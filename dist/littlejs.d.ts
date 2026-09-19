@@ -5929,6 +5929,7 @@ declare module "littlejsengine" {
          *  @param {number} angle - Radians
          *  @return {Vector3} */
         rotate(axis: Vector3, angle: number): Vector3;
+        rotateY(angle: any): Vector3;
         /** Returns a new vector with the absolute value of each component
          *  @return {Vector3} */
         abs(): Vector3;
