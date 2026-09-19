@@ -24,6 +24,7 @@ function buildShapes()
     const cone = buildCone(1.4, 1.6);
     const capsule = buildCapsule(.8, 2);
 
+    // create the spinners
     const meshes = 
         [box, oct, cylinder, vase, sphere, hull, torus, cone, capsule];
     spinners.forEach((s, i)=> s.mesh = meshes[i]);
@@ -73,6 +74,6 @@ function gameUpdate()
 function gameRenderPost()
 {
     const shading = render3DSmoothShading ? 'smooth' : 'flat';
-    const text = 'space: ' + shading + ' shading, hold S: specular, drag: orbit';
+    const text = 'space: ' + shading + ' shading / hold S: specular';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

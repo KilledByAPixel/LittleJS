@@ -11,24 +11,18 @@ class Ball extends EngineObject3D
     }
     update()
     {
-        // roll downhill along the ground normal, reset when it leaves the edge
+        // roll downhill along the ground normal
         const p = this.pos3D;
         const normal = terrain.getNormal(p.x, p.z);
-        this.velocity3D = this.velocity3D.add(vec3(normal.x, 0, normal.z).scale(.02)).scale(.99);
+        const push = vec3(normal.x, 0, normal.z).scale(.02);
+        this.velocity3D = this.velocity3D.add(push).scale(.99);
         p.y = terrain.getHeight(p.x, p.z) + .5;
-        this.rotation3D.x += this.velocity3D.z*2;
-        this.rotation3D.z -= this.velocity3D.x*2;
-        if (abs(p.x) > 24 || abs(p.z) > 24)
-        {
-            this.pos3D = vec3(rand(-10,10), 0, rand(-10,10));
-            this.velocity3D = vec3();
-        }
     }
 }
 
-// paint a height map and a color map, standing in for an artist's images
 function makeTerrainImages(size)
 {
+    // paint a height map and a color map
     const heightCanvas = new OffscreenCanvas(size, size);
     const colorCanvas = new OffscreenCanvas(size, size);
     const heightContext = heightCanvas.getContext('2d');
@@ -36,14 +30,18 @@ function makeTerrainImages(size)
     for (let y = size; y--;)
     for (let x = size; x--;)
     {
-        // rolling hills from two octaves of noise, rising toward the edges
+        // rolling hills from noise, rising toward the edges
         const edge = hypot(x/size - .5, y/size - .5)*1.5;
-        const h = clamp(noise2D(x/12, y/12)*.5 + noise2D(x/5, y/5)*.15 - .15 + edge*edge);
+        const n1 = noise2D(x/12, y/12)*.5;
+        const n2 = noise2D(x/5, y/5)*.15;
+        const h = clamp(n1 + n2 - .15 + edge*edge);
         heightContext.fillStyle = hsl(0,0,h);
         heightContext.fillRect(x, y, 1, 1);
 
         // grass low, rock high, snow on top
-        const grass = hsl(.3,.5,.3 + h*.3), rock = hsl(.1,.3,.4), snow = hsl(0,0,.9);
+        const grass = hsl(.3,.5,.3 + h*.3);
+        const rock = hsl(.1,.3,.4);
+        const snow = hsl(0,0,.9);
         colorContext.fillStyle = h < .5 ? grass : h < .75 ? rock : snow;
         colorContext.fillRect(x, y, 1, 1);
     }
@@ -85,7 +83,7 @@ function gameInit()
 
 function gameUpdate()
 {
-    // space toggles shading, right click drops the ball where the mouse hits the ground
+    // space toggles shading, right click moves the ball
     if (keyWasPressed('Space'))
     {
         setRender3DSmoothShading(!render3DSmoothShading);
@@ -95,7 +93,7 @@ function gameUpdate()
     {
         const ray = render3D.screenToRay(mousePosScreen);
         const distance = terrain.raycast(ray.origin, ray.direction);
-        if (distance !== undefined)
+        if (distance)
         {
             ball.pos3D = ray.origin.add(ray.direction.scale(distance));
             ball.velocity3D = vec3();
@@ -104,11 +102,11 @@ function gameUpdate()
 
     // drag to orbit
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
-    render3D.camera.orbit(vec3(0,3,0), 35, orbit, .45);
+    render3D.camera.orbit(vec3(0,3,0), 35, orbit, .5);
 }
 
 function gameRenderPost()
 {
-    const text = 'right click: drop the ball, space: shading, drag: orbit';
+    const text = 'right click: move the ball / space: toggle shading';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

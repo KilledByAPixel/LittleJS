@@ -42,5 +42,5 @@ function gameUpdate()
 {
     // drag to orbit
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .003;
-    render3D.camera.orbit(vec3(0,1,0), 15, orbit, .4);
+    render3D.camera.orbit(vec3(), 15, orbit, .5);
 }
