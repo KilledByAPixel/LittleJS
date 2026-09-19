@@ -1747,3 +1747,23 @@ test('a soft shadow can sit on a HeightMap directly', () =>
     for (const p of disc.points)
         near(p.y, 3.02);
 });
+
+test('collideSolid3D objects push apart by mass and bounce off each other', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const a = new EngineObject3D(vec3()), b = new EngineObject3D(vec3(.6, 0, 0));
+    a.collideSolid3D = b.collideSolid3D = true;
+    a.mass = b.mass = 1;
+    a.velocity3D = vec3(1, 0, 0);
+    b.updateTransforms(); // b comes after a, so b resolves the pair
+    near(a.pos3D.x, -.2); near(b.pos3D.x, .8);
+    nearVec(a.velocity3D, 0, 0, 0); // heading into b with no restitution, the push takes it away
+    b.pos3D = vec3(.6, 0, 0); a.pos3D = vec3(); a.mass = 0; // a is static now
+    b.updateTransforms();
+    near(a.pos3D.x, 0); near(b.pos3D.x, 1);
+    const emitter = new ParticleEmitter3D(vec3());
+    assert.ok(!emitter.castShadow, 'particles cast no shadow unless asked');
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});

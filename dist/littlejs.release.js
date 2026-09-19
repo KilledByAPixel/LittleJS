@@ -17806,7 +17806,8 @@ class Render3DPlugin
 
         // the particle path: the quad's six stream vertices written straight in, unlit
         const count = render3DStripCount(4);
-        const uvRect = render3DWithState({lighting: false}, ()=> render3DBeginStrip(count, tileInfo));
+        const lighting = this.shadowPass && this.lighting; // unlit on screen, in the shadow map the object's flag decides
+        const uvRect = render3DWithState({lighting}, ()=> render3DBeginStrip(count, tileInfo));
         if (!uvRect) return;
         const corners = render3DBillboardCorners(pos, size, angle, upright), rgba = color.rgbaInt();
         const floats = this.streamFloats, ints = this.streamInts;
@@ -18224,17 +18225,22 @@ function render3DInitGL()
         '}'
     );
 
-    // the depth only shader for the shadow map, same vertex layout, position only
+    // the depth only shader for the shadow map, same vertex layout; see through pixels cast nothing,
+    // so sprites and cut out textures cast their outline
     r.shadowShader = glCreateProgram(
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform mat4 viewProj,model;' +
-        'layout(location=0) in vec3 p;' +
-        'void main(){gl_Position=viewProj*model*vec4(p,1.);}'
+        'uniform vec4 uvRect;' +
+        'layout(location=0) in vec3 p;layout(location=2) in vec2 t;' +
+        'out vec2 T;' +
+        'void main(){T=uvRect.xy+t*uvRect.zw;gl_Position=viewProj*model*vec4(p,1.);}'
         ,
         '#version 300 es\n' +
         'precision highp float;' +
-        'void main(){}'
+        'uniform sampler2D tex;' +
+        'in vec2 T;' +
+        'void main(){if(texture(tex,T).a<.5)discard;}'
     );
 
     // the vertex array object with the attributes enabled once, pointers are set per buffer by render3DBindVertexBuffer
@@ -18283,6 +18289,13 @@ function render3DUniform(name, program=render3D.shader)
 }
 
 // send a vec4 uniform of the main shader only when its value changed since the last send
+// the GL texture of a tile or texture, white when there is none or it is not loaded
+function render3DTexture(tileInfo)
+{
+    const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
+    return textureInfo?.glTexture || render3D.whiteTexture;
+}
+
 function render3DUniform4f(name, x, y, z, w)
 {
     const values = render3D.uniformValues, last = values[name];
@@ -18325,7 +18338,11 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     const gl = glContext, r = render3D, m = matrix.m;
     if (r.shadowPass)
     {
+        // the shadow map only needs the transform and the texture for its alpha
         gl.uniformMatrix4fv(render3DUniform('model', r.shadowShader), false, m);
+        gl.bindTexture(gl.TEXTURE_2D, render3DTexture(tileInfo));
+        uvRect ||= render3DGetTileUVs(tileInfo);
+        gl.uniform4f(render3DUniform('uvRect', r.shadowShader), uvRect.x, uvRect.y, uvRect.w, uvRect.h);
         return;
     }
     gl.uniformMatrix4fv(render3DUniform('model'), false, m);
@@ -18353,12 +18370,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     state.cullBackFaces ? gl.enable(gl.CULL_FACE) : gl.disable(gl.CULL_FACE);
 
     // texture, on unit 0 with the shadow map on unit 1
-    let texture = r.whiteTexture;
-    if (tileInfo instanceof TileInfo)
-        texture = tileInfo.textureInfo.glTexture || texture;
-    else if (tileInfo instanceof TextureInfo)
-        texture = tileInfo.glTexture || texture;
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.bindTexture(gl.TEXTURE_2D, render3DTexture(tileInfo));
     uvRect ||= render3DGetTileUVs(tileInfo);
     render3DUniform4f('uvRect', uvRect.x, uvRect.y, uvRect.w, uvRect.h);
     render3DUniform4f('tint', tint.r, tint.g, tint.b, tint.a);
@@ -18533,7 +18545,8 @@ function render3DRenderShadowMap()
     r.shadowPass = true;
     try
     {
-        const casters = render3DLayerObjects(!!r.renderAfter2D).filter(o => o.castShadow && !o.transparent && !o.additive);
+        // see through objects cast only when textured, their alpha cuts the shadow out
+        const casters = render3DLayerObjects(!!r.renderAfter2D).filter(o => o.castShadow && !o.additive && (!o.transparent || o.tileInfo));
         render3DDrawObjects(casters);
         r.onRenderOpaque?.();
         r.flush();
@@ -19678,8 +19691,10 @@ class EngineObject3D extends EngineObject
         this.unlit = false;
         /** @property {number} - How shiny the surface is, 0 is flat and matte */
         this.specular = 0;
-        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, lit opaque objects only; the map holds the shape, not the texture's alpha, so turn it off for cut out art */
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         this.castShadow = true;
+        /** @property {boolean} - Push apart from other collideSolid3D objects each frame as balls the size of their largest side, heavier objects move less and mass 0 stays put */
+        this.collideSolid3D = false;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
         /** @property {boolean} - Skip faces that point away from the camera, faster for closed meshes */
@@ -19703,6 +19718,8 @@ class EngineObject3D extends EngineObject
             this.rotation3D = this.rotation3D.add(this.angleVelocity3D);
             if (this.sync2D)
                 this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
+            if (this.collideSolid3D)
+                render3DCollideSolid(this);
         }
         super.updateTransforms();
     }
@@ -19745,6 +19762,32 @@ class EngineObject3D extends EngineObject
             render3D.drawMesh(this.mesh, this.getMatrix(), this.tileInfo, this.color);
         else if (this.tileInfo) // a sprite
             render3D.drawBillboard(this.getWorldPos3D(), vec2(this.size3D.x, this.size3D.y), this.tileInfo, this.color, 0, this.upright);
+    }
+}
+
+// push a solid object out of the solids updated before it this frame, so each pair is resolved once
+function render3DCollideSolid(a)
+{
+    const radius = (o)=> max(o.size3D.x, o.size3D.y, o.size3D.z) * max(o.scale3D.x, o.scale3D.y, o.scale3D.z) / 2;
+    const ra = radius(a);
+    for (const b of engineObjects)
+    {
+        if (b === a) break; // the ones after this update later and test against this one then
+        if (!b.collideSolid3D || b.destroyed) continue;
+        const push = collideSphereSphere(a.pos3D, ra, b.pos3D, radius(b));
+        if (!push) continue;
+
+        // heavier objects move less, mass 0 stays put; then bounce apart when moving toward each other
+        const total = a.mass + b.mass;
+        const weightA = !a.mass ? 0 : !b.mass ? 1 : b.mass / total;
+        const weightB = !b.mass ? 0 : !a.mass ? 1 : a.mass / total;
+        a.pos3D = a.pos3D.add(push.scale(weightA));
+        b.pos3D = b.pos3D.subtract(push.scale(weightB));
+        const normal = push.normalize();
+        if (a.velocity3D.dot(normal) < 0)
+            a.velocity3D = a.velocity3D.reflect(normal, a.restitution);
+        if (b.velocity3D.dot(normal) > 0)
+            b.velocity3D = b.velocity3D.reflect(normal, b.restitution);
     }
 }
 
@@ -19858,6 +19901,7 @@ class ParticleEmitter3D extends EngineObject3D
     {
         super(pos3D, undefined, tileInfo);
         this.transparent = true;
+        this.castShadow = false;
         this.size3D = vec3(); // not a solid thing to pick or collect
 
         /** @property {number|Vector3} - Spawn area, a number for a sphere diameter or a vec3 for a box */
@@ -20032,6 +20076,7 @@ class Trail3D extends EngineObject3D
         super(pos3D, undefined, tileInfo, color);
         this.transparent = true;
         this.additive = additive;
+        this.castShadow = false;
         this.size3D = vec3(); // not a solid thing to pick or collect
         this.finishing = false; // set by destroy, the ribbon fades out then goes away
 

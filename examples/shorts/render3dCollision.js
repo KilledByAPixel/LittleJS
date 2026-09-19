@@ -14,6 +14,8 @@ class Ball extends EngineObject3D
         this.softShadow = this.radius*2;
         this.velocity3D = randVector3(.1);
         this.mass = 1; // falls with render3D.gravity
+        this.restitution = .6;
+        this.collideSolid3D = true; // balls push each other apart
     }
     update()
     {
@@ -31,7 +33,7 @@ class Ball extends EngineObject3D
     {
         // move out and reflect off the push direction
         this.pos3D = this.pos3D.add(pushOut);
-        this.velocity3D = this.velocity3D.reflect(pushOut.normalize(), .6);
+        this.velocity3D = this.velocity3D.reflect(pushOut.normalize(), this.restitution);
     }
 }
 
@@ -61,16 +63,6 @@ function gameInit()
 
 function gameUpdate()
 {
-    // balls push each other apart
-    for (const a of balls)
-    for (const b of balls)
-        if (a !== b)
-        {
-            const pushOut = collideSphereSphere(a.pos3D, a.radius, b.pos3D, b.radius);
-            if (pushOut)
-                a.bounce(pushOut.scale(.5));
-        }
-
     // pick the ball under the mouse, click to toss it up
     const ray = render3D.screenToRay(mousePosScreen);
     const picked = render3D.raycastObjects(ray, balls)?.object;

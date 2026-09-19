@@ -6609,8 +6609,10 @@ declare module "littlejsengine" {
         unlit: boolean;
         /** @property {number} - How shiny the surface is, 0 is flat and matte */
         specular: number;
-        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on, lit opaque objects only; the map holds the shape, not the texture's alpha, so turn it off for cut out art */
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         castShadow: boolean;
+        /** @property {boolean} - Push apart from other collideSolid3D objects each frame as balls the size of their largest side, heavier objects move less and mass 0 stays put */
+        collideSolid3D: boolean;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         receiveShadow: boolean;
         /** @property {boolean} - Skip faces that point away from the camera, faster for closed meshes */

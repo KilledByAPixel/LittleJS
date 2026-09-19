@@ -931,6 +931,8 @@ obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engin
 obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gravity, gravityScale and damping act on
              // velocity3D, and damping is 1 by default for no slowing
 obj.size3D                              // full size for engineObjectsCollect3D and sprites
+obj.collideSolid3D = true               // push apart from other solid objects as balls the size of the largest side,
+                                        // heavier objects move less, mass 0 stays put, velocities bounce by restitution
 obj.softShadow = 2                      // a soft shadow of that diameter under the object on render3D.softShadowHeight
 obj.upright = true                      // a sprite stands on world up instead of tilting toward the camera
 obj.sync2D = true // copy the 2D pos and angle into pos3D and rotation3D each frame, set mass for 2D physics
@@ -939,8 +941,8 @@ obj.transparent = true                  // draw in the transparent stage, blende
 obj.additive = true                     // additive blending, implies the transparent stage
 obj.unlit = true                        // draw with lighting off, for lamps and glowing things
 obj.specular = .5                       // highlight strength
-obj.castShadow = false                  // keep it out of the shadow map; the map holds shapes, not texture alpha,
-                                        // so cut out art casts a solid shadow unless this is off
+obj.castShadow = false                  // keep it out of the shadow map; sprites and cut out textures cast their
+                                        // outline, unlit and additive objects never cast
 obj.receiveShadow = false               // draw it without the shadow map's darkening
 obj.cullBackFaces = true                // skip faces pointing away from the camera, faster for closed meshes
 obj.renderOrder                         // sorts the opaque stage
