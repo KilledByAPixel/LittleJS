@@ -6380,7 +6380,7 @@ declare module "littlejsengine" {
          *  @param {number} radius
          *  @return {boolean} */
         isSphereVisible(center: Vector3, radius: number): boolean;
-        /** Draw a mesh with the current draw state, flushes the stream first so draw order holds
+        /** Draw a mesh with the current draw state, batched with its other uses in the opaque stage when instancing is on
          *  @param {Mesh} mesh
          *  @param {Matrix4} [matrix] - Object transform
          *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
@@ -6699,12 +6699,16 @@ declare module "littlejsengine" {
          *  @param {Array<Vector2>} [uvs] - One per corner, default across the tile
          *  @return {Mesh} */
         addQuad(a: Vector3, b: Vector3, c: Vector3, d: Vector3, color?: Color | Array<Color>, uvs?: Array<Vector2>): Mesh;
-        /** Append another mesh transformed by a matrix, for welding shapes into one draw call
+        /** Append another mesh transformed by a matrix, for building one shape out of several
          *  @param {Mesh} mesh
          *  @param {Matrix4} [matrix]
          *  @param {Color} [color] - Multiplies the appended vertex colors
          *  @return {Mesh} */
         combine(mesh: Mesh, matrix?: Matrix4, color?: Color): Mesh;
+        /** Scale every uv, so a whole texture repeats across the mesh when its TextureInfo wraps
+         *  @param {Vector2|number} scale - Repeats across and up, a number for both
+         *  @return {Mesh} */
+        scaleUVs(scale: Vector2 | number): Mesh;
         /** Move, turn or scale every vertex in place, normals follow along
          *  @param {Matrix4} matrix
          *  @return {Mesh} */
@@ -6739,7 +6743,7 @@ declare module "littlejsengine" {
         /** Pack the vertices and create the GPU buffer, called automatically by render
          *  @return {Mesh} */
         upload(): Mesh;
-        /** Draw the mesh, one draw call with the current draw state
+        /** Draw the mesh with the current draw state, batched with its other uses in the opaque stage
          *  @param {Matrix4} [matrix] - Object transform
          *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
          *  @param {Color} [color] - Tint */

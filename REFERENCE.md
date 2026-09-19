@@ -821,7 +821,8 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 - Below, a comment that says `e.g.` marks the value on that line as an example, not the default
 - See the `examples/shorts/render3d*.js` demos - features: render3dShapes, render3dBillboards, render3dHeightMap
   terrain, render3dCollision with picking, render3dLights, render3dParticles, render3dTrails, render3dText,
-  render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene, render3dInstancing; games:
+  render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene, render3dInstancing, render3dTextures;
+  games:
   render3dDodgeGame, render3dRacerGame, render3dPuzzleGame
 
 ```javascript
@@ -947,7 +948,8 @@ obj.castShadow = false                  // keep it out of the shadow map; sprite
                                         // outline, unlit and additive objects never cast
 obj.receiveShadow = false               // draw it without the shadow map's darkening
 obj.cullBackFaces = true                // skip faces pointing away from the camera, faster for closed meshes
-obj.renderOrder                         // sorts the opaque stage
+obj.renderOrder                         // sorts the opaque stage; instanced meshes draw as batches, so set
+                                        // mesh.instanced = false on a mesh whose order matters
 obj.renderAfter2D = true // this object on top of the 2D scene, or false for under it; undefined follows
                          // render3D.renderAfter2D
 // the layer under the 2D scene and the layer over it are drawn separately with their own depth, so neither hides the
@@ -967,8 +969,8 @@ obj.render3D() // override for custom drawing, the draw state is already set fro
 // into one draw per texture and state
 render3D.drawBox(pos, size, color, rotation)              // size is a vec3 or a number, untextured
 render3D.drawSphere(pos, size, color)                     // size is the diameter, untextured
-render3D.drawMesh(mesh, matrix, tileInfo, color) // any mesh, one draw call; tileInfo can be a TextureInfo for the whole
-                                                 // texture
+render3D.drawMesh(mesh, matrix, tileInfo, color) // any mesh, batched with its other uses; tileInfo can be a TextureInfo
+                                                 // for the whole texture, uvs past 1 repeat when it wraps
 render3D.drawBillboard(pos, size, tileInfo, color, angle, upright) // camera facing quad, unlit, size is a Vector2;
                                                                    // upright stands on world up
 // list points counter clockwise as seen from the front, or the face points away and cullBackFaces hides it
@@ -1007,7 +1009,8 @@ mesh.addStrip(points, normals, uvs, colors) // one strip in strip order, counter
                                             // joined by an invisible flat triangle, so they do not look connected
 mesh.addQuad(a, b, c, d, color, uvs) // corners in loop order, counter clockwise seen from the front; color and uvs one
                                      // or per corner
-mesh.combine(otherMesh, matrix, color)        // append a transformed, tinted copy: many shapes in one draw call
+mesh.combine(otherMesh, matrix, color)        // append a transformed, tinted copy, to build one shape out of several
+mesh.scaleUVs(scale)                          // repeat a wrapping texture across the mesh, a vec2 or a number
 mesh.transform(matrix)                        // move every vertex in place
 mesh.flipNormals()                            // turn it inside out, for rooms and domes seen from within
 mesh.setColor(color)                          // every vertex color
@@ -1015,7 +1018,7 @@ mesh.computeNormals(smooth=false)             // derive normals from the triangl
 mesh.getBounds()                              // {min, max} around the vertices
 mesh.center() mesh.fit(size) // move the bounds onto the origin, scale the largest extent to size; both edit in place
                              // and return the mesh
-mesh.render(matrix, tileInfo, color)          // one draw call with the current draw state
+mesh.render(matrix, tileInfo, color)          // draw it now with the current draw state
 mesh.dispose()                                // free the GPU buffer, the CPU data stays
 mesh.points mesh.normals mesh.uvs mesh.colors // the vertex arrays, one entry per strip vertex
 mesh.instanced = false           // draw this mesh one call per use, in object order, instead of batching it

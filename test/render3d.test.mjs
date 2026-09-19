@@ -1778,3 +1778,12 @@ test('instancing is on by default and a mesh can opt out', () =>
     const baked = render3D.bake(()=> render3D.drawMesh(mesh)); // a bake still copies the mesh in
     assert.equal(baked.vertexCount, mesh.vertexCount);
 });
+
+test('scaleUVs repeats a texture across a mesh', () =>
+{
+    const grid = buildGrid(vec2(2), 1).scaleUVs(4);
+    assert.ok(grid.uvs.some(uv=> uv.x === 4 && uv.y === 4));
+    assert.ok(grid.dirty);
+    const box = buildBox().scaleUVs(vec2(2, 3));
+    assert.ok(box.uvs.some(uv=> uv.x === 2 && uv.y === 3));
+});

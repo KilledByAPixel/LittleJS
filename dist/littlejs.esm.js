@@ -18319,7 +18319,7 @@ class Render3DPlugin
     ///////////////////////////////////////////////////////////////////////////
     // Meshes and the stream
 
-    /** Draw a mesh with the current draw state, flushes the stream first so draw order holds
+    /** Draw a mesh with the current draw state, batched with its other uses in the opaque stage when instancing is on
      *  @param {Mesh} mesh
      *  @param {Matrix4} [matrix] - Object transform
      *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
@@ -19555,7 +19555,7 @@ class Mesh
             uvs ? render3DQuadValues(uvs) : RENDER3D_QUAD_UVS, render3DQuadValues(color));
     }
 
-    /** Append another mesh transformed by a matrix, for welding shapes into one draw call
+    /** Append another mesh transformed by a matrix, for building one shape out of several
      *  @param {Mesh} mesh
      *  @param {Matrix4} [matrix]
      *  @param {Color} [color] - Multiplies the appended vertex colors
@@ -19570,6 +19570,17 @@ class Mesh
             this.uvs.push((mesh.uvs[i] || RENDER3D_DEFAULT_UV).copy());
             this.colors.push((mesh.colors[i] || WHITE).multiply(color));
         }
+        this.dirty = true;
+        return this;
+    }
+
+    /** Scale every uv, so a whole texture repeats across the mesh when its TextureInfo wraps
+     *  @param {Vector2|number} scale - Repeats across and up, a number for both
+     *  @return {Mesh} */
+    scaleUVs(scale)
+    {
+        const s = isNumber(scale) ? vec2(scale) : scale;
+        this.uvs = this.uvs.map(uv=> vec2(uv.x * s.x, uv.y * s.y)); // new vectors, builders share uv objects between faces
         this.dirty = true;
         return this;
     }
@@ -19724,7 +19735,7 @@ class Mesh
         return this;
     }
 
-    /** Draw the mesh, one draw call with the current draw state
+    /** Draw the mesh with the current draw state, batched with its other uses in the opaque stage
      *  @param {Matrix4} [matrix] - Object transform
      *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
      *  @param {Color} [color] - Tint */

@@ -147,18 +147,18 @@ function gameInit()
         postObject.color = i > 1 ? hsl(.15,1,.5) : hsl(0,.7,.5);
     }
 
-    // trees scattered clear of the road, welded into one mesh so they are one draw
-    const tree = buildTree(), forest = new Mesh;
+    // trees scattered clear of the road, one mesh shared so they draw as one batch
+    const tree = buildTree();
     for (let i = 300; i--;)
     {
         const x = rand(-trackSize/2, trackSize/2), z = rand(-trackSize/2, trackSize/2);
         if (trackDistance(x, z) < roadWidth/2 + 6)
             continue;
-        const pos = vec3(x, terrain.getHeight(x, z) + 1.5, z);
-        forest.combine(tree, buildMatrix(pos, vec3(0, rand(2*PI)), vec3(rand(.7,1.3))));
+        const treeObject = new EngineObject3D(vec3(x, terrain.getHeight(x, z) + 1.5, z), tree);
+        treeObject.rotation3D.y = rand(2*PI);
+        treeObject.scale3D = vec3(rand(.7,1.3));
+        treeObject.cullBackFaces = true;
     }
-    const forestObject = new EngineObject3D(vec3(), forest);
-    forestObject.cullBackFaces = true;
     car = new Car(trackPoint(0));
     lapTime = time;
 }
