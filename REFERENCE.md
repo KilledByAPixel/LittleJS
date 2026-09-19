@@ -816,6 +816,8 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 - Builders and draws take full sizes (diameters) like buildBox and drawCircle; collision helpers and lights take radii
 - Textures sample through mipmaps in 3D so floors do not shimmer in the distance, crisp up close when tilesPixelated
   is on; render3D.mipmaps = false keeps each texture's own filtering, and 2D sprites always do
+- The 3D scene is on the engine's WebGL canvas, so the post processing plugin shaders it too: new PostProcessPlugin
+  after new Render3DPlugin, see the render3dGlow demo for bloom
 - Opaque draws drop texels under half alpha, so cut out art like a fence or a leafy tree works and its shadow matches;
   see through draws blend instead, set obj.transparent for a sprite that fades
 - A texture comes before its tint like drawTile, except where per vertex colors are part of the geometry (drawStrip,
@@ -825,7 +827,8 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 - Below, a comment that says `e.g.` marks the value on that line as an example, not the default
 - See the `examples/shorts/render3d*.js` demos - features: render3dShapes, render3dBillboards, render3dHeightMap
   terrain, render3dCollision with picking, render3dLights, render3dParticles, render3dTrails, render3dText,
-  render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene, render3dInstancing, render3dTextures;
+  render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene, render3dInstancing, render3dTextures,
+  render3dGlow;
   games:
   render3dDodgeGame, render3dRacerGame, render3dPuzzleGame
 

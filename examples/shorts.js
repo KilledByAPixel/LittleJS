@@ -89,6 +89,7 @@ const exampleList =
     new ExampleInfo('3D Puzzle Game', 'render3dPuzzleGame.js', 'A small game: push blocks onto pads under an orthographic camera with mouse picking', false, '3d, game, puzzle, orthographic, picking, layers, webgl'),
     new ExampleInfo('3D Mesh', 'render3dMesh.js', 'Load an OBJ model, drop your own on the page', false, '3d, obj, mesh, model, load, file, webgl'),
     new ExampleInfo('3D Textures', 'render3dTextures.js', 'Tiles on shapes and a repeating brick floor', false, '3d, texture, tile, uv, repeat, wrap, webgl'),
+    new ExampleInfo('3D Glow', 'render3dGlow.js', 'Bloom over a 3D scene with the post processing plugin', false, '3d, bloom, glow, post processing, shader, light, webgl'),
     new ExampleInfo('3D Instancing', 'render3dInstancing.js', 'Thousands of tumbling cubes drawn in one call', false, '3d, instancing, batch, performance, stress, webgl'),
     new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball bouncing', false, 'objects, collision'),
