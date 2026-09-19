@@ -23,7 +23,7 @@ class Flag extends EngineObject3D
     {
         super(pos, buildGrid(vec2(4,2.5), vec2(16,10), hsl(0,.7,.6)));
         this.rotation3D.x = PI/2; // stand the grid up
-        const pole = buildCylinder(.16, pos.y + 1.5, 8).setColor(hsl(.08,.3,.4));
+        const pole = buildCylinder(.16, pos.y + 1.5, 8).setColor(hsl(.1,.3,.4));
         new EngineObject3D(pos.add(vec3(-2,-pos.y/2)), pole);
     }
     update()
@@ -40,10 +40,10 @@ let orbit = 0;
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky(hsl(.65,.5,.1), hsl(.85,.35,.22), hsl(.65,.3,.07));
-    render3D.ambientColor = hsl(.65,.05,.52);
+    render3D.setSky(hsl(.6,.5,.1), hsl(.8,.4,.2), hsl(.6,.3,.1));
+    render3D.ambientColor = hsl(.6,.1,.5);
     render3D.onRenderTransparent = drawRainbow;
-    new EngineObject3D(vec3(), buildGrid(vec2(30), 1, hsl(.65,.1,.22)));
+    new EngineObject3D(vec3(), buildGrid(vec2(30), 1, hsl(.6,.1,.2)));
     new Flag(vec3(0,4.5,0));
     for (let i = 3; i--;)
         new Comet(hsl(i/3,1,.6), i*2*PI/3);
@@ -68,9 +68,4 @@ function drawRainbow()
         colors.push(hsl(t + time*.2, 1, .6, .8));
     }
     render3D.drawRibbon(points, widths, colors);
-}
-
-function gameRenderPost()
-{
-    drawTextScreen('drag: orbit', vec2(mainCanvasSize.x/2, 40), 30);
 }

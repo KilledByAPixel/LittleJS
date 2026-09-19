@@ -43,7 +43,7 @@ function makeTerrainImages(size)
         heightContext.fillRect(x, y, 1, 1);
 
         // grass low, rock high, snow on top
-        const grass = hsl(.3,.5,.3 + h*.3), rock = hsl(.08,.3,.4), snow = hsl(0,0,.9);
+        const grass = hsl(.3,.5,.3 + h*.3), rock = hsl(.1,.3,.4), snow = hsl(0,0,.9);
         colorContext.fillStyle = h < .5 ? grass : h < .75 ? rock : snow;
         colorContext.fillRect(x, y, 1, 1);
     }
@@ -66,8 +66,8 @@ function gameInit()
     // trees on the grass, a trunk and a cone welded into one mesh
     const trunk = buildCylinder(.5, 2, 5), top = buildCone(3, 3.5, 6);
     const tree = new Mesh()
-        .combine(trunk, Matrix4.translation(vec3(0,1,0)), hsl(.08,.6,.25))
-        .combine(top, Matrix4.translation(vec3(0,3.25,0)), hsl(.35,.5,.25));
+        .combine(trunk, Matrix4.translation(vec3(0,1,0)), hsl(.1,.6,.3))
+        .combine(top, Matrix4.translation(vec3(0,3.25,0)), hsl(.3,.5,.3));
     for (let i = 80; i--;)
     {
         const x = rand(-22,22), z = rand(-22,22), y = terrain.getHeight(x, z);

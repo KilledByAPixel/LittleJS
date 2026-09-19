@@ -31,10 +31,10 @@ function gameInit()
     render3D.shadows = true;
 
     // a checkerboard floor and the model
-    const checker = (x, z)=> hsl(.3, .2, (x+z)/2&1 ? .45 : .4);
+    const checker = (x, z)=> hsl(.3, .2, (x+z)/2&1 ? .5 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(20), 10, checker));
     model = new EngineObject3D(vec3());
-    model.color = hsl(.08,.6,.7);
+    model.color = hsl(.1,.6,.7);
     model.angleVelocity3D = vec3(0, .005);
     setModel(parseOBJ(houseOBJ));
 

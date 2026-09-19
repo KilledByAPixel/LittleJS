@@ -76,7 +76,7 @@ const exampleList =
     new ExampleInfo('Light System', 'lightSystem.js', 'Additive 2D lighting overlay with soft falloff lights', false, 'webgl, visual, lighting, additive, color, falloff, glow'),
     new ExampleInfo('--- LITTLEJS 3D ---'),
     new ExampleInfo('3D Shapes', 'render3dShapes.js', 'Shape builders, lighting, fog, sky and the shading toggle', false, '3d, mesh, lathe, box, sphere, loft, camera, fog, sky, webgl'),
-    new ExampleInfo('3D Billboards', 'render3dBillboards.js', 'Textured billboards with alpha, shadows and lines', false, '3d, billboard, sprite, shadow, line, webgl'),
+    new ExampleInfo('3D Billboards', 'render3dBillboards.js', 'Sprites drawn as billboards with soft shadows', false, '3d, billboard, sprite, shadow, webgl'),
     new ExampleInfo('3D Height Map', 'render3dHeightMap.js', 'Terrain from a height map image with a color image', false, '3d, terrain, heightmap, image, mesh, webgl'),
     new ExampleInfo('3D Collision', 'render3dCollision.js', 'Sphere, box and cylinder collision helpers with mouse picking', false, '3d, collision, sphere, box, cylinder, raycast, picking, webgl'),
     new ExampleInfo('3D Lights', 'render3dLights.js', 'Three colored point lights moving through a scene', false, '3d, light, point light, color, webgl'),

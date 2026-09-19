@@ -17,7 +17,7 @@ function trackSide(a)
 function buildTerrain()
 {
     const n = 81, heights = [], colors = [];
-    const grassColor = hsl(.32,.4,.33), rockColor = hsl(.13,.18,.42), roadColor = hsl(.1,.05,.28);
+    const grassColor = hsl(.3,.4,.3), rockColor = hsl(.1,.2,.4), roadColor = hsl(.1,.1,.3);
     for (let r = 0; r < n; ++r)
     {
         const heightRow = [], colorRow = [];
@@ -40,21 +40,21 @@ function buildTerrain()
 function buildCar()
 {
     const mesh = buildBox(vec3(1.6,.6,3.4)).setColor(hsl(0,.7,.5));
-    mesh.combine(buildBox(vec3(1.3,.5,1.5)), buildMatrix(vec3(0,.5,-.2)), hsl(.6,.6,.87));
+    mesh.combine(buildBox(vec3(1.3,.5,1.5)), buildMatrix(vec3(0,.5,-.2)), hsl(.6,.6,.9));
     mesh.combine(buildBox(vec3(1.7,.15,.5)), buildMatrix(vec3(0,.6,1.6)), hsl(0,0,.2));
     const wheel = buildCylinder(.8, .4, 10);
     for (let i = 4; i--;)
     {
         const pos = vec3(i&1 ? .9 : -.9, -.3, i&2 ? 1.2 : -1.2);
-        mesh.combine(wheel, buildMatrix(pos, vec3(0,0,PI/2)), hsl(.65,.1,.1));
+        mesh.combine(wheel, buildMatrix(pos, vec3(0,0,PI/2)), hsl(.6,.1,.1));
     }
     return mesh;
 }
 function buildTree()
 {
-    const mesh = buildCylinder(.5, 3, 7).setColor(hsl(.08,.4,.25));
-    mesh.combine(buildCone(3.2, 4, 8), buildMatrix(vec3(0,3,0)), hsl(.35,.5,.23));
-    mesh.combine(buildCone(2.2, 3, 8), buildMatrix(vec3(0,4.8,0)), hsl(.34,.45,.33));
+    const mesh = buildCylinder(.5, 3, 7).setColor(hsl(.1,.4,.3));
+    mesh.combine(buildCone(3.2, 4, 8), buildMatrix(vec3(0,3,0)), hsl(.3,.5,.2));
+    mesh.combine(buildCone(2.2, 3, 8), buildMatrix(vec3(0,4.8,0)), hsl(.3,.5,.3));
     return mesh;
 }
 
@@ -116,10 +116,10 @@ class Car extends EngineObject3D
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky(hsl(.61,.62,.52), hsl(.6,.7,.84), hsl(.33,.05,.47));
+    render3D.setSky(hsl(.6,.6,.5), hsl(.6,.7,.8), hsl(.3,.1,.5));
     render3D.setFog(45, 140);
     render3D.lightDirection = vec3(.4,-1,.3).normalize();
-    render3D.ambientColor = hsl(.62,.11,.45);
+    render3D.ambientColor = hsl(.6,.1,.5);
     render3D.shadows = true;
     render3D.shadowRange = 45;
     terrain = buildTerrain();
@@ -132,7 +132,7 @@ function gameInit()
         const p = trackPoint(i/120*2*PI);
         p.y = terrain.getHeight(p.x, p.z) + .1;
         points.push(p);
-        colors.push(hsl(.65, .05, i%8 < 4 ? .17 : .21));
+        colors.push(hsl(.6, .1, i%8 < 4 ? .2 : .25));
     }
     new EngineObject3D(vec3(), buildRibbon(points, roadWidth, colors, true));
 
@@ -144,7 +144,7 @@ function gameInit()
         const p = trackPoint(a).add(trackSide(a).scale(side*(roadWidth/2 + 1)));
         p.y = terrain.getHeight(p.x, p.z) + 2.5;
         const postObject = new EngineObject3D(p, post);
-        postObject.color = i > 1 ? hsl(.14,1,.55) : hsl(0,.7,.5);
+        postObject.color = i > 1 ? hsl(.15,1,.5) : hsl(0,.7,.5);
     }
 
     // trees scattered clear of the road, welded into one mesh so they are one draw

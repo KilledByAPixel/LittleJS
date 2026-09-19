@@ -21,9 +21,9 @@ let orbit = 0;
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky(hsl(.65,.5,.03), hsl(.65,.4,.08));
-    render3D.lightColor = hsl(.65,.2,.15); // a dim moon so the point lights carry the scene
-    render3D.ambientColor = hsl(.65,.2,.08);
+    render3D.setSky(hsl(.6,.5,.03), hsl(.6,.4,.08));
+    render3D.lightColor = hsl(.6,.2,.15); // a dim moon so the point lights carry the scene
+    render3D.ambientColor = hsl(.6,.2,.1);
     setRender3DSmoothShading(true);
 
     // a floor, pillars to catch the light, and three colored lamps
@@ -41,9 +41,4 @@ function gameUpdate()
     // drag to orbit
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
     render3D.camera.orbit(vec3(0,1,0), 15, orbit, .5);
-}
-
-function gameRenderPost()
-{
-    drawTextScreen('drag: orbit', vec2(mainCanvasSize.x/2, 40), 30);
 }

@@ -10,7 +10,7 @@ class Player extends EngineObject3D
     constructor()
     {
         super(playerStart, buildCapsule(1.4, 2.6));
-        this.color = hsl(.55,.8,.6);
+        this.color = hsl(.5,.8,.6);
         this.specular = .6;
         this.cullBackFaces = true;
     }
@@ -36,7 +36,7 @@ class Box extends EngineObject3D
         this.color = hsl(rand(),.7,.5);
         this.size3D = vec3(2);
         this.mass = 1; // falls with render3D.gravity
-        this.velocity3D = player.pos3D.subtract(pos).normalize(rand(.12,.22));
+        this.velocity3D = player.pos3D.subtract(pos).normalize(rand(.1,.2));
         this.velocity3D.y = rand(.1,.2);
         this.angleVelocity3D = randVector3(.1);
         this.cullBackFaces = true;
@@ -76,7 +76,7 @@ function endRound()
     new ParticleEmitter3D(
         player.pos3D.copy(),              // pos
         1, .1, 600, PI, undefined,        // emitSize, emitTime, rate, cone, tileInfo
-        hsl(.12,1,.8), hsl(0,1,.5),       // colorStartA, colorStartB
+        hsl(.1,1,.8), hsl(0,1,.5),        // colorStartA, colorStartB
         hsl(.1,1,.5,0), hsl(0,1,.5,0),    // colorEndA, colorEndB
         1, 1.5, 0, .4, .95,               // time, sizeStart, sizeEnd, speed, damping
         -.02, .1, .5, true                // gravity, fade, randomness, additive
@@ -93,19 +93,19 @@ function endRound()
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky(hsl(.6,.6,.5), hsl(.55,.4,.75), hsl(.1,.3,.4));
+    render3D.setSky(hsl(.6,.6,.5), hsl(.6,.4,.8), hsl(.1,.3,.4));
     render3D.setFog(30, 80);
-    render3D.ambientColor = hsl(.65,.12,.4);
+    render3D.ambientColor = hsl(.6,.1,.4);
     render3D.lightDirection = vec3(.4,-1,.3).normalize();
     render3D.shadows = true;
     render3D.gravity = vec3(0,-.01);
 
     // a checkered ground, the player with a trail and a light, and the score in lit 3D text
-    const checker = (x, z)=> hsl(.3, .4, (x+z)/2&1 ? .42 : .3);
+    const checker = (x, z)=> hsl(.3, .4, (x+z)/2&1 ? .4 : .3);
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 20, checker));
     boxMesh = buildBox(2);
     player = new Player;
-    trail = new Trail3D(vec3(0,-1,0), .4, .6, undefined, hsl(.55,1,.7,.5), hsl(.55,1,.7,0), true);
+    trail = new Trail3D(vec3(0,-1,0), .4, .6, undefined, hsl(.5,1,.7,.5), hsl(.5,1,.7,0), true);
     player.addChild(trail);
     player.addChild(new Light3D(vec3(0,3,0), 12, hsl(.15,1,.6)));
     scoreObject = new EngineObject3D(vec3(0,5,-arenaSize/2));

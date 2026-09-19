@@ -13,7 +13,7 @@ const levelSize = levelData.length;
 const cellPos = (x, z, y=0)=> vec3(x - levelSize/2 + .5, y, z - levelSize/2 + .5);
 const isWall = (x, z)=> levelData[z][x] == '#';
 const boxAt = (x, z)=> boxes.find(b=> b.cell.x == x && b.cell.y == z);
-const padColor = hsl(.1,.6,.3), litColor = hsl(.13,1,.6);
+const padColor = hsl(.1,.6,.3), litColor = hsl(.15,1,.6);
 const pushSound = new Sound([,,150,.01,.02,.08,1,1.5,,,,,,,,,.05]);
 let wallMesh, blockMesh, ballMesh, padMesh, level, boxes, goals, player, moves, hoverCell;
 
@@ -47,7 +47,7 @@ class Goal extends GridObject
     constructor(x, z)
     {
         super(x, z, padMesh, padColor, .03);
-        this.light = new Light3D(cellPos(x, z, .6), 4, hsl(.1,1,.65,0));
+        this.light = new Light3D(cellPos(x, z, .6), 4, hsl(.1,1,.6,0));
     }
     update()
     {
@@ -84,7 +84,7 @@ function buildLevel()
         else if (c == 'B')
             boxes.push(new GridObject(x, z, blockMesh, hsl(.05,.7,.5), .39));
         else if (c == '@')
-            player = new GridObject(x, z, ballMesh, hsl(.55,.8,.6), .35);
+            player = new GridObject(x, z, ballMesh, hsl(.5,.8,.6), .35);
     }
     level.push(player, ...boxes, ...goals);
 }
@@ -111,7 +111,7 @@ function tryMove(moveX, moveZ)
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky(hsl(.6,.6,.5), hsl(.55,.5,.6), hsl(.6,.5,.25));
+    render3D.setSky(hsl(.6,.6,.5), hsl(.6,.5,.6), hsl(.6,.5,.3));
     render3D.lightDirection = vec3(.4,-1,.3).normalize();
     render3D.ambientColor = hsl(.6,.3,.35);
     render3D.shadows = true;
@@ -128,7 +128,7 @@ function gameInit()
     render3D.camera.orthographic = levelSize + 2;
 
     // a checkered floor, and a trophy that spins on top of the 2D text
-    const checker = (x, z)=> hsl(0, 0, (x+z)&1 ? .35 : .28);
+    const checker = (x, z)=> hsl(0, 0, (x+z)&1 ? .4 : .3);
     new EngineObject3D(vec3(0,-.02,0), buildGrid(vec2(levelSize), levelSize, checker));
     const trophy = new EngineObject3D(vec3(5,3,-5), buildTorus(1, .3));
     trophy.color = litColor;

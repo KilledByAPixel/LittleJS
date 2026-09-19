@@ -10,7 +10,7 @@ class Sprite extends EngineObject3D
     }
     update()
     {
-        // hover and drift in a circle
+        // bob up and down
         const t = time + this.phase;
         this.pos3D.y = 2 + sin(t*2) * .5;
     }
@@ -29,7 +29,7 @@ function gameInit()
     new EngineObject3D(vec3(), buildGrid(vec2(30), 1, hsl(.8,.2,.3)));
     new EngineObject3D(vec3(0,1,0), buildBox(2).setColor(hsl(0,0,.7)));
 
-    // ring of sprites from the tile sheet 
+    // ring of sprites from the tile sheet
     for (let i = 12; i--;)
     {
         const pos = vec3(7, 2).rotateY(i/12*2*PI);

@@ -42,7 +42,7 @@ function gameInit()
 {
     new Render3DPlugin;
     render3D.setSky(hsl(.6,.5,.4), hsl(.6,.5,.8));
-    render3D.ambientColor = hsl(.6,.1,.45);
+    render3D.ambientColor = hsl(.6,.1,.5);
     render3D.gravity = vec3(0,-.01);
 
     // a checkerboard floor, flat so the cells stay crisp
@@ -51,9 +51,9 @@ function gameInit()
     setRender3DSmoothShading(true);
 
     // a box, a cylinder and a dozen balls, builders take full sizes and collision takes radii
-    new EngineObject3D(boxPos, buildBox(boxSize).setColor(hsl(.08,.4,.45)));
+    new EngineObject3D(boxPos, buildBox(boxSize).setColor(hsl(.1,.4,.5)));
     const cylinder = buildCylinder(cylinderRadius*2, cylinderHeight, 16);
-    new EngineObject3D(cylinderPos, cylinder.setColor(hsl(.55,.3,.45)));
+    new EngineObject3D(cylinderPos, cylinder.setColor(hsl(.6,.3,.5)));
     ballMesh = buildSphere();
     for (let i = 12; i--;)
     {
