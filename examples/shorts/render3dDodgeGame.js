@@ -15,7 +15,7 @@ class Player extends EngineObject3D
         this.cullBackFaces = true;
         this.size3D = vec3(1.6);
         this.setCollision();
-        this.collideAsBall3D = true;
+        this.collideAsSphere3D = true;
     }
     update()
     {

@@ -16,7 +16,7 @@ class Ball extends EngineObject3D
         this.mass = 1; // falls with render3D.gravity
         this.restitution = .6;
         this.setCollision();          // the same call as in 2D, the collision happens in 3D
-        this.collideAsBall3D = true;  // as a ball, not as its size3D box
+        this.collideAsSphere3D = true;  // as a sphere, not as its size3D box
     }
     update()
     {

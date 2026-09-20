@@ -547,7 +547,7 @@ class Render3DPlugin
     }
 
     /** Find the nearest object a ray hits, for clicking on things
-     *  - Each object is tested as a ball around its mesh, or around a sprite's size3D, not triangle by triangle
+     *  - Each object is tested as a sphere around its mesh, or around a sprite's size3D, not triangle by triangle
      *  @param {Ray3D} ray - From screenToRay, or any ray
      *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
      *  @return {{object: EngineObject3D, distance: number}|undefined} */
@@ -2883,8 +2883,8 @@ class EngineObject3D extends EngineObject
         this.specular = 0;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         this.castShadow = true;
-        /** @property {boolean} - Collide as the ball that fits size3D instead of as the size3D box, so it rolls around corners */
-        this.collideAsBall3D = false;
+        /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls around corners */
+        this.collideAsSphere3D = false;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
         /** @property {boolean} - Skip faces that point away from the camera, faster for closed meshes */
@@ -2918,7 +2918,7 @@ class EngineObject3D extends EngineObject
     updatePhysics() { this.sync2D && super.updatePhysics(); }
 
     /** Set how this object collides, the same flags as in 2D
-     *  - Solid collision happens in 3D here, against size3D boxes or balls, and only for objects that are not sync2D
+     *  - Solid collision happens in 3D here, against size3D boxes or spheres, and only for objects that are not sync2D
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through
      *  @param {boolean} [collideTiles] - Tile collision, 2D only so it needs sync2D
@@ -2967,12 +2967,12 @@ class EngineObject3D extends EngineObject
     }
 }
 
-// where a solid object is in the world and what it collides as: the ball that fits size3D, or the size3D box,
+// where a solid object is in the world and what it collides as: the sphere that fits size3D, or the size3D box,
 // each grown by the object's own scale and its parents'
 function render3DSolidShape(o)
 {
     const m = o.getMatrix().m, s = o.size3D, pos = vec3(m[12], m[13], m[14]);
-    if (o.collideAsBall3D)
+    if (o.collideAsSphere3D)
         return {pos, radius: max(s.x, s.y, s.z) / 2 * render3DMaxScale(m)};
     return {pos, size: vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]))};
 }
@@ -2980,7 +2980,7 @@ function render3DSolidShape(o)
 // what it takes to move shape a clear of shape b, whichever pair of shapes they are, or undefined for no touch
 function render3DSolidPush(a, b)
 {
-    if (!a.size) // a is a ball
+    if (!a.size) // a is a sphere
         return b.size ? collideSphereBox(a.pos, a.radius, b.pos, b.size)
             : collideSphereSphere(a.pos, a.radius, b.pos, b.radius);
     if (!b.size) // only b is, so push b out of a and turn it around

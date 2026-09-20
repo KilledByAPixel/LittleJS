@@ -1871,7 +1871,7 @@ test('a point light with no radius is off, only a directional light carries the 
     engineObjects.length = 0;
 });
 
-test('a solid object collides as its size3D box, or as a ball when it asks to', () =>
+test('a solid object collides as its size3D box, or as a sphere when it asks to', () =>
 {
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
@@ -1887,14 +1887,14 @@ test('a solid object collides as its size3D box, or as a ball when it asks to', 
     near(b.pos3D.x, 1); near(b.pos3D.y, .1);
 
     // the same pair as balls slides along the line between the centers instead
-    a.collideAsBall3D = b.collideAsBall3D = true;
+    a.collideAsSphere3D = b.collideAsSphere3D = true;
     b.pos3D = vec3(.6, .1, 0);
     b.updateTransforms();
-    assert.ok(b.pos3D.x > .6 && b.pos3D.y > .1, 'a ball is pushed along the center line');
+    assert.ok(b.pos3D.x > .6 && b.pos3D.y > .1, 'a sphere is pushed along the center line');
 
-    // a ball against a box takes them apart by the ball's radius plus the box's half size
-    b.collideAsBall3D = false;
-    a.size3D = b.size3D = vec3(1); // a is a ball of radius .5, b a 1 unit box
+    // a sphere against a box takes them apart by the sphere's radius plus the box's half size
+    b.collideAsSphere3D = false;
+    a.size3D = b.size3D = vec3(1); // a is a sphere of radius .5, b a 1 unit box
     a.pos3D = vec3(); b.pos3D = vec3(.6, 0, 0);
     b.updateTransforms();
     near(b.pos3D.x, 1);

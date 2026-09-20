@@ -6393,7 +6393,7 @@ declare module "littlejsengine" {
          *  @return {Vector3|undefined} - undefined when the ray misses the plane */
         screenToGround(screenPos: Vector2, groundHeight?: number): Vector3 | undefined;
         /** Find the nearest object a ray hits, for clicking on things
-         *  - Each object is tested as a ball around its mesh, or around a sprite's size3D, not triangle by triangle
+         *  - Each object is tested as a sphere around its mesh, or around a sprite's size3D, not triangle by triangle
          *  @param {Ray3D} ray - From screenToRay, or any ray
          *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
          *  @return {{object: EngineObject3D, distance: number}|undefined} */
@@ -6656,8 +6656,8 @@ declare module "littlejsengine" {
         specular: number;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         castShadow: boolean;
-        /** @property {boolean} - Collide as the ball that fits size3D instead of as the size3D box, so it rolls around corners */
-        collideAsBall3D: boolean;
+        /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls around corners */
+        collideAsSphere3D: boolean;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         receiveShadow: boolean;
         /** @property {boolean} - Skip faces that point away from the camera, faster for closed meshes */
