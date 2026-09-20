@@ -10022,13 +10022,13 @@ function postProcessBloomShader(threshold=.6, strength=1, size=6)
  * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
  * @param {number} [strength] - How much glow to add
  * @param {number} [size] - How far the glow spreads in pixels
- * @param {boolean} [includeMainCanvas] - Glow the 2D canvas too, on by default so sprites and text glow as well
+ * @param {boolean} [includeMainCanvas] - Glow the 2D canvas too, off by default so HUD text stays crisp
  * @return {PostProcessPlugin}
  * @memberof PostProcess
  * @example
  * postProcessBloom(); // in gameInit, after any Render3DPlugin
  */
-function postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=true)
+function postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=false)
 { return new PostProcessPlugin(postProcessBloomShader(threshold, strength, size), includeMainCanvas); }
 
 /**

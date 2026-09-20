@@ -4,10 +4,13 @@
     - Terrain from a height map, shadows, fog and a sky
     - Meshes built from shapes, an instanced forest, sprites and 3D text
     - Point lights, particles, a trail, bloom and 3D sound
-    - Drive the ball with the arrow keys and collect the orbs
+    - Roll the ball with the arrow keys, jump with space, and collect the orbs
 */
 
 'use strict';
+
+// pull tile edges in slightly so neighbors on the sheet cannot bleed into them
+setTileDefaultBleed(.5);
 
 const terrainSize = 90, terrainHeight = 14, orbCount = 8;
 const soundCollect = new Sound([,,500,.02,.1,.2,1,1.5,,,200,.05]);
@@ -26,6 +29,7 @@ class Player extends EngineObject3D
         this.specular = .5;
         this.softShadow = 2.5;
         this.speed = vec3();
+        this.speedY = 0;
         this.addChild(new Light3D(vec3(0,1,0), 10, hsl(.55,1,.7)));
         const trailColor = hsl(.55,1,.7,.4), trailFade = trailColor.withAlpha(0);
         this.addChild(new Trail3D(vec3(0,-.8,0), 1, .5, undefined, trailColor, trailFade, true));
@@ -41,7 +45,16 @@ class Player extends EngineObject3D
         const limit = terrainSize/2 - 4;
         this.pos3D.x = clamp(this.pos3D.x, -limit, limit);
         this.pos3D.z = clamp(this.pos3D.z, -limit, limit);
-        this.pos3D.y = terrain.getHeight(this.pos3D.x, this.pos3D.z) + 1;
+
+        // space jumps when it is on the ground, then gravity brings it back
+        const ground = terrain.getHeight(this.pos3D.x, this.pos3D.z) + 1;
+        const onGround = this.pos3D.y < ground + .1;
+        if (onGround && keyWasPressed('Space'))
+            this.speedY = .35;
+        this.speedY -= .015;
+        this.pos3D.y = max(ground, this.pos3D.y + this.speedY);
+        if (this.pos3D.y == ground)
+            this.speedY = 0;
         this.rotation3D.x += this.speed.z;
         this.rotation3D.z -= this.speed.x;
 
@@ -108,7 +121,7 @@ function gameInit()
 {
     // the 3D pass draws under the 2D canvas, bloom shaders both
     new Render3DPlugin;
-    postProcessBloom(.85, 2, 8); // only the brightest things glow
+    postProcessBloom(.85, 2, 8); // only the brightest things glow, and not the 2D text
     render3D.setSky(hsl(.6,.6,.45), hsl(.55,.4,.7), hsl(.35,.3,.4));
     render3D.setFog(40, 130);
     render3D.lightDirection = vec3(.4,-1,.3).normalize();
@@ -210,7 +223,7 @@ function gameUpdatePost()
 
 function gameRenderPost()
 {
-    const text = 'arrow keys: roll / collect the orbs';
+    const text = 'arrow keys: roll / space: jump / collect the orbs';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40), 30);
 }
 

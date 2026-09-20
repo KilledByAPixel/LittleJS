@@ -21,7 +21,7 @@ class Orb extends EngineObject3D
 function gameInit()
 {
     new Render3DPlugin;
-    postProcessBloom(.5, 2, 8); // threshold, strength and spread, it shaders the whole frame
+    postProcessBloom(.5, 2, 8); // threshold, strength and spread
     render3D.setSky(hsl(.7,.5,.1), hsl(.6,.4,.2));
     render3D.lightColor = hsl(.6,.3,.2);
     render3D.ambientColor = hsl(.6,.3,.15);
