@@ -848,12 +848,12 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 
 ```javascript
 // Setup (call in gameInit)
-new Render3DPlugin()                  // creates global render3D, renders automatically before gameRender
+new Render3DPlugin;                  // creates global render3D, renders automatically before gameRender
 
 // A first 3D scene
 function gameInit()
 {
-    new Render3DPlugin();                                // draws itself every frame, before gameRender
+    new Render3DPlugin;                                  // draws itself every frame, before gameRender
     render3D.setSky();                                   // dome colors, also sets the fog color
     new EngineObject3D(vec3(), buildGrid(vec2(20), 20)); // the ground is the XZ plane, Y is up
     new EngineObject3D(vec3(0, 1, 0), buildBox(), undefined, RED);
@@ -1103,7 +1103,8 @@ buildSky(topColor, horizonColor, bottomColor, sides, rings) // dome colored by h
 buildExtrude(pixels, size, depth) // 3D sprite: each solid pixel of a tileInfo given thickness, like a block model,
                                   // colors kept; or rows of pixels (Color, truthy for white, falsy for empty)
 buildText3D(text, size, depth, font) // extruded glyphs from an ImageFont, the white engine font by default so the
-                                     // object color tints it; centered, faces +Z, a new mesh each call
+                                     // object color tints it; centered, faces +Z, a new mesh each call; newlines
+                                     // stack downward with a gap, since extruded lines that touch overlap at an angle
 
 // Height map terrain - from a 2D array [row][column] of 0-1 heights or an image's red channel; row 0 is the far edge at
 // -Z, column 0 the left edge at -X

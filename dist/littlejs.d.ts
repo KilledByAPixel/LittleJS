@@ -6299,7 +6299,7 @@ declare module "littlejsengine" {
      * - Every object sets them from its own flags, so you rarely touch them
      * @memberof Render3D
      * @example
-     * new Render3DPlugin();
+     * new Render3DPlugin;
      * render3D.camera.pos = vec3(0, 5, 10);
      * render3D.camera.lookAt(vec3());
      * new EngineObject3D(vec3(), buildBox());
@@ -6321,8 +6321,9 @@ declare module "littlejsengine" {
         fogEnd: number;
         /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale; sync2D objects use the 2D gravity */
         gravity: Vector3;
-        /** @property {number|HeightMap|Function} - Floor for objects with a softShadow: a height, a HeightMap, or (x, z) => y */
-        softShadowHeight: number;
+        /** @property {number|HeightMap|Function} - Floor for objects with a softShadow: a height, a HeightMap, or (x, z) => y
+         *  @type {number|HeightMap|Function} */
+        softShadowHeight: number | HeightMap | Function;
         /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for flat faces */
         smoothShading: boolean;
         /** @property {boolean} - Cast real shadows from the directional light, off by default and free when off */
@@ -6331,8 +6332,9 @@ declare module "littlejsengine" {
         shadowMapSize: number;
         /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper */
         shadowRange: number;
-        /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera */
-        shadowCenter: any;
+        /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera
+         *  @type {Vector3|undefined} */
+        shadowCenter: Vector3 | undefined;
         /** @property {number} - Stops surfaces shadowing themselves, raise for speckles, lower if shadows drift off */
         shadowBias: number;
         /** @property {number} - How much to blur the shadow edges */
@@ -6351,10 +6353,12 @@ declare module "littlejsengine" {
         specular: number;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
         receiveShadow: boolean;
-        /** @property {Function|undefined} - Draw solid world here, it runs again for shadows so only draw in it */
-        onRenderOpaque: any;
-        /** @property {Function|undefined} - Draw see through things here, like glows, billboards and soft shadows */
-        onRenderTransparent: any;
+        /** @property {Function|undefined} - Draw solid world here, it runs again for shadows so only draw in it
+         *  @type {Function|undefined} */
+        onRenderOpaque: Function | undefined;
+        /** @property {Function|undefined} - Draw see through things here, like glows, billboards and soft shadows
+         *  @type {Function|undefined} */
+        onRenderTransparent: Function | undefined;
         /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything */
         sky: Mesh;
         /** @property {boolean} - Draw the 3D scene on top of the 2D scene instead of under it */
@@ -6661,7 +6665,8 @@ declare module "littlejsengine" {
      * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
      * - The 2D pos and velocity are still there but nothing draws them
      * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D
-     * - setCollision works as it does in 2D, but the solid collision happens in 3D unless the object is sync2D
+     * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D
+     * - Its tile and raycast halves are 2D only so they default off here, and a child or a sync2D object sits it out
      * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
      * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
      * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
@@ -6720,8 +6725,9 @@ declare module "littlejsengine" {
         receiveShadow: boolean;
         /** @property {boolean} - Skip faces that point away from the camera, faster for closed meshes */
         cullBackFaces: boolean;
-        /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D */
-        renderAfter2D: any;
+        /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
+         *  @type {boolean|undefined} */
+        renderAfter2D: boolean | undefined;
         /** Returns the world position
          *  @return {Vector3} */
         getWorldPos3D(): Vector3;
@@ -6760,22 +6766,27 @@ declare module "littlejsengine" {
      * mesh.render(buildMatrix(vec3(0, 1, 0)), undefined, RED);
      */
     export class Mesh {
-        /** @property {Array<Vector3>} - Vertex positions in strip order */
-        points: any[];
-        /** @property {Array<Vector3>} - Vertex normals */
-        normals: any[];
-        /** @property {Array<Vector2>} - Vertex texture coords, 0-1 across the tile */
-        uvs: any[];
-        /** @property {Array<Color>} - Vertex colors */
-        colors: any[];
+        /** @property {Array<Vector3>} - Vertex positions in strip order
+         *  @type {Array<Vector3>} */
+        points: Array<Vector3>;
+        /** @property {Array<Vector3>} - Vertex normals
+         *  @type {Array<Vector3>} */
+        normals: Array<Vector3>;
+        /** @property {Array<Vector2>} - Vertex texture coords, 0-1 across the tile
+         *  @type {Array<Vector2>} */
+        uvs: Array<Vector2>;
+        /** @property {Array<Color>} - Vertex colors
+         *  @type {Array<Color>} */
+        colors: Array<Color>;
         /** @property {WebGLBuffer|undefined} - GPU buffer, created by upload */
         buffer: WebGLBuffer;
         /** @property {number} - Vertices in the GPU buffer */
         bufferCount: number;
         /** @property {boolean} - The mesh changed and needs uploading again, set it yourself if you edit the arrays */
         dirty: boolean;
-        /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call, undefined follows render3D.instancing */
-        instanced: any;
+        /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call, undefined follows render3D.instancing
+         *  @type {boolean|undefined} */
+        instanced: boolean | undefined;
         instanceCount: number;
         instanceData: any;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
@@ -7001,7 +7012,8 @@ declare module "littlejsengine" {
     export function buildExtrude(pixels: TileInfo | Array<Array<Color | number | boolean>>, size?: Vector2, depth?: number): Mesh;
     /**
      * Build a mesh of extruded text from an image font, the engine font by default so it needs no assets
-     * - Each glyph is extruded once per font and reused, the block is centered and faces +Z, newlines stack downward
+     * - Each glyph is extruded once per font and reused, the block is centered and faces +Z
+     * - Newlines stack downward, spaced a little wider than the character height so the sides do not collide
      * - Every call builds a new mesh, dispose the old one when text changes often
      * - Glyphs are white in the engine font, so the object's color tints the text
      * @param {string|number} text
@@ -7036,8 +7048,9 @@ declare module "littlejsengine" {
         constructor(heights: Array<Array<number>> | HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | TextureInfo, size?: Vector2, height?: number, colors?: Array<Array<Color>> | HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | TextureInfo);
         /** @property {Array<Array<number>>} - Heights 0-1 as [row][column], rows along Z */
         heights: number[][];
-        /** @property {Array<Array<Color>>|undefined} - Vertex colors as [row][column], undefined for white */
-        colors: OffscreenCanvas | HTMLCanvasElement | HTMLImageElement | TextureInfo | Color[][];
+        /** @property {Array<Array<Color>>|undefined} - Vertex colors as [row][column], undefined for white
+         *  @type {Array<Array<Color>>|undefined} */
+        colors: Array<Array<Color>> | undefined;
         /** @property {Vector2} - World size along X and Z */
         size: Vector2;
         /** @property {number} - World height of a full value */
@@ -7203,8 +7216,9 @@ declare module "littlejsengine" {
         randomness: number;
         /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards */
         trailTime: number;
-        /** @property {Array<Object>} - Live particles */
-        particles: any[];
+        /** @property {Array<Object>} - Live particles
+         *  @type {Array<Object>} */
+        particles: Array<any>;
         emitTimeBuffer: number;
         worldPos3D: Vector3;
         /** Spawn one particle now */
@@ -7240,10 +7254,12 @@ declare module "littlejsengine" {
         width: number;
         /** @property {Color} - Color at the tail */
         colorEnd: Color;
-        /** @property {Vector3|undefined} - Direction across the ribbon, recorded with each sample, undefined faces the camera */
-        side: any;
-        /** @property {Array<Object>} - Recorded samples, oldest first */
-        samples: any[];
+        /** @property {Vector3|undefined} - Direction across the ribbon, recorded with each sample, undefined faces the camera
+         *  @type {Vector3|undefined} */
+        side: Vector3 | undefined;
+        /** @property {Array<Object>} - Recorded samples, oldest first
+         *  @type {Array<Object>} */
+        samples: Array<any>;
         /** Forget the trail so far, for when the object teleports */
         clear(): void;
         worldPos3D: Vector3;

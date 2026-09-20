@@ -13,7 +13,7 @@ function gameInit()
     title.color = hsl(.1,.9,.6);
     title.specular = .3;
     const captionMesh = buildText3D('3D TEXT\nFROM THE ENGINE FONT', .6, .3);
-    const caption = new EngineObject3D(vec3(0,2.4,0), captionMesh);
+    const caption = new EngineObject3D(vec3(0,2.1,0), captionMesh);
     caption.color = hsl(.6,.8,.8);
 
     // tiles from the sheet extruded the same way, their pixel colors carry through
