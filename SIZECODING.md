@@ -18,6 +18,26 @@ rewrite estimated at −100..−300 measured +772. Whole-feature cut estimates
 ran 2–4x too high across the board. A throwaway build takes ten seconds
 and is the only opinion that counts.
 
+**If you need bytes right now**, the order that pays is: build settings
+first (section 2, especially property mangling in 2.6), then whole
+subsystems and features nothing else depends on (section 4), then data
+and literals, and only then art. Do not start by shortening names —
+section 5 is a list of things that look like savings and are not. Set up
+a way to measure before you change anything (section 3).
+
+---
+
+## Contents
+
+1. [Where the bytes actually are](#1-where-the-bytes-actually-are) — what a feature really costs
+2. [The build pipeline](#2-the-build-pipeline) — the settings, where the big wins live
+3. [Measurement discipline](#3-measurement-discipline) — how to get a number you can trust
+4. [What pays, ranked by yield](#4-what-pays-ranked-by-yield)
+5. [What does not pay](#5-what-does-not-pay-all-measured-all-rejected) — measured and rejected
+6. [Gotchas](#6-gotchas) — the ways a smaller build breaks
+7. [Estimate versus reality](#7-estimate-versus-reality)
+8. [Checklist](#8-checklist)
+
 ---
 
 ## 1. Where the bytes actually are
@@ -228,7 +248,7 @@ the regex.
 
 Closure ADVANCED renames properties on its own. Terser does not, and on a
 41 KB minified source a game's own property names (`velocity`, `heading`,
-`driftCharge`, `previousPosition`, …) were the largest remaining cost:
+`chargeLevel`, `previousPosition`, …) were the largest remaining cost:
 **−456 bytes, 3.3% of the zip**, from one build option.
 
 - use `mangle: {properties: {regex: /^(pos|velocity|…)$/}}` with an
@@ -396,13 +416,13 @@ move the zip by a few bytes, which is noise rather than cost (section 6).
 
   | feature | before mangling | after |
   |---|---|---|
-  | minimap | 146 | 188 |
-  | model shadow | 44 | 66 |
-  | engine sound | 28 | 61 |
+  | a minimap | 146 | 188 |
+  | a shadow under the player | 44 | 66 |
+  | a looping sound with pitch follow | 28 | 61 |
   | three detail passes on one model | 68 | 88 |
-  | lamp rings | 23 | 45 |
-  | shield glow | 21 | 37 |
-  | lane lines | 26 | 39 |
+  | light rings on scenery | 23 | 45 |
+  | a shield glow | 21 | 37 |
+  | lines painted on the ground | 26 | 39 |
   | one HUD text line | 57 | 46 |
 
   The long identifiers were context the compressor modelled the
