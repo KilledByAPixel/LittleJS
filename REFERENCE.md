@@ -884,8 +884,8 @@ render3D.worldToClip(pos)             // Vector3 -> -1 to 1 across and up the sc
 render3D.screenToRay(screenPos)       // Ray3D under a screen point, always returns one
 render3D.screenToGround(screenPos, groundHeight=0) // where that ray meets a flat ground plane, or undefined;
                                                    // terrain has HeightMap.raycast
-render3D.raycastObjects(ray, objects)              // {object, distance} of the nearest object whose bounding sphere
-                                                    // the ray hits, around its mesh or a sprite's size3D
+render3D.pick(screenPos or ray, objects)           // {object, distance} of the nearest object hit, around its mesh
+                                                   // or a sprite's size3D; a screen position goes through screenToRay
 render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop) // like sound.play(pos): quieter with
                                                 // distance from the camera, panned by side
 render3D.isSphereVisible(center, radius) // the same is-it-on-screen test drawMesh uses, for skipping your own draws
@@ -1008,6 +1008,8 @@ obj.getForward3D() .getRight3D() .getUp3D() // the object's axes in the world, f
 engineObjectsCollect3D(pos, size, objects) // the EngineObject3D objects whose boxes overlap a box, size a vec3 or a
                                            // number
 engineObjectsCallback3D(pos, size, callback, objects)
+engineObjectsRaycast3D(ray, objects)       // every object along the ray, nearest first, like engineObjectsRaycast in
+                                           // 2D; the ray has no end, use render3D.pick for just the nearest one
 obj.lookAt(target)                      // turn -Z toward a point: sets pitch and yaw, clears roll
 obj.render3D() // override for custom drawing, the draw state is already set from the flags; render() is empty
 // children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local; addChild's 2D

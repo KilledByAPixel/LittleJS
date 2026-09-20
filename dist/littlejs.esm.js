@@ -18451,21 +18451,19 @@ class Render3DPlugin
         return t === undefined ? undefined : ray.getPosition(t);
     }
 
-    /** Find the nearest object a ray hits, for clicking on things
+    /** Find the nearest object under a screen position or along a ray, for clicking on things
      *  - Each object is tested as a sphere around its mesh, or around a sprite's size3D, not triangle by triangle
-     *  @param {Ray3D} ray - From screenToRay, or any ray
+     *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
+     *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
      *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
      *  @return {{object: EngineObject3D, distance: number}|undefined} */
-    raycastObjects(ray, objects=engineObjects)
+    pick(from, objects=engineObjects)
     {
+        const ray = from instanceof Ray3D ? from : this.screenToRay(from);
         let nearest;
         for (const o of objects)
         {
-            if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) continue;
-            const matrix = o.getMatrix(), mesh = o.mesh; // a sprite is picked by its size3D
-            const radius = (mesh ? mesh.radius || mesh.computeRadius() : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxScale(matrix.m);
-            if (!(radius > 0)) continue; // nothing to hit
-            const distance = raycastSphere(ray, matrix.getTranslation(), radius);
+            const distance = render3DRaycastObject(ray, o);
             if (distance !== undefined && (!nearest || distance < nearest.distance))
                 nearest = {object: o, distance};
         }
@@ -20840,7 +20838,7 @@ class EngineObject3D extends EngineObject
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through
      *  @param {boolean} [collideTiles] - Tile collision, 2D only so it needs sync2D
-     *  @param {boolean} [collideRaycast] - Raycasts, 2D only; 3D picking is render3D.raycastObjects */
+     *  @param {boolean} [collideRaycast] - Raycasts, 2D only; 3D has render3D.pick and engineObjectsRaycast3D */
     setCollision(collideSolidObjects=true, isSolid=true, collideTiles=false, collideRaycast=false)
     { super.setCollision(collideSolidObjects, isSolid, collideTiles, collideRaycast); }
 
@@ -20982,6 +20980,38 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects)
             collected.push(o);
     }
     return collected;
+}
+
+// how far along a ray an object is hit, or undefined for a miss; each one is tested as a sphere
+// around its mesh, or around a sprite's size3D, not triangle by triangle
+function render3DRaycastObject(ray, o)
+{
+    if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) return;
+    const matrix = o.getMatrix(), mesh = o.mesh; // a sprite is picked by its size3D
+    const radius = (mesh ? mesh.radius || mesh.computeRadius() : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxScale(matrix.m);
+    if (!(radius > 0)) return; // nothing to hit
+    return raycastSphere(ray, matrix.getTranslation(), radius);
+}
+
+/**
+ * Collect every EngineObject3D a ray passes through, nearest first, the 3D twin of engineObjectsRaycast
+ * - The ray has no end, so everything along it counts however far away it is
+ * - Use render3D.pick for the nearest one on its own, with the distance to it
+ * @param {Ray3D} ray - From render3D.screenToRay, or any ray
+ * @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
+ * @return {Array<EngineObject3D>}
+ * @memberof Render3D
+ */
+function engineObjectsRaycast3D(ray, objects=engineObjects)
+{
+    const hits = [];
+    for (const o of objects)
+    {
+        const distance = render3DRaycastObject(ray, o);
+        if (distance !== undefined)
+            hits.push({o, distance});
+    }
+    return hits.sort((a, b)=> a.distance - b.distance).map(hit => hit.o);
 }
 
 /**
@@ -22147,6 +22177,7 @@ export
     Trail3D,
     engineObjectsCollect3D,
     engineObjectsCallback3D,
+    engineObjectsRaycast3D,
     parseOBJ,
     loadOBJ,
     debugBox3D,

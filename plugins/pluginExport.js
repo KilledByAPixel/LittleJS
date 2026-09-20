@@ -142,6 +142,7 @@ export
     Trail3D,
     engineObjectsCollect3D,
     engineObjectsCallback3D,
+    engineObjectsRaycast3D,
     parseOBJ,
     loadOBJ,
     debugBox3D,

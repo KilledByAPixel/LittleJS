@@ -145,9 +145,8 @@ function gameUpdate()
     if (keyWasPressed('ArrowDown'))  tryMove(0, 1);
     if (keyWasPressed('KeyR'))       buildLevel();
 
-    // the cell under the mouse: a block if the ray hits one, else where it meets the floor
-    const ray = render3D.screenToRay(mousePosScreen);
-    const picked = render3D.raycastObjects(ray, boxes)?.object;
+    // the cell under the mouse: a block if one is under it, else where it meets the floor
+    const picked = render3D.pick(mousePosScreen, boxes)?.object;
     const ground = render3D.screenToGround(mousePosScreen);
     const groundCell = ground && vec2(floor(ground.x + levelSize/2), floor(ground.z + levelSize/2));
     hoverCell = picked ? picked.cell : groundCell;

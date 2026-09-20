@@ -72,8 +72,7 @@ function gameInit()
 function gameUpdate()
 {
     // pick the ball under the mouse, click to toss it up
-    const ray = render3D.screenToRay(mousePosScreen);
-    const picked = render3D.raycastObjects(ray, balls)?.object;
+    const picked = render3D.pick(mousePosScreen, balls)?.object;
     if (picked)
     {
         debugSphere3D(picked.pos3D, picked.radius*2 + .2, YELLOW);

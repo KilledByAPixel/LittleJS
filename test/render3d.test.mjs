@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, Ray3D, CameraControl3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsUpdate } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, Ray3D, CameraControl3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -1231,7 +1231,7 @@ test('the stage loop sets the draw state from each object, so render3D overrides
     engineObjects.length = 0;
 });
 
-test('drawBox and drawSphere build their unit meshes once, raycastObjects picks the nearest object', () =>
+test('drawBox and drawSphere build their unit meshes once, pick finds the nearest object', () =>
 {
     assert.doesNotThrow(()=> render3D.drawBox(vec3(), 2, RED, vec3(0, 1, 0)));
     assert.doesNotThrow(()=> render3D.drawSphere(vec3(), 2, RED));
@@ -1239,11 +1239,11 @@ test('drawBox and drawSphere build their unit meshes once, raycastObjects picks 
     const nearObject = new EngineObject3D(vec3(0, 0, -5), buildBox()), farObject = new EngineObject3D(vec3(0, 0, -12), buildBox());
     farObject.scale3D = vec3(2);
     const miss = new EngineObject3D(vec3(5, 0, -5), buildBox());
-    const hit = render3D.raycastObjects(new Ray3D(vec3(), vec3(0, 0, -1)));
+    const hit = render3D.pick(new Ray3D(vec3(), vec3(0, 0, -1)));
     assert.equal(hit.object, nearObject);
     near(hit.distance, 5 - Math.sqrt(.75)); // to the bounding sphere
-    assert.equal(render3D.raycastObjects(new Ray3D(vec3(), vec3(0, 0, -1)), [farObject]).object, farObject);
-    assert.equal(render3D.raycastObjects(new Ray3D(vec3(), vec3(0, 1, 0))), undefined);
+    assert.equal(render3D.pick(new Ray3D(vec3(), vec3(0, 0, -1)), [farObject]).object, farObject);
+    assert.equal(render3D.pick(new Ray3D(vec3(), vec3(0, 1, 0))), undefined);
     nearObject.destroy(); farObject.destroy(); miss.destroy();
 });
 
@@ -1610,7 +1610,7 @@ test('sprite objects blend by default and are picked by their size3D, lights and
     assert.ok(sprite.transparent);
     assert.ok(!new EngineObject3D(vec3(), buildBox()).transparent);
     const light = new Light3D(vec3(0, 0, -2)), emitter = new ParticleEmitter3D(vec3(0, 0, -3), 0, 0, 0, PI, new TileInfo(vec2(), vec2(16)));
-    const hit = render3D.raycastObjects(new Ray3D(vec3(), vec3(0, 0, -1)), [light, emitter, sprite]);
+    const hit = render3D.pick(new Ray3D(vec3(), vec3(0, 0, -1)), [light, emitter, sprite]);
     assert.equal(hit.object, sprite);
     near(hit.distance, 5 - Math.hypot(2, 2) / 2); // half the drawn diagonal, size3D.z is not drawn
     for (const o of engineObjects) o.destroy();
@@ -1951,7 +1951,7 @@ test('setCollision on a 3D object skips the 2D only flags', () =>
     assert.equal(o.collideSolidObjects, true);
     assert.equal(o.isSolid, true);
     assert.equal(o.collideTiles, false, 'tile collision is 2D, it needs sync2D');
-    assert.equal(o.collideRaycast, false, 'raycasts are 2D, 3D picking is render3D.raycastObjects');
+    assert.equal(o.collideRaycast, false, 'raycasts are 2D, 3D picking is render3D.pick');
     o.destroy();
 });
 
@@ -2068,4 +2068,45 @@ test('height map lookups take a position as well as two numbers', () =>
         nearVec(a, b.x, b.y, b.z);
         assert.equal(map.getColor(vec3(x, 99, z)).rgbaInt(), map.getColor(x, z).rgbaInt());
     }
+});
+
+test('engineObjectsRaycast3D returns everything along the ray, nearest first', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const front = new EngineObject3D(vec3(0, 0, -5), buildBox());
+    const back = new EngineObject3D(vec3(0, 0, -20), buildBox());
+    const aside = new EngineObject3D(vec3(50, 0, -10), buildBox());
+    const ray = new Ray3D(vec3(), vec3(0, 0, -1));
+
+    const hits = engineObjectsRaycast3D(ray);
+    assert.deepEqual(hits, [front, back], 'both along the ray, nearest first, and not the one off to the side');
+    assert.deepEqual(engineObjectsRaycast3D(ray, [back, aside]), [back], 'only looks at the objects it is given');
+    assert.deepEqual(engineObjectsRaycast3D(new Ray3D(vec3(), vec3(0, 1, 0))), [], 'a miss is an empty list');
+
+    // pick is the nearest of the same set, with the distance to it
+    const picked = render3D.pick(ray);
+    assert.equal(picked.object, front);
+    assert.ok(picked.distance > 4 && picked.distance < 5, 'the near side of a unit box 5 away');
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});
+
+test('pick takes a screen position as well as a ray', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    render3D.camera.pos = vec3();
+    render3D.camera.rotation = vec3();
+    render3D.updateMatrices(1);
+
+    // a shape around the camera is hit by any ray, so neither road can miss it by accident
+    const around = new EngineObject3D(vec3(), buildBox(100));
+    const screen = vec2(123, 45);
+    assert.equal(render3D.pick(screen)?.object, around, 'a screen position picks');
+    assert.equal(render3D.pick(render3D.screenToRay(screen))?.object, around, 'and so does the ray it makes');
+
+    around.destroy();
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
 });
