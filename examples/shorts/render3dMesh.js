@@ -56,6 +56,7 @@ function gameInit()
 // center the model, make it 4 units across, and stand it on the floor
 function setModel(mesh)
 {
+    model.mesh?.dispose(); // the model it replaces is on the GPU, let it go
     model.mesh = mesh.center().fit(4);
     model.pos3D = vec3(0, -mesh.getBounds().min.y);
 }

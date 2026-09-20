@@ -24,9 +24,13 @@ function buildShapes()
     const cone = buildCone(1.4, 1.6);
     const capsule = buildCapsule(.8, 2);
 
-    // hand one to each spinner
+    // hand one to each spinner, letting go of the ones from last time
     const meshes = [box, oct, cylinder, vase, sphere, hull, torus, cone, capsule];
-    spinners.forEach((s, i)=> s.mesh = meshes[i]);
+    spinners.forEach((s, i)=>
+    {
+        s.mesh?.dispose(); // the old mesh is on the GPU
+        s.mesh = meshes[i];
+    });
 }
 
 function gameInit()
