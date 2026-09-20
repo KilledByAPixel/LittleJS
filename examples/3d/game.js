@@ -171,6 +171,21 @@ function gameInit()
         rock.specular = .6;
     }
 
+    // sprites from the tile sheet, upright billboards with their pixels kept hard edged
+    for (let i = 12; i--;)
+    {
+        const pos = randomGroundPos();
+        pos.y = terrain.getHeight(pos.x, pos.z) + 1.5;
+        if (pos.y < 3)
+            continue;
+        const sprite = new EngineObject3D(pos, undefined, tile(i%4, 16));
+        sprite.color = hsl(i/12,.7,.7);
+        sprite.size3D = vec3(3);
+        sprite.upright = true;  // stands on the ground instead of tilting with the camera
+        sprite.pixelated = true; // no blurring or bleeding between tiles on the sheet
+        sprite.softShadow = 1.5;
+    }
+
     // the title and the score, extruded from the engine font
     const title = new EngineObject3D(vec3(0,16,-14), buildText3D('LITTLEJS 3D', 5, 1.2));
     title.color = hsl(.12,1,.6);
