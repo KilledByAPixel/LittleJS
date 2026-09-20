@@ -44,23 +44,46 @@ The lesson: **trimming art is poor value.** The engine and the build are
 where the bytes are. One session that touched no game feature at all went
 13,176 → 12,393 (−783), and 633 of that was three engine strips.
 
-A fuller price list from a different game, for the shape of it. Nothing
-here was cut; it is what a menu looks like when the budget is needed:
+A fuller price list, from a different game on a 12,781 baseline. Nothing
+here was cut; this is what a menu looks like on the day the budget is
+needed, and it is worth building one for your own game before you need
+it:
 
-| kind of feature | typical price |
+| feature | ZIP |
 |---|---|
-| a minimap (canvas polyline plus dots) | 150–190 |
-| a scenery generator (districts, fills, skylines) | 60–100 |
-| a landmark or set piece | 80 |
-| a looping engine sound with pitch follow | 60–66 |
-| an explosion or hit burst | 50–55 |
-| a drop shadow, canopy, or second pass on a model | 45–50 |
-| a results line that chooses between three strings | 64 |
-| stars, clouds, halos, lane lines, light rails | 15–35 |
-| a single line of static HUD text | 8–10 |
+| a minimap (canvas polyline plus dots) | 164 |
+| a background scenery generator (a district of buildings) | 96 |
+| a large background fill | 95 |
+| a landmark set piece | 82 |
+| directional arrows along the route | 67 |
+| a looping sound with pitch follow | 66 |
+| distant background props | 64 |
+| a results line that picks between three strings and reads a name | 64 |
+| motion cues beside the play area | 62 |
+| clouds | 60 |
+| a death explosion | 55 |
+| a hit burst | 51 |
+| a shadow under the player | 50 |
+| one extra detail pass on a model | 49 |
+| one AI behaviour (seeking a target) | 47 |
+| a win-condition checker | 38 |
+| tunnel walls | 35 |
+| stars | 24 |
+| a sun halo | 23 |
+| camera easing on a state change | 23 |
+| lines painted on the ground | 23 |
+| a field-of-view kick on a state change | 20 |
+| a light strip along a wall | 16 |
+| a marker line every 24 samples | 15 |
+| a saved-best line on the title screen | 10 |
+| a time readout line | 8 |
 
-Scenery generators and minimaps are the expensive things. A line of text
-is cheap **unless it carries logic**. Any one visual flourish is 15–60.
+The shape matches the first table: **the scenery generators and the
+minimap are the expensive things.** A line of text is cheap *unless it
+carries logic* — the results line costs 64 because it chooses between
+three strings and looks up a name, while the plain time readout is 8. Any
+one visual flourish is 15–60, so cutting them one at a time to find a
+hundred bytes is a bad trade against one generator.
 
 ---
 
@@ -141,9 +164,27 @@ compiler deletes the branch.
 Have each rewrite **assert that its pattern matched**, and fail the build
 if not. A strip that silently stops applying is a slow leak.
 
-In LittleJS the flags worth folding are webgl, touch, gamepad, sound and
-the physics solver; together roughly 2.5 KB. `canvasPixelated` alone was
-−14 and a visual bug fix.
+In LittleJS, measured on the starter:
+
+| flag folded off | saving | what goes |
+|---|---:|---|
+| `soundEnable` | 794 | all audio: ZzFX sounds, music, speech |
+| `glEnable` | 792 | WebGL sprite batching, falls back to canvas 2D |
+| `enablePhysicsSolver` | 488 | collision response, object and tile |
+| `gamepadsEnable` | 247 | gamepad input |
+| `touchInputEnable` | 152 | touch input and the on-screen gamepad |
+| all five | **~2,500** | a silent keyboard-and-mouse game in canvas 2D |
+
+That is about 19% of the budget. Query functions the game calls itself,
+like a tile collision test, survive regardless, because the game
+references them. `canvasPixelated` alone was −14 and a visual bug fix.
+
+Note that a flag defaulting to `false` costs nothing already: the
+compiler sees the initializer, sees that nothing writes it, and deletes
+the block. Only flags that default to `true` need this treatment. And
+setting one to `false` in your own code **costs** about 50 bytes instead
+of saving any, because the binding stays mutable and you have added an
+assignment. It has to happen in the build.
 
 ### 2.3 Strip colliding method names
 
@@ -358,7 +399,7 @@ move the zip by a few bytes, which is noise rather than cost (section 6).
   | minimap | 146 | 188 |
   | model shadow | 44 | 66 |
   | engine sound | 28 | 61 |
-  | model details (canopy, stripe, block) | 68 | 88 |
+  | three detail passes on one model | 68 | 88 |
   | lamp rings | 23 | 45 |
   | shield glow | 21 | 37 |
   | lane lines | 26 | 39 |
