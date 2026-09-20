@@ -71,7 +71,7 @@ Add your own files to `sourceFiles`, and runtime assets to `dataFiles`.
 
 ## 📦 Saving space
 
-**[SIZECODING.md](SIZECODING.md) is the long version:** what actually made a real 13,312 byte game smaller, what did not, and how to tell the difference, all measured on a shipped JS13K entry. This section only covers the switches already wired into the starter. Read the other one when you are close to the limit, not before.
+**[SIZECODING.md](SIZECODING.md) is the long version:** what actually made real 13,312 byte games smaller, what did not, and how to tell the difference, measured on shipped JS13K entries. It is written to be handed to an AI assistant that is hunting for bytes. This section only covers the switches already wired into the starter. Read the other one when you are close to the limit, not before.
 
 **Start by not worrying about it.** Closure in `ADVANCED` mode already deletes every engine function your game never calls, so unused features mostly cost nothing.
 
