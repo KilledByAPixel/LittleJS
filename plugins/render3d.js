@@ -2666,6 +2666,7 @@ class HeightMap
         if (colors && !isArray(colors))
             colors = render3DImageToArray(colors, (r, g, b, a)=> rgb(r / 255, g / 255, b / 255, a / 255));
         ASSERT(isArray(heights) && heights.length > 1 && isArray(heights[0]) && heights[0].length > 1, 'height map needs at least 2 rows and 2 columns');
+        ASSERT(size.x > 0 && size.y > 0, 'height map size must be positive, a zero size has nowhere to look things up');
 
         /** @property {Array<Array<number>>} - Heights 0-1 as [row][column], rows along Z */
         this.heights = heights;
@@ -2961,6 +2962,7 @@ class EngineObject3D extends EngineObject
     /** Draw a different mesh and free the GPU buffer of the one it replaces
      *  - For a mesh built again when something changes, like a score, a rebuilt terrain or a loaded model
      *  - A mesh another object is still drawing is left alone, since builders are often shared
+     *  - Freeing one held somewhere else only costs it an upload, the points it was built from stay
      *  @param {Mesh} [mesh] - The mesh to draw from now on, undefined to draw nothing
      *  @return {Mesh|undefined} - The mesh passed in */
     setMesh(mesh)
@@ -2968,7 +2970,8 @@ class EngineObject3D extends EngineObject
         ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
         const old = this.mesh;
         this.mesh = mesh;
-        if (old && old !== mesh && !engineObjects.some(o => o.mesh === old))
+        // nothing to free and nothing to look for when it was never uploaded
+        if (old && old !== mesh && old.buffer && !engineObjects.some(o => o.mesh === old))
             old.dispose();
         return mesh;
     }

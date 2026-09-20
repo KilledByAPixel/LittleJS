@@ -179,4 +179,5 @@ function gameRenderPost()
     drawTextScreen(gate, vec2(mainCanvasSize.x - 140, 50), 28, YELLOW, 5, BLACK);
     const speed = round(abs(car.speed)*180) + ' KPH';
     drawTextScreen(speed, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40), 36, WHITE, 6, BLACK);
+    drawTextScreen('arrows: drive', vec2(110, mainCanvasSize.y - 40), 26, WHITE, 5, BLACK);
 }

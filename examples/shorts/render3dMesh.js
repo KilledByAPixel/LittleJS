@@ -72,6 +72,6 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    const text = modelName + ' / drop an .obj file here / space: toggle shading';
+    const text = 'drop an .obj file here / space: toggle shading / ' + modelName;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

@@ -6712,6 +6712,7 @@ declare module "littlejsengine" {
         /** Draw a different mesh and free the GPU buffer of the one it replaces
          *  - For a mesh built again when something changes, like a score, a rebuilt terrain or a loaded model
          *  - A mesh another object is still drawing is left alone, since builders are often shared
+         *  - Freeing one held somewhere else only costs it an upload, the points it was built from stay
          *  @param {Mesh} [mesh] - The mesh to draw from now on, undefined to draw nothing
          *  @return {Mesh|undefined} - The mesh passed in */
         setMesh(mesh?: Mesh): Mesh | undefined;

@@ -1681,7 +1681,8 @@ test('lookAt at your own position keeps the rotation, upright sprites survive a 
     render3D.camera.pos = vec3(0, 0, 10); render3D.camera.rotation = vec3(); render3D.updateMatrices(1);
     const ray = render3D.screenToRay(vec2(), vec2());
     assert.ok(ray.direction.isValid());
-    const heightMap = new HeightMap([[0, 0], [0, 0]], vec2(0, 4));
+    const heightMap = new HeightMap([[0, 0], [0, 0]], vec2(4, 4));
+    heightMap.size = vec2(0, 4); // a size that went bad after construction, where no assert can catch it
     assert.equal(heightMap.raycast(new Ray3D(vec3(0, 5, 0), vec3(0, -1, 0))), undefined);
 });
 
@@ -2046,4 +2047,11 @@ test('setMesh frees the mesh it replaces, unless something else is still drawing
 
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
+});
+
+test('a height map with no size says so instead of failing later', () =>
+{
+    // every lookup divides by the size, so a zero one turns into NaN and an unreadable crash
+    assert.throws(()=> new HeightMap([[0,1],[1,0]], vec2(), 1));
+    assert.doesNotThrow(()=> new HeightMap([[0,1],[1,0]], vec2(4), 1));
 });

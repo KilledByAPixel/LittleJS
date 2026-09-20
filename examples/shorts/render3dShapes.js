@@ -70,6 +70,6 @@ function gameUpdate()
 function gameRenderPost()
 {
     const shading = render3D.smoothShading ? 'smooth' : 'flat';
-    const text = 'space: ' + shading + ' shading / hold S: specular';
+    const text = 'space: toggle shading / ' + shading + ' / hold S: specular';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }
