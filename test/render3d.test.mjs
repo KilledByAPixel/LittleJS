@@ -1935,3 +1935,30 @@ test('collideWithObject3D hears about a touch and can take it over', () =>
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
 });
+
+test('two objects that both have isSolid3D off pass through each other', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const a = new EngineObject3D(vec3()), b = new EngineObject3D(vec3(.6, 0, 0));
+    a.collideSolid3D = b.collideSolid3D = true;
+    b.mass = 1;
+    assert.equal(a.isSolid3D, true, 'blocking is on by default');
+
+    // neither blocks, so nothing happens
+    a.isSolid3D = b.isSolid3D = false;
+    b.updateTransforms();
+    near(b.pos3D.x, .6);
+
+    // one of them blocking is enough, whichever one it is
+    for (const solid of [a, b])
+    {
+        solid.isSolid3D = true;
+        b.pos3D = vec3(.6, 0, 0);
+        b.updateTransforms();
+        near(b.pos3D.x, 1);
+        solid.isSolid3D = false;
+    }
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});

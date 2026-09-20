@@ -17,12 +17,6 @@ class Player extends EngineObject3D
         this.collideSolid3D = true;
         this.collideAsBall3D = true;
     }
-    collideWithObject3D()
-    {
-        // a box got the player, so end the round; nothing to push apart
-        endRound();
-        return false;
-    }
     update()
     {
         // arrow keys move on the ground, forward is -Z
@@ -34,6 +28,12 @@ class Player extends EngineObject3D
         this.pos3D.x = clamp(this.pos3D.x, -limit, limit);
         this.pos3D.z = clamp(this.pos3D.z, -limit, limit);
         this.rotation3D = vec3(-this.velocity3D.z, 0, -this.velocity3D.x).scale(1.5);
+    }
+    collideWithObject3D()
+    {
+        // a box got the player, so end the round; nothing to push apart
+        endRound();
+        return false;
     }
 }
 
@@ -49,7 +49,8 @@ class Box extends EngineObject3D
         this.velocity3D.y = rand(.1,.2);
         this.angleVelocity3D = randVector3(.1);
         this.cullBackFaces = true;
-        this.collideSolid3D = true; // boxes shove each other, and the player hears about it
+        this.collideSolid3D = true;
+        this.isSolid3D = false; // boxes pass through each other, only the player stops them
     }
     update()
     {

@@ -6654,8 +6654,10 @@ declare module "littlejsengine" {
         specular: number;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         castShadow: boolean;
-        /** @property {boolean} - Push apart from other collideSolid3D objects each frame, heavier objects move less and mass 0 stays put; a parented object moves in its parent's space */
+        /** @property {boolean} - Take part in solid collision: both objects of a pair need it, heavier objects move less and mass 0 stays put; a parented object moves in its parent's space */
         collideSolid3D: boolean;
+        /** @property {boolean} - Block other objects, like isSolid in 2D; two objects that both have it off pass through each other */
+        isSolid3D: boolean;
         /** @property {boolean} - Collide as the ball that fits size3D instead of as the size3D box, so it rolls around corners */
         collideAsBall3D: boolean;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */

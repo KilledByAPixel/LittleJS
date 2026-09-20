@@ -25,7 +25,7 @@ class Ball extends EngineObject3D
         const inside = vec3(clamp(p.x, -limit, limit), max(p.y, r), clamp(p.z, -limit, limit));
         if (p.distance(inside))
             this.bounce(inside.subtract(p));
-        const hit = collideSphereCylinder(this.pos3D, r, cylinderPos, cylinderRadius, cylinderHeight);
+        const hit = collideSphereCylinder(p, r, cylinderPos, cylinderRadius, cylinderHeight);
         if (hit)
             this.bounce(hit);
     }

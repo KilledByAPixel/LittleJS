@@ -960,8 +960,10 @@ obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engin
 obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gravity, gravityScale and damping act on
              // velocity3D, and damping is 1 by default for no slowing
 obj.size3D                              // full size for engineObjectsCollect3D and sprites
-obj.collideSolid3D = true               // push apart from the other solid objects each frame, heavier objects move
-                                        // less, mass 0 stays put, velocities bounce by restitution
+obj.collideSolid3D = true               // take part in solid collision, both objects of a pair need it; heavier
+                                        // objects move less, mass 0 stays put, velocities bounce by restitution
+obj.isSolid3D = false                   // stop blocking others, like isSolid in 2D; a pair where neither one blocks
+                                        // passes through, so movers hit the level without shoving each other
 obj.collideAsBall3D = true              // collide as the ball that fits size3D instead of as the size3D box
 obj.collideWithObject3D(object, push)   // called when it touches a solid object, both objects are asked and either
                                         // returning false leaves the push and the bounce to you

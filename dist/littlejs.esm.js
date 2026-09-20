@@ -20657,8 +20657,10 @@ class EngineObject3D extends EngineObject
         this.specular = 0;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         this.castShadow = true;
-        /** @property {boolean} - Push apart from other collideSolid3D objects each frame, heavier objects move less and mass 0 stays put; a parented object moves in its parent's space */
+        /** @property {boolean} - Take part in solid collision: both objects of a pair need it, heavier objects move less and mass 0 stays put; a parented object moves in its parent's space */
         this.collideSolid3D = false;
+        /** @property {boolean} - Block other objects, like isSolid in 2D; two objects that both have it off pass through each other */
+        this.isSolid3D = true;
         /** @property {boolean} - Collide as the ball that fits size3D instead of as the size3D box, so it rolls around corners */
         this.collideAsBall3D = false;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
@@ -20773,6 +20775,7 @@ function render3DCollideSolid(a)
     {
         if (b === a) break; // the ones after this update later and test against this one then
         if (!b.collideSolid3D || b.destroyed) continue;
+        if (!a.isSolid3D && !b.isSolid3D) continue; // neither one blocks, so they pass through each other
         const push = render3DSolidPush(shapeA, render3DSolidShape(b));
         if (!push) continue;
 
