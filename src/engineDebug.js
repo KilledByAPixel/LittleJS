@@ -574,9 +574,9 @@ function debugRender()
             + savedDrawCount + ' / ' + savedPrimitiveCount + ' / '
             + engineObjects.length + ' / ' + averageFPS.toFixed(1)
             + (glEnable ? ' GL' : ' 2D') ;
-        mainContext.fillText(text, mainCanvas.width-3, 3);
+        mainContext.fillText(text, mainCanvasSize.x-3, 3);
         mainContext.fillStyle = '#fff';
-        mainContext.fillText(text, mainCanvas.width-2, 2);
+        mainContext.fillText(text, mainCanvasSize.x-2, 2);
     }
 }
 

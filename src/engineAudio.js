@@ -214,7 +214,7 @@ class Sound
             }
 
             // get pan from screen space coords
-            pan = worldToScreen(pos).x * 2/mainCanvas.width - 1;
+            pan = worldToScreen(pos).x * 2/mainCanvasSize.x - 1;
         }
         
         // Create sound instance

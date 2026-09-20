@@ -190,8 +190,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // Called automatically by engine to setup render system
     function enginePreRender()
     {
-        // save canvas size
-        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+        // mainCanvasSize is set by engineUpdateCanvas which always runs first,
+        // it is css pixels so it does not match the canvas backing store
 
         // disable smoothing for pixel art
         mainContext.imageSmoothingEnabled = !tilesPixelated;
@@ -401,11 +401,13 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
 // Resize the canvas to fit the window and prepare it for a new frame
 // Called automatically each frame and by the splash screen before the loop starts
+// mainCanvasSize is css pixels and the backing store is that scaled by the
+// pixel ratio, so the ratio only changes sharpness, never how big things look
 function engineUpdateCanvas()
 {
     if (headlessMode) return;
 
-    // scales the canvas backing store above the displayed size
+    // the backing store is scaled by this, every size below is css pixels
     const dpr = getCanvasPixelRatio();
 
     if (canvasFixedSize.x)
@@ -428,10 +430,10 @@ function engineUpdateCanvas()
     }
     else
     {
-        // get displayed canvas size based on window size, in css pixels so
+        // get main canvas size based on window size, in css pixels so
         // canvasMaxSize caps how big the canvas looks, not its resolution
-        let displayWidth  = min(innerWidth,  canvasMaxSize.x) | 0;
-        let displayHeight = min(innerHeight, canvasMaxSize.y) | 0;
+        mainCanvasSize.x = min(innerWidth,  canvasMaxSize.x) | 0;
+        mainCanvasSize.y = min(innerHeight, canvasMaxSize.y) | 0;
 
         // responsive aspect ratio
         const innerAspect = innerWidth / innerHeight;
@@ -439,41 +441,46 @@ function engineUpdateCanvas()
         if (canvasMaxAspect && innerAspect > canvasMaxAspect)
         {
             // full height
-            displayWidth = min(displayHeight * canvasMaxAspect | 0, canvasMaxSize.x);
+            const w = mainCanvasSize.y * canvasMaxAspect | 0;
+            mainCanvasSize.x = min(w, canvasMaxSize.x);
         }
         else if (innerAspect < canvasMinAspect)
         {
             // full width
-            displayHeight = min(displayWidth / canvasMinAspect | 0, canvasMaxSize.y);
+            const h = mainCanvasSize.x / canvasMinAspect | 0;
+            mainCanvasSize.y = min(h, canvasMaxSize.y);
         }
 
-        // set css size to fit the window, backing store renders above it
-        mainCanvas.style.width  = displayWidth  + 'px';
-        mainCanvas.style.height = displayHeight + 'px';
+        // css size is the canvas size, the backing store is scaled up below
+        mainCanvas.style.width  = mainCanvasSize.x + 'px';
+        mainCanvas.style.height = mainCanvasSize.y + 'px';
         if (glCanvas)
         {
-            glCanvas.style.width  = displayWidth  + 'px';
-            glCanvas.style.height = displayHeight + 'px';
+            glCanvas.style.width  = mainCanvasSize.x + 'px';
+            glCanvas.style.height = mainCanvasSize.y + 'px';
         }
-        mainCanvasSize.x = displayWidth  * dpr | 0;
-        mainCanvasSize.y = displayHeight * dpr | 0;
     }
 
     // clear main canvas and set size
     // only set the size when it changes, setting it invalidates the canvas
     // frame which makes the browser rebuild the display list for the page
-    if (mainCanvas.width !== mainCanvasSize.x || mainCanvas.height !== mainCanvasSize.y)
+    const bufferSizeX = mainCanvasSize.x * dpr | 0;
+    const bufferSizeY = mainCanvasSize.y * dpr | 0;
+    if (mainCanvas.width !== bufferSizeX || mainCanvas.height !== bufferSizeY)
     {
-        mainCanvas.width  = mainCanvasSize.x;
-        mainCanvas.height = mainCanvasSize.y;
+        mainCanvas.width  = bufferSizeX;
+        mainCanvas.height = bufferSizeY;
     }
     else
     {
         // setting the size also resets the context state, match that
         mainContext.setTransform(1, 0, 0, 1, 0, 0);
         mainContext.globalCompositeOperation = 'source-over';
-        mainContext.clearRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+        mainContext.clearRect(0, 0, bufferSizeX, bufferSizeY);
     }
+
+    // scale the context so 2d drawing is in css pixels
+    mainContext.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     // apply the clear color to main canvas
     if (canvasClearColor.a > 0 && !glEnable)

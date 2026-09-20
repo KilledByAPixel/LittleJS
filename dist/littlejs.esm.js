@@ -193,8 +193,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // Called automatically by engine to setup render system
     function enginePreRender()
     {
-        // save canvas size
-        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+        // mainCanvasSize is set by engineUpdateCanvas which always runs first,
+        // it is css pixels so it does not match the canvas backing store
 
         // disable smoothing for pixel art
         mainContext.imageSmoothingEnabled = !tilesPixelated;
@@ -404,11 +404,13 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
 // Resize the canvas to fit the window and prepare it for a new frame
 // Called automatically each frame and by the splash screen before the loop starts
+// mainCanvasSize is css pixels and the backing store is that scaled by the
+// pixel ratio, so the ratio only changes sharpness, never how big things look
 function engineUpdateCanvas()
 {
     if (headlessMode) return;
 
-    // scales the canvas backing store above the displayed size
+    // the backing store is scaled by this, every size below is css pixels
     const dpr = getCanvasPixelRatio();
 
     if (canvasFixedSize.x)
@@ -431,10 +433,10 @@ function engineUpdateCanvas()
     }
     else
     {
-        // get displayed canvas size based on window size, in css pixels so
+        // get main canvas size based on window size, in css pixels so
         // canvasMaxSize caps how big the canvas looks, not its resolution
-        let displayWidth  = min(innerWidth,  canvasMaxSize.x) | 0;
-        let displayHeight = min(innerHeight, canvasMaxSize.y) | 0;
+        mainCanvasSize.x = min(innerWidth,  canvasMaxSize.x) | 0;
+        mainCanvasSize.y = min(innerHeight, canvasMaxSize.y) | 0;
 
         // responsive aspect ratio
         const innerAspect = innerWidth / innerHeight;
@@ -442,41 +444,46 @@ function engineUpdateCanvas()
         if (canvasMaxAspect && innerAspect > canvasMaxAspect)
         {
             // full height
-            displayWidth = min(displayHeight * canvasMaxAspect | 0, canvasMaxSize.x);
+            const w = mainCanvasSize.y * canvasMaxAspect | 0;
+            mainCanvasSize.x = min(w, canvasMaxSize.x);
         }
         else if (innerAspect < canvasMinAspect)
         {
             // full width
-            displayHeight = min(displayWidth / canvasMinAspect | 0, canvasMaxSize.y);
+            const h = mainCanvasSize.x / canvasMinAspect | 0;
+            mainCanvasSize.y = min(h, canvasMaxSize.y);
         }
 
-        // set css size to fit the window, backing store renders above it
-        mainCanvas.style.width  = displayWidth  + 'px';
-        mainCanvas.style.height = displayHeight + 'px';
+        // css size is the canvas size, the backing store is scaled up below
+        mainCanvas.style.width  = mainCanvasSize.x + 'px';
+        mainCanvas.style.height = mainCanvasSize.y + 'px';
         if (glCanvas)
         {
-            glCanvas.style.width  = displayWidth  + 'px';
-            glCanvas.style.height = displayHeight + 'px';
+            glCanvas.style.width  = mainCanvasSize.x + 'px';
+            glCanvas.style.height = mainCanvasSize.y + 'px';
         }
-        mainCanvasSize.x = displayWidth  * dpr | 0;
-        mainCanvasSize.y = displayHeight * dpr | 0;
     }
 
     // clear main canvas and set size
     // only set the size when it changes, setting it invalidates the canvas
     // frame which makes the browser rebuild the display list for the page
-    if (mainCanvas.width !== mainCanvasSize.x || mainCanvas.height !== mainCanvasSize.y)
+    const bufferSizeX = mainCanvasSize.x * dpr | 0;
+    const bufferSizeY = mainCanvasSize.y * dpr | 0;
+    if (mainCanvas.width !== bufferSizeX || mainCanvas.height !== bufferSizeY)
     {
-        mainCanvas.width  = mainCanvasSize.x;
-        mainCanvas.height = mainCanvasSize.y;
+        mainCanvas.width  = bufferSizeX;
+        mainCanvas.height = bufferSizeY;
     }
     else
     {
         // setting the size also resets the context state, match that
         mainContext.setTransform(1, 0, 0, 1, 0, 0);
         mainContext.globalCompositeOperation = 'source-over';
-        mainContext.clearRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+        mainContext.clearRect(0, 0, bufferSizeX, bufferSizeY);
     }
+
+    // scale the context so 2d drawing is in css pixels
+    mainContext.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     // apply the clear color to main canvas
     if (canvasClearColor.a > 0 && !glEnable)
@@ -1211,9 +1218,9 @@ function debugRender()
             + savedDrawCount + ' / ' + savedPrimitiveCount + ' / '
             + engineObjects.length + ' / ' + averageFPS.toFixed(1)
             + (glEnable ? ' GL' : ' 2D') ;
-        mainContext.fillText(text, mainCanvas.width-3, 3);
+        mainContext.fillText(text, mainCanvasSize.x-3, 3);
         mainContext.fillStyle = '#fff';
-        mainContext.fillText(text, mainCanvas.width-2, 2);
+        mainContext.fillText(text, mainCanvasSize.x-2, 2);
     }
 }
 
@@ -2967,8 +2974,9 @@ let canvasMinAspect = 0;
  *  @memberof Settings */
 let canvasMaxAspect = 0;
 
-/** Fixed size of the canvas, if enabled canvas size never changes
+/** Fixed size of the canvas in css pixels, if enabled canvas size never changes
  * - you may also need to set mainCanvasSize if using screen space coords in startup
+ * - canvasPixelRatio still applies, it only scales the backing store
  *  @type {Vector2}
  *  @default Vector2()
  *  @memberof Settings */
@@ -2991,13 +2999,10 @@ let tilesPixelated = true;
 
 /** Scale factor applied to the canvas resolution for sharper rendering
  *  Pass 1 for no scaling, a number for an explicit ratio, or undefined to track devicePixelRatio each frame.
- *  - Raises the render resolution without changing how big the canvas looks,
- *    so the image is sharper on high density displays
- *  - mainCanvasSize scales with it, so a fixed cameraScale shows more of the
- *    world and screen space sizes get smaller relative to the display; derive
- *    cameraScale from mainCanvasSize to pin the view, see setCanvasPixelRatio
- *  - Has no effect when canvasFixedSize is set, that is already a resolution
- *  - Pixel art usually looks best left at 1 or clamped to whole numbers,
+ *  - Only the backing store scales, so this changes sharpness and nothing else
+ *  - mainCanvasSize, cameraScale, mousePos and screen space stay in css pixels,
+ *    so the same code draws the same size at any ratio
+ *  - Pixel art usually looks best left at 1 or set to whole numbers,
  *    a fractional ratio samples texels unevenly
  *  @type {number|undefined}
  *  @default
@@ -3368,22 +3373,20 @@ function setTilesPixelated(pixelated) { tilesPixelated = pixelated; }
 
 /** Set the canvas pixel ratio, scales the render resolution for sharper output
  *  Pass a number for an explicit ratio, or call with no argument to track devicePixelRatio each frame.
- *  - The canvas still fills the same part of the window, it just renders at a
- *    higher resolution, so nothing is blurred when scaled to the display
- *  - mainCanvasSize scales with the ratio, so a fixed cameraScale will show
- *    more of the world; derive cameraScale from mainCanvasSize to pin the view
+ *  - The canvas stays the same size on screen and everything draws the same
+ *    size, it just renders at a higher resolution so nothing looks blurry
+ *  - Game code is unaffected, it always works in css pixels
  *  @param {number} [pixelRatio]
  *  @example
  *  // render at native resolution, capped so phones don't pay for 3x
  *  setCanvasPixelRatio(min(devicePixelRatio, 2));
- *
- *  // keep 20 world units visible tall at any ratio, window size, or zoom
- *  setCameraScale(mainCanvasSize.y / 20);
  *  @memberof Settings */
 function setCanvasPixelRatio(pixelRatio) { canvasPixelRatio = pixelRatio; }
 
-/** Get the pixel ratio currently applied to the canvas
+/** Get the pixel ratio currently applied to the canvas backing store
  *  - Resolves canvasPixelRatio, falling back to devicePixelRatio when it is undefined
+ *  - Game code works in css pixels so this is rarely needed, it is for sizing
+ *    render targets and viewports that must match the backing store
  *  @return {number}
  *  @memberof Settings */
 function getCanvasPixelRatio() { return canvasPixelRatio ?? (devicePixelRatio || 1); }
@@ -4225,6 +4228,9 @@ class EngineObject
 let mainCanvas;
 
 /** 2d context for mainCanvas
+ *  - Scaled by canvasPixelRatio, so drawing to it is in css pixels
+ *  - getImageData and putImageData ignore that scale and work in backing store
+ *    pixels, so use workReadCanvas to read pixels back instead of this
  *  @type {CanvasRenderingContext2D}
  *  @memberof Draw */
 let mainContext;
@@ -4260,7 +4266,9 @@ let workReadContext;
  *  @memberof Draw */
 let backgroundCanvas;
 
-/** The size of the main canvas (and other secondary canvases)
+/** The size of the main canvas (and other secondary canvases) in css pixels
+ *  - This is the screen space coordinate system, matching mousePos
+ *  - With canvasPixelRatio set the backing store is larger than this
  *  @type {Vector2}
  *  @memberof Draw */
 let mainCanvasSize = vec2();
@@ -5423,7 +5431,9 @@ function setBackgroundCanvas(canvas) { backgroundCanvas = canvas; }
  *  @memberof Draw */
 function combineCanvases()
 {
-    const w = mainCanvasSize.x, h = mainCanvasSize.y;
+    // this composites raw canvases so it works in backing store pixels,
+    // mainCanvasSize is css pixels and would throw away resolution
+    const w = mainCanvas.width, h = mainCanvas.height;
     workCanvas.width = w;
     workCanvas.height = h;
     // remove background alpha — explicit fillStyle so a previous caller
@@ -5434,7 +5444,12 @@ function combineCanvases()
         workContext.drawImage(backgroundCanvas, 0, 0, w, h);
     glCopyToContext(workContext);
     workContext.drawImage(mainCanvas, 0, 0);
+
+    // draw back 1:1, mainContext is scaled to css pixels
+    mainContext.save();
+    mainContext.setTransform(1, 0, 0, 1, 0, 0);
     mainContext.drawImage(workCanvas, 0, 0);
+    mainContext.restore();
 }
 
 // Internal: bake a color/additive-color tint into workReadCanvas at the
@@ -6288,7 +6303,7 @@ function inputInit()
         const rect = mainCanvas.getBoundingClientRect();
         const px = percent(mousePos.x, rect.left, rect.right);
         const py = percent(mousePos.y, rect.top, rect.bottom);
-        return vec2(px*mainCanvas.width, py*mainCanvas.height);
+        return vec2(px*mainCanvasSize.x, py*mainCanvasSize.y);
     }
 }
 
@@ -7212,7 +7227,7 @@ class Sound
             }
 
             // get pan from screen space coords
-            pan = worldToScreen(pos).x * 2/mainCanvas.width - 1;
+            pan = worldToScreen(pos).x * 2/mainCanvasSize.x - 1;
         }
         
         // Create sound instance
@@ -9287,17 +9302,22 @@ function glPreRender(clear=true)
 
     ASSERT(!glBatchCount, 'glPreRender called with unflushed batch.');
 
+    // mainCanvasSize is css pixels, the backing store is scaled by the pixel
+    // ratio, render targets are offscreen so they are never scaled
+    const dpr = glRenderTarget ? 1 : getCanvasPixelRatio();
+    const bufferSizeX = mainCanvasSize.x * dpr | 0;
+    const bufferSizeY = mainCanvasSize.y * dpr | 0;
     if (!glRenderTarget)
     {
         // set to same size as main canvas, only when it changes because
         // setting it reallocates the drawing buffer and invalidates the frame
-        if (glCanvas.width !== mainCanvasSize.x || glCanvas.height !== mainCanvasSize.y)
+        if (glCanvas.width !== bufferSizeX || glCanvas.height !== bufferSizeY)
         {
-            glCanvas.width = mainCanvasSize.x;
-            glCanvas.height = mainCanvasSize.y;
+            glCanvas.width = bufferSizeX;
+            glCanvas.height = bufferSizeY;
         }
     }
-    glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+    glContext.viewport(0, 0, bufferSizeX, bufferSizeY);
     clear && glClearCanvas();
 
     // build the transform matrix
@@ -9763,7 +9783,10 @@ function glSetRenderTarget(texture, clear=false)
         glFlush();
         glRenderTarget = undefined;
         glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
-        glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+
+        // use the backing store size, mainCanvasSize is css pixels and may
+        // still be the render target's size when unwinding a layer redraw
+        glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
     }
 }
 
@@ -10341,9 +10364,9 @@ class Medal
     render(hidePercent=0)
     {
         const context = mainContext;
-        const width = min(medalDisplaySize.x, mainCanvas.width);
+        const width = min(medalDisplaySize.x, mainCanvasSize.x);
         const height = medalDisplaySize.y;
-        const x = mainCanvas.width - width;
+        const x = mainCanvasSize.x - width;
         const y = -height*hidePercent;
         const backgroundColor = hsl(0,0,.9);
 
@@ -10616,6 +10639,10 @@ class NewgroundsPlugin
  * - Supports shadertoy style post processing shaders
  * - call new PostProcessPlugin() to setup post processing
  * - can be enabled to pass other canvases through a final shader
+ * - iResolution is the canvas backing store, so it grows with canvasPixelRatio
+ *   like shadertoy does. Effects that use it only for uv (p/iResolution.xy) are
+ *   unaffected, but ones that set a feature size from it, like scan lines, get
+ *   finer as the ratio rises. Divide by getCanvasPixelRatio() to pin them.
  * @namespace PostProcess
  */
 
@@ -10737,13 +10764,18 @@ class PostProcessPlugin
             glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
             if (includeMainCanvas)
             {
-                // copy main canvas to work canvas
-                workCanvas.width = mainCanvasSize.x;
-                workCanvas.height = mainCanvasSize.y;
+                // copy main canvas to work canvas at the backing store size,
+                // mainCanvasSize is css pixels so it would lose resolution
+                workCanvas.width = mainCanvas.width;
+                workCanvas.height = mainCanvas.height;
                 glCopyToContext(workContext);
                 workContext.drawImage(mainCanvas, 0, 0);
                 mainCanvas.width |= 0; // setting size clears the main canvas
 
+                // that also reset the transform, restore it so anything drawn
+                // later this frame is still in css pixels
+                const dpr = getCanvasPixelRatio();
+                mainContext.setTransform(dpr, 0, 0, dpr, 0, 0);
 
                 // copy work canvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, workCanvas);
@@ -10859,7 +10891,7 @@ let lightSystem;
 class LightSystemPlugin
 {
     /** Create the global light system plugin.
-     *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to mainCanvasSize)
+     *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to mainCanvasSize, which is css pixels, so the lightmap is not scaled by canvasPixelRatio; pass mainCanvasSize.scale(getCanvasPixelRatio()) for a full resolution lightmap)
      *  @param {Color}   [ambientColor] - Color applied to unlit areas of the scene (defaults to BLACK = pitch dark). Set a small RGB like rgb(0.1,0.1,0.15) for a faint "moonlight" baseline so unlit areas aren't fully black.
      *  @example
      *  // simplest usage
@@ -10875,7 +10907,7 @@ class LightSystemPlugin
         this.enabled = true;
         /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
         this.ambientColor = (ambientColor || BLACK).copy();
-        /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize at init time) */
+        /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize in css pixels at init time, so it is not scaled by canvasPixelRatio) */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
 
         /** @property {WebGLTexture} - The lightmap texture */
@@ -11017,7 +11049,9 @@ class LightSystemPlugin
             //    canvas after we unbind
             glFlush();
             glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
-            glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+
+            // backing store size, mainCanvasSize is css pixels
+            glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
 
             // 5. composite: fullscreen quad, multiplicative blend onto glCanvas
             //    (scene * lightmap — unlit areas go to black, lit areas are
@@ -19600,7 +19634,9 @@ function render3DRenderShadowMap()
         // back to the frame with the map ready to sample
         r.shadowPass = false;
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+
+        // backing store size, mainCanvasSize is css pixels
+        gl.viewport(0, 0, glCanvas.width, glCanvas.height);
         gl.useProgram(r.shader);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture);
@@ -21484,9 +21520,14 @@ class ThreeJSPlugin
         if (!this.renderer) return; // headless mode
 
         // keep renderer size and css in sync with the LittleJS canvas
+        // mainCanvasSize is css pixels, three scales it by the pixel ratio
         const threeCanvas = this.renderer.domElement;
-        if (threeCanvas.width != mainCanvasSize.x || threeCanvas.height != mainCanvasSize.y)
+        const dpr = getCanvasPixelRatio();
+        const bufferSizeX = mainCanvasSize.x * dpr | 0;
+        const bufferSizeY = mainCanvasSize.y * dpr | 0;
+        if (threeCanvas.width != bufferSizeX || threeCanvas.height != bufferSizeY)
         {
+            this.renderer.setPixelRatio(dpr);
             this.renderer.setSize(mainCanvasSize.x, mainCanvasSize.y, false);
             this.camera.aspect = mainCanvasSize.x / mainCanvasSize.y;
             this.camera.updateProjectionMatrix();

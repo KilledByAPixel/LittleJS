@@ -242,17 +242,22 @@ function glPreRender(clear=true)
 
     ASSERT(!glBatchCount, 'glPreRender called with unflushed batch.');
 
+    // mainCanvasSize is css pixels, the backing store is scaled by the pixel
+    // ratio, render targets are offscreen so they are never scaled
+    const dpr = glRenderTarget ? 1 : getCanvasPixelRatio();
+    const bufferSizeX = mainCanvasSize.x * dpr | 0;
+    const bufferSizeY = mainCanvasSize.y * dpr | 0;
     if (!glRenderTarget)
     {
         // set to same size as main canvas, only when it changes because
         // setting it reallocates the drawing buffer and invalidates the frame
-        if (glCanvas.width !== mainCanvasSize.x || glCanvas.height !== mainCanvasSize.y)
+        if (glCanvas.width !== bufferSizeX || glCanvas.height !== bufferSizeY)
         {
-            glCanvas.width = mainCanvasSize.x;
-            glCanvas.height = mainCanvasSize.y;
+            glCanvas.width = bufferSizeX;
+            glCanvas.height = bufferSizeY;
         }
     }
-    glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+    glContext.viewport(0, 0, bufferSizeX, bufferSizeY);
     clear && glClearCanvas();
 
     // build the transform matrix
@@ -718,7 +723,10 @@ function glSetRenderTarget(texture, clear=false)
         glFlush();
         glRenderTarget = undefined;
         glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
-        glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+
+        // use the backing store size, mainCanvasSize is css pixels and may
+        // still be the render target's size when unwinding a layer redraw
+        glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
     }
 }
 

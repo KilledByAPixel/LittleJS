@@ -206,9 +206,9 @@ class Medal
     render(hidePercent=0)
     {
         const context = mainContext;
-        const width = min(medalDisplaySize.x, mainCanvas.width);
+        const width = min(medalDisplaySize.x, mainCanvasSize.x);
         const height = medalDisplaySize.y;
-        const x = mainCanvas.width - width;
+        const x = mainCanvasSize.x - width;
         const y = -height*hidePercent;
         const backgroundColor = hsl(0,0,.9);
 

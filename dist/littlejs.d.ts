@@ -391,8 +391,9 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let canvasMaxAspect: number;
-    /** Fixed size of the canvas, if enabled canvas size never changes
+    /** Fixed size of the canvas in css pixels, if enabled canvas size never changes
      * - you may also need to set mainCanvasSize if using screen space coords in startup
+     * - canvasPixelRatio still applies, it only scales the backing store
      *  @type {Vector2}
      *  @default Vector2()
      *  @memberof Settings */
@@ -412,13 +413,10 @@ declare module "littlejsengine" {
     export let tilesPixelated: boolean;
     /** Scale factor applied to the canvas resolution for sharper rendering
      *  Pass 1 for no scaling, a number for an explicit ratio, or undefined to track devicePixelRatio each frame.
-     *  - Raises the render resolution without changing how big the canvas looks,
-     *    so the image is sharper on high density displays
-     *  - mainCanvasSize scales with it, so a fixed cameraScale shows more of the
-     *    world and screen space sizes get smaller relative to the display; derive
-     *    cameraScale from mainCanvasSize to pin the view, see setCanvasPixelRatio
-     *  - Has no effect when canvasFixedSize is set, that is already a resolution
-     *  - Pixel art usually looks best left at 1 or clamped to whole numbers,
+     *  - Only the backing store scales, so this changes sharpness and nothing else
+     *  - mainCanvasSize, cameraScale, mousePos and screen space stay in css pixels,
+     *    so the same code draws the same size at any ratio
+     *  - Pixel art usually looks best left at 1 or set to whole numbers,
      *    a fractional ratio samples texels unevenly
      *  @type {number|undefined}
      *  @default
@@ -710,21 +708,19 @@ declare module "littlejsengine" {
     export function setTilesPixelated(pixelated: boolean): void;
     /** Set the canvas pixel ratio, scales the render resolution for sharper output
      *  Pass a number for an explicit ratio, or call with no argument to track devicePixelRatio each frame.
-     *  - The canvas still fills the same part of the window, it just renders at a
-     *    higher resolution, so nothing is blurred when scaled to the display
-     *  - mainCanvasSize scales with the ratio, so a fixed cameraScale will show
-     *    more of the world; derive cameraScale from mainCanvasSize to pin the view
+     *  - The canvas stays the same size on screen and everything draws the same
+     *    size, it just renders at a higher resolution so nothing looks blurry
+     *  - Game code is unaffected, it always works in css pixels
      *  @param {number} [pixelRatio]
      *  @example
      *  // render at native resolution, capped so phones don't pay for 3x
      *  setCanvasPixelRatio(min(devicePixelRatio, 2));
-     *
-     *  // keep 20 world units visible tall at any ratio, window size, or zoom
-     *  setCameraScale(mainCanvasSize.y / 20);
      *  @memberof Settings */
     export function setCanvasPixelRatio(pixelRatio?: number): void;
-    /** Get the pixel ratio currently applied to the canvas
+    /** Get the pixel ratio currently applied to the canvas backing store
      *  - Resolves canvasPixelRatio, falling back to devicePixelRatio when it is undefined
+     *  - Game code works in css pixels so this is rarely needed, it is for sizing
+     *    render targets and viewports that must match the backing store
      *  @return {number}
      *  @memberof Settings */
     export function getCanvasPixelRatio(): number;
@@ -1856,6 +1852,9 @@ declare module "littlejsengine" {
      *  @memberof Draw */
     export let mainCanvas: HTMLCanvasElement;
     /** 2d context for mainCanvas
+     *  - Scaled by canvasPixelRatio, so drawing to it is in css pixels
+     *  - getImageData and putImageData ignore that scale and work in backing store
+     *    pixels, so use workReadCanvas to read pixels back instead of this
      *  @type {CanvasRenderingContext2D}
      *  @memberof Draw */
     export let mainContext: CanvasRenderingContext2D;
@@ -1884,7 +1883,9 @@ declare module "littlejsengine" {
      *  @type {HTMLCanvasElement}
      *  @memberof Draw */
     export let backgroundCanvas: HTMLCanvasElement;
-    /** The size of the main canvas (and other secondary canvases)
+    /** The size of the main canvas (and other secondary canvases) in css pixels
+     *  - This is the screen space coordinate system, matching mousePos
+     *  - With canvasPixelRatio set the backing store is larger than this
      *  @type {Vector2}
      *  @memberof Draw */
     export let mainCanvasSize: Vector2;
@@ -3711,6 +3712,10 @@ declare module "littlejsengine" {
      * - Supports shadertoy style post processing shaders
      * - call new PostProcessPlugin() to setup post processing
      * - can be enabled to pass other canvases through a final shader
+     * - iResolution is the canvas backing store, so it grows with canvasPixelRatio
+     *   like shadertoy does. Effects that use it only for uv (p/iResolution.xy) are
+     *   unaffected, but ones that set a feature size from it, like scan lines, get
+     *   finer as the ratio rises. Divide by getCanvasPixelRatio() to pin them.
      * @namespace PostProcess
      */
     /** Global Post Process plugin object
@@ -3790,7 +3795,7 @@ declare module "littlejsengine" {
      */
     export class LightSystemPlugin {
         /** Create the global light system plugin.
-         *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to mainCanvasSize)
+         *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to mainCanvasSize, which is css pixels, so the lightmap is not scaled by canvasPixelRatio; pass mainCanvasSize.scale(getCanvasPixelRatio()) for a full resolution lightmap)
          *  @param {Color}   [ambientColor] - Color applied to unlit areas of the scene (defaults to BLACK = pitch dark). Set a small RGB like rgb(0.1,0.1,0.15) for a faint "moonlight" baseline so unlit areas aren't fully black.
          *  @example
          *  // simplest usage
@@ -3801,7 +3806,7 @@ declare module "littlejsengine" {
         enabled: boolean;
         /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
         ambientColor: Color;
-        /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize at init time) */
+        /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize in css pixels at init time, so it is not scaled by canvasPixelRatio) */
         textureSize: Vector2;
         /** @property {WebGLTexture} - The lightmap texture */
         texture: any;

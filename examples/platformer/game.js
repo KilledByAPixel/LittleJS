@@ -135,8 +135,8 @@ function gameRenderPost()
         context.strokeText(text, x, y);
         context.fillText(text, x, y);
     }
-    drawText('Score: ' + score,   LJS.mainCanvas.width*1/4, 20);
-    drawText('Deaths: ' + deaths, LJS.mainCanvas.width*3/4, 20);
+    drawText('Score: ' + score,   LJS.mainCanvasSize.x*1/4, 20);
+    drawText('Deaths: ' + deaths, LJS.mainCanvasSize.x*3/4, 20);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

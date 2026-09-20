@@ -81,9 +81,14 @@ class ThreeJSPlugin
         if (!this.renderer) return; // headless mode
 
         // keep renderer size and css in sync with the LittleJS canvas
+        // mainCanvasSize is css pixels, three scales it by the pixel ratio
         const threeCanvas = this.renderer.domElement;
-        if (threeCanvas.width != mainCanvasSize.x || threeCanvas.height != mainCanvasSize.y)
+        const dpr = getCanvasPixelRatio();
+        const bufferSizeX = mainCanvasSize.x * dpr | 0;
+        const bufferSizeY = mainCanvasSize.y * dpr | 0;
+        if (threeCanvas.width != bufferSizeX || threeCanvas.height != bufferSizeY)
         {
+            this.renderer.setPixelRatio(dpr);
             this.renderer.setSize(mainCanvasSize.x, mainCanvasSize.y, false);
             this.camera.aspect = mainCanvasSize.x / mainCanvasSize.y;
             this.camera.updateProjectionMatrix();

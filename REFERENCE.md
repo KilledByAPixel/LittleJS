@@ -296,8 +296,8 @@ canvasMaxSize = (3840, 2160)  // The max size of the canvas in css pixels
 canvasFixedSize = (0, 0)      // Fixed size of the canvas
 canvasMinAspect = 0           // Min aspect ratio, fits to height (0 = disabled)
 canvasMaxAspect = 0           // Max aspect ratio, fits to width (0 = disabled)
-canvasPixelRatio = 1          // Scales canvas resolution (undefined tracks devicePixelRatio)
-getCanvasPixelRatio()         // Get the pixel ratio currently applied to the canvas
+canvasPixelRatio = 1          // Scales render resolution only (undefined tracks devicePixelRatio)
+getCanvasPixelRatio()         // Get the pixel ratio currently applied to the backing store
 canvasClearColor = BLACK      // Color used to clear the canvas at start of frame
 canvasColorTiles = true       // Allow tiles to be tinted when drawn
 fontDefault = 'arial'         // Default font used for text rendering
@@ -315,7 +315,7 @@ tileDefaultBleed = 0      // How much smaller to draw tiles to prevent bleeding
 mainCanvas / mainContext     // The main 2D canvas and its context
 drawContext                  // Context currently being drawn to
 glCanvas / glContext         // The WebGL canvas and context
-mainCanvasSize               // Size of the main canvas in pixels
+mainCanvasSize               // Size of the main canvas in css pixels (screen space)
 backgroundCanvas             // Extra canvas composited behind the engine canvases
 setBackgroundCanvas(canvas)  // Set a plugin canvas to include when combining
 setCursor(cursorStyle)       // Set the CSS cursor style

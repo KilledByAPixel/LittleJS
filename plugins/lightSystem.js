@@ -37,7 +37,7 @@ let lightSystem;
 class LightSystemPlugin
 {
     /** Create the global light system plugin.
-     *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to mainCanvasSize)
+     *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to mainCanvasSize, which is css pixels, so the lightmap is not scaled by canvasPixelRatio; pass mainCanvasSize.scale(getCanvasPixelRatio()) for a full resolution lightmap)
      *  @param {Color}   [ambientColor] - Color applied to unlit areas of the scene (defaults to BLACK = pitch dark). Set a small RGB like rgb(0.1,0.1,0.15) for a faint "moonlight" baseline so unlit areas aren't fully black.
      *  @example
      *  // simplest usage
@@ -53,7 +53,7 @@ class LightSystemPlugin
         this.enabled = true;
         /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
         this.ambientColor = (ambientColor || BLACK).copy();
-        /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize at init time) */
+        /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize in css pixels at init time, so it is not scaled by canvasPixelRatio) */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
 
         /** @property {WebGLTexture} - The lightmap texture */
@@ -195,7 +195,9 @@ class LightSystemPlugin
             //    canvas after we unbind
             glFlush();
             glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
-            glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+
+            // backing store size, mainCanvasSize is css pixels
+            glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
 
             // 5. composite: fullscreen quad, multiplicative blend onto glCanvas
             //    (scene * lightmap — unlit areas go to black, lit areas are

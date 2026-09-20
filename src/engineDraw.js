@@ -28,6 +28,9 @@
 let mainCanvas;
 
 /** 2d context for mainCanvas
+ *  - Scaled by canvasPixelRatio, so drawing to it is in css pixels
+ *  - getImageData and putImageData ignore that scale and work in backing store
+ *    pixels, so use workReadCanvas to read pixels back instead of this
  *  @type {CanvasRenderingContext2D}
  *  @memberof Draw */
 let mainContext;
@@ -63,7 +66,9 @@ let workReadContext;
  *  @memberof Draw */
 let backgroundCanvas;
 
-/** The size of the main canvas (and other secondary canvases)
+/** The size of the main canvas (and other secondary canvases) in css pixels
+ *  - This is the screen space coordinate system, matching mousePos
+ *  - With canvasPixelRatio set the backing store is larger than this
  *  @type {Vector2}
  *  @memberof Draw */
 let mainCanvasSize = vec2();
@@ -1226,7 +1231,9 @@ function setBackgroundCanvas(canvas) { backgroundCanvas = canvas; }
  *  @memberof Draw */
 function combineCanvases()
 {
-    const w = mainCanvasSize.x, h = mainCanvasSize.y;
+    // this composites raw canvases so it works in backing store pixels,
+    // mainCanvasSize is css pixels and would throw away resolution
+    const w = mainCanvas.width, h = mainCanvas.height;
     workCanvas.width = w;
     workCanvas.height = h;
     // remove background alpha — explicit fillStyle so a previous caller
@@ -1237,7 +1244,12 @@ function combineCanvases()
         workContext.drawImage(backgroundCanvas, 0, 0, w, h);
     glCopyToContext(workContext);
     workContext.drawImage(mainCanvas, 0, 0);
+
+    // draw back 1:1, mainContext is scaled to css pixels
+    mainContext.save();
+    mainContext.setTransform(1, 0, 0, 1, 0, 0);
     mainContext.drawImage(workCanvas, 0, 0);
+    mainContext.restore();
 }
 
 // Internal: bake a color/additive-color tint into workReadCanvas at the

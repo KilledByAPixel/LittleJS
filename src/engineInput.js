@@ -582,7 +582,7 @@ function inputInit()
         const rect = mainCanvas.getBoundingClientRect();
         const px = percent(mousePos.x, rect.left, rect.right);
         const py = percent(mousePos.y, rect.top, rect.bottom);
-        return vec2(px*mainCanvas.width, py*mainCanvas.height);
+        return vec2(px*mainCanvasSize.x, py*mainCanvasSize.y);
     }
 }
 

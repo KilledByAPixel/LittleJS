@@ -75,8 +75,9 @@ let canvasMinAspect = 0;
  *  @memberof Settings */
 let canvasMaxAspect = 0;
 
-/** Fixed size of the canvas, if enabled canvas size never changes
+/** Fixed size of the canvas in css pixels, if enabled canvas size never changes
  * - you may also need to set mainCanvasSize if using screen space coords in startup
+ * - canvasPixelRatio still applies, it only scales the backing store
  *  @type {Vector2}
  *  @default Vector2()
  *  @memberof Settings */
@@ -99,13 +100,10 @@ let tilesPixelated = true;
 
 /** Scale factor applied to the canvas resolution for sharper rendering
  *  Pass 1 for no scaling, a number for an explicit ratio, or undefined to track devicePixelRatio each frame.
- *  - Raises the render resolution without changing how big the canvas looks,
- *    so the image is sharper on high density displays
- *  - mainCanvasSize scales with it, so a fixed cameraScale shows more of the
- *    world and screen space sizes get smaller relative to the display; derive
- *    cameraScale from mainCanvasSize to pin the view, see setCanvasPixelRatio
- *  - Has no effect when canvasFixedSize is set, that is already a resolution
- *  - Pixel art usually looks best left at 1 or clamped to whole numbers,
+ *  - Only the backing store scales, so this changes sharpness and nothing else
+ *  - mainCanvasSize, cameraScale, mousePos and screen space stay in css pixels,
+ *    so the same code draws the same size at any ratio
+ *  - Pixel art usually looks best left at 1 or set to whole numbers,
  *    a fractional ratio samples texels unevenly
  *  @type {number|undefined}
  *  @default
@@ -476,22 +474,20 @@ function setTilesPixelated(pixelated) { tilesPixelated = pixelated; }
 
 /** Set the canvas pixel ratio, scales the render resolution for sharper output
  *  Pass a number for an explicit ratio, or call with no argument to track devicePixelRatio each frame.
- *  - The canvas still fills the same part of the window, it just renders at a
- *    higher resolution, so nothing is blurred when scaled to the display
- *  - mainCanvasSize scales with the ratio, so a fixed cameraScale will show
- *    more of the world; derive cameraScale from mainCanvasSize to pin the view
+ *  - The canvas stays the same size on screen and everything draws the same
+ *    size, it just renders at a higher resolution so nothing looks blurry
+ *  - Game code is unaffected, it always works in css pixels
  *  @param {number} [pixelRatio]
  *  @example
  *  // render at native resolution, capped so phones don't pay for 3x
  *  setCanvasPixelRatio(min(devicePixelRatio, 2));
- *
- *  // keep 20 world units visible tall at any ratio, window size, or zoom
- *  setCameraScale(mainCanvasSize.y / 20);
  *  @memberof Settings */
 function setCanvasPixelRatio(pixelRatio) { canvasPixelRatio = pixelRatio; }
 
-/** Get the pixel ratio currently applied to the canvas
+/** Get the pixel ratio currently applied to the canvas backing store
  *  - Resolves canvasPixelRatio, falling back to devicePixelRatio when it is undefined
+ *  - Game code works in css pixels so this is rarely needed, it is for sizing
+ *    render targets and viewports that must match the backing store
  *  @return {number}
  *  @memberof Settings */
 function getCanvasPixelRatio() { return canvasPixelRatio ?? (devicePixelRatio || 1); }

@@ -1729,7 +1729,9 @@ function render3DRenderShadowMap()
         // back to the frame with the map ready to sample
         r.shadowPass = false;
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+
+        // backing store size, mainCanvasSize is css pixels
+        gl.viewport(0, 0, glCanvas.width, glCanvas.height);
         gl.useProgram(r.shader);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture);

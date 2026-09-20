@@ -3,6 +3,10 @@
  * - Supports shadertoy style post processing shaders
  * - call new PostProcessPlugin() to setup post processing
  * - can be enabled to pass other canvases through a final shader
+ * - iResolution is the canvas backing store, so it grows with canvasPixelRatio
+ *   like shadertoy does. Effects that use it only for uv (p/iResolution.xy) are
+ *   unaffected, but ones that set a feature size from it, like scan lines, get
+ *   finer as the ratio rises. Divide by getCanvasPixelRatio() to pin them.
  * @namespace PostProcess
  */
 
@@ -126,13 +130,18 @@ class PostProcessPlugin
             glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
             if (includeMainCanvas)
             {
-                // copy main canvas to work canvas
-                workCanvas.width = mainCanvasSize.x;
-                workCanvas.height = mainCanvasSize.y;
+                // copy main canvas to work canvas at the backing store size,
+                // mainCanvasSize is css pixels so it would lose resolution
+                workCanvas.width = mainCanvas.width;
+                workCanvas.height = mainCanvas.height;
                 glCopyToContext(workContext);
                 workContext.drawImage(mainCanvas, 0, 0);
                 mainCanvas.width |= 0; // setting size clears the main canvas
 
+                // that also reset the transform, restore it so anything drawn
+                // later this frame is still in css pixels
+                const dpr = getCanvasPixelRatio();
+                mainContext.setTransform(dpr, 0, 0, dpr, 0, 0);
 
                 // copy work canvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, workCanvas);
