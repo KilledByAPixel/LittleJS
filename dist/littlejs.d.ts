@@ -6306,6 +6306,8 @@ declare module "littlejsengine" {
         instancing: boolean;
         /** @property {boolean} - Sample textures through mipmaps so they do not shimmer in the distance, false uses each texture's own filtering like 2D */
         mipmaps: boolean;
+        /** @property {boolean} - Draw state: keep texture pixels hard edged, no mipmaps and no blending between them, set per object by pixelated */
+        pixelated: boolean;
         /** @property {number} - Anisotropic filtering for textures seen at an angle, 1 to 16, 1 is off; needs mipmaps */
         anisotropy: number;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
@@ -6633,6 +6635,8 @@ declare module "littlejsengine" {
         softShadow: number;
         /** @property {boolean} - A sprite stands on world up instead of tilting toward the camera */
         upright: boolean;
+        /** @property {boolean} - Keep this object's texture pixels hard edged, for pixel art that should not blur or bleed */
+        pixelated: boolean;
         /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D looks; set mass to use 2D physics */
         sync2D: boolean;
         /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off; on for a sprite */
@@ -7020,6 +7024,42 @@ declare module "littlejsengine" {
         radius: number;
         /** @property {boolean} - Shine along the light's forward axis from far away instead of out from its position, with no falloff */
         directional: boolean;
+    }
+    /**
+     * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
+     * - An EngineObject3D, so move its pos3D to follow something, or parent it to an object
+     * - Destroy it to hand the camera back, and it stops driving the camera
+     * - Every part of it is a field, so a game can change the buttons, speeds and limits
+     * @extends EngineObject3D
+     * @memberof Render3D
+     * @example
+     * new CameraControl3D(vec3(0, 1, 0), 15); // look at a point from 15 units away
+     */
+    export class CameraControl3D extends EngineObject3D {
+        /** Create a camera control, it drives render3D.camera every frame
+         *  @param {Vector3} [target] - The point to look at, its pos3D
+         *  @param {number} [distance] - How far the camera sits from the target
+         *  @param {number} [pitch] - Angle above the horizon, PI/2 looks straight down
+         *  @param {number} [idleSpin] - Turned each frame while not dragging, 0 holds still */
+        constructor(target?: Vector3, distance?: number, pitch?: number, idleSpin?: number);
+        /** @property {number} - How far the camera sits from the target */
+        distance: number;
+        /** @property {number} - Angle above the horizon */
+        pitch: number;
+        /** @property {number} - Turned each frame while not dragging */
+        idleSpin: number;
+        /** @property {number} - Angle around the target, dragging changes it */
+        yaw: number;
+        /** @property {number} - Mouse button that turns the camera, 0 is left and 2 is right */
+        dragButton: number;
+        /** @property {number} - How far dragging a pixel turns the camera */
+        dragSpeed: number;
+        /** @property {number} - How much one wheel notch zooms, 0 turns zooming off */
+        zoomSpeed: number;
+        /** @property {Vector2} - Closest and furthest the wheel can zoom to */
+        zoomRange: Vector2;
+        /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top */
+        pitchRange: Vector2;
     }
     /**
      * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter

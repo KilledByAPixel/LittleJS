@@ -9,7 +9,7 @@ class Spinner extends EngineObject3D
     }
 }
 
-let spinners = [], orbit = 0;
+let spinners = [];
 
 function buildShapes()
 {
@@ -39,6 +39,7 @@ function gameInit()
     render3D.fogEnd = 40;
     render3D.lightDirection = vec3(-.5,-1,-.3).normalize();
     render3D.ambientColor = rgb(.35,.35,.4);
+    new CameraControl3D(vec3(0,1,0), 15, .4, .003); // drag to turn, wheel to zoom
 
     // checkerboard floor
     const checker = (x, z)=> hsl(.3, .2, (x+z)/2&1 ? .5 : .4);
@@ -65,10 +66,6 @@ function gameUpdate()
     }
     for (const s of spinners)
         s.specular = keyIsDown('KeyS');
-
-    // drag to orbit
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .003;
-    render3D.camera.orbit(vec3(0,1,0), 15, orbit, .4);
 }
 
 function gameRenderPost()

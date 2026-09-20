@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, Ray3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, Ray3D, CameraControl3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -1825,5 +1825,31 @@ test('a sprite object turns with its roll and only a sync2D object runs the 2D p
     o.updatePhysics();
     assert.ok(o.pos.x > 0);
     for (const object of engineObjects) object.destroy();
+    engineObjects.length = 0;
+});
+
+test('CameraControl3D turns the camera with the mouse and stops when destroyed', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const control = new CameraControl3D(vec3(0, 1, 0), 12, .3);
+    control.idleSpin = .1;
+    control.update();
+    near(control.yaw, .1); // it spins while nothing drags it
+    near(render3D.camera.pos.distance(vec3(0, 1, 0)), 12);
+    control.pitch = 9;
+    control.update();
+    near(control.pitch, control.pitchRange.y); // it cannot tip over the top
+    assert.equal(control.mesh, undefined);
+    control.destroy();
+    engineObjects.length = 0;
+});
+
+test('pixelated is part of the draw state, so a batch splits on it', () =>
+{
+    const o = new EngineObject3D(vec3());
+    assert.equal(o.pixelated, false);
+    assert.equal(render3D.pixelated, false);
+    o.destroy();
     engineObjects.length = 0;
 });

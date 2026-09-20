@@ -137,6 +137,7 @@ export
     buildText3D,
     HeightMap,
     Light3D,
+    CameraControl3D,
     ParticleEmitter3D,
     Trail3D,
     engineObjectsCollect3D,

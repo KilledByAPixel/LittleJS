@@ -1,5 +1,5 @@
 const terrainSize = 50, terrainHeight = 12, terrainSamples = 48;
-let terrain, ground, ball, orbit = 0;
+let terrain, ground, ball;
 
 class Ball extends EngineObject3D
 {
@@ -79,6 +79,8 @@ function gameInit()
     // soft shadows follow the ground
     ball = new Ball;
     render3D.softShadowHeight = terrain;
+
+    new CameraControl3D(vec3(0,3,0), 35, .5, .002);
 }
 
 function gameUpdate()
@@ -100,9 +102,6 @@ function gameUpdate()
         }
     }
 
-    // drag to orbit
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
-    render3D.camera.orbit(vec3(0,3,0), 35, orbit, .5);
 }
 
 function gameRenderPost()

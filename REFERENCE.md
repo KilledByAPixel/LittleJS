@@ -831,7 +831,7 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 - See the `examples/shorts/render3d*.js` demos - features: render3dShapes, render3dBillboards, render3dHeightMap
   terrain, render3dCollision with picking, render3dLights, render3dParticles, render3dTrails, render3dText,
   render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene, render3dInstancing, render3dTextures,
-  render3dGlow;
+  render3dGlow; and `examples/3d` is a full example with all of it in one scene
   games:
   render3dDodgeGame, render3dRacerGame, render3dPuzzleGame
 
@@ -856,6 +856,9 @@ render3D.camera.orthographic = 20     // visible height in world units with no p
                                       // shrink things; 0 is the normal perspective view; near and far still clip
 render3D.camera.lookAt(target)        // set the rotation to face a target now, clears roll
 render3D.camera.orbit(target, distance, yaw, pitch=.5) // put the camera on an orbit looking at the target
+new CameraControl3D(target, distance, pitch=.4, idleSpin=0) // an object that orbits the camera around its pos3D:
+                               // drag to turn, wheel to zoom; fields for dragButton, dragSpeed, zoomSpeed, zoomRange,
+                               // pitchRange, yaw and idleSpin; destroy it to hand the camera back
 render3D.camera.follow(target, offset, percent=1) // chase camera: ease toward target + offset and look at it, percent
                                                   // is how far it moves each call, so call it every frame, from
                                                   // gameUpdatePost once the target has moved
@@ -934,6 +937,8 @@ render3D.frustumCulling = true // drawMesh skips meshes whose bounding sphere is
                                // space the camera can see
 render3D.mipmaps = true        // textures sample through mipmaps so they do not shimmer far away, false keeps each
                                // texture's own filtering like 2D; magnification follows tilesPixelated either way
+obj.pixelated = true           // keep one object's texture pixels hard edged, no mipmaps and no blending between
+                               // them, for pixel art that should not blur or bleed into its neighbors on the sheet
 render3D.anisotropy = 4        // sharper textures seen at an angle, 1 to 16, 1 is off; needs mipmaps
 render3D.instancing = true     // every use of a mesh in the opaque stage is one draw call however many there are,
                                // mesh.instanced = false keeps one mesh drawing in object order instead

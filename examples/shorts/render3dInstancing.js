@@ -1,6 +1,5 @@
 // thousands of tumbling cubes, all of them in one draw call
 const cubeCount = 5000;
-let orbit = 0;
 
 class Cube extends EngineObject3D
 {
@@ -23,6 +22,8 @@ function gameInit()
     const cube = buildBox(.6);
     for (let i = cubeCount; i--;)
         new Cube(randVector3(rand(4, 30)), cube);
+
+    new CameraControl3D(vec3(), 40, .3, .002);
 }
 
 function gameUpdate()
@@ -30,8 +31,6 @@ function gameUpdate()
     // space toggles instancing, watch the draw calls change
     if (keyWasPressed('Space'))
         render3D.instancing = !render3D.instancing;
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
-    render3D.camera.orbit(vec3(), 40, orbit, .3);
 }
 
 function gameRenderPost()

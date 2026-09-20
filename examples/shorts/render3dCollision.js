@@ -1,7 +1,7 @@
 const arenaSize = 16;
 const boxPos = vec3(3,1,0), boxSize = vec3(3,2,3);
 const cylinderPos = vec3(-3,1.5,0), cylinderRadius = 1.2, cylinderHeight = 3;
-let ballMesh, balls = [], orbit = 0;
+let ballMesh, balls = [];
 
 class Ball extends EngineObject3D
 {
@@ -59,6 +59,10 @@ function gameInit()
         const pos = vec3(rand(-6,6), rand(3,8), rand(-6,6));
         balls.push(new Ball(pos));
     }
+
+    // the left button tosses balls, so turn the camera with the right one
+    const camera = new CameraControl3D(vec3(0,1,0), 16, .5, .002);
+    camera.dragButton = 2;
 }
 
 function gameUpdate()
@@ -73,9 +77,6 @@ function gameUpdate()
             picked.velocity3D = picked.velocity3D.add(vec3(rand(-.1,.1), .3, rand(-.1,.1)));
     }
 
-    // right drag to orbit, the left button tosses balls
-    orbit += mouseIsDown(2) ? -mouseDeltaScreen.x*.01 : .002;
-    render3D.camera.orbit(vec3(0,1,0), 16, orbit, .5);
 }
 
 function gameRenderPost()

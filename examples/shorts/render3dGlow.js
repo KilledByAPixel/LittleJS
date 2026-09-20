@@ -17,7 +17,6 @@ class Orb extends EngineObject3D
     }
 }
 
-let orbit = 0;
 
 function gameInit()
 {
@@ -35,11 +34,6 @@ function gameInit()
         new EngineObject3D(vec3(11, 2.5).rotateY(i/6*2*PI), pillar);
     for (let i = 4; i--;)
         new Orb(i*PI/2, hsl(i/4,1,.6));
-}
 
-function gameUpdate()
-{
-    // drag to orbit
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
-    render3D.camera.orbit(vec3(0,2,0), 20, orbit, .25);
+    new CameraControl3D(vec3(0,2,0), 20, .25, .002);
 }

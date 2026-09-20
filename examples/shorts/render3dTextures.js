@@ -1,4 +1,3 @@
-let orbit = 0;
 
 // paint a brick pattern, any image or canvas can be a texture
 function makeBrickTexture()
@@ -34,15 +33,15 @@ function gameInit()
     // so the shadow takes the sprite's shape
     const sign = new EngineObject3D(vec3(-4, 2.5, -5), buildGrid(vec2(5), 1), tile(3, 16));
     sign.rotation3D = vec3(PI/2, PI, 0); // stand it up with its face toward the light
+
+    new CameraControl3D(vec3(0,1,0), 14, .4, .002);
 }
 
 function gameUpdate()
 {
-    // space toggles mipmaps, drag to orbit
+    // space toggles mipmaps
     if (keyWasPressed('Space'))
         render3D.mipmaps = !render3D.mipmaps;
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
-    render3D.camera.orbit(vec3(0,1,0), 14, orbit, .4);
 }
 
 function gameRenderPost()

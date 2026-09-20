@@ -27,7 +27,8 @@ class Player extends EngineObject3D
         this.softShadow = 2.5;
         this.speed = vec3();
         this.addChild(new Light3D(vec3(0,1,0), 10, hsl(.55,1,.7)));
-        this.addChild(new Trail3D(vec3(0,-.8,0), 1, .5, undefined, hsl(.55,1,.7,.4), hsl(.55,1,.7,0), true));
+        const trailColor = hsl(.55,1,.7,.4), trailFade = trailColor.withAlpha(0);
+        this.addChild(new Trail3D(vec3(0,-.8,0), 1, .5, undefined, trailColor, trailFade, true));
     }
     update()
     {
@@ -68,7 +69,8 @@ class Orb extends EngineObject3D
     update()
     {
         // bob in place until the player reaches it
-        this.pos3D.y = terrain.getHeight(this.pos3D.x, this.pos3D.z) + 2 + sin(time*2 + this.pos3D.x)*.3;
+        const bob = sin(time*2 + this.pos3D.x)*.3;
+        this.pos3D.y = terrain.getHeight(this.pos3D.x, this.pos3D.z) + 2 + bob;
         if (this.pos3D.distance(player.pos3D) > 2.5)
             return;
 
@@ -152,16 +154,21 @@ function gameInit()
         treeObject.cullBackFaces = true;
     }
 
-    // sprites from the tile sheet stand up as billboards around the island
-    for (let i = 10; i--;)
+    // crystals around the island, a cone and its mirror image welded together
+    const crystal = new Mesh()
+        .combine(buildCone(2.5, 4, 6), buildMatrix(vec3(0,2,0)))
+        .combine(buildCone(2.5, 2, 6), buildMatrix(vec3(0,1,0), vec3(PI,0,0)));
+    for (let i = 14; i--;)
     {
-        const pos = vec3(terrainSize/2 - 20).rotateY(i/10*2*PI);
-        pos.y = terrain.getHeight(pos.x, pos.z) + 1.5;
-        const sprite = new EngineObject3D(pos, undefined, tile(i%4, 16));
-        sprite.color = hsl(i/10,.7,.6);
-        sprite.size3D = vec3(4);
-        sprite.upright = true;
-        sprite.softShadow = 2;
+        const pos = randomGroundPos();
+        pos.y = terrain.getHeight(pos.x, pos.z);
+        if (pos.y < 2)
+            continue;
+        const rock = new EngineObject3D(pos, crystal);
+        rock.color = hsl(.55 + rand(-.1,.1), .5, .6);
+        rock.rotation3D.y = rand(2*PI);
+        rock.scale3D = vec3(rand(1,1.8));
+        rock.specular = .6;
     }
 
     // the title and the score, extruded from the engine font
@@ -187,7 +194,8 @@ function gameUpdatePost()
 
 function gameRenderPost()
 {
-    drawTextScreen('arrow keys: roll / collect the orbs', vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40), 30);
+    const text = 'arrow keys: roll / collect the orbs';
+    drawTextScreen(text, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40), 30);
 }
 
 engineInit(gameInit, ()=>{}, gameUpdatePost, ()=>{}, gameRenderPost, ['tiles.png']);

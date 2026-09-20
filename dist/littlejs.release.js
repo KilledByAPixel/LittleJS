@@ -17143,7 +17143,7 @@ function render3DCanDraw()
 }
 
 // the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
-const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'lighting', 'receiveShadow', 'specular'];
+const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'lighting', 'receiveShadow', 'specular', 'pixelated'];
 
 // a copy of the current draw state
 function render3DCaptureBatchState()
@@ -17216,6 +17216,7 @@ function render3DSetObjectState(o)
     r.specular = o?.specular || 0;
     r.receiveShadow = !o || o.receiveShadow;
     r.cullBackFaces = !!o?.cullBackFaces;
+    r.pixelated = !!o?.pixelated;
     r.depthTest = true;
 }
 
@@ -17471,6 +17472,8 @@ class Render3DPlugin
         this.instancing = true;
         /** @property {boolean} - Sample textures through mipmaps so they do not shimmer in the distance, false uses each texture's own filtering like 2D */
         this.mipmaps = true;
+        /** @property {boolean} - Draw state: keep texture pixels hard edged, no mipmaps and no blending between them, set per object by pixelated */
+        this.pixelated = false;
         /** @property {number} - Anisotropic filtering for textures seen at an angle, 1 to 16, 1 is off; needs mipmaps */
         this.anisotropy = 4;
 
@@ -18511,20 +18514,23 @@ function render3DUpdateSamplers()
     if (r.samplerKey === key) return;
     r.samplerKey = key;
     const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
-    r.samplers = [gl.CLAMP_TO_EDGE, gl.REPEAT].map(wrap =>
+    // four samplers: clamped and wrapping, each smooth or hard edged
+    r.samplers = [false, true].flatMap(pixelated => [gl.CLAMP_TO_EDGE, gl.REPEAT].map(wrap =>
     {
         const sampler = gl.createSampler();
-        gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, tilesPixelated ? gl.NEAREST : gl.LINEAR);
-        gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
+        const sharp = pixelated || tilesPixelated;
+        gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, sharp ? gl.NEAREST : gl.LINEAR);
+        gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, pixelated ? gl.NEAREST
+            : tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
         gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrap);
         gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrap);
-        if (anisotropy)
+        if (anisotropy && !pixelated)
         {
             const most = gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
             gl.samplerParameterf(sampler, anisotropy.TEXTURE_MAX_ANISOTROPY_EXT, clamp(r.anisotropy, 1, most));
         }
         return sampler;
-    });
+    }));
 }
 
 // bind the texture of a tile or texture, white when there is none or it is not loaded, with the 3D sampler that
@@ -18537,8 +18543,8 @@ function render3DBindTexture(tileInfo)
     gl.bindTexture(gl.TEXTURE_2D, texture);
     if (!r.mipmaps)
         return gl.bindSampler(0, null); // the texture's own filtering, as in 2D
-    gl.bindSampler(0, r.samplers[textureInfo?.wrap ? 1 : 0]);
-    if (!r.mipmapped.has(texture))
+    gl.bindSampler(0, r.samplers[(textureInfo?.wrap ? 1 : 0) + (r.pixelated ? 2 : 0)]);
+    if (!r.pixelated && !r.mipmapped.has(texture)) // a hard edged draw never reads them
     {
         r.mipmapped.add(texture);
         gl.generateMipmap(gl.TEXTURE_2D);
@@ -19935,6 +19941,8 @@ class EngineObject3D extends EngineObject
         this.softShadow = 0;
         /** @property {boolean} - A sprite stands on world up instead of tilting toward the camera */
         this.upright = false;
+        /** @property {boolean} - Keep this object's texture pixels hard edged, for pixel art that should not blur or bleed */
+        this.pixelated = false;
         /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D looks; set mass to use 2D physics */
         this.sync2D = false;
         /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off; on for a sprite */
@@ -20124,6 +20132,69 @@ class Light3D extends EngineObject3D
     }
 
     /** Lights draw nothing */
+    render3D() {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
+ * - An EngineObject3D, so move its pos3D to follow something, or parent it to an object
+ * - Destroy it to hand the camera back, and it stops driving the camera
+ * - Every part of it is a field, so a game can change the buttons, speeds and limits
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * new CameraControl3D(vec3(0, 1, 0), 15); // look at a point from 15 units away
+ */
+class CameraControl3D extends EngineObject3D
+{
+    /** Create a camera control, it drives render3D.camera every frame
+     *  @param {Vector3} [target] - The point to look at, its pos3D
+     *  @param {number} [distance] - How far the camera sits from the target
+     *  @param {number} [pitch] - Angle above the horizon, PI/2 looks straight down
+     *  @param {number} [idleSpin] - Turned each frame while not dragging, 0 holds still */
+    constructor(target=vec3(), distance=10, pitch=.4, idleSpin=0)
+    {
+        super(target);
+        this.size3D = vec3(); // not a solid thing to pick or collect
+        /** @property {number} - How far the camera sits from the target */
+        this.distance = distance;
+        /** @property {number} - Angle above the horizon */
+        this.pitch = pitch;
+        /** @property {number} - Turned each frame while not dragging */
+        this.idleSpin = idleSpin;
+        /** @property {number} - Angle around the target, dragging changes it */
+        this.yaw = 0;
+        /** @property {number} - Mouse button that turns the camera, 0 is left and 2 is right */
+        this.dragButton = 0;
+        /** @property {number} - How far dragging a pixel turns the camera */
+        this.dragSpeed = .01;
+        /** @property {number} - How much one wheel notch zooms, 0 turns zooming off */
+        this.zoomSpeed = .1;
+        /** @property {Vector2} - Closest and furthest the wheel can zoom to */
+        this.zoomRange = vec2(distance/4, distance*3);
+        /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top */
+        this.pitchRange = vec2(-.2, 1.4);
+    }
+
+    /** Read the mouse and put the camera on its orbit, called automatically each frame */
+    update()
+    {
+        if (mouseIsDown(this.dragButton))
+        {
+            // the scene follows the drag
+            this.yaw -= mouseDeltaScreen.x * this.dragSpeed;
+            this.pitch += mouseDeltaScreen.y * this.dragSpeed;
+        }
+        else
+            this.yaw += this.idleSpin;
+        this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
+        if (this.zoomSpeed && mouseWheel)
+            this.distance = clamp(this.distance * (1 + sign(mouseWheel) * this.zoomSpeed), this.zoomRange.x, this.zoomRange.y);
+        render3D.camera.orbit(this.getWorldPos3D(), this.distance, this.yaw, this.pitch);
+    }
+
+    /** Camera controls draw nothing */
     render3D() {}
 }
 

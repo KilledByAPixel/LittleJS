@@ -27,8 +27,10 @@ function gameInit()
 
 function gameUpdate()
 {
-    // sway the title so the sides catch the light, drag to orbit
+    // sway the title so the sides catch the light
     title.rotation3D.y = sin(time)*.5;
+
+    // orbiting the camera by hand, which is all CameraControl3D does for the other demos
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
     render3D.camera.orbit(vec3(0,2,0), 16, orbit, .35);
 }

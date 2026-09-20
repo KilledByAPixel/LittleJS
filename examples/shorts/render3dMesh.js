@@ -21,7 +21,7 @@ f 5 9 6
 f 7 10 8
 `;
 
-let model, orbit = 0, name = 'house';
+let model, name = 'house';
 
 function gameInit()
 {
@@ -49,6 +49,8 @@ function gameInit()
         setModel(parseOBJ(await file.text()));
         name = file.name;
     });
+
+    new CameraControl3D(vec3(0,2,0), 10, .35); // no idle spin, the model is for inspecting
 }
 
 // center the model, make it 4 units across, and stand it on the floor
@@ -60,14 +62,12 @@ function setModel(mesh)
 
 function gameUpdate()
 {
-    // space toggles shading, drag to orbit with no idle spin
+    // space toggles shading
     if (keyWasPressed('Space'))
     {
         render3D.smoothShading = !render3D.smoothShading;
         model.mesh.computeNormals(render3D.smoothShading);
     }
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : 0;
-    render3D.camera.orbit(vec3(0,2,0), 10, orbit, .35);
 }
 
 function gameRenderPost()

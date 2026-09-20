@@ -1,4 +1,4 @@
-let orbit = 0, fountain;
+let fountain;
 
 function gameInit()
 {
@@ -47,12 +47,12 @@ function gameInit()
         1.5, .25, .1, .25, 1,               // time, sizeStart, sizeEnd, speed, damping
         -.008, .1, .1                       // gravity, fade, randomness
     );
+
+    new CameraControl3D(vec3(0,2,0), 14, .3, .002);
 }
 
 function gameUpdate()
 {
-    // sway the fountain, drag to orbit
+    // sway the fountain
     fountain.rotation3D.z = sin(time)*.5;
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
-    render3D.camera.orbit(vec3(0,2,0), 14, orbit, .3);
 }

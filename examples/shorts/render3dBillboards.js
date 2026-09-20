@@ -6,6 +6,7 @@ class Sprite extends EngineObject3D
         super(pos, undefined, tileInfo, color);
         this.size3D = vec3(2);
         this.softShadow = 2;
+        this.pixelated = true; // hard edged pixels, so tiles do not blur or bleed
         this.phase = rand(2*PI);
     }
     update()
@@ -16,7 +17,6 @@ class Sprite extends EngineObject3D
     }
 }
 
-let orbit = 0;
 
 function gameInit()
 {
@@ -36,11 +36,6 @@ function gameInit()
         const color = hsl(i/12,.8,.7);
         new Sprite(pos, tile(i%4, 16), color);
     }
-}
 
-function gameUpdate()
-{
-    // drag to orbit
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .003;
-    render3D.camera.orbit(vec3(), 15, orbit, .5);
+    new CameraControl3D(vec3(), 15, .5, .003); // drag to turn, wheel to zoom
 }

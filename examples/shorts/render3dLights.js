@@ -16,7 +16,6 @@ class Lamp extends EngineObject3D
     }
 }
 
-let orbit = 0;
 
 function gameInit()
 {
@@ -39,11 +38,6 @@ function gameInit()
     const fill = new Light3D(vec3(), 1, hsl(.6,1,.2));
     fill.directional = true;
     fill.lookAt(vec3(-1,-1,-.5));
-}
 
-function gameUpdate()
-{
-    // drag to orbit
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
-    render3D.camera.orbit(vec3(0,1,0), 15, orbit, .5);
+    new CameraControl3D(vec3(0,1,0), 15, .5, .002);
 }

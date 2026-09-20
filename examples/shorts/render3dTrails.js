@@ -33,7 +33,6 @@ class Flag extends EngineObject3D
     }
 }
 
-let orbit = 0;
 
 function gameInit()
 {
@@ -46,13 +45,8 @@ function gameInit()
     new Flag(vec3(0,4.5,0));
     for (let i = 3; i--;)
         new Comet(hsl(i/3,1,.6), i*2*PI/3);
-}
 
-function gameUpdate()
-{
-    // drag to orbit
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
-    render3D.camera.orbit(vec3(0,3,0), 16, orbit, .3);
+    new CameraControl3D(vec3(0,3,0), 16, .3, .002);
 }
 
 function drawRainbow()
