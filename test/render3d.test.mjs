@@ -1853,3 +1853,18 @@ test('pixelated is part of the draw state, so a batch splits on it', () =>
     o.destroy();
     engineObjects.length = 0;
 });
+
+test('a point light with no radius is off, only a directional light carries the direction marker', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const off = new Light3D(vec3(), 5, RED);
+    off.radius = 0; // the other off switch, alpha 0 is the first
+    const sun = new Light3D(vec3(), 5, WHITE);
+    sun.directional = true;
+    render3D.camera.pos = vec3(0, 0, 10); render3D.updateMatrices(1);
+    assert.equal(off.directional, false);
+    assert.ok(sun.directional);
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});

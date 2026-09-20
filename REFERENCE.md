@@ -890,7 +890,8 @@ render3D.gravity = vec3(0, -.01, 0) // e.g., vec3() by default so nothing falls;
                                     // frame, times their gravityScale, and slow by their damping, which is 1 by
                                     // default for no slowing
 new Light3D(pos3D, radius, color) // point light, an EngineObject3D; alpha scales brightness so alpha 0 is an off
-                                  // switch, brightness drops off fast so a small radius needs a bright color
+                                  // switch, a radius of 0 is another, brightness drops off fast so a small radius
+                                  // needs a bright color
 light.directional = true          // shine from far away along the light's forward axis, no position and no falloff;
                                   // aim it with light.lookAt(target) or rotation3D
 // 8 lights reach the shader each frame: every directional light first, then the point lights nearest the camera;

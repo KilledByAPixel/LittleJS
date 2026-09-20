@@ -178,6 +178,7 @@ class PostProcessPlugin
  */
 function postProcessBloomShader(threshold=.6, strength=1, size=6)
 {
+    ASSERT(isNumber(threshold) && isNumber(strength) && isNumber(size), 'bloom settings must be numbers');
     // two rings of samples around each pixel, the outer one wider and dimmer
     return `
     void mainImage(out vec4 color, vec2 pixel)

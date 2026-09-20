@@ -9998,6 +9998,7 @@ class PostProcessPlugin
  */
 function postProcessBloomShader(threshold=.6, strength=1, size=6)
 {
+    ASSERT(isNumber(threshold) && isNumber(strength) && isNumber(size), 'bloom settings must be numbers');
     // two rings of samples around each pixel, the outer one wider and dimmer
     return `
     void mainImage(out vec4 color, vec2 pixel)
@@ -17704,7 +17705,7 @@ class Render3DPlugin
         if (!mesh.bufferCount) return;
         if (this.frustumCulling && !this.isSphereVisible(matrix.getTranslation(), mesh.radius * render3DMaxScale(matrix.m)))
             return;
-        if (!this.blend && (mesh.instanced ?? this.instancing)) // the stage draws the whole batch at its end
+        if (!this.blend && this.depthTest && (mesh.instanced ?? this.instancing)) // the stage draws the batch at its end
             return render3DInstance(mesh, matrix, tileInfo, color);
         this.flush();
         render3DSetDrawUniforms(matrix, tileInfo, color);
@@ -18359,7 +18360,7 @@ function render3DInitGL()
         'for(int i=0;i<' + RENDER3D_MAX_LIGHTS + ';++i){' +
         'if(i>=extraLightCount)break;' +
         'vec4 L=extraLights[i];' +
-        'bool directional=L.w<=0.;' +
+        'bool directional=L.w<0.;' +
         'vec3 v=directional?L.xyz:L.xyz-P;' +
         'float d=length(v);' +
         'float a=directional?1.:max(0.,1.-d/L.w);' +
@@ -18535,16 +18536,16 @@ function render3DUpdateSamplers()
 
 // bind the texture of a tile or texture, white when there is none or it is not loaded, with the 3D sampler that
 // matches its wrap mode; the first time a texture is used in 3D it gets its mipmaps
-function render3DBindTexture(tileInfo)
+function render3DBindTexture(tileInfo, state=render3D)
 {
     const gl = glContext, r = render3D;
     const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
     const texture = textureInfo?.glTexture || r.whiteTexture;
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    if (!r.mipmaps)
+    if (!r.mipmaps && !state.pixelated)
         return gl.bindSampler(0, null); // the texture's own filtering, as in 2D
-    gl.bindSampler(0, r.samplers[(textureInfo?.wrap ? 1 : 0) + (r.pixelated ? 2 : 0)]);
-    if (!r.pixelated && !r.mipmapped.has(texture)) // a hard edged draw never reads them
+    gl.bindSampler(0, r.samplers[(textureInfo?.wrap ? 1 : 0) + (state.pixelated ? 2 : 0)]);
+    if (!state.pixelated && !r.mipmapped.has(texture)) // a hard edged draw never reads them
     {
         r.mipmapped.add(texture);
         gl.generateMipmap(gl.TEXTURE_2D);
@@ -18595,7 +18596,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     // the per draw values are constant vertex attributes, a batch turns on a per instance array over them
     uvRect ||= render3DGetTileUVs(tileInfo);
     render3DDrawAttribs(matrix.m, tint, uvRect);
-    render3DBindTexture(tileInfo);
+    render3DBindTexture(tileInfo, state);
     if (r.shadowPass) return; // the shadow map needs nothing else
 
     // blending, matches the engine's 2D blend functions
@@ -18698,7 +18699,7 @@ function render3DRenderPass(after2D)
             const p = light.directional ? light.getForward3D().scale(-1) : light.getWorldPos3D();
             const c = light.color, k = i * 4;
             positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
-            positions[k+3] = light.directional ? 0 : light.radius;
+            positions[k+3] = light.directional ? -1 : light.radius; // a negative radius marks a direction
             colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a;
         });
         gl.uniform4fv(render3DUniform('extraLights'), positions, 0, lights.length * 4);

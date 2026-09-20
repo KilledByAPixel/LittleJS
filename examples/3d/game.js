@@ -12,7 +12,7 @@
 const terrainSize = 90, terrainHeight = 14, orbCount = 8;
 const soundCollect = new Sound([,,500,.02,.1,.2,1,1.5,,,200,.05]);
 const soundEngine = new Sound([,0,80,.01,.03,.1,3,1.5,,,,,,.6]);
-let terrain, player, scoreText, score = 0;
+let terrain, player, scoreText, orbMesh, score = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // the player rolls over the terrain with a trail behind it
@@ -59,7 +59,7 @@ class Orb extends EngineObject3D
 {
     constructor(pos)
     {
-        super(pos, buildSphere(1.4, 10, 5, true));
+        super(pos, orbMesh);
         this.color = hsl(rand(),1,.6);
         this.unlit = true; // its own bright color, which the bloom picks up
         this.angleVelocity3D = vec3(.01,.02,0);
@@ -93,12 +93,12 @@ class Orb extends EngineObject3D
 // a random spot on the island, clear of the middle where the player starts
 function randomGroundPos()
 {
-    const pos = vec3(rand(20, terrainSize/2 - 6)).rotateY(rand(2*PI));
-    return vec3(pos.x, 0, pos.z);
+    return vec3(rand(20, terrainSize/2 - 6), 0, 0).rotateY(rand(2*PI));
 }
 
 function buildScoreText()
 {
+    scoreText.mesh?.dispose(); // the old text is a mesh on the GPU, let it go
     scoreText.mesh = buildText3D('ORBS ' + score, 3, .8);
 }
 
@@ -134,6 +134,7 @@ function gameInit()
         heights.push(heightRow);
         colors.push(colorRow);
     }
+    orbMesh = buildSphere(1.4, 10, 5, true); // one mesh for every orb, so they draw as one batch
     terrain = new HeightMap(heights, vec2(terrainSize), terrainHeight, colors);
     new EngineObject3D(vec3(), terrain.buildMesh(true));
     render3D.softShadowHeight = terrain; // soft shadows follow the ground
