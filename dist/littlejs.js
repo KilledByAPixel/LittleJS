@@ -20836,13 +20836,15 @@ function render3DSolidPush(a, b)
     return collideBoxBox3D(a.pos, a.size, b.pos, b.size);
 }
 
-// push a solid object out of the solids updated before it this frame, so each pair is resolved once
+// push a solid object out of the solids before it in the engine's list of them, so each pair is resolved once:
+// the ones after it update later and test against it then, and an object that is not in the list yet, because it
+// turned collision on this frame, tests them all itself and is not tested back
 function render3DCollideSolid(a)
 {
     const shapeA = render3DSolidShape(a);
     for (const b of engineObjectsCollide)
     {
-        if (b === a) break; // the ones after this update later and test against this one then
+        if (b === a) break;
         if (b.destroyed || b.sync2D || !(b instanceof EngineObject3D)) continue;
         if (!a.isSolid && !b.isSolid) continue; // neither one blocks, so they pass through each other
         const push = render3DSolidPush(shapeA, render3DSolidShape(b));
