@@ -481,6 +481,8 @@ EngineObject.getMirrorSign()                       // Get mirror direction (1 or
 EngineObject.addChild(child, localPos, localAngle) // Attach a child
 EngineObject.removeChild(child)                    // Remove a child
 EngineObject.setCollision(solids, isSolid, tiles)  // Set collision
+EngineObject.persistent = true                     // skipped by engineObjectsDestroy, for things that outlive a
+                                                   // level like a camera; destroy() still destroys it
 
 // Engine Object Members
 EngineObject.pos           // World space position
@@ -515,7 +517,7 @@ gravity = (0,0)               // How much gravity to apply to objects
 engineObjectsCollect(pos, size, objects=engineObjects)
 engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 engineObjectsRaycast(start, end, objects=engineObjects)
-engineObjectsDestroy()
+engineObjectsDestroy()          // destroy every object except the persistent ones
 ```
 
 ## LittleJS Tile Layer System
@@ -958,8 +960,11 @@ obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engin
 obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gravity, gravityScale and damping act on
              // velocity3D, and damping is 1 by default for no slowing
 obj.size3D                              // full size for engineObjectsCollect3D and sprites
-obj.collideSolid3D = true               // push apart from other solid objects as balls the size of the largest side,
-                                        // heavier objects move less, mass 0 stays put, velocities bounce by restitution
+obj.collideSolid3D = true               // push apart from the other solid objects each frame, heavier objects move
+                                        // less, mass 0 stays put, velocities bounce by restitution
+obj.collideAsBall3D = true              // collide as the ball that fits size3D instead of as the size3D box
+obj.collideWithObject3D(object, push)   // called when it touches a solid object, both objects are asked and either
+                                        // returning false leaves the push and the bounce to you
 obj.softShadow = 2                      // a soft shadow of that diameter under the object on render3D.softShadowHeight
 obj.upright = true                      // a sprite stands on world up instead of tilting toward the camera
                                         // a sprite also turns with rotation3D.z, like a 2D object turns with angle

@@ -122,6 +122,10 @@ class EngineObject
         /** @property {boolean} - Object collides with raycasts */
         this.collideRaycast = false;
 
+        /** @property {boolean} - Object is skipped by engineObjectsDestroy, for things that outlive a level like a camera
+         *  - Calling destroy on it still destroys it, and its children go with it either way */
+        this.persistent = false;
+
         // add to list of objects
         engineObjects.push(this);
     }

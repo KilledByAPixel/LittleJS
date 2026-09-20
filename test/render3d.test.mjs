@@ -1868,3 +1868,70 @@ test('a point light with no radius is off, only a directional light carries the 
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
 });
+
+test('a solid object collides as its size3D box, or as a ball when it asks to', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+
+    // two boxes overlapping most on X are pushed apart along X, the shallowest way out
+    const a = new EngineObject3D(vec3()), b = new EngineObject3D(vec3(.6, .1, 0));
+    a.collideSolid3D = b.collideSolid3D = true;
+    a.size3D = b.size3D = vec3(1, 2, 1);
+    b.mass = 1; // only b moves
+    b.updateTransforms();
+    near(b.pos3D.x, 1); near(b.pos3D.y, .1);
+
+    // the same pair as balls slides along the line between the centers instead
+    a.collideAsBall3D = b.collideAsBall3D = true;
+    b.pos3D = vec3(.6, .1, 0);
+    b.updateTransforms();
+    assert.ok(b.pos3D.x > .6 && b.pos3D.y > .1, 'a ball is pushed along the center line');
+
+    // a ball against a box takes them apart by the ball's radius plus the box's half size
+    b.collideAsBall3D = false;
+    a.size3D = b.size3D = vec3(1); // a is a ball of radius .5, b a 1 unit box
+    a.pos3D = vec3(); b.pos3D = vec3(.6, 0, 0);
+    b.updateTransforms();
+    near(b.pos3D.x, 1);
+
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});
+
+test('collideWithObject3D hears about a touch and can take it over', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const heard = [];
+    class Solid extends EngineObject3D
+    {
+        collideWithObject3D(object, push)
+        {
+            heard.push([this.name, object.name, Math.round(push.x*100)/100]);
+            return this.resolve;
+        }
+    }
+    const a = new Solid(vec3()), b = new Solid(vec3(.6, 0, 0));
+    a.name = 'a', b.name = 'b';
+    a.collideSolid3D = b.collideSolid3D = true;
+    a.resolve = b.resolve = true;
+    b.mass = 1;
+    b.updateTransforms();
+    assert.deepEqual(heard, [['b', 'a', .4], ['a', 'b', -.4]], 'both are asked, each with its own push');
+    near(b.pos3D.x, 1);
+
+    // either one saying no leaves them where they are
+    for (const refuser of [a, b])
+    {
+        heard.length = 0;
+        refuser.resolve = false;
+        b.pos3D = vec3(.6, 0, 0);
+        b.updateTransforms();
+        near(b.pos3D.x, .6);
+        assert.equal(heard.length, 2, 'both still hear about it');
+        refuser.resolve = true;
+    }
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});

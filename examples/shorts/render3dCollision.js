@@ -15,17 +15,17 @@ class Ball extends EngineObject3D
         this.velocity3D = randVector3(.1);
         this.mass = 1; // falls with render3D.gravity
         this.restitution = .6;
-        this.collideSolid3D = true; // balls push each other apart
+        this.collideSolid3D = true;   // pushes apart from the other solids
+        this.collideAsBall3D = true;  // as a ball, not as its box
     }
     update()
     {
-        // bounce off the floor and walls, then the box and the cylinder
+        // bounce off the floor and walls, then off the cylinder by hand
         const p = this.pos3D, r = this.radius, limit = arenaSize/2 - r;
         const inside = vec3(clamp(p.x, -limit, limit), max(p.y, r), clamp(p.z, -limit, limit));
         if (p.distance(inside))
             this.bounce(inside.subtract(p));
-        const hit = collideSphereBox(this.pos3D, r, boxPos, boxSize)
-            || collideSphereCylinder(this.pos3D, r, cylinderPos, cylinderRadius, cylinderHeight);
+        const hit = collideSphereCylinder(this.pos3D, r, cylinderPos, cylinderRadius, cylinderHeight);
         if (hit)
             this.bounce(hit);
     }
@@ -49,8 +49,12 @@ function gameInit()
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 8, checker));
     render3D.smoothShading = true;
 
-    // a box, a cylinder and a dozen balls, builders take full sizes and collision takes radii
-    new EngineObject3D(boxPos, buildBox(boxSize).setColor(hsl(.1,.4,.5)));
+    // a solid box the plugin bounces the balls off, no mass so it never moves
+    const box = new EngineObject3D(boxPos, buildBox(boxSize).setColor(hsl(.1,.4,.5)));
+    box.size3D = boxSize;
+    box.collideSolid3D = true;
+
+    // a cylinder is not a shape the solid flag covers, so the balls hit it with a helper
     const cylinder = buildCylinder(cylinderRadius*2, cylinderHeight, 16);
     new EngineObject3D(cylinderPos, cylinder.setColor(hsl(.6,.3,.5)));
     ballMesh = buildSphere();

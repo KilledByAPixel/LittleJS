@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
     EngineObject, ParticleEmitter, TileLayerData, TileInfo, TextureInfo,
     TileLayer, CanvasLayer, Medal,
-    Timer, tile, vec2, rgb,
+    Timer, tile, vec2, rgb, engineObjects, engineObjectsDestroy,
 } from '../dist/littlejs.esm.js';
 
 const near = (a, b, eps=1e-9) => Math.abs(a - b) <= eps;
@@ -374,4 +374,23 @@ test('drawCircleGradient is callable in headless mode', async () =>
     const { drawCircleGradient, vec2, rgb } = mod;
     assert.doesNotThrow(() =>
         drawCircleGradient(vec2(), 1, rgb(1, 1, 1), rgb(0, 0, 0)));
+});
+
+test('persistent objects survive engineObjectsDestroy but not their own destroy', () =>
+{
+    engineObjects.length = 0;
+    const level = new EngineObject(vec2(), vec2(1));
+    const camera = new EngineObject(vec2(), vec2(1));
+    const held = camera.addChild(new EngineObject(vec2(), vec2(1)));
+    camera.persistent = true;
+    assert.equal(level.persistent, false, 'off by default');
+    engineObjectsDestroy();
+    assert.equal(level.destroyed, true);
+    assert.equal(camera.destroyed, false, 'a persistent object is left alone');
+    assert.equal(held.destroyed, false, 'and so is what it is holding');
+    assert.deepEqual(engineObjects, [camera, held]);
+    camera.destroy(); // destroy still means destroy
+    assert.equal(camera.destroyed, true);
+    assert.equal(held.destroyed, true);
+    engineObjects.length = 0;
 });

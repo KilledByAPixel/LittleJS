@@ -560,13 +560,14 @@ function engineObjectsUpdate()
 
 /** Destroy and remove all objects
  *  - This can be used to clear out all objects when restarting a level
+ *  - Objects with the persistent flag set are left alone, for things that outlive a level
  *  - Objects can override their destroy function to do cleanup or stick around
  *  @param {boolean} [immediate] - should attached effects be allowed to die off?
  *  @memberof Engine */
 function engineObjectsDestroy(immediate=true)
 {
     for (const o of engineObjects)
-        o.parent || o.destroy(immediate);
+        o.parent || o.persistent || o.destroy(immediate);
     engineObjects = engineObjects.filter(o=>!o.destroyed);
 }
 
@@ -3669,6 +3670,10 @@ class EngineObject
         this.isSolid = false;
         /** @property {boolean} - Object collides with raycasts */
         this.collideRaycast = false;
+
+        /** @property {boolean} - Object is skipped by engineObjectsDestroy, for things that outlive a level like a camera
+         *  - Calling destroy on it still destroys it, and its children go with it either way */
+        this.persistent = false;
 
         // add to list of objects
         engineObjects.push(this);
@@ -20652,8 +20657,10 @@ class EngineObject3D extends EngineObject
         this.specular = 0;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         this.castShadow = true;
-        /** @property {boolean} - Push apart from other collideSolid3D objects each frame as balls the size of their largest side, heavier objects move less and mass 0 stays put; a parented object moves in its parent's space */
+        /** @property {boolean} - Push apart from other collideSolid3D objects each frame, heavier objects move less and mass 0 stays put; a parented object moves in its parent's space */
         this.collideSolid3D = false;
+        /** @property {boolean} - Collide as the ball that fits size3D instead of as the size3D box, so it rolls around corners */
+        this.collideAsBall3D = false;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
         /** @property {boolean} - Skip faces that point away from the camera, faster for closed meshes */
@@ -20714,6 +20721,13 @@ class EngineObject3D extends EngineObject
      *  @param {Vector3} target */
     lookAt(target) { this.rotation3D = render3DLookRotation(target.subtract(this.pos3D), this.rotation3D); }
 
+    /** Called when this object touches a solid object, return false to handle the touch yourself
+     *  - Both objects are asked and either saying no leaves the push and the bounce alone, like collideWithObject in 2D
+     *  @param {EngineObject3D} object - What it touched
+     *  @param {Vector3} push - What it would take to move this object clear
+     *  @return {boolean} - True to let the plugin push them apart */
+    collideWithObject3D(object, push) { return true; }
+
     /** 2D rendering is skipped, the mesh is drawn by render3D during the 3D pass */
     render() {}
 
@@ -20727,25 +20741,45 @@ class EngineObject3D extends EngineObject
     }
 }
 
-// where a solid object is in the world and how big its ball is there, its largest side scaled by its parents
-function render3DSolidBall(o)
+// where a solid object is in the world and what it collides as: the ball that fits size3D, or the size3D box,
+// each grown by the object's own scale and its parents'
+function render3DSolidShape(o)
 {
-    const m = o.getMatrix().m;
-    const radius = max(o.size3D.x, o.size3D.y, o.size3D.z) / 2 * render3DMaxScale(m);
-    return {pos: vec3(m[12], m[13], m[14]), radius};
+    const m = o.getMatrix().m, s = o.size3D, pos = vec3(m[12], m[13], m[14]);
+    if (o.collideAsBall3D)
+        return {pos, radius: max(s.x, s.y, s.z) / 2 * render3DMaxScale(m)};
+    return {pos, size: vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]))};
+}
+
+// what it takes to move shape a clear of shape b, whichever pair of shapes they are, or undefined for no touch
+function render3DSolidPush(a, b)
+{
+    if (!a.size) // a is a ball
+        return b.size ? collideSphereBox(a.pos, a.radius, b.pos, b.size)
+            : collideSphereSphere(a.pos, a.radius, b.pos, b.radius);
+    if (!b.size) // only b is, so push b out of a and turn it around
+    {
+        const push = collideSphereBox(b.pos, b.radius, a.pos, a.size);
+        return push && push.scale(-1);
+    }
+    return collideBoxBox(a.pos, a.size, b.pos, b.size);
 }
 
 // push a solid object out of the solids updated before it this frame, so each pair is resolved once
 function render3DCollideSolid(a)
 {
-    const ballA = render3DSolidBall(a);
+    const shapeA = render3DSolidShape(a);
     for (const b of engineObjects)
     {
         if (b === a) break; // the ones after this update later and test against this one then
         if (!b.collideSolid3D || b.destroyed) continue;
-        const ballB = render3DSolidBall(b);
-        const push = collideSphereSphere(ballA.pos, ballA.radius, ballB.pos, ballB.radius);
+        const push = render3DSolidPush(shapeA, render3DSolidShape(b));
         if (!push) continue;
+
+        // both objects hear about it, and either one can take the touch over
+        const resolveA = a.collideWithObject3D(b, push);
+        const resolveB = b.collideWithObject3D(a, push.scale(-1));
+        if (!resolveA || !resolveB) continue;
 
         // heavier objects move less, mass 0 stays put; then bounce apart when moving toward each other
         const total = a.mass + b.mass;
@@ -20837,6 +20871,7 @@ class Light3D extends EngineObject3D
  * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
  * - An EngineObject3D, so move its pos3D to follow something, or parent it to an object
  * - Destroy it to hand the camera back, and it stops driving the camera
+ * - Set persistent to keep it when engineObjectsDestroy clears out a level
  * - Every part of it is a field, so a game can change the buttons, speeds and limits
  * @extends EngineObject3D
  * @memberof Render3D

@@ -163,6 +163,7 @@ declare module "littlejsengine" {
     export function engineObjectsUpdate(): void;
     /** Destroy and remove all objects
      *  - This can be used to clear out all objects when restarting a level
+     *  - Objects with the persistent flag set are left alone, for things that outlive a level
      *  - Objects can override their destroy function to do cleanup or stick around
      *  @param {boolean} [immediate] - should attached effects be allowed to die off?
      *  @memberof Engine */
@@ -2918,6 +2919,9 @@ declare module "littlejsengine" {
         isSolid: boolean;
         /** @property {boolean} - Object collides with raycasts */
         collideRaycast: boolean;
+        /** @property {boolean} - Object is skipped by engineObjectsDestroy, for things that outlive a level like a camera
+         *  - Calling destroy on it still destroys it, and its children go with it either way */
+        persistent: boolean;
         /** Update the object transform, called automatically by engine even when paused */
         updateTransforms(): void;
         /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object. */
@@ -6650,8 +6654,10 @@ declare module "littlejsengine" {
         specular: number;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         castShadow: boolean;
-        /** @property {boolean} - Push apart from other collideSolid3D objects each frame as balls the size of their largest side, heavier objects move less and mass 0 stays put; a parented object moves in its parent's space */
+        /** @property {boolean} - Push apart from other collideSolid3D objects each frame, heavier objects move less and mass 0 stays put; a parented object moves in its parent's space */
         collideSolid3D: boolean;
+        /** @property {boolean} - Collide as the ball that fits size3D instead of as the size3D box, so it rolls around corners */
+        collideAsBall3D: boolean;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         receiveShadow: boolean;
         /** @property {boolean} - Skip faces that point away from the camera, faster for closed meshes */
@@ -6676,6 +6682,12 @@ declare module "littlejsengine" {
         /** Turn the object so its -Z axis points at a target, sets pitch and yaw and clears roll
          *  @param {Vector3} target */
         lookAt(target: Vector3): void;
+        /** Called when this object touches a solid object, return false to handle the touch yourself
+         *  - Both objects are asked and either saying no leaves the push and the bounce alone, like collideWithObject in 2D
+         *  @param {EngineObject3D} object - What it touched
+         *  @param {Vector3} push - What it would take to move this object clear
+         *  @return {boolean} - True to let the plugin push them apart */
+        collideWithObject3D(object: EngineObject3D, push: Vector3): boolean;
         /** Draw the object in 3D, called by the 3D pass with the draw state set from this object's flags, draws the mesh by default */
         render3D(): void;
     }
@@ -7030,6 +7042,7 @@ declare module "littlejsengine" {
      * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
      * - An EngineObject3D, so move its pos3D to follow something, or parent it to an object
      * - Destroy it to hand the camera back, and it stops driving the camera
+     * - Set persistent to keep it when engineObjectsDestroy clears out a level
      * - Every part of it is a field, so a game can change the buttons, speeds and limits
      * @extends EngineObject3D
      * @memberof Render3D

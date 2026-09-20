@@ -202,9 +202,14 @@ function gameInit()
     title.specular = .4;
     title.angleVelocity3D = vec3(0,.002,0);
     scoreText = new EngineObject3D(vec3(0,12.5,-14));
-    scoreText.color = hsl(.55,.3,.9);
-    scoreText.unlit = true; // the sun is behind it, so let it keep its own color
+    scoreText.color = hsl(.55,.3,.95);
+    scoreText.specular = .3;
     buildScoreText();
+
+    // the sun is behind everything facing the camera, so a cool fill picks out the front faces
+    const fill = new Light3D(vec3(), 1, hsl(.55,.4,.3));
+    fill.directional = true;
+    fill.lookAt(vec3(0,-.3,-1));
 
     player = new Player;
     for (let i = orbCount; i--;)
