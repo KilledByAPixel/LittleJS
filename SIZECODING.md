@@ -83,12 +83,17 @@ ect -9 -strip -zip game.zip index.html
 ```
 
 **Terser**, which does not rename properties unless told to (section 2.6),
-and needs no Java:
+and needs no Java. The allow-list is long enough that this one wants the
+API or a config file rather than a command line:
 
-```
-terser in.js --toplevel --mangle-props ... -c passes=5,pure_getters=true --ecma 2020
-npx roadroller out.js -o out.js <PINNED ARGS>
-ect -9 -strip -zip game.zip index.html
+```js
+// terser options, then the same roadroller and ect steps as above
+{
+    toplevel: true,
+    ecma: 2020,
+    compress: {passes: 5, pure_getters: true},
+    mangle: {properties: {regex: /^(pos|velocity|heading|…)$/, builtins: true}},
+}
 ```
 
 Versions that behaved as described: google-closure-compiler 20230502,
@@ -118,9 +123,9 @@ tuned for Terser. A retune per variant might move each by ~20, not 179.
   pattern below that expects `\n` silently stops matching
 - consider stripping `'use strict'`: Closure carries one into the release
   where it can cost ~17 bytes. **This does not always pay.** On one
-  LittleJS starter it measured **+2**, because uglify already collapses
-  the thirteen copies into one and roadroller models the remainder away.
-  Measure it rather than assuming
+  LittleJS starter it measured **+2**, because uglify had already
+  collapsed every copy into one and roadroller models the remainder
+  away. Measure it rather than assuming
 - ORDER MATTERS to the compiler: moving one file earlier in the list cost
   +9. Load the file that calls `engineInit` last
 - watch for files with no trailing newline; they break `[^\n]*\n` anchors
@@ -189,17 +194,20 @@ Closure ADVANCED renames properties on its own. Terser does not, and on a
   **explicit allow-list** of names the game defines. Never a blanket
   regex: Terser renames EVERY occurrence of a listed name, including
   `canvas.width`
-- add `builtins: true`. Terser keeps its own list of DOM and built-in
-  property names and refuses to mangle them even when your allow-list
-  names them. On one game `float`, `heading`, `forward`, `right`,
-  `normalize`, `speed`, `add`, `play`, `turn`, `seed`, `points`, `flags`,
-  `pitch`, `transform`, `time`, `name`, `color`, `count`, `draw` and
-  `dispose` were all shipping unmangled for this reason. The game read
-  none of them off a DOM object: **−141 more**
-- exclude anything you DO read off a DOM or built-in object: `width`,
-  `height`, `length`, `buffer`, `value`, `state`, `set`, `multiply`,
-  `rotate`, `scale` on DOMMatrix. One DOMMatrix `.scale()` call became
-  `.scaleSelf()` so a vector class's `scale` could stay on the list
+- keep off the list anything you DO read off a DOM or built-in object:
+  `width`, `height`, `length`, `buffer`, `value`, `state`, `set`,
+  `multiply`, `rotate`, `scale` on DOMMatrix. One DOMMatrix `.scale()`
+  call became `.scaleSelf()` so a vector class's `scale` could stay on
+  the list
+- then add `builtins: true`. Terser keeps its own list of DOM and
+  built-in property names and refuses to mangle them even when your
+  allow-list names them. On one game `float`, `heading`, `forward`,
+  `right`, `normalize`, `speed`, `add`, `play`, `turn`, `seed`, `points`,
+  `flags`, `pitch`, `transform`, `time`, `name`, `color`, `count`, `draw`
+  and `dispose` were all shipping unmangled for this reason. The game
+  read none of them off a DOM object: **−141 more**. This option only
+  affects names already on your allow-list, so it is safe once the
+  exclusions above are right, and dangerous if they are not
 - build the list from the minified output: count `\.name` occurrences,
   drop the DOM and Math names, take what is left. Short names (`x`, `r`,
   `s`) gain nothing
@@ -266,7 +274,8 @@ dropping `<head>` on its own measured +3, so **these cuts are not
 additive, measure the combination**); then no doctype −18 more.
 
 The smallest shell that still works is `<body><script>…</script>`, with a
-UTF-8 byte-order mark in front if the payload needs one.
+UTF-8 byte-order mark in front of it once the packed payload contains any
+byte above ASCII, which it usually will.
 
 - **`<body>` is required.** Without it the script runs with
   `document.body === null`
@@ -317,7 +326,8 @@ deflates fine while the injection adds a unique call shape to the payload.
 Everything debug lives behind `if (debug)`, with `debug` a compile-time 0
 in the release build — in LittleJS, a separate `engineRelease.js` is
 concatenated where the dev page loads `engineDebug.js`. Whole debug files
-removed measured byte-identical, repeatedly.
+removed measured byte-identical, repeatedly. An EDIT inside one can still
+move the zip by a few bytes, which is noise rather than cost (section 6).
 
 ---
 
@@ -333,11 +343,11 @@ removed measured byte-identical, repeatedly.
   `name / minified / zip / delta`. Twenty experiments priced in 40
   seconds. This is what makes "measure, never estimate" affordable enough
   to do for every cut, including the ones you keep.
-- **The harness is not the build.** A measure shell differs from the
-  release shell, and harness prices drift from real builds by several
-  bytes. Price with the harness to choose; confirm with a real build
-  before committing. Cuts priced at −9 to −14 in a throwaway build came
-  back as +1 in a real one.
+- **The harness is not the build.** Its shell differs from the release
+  shell, and its prices drift from real builds by several bytes. Price
+  with the harness to choose what to try; confirm with a real build
+  before committing. Cuts the harness priced at −9 to −14 came back as
+  +1 in a real build.
 - **Baseline first and last.** A moving tree (someone else's commit, a
   retune, an editor BOM) shows up only if you re-measure the baseline.
 - **A price is only valid on the baseline it was measured on.** After
@@ -427,10 +437,10 @@ removed measured byte-identical, repeatedly.
    unified into one −166; a prediction solver −146. Deleting a results
    SCREEN cost less (−49) than the branches choosing between two versions
    of one screen had cost to add.
-3. **Two builders of the same kind of thing.** A loft builder taught one
-   extra parameter could make the shapes a separate extrude builder
-   existed for; deleting the second builder: **−125**. It was 40 lines and
-   looked "small". **Unify builders before cutting art.**
+3. **Two builders of the same kind of thing.** One mesh builder, given a
+   single extra parameter, could produce every shape a second builder
+   existed for; deleting that second builder: **−125**. It was 40 lines
+   and looked "small". **Unify builders before cutting art.**
 4. **A line of UI text.** Deleting one prompt line: −20; a title screen's
    control hint: −54. Three separate times, deleting a line of text beat a
    week of micro-optimisation. Words themselves are almost free (they
@@ -515,8 +525,9 @@ costs. Hence:
 
 ### Minifier knobs
 
-Small, but free. Measured on Terser: `ecma: 2020` −15, `passes: 5` over 3
-−42, `pure_getters: true` −7.
+Cheap to try, and nearly all of them are 0. The ones that paid, on
+Terser: `ecma: 2020` −15, `passes: 5` over 3 −42, `pure_getters: true`
+−7.
 
 Everything else measured at or near 0, or lost: uglify `passes=2` +13;
 Terser `reduce_funcs: false` +90, `unsafe_comps` +27, `sequences: false`
@@ -527,11 +538,12 @@ Terser `reduce_funcs: false` +90, `unsafe_comps` +27, `sequences: false`
 unused engine files from the concatenation: 0–2, the compiler already
 strips them.
 
-**Delete what the minifier already drops for the reader, not the zip.**
-Unused top-level functions and consts, dead class methods and unread
-fields are 0 to remove — except that Terser *keeps* unused class methods
-(a dead `matrix()` method: 15) and top-level `new Color(...)` constants
-nothing reads (34). Those it will not drop for you.
+**Code the minifier already drops is 0 to delete. Delete it anyway, for
+the reader.** Unused top-level functions and consts and unread fields
+cost nothing to remove either way — but Terser *keeps* unused class
+methods (a dead `matrix()` method: 15) and top-level `new Color(...)`
+constants nothing reads (34). Those it will not drop for you, so they are
+worth real bytes.
 
 ---
 
@@ -585,8 +597,8 @@ nothing reads (34). Those it will not drop for you.
 **After property mangling, almost everything in this section gets worse.**
 On one game, once `builtins` mangling was on, every rename, hoist,
 literal-vs-class and loop-shape change measured within ±12 and usually the
-wrong way. What is left at that point is the feature menu: choices for the
-designer, not the compressor.
+wrong way. What is left at that point is the feature price list
+(section 1): choices for the designer, not the compressor.
 
 ---
 
