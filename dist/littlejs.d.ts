@@ -6683,10 +6683,9 @@ declare module "littlejsengine" {
         /** Create a 3D object and add it to the object list
          *  @param {Vector3} [pos3D] - World space position
          *  @param {Mesh} [mesh] - Mesh to draw, undefined draws nothing
-         *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
+         *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile; a whole TextureInfo becomes the tile that covers it
          *  @param {Color} [color] - Tint */
         constructor(pos3D?: Vector3, mesh?: Mesh, tileInfo?: TileInfo | TextureInfo, color?: Color);
-        tileInfo: TileInfo | TextureInfo;
         /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
         pos3D: Vector3;
         /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, local to the parent when attached to an EngineObject3D */

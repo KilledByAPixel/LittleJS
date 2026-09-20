@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, Ray3D, CameraControl3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -1927,6 +1927,30 @@ test('resting on two solids at once is one push, not both added up', () =>
     near(ball.pos3D.y, .5, 'lifted to the floor once, not lifted twice for going over a seam');
 
     for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});
+
+test('a whole texture is kept as the tile that covers it, so a 3D object is still an EngineObject', () =>
+{
+    const texture = new TextureInfo({width: 64, height: 32});
+    const o = new EngineObject3D(vec3(), buildBox(), texture);
+
+    // the 2D class declares tileInfo as a TileInfo, and TypeScript will not accept a 3D
+    // object anywhere an EngineObject goes if this class widens it
+    assert.ok(o.tileInfo instanceof TileInfo, 'stored as a TileInfo, not as the TextureInfo');
+    assert.equal(o.tileInfo.textureInfo, texture);
+    near(o.tileInfo.pos.x, 0); near(o.tileInfo.pos.y, 0);
+    near(o.tileInfo.size.x, 64); near(o.tileInfo.size.y, 32); // the whole image
+    assert.equal(o.tileInfo.bleed, 0, 'no bleed, there are no neighbors to trim away from');
+    assert.equal(o.tileInfo.padding, 0);
+
+    // a TileInfo is left exactly as it was passed
+    const tileInfo = new TileInfo(vec2(), vec2(16), texture);
+    const tiled = new EngineObject3D(vec3(), buildBox(), tileInfo);
+    assert.equal(tiled.tileInfo, tileInfo);
+
+    o.destroy(); tiled.destroy();
+    for (const obj of engineObjects) obj.destroy();
     engineObjects.length = 0;
 });
 

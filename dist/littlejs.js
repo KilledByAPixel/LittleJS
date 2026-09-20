@@ -20772,15 +20772,18 @@ class EngineObject3D extends EngineObject
     /** Create a 3D object and add it to the object list
      *  @param {Vector3} [pos3D] - World space position
      *  @param {Mesh} [mesh] - Mesh to draw, undefined draws nothing
-     *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
+     *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile; a whole TextureInfo becomes the tile that covers it
      *  @param {Color} [color] - Tint */
     constructor(pos3D=vec3(), mesh, tileInfo, color=WHITE)
     {
-        super(vec2(), vec2(), undefined, 0, color);
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo, it comes before color');
+        // a whole texture is stored as the tile that covers it, with no padding or bleed to trim
+        // the edges, so this is always a TileInfo like the 2D one and the object stays an EngineObject
+        if (tileInfo instanceof TextureInfo)
+            tileInfo = new TileInfo(vec2(), tileInfo.size, tileInfo, 0, 0);
+        super(vec2(), vec2(), tileInfo, 0, color);
         ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
         ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo, it comes before color');
-        this.tileInfo = tileInfo; // set after super so a whole TextureInfo is allowed
         this.mass = 0; // static: no 2D physics, and no 3D gravity until a mass is set
 
         /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
