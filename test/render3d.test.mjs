@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, Ray3D, CameraControl3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, HeightMap, Ray3D, CameraControl3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsUpdate } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -1748,12 +1748,14 @@ test('a soft shadow can sit on a HeightMap directly', () =>
         near(p.y, 3.02);
 });
 
-test('collideSolid3D objects push apart by mass and bounce off each other', () =>
+test('solid objects push apart by mass and bounce off each other', () =>
 {
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
     const a = new EngineObject3D(vec3()), b = new EngineObject3D(vec3(.6, 0, 0));
-    a.collideSolid3D = b.collideSolid3D = true;
+    a.setCollision(); b.setCollision(); // the same call as in 2D
+    engineObjectsUpdate(); // the engine collects the solid objects here
+    a.pos3D = vec3(); b.pos3D = vec3(.6, 0, 0);
     a.mass = b.mass = 1;
     a.velocity3D = vec3(1, 0, 0);
     b.updateTransforms(); // b comes after a, so b resolves the pair
@@ -1876,7 +1878,9 @@ test('a solid object collides as its size3D box, or as a ball when it asks to', 
 
     // two boxes overlapping most on X are pushed apart along X, the shallowest way out
     const a = new EngineObject3D(vec3()), b = new EngineObject3D(vec3(.6, .1, 0));
-    a.collideSolid3D = b.collideSolid3D = true;
+    a.setCollision(); b.setCollision();
+    engineObjectsUpdate();
+    a.pos3D = vec3(); b.pos3D = vec3(.6, .1, 0);
     a.size3D = b.size3D = vec3(1, 2, 1);
     b.mass = 1; // only b moves
     b.updateTransforms();
@@ -1899,14 +1903,14 @@ test('a solid object collides as its size3D box, or as a ball when it asks to', 
     engineObjects.length = 0;
 });
 
-test('collideWithObject3D hears about a touch and can take it over', () =>
+test('collideWithObject hears about a 3D touch and can take it over', () =>
 {
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
     const heard = [];
     class Solid extends EngineObject3D
     {
-        collideWithObject3D(object, push)
+        collideWithObject(object, push)
         {
             heard.push([this.name, object.name, Math.round(push.x*100)/100]);
             return this.resolve;
@@ -1914,8 +1918,11 @@ test('collideWithObject3D hears about a touch and can take it over', () =>
     }
     const a = new Solid(vec3()), b = new Solid(vec3(.6, 0, 0));
     a.name = 'a', b.name = 'b';
-    a.collideSolid3D = b.collideSolid3D = true;
+    a.setCollision(); b.setCollision();
     a.resolve = b.resolve = true;
+    engineObjectsUpdate();
+    a.pos3D = vec3(); b.pos3D = vec3(.6, 0, 0);
+    heard.length = 0;
     b.mass = 1;
     b.updateTransforms();
     assert.deepEqual(heard, [['b', 'a', .4], ['a', 'b', -.4]], 'both are asked, each with its own push');
@@ -1936,28 +1943,39 @@ test('collideWithObject3D hears about a touch and can take it over', () =>
     engineObjects.length = 0;
 });
 
-test('two objects that both have isSolid3D off pass through each other', () =>
+test('setCollision on a 3D object skips the 2D only flags', () =>
+{
+    const o = new EngineObject3D(vec3());
+    o.setCollision();
+    assert.equal(o.collideSolidObjects, true);
+    assert.equal(o.isSolid, true);
+    assert.equal(o.collideTiles, false, 'tile collision is 2D, it needs sync2D');
+    assert.equal(o.collideRaycast, false, 'raycasts are 2D, 3D picking is render3D.raycastObjects');
+    o.destroy();
+});
+
+test('two objects that both have isSolid off pass through each other', () =>
 {
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
     const a = new EngineObject3D(vec3()), b = new EngineObject3D(vec3(.6, 0, 0));
-    a.collideSolid3D = b.collideSolid3D = true;
+    a.setCollision(true, false); b.setCollision(true, false); // collide with solids, block nothing
+    engineObjectsUpdate();
     b.mass = 1;
-    assert.equal(a.isSolid3D, true, 'blocking is on by default');
 
     // neither blocks, so nothing happens
-    a.isSolid3D = b.isSolid3D = false;
+    b.pos3D = vec3(.6, 0, 0);
     b.updateTransforms();
     near(b.pos3D.x, .6);
 
     // one of them blocking is enough, whichever one it is
     for (const solid of [a, b])
     {
-        solid.isSolid3D = true;
+        solid.isSolid = true;
         b.pos3D = vec3(.6, 0, 0);
         b.updateTransforms();
         near(b.pos3D.x, 1);
-        solid.isSolid3D = false;
+        solid.isSolid = false;
     }
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;

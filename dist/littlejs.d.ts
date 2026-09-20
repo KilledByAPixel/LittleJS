@@ -2954,9 +2954,10 @@ declare module "littlejsengine" {
         collideWithTile(tileData: number, pos: Vector2): boolean;
         /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
          *  @param {EngineObject} object - the object to test against
+         *  @param {Object} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
          *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity
          */
-        collideWithObject(object: EngineObject): boolean;
+        collideWithObject(object: EngineObject, push?: any): boolean;
         /** Get this object's up vector
          *  @param {number} [scale] - length of the vector
          *  @return {Vector2} */
@@ -6603,6 +6604,7 @@ declare module "littlejsengine" {
      * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
      * - The 2D pos and velocity are still there but nothing draws them
      * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D
+     * - setCollision works as it does in 2D, but the solid collision happens in 3D unless the object is sync2D
      * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
      * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
      * @extends EngineObject
@@ -6654,10 +6656,6 @@ declare module "littlejsengine" {
         specular: number;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         castShadow: boolean;
-        /** @property {boolean} - Take part in solid collision: both objects of a pair need it, heavier objects move less and mass 0 stays put; a parented object moves in its parent's space */
-        collideSolid3D: boolean;
-        /** @property {boolean} - Block other objects, like isSolid in 2D; two objects that both have it off pass through each other */
-        isSolid3D: boolean;
         /** @property {boolean} - Collide as the ball that fits size3D instead of as the size3D box, so it rolls around corners */
         collideAsBall3D: boolean;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
@@ -6684,12 +6682,6 @@ declare module "littlejsengine" {
         /** Turn the object so its -Z axis points at a target, sets pitch and yaw and clears roll
          *  @param {Vector3} target */
         lookAt(target: Vector3): void;
-        /** Called when this object touches a solid object, return false to handle the touch yourself
-         *  - Both objects are asked and either saying no leaves the push and the bounce alone, like collideWithObject in 2D
-         *  @param {EngineObject3D} object - What it touched
-         *  @param {Vector3} push - What it would take to move this object clear
-         *  @return {boolean} - True to let the plugin push them apart */
-        collideWithObject3D(object: EngineObject3D, push: Vector3): boolean;
         /** Draw the object in 3D, called by the 3D pass with the draw state set from this object's flags, draws the mesh by default */
         render3D(): void;
     }

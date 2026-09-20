@@ -14,7 +14,7 @@ class Player extends EngineObject3D
         this.specular = .6;
         this.cullBackFaces = true;
         this.size3D = vec3(1.6);
-        this.collideSolid3D = true;
+        this.setCollision();
         this.collideAsBall3D = true;
     }
     update()
@@ -29,7 +29,7 @@ class Player extends EngineObject3D
         this.pos3D.z = clamp(this.pos3D.z, -limit, limit);
         this.rotation3D = vec3(-this.velocity3D.z, 0, -this.velocity3D.x).scale(1.5);
     }
-    collideWithObject3D()
+    collideWithObject()
     {
         // a box got the player, so end the round; nothing to push apart
         endRound();
@@ -49,8 +49,7 @@ class Box extends EngineObject3D
         this.velocity3D.y = rand(.1,.2);
         this.angleVelocity3D = randVector3(.1);
         this.cullBackFaces = true;
-        this.collideSolid3D = true;
-        this.isSolid3D = false; // boxes pass through each other, only the player stops them
+        this.setCollision(true, false); // blocks nothing, so boxes pass through each other
     }
     update()
     {
@@ -61,7 +60,7 @@ class Box extends EngineObject3D
             this.velocity3D.y = abs(this.velocity3D.y)*.7;
         }
 
-        // a near miss scores once, a hit is caught by the player's collideWithObject3D
+        // a near miss scores once, a hit is caught by the player's collideWithObject
         if (!this.missed && player.pos3D.distance(this.pos3D) < 3)
         {
             this.missed = true;

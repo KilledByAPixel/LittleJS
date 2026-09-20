@@ -419,9 +419,10 @@ class EngineObject
 
     /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
      *  @param {EngineObject} object - the object to test against
+     *  @param {Object} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity
      */
-    collideWithObject(object) { return true; }
+    collideWithObject(object, push) { return true; }
 
     /** Get this object's up vector
      *  @param {number} [scale] - length of the vector

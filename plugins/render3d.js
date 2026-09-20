@@ -2823,6 +2823,7 @@ function render3DReadPixels(textureInfo)
  * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
  * - The 2D pos and velocity are still there but nothing draws them
  * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D
+ * - setCollision works as it does in 2D, but the solid collision happens in 3D unless the object is sync2D
  * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
  * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
  * @extends EngineObject
@@ -2882,10 +2883,6 @@ class EngineObject3D extends EngineObject
         this.specular = 0;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         this.castShadow = true;
-        /** @property {boolean} - Take part in solid collision: both objects of a pair need it, heavier objects move less and mass 0 stays put; a parented object moves in its parent's space */
-        this.collideSolid3D = false;
-        /** @property {boolean} - Block other objects, like isSolid in 2D; two objects that both have it off pass through each other */
-        this.isSolid3D = true;
         /** @property {boolean} - Collide as the ball that fits size3D instead of as the size3D box, so it rolls around corners */
         this.collideAsBall3D = false;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
@@ -2911,7 +2908,7 @@ class EngineObject3D extends EngineObject
             this.rotation3D = this.rotation3D.add(this.angleVelocity3D);
             if (this.sync2D)
                 this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
-            if (this.collideSolid3D)
+            if (this.collideSolidObjects && !this.sync2D) // a sync2D object collides in 2D instead
                 render3DCollideSolid(this);
         }
         super.updateTransforms();
@@ -2919,6 +2916,15 @@ class EngineObject3D extends EngineObject
 
     /** The 2D physics only run for a sync2D object, everything else moves by velocity3D, called automatically each frame */
     updatePhysics() { this.sync2D && super.updatePhysics(); }
+
+    /** Set how this object collides, the same flags as in 2D
+     *  - Solid collision happens in 3D here, against size3D boxes or balls, and only for objects that are not sync2D
+     *  @param {boolean} [collideSolidObjects] - Take part in solid collision
+     *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through
+     *  @param {boolean} [collideTiles] - Tile collision, 2D only so it needs sync2D
+     *  @param {boolean} [collideRaycast] - Raycasts, 2D only; 3D picking is render3D.raycastObjects */
+    setCollision(collideSolidObjects=true, isSolid=true, collideTiles=false, collideRaycast=false)
+    { super.setCollision(collideSolidObjects, isSolid, collideTiles, collideRaycast); }
 
     /** Returns the world position
      *  @return {Vector3} */
@@ -2947,13 +2953,6 @@ class EngineObject3D extends EngineObject
     /** Turn the object so its -Z axis points at a target, sets pitch and yaw and clears roll
      *  @param {Vector3} target */
     lookAt(target) { this.rotation3D = render3DLookRotation(target.subtract(this.pos3D), this.rotation3D); }
-
-    /** Called when this object touches a solid object, return false to handle the touch yourself
-     *  - Both objects are asked and either saying no leaves the push and the bounce alone, like collideWithObject in 2D
-     *  @param {EngineObject3D} object - What it touched
-     *  @param {Vector3} push - What it would take to move this object clear
-     *  @return {boolean} - True to let the plugin push them apart */
-    collideWithObject3D(object, push) { return true; }
 
     /** 2D rendering is skipped, the mesh is drawn by render3D during the 3D pass */
     render() {}
@@ -2996,17 +2995,17 @@ function render3DSolidPush(a, b)
 function render3DCollideSolid(a)
 {
     const shapeA = render3DSolidShape(a);
-    for (const b of engineObjects)
+    for (const b of engineObjectsCollide)
     {
         if (b === a) break; // the ones after this update later and test against this one then
-        if (!b.collideSolid3D || b.destroyed) continue;
-        if (!a.isSolid3D && !b.isSolid3D) continue; // neither one blocks, so they pass through each other
+        if (b.destroyed || b.sync2D || !(b instanceof EngineObject3D)) continue;
+        if (!a.isSolid && !b.isSolid) continue; // neither one blocks, so they pass through each other
         const push = render3DSolidPush(shapeA, render3DSolidShape(b));
         if (!push) continue;
 
         // both objects hear about it, and either one can take the touch over
-        const resolveA = a.collideWithObject3D(b, push);
-        const resolveB = b.collideWithObject3D(a, push.scale(-1));
+        const resolveA = a.collideWithObject(b, push);
+        const resolveB = b.collideWithObject(a, push.scale(-1));
         if (!resolveA || !resolveB) continue;
 
         // heavier objects move less, mass 0 stays put; then bounce apart when moving toward each other

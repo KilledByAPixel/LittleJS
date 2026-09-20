@@ -15,8 +15,8 @@ class Ball extends EngineObject3D
         this.velocity3D = randVector3(.1);
         this.mass = 1; // falls with render3D.gravity
         this.restitution = .6;
-        this.collideSolid3D = true;   // pushes apart from the other solids
-        this.collideAsBall3D = true;  // as a ball, not as its box
+        this.setCollision();          // the same call as in 2D, the collision happens in 3D
+        this.collideAsBall3D = true;  // as a ball, not as its size3D box
     }
     update()
     {
@@ -52,7 +52,7 @@ function gameInit()
     // a solid box the plugin bounces the balls off, no mass so it never moves
     const box = new EngineObject3D(boxPos, buildBox(boxSize).setColor(hsl(.1,.4,.5)));
     box.size3D = boxSize;
-    box.collideSolid3D = true;
+    box.setCollision();
 
     // a cylinder is not a shape the solid flag covers, so the balls hit it with a helper
     const cylinder = buildCylinder(cylinderRadius*2, cylinderHeight, 16);

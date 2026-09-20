@@ -473,7 +473,7 @@ EngineObject.update()                              // Update object, called auto
 EngineObject.render()                              // Render object, called automatically
 EngineObject.destroy()                             // Destroy this object and children
 EngineObject.collideWithTile(tileData, pos)        // Tile collision resolve check
-EngineObject.collideWithObject(object)             // Object collision resolve check
+EngineObject.collideWithObject(object, push)       // Object collision resolve check, push is 3D only
 EngineObject.getAliveTime()                        // How long since object was created
 EngineObject.applyAcceleration(acceleration)       // Apply acceleration
 EngineObject.applyForce(force)                     // Apply force
@@ -960,13 +960,16 @@ obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engin
 obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gravity, gravityScale and damping act on
              // velocity3D, and damping is 1 by default for no slowing
 obj.size3D                              // full size for engineObjectsCollect3D and sprites
-obj.collideSolid3D = true               // take part in solid collision, both objects of a pair need it; heavier
-                                        // objects move less, mass 0 stays put, velocities bounce by restitution
-obj.isSolid3D = false                   // stop blocking others, like isSolid in 2D; a pair where neither one blocks
-                                        // passes through, so movers hit the level without shoving each other
+obj.setCollision(solids, isSolid)       // the same flags as in 2D, but the collision happens in 3D against size3D;
+                                        // both objects of a pair need solids, and a pair where neither one blocks
+                                        // passes through, so movers hit the level without shoving each other;
+                                        // heavier objects move less, mass 0 stays put, velocities bounce by
+                                        // restitution; the tile and raycast halves are 2D only and default off here,
+                                        // and a sync2D object collides in 2D instead
 obj.collideAsBall3D = true              // collide as the ball that fits size3D instead of as the size3D box
-obj.collideWithObject3D(object, push)   // called when it touches a solid object, both objects are asked and either
-                                        // returning false leaves the push and the bounce to you
+obj.collideWithObject(object, push)     // called when it touches a solid object, both objects are asked and either
+                                        // returning false leaves the push and the bounce to you; push is what it
+                                        // takes to move this one clear, it is undefined in 2D
 obj.softShadow = 2                      // a soft shadow of that diameter under the object on render3D.softShadowHeight
 obj.upright = true                      // a sprite stands on world up instead of tilting toward the camera
                                         // a sprite also turns with rotation3D.z, like a 2D object turns with angle
