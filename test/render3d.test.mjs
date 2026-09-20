@@ -2005,3 +2005,15 @@ test('a 3D object is not a phantom obstacle for 2D solid collision', () =>
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
 });
+
+test('a mesh from a lost context is let go instead of deleted', () =>
+{
+    // dispose only deletes a buffer the current context owns; the new context refuses the old ones
+    const mesh = buildBox();
+    mesh.buffer = {}; // stand in for a WebGLBuffer, headless has no real one
+    mesh.bufferCount = 4;
+    mesh.contextGeneration = render3D.contextGeneration - 1; // uploaded before a context loss
+    assert.doesNotThrow(()=> mesh.dispose());
+    assert.equal(mesh.buffer, undefined, 'the stale buffer is dropped either way');
+    assert.equal(mesh.bufferCount, 0);
+});

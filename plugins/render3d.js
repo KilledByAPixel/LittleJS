@@ -1228,6 +1228,7 @@ function render3DInitGL()
     const gl = glContext, r = render3D;
     r.uniforms = new Map;
     r.uniformValues = {};
+    r.attribValues = []; // a fresh context has its own attribute defaults, so nothing sent before it counts
 
     // the shader
     // attributes: p position, n normal, t uv, c color, at fixed slots the depth shader also uses
@@ -2092,7 +2093,9 @@ class Mesh
     dispose()
     {
         if (!this.buffer) return;
-        glContext?.deleteBuffer(this.buffer);
+        // a buffer from a context that was lost is gone with it, and the new context refuses to delete it
+        if (this.contextGeneration === render3D?.contextGeneration)
+            glContext?.deleteBuffer(this.buffer);
         this.buffer = undefined;
         this.bufferCount = 0;
     }
