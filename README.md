@@ -41,8 +41,20 @@ The code is very clean and well documented with many examples to get you started
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 - Load sprites and animations into texture sheets at runtime, or import [TexturePacker](https://www.codeandweb.com/texturepacker) and [Aseprite](https://www.aseprite.org) atlases
-- Optional 3D plugin with meshes, lights, shadows, fog and particles in the same canvas as the 2D scene
 
+### 🧊 LittleJS 3D
+
+- Built-in 3D renderer with no dependencies that adds about 21kb gzipped, drawing into the same WebGL canvas as the 2D scene, so 3D can sit behind your sprites, in front of them, or both
+- `EngineObject3D` is an `EngineObject` with a mesh, so update, collision, children, timers and sound all work the way they do in 2D
+- Build shapes in code with box, sphere, cylinder, cone, capsule, torus, lathe and loft builders, give any sprite thickness to make a block model, or load an OBJ file
+- Sunlight with real shadow maps, where cut-out art like a leafy tree casts its true outline, plus ambient light, up to 8 colored point or directional lights, specular highlights and distance fog
+- Height map terrain from an array or an image, with height, normal and raycast lookups for driving and walking on it
+- Instanced drawing puts thousands of copies of a mesh into one draw call
+- 3D particles, trails, ribbons, billboards and text extruded from the engine font
+- Orbit and chase cameras, perspective or orthographic, with mouse picking and 3D positional sound
+- Post-processing shaders reach the 3D scene too, including a built-in bloom for glowing lights
+- The [Three.js](https://threejs.org) plugin is still fully supported as an alternative, rendering a Three.js scene behind the LittleJS canvas with `ThreeJSObject` letting LittleJS physics drive its meshes
+
 ### 🔊 Audio
 
 - Sound and music with mp3, ogg, or wave files
@@ -82,13 +94,6 @@ The code is very clean and well documented with many examples to get you started
 - The entire API is small and well documented so LLMs can produce high quality results
 - [LittleJS AI Tools](https://github.com/KilledByAPixel/LittleJS-AI) - Templates, examples, and prompts tuned for AI + LittleJS workflows
 - [LittleJS GPT](https://chatgpt.com/g/g-67c7c080b5bc81919736bc8815836be6-littlejs-game-maker) - Build LittleJS games right inside ChatGPT
-
-### 🧊 LittleJS 3D
-
-- Optional 3D rendering plugin with no dependencies: shape builders, OBJ models, lighting, shadows, fog, height map terrain, 3D particles and text
-- `EngineObject3D` is an `EngineObject` with a mesh, so update, children, timers and sound work as they do in 2D
-- Draws into the same WebGL canvas, so 3D can sit behind the 2D scene, in front of it, or both
-- Or use the [Three.js](https://threejs.org) plugin to render a Three.js scene behind the LittleJS canvas, with `ThreeJSObject` letting LittleJS physics drive its meshes
 
 ## How To Use LittleJS
 
