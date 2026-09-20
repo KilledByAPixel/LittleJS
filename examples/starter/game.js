@@ -9,7 +9,6 @@
 
 // show the LittleJS splash screen
 setShowSplashScreen(true);
-
 // fix texture bleeding by shrinking tile slightly
 setTileDefaultBleed(.5);
 
@@ -31,9 +30,13 @@ function gameInit()
     const tileLayer = new TileCollisionLayer(pos, vec2(32,16));
 
     // get level data from the tiles image
+    // read it on the offscreen work canvas, the main canvas is sized to the
+    // window so reading back from it would clip and clear what is drawn
     const tileImage = textureInfos[0].image;
-    mainContext.drawImage(tileImage,0,0);
-    const imageData = mainContext.getImageData(0,0,tileImage.width,tileImage.height).data;
+    workReadCanvas.width = tileImage.width;
+    workReadCanvas.height = tileImage.height;
+    workReadContext.drawImage(tileImage,0,0);
+    const imageData = workReadContext.getImageData(0,0,tileImage.width,tileImage.height).data;
     for (pos.x = tileLayer.size.x; pos.x--;)
     for (pos.y = tileLayer.size.y; pos.y--;)
     {

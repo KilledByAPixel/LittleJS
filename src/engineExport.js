@@ -120,6 +120,7 @@ export
     setCanvasPixelated,
     setTilesPixelated,
     setCanvasPixelRatio,
+    getCanvasPixelRatio,
     setFontDefault,
     setShowSplashScreen,
     setHeadlessMode,

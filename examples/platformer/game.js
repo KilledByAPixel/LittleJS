@@ -28,9 +28,6 @@ LJS.setTouchGamepadEnable(true);
 LJS.setCanvasMinAspect(.4);
 LJS.setCanvasMaxAspect(2.5);
 
-// limit size to to 4k HD
-LJS.setCanvasMaxSize(vec2(3840, 2160));
-
 ///////////////////////////////////////////////////////////////////////////////
 function loadLevel()
 {

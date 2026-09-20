@@ -34,10 +34,13 @@ function gameInit()
     const tileLayer = new LJS.TileCollisionLayer(pos, vec2(32,16));
 
     // get level data from the tiles image
-    const mainContext = LJS.mainContext;
+    // read it on the offscreen work canvas, the main canvas is sized to the
+    // window so reading back from it would clip and clear what is drawn
     const tileImage = LJS.textureInfos[0].image;
-    mainContext.drawImage(tileImage, 0, 0);
-    const imageData = mainContext.getImageData(0,0,tileImage.width,tileImage.height).data;
+    LJS.workReadCanvas.width = tileImage.width;
+    LJS.workReadCanvas.height = tileImage.height;
+    LJS.workReadContext.drawImage(tileImage, 0, 0);
+    const imageData = LJS.workReadContext.getImageData(0,0,tileImage.width,tileImage.height).data;
     for (pos.x = tileLayer.size.x; pos.x--;)
     for (pos.y = tileLayer.size.y; pos.y--;)
     {

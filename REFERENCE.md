@@ -292,11 +292,12 @@ getCameraSize()          // Get the camera's visible area in world space
 cameraFit(center, size, worldMargin, screenInset) // Fit the camera to a world space rectangle
 
 // Display settings
-canvasMaxSize = (1920, 1080)  // The max size of the canvas
+canvasMaxSize = (3840, 2160)  // The max size of the canvas in css pixels
 canvasFixedSize = (0, 0)      // Fixed size of the canvas
 canvasMinAspect = 0           // Min aspect ratio, fits to height (0 = disabled)
 canvasMaxAspect = 0           // Max aspect ratio, fits to width (0 = disabled)
-canvasPixelRatio = 1          // Scales canvas resolution (use devicePixelRatio for HD)
+canvasPixelRatio = 1          // Scales canvas resolution (undefined tracks devicePixelRatio)
+getCanvasPixelRatio()         // Get the pixel ratio currently applied to the canvas
 canvasClearColor = BLACK      // Color used to clear the canvas at start of frame
 canvasColorTiles = true       // Allow tiles to be tinted when drawn
 fontDefault = 'arial'         // Default font used for text rendering

@@ -13,10 +13,11 @@ function drawEngineLogo(t)
     const showName = 1;
 
     // LittleJS Logo and Splash Screen
+    // the splash runs before the engine loop so size the canvas here too
+    engineUpdateCanvas();
     const x = mainContext;
-    const dpr = canvasPixelRatio ?? (devicePixelRatio || 1);
-    const w = mainCanvas.width = innerWidth * dpr;
-    const h = mainCanvas.height = innerHeight * dpr;
+    const w = mainCanvasSize.x;
+    const h = mainCanvasSize.y;
     {
         // background
         const p3 = percent(t, 1, .8);

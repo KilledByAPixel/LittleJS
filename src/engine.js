@@ -247,7 +247,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
             // update game and objects, when paused update everything except them
             wasUpdated = true;
-            updateCanvas();
+            engineUpdateCanvas();
             inputUpdate();
             if (!paused)
                 gameUpdate();
@@ -298,7 +298,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
             // canvas must be updated before rendering
             if (!wasUpdated)
-                updateCanvas();
+                engineUpdateCanvas();
 
             // render the game and objects
             enginePreRender();
@@ -320,96 +320,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     }
     engineUpdateInternal = engineUpdate;
 
-    function updateCanvas()
-    {
-        if (headlessMode) return;
-
-        if (canvasFixedSize.x)
-        {
-            // set canvas fixed size
-            mainCanvasSize = canvasFixedSize.copy();
-
-            // fit to window using css width and height
-            const innerAspect = innerWidth / innerHeight;
-            const fixedAspect = canvasFixedSize.x / canvasFixedSize.y;
-            const w = innerAspect < fixedAspect ? '100%' : '';
-            const h = innerAspect < fixedAspect ? '' : '100%';
-            mainCanvas.style.width  = w;
-            mainCanvas.style.height = h;
-            if (glCanvas)
-            {
-                glCanvas.style.width  = w;
-                glCanvas.style.height = h;
-            }
-        }
-        else
-        {
-            // apply device pixel ratio for crisp rendering
-            const dpr = canvasPixelRatio ?? (devicePixelRatio || 1);
-            const viewWidth = innerWidth * dpr | 0;
-            const viewHeight = innerHeight * dpr | 0;
-            
-            // get main canvas size based on window size
-            mainCanvasSize.x = min(viewWidth,  canvasMaxSize.x);
-            mainCanvasSize.y = min(viewHeight, canvasMaxSize.y);
-            
-            // responsive aspect ratio with native resolution
-            const innerAspect = viewWidth / viewHeight;
-            ASSERT(canvasMinAspect <= canvasMaxAspect);
-            if (canvasMaxAspect && innerAspect > canvasMaxAspect)
-            {
-                // full height
-                const w = mainCanvasSize.y * canvasMaxAspect | 0;
-                mainCanvasSize.x = min(w,  canvasMaxSize.x);
-            }
-            else if (innerAspect < canvasMinAspect)
-            {
-                // full width
-                const h = mainCanvasSize.x / canvasMinAspect | 0;
-                mainCanvasSize.y = min(h, canvasMaxSize.y);
-            }
-
-            // set CSS display size so backing store renders at viewport size
-            const cssW = (mainCanvasSize.x / dpr | 0) + 'px';
-            const cssH = (mainCanvasSize.y / dpr | 0) + 'px';
-            mainCanvas.style.width  = cssW;
-            mainCanvas.style.height = cssH;
-            if (glCanvas)
-            {
-                glCanvas.style.width  = cssW;
-                glCanvas.style.height = cssH;
-            }
-        }
-
-        // clear main canvas and set size
-        // only set the size when it changes, setting it invalidates the canvas
-        // frame which makes the browser rebuild the display list for the page
-        if (mainCanvas.width !== mainCanvasSize.x || mainCanvas.height !== mainCanvasSize.y)
-        {
-            mainCanvas.width  = mainCanvasSize.x;
-            mainCanvas.height = mainCanvasSize.y;
-        }
-        else
-        {
-            // setting the size also resets the context state, match that
-            mainContext.setTransform(1, 0, 0, 1, 0, 0);
-            mainContext.globalCompositeOperation = 'source-over';
-            mainContext.clearRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
-        }
-
-        // apply the clear color to main canvas
-        if (canvasClearColor.a > 0 && !glEnable)
-        {
-            mainContext.fillStyle = canvasClearColor.toString();
-            mainContext.fillRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
-            mainContext.fillStyle = BLACK.toString();
-        }
-
-        // set default line join and cap
-        mainContext.lineJoin = 'round';
-        mainContext.lineCap  = 'round';
-    }
-    
     // skip setup if headless
     if (headlessMode) return startEngine();
 
@@ -442,7 +352,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;
     setCanvasPixelated(canvasPixelated);
-    updateCanvas();
+    engineUpdateCanvas();
     glPreRender();
 
     // create offscreen canvases for image processing
@@ -487,6 +397,95 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         await gameInit();
         engineManualStep || engineUpdate();
     }
+}
+
+// Resize the canvas to fit the window and prepare it for a new frame
+// Called automatically each frame and by the splash screen before the loop starts
+function engineUpdateCanvas()
+{
+    if (headlessMode) return;
+
+    // scales the canvas backing store above the displayed size
+    const dpr = getCanvasPixelRatio();
+
+    if (canvasFixedSize.x)
+    {
+        // set canvas fixed size
+        mainCanvasSize = canvasFixedSize.copy();
+
+        // fit to window using css width and height
+        const innerAspect = innerWidth / innerHeight;
+        const fixedAspect = canvasFixedSize.x / canvasFixedSize.y;
+        const w = innerAspect < fixedAspect ? '100%' : '';
+        const h = innerAspect < fixedAspect ? '' : '100%';
+        mainCanvas.style.width  = w;
+        mainCanvas.style.height = h;
+        if (glCanvas)
+        {
+            glCanvas.style.width  = w;
+            glCanvas.style.height = h;
+        }
+    }
+    else
+    {
+        // get displayed canvas size based on window size, in css pixels so
+        // canvasMaxSize caps how big the canvas looks, not its resolution
+        let displayWidth  = min(innerWidth,  canvasMaxSize.x) | 0;
+        let displayHeight = min(innerHeight, canvasMaxSize.y) | 0;
+
+        // responsive aspect ratio
+        const innerAspect = innerWidth / innerHeight;
+        ASSERT(canvasMinAspect <= canvasMaxAspect);
+        if (canvasMaxAspect && innerAspect > canvasMaxAspect)
+        {
+            // full height
+            displayWidth = min(displayHeight * canvasMaxAspect | 0, canvasMaxSize.x);
+        }
+        else if (innerAspect < canvasMinAspect)
+        {
+            // full width
+            displayHeight = min(displayWidth / canvasMinAspect | 0, canvasMaxSize.y);
+        }
+
+        // set css size to fit the window, backing store renders above it
+        mainCanvas.style.width  = displayWidth  + 'px';
+        mainCanvas.style.height = displayHeight + 'px';
+        if (glCanvas)
+        {
+            glCanvas.style.width  = displayWidth  + 'px';
+            glCanvas.style.height = displayHeight + 'px';
+        }
+        mainCanvasSize.x = displayWidth  * dpr | 0;
+        mainCanvasSize.y = displayHeight * dpr | 0;
+    }
+
+    // clear main canvas and set size
+    // only set the size when it changes, setting it invalidates the canvas
+    // frame which makes the browser rebuild the display list for the page
+    if (mainCanvas.width !== mainCanvasSize.x || mainCanvas.height !== mainCanvasSize.y)
+    {
+        mainCanvas.width  = mainCanvasSize.x;
+        mainCanvas.height = mainCanvasSize.y;
+    }
+    else
+    {
+        // setting the size also resets the context state, match that
+        mainContext.setTransform(1, 0, 0, 1, 0, 0);
+        mainContext.globalCompositeOperation = 'source-over';
+        mainContext.clearRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+    }
+
+    // apply the clear color to main canvas
+    if (canvasClearColor.a > 0 && !glEnable)
+    {
+        mainContext.fillStyle = canvasClearColor.toString();
+        mainContext.fillRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+        mainContext.fillStyle = BLACK.toString();
+    }
+
+    // set default line join and cap
+    mainContext.lineJoin = 'round';
+    mainContext.lineCap  = 'round';
 }
 
 // max frames engineStep can advance in one call, 10 minutes at 60fps
