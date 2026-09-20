@@ -1980,3 +1980,28 @@ test('two objects that both have isSolid off pass through each other', () =>
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
 });
+
+test('a 3D object is not a phantom obstacle for 2D solid collision', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+
+    // both kinds share the solid flags now, so both land in the engine's solid list;
+    // a 3D object's 2D size is zero, and a box with no size blocks nothing
+    const flat = new EngineObject(vec2(2, 0), vec2(1, 1));
+    flat.setCollision();
+    flat.mass = 1;
+    flat.velocity = vec2(-.5, 0);
+    const solid3D = new EngineObject3D(vec3());
+    solid3D.setCollision();
+    assert.equal(solid3D.size.x, 0, 'a 3D object has no 2D size');
+
+    engineObjectsUpdate();
+    for (let i = 0; i < 4; ++i)
+        engineObjectsUpdate();
+    assert.ok(flat.pos.x < -.4, `the 2D object should sail past the origin, stopped at ${flat.pos.x}`);
+    assert.equal(flat.velocity.x, -.5, 'and keep its velocity');
+
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});

@@ -3128,14 +3128,15 @@ class EngineObject
             this.groundObject = undefined;
         }
 
-        if (this.collideSolidObjects)
+        // an object with no width or height has no box to push out of, or to be pushed out of
+        if (this.collideSolidObjects && this.size.x && this.size.y)
         {
             // check collisions against solid objects
             const epsilon = .001; // necessary to push slightly outside of the collision
             for (const o of engineObjectsCollide)
             {
-                // skip destroyed, child objects, or self collision
-                if (o.destroyed || o.parent || o === this) continue;
+                // skip destroyed, child objects, self collision, or objects with no box
+                if (o.destroyed || o.parent || o === this || !o.size.x || !o.size.y) continue;
 
                 // non solid objects don't collide with each other
                 if (!this.isSolid && !o.isSolid) continue;

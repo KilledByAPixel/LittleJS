@@ -485,7 +485,8 @@ EngineObject.applyForce(force)                     // Apply force
 EngineObject.getMirrorSign()                       // Get mirror direction (1 or -1)
 EngineObject.addChild(child, localPos, localAngle) // Attach a child
 EngineObject.removeChild(child)                    // Remove a child
-EngineObject.setCollision(solids, isSolid, tiles)  // Set collision
+EngineObject.setCollision(solids, isSolid, tiles)  // Set collision; an object with no width or height is not a
+                                                   // solid obstacle, so it blocks nothing and nothing blocks it
 EngineObject.persistent = true                     // skipped by engineObjectsDestroy, for things that outlive a
                                                    // level like a camera; destroy() still destroys it
 
@@ -967,6 +968,7 @@ obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gr
              // velocity3D, and damping is 1 by default for no slowing
 obj.size3D                              // full size for engineObjectsCollect3D and sprites
 obj.setCollision(solids, isSolid)       // the same flags as in 2D, but the collision happens in 3D against size3D;
+                                        // a 3D object has no 2D size, so it is never an obstacle in a 2D scene;
                                         // both objects of a pair need solids, and a pair where neither one blocks
                                         // passes through, so movers hit the level without shoving each other;
                                         // heavier objects move less, mass 0 stays put, velocities bounce by
