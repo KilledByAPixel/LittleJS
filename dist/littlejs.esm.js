@@ -17852,7 +17852,7 @@ function raycastBox(ray, pos, size)
  * - Call new Render3DPlugin() in gameInit, then move render3D.camera and make EngineObject3D objects
  * - EngineObject3D is an EngineObject with a 3D position, rotation and mesh
  * - The 3D scene draws under the 2D sprites, so HUD and text land on top
- * - Lighting is one directional light plus ambient, with optional point lights, fog and shadows
+ * - Lighting is one directional light plus ambient, with optional extra lights, fog and shadows
  * - Build shapes with buildBox, buildSphere and friends, or load a model with loadOBJ
  * - Requires the Math3D plugin
  * @namespace Render3D
@@ -20668,11 +20668,12 @@ function render3DReadPixels(textureInfo)
  * EngineObject3D - An EngineObject with a 3D transform and a mesh
  * - Set pos3D, rotation3D and scale3D instead of the 2D pos, size and angle
  * - Gets update, children, timers, destroy and renderOrder from EngineObject
- * - velocity3D is added to pos3D each frame, that is all the 3D physics there is
+ * - velocity3D is added to pos3D each frame, along with render3D.gravity and damping once it has a mass
  * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
  * - The 2D pos and velocity are still there but nothing draws them
  * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D
  * - setCollision works as it does in 2D, but the solid collision happens in 3D unless the object is sync2D
+ * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
  * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
  * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
  * @extends EngineObject
@@ -20802,6 +20803,21 @@ class EngineObject3D extends EngineObject
     /** Turn the object so its -Z axis points at a target, sets pitch and yaw and clears roll
      *  @param {Vector3} target */
     lookAt(target) { this.rotation3D = render3DLookRotation(target.subtract(this.pos3D), this.rotation3D); }
+
+    /** Draw a different mesh and free the GPU buffer of the one it replaces
+     *  - For a mesh built again when something changes, like a score, a rebuilt terrain or a loaded model
+     *  - A mesh another object is still drawing is left alone, since builders are often shared
+     *  @param {Mesh} [mesh] - The mesh to draw from now on, undefined to draw nothing
+     *  @return {Mesh|undefined} - The mesh passed in */
+    setMesh(mesh)
+    {
+        ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
+        const old = this.mesh;
+        this.mesh = mesh;
+        if (old && old !== mesh && !engineObjects.some(o => o.mesh === old))
+            old.dispose();
+        return mesh;
+    }
 
     /** 2D rendering is skipped, the mesh is drawn by render3D during the 3D pass */
     render() {}

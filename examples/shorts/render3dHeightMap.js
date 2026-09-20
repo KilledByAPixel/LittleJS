@@ -89,8 +89,7 @@ function gameUpdate()
     if (keyWasPressed('Space'))
     {
         render3D.smoothShading = !render3D.smoothShading;
-        ground.mesh.dispose(); // the old terrain is on the GPU, let it go
-        ground.mesh = terrain.buildMesh();
+        ground.setMesh(terrain.buildMesh()); // frees the terrain it replaces
     }
     if (mouseWasPressed(2))
     {

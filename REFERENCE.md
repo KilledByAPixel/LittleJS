@@ -984,6 +984,9 @@ obj.upright = true                      // a sprite stands on world up instead o
 obj.sync2D = true // copy the 2D pos and angle into pos3D and rotation3D each frame; the 2D physics only run for a
                   // sync2D object, so set its mass to have them move it
 obj.mesh obj.tileInfo obj.color         // what to draw and how
+obj.setMesh(mesh)                       // draw a different mesh and free the GPU buffer of the one it replaces, for
+                                        // text and terrain built again as things change; a mesh another object is
+                                        // still drawing is left alone, so shared builders are safe
 obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
 obj.additive = true                     // additive blending, implies the transparent stage
 obj.unlit = true                        // draw with lighting off, for lamps and glowing things
@@ -1045,8 +1048,8 @@ debugSphere3D(pos, size, color, time)
 debugLine3D(posA, posB, color, width, time)
 debugPoint3D(pos, color, time, size)
 
-// Meshes - triangle strips, sent to the GPU on first render, drawn by matrix; dispose a mesh you stop using to free its
-// GPU buffer
+// Meshes - triangle strips, sent to the GPU on first render, drawn by matrix; dispose a mesh you stop using to free
+// its GPU buffer, or use obj.setMesh to swap the mesh of an object and free the old one in a single call
 const mesh = new Mesh
 mesh.addStrip(points, normals, uvs, colors) // one strip in strip order, counter clockwise from the front; normals, uvs
                                             // and colors are one value or one per point; extra strips in one mesh are

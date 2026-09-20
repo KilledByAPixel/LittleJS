@@ -109,8 +109,7 @@ function randomGroundPos()
 
 function buildScoreText()
 {
-    scoreText.mesh?.dispose(); // the old text is a mesh on the GPU, let it go
-    scoreText.mesh = buildText3D('ORBS ' + score, 3, .8);
+    scoreText.setMesh(buildText3D('ORBS ' + score, 3, .8)); // frees the text it replaces
 }
 
 ///////////////////////////////////////////////////////////////////////////////

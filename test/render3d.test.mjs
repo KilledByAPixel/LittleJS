@@ -2017,3 +2017,33 @@ test('a mesh from a lost context is let go instead of deleted', () =>
     assert.equal(mesh.buffer, undefined, 'the stale buffer is dropped either way');
     assert.equal(mesh.bufferCount, 0);
 });
+
+test('setMesh frees the mesh it replaces, unless something else is still drawing it', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const a = new EngineObject3D(vec3()), b = new EngineObject3D(vec3());
+    const first = buildBox(), second = buildBox(), shared = buildBox();
+    for (const m of [first, second, shared]) // stand in for uploaded meshes, headless has no GL
+        m.buffer = {}, m.bufferCount = 4, m.contextGeneration = render3D.contextGeneration;
+
+    // a mesh only this object draws is let go
+    a.setMesh(first);
+    assert.equal(a.setMesh(second), second, 'returns the mesh it was given');
+    assert.equal(first.buffer, undefined, 'the mesh it replaced was freed');
+    assert.equal(a.mesh, second);
+
+    // a mesh another object still draws is left alone
+    a.setMesh(shared);
+    b.mesh = shared;
+    a.setMesh(undefined);
+    assert.ok(shared.buffer, 'b is still drawing it, so it keeps its buffer');
+    assert.equal(a.mesh, undefined);
+
+    // and setting the same mesh again is not a reason to free it
+    b.setMesh(shared);
+    assert.ok(shared.buffer);
+
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});

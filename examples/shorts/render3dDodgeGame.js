@@ -75,8 +75,7 @@ class Box extends EngineObject3D
 
 function buildScoreText()
 {
-    scoreObject.mesh?.dispose(); // the old text is a mesh on the GPU, let it go
-    scoreObject.mesh = buildText3D('SCORE ' + score + '\nBEST ' + best, 2, .6);
+    scoreObject.setMesh(buildText3D('SCORE ' + score + '\nBEST ' + best, 2, .6));
 }
 
 function endRound()
