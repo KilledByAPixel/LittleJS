@@ -20533,11 +20533,13 @@ class HeightMap
     get columns() { return this.heights[0].length; }
 
     /** World height at a position, exactly the height of the mesh buildMesh draws there, clamped at the edges
-     *  @param {number} x
-     *  @param {number} z
+     *  @param {number|Vector3} x - X, or a position to take X and Z from
+     *  @param {number} [z]
      *  @return {number} */
     getHeight(x, z)
     {
+        if (x instanceof Vector3)
+            z = x.z, x = x.x; // a position works as well as its two numbers, its own y is ignored
         const columns = this.columns, rows = this.rows, h = this.heights;
         const u = clamp((x / this.size.x + .5) * (columns - 1), 0, columns - 1);
         const v = clamp((z / this.size.y + .5) * (rows - 1), 0, rows - 1);
@@ -20550,21 +20552,25 @@ class HeightMap
     }
 
     /** Surface normal at a position, from the slope across a sample
-     *  @param {number} x
-     *  @param {number} z
+     *  @param {number|Vector3} x - X, or a position to take X and Z from
+     *  @param {number} [z]
      *  @return {Vector3} */
     getNormal(x, z)
     {
+        if (x instanceof Vector3)
+            z = x.z, x = x.x;
         const ex = this.size.x / (this.columns - 1) / 2, ez = this.size.y / (this.rows - 1) / 2;
         return render3DSlopeNormal((x, z)=> this.getHeight(x, z), x, z, ex, ez, this.size.x / 2, this.size.y / 2);
     }
 
     /** Color of the nearest sample to a position, white when there are no colors
-     *  @param {number} x
-     *  @param {number} z
+     *  @param {number|Vector3} x - X, or a position to take X and Z from
+     *  @param {number} [z]
      *  @return {Color} */
     getColor(x, z)
     {
+        if (x instanceof Vector3)
+            z = x.z, x = x.x;
         const c = this.colors;
         if (!c) return WHITE;
         const columns = c[0].length, rows = c.length;

@@ -2055,3 +2055,17 @@ test('a height map with no size says so instead of failing later', () =>
     assert.throws(()=> new HeightMap([[0,1],[1,0]], vec2(), 1));
     assert.doesNotThrow(()=> new HeightMap([[0,1],[1,0]], vec2(4), 1));
 });
+
+test('height map lookups take a position as well as two numbers', () =>
+{
+    const heights = [[0, .5], [.5, 1]];
+    const colors = [[RED, WHITE], [WHITE, RED]];
+    const map = new HeightMap(heights, vec2(10), 4, colors);
+    for (const [x, z] of [[0, 0], [-3, 2], [4.5, -4.5], [-5, 5]])
+    {
+        near(map.getHeight(vec3(x, 99, z)), map.getHeight(x, z), 'height ignores the y it is handed');
+        const a = map.getNormal(vec3(x, 99, z)), b = map.getNormal(x, z);
+        nearVec(a, b.x, b.y, b.z);
+        assert.equal(map.getColor(vec3(x, 99, z)).rgbaInt(), map.getColor(x, z).rgbaInt());
+    }
+});

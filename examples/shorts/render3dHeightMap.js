@@ -13,10 +13,10 @@ class Ball extends EngineObject3D
     {
         // roll downhill along the ground normal
         const p = this.pos3D;
-        const normal = terrain.getNormal(p.x, p.z);
+        const normal = terrain.getNormal(p);
         const push = vec3(normal.x, 0, normal.z).scale(.02);
         this.velocity3D = this.velocity3D.add(push).scale(.99);
-        p.y = terrain.getHeight(p.x, p.z) + .5;
+        p.y = terrain.getHeight(p) + .5;
     }
 }
 

@@ -86,10 +86,10 @@ class Car extends EngineObject3D
         // follow the ground, the nose follows the slope
         const forward = vec3(0, 0, -1).rotateY(this.yaw);
         this.pos3D = this.pos3D.add(forward.scale(this.speed));
-        this.pos3D.y = terrain.getHeight(this.pos3D.x, this.pos3D.z) + .85;
+        this.pos3D.y = terrain.getHeight(this.pos3D) + .85;
         const ahead = this.pos3D.add(forward.scale(1.5));
         const behind = this.pos3D.subtract(forward.scale(1.5));
-        const rise = terrain.getHeight(ahead.x, ahead.z) - terrain.getHeight(behind.x, behind.z);
+        const rise = terrain.getHeight(ahead) - terrain.getHeight(behind);
         this.rotation3D = vec3(atan2(rise, 3), this.yaw, -input.x*this.speed*.6);
         for (const trail of this.trails)
             trail.side = vec3(1, 0, 0).rotateY(this.yaw); // across the car, so the marks lie flat
@@ -130,7 +130,7 @@ function gameInit()
     for (let i = 0; i < 120; ++i)
     {
         const p = trackPoint(i/120*2*PI);
-        p.y = terrain.getHeight(p.x, p.z) + .1;
+        p.y = terrain.getHeight(p) + .1;
         points.push(p);
         colors.push(hsl(.6, .1, i%8 < 4 ? .2 : .25));
     }
@@ -142,7 +142,7 @@ function gameInit()
     {
         const a = floor(i/2)/gateCount*2*PI, side = i%2 ? 1 : -1;
         const p = trackPoint(a).add(trackSide(a).scale(side*(roadWidth/2 + 1)));
-        p.y = terrain.getHeight(p.x, p.z) + 2.5;
+        p.y = terrain.getHeight(p) + 2.5;
         const postObject = new EngineObject3D(p, post);
         postObject.color = i > 1 ? hsl(.15,1,.5) : hsl(0,.7,.5);
     }

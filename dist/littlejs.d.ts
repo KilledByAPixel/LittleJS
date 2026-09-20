@@ -7018,20 +7018,20 @@ declare module "littlejsengine" {
          *  @return {number} */
         get columns(): number;
         /** World height at a position, exactly the height of the mesh buildMesh draws there, clamped at the edges
-         *  @param {number} x
-         *  @param {number} z
+         *  @param {number|Vector3} x - X, or a position to take X and Z from
+         *  @param {number} [z]
          *  @return {number} */
-        getHeight(x: number, z: number): number;
+        getHeight(x: number | Vector3, z?: number): number;
         /** Surface normal at a position, from the slope across a sample
-         *  @param {number} x
-         *  @param {number} z
+         *  @param {number|Vector3} x - X, or a position to take X and Z from
+         *  @param {number} [z]
          *  @return {Vector3} */
-        getNormal(x: number, z: number): Vector3;
+        getNormal(x: number | Vector3, z?: number): Vector3;
         /** Color of the nearest sample to a position, white when there are no colors
-         *  @param {number} x
-         *  @param {number} z
+         *  @param {number|Vector3} x - X, or a position to take X and Z from
+         *  @param {number} [z]
          *  @return {Color} */
-        getColor(x: number, z: number): Color;
+        getColor(x: number | Vector3, z?: number): Color;
         /** Distance along a ray to where it hits the terrain, or undefined for a miss
          *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
          *  @param {Ray3D} ray - From screenToRay, or any ray

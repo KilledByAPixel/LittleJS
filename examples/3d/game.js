@@ -46,7 +46,7 @@ class Player extends EngineObject3D
         this.pos3D.z = clamp(this.pos3D.z, -limit, limit);
 
         // space jumps when it is on the ground, then gravity brings it back
-        const ground = terrain.getHeight(this.pos3D.x, this.pos3D.z) + 1;
+        const ground = terrain.getHeight(this.pos3D) + 1;
         const onGround = this.pos3D.y < ground + .1;
         if (onGround && keyWasPressed('Space'))
             this.speedY = .35;
@@ -81,7 +81,7 @@ class Orb extends EngineObject3D
     {
         // bob in place until the player reaches it
         const bob = sin(time*2 + this.pos3D.x)*.3;
-        this.pos3D.y = terrain.getHeight(this.pos3D.x, this.pos3D.z) + 2 + bob;
+        this.pos3D.y = terrain.getHeight(this.pos3D) + 2 + bob;
         if (this.pos3D.distance(player.pos3D) > 2.5)
             return;
 
@@ -155,7 +155,7 @@ function gameInit()
     for (let i = 250; i--;)
     {
         const pos = randomGroundPos();
-        pos.y = terrain.getHeight(pos.x, pos.z);
+        pos.y = terrain.getHeight(pos);
         if (pos.y < 2 || pos.y > 9)
             continue;
         const treeObject = new EngineObject3D(pos, tree);
@@ -171,7 +171,7 @@ function gameInit()
     for (let i = 14; i--;)
     {
         const pos = randomGroundPos();
-        pos.y = terrain.getHeight(pos.x, pos.z);
+        pos.y = terrain.getHeight(pos);
         if (pos.y < 2)
             continue;
         const rock = new EngineObject3D(pos, crystal);
@@ -185,7 +185,7 @@ function gameInit()
     for (let i = 12; i--;)
     {
         const pos = randomGroundPos();
-        pos.y = terrain.getHeight(pos.x, pos.z) + 1.5;
+        pos.y = terrain.getHeight(pos) + 1.5;
         if (pos.y < 3)
             continue;
         const sprite = new EngineObject3D(pos, undefined, tile(i%4, 16));

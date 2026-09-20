@@ -1106,10 +1106,10 @@ buildText3D(text, size, depth, font) // extruded glyphs from an ImageFont, the w
 const terrain = new HeightMap(heights, size=vec2(1), height=1, colors) // heights and colors take the array, an image or
                                                                       // a canvas
 terrain.buildMesh(smooth)                     // one vertex per sample, centered on the origin
-terrain.getHeight(x, z)                       // world height of the drawn mesh there, to stand things on it
-terrain.getNormal(x, z)                       // surface normal there, to tilt things to the slope
-terrain.raycast(ray)               // distance along a ray to the ground or undefined, for clicking on terrain
-terrain.getColor(x, z)                        // nearest sample color
+terrain.getHeight(pos3D) or (x, z)            // world height of the drawn mesh there, to stand things on it
+terrain.getNormal(pos3D) or (x, z)            // surface normal there, to tilt things to the slope
+terrain.raycast(ray)                          // distance along a ray to the ground or undefined, for clicking
+terrain.getColor(pos3D) or (x, z)             // nearest sample color
 terrain.rows terrain.columns                  // samples along Z and X
 
 // OBJ meshes - v, vt, vn and f lines, convex polygons, no materials
