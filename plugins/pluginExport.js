@@ -111,7 +111,7 @@ export
     collideSphereSphere,
     collideSphereBox,
     collideSphereCylinder,
-    collideBoxBox,
+    collideBoxBox3D,
     raycastSphere,
     raycastPlane,
     raycastBox,

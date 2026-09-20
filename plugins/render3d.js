@@ -2988,7 +2988,7 @@ function render3DSolidPush(a, b)
         const push = collideSphereBox(b.pos, b.radius, a.pos, a.size);
         return push && push.scale(-1);
     }
-    return collideBoxBox(a.pos, a.size, b.pos, b.size);
+    return collideBoxBox3D(a.pos, a.size, b.pos, b.size);
 }
 
 // push a solid object out of the solids updated before it this frame, so each pair is resolved once

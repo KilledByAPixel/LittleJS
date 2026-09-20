@@ -193,6 +193,9 @@ export
     isPowerOfTwo,
     isOverlapping,
     isIntersecting,
+    collideCircleCircle,
+    collideCircleBox,
+    collideBoxBox,
     lineTest,
     oscillate,
 

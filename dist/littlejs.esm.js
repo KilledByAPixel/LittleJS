@@ -1633,6 +1633,74 @@ function isIntersecting(start, end, pos, size)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Collision helpers, none of them change anything that is passed in
+// Boxes are axis aligned and centered on pos with a full size, like drawRect
+// Each returns how far to move the first shape to get it clear, or undefined when they are not touching
+// isOverlapping answers whether two boxes touch, these answer how far out
+
+/** Returns the vector to move circle A by so it no longer overlaps circle B, or undefined
+ *  @param {Vector2} posA - Center of circle A
+ *  @param {number} radiusA
+ *  @param {Vector2} posB - Center of circle B
+ *  @param {number} radiusB
+ *  @return {Vector2|undefined}
+ *  @memberof Math */
+function collideCircleCircle(posA, radiusA, posB, radiusB)
+{
+    const d = posA.subtract(posB);
+    const r = radiusA + radiusB;
+    const dist = d.length();
+    if (dist >= r)
+        return undefined;
+    return d.normalize(r - dist); // coincident centers normalize to straight up
+}
+
+/** Returns the vector to move a circle out of an axis aligned box, or undefined
+ *  @param {Vector2} pos - Center of the circle
+ *  @param {number} radius
+ *  @param {Vector2} boxPos - Center of the box
+ *  @param {Vector2} boxSize - Full size of the box
+ *  @return {Vector2|undefined}
+ *  @memberof Math */
+function collideCircleBox(pos, radius, boxPos, boxSize)
+{
+    const h = boxSize.scale(.5);
+    const closest = vec2(clamp(pos.x, boxPos.x - h.x, boxPos.x + h.x), clamp(pos.y, boxPos.y - h.y, boxPos.y + h.y));
+    const d = pos.subtract(closest), distSq = d.lengthSquared();
+    if (distSq)
+        return distSq >= radius*radius ? undefined : d.normalize(radius - distSq**.5);
+
+    // center is inside the box, push out along the axis of least penetration
+    const offset = pos.subtract(boxPos);
+    return pushOutAxis(offset, h.x - abs(offset.x), h.y - abs(offset.y), radius);
+}
+
+/** Returns the vector to move box A by so it no longer overlaps box B, the shortest way out, or undefined
+ *  - isOverlapping is the yes or no version of this
+ *  @param {Vector2} posA - Center of box A
+ *  @param {Vector2} sizeA - Full size of box A
+ *  @param {Vector2} posB - Center of box B
+ *  @param {Vector2} sizeB - Full size of box B
+ *  @return {Vector2|undefined}
+ *  @memberof Math */
+function collideBoxBox(posA, sizeA, posB, sizeB)
+{
+    const d = posA.subtract(posB);
+    const overlapX = (sizeA.x + sizeB.x)/2 - abs(d.x);
+    const overlapY = (sizeA.y + sizeB.y)/2 - abs(d.y);
+    if (overlapX <= 0 || overlapY <= 0)
+        return undefined;
+    return pushOutAxis(d, overlapX, overlapY);
+}
+
+// the axis with the smallest penetration, pointing the way d does, with extra distance added
+function pushOutAxis(d, penX, penY, extra=0)
+{
+    const s = (v)=> v >= 0 ? 1 : -1; // sign() gives 0 on a tie, which would be no push
+    return penX <= penY ? vec2(s(d.x)*(penX + extra), 0) : vec2(0, s(d.y)*(penY + extra));
+}
+
 /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
  *  @param {number} [frequency] - Frequency of the wave in Hz
  *  @param {number} [amplitude] - Amplitude (max height) of the wave
@@ -17622,11 +17690,11 @@ function collideSphereBox(pos, radius, boxPos, boxSize)
 
     // center is inside the box, push out along the axis of least penetration
     const offset = pos.subtract(boxPos);
-    return pushOutAxis(offset, h.x - abs(offset.x), h.y - abs(offset.y), h.z - abs(offset.z), radius);
+    return pushOutAxis3D(offset, h.x - abs(offset.x), h.y - abs(offset.y), h.z - abs(offset.z), radius);
 }
 
 // the axis with the smallest penetration, pointing the way d does, with extra distance added
-function pushOutAxis(d, penX, penY, penZ, extra=0)
+function pushOutAxis3D(d, penX, penY, penZ, extra=0)
 {
     const s = (v)=> v >= 0 ? 1 : -1; // sign() gives 0 on a tie, which would be no push
     if (penX <= penY && penX <= penZ)
@@ -17674,7 +17742,8 @@ function collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinde
 }
 
 /**
- * Returns the minimum translation vector to move box A out of box B, or undefined
+ * Returns the vector to move box A by so it no longer overlaps box B, the shortest way out, or undefined
+ * - The 3D twin of collideBoxBox
  * @param {Vector3} posA
  * @param {Vector3} sizeA - Full size of box A
  * @param {Vector3} posB
@@ -17682,7 +17751,7 @@ function collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinde
  * @return {Vector3|undefined}
  * @memberof Math3D
  */
-function collideBoxBox(posA, sizeA, posB, sizeB)
+function collideBoxBox3D(posA, sizeA, posB, sizeB)
 {
     const d = posA.subtract(posB);
     const overlapX = (sizeA.x + sizeB.x)/2 - abs(d.x);
@@ -17690,7 +17759,7 @@ function collideBoxBox(posA, sizeA, posB, sizeB)
     const overlapZ = (sizeA.z + sizeB.z)/2 - abs(d.z);
     if (overlapX <= 0 || overlapY <= 0 || overlapZ <= 0)
         return undefined;
-    return pushOutAxis(d, overlapX, overlapY, overlapZ);
+    return pushOutAxis3D(d, overlapX, overlapY, overlapZ);
 }
 
 /**
@@ -20764,7 +20833,7 @@ function render3DSolidPush(a, b)
         const push = collideSphereBox(b.pos, b.radius, a.pos, a.size);
         return push && push.scale(-1);
     }
-    return collideBoxBox(a.pos, a.size, b.pos, b.size);
+    return collideBoxBox3D(a.pos, a.size, b.pos, b.size);
 }
 
 // push a solid object out of the solids updated before it this frame, so each pair is resolved once
@@ -21631,6 +21700,9 @@ export
     isPowerOfTwo,
     isOverlapping,
     isIntersecting,
+    collideCircleCircle,
+    collideCircleBox,
+    collideBoxBox,
     lineTest,
     oscillate,
 
@@ -21946,7 +22018,7 @@ export
     collideSphereSphere,
     collideSphereBox,
     collideSphereCylinder,
-    collideBoxBox,
+    collideBoxBox3D,
     raycastSphere,
     raycastPlane,
     raycastBox,

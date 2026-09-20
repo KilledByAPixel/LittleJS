@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { vec3, isVector3, Vector3, Matrix4, buildMatrix, PI,
     isPointInBox3D, isOverlapping3D, collideSphereSphere, collideSphereBox, collideSphereCylinder,
-    collideBoxBox, raycastSphere, raycastPlane, raycastBox, randVector3, Ray3D } from '../dist/littlejs.esm.js';
+    collideBoxBox3D, raycastSphere, raycastPlane, raycastBox, randVector3, Ray3D } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-6, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -289,11 +289,11 @@ test('collideSphereCylinder hits the side and the cap', () =>
     assert.equal(collideSphereCylinder(vec3(5, 0, 0), 1, cylPos, cylRadius, cylHeight), undefined);
 });
 
-test('collideBoxBox returns the minimum translation vector on the smallest axis', () =>
+test('collideBoxBox3D returns the minimum translation vector on the smallest axis', () =>
 {
     const sizeA = vec3(4, 4, 4), sizeB = vec3(4, 4, 4); // half = 2 each
-    assert.equal(collideBoxBox(vec3(5, 0, 0), sizeA, vec3(0, 0, 0), sizeB), undefined); // not touching
-    nearVec(collideBoxBox(vec3(0, 0, 0), sizeA, vec3(3, .5, 0), sizeB), -1, 0, 0); // X is smallest overlap
+    assert.equal(collideBoxBox3D(vec3(5, 0, 0), sizeA, vec3(0, 0, 0), sizeB), undefined); // not touching
+    nearVec(collideBoxBox3D(vec3(0, 0, 0), sizeA, vec3(3, .5, 0), sizeB), -1, 0, 0); // X is smallest overlap
 });
 
 test('raycastSphere handles hit, miss, inside and behind', () =>

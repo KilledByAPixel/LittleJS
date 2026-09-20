@@ -4,6 +4,7 @@ import {
     PI, clamp, percent, percentLerp, lerp, mod, smoothStep, nearestPowerOfTwo, oscillate,
     distanceWrap, lerpWrap, distanceAngle, lerpAngle,
     isOverlapping, isIntersecting, lineTest,
+    collideCircleCircle, collideCircleBox, collideBoxBox,
     vec2, Vector2, rgb, hsl, Color,
     RandomGenerator,
     rand, randInt, randBool, randSign, randVec2, randInCircle, randColor,
@@ -793,4 +794,49 @@ test('RandomGenerator mutateColor', () =>
     assert(Math.abs(m.r - 0.5) <= 0.1 + EPS);
     assert(Math.abs(m.g - 0.5) <= 0.1 + EPS);
     assert(Math.abs(m.b - 0.5) <= 0.1 + EPS);
+});
+
+test('collideCircleCircle pushes one circle clear of another', () =>
+{
+    assert.equal(collideCircleCircle(vec2(5, 0), 1, vec2(0, 0), 1), undefined); // not touching
+    assert.equal(collideCircleCircle(vec2(2, 0), 1, vec2(0, 0), 1), undefined); // exactly touching is not overlapping
+    const push = collideCircleCircle(vec2(1, 0), 1, vec2(0, 0), 1);
+    assert.ok(Math.abs(push.x - 1) < 1e-9 && Math.abs(push.y) < 1e-9, 'pushed a full radius out along x');
+    const up = collideCircleCircle(vec2(0, 0), 1, vec2(0, 0), 2); // same center, pushed straight up
+    assert.ok(Math.abs(up.x) < 1e-9 && Math.abs(up.y - 3) < 1e-9, `${up}`);
+});
+
+test('collideCircleBox pushes a circle clear of a box, from outside or within', () =>
+{
+    const boxSize = vec2(2, 2);
+    assert.equal(collideCircleBox(vec2(5, 0), 1, vec2(), boxSize), undefined);
+
+    // outside: pushed along the line to the nearest point on the box
+    const side = collideCircleBox(vec2(1.5, 0), 1, vec2(), boxSize);
+    assert.ok(Math.abs(side.x - .5) < 1e-9 && Math.abs(side.y) < 1e-9, `${side}`);
+
+    // a corner pushes diagonally
+    const corner = collideCircleBox(vec2(1.5, 1.5), 1, vec2(), boxSize);
+    assert.ok(corner.x > 0 && corner.y > 0 && Math.abs(corner.x - corner.y) < 1e-9, `${corner}`);
+
+    // inside: out through the nearest side, plus the radius
+    const within = collideCircleBox(vec2(0, .4), 1, vec2(), boxSize);
+    assert.ok(Math.abs(within.x) < 1e-9 && Math.abs(within.y - 1.6) < 1e-9, `${within}`);
+});
+
+test('collideBoxBox is the how-far-out version of isOverlapping', () =>
+{
+    const sizeA = vec2(2, 2), sizeB = vec2(2, 2);
+    assert.equal(isOverlapping(vec2(5, 0), sizeA, vec2(), sizeB), false);
+    assert.equal(collideBoxBox(vec2(5, 0), sizeA, vec2(), sizeB), undefined);
+    assert.equal(isOverlapping(vec2(2, 0), sizeA, vec2(), sizeB), false); // touching edges do not overlap
+    assert.equal(collideBoxBox(vec2(2, 0), sizeA, vec2(), sizeB), undefined);
+
+    // overlapping: out along the shorter way, x here
+    const push = collideBoxBox(vec2(1.5, .5), sizeA, vec2(), sizeB);
+    assert.ok(Math.abs(push.x - .5) < 1e-9 && push.y === 0, `${push}`);
+
+    // and the other way when y is shorter
+    const up = collideBoxBox(vec2(.5, 1.5), sizeA, vec2(), sizeB);
+    assert.ok(push.y === 0 && Math.abs(up.y - .5) < 1e-9 && up.x === 0, `${up}`);
 });

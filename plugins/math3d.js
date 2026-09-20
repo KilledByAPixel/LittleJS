@@ -668,11 +668,11 @@ function collideSphereBox(pos, radius, boxPos, boxSize)
 
     // center is inside the box, push out along the axis of least penetration
     const offset = pos.subtract(boxPos);
-    return pushOutAxis(offset, h.x - abs(offset.x), h.y - abs(offset.y), h.z - abs(offset.z), radius);
+    return pushOutAxis3D(offset, h.x - abs(offset.x), h.y - abs(offset.y), h.z - abs(offset.z), radius);
 }
 
 // the axis with the smallest penetration, pointing the way d does, with extra distance added
-function pushOutAxis(d, penX, penY, penZ, extra=0)
+function pushOutAxis3D(d, penX, penY, penZ, extra=0)
 {
     const s = (v)=> v >= 0 ? 1 : -1; // sign() gives 0 on a tie, which would be no push
     if (penX <= penY && penX <= penZ)
@@ -720,7 +720,8 @@ function collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinde
 }
 
 /**
- * Returns the minimum translation vector to move box A out of box B, or undefined
+ * Returns the vector to move box A by so it no longer overlaps box B, the shortest way out, or undefined
+ * - The 3D twin of collideBoxBox
  * @param {Vector3} posA
  * @param {Vector3} sizeA - Full size of box A
  * @param {Vector3} posB
@@ -728,7 +729,7 @@ function collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinde
  * @return {Vector3|undefined}
  * @memberof Math3D
  */
-function collideBoxBox(posA, sizeA, posB, sizeB)
+function collideBoxBox3D(posA, sizeA, posB, sizeB)
 {
     const d = posA.subtract(posB);
     const overlapX = (sizeA.x + sizeB.x)/2 - abs(d.x);
@@ -736,7 +737,7 @@ function collideBoxBox(posA, sizeA, posB, sizeB)
     const overlapZ = (sizeA.z + sizeB.z)/2 - abs(d.z);
     if (overlapX <= 0 || overlapY <= 0 || overlapZ <= 0)
         return undefined;
-    return pushOutAxis(d, overlapX, overlapY, overlapZ);
+    return pushOutAxis3D(d, overlapX, overlapY, overlapZ);
 }
 
 /**

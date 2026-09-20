@@ -1063,6 +1063,31 @@ declare module "littlejsengine" {
      *  @return {boolean}      - True if intersecting
      *  @memberof Math */
     export function isIntersecting(start: Vector2, end: Vector2, pos: Vector2, size: Vector2): boolean;
+    /** Returns the vector to move circle A by so it no longer overlaps circle B, or undefined
+     *  @param {Vector2} posA - Center of circle A
+     *  @param {number} radiusA
+     *  @param {Vector2} posB - Center of circle B
+     *  @param {number} radiusB
+     *  @return {Vector2|undefined}
+     *  @memberof Math */
+    export function collideCircleCircle(posA: Vector2, radiusA: number, posB: Vector2, radiusB: number): Vector2 | undefined;
+    /** Returns the vector to move a circle out of an axis aligned box, or undefined
+     *  @param {Vector2} pos - Center of the circle
+     *  @param {number} radius
+     *  @param {Vector2} boxPos - Center of the box
+     *  @param {Vector2} boxSize - Full size of the box
+     *  @return {Vector2|undefined}
+     *  @memberof Math */
+    export function collideCircleBox(pos: Vector2, radius: number, boxPos: Vector2, boxSize: Vector2): Vector2 | undefined;
+    /** Returns the vector to move box A by so it no longer overlaps box B, the shortest way out, or undefined
+     *  - isOverlapping is the yes or no version of this
+     *  @param {Vector2} posA - Center of box A
+     *  @param {Vector2} sizeA - Full size of box A
+     *  @param {Vector2} posB - Center of box B
+     *  @param {Vector2} sizeB - Full size of box B
+     *  @return {Vector2|undefined}
+     *  @memberof Math */
+    export function collideBoxBox(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB: Vector2): Vector2 | undefined;
     /**
      * @callback LineTestFunction - Checks if a position is colliding
      * @param {Vector2} pos
@@ -6180,7 +6205,8 @@ declare module "littlejsengine" {
      */
     export function collideSphereCylinder(pos: Vector3, radius: number, cylinderPos: Vector3, cylinderRadius: number, cylinderHeight: number): Vector3 | undefined;
     /**
-     * Returns the minimum translation vector to move box A out of box B, or undefined
+     * Returns the vector to move box A by so it no longer overlaps box B, the shortest way out, or undefined
+     * - The 3D twin of collideBoxBox
      * @param {Vector3} posA
      * @param {Vector3} sizeA - Full size of box A
      * @param {Vector3} posB
@@ -6188,7 +6214,7 @@ declare module "littlejsengine" {
      * @return {Vector3|undefined}
      * @memberof Math3D
      */
-    export function collideBoxBox(posA: Vector3, sizeA: Vector3, posB: Vector3, sizeB: Vector3): Vector3 | undefined;
+    export function collideBoxBox3D(posA: Vector3, sizeA: Vector3, posB: Vector3, sizeB: Vector3): Vector3 | undefined;
     /**
      * Returns the distance along the ray to the first intersection with a sphere, or undefined
      * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance

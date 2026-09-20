@@ -111,6 +111,11 @@ isPowerOfTwo(value)                           // Checks if the value is a power 
 nearestPowerOfTwo(value)                      // Returns the nearest power of two
 isOverlapping(pointA, sizeA, pointB, sizeB)   // Checks if bounding boxes overlap
 isIntersecting(start, end, pos, size)         // Checks if ray intersects box
+// the collide helpers answer how far out, where isOverlapping answers whether; boxes are axis aligned and centered
+// with a full size, and each returns undefined when the shapes are not touching
+collideCircleCircle(posA, radiusA, posB, radiusB) // vector that moves circle A clear of circle B
+collideCircleBox(pos, radius, boxPos, boxSize)    // vector that moves a circle clear of a box
+collideBoxBox(posA, sizeA, posB, sizeB)           // vector that moves box A clear of box B, the shortest way out
 oscillate(frequency=1, amplitude=1, t=time, offset=0, type=0) // Oscillating wave
 lineTest(posStart, posEnd, testFunction, normal) // Step along a line until test passes
 formatTime(t)                                 // Formats seconds for display
@@ -798,7 +803,8 @@ collideSphereSphere(posA, radiusA, posB, radiusB)          // push A out of B, o
 collideSphereBox(pos, radius, boxPos, boxSize)             // push a sphere out of a box, or undefined
 collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinderHeight) // push a sphere out of a cylinder,
                                                                                 // or undefined
-collideBoxBox(posA, sizeA, posB, sizeB)        // minimum translation vector for A, or undefined
+collideBoxBox3D(posA, sizeA, posB, sizeB)      // push A out of B the shortest way, or undefined; the 3D twin of
+                                               // collideBoxBox
 // raycasts return the distance t where the hit is ray.getPosition(t), so scale direction and t scales too
 new Ray3D(origin, direction)                   // a start and a direction, what screenToRay returns
 ray.getPosition(distance)                      // the point a distance along it, distance is what the raycasts return
