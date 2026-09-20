@@ -21,7 +21,7 @@ f 5 9 6
 f 7 10 8
 `;
 
-let model, name = 'house';
+let model, modelName = 'house';
 
 function gameInit()
 {
@@ -47,7 +47,7 @@ function gameInit()
         const file = e.dataTransfer.files[0];
         if (!file) return;
         setModel(parseOBJ(await file.text()));
-        name = file.name;
+        modelName = file.name;
     });
 
     new CameraControl3D(vec3(0,2,0), 10, .35); // no idle spin, the model is for inspecting
@@ -72,6 +72,6 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    const text = name + ' / drop an .obj file here / space: toggle shading';
+    const text = modelName + ' / drop an .obj file here / space: toggle shading';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

@@ -76,7 +76,6 @@ function gameUpdate()
         if (mouseWasPressed(0))
             picked.velocity3D = picked.velocity3D.add(vec3(rand(-.1,.1), .3, rand(-.1,.1)));
     }
-
 }
 
 function gameRenderPost()

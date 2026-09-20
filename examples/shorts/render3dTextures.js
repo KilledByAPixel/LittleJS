@@ -1,4 +1,3 @@
-
 // paint a brick pattern, any image or canvas can be a texture
 function makeBrickTexture()
 {

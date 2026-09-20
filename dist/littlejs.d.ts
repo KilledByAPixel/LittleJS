@@ -5952,8 +5952,8 @@ declare module "littlejsengine" {
          *  @return {Vector3} */
         rotate(axis: Vector3, angle: number): Vector3;
         /** Returns a new vector turned around the X axis, the way a positive pitch in rotation3D turns things
-     *  @param {number} angle - Radians
-     *  @return {Vector3} */
+         *  @param {number} angle - Radians
+         *  @return {Vector3} */
         rotateX(angle: number): Vector3;
         /** Returns a new vector turned around the Y axis, the way a positive yaw in rotation3D turns things
          *  @param {number} angle - Radians
@@ -6337,6 +6337,7 @@ declare module "littlejsengine" {
         vao: any;
         whiteTexture: any;
         samplers: any[];
+        samplerKey: any;
         mipmapped: WeakSet<object>;
         shadowTexture: any;
         shadowFramebuffer: any;

@@ -47,7 +47,7 @@ class Goal extends GridObject
     constructor(x, z)
     {
         super(x, z, padMesh, padColor, .03);
-        this.light = new Light3D(cellPos(x, z, .6), 4, hsl(.1,1,.6,0));
+        this.light = this.addChild(new Light3D(vec3(0,.57,0), 4, hsl(.1,1,.6,0)));
     }
     update()
     {

@@ -33,7 +33,6 @@ class Flag extends EngineObject3D
     }
 }
 
-
 function gameInit()
 {
     new Render3DPlugin;

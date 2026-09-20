@@ -64,8 +64,8 @@ function gameInit()
     // trees on the grass, a trunk and a cone welded into one mesh
     const trunk = buildCylinder(.5, 2, 5), top = buildCone(3, 3.5, 6);
     const tree = new Mesh()
-        .combine(trunk, Matrix4.translation(vec3(0,1,0)), hsl(.1,.6,.3))
-        .combine(top, Matrix4.translation(vec3(0,3.25,0)), hsl(.3,.5,.3));
+        .combine(trunk, buildMatrix(vec3(0,1,0)), hsl(.1,.6,.3))
+        .combine(top, buildMatrix(vec3(0,3.25,0)), hsl(.3,.5,.3));
     for (let i = 80; i--;)
     {
         const x = rand(-22,22), z = rand(-22,22), y = terrain.getHeight(x, z);
@@ -101,7 +101,6 @@ function gameUpdate()
             ball.velocity3D = vec3();
         }
     }
-
 }
 
 function gameRenderPost()

@@ -24,9 +24,8 @@ function buildShapes()
     const cone = buildCone(1.4, 1.6);
     const capsule = buildCapsule(.8, 2);
 
-    // create the spinners
-    const meshes = 
-        [box, oct, cylinder, vase, sphere, hull, torus, cone, capsule];
+    // hand one to each spinner
+    const meshes = [box, oct, cylinder, vase, sphere, hull, torus, cone, capsule];
     spinners.forEach((s, i)=> s.mesh = meshes[i]);
 }
 

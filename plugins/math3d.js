@@ -195,7 +195,7 @@ class Vector3
         return this.scale(c).add(axis.cross(this).scale(s)).add(axis.scale(d));
     }
 
-        /** Returns a new vector turned around the X axis, the way a positive pitch in rotation3D turns things
+    /** Returns a new vector turned around the X axis, the way a positive pitch in rotation3D turns things
      *  @param {number} angle - Radians
      *  @return {Vector3} */
     rotateX(angle)
@@ -237,7 +237,11 @@ class Vector3
     /** Returns a new vector snapped down to a grid, grid is the number of steps per unit like Vector2.snap
      *  @param {number} grid - Snap steps per unit, 2 snaps to halves
      *  @return {Vector3} */
-    snap(grid) { ASSERT_NUMBER_VALID(grid); return new Vector3(floor(this.x*grid)/grid, floor(this.y*grid)/grid, floor(this.z*grid)/grid); }
+    snap(grid)
+    {
+        ASSERT_NUMBER_VALID(grid);
+        return new Vector3(floor(this.x*grid)/grid, floor(this.y*grid)/grid, floor(this.z*grid)/grid);
+    }
 
     /** Returns this point transformed by a matrix, translation included
      *  @param {Matrix4} matrix

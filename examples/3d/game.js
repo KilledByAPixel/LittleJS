@@ -27,7 +27,6 @@ class Player extends EngineObject3D
         super(vec3(0,0,6), buildSphere(2, 16, 8, true));
         this.color = hsl(.55,.8,.6);
         this.specular = .5;
-        this.softShadow = 2.5;
         this.speed = vec3();
         this.speedY = 0;
         this.addChild(new Light3D(vec3(0,1,0), 10, hsl(.55,1,.7)));
@@ -76,7 +75,6 @@ class Orb extends EngineObject3D
         this.color = hsl(rand(),1,.6);
         this.unlit = true; // its own bright color, which the bloom picks up
         this.angleVelocity3D = vec3(.01,.02,0);
-        this.softShadow = 1.5;
         this.addChild(new Light3D(vec3(), 12, this.color));
     }
     update()
@@ -150,7 +148,6 @@ function gameInit()
     orbMesh = buildSphere(1.4, 10, 5, true); // one mesh for every orb, so they draw as one batch
     terrain = new HeightMap(heights, vec2(terrainSize), terrainHeight, colors);
     new EngineObject3D(vec3(), terrain.buildMesh(true));
-    render3D.softShadowHeight = terrain; // soft shadows follow the ground
 
     // a forest sharing one mesh, so all of it is a single draw call
     const tree = new Mesh()
@@ -197,16 +194,16 @@ function gameInit()
         sprite.size3D = vec3(3);
         sprite.upright = true;  // stands on the ground instead of tilting with the camera
         sprite.pixelated = true; // no blurring or bleeding between tiles on the sheet
-        sprite.softShadow = 1.5;
     }
 
-    // the title and the score, extruded from the engine font
-    const title = new EngineObject3D(vec3(0,16,-14), buildText3D('LITTLEJS 3D', 5, 1.2));
+    // the title and the score, extruded from the engine font, high enough to clear the hills
+    const title = new EngineObject3D(vec3(0,17,-14), buildText3D('LITTLEJS 3D', 5, 1.2));
     title.color = hsl(.12,1,.6);
     title.specular = .4;
     title.angleVelocity3D = vec3(0,.002,0);
-    scoreText = new EngineObject3D(vec3(0,11,-14));
-    scoreText.color = WHITE;
+    scoreText = new EngineObject3D(vec3(0,12.5,-14));
+    scoreText.color = hsl(.55,.3,.9);
+    scoreText.unlit = true; // the sun is behind it, so let it keep its own color
     buildScoreText();
 
     player = new Player;

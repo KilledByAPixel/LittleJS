@@ -16452,7 +16452,7 @@ class Vector3
         return this.scale(c).add(axis.cross(this).scale(s)).add(axis.scale(d));
     }
 
-        /** Returns a new vector turned around the X axis, the way a positive pitch in rotation3D turns things
+    /** Returns a new vector turned around the X axis, the way a positive pitch in rotation3D turns things
      *  @param {number} angle - Radians
      *  @return {Vector3} */
     rotateX(angle)
@@ -16494,7 +16494,11 @@ class Vector3
     /** Returns a new vector snapped down to a grid, grid is the number of steps per unit like Vector2.snap
      *  @param {number} grid - Snap steps per unit, 2 snaps to halves
      *  @return {Vector3} */
-    snap(grid) { ASSERT_NUMBER_VALID(grid); return new Vector3(floor(this.x*grid)/grid, floor(this.y*grid)/grid, floor(this.z*grid)/grid); }
+    snap(grid)
+    {
+        ASSERT_NUMBER_VALID(grid);
+        return new Vector3(floor(this.x*grid)/grid, floor(this.y*grid)/grid, floor(this.z*grid)/grid);
+    }
 
     /** Returns this point transformed by a matrix, translation included
      *  @param {Matrix4} matrix
@@ -17508,6 +17512,7 @@ class Render3DPlugin
         this.vao = undefined;
         this.whiteTexture = undefined; // 1x1 white for untextured draws
         this.samplers = [];            // how textures are filtered in 3D, clamped and wrapping, see render3DInitGL
+        this.samplerKey = undefined;   // the settings the samplers were made for, they are rebuilt when it changes
         this.mipmapped = new WeakSet;  // textures given mipmaps for the 3D pass
         this.shadowTexture = undefined;
         this.shadowFramebuffer = undefined;
@@ -18356,7 +18361,7 @@ function render3DInitGL()
         '}}' +
         'vec3 l=ambientColor.rgb+lightColor.rgb*max(nl,0.)*s;' +
         // the Light3D objects, diffuse only: a point light falls off with distance, a directional one does not and
-        // carries the direction toward it in xyz, marked by a radius of zero
+        // carries the direction toward it in xyz, marked by a negative radius
         'for(int i=0;i<' + RENDER3D_MAX_LIGHTS + ';++i){' +
         'if(i>=extraLightCount)break;' +
         'vec4 L=extraLights[i];' +
@@ -18688,7 +18693,7 @@ function render3DRenderPass(after2D)
     const c = r.camera.pos;
     gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
 
-    // the Light3D objects, a directional one sends the direction toward it and a radius of zero
+    // the Light3D objects, a directional one sends the direction toward it and a negative radius
     const lights = render3DCollectLights();
     gl.uniform1i(render3DUniform('extraLightCount'), lights.length);
     if (lights.length)
@@ -18699,7 +18704,7 @@ function render3DRenderPass(after2D)
             const p = light.directional ? light.getForward3D().scale(-1) : light.getWorldPos3D();
             const c = light.color, k = i * 4;
             positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
-            positions[k+3] = light.directional ? -1 : light.radius; // a negative radius marks a direction
+            positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
             colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a;
         });
         gl.uniform4fv(render3DUniform('extraLights'), positions, 0, lights.length * 4);
@@ -20124,7 +20129,7 @@ class Light3D extends EngineObject3D
     constructor(pos3D=vec3(), radius=5, color=WHITE)
     {
         super(pos3D, undefined, undefined, color);
-        ASSERT(radius > 0, 'light radius must be positive');
+        ASSERT(radius >= 0, 'light radius cannot be negative, 0 is an off switch like an alpha of 0');
         this.size3D = vec3(); // not a solid thing to pick or collect
         /** @property {number} - Distance where the light fades to nothing */
         this.radius = radius;

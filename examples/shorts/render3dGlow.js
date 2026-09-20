@@ -17,7 +17,6 @@ class Orb extends EngineObject3D
     }
 }
 
-
 function gameInit()
 {
     new Render3DPlugin;

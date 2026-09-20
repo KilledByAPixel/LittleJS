@@ -17,7 +17,7 @@ function gameInit()
     new Render3DPlugin;
     render3D.camera.align2D = true; // follow the 2D camera so world units match
     render3D.ambientColor = hsl(0,0,.5);
-    canvasClearColor = hsl(.6,.3,.3);
+    setCanvasClearColor(hsl(.6,.3,.3));
 
     // coins behind the bars and coins in front of them
     for (let i = 6; i--;)

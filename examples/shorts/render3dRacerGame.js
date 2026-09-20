@@ -5,7 +5,7 @@ let terrain, car, lapCount = 0, nextGate = 1, bestTime = 0, lapTime = 0;
 
 // the center line of the track, a wobbly circle on the ground
 function trackRadius(a) { return 42 + 9*sin(a*3) + 5*sin(a*2 + 1); }
-function trackPoint(a) { return vec3(trackRadius(a)).rotateY(-a); }
+function trackPoint(a) { return vec3(trackRadius(a), 0, 0).rotateY(-a); }
 function trackDistance(x, z) { return abs(hypot(x, z) - trackRadius(atan2(z, x))); }
 function trackSide(a)
 {
@@ -92,7 +92,7 @@ class Car extends EngineObject3D
         const rise = terrain.getHeight(ahead.x, ahead.z) - terrain.getHeight(behind.x, behind.z);
         this.rotation3D = vec3(atan2(rise, 3), this.yaw, -input.x*this.speed*.6);
         for (const trail of this.trails)
-            trail.side = vec3(1).rotateY(this.yaw);
+            trail.side = vec3(1, 0, 0).rotateY(this.yaw); // across the car, so the marks lie flat
 
         // the engine revs faster with speed
         if (frame % max(2, round(9 - abs(this.speed)*12)) == 0)
