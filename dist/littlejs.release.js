@@ -1448,6 +1448,7 @@ class Vector2
     distanceSquared(v) { return (this.x - v.x)**2 + (this.y - v.y)**2; }
 
     /** Returns a new vector in same direction as this one with the length passed in
+     * - A zero vector has no direction, so it normalizes to straight up
      * @param {number} [length]
      * @return {Vector2} */
     normalize(length=1)
@@ -20133,7 +20134,9 @@ class EngineObject3D extends EngineObject
             this.rotation3D = this.rotation3D.add(this.angleVelocity3D);
             if (this.sync2D)
                 this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
-            if (this.collideSolidObjects && !this.sync2D) // a sync2D object collides in 2D instead
+            // solid collision, for the objects that own where they are: a sync2D object collides in 2D
+            // instead, and a child rides along with its parent, so its pos3D is an offset with nothing to push
+            if (this.collideSolidObjects && !this.sync2D && !this.parent)
                 render3DCollideSolid(this);
         }
         super.updateTransforms();
@@ -20143,7 +20146,7 @@ class EngineObject3D extends EngineObject
     updatePhysics() { this.sync2D && super.updatePhysics(); }
 
     /** Set how this object collides, the same flags as in 2D
-     *  - Solid collision happens in 3D here, against size3D boxes or spheres, and only for objects that are not sync2D
+     *  - Solid collision happens in 3D here, against size3D boxes or spheres; a sync2D object or a child sits it out
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through
      *  @param {boolean} [collideTiles] - Tile collision, 2D only so it needs sync2D
@@ -20238,11 +20241,11 @@ function render3DSolidPush(a, b)
 // turned collision on this frame, tests them all itself and is not tested back
 function render3DCollideSolid(a)
 {
-    const shapeA = render3DSolidShape(a);
+    let shapeA = render3DSolidShape(a);
     for (const b of engineObjectsCollide)
     {
         if (b === a) break;
-        if (b.destroyed || b.sync2D || !(b instanceof EngineObject3D)) continue;
+        if (b.destroyed || b.parent || b.sync2D || !(b instanceof EngineObject3D)) continue; // a child is part of its parent
         if (!a.isSolid && !b.isSolid) continue; // neither one blocks, so they pass through each other
         const push = render3DSolidPush(shapeA, render3DSolidShape(b));
         if (!push) continue;
@@ -20258,6 +20261,8 @@ function render3DCollideSolid(a)
         const weightB = !b.mass ? 0 : !a.mass ? 1 : a.mass / total;
         a.pos3D = a.pos3D.add(push.scale(weightA));
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
+        if (weightA)
+            shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
         const normal = push.normalize();
         if (a.velocity3D.dot(normal) < 0)
             a.velocity3D = a.velocity3D.reflect(normal, a.restitution);

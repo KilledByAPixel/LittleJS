@@ -973,8 +973,9 @@ obj.setCollision(solids, isSolid)       // the same flags as in 2D, but the coll
                                         // both objects of a pair need solids, and a pair where neither one blocks
                                         // passes through, so movers hit the level without shoving each other;
                                         // heavier objects move less, mass 0 stays put, velocities bounce by
-                                        // restitution; the tile and raycast halves are 2D only and default off here,
-                                        // and a sync2D object collides in 2D instead
+                                        // restitution; the tile and raycast halves are 2D only and default off here;
+                                        // a sync2D object collides in 2D instead, and a child rides with its parent
+                                        // so it sits solid collision out, the same rule as in 2D
 obj.collideAsSphere3D = true              // collide as the sphere that fits size3D instead of as the size3D box
 obj.collideWithObject(object, push)     // called when it touches a solid object, both objects are asked and either
                                         // returning false leaves the push and the bounce to you; push is what it

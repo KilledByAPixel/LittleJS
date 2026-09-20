@@ -1904,6 +1904,58 @@ test('a solid object collides as its size3D box, or as a sphere when it asks to'
     engineObjects.length = 0;
 });
 
+test('resting on two solids at once is one push, not both added up', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+
+    // a floor of two blocks with their tops at y = 0 and the seam at x = 0
+    for (const x of [-1, 1])
+    {
+        const block = new EngineObject3D(vec3(x, -1, 0));
+        block.size3D = vec3(2);
+        block.setCollision();
+    }
+
+    // a ball straddling the seam, sunk .1 in, touches both blocks in the same update
+    const ball = new EngineObject3D(vec3(0, .4, 0));
+    ball.size3D = vec3(1);
+    ball.collideAsSphere3D = true;
+    ball.mass = 1;
+    ball.setCollision();
+    engineObjectsUpdate();
+    near(ball.pos3D.y, .5, 'lifted to the floor once, not lifted twice for going over a seam');
+
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});
+
+test('a child takes no part in solid collision, the same rule as in 2D', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+
+    // a body turned a quarter turn, so its local axes are not the world's
+    const body = new EngineObject3D(vec3(5, 0, 0));
+    body.rotation3D = vec3(0, PI/2, 0);
+    const part = new EngineObject3D(vec3());
+    part.size3D = vec3(1);
+    part.mass = 1;
+    part.setCollision();
+    body.addChild(part);
+
+    // a wall the part overlaps; pushing the part would move it in the body's space, not the world's
+    const wall = new EngineObject3D(vec3(5.6, 0, 0));
+    wall.size3D = vec3(1);
+    wall.setCollision();
+    engineObjectsUpdate();
+    nearVec(part.pos3D, 0, 0, 0); // the child stays where its parent put it
+    nearVec(wall.pos3D, 5.6, 0, 0); // and is no obstacle of its own
+
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});
+
 test('collideWithObject hears about a 3D touch and can take it over', () =>
 {
     for (const o of engineObjects) o.destroy();

@@ -15,7 +15,7 @@ setTileDefaultBleed(.5);
 const terrainSize = 90, terrainHeight = 14, orbCount = 8;
 const soundCollect = new Sound([,,500,.02,.1,.2,1,1.5,,,200,.05]);
 const soundEngine = new Sound([,0,80,.01,.03,.1,3,1.5,,,,,,.6]);
-let terrain, player, scoreText, orbMesh, score = 0;
+let terrain, player, title, scoreText, orbMesh, score = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // the player rolls over the terrain with a trail behind it
@@ -196,10 +196,9 @@ function gameInit()
     }
 
     // the title and the score, extruded from the engine font, high enough to clear the hills
-    const title = new EngineObject3D(vec3(0,17,-14), buildText3D('LITTLEJS 3D', 5, 1.2));
+    title = new EngineObject3D(vec3(0,17,-14), buildText3D('LITTLEJS 3D', 5, 1.2));
     title.color = hsl(.12,1,.6);
     title.specular = .4;
-    title.angleVelocity3D = vec3(0,.002,0);
     scoreText = new EngineObject3D(vec3(0,12.5,-14));
     scoreText.color = hsl(.55,.3,.95);
     scoreText.specular = .3;
@@ -220,6 +219,9 @@ function gameUpdatePost()
     // the camera and the shadows follow the player, after it has moved
     render3D.camera.follow(player.pos3D.add(vec3(0,2,0)), vec3(0,10,18), .08);
     render3D.shadowCenter = player.pos3D;
+
+    // the title sways so its sides catch the light, rather than turning around to read backwards
+    title.rotation3D.y = sin(time*.3)*.5;
 }
 
 function gameRenderPost()

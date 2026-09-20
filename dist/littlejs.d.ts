@@ -1357,6 +1357,7 @@ declare module "littlejsengine" {
          * @return {number} */
         distanceSquared(v: Vector2): number;
         /** Returns a new vector in same direction as this one with the length passed in
+         * - A zero vector has no direction, so it normalizes to straight up
          * @param {number} [length]
          * @return {Vector2} */
         normalize(length?: number): Vector2;
