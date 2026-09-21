@@ -880,7 +880,8 @@ render3D.camera.forward() .right() .up() // the camera's axes as it is right now
                                          // .cameraForward are this frame's, read only
 render3D.viewMatrix .projectionMatrix .viewProjection .shadowMatrix // this frame's, rebuilt by updateMatrices()
 render3D.camera.getMatrix() .getViewMatrix() .getProjectionMatrix(aspect) // built from the camera as it is now
-render3D.worldToScreen(pos)           // Vector3 -> screen pixels, undefined when behind the camera
+render3D.worldToScreen(pos, canvasSize) // Vector3 -> screen pixels, undefined when behind the camera; the opposite
+                                      // of screenToRay and it takes the same canvas, so the two agree
 render3D.worldToClip(pos)             // Vector3 -> -1 to 1 across and up the screen, z is depth; undefined when behind
                                       // the camera
 render3D.screenToRay(screenPos, canvasSize)  // Ray3D under a screen point, always returns one; canvasSize

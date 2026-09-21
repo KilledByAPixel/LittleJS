@@ -18449,14 +18449,17 @@ class Render3DPlugin
     }
 
     /** Project a world point to screen space pixels, same space as mousePosScreen
+     *  - The opposite of screenToRay, and it takes the same canvas so the pair agree
      *  @param {Vector3} pos
+     *  @param {Vector2} [canvasSize] - Defaults to the main canvas size, as in screenToRay;
+     *    the projection is whatever updateMatrices last built, which screenToRay does for its canvas
      *  @return {Vector2|undefined} - undefined when behind the camera */
-    worldToScreen(pos)
+    worldToScreen(pos, canvasSize=mainCanvasSize)
     {
         const clip = this.worldToClip(pos);
         if (!clip)
             return;
-        return vec2((clip.x + 1) / 2 * mainCanvasSize.x, (1 - clip.y) / 2 * mainCanvasSize.y);
+        return vec2((clip.x + 1) / 2 * canvasSize.x, (1 - clip.y) / 2 * canvasSize.y);
     }
 
     /** Get the world ray under a screen position, for clicking on things in 3D

@@ -6445,9 +6445,12 @@ declare module "littlejsengine" {
          *  @return {Vector3|undefined} - undefined when behind the camera or closer than the near plane */
         worldToClip(pos: Vector3): Vector3 | undefined;
         /** Project a world point to screen space pixels, same space as mousePosScreen
+         *  - The opposite of screenToRay, and it takes the same canvas so the pair agree
          *  @param {Vector3} pos
+         *  @param {Vector2} [canvasSize] - Defaults to the main canvas size, as in screenToRay;
+         *    the projection is whatever updateMatrices last built, which screenToRay does for its canvas
          *  @return {Vector2|undefined} - undefined when behind the camera */
-        worldToScreen(pos: Vector3): Vector2 | undefined;
+        worldToScreen(pos: Vector3, canvasSize?: Vector2): Vector2 | undefined;
         /** Get the world ray under a screen position, for clicking on things in 3D
          *  - Uses the camera where it is right now, so it is fine to call from gameUpdate
          *  - It brings the view matrices up to date for that canvas, so worldToScreen stays its exact opposite

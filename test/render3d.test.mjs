@@ -2566,3 +2566,34 @@ test('a sync2D object is told its solid collision needs the 2D size too', () =>
     for (const x of engineObjects) x.destroy();
     engineObjects.length = 0;
 });
+
+test('worldToScreen and screenToRay are opposites, on the main canvas or any other', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const canvas = vec2(1280, 720);
+    render3D.camera.orthographic = 0;
+    render3D.camera.pos = vec3(3, 4, 12);
+    render3D.camera.rotation = vec3(-.2, .3, .1);
+    render3D.updateMatrices(canvas.x / canvas.y);
+
+    // a point in front of the camera, projected then unprojected through the same canvas
+    for (const target of [vec3(0, 0, 0), vec3(-4, 2, -3), vec3(5, -1, 4)])
+    {
+        const screen = render3D.worldToScreen(target, canvas);
+        assert.ok(screen, 'the point should be in front of the camera');
+        const ray = render3D.screenToRay(screen, canvas);
+        // the target must lie on that ray
+        const toTarget = target.subtract(ray.origin);
+        const along = toTarget.dot(ray.direction) / ray.direction.lengthSquared();
+        const off = toTarget.subtract(ray.direction.scale(along)).length();
+        assert.ok(off < 1e-3, `ray misses the point it came from by ${off}`);
+        assert.ok(along > 0, 'and the point is in front of the ray start');
+    }
+
+    // the canvas only scales the pixels, so twice the canvas is twice the coordinates
+    const big = render3D.worldToScreen(vec3(1, 1, 0), canvas.scale(2));
+    const small = render3D.worldToScreen(vec3(1, 1, 0), canvas);
+    near(big.x, small.x * 2);
+    near(big.y, small.y * 2);
+});
