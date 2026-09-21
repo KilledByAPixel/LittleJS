@@ -1,8 +1,8 @@
-// dodge the tumbling boxes as long as you can, they come faster and faster
+// dodge the tumbling boxes as long as you can
 const arenaSize = 40, playerStart = vec3(0,1.3,0);
 const soundHit = new Sound([,,,.01,.1,.2,4,,,,,,,,,.5]);
 let player, trail, scoreObject, boxMesh;
-let roundStart = 0, shown, best = 0, spawnTimer = new Timer(1);
+let shown, best = 0, roundTimer = new Timer(0), spawnTimer = new Timer(1);
 
 class Player extends EngineObject3D
 {
@@ -67,7 +67,7 @@ class Box extends EngineObject3D
 function buildScoreText()
 {
     // whole seconds survived this round
-    shown = floor(time - roundStart);
+    shown = floor(roundTimer.get());
     const text = `TIME ${shown}\nBEST ${best}`;
     scoreObject.setMesh(buildText3D(text, 2, .6));
 }
@@ -86,8 +86,8 @@ function endRound()
         .1, .5, true                   // fade, randomness, additive
     );
     render3D.playSound(soundHit, player.pos3D, 2);
-    best = max(best, floor(time - roundStart));
-    roundStart = time;
+    best = max(best, floor(roundTimer.get()));
+    roundTimer.set();
     buildScoreText();
     engineObjects.forEach(o=> o instanceof Box && o.destroy());
     player.pos3D = playerStart.copy();
@@ -124,7 +124,7 @@ function gameInit()
 function gameUpdate()
 {
     // boxes come in from a random edge, more often the longer you last
-    const t = time - roundStart;
+    const t = roundTimer.get();
     if (spawnTimer.elapsed())
     {
         spawnTimer.set(rand(.4,.8) / (1 + t/20));
@@ -142,10 +142,4 @@ function gameUpdatePost()
     // the shadows and the camera follow the player, after it has moved
     render3D.shadowCenter = player.pos3D;
     render3D.camera.follow(player.pos3D.add(vec3(0,1,0)), vec3(0,9,16), .1);
-}
-
-function gameRenderPost()
-{
-    drawTextScreen('arrow keys: dodge',
-        vec2(mainCanvasSize.x/2, mainCanvasSize.y - 30), 30);
 }
