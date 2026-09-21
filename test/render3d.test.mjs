@@ -971,6 +971,53 @@ test('ParticleEmitter3D particles die after their life', () =>
     e.destroy();
 });
 
+test('ParticleEmitter3D particles turn when asked and sit still by default', () =>
+{
+    const tileInfo = new TileInfo(vec2(), vec2(16));
+    const make = (spin, damping=1)=>
+    {
+        // a rate of zero so update() adds nothing and only the hand fed particle is measured
+        const e = new ParticleEmitter3D(vec3(), 0, 0, 0, 0, tileInfo, WHITE, WHITE, WHITE, WHITE, 10, 1, 1, 0, 1, 0, 0, 0);
+        e.angleSpeed = spin;
+        e.angleDamping = damping;
+        e.emitParticle();
+        return e;
+    };
+    render3D.camera.pos = vec3(0, 0, 10); render3D.camera.rotation = vec3(); render3D.updateMatrices(1);
+    const corners = (e)=> render3D.bake(()=> e.render3D()).points.map(p => p.toString()).join(' ');
+
+    // the default is no spin at all, and has to draw exactly what it drew before there was any
+    const still = make(0);
+    assert.equal(still.particles[0].angle, 0);
+    assert.equal(still.particles[0].angleVelocity, 0);
+    const before = corners(still);
+    still.update();
+    assert.equal(corners(still), before, 'a particle with no spin moved');
+    still.destroy(true);
+
+    // asking for spin turns it, and angleDamping takes the spin away again
+    const spun = make(.1);
+    const spunBefore = corners(spun);
+    spun.update();
+    assert.notEqual(corners(spun), spunBefore, 'a spinning particle did not turn');
+    spun.destroy(true);
+
+    const damped = make(.1, .5);
+    const v0 = Math.abs(damped.particles[0].angleVelocity);
+    damped.update();
+    near(Math.abs(damped.particles[0].angleVelocity), v0 * .5);
+    damped.destroy(true);
+
+    // and they spin both ways from random starting angles, like the 2D particle
+    const many = make(.1);
+    for (let i = 0; i < 200; ++i) many.emitParticle();
+    assert.ok(many.particles.some(p => p.angleVelocity > 0) && many.particles.some(p => p.angleVelocity < 0),
+        'every particle spun the same way');
+    const angles = many.particles.map(p => p.angle);
+    assert.ok(Math.max(...angles) - Math.min(...angles) > 5, 'starting angles are not spread around');
+    many.destroy(true);
+});
+
 test('ParticleEmitter3D lives out its emit time even when it emits nothing', () =>
 {
     // an emitter only goes away once its emit time is up, the way the 2D one does;

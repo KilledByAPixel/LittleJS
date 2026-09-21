@@ -995,6 +995,8 @@ obj.upright = true                      // a sprite stands on world up instead o
                                         // a sprite also turns with rotation3D.z, like a 2D object turns with angle
 obj.sync2D = true // copy the 2D pos and angle into pos3D and rotation3D each frame; the 2D physics only run for a
                   // sync2D object, so set its mass to have them move it
+// these inherited EngineObject fields are 2D only and do nothing on a 3D object: angle, angleVelocity,
+// angleDamping, additiveColor, drawSize, mirror, clampSpeed, friction, groundObject; sync2D is the one way in
 obj.mesh obj.tileInfo obj.color         // what to draw and how
 obj.setMesh(mesh)                       // draw a different mesh and free the GPU buffer of the one it replaces, for
                                         // text and terrain built again as things change; a mesh another object is
@@ -1141,7 +1143,8 @@ new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileIn
     colorStartA, colorStartB, colorEndA, colorEndB, particleTime, sizeStart, sizeEnd,
     speed, damping, gravity, fadeRate, randomness, additive)
 // particles shoot out along the emitter's own up axis, so rotation3D aims the spray; emitSize is a sphere diameter or a
-// vec3 box; speeds are per frame, sizes are world units, gravity changes velocity y per frame so it is negative to fall
+// vec3 box; speeds are per frame, sizes are world units, gravity changes velocity y per frame so it is negative to
+// fall, and it is the emitter's own number rather than render3D.gravity, so an effect falls the same wherever it is used
 // emitConeAngle is the half angle around that direction, PI is every direction; damping multiplies velocity each frame,
 // 1 by default for no slowing; fadeRate is the fraction of life spent fading, half in and half out; randomness is extra
 // randomness on speed, size and life
@@ -1149,6 +1152,9 @@ new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileIn
 // untextured particles are soft round dots, textured ones are billboards of the tile
 emitter.trailTime = .2 // draw each particle as a ribbon along its last .2 seconds instead, the texture stretches along
                        // it
+emitter.angleSpeed = .05; emitter.angleDamping = 1 // tumble each particle in the camera plane, either way from a random
+                       // start, damped each frame; 0 is no spin, which is the default, and the 2D emitter takes these
+                       // as constructor arguments instead
 emitter.emitParticle()  // fire one particle now, on top of the emit rate
 
 // Trails - a ribbon through where the object has been, parent it to something that moves

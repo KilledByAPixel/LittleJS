@@ -6668,7 +6668,10 @@ declare module "littlejsengine" {
      * - velocity3D is added to pos3D each frame, along with render3D.gravity and damping once it has a mass
      * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
      * - The 2D pos and velocity are still there but nothing draws them
-     * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D
+     * - These inherited fields are 2D only and do nothing here: angle, angleVelocity, angleDamping,
+     *   additiveColor, drawSize, mirror, clampSpeed, friction and groundObject
+     * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D,
+     *   which is the one way those 2D fields reach a 3D object
      * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D
      * - Its tile and raycast halves are 2D only so they default off here, and a child or a sync2D object sits it out
      * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
@@ -7161,10 +7164,12 @@ declare module "littlejsengine" {
      * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
      * - Each particle is a flat square facing the camera, with a soft round dot when no tile is given
      * - Set trailTime to draw each particle as a streak along where it has been, for sparks
+     * - Set angleSpeed to tumble them in the camera plane, which the 2D emitter takes as an argument
      * - Particles shoot out along the emitter's own up axis, turned by rotation3D
      * - emitConeAngle spreads them, PI sprays in every direction
      * - Speeds are per frame and sizes are world units, the same as the 2D emitter
-     * - gravity here is added to velocity y each frame, it does not use the engine's 2D gravity
+     * - gravity here is its own number added to velocity y each frame: it is neither the engine's 2D
+     *   gravity nor render3D.gravity, so an effect keeps its own fall wherever it is used
      * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
      * @extends EngineObject3D
      * @memberof Render3D
@@ -7189,7 +7194,8 @@ declare module "littlejsengine" {
          *  @param {number} [sizeEnd] - Particle size at end of life
          *  @param {number} [speed] - Spawn speed in world units per frame
          *  @param {number} [damping] - Per frame velocity multiplier, 1 is none
-         *  @param {number} [gravity] - Per frame change to velocity y, negative pulls down
+         *  @param {number} [gravity] - Per frame change to velocity y, negative pulls down; its own number,
+         *    not render3D.gravity, so the 2D emitter's gravityScale has no equivalent here
          *  @param {number} [fadeRate] - Fraction of life spent fading, half in and half out
          *  @param {number} [randomness] - Extra randomness applied to speed, size and life
          *  @param {boolean} [additive] - Additive blending */
@@ -7218,7 +7224,7 @@ declare module "littlejsengine" {
         sizeEnd: number;
         /** @property {number} - Spawn speed in world units per frame */
         speed: number;
-        /** @property {number} - Per frame change to velocity y */
+        /** @property {number} - Per frame change to velocity y, its own number and not render3D.gravity */
         gravity: number;
         /** @property {number} - Fraction of life spent fading, half in and half out */
         fadeRate: number;
@@ -7226,6 +7232,8 @@ declare module "littlejsengine" {
         randomness: number;
         /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards */
         trailTime: number;
+        /** @property {number} - Radians per frame each particle turns in the camera plane, either way; 0 is no spin */
+        angleSpeed: number;
         /** @property {Array<Object>} - Live particles
          *  @type {Array<Object>} */
         particles: Array<any>;
