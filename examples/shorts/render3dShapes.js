@@ -13,21 +13,19 @@ let spinners = [];
 
 function buildShapes()
 {
-    // create each type of shape mesh
-    const meshes =
-    [
-        buildBox(vec3(1)),
-        buildLathe([[0,-1], [1,0], [0,1]], 4),
-        buildCylinder(1, 2),
-        buildLathe([[0,-1], [.4,-.2], [.7,.2], [.4,.6], [0,1]], 8),
-        buildSphere(),
-        buildLoft([[1,.4,.2,-.1], [0,2,.5,-.4], [-1,1,.3,-.3]]),
-        buildTorus(1.4, .5),
-        buildCone(1.4, 1.6),
-        buildCapsule(.8, 2)
-    ];
+    // builders use render3D.smoothShading by default
+    const box = buildBox(vec3(1));
+    const oct = buildLathe([[0,-1], [1,0], [0,1]], 4);
+    const cylinder = buildCylinder(1, 2);
+    const vase = buildLathe([[0,-1], [.4,-.2], [.7,.2], [.4,.6], [0,1]], 8);
+    const sphere = buildSphere();
+    const hull = buildLoft([[1,.4,.2,-.1], [0,2,.5,-.4], [-1,1,.3,-.3]]);
+    const torus = buildTorus(1.4, .5);
+    const cone = buildCone(1.4, 1.6);
+    const cap = buildCapsule(.8, 2);
 
     // make a spinner for each shape
+    const meshes = [box, oct, cylinder, vase, sphere, hull, torus, cone, cap];
     spinners.forEach((s, i)=> s.setMesh(meshes[i]));
 }
 
