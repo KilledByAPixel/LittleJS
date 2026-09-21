@@ -939,7 +939,8 @@ render3D.sky = buildSky(topColor, horizonColor, bottomColor, sides, rings) // or
 render3D.lighting = true              // false draws plain vertex color times texture
 render3D.additive = false             // additive blending in the transparent stage
 render3D.specular = 0                 // Phong highlight strength, the shiny spot where the directional light
-                                      // reflects; a Light3D adds no highlight
+                                      // reflects: 1 adds the light's full color at its peak, more burns out;
+                                      // the size of the spot is fixed, and a Light3D adds no highlight
 render3D.receiveShadow = true         // false keeps the next draws out of the shadow map's darkening
 render3D.cullBackFaces = false // off by default so one sided meshes like grids and ribbons do not vanish; true skips
                                // faces pointing away, faster for closed meshes
@@ -1013,7 +1014,7 @@ obj.setMesh(mesh)                       // draw a different mesh and free the GP
 obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
 obj.additive = true                     // additive blending, implies the transparent stage
 obj.unlit = true                        // draw with lighting off, for lamps and glowing things
-obj.specular = .5                       // highlight strength
+obj.specular = .5                       // highlight strength, 0 is none and 1 is full, as render3D.specular
 obj.castShadow = false                  // keep it out of the shadow map; sprites and cut out textures cast their
                                         // outline, unlit and additive objects never cast
 obj.receiveShadow = false               // draw it without the shadow map's darkening

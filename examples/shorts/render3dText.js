@@ -1,4 +1,4 @@
-let orbit = 0, title;
+let title;
 
 function gameInit()
 {
@@ -6,6 +6,9 @@ function gameInit()
     render3D.setSky(hsl(.6,.4,.2), hsl(.9,.3,.4), hsl(.6,.2,.1));
     render3D.shadows = true;
     render3D.ambientColor = hsl(.6,.1,.4);
+    new CameraControl3D(vec3(0,2,0), 16, .35, .002);
+
+    // floor
     new EngineObject3D(vec3(), buildGrid(vec2(30), 1, hsl(.6,.1,.3)));
 
     // create 3d text from extruded engine font
@@ -30,8 +33,4 @@ function gameUpdate()
 {
     // sway the title so the sides catch the light
     title.rotation3D.y = sin(time)*.5;
-
-    // orbit the camera
-    orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
-    render3D.camera.orbit(vec3(0,2,0), 16, orbit, .35);
 }

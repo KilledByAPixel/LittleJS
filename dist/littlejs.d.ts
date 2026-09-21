@@ -6386,7 +6386,7 @@ declare module "littlejsengine" {
         depthWrite: boolean;
         /** @property {boolean} - Skip faces that point away from the camera, set per object with its cullBackFaces flag */
         cullBackFaces: boolean;
-        /** @property {number} - How shiny the surface is, 0 is flat and matte */
+        /** @property {number} - Strength of the highlight where the directional light reflects, 0 is none and 1 adds the light's full color at its brightest; its size is fixed */
         specular: number;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
         receiveShadow: boolean;
@@ -6767,7 +6767,7 @@ declare module "littlejsengine" {
         additive: boolean;
         /** @property {boolean} - Draw with lighting off, plain vertex color times texture, for lamps and glowing things; unlit objects cast no shadow */
         unlit: boolean;
-        /** @property {number} - How shiny the surface is, 0 is flat and matte */
+        /** @property {number} - Strength of the highlight where the directional light reflects, 0 is none and 1 adds the light's full color at its brightest; its size is fixed */
         specular: number;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
         castShadow: boolean;
