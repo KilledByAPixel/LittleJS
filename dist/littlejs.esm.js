@@ -20814,9 +20814,10 @@ class EngineObject3D extends EngineObject
         this.rotation3D = vec3();
         /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
         this.scale3D = vec3(1);
-        /** @property {Vector3} - Added to pos3D each frame by the engine after update, no super call needed */
+        /** @property {Vector3} - Added to pos3D each frame by the engine after update, no super call needed;
+         *  damping and render3D.gravity act on it once the object has a mass */
         this.velocity3D = vec3();
-        /** @property {Vector3} - Added to rotation3D each frame by the engine after update */
+        /** @property {Vector3} - Added to rotation3D each frame by the engine after update, angleDamping is 2D only */
         this.angleVelocity3D = vec3();
         /** @property {Mesh|undefined} - Mesh to draw */
         this.mesh = mesh;
@@ -20859,8 +20860,10 @@ class EngineObject3D extends EngineObject
             // an object with mass falls with render3D.gravity and slows by its damping, like the 2D physics
             if (this.mass && !this.sync2D) // a 2D driven object gets the 2D gravity instead
             {
+                // damped first and gravity added after, the order EngineObject.updatePhysics uses,
+                // so the same mass, damping and gravity fall the same way in both
                 const v = this.velocity3D, g = render3D.gravity, s = this.gravityScale, d = this.damping;
-                this.velocity3D = vec3((v.x + g.x * s) * d, (v.y + g.y * s) * d, (v.z + g.z * s) * d);
+                this.velocity3D = vec3(v.x * d + g.x * s, v.y * d + g.y * s, v.z * d + g.z * s);
             }
             this.pos3D = this.pos3D.add(this.velocity3D);
             this.rotation3D = this.rotation3D.add(this.angleVelocity3D);
@@ -21291,9 +21294,11 @@ class ParticleEmitter3D extends EngineObject3D
         const particles = this.particles;
         for (let i = particles.length; i--;)
         {
+            // damped first and gravity added after, the order the 2D particle uses, so the same
+            // damping and gravity give the same arc in both
             const p = particles[i], v = p.velocity;
-            v.y += this.gravity;
             v.x *= this.damping, v.y *= this.damping, v.z *= this.damping; // in place, this runs per particle
+            v.y += this.gravity;
             p.pos = p.pos.add(v);
             if (this.trailTime)
             {

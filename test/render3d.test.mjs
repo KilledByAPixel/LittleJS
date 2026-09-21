@@ -416,6 +416,20 @@ test('EngineObject3D extends EngineObject and has a 3D transform', () =>
     assert.ok(o.destroyed);
 });
 
+test('a 3D particle damps and then falls, the order the 2D particle uses', () =>
+{
+    // the other way round would damp that frame's gravity too, so the same damping and
+    // gravity would give a different arc in 2D and in 3D
+    const damping = .9, gravity = -.02;
+    const e = new ParticleEmitter3D(vec3(), 0, 0, 0, PI, undefined, WHITE, WHITE, WHITE, WHITE, 10, 1, 1, 0, damping, gravity, 0, 0);
+    e.emitParticle();
+    const p = e.particles[0];
+    p.velocity = vec3(1, -.5, 2);
+    e.update();
+    nearVec(p.velocity, 1 * damping, -.5 * damping + gravity, 2 * damping);
+    e.destroy(true);
+});
+
 test('EngineObject3D getMatrix places the origin at pos3D with rotation and scale', () =>
 {
     const o = new EngineObject3D(vec3(5, 0, 0));
@@ -1564,11 +1578,12 @@ test('render3D.gravity and the inherited damping move objects like the 2D physic
     o.mass = 1;
     o.damping = .5;
     o.updateTransforms();
-    nearVec(o.velocity3D, .5, -.05, 0);
-    nearVec(o.pos3D, .5, 9.95, 0);
+    // damped first and gravity added after, the order EngineObject.updatePhysics uses
+    nearVec(o.velocity3D, .5, -.1, 0);
+    nearVec(o.pos3D, .5, 9.9, 0);
     o.gravityScale = 0;
     o.updateTransforms();
-    near(o.velocity3D.y, -.025); // damped, no more gravity
+    near(o.velocity3D.y, -.05); // damped, no more gravity
     o.sync2D = true;
     o.pos = vec2(3, 4);
     o.angle = .5;
