@@ -20,8 +20,9 @@ class Ball extends EngineObject3D
     }
     update()
     {
-        // stay in the arena and bounce off the cylinder, the box is solid so it is automatic
-        const inside = collideSphereInBox(this.pos3D, this.radius, arenaPos, arenaSize);
+        // stay in the arena and bounce off stuff
+        const inside = collideSphereInBox(
+            this.pos3D, this.radius, arenaPos, arenaSize);
         if (inside)
             this.bounce(inside);
         const hit = collideSphereCylinder(this.pos3D, this.radius,
@@ -43,7 +44,7 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky(hsl(.6,.5,.4), hsl(.6,.5,.8));
     render3D.ambientColor = hsl(.6,.1,.5);
-    render3D.gravity = vec3(0,-.01);
+    render3D.gravity.y = -.01;
     new CameraControl3D(vec3(0,1,0), 16, .5, .002);
 
     // checkerboard floor, built before smooth shading is enabled
