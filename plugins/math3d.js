@@ -693,6 +693,28 @@ function collideSphereBox(pos, radius, boxPos, boxSize)
     return pushOutAxis3D(offset, h.x - abs(offset.x), h.y - abs(offset.y), h.z - abs(offset.z), radius);
 }
 
+/**
+ * Returns the vector to move a sphere back inside an axis aligned box, or undefined when it is all inside
+ * - The inside out twin of collideSphereBox, for keeping things in a room or an arena
+ * - A sphere too big for the box on some axis is held at the middle of it on that axis
+ * @param {Vector3} pos - Sphere center
+ * @param {number} radius
+ * @param {Vector3} boxPos
+ * @param {Vector3} boxSize - Full size of the box
+ * @return {Vector3|undefined}
+ * @memberof Math3D
+ */
+function collideSphereInBox(pos, radius, boxPos, boxSize)
+{
+    // the box shrunk by the radius is everywhere the center can be, so clamp the center into it
+    const x = max(0, boxSize.x/2 - radius), y = max(0, boxSize.y/2 - radius), z = max(0, boxSize.z/2 - radius);
+    const push = vec3(
+        clamp(pos.x, boxPos.x - x, boxPos.x + x) - pos.x,
+        clamp(pos.y, boxPos.y - y, boxPos.y + y) - pos.y,
+        clamp(pos.z, boxPos.z - z, boxPos.z + z) - pos.z);
+    return push.lengthSquared() ? push : undefined;
+}
+
 // the axis with the smallest penetration, pointing the way d does, with extra distance added
 function pushOutAxis3D(d, penX, penY, penZ, extra=0)
 {

@@ -27,7 +27,7 @@ function gameInit()
 
     // floor, pillars to catch the light, and three colored lamps
     new EngineObject3D(vec3(), buildGrid(vec2(24), 12, hsl(0,0,.6)));
-    const pillar = buildCylinder(1, 3, 12).setColor(hsl(0,0,.7));
+    const pillar = buildCylinder(1, 3).setColor(hsl(0,0,.7));
     for (let i = 8; i--;)
         new EngineObject3D(vec3(7, 1.5).rotateY(i/8*2*PI), pillar);
     new EngineObject3D(vec3(0,1,0), buildBox(2).setColor(hsl(0,0,.8)));

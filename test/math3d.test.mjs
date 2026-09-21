@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { vec3, isVector3, Vector3, Matrix4, buildMatrix, PI,
     isPointInBox3D, isOverlapping3D, collideSphereSphere, collideSphereBox, collideSphereCylinder,
-    collideBoxBox3D, raycastSphere, raycastPlane, raycastBox, randVector3, randInSphere, Ray3D } from '../dist/littlejs.esm.js';
+    collideBoxBox3D, collideSphereInBox, raycastSphere, raycastPlane, raycastBox, randVector3, randInSphere, Ray3D } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-6, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -402,4 +402,35 @@ test('randInSphere fills the sphere evenly, and leaves a hollow middle when aske
         assert.ok(d >= 2 - 1e-9 && d <= 3 + 1e-9, 'between the two radii, got ' + d);
     }
     assert.equal(randInSphere(0).length(), 0);
+});
+
+test('collideSphereInBox pushes a sphere back inside, and leaves one alone that already is', () =>
+{
+    const boxPos = vec3(0, 5, 0), boxSize = vec3(10);
+    assert.equal(collideSphereInBox(vec3(0, 5, 0), 1, boxPos, boxSize), undefined, 'well inside');
+    assert.equal(collideSphereInBox(vec3(4, 5, 0), 1, boxPos, boxSize), undefined, 'just touching the wall');
+
+    // through the floor, straight back up by how far it went through
+    const up = collideSphereInBox(vec3(0, .5, 0), 1, boxPos, boxSize);
+    assert.ok(up.distance(vec3(0, .5, 0)) < 1e-9);
+
+    // out through a corner, back in on every axis it crossed
+    const corner = collideSphereInBox(vec3(5, 10, -6), 1, boxPos, boxSize);
+    assert.ok(corner.distance(vec3(-1, -1, 2)) < 1e-9);
+
+    // too big for the box on an axis, so held in the middle of it there
+    const wide = collideSphereInBox(vec3(3, 5, 0), 2, boxPos, vec3(2, 10, 10));
+    assert.ok(wide.distance(vec3(-3, 0, 0)) < 1e-9);
+
+    // however it is out, one push puts all of it inside
+    let seed = 7;
+    const rnd = (a, b)=> a + (b - a) * ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < 2000; ++i)
+    {
+        const pos = vec3(rnd(-9, 9), rnd(-4, 14), rnd(-9, 9)), radius = rnd(.1, 3);
+        const moved = pos.add(collideSphereInBox(pos, radius, boxPos, boxSize) || vec3());
+        for (const axis of ['x', 'y', 'z'])
+            assert.ok(Math.abs(moved[axis] - boxPos[axis]) <= boxSize[axis] / 2 - radius + 1e-9,
+                'the sphere is back inside on ' + axis);
+    }
 });

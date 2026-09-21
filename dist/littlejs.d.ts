@@ -6245,6 +6245,18 @@ declare module "littlejsengine" {
      */
     export function collideSphereBox(pos: Vector3, radius: number, boxPos: Vector3, boxSize: Vector3): Vector3 | undefined;
     /**
+     * Returns the vector to move a sphere back inside an axis aligned box, or undefined when it is all inside
+     * - The inside out twin of collideSphereBox, for keeping things in a room or an arena
+     * - A sphere too big for the box on some axis is held at the middle of it on that axis
+     * @param {Vector3} pos - Sphere center
+     * @param {number} radius
+     * @param {Vector3} boxPos
+     * @param {Vector3} boxSize - Full size of the box
+     * @return {Vector3|undefined}
+     * @memberof Math3D
+     */
+    export function collideSphereInBox(pos: Vector3, radius: number, boxPos: Vector3, boxSize: Vector3): Vector3 | undefined;
+    /**
      * Returns the vector to move a sphere out of a vertical cylinder, or undefined
      * @param {Vector3} pos - Sphere center
      * @param {number} radius

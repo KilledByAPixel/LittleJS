@@ -805,6 +805,7 @@ isPointInBox3D(point, pos, size)               // true if point is in the box, b
 isOverlapping3D(posA, sizeA, posB, sizeB)      // box vs box, touching edges do not overlap; no sizeB tests a point
 collideSphereSphere(posA, radiusA, posB, radiusB)          // push A out of B, or undefined
 collideSphereBox(pos, radius, boxPos, boxSize)             // push a sphere out of a box, or undefined
+collideSphereInBox(pos, radius, boxPos, boxSize)           // push a sphere back inside a box, for rooms and arenas
 collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinderHeight) // push a sphere out of a cylinder,
                                                                                 // or undefined
 collideBoxBox3D(posA, sizeA, posB, sizeB)      // push A out of B the shortest way, or undefined; the 3D twin of
@@ -1101,14 +1102,14 @@ mesh.computeRadius()                          // measure mesh.radius now, withou
 
 // Shape builders - return a Mesh centered on the origin, sizes are full sizes, smooth defaults to the plugin setting
 buildBox(size=1)                              // a vec3 or a number, six faces with uvs, always flat
-buildSphere(size=1, sides=12, rings=6, smooth)
+buildSphere(size=1, sides=16, rings=8, smooth)
 buildCylinder(size=1, height=1, sides=16, smooth, capped=true)
-buildCone(size=1, height=1, sides=12, smooth, capped=true)      // point up
-buildCapsule(size=1, height=1, sides=12, rings=4, smooth) // total height including the rounded ends, at least the size
+buildCone(size=1, height=1, sides=16, smooth, capped=true)      // point up
+buildCapsule(size=1, height=1, sides=16, rings=4, smooth) // total height including the rounded ends, at least the size
 buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth) // size is the diameter of the whole donut, outside edge
                                                                // to outside edge; it lies flat in the XZ plane like a
                                                                // coin on a table, so rotation3D.x = PI/2 stands it up
-buildLathe(profile, sides=12, smooth, capped=true) // spins an outline around the Y axis like a vase on a wheel; profile
+buildLathe(profile, sides=16, smooth, capped=true) // spins an outline around the Y axis like a vase on a wheel; profile
                                                    // is [[radius, y], ...] bottom to top, a closed profile is a ring
 buildRibbon(points, width=1, color, closed, up) // lit quads along a path, for roads and tracks; width and color one or
                                                 // per point

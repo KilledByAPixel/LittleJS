@@ -24,7 +24,7 @@ class Player extends EngineObject3D
 {
     constructor()
     {
-        super(vec3(0,0,6), buildSphere(2, 16, 8));
+        super(vec3(0,0,6), buildSphere(2));
         this.color = hsl(.55,.8,.6);
         this.specular = .5;
         this.speed = vec3();

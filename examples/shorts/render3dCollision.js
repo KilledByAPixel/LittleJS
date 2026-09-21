@@ -1,4 +1,4 @@
-const arenaSize = 16;
+const arenaPos = vec3(0,8,0), arenaSize = vec3(16);
 const boxPos = vec3(3,1,0), boxSize = vec3(3,2,3);
 const cylinderPos = vec3(-3,1.5,0), cylinderRadius = 1, cylinderHeight = 3;
 let balls = [];
@@ -20,17 +20,11 @@ class Ball extends EngineObject3D
     }
     update()
     {
-        // bounce off the floor, walls, box, and cylinder
-        const p = this.pos3D, r = this.radius, limit = arenaSize/2 - r;
-        const inside = vec3
-        (
-            clamp(p.x, -limit, limit),
-            max(p.y, r),
-            clamp(p.z, -limit, limit)
-        );
-        if (p.distance(inside))
-            this.bounce(inside.subtract(p));
-        const hit = collideSphereCylinder(p, r,
+        // stay in the arena and bounce off the cylinder, the box is solid so it is automatic
+        const inside = collideSphereInBox(this.pos3D, this.radius, arenaPos, arenaSize);
+        if (inside)
+            this.bounce(inside);
+        const hit = collideSphereCylinder(this.pos3D, this.radius,
             cylinderPos, cylinderRadius, cylinderHeight);
         if (hit)
             this.bounce(hit);
@@ -54,7 +48,7 @@ function gameInit()
 
     // checkerboard floor, built before smooth shading is enabled
     const checker = (x, z)=> hsl(0, 0, (x+z)/2&1 ? .5 : .4);
-    new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 8, checker));
+    new EngineObject3D(vec3(), buildGrid(vec2(arenaSize.x), 8, checker));
     render3D.smoothShading = true;
 
     // make a solid box

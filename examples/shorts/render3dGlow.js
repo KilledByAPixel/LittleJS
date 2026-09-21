@@ -4,7 +4,7 @@ class Orb extends EngineObject3D
 {
     constructor(angle, color)
     {
-        super(vec3(), buildSphere(1.2, 12, 6));
+        super(vec3(), buildSphere(1.2));
         this.color = color;
         this.orbitAngle = angle;
         this.unlit = true; // its own color, so the bloom has something bright to find
@@ -29,7 +29,7 @@ function gameInit()
 
     // dark floor and pillars for the orbs to light up
     new EngineObject3D(vec3(), buildGrid(vec2(30), 15, hsl(.6,.2,.3)));
-    const pillar = buildCylinder(1.4, 5, 12).setColor(hsl(.6,.2,.4));
+    const pillar = buildCylinder(1.4, 5).setColor(hsl(.6,.2,.4));
     for (let i = 6; i--;)
         new EngineObject3D(vec3(11, 2.5).rotateY(i/6*2*PI), pillar);
     for (let i = 4; i--;)

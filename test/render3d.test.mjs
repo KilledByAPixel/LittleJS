@@ -1503,7 +1503,7 @@ test('buildBox takes a number, buildCapsule height is the total, buildLoft width
     assert.throws(()=> buildCapsule(1, .5, 8, 2, false)); // shorter than the size is only a sphere
     const loft = buildLoft([[1, 2, 1, -1], [-1, 2, 1, -1]]);
     near(loft.getBounds().max.x, 1); near(loft.getBounds().min.x, -1);
-    assert.equal(buildLathe([[0, -1], [1, 0], [0, 1]]).vertexCount, 2 * 12 * 6); // 12 sides by default
+    assert.equal(buildLathe([[0, -1], [1, 0], [0, 1]]).vertexCount, 2 * 16 * 6); // 16 sides by default
 });
 
 test('isVector3 rejects NaN like isVector2', () =>
@@ -1855,7 +1855,7 @@ test('drawBox, drawSphere and drawMesh bake into the mesh, moved and tinted', ()
         render3D.drawSphere(vec3(), 1);
         render3D.drawMesh(buildBox(), Matrix4.translation(vec3(0, 5, 0)));
     });
-    assert.equal(baked.vertexCount, buildBox().vertexCount * 2 + buildSphere(1, 12, 6, true).vertexCount);
+    assert.equal(baked.vertexCount, buildBox().vertexCount * 2 + buildSphere(1, 16, 8, true).vertexCount);
     assert.ok(baked.points.some(p=> p.x > 10.9), 'the box moved');
     assert.ok(baked.points.some(p=> p.y > 5.4), 'the mesh moved');
     assert.equal(baked.colors[0].rgbaInt(), RED.rgbaInt());

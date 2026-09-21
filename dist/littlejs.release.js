@@ -17118,6 +17118,28 @@ function collideSphereBox(pos, radius, boxPos, boxSize)
     return pushOutAxis3D(offset, h.x - abs(offset.x), h.y - abs(offset.y), h.z - abs(offset.z), radius);
 }
 
+/**
+ * Returns the vector to move a sphere back inside an axis aligned box, or undefined when it is all inside
+ * - The inside out twin of collideSphereBox, for keeping things in a room or an arena
+ * - A sphere too big for the box on some axis is held at the middle of it on that axis
+ * @param {Vector3} pos - Sphere center
+ * @param {number} radius
+ * @param {Vector3} boxPos
+ * @param {Vector3} boxSize - Full size of the box
+ * @return {Vector3|undefined}
+ * @memberof Math3D
+ */
+function collideSphereInBox(pos, radius, boxPos, boxSize)
+{
+    // the box shrunk by the radius is everywhere the center can be, so clamp the center into it
+    const x = max(0, boxSize.x/2 - radius), y = max(0, boxSize.y/2 - radius), z = max(0, boxSize.z/2 - radius);
+    const push = vec3(
+        clamp(pos.x, boxPos.x - x, boxPos.x + x) - pos.x,
+        clamp(pos.y, boxPos.y - y, boxPos.y + y) - pos.y,
+        clamp(pos.z, boxPos.z - z, boxPos.z + z) - pos.z);
+    return push.lengthSquared() ? push : undefined;
+}
+
 // the axis with the smallest penetration, pointing the way d does, with extra distance added
 function pushOutAxis3D(d, penX, penY, penZ, extra=0)
 {
@@ -18169,7 +18191,7 @@ class Render3DPlugin
      *  @param {Color} [color] */
     drawSphere(pos, size=1, color=WHITE)
     {
-        this.sphereMesh ||= buildSphere(1, 12, 6, true);
+        this.sphereMesh ||= buildSphere(1, 16, 8, true);
         this.drawMesh(this.sphereMesh, buildMatrix(pos, undefined, vec3(size)), undefined, color);
     }
 
@@ -19454,7 +19476,7 @@ class Mesh
  * @example
  * const vase = buildLathe([[0, -1], [.8, -.3], [.9, .2], [.4, .6], [0, 1]], 12);
  */
-function buildLathe(profile, sides=12, smooth=render3D?.smoothShading, capped=true)
+function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=true)
 {
     ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
     sides |= 0;
@@ -19571,7 +19593,7 @@ function buildCylinder(size=1, height=1, sides=16, smooth=render3D?.smoothShadin
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildCone(size=1, height=1, sides=12, smooth=render3D?.smoothShading, capped=true)
+function buildCone(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true)
 {
     return buildLathe([[size / 2, -height / 2], [0, height / 2]], sides, smooth, capped);
 }
@@ -19585,7 +19607,7 @@ function buildCone(size=1, height=1, sides=12, smooth=render3D?.smoothShading, c
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildSphere(size=1, sides=12, rings=6, smooth=render3D?.smoothShading)
+function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
 {
     ASSERT(rings > 1, 'sphere needs at least 2 rings');
     const profile = [];
@@ -19607,7 +19629,7 @@ function buildSphere(size=1, sides=12, rings=6, smooth=render3D?.smoothShading)
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildCapsule(size=1, height=1, sides=12, rings=4, smooth=render3D?.smoothShading)
+function buildCapsule(size=1, height=1, sides=16, rings=4, smooth=render3D?.smoothShading)
 {
     // the rounded ends alone are already the size tall, so a shorter capsule is only a sphere
     ASSERT(height >= size, 'a capsule is at least as tall as it is wide, the ends take up the size', size, height);

@@ -111,6 +111,7 @@ export
     isOverlapping3D,
     collideSphereSphere,
     collideSphereBox,
+    collideSphereInBox,
     collideSphereCylinder,
     collideBoxBox3D,
     raycastSphere,
