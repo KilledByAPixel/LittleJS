@@ -1,7 +1,7 @@
 // dodge the tumbling boxes with the arrow keys
 const arenaSize = 40, playerStart = vec3(0,1.3,0);
-const soundNearMiss = new Sound([,,900,,.02,.08,1,1.5,,,,,,,,,,.5]);
-const soundHit = new Sound([,,120,.05,.2,.4,4,2,,,,,,5]);
+const soundNearMiss = new Sound([,,700,,,,1,2,4]);
+const soundHit = new Sound([,,,.01,.1,.2,4,,,,,,,,,.5]);
 let player, trail, scoreObject, boxMesh;
 let score = 0, best = 0, spawnTimer = new Timer(1);
 
