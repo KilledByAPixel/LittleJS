@@ -18430,6 +18430,10 @@ class Camera3D
     {
         const halfHeight = canvasHeight / 2 / cameraScale; // half visible height in world units
         const distance = halfHeight / tan(this.fov/2);
+        // a zoomed out 2D camera sits a long way back, far enough to fall past the far plane and
+        // clip the whole scene away, which looks like nothing rendering at all
+        ASSERT(!canvasHeight || distance < this.far,
+            'align2D needs this camera distance to match the 2D view, raise camera.far past it', distance);
         this.orthographic &&= halfHeight * 2; // an orthographic camera stays orthographic and shows the same height
         this.pos = vec3(cameraPos.x, cameraPos.y, distance);
         this.rotation = vec3(0, 0, -cameraAngle); // 2D angles turn the other way
@@ -19743,6 +19747,7 @@ function buildSky(topColor=rgb(.2, .4, .9), horizonColor=rgb(.8, .9, 1), bottomC
  * - A pixel counts as solid when it is more than half opaque
  * - Each pixel keeps its own color, so white art takes the object's tint
  * - Runs of matching pixels merge into one face, and side walls appear only at the sprite's edges
+ * - A texture's pixels are read once and kept, so redrawing a canvas texture will not change what this builds
  * - Pixels can also be an array of rows, each a Color, a truthy value for white, or a falsy value for empty
  * @param {TileInfo|Array<Array<Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels,
  *  each a Color (empty when see through), a truthy value for white or a falsy value for empty
@@ -20138,7 +20143,8 @@ class EngineObject3D extends EngineObject
         this.upright = false;
         /** @property {boolean} - Keep this object's texture pixels hard edged, for pixel art that should not blur or bleed */
         this.pixelated = false;
-        /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D looks; set mass to use 2D physics */
+        /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D looks;
+         *  set mass to use 2D physics, and pos3D.z stays yours to set or move with velocity3D.z */
         this.sync2D = false;
         /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off; on for a sprite */
         this.transparent = !mesh && !!tileInfo;
