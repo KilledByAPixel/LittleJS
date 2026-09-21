@@ -17764,7 +17764,7 @@ class Render3DPlugin
      *  @param {Vector3} pos
      *  @param {Vector2} [canvasSize] - Defaults to the main canvas size, as in screenToRay;
      *    the projection is whatever updateMatrices last built, which screenToRay does for its canvas
-     *  @return {Vector2|undefined} - undefined when behind the camera */
+     *  @return {Vector2|undefined} - undefined when behind the camera or closer than the near plane */
     worldToScreen(pos, canvasSize=mainCanvasSize)
     {
         const clip = this.worldToClip(pos);
@@ -19227,7 +19227,8 @@ class Mesh
         for (let i = 0; i < this.points.length; ++i)
         {
             this.points[i] = matrix.transformPoint(this.points[i]);
-            this.normals[i] = normalMatrix.transformDirection(this.normals[i]).normalize();
+            // a mesh built by hand may have no normals yet, and then there is nothing to turn
+            this.normals[i] &&= normalMatrix.transformDirection(this.normals[i]).normalize();
         }
         this.dirty = true;
         return this;
@@ -19567,6 +19568,8 @@ function buildSphere(size=1, sides=12, rings=6, smooth=render3D?.smoothShading)
  */
 function buildCapsule(size=1, height=1, sides=12, rings=4, smooth=render3D?.smoothShading)
 {
+    // the rounded ends alone are already the size tall, so a shorter capsule is only a sphere
+    ASSERT(height >= size, 'a capsule is at least as tall as it is wide, the ends take up the size', size, height);
     const profile = [], r = size / 2, straight = max(0, height - size) / 2;
     for (let i = 0; i <= rings; ++i)
     {

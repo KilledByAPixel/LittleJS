@@ -6451,7 +6451,7 @@ declare module "littlejsengine" {
          *  @param {Vector3} pos
          *  @param {Vector2} [canvasSize] - Defaults to the main canvas size, as in screenToRay;
          *    the projection is whatever updateMatrices last built, which screenToRay does for its canvas
-         *  @return {Vector2|undefined} - undefined when behind the camera */
+         *  @return {Vector2|undefined} - undefined when behind the camera or closer than the near plane */
         worldToScreen(pos: Vector3, canvasSize?: Vector2): Vector2 | undefined;
         /** Get the world ray under a screen position, for clicking on things in 3D
          *  - Uses the camera where it is right now, so it is fine to call from gameUpdate

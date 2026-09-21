@@ -1467,7 +1467,7 @@ test('buildBox takes a number, buildCapsule height is the total, buildLoft width
     near(buildBox(2).getBounds().max.x, 1);
     const capsule = buildCapsule(1, 3, 8, 2, false);
     near(capsule.getBounds().max.y, 1.5); near(capsule.getBounds().min.y, -1.5);
-    near(buildCapsule(1, .5, 8, 2, false).getBounds().max.y, .5); // never shorter than the size
+    assert.throws(()=> buildCapsule(1, .5, 8, 2, false)); // shorter than the size is only a sphere
     const loft = buildLoft([[1, 2, 1, -1], [-1, 2, 1, -1]]);
     near(loft.getBounds().max.x, 1); near(loft.getBounds().min.x, -1);
     assert.equal(buildLathe([[0, -1], [1, 0], [0, 1]]).vertexCount, 2 * 12 * 6); // 12 sides by default
@@ -2478,6 +2478,36 @@ test('setColor reaches a mesh built by hand, which has no colors yet', () =>
     const built = buildBox().setColor(RED);
     assert.equal(built.colors.length, built.points.length);
     assert.equal(built.colors[0], RED);
+});
+
+test('center and fit work on a mesh built by hand, which has no normals yet', () =>
+{
+    // the docs send a loaded or hand built model through center and fit, and both go through
+    // transform, which used to reach into an empty normals array and die on the first vertex
+    const hand = new Mesh;
+    hand.points.push(vec3(2, 0, 0), vec3(4, 0, 0), vec3(2, 2, 0), vec3(4, 2, 0));
+    hand.center();
+    nearVec(hand.getBounds().min, -1, -1, 0);
+    nearVec(hand.getBounds().max, 1, 1, 0);
+    hand.fit(4);
+    nearVec(hand.getBounds().max, 2, 2, 0);
+    assert.equal(hand.normals.length, 0, 'nothing to turn, so no normals were invented');
+
+    // and once it has normals they are still carried through the turn
+    const turned = buildBox().transform(Matrix4.rotation(vec3(0, PI/2, 0)));
+    assert.ok(turned.normals.every(n => Math.abs(n.length() - 1) < 1e-5));
+    assert.ok(turned.normals.some(n => n.x > .99), 'a face that pointed along +Z now points along +X');
+});
+
+test('buildCapsule catches a capsule shorter than it is wide', () =>
+{
+    // the two rounded ends alone are already the size tall, so a shorter one comes out a sphere
+    // of the full size, quietly taller than the height that was asked for
+    assert.throws(()=> buildCapsule(2, 1));
+    assert.throws(()=> buildCapsule(1, .99));
+    const equal = buildCapsule(1, 1, 8, 2, false); // exactly the size is a sphere on purpose
+    near(equal.getBounds().max.y, .5);
+    near(buildCapsule(1, 3, 8, 2, false).getBounds().max.y, 1.5);
 });
 
 test('buildLoft catches stations listed the wrong way round, which builds the hull inside out', () =>
