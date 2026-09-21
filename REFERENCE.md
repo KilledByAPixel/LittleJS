@@ -1086,10 +1086,11 @@ mesh.center() mesh.fit(size) // move the bounds onto the origin, scale the large
                              // and return the mesh
 mesh.render(matrix, tileInfo, color)          // draw it now with the current draw state
 mesh.dispose()                                // free the GPU buffer, the CPU data stays
-mesh.points mesh.normals mesh.uvs mesh.colors // the vertex arrays, one entry per strip vertex
+mesh.points mesh.normals mesh.uvs mesh.colors // the vertex arrays, one entry per strip vertex; building one by
+                                 // hand you can fill points alone, the rest fall back to up, zero and white
 mesh.instanced = false           // draw this mesh one call per use, in object order, instead of batching it
 mesh.dirty = true; mesh.upload() // re-upload edited arrays on the next draw, or upload now; upload also measures
-                                 // mesh.radius; transform, setColor and computeNormals set dirty themselves
+                                 // mesh.radius; every method that edits a mesh sets dirty itself
 mesh.vertexCount mesh.radius                  // vertices, and the bounding sphere for culling and picking
 mesh.computeRadius()                          // measure mesh.radius now, without uploading
 
