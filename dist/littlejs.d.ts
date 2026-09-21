@@ -6614,7 +6614,7 @@ declare module "littlejsengine" {
         fov: number;
         /** @property {number} - Near clip distance */
         near: number;
-        /** @property {number} - Far clip distance */
+        /** @property {number} - Far clip distance, Infinity is allowed for a perspective view */
         far: number;
         /** @property {number} - Visible height in world units for an orthographic view, 0 is perspective */
         orthographic: number;

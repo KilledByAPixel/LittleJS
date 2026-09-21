@@ -862,7 +862,7 @@ function gameInit()
 
 // Camera
 render3D.camera.pos = vec3(0, 5, 10) // Camera3D: pos (0, 0, 10), rotation (pitch, yaw, roll), fov PI/3, near .1,
-                                     // far 1000
+                                     // far 1000, which can be Infinity for a perspective view
 render3D.camera.orthographic = 20     // visible height in world units with no perspective, so distance does not
                                       // shrink things; 0 is the normal perspective view; near and far still clip
 render3D.camera.lookAt(target)        // set the rotation to face a target now, clears roll

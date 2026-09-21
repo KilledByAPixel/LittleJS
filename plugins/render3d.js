@@ -803,7 +803,10 @@ class Render3DPlugin
     drawSky()
     {
         this.flush();
-        const radius = (this.camera.near + this.camera.far) / 2;
+        // the dome only has to sit between the clip planes, the pass draws it first with no depth test;
+        // a far plane at Infinity has no midpoint, so put it a long way out instead
+        const {near, far} = this.camera;
+        const radius = far == Infinity ? near * 1e4 : (near + far) / 2;
         render3DWithState({lighting: false, blend: false, depthTest: false, depthWrite: false, fogEnd: 0}, ()=>
             this.drawMesh(this.sky, buildMatrix(this.camera.pos, undefined, vec3(radius))));
     }
@@ -1143,7 +1146,7 @@ class Camera3D
         this.fov = PI/3;
         /** @property {number} - Near clip distance */
         this.near = .1;
-        /** @property {number} - Far clip distance */
+        /** @property {number} - Far clip distance, Infinity is allowed for a perspective view */
         this.far = 1e3;
         /** @property {number} - Visible height in world units for an orthographic view, 0 is perspective */
         this.orthographic = 0;

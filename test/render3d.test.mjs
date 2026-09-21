@@ -717,6 +717,22 @@ test('drawSky draws unlit and unfogged with depth off, then restores every field
     render3D.cullBackFaces = false;
 });
 
+test('drawSky still has somewhere to put the dome when the far plane is at Infinity', () =>
+{
+    // Matrix4.perspective takes an infinite far plane, so the sky has to cope with one
+    render3D.sky = buildSky();
+    render3D.camera.pos = vec3();
+    render3D.camera.far = Infinity;
+    const dome = render3D.bake(()=> render3D.drawSky());
+    assert.ok(dome.vertexCount > 0);
+    for (const p of dome.points)
+        assert.ok(isFinite(p.x) && isFinite(p.y) && isFinite(p.z), 'an infinite far plane put the sky at ' + p);
+    const radius = dome.computeRadius();
+    assert.ok(radius > render3D.camera.near, 'the dome is inside the near plane, it would be clipped away');
+    render3D.camera.far = 1e3;
+    render3D.sky = undefined;
+});
+
 test('drawStripUnlit turns lighting off for the push and restores it, even on a throw', () =>
 {
     const seen = [];
