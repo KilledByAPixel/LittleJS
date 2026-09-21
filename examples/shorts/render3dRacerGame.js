@@ -40,8 +40,8 @@ function buildTerrain()
 function buildCar()
 {
     const mesh = buildBox(vec3(1.6,.6,3.4)).setColor(hsl(0,.7,.5));
-    mesh.combine(buildBox(vec3(1.3,.5,1.5)), buildMatrix(vec3(0,.5,-.2)), hsl(.6,.6,.9));
-    mesh.combine(buildBox(vec3(1.7,.15,.5)), buildMatrix(vec3(0,.6,1.6)), hsl(0,0,.2));
+    mesh.combine(buildBox(vec3(1.3,.5,1.5)), vec3(0,.5,-.2), hsl(.6,.6,.9));
+    mesh.combine(buildBox(vec3(1.7,.15,.5)), vec3(0,.6,1.6), hsl(0,0,.2));
     const wheel = buildCylinder(.8, .4, 10);
     for (let i = 4; i--;)
     {
@@ -53,8 +53,8 @@ function buildCar()
 function buildTree()
 {
     const mesh = buildCylinder(.5, 3, 7).setColor(hsl(.1,.4,.3));
-    mesh.combine(buildCone(3.2, 4, 8), buildMatrix(vec3(0,3,0)), hsl(.3,.5,.2));
-    mesh.combine(buildCone(2.2, 3, 8), buildMatrix(vec3(0,4.8,0)), hsl(.3,.5,.3));
+    mesh.combine(buildCone(3.2, 4, 8), vec3(0,3,0), hsl(.3,.5,.2));
+    mesh.combine(buildCone(2.2, 3, 8), vec3(0,4.8,0), hsl(.3,.5,.3));
     return mesh;
 }
 

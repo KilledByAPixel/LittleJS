@@ -61,8 +61,7 @@ function setModel(mesh)
 
 function gameUpdate()
 {
-    // space toggles shading
-    if (keyWasPressed('Space'))
+    if (keyWasPressed('Space')) // space toggles shading
     {
         render3D.smoothShading = !render3D.smoothShading;
         model.mesh.computeNormals(render3D.smoothShading);

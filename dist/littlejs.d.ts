@@ -6840,10 +6840,10 @@ declare module "littlejsengine" {
         addQuad(a: Vector3, b: Vector3, c: Vector3, d: Vector3, color?: Color | Array<Color>, uvs?: Array<Vector2>): Mesh;
         /** Append another mesh transformed by a matrix, for building one shape out of several
          *  @param {Mesh} mesh
-         *  @param {Matrix4} [matrix]
+         *  @param {Matrix4|Vector3} [matrix] - Transform, or just a position to move it to
          *  @param {Color} [color] - Multiplies the appended vertex colors
          *  @return {Mesh} */
-        combine(mesh: Mesh, matrix?: Matrix4, color?: Color): Mesh;
+        combine(mesh: Mesh, matrix?: Matrix4 | Vector3, color?: Color): Mesh;
         /** Scale every uv, so a whole texture repeats across the mesh when its TextureInfo wraps
          *  @param {Vector2|number} scale - Repeats across and up, a number for both
          *  @return {Mesh} */

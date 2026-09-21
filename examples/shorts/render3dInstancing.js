@@ -27,8 +27,7 @@ function gameInit()
 
 function gameUpdate()
 {
-    // space toggles instancing, watch the draw calls change
-    if (keyWasPressed('Space'))
+    if (keyWasPressed('Space')) // space toggles instancing
         render3D.instancing = !render3D.instancing;
 }
 

@@ -1078,7 +1078,8 @@ mesh.addStrip(points, normals, uvs, colors) // one strip in strip order, counter
                                             // joined by an invisible flat triangle, so they do not look connected
 mesh.addQuad(a, b, c, d, color, uvs) // corners in loop order, counter clockwise seen from the front; color and uvs one
                                      // or per corner
-mesh.combine(otherMesh, matrix, color)        // append a transformed, tinted copy, to build one shape out of several
+mesh.combine(otherMesh, matrix, color)        // append a transformed, tinted copy, to build one shape out of several;
+                                              // matrix can be a vec3 when the part only needs moving into place
 mesh.scaleUVs(scale)                          // repeat a wrapping texture across the mesh, a vec2 or a number
 mesh.transform(matrix)                        // move every vertex in place
 mesh.flipNormals()                            // turn it inside out, for rooms and domes seen from within

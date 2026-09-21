@@ -24,7 +24,7 @@ class Player extends EngineObject3D
 {
     constructor()
     {
-        super(vec3(0,0,6), buildSphere(2, 16, 8, true));
+        super(vec3(0,0,6), buildSphere(2, 16, 8));
         this.color = hsl(.55,.8,.6);
         this.specular = .5;
         this.speed = vec3();
@@ -144,14 +144,14 @@ function gameInit()
         heights.push(heightRow);
         colors.push(colorRow);
     }
-    orbMesh = buildSphere(1.4, 10, 5, true); // one mesh for every orb, so they draw as one batch
+    orbMesh = buildSphere(1.4, 10, 5); // one mesh for every orb, so they draw as one batch
     terrain = new HeightMap(heights, vec2(terrainSize), terrainHeight, colors);
-    new EngineObject3D(vec3(), terrain.buildMesh(true));
+    new EngineObject3D(vec3(), terrain.buildMesh());
 
     // a forest sharing one mesh, so all of it is a single draw call
     const tree = new Mesh()
-        .combine(buildCylinder(.7, 3, 6), buildMatrix(vec3(0,1.5,0)), hsl(.1,.4,.3))
-        .combine(buildCone(4, 5, 7), buildMatrix(vec3(0,4.5,0)), hsl(.3,.5,.25));
+        .combine(buildCylinder(.7, 3, 6), vec3(0,1.5,0), hsl(.1,.4,.3))
+        .combine(buildCone(4, 5, 7), vec3(0,4.5,0), hsl(.3,.5,.25));
     for (let i = 250; i--;)
     {
         const pos = randomGroundPos();
@@ -166,7 +166,7 @@ function gameInit()
 
     // crystals around the island, a cone and its mirror image welded together
     const crystal = new Mesh()
-        .combine(buildCone(2.5, 4, 6), buildMatrix(vec3(0,2,0)))
+        .combine(buildCone(2.5, 4, 6), vec3(0,2,0))
         .combine(buildCone(2.5, 2, 6), buildMatrix(vec3(0,1,0), vec3(PI,0,0)));
     for (let i = 14; i--;)
     {

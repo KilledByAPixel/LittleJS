@@ -4,7 +4,7 @@ class Orb extends EngineObject3D
 {
     constructor(angle, color)
     {
-        super(vec3(), buildSphere(1.2, 12, 6, true));
+        super(vec3(), buildSphere(1.2, 12, 6));
         this.color = color;
         this.orbitAngle = angle;
         this.unlit = true; // its own color, so the bloom has something bright to find

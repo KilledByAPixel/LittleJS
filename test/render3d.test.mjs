@@ -2532,6 +2532,21 @@ test('center and fit work on a mesh built by hand, which has no normals yet', ()
     assert.ok(turned.normals.some(n => n.x > .99), 'a face that pointed along +Z now points along +X');
 });
 
+test('combine takes a position on its own, the same as a matrix that only moves', () =>
+{
+    // most parts of a built model only need moving into place, so a Vector3 stands in for buildMatrix(pos)
+    const byPos = new Mesh().combine(buildBox(), vec3(1, 2, 3), RED);
+    const byMatrix = new Mesh().combine(buildBox(), buildMatrix(vec3(1, 2, 3)), RED);
+    assert.equal(byPos.points.length, byMatrix.points.length);
+    byPos.points.forEach((p, i)=> assert.ok(p.distance(byMatrix.points[i]) < 1e-9));
+    byPos.normals.forEach((n, i)=> assert.ok(n.distance(byMatrix.normals[i]) < 1e-9));
+    nearVec(byPos.getBounds().min, .5, 1.5, 2.5);
+    assert.equal(byPos.colors[0].g, 0, 'the color still tints what is added');
+
+    // anything else is a mistake worth hearing about, rather than a crash on .m
+    assert.throws(()=> new Mesh().combine(buildBox(), vec2(1, 2)));
+});
+
 test('buildCapsule catches a capsule shorter than it is wide', () =>
 {
     // the two rounded ends alone are already the size tall, so a shorter one comes out a sphere

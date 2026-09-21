@@ -37,8 +37,7 @@ function gameInit()
 
 function gameUpdate()
 {
-    // space toggles mipmaps
-    if (keyWasPressed('Space'))
+    if (keyWasPressed('Space')) // space toggles mipmaps
         render3D.mipmaps = !render3D.mipmaps;
 }
 

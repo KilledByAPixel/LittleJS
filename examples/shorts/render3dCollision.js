@@ -71,12 +71,12 @@ function gameInit()
 
 function gameUpdate()
 {
-    // pick the ball under the mouse, click to toss it up
+    // pick the ball under the mouse
     const picked = render3D.pick(mousePosScreen, balls)?.object;
     if (picked)
     {
         debugSphere3D(picked.pos3D, picked.radius*2 + .2, YELLOW);
-        if (mouseWasPressed(0))
+        if (mouseWasPressed(0)) // click tosses it up
             picked.velocity3D = picked.velocity3D.add(vec3(rand(-.1,.1), .3, rand(-.1,.1)));
     }
 }

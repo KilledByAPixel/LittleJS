@@ -19882,11 +19882,14 @@ class Mesh
 
     /** Append another mesh transformed by a matrix, for building one shape out of several
      *  @param {Mesh} mesh
-     *  @param {Matrix4} [matrix]
+     *  @param {Matrix4|Vector3} [matrix] - Transform, or just a position to move it to
      *  @param {Color} [color] - Multiplies the appended vertex colors
      *  @return {Mesh} */
     combine(mesh, matrix=RENDER3D_IDENTITY, color=WHITE)
     {
+        if (matrix instanceof Vector3)
+            matrix = buildMatrix(matrix); // most parts only need moving into place
+        ASSERT(matrix instanceof Matrix4, 'combine takes a Matrix4, or a Vector3 for a position');
         const normalMatrix = render3DNormalMatrix(matrix);
         for (let i = 0; i < mesh.points.length; ++i)
         {
