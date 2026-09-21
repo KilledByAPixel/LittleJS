@@ -19353,6 +19353,8 @@ function render3DUpdateSamplers()
     const gl = glContext, r = render3D, key = tilesPixelated + ' ' + r.anisotropy;
     if (r.samplerKey === key) return;
     r.samplerKey = key;
+    for (const sampler of r.samplers)
+        gl.deleteSampler(sampler); // the set being replaced, a lost context empties this first
     const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
     // four samplers: clamped and wrapping, each smooth or hard edged
     r.samplers = [false, true].flatMap(pixelated => [gl.CLAMP_TO_EDGE, gl.REPEAT].map(wrap =>
