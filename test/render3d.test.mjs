@@ -438,6 +438,26 @@ test('EngineObject3D getMatrix follows an EngineObject3D parent', () =>
     parent.destroy();
 });
 
+test('EngineObject3D lookAt aims at a world target through a moved and turned parent', () =>
+{
+    const target = vec3(0, 1, -10);
+    const alone = new EngineObject3D(vec3(0, 0, 5));
+    alone.lookAt(target);
+    const aim = (o)=> target.subtract(o.getWorldPos3D()).normalize();
+    nearVec(alone.getForward3D(), aim(alone).x, aim(alone).y, aim(alone).z);
+
+    // rotation3D is local to the parent, so the target has to come into that space first
+    const parent = new EngineObject3D(vec3(6, -2, 3));
+    parent.rotation3D = vec3(.3, PI/2, 0);
+    const child = new EngineObject3D(vec3(0, 1, 0));
+    parent.addChild(child);
+    child.lookAt(target);
+    const want = aim(child);
+    nearVec(child.getForward3D(), want.x, want.y, want.z);
+    parent.destroy();
+    alone.destroy();
+});
+
 test('EngineObject3D render is a no-op and render3D draws the mesh through the plugin', () =>
 {
     let drawn;

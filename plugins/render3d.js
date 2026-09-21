@@ -252,7 +252,9 @@ function render3DLayerObjects(after2D)
 // then the point lights nearest the camera
 function render3DCollectLights()
 {
-    const lights = engineObjects.filter(o => !o.destroyed && o instanceof Light3D);
+    // a light switched off by its radius or its alpha is left out, so it cannot take one of the few slots
+    const lights = engineObjects.filter(o => !o.destroyed && o instanceof Light3D &&
+        o.color.a > 0 && (o.directional || o.radius > 0));
     if (lights.length > RENDER3D_MAX_LIGHTS)
     {
         // distances cached once, getWorldPos3D walks the parent chain and the sort asks many times
@@ -3000,9 +3002,15 @@ class EngineObject3D extends EngineObject
         return this.parent instanceof EngineObject3D ? this.parent.getMatrix().multiply(matrix) : matrix;
     }
 
-    /** Turn the object so its -Z axis points at a target, sets pitch and yaw and clears roll
+    /** Turn the object so its -Z axis points at a world space target, sets pitch and yaw and clears roll
      *  @param {Vector3} target */
-    lookAt(target) { this.rotation3D = render3DLookRotation(target.subtract(this.pos3D), this.rotation3D); }
+    lookAt(target)
+    {
+        // rotation3D is local to the parent, so a child has to aim at the target from the parent's point of view
+        const parent = this.parent instanceof EngineObject3D ? this.parent : undefined;
+        const local = parent ? parent.getMatrix().invert().transformPoint(target) : target;
+        this.rotation3D = render3DLookRotation(local.subtract(this.pos3D), this.rotation3D);
+    }
 
     /** Draw a different mesh and free the GPU buffer of the one it replaces
      *  - For a mesh built again when something changes, like a score, a rebuilt terrain or a loaded model
@@ -3169,6 +3177,7 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
  * - Only render3D.lightDirection casts shadows, these light without shadowing
  * - Only the 8 lights nearest the camera are used each frame
  * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
+ * - An alpha or a radius of 0 switches it off, and a light that is off takes none of those slots
  * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
  * @extends EngineObject3D
  * @memberof Render3D

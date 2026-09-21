@@ -907,6 +907,7 @@ new Light3D(pos3D, radius, color) // point light, an EngineObject3D; alpha scale
 light.directional = true          // shine from far away along the light's forward axis, no position and no falloff;
                                   // aim it with light.lookAt(target) or rotation3D
 // 8 lights reach the shader each frame: every directional light first, then the point lights nearest the camera;
+// a light switched off by its alpha or radius is left out so it cannot take a slot from one that is on;
 // none of them cast shadows, only render3D.lightDirection does
 
 // Shadows - one shadow map from the directional light; lit opaque objects and draws on the default side of the 2D scene
@@ -1014,7 +1015,8 @@ engineObjectsCollect3D(pos, size, objects) // the EngineObject3D objects whose b
 engineObjectsCallback3D(pos, size, callback, objects)
 engineObjectsRaycast3D(ray, objects)       // every object along the ray, nearest first, like engineObjectsRaycast in
                                            // 2D; the ray has no end, use render3D.pick for just the nearest one
-obj.lookAt(target)                      // turn -Z toward a point: sets pitch and yaw, clears roll
+obj.lookAt(target)                      // turn -Z toward a world space point: sets pitch and yaw, clears roll;
+                                        // a child aims through its parent, since its rotation3D is local
 obj.render3D() // override for custom drawing, the draw state is already set from the flags; render() is empty
 // children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local; addChild's 2D
 // offset arguments do nothing in 3D

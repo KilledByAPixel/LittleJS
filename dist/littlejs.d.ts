@@ -6742,7 +6742,7 @@ declare module "littlejsengine" {
         /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
          *  @return {Matrix4} */
         getMatrix(): Matrix4;
-        /** Turn the object so its -Z axis points at a target, sets pitch and yaw and clears roll
+        /** Turn the object so its -Z axis points at a world space target, sets pitch and yaw and clears roll
          *  @param {Vector3} target */
         lookAt(target: Vector3): void;
         /** Draw a different mesh and free the GPU buffer of the one it replaces
@@ -7093,6 +7093,7 @@ declare module "littlejsengine" {
      * - Only render3D.lightDirection casts shadows, these light without shadowing
      * - Only the 8 lights nearest the camera are used each frame
      * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
+     * - An alpha or a radius of 0 switches it off, and a light that is off takes none of those slots
      * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
      * @extends EngineObject3D
      * @memberof Render3D
