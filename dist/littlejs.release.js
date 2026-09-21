@@ -20138,7 +20138,8 @@ class EngineObject3D extends EngineObject
         /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo
          *  and no mesh; scale3D and any parent's scale grow it, so drawing and picking agree */
         this.size3D = vec3(1);
-        /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none */
+        /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none;
+         *  a world measurement, unlike size3D it does not grow with scale3D */
         this.softShadow = 0;
         /** @property {boolean} - A sprite stands on world up instead of tilting toward the camera */
         this.upright = false;

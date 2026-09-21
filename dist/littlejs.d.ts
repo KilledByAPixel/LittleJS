@@ -6702,7 +6702,8 @@ declare module "littlejsengine" {
         /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo
          *  and no mesh; scale3D and any parent's scale grow it, so drawing and picking agree */
         size3D: Vector3;
-        /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none */
+        /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none;
+         *  a world measurement, unlike size3D it does not grow with scale3D */
         softShadow: number;
         /** @property {boolean} - A sprite stands on world up instead of tilting toward the camera */
         upright: boolean;
