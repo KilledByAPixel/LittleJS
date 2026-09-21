@@ -34,11 +34,8 @@ function buildShapes()
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky(hsl(.6,.8,.55), hsl(.6,1,.9));
-    render3D.setFog(15, 40);
+    render3D.setSky();
     render3D.shadows = true;
-    render3D.lightDirection = vec3(-.5,-1,-.3);
-    render3D.ambientColor = hsl(.6,.1,.38);
     new CameraControl3D(vec3(0,1,0), 15, .4, .003);
 
     // checkerboard floor
