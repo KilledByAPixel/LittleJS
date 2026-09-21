@@ -18276,7 +18276,8 @@ class Render3DPlugin
         this.lightColor = WHITE.copy();
         /** @property {Color} - Ambient light color */
         this.ambientColor = rgb(.3, .3, .3);
-        /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined */
+        /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined
+         *  @type {Color|undefined} */
         this.fogColor = undefined;
         /** @property {number} - Distance from the camera where fog starts */
         this.fogStart = 0;
@@ -18328,7 +18329,8 @@ class Render3DPlugin
         /** @property {Function|undefined} - Draw see through things here, like glows, billboards and soft shadows
          *  @type {Function|undefined} */
         this.onRenderTransparent = undefined;
-        /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything */
+        /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything
+         *  @type {Mesh|undefined} */
         this.sky = undefined;
         /** @property {boolean} - Draw the 3D scene on top of the 2D scene instead of under it */
         this.renderAfter2D = false;
@@ -19815,7 +19817,8 @@ class Mesh
         /** @property {Array<Color>} - Vertex colors
          *  @type {Array<Color>} */
         this.colors = [];
-        /** @property {WebGLBuffer|undefined} - GPU buffer, created by upload */
+        /** @property {WebGLBuffer|undefined} - GPU buffer, created by upload
+         *  @type {WebGLBuffer|undefined} */
         this.buffer = undefined;
         /** @property {number} - Vertices in the GPU buffer */
         this.bufferCount = 0;
@@ -20871,7 +20874,8 @@ class EngineObject3D extends EngineObject
         this.velocity3D = vec3();
         /** @property {Vector3} - Added to rotation3D each frame by the engine after update, angleDamping is 2D only */
         this.angleVelocity3D = vec3();
-        /** @property {Mesh|undefined} - Mesh to draw */
+        /** @property {Mesh|undefined} - Mesh to draw
+         *  @type {Mesh|undefined} */
         this.mesh = mesh;
         /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo
          *  and no mesh; scale3D and any parent's scale grow it, so drawing and picking agree */

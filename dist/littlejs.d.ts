@@ -6318,8 +6318,9 @@ declare module "littlejsengine" {
         lightColor: Color;
         /** @property {Color} - Ambient light color */
         ambientColor: Color;
-        /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined */
-        fogColor: Color;
+        /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined
+         *  @type {Color|undefined} */
+        fogColor: Color | undefined;
         /** @property {number} - Distance from the camera where fog starts */
         fogStart: number;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
@@ -6364,8 +6365,9 @@ declare module "littlejsengine" {
         /** @property {Function|undefined} - Draw see through things here, like glows, billboards and soft shadows
          *  @type {Function|undefined} */
         onRenderTransparent: Function | undefined;
-        /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything */
-        sky: Mesh;
+        /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything
+         *  @type {Mesh|undefined} */
+        sky: Mesh | undefined;
         /** @property {boolean} - Draw the 3D scene on top of the 2D scene instead of under it */
         renderAfter2D: boolean;
         /** @property {boolean} - Draw see through things far to near so they blend correctly */
@@ -6708,8 +6710,9 @@ declare module "littlejsengine" {
         velocity3D: Vector3;
         /** @property {Vector3} - Added to rotation3D each frame by the engine after update, angleDamping is 2D only */
         angleVelocity3D: Vector3;
-        /** @property {Mesh|undefined} - Mesh to draw */
-        mesh: Mesh;
+        /** @property {Mesh|undefined} - Mesh to draw
+         *  @type {Mesh|undefined} */
+        mesh: Mesh | undefined;
         /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo
          *  and no mesh; scale3D and any parent's scale grow it, so drawing and picking agree */
         size3D: Vector3;
@@ -6792,8 +6795,9 @@ declare module "littlejsengine" {
         /** @property {Array<Color>} - Vertex colors
          *  @type {Array<Color>} */
         colors: Array<Color>;
-        /** @property {WebGLBuffer|undefined} - GPU buffer, created by upload */
-        buffer: WebGLBuffer;
+        /** @property {WebGLBuffer|undefined} - GPU buffer, created by upload
+         *  @type {WebGLBuffer|undefined} */
+        buffer: WebGLBuffer | undefined;
         /** @property {number} - Vertices in the GPU buffer */
         bufferCount: number;
         /** @property {boolean} - The mesh changed and needs uploading again, set it yourself if you edit the arrays */
