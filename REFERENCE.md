@@ -896,7 +896,8 @@ render3D.lightColor = rgb(1, .95, .9) // e.g., WHITE by default
 render3D.ambientColor = rgb(.3, .3, .3)
 render3D.fogColor = undefined         // uses canvasClearColor when undefined
 render3D.fogStart = 20; render3D.fogEnd = 100 // e.g., both 0 by default which is no fog; measured by camera distance,
-                                              // fogEnd 0 disables fog
+                                              // fogEnd 0 disables fog; additive draws fade out with distance instead
+                                              // of taking the fog color, since adding it would brighten them
 render3D.gravity = vec3(0, -.01, 0) // e.g., vec3() by default so nothing falls; objects with a mass fall by this each
                                     // frame, times their gravityScale, and slow by their damping, which is 1 by
                                     // default for no slowing
@@ -970,6 +971,7 @@ obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gr
              // velocity3D, and damping is 1 by default for no slowing
 obj.size3D                              // full size for engineObjectsCollect3D and sprites
 obj.setCollision(solids, isSolid)       // the same flags as in 2D, but the collision happens in 3D against size3D;
+                                        // isSolid needs solids, an object cannot block without colliding;
                                         // a 3D object has no 2D size, so it is never an obstacle in a 2D scene;
                                         // both objects of a pair need solids, and a pair where neither one blocks
                                         // passes through, so movers hit the level without shoving each other;

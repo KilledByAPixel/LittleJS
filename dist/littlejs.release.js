@@ -18456,7 +18456,8 @@ function render3DInitGL()
     //   the tint and the uv rect are vertex attributes, see RENDER3D_VERTEX_INPUTS
     // fragment uniforms: lightDir (xyz, w = lighting on), lightColor (rgb, a = specular),
     //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, tex,
-    //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space, w = alpha test)
+    //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
+    //   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive)
     r.shader = glCreateProgram(
         '#version 300 es\n' +
         'precision highp float;' +
@@ -18522,7 +18523,7 @@ function render3DInitGL()
         '}}' +
         'if(ambientColor.a>0.){' +
         'float z=distance(cameraPos,P);' +
-        'c.rgb=mix(c.rgb,fogColor.rgb,smoothstep(fogColor.a,ambientColor.a,z));' +
+        'c.rgb=mix(c.rgb,shadowParams.w<0.?vec3(0):fogColor.rgb,smoothstep(fogColor.a,ambientColor.a,z));' +
         '}' +
         'o=vec4(c.rgb,shadowParams.w>0.?1.:c.a);' + // an opaque draw stays opaque whatever the tint alpha says
 
@@ -18767,8 +18768,10 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     render3DUniform4f('lightColor', lc.r, lc.g, lc.b, state.specular);
     render3DUniform4f('ambientColor', ac.r, ac.g, ac.b, r.fogEnd);
     render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogStart);
-    const alphaTest = state.blend ? 0 : 1; // see through texels are blended away in the transparent stage instead
-    render3DUniform4f('shadowParams', r.shadows && r.passIsDefault && state.receiveShadow ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, alphaTest);
+    // how the fragment shader finishes: 1 drops see through texels and keeps the draw opaque,
+    // 0 blends them away instead, and -1 is additive, which has to fade into fog differently
+    const blendMode = state.blend ? (state.additive ? -1 : 0) : 1;
+    render3DUniform4f('shadowParams', r.shadows && r.passIsDefault && state.receiveShadow ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, blendMode);
 }
 
 // the six flat sides of the camera's visible box, each as [x, y, z, w] facing inward
@@ -20179,7 +20182,8 @@ class EngineObject3D extends EngineObject
     /** Set how this object collides, the same flags as in 2D
      *  - Solid collision happens in 3D here, against size3D boxes or spheres; a sync2D object or a child sits it out
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
-     *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through
+     *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
+     *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
      *  @param {boolean} [collideTiles] - Tile collision, 2D only so it needs sync2D
      *  @param {boolean} [collideRaycast] - Raycasts, 2D only; 3D has render3D.pick and engineObjectsRaycast3D */
     setCollision(collideSolidObjects=true, isSolid=true, collideTiles=false, collideRaycast=false)
