@@ -1898,6 +1898,19 @@ test('a sprite object turns with its roll and only a sync2D object runs the 2D p
     const widest = (mesh)=> mesh.points.reduce((w, p)=> Math.max(w, Math.abs(p.x)), 0);
     near(widest(flat), 2); near(widest(turned), 1); // the long side is upright now
 
+    // a sprite grows with scale3D and with a parent's scale, the same world size the collect,
+    // pick and collision helpers measure it at, so what is drawn is what gets hit
+    sprite.rotation3D.z = 0;
+    sprite.scale3D = vec3(3);
+    near(widest(render3D.bake(()=> sprite.render3D())), 6);
+    sprite.scale3D = vec3(1);
+    const parent = new EngineObject3D(vec3());
+    parent.scale3D = vec3(4);
+    parent.addChild(sprite);
+    near(widest(render3D.bake(()=> sprite.render3D())), 8);
+    sprite.parent.removeChild(sprite);
+    parent.destroy();
+
     const o = new EngineObject3D(vec3());
     o.mass = 1;
     o.velocity = vec2(1, 0);

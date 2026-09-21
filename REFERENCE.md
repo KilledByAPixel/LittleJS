@@ -971,7 +971,8 @@ obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engin
                                    // needed; angleVelocity3D is not damped, angleDamping is 2D only
 obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gravity, gravityScale and damping act on
              // velocity3D, damped first and gravity added after as in 2D, and damping is 1 by default for no slowing
-obj.size3D                              // full size for engineObjectsCollect3D and sprites
+obj.size3D                              // full size for engineObjectsCollect3D, picking, solid collision and
+                                        // sprites; scale3D and a parent's scale grow it
 obj.setCollision(solids, isSolid)       // the same flags as in 2D, but the collision happens in 3D against size3D;
                                         // isSolid needs solids, an object cannot block without colliding;
                                         // a 3D object has no 2D size, so it is never an obstacle in a 2D scene;
@@ -1148,7 +1149,9 @@ emitter.emitParticle()  // fire one particle now, on top of the emit rate
 
 // Trails - a ribbon through where the object has been, parent it to something that moves
 new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over
-                                                                         // lifeTime seconds
+                                                                         // lifeTime seconds; Infinity keeps every
+                                                                         // sample at full width, a path that only
+                                                                         // grows, and destroy() then takes it at once
 trail.side // Vector3 for which way the ribbon lies flat, recorded with each sample; undefined turns it to face the
            // camera
 trail.clear()                                 // forget the trail, for when the object teleports

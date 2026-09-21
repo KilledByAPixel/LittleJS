@@ -20826,7 +20826,8 @@ class EngineObject3D extends EngineObject
         this.angleVelocity3D = vec3();
         /** @property {Mesh|undefined} - Mesh to draw */
         this.mesh = mesh;
-        /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo and no mesh */
+        /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo
+         *  and no mesh; scale3D and any parent's scale grow it, so drawing and picking agree */
         this.size3D = vec3(1);
         /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none */
         this.softShadow = 0;
@@ -20955,8 +20956,15 @@ class EngineObject3D extends EngineObject
     {
         if (this.mesh)
             render3D.drawMesh(this.mesh, this.getMatrix(), this.tileInfo, this.color);
-        else if (this.tileInfo) // a sprite
-            render3D.drawBillboard(this.getWorldPos3D(), vec2(this.size3D.x, this.size3D.y), this.tileInfo, this.color, this.rotation3D.z, this.upright);
+        else if (this.tileInfo)
+        {
+            // a sprite: size3D grown by its own scale and its parents', the same world size the
+            // collect, pick and solid collision helpers measure it at
+            const m = this.getMatrix().m;
+            render3D.drawBillboard(vec3(m[12], m[13], m[14]),
+                vec2(this.size3D.x * hypot(m[0], m[1], m[2]), this.size3D.y * hypot(m[4], m[5], m[6])),
+                this.tileInfo, this.color, this.rotation3D.z, this.upright);
+        }
     }
 }
 
@@ -21403,7 +21411,8 @@ class Trail3D extends EngineObject3D
 {
     /** Create a trail
      *  @param {Vector3} [pos3D]
-     *  @param {number} [lifeTime] - Seconds the ribbon takes to thin and fade from head to tail
+     *  @param {number} [lifeTime] - Seconds the ribbon takes to thin and fade from head to tail,
+     *    Infinity keeps every sample at full width and never drops one, so it grows as long as the object moves
      *  @param {number} [width] - Width at the head, it thins to nothing at the tail
      *  @param {TileInfo} [tileInfo] - Texture stretched along the trail, undefined is untextured
      *  @param {Color} [color] - Color at the head
@@ -21418,7 +21427,7 @@ class Trail3D extends EngineObject3D
         this.size3D = vec3(); // not a solid thing to pick or collect
         this.finishing = false; // set by destroy, the ribbon fades out then goes away
 
-        /** @property {number} - Seconds the ribbon takes to thin and fade from head to tail */
+        /** @property {number} - Seconds the ribbon takes to thin and fade from head to tail, Infinity never drops a sample */
         this.lifeTime = lifeTime;
         /** @property {number} - Width at the head */
         this.width = width;

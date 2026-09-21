@@ -6699,7 +6699,8 @@ declare module "littlejsengine" {
         angleVelocity3D: Vector3;
         /** @property {Mesh|undefined} - Mesh to draw */
         mesh: Mesh;
-        /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo and no mesh */
+        /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo
+         *  and no mesh; scale3D and any parent's scale grow it, so drawing and picking agree */
         size3D: Vector3;
         /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none */
         softShadow: number;
@@ -7244,7 +7245,8 @@ declare module "littlejsengine" {
     export class Trail3D extends EngineObject3D {
         /** Create a trail
          *  @param {Vector3} [pos3D]
-         *  @param {number} [lifeTime] - Seconds the ribbon takes to thin and fade from head to tail
+         *  @param {number} [lifeTime] - Seconds the ribbon takes to thin and fade from head to tail,
+         *    Infinity keeps every sample at full width and never drops one, so it grows as long as the object moves
          *  @param {number} [width] - Width at the head, it thins to nothing at the tail
          *  @param {TileInfo} [tileInfo] - Texture stretched along the trail, undefined is untextured
          *  @param {Color} [color] - Color at the head
@@ -7252,7 +7254,7 @@ declare module "littlejsengine" {
          *  @param {boolean} [additive] - Additive blending */
         constructor(pos3D?: Vector3, lifeTime?: number, width?: number, tileInfo?: TileInfo, color?: Color, colorEnd?: Color, additive?: boolean);
         finishing: boolean;
-        /** @property {number} - Seconds the ribbon takes to thin and fade from head to tail */
+        /** @property {number} - Seconds the ribbon takes to thin and fade from head to tail, Infinity never drops a sample */
         lifeTime: number;
         /** @property {number} - Width at the head */
         width: number;
