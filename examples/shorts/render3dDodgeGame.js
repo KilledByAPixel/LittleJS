@@ -1,9 +1,8 @@
-// dodge the tumbling boxes with the arrow keys
+// dodge the tumbling boxes as long as you can, they come faster and faster
 const arenaSize = 40, playerStart = vec3(0,1.3,0);
-const soundNearMiss = new Sound([,,700,,,,1,2,4]);
 const soundHit = new Sound([,,,.01,.1,.2,4,,,,,,,,,.5]);
 let player, trail, scoreObject, boxMesh;
-let score = 0, best = 0, spawnTimer = new Timer(1);
+let roundStart = 0, shown, best = 0, spawnTimer = new Timer(1);
 
 class Player extends EngineObject3D
 {
@@ -60,15 +59,6 @@ class Box extends EngineObject3D
             this.pos3D.y = 1;
             this.velocity3D.y = abs(this.velocity3D.y)*.7;
         }
-
-        // a near miss scores once, the player's collideWithObject catches a hit
-        if (!this.missed && player.pos3D.distance(this.pos3D) < 3)
-        {
-            this.missed = true;
-            ++score;
-            render3D.playSound(soundNearMiss, this.pos3D);
-            buildScoreText();
-        }
         if (this.pos3D.length() > arenaSize)
             this.destroy();
     }
@@ -76,7 +66,9 @@ class Box extends EngineObject3D
 
 function buildScoreText()
 {
-    const text = `SCORE ${score}\nBEST ${best}`;
+    // whole seconds survived this round
+    shown = floor(time - roundStart);
+    const text = `TIME ${shown}\nBEST ${best}`;
     scoreObject.setMesh(buildText3D(text, 2, .6));
 }
 
@@ -94,12 +86,13 @@ function endRound()
         .1, .5, true                   // fade, randomness, additive
     );
     render3D.playSound(soundHit, player.pos3D, 2);
-    best = max(best, score);
-    score = 0;
+    best = max(best, floor(time - roundStart));
+    roundStart = time;
     buildScoreText();
     engineObjects.forEach(o=> o instanceof Box && o.destroy());
     player.pos3D = playerStart.copy();
     trail.clear();
+    spawnTimer.set(1); // a moment to breathe
 }
 
 function gameInit()
@@ -130,13 +123,18 @@ function gameInit()
 
 function gameUpdate()
 {
-    // boxes come in from a random edge
+    // boxes come in from a random edge, more often the longer you last
+    const t = time - roundStart;
     if (spawnTimer.elapsed())
     {
-        spawnTimer.set(rand(.3,.6));
+        spawnTimer.set(rand(.4,.8) / (1 + t/20));
         const pos = vec3(arenaSize/2 + 2, rand(1,6)).rotateY(rand(2*PI));
         new Box(pos);
     }
+
+    // the 3D time is rebuilt only when the second changes
+    if (floor(t) != shown)
+        buildScoreText();
 }
 
 function gameUpdatePost()
