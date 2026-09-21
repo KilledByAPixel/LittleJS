@@ -2244,6 +2244,21 @@ test('terrain raycast lands on the surface from either side', () =>
     assert.equal(terrain.raycast(new Ray3D(vec3(100, 20, 100), vec3(0, -1, 0))), undefined, 'off the map');
 });
 
+test('particles and trails take a whole texture too, kept as the tile that covers it', () =>
+{
+    // both hand their tileInfo to EngineObject3D, which is where a TextureInfo becomes a TileInfo
+    const texture = new TextureInfo({width: 64, height: 32});
+    const emitter = new ParticleEmitter3D(vec3(), 0, 0, 0, PI, texture);
+    const trail = new Trail3D(vec3(), 1, .2, texture);
+    for (const o of [emitter, trail])
+    {
+        assert.ok(o.tileInfo instanceof TileInfo);
+        assert.equal(o.tileInfo.textureInfo, texture);
+        near(o.tileInfo.size.x, 64); near(o.tileInfo.size.y, 32);
+    }
+    emitter.destroy(true); trail.destroy(true);
+});
+
 test('a whole texture is kept as the tile that covers it, so a 3D object is still an EngineObject', () =>
 {
     const texture = new TextureInfo({width: 64, height: 32});

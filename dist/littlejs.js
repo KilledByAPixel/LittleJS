@@ -21395,7 +21395,7 @@ class ParticleEmitter3D extends EngineObject3D
      *  @param {number} [emitTime] - How long to keep emitting, 0 is forever
      *  @param {number} [emitRate] - Particles per second, 0 does not emit
      *  @param {number} [emitConeAngle] - Half angle around the emit direction, PI is every direction
-     *  @param {TileInfo} [tileInfo] - Tile to render particles with, undefined is untextured
+     *  @param {TileInfo|TextureInfo} [tileInfo] - Tile to render particles with, or a whole texture, undefined is untextured
      *  @param {Color} [colorStartA] - Color at start of life, randomized between the start colors
      *  @param {Color} [colorStartB]
      *  @param {Color} [colorEndA] - Color at end of life, randomized between the end colors
@@ -21605,7 +21605,7 @@ class Trail3D extends EngineObject3D
      *  @param {number} [lifeTime] - Seconds the ribbon takes to thin and fade from head to tail,
      *    Infinity keeps every sample at full width and never drops one, so it grows as long as the object moves
      *  @param {number} [width] - Width at the head, it thins to nothing at the tail
-     *  @param {TileInfo} [tileInfo] - Texture stretched along the trail, undefined is untextured
+     *  @param {TileInfo|TextureInfo} [tileInfo] - Tile or whole texture stretched along the trail, undefined is untextured
      *  @param {Color} [color] - Color at the head
      *  @param {Color} [colorEnd] - Color at the tail
      *  @param {boolean} [additive] - Additive blending */

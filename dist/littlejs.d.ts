@@ -7229,7 +7229,7 @@ declare module "littlejsengine" {
          *  @param {number} [emitTime] - How long to keep emitting, 0 is forever
          *  @param {number} [emitRate] - Particles per second, 0 does not emit
          *  @param {number} [emitConeAngle] - Half angle around the emit direction, PI is every direction
-         *  @param {TileInfo} [tileInfo] - Tile to render particles with, undefined is untextured
+         *  @param {TileInfo|TextureInfo} [tileInfo] - Tile to render particles with, or a whole texture, undefined is untextured
          *  @param {Color} [colorStartA] - Color at start of life, randomized between the start colors
          *  @param {Color} [colorStartB]
          *  @param {Color} [colorEndA] - Color at end of life, randomized between the end colors
@@ -7244,7 +7244,7 @@ declare module "littlejsengine" {
          *  @param {number} [fadeRate] - Fraction of life spent fading, half in and half out
          *  @param {number} [randomness] - Extra randomness applied to speed, size and life
          *  @param {boolean} [additive] - Additive blending */
-        constructor(pos3D?: Vector3, emitSize?: number | Vector3, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileInfo?: TileInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, damping?: number, gravity?: number, fadeRate?: number, randomness?: number, additive?: boolean);
+        constructor(pos3D?: Vector3, emitSize?: number | Vector3, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileInfo?: TileInfo | TextureInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, damping?: number, gravity?: number, fadeRate?: number, randomness?: number, additive?: boolean);
         /** @property {number|Vector3} - Spawn area, a number for a sphere diameter or a vec3 for a box */
         emitSize: number | Vector3;
         /** @property {number} - How long to keep emitting, 0 is forever */
@@ -7307,11 +7307,11 @@ declare module "littlejsengine" {
          *  @param {number} [lifeTime] - Seconds the ribbon takes to thin and fade from head to tail,
          *    Infinity keeps every sample at full width and never drops one, so it grows as long as the object moves
          *  @param {number} [width] - Width at the head, it thins to nothing at the tail
-         *  @param {TileInfo} [tileInfo] - Texture stretched along the trail, undefined is untextured
+         *  @param {TileInfo|TextureInfo} [tileInfo] - Tile or whole texture stretched along the trail, undefined is untextured
          *  @param {Color} [color] - Color at the head
          *  @param {Color} [colorEnd] - Color at the tail
          *  @param {boolean} [additive] - Additive blending */
-        constructor(pos3D?: Vector3, lifeTime?: number, width?: number, tileInfo?: TileInfo, color?: Color, colorEnd?: Color, additive?: boolean);
+        constructor(pos3D?: Vector3, lifeTime?: number, width?: number, tileInfo?: TileInfo | TextureInfo, color?: Color, colorEnd?: Color, additive?: boolean);
         finishing: boolean;
         /** @property {number} - Seconds the ribbon takes to thin and fade from head to tail, Infinity never drops a sample */
         lifeTime: number;
