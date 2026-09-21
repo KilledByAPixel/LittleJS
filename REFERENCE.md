@@ -1361,6 +1361,8 @@ debugShowErrors()                // Show full page error message when an error o
 debugVideoCaptureStart()         // Start capturing a video of the canvas
 debugVideoCaptureStop()          // Stop capturing and save the video to disk
 debugVideoCaptureIsActive()      // Is video currently being captured?
+createCanvasContext(width, height=width, willReadFrequently=false) // Offscreen canvas to draw into, returns its
+                                                    // 2D context; the canvas is context.canvas
 saveCanvas(canvas, filename='screenshot', type='image/png') // Save canvas to a file
 saveText(text, filename='text', type='text/plain')          // Save text to a file
 saveDataURL(dataURL, filename='download')                   // Save url to a file

@@ -359,10 +359,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     glPreRender();
 
     // create offscreen canvases for image processing
-    workCanvas = new OffscreenCanvas(64, 64);
-    workContext = workCanvas.getContext('2d');
-    workReadCanvas = new OffscreenCanvas(64, 64);
-    workReadContext = workReadCanvas.getContext('2d', { willReadFrequently: true });
+    workContext = createCanvasContext(64);
+    workCanvas = workContext.canvas;
+    workReadContext = createCanvasContext(64, 64, true);
+    workReadCanvas = workReadContext.canvas;
 
     // create promises for loading images
     const promises = imageSources.map((src, i)=> loadTexture(i, src));
@@ -2763,6 +2763,19 @@ async function fetchJSON(url)
  *  @memberof Utilities */
 function saveText(text, filename='text', type='text/plain')
 { saveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
+
+/** Create an offscreen canvas to draw into, and return its 2D context
+ *  - The canvas is context.canvas, which is what TextureInfo and the like take
+ *  @param {number} width - In pixels
+ *  @param {number} [height] - In pixels, defaults to the width for a square
+ *  @param {boolean} [willReadFrequently] - Keep it in software, faster when getImageData is called on it often
+ *  @return {OffscreenCanvasRenderingContext2D}
+ *  @memberof Utilities */
+function createCanvasContext(width, height=width, willReadFrequently=false)
+{
+    ASSERT(isNumber(width) && isNumber(height), 'canvas width and height must be numbers', width, height);
+    return new OffscreenCanvas(width, height).getContext('2d', {willReadFrequently});
+}
 
 /** Save a canvas to disk
  *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
@@ -8021,10 +8034,10 @@ class CanvasLayer extends EngineObject
         ASSERT(isVector2(canvasSize), 'canvasSize must be a Vector2');
         super(pos, size, undefined, angle, WHITE, renderOrder);
 
-        /** @property {HTMLCanvasElement} - The canvas used by this layer */
-        this.canvas = headlessMode ? undefined : new OffscreenCanvas(canvasSize.x, canvasSize.y);
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
-        this.context = this.canvas?.getContext('2d');
+        this.context = headlessMode ? undefined : createCanvasContext(canvasSize.x, canvasSize.y);
+        /** @property {OffscreenCanvas} - The canvas used by this layer */
+        this.canvas = this.context?.canvas;
         /** @property {TextureInfo} - Texture info to use for this object rendering */
         this.textureInfo = new TextureInfo(this.canvas, useWebGL);
 
@@ -15379,10 +15392,10 @@ class TextureSheet
 
         /** @property {number} - Width and height of the sheet in pixels */
         this.size = size;
-        /** @property {OffscreenCanvas} - Canvas holding the packed images */
-        this.canvas = headlessMode ? undefined : new OffscreenCanvas(size, size);
         /** @property {OffscreenCanvasRenderingContext2D} - 2d context for the canvas */
-        this.context = this.canvas?.getContext('2d');
+        this.context = headlessMode ? undefined : createCanvasContext(size);
+        /** @property {OffscreenCanvas} - Canvas holding the packed images */
+        this.canvas = this.context?.canvas;
         /** @property {TextureInfo} - The texture info for this sheet */
         this.textureInfo = new TextureInfo(this.canvas);
         /** @property {Vector2} - Where the next image will be packed */
@@ -18043,6 +18056,15 @@ function render3DIsAfter2D(o) { return !!(o.renderAfter2D ?? render3D.renderAfte
 // a size given as a number or a vec3
 function render3DSize3(size) { return isNumber(size) ? vec3(size) : size; }
 
+// a transform given as a matrix, or as a vec3 for one that only moves there
+function render3DMatrix(matrix)
+{
+    if (matrix instanceof Vector3)
+        return buildMatrix(matrix);
+    ASSERT(matrix instanceof Matrix4, 'takes a Matrix4, or a Vector3 for a position');
+    return matrix;
+}
+
 // the matrix that keeps normals pointing out when an object is scaled unevenly
 function render3DNormalMatrix(matrix) { return matrix.copy().invert().transpose(); }
 
@@ -18226,13 +18248,13 @@ let render3DSoftDotTexture;
 function render3DSoftDot()
 {
     if (render3DSoftDotTexture || !glContext || typeof OffscreenCanvas == 'undefined') return render3DSoftDotTexture;
-    const size = 32, canvas = new OffscreenCanvas(size, size), context = canvas.getContext('2d');
+    const size = 32, context = createCanvasContext(size);
     const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
     for (const [stop, alpha] of [[0, 1], [.33, .9], [.67, .7], [1, 0]]) // the same falloff as a soft disc
         gradient.addColorStop(stop, 'rgba(255,255,255,' + alpha + ')');
     context.fillStyle = gradient;
     context.fillRect(0, 0, size, size);
-    return render3DSoftDotTexture = new TextureInfo(canvas);
+    return render3DSoftDotTexture = new TextureInfo(context.canvas);
 }
 
 // the rotation that points -Z along a direction, as vec3(pitch, yaw, 0); a zero direction keeps the current one
@@ -18564,11 +18586,12 @@ class Render3DPlugin
 
     /** Draw a mesh with the current draw state, batched with its other uses in the opaque stage when instancing is on
      *  @param {Mesh} mesh
-     *  @param {Matrix4} [matrix] - Object transform
+     *  @param {Matrix4|Vector3} [matrix] - Object transform, or just a position to draw it at
      *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
      *  @param {Color} [color] - Tint */
     drawMesh(mesh, matrix=RENDER3D_IDENTITY, tileInfo, color=WHITE)
     {
+        matrix = render3DMatrix(matrix);
         ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo, it comes before color');
         ASSERT(isColor(color), 'color must be a Color');
         if (this.capture)
@@ -19887,9 +19910,7 @@ class Mesh
      *  @return {Mesh} */
     combine(mesh, matrix=RENDER3D_IDENTITY, color=WHITE)
     {
-        if (matrix instanceof Vector3)
-            matrix = buildMatrix(matrix); // most parts only need moving into place
-        ASSERT(matrix instanceof Matrix4, 'combine takes a Matrix4, or a Vector3 for a position');
+        matrix = render3DMatrix(matrix); // most parts only need moving into place
         const normalMatrix = render3DNormalMatrix(matrix);
         for (let i = 0; i < mesh.points.length; ++i)
         {
@@ -19914,10 +19935,11 @@ class Mesh
     }
 
     /** Move, turn or scale every vertex in place, normals follow along
-     *  @param {Matrix4} matrix
+     *  @param {Matrix4|Vector3} matrix - Transform, or just an offset to move by
      *  @return {Mesh} */
     transform(matrix)
     {
+        matrix = render3DMatrix(matrix);
         const normalMatrix = render3DNormalMatrix(matrix);
         for (let i = 0; i < this.points.length; ++i)
         {
@@ -19977,7 +19999,7 @@ class Mesh
     center()
     {
         const bounds = this.getBounds();
-        return this.transform(Matrix4.translation(bounds.min.add(bounds.max).scale(-.5)));
+        return this.transform(bounds.min.add(bounds.max).scale(-.5));
     }
 
     /** Scale the mesh evenly so its largest extent is a size, for loaded models of unknown units
@@ -20074,7 +20096,7 @@ class Mesh
     }
 
     /** Draw the mesh with the current draw state, batched with its other uses in the opaque stage
-     *  @param {Matrix4} [matrix] - Object transform
+     *  @param {Matrix4|Vector3} [matrix] - Object transform, or just a position to draw it at
      *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
      *  @param {Color} [color] - Tint */
     render(matrix, tileInfo, color) { render3D?.drawMesh(this, matrix, tileInfo, color); }
@@ -22044,6 +22066,7 @@ export
     formatTime,
     fetchJSON,
     saveText,
+    createCanvasContext,
     saveCanvas,
     saveDataURL,
     shareURL,

@@ -204,6 +204,7 @@ export
     formatTime,
     fetchJSON,
     saveText,
+    createCanvasContext,
     saveCanvas,
     saveDataURL,
     shareURL,

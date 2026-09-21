@@ -2547,6 +2547,24 @@ test('combine takes a position on its own, the same as a matrix that only moves'
     assert.throws(()=> new Mesh().combine(buildBox(), vec2(1, 2)));
 });
 
+test('drawMesh, render and transform take a position too, like combine', () =>
+{
+    // transform moves the mesh by it
+    const moved = buildBox().transform(vec3(1, 2, 3));
+    nearVec(moved.getBounds().min, .5, 1.5, 2.5);
+    assert.throws(()=> buildBox().transform(vec2(1, 2)));
+
+    // drawing a mesh at a position is the same draw as at buildMatrix of it; a bake records
+    // the draw, so the two can be compared without a GL context
+    const box = buildBox();
+    const atPos = render3D.bake(()=> render3D.drawMesh(box, vec3(4, 0, 0)));
+    const atMatrix = render3D.bake(()=> render3D.drawMesh(box, buildMatrix(vec3(4, 0, 0))));
+    atPos.points.forEach((p, i)=> assert.ok(p.distance(atMatrix.points[i]) < 1e-9));
+    const rendered = render3D.bake(()=> box.render(vec3(4, 0, 0)));
+    rendered.points.forEach((p, i)=> assert.ok(p.distance(atMatrix.points[i]) < 1e-9));
+    assert.throws(()=> render3D.bake(()=> render3D.drawMesh(box, vec2(4, 0))));
+});
+
 test('buildCapsule catches a capsule shorter than it is wide', () =>
 {
     // the two rounded ends alone are already the size tall, so a shorter one comes out a sphere

@@ -1,15 +1,14 @@
 // paint a brick pattern, any image or canvas can be a texture
 function makeBrickTexture()
 {
-    const size = 64, canvas = new OffscreenCanvas(size, size);
-    const context = canvas.getContext('2d');
+    const size = 64, context = createCanvasContext(size);
     context.fillStyle = hsl(.05,.4,.3);
     context.fillRect(0, 0, size, size);
     context.fillStyle = hsl(.05,.5,.5);
     for (let row = 4; row--;)
     for (let col = 4; col--;)
         context.fillRect(col*16 + (row&1)*8 - 8, row*16, 14, 14);
-    return new TextureInfo(canvas, true, true); // wrap, so uvs past 1 repeat
+    return new TextureInfo(context.canvas, true, true); // wrap, so uvs past 1 repeat
 }
 
 function gameInit()

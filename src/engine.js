@@ -356,10 +356,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     glPreRender();
 
     // create offscreen canvases for image processing
-    workCanvas = new OffscreenCanvas(64, 64);
-    workContext = workCanvas.getContext('2d');
-    workReadCanvas = new OffscreenCanvas(64, 64);
-    workReadContext = workReadCanvas.getContext('2d', { willReadFrequently: true });
+    workContext = createCanvasContext(64);
+    workCanvas = workContext.canvas;
+    workReadContext = createCanvasContext(64, 64, true);
+    workReadCanvas = workReadContext.canvas;
 
     // create promises for loading images
     const promises = imageSources.map((src, i)=> loadTexture(i, src));

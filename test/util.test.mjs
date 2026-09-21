@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isNumber, isStringLike, isArray, isVector2, isColor, vec2, rgb, Vector2, Color, formatTime } from '../dist/littlejs.esm.js';
+import { isNumber, isStringLike, isArray, isVector2, isColor, vec2, rgb, Vector2, Color, formatTime, createCanvasContext } from '../dist/littlejs.esm.js';
 
 test('isNumber', () =>
 {
@@ -76,4 +76,31 @@ test('formatTime', () =>
     // negative times get a leading minus
     assert.equal(formatTime(-30), '-0:30');
     assert.equal(formatTime(-125), '-2:05');
+});
+
+test('createCanvasContext makes a canvas and hands back its 2D context', () =>
+{
+    // Node has no OffscreenCanvas, so stand one in that records what it was asked for
+    const had = globalThis.OffscreenCanvas;
+    globalThis.OffscreenCanvas = class
+    {
+        constructor(width, height) { this.width = width; this.height = height; }
+        getContext(type, options) { return {canvas: this, type, options}; }
+    };
+    try
+    {
+        const square = createCanvasContext(32);
+        assert.equal(square.canvas.width, 32);
+        assert.equal(square.canvas.height, 32, 'the height defaults to the width');
+        assert.equal(square.type, '2d');
+        assert.equal(square.options.willReadFrequently, false);
+
+        const wide = createCanvasContext(64, 16, true);
+        assert.equal(wide.canvas.width, 64);
+        assert.equal(wide.canvas.height, 16);
+        assert.equal(wide.options.willReadFrequently, true);
+
+        assert.throws(()=> createCanvasContext(NaN)); // would quietly be a 0 by 0 canvas
+    }
+    finally { globalThis.OffscreenCanvas = had; }
 });

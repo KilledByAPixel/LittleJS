@@ -1147,6 +1147,14 @@ declare module "littlejsengine" {
      *  @param {string} [type]
      *  @memberof Utilities */
     export function saveText(text: string, filename?: string, type?: string): void;
+    /** Create an offscreen canvas to draw into, and return its 2D context
+     *  - The canvas is context.canvas, which is what TextureInfo and the like take
+     *  @param {number} width - In pixels
+     *  @param {number} [height] - In pixels, defaults to the width for a square
+     *  @param {boolean} [willReadFrequently] - Keep it in software, faster when getImageData is called on it often
+     *  @return {OffscreenCanvasRenderingContext2D}
+     *  @memberof Utilities */
+    export function createCanvasContext(width: number, height?: number, willReadFrequently?: boolean): OffscreenCanvasRenderingContext2D;
     /** Save a canvas to disk
      *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
      *  @param {string} [filename]
@@ -3171,10 +3179,10 @@ declare module "littlejsengine" {
          *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
         */
         constructor(pos?: Vector2, size?: Vector2, angle?: number, renderOrder?: number, canvasSize?: Vector2, useWebGL?: boolean);
-        /** @property {HTMLCanvasElement} - The canvas used by this layer */
-        canvas: OffscreenCanvas;
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
         context: OffscreenCanvasRenderingContext2D;
+        /** @property {OffscreenCanvas} - The canvas used by this layer */
+        canvas: OffscreenCanvas;
         /** @property {TextureInfo} - Texture info to use for this object rendering */
         textureInfo: TextureInfo;
         /** Destroy this canvas layer */
@@ -6494,10 +6502,10 @@ declare module "littlejsengine" {
         isSphereVisible(center: Vector3, radius: number): boolean;
         /** Draw a mesh with the current draw state, batched with its other uses in the opaque stage when instancing is on
          *  @param {Mesh} mesh
-         *  @param {Matrix4} [matrix] - Object transform
+         *  @param {Matrix4|Vector3} [matrix] - Object transform, or just a position to draw it at
          *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
          *  @param {Color} [color] - Tint */
-        drawMesh(mesh: Mesh, matrix?: Matrix4, tileInfo?: TileInfo | TextureInfo, color?: Color): any;
+        drawMesh(mesh: Mesh, matrix?: Matrix4 | Vector3, tileInfo?: TileInfo | TextureInfo, color?: Color): any;
         /** Draw a triangle strip, batched into the stream with the current draw state
          *  - Strip order: the first three points make a triangle, then each point makes another with the two before it
          *  - List the first three points counter clockwise as seen from the front, or the face points away
@@ -6849,9 +6857,9 @@ declare module "littlejsengine" {
          *  @return {Mesh} */
         scaleUVs(scale: Vector2 | number): Mesh;
         /** Move, turn or scale every vertex in place, normals follow along
-         *  @param {Matrix4} matrix
+         *  @param {Matrix4|Vector3} matrix - Transform, or just an offset to move by
          *  @return {Mesh} */
-        transform(matrix: Matrix4): Mesh;
+        transform(matrix: Matrix4 | Vector3): Mesh;
         /** Turn the mesh inside out so it is lit and drawn from within, for rooms and domes
          *  @return {Mesh} */
         flipNormals(): Mesh;
@@ -6883,10 +6891,10 @@ declare module "littlejsengine" {
          *  @return {Mesh} */
         upload(): Mesh;
         /** Draw the mesh with the current draw state, batched with its other uses in the opaque stage
-         *  @param {Matrix4} [matrix] - Object transform
+         *  @param {Matrix4|Vector3} [matrix] - Object transform, or just a position to draw it at
          *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
          *  @param {Color} [color] - Tint */
-        render(matrix?: Matrix4, tileInfo?: TileInfo | TextureInfo, color?: Color): void;
+        render(matrix?: Matrix4 | Vector3, tileInfo?: TileInfo | TextureInfo, color?: Color): void;
         /** Delete the GPU buffer, the CPU arrays stay so the mesh can be rendered again */
         dispose(): void;
     }
@@ -7491,10 +7499,10 @@ declare module "littlejsengine" {
         constructor(size?: number);
         /** @property {number} - Width and height of the sheet in pixels */
         size: number;
-        /** @property {OffscreenCanvas} - Canvas holding the packed images */
-        canvas: OffscreenCanvas;
         /** @property {OffscreenCanvasRenderingContext2D} - 2d context for the canvas */
         context: OffscreenCanvasRenderingContext2D;
+        /** @property {OffscreenCanvas} - Canvas holding the packed images */
+        canvas: OffscreenCanvas;
         /** @property {TextureInfo} - The texture info for this sheet */
         textureInfo: TextureInfo;
         /** @property {Vector2} - Where the next image will be packed */

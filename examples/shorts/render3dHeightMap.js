@@ -23,10 +23,8 @@ class Ball extends EngineObject3D
 function makeTerrainImages(size)
 {
     // paint height and color maps
-    const heightCanvas = new OffscreenCanvas(size, size);
-    const colorCanvas = new OffscreenCanvas(size, size);
-    const heightContext = heightCanvas.getContext('2d');
-    const colorContext = colorCanvas.getContext('2d');
+    const heightContext = createCanvasContext(size);
+    const colorContext = createCanvasContext(size);
     for (let y = size; y--;)
     for (let x = size; x--;)
     {
@@ -45,7 +43,7 @@ function makeTerrainImages(size)
         colorContext.fillStyle = h<.5 ? grass : h<.7 ? rock : snow;
         colorContext.fillRect(x, y, 1, 1);
     }
-    return [heightCanvas, colorCanvas];
+    return [heightContext.canvas, colorContext.canvas];
 }
 
 function gameInit()
