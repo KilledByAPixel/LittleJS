@@ -1152,6 +1152,7 @@ new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileIn
 // untextured particles are soft round dots, textured ones are billboards of the tile
 emitter.trailTime = .2 // draw each particle as a ribbon along its last .2 seconds instead, the texture stretches along
                        // it
+// scale3D on the emitter, its own or a parent's, grows the whole effect: spawn area, sizes, speed and fall
 emitter.angleSpeed = .05; emitter.angleDamping = 1 // tumble each particle in the camera plane, either way from a random
                        // start, damped each frame; 0 is no spin, which is the default, and the 2D emitter takes these
                        // as constructor arguments instead
@@ -1164,6 +1165,8 @@ new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thin
                                                                          // grows, and destroy() then takes it at once
 trail.side // Vector3 for which way the ribbon lies flat, recorded with each sample; undefined turns it to face the
            // camera
+// the samples are world space, so width is a world width and scale3D does nothing to a trail; a Light3D's radius is
+// a world distance too, so scale3D does nothing there either
 trail.clear()                                 // forget the trail, for when the object teleports
 ```
 

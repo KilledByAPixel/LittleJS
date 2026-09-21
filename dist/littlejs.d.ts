@@ -7105,6 +7105,7 @@ declare module "littlejsengine" {
      * - Only render3D.lightDirection casts shadows, these light without shadowing
      * - Only the 8 lights nearest the camera are used each frame
      * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
+     * - radius is a world distance, so scale3D does not change it
      * - An alpha or a radius of 0 switches it off, and a light that is off takes none of those slots
      * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
      * @extends EngineObject3D
@@ -7168,6 +7169,7 @@ declare module "littlejsengine" {
      * - Particles shoot out along the emitter's own up axis, turned by rotation3D
      * - emitConeAngle spreads them, PI sprays in every direction
      * - Speeds are per frame and sizes are world units, the same as the 2D emitter
+     * - scale3D, its own or a parent's, grows the whole effect: the spawn area, the sizes, the speed and the fall
      * - gravity here is its own number added to velocity y each frame: it is neither the engine's 2D
      *   gravity nor render3D.gravity, so an effect keeps its own fall wherever it is used
      * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
@@ -7248,6 +7250,7 @@ declare module "littlejsengine" {
     /**
      * Trail3D - A ribbon through where the object has been, thinning and fading with age
      * - Records its world position each frame it moves, so parent it to something that moves or set pos3D yourself
+     * - The samples are world space, so width is a world width and scale3D does nothing to the ribbon
      * - Drawn unlit in the transparent stage, dies down on its own once the object stops
      * @extends EngineObject3D
      * @memberof Render3D

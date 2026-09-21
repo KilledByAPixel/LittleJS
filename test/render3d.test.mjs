@@ -971,6 +971,38 @@ test('ParticleEmitter3D particles die after their life', () =>
     e.destroy();
 });
 
+test('scaling a ParticleEmitter3D scales the whole effect, not just the spawn area', () =>
+{
+    const make = (scale)=>
+    {
+        const e = new ParticleEmitter3D(vec3(), vec3(2, 2, 2), 0, 0, 0, undefined,
+            WHITE, WHITE, WHITE, WHITE, 10, 1, 1, .5, 1, -.01, 0, 0); // no randomness, so the numbers are exact
+        e.scale3D = vec3(scale);
+        e.emitParticle();
+        return e;
+    };
+    const one = make(1), four = make(4);
+    near(four.particles[0].velocity.length(), one.particles[0].velocity.length() * 4);
+    near(four.particles[0].sizeStart, one.particles[0].sizeStart * 4);
+    near(four.particles[0].sizeEnd, one.particles[0].sizeEnd * 4);
+
+    // and gravity too, or a scaled up effect would arc flatter than the one it copies
+    const fall = (e)=> { const before = e.particles[0].velocity.y; e.update(); return e.particles[0].velocity.y - before; };
+    near(fall(four), fall(one) * 4);
+    one.destroy(true); four.destroy(true);
+
+    // a parent's scale counts the same way
+    const parent = new EngineObject3D(vec3());
+    parent.scale3D = vec3(3);
+    const child = make(1);
+    parent.addChild(child);
+    child.particles.length = 0;
+    child.emitParticle();
+    const plain = make(1);
+    near(child.particles[0].sizeStart, plain.particles[0].sizeStart * 3);
+    parent.destroy(true); plain.destroy(true);
+});
+
 test('ParticleEmitter3D particles turn when asked and sit still by default', () =>
 {
     const tileInfo = new TileInfo(vec2(), vec2(16));

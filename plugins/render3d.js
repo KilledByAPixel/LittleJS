@@ -3236,6 +3236,7 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
  * - Only render3D.lightDirection casts shadows, these light without shadowing
  * - Only the 8 lights nearest the camera are used each frame
  * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
+ * - radius is a world distance, so scale3D does not change it
  * - An alpha or a radius of 0 switches it off, and a light that is off takes none of those slots
  * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
  * @extends EngineObject3D
@@ -3337,6 +3338,7 @@ class CameraControl3D extends EngineObject3D
  * - Particles shoot out along the emitter's own up axis, turned by rotation3D
  * - emitConeAngle spreads them, PI sprays in every direction
  * - Speeds are per frame and sizes are world units, the same as the 2D emitter
+ * - scale3D, its own or a parent's, grows the whole effect: the spawn area, the sizes, the speed and the fall
  * - gravity here is its own number added to velocity y each frame: it is neither the engine's 2D
  *   gravity nor render3D.gravity, so an effect keeps its own fall wherever it is used
  * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
@@ -3427,7 +3429,10 @@ class ParticleEmitter3D extends EngineObject3D
     /** Spawn new particles, move the live ones, and go away when done */
     update()
     {
-        this.worldPos3D = this.getWorldPos3D(); // remembered for when the parent is destroyed
+        // one transform for the frame: where the emitter is, and how big the effect it makes is
+        const matrix = this.getMatrix();
+        this.worldPos3D = matrix.getTranslation(); // remembered for when the parent is destroyed
+        const scale = render3DMaxScale(matrix.m);
 
         // emit until the emit time is up, then wait for the last particle and go away
         if (!this.emitTime || this.getAliveTime() <= this.emitTime)
@@ -3452,7 +3457,7 @@ class ParticleEmitter3D extends EngineObject3D
             // damping and gravity give the same arc in both
             const p = particles[i], v = p.velocity;
             v.x *= this.damping, v.y *= this.damping, v.z *= this.damping; // in place, this runs per particle
-            v.y += this.gravity;
+            v.y += this.gravity * scale; // a bigger effect has to fall faster to keep the same arc
             p.pos = p.pos.add(v);
             p.angle += p.angleVelocity *= this.angleDamping;
             if (this.trailTime)
@@ -3483,6 +3488,8 @@ class ParticleEmitter3D extends EngineObject3D
     {
         const random = ()=> rand(1 - this.randomness, 1 + this.randomness);
         const matrix = this.getMatrix();
+        // the whole effect grows with the emitter, not just the area the particles start in
+        const scale = render3DMaxScale(matrix.m);
 
         // spawn offset: inside a box or a sphere
         const size = this.emitSize;
@@ -3494,11 +3501,11 @@ class ParticleEmitter3D extends EngineObject3D
 
         this.particles.push({
             pos: matrix.transformPoint(offset),
-            velocity: direction.scale(this.speed * random()),
+            velocity: direction.scale(this.speed * random() * scale),
             colorStart: randColor(this.colorStartA, this.colorStartB, true),
             colorEnd: randColor(this.colorEndA, this.colorEndB, true),
-            sizeStart: this.sizeStart * random(),
-            sizeEnd: this.sizeEnd * random(),
+            sizeStart: this.sizeStart * random() * scale,
+            sizeEnd: this.sizeEnd * random() * scale,
             life: this.particleTime * random(),
             // a spinning particle starts anywhere and turns either way, one that is not stays at zero
             angle: this.angleSpeed ? rand(2*PI) : 0,
@@ -3544,6 +3551,7 @@ class ParticleEmitter3D extends EngineObject3D
 /**
  * Trail3D - A ribbon through where the object has been, thinning and fading with age
  * - Records its world position each frame it moves, so parent it to something that moves or set pos3D yourself
+ * - The samples are world space, so width is a world width and scale3D does nothing to the ribbon
  * - Drawn unlit in the transparent stage, dies down on its own once the object stops
  * @extends EngineObject3D
  * @memberof Render3D
