@@ -2284,7 +2284,7 @@ function buildLathe(profile, sides=12, smooth=render3D?.smoothShading, capped=tr
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildCylinder(size=1, height=1, sides=12, smooth=render3D?.smoothShading, capped=true)
+function buildCylinder(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true)
 {
     return buildLathe([[size / 2, -height / 2], [size / 2, height / 2]], sides, smooth, capped);
 }

@@ -81,7 +81,7 @@ function gameUpdate()
     if (keyWasPressed('Space')) // space toggles shading
     {
         render3D.smoothShading = !render3D.smoothShading;
-        ground.setMesh(terrain.buildMesh()); // rebuild the terrain
+        ground.setMesh(terrain.buildMesh()); // rebuild terrain
     }
     if (mouseWasPressed(2)) // right click moves the ball
     {
