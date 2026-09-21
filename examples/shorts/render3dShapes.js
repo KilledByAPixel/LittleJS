@@ -13,19 +13,21 @@ let spinners = [];
 
 function buildShapes()
 {
-    // builders use render3D.smoothShading by default
-    const box = buildBox(vec3(1));
-    const oct = buildLathe([[0,-1], [1,0], [0,1]], 4);
-    const cylinder = buildCylinder(1, 2);
-    const vase = buildLathe([[0,-1], [.4,-.2], [.7,.2], [.4,.6], [0,1]], 8);
-    const sphere = buildSphere();
-    const hull = buildLoft([[1,.4,.2,-.1], [0,2,.5,-.4], [-1,1,.3,-.3]]);
-    const torus = buildTorus(1.4, .5);
-    const cone = buildCone(1.4, 1.6);
-    const capsule = buildCapsule(.8, 2);
+    // create each type of shape mesh
+    const meshes =
+    [
+        buildBox(vec3(1)),
+        buildLathe([[0,-1], [1,0], [0,1]], 4),
+        buildCylinder(1, 2),
+        buildLathe([[0,-1], [.4,-.2], [.7,.2], [.4,.6], [0,1]], 8),
+        buildSphere(),
+        buildLoft([[1,.4,.2,-.1], [0,2,.5,-.4], [-1,1,.3,-.3]]),
+        buildTorus(1.4, .5),
+        buildCone(1.4, 1.6),
+        buildCapsule(.8, 2)
+    ];
 
-    // hand one to each spinner, freeing the shapes from last time
-    const meshes = [box, oct, cylinder, vase, sphere, hull, torus, cone, capsule];
+    // make a spinner for each shape
     spinners.forEach((s, i)=> s.setMesh(meshes[i]));
 }
 
@@ -33,12 +35,11 @@ function gameInit()
 {
     new Render3DPlugin;
     render3D.setSky(rgb(.2,.4,.9), rgb(.8,.9,1));
+    render3D.setFog(15, 40);
     render3D.shadows = true;
-    render3D.fogStart = 15;
-    render3D.fogEnd = 40;
     render3D.lightDirection = vec3(-.5,-1,-.3).normalize();
     render3D.ambientColor = rgb(.35,.35,.4);
-    new CameraControl3D(vec3(0,1,0), 15, .4, .003); // drag to turn, wheel to zoom
+    new CameraControl3D(vec3(0,1,0), 15, .4, .003);
 
     // checkerboard floor
     const checker = (x, z)=> hsl(.3, .2, (x+z)/2&1 ? .5 : .4);
@@ -70,6 +71,6 @@ function gameUpdate()
 function gameRenderPost()
 {
     const shading = render3D.smoothShading ? 'smooth' : 'flat';
-    const text = 'space: toggle shading / ' + shading + ' / hold S: specular';
+    const text = `space: shading (${shading}) / hold S: specular`;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }
