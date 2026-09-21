@@ -6621,6 +6621,7 @@ declare module "littlejsengine" {
         drawLine(posA: Vector3, posB: Vector3, width?: number, color?: Color): void;
         /** Draw a ribbon along a path, unlit and visible from both sides; width and color can change along it
          *  - The texture runs along the length, u from the first point to the last
+         *  - A path that ends where it starts is a loop, and joins with no seam
          *  @param {Array<Vector3>} points - Center line in order, at least two
          *  @param {number|Array<number>} [width] - Full width, one for all or one per point
          *  @param {Color|Array<Color>} [color] - One for all or one per point

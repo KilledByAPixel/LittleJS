@@ -1204,6 +1204,36 @@ test('drawSoftShadow follows a height function and lifts by the given amount', (
         near(p.y, 4.02);
 });
 
+test('drawRibbon closes a path that ends where it starts, and leaves an open one alone', () =>
+{
+    // a ring: the first and last points are the same, so the two ends must meet edge to edge;
+    // the strip is edge pairs with a repeat at each end, so the join is vertices 1,2 and n-3,n-2
+    // seen from above, so the ribbon faces the camera all the way round
+    const camera = render3D.camera, pos = camera.pos, rotation = camera.rotation;
+    camera.pos = vec3(0, 20, 0);
+    camera.rotation = vec3(-PI/2, 0, 0);
+    render3D.updateMatrices(1);
+    try
+    {
+        const ring = [];
+        for (let i = 0; i <= 24; ++i)
+            ring.push(vec3(Math.cos(i/24*2*PI)*5, 0, Math.sin(i/24*2*PI)*5));
+        const closed = render3D.bake(()=> render3D.drawRibbon(ring, 1)).points, n = closed.length;
+        assert.ok(closed[1].distance(closed[n-3]) < 1e-9 && closed[2].distance(closed[n-2]) < 1e-9,
+            'the ends of a loop meet with no seam');
+
+        // an open path keeps its ends square to their own last segment, as before
+        const open = [vec3(0,0,0), vec3(2,0,0), vec3(2,0,2)];
+        const strip = render3D.bake(()=> render3D.drawRibbon(open, 1)).points;
+        near(strip[1].x, strip[2].x); // across the first segment, which runs along x
+    }
+    finally
+    {
+        camera.pos = pos, camera.rotation = rotation;
+        render3D.updateMatrices(1);
+    }
+});
+
 test('drawRibbon builds a strip with width and color per point, uvs along it, and a given side', () =>
 {
     render3D.camera.pos = vec3(0, 0, 10);

@@ -965,6 +965,7 @@ class Render3DPlugin
 
     /** Draw a ribbon along a path, unlit and visible from both sides; width and color can change along it
      *  - The texture runs along the length, u from the first point to the last
+     *  - A path that ends where it starts is a loop, and joins with no seam
      *  @param {Array<Vector3>} points - Center line in order, at least two
      *  @param {number|Array<number>} [width] - Full width, one for all or one per point
      *  @param {Color|Array<Color>} [color] - One for all or one per point
@@ -976,6 +977,8 @@ class Render3DPlugin
         ASSERT(count > 1, 'a ribbon needs at least two points');
         const strip = [], uvs = tileInfo ? [] : undefined, colors = [], forward = this.cameraForward;
         let across = vec3(1, 0, 0); // kept from the last point where the direction vanishes
+        // a loop's two ends take their direction across the join, so they meet edge to edge
+        const loop = count > 2 && points[0].distanceSquared(points[count - 1]) < 1e-12;
         for (let i = 0; i < count; ++i)
         {
             const p = points[i];
@@ -983,7 +986,9 @@ class Render3DPlugin
             const c = isArray(color) ? color[i] : color;
             const s = side && (isArray(side) ? side[i] : side);
             // across the path in the camera plane unless a side is given
-            const dir = s || points[min(i + 1, count - 1)].subtract(points[max(i - 1, 0)]).cross(forward);
+            const next = points[i < count - 1 ? i + 1 : loop ? 1 : i];
+            const last = points[i > 0 ? i - 1 : loop ? count - 2 : i];
+            const dir = s || next.subtract(last).cross(forward);
             if (dir.lengthSquared() > 1e-12)
                 across = dir.normalize();
             const half = across.scale(w / 2);

@@ -844,9 +844,9 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
   a yaw is vec3(-sin(yaw), 0, -cos(yaw)) and right is vec3(cos(yaw), 0, -sin(yaw))
 - Below, a comment that says `e.g.` marks the value on that line as an example, not the default
 - See the `examples/shorts/render3d*.js` demos - features: render3dShapes, render3dBillboards, render3dHeightMap
-  terrain, render3dCollision with picking, render3dLights, render3dParticles, render3dTrails, render3dText,
-  render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene, render3dInstancing, render3dTextures,
-  render3dGlow; and `examples/3d` is a full example with all of it in one scene
+  terrain, render3dCollision with picking, render3dLights, render3dParticles, render3dTrails, render3dDraw for
+  immediate drawing, render3dText, render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene,
+  render3dInstancing, render3dTextures, render3dGlow; and `examples/3d` is a full example with all of it in one scene
   games:
   render3dDodgeGame, render3dRacerGame, render3dPuzzleGame
 
