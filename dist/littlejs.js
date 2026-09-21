@@ -17974,7 +17974,7 @@ const RENDER3D_QUAD_UVS = Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec
 const RENDER3D_FULL_UV_RECT = Object.freeze({x:0, y:0, w:1, h:1});
 const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
 const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
-const RENDER3D_SHADOW_COLOR = Object.freeze(rgb(0, 0, 0, .5));
+const RENDER3D_SHADOW_COLOR = Object.freeze(hsl(0, 0, 0, .5));
 const RENDER3D_IDENTITY = new Matrix4; // never modified
 const RENDER3D_DEBUG_WIDTH = .05; // line width of the debug primitives
 // gap between lines of 3D text, as a share of the character height; flat text can let lines touch
@@ -18278,7 +18278,7 @@ class Render3DPlugin
         /** @property {Color} - Directional light color */
         this.lightColor = WHITE.copy();
         /** @property {Color} - Ambient light color */
-        this.ambientColor = rgb(.3, .3, .3);
+        this.ambientColor = hsl(0, 0, .3);
         /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined
          *  @type {Color|undefined} */
         this.fogColor = undefined;
@@ -18782,7 +18782,7 @@ class Render3DPlugin
      *  @param {Color} [horizonColor] - Level with the camera
      *  @param {Color} [bottomColor] - Straight down, defaults to the horizon color
      *  @return {Mesh} - The dome, also in render3D.sky */
-    setSky(topColor, horizonColor=rgb(.8, .9, 1), bottomColor)
+    setSky(topColor, horizonColor=hsl(.6, 1, .9), bottomColor)
     {
         this.sky?.dispose();
         this.sky = buildSky(topColor, horizonColor, bottomColor);
@@ -20460,7 +20460,7 @@ function buildLoft(stations)
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildSky(topColor=rgb(.2, .4, .9), horizonColor=rgb(.8, .9, 1), bottomColor=horizonColor, sides=16, rings=8)
+function buildSky(topColor=hsl(.6, .8, .55), horizonColor=hsl(.6, 1, .9), bottomColor=horizonColor, sides=16, rings=8)
 {
     const mesh = new Mesh;
     const point = (i, a)=>
@@ -21208,7 +21208,7 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
- * const torch = new Light3D(vec3(0, 3, 0), 10, rgb(1, .7, .3));
+ * const torch = new Light3D(vec3(0, 3, 0), 10, hsl(.1, 1, .65));
  */
 class Light3D extends EngineObject3D
 {
@@ -21312,7 +21312,7 @@ class CameraControl3D extends EngineObject3D
  * @memberof Render3D
  * @example
  * // fire: a stream upward, yellow fading to transparent red, additive
- * new ParticleEmitter3D(vec3(), .5, 0, 100, .3, undefined, rgb(1, .8, .2), rgb(1, .5, 0), rgb(1, 0, 0, 0), rgb(.5, 0, 0, 0), 1, .5, 1.5, .05, .95, 0, .3, .2, true);
+ * new ParticleEmitter3D(vec3(), .5, 0, 100, .3, undefined, hsl(.12, 1, .6), hsl(.08, 1, .5), hsl(0, 1, .5, 0), hsl(0, 1, .25, 0), 1, .5, 1.5, .05, .95, 0, .3, .2, true);
  */
 class ParticleEmitter3D extends EngineObject3D
 {
@@ -21522,7 +21522,7 @@ class ParticleEmitter3D extends EngineObject3D
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
- * const trail = new Trail3D(vec3(), 1, .3, undefined, rgb(1, .5, 0), rgb(1, 0, 0, 0), true);
+ * const trail = new Trail3D(vec3(), 1, .3, undefined, hsl(.08, 1, .5), hsl(0, 1, .5, 0), true);
  * ball.addChild(trail); // follows the ball
  */
 class Trail3D extends EngineObject3D

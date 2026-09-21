@@ -7126,7 +7126,7 @@ declare module "littlejsengine" {
      * @extends EngineObject3D
      * @memberof Render3D
      * @example
-     * const torch = new Light3D(vec3(0, 3, 0), 10, rgb(1, .7, .3));
+     * const torch = new Light3D(vec3(0, 3, 0), 10, hsl(.1, 1, .65));
      */
     export class Light3D extends EngineObject3D {
         /** Create a point light, set directional to make it shine from far away instead
@@ -7192,7 +7192,7 @@ declare module "littlejsengine" {
      * @memberof Render3D
      * @example
      * // fire: a stream upward, yellow fading to transparent red, additive
-     * new ParticleEmitter3D(vec3(), .5, 0, 100, .3, undefined, rgb(1, .8, .2), rgb(1, .5, 0), rgb(1, 0, 0, 0), rgb(.5, 0, 0, 0), 1, .5, 1.5, .05, .95, 0, .3, .2, true);
+     * new ParticleEmitter3D(vec3(), .5, 0, 100, .3, undefined, hsl(.12, 1, .6), hsl(.08, 1, .5), hsl(0, 1, .5, 0), hsl(0, 1, .25, 0), 1, .5, 1.5, .05, .95, 0, .3, .2, true);
      */
     export class ParticleEmitter3D extends EngineObject3D {
         /** Create a particle emitter
@@ -7270,7 +7270,7 @@ declare module "littlejsengine" {
      * @extends EngineObject3D
      * @memberof Render3D
      * @example
-     * const trail = new Trail3D(vec3(), 1, .3, undefined, rgb(1, .5, 0), rgb(1, 0, 0, 0), true);
+     * const trail = new Trail3D(vec3(), 1, .3, undefined, hsl(.08, 1, .5), hsl(0, 1, .5, 0), true);
      * ball.addChild(trail); // follows the ball
      */
     export class Trail3D extends EngineObject3D {
