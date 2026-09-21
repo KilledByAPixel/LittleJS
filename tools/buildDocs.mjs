@@ -53,22 +53,22 @@ try
 catch (e) { handleError(e, 'Failed to clear docs folder!'); }
 
 console.log('Build Docs -- jsdoc');
+let jsdocMessages = '';
 try
 {
-    execSync(`npx jsdoc -c ${CONFIG_FILE}`, { stdio: 'inherit' });
+    // parsing progress stays live on stdout, the messages on stderr are captured
+    // so the expected tag errors can be told apart from real ones
+    execSync(`npx jsdoc -c ${CONFIG_FILE}`, { stdio: ['ignore', 'inherit', 'pipe'] });
 }
 catch (e)
 {
     // jsdoc exits non-zero when it logs any tag error, even though it still
-    // finishes generating the site. The engine writes TypeScript flavored
-    // JSDoc on purpose so dist/littlejs.d.ts gets precise types (tuples like
-    // [Vector2, Vector2, number], predicates like "a is Array<any>"), and
-    // jsdoc cannot parse those forms. Verify the output instead of trusting
-    // the exit code, so a real failure still stops the build.
+    // finishes generating the site, so verify the output instead of the exit code
+    jsdocMessages = (e.stderr || '').toString();
     if (!fs.existsSync(join(DOCS_FOLDER, 'index.html')))
         handleError(e, 'Failed to generate docs!');
-    console.log('Build Docs -- jsdoc reported tag errors, site generated anyway');
 }
+checkJSDocMessages(jsdocMessages);
 
 console.log('Build Docs -- images');
 try
@@ -88,6 +88,29 @@ try
 catch (e) { handleError(e, 'Failed to copy static files!'); }
 
 console.log(`Docs built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds! ✨`);
+
+// The engine writes TypeScript flavored JSDoc on purpose so dist/littlejs.d.ts gets
+// precise types. Tuples like [Vector2, Vector2, number] and predicates like
+// "a is Array<any>" have no spelling both tools accept: jsdoc's type parser is Closure
+// only, and the forms it does accept, Array<Vector2|number> or a record type, throw the
+// positions away. So jsdoc always rejects those and that is expected. Every other
+// message is a real problem, and burying it in the expected ones is how tags rot.
+function checkJSDocMessages(output)
+{
+    const lines = output.split(/\r?\n/).map(line => line.trim()).filter(line => line);
+    const expected = (line)=> /Invalid type expression "(\[|\w+ is )/.test(line);
+    const unexpected = lines.filter(line => !expected(line));
+    if (unexpected.length)
+    {
+        for (const line of unexpected)
+            console.error(line);
+        console.error(`Build Docs -- ${unexpected.length} jsdoc messages that are not expected type errors`);
+        console.error('Fix the tags above. If one of them is deliberate, say so in checkJSDocMessages.');
+        process.exit(1);
+    }
+    if (lines.length)
+        console.log(`Build Docs -- ${lines.length} expected type errors, tuples and predicates jsdoc cannot parse`);
+}
 
 function handleError(e, message)
 {

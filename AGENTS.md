@@ -185,7 +185,8 @@ npm run build-docs
 - **This is not part of the normal workflow — do not run it after editing source.** It takes ~17s, rewrites ~100 files, and produces a large diff. The docs do not need to be current on every change. The repo owner asks for it when they want it.
 - It is worth *suggesting* when a major feature or new plugin lands, after a significant rework, or before a release. A plugin that never gets regenerated never appears on the site at all — `textureSheet` and `threejs` were both missing from the published docs for exactly that reason.
 - CI does not run it. `jsdoc` and `clean-jsdoc-theme` are devDependencies.
-- jsdoc exits non-zero on the TypeScript-flavored JSDoc used across the engine (tuples like `[Vector2, Vector2, number]`, predicates like `a is Array<any>`) which it cannot parse but which `dist/littlejs.d.ts` needs for precise types. The script verifies the generated output instead of the exit code — don't "fix" those JSDoc types to silence the errors.
+- jsdoc exits non-zero on the TypeScript-flavored JSDoc used across the engine (tuples like `[Vector2, Vector2, number]`, predicates like `a is Array<any>`) which it cannot parse but which `dist/littlejs.d.ts` needs for precise types. The script verifies the generated output instead of the exit code — don't "fix" those JSDoc types to silence the errors. No spelling satisfies both tools: what jsdoc accepts in place of a tuple (`Array<Vector2|number>`, or a record type) throws the positions away, and a type predicate has no jsdoc-legal form at all.
+- `checkJSDocMessages` in [tools/buildDocs.mjs](tools/buildDocs.mjs) counts those expected errors into one line and **fails the build on any other jsdoc message**, so a real tag problem cannot hide among them. If a new message is deliberate, widen the check there rather than letting the build print it on every run.
 
 ### Debug features
 - Press `Esc` to toggle debug overlay
