@@ -1627,6 +1627,32 @@ test('render3D.gravity and the inherited damping move objects like the 2D physic
     o.destroy();
 });
 
+test('solid collision still finds a touch when size3D and scale3D pull different ways', () =>
+{
+    // the quick reject before the exact test has to reach at least as far as the shape does.
+    // a sphere collides as size3D's longest side times the largest scale, even when those are
+    // different axes, so a reject that multiplied them axis by axis would skip this entirely.
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const post = new EngineObject3D(vec3(20, 0, 0));
+    post.setCollision();
+    const ball = new EngineObject3D(vec3());
+    ball.size3D = vec3(10, 1, 1);   // longest along x
+    ball.scale3D = vec3(.1, 5, 1);  // largest along y
+    ball.collideAsSphere3D = true;  // so it collides as a sphere 10/2 * 5 = 25 in radius
+    ball.mass = 1;                  // only the ball moves, the post is static
+    ball.setCollision();
+    engineObjectsUpdate();
+    ball.pos3D = vec3();
+    post.pos3D = vec3(20, 0, 0);
+    ball.updateTransforms();
+    // the post's near face is at 19.5, so a radius of 25 pushes the ball 5.5 back along -x
+    near(ball.pos3D.x, -5.5);
+    nearVec(post.pos3D, 20, 0, 0);
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});
+
 test('EngineObject3D axes, sprite objects and the collect helpers', () =>
 {
     const o = new EngineObject3D(vec3(1, 2, 3));

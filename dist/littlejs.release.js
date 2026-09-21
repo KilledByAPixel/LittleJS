@@ -20288,13 +20288,30 @@ class EngineObject3D extends EngineObject
 }
 
 // where a solid object is in the world and what it collides as: the sphere that fits size3D, or the size3D box,
-// each grown by the object's own scale and its parents'
+// each grown by the object's scale
+// only objects that own where they are take part, so pos3D is already world space, and however the object is
+// turned its axes come out as long as its scale makes them; building the transform to read that back off it
+// costs six trig calls and a matrix for every pair tested, which is the whole cost of a crowded scene
 function render3DSolidShape(o)
 {
-    const m = o.getMatrix().m, s = o.size3D, pos = vec3(m[12], m[13], m[14]);
+    ASSERT(!o.parent, 'a child rides along with its parent, it has no world pos3D of its own to collide with');
+    const s = o.size3D, k = o.scale3D;
+    const kx = abs(k.x), ky = abs(k.y), kz = abs(k.z);
     if (o.collideAsSphere3D)
-        return {pos, radius: max(s.x, s.y, s.z) / 2 * render3DMaxScale(m)};
-    return {pos, size: vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]))};
+        return {pos: o.pos3D.copy(), radius: max(s.x, s.y, s.z) / 2 * max(kx, ky, kz)};
+    return {pos: o.pos3D.copy(), size: vec3(s.x * kx, s.y * ky, s.z * kz)};
+}
+
+// how far a solid shape can reach from its own center, for a quick reject before the exact test
+// it has to be the shape's own radius, or a wider one: a box reaches to its corner, and a sphere
+// takes the largest scale the same way render3DSolidShape does, or the reject would skip real touches
+function render3DSolidReach(o)
+{
+    const s = o.size3D, k = o.scale3D;
+    const kx = abs(k.x), ky = abs(k.y), kz = abs(k.z);
+    if (o.collideAsSphere3D)
+        return max(s.x, s.y, s.z) / 2 * max(kx, ky, kz);
+    return hypot(s.x * kx, s.y * ky, s.z * kz) / 2;
 }
 
 // what it takes to move shape a clear of shape b, whichever pair of shapes they are, or undefined for no touch
@@ -20317,11 +20334,20 @@ function render3DSolidPush(a, b)
 function render3DCollideSolid(a)
 {
     let shapeA = render3DSolidShape(a);
+    const reachA = render3DSolidReach(a);
     for (const b of engineObjectsCollide)
     {
         if (b === a) break;
         if (b.destroyed || b.parent || b.sync2D || !(b instanceof EngineObject3D)) continue; // a child is part of its parent
         if (!a.isSolid && !b.isSolid) continue; // neither one blocks, so they pass through each other
+
+        // the pairs nowhere near each other are almost all of them in a scene of any size, so
+        // settle those with one distance check instead of building a shape for each
+        const p = shapeA.pos, q = b.pos3D, reach = reachA + render3DSolidReach(b);
+        const dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
+        if (dx*dx + dy*dy + dz*dz > reach*reach)
+            continue;
+
         const push = render3DSolidPush(shapeA, render3DSolidShape(b));
         if (!push) continue;
 
