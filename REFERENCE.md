@@ -969,7 +969,8 @@ render3D.smoothShading = true  // default for every builder's smooth argument, f
 // Objects - EngineObject with a 3D transform, drawn by the 3D pass
 new EngineObject3D(pos3D, mesh, tileInfo, color) // a tileInfo with no mesh draws a sprite billboard of size3D in the
                                                  // transparent stage, already transparent without setting the flag;
-                                                 // size3D.z is ignored for sprites; a whole TextureInfo is kept as the
+                                                 // size3D.z does not change how a sprite draws, only how it collides;
+                                                 // a whole TextureInfo is kept as the
                                                  // tile covering it, so obj.tileInfo is always a TileInfo as it is in 2D
 obj.pos3D obj.rotation3D obj.scale3D // Vector3, rotation is (pitch, yaw, roll); change them in place or assign new ones
 obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engine after update, no super.update()

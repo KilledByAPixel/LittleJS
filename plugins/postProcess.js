@@ -22,6 +22,8 @@ let postProcess;
 /////////////////////////////////////////////////////////////////////////
 /**
  * Post Process Plugin - Applies a full screen shader to the rendered output
+ * - Create it after any plugin that draws, since plugins render in the order they are made
+ *   and this one shades what is on the canvas when its turn comes
  * @memberof PostProcess
  */
 class PostProcessPlugin
