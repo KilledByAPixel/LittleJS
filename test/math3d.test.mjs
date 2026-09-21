@@ -367,3 +367,15 @@ test('Ray3D.getPosition walks the ray by the distance the raycasts return', () =
     nearVec(new Ray3D().direction, 0, 0, -1);
     nearVec(ray.copy().origin, 0, 0, 5);
 });
+
+test('a projection that cannot be built is caught instead of filling the matrix with NaN', () =>
+{
+    // an orthographic far plane at Infinity works out to NaN, which clips every vertex away
+    assert.throws(()=> Matrix4.orthographic(-1, 1, -1, 1, .1, Infinity));
+    assert.throws(()=> Matrix4.orthographic(-1, 1, -1, 1, 10, 10));
+    assert.throws(()=> Matrix4.perspective(PI/3, 1, 0, 100));
+    assert.throws(()=> Matrix4.perspective(PI/3, 1, 100, 10));
+    // the ones that do have a form still build, including the infinite perspective
+    assert.ok(Matrix4.orthographic(-1, 1, -1, 1, 0, 100).m.every(Number.isFinite));
+    assert.ok(Matrix4.perspective(PI/3, 1, .1, Infinity).m.every(Number.isFinite));
+});

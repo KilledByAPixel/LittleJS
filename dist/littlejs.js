@@ -17438,6 +17438,7 @@ class Matrix4
      *  @return {Matrix4} */
     static perspective(fov, aspect, near, far)
     {
+        ASSERT(near > 0 && far > near, 'a perspective projection needs 0 < near < far, or nothing is visible', near, far);
         const f = 1 / tan(fov/2);
         const r = new Matrix4;
         const m = r.m;
@@ -17456,10 +17457,13 @@ class Matrix4
      *  @param {number} bottom - Edge of the visible box
      *  @param {number} top - Edge of the visible box
      *  @param {number} near - Closest visible distance
-     *  @param {number} far - Furthest visible distance
+     *  @param {number} far - Furthest visible distance, Infinity is not allowed here
      *  @return {Matrix4} */
     static orthographic(left, right, bottom, top, near, far)
     {
+        // an infinite far plane has no orthographic form: every depth would land on the near plane,
+        // and the formula below works out to NaN, which quietly clips the whole scene away
+        ASSERT(far > near && far != Infinity, 'an orthographic projection needs a real far plane past near, Infinity is perspective only', near, far);
         const r = new Matrix4;
         const m = r.m;
         m[0]  = 2 / (right - left);
@@ -19918,7 +19922,9 @@ class Mesh
      *  @return {Mesh} */
     setColor(color)
     {
-        this.colors = this.colors.map(()=> color);
+        // one per point, not one per color already there, so a mesh built by hand with no
+        // colors gets them instead of quietly staying white
+        this.colors = this.points.map(()=> color);
         this.dirty = true;
         return this;
     }
@@ -20395,6 +20401,8 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
 function buildLoft(stations)
 {
     ASSERT(isArray(stations) && stations.length > 1, 'loft needs at least 2 stations');
+    // the caps and the winding both assume the nose leads, so the other order turns the hull inside out
+    ASSERT(stations[0][0] > stations[stations.length-1][0], 'loft stations go nose first, from the largest z to the smallest');
     const mesh = new Mesh;
     // section points: left, top, right, bottom, wound clockwise seen from +z
     const section = ([z, w, t, b, m=.5])=>

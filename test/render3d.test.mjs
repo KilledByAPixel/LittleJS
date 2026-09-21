@@ -2464,3 +2464,43 @@ test('pick takes a screen position as well as a ray', () =>
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
 });
+
+test('setColor reaches a mesh built by hand, which has no colors yet', () =>
+{
+    // a mesh assembled by pushing points has empty uvs and colors, upload fills them in with
+    // defaults, so setColor mapping over its own colors would have had nothing to map over
+    const hand = new Mesh;
+    hand.points.push(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0));
+    hand.setColor(RED);
+    assert.equal(hand.colors.length, hand.points.length);
+    assert.equal(hand.colors[0], RED);
+
+    const built = buildBox().setColor(RED);
+    assert.equal(built.colors.length, built.points.length);
+    assert.equal(built.colors[0], RED);
+});
+
+test('buildLoft catches stations listed the wrong way round, which builds the hull inside out', () =>
+{
+    const noseFirst = [[1, .4, .2, -.1], [0, 2, .5, -.4], [-1, 1, .3, -.3]];
+    const hull = buildLoft(noseFirst);
+    assert.ok(hull.points.length > 0);
+
+    // every real triangle of a nose first hull faces away from the middle
+    const facing = (mesh)=>
+    {
+        let out = 0, inward = 0;
+        const p = mesh.points;
+        for (let i = 0; i + 2 < p.length; ++i)
+        {
+            const n = p[i+1].subtract(p[i]).cross(p[i+2].subtract(p[i]));
+            if (!n.lengthSquared()) continue; // a flat joiner between strips
+            const center = p[i].add(p[i+1]).add(p[i+2]).scale(1/3);
+            n.normalize(i & 1 ? 1 : -1).dot(center) > 0 ? ++out : ++inward;
+        }
+        return {out, inward};
+    };
+    const {out, inward} = facing(hull);
+    assert.ok(out > 0 && !inward, `every face points out, got ${out} out and ${inward} in`);
+    assert.throws(()=> buildLoft([...noseFirst].reverse()));
+});

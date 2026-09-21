@@ -352,6 +352,7 @@ class Matrix4
      *  @return {Matrix4} */
     static perspective(fov, aspect, near, far)
     {
+        ASSERT(near > 0 && far > near, 'a perspective projection needs 0 < near < far, or nothing is visible', near, far);
         const f = 1 / tan(fov/2);
         const r = new Matrix4;
         const m = r.m;
@@ -370,10 +371,13 @@ class Matrix4
      *  @param {number} bottom - Edge of the visible box
      *  @param {number} top - Edge of the visible box
      *  @param {number} near - Closest visible distance
-     *  @param {number} far - Furthest visible distance
+     *  @param {number} far - Furthest visible distance, Infinity is not allowed here
      *  @return {Matrix4} */
     static orthographic(left, right, bottom, top, near, far)
     {
+        // an infinite far plane has no orthographic form: every depth would land on the near plane,
+        // and the formula below works out to NaN, which quietly clips the whole scene away
+        ASSERT(far > near && far != Infinity, 'an orthographic projection needs a real far plane past near, Infinity is perspective only', near, far);
         const r = new Matrix4;
         const m = r.m;
         m[0]  = 2 / (right - left);

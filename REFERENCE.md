@@ -865,7 +865,8 @@ function gameInit()
 render3D.camera.pos = vec3(0, 5, 10) // Camera3D: pos (0, 0, 10), rotation (pitch, yaw, roll), fov PI/3, near .1,
                                      // far 1000, which can be Infinity for a perspective view
 render3D.camera.orthographic = 20     // visible height in world units with no perspective, so distance does not
-                                      // shrink things; 0 is the normal perspective view; near and far still clip
+                                      // shrink things; 0 is the normal perspective view; near and far still clip,
+                                      // and far must be a real distance here, Infinity is perspective only
 render3D.camera.lookAt(target)        // set the rotation to face a target now, clears roll
 render3D.camera.orbit(target, distance, yaw, pitch=.5) // put the camera on an orbit looking at the target
 new CameraControl3D(target, distance, pitch=.4, idleSpin=0) // an object that orbits the camera around its pos3D:
@@ -1111,7 +1112,7 @@ buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth) // XZ plane; 
 // buildGrid(vec2(30), 15) the cells are 2 units, so (x, z)=> (floor(x/2) + floor(z/2)) & 1 ? GRAY : WHITE
 buildLoft(stations) // a hull from diamond shaped cross sections, the stations: [[z, width, top, bottom, sideHeight],
                     // ...] nose first at the largest z, always flat; sideHeight is 0 to 1, where the side corners sit
-                    // between the bottom and the top
+                    // between the bottom and the top; the other order would build the hull inside out, so it asserts
 buildSky(topColor, horizonColor, bottomColor, sides, rings) // dome colored by height, set as render3D.sky
 buildExtrude(pixels, size, depth) // 3D sprite: each solid pixel of a tileInfo given thickness, like a block model,
                                   // colors kept; or rows of pixels (Color, truthy for white, falsy for empty)

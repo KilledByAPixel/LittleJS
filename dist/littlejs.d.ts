@@ -6095,7 +6095,7 @@ declare module "littlejsengine" {
          *  @param {number} bottom - Edge of the visible box
          *  @param {number} top - Edge of the visible box
          *  @param {number} near - Closest visible distance
-         *  @param {number} far - Furthest visible distance
+         *  @param {number} far - Furthest visible distance, Infinity is not allowed here
          *  @return {Matrix4} */
         static orthographic(left: number, right: number, bottom: number, top: number, near: number, far: number): Matrix4;
         /** Returns the transform of something at eye turned to face target

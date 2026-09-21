@@ -2004,7 +2004,9 @@ class Mesh
      *  @return {Mesh} */
     setColor(color)
     {
-        this.colors = this.colors.map(()=> color);
+        // one per point, not one per color already there, so a mesh built by hand with no
+        // colors gets them instead of quietly staying white
+        this.colors = this.points.map(()=> color);
         this.dirty = true;
         return this;
     }
@@ -2481,6 +2483,8 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
 function buildLoft(stations)
 {
     ASSERT(isArray(stations) && stations.length > 1, 'loft needs at least 2 stations');
+    // the caps and the winding both assume the nose leads, so the other order turns the hull inside out
+    ASSERT(stations[0][0] > stations[stations.length-1][0], 'loft stations go nose first, from the largest z to the smallest');
     const mesh = new Mesh;
     // section points: left, top, right, bottom, wound clockwise seen from +z
     const section = ([z, w, t, b, m=.5])=>
