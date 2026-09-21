@@ -897,7 +897,7 @@ render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop) // like s
 render3D.isSphereVisible(center, radius) // the same is-it-on-screen test drawMesh uses, for skipping your own draws
 
 // Lights and fog, read at each draw
-render3D.lightDirection = vec3(.5, -1, .3).normalize()  // direction the light travels
+render3D.lightDirection = vec3(.5, -1, .3)  // direction the light travels, any length, it is normalized for you
 render3D.lightColor = rgb(1, .95, .9) // e.g., WHITE by default
 render3D.ambientColor = rgb(.3, .3, .3)
 render3D.fogColor = undefined         // uses canvasClearColor when undefined

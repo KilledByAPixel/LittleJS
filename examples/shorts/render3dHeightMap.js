@@ -53,7 +53,7 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky(hsl(.6,.7,.6), hsl(.6,.6,.9));
     render3D.setFog(20, 60);
-    render3D.lightDirection = vec3(-.4,-1,-.5).normalize();
+    render3D.lightDirection = vec3(-.4,-1,-.5);
     render3D.smoothShading = true;
 
     // the terrain from the two images

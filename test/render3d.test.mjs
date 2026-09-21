@@ -17,7 +17,7 @@ test('Render3DPlugin constructs headless and sets the global', () =>
 
 test('Render3DPlugin has the documented defaults', () =>
 {
-    near(render3D.lightDirection.length(), 1);
+    assert.ok(render3D.lightDirection.y < 0, 'the light shines downward by default');
     assert.equal(render3D.lighting, true);
     assert.equal(render3D.blend, false);
     assert.equal(render3D.additive, false);
@@ -28,6 +28,39 @@ test('Render3DPlugin has the documented defaults', () =>
     assert.equal(render3D.fogEnd, 0);
     assert.equal(render3D.fogColor, undefined);
     assert.equal(render3D.isRendering, false);
+});
+
+test('lightDirection works at any length, since everything that reads it normalizes', () =>
+{
+    // nothing should have to write .normalize() on the end, so check the two places that read it:
+    // the shadow matrix, and the arithmetic that builds the lightDir the shader gets
+    const shadowFor = (direction)=>
+    {
+        render3D.lightDirection = direction;
+        render3D.shadowCenter = vec3();
+        render3D.updateShadowMatrix();
+        return [...render3D.shadowMatrix.m];
+    };
+    try
+    {
+        const unit = shadowFor(vec3(.5, -1, .3).normalize());
+        for (const scale of [2, 10, 1000, .001])
+        {
+            const scaled = shadowFor(vec3(.5, -1, .3).scale(scale));
+            assert.deepEqual(scaled, unit, 'a light direction ' + scale + ' times as long should shadow the same');
+        }
+        // the shader gets the same lightDir too, which is this arithmetic on the way to the uniform
+        // dividing by a length of a different size lands a bit or two apart, well under a float
+        const lightDir = (v)=> { const n = v.length() || 1; return [v.x/n, v.y/n, v.z/n]; };
+        const long = lightDir(vec3(5, -10, 3)), short = lightDir(vec3(.5, -1, .3));
+        long.forEach((v, i)=> near(v, short[i]));
+    }
+    finally
+    {
+        // these are global, so hand them back however the checks above went
+        render3D.lightDirection = vec3(.5, -1, .3);
+        render3D.shadowCenter = undefined;
+    }
 });
 
 test('Camera3D defaults look down -Z from +Z', () =>

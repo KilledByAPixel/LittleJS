@@ -121,7 +121,7 @@ function gameInit()
     postProcessBloom(.85, 2, 8); // only the brightest things glow, and not the 2D text
     render3D.setSky(hsl(.6,.6,.45), hsl(.55,.4,.7), hsl(.35,.3,.4));
     render3D.setFog(40, 130);
-    render3D.lightDirection = vec3(.4,-1,.3).normalize();
+    render3D.lightDirection = vec3(.4,-1,.3);
     render3D.ambientColor = hsl(.6,.2,.35);
     render3D.shadows = true;
     render3D.shadowRange = 50;

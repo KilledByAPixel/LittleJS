@@ -6314,7 +6314,8 @@ declare module "littlejsengine" {
     export class Render3DPlugin {
         /** @property {Camera3D} - The camera */
         camera: Camera3D;
-        /** @property {Vector3} - Direction the directional light travels, read at each draw */
+        /** @property {Vector3} - Direction the directional light travels, read at each draw;
+         *  any length will do, both the shading and the shadows normalize it themselves */
         lightDirection: Vector3;
         /** @property {Color} - Directional light color */
         lightColor: Color;

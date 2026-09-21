@@ -104,7 +104,7 @@ function gameInit()
     render3D.setSky(hsl(.6,.6,.5), hsl(.6,.4,.8), hsl(.1,.3,.4));
     render3D.setFog(30, 80);
     render3D.ambientColor = hsl(.6,.1,.4);
-    render3D.lightDirection = vec3(.4,-1,.3).normalize();
+    render3D.lightDirection = vec3(.4,-1,.3);
     render3D.shadows = true;
     render3D.gravity = vec3(0,-.01);
 

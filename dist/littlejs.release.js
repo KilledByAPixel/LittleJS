@@ -17581,8 +17581,9 @@ class Render3DPlugin
         this.camera = new Camera3D;
 
         // lights and fog
-        /** @property {Vector3} - Direction the directional light travels, read at each draw */
-        this.lightDirection = vec3(.5, -1, .3).normalize();
+        /** @property {Vector3} - Direction the directional light travels, read at each draw;
+         *  any length will do, both the shading and the shadows normalize it themselves */
+        this.lightDirection = vec3(.5, -1, .3);
         /** @property {Color} - Directional light color */
         this.lightColor = WHITE.copy();
         /** @property {Color} - Ambient light color */
