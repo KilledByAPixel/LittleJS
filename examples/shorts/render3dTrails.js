@@ -7,7 +7,8 @@ class Comet extends EngineObject3D
         this.phase = phase;
         this.softShadow = 1.5;
         // the trail is a child so it follows, additive, fading over 1.5 seconds
-        this.addChild(new Trail3D(vec3(), 1.5, .5, undefined, color, color.withAlpha(0), true));
+        this.addChild(new Trail3D(vec3(), 1.5, .5, undefined,
+            color, color.withAlpha(0), true));
     }
     update()
     {
@@ -43,7 +44,8 @@ function gameInit()
 
     // floor, flagpole, flag and the comets looping around it
     new EngineObject3D(vec3(), buildGrid(vec2(30), 1, hsl(.6,.1,.2)));
-    new EngineObject3D(vec3(-2,3,0), buildCylinder(.16, 6, 8).setColor(hsl(.1,.3,.4)));
+    const pole = buildCylinder(.16, 6, 8).setColor(hsl(.1,.3,.4));
+    new EngineObject3D(vec3(-2,3,0), pole);
     new Flag(vec3(0,4.5,0));
     for (let i = 3; i--;)
         new Comet(hsl(i/3,1,.6), i*2*PI/3);

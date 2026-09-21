@@ -16,11 +16,12 @@ function gameInit()
     const caption = new EngineObject3D(vec3(0,2.1,0), captionMesh);
     caption.color = hsl(.6,.8,.8);
 
-    // tiles from the sheet extruded the same way, their pixel colors carry through
+    // tiles from the sheet extruded the same way, keeping their colors
     for (let i = 4; i--;)
     {
         const pos = vec3(i*3 - 4.5, 1, 4.5);
-        const sprite = new EngineObject3D(pos, buildExtrude(tile(i,16), vec2(2), .5));
+        const mesh = buildExtrude(tile(i,16), vec2(2), .5);
+        const sprite = new EngineObject3D(pos, mesh);
         sprite.angleVelocity3D = vec3(0, .02);
     }
 }
@@ -30,7 +31,7 @@ function gameUpdate()
     // sway the title so the sides catch the light
     title.rotation3D.y = sin(time)*.5;
 
-    // orbiting the camera by hand, which is all CameraControl3D does for the other demos
+    // orbit the camera by hand, which is all CameraControl3D does
     orbit += mouseIsDown(0) ? -mouseDeltaScreen.x*.01 : .002;
     render3D.camera.orbit(vec3(0,2,0), 16, orbit, .35);
 }

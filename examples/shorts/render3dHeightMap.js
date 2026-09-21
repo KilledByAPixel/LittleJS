@@ -56,8 +56,8 @@ function gameInit()
     new CameraControl3D(vec3(0,3,0), 35, .5, .002);
 
     // terrain from the two images
-    const [heightImage, colorImage] = makeTerrainImages(terrainSamples);
-    terrain = new HeightMap(heightImage, terrainSize, terrainHeight, colorImage);
+    const [heights, colors] = makeTerrainImages(terrainSamples);
+    terrain = new HeightMap(heights, terrainSize, terrainHeight, colors);
     ground = new EngineObject3D(vec3(), terrain.buildMesh());
 
     // trees on the grass, a trunk and a cone welded into one mesh

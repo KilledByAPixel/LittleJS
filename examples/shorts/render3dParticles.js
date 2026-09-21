@@ -13,42 +13,50 @@ function gameInit()
     // fire
     new ParticleEmitter3D(
         vec3(-4,.2,0),                      // pos
-        .6, 0, 40, .3, undefined,           // emitSize, emitTime, rate, cone, tileInfo
+        .6, 0,                              // emitSize, emitTime
+        40, .3, undefined,                  // rate, cone, tileInfo
         hsl(.1,1,.7,.5), hsl(.1,1,.5,.5),   // colorStartA, colorStartB
         hsl(0,1,.5,0), hsl(0,1,.3,0),       // colorEndA, colorEndB
-        1, .8, 2, .05, .96,                 // time, sizeStart, sizeEnd, speed, damping
-        0, .3, .3, true                     // gravity, fade, randomness, additive
+        1, .8, 2,                           // time, sizeStart, sizeEnd
+        .05, .96, 0,                        // speed, damping, gravity
+        .3, .3, true                        // fade, randomness, additive
     );
 
     // smoke
     new ParticleEmitter3D(
         vec3(-4,2.5,0),                     // pos
-        .8, 0, 6, .2, undefined,            // emitSize, emitTime, rate, cone, tileInfo
+        .8, 0,                              // emitSize, emitTime
+        6, .2, undefined,                   // rate, cone, tileInfo
         hsl(.6,.1,.5,.3), hsl(.6,.1,.3,.3), // colorStartA, colorStartB
         hsl(.6,.1,.4,0), hsl(.6,.1,.4,0),   // colorEndA, colorEndB
-        3, 1.5, 4, .03, .98,                // time, sizeStart, sizeEnd, speed, damping
-        0, .5, .2                           // gravity, fade, randomness
+        3, 1.5, 4,                          // time, sizeStart, sizeEnd
+        .03, .98, 0,                        // speed, damping, gravity
+        .5, .2                              // fade, randomness
     );
 
     // sparks, each one a ribbon along its last .15 seconds
     const sparks = new ParticleEmitter3D(
         vec3(4,.5,0),                       // pos
-        0, 0, 40, PI, tile(0,16),           // emitSize, emitTime, rate, cone, tileInfo
+        0, 0,                               // emitSize, emitTime
+        40, PI, tile(0,16),                 // rate, cone, tileInfo
         hsl(.2,1,.8), hsl(.1,1,.7),         // colorStartA, colorStartB
         hsl(.1,1,.5,0), hsl(.1,1,.5,0),     // colorEndA, colorEndB
-        1.5, .3, .1, .2, .98,               // time, sizeStart, sizeEnd, speed, damping
-        -.006, .2, .3, true                 // gravity, fade, randomness, additive
+        1.5, .3, .1,                        // time, sizeStart, sizeEnd
+        .2, .98, -.006,                     // speed, damping, gravity
+        .2, .3, true                        // fade, randomness, additive
     );
     sparks.trailTime = .15;
 
     // fountain, emits along its local +Y so rotation3D aims it
     fountain = new ParticleEmitter3D(
         vec3(0,.5,4),                       // pos
-        0, 0, 120, .15, undefined,          // emitSize, emitTime, rate, cone, tileInfo
+        0, 0,                               // emitSize, emitTime
+        120, .15, undefined,                // rate, cone, tileInfo
         hsl(.6,1,.8,.8), hsl(.6,1,.9,.8),   // colorStartA, colorStartB
         hsl(.6,1,.8,0), hsl(.6,1,.8,0),     // colorEndA, colorEndB
-        1.5, .25, .1, .25, 1,               // time, sizeStart, sizeEnd, speed, damping
-        -.008, .1, .1                       // gravity, fade, randomness
+        1.5, .25, .1,                       // time, sizeStart, sizeEnd
+        .25, 1, -.008,                      // speed, damping, gravity
+        .1, .1                              // fade, randomness
     );
 }
 

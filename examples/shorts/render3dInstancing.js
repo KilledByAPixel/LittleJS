@@ -34,6 +34,6 @@ function gameUpdate()
 function gameRenderPost()
 {
     const state = render3D.instancing ? 'on' : 'off';
-    const text = 'space: toggle instancing / instancing ' + state + ' / draw calls: ' + drawCount;
+    const text = `space: instancing (${state}) / draw calls: ${drawCount}`;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30);
 }

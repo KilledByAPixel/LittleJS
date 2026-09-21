@@ -10,12 +10,14 @@ const levelData =
     '#######',
 ];
 const levelSize = levelData.length;
-const cellPos = (x, z, y=0)=> vec3(x - levelSize/2 + .5, y, z - levelSize/2 + .5);
+const cellPos = (x, z, y=0)=>
+    vec3(x - levelSize/2 + .5, y, z - levelSize/2 + .5);
 const isWall = (x, z)=> levelData[z][x] == '#';
 const boxAt = (x, z)=> boxes.find(b=> b.cell.x == x && b.cell.y == z);
 const padColor = hsl(.1,.6,.3), litColor = hsl(.15,1,.6);
 const pushSound = new Sound([,,150,.01,.02,.08,1,1.5,,,,,,,,,.05]);
-let wallMesh, blockMesh, ballMesh, padMesh, level, boxes, goals, player, moves, hoverCell;
+let wallMesh, blockMesh, ballMesh, padMesh;
+let level, boxes, goals, player, moves, hoverCell;
 
 class GridObject extends EngineObject3D
 {
@@ -47,20 +49,23 @@ class Goal extends GridObject
     constructor(x, z)
     {
         super(x, z, padMesh, padColor, .03);
-        this.light = this.addChild(new Light3D(vec3(0,.57,0), 4, hsl(.1,1,.6,0)));
+        this.light = new Light3D(vec3(0,.57,0), 4, hsl(.1,1,.6,0));
+        this.addChild(this.light);
     }
     update()
     {
-        // light up while a block sits on the pad, with a burst the moment it lands
+        // light up while a block is on the pad, with a burst when it lands
         const lit = !!boxAt(this.cell.x, this.cell.y);
         if (lit && !this.lit)
             new ParticleEmitter3D(
                 cellPos(this.cell.x, this.cell.y, .5), // pos
-                .6, .1, 80, PI, undefined,            // emitSize, emitTime, rate, cone, tileInfo
-                litColor, WHITE,                      // colorStartA, colorStartB
-                hsl(.08,1,.5,0), hsl(.17,1,.5,0),     // colorEndA, colorEndB
-                .7, .3, 0, .07, .95,                  // time, sizeStart, sizeEnd, speed, damping
-                -.004, .1, .5, true                   // gravity, fade, randomness, additive
+                .6, .1,                           // emitSize, emitTime
+                80, PI, undefined,                // rate, cone, tileInfo
+                litColor, WHITE,                  // colorStartA, colorStartB
+                hsl(.08,1,.5,0), hsl(.17,1,.5,0), // colorEndA, colorEndB
+                .7, .3, 0,                        // time, sizeStart, sizeEnd
+                .07, .95, -.004,                  // speed, damping, gravity
+                .1, .5, true                      // fade, randomness, additive
             );
         this.lit = lit;
         this.color = lit ? litColor : padColor;
@@ -131,7 +136,8 @@ function gameInit()
 
     // checkered floor, and a trophy that spins on top of the 2D text
     const checker = (x, z)=> hsl(0, 0, (x+z)&1 ? .4 : .3);
-    new EngineObject3D(vec3(0,-.02,0), buildGrid(vec2(levelSize), levelSize, checker));
+    const floorMesh = buildGrid(vec2(levelSize), levelSize, checker);
+    new EngineObject3D(vec3(0,-.02,0), floorMesh);
     const trophy = new EngineObject3D(vec3(5,3,-5), buildTorus(1, .3));
     trophy.color = litColor;
     trophy.angleVelocity3D = vec3(.01,.03);
@@ -147,12 +153,13 @@ function gameUpdate()
     if (keyWasPressed('ArrowDown'))  tryMove(0, 1);
     if (keyWasPressed('KeyR'))       buildLevel();
 
-    // the cell under the mouse: a block if one is under it, else where it meets the floor
+    // the cell under the mouse: a block under it, else where it meets the floor
     const picked = render3D.pick(mousePosScreen, boxes)?.object;
     const ground = render3D.screenToGround(mousePosScreen);
-    const groundCell = ground && vec2(floor(ground.x + levelSize/2), floor(ground.z + levelSize/2));
+    const toCell = (v)=> clamp(floor(v + levelSize/2), 0, levelSize-1);
+    const groundCell = ground && vec2(toCell(ground.x), toCell(ground.z));
     hoverCell = picked ? picked.cell : groundCell;
-    if (hoverCell && isWall(clamp(hoverCell.x, 0, levelSize-1), clamp(hoverCell.y, 0, levelSize-1)))
+    if (hoverCell && isWall(hoverCell.x, hoverCell.y))
         hoverCell = undefined;
 }
 
@@ -160,7 +167,8 @@ function gameRender()
 {
     // outline the hovered cell with a debug primitive
     if (hoverCell)
-        debugBox3D(cellPos(hoverCell.x, hoverCell.y, .03), vec3(.95,.05,.95), WHITE);
+        debugBox3D(cellPos(hoverCell.x, hoverCell.y, .03),
+            vec3(.95,.05,.95), WHITE);
 }
 
 function gameRenderPost()
@@ -168,5 +176,6 @@ function gameRenderPost()
     const text = 'arrows: move / R: reset / moves: ' + moves;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30);
     if (goals.every(g=> g.lit))
-        drawTextScreen('SOLVED!', vec2(mainCanvasSize.x/2, mainCanvasSize.y - 50), 50, litColor);
+        drawTextScreen('SOLVED!',
+            vec2(mainCanvasSize.x/2, mainCanvasSize.y - 50), 50, litColor);
 }

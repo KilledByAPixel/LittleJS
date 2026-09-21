@@ -30,14 +30,16 @@ class Player extends EngineObject3D
         this.speed = vec3();
         this.speedY = 0;
         this.addChild(new Light3D(vec3(0,1,0), 10, hsl(.55,1,.7)));
-        const trailColor = hsl(.55,1,.7,.4), trailFade = trailColor.withAlpha(0);
-        this.addChild(new Trail3D(vec3(0,-.8,0), 1, .5, undefined, trailColor, trailFade, true));
+        const trailColor = hsl(.55,1,.7,.4);
+        this.addChild(new Trail3D(vec3(0,-.8,0), 1, .5, undefined,
+            trailColor, trailColor.withAlpha(0), true));
     }
     update()
     {
         // arrow keys push it along the ground, forward is -Z
         const move = keyDirection();
-        this.speed = this.speed.add(vec3(move.x, 0, -move.y).scale(.02)).scale(.94);
+        const push = vec3(move.x, 0, -move.y).scale(.02);
+        this.speed = this.speed.add(push).scale(.94);
         this.pos3D = this.pos3D.add(this.speed);
 
         // stay on the island and roll with the slope
@@ -86,12 +88,14 @@ class Orb extends EngineObject3D
             return;
 
         new ParticleEmitter3D(
-            this.pos3D.copy(),                // pos
-            1, .1, 250, PI, undefined,        // emitSize, emitTime, rate, cone, tileInfo
-            this.color, WHITE,                // colorStartA, colorStartB
-            this.color.withAlpha(0), WHITE.withAlpha(0), // colorEndA, colorEndB
-            1, .6, 0, .3, .95,                // time, sizeStart, sizeEnd, speed, damping
-            -.01, .1, .4, true                // gravity, fade, randomness, additive
+            this.pos3D.copy(),                    // pos
+            1, .1,                                // emitSize, emitTime
+            250, PI, undefined,                   // rate, cone, tileInfo
+            this.color, WHITE,                    // colorStartA, colorStartB
+            this.color.withAlpha(0), CLEAR_WHITE, // colorEndA, colorEndB
+            1, .6, 0,                             // time, sizeStart, sizeEnd
+            .3, .95, -.01,                        // speed, damping, gravity
+            .1, .4, true                          // fade, randomness, additive
         );
         render3D.playSound(soundCollect, this.pos3D);
         ++score;
@@ -109,7 +113,7 @@ function randomGroundPos()
 
 function buildScoreText()
 {
-    scoreText.setMesh(buildText3D('ORBS ' + score, 3, .8)); // frees the text it replaces
+    scoreText.setMesh(buildText3D('ORBS ' + score, 3, .8)); // rebuild text
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -118,7 +122,7 @@ function gameInit()
 {
     // the 3D pass draws under the 2D canvas, bloom shaders both
     new Render3DPlugin;
-    postProcessBloom(.85, 2, 8); // only the brightest things glow, and not the 2D text
+    postProcessBloom(.85, 2, 8); // the brightest things glow, not the 2D text
     render3D.setSky(hsl(.6,.6,.45), hsl(.55,.4,.7), hsl(.35,.3,.4));
     render3D.setFog(40, 130);
     render3D.lightDirection = vec3(.4,-1,.3);
@@ -139,12 +143,13 @@ function gameInit()
             const height = clamp(hills + .35 - hypot(x, z)*1.6);
             heightRow.push(height);
             const grass = hsl(.3,.5,.25 + height*.4), rock = hsl(.1,.2,.45);
-            colorRow.push(height < .12 ? hsl(.55,.5,.45) : grass.lerp(rock, height));
+            const water = hsl(.55,.5,.45);
+            colorRow.push(height < .12 ? water : grass.lerp(rock, height));
         }
         heights.push(heightRow);
         colors.push(colorRow);
     }
-    orbMesh = buildSphere(1.4, 10, 5); // one mesh for every orb, so they draw as one batch
+    orbMesh = buildSphere(1.4, 10, 5); // one mesh for every orb, one draw call
     terrain = new HeightMap(heights, vec2(terrainSize), terrainHeight, colors);
     new EngineObject3D(vec3(), terrain.buildMesh());
 
@@ -181,7 +186,7 @@ function gameInit()
         rock.specular = .6;
     }
 
-    // sprites from the tile sheet, upright billboards with their pixels kept hard edged
+    // sprites from the tile sheet
     for (let i = 12; i--;)
     {
         const pos = randomGroundPos();
@@ -191,12 +196,13 @@ function gameInit()
         const sprite = new EngineObject3D(pos, undefined, tile(i%4, 16));
         sprite.color = hsl(i/12,.7,.7);
         sprite.size3D = vec3(3);
-        sprite.upright = true;  // stands on the ground instead of tilting with the camera
-        sprite.pixelated = true; // no blurring or bleeding between tiles on the sheet
+        sprite.upright = true;  // stands on the ground
+        sprite.pixelated = true; // hard edged pixels
     }
 
-    // the title and the score, extruded from the engine font, high enough to clear the hills
-    title = new EngineObject3D(vec3(0,17,-14), buildText3D('LITTLEJS 3D', 5, 1.2));
+    // title and score, extruded from the engine font, above the hills
+    const titleMesh = buildText3D('LITTLEJS 3D', 5, 1.2);
+    title = new EngineObject3D(vec3(0,17,-14), titleMesh);
     title.color = hsl(.12,1,.6);
     title.specular = .4;
     scoreText = new EngineObject3D(vec3(0,12.5,-14));
@@ -204,7 +210,7 @@ function gameInit()
     scoreText.specular = .3;
     buildScoreText();
 
-    // the sun is behind everything facing the camera, so a cool fill picks out the front faces
+    // the sun lights things from behind, so a cool fill picks out the fronts
     const fill = new Light3D(vec3(), 1, hsl(.55,.4,.3));
     fill.directional = true;
     fill.lookAt(vec3(0,-.3,-1));
@@ -220,7 +226,7 @@ function gameUpdatePost()
     render3D.camera.follow(player.pos3D.add(vec3(0,2,0)), vec3(0,10,18), .08);
     render3D.shadowCenter = player.pos3D;
 
-    // the title sways so its sides catch the light, rather than turning around to read backwards
+    // sway the title so its sides catch the light
     title.rotation3D.y = sin(time*.3)*.5;
 }
 
@@ -230,4 +236,5 @@ function gameRenderPost()
     drawTextScreen(text, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40), 30);
 }
 
-engineInit(gameInit, ()=>{}, gameUpdatePost, ()=>{}, gameRenderPost, ['tiles.png']);
+engineInit(gameInit, ()=>{}, gameUpdatePost, ()=>{}, gameRenderPost,
+    ['tiles.png']);

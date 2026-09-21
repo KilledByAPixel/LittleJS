@@ -2,7 +2,7 @@ class Coin extends EngineObject3D
 {
     constructor(pos, above)
     {
-        // a 3D coin at a 2D position, z=0 is the 2D plane when the camera is aligned
+        // at a 2D position, the aligned camera puts z=0 on the 2D plane
         super(vec3(pos.x, pos.y), buildTorus(1.5, .5));
         this.color = hsl(.15,1,.5);
         this.rotation3D.x = PI/2; // face the camera

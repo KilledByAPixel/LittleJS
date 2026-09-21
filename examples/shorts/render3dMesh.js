@@ -29,7 +29,7 @@ function gameInit()
     render3D.setSky(hsl(.6,.7,.6), hsl(.6,.6,.9));
     render3D.setFog(20, 50);
     render3D.shadows = true;
-    new CameraControl3D(vec3(0,2,0), 10, .35); // no idle spin, the model is for inspecting
+    new CameraControl3D(vec3(0,2,0), 10, .35); // no idle spin
 
     // checkerboard floor and the model
     const checker = (x, z)=> hsl(.3, .2, (x+z)/2&1 ? .5 : .4);
@@ -70,6 +70,6 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    const text = 'drop an .obj file here / space: toggle shading / ' + modelName;
+    const text = `drop an .obj file / space: toggle shading / ${modelName}`;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

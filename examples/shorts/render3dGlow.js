@@ -1,4 +1,4 @@
-// the post processing plugin runs over the 3D scene too, here the built in bloom
+// the post processing plugin works on 3D too, here the built in bloom
 
 class Orb extends EngineObject3D
 {
@@ -7,7 +7,7 @@ class Orb extends EngineObject3D
         super(vec3(), buildSphere(1.2));
         this.color = color;
         this.orbitAngle = angle;
-        this.unlit = true; // its own color, so the bloom has something bright to find
+        this.unlit = true; // full brightness, so the bloom picks it up
         this.addChild(new Light3D(vec3(), 9, color));
     }
     update()

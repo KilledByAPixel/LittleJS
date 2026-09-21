@@ -6,7 +6,7 @@ class Lamp extends EngineObject3D
         this.color = color;
         this.orbitAngle = angle;
         this.unlit = true; // drawn in its own color so it reads as bright
-        this.addChild(new Light3D(vec3(), 8, color)); // the light follows the lamp
+        this.addChild(new Light3D(vec3(), 8, color)); // follows the lamp
     }
     update()
     {
@@ -20,7 +20,7 @@ function gameInit()
 {
     new Render3DPlugin;
     render3D.setSky(hsl(.6,.5,.03), hsl(.6,.4,.08));
-    render3D.lightColor = hsl(.6,.2,.15); // a dim moon so the point lights carry the scene
+    render3D.lightColor = hsl(.6,.2,.15); // dim moon, the lamps light the scene
     render3D.ambientColor = hsl(.6,.2,.1);
     render3D.smoothShading = true;
     new CameraControl3D(vec3(0,1,0), 15, .5, .002);
@@ -34,7 +34,7 @@ function gameInit()
     for (let i = 3; i--;)
         new Lamp(i*2, hsl(i/3,1,.6));
 
-    // a directional light shines along its forward axis from far away, a cold fill here
+    // a directional light shines along its forward axis, a cold fill here
     const fill = new Light3D(vec3(), 1, hsl(.6,1,.2));
     fill.directional = true;
     fill.lookAt(vec3(-1,-1,-.5));

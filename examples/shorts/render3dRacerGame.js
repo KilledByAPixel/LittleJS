@@ -6,7 +6,8 @@ let terrain, car, lapCount = 0, nextGate = 1, bestTime = 0, lapTime = 0;
 // the center line of the track, a wobbly circle on the ground
 function trackRadius(a) { return 42 + 9*sin(a*3) + 5*sin(a*2 + 1); }
 function trackPoint(a) { return vec3(trackRadius(a), 0, 0).rotateY(-a); }
-function trackDistance(x, z) { return abs(hypot(x, z) - trackRadius(atan2(z, x))); }
+function trackDistance(x, z)
+{ return abs(hypot(x, z) - trackRadius(atan2(z, x))); }
 function trackSide(a)
 {
     const d = trackPoint(a + .01).subtract(trackPoint(a)).normalize();
@@ -17,18 +18,22 @@ function trackSide(a)
 function buildTerrain()
 {
     const n = 81, heights = [], colors = [];
-    const grassColor = hsl(.3,.4,.3), rockColor = hsl(.1,.2,.4), roadColor = hsl(.1,.1,.3);
+    const grassColor = hsl(.3,.4,.3), rockColor = hsl(.1,.2,.4);
+    const roadColor = hsl(.1,.1,.3);
     for (let r = 0; r < n; ++r)
     {
         const heightRow = [], colorRow = [];
         for (let c = 0; c < n; ++c)
         {
             const x = (c/(n-1) - .5)*trackSize, z = (r/(n-1) - .5)*trackSize;
-            const hills = noise2D(x*.025, z*.025)*.75 + noise2D(x*.08, z*.08)*.25;
+            const hills = noise2D(x*.025, z*.025)*.75 +
+                noise2D(x*.08, z*.08)*.25;
             const flat = .3 + .1*sin(atan2(z, x)*2 + 1);
-            const blend = smoothStep(clamp((trackDistance(x, z) - roadWidth/2)/12));
+            const edge = trackDistance(x, z) - roadWidth/2;
+            const blend = smoothStep(clamp(edge/12));
             heightRow.push(lerp(flat, hills, blend));
-            colorRow.push(blend < .4 ? roadColor : grassColor.lerp(rockColor, hills));
+            const ground = grassColor.lerp(rockColor, hills);
+            colorRow.push(blend < .4 ? roadColor : ground);
         }
         heights.push(heightRow);
         colors.push(colorRow);
@@ -68,10 +73,10 @@ class Car extends EngineObject3D
         this.specular = .6;
         this.cullBackFaces = true;
 
-        // a skid mark from each rear wheel, lying flat instead of facing the camera
+        // a skid mark from each rear wheel, lying flat on the ground
         const mark = hsl(0,0,.1,.7), faded = hsl(0,0,.1,0);
-        this.trails = [-.9, .9].map(x =>
-            this.addChild(new Trail3D(vec3(x,-.65,1.3), 1.5, .35, undefined, mark, faded)));
+        this.trails = [-.9, .9].map(x => this.addChild(
+            new Trail3D(vec3(x,-.65,1.3), 1.5, .35, undefined, mark, faded)));
     }
     update()
     {
@@ -90,22 +95,26 @@ class Car extends EngineObject3D
         const ahead = this.pos3D.add(forward.scale(1.5));
         const behind = this.pos3D.subtract(forward.scale(1.5));
         const rise = terrain.getHeight(ahead) - terrain.getHeight(behind);
-        this.rotation3D = vec3(atan2(rise, 3), this.yaw, -input.x*this.speed*.6);
+        const roll = -input.x*this.speed*.6;
+        this.rotation3D = vec3(atan2(rise, 3), this.yaw, roll);
         for (const trail of this.trails)
-            trail.side = vec3(1, 0, 0).rotateY(this.yaw); // across the car, so the marks lie flat
+            trail.side = vec3(1, 0, 0).rotateY(this.yaw); // lie flat
 
         // the engine revs faster with speed
         if (frame % max(2, round(9 - abs(this.speed)*12)) == 0)
-            render3D.playSound(engineSound, this.pos3D, .4, .7 + abs(this.speed)*2.5);
+            render3D.playSound(engineSound, this.pos3D, .4,
+                .7 + abs(this.speed)*2.5);
 
         // gates count in order, the finish line completes a lap
-        const gate = floor(mod(atan2(this.pos3D.z, this.pos3D.x), 2*PI)/(2*PI)*gateCount);
+        const angle = mod(atan2(this.pos3D.z, this.pos3D.x), 2*PI);
+        const gate = floor(angle/(2*PI)*gateCount);
         if (gate == nextGate && offRoad < 3)
         {
             if (!gate)
             {
                 ++lapCount;
-                bestTime = bestTime ? min(bestTime, time - lapTime) : time - lapTime;
+                const lap = time - lapTime;
+                bestTime = bestTime ? min(bestTime, lap) : lap;
                 lapTime = time;
             }
             nextGate = (gate + 1) % gateCount;
@@ -149,14 +158,15 @@ function gameInit()
         postObject.color = i > 1 ? hsl(.15,1,.5) : hsl(0,.7,.5);
     }
 
-    // trees scattered clear of the road, one mesh shared so they draw as one batch
-    const tree = buildTree();
+    // trees clear of the road, sharing one mesh so they draw as one batch
+    const tree = buildTree(), half = trackSize/2;
     for (let i = 300; i--;)
     {
-        const x = rand(-trackSize/2, trackSize/2), z = rand(-trackSize/2, trackSize/2);
+        const x = rand(-half, half), z = rand(-half, half);
         if (trackDistance(x, z) < roadWidth/2 + 6)
             continue;
-        const treeObject = new EngineObject3D(vec3(x, terrain.getHeight(x, z) + 1.5, z), tree);
+        const y = terrain.getHeight(x, z) + 1.5;
+        const treeObject = new EngineObject3D(vec3(x, y, z), tree);
         treeObject.rotation3D.y = rand(2*PI);
         treeObject.scale3D = vec3(rand(.7,1.3));
         treeObject.cullBackFaces = true;
@@ -176,10 +186,14 @@ function gameRenderPost()
 {
     drawTextScreen('LAP ' + lapCount, vec2(110, 50), 44, WHITE, 6, BLACK);
     if (bestTime)
-        drawTextScreen('BEST ' + formatTime(bestTime), vec2(110, 95), 26, WHITE, 5, BLACK);
+        drawTextScreen('BEST ' + formatTime(bestTime), vec2(110, 95),
+            26, WHITE, 5, BLACK);
     const gate = nextGate ? 'NEXT GATE ' + nextGate : 'FINISH LINE';
-    drawTextScreen(gate, vec2(mainCanvasSize.x - 140, 50), 28, YELLOW, 5, BLACK);
+    drawTextScreen(gate, vec2(mainCanvasSize.x - 140, 50),
+        28, YELLOW, 5, BLACK);
     const speed = round(abs(car.speed)*180) + ' KPH';
-    drawTextScreen(speed, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40), 36, WHITE, 6, BLACK);
-    drawTextScreen('arrows: drive', vec2(110, mainCanvasSize.y - 40), 26, WHITE, 5, BLACK);
+    drawTextScreen(speed, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40),
+        36, WHITE, 6, BLACK);
+    drawTextScreen('arrows: drive', vec2(110, mainCanvasSize.y - 40),
+        26, WHITE, 5, BLACK);
 }

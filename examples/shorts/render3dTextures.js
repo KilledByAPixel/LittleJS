@@ -8,7 +8,7 @@ function makeBrickTexture()
     for (let row = 4; row--;)
     for (let col = 4; col--;)
         context.fillRect(col*16 + (row&1)*8 - 8, row*16, 14, 14);
-    return new TextureInfo(context.canvas, true, true); // wrap, so uvs past 1 repeat
+    return new TextureInfo(context.canvas, true, true); // wrap, so uvs repeat
 }
 
 function gameInit()
@@ -21,17 +21,22 @@ function gameInit()
     // one texture, repeated across the floor and wrapped around each shape
     const bricks = makeBrickTexture();
     new EngineObject3D(vec3(), buildGrid(vec2(20), 1).scaleUVs(8), bricks);
-    const shapes = [buildBox(2), buildSphere(2), buildCylinder(2, 2), buildTorus(2.4, .8)];
+    const shapes =
+    [
+        buildBox(2), buildSphere(2), buildCylinder(2, 2), buildTorus(2.4, .8)
+    ];
     for (let i = shapes.length; i--;)
     {
-        const shape = new EngineObject3D(vec3(i*3.5 - 5.25, 1.5, 0), shapes[i].scaleUVs(2), bricks);
+        const pos = vec3(i*3.5 - 5.25, 1.5, 0);
+        const shape = new EngineObject3D(pos, shapes[i].scaleUVs(2), bricks);
         shape.angleVelocity3D = vec3(0, .01);
     }
 
     // a tile from the sheet on a standing quad, see through texels are dropped
     // so the shadow takes the sprite's shape
-    const sign = new EngineObject3D(vec3(-4, 2.5, -5), buildGrid(vec2(5), 1), tile(3, 16));
-    sign.rotation3D = vec3(PI/2, PI, 0); // stand it up with its face toward the light
+    const signMesh = buildGrid(vec2(5), 1);
+    const sign = new EngineObject3D(vec3(-4, 2.5, -5), signMesh, tile(3, 16));
+    sign.rotation3D = vec3(PI/2, PI, 0); // stand it up facing the light
 }
 
 function gameUpdate()
@@ -42,6 +47,7 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    const text = 'space: toggle mipmaps / mipmaps ' + (render3D.mipmaps ? 'on' : 'off');
+    const mipmaps = render3D.mipmaps ? 'on' : 'off';
+    const text = `space: mipmaps (${mipmaps})`;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }

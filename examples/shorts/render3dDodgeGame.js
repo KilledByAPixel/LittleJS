@@ -27,7 +27,8 @@ class Player extends EngineObject3D
         const limit = arenaSize/2 - 2;
         this.pos3D.x = clamp(this.pos3D.x, -limit, limit);
         this.pos3D.z = clamp(this.pos3D.z, -limit, limit);
-        this.rotation3D = vec3(-this.velocity3D.z, 0, -this.velocity3D.x).scale(1.5);
+        const v = this.velocity3D;
+        this.rotation3D = vec3(-v.z, 0, -v.x).scale(1.5);
     }
     collideWithObject()
     {
@@ -49,7 +50,7 @@ class Box extends EngineObject3D
         this.velocity3D.y = rand(.1,.2);
         this.angleVelocity3D = randVector3(.1);
         this.cullBackFaces = true;
-        this.setCollision(true, false); // blocks nothing, so boxes pass through each other
+        this.setCollision(true, false); // boxes pass through each other
     }
     update()
     {
@@ -60,7 +61,7 @@ class Box extends EngineObject3D
             this.velocity3D.y = abs(this.velocity3D.y)*.7;
         }
 
-        // a near miss scores once, a hit is caught by the player's collideWithObject
+        // a near miss scores once, the player's collideWithObject catches a hit
         if (!this.missed && player.pos3D.distance(this.pos3D) < 3)
         {
             this.missed = true;
@@ -75,19 +76,22 @@ class Box extends EngineObject3D
 
 function buildScoreText()
 {
-    scoreObject.setMesh(buildText3D('SCORE ' + score + '\nBEST ' + best, 2, .6));
+    const text = `SCORE ${score}\nBEST ${best}`;
+    scoreObject.setMesh(buildText3D(text, 2, .6));
 }
 
 function endRound()
 {
     // a burst of debris, then start over
     new ParticleEmitter3D(
-        player.pos3D.copy(),              // pos
-        1, .1, 600, PI, undefined,        // emitSize, emitTime, rate, cone, tileInfo
-        hsl(.1,1,.8), hsl(0,1,.5),        // colorStartA, colorStartB
-        hsl(.1,1,.5,0), hsl(0,1,.5,0),    // colorEndA, colorEndB
-        1, 1.5, 0, .4, .95,               // time, sizeStart, sizeEnd, speed, damping
-        -.02, .1, .5, true                // gravity, fade, randomness, additive
+        player.pos3D.copy(),           // pos
+        1, .1,                         // emitSize, emitTime
+        600, PI, undefined,            // rate, cone, tileInfo
+        hsl(.1,1,.8), hsl(0,1,.5),     // colorStartA, colorStartB
+        hsl(.1,1,.5,0), hsl(0,1,.5,0), // colorEndA, colorEndB
+        1, 1.5, 0,                     // time, sizeStart, sizeEnd
+        .4, .95, -.02,                 // speed, damping, gravity
+        .1, .5, true                   // fade, randomness, additive
     );
     render3D.playSound(soundHit, player.pos3D, 2);
     best = max(best, score);
@@ -106,14 +110,15 @@ function gameInit()
     render3D.ambientColor = hsl(.6,.1,.4);
     render3D.lightDirection = vec3(.4,-1,.3);
     render3D.shadows = true;
-    render3D.gravity = vec3(0,-.01);
+    render3D.gravity.y = -.01;
 
-    // checkered ground, the player with a trail and a light, and the score in lit 3D text
+    // checkered ground, the player with a trail and light, and the 3D score
     const checker = (x, z)=> hsl(.3, .4, (x+z)/2&1 ? .4 : .3);
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 20, checker));
     boxMesh = buildBox();
     player = new Player;
-    trail = new Trail3D(vec3(0,-1,0), .4, .6, undefined, hsl(.5,1,.7,.5), hsl(.5,1,.7,0), true);
+    trail = new Trail3D(vec3(0,-1,0), .4, .6, undefined,
+        hsl(.5,1,.7,.5), hsl(.5,1,.7,0), true);
     player.addChild(trail);
     player.addChild(new Light3D(vec3(0,3,0), 12, hsl(.15,1,.6)));
     scoreObject = new EngineObject3D(vec3(0,5,-arenaSize/2));
@@ -143,5 +148,6 @@ function gameUpdatePost()
 
 function gameRenderPost()
 {
-    drawTextScreen('arrow keys: dodge', vec2(mainCanvasSize.x/2, mainCanvasSize.y - 30), 30);
+    drawTextScreen('arrow keys: dodge',
+        vec2(mainCanvasSize.x/2, mainCanvasSize.y - 30), 30);
 }
