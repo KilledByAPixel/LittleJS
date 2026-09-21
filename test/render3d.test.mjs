@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -885,6 +885,26 @@ test('ParticleEmitter3D particles die after their life', () =>
     e.update(); // spawns 1, the first reaches 3 and dies
     assert.equal(e.particles.length, 2);
     e.destroy();
+});
+
+test('ParticleEmitter3D lives out its emit time even when it emits nothing', () =>
+{
+    // an emitter only goes away once its emit time is up, the way the 2D one does;
+    // a rate of zero or the global scale turned down is quiet, not finished
+    const byHand = new ParticleEmitter3D(vec3(), 0, 1, 0);
+    byHand.update();
+    assert.ok(!byHand.destroyed, 'an emitter fed by hand destroyed itself before emitting anything');
+    byHand.emitParticle();
+    assert.equal(byHand.particles.length, 1);
+    byHand.destroy(true);
+
+    setParticleEmitRateScale(0);
+    const quiet = new ParticleEmitter3D(vec3(), 0, 1, 60);
+    quiet.update();
+    assert.ok(!quiet.destroyed, 'turning the global emit rate down destroyed a timed emitter');
+    assert.equal(quiet.particles.length, 0, 'a scale of zero should still emit nothing');
+    quiet.destroy(true);
+    setParticleEmitRateScale(1);
 });
 
 const houseOBJ = `

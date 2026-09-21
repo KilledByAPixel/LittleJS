@@ -3354,14 +3354,19 @@ class ParticleEmitter3D extends EngineObject3D
     {
         this.worldPos3D = this.getWorldPos3D(); // remembered for when the parent is destroyed
 
-        // emit at the rate until the emit time is up
-        if (this.emitRate && particleEmitRateScale && (!this.emitTime || this.getAliveTime() <= this.emitTime))
+        // emit until the emit time is up, then wait for the last particle and go away
+        if (!this.emitTime || this.getAliveTime() <= this.emitTime)
         {
-            this.emitTimeBuffer += this.emitRate * particleEmitRateScale * timeDelta;
-            for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
-                this.emitParticle();
+            // a rate of zero is an emitter fed by hand, and the global scale only quiets it,
+            // neither is a reason to stop counting down the emit time
+            if (this.emitRate && particleEmitRateScale)
+            {
+                this.emitTimeBuffer += this.emitRate * particleEmitRateScale * timeDelta;
+                for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
+                    this.emitParticle();
+            }
         }
-        else if (this.emitTime && !this.particles.length)
+        else if (!this.particles.length)
             this.destroy();
 
         // move the particles and drop the dead ones
