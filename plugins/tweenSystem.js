@@ -40,7 +40,7 @@ class Tween
      *  any object exposing a `lerp(other, percent) => sameType` method. The
      *  callback receives the interpolated value (a number, or a fresh instance
      *  for lerp-able types). Both endpoints must be the same type.
-     *  @param {function(number|Vector2|Color):void} callback - Called with the interpolated value each frame
+     *  @param {function((number|Vector2|Color)):void} callback - Called with the interpolated value each frame
      *  @param {number|Vector2|Color} [start=0] - Starting value
      *  @param {number|Vector2|Color} [end=1] - Ending value
      *  @param {number} [duration=1] - Duration in seconds
@@ -63,7 +63,7 @@ class Tween
         }
         ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
 
-        /** @property {function(number|Vector2|Color):void} - Called with the interpolated value each frame */
+        /** @property {function((number|Vector2|Color)):void} - Called with the interpolated value each frame */
         this.callback = callback;
         /** @property {number|Vector2|Color} - Starting value */
         this.start = start;
@@ -80,9 +80,11 @@ class Tween
         /** @property {boolean} - If true, stop advancing until cleared */
         this.paused = !!options.paused;
 
-        /** @private completion callback set by then(), loop(), pingPong(). */
+        /** Completion callback set by then(), loop(), pingPong().
+         *  @private */
         this.thenCallback = undefined;
-        /** @private remaining iterations including the current run (loop/pingPong only). */
+        /** Remaining iterations including the current run (loop/pingPong only).
+         *  @private */
         this.loopRemaining = 0;
 
         tweenActive.push(this);

@@ -103,7 +103,8 @@ class Sound
         /** @property {AudioBuffer} - Decoded audio shared by every play of this sound
          *  @type {AudioBuffer} */
         this.sampleBuffer = undefined;
-        /** @private @type {Array<Array<number>|Float32Array>} */
+        /** @private
+         *  @type {Array<Array<number>|Float32Array>} */
         this._sampleChannels = undefined;
         /** @property {number} - Percentage of this sound currently loaded, sounds
          *  fetched from a url stay at 0 until decoding completes */

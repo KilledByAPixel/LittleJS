@@ -2645,7 +2645,8 @@ declare module "littlejsengine" {
         /** @property {AudioBuffer} - Decoded audio shared by every play of this sound
          *  @type {AudioBuffer} */
         sampleBuffer: AudioBuffer;
-        /** @private @type {Array<Array<number>|Float32Array>} */
+        /** @private
+         *  @type {Array<Array<number>|Float32Array>} */
         private _sampleChannels;
         /** @property {number} - Percentage of this sound currently loaded, sounds
          *  fetched from a url stay at 0 until decoding completes */
@@ -5548,7 +5549,7 @@ declare module "littlejsengine" {
          *  any object exposing a `lerp(other, percent) => sameType` method. The
          *  callback receives the interpolated value (a number, or a fresh instance
          *  for lerp-able types). Both endpoints must be the same type.
-         *  @param {function(number|Vector2|Color):void} callback - Called with the interpolated value each frame
+         *  @param {function((number|Vector2|Color)):void} callback - Called with the interpolated value each frame
          *  @param {number|Vector2|Color} [start=0] - Starting value
          *  @param {number|Vector2|Color} [end=1] - Ending value
          *  @param {number} [duration=1] - Duration in seconds
@@ -5556,13 +5557,13 @@ declare module "littlejsengine" {
          *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
          *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused (matches Timer's useRealTime)
          *  @param {boolean} [options.paused=false] - Start in paused state */
-        constructor(callback: (arg0: number | Vector2 | Color) => void, start?: number | Vector2 | Color, end?: number | Vector2 | Color, duration?: number, options?: {
+        constructor(callback: (arg0: (number | Vector2 | Color)) => void, start?: number | Vector2 | Color, end?: number | Vector2 | Color, duration?: number, options?: {
             ease?: (arg0: number) => number;
             useRealTime?: boolean;
             paused?: boolean;
         });
-        /** @property {function(number|Vector2|Color):void} - Called with the interpolated value each frame */
-        callback: (arg0: number | Vector2 | Color) => void;
+        /** @property {function((number|Vector2|Color)):void} - Called with the interpolated value each frame */
+        callback: (arg0: (number | Vector2 | Color)) => void;
         /** @property {number|Vector2|Color} - Starting value */
         start: number | Vector2 | Color;
         /** @property {number|Vector2|Color} - Ending value */
@@ -5577,9 +5578,11 @@ declare module "littlejsengine" {
         useRealTime: boolean;
         /** @property {boolean} - If true, stop advancing until cleared */
         paused: boolean;
-        /** @private completion callback set by then(), loop(), pingPong(). */
+        /** Completion callback set by then(), loop(), pingPong().
+         *  @private */
         private thenCallback;
-        /** @private remaining iterations including the current run (loop/pingPong only). */
+        /** Remaining iterations including the current run (loop/pingPong only).
+         *  @private */
         private loopRemaining;
         /** Set the easing curve and return this for chaining.
          *  @param {function(number):number} easeFn
