@@ -1114,7 +1114,10 @@ const terrain = new HeightMap(heights, size=vec2(1), height=1, colors) // height
 terrain.buildMesh(smooth)                     // one vertex per sample, centered on the origin
 terrain.getHeight(pos3D) or (x, z)            // world height of the drawn mesh there, to stand things on it
 terrain.getNormal(pos3D) or (x, z)            // surface normal there, to tilt things to the slope
-terrain.raycast(ray)                          // distance along a ray to the ground or undefined, for clicking
+terrain.raycast(ray)                          // distance along a ray to where it crosses the ground, or undefined,
+                                              // for clicking; a ray starting underneath crosses on its way out, and
+                                              // the search steps half a cell at a time so a very thin ridge can slip
+                                              // between samples
 terrain.getColor(pos3D) or (x, z)             // nearest sample color
 terrain.rows terrain.columns                  // samples along Z and X
 

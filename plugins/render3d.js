@@ -2035,6 +2035,7 @@ class Mesh
      *  @return {Mesh} */
     computeNormals(smooth=false)
     {
+        // the outward normal of each triangle in the strip
         const points = this.points, n = points.length;
         const faceNormals = [];
         for (let i = 0; i + 2 < n; ++i)
@@ -2045,6 +2046,8 @@ class Mesh
             // a zero normal means a flat triangle joining two strips, so skip it
             faceNormals.push(normal.lengthSquared() ? normal.normalize(i & 1 ? 1 : -1) : undefined);
         }
+
+        // then hand those to the vertices, shared around a position or kept per face
         const normals = points.map(()=> RENDER3D_DEFAULT_NORMAL);
         if (smooth)
         {
@@ -2064,6 +2067,7 @@ class Mesh
         }
         else
             faceNormals.forEach((f, i)=> f && (normals[i] = normals[i+1] = normals[i+2] = f));
+
         this.normals = normals;
         this.dirty = true;
         return this;
@@ -2747,8 +2751,9 @@ class HeightMap
         return c[j][i];
     }
 
-    /** Distance along a ray to where it hits the terrain, or undefined for a miss
+    /** Distance along a ray to where it crosses the terrain surface, or undefined for a miss
      *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
+     *  - A ray that starts under the ground crosses on its way out, so the hit is still on the surface
      *  @param {Ray3D} ray - From screenToRay, or any ray
      *  @return {number|undefined} */
     raycast(ray)
@@ -2756,33 +2761,40 @@ class HeightMap
         const {origin, direction} = ray;
         const size = this.size, height = this.height, length = direction.length();
         if (!length) return;
-        // clip to the box around the terrain, then step until the ray dips under the ground or leaves the map
+
+        // clip to the box around the terrain, and walk it in half cell steps from there
         let t = raycastBox(ray, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
         if (t === undefined) return;
         const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
         const step = cell / 2 / length, end = t + hypot(size.x, size.y, height) / length;
         if (!(step > 0)) return; // a zero size
+
+        // is the ray below the ground this far along, or undefined where it is off the map
         const under = (at)=>
         {
             const p = origin.add(direction.scale(at));
             if (abs(p.x) > size.x / 2 || abs(p.z) > size.y / 2) return;
             return p.y <= this.getHeight(p.x, p.z);
         };
-        if (under(t)) return t;
+
+        // look for where the ray changes sides, so one coming up from under the ground
+        // lands on the surface it breaks through instead of wherever it entered the box
+        const startUnder = under(t);
+        if (startUnder === undefined) return; // it meets the box outside the map itself
         for (; t < end; t += step)
         {
             const u = under(t + step);
-            if (u === undefined) return;
-            if (u)
+            if (u === undefined) return; // it left the map before crossing
+            if (u === startUnder) continue;
+
+            // it crossed between the last two samples, halve the gap until it is exact
+            let a = t, b = t + step;
+            for (let i = 0; i < 16; ++i)
             {
-                let a = t, b = t + step;
-                for (let i = 0; i < 16; ++i)
-                {
-                    const mid = (a + b) / 2;
-                    under(mid) ? b = mid : a = mid;
-                }
-                return b;
+                const mid = (a + b) / 2;
+                under(mid) === startUnder ? a = mid : b = mid;
             }
+            return b;
         }
     }
 
@@ -3545,7 +3557,9 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
 {
     const positions = [], normals = [], uvs = [], mesh = new Mesh;
     let fileNormals = false;
-    const lookup = (s, list)=> { const i = parseInt(s); return list[i < 0 ? list.length + i : i - 1]; }; // 1 based, negatives count from the end
+
+    // OBJ indices count from 1, and a negative one counts back from the end of the list so far
+    const lookup = (s, list)=> { const i = parseInt(s); return list[i < 0 ? list.length + i : i - 1]; };
     for (const line of text.split('\n'))
     {
         const parts = line.trim().split(/\s+/);

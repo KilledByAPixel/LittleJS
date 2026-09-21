@@ -7075,8 +7075,9 @@ declare module "littlejsengine" {
          *  @param {number} [z]
          *  @return {Color} */
         getColor(x: number | Vector3, z?: number): Color;
-        /** Distance along a ray to where it hits the terrain, or undefined for a miss
+        /** Distance along a ray to where it crosses the terrain surface, or undefined for a miss
          *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
+         *  - A ray that starts under the ground crosses on its way out, so the hit is still on the surface
          *  @param {Ray3D} ray - From screenToRay, or any ray
          *  @return {number|undefined} */
         raycast(ray: Ray3D): number | undefined;

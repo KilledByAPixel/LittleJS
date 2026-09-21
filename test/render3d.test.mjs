@@ -1930,6 +1930,40 @@ test('resting on two solids at once is one push, not both added up', () =>
     engineObjects.length = 0;
 });
 
+test('terrain raycast lands on the surface from either side', () =>
+{
+    // a ramp rising along Z from 0 to 10, two rows so each column runs the full slope
+    const terrain = new HeightMap([[0, 0], [1, 1]], vec2(10, 10), 10);
+    // the search halves a half cell step 16 times, so it lands within about 1e-4 here
+    const onSurface = (t, ray, msg)=>
+    {
+        assert.ok(t !== undefined, msg + ': expected a hit');
+        const p = ray.getPosition(t);
+        const off = Math.abs(p.y - terrain.getHeight(p.x, p.z));
+        assert.ok(off < 1e-3, msg + ': the hit is ' + off + ' off the surface');
+    };
+
+    // straight down onto the middle of the ramp
+    const down = new Ray3D(vec3(0, 20, 0), vec3(0, -1, 0));
+    onSurface(terrain.raycast(down), down, 'from above');
+    assert.ok(Math.abs(terrain.raycast(down) - 15) < 1e-3, 'the middle of the ramp is at height 5');
+
+    // straight up from under the ground, which used to return where the ray met the
+    // bounding box rather than where it breaks through the surface
+    const up = new Ray3D(vec3(0, -20, 0), vec3(0, 1, 0));
+    onSurface(terrain.raycast(up), up, 'from below');
+
+    // and a shallow ray that comes in from outside and under the terrain
+    const across = new Ray3D(vec3(-30, -5, -2), vec3(1, .4, .1).normalize());
+    const t = terrain.raycast(across);
+    if (t !== undefined)
+        onSurface(t, across, 'from outside and below');
+
+    // a ray that never reaches the terrain is still a miss
+    assert.equal(terrain.raycast(new Ray3D(vec3(0, 20, 0), vec3(0, 1, 0))), undefined, 'pointing away');
+    assert.equal(terrain.raycast(new Ray3D(vec3(100, 20, 100), vec3(0, -1, 0))), undefined, 'off the map');
+});
+
 test('a whole texture is kept as the tile that covers it, so a 3D object is still an EngineObject', () =>
 {
     const texture = new TextureInfo({width: 64, height: 32});
