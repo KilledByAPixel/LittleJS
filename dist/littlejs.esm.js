@@ -17622,7 +17622,10 @@ function buildMatrix(pos, rotation, scale)
     ASSERT(!pos || isVector3(pos), 'pos must be a Vector3', pos);
     ASSERT(!scale || isVector3(scale), 'scale must be a Vector3', scale);
     // scale the rotation columns and drop the position in, instead of multiplying three matrices
-    const matrix = rotation ? Matrix4.rotation(rotation) : new Matrix4, m = matrix.m;
+    // an object that is not turned at all is most of a big scene, and identity is what the six
+    // trig calls would have worked out to anyway
+    const turned = rotation && (rotation.x || rotation.y || rotation.z);
+    const matrix = turned ? Matrix4.rotation(rotation) : new Matrix4, m = matrix.m;
     if (scale)
     {
         m[0] *= scale.x; m[1] *= scale.x; m[2]  *= scale.x;
@@ -17826,6 +17829,7 @@ function collideBoxBox3D(posA, sizeA, posB, sizeB)
 /**
  * Returns the distance along the ray to the first intersection with a sphere, or undefined
  * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
+ * - A ray starting inside the sphere is already there, so it gets back 0
  * @param {Ray3D} ray
  * @param {Vector3} pos - Sphere center
  * @param {number} radius
@@ -17872,6 +17876,7 @@ function raycastPlane(ray, planePos, planeNormal)
 /**
  * Returns the distance along the ray to the first intersection with an axis aligned box, or undefined
  * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
+ * - A ray starting inside the box is already there, so it gets back 0
  * @param {Ray3D} ray
  * @param {Vector3} pos - Center of the box
  * @param {Vector3} size - Full size of the box

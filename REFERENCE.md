@@ -810,7 +810,8 @@ collideBoxBox3D(posA, sizeA, posB, sizeB)      // push A out of B the shortest w
 // raycasts return the distance t where the hit is ray.getPosition(t), so scale direction and t scales too
 new Ray3D(origin, direction)                   // a start and a direction, what screenToRay returns
 ray.getPosition(distance)                      // the point a distance along it, distance is what the raycasts return
-raycastSphere(ray, pos, radius)                // distance t to the sphere, or undefined
+raycastSphere(ray, pos, radius)                // distance t to the sphere, or undefined; a ray that starts
+                                               // inside a sphere or a box is already there and gets back 0
 raycastPlane(ray, planePos, planeNormal)       // distance t to the plane, or undefined
 raycastBox(ray, pos, size)                     // distance t to the box, or undefined
 ```

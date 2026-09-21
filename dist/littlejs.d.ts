@@ -6248,6 +6248,7 @@ declare module "littlejsengine" {
     /**
      * Returns the distance along the ray to the first intersection with a sphere, or undefined
      * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
+     * - A ray starting inside the sphere is already there, so it gets back 0
      * @param {Ray3D} ray
      * @param {Vector3} pos - Sphere center
      * @param {number} radius
@@ -6268,6 +6269,7 @@ declare module "littlejsengine" {
     /**
      * Returns the distance along the ray to the first intersection with an axis aligned box, or undefined
      * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
+     * - A ray starting inside the box is already there, so it gets back 0
      * @param {Ray3D} ray
      * @param {Vector3} pos - Center of the box
      * @param {Vector3} size - Full size of the box

@@ -119,6 +119,22 @@ test('Matrix4 rotation applies roll, then pitch, then yaw', () =>
     nearVec(m.transformDirection(vec3(0, 0, 1)), 1, 0, 0);
 });
 
+test('buildMatrix treats a rotation of zero as no rotation at all', () =>
+{
+    // it skips the six trig calls for an object that is not turned, which is most of a big
+    // scene, so a zero rotation has to come out exactly what those calls would have given
+    // element by element, since the trig writes -0 where an untouched matrix holds 0
+    // strict equal is SameValue, which calls -0 different from 0, so compare as numbers
+    const same = (a, b)=> { for (let i = 0; i < 16; ++i) assert.ok(a.m[i] == b.m[i], 'element ' + i + ': ' + a.m[i] + ' vs ' + b.m[i]); };
+    same(Matrix4.rotation(vec3()), new Matrix4);
+    const pos = vec3(3, -4, 5), scale = vec3(2, .5, 7);
+    same(buildMatrix(pos, vec3(), scale), buildMatrix(pos, undefined, scale));
+    // and a rotation on any one axis still goes the long way round
+    for (const turn of [vec3(1e-6, 0, 0), vec3(0, 1e-6, 0), vec3(0, 0, 1e-6)])
+        assert.ok([...buildMatrix(pos, turn, scale).m].some((v, i)=> v !== buildMatrix(pos, vec3(), scale).m[i]),
+            'a real rotation about ' + turn + ' was skipped');
+});
+
 test('buildMatrix scales, then rotates, then translates', () =>
 {
     const m = buildMatrix(vec3(10, 0, 0), vec3(0, PI/2, 0), vec3(2, 2, 2));
