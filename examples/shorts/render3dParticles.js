@@ -5,6 +5,9 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky(hsl(.6,.3,.1), hsl(0,.3,.2), hsl(0,0,.1));
     render3D.ambientColor = hsl(.6,.1,.3);
+    new CameraControl3D(vec3(0,2,0), 14, .3, .002);
+
+    // floor
     new EngineObject3D(vec3(), buildGrid(vec2(20), 1, hsl(.6,.1,.2)));
 
     // fire
@@ -47,8 +50,6 @@ function gameInit()
         1.5, .25, .1, .25, 1,               // time, sizeStart, sizeEnd, speed, damping
         -.008, .1, .1                       // gravity, fade, randomness
     );
-
-    new CameraControl3D(vec3(0,2,0), 14, .3, .002);
 }
 
 function gameUpdate()

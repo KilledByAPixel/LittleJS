@@ -25,14 +25,13 @@ function gameInit()
     render3D.lightColor = hsl(.6,.3,.2);
     render3D.ambientColor = hsl(.6,.3,.15);
     render3D.smoothShading = true;
+    new CameraControl3D(vec3(0,2,0), 20, .25, .002);
 
-    // a dark floor and pillars for the orbs to light up
+    // dark floor and pillars for the orbs to light up
     new EngineObject3D(vec3(), buildGrid(vec2(30), 15, hsl(.6,.2,.3)));
     const pillar = buildCylinder(1.4, 5, 12).setColor(hsl(.6,.2,.4));
     for (let i = 6; i--;)
         new EngineObject3D(vec3(11, 2.5).rotateY(i/6*2*PI), pillar);
     for (let i = 4; i--;)
         new Orb(i*PI/2, hsl(i/4,1,.6));
-
-    new CameraControl3D(vec3(0,2,0), 20, .25, .002);
 }

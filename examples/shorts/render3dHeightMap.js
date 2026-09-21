@@ -55,8 +55,9 @@ function gameInit()
     render3D.setFog(20, 60);
     render3D.lightDirection = vec3(-.4,-1,-.5);
     render3D.smoothShading = true;
+    new CameraControl3D(vec3(0,3,0), 35, .5, .002);
 
-    // the terrain from the two images
+    // terrain from the two images
     const [heightImage, colorImage] = makeTerrainImages(terrainSamples);
     terrain = new HeightMap(heightImage, vec2(terrainSize), terrainHeight, colorImage);
     ground = new EngineObject3D(vec3(), terrain.buildMesh());
@@ -79,8 +80,6 @@ function gameInit()
     // soft shadows follow the ground
     ball = new Ball;
     render3D.softShadowHeight = terrain;
-
-    new CameraControl3D(vec3(0,3,0), 35, .5, .002);
 }
 
 function gameUpdate()

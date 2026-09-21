@@ -108,7 +108,7 @@ function gameInit()
     render3D.shadows = true;
     render3D.gravity = vec3(0,-.01);
 
-    // a checkered ground, the player with a trail and a light, and the score in lit 3D text
+    // checkered ground, the player with a trail and a light, and the score in lit 3D text
     const checker = (x, z)=> hsl(.3, .4, (x+z)/2&1 ? .4 : .3);
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 20, checker));
     boxMesh = buildBox(2);

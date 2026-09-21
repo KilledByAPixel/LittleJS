@@ -39,13 +39,14 @@ function gameInit()
     render3D.setSky(hsl(.6,.5,.1), hsl(.8,.4,.2), hsl(.6,.3,.1));
     render3D.ambientColor = hsl(.6,.1,.5);
     render3D.onRenderTransparent = drawRainbow;
+    new CameraControl3D(vec3(0,3,0), 16, .3, .002);
+
+    // floor, flagpole, flag and the comets looping around it
     new EngineObject3D(vec3(), buildGrid(vec2(30), 1, hsl(.6,.1,.2)));
     new EngineObject3D(vec3(-2,3,0), buildCylinder(.16, 6, 8).setColor(hsl(.1,.3,.4)));
     new Flag(vec3(0,4.5,0));
     for (let i = 3; i--;)
         new Comet(hsl(i/3,1,.6), i*2*PI/3);
-
-    new CameraControl3D(vec3(0,3,0), 16, .3, .002);
 }
 
 function drawRainbow()

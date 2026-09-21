@@ -122,6 +122,8 @@ function gameInit()
     render3D.ambientColor = hsl(.6,.1,.5);
     render3D.shadows = true;
     render3D.shadowRange = 45;
+
+    // hills from noise, flattened where the road runs
     terrain = buildTerrain();
     new EngineObject3D(vec3(), terrain.buildMesh(true));
 

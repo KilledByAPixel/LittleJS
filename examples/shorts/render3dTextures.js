@@ -17,6 +17,7 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky(hsl(.6,.5,.5), hsl(.6,.5,.8));
     render3D.shadows = true;
+    new CameraControl3D(vec3(0,1,0), 14, .4, .002);
 
     // one texture, repeated across the floor and wrapped around each shape
     const bricks = makeBrickTexture();
@@ -32,8 +33,6 @@ function gameInit()
     // so the shadow takes the sprite's shape
     const sign = new EngineObject3D(vec3(-4, 2.5, -5), buildGrid(vec2(5), 1), tile(3, 16));
     sign.rotation3D = vec3(PI/2, PI, 0); // stand it up with its face toward the light
-
-    new CameraControl3D(vec3(0,1,0), 14, .4, .002);
 }
 
 function gameUpdate()

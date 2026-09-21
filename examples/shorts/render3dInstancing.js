@@ -17,13 +17,12 @@ function gameInit()
     render3D.setSky(hsl(.6,.4,.1), hsl(.7,.3,.3));
     render3D.setFog(30, 80);
     render3D.ambientColor = hsl(.6,.2,.3);
+    new CameraControl3D(vec3(), 40, .3, .002);
 
-    // a cloud of cubes sharing one mesh
+    // cloud of cubes sharing one mesh
     const cube = buildBox(.6);
     for (let i = cubeCount; i--;)
         new Cube(randVector3(rand(4, 30)), cube);
-
-    new CameraControl3D(vec3(), 40, .3, .002);
 }
 
 function gameUpdate()

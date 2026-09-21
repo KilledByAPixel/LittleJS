@@ -117,17 +117,19 @@ function gameInit()
     render3D.shadows = true;
     render3D.shadowRange = levelSize + 4;
     render3D.shadowCenter = vec3();
+
+    // angled orthographic camera looking down at the board
+    render3D.camera.pos = vec3(7,9,9);
+    render3D.camera.lookAt(vec3());
+    render3D.camera.orthographic = levelSize + 2;
+
+    // meshes shared by every level
     wallMesh = buildBox(.9).setColor(hsl(.6,.2,.4));
     blockMesh = buildBox(.78);
     ballMesh = buildSphere(.7);
     padMesh = buildBox(vec3(1,.06,1));
 
-    // an angled orthographic camera looking down at the board
-    render3D.camera.pos = vec3(7,9,9);
-    render3D.camera.lookAt(vec3());
-    render3D.camera.orthographic = levelSize + 2;
-
-    // a checkered floor, and a trophy that spins on top of the 2D text
+    // checkered floor, and a trophy that spins on top of the 2D text
     const checker = (x, z)=> hsl(0, 0, (x+z)&1 ? .4 : .3);
     new EngineObject3D(vec3(0,-.02,0), buildGrid(vec2(levelSize), levelSize, checker));
     const trophy = new EngineObject3D(vec3(5,3,-5), buildTorus(1, .3));

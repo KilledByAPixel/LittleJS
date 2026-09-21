@@ -23,8 +23,9 @@ function gameInit()
     render3D.lightColor = hsl(.6,.2,.15); // a dim moon so the point lights carry the scene
     render3D.ambientColor = hsl(.6,.2,.1);
     render3D.smoothShading = true;
+    new CameraControl3D(vec3(0,1,0), 15, .5, .002);
 
-    // a floor, pillars to catch the light, and three colored lamps
+    // floor, pillars to catch the light, and three colored lamps
     new EngineObject3D(vec3(), buildGrid(vec2(24), 12, hsl(0,0,.6)));
     const pillar = buildCylinder(1, 3, 12).setColor(hsl(0,0,.7));
     for (let i = 8; i--;)
@@ -37,6 +38,4 @@ function gameInit()
     const fill = new Light3D(vec3(), 1, hsl(.6,1,.2));
     fill.directional = true;
     fill.lookAt(vec3(-1,-1,-.5));
-
-    new CameraControl3D(vec3(0,1,0), 15, .5, .002);
 }

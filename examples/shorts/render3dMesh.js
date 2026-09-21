@@ -29,8 +29,9 @@ function gameInit()
     render3D.setSky(hsl(.6,.7,.6), hsl(.6,.6,.9));
     render3D.setFog(20, 50);
     render3D.shadows = true;
+    new CameraControl3D(vec3(0,2,0), 10, .35); // no idle spin, the model is for inspecting
 
-    // a checkerboard floor and the model
+    // checkerboard floor and the model
     const checker = (x, z)=> hsl(.3, .2, (x+z)/2&1 ? .5 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(20), 10, checker));
     model = new EngineObject3D(vec3());
@@ -49,8 +50,6 @@ function gameInit()
         setModel(parseOBJ(await file.text()));
         modelName = file.name;
     });
-
-    new CameraControl3D(vec3(0,2,0), 10, .35); // no idle spin, the model is for inspecting
 }
 
 // center the model, make it 4 units across, and stand it on the floor

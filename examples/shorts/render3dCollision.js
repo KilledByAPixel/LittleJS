@@ -44,7 +44,11 @@ function gameInit()
     render3D.ambientColor = hsl(.6,.1,.5);
     render3D.gravity = vec3(0,-.01);
 
-    // a checkerboard floor, flat so the cells stay crisp
+    // the left button tosses balls, so turn the camera with the right one
+    const camera = new CameraControl3D(vec3(0,1,0), 16, .5, .002);
+    camera.dragButton = 2;
+
+    // checkerboard floor, built before smooth shading is on so the cells stay crisp
     const checker = (x, z)=> hsl(0, 0, (x+z)/2&1 ? .5 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 8, checker));
     render3D.smoothShading = true;
@@ -63,10 +67,6 @@ function gameInit()
         const pos = vec3(rand(-6,6), rand(3,8), rand(-6,6));
         balls.push(new Ball(pos));
     }
-
-    // the left button tosses balls, so turn the camera with the right one
-    const camera = new CameraControl3D(vec3(0,1,0), 16, .5, .002);
-    camera.dragButton = 2;
 }
 
 function gameUpdate()
