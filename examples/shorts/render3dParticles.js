@@ -8,7 +8,7 @@ function gameInit()
     new CameraControl3D(vec3(0,2,0), 14, .3, .002);
 
     // floor
-    new EngineObject3D(vec3(), buildGrid(vec2(20), 1, hsl(.6,.1,.3)));
+    new EngineObject3D(vec3(), buildGrid(vec2(20), 1, hsl(.6,.1,.4)));
 
     // fire
     new ParticleEmitter3D(

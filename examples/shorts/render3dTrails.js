@@ -44,7 +44,7 @@ function gameInit()
     new CameraControl3D(vec3(0,3,0), 16, .3, .002);
 
     // floor, flagpole, flag and the comets looping around it
-    new EngineObject3D(vec3(), buildGrid(vec2(30), 1, hsl(.6,.1,.2)));
+    new EngineObject3D(vec3(), buildGrid(vec2(30), 1, hsl(.6,.1,.4)));
     const pole = buildCylinder(.16, 6, 8).setColor(hsl(.1,.3,.4));
     new EngineObject3D(vec3(-2,3,0), pole);
     new Flag(vec3(0,4.5,0));
