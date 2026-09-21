@@ -6443,6 +6443,7 @@ declare module "littlejsengine" {
         worldToScreen(pos: Vector3): Vector2 | undefined;
         /** Get the world ray under a screen position, for clicking on things in 3D
          *  - Uses the camera where it is right now, so it is fine to call from gameUpdate
+         *  - It brings the view matrices up to date for that canvas, so worldToScreen stays its exact opposite
          *  @param {Vector2} screenPos - Same space as mousePosScreen
          *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
          *  @return {Ray3D} - Starts at the camera with a unit direction, or on the camera plane when orthographic */
@@ -6450,8 +6451,9 @@ declare module "littlejsengine" {
         /** Where a screen position lands on a flat ground plane, for top down games; use HeightMap.raycast for terrain
          *  @param {Vector2} screenPos - Same space as mousePosScreen
          *  @param {number} [groundHeight] - World height of the ground plane
+         *  @param {Vector2} [canvasSize] - Defaults to the main canvas size, as in screenToRay
          *  @return {Vector3|undefined} - undefined when the ray misses the plane */
-        screenToGround(screenPos: Vector2, groundHeight?: number): Vector3 | undefined;
+        screenToGround(screenPos: Vector2, groundHeight?: number, canvasSize?: Vector2): Vector3 | undefined;
         /** Find the nearest object under a screen position or along a ray, for clicking on things
          *  - Each object is tested as a sphere around its mesh, or around a sprite's size3D, not triangle by triangle
          *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
@@ -6703,7 +6705,7 @@ declare module "littlejsengine" {
          *  and no mesh; scale3D and any parent's scale grow it, so drawing and picking agree */
         size3D: Vector3;
         /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none;
-         *  a world measurement, unlike size3D it does not grow with scale3D */
+         *  scale3D and a parent's scale grow it, so set it once for the unscaled object */
         softShadow: number;
         /** @property {boolean} - A sprite stands on world up instead of tilting toward the camera */
         upright: boolean;

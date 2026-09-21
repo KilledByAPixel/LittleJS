@@ -881,9 +881,11 @@ render3D.camera.getMatrix() .getViewMatrix() .getProjectionMatrix(aspect) // bui
 render3D.worldToScreen(pos)           // Vector3 -> screen pixels, undefined when behind the camera
 render3D.worldToClip(pos)             // Vector3 -> -1 to 1 across and up the screen, z is depth; undefined when behind
                                       // the camera
-render3D.screenToRay(screenPos)       // Ray3D under a screen point, always returns one
-render3D.screenToGround(screenPos, groundHeight=0) // where that ray meets a flat ground plane, or undefined;
-                                                   // terrain has HeightMap.raycast
+render3D.screenToRay(screenPos, canvasSize)  // Ray3D under a screen point, always returns one; canvasSize
+                                     // defaults to the main canvas, and both of these bring the matrices up to
+                                     // date for it, so worldToScreen keeps agreeing with them
+render3D.screenToGround(screenPos, groundHeight=0, canvasSize) // where that ray meets a flat ground plane, or
+                                                   // undefined; terrain has HeightMap.raycast
 render3D.pick(screenPos or ray, objects)           // {object, distance} of the nearest object hit, around its mesh
                                                    // or a sprite's size3D; a screen position goes through screenToRay
 render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop) // like sound.play(pos): quieter with
@@ -986,7 +988,8 @@ obj.collideAsSphere3D = true              // collide as the sphere that fits siz
 obj.collideWithObject(object, push)     // called when it touches a solid object, both objects are asked and either
                                         // returning false leaves the push and the bounce to you; push is what it
                                         // takes to move this one clear, it is undefined in 2D
-obj.softShadow = 2                      // a soft shadow of that diameter under the object on render3D.softShadowHeight
+obj.softShadow = 2                      // a soft shadow of that diameter under the object on render3D.softShadowHeight;
+                                        // scale3D and a parent's scale grow it, so set it for the unscaled object
 obj.upright = true                      // a sprite stands on world up instead of tilting toward the camera
                                         // a sprite also turns with rotation3D.z, like a 2D object turns with angle
 obj.sync2D = true // copy the 2D pos and angle into pos3D and rotation3D each frame; the 2D physics only run for a

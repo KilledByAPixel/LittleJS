@@ -11,7 +11,7 @@ class Ball extends EngineObject3D
         this.color = hsl(rand(),.7,.6);
         this.radius = rand(.4,.8);
         this.scale3D = vec3(this.radius*2);
-        this.softShadow = this.radius*2;
+        this.softShadow = 1; // the scale grows it, so this is the size of an unscaled ball
         this.velocity3D = randVector3(.1);
         this.mass = 1; // falls with render3D.gravity
         this.restitution = .6;

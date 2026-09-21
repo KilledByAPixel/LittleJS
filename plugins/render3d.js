@@ -526,16 +526,18 @@ class Render3DPlugin
 
     /** Get the world ray under a screen position, for clicking on things in 3D
      *  - Uses the camera where it is right now, so it is fine to call from gameUpdate
+     *  - It brings the view matrices up to date for that canvas, so worldToScreen stays its exact opposite
      *  @param {Vector2} screenPos - Same space as mousePosScreen
      *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
      *  @return {Ray3D} - Starts at the camera with a unit direction, or on the camera plane when orthographic */
     screenToRay(screenPos, canvasSize=mainCanvasSize)
     {
-        this.updateMatrices();
         const width = canvasSize.x || 1, height = canvasSize.y || 1; // a zero canvas gives the center ray
+        const aspect = width / height, camera = this.camera;
+        // bring the matrices up to date for this canvas, so worldToScreen and this agree on where things are
+        this.updateMatrices(aspect);
         const clipX = screenPos.x / width * 2 - 1;
         const clipY = 1 - screenPos.y / height * 2;
-        const aspect = width / height, camera = this.camera;
         // the screen offset moves a parallel ray's origin, or bends a perspective ray's direction
         const h = camera.orthographic ? camera.orthographic / 2 : tan(camera.fov / 2);
         const offset = this.cameraRight.scale(clipX * h * aspect).add(this.cameraUp.scale(clipY * h));
@@ -547,10 +549,11 @@ class Render3DPlugin
     /** Where a screen position lands on a flat ground plane, for top down games; use HeightMap.raycast for terrain
      *  @param {Vector2} screenPos - Same space as mousePosScreen
      *  @param {number} [groundHeight] - World height of the ground plane
+     *  @param {Vector2} [canvasSize] - Defaults to the main canvas size, as in screenToRay
      *  @return {Vector3|undefined} - undefined when the ray misses the plane */
-    screenToGround(screenPos, groundHeight=0)
+    screenToGround(screenPos, groundHeight=0, canvasSize=mainCanvasSize)
     {
-        const ray = this.screenToRay(screenPos);
+        const ray = this.screenToRay(screenPos, canvasSize);
         const t = raycastPlane(ray, vec3(0, groundHeight, 0), RENDER3D_DEFAULT_NORMAL);
         return t === undefined ? undefined : ray.getPosition(t);
     }
@@ -765,7 +768,13 @@ class Render3DPlugin
         {
             render3DDrawObjects(transparent);
             for (const o of objects)
-                o.softShadow && this.drawSoftShadow(o.getWorldPos3D(), o.softShadow, this.softShadowHeight);
+                if (o.softShadow)
+                {
+                    // the shadow grows with the object, by the same scale picking and culling
+                    // measure it at, so one size set once holds however the object is scaled
+                    const m = o.getMatrix();
+                    this.drawSoftShadow(m.getTranslation(), o.softShadow * render3DMaxScale(m.m), this.softShadowHeight);
+                }
             isDefault && this.onRenderTransparent?.();
         }
         finally { this.flushTransparentQueue(); }
@@ -2924,7 +2933,7 @@ class EngineObject3D extends EngineObject
          *  and no mesh; scale3D and any parent's scale grow it, so drawing and picking agree */
         this.size3D = vec3(1);
         /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none;
-         *  a world measurement, unlike size3D it does not grow with scale3D */
+         *  scale3D and a parent's scale grow it, so set it once for the unscaled object */
         this.softShadow = 0;
         /** @property {boolean} - A sprite stands on world up instead of tilting toward the camera */
         this.upright = false;

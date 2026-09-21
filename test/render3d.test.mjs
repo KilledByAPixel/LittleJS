@@ -669,6 +669,32 @@ test('screenToRay points forward at the center and right of it toward +x', () =>
     near(Math.atan2(up.direction.y, -up.direction.z), render3D.camera.fov / 2);
 });
 
+test('screenToRay and screenToGround answer for the canvas they are handed', () =>
+{
+    const size = vec2(960, 540), aspect = size.x / size.y;
+    const toScreen = (clip)=> vec2((clip.x + 1)/2 * size.x, (1 - clip.y)/2 * size.y);
+    render3D.camera.pos = vec3(0, 8, 10);
+    render3D.camera.lookAt(vec3());
+    render3D.updateMatrices(aspect);
+
+    // a ray through a point's own pixel has to pass through that point
+    const p = vec3(3, 1.5, -2);
+    const clip = render3D.worldToClip(p);
+    const ray = render3D.screenToRay(toScreen(clip), size);
+    const toPoint = p.subtract(ray.origin);
+    const off = toPoint.subtract(ray.direction.scale(toPoint.dot(ray.direction))).length();
+    assert.ok(off < 1e-4, `the ray misses its own pixel by ${off}`);
+
+    // and asking must not quietly reproject for a different canvas behind your back
+    const again = render3D.worldToClip(p);
+    near(again.x, clip.x); near(again.y, clip.y);
+
+    // screenToGround takes the same canvas, so it lands back on the point it came from
+    const target = vec3(2, 0, -1);
+    const hit = render3D.screenToGround(toScreen(render3D.worldToClip(target)), 0, size);
+    nearVec(hit, target.x, target.y, target.z);
+});
+
 test('drawSoftShadow is a soft disc facing up just above the floor', () =>
 {
     const disc = render3D.bake(()=> render3D.drawSoftShadow(vec3(3, 5, -2), 4, 1));
@@ -1651,6 +1677,27 @@ test('objects with a softShadow get one drawn in the transparent stage, and Trai
     finally { render3D.drawSoftShadow = drawSoftShadow; render3D.softShadowHeight = 0; }
     assert.equal(shadows.length, 1);
     nearVec(shadows[0][0], 1, 5, 2); assert.equal(shadows[0][1], 3); assert.equal(shadows[0][2], 1);
+
+    // the shadow follows the object's scale, so one size set once covers every scaled copy
+    o.scale3D = vec3(2.5);
+    shadows.length = 0;
+    render3D.drawSoftShadow = (pos, size, floor)=> shadows.push([pos, size, floor]);
+    try { render3D.renderStages([o]); }
+    finally { render3D.drawSoftShadow = drawSoftShadow; }
+    near(shadows[0][1], 7.5);
+
+    // including a parent's scale, the same scale picking and culling measure it at
+    o.scale3D = vec3(1);
+    const parent = new EngineObject3D(vec3());
+    parent.scale3D = vec3(4);
+    parent.addChild(o);
+    shadows.length = 0;
+    render3D.drawSoftShadow = (pos, size, floor)=> shadows.push([pos, size, floor]);
+    try { render3D.renderStages([o]); }
+    finally { render3D.drawSoftShadow = drawSoftShadow; }
+    near(shadows[0][1], 12);
+    o.parent.removeChild(o);
+    parent.destroy();
     o.destroy();
     engineObjects.length = 0;
     const trail = new Trail3D(vec3());
