@@ -2504,3 +2504,65 @@ test('buildLoft catches stations listed the wrong way round, which builds the hu
     assert.ok(out > 0 && !inward, `every face points out, got ${out} out and ${inward} in`);
     assert.throws(()=> buildLoft([...noseFirst].reverse()));
 });
+
+test('an opaque object that sets a color alpha is told the alpha does nothing', () =>
+{
+    // the shader writes alpha 1 for an opaque draw, so a fade with no flag is invisible work
+    const o = new EngineObject3D(vec3(), buildBox());
+    o.color = rgb(1, 0, 0, .5);
+    assert.throws(()=> o.render3D()); // ASSERT throws a bare Error, the reason goes to the console
+    o.transparent = true;
+    o.render3D(); // the flag makes it legal
+    o.transparent = false;
+    o.additive = true;
+    o.render3D(); // and so does additive
+    o.additive = false;
+    o.color = rgb(1, 0, 0);
+    o.render3D(); // as does a solid color
+
+    // a light is not drawn, and its alpha is its brightness, so it is none of this
+    const light = new Light3D(vec3(), 5, rgb(1, 1, 1, .25));
+    light.render3D();
+    for (const x of [o, light]) x.destroy();
+    for (const x of engineObjects) x.destroy();
+    engineObjects.length = 0;
+});
+
+test('a mesh built by hand renders without normals, the way it already did without uvs and colors', () =>
+{
+    const hand = new Mesh;
+    hand.points.push(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0), vec3(1, 1, 0), vec3(0, 0, 1));
+    assert.equal(hand.normals.length, 0);
+    const combined = new Mesh().combine(hand);
+    assert.equal(combined.normals.length, hand.points.length);
+    assert.ok(combined.normals.every(isVector3));
+    // computeNormals is still the way to get real ones
+    assert.equal(hand.computeNormals().normals.length, hand.points.length);
+});
+
+test('parseOBJ says which line has a face index the file does not have', () =>
+{
+    const good = 'v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n';
+    assert.ok(parseOBJ(good).points.length > 0);
+    assert.throws(()=> parseOBJ('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 9\n'));
+    assert.throws(()=> parseOBJ('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 -9\n'));
+    // a negative index counts back from the end, which is legal
+    assert.ok(parseOBJ('v 0 0 0\nv 1 0 0\nv 0 1 0\nf -3 -2 -1\n').points.length > 0);
+});
+
+test('a sync2D object is told its solid collision needs the 2D size too', () =>
+{
+    // sync2D hands physics back to the 2D solver, which measures size, not size3D
+    const o = new EngineObject3D(vec3());
+    o.size3D = vec3(1);
+    o.mass = 1;
+    o.setCollision();
+    o.updatePhysics(); // fine while it drives itself in 3D
+    o.sync2D = true;
+    assert.throws(()=> o.updatePhysics());
+    o.size = vec2(1);
+    o.updatePhysics(); // and fine again once the 2D box is there
+    o.destroy();
+    for (const x of engineObjects) x.destroy();
+    engineObjects.length = 0;
+});

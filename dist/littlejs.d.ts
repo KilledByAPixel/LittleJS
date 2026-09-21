@@ -6676,7 +6676,8 @@ declare module "littlejsengine" {
      * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D,
      *   which is the one way those 2D fields reach a 3D object
      * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D
-     * - Its tile and raycast halves are 2D only so they default off here, and a child or a sync2D object sits it out
+     * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
+     * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
      * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
      * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
      * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
@@ -7105,6 +7106,7 @@ declare module "littlejsengine" {
      * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
      * - A point light by default: it lights what is near it and fades out by its radius
      * - Set directional to shine from far away along the light's forward axis instead, aim it with lookAt or rotation3D
+     * - A directional light shines from no particular place, so only its facing counts and moving it does nothing
      * - Only render3D.lightDirection casts shadows, these light without shadowing
      * - Only the 8 lights nearest the camera are used each frame
      * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color

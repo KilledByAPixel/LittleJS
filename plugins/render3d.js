@@ -532,7 +532,7 @@ class Render3DPlugin
      *  @return {Ray3D} - Starts at the camera with a unit direction, or on the camera plane when orthographic */
     screenToRay(screenPos, canvasSize=mainCanvasSize)
     {
-        const width = canvasSize.x || 1, height = canvasSize.y || 1; // a zero canvas gives the center ray
+        const width = canvasSize.x || 1, height = canvasSize.y || 1; // a canvas with no size stands in as 1x1, rather than dividing by zero
         const aspect = width / height, camera = this.camera;
         // bring the matrices up to date for this canvas, so worldToScreen and this agree on where things are
         this.updateMatrices(aspect);
@@ -1949,7 +1949,7 @@ class Mesh
         for (let i = 0; i < mesh.points.length; ++i)
         {
             this.points.push(matrix.transformPoint(mesh.points[i]));
-            this.normals.push(normalMatrix.transformDirection(mesh.normals[i]).normalize());
+            this.normals.push(normalMatrix.transformDirection(mesh.normals[i] || RENDER3D_DEFAULT_NORMAL).normalize());
             this.uvs.push((mesh.uvs[i] || RENDER3D_DEFAULT_UV).copy());
             this.colors.push((mesh.colors[i] || WHITE).multiply(color));
         }
@@ -2067,7 +2067,7 @@ class Mesh
         {
             const a = points[i], b = points[i+1], c = points[i+2];
             const normal = b.subtract(a).cross(c.subtract(a));
-            // the real triangles sit at odd positions, see render3DForEachStripVertex
+            // triangles in a strip alternate which way they wind, so every other one is flipped back
             // a zero normal means a flat triangle joining two strips, so skip it
             faceNormals.push(normal.lengthSquared() ? normal.normalize(i & 1 ? 1 : -1) : undefined);
         }
@@ -2091,6 +2091,8 @@ class Mesh
                 normals[i] = (sums.get(key(points[i])) || RENDER3D_DEFAULT_NORMAL).normalize();
         }
         else
+            // every triangle writes its own three corners, so the only vertices left with the default
+            // are the repeats at the ends of a strip, which no triangle with any area uses
             faceNormals.forEach((f, i)=> f && (normals[i] = normals[i+1] = normals[i+2] = f));
 
         this.normals = normals;
@@ -2110,8 +2112,9 @@ class Mesh
         const floats = new Float32Array(data), ints = new Uint32Array(data);
         for (let i = 0; i < count; ++i)
         {
-            const uv = this.uvs[i] || RENDER3D_DEFAULT_UV; // a hand built mesh may leave uvs and colors empty
-            render3DWriteVertex(floats, ints, i * RENDER3D_VERTEX_FLOATS, this.points[i], this.normals[i], uv.x, uv.y, (this.colors[i] || WHITE).rgbaInt());
+            const uv = this.uvs[i] || RENDER3D_DEFAULT_UV; // a hand built mesh may leave normals, uvs and colors empty
+            render3DWriteVertex(floats, ints, i * RENDER3D_VERTEX_FLOATS, this.points[i],
+                this.normals[i] || RENDER3D_DEFAULT_NORMAL, uv.x, uv.y, (this.colors[i] || WHITE).rgbaInt());
         }
         const gl = glContext;
         this.buffer = gl.createBuffer();
@@ -2891,7 +2894,8 @@ function render3DReadPixels(textureInfo)
  * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D,
  *   which is the one way those 2D fields reach a 3D object
  * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D
- * - Its tile and raycast halves are 2D only so they default off here, and a child or a sync2D object sits it out
+ * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
+ * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
  * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
  * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
  * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
@@ -2996,10 +3000,17 @@ class EngineObject3D extends EngineObject
     }
 
     /** The 2D physics only run for a sync2D object, everything else moves by velocity3D, called automatically each frame */
-    updatePhysics() { this.sync2D && super.updatePhysics(); }
+    updatePhysics()
+    {
+        // a sync2D object collides in 2D, which measures the 2D size, and that starts at zero on a 3D object
+        ASSERT(!this.sync2D || !this.collideSolidObjects || (this.size.x && this.size.y),
+            'a sync2D object collides in 2D, so give it a 2D size as well as a size3D', this.size);
+        this.sync2D && super.updatePhysics();
+    }
 
     /** Set how this object collides, the same flags as in 2D
-     *  - Solid collision happens in 3D here, against size3D boxes or spheres; a sync2D object or a child sits it out
+     *  - Solid collision happens in 3D here, against size3D boxes or spheres; a child sits it out
+     *  - A sync2D object collides in 2D instead, against the 2D size, so set that as well as size3D
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
@@ -3065,6 +3076,8 @@ class EngineObject3D extends EngineObject
     /** Draw the object in 3D, called by the 3D pass with the draw state set from this object's flags, draws the mesh by default */
     render3D()
     {
+        // an opaque draw comes out solid however low its alpha is, so a fade with no flag looks like nothing happened
+        ASSERT(this.transparent || this.additive || this.color.a >= 1, 'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', this.color);
         if (this.mesh)
             render3D.drawMesh(this.mesh, this.getMatrix(), this.tileInfo, this.color);
         else if (this.tileInfo)
@@ -3123,6 +3136,8 @@ function render3DSolidPush(a, b)
 // push a solid object out of the solids before it in the engine's list of them, so each pair is resolved once:
 // the ones after it update later and test against it then, and an object that is not in the list yet, because it
 // turned collision on this frame, tests them all itself and is not tested back
+// one pair per test is half the work of the 2D solver, which tests both directions; the difference only shows
+// when a collideWithObject destroys some third object, whose own turn then finds the pair already gone
 function render3DCollideSolid(a)
 {
     let shapeA = render3DSolidShape(a);
@@ -3237,6 +3252,7 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
  * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
  * - A point light by default: it lights what is near it and fades out by its radius
  * - Set directional to shine from far away along the light's forward axis instead, aim it with lookAt or rotation3D
+ * - A directional light shines from no particular place, so only its facing counts and moving it does nothing
  * - Only render3D.lightDirection casts shadows, these light without shadowing
  * - Only the 8 lights nearest the camera are used each frame
  * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
@@ -3678,6 +3694,7 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
                 const corners = parts.slice(1).map(c => c.split('/'));
                 if (corners.length < 3) break;
                 const points = corners.map(c => lookup(c[0], positions));
+                ASSERT(points.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
                 const uv = corners.map(c => c[1] ? lookup(c[1], uvs) : RENDER3D_DEFAULT_UV);
                 const hasNormals = corners.every(c => c[2]);
                 fileNormals ||= hasNormals;
