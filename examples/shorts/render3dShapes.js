@@ -55,13 +55,12 @@ function gameInit()
 
 function gameUpdate()
 {
-    // space toggles shading, S toggles specular
-    if (keyWasPressed('Space'))
+    if (keyWasPressed('Space')) // space toggles shading
     {
         render3D.smoothShading = !render3D.smoothShading;
         buildShapes();
     }
-    for (const s of spinners)
+    for (const s of spinners) // S toggles specular
         s.specular = keyIsDown('KeyS');
 }
 

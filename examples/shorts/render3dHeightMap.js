@@ -1,11 +1,11 @@
-const terrainSize = 50, terrainHeight = 12, terrainSamples = 48;
+const terrainSize = vec2(50), terrainHeight = 12, terrainSamples = 48;
 let terrain, ground, ball;
 
 class Ball extends EngineObject3D
 {
     constructor()
     {
-        super(vec3(), buildSphere(1, 12, 6, true));
+        super(vec3(), buildSphere(1, 12, 6));
         this.color = hsl(0,.8,.5);
         this.softShadow = 2;
     }
@@ -22,7 +22,7 @@ class Ball extends EngineObject3D
 
 function makeTerrainImages(size)
 {
-    // paint a height map and a color map
+    // paint height and color maps
     const heightCanvas = new OffscreenCanvas(size, size);
     const colorCanvas = new OffscreenCanvas(size, size);
     const heightContext = heightCanvas.getContext('2d');
@@ -42,7 +42,7 @@ function makeTerrainImages(size)
         const grass = hsl(.3,.5,.3 + h*.3);
         const rock = hsl(.1,.3,.4);
         const snow = hsl(0,0,.9);
-        colorContext.fillStyle = h < .5 ? grass : h < .75 ? rock : snow;
+        colorContext.fillStyle = h<.5 ? grass : h<.7 ? rock : snow;
         colorContext.fillRect(x, y, 1, 1);
     }
     return [heightCanvas, colorCanvas];
@@ -59,7 +59,7 @@ function gameInit()
 
     // terrain from the two images
     const [heightImage, colorImage] = makeTerrainImages(terrainSamples);
-    terrain = new HeightMap(heightImage, vec2(terrainSize), terrainHeight, colorImage);
+    terrain = new HeightMap(heightImage, terrainSize, terrainHeight, colorImage);
     ground = new EngineObject3D(vec3(), terrain.buildMesh());
 
     // trees on the grass, a trunk and a cone welded into one mesh
@@ -70,11 +70,7 @@ function gameInit()
     for (let i = 80; i--;)
     {
         const x = rand(-22,22), z = rand(-22,22), y = terrain.getHeight(x, z);
-        if (y < 5)
-        {
-            const treeObject = new EngineObject3D(vec3(x,y,z), tree);
-            treeObject.rotation3D.y = rand(2*PI);
-        }
+        new EngineObject3D(vec3(x,y,z), tree);
     }
 
     // soft shadows follow the ground
@@ -84,13 +80,12 @@ function gameInit()
 
 function gameUpdate()
 {
-    // space toggles shading, right click moves the ball
-    if (keyWasPressed('Space'))
+    if (keyWasPressed('Space')) // space toggles shading
     {
         render3D.smoothShading = !render3D.smoothShading;
-        ground.setMesh(terrain.buildMesh()); // frees the terrain it replaces
+        ground.setMesh(terrain.buildMesh()); // rebuild the terrain
     }
-    if (mouseWasPressed(2))
+    if (mouseWasPressed(2)) // right click moves the ball
     {
         const ray = render3D.screenToRay(mousePosScreen);
         const distance = terrain.raycast(ray);
