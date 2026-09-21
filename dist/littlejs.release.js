@@ -10126,28 +10126,43 @@ class PostProcessPlugin
  * - Pass it to PostProcessPlugin, or edit the string to build an effect on top of it
  * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
  * @param {number} [strength] - How much glow to add
- * @param {number} [size] - How far the glow spreads in pixels
+ * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes
  * @return {string}
  * @memberof PostProcess
  */
 function postProcessBloomShader(threshold=.6, strength=1, size=6)
 {
     ASSERT(isNumber(threshold) && isNumber(strength) && isNumber(size), 'bloom settings must be numbers');
-    // two rings of samples around each pixel, the outer one wider and dimmer
+    ASSERT(size > 0, 'bloom size must be above zero');
+
+    // Taps on three rings over a disc of the given size, roughly one every three pixels of ring so
+    // there is no gap wide enough to show. The counts are odd and unequal and each ring is turned off
+    // the last, so no two rings line up: what the taps miss comes out as fine ripple instead of the
+    // ring of evenly spaced copies that a single ring of eight leaves around anything bright.
+    // Each ring gets its own floor and ceiling on the count, so even a tiny or a huge glow, where
+    // they would all be pinned to the same number, still has three rings that do not line up.
+    // The count grows with the area, capped so a very wide glow cannot quietly cost hundreds a pixel.
+    const rings = 3;
+    let code = '', taps = 0;
+    for (let j = 0; j < rings; ++j)
+    {
+        const radius = ((j + .5) / rings) ** .5 * size;   // equal area per ring
+        const count = min(17 + 4 * j, max(5 + 2 * j, round(2 * radius))) | 1;
+        taps += count;
+        code += `
+        for (int k = 0; k < ${count}; ++k)
+        {
+            float a = float(k) * ${(2 * PI / count).toFixed(7)}${j ? ' + ' + (j * 2.3999632).toFixed(7) : ''};
+            glow += max(vec3(0), texture(iChannel0, uv + vec2(cos(a), sin(a)) * ${radius.toFixed(4)} / iResolution.xy).rgb - ${threshold.toFixed(4)});
+        }`;
+    }
     return `
     void mainImage(out vec4 color, vec2 pixel)
     {
         vec2 uv = pixel / iResolution.xy;
         color = texture(iChannel0, uv);
-        vec3 glow = vec3(0);
-        for (int i = 0; i < 8; ++i)
-        {
-            float a = float(i) * 3.14159 / 4.;
-            vec2 d = vec2(cos(a), sin(a)) / iResolution.xy;
-            glow += max(vec3(0), texture(iChannel0, uv + d * ${size.toFixed(3)}).rgb - ${threshold.toFixed(3)});
-            glow += max(vec3(0), texture(iChannel0, uv + d * ${(size / 2).toFixed(3)}).rgb - ${threshold.toFixed(3)});
-        }
-        color.rgb += glow * ${(strength / 16).toFixed(5)};
+        vec3 glow = vec3(0);${code}
+        color.rgb += glow * ${(strength / taps).toFixed(6)};
     }`;
 }
 

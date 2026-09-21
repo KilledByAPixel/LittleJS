@@ -3762,7 +3762,7 @@ declare module "littlejsengine" {
      * - Pass it to PostProcessPlugin, or edit the string to build an effect on top of it
      * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
      * @param {number} [strength] - How much glow to add
-     * @param {number} [size] - How far the glow spreads in pixels
+     * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes
      * @return {string}
      * @memberof PostProcess
      */

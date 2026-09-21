@@ -761,7 +761,7 @@ new PostProcessPlugin(shaderCode, includeMainCanvas=false, feedbackTexture=false
 postProcess                    // Global instance created by the plugin
 postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=false) // set up a ready made bloom effect, so
                                // bright colors and lights glow; threshold is where the glow starts, and the 2D canvas
-                               // is left out so HUD text stays crisp
+                               // is left out so HUD text stays crisp; a wider glow takes more samples to stay smooth
 postProcessBloomShader(threshold, strength, size) // its shader code, to pass to PostProcessPlugin or build on
 ```
 
