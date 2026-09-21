@@ -6,9 +6,11 @@ class Comet extends EngineObject3D
         this.color = color;
         this.phase = phase;
         this.softShadow = 1.5;
-        // the trail is a child so it follows, additive, fading over 1.5 seconds
-        this.addChild(new Trail3D(vec3(), 1.5, .5, undefined,
-            color, color.withAlpha(0), true));
+
+        // add trail as a child so it follows
+        const trail = new Trail3D(vec3(), 1.5, .5, undefined,
+            color, color.withAlpha(0), true);
+        this.addChild(trail);
     }
     update()
     {
@@ -27,10 +29,10 @@ class Flag extends EngineObject3D
     }
     update()
     {
-        // ripple the cloth in place, computeNormals marks it for re-upload
+        // ripple the cloth in place
         for (const p of this.mesh.points)
-            p.y = sin(p.x*2 - time*6)*.08*(p.x + 2);
-        this.mesh.computeNormals(false);
+            p.y = sin(p.x*2 - time*6)*.3*(p.x + 2);
+        this.mesh.computeNormals(true);
     }
 }
 
@@ -58,8 +60,8 @@ function drawRainbow()
     for (let i = 0; i <= 60; ++i)
     {
         const t = i/60, a = t*2*PI;
-        points.push(vec3(cos(a)*9, 1 + sin(a*3 + time*2), sin(a)*9));
-        widths.push(.3 + .2*sin(a*5 - time*4));
+        points.push(vec3(cos(a)*12, 1 + sin(a*3 + time*2), sin(a)*12));
+        widths.push(1)//.3 + .2*sin(a*5 - time*4));
         colors.push(hsl(t + time*.2, 1, .6, .8));
     }
     render3D.drawRibbon(points, widths, colors);
