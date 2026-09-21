@@ -20249,10 +20249,10 @@ class EngineObject3D extends EngineObject
         this.rotation3D = vec3();
         /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
         this.scale3D = vec3(1);
-        /** @property {Vector3} - Added to pos3D each frame by the engine after update, no super call needed;
+        /** @property {Vector3} - Added to pos3D each frame by the engine before update, like the 2D velocity, no super call needed;
          *  damping and render3D.gravity act on it once the object has a mass */
         this.velocity3D = vec3();
-        /** @property {Vector3} - Added to rotation3D each frame by the engine after update, angleDamping is 2D only */
+        /** @property {Vector3} - Added to rotation3D each frame by the engine before update, angleDamping is 2D only */
         this.angleVelocity3D = vec3();
         /** @property {Mesh|undefined} - Mesh to draw
          *  @type {Mesh|undefined} */
@@ -20291,38 +20291,35 @@ class EngineObject3D extends EngineObject
         this.renderAfter2D = undefined;
     }
 
-    /** Apply the 3D velocities, then update the children, called automatically each frame */
-    updateTransforms()
-    {
-        if (!paused)
-        {
-            // an object with mass falls with render3D.gravity and slows by its damping, like the 2D physics
-            if (this.mass && !this.sync2D) // a 2D driven object gets the 2D gravity instead
-            {
-                // damped first and gravity added after, the order EngineObject.updatePhysics uses,
-                // so the same mass, damping and gravity fall the same way in both
-                const v = this.velocity3D, g = render3D.gravity, s = this.gravityScale, d = this.damping;
-                this.velocity3D = vec3(v.x * d + g.x * s, v.y * d + g.y * s, v.z * d + g.z * s);
-            }
-            this.pos3D = this.pos3D.add(this.velocity3D);
-            this.rotation3D = this.rotation3D.add(this.angleVelocity3D);
-            if (this.sync2D)
-                this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
-            // solid collision, for the objects that own where they are: a sync2D object collides in 2D
-            // instead, and a child rides along with its parent, so its pos3D is an offset with nothing to push
-            if (this.collideSolidObjects && !this.sync2D && !this.parent)
-                render3DCollideSolid(this);
-        }
-        super.updateTransforms();
-    }
-
-    /** The 2D physics only run for a sync2D object, everything else moves by velocity3D, called automatically each frame */
+    /** Move by the 3D velocities and push out of solids, called automatically each frame before update, like the 2D physics
+     *  - update runs once every object has moved and collided, so bounce off anything else there, it lands before the draw
+     *  - Override this and call super to change how the object moves itself
+     *  - A sync2D object runs the 2D physics as well, and collides there instead */
     updatePhysics()
     {
         // a sync2D object collides in 2D, which measures the 2D size, and that starts at zero on a 3D object
         ASSERT(!this.sync2D || !this.collideSolidObjects || (this.size.x && this.size.y),
             'a sync2D object collides in 2D, so give it a 2D size as well as a size3D', this.size);
-        this.sync2D && super.updatePhysics();
+        if (this.sync2D)
+            super.updatePhysics();
+        render3DMove(this);
+        // the engine only runs this for objects that own where they are, a child rides along with its parent
+        if (this.collideSolidObjects && !this.sync2D)
+            render3DCollideSolid(this);
+    }
+
+    /** Move a child by its own velocities, bring a sync2D object's pos3D up to its 2D pos, then update the children,
+     *  called automatically each frame */
+    updateTransforms()
+    {
+        if (!paused)
+        {
+            // a child is never given updatePhysics, so it moves here, as an offset from its parent
+            this.parent && render3DMove(this);
+            if (this.sync2D)
+                this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
+        }
+        super.updateTransforms();
     }
 
     /** Set how this object collides, the same flags as in 2D
@@ -20407,6 +20404,20 @@ class EngineObject3D extends EngineObject
                 this.tileInfo, this.color, this.rotation3D.z, this.upright);
         }
     }
+}
+
+// move an object by its 3D velocities, an object with mass falling with render3D.gravity and slowing by its damping
+function render3DMove(o)
+{
+    if (o.mass && !o.sync2D) // a 2D driven object gets the 2D gravity instead
+    {
+        // damped first and gravity added after, the order EngineObject.updatePhysics uses,
+        // so the same mass, damping and gravity fall the same way in both
+        const v = o.velocity3D, g = render3D.gravity, s = o.gravityScale, d = o.damping;
+        o.velocity3D = vec3(v.x * d + g.x * s, v.y * d + g.y * s, v.z * d + g.z * s);
+    }
+    o.pos3D = o.pos3D.add(o.velocity3D);
+    o.rotation3D = o.rotation3D.add(o.angleVelocity3D);
 }
 
 // where a solid object is in the world and what it collides as: the sphere that fits size3D, or the size3D box,

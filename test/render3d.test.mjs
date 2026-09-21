@@ -918,18 +918,21 @@ test('Camera3D.orbit parks the camera at the distance and angles and looks at th
     nearVec(c.forward(), -c.pos.x / 10, -c.pos.y / 10, 0);
 });
 
-test('EngineObject3D integrates velocity3D in updateTransforms, for children too, and has no 2D mass', () =>
+test('EngineObject3D moves in updatePhysics like 2D, a child in updateTransforms, and has no 2D mass', () =>
 {
+    // the engine runs updatePhysics before update, so update sees where the object is this frame
     const o = new EngineObject3D(vec3(1, 2, 3));
     o.velocity3D = vec3(.1, 0, -.1);
     o.updateTransforms();
+    nearVec(o.pos3D, 1, 2, 3); // a top level object does not move here
+    o.updatePhysics();
     nearVec(o.pos3D, 1.1, 2, 2.9);
     near(o.pos.x, 0); // the 2D body is untouched
     assert.equal(o.mass, 0);
     const child = new EngineObject3D(vec3(0, 0, 1));
     o.addChild(child);
     child.velocity3D = vec3(0, 1, 0);
-    o.updateTransforms(); // the engine only calls the root, it recurses into the children
+    o.updateTransforms(); // the engine never gives a child updatePhysics, the root's updateTransforms moves it
     nearVec(child.pos3D, 0, 1, 1);
     child.destroy();
     o.destroy();
@@ -1536,7 +1539,7 @@ test('angleVelocity3D turns objects each frame and getWorldPos3D composes with t
     const child = new EngineObject3D(vec3(0, 0, 1));
     parent.addChild(child);
     parent.angleVelocity3D = vec3(0, PI / 2, 0);
-    parent.updateTransforms();
+    parent.updatePhysics();
     near(parent.rotation3D.y, PI / 2);
     nearVec(child.getWorldPos3D(), 11, 0, 0);
     nearVec(parent.getWorldPos3D(), 10, 0, 0);
@@ -1718,17 +1721,17 @@ test('render3D.gravity and the inherited damping move objects like the 2D physic
     render3D.gravity = vec3(0, -.1, 0);
     const o = new EngineObject3D(vec3(0, 10, 0));
     o.velocity3D = vec3(1, 0, 0);
-    o.updateTransforms();
+    o.updatePhysics();
     nearVec(o.velocity3D, 1, 0, 0); // no mass, no gravity or damping
     o.pos3D = vec3(0, 10, 0);
     o.mass = 1;
     o.damping = .5;
-    o.updateTransforms();
+    o.updatePhysics();
     // damped first and gravity added after, the order EngineObject.updatePhysics uses
     nearVec(o.velocity3D, .5, -.1, 0);
     nearVec(o.pos3D, .5, 9.9, 0);
     o.gravityScale = 0;
-    o.updateTransforms();
+    o.updatePhysics();
     near(o.velocity3D.y, -.05); // damped, no more gravity
     o.sync2D = true;
     o.pos = vec2(3, 4);
@@ -1757,7 +1760,7 @@ test('solid collision still finds a touch when size3D and scale3D pull different
     engineObjectsUpdate();
     ball.pos3D = vec3();
     post.pos3D = vec3(20, 0, 0);
-    ball.updateTransforms();
+    ball.updatePhysics();
     // the post's near face is at 19.5, so a radius of 25 pushes the ball 5.5 back along -x
     near(ball.pos3D.x, -5.5);
     nearVec(post.pos3D, 20, 0, 0);
@@ -2023,11 +2026,11 @@ test('solid objects push apart by mass and bounce off each other', () =>
     a.pos3D = vec3(); b.pos3D = vec3(.6, 0, 0);
     a.mass = b.mass = 1;
     a.velocity3D = vec3(1, 0, 0);
-    b.updateTransforms(); // b comes after a, so b resolves the pair
+    b.updatePhysics(); // b comes after a, so b resolves the pair
     near(a.pos3D.x, -.2); near(b.pos3D.x, .8);
     nearVec(a.velocity3D, 0, 0, 0); // heading into b with no restitution, the push takes it away
     b.pos3D = vec3(.6, 0, 0); a.pos3D = vec3(); a.mass = 0; // a is static now
-    b.updateTransforms();
+    b.updatePhysics();
     near(a.pos3D.x, 0); near(b.pos3D.x, 1);
     const emitter = new ParticleEmitter3D(vec3());
     assert.ok(!emitter.castShadow, 'particles cast no shadow unless asked');
@@ -2161,20 +2164,20 @@ test('a solid object collides as its size3D box, or as a sphere when it asks to'
     a.pos3D = vec3(); b.pos3D = vec3(.6, .1, 0);
     a.size3D = b.size3D = vec3(1, 2, 1);
     b.mass = 1; // only b moves
-    b.updateTransforms();
+    b.updatePhysics();
     near(b.pos3D.x, 1); near(b.pos3D.y, .1);
 
     // the same pair as balls slides along the line between the centers instead
     a.collideAsSphere3D = b.collideAsSphere3D = true;
     b.pos3D = vec3(.6, .1, 0);
-    b.updateTransforms();
+    b.updatePhysics();
     assert.ok(b.pos3D.x > .6 && b.pos3D.y > .1, 'a sphere is pushed along the center line');
 
     // a sphere against a box takes them apart by the sphere's radius plus the box's half size
     b.collideAsSphere3D = false;
     a.size3D = b.size3D = vec3(1); // a is a sphere of radius .5, b a 1 unit box
     a.pos3D = vec3(); b.pos3D = vec3(.6, 0, 0);
-    b.updateTransforms();
+    b.updatePhysics();
     near(b.pos3D.x, 1);
 
     for (const o of engineObjects) o.destroy();
@@ -2312,7 +2315,7 @@ test('collideWithObject hears about a 3D touch and can take it over', () =>
     a.pos3D = vec3(); b.pos3D = vec3(.6, 0, 0);
     heard.length = 0;
     b.mass = 1;
-    b.updateTransforms();
+    b.updatePhysics();
     assert.deepEqual(heard, [['b', 'a', .4], ['a', 'b', -.4]], 'both are asked, each with its own push');
     near(b.pos3D.x, 1);
 
@@ -2322,7 +2325,7 @@ test('collideWithObject hears about a 3D touch and can take it over', () =>
         heard.length = 0;
         refuser.resolve = false;
         b.pos3D = vec3(.6, 0, 0);
-        b.updateTransforms();
+        b.updatePhysics();
         near(b.pos3D.x, .6);
         assert.equal(heard.length, 2, 'both still hear about it');
         refuser.resolve = true;
@@ -2353,7 +2356,7 @@ test('two objects that both have isSolid off pass through each other', () =>
 
     // neither blocks, so nothing happens
     b.pos3D = vec3(.6, 0, 0);
-    b.updateTransforms();
+    b.updatePhysics();
     near(b.pos3D.x, .6);
 
     // one of them blocking is enough, whichever one it is
@@ -2361,7 +2364,7 @@ test('two objects that both have isSolid off pass through each other', () =>
     {
         solid.isSolid = true;
         b.pos3D = vec3(.6, 0, 0);
-        b.updateTransforms();
+        b.updatePhysics();
         near(b.pos3D.x, 1);
         solid.isSolid = false;
     }

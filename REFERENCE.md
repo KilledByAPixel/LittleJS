@@ -976,8 +976,10 @@ new EngineObject3D(pos3D, mesh, tileInfo, color) // a tileInfo with no mesh draw
                                                  // a whole TextureInfo is kept as the
                                                  // tile covering it, so obj.tileInfo is always a TileInfo as it is in 2D
 obj.pos3D obj.rotation3D obj.scale3D // Vector3, rotation is (pitch, yaw, roll); change them in place or assign new ones
-obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engine after update, no super.update()
-                                   // needed; angleVelocity3D is not damped, angleDamping is 2D only
+obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engine before update, like the 2D physics,
+                                   // no super.update() needed; angleVelocity3D is not damped, angleDamping is 2D only
+obj.updatePhysics()                // moves it and pushes it out of solids; bounce off anything else in update, which
+                                   // runs once every object has moved, so the fix lands before the frame draws
 obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gravity, gravityScale and damping act on
              // velocity3D, damped first and gravity added after as in 2D, and damping is 1 by default for no slowing
 obj.size3D                              // full size for engineObjectsCollect3D, picking, solid collision and

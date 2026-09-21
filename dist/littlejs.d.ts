@@ -6739,10 +6739,10 @@ declare module "littlejsengine" {
         rotation3D: Vector3;
         /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
         scale3D: Vector3;
-        /** @property {Vector3} - Added to pos3D each frame by the engine after update, no super call needed;
+        /** @property {Vector3} - Added to pos3D each frame by the engine before update, like the 2D velocity, no super call needed;
          *  damping and render3D.gravity act on it once the object has a mass */
         velocity3D: Vector3;
-        /** @property {Vector3} - Added to rotation3D each frame by the engine after update, angleDamping is 2D only */
+        /** @property {Vector3} - Added to rotation3D each frame by the engine before update, angleDamping is 2D only */
         angleVelocity3D: Vector3;
         /** @property {Mesh|undefined} - Mesh to draw
          *  @type {Mesh|undefined} */
