@@ -10136,20 +10136,20 @@ function postProcessBloomShader(threshold=.6, strength=1, size=6)
 {
     ASSERT(isNumber(threshold) && isNumber(strength) && isNumber(size), 'bloom settings must be numbers');
     ASSERT(size > 0, 'bloom size must be above zero');
+    ASSERT(size <= 32, 'a bloom this wide takes a sample every few pixels of every ring, which is hundreds of samples a pixel', size);
 
-    // Taps on three rings over a disc of the given size, roughly one every three pixels of ring so
-    // there is no gap wide enough to show. The counts are odd and unequal and each ring is turned off
-    // the last, so no two rings line up: what the taps miss comes out as fine ripple instead of the
-    // ring of evenly spaced copies that a single ring of eight leaves around anything bright.
-    // Each ring gets its own floor and ceiling on the count, so even a tiny or a huge glow, where
-    // they would all be pinned to the same number, still has three rings that do not line up.
-    // The count grows with the area, capped so a very wide glow cannot quietly cost hundreds a pixel.
+    // Taps on three rings over a disc of the given size, one every three pixels or so of each ring
+    // so there is no gap wide enough to show. The count follows the ring all the way out: hold it
+    // still and a wider glow only spreads the same taps further apart, until they show up as the
+    // ring of evenly spaced copies a single ring of eight leaves around anything bright.
+    // Each ring has its own count, odd and unequal, and its own turn off the last, so the little
+    // the taps do miss comes out as fine ripple instead of a shape of its own.
     const rings = 3;
     let code = '', taps = 0;
     for (let j = 0; j < rings; ++j)
     {
         const radius = ((j + .5) / rings) ** .5 * size;   // equal area per ring
-        const count = min(17 + 4 * j, max(5 + 2 * j, round(2 * radius))) | 1;
+        const count = max(5 + 2 * j, round(2 * radius)) | 1;
         taps += count;
         code += `
         for (int k = 0; k < ${count}; ++k)
