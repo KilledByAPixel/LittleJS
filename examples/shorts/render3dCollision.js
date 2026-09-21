@@ -11,7 +11,7 @@ class Ball extends EngineObject3D
         this.color = hsl(rand(),.7,.6);
         this.radius = rand(.4,.8);
         this.scale3D = vec3(this.radius*2);
-        this.softShadow = 1; // scaled by size3D
+        this.softShadow = 1; // scaled by scale3D
         this.velocity3D = randVector3(.1);
         this.mass = 1; // enable gravity
         this.restitution = .6; // bounciness
@@ -24,13 +24,13 @@ class Ball extends EngineObject3D
         const p = this.pos3D, r = this.radius, limit = arenaSize/2 - r;
         const inside = vec3
         (
-            clamp(p.x, -limit, limit), 
-            max(p.y, r), 
+            clamp(p.x, -limit, limit),
+            max(p.y, r),
             clamp(p.z, -limit, limit)
         );
         if (p.distance(inside))
             this.bounce(inside.subtract(p));
-        const hit = collideSphereCylinder(p, r, 
+        const hit = collideSphereCylinder(p, r,
             cylinderPos, cylinderRadius, cylinderHeight);
         if (hit)
             this.bounce(hit);
@@ -58,9 +58,9 @@ function gameInit()
     render3D.smoothShading = true;
 
     // make a solid box
-    const boxMesh = buildBox(boxSize).setColor(hsl(0,.4,.5));
+    const boxMesh = buildBox().setColor(hsl(0,.4,.5));
     const box = new EngineObject3D(boxPos, boxMesh);
-    box.size3D = boxSize;
+    box.scale3D = boxSize; // scales the collision too
     box.setCollision();
 
     // make a cylinder

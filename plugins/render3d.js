@@ -3537,7 +3537,7 @@ class ParticleEmitter3D extends EngineObject3D
         // spawn offset: inside a box or a sphere
         const size = this.emitSize;
         const offset = isVector3(size) ? vec3(rand(-.5, .5) * size.x, rand(-.5, .5) * size.y, rand(-.5, .5) * size.z)
-            : randVector3(rand() ** (1/3) * size / 2);
+            : randInSphere(size / 2);
 
         // direction inside the cone around local +Y
         const direction = matrix.transformDirection(randVector3(1, this.emitConeAngle)).normalize();

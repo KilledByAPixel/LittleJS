@@ -5927,6 +5927,14 @@ declare module "littlejsengine" {
      */
     export function randVector3(length?: number, coneAngle?: number): Vector3;
     /**
+     * Returns a random Vector3 inside a sphere, spread evenly through its volume, the 3D twin of randInCircle
+     * @param {number} [radius]
+     * @param {number} [minRadius] - Leave a hollow middle this big
+     * @return {Vector3}
+     * @memberof Math3D
+     */
+    export function randInSphere(radius?: number, minRadius?: number): Vector3;
+    /**
      * 3D Vector object, right handed with Y up
      * - Methods return new vectors except set
      * @memberof Math3D

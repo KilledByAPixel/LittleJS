@@ -50,6 +50,21 @@ function randVector3(length=1, coneAngle=PI)
 }
 
 /**
+ * Returns a random Vector3 inside a sphere, spread evenly through its volume, the 3D twin of randInCircle
+ * @param {number} [radius]
+ * @param {number} [minRadius] - Leave a hollow middle this big
+ * @return {Vector3}
+ * @memberof Math3D
+ */
+function randInSphere(radius=1, minRadius=0)
+{
+    // the volume inside a radius grows with its cube, so that is what has to come out even
+    if (radius <= 0) return new Vector3;
+    const ratio = clamp(minRadius / radius);
+    return randVector3(radius * rand(ratio**3, 1) ** (1/3));
+}
+
+/**
  * 3D Vector object, right handed with Y up
  * - Methods return new vectors except set
  * @memberof Math3D

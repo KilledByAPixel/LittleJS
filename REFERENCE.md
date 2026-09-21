@@ -776,6 +776,7 @@ postProcessBloomShader(threshold, strength, size) // its shader code, to pass to
 vec3(x, y, z)                  // vec3() is zero, vec3(s) fills all, vec3(x, y) has z=0
 isVector3(v)                   // true if v is a Vector3
 randVector3(length=1, coneAngle=PI) // random direction, uniform over the sphere or a cone around +Y
+randInSphere(radius=1, minRadius=0) // random point inside a sphere, even through its volume, like randInCircle
 v.add(v2) v.subtract(v2) v.multiply(v2) v.divide(v2) v.scale(s)
 v.dot(v2) v.cross(v2) v.length() v.lengthSquared() v.distance(v2) v.distanceSquared(v2)
 v.normalize(length=1) v.clampLength(length=1) v.lerp(v2, percent) // percent is clamped like lerp
@@ -1101,7 +1102,7 @@ mesh.computeRadius()                          // measure mesh.radius now, withou
 // Shape builders - return a Mesh centered on the origin, sizes are full sizes, smooth defaults to the plugin setting
 buildBox(size=1)                              // a vec3 or a number, six faces with uvs, always flat
 buildSphere(size=1, sides=12, rings=6, smooth)
-buildCylinder(size=1, height=1, sides=12, smooth, capped=true)
+buildCylinder(size=1, height=1, sides=16, smooth, capped=true)
 buildCone(size=1, height=1, sides=12, smooth, capped=true)      // point up
 buildCapsule(size=1, height=1, sides=12, rings=4, smooth) // total height including the rounded ends, at least the size
 buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth) // size is the diameter of the whole donut, outside edge

@@ -102,6 +102,7 @@ export
     vec3,
     isVector3,
     randVector3,
+    randInSphere,
     Vector3,
     Matrix4,
     Ray3D,

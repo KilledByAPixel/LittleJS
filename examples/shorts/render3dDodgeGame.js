@@ -43,8 +43,8 @@ class Box extends EngineObject3D
     {
         super(pos, boxMesh);
         this.color = hsl(rand(),.7,.5);
-        this.size3D = vec3(2);
-        this.mass = 1; // falls with render3D.gravity
+        this.scale3D = vec3(2); // scales the collision too
+        this.mass = 1; // enable gravity
         this.velocity3D = player.pos3D.subtract(pos).normalize(rand(.1,.2));
         this.velocity3D.y = rand(.1,.2);
         this.angleVelocity3D = randVector3(.1);
@@ -111,7 +111,7 @@ function gameInit()
     // checkered ground, the player with a trail and a light, and the score in lit 3D text
     const checker = (x, z)=> hsl(.3, .4, (x+z)/2&1 ? .4 : .3);
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 20, checker));
-    boxMesh = buildBox(2);
+    boxMesh = buildBox();
     player = new Player;
     trail = new Trail3D(vec3(0,-1,0), .4, .6, undefined, hsl(.5,1,.7,.5), hsl(.5,1,.7,0), true);
     player.addChild(trail);

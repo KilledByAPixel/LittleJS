@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { vec3, isVector3, Vector3, Matrix4, buildMatrix, PI,
     isPointInBox3D, isOverlapping3D, collideSphereSphere, collideSphereBox, collideSphereCylinder,
-    collideBoxBox3D, raycastSphere, raycastPlane, raycastBox, randVector3, Ray3D } from '../dist/littlejs.esm.js';
+    collideBoxBox3D, raycastSphere, raycastPlane, raycastBox, randVector3, randInSphere, Ray3D } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-6, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -378,4 +378,28 @@ test('a projection that cannot be built is caught instead of filling the matrix 
     // the ones that do have a form still build, including the infinite perspective
     assert.ok(Matrix4.orthographic(-1, 1, -1, 1, 0, 100).m.every(Number.isFinite));
     assert.ok(Matrix4.perspective(PI/3, 1, .1, Infinity).m.every(Number.isFinite));
+});
+
+test('randInSphere fills the sphere evenly, and leaves a hollow middle when asked', () =>
+{
+    // even through the volume means half the points fall inside the radius that holds half of it,
+    // which is the cube root of a half; spread evenly by distance instead would put half inside .5
+    const count = 40000, inner = .5 ** (1/3);
+    let inside = 0, worst = 0;
+    for (let i = count; i--;)
+    {
+        const d = randInSphere(2).length() / 2;
+        worst = Math.max(worst, d);
+        d < inner && ++inside;
+    }
+    assert.ok(worst <= 1, 'never outside the radius');
+    assert.ok(Math.abs(inside / count - .5) < .02, 'half the points in half the volume, got ' + inside / count);
+
+    // a hollow middle, and still even through the shell that is left
+    for (let i = 2000; i--;)
+    {
+        const d = randInSphere(3, 2).length();
+        assert.ok(d >= 2 - 1e-9 && d <= 3 + 1e-9, 'between the two radii, got ' + d);
+    }
+    assert.equal(randInSphere(0).length(), 0);
 });
