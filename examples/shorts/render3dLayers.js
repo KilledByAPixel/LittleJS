@@ -18,7 +18,7 @@ function gameInit()
     render3D.ambientColor = hsl(0,0,.5);
     setCanvasClearColor(hsl(.6,.3,.3));
 
-    // coins in front of and behind the 2d bars
+    // coins in front of and behind the 2D bars
     for (let i = 6; i--;)
         new Coin(vec2(i*4 - 10, 0), i%2 == 1);
 }
