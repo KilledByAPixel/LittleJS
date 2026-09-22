@@ -6,7 +6,7 @@ class Lamp extends EngineObject3D
         this.color = color;
         this.orbitAngle = angle;
         this.emissive = 1; // drawn in its own color so it looks bright
-        this.addChild(new Light3D(vec3(), 8, color)); // follows the lamp
+        this.addChild(new Light3D(vec3(), 6, color, 2)); // follows the lamp
     }
     update()
     {
@@ -20,7 +20,7 @@ function gameInit()
 {
     new Render3DPlugin;
     render3D.setSky(hsl(.6,.5,.03), hsl(.6,.4,.08));
-    render3D.lightColor = hsl(.6,.2,.15); // dim light
+    render3D.sunColor = hsl(.6,.2,.15); // dim sunlight
     render3D.ambientColor = hsl(.6,.2,.1);
     render3D.smoothShading = true;
     new CameraControl3D(vec3(0,1,0), 15, .5, .002);

@@ -4,7 +4,7 @@
  * - Call new Render3DPlugin() in gameInit, then move render3D.camera and make EngineObject3D objects
  * - EngineObject3D is an EngineObject with a 3D position, rotation and mesh
  * - The 3D scene draws under the 2D sprites, so HUD and text land on top
- * - Lighting is one directional light plus ambient, with optional extra lights, fog and shadows
+ * - Lighting is the sun plus ambient, with optional extra lights, fog and shadows
  * - Build shapes with buildBox, buildSphere and friends, or load a model with loadOBJ
  * - Requires the Math3D plugin
  * @namespace Render3D
@@ -266,7 +266,7 @@ function render3DCollectLights()
 {
     // a light switched off by its radius or its alpha is left out, so it cannot take one of the few slots
     const lights = engineObjects.filter(o=> !o.destroyed && o instanceof Light3D &&
-        o.color.a > 0 && (o.directional || o.radius > 0));
+        o.color.a > 0 && o.intensity > 0 && (o.directional || o.radius > 0));
     if (lights.length > RENDER3D_MAX_LIGHTS)
     {
         // distances cached once, getWorldPos3D walks the parent chain and the sort asks many times
@@ -349,11 +349,12 @@ class Render3DPlugin
         this.camera = new Camera3D;
 
         // lights and fog
-        /** @property {Vector3} - Direction the directional light travels, read at each draw;
-         *  any length will do, both the shading and the shadows normalize it themselves */
-        this.lightDirection = vec3(.3, -1, -.5);
-        /** @property {Color} - Directional light color */
-        this.lightColor = WHITE.copy();
+        /** @property {Vector3} - Direction toward the sun, where its light comes from, like a directional Light3D;
+         *  read at each draw, and any length will do, the shading and the shadows normalize it themselves;
+         *  the sun is the one light that casts shadows and makes specular highlights */
+        this.sunDirection = vec3(-.3, 1, .5);
+        /** @property {Color} - Sunlight color */
+        this.sunColor = WHITE.copy();
         /** @property {Color} - Ambient light color */
         this.ambientColor = hsl(0, 0, .3);
         /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined
@@ -372,7 +373,7 @@ class Render3DPlugin
         this.smoothShading = false;
 
         // shadows
-        /** @property {boolean} - Cast real shadows from the directional light, off by default and free when off */
+        /** @property {boolean} - Cast real shadows from the sun, off by default and free when off */
         this.shadows = false;
         /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
         this.shadowMapSize = 1024;
@@ -404,7 +405,7 @@ class Render3DPlugin
         this.cullBackFaces = false;
         /** @property {boolean} - The transform mirrors what it draws, so the other winding is the front, set as each mesh draws */
         this.mirrored = false;
-        /** @property {number} - Strength of the highlight where the directional light reflects, 0 is none and 1 adds the light's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
         this.specular = 0;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
         this.receiveShadow = true;
@@ -884,9 +885,9 @@ class Render3DPlugin
     {
         ASSERT(this.shadowRange > 0, 'shadowRange must be positive');
         const range = this.shadowRange > 0 ? this.shadowRange : 1, half = range / 2;
-        const direction = this.lightDirection.normalize();
+        const toSun = this.sunDirection.normalize();
         const center = this.shadowCenter || this.camera.pos.add(this.cameraForward.scale(half * .8));
-        const view = Matrix4.lookAt(center.subtract(direction.scale(range)), center).invert();
+        const view = Matrix4.lookAt(center.add(toSun.scale(range)), center).invert();
         // move the light's view in whole pixel steps so shadow edges do not crawl as the camera moves
         const texel = range / (this.shadowTextureSize || this.shadowMapSize), m = view.m; // no texture in headless mode
         m[12] = round(m[12] / texel) * texel;
@@ -1319,7 +1320,8 @@ function render3DInitGL()
     // attributes: p position, n normal, t uv, c color, at fixed slots the depth shader also uses
     // vertex uniforms: viewProj, lightViewProj; the model matrix, the normal matrix (the fixed up one for normals),
     //   the tint and the uv rect are vertex attributes, see RENDER3D_VERTEX_INPUTS
-    // fragment uniforms: lightDir (xyz, w = emissive, 1 or more skips the lighting), lightColor (rgb, a = specular),
+    // fragment uniforms: lightDir (xyz the way the sunlight travels, w = emissive, 1 or more skips the lighting),
+    //   lightColor (the sun's rgb, a = specular),
     //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, tex,
     //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
     //   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive)
@@ -1633,8 +1635,9 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     gl.frontFace(state.mirrored ? gl.CCW : gl.CW); // the pass's strips read clockwise, a mirror turns that around
 
     // lights, fog and shadows are scene state read at draw time, sent only when they change
-    const l = r.lightDirection, ll = l.length() || 1, lc = r.lightColor, ac = r.ambientColor, fc = r.fogColor || canvasClearColor;
-    render3DUniform4f('lightDir', l.x / ll, l.y / ll, l.z / ll, state.lighting ? state.emissive : 1);
+    // the shader takes the way the sunlight travels, away from the sun
+    const s = r.sunDirection, sl = -(s.length() || 1), lc = r.sunColor, ac = r.ambientColor, fc = r.fogColor || canvasClearColor;
+    render3DUniform4f('lightDir', s.x / sl, s.y / sl, s.z / sl, state.lighting ? state.emissive : 1);
     render3DUniform4f('lightColor', lc.r, lc.g, lc.b, state.specular);
     render3DUniform4f('ambientColor', ac.r, ac.g, ac.b, r.fogEnd);
     render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogStart);
@@ -1721,7 +1724,7 @@ function render3DRenderPass(after2D)
             const c = light.color, k = i * 4;
             positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
             positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
-            colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a;
+            colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a * light.intensity;
         });
         gl.uniform4fv(render3DUniform('extraLights'), positions, 0, lights.length * 4);
         gl.uniform4fv(render3DUniform('extraLightColors'), colors, 0, lights.length * 4);
@@ -3058,7 +3061,7 @@ class EngineObject3D extends EngineObject
         /** @property {number} - How much it lights itself: 0 is lit as normal, 1 is its own color with no shading, for
          *  lamps and glowing things, between is partly self lit, and above 1 is brighter than its color, for bloom */
         this.emissive = 0;
-        /** @property {number} - Strength of the highlight where the directional light reflects, 0 is none and 1 adds the light's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
         this.specular = 0;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, additive objects never cast */
         this.castShadow = true;
@@ -3361,11 +3364,12 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
  * - A point light by default: it lights what is near it and fades out by its radius
  * - Set directional to shine from far away instead, from its position toward the origin like a three.js
  *   DirectionalLight: only the direction to it counts, so moving it or its parent swings the light around
- * - Only render3D.lightDirection casts shadows, these light without shadowing
+ * - Only the sun, render3D.sunDirection, casts shadows and makes highlights, these light without either
  * - Only the 8 lights nearest the camera are used each frame
- * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
+ * - radius is where the light fades out, and it fades fast, so a small radius wants a higher intensity
+ * - intensity multiplies the color, above 1 for a light brighter than white
  * - radius is a world distance, so scale3D does not change it
- * - An alpha or a radius of 0 switches it off, and a light that is off takes none of those slots
+ * - An alpha, an intensity or a radius of 0 switches it off, and a light that is off takes none of those slots
  * - Draws nothing itself, add a glow with drawSoftDisc or a small emissive mesh if it should be seen
  * @extends EngineObject3D
  * @memberof Render3D
@@ -3379,14 +3383,18 @@ class Light3D extends EngineObject3D
     /** Create a point light, set directional to make it shine from far away instead
      *  @param {Vector3} [pos3D] - Where it is, or for a directional light where it shines from, toward the origin
      *  @param {number} [radius] - Distance where the light fades to nothing, ignored when directional
-     *  @param {Color} [color] - Light color, alpha scales the brightness */
-    constructor(pos3D=vec3(), radius=5, color=WHITE)
+     *  @param {Color} [color] - Light color, its alpha fades it
+     *  @param {number} [intensity] - Brightness, multiplies the color, above 1 is brighter than white */
+    constructor(pos3D=vec3(), radius=5, color=WHITE, intensity=1)
     {
         super(pos3D, undefined, undefined, color);
         ASSERT(radius >= 0, 'light radius cannot be negative, 0 is an off switch like an alpha of 0');
+        ASSERT(intensity >= 0, 'light intensity cannot be negative, 0 is an off switch');
         this.size3D = vec3(); // not a solid thing to pick or collect
         /** @property {number} - Distance where the light fades to nothing */
         this.radius = radius;
+        /** @property {number} - Brightness, multiplies the color, above 1 is brighter than white */
+        this.intensity = intensity;
         /** @property {boolean} - Shine from far away, from its position toward the origin, instead of out from its position
          *  with a falloff; parent it to a sun in the sky and the light follows the sun */
         this.directional = false;

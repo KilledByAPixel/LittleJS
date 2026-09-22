@@ -6338,7 +6338,7 @@ declare module "littlejsengine" {
      * - Call new Render3DPlugin() in gameInit, then move render3D.camera and make EngineObject3D objects
      * - EngineObject3D is an EngineObject with a 3D position, rotation and mesh
      * - The 3D scene draws under the 2D sprites, so HUD and text land on top
-     * - Lighting is one directional light plus ambient, with optional extra lights, fog and shadows
+     * - Lighting is the sun plus ambient, with optional extra lights, fog and shadows
      * - Build shapes with buildBox, buildSphere and friends, or load a model with loadOBJ
      * - Requires the Math3D plugin
      * @namespace Render3D
@@ -6364,11 +6364,12 @@ declare module "littlejsengine" {
     export class Render3DPlugin {
         /** @property {Camera3D} - The camera */
         camera: Camera3D;
-        /** @property {Vector3} - Direction the directional light travels, read at each draw;
-         *  any length will do, both the shading and the shadows normalize it themselves */
-        lightDirection: Vector3;
-        /** @property {Color} - Directional light color */
-        lightColor: Color;
+        /** @property {Vector3} - Direction toward the sun, where its light comes from, like a directional Light3D;
+         *  read at each draw, and any length will do, the shading and the shadows normalize it themselves;
+         *  the sun is the one light that casts shadows and makes specular highlights */
+        sunDirection: Vector3;
+        /** @property {Color} - Sunlight color */
+        sunColor: Color;
         /** @property {Color} - Ambient light color */
         ambientColor: Color;
         /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined
@@ -6385,7 +6386,7 @@ declare module "littlejsengine" {
         softShadowHeight: number | HeightMap | Function;
         /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for flat faces */
         smoothShading: boolean;
-        /** @property {boolean} - Cast real shadows from the directional light, off by default and free when off */
+        /** @property {boolean} - Cast real shadows from the sun, off by default and free when off */
         shadows: boolean;
         /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
         shadowMapSize: number;
@@ -6415,7 +6416,7 @@ declare module "littlejsengine" {
         cullBackFaces: boolean;
         /** @property {boolean} - The transform mirrors what it draws, so the other winding is the front, set as each mesh draws */
         mirrored: boolean;
-        /** @property {number} - Strength of the highlight where the directional light reflects, 0 is none and 1 adds the light's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
         specular: number;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
         receiveShadow: boolean;
@@ -6815,7 +6816,7 @@ declare module "littlejsengine" {
         /** @property {number} - How much it lights itself: 0 is lit as normal, 1 is its own color with no shading, for
          *  lamps and glowing things, between is partly self lit, and above 1 is brighter than its color, for bloom */
         emissive: number;
-        /** @property {number} - Strength of the highlight where the directional light reflects, 0 is none and 1 adds the light's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
         specular: number;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, additive objects never cast */
         castShadow: boolean;
@@ -7202,11 +7203,12 @@ declare module "littlejsengine" {
      * - A point light by default: it lights what is near it and fades out by its radius
      * - Set directional to shine from far away instead, from its position toward the origin like a three.js
      *   DirectionalLight: only the direction to it counts, so moving it or its parent swings the light around
-     * - Only render3D.lightDirection casts shadows, these light without shadowing
+     * - Only the sun, render3D.sunDirection, casts shadows and makes highlights, these light without either
      * - Only the 8 lights nearest the camera are used each frame
-     * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
+     * - radius is where the light fades out, and it fades fast, so a small radius wants a higher intensity
+     * - intensity multiplies the color, above 1 for a light brighter than white
      * - radius is a world distance, so scale3D does not change it
-     * - An alpha or a radius of 0 switches it off, and a light that is off takes none of those slots
+     * - An alpha, an intensity or a radius of 0 switches it off, and a light that is off takes none of those slots
      * - Draws nothing itself, add a glow with drawSoftDisc or a small emissive mesh if it should be seen
      * @extends EngineObject3D
      * @memberof Render3D
@@ -7219,10 +7221,13 @@ declare module "littlejsengine" {
         /** Create a point light, set directional to make it shine from far away instead
          *  @param {Vector3} [pos3D] - Where it is, or for a directional light where it shines from, toward the origin
          *  @param {number} [radius] - Distance where the light fades to nothing, ignored when directional
-         *  @param {Color} [color] - Light color, alpha scales the brightness */
-        constructor(pos3D?: Vector3, radius?: number, color?: Color);
+         *  @param {Color} [color] - Light color, its alpha fades it
+         *  @param {number} [intensity] - Brightness, multiplies the color, above 1 is brighter than white */
+        constructor(pos3D?: Vector3, radius?: number, color?: Color, intensity?: number);
         /** @property {number} - Distance where the light fades to nothing */
         radius: number;
+        /** @property {number} - Brightness, multiplies the color, above 1 is brighter than white */
+        intensity: number;
         /** @property {boolean} - Shine from far away, from its position toward the origin, instead of out from its position
          *  with a falloff; parent it to a sun in the sky and the light follows the sun */
         directional: boolean;

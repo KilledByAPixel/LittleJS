@@ -17,7 +17,7 @@ test('Render3DPlugin constructs headless and sets the global', () =>
 
 test('Render3DPlugin has the documented defaults', () =>
 {
-    assert.ok(render3D.lightDirection.y < 0, 'the light shines downward by default');
+    assert.ok(render3D.sunDirection.y > 0, 'the sun is up in the sky by default');
     assert.equal(render3D.lighting, true);
     assert.equal(render3D.blend, false);
     assert.equal(render3D.additive, false);
@@ -30,23 +30,23 @@ test('Render3DPlugin has the documented defaults', () =>
     assert.equal(render3D.isRendering, false);
 });
 
-test('lightDirection works at any length, since everything that reads it normalizes', () =>
+test('sunDirection works at any length, since everything that reads it normalizes', () =>
 {
     // nothing should have to write .normalize() on the end, so check the two places that read it:
     // the shadow matrix, and the arithmetic that builds the lightDir the shader gets
     const shadowFor = (direction)=>
     {
-        render3D.lightDirection = direction;
+        render3D.sunDirection = direction;
         render3D.shadowCenter = vec3();
         render3D.updateShadowMatrix();
         return [...render3D.shadowMatrix.m];
     };
     try
     {
-        const unit = shadowFor(vec3(.5, -1, .3).normalize());
+        const unit = shadowFor(vec3(-.5, 1, -.3).normalize());
         for (const scale of [2, 10, 1000, .001])
         {
-            const scaled = shadowFor(vec3(.5, -1, .3).scale(scale));
+            const scaled = shadowFor(vec3(-.5, 1, -.3).scale(scale));
             assert.deepEqual(scaled, unit, 'a light direction ' + scale + ' times as long should shadow the same');
         }
         // the shader gets the same lightDir too, which is this arithmetic on the way to the uniform
@@ -58,7 +58,7 @@ test('lightDirection works at any length, since everything that reads it normali
     finally
     {
         // these are global, so hand them back however the checks above went
-        render3D.lightDirection = vec3(.5, -1, .3);
+        render3D.sunDirection = vec3(-.3, 1, .5);
         render3D.shadowCenter = undefined;
     }
 });
@@ -1337,7 +1337,7 @@ test('shadow settings default off and objects cast by default', () =>
 
 test('updateShadowMatrix fits an orthographic box around the center, snapped to texels', () =>
 {
-    render3D.lightDirection = vec3(0, -1, 0);
+    render3D.sunDirection = vec3(0, 1, 0); // straight overhead
     render3D.shadowCenter = vec3(0, 0, 0);
     render3D.shadowRange = 40;
     render3D.updateShadowMatrix();
@@ -1362,7 +1362,7 @@ test('updateShadowMatrix fits an orthographic box around the center, snapped to 
     render3D.updateMatrices(1);
     render3D.updateShadowMatrix();
     near(Math.abs(render3D.shadowMatrix.transformPoint(vec3(100, 0, -16)).x), 0);
-    render3D.lightDirection = vec3(.5, -1, .3).normalize();
+    render3D.sunDirection = vec3(-.3, 1, .5);
 });
 
 test('buildCone, buildCapsule and buildTorus are outward shapes of the documented size', () =>
@@ -2256,6 +2256,16 @@ test('pixelated is part of the draw state, so a batch splits on it', () =>
     assert.equal(o.pixelated, false);
     assert.equal(render3D.pixelated, false);
     o.destroy();
+    engineObjects.length = 0;
+});
+
+test('a Light3D has an intensity that multiplies its color, 1 by default', () =>
+{
+    const plain = new Light3D(vec3(), 5, RED), bright = new Light3D(vec3(), 5, RED, 3);
+    assert.equal(plain.intensity, 1);
+    assert.equal(bright.intensity, 3);
+    assert.throws(()=> new Light3D(vec3(), 5, RED, -1)); // 0 is off, below that is a mistake
+    for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
 });
 

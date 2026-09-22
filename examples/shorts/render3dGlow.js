@@ -19,7 +19,7 @@ function gameInit()
 {
     new Render3DPlugin;
     render3D.setSky(hsl(.7,.5,.1), hsl(.6,.4,.2));
-    render3D.lightColor = hsl(.6,.3,.2);
+    render3D.sunColor = hsl(.6,.3,.2);
     render3D.ambientColor = hsl(.6,.3,.15);
     render3D.smoothShading = true;
     new CameraControl3D(vec3(0,2,0), 20, .25, .002);

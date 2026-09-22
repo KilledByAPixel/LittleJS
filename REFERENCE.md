@@ -911,8 +911,10 @@ render3D.playSoundLoop(sound, pos3D, volume, pitch, randomnessScale) // the same
 render3D.isSphereVisible(center, radius) // the same is-it-on-screen test drawMesh uses, for skipping your own draws
 
 // Lights and fog, read at each draw
-render3D.lightDirection = vec3(.3, -1, -.5) // direction the light travels, any length, it is normalized for you
-render3D.lightColor = hsl(.08, 1, .95) // e.g., WHITE by default
+render3D.sunDirection = vec3(-.3, 1, .5) // toward the sun, where its light comes from, like a directional Light3D;
+                                         // any length, it is normalized for you; the sun is the one light that
+                                         // casts shadows and makes specular highlights
+render3D.sunColor = hsl(.08, 1, .95) // e.g., WHITE by default
 render3D.ambientColor = hsl(0, 0, .3)
 render3D.fogColor = undefined         // uses canvasClearColor when undefined
 render3D.fogStart = 20; render3D.fogEnd = 100 // e.g., both 0 by default which is no fog; measured by camera distance,
@@ -921,16 +923,16 @@ render3D.fogStart = 20; render3D.fogEnd = 100 // e.g., both 0 by default which i
 render3D.gravity = vec3(0, -.01, 0) // e.g., vec3() by default so nothing falls; objects with a mass fall by this each
                                     // frame, times their gravityScale, and slow by their damping, which is 1 by
                                     // default for no slowing
-new Light3D(pos3D, radius, color) // point light, an EngineObject3D; alpha scales brightness so alpha 0 is an off
-                                  // switch, a radius of 0 is another, brightness drops off fast so a small radius
-                                  // needs a bright color
+new Light3D(pos3D, radius, color, intensity=1) // point light, an EngineObject3D; it drops off fast, so a small
+                                  // radius wants an intensity above 1; an alpha, intensity or radius of 0 is off
+light.intensity = 2               // brightness, multiplies the color, above 1 is brighter than white
 light.directional = true          // shine from far away, from its position toward the origin, with no falloff,
                                   // like a three.js DirectionalLight; moving it or its parent swings the light
 // 8 lights reach the shader each frame: every directional light first, then the point lights nearest the camera;
-// a light switched off by its alpha or radius is left out so it cannot take a slot from one that is on;
-// none of them cast shadows, only render3D.lightDirection does
+// a light switched off by its alpha, intensity or radius is left out so it cannot take a slot from one that is on;
+// none of them cast shadows or make highlights, only the sun does
 
-// Shadows - one shadow map from the directional light; lit opaque objects and draws on the default side of the 2D scene
+// Shadows - one shadow map from the sun; lit opaque objects and draws on the default side of the 2D scene
 // cast and receive
 render3D.shadows = true // off by default and free when off, soft shadows (drawSoftShadow) still work alongside
 render3D.shadowMapSize = 1024         // pixels across the shadow map, rebuilt when it changes
@@ -952,8 +954,8 @@ render3D.sky = buildSky(topColor, horizonColor, bottomColor, sides, rings) // or
 render3D.lighting = true              // false draws plain vertex color times texture, as billboards and lines do
 render3D.emissive = 0                 // how much a surface lights itself, set from each object's emissive
 render3D.additive = false             // additive blending in the transparent stage
-render3D.specular = 0                 // Phong highlight strength, the shiny spot where the directional light
-                                      // reflects: 1 adds the light's full color at its peak, more burns out;
+render3D.specular = 0                 // Phong highlight strength, the shiny spot where the sunlight reflects:
+                                      // 1 adds the sun's full color at its peak, more burns out;
                                       // the size of the spot is fixed, and a Light3D adds no highlight
 render3D.receiveShadow = true         // false keeps the next draws out of the shadow map's darkening
 render3D.cullBackFaces render3D.mirrored // set from each mesh as it draws: its doubleSided, and whether its
@@ -1217,8 +1219,8 @@ trail.clear()                                 // forget the trail, for when the 
   - Builders take diameters and full sizes; three.js SphereGeometry, CylinderGeometry and TorusGeometry take radii
   - camera.fov is in radians, a three.js PerspectiveCamera fov is in degrees
   - A plane lies in XZ facing +Y, a three.js PlaneGeometry stands in XY facing +Z
-  - render3D.lightDirection is the way sunlight travels, while a directional Light3D, like a three.js
-    DirectionalLight, shines from its position
+  - Directional lights point toward where their light comes from, like three.js: render3D.sunDirection, and a
+    directional Light3D shines from its position toward the origin
   - Colors are plain 0 to 1 values with no color management, and a point light fades out by a radius, not by
     physical intensity units
 
@@ -1237,8 +1239,8 @@ material.emissiveIntensity                // obj.emissive
 material.transparent, blending            // obj.transparent, obj.additive
 new THREE.AmbientLight(color)             // render3D.ambientColor
 new THREE.DirectionalLight(color)         // a directional Light3D, it shines from its position the same way; or
-                                          // render3D.lightDirection and lightColor, the one light that casts shadows
-new THREE.PointLight(color, 1, distance)  // new Light3D(pos3D, radius, color)
+                                          // render3D.sunDirection and sunColor, the one light that casts shadows
+new THREE.PointLight(color, i, distance)  // new Light3D(pos3D, radius, color, intensity)
 light.castShadow, light.shadow.camera     // render3D.shadows, shadowRange and shadowCenter
 scene.fog = new THREE.Fog(c, near, far)   // render3D.setFog(near, far, c)
 scene.background                          // render3D.setSky(topColor, horizonColor, bottomColor)

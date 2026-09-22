@@ -51,7 +51,7 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky(hsl(.6,.7,.6), hsl(.6,.6,.9));
     render3D.setFog(20, 60);
-    render3D.lightDirection = vec3(-.4,-1,-.5);
+    render3D.sunDirection = vec3(.4,1,.5);
     render3D.smoothShading = true;
     new CameraControl3D(vec3(0,3,0), 35, .5, .002);
 
