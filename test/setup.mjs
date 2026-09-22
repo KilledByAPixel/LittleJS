@@ -8,7 +8,8 @@
 globalThis.window = {};
 
 // gain nodes record their connections so tests can check the audio graph;
-// disconnect(node) drops that one connection, disconnect() drops them all
+// disconnect(node) drops that one connection, disconnect() drops them all,
+// and like a real node, disconnecting something not connected throws
 globalThis.AudioContext = class AudioContext
 {
     constructor() { this.currentTime = 0; this.destination = {}; this.state = 'running'; }
@@ -20,9 +21,11 @@ globalThis.AudioContext = class AudioContext
             disconnect(node)
             {
                 if (node === undefined)
-                    this.connections.length = 0;
-                else
-                    this.connections.splice(this.connections.indexOf(node) >>> 0, 1);
+                    return void (this.connections.length = 0);
+                const i = this.connections.indexOf(node);
+                if (i < 0)
+                    throw new Error('InvalidAccessError: node is not connected');
+                this.connections.splice(i, 1);
             },
             gain: { value: 0 },
         };

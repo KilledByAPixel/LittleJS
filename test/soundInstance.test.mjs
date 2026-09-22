@@ -18,10 +18,13 @@ ctxProto.createGain = function()
         connect(node) { this.connections.push(node); return node; },
         disconnect(node)
         {
+            // like a real node, disconnecting something not connected throws
             if (node === undefined)
-                this.connections.length = 0;
-            else
-                this.connections.splice(this.connections.indexOf(node) >>> 0, 1);
+                return void (this.connections.length = 0);
+            const i = this.connections.indexOf(node);
+            if (i < 0)
+                throw new Error('InvalidAccessError: node is not connected');
+            this.connections.splice(i, 1);
         },
         gain: {
             value: 0,

@@ -6692,7 +6692,7 @@ class Sound
 
     /** Play the sound as a musical note with a semitone offset
      *  This can be used to play music with chromatic scales
-     *  @param {number}  [semitoneOffset=0] - How many semitones to offset pitch
+     *  @param {number}  [semitoneOffset] - How many semitones to offset pitch
      *  @param {Vector2} [pos] - World space position to play the sound if any
      *  @param {number}  [volume=1] - How much to scale volume by
      *  @return {SoundInstance} - The sound instance
@@ -6978,7 +6978,7 @@ function speakStop()
 
 /** Get frequency of a note on a musical scale
  *  @param {number} semitoneOffset - How many semitones away from the root note
- *  @param {number} [rootFrequency=220] - Frequency at semitone offset 0
+ *  @param {number} [rootFrequency] - Frequency at semitone offset 0
  *  @return {number} - The frequency of the note
  *  @memberof Audio */
 function getNoteFrequency(semitoneOffset, rootFrequency=220)
