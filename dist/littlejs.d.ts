@@ -6662,6 +6662,8 @@ declare module "littlejsengine" {
         mirrored: boolean;
         /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
         specular: number;
+        /** @property {Shader} - Custom Shader for the next draws, set from each object's shader; undefined draws with the plugin's own */
+        shader: any;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
         receiveShadow: boolean;
         /** @property {Function|undefined} - Draw solid world here, it runs again for shadows so only draw in it
@@ -6719,7 +6721,9 @@ declare module "littlejsengine" {
         blend: boolean;
         frustumPlanes: any[];
         shadowPlanes: any[];
-        shader: any;
+        program: any;
+        currentProgram: any;
+        lightCount: number;
         shadowShader: any;
         vao: any;
         whiteTexture: any;

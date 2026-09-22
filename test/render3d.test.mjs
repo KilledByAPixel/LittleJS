@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, FirstPersonCamera3D, EngineObject3D, EngineObject, engineObjects, Light3D, DirectionalLight3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale, setCameraScale } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, FirstPersonCamera3D, EngineObject3D, EngineObject, engineObjects, Light3D, DirectionalLight3D, Shader, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale, setCameraScale } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -1745,7 +1745,7 @@ test('worldToClip returns undefined behind an orthographic camera and drawQuad t
 test('the stream splits a batch when the draw state changes between strips', () =>
 {
     render3D.isRendering = true;
-    render3D.shader = {}; // a stand in so drawStrip writes to the stream, flush does nothing without gl
+    render3D.program = {}; // a stand in so drawStrip writes to the stream, flush does nothing without gl
     const flush = render3D.flush;
     let flushes = 0;
     render3D.flush = ()=> { ++flushes; render3D.streamCount = 0; };
@@ -1763,10 +1763,52 @@ test('the stream splits a batch when the draw state changes between strips', () 
     finally
     {
         render3D.flush = flush;
-        render3D.shader = undefined;
+        render3D.program = undefined;
         render3D.isRendering = false;
         render3D.streamCount = 0;
         render3D.specular = 0;
+    }
+});
+
+test('an object\'s shader reaches the draw state, is undefined for the callbacks, and the stream splits on it', () =>
+{
+    const shader = new Shader('void mainImage(out vec4 c, vec2 uv){c=vec4(1);}');
+    const seen = {};
+    class Probe extends EngineObject3D { render3D() { seen[this.name] = render3D.shader; } }
+    const plain = new Probe(vec3()), shaded = new Probe(vec3());
+    plain.name = 'plain'; shaded.name = 'shaded'; shaded.shader = shader;
+    render3D.onRenderOpaque = ()=> seen.callback = render3D.shader;
+    render3D.renderStages([shaded, plain]);
+    render3D.onRenderOpaque = undefined;
+    assert.equal(seen.shaded, shader);
+    assert.equal(seen.plain, undefined);
+    assert.equal(seen.callback, undefined); // reset before the callback, so a shader cannot leak out of an object
+    assert.equal(render3D.shader, undefined);
+    plain.destroy(); shaded.destroy();
+    engineObjects.length = 0;
+
+    render3D.isRendering = true;
+    render3D.program = {}; // a stand in so drawStrip writes to the stream, flush does nothing without gl
+    const flush = render3D.flush;
+    let flushes = 0;
+    render3D.flush = ()=> { ++flushes; render3D.streamCount = 0; };
+    try
+    {
+        const tri = [vec3(), vec3(1), vec3(2)];
+        render3D.drawStrip(tri);
+        render3D.shader = shader;
+        render3D.drawStrip(tri); // a different shader flushes the pending batch first
+        assert.equal(flushes, 1);
+        assert.equal(render3D.streamState.shader, shader);
+        render3D.drawStrip(tri); // the same shader keeps batching
+        assert.equal(flushes, 1);
+    }
+    finally
+    {
+        render3D.flush = flush;
+        render3D.program = render3D.shader = undefined;
+        render3D.isRendering = false;
+        render3D.streamCount = 0;
     }
 });
 

@@ -66,13 +66,13 @@ function render3DQuadValues(v) { return isArray(v) ? render3DQuadStrip(...v) : v
 // 3D draws are only valid during the pass with a live shader
 function render3DCanDraw()
 {
-    if (!render3D.shader) return false;
+    if (!render3D.program) return false;
     ASSERT(render3D.isRendering, '3D draws are only valid during the 3D pass, draw from an EngineObject3D or render3D.onRenderOpaque');
     return render3D.isRendering;
 }
 
 // the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
-const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated'];
+const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader'];
 
 // a copy of the current draw state
 function render3DCaptureBatchState()
@@ -158,6 +158,7 @@ function render3DSetObjectState(o)
     r.receiveShadow = !o || o.receiveShadow;
     r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
     r.pixelated = !!o?.pixelated;
+    r.shader = o?.shader;
     r.depthTest = true;
 }
 
@@ -406,6 +407,8 @@ class Render3DPlugin
         this.mirrored = false;
         /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
         this.specular = 0;
+        /** @property {Shader} - Custom Shader for the next draws, set from each object's shader; undefined draws with the plugin's own */
+        this.shader = undefined;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
         this.receiveShadow = true;
 
@@ -472,7 +475,9 @@ class Render3DPlugin
         this.blend = false;          // blending on, set by the stages
         this.frustumPlanes = [];     // the view as six inward planes [x, y, z, w]
         this.shadowPlanes = [];      // the shadow map's box as six planes
-        this.shader = undefined;     // the main shader, undefined when not available
+        this.program = undefined;    // the main program, undefined when not available
+        this.currentProgram = undefined; // the program in use during a pass, a Shader's or the main one
+        this.lightCount = 0;         // Light3D objects sent this pass
         this.shadowShader = undefined;
         this.vao = undefined;
         this.whiteTexture = undefined; // 1x1 white for untextured draws
@@ -1128,7 +1133,7 @@ function render3DRenderDebug()
 function render3DDebugPush(duration, draw)
 {
     ASSERT(isNumber(duration), 'duration must be a number');
-    debug && render3D?.shader && render3DDebugPrimitives.push({timer: new Timer(duration), draw});
+    debug && render3D?.program && render3DDebugPrimitives.push({timer: new Timer(duration), draw});
 }
 
 /** Draw a debug wireframe box
@@ -1325,7 +1330,7 @@ function render3DInitGL()
     //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, tex,
     //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
     //   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive)
-    r.shader = glCreateProgram(
+    r.program = glCreateProgram(
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform mat4 viewProj,lightViewProj;' +
@@ -1447,7 +1452,10 @@ function render3DInitGL()
 function render3DContextLost()
 {
     const r = render3D;
-    r.shader = r.shadowShader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
+    r.program = r.currentProgram = r.shadowShader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
+    for (const shader of glShaderObjects)
+        shader.program3D = undefined; // compiled again by the next draw
+    r.lightCount = 0;
     r.instanceBuffers = r.samplers = [];
     r.samplerKey = undefined;
     render3DClearInstances();
@@ -1463,7 +1471,7 @@ function render3DContextRestored()
 }
 
 // a uniform location, looked up once per program
-function render3DUniform(name, program=render3D.shader)
+function render3DUniform(name, program=render3D.currentProgram)
 {
     const u = render3D.uniforms;
     let cache = u.get(program);
@@ -1682,7 +1690,7 @@ function render3DRender()
 function render3DRenderPass(after2D)
 {
     const gl = glContext, r = render3D;
-    if (!r.shader) return; // headless, gl disabled, or context lost
+    if (!r.program) return; // headless, gl disabled, or context lost
     render3DUpdateSamplers();
     ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
     ASSERT(!glRenderTarget, 'the 3D pass needs the canvas depth buffer, it can not draw into a render target');
@@ -1697,7 +1705,7 @@ function render3DRenderPass(after2D)
     render3DClearInstances();
 
     // take over the gl state
-    gl.useProgram(r.shader);
+    gl.useProgram(r.currentProgram = r.program);
     gl.bindVertexArray(r.vao);
     // the leading repeat on every strip shifts the triangles by one, which flips
     // which way they read, so tell WebGL that clockwise is the front here
@@ -1829,7 +1837,7 @@ function render3DRenderShadowMap()
 
         // backing store size, mainCanvasSize is css pixels
         gl.viewport(0, 0, glCanvas.width, glCanvas.height);
-        gl.useProgram(r.shader);
+        gl.useProgram(r.currentProgram = r.program);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture);
         gl.activeTexture(gl.TEXTURE0);
@@ -2191,7 +2199,7 @@ class Mesh
     upload()
     {
         this.computeRadius();
-        if (!render3D?.shader) return this;
+        if (!render3D?.program) return this;
         this.dispose();
         const count = this.points.length;
         const data = new ArrayBuffer(count * RENDER3D_VERTEX_BYTES);
