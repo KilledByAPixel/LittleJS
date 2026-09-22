@@ -27,6 +27,7 @@ LittleJS is a modular HTML5 game engine with:
 
 - **Core engine**: `src/engine*.js` (main loop, objects, rendering, physics, input, etc.)
 - **Plugins**: `plugins/*.js` (optional features like Box2D, post-processing, UI, audio helpers, etc.)
+- **3D**: `plugins/math3d.js` (Vector3, Matrix4, Ray3D, 3D collision and raycasts) and `plugins/render3d.js` (the 3D renderer: meshes, builders, lights, shadows, EngineObject3D, cameras, particles). Both are plugins in the same bundle, and `plugins/threejs.js` is the alternative that renders with Three.js.
 - **Build system**: `src/engineBuild.mjs` (concatenates modules into distributable bundles)
 
 ## Repo structure and file types
@@ -54,13 +55,16 @@ Prefer adding new optional features as plugins when it keeps the core simpler.
 - `examples/starter/` - Plain JavaScript global usage via `<script>` (recommended starting point)
 - `examples/module/` - ES module import pattern
 - `examples/typescript/` - TypeScript example usage
-- `examples/shorts/*.js` - Single-file demos loaded by the shorts harness
+- `examples/shorts/*.js` - Single-file demos loaded by the shorts harness; the 3D ones are `render3d*.js`
+- `examples/3d/` - The 3D plugin in one scene; `examples/threejs/` - the same idea rendered with Three.js
 
 ### Short examples (`examples/shorts/*.js`)
 Short examples are special:
 - Pure JS code file, no HTML
 - No imports, do not use LJS namespace - engine APIs are available globally
 - Override hooks: `gameInit()`, `gameUpdate()`, `gameUpdatePost()`, `gameRender()`, `gameRenderPost()`
+- Lines stay within 80 columns, and colors are written with `hsl(...)`, never `rgb(...)`
+- Each short is listed in `examples/shorts.js` with a name, a short description and search keywords
 
 ## Coding conventions
 
@@ -94,7 +98,15 @@ isNumber(n)   // true if number and not NaN
 isStringLike(s) // true if stringifiable (has toString returning a string)
 isArray(a)    // true if array
 isVector2(v)  // true if valid Vector2
+isVector3(v)  // true if valid Vector3 (3D math plugin)
 isColor(c)    // true if valid Color
+```
+
+A field that starts as `undefined` reaches `dist/littlejs.d.ts` as `any`, because tsc infers field types from their assignments. Give it a `@type` tag beside its `@property` tag, the way `fogColor` and `obj.shader` do:
+```javascript
+/** @property {Shader|undefined} - Custom shader to render with
+ *  @type {Shader|undefined} */
+this.shader = undefined;
 ```
 
 ### Math aliases
@@ -104,6 +116,17 @@ over `Math.X` in engine and plugin code:
 abs, floor, ceil, round, min, max, sign, hypot, log2, sin, cos, tan, atan2, PI
 ```
 For things without an alias (e.g. `Math.trunc`, `Math.SQRT2`), use `Math.*` as normal.
+
+### 3D plugin conventions
+The 3D API mirrors the 2D one, so the same rules hold unless a 3D reason overrides them:
+- Argument order follows 2D: `tileInfo` before `color`, and `EngineObject3D(pos3D, mesh, tileInfo, color)` like `EngineObject(pos, size, tileInfo, angle, color)`
+- Builders, draws and objects take full sizes (diameters), like `drawCircle`; the math helpers (`collideSphereBox`, `raycastSphere`) and `Light3D` take a radius, and the parameter says which
+- The `3D` suffix goes on fields that have a 2D counterpart (`pos3D`, `size3D`, `velocity3D`), on classes with a 2D namesake (`Camera3D`, `Light3D`, `ParticleEmitter3D`) and on functions where nothing in the name says 3D (`isOverlapping3D`, `collideBoxBox3D`); `Mesh`, `HeightMap` and `raycastSphere` need none
+- Meshes are triangle strips, never lists: every strip repeats its first point, the odd triangles read the other way, and the pass draws with `frontFace(CW)`. Back faces are culled unless `mesh.doubleSided` is set, which the open builders (`buildGrid`, `buildRibbon`, an uncapped lathe) do themselves
+- Draw state lives on `render3D` (`additive`, `emissive`, `specular`, `receiveShadow`, `shader`, ...), listed in `RENDER3D_STATE_FIELDS`, which is the batch key: a change flushes the pending batch. The stage loop sets it from each object's flags through `render3DSetObjectState` and resets it before every callback, so an object's flag is never read at draw time by anything else
+- 3D draws only work inside the 3D pass (an object's `render3D()` or `render3D.onRenderOpaque` / `onRenderTransparent`); asserts belong outside the pass, since the pass has a try/finally that hands the GL state back to 2D
+- Lighting: `render3D.sunDirection` points toward the sun, a `DirectionalLight3D` shines from its position toward the origin, `emissive` is a number (0 lit, 1 its own color, above 1 overbright), and `rotation3D` is Euler pitch, yaw, roll applied roll, pitch, yaw. All of it matches three.js, and REFERENCE.md has a "Coming from three.js" section to keep in step
+- Custom shaders: `Shader` (core, `src/engineDraw.js`) holds a `mainImage` snippet in the post-process style; each renderer wraps it with its own program on the first draw (`glShaderProgram` in 2D, `render3DFragmentSource` and `render3DShaderProgram` in 3D). The 3D fragment source is one function for the plugin's own program and every snippet's, so they cannot drift, and the promised snippet names are macros in `RENDER3D_SNIPPET_NAMES`. With no Shader set, rendering must stay pixel-identical
 
 ### Global variables
 - Engine time: `time`, `timeReal`, `frame`, `timeDelta`
@@ -157,6 +180,11 @@ drawEllipse(pos, size, color)           // filled ellipse
 - **Fixed 60 FPS timestep** - Physics runs at 60 FPS regardless of display refresh rate
 - **WebGL is enabled by default** - Set `glEnable = false` before `engineInit()` for Canvas2D only
 - **Tile coordinates are bottom-left origin** - Y increases upward in world space
+- **Every export must appear in REFERENCE.md** - [test/reference.test.mjs](test/reference.test.mjs) fails on a name that is exported but not mentioned, so a new API comes with its REFERENCE line
+- **Files are stored with LF endings** - with `core.autocrlf` on, a working copy may be CRLF, so an edit script normalizes `
+` to `
+` before matching and writes LF back, or the whole file shows as changed
+- **A Shader on a 2D untextured draw does nothing** - `drawRect` carries its color in the additive slot with a zero tint, so the snippet's output multiplies away; draw a white tile instead
 
 ## Developer workflows
 
@@ -174,6 +202,7 @@ npm test
 - [test/setup.mjs](test/setup.mjs) stubs minimal DOM and enables headless mode. Most tests shouldn't call `engineInit` or `render()`, or assume `time` advances — construct objects directly instead.
 - To test time-driven logic (timers, cooldowns, spawns), call `setEngineManualStep(true)` before `engineInit`, then advance with `engineStep(frames)`. See [test/engineStep.test.mjs](test/engineStep.test.mjs). Call `engineInit` once per file at module scope: `frame` and `time` are module globals and monotonic, and `node --test` gives each test file its own process.
 - Zero test dependencies — uses Node's built-in `node --test`. Match the style in [test/](test/) when adding new ones.
+- [test/render3d.test.mjs](test/render3d.test.mjs) covers the 3D plugins headless: builder geometry and winding, draw state and batching decisions, collision and cameras. Nothing that needs a GPU (culling, lighting, a compiled shader) can be tested there; check that in headless Chrome with SwiftShader (`--use-angle=swiftshader --enable-unsafe-swiftshader`) through playwright-core, and never open a visible browser window. Those harnesses live under `.claude/` and are not part of the repo.
 - CI runs build + test on every push/PR ([.github/workflows/test.yml](.github/workflows/test.yml)).
 
 ### Documentation
@@ -185,6 +214,7 @@ npm run build-docs
 - **This is not part of the normal workflow — do not run it after editing source.** It takes ~17s, rewrites ~100 files, and produces a large diff. The docs do not need to be current on every change. The repo owner asks for it when they want it.
 - It is worth *suggesting* when a major feature or new plugin lands, after a significant rework, or before a release. A plugin that never gets regenerated never appears on the site at all — `textureSheet` and `threejs` were both missing from the published docs for exactly that reason.
 - CI does not run it. `jsdoc` and `clean-jsdoc-theme` are devDependencies.
+- Before a release: bump the version in both `package.json` and `src/engine.js` (`engineVersion`), run the build so `dist/` carries it, then the docs.
 - jsdoc exits non-zero on the TypeScript-flavored JSDoc used across the engine (tuples like `[Vector2, Vector2, number]`, predicates like `a is Array<any>`) which it cannot parse but which `dist/littlejs.d.ts` needs for precise types. The script verifies the generated output instead of the exit code — don't "fix" those JSDoc types to silence the errors. No spelling satisfies both tools: what jsdoc accepts in place of a tuple (`Array<Vector2|number>`, or a record type) throws the positions away, and a type predicate has no jsdoc-legal form at all.
 - `checkJSDocMessages` in [tools/buildDocs.mjs](tools/buildDocs.mjs) counts those expected errors into one line and **fails the build on any other jsdoc message**, so a real tag problem cannot hide among them. If a new message is deliberate, widen the check there rather than letting the build print it on every run.
 
@@ -192,4 +222,4 @@ npm run build-docs
 - Press `Esc` to toggle debug overlay
 - Number keys toggle visualizations
 - `+`/`-` keys control time scale
-- Debug functions: `debugRect()`, `debugCircle()`, `debugLine()`, `debugText()`
+- Debug functions: `debugRect()`, `debugCircle()`, `debugLine()`, `debugText()`, and in 3D `debugBox3D()`, `debugSphere3D()`, `debugLine3D()`, `debugPoint3D()`
