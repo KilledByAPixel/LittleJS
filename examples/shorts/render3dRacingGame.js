@@ -179,7 +179,8 @@ function gameInit()
 function gameUpdatePost()
 {
     // the camera and the shadow map follow the car
-    render3D.camera.follow(car.pos3D, vec3(0, 5, 10).rotateY(car.yaw), .15);
+    const target = car.pos3D.add(vec3(0, 2, 0));
+    render3D.camera.follow(target, vec3(0, 1, 6).rotateY(car.yaw), .2);
     render3D.shadowCenter = car.pos3D;
 }
 
