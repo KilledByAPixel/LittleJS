@@ -12,7 +12,7 @@
 // pull in edges to prevent bleeding from neighboring tiles
 setTileDefaultBleed(.5);
 
-const terrainSize = 300, terrainHeight = 18, orbCount = 24;
+const terrainSize = 600, terrainHeight = 24, orbCount = 40;
 const soundCollect = new Sound([,,,.02,,.5,,3,,-50,40,,.05]);
 const soundEngine = new Sound([,0,80,.01,,.1,2,5,,,,,,.5,,,,,,,-100]);
 const soundJump = new Sound([.5,,140,,,,,.5,12]);
@@ -144,7 +144,7 @@ function gameInit()
         for (let column = 0; column < samples; ++column)
         {
             const x = column/(samples-1) - .5, z = row/(samples-1) - .5;
-            const hills = noise2D(x*24, z*24)*.6 + noise2D(x*60, z*60)*.2;
+            const hills = noise2D(x*36, z*36)*.6 + noise2D(x*90, z*90)*.2;
             const height = clamp(hills + .35 - hypot(x, z)*1.6);
             heightRow.push(height);
             const grass = hsl(.3,.5,.25 + height*.4), rock = hsl(.1,.2,.45);
@@ -161,7 +161,7 @@ function gameInit()
     const tree = new Mesh()
         .combine(buildCylinder(.7, 3, 6), vec3(0,1.5,0), hsl(.1,.4,.3))
         .combine(buildCone(4, 5, 7), vec3(0,4.5,0), hsl(.3,.5,.25));
-    for (let i = 1000; i--;)
+    for (let i = 2500; i--;)
     {
         const pos = randomGroundPos();
         pos.y = terrain.getHeight(pos);
@@ -175,7 +175,7 @@ function gameInit()
     const crystal = new Mesh()
         .combine(buildCone(2.5, 4, 6), vec3(0,2,0))
         .combine(buildCone(2.5, 2, 6), buildMatrix(vec3(0,1,0), vec3(PI,0,0)));
-    for (let i = 120; i--;)
+    for (let i = 300; i--;)
     {
         const pos = randomGroundPos();
         pos.y = terrain.getHeight(pos);
@@ -189,14 +189,14 @@ function gameInit()
     }
 
     // sprites from the tile sheet
-    for (let i = 60; i--;)
+    for (let i = 150; i--;)
     {
         const pos = randomGroundPos();
         pos.y = terrain.getHeight(pos) + 1.5;
         if (pos.y < 3)
             continue;
         const sprite = new EngineObject3D(pos, undefined, tile(i%4, 16));
-        sprite.color = hsl(i/60,.7,.7);
+        sprite.color = hsl(i/150,.7,.7);
         sprite.size3D = vec3(3);
         sprite.upright = true;  // stands on the ground
         sprite.pixelated = true; // hard edged pixels
@@ -204,7 +204,8 @@ function gameInit()
 
     // title text, extruded from the engine font
     const titleMesh = buildText3D('LITTLEJS 3D', 5, 2);
-    title = new EngineObject3D(vec3(0,17,-14), titleMesh);
+    title = new EngineObject3D(vec3(0,0,-40), titleMesh);
+    title.pos3D.y = terrain.getHeight(title.pos3D) + 6; // just above the ground
     title.color = hsl(.1,1,.6);
     title.specular = 1;
 
