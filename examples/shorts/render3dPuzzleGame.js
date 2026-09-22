@@ -156,6 +156,14 @@ function gameUpdate()
     hoverCell = picked ? picked.cell : groundCell;
     if (hoverCell && isWall(hoverCell.x, hoverCell.y))
         hoverCell = undefined;
+
+    // click a cell beside the player to step there, pushing a block
+    if (mouseWasPressed(0) && hoverCell)
+    {
+        const offset = hoverCell.subtract(player.cell);
+        if (abs(offset.x) + abs(offset.y) == 1)
+            tryMove(offset.x, offset.y);
+    }
 }
 
 function gameRender()
@@ -168,7 +176,7 @@ function gameRender()
 
 function gameRenderPost()
 {
-    const text = 'arrows: move / R: reset / moves: ' + moves;
+    const text = 'arrows or click: move / R: reset / moves: ' + moves;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 40, BLACK);
     const solvedPos = vec2(mainCanvasSize.x/2, mainCanvasSize.y - 50);
     const isSolved = goals.every(g=> boxAt(g.cell.x, g.cell.y));
