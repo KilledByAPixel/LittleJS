@@ -852,7 +852,7 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
   immediate drawing, render3dText, render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene,
   render3dInstancing, render3dTextures, render3dGlow; and `examples/3d` is a full example with all of it in one scene
   games:
-  render3dDodgeGame, render3dRacerGame, render3dPuzzleGame
+  render3dDodgeGame, render3dRacingGame, render3dPuzzleGame
 
 ```javascript
 // Setup (call in gameInit)
@@ -905,7 +905,7 @@ render3D.playSoundLoop(sound, pos3D, volume, pitch, randomnessScale) // the same
 render3D.isSphereVisible(center, radius) // the same is-it-on-screen test drawMesh uses, for skipping your own draws
 
 // Lights and fog, read at each draw
-render3D.lightDirection = vec3(.5, -1, .3)  // direction the light travels, any length, it is normalized for you
+render3D.lightDirection = vec3(.5, -1, -.3) // direction the light travels, any length, it is normalized for you
 render3D.lightColor = hsl(.08, 1, .95) // e.g., WHITE by default
 render3D.ambientColor = hsl(0, 0, .3)
 render3D.fogColor = undefined         // uses canvasClearColor when undefined
