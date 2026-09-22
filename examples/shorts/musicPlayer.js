@@ -64,7 +64,7 @@ function gameInit()
         // control music seek position
         const wasPlaying = musicInstance?.isPlaying();
         if (!musicInstance)
-            musicInstance = musicSound.playMusic(musicVolume, 1, 1);
+            musicInstance = musicSound.playMusic(musicVolume, true, true);
         progressBar.value = min(progressBar.value, .999); // prevent wrap
         const seekTime = progressBar.value * musicSound.getDuration();
         musicInstance.start(seekTime);
@@ -88,7 +88,7 @@ function gameInit()
                 
             // create new sound from dropped file
             const fileURL = URL.createObjectURL(file);
-            musicSound = new Sound(fileURL, musicVolume);
+            musicSound = new Sound(fileURL);
             dropZoneText.text = file.name;
             
             // reset UI

@@ -358,7 +358,7 @@ SoundInstance.getSource()         // Get AudioBufferSourceNode
 
 // ZzFXM - Tiny music playing system
 ZzFXMusic(zzfxMusic)                                 // Create a zzfx music object
-ZzFXMusic.playMusic(volume=1, loop=true)             // Play the music
+ZzFXMusic.playMusic(volume=1, loop=true, paused=false) // Play the music, it is a Sound so play and playLoop work too
 
 // Audio functions
 speak(text, volume=1, rate=1, pitch=1, language='')  // Speak text line

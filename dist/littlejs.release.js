@@ -10657,7 +10657,7 @@ class Light extends EngineObject
  * @memberof ZzFXM
  * @example
  * // create some music
- * const music_example = new Music(
+ * const music_example = new ZzFXMusic(
  * [
  *     [                         // instruments
  *       [,0,400]                // simple note
@@ -10678,8 +10678,8 @@ class Light extends EngineObject
  *     90            // BPM
  * ]);
  * 
- * // play the music
- * music_example.play();
+ * // play the music on a loop
+ * music_example.playMusic();
  */
 class ZzFXMusic extends Sound
 {
@@ -10695,14 +10695,6 @@ class ZzFXMusic extends Sound
         super.sampleChannels = zzfxM(...zzfxMusic); // the setter, without declaring a field that hides it in the typings
         this.sampleRate = audioDefaultSampleRate;
     }
-
-    /** Play the music that loops by default
-     *  @param {number}  [volume] - Volume to play the music at
-     *  @param {boolean} [loop] - Should the music loop?
-     *  @return {SoundInstance} - The sound instance
-     */
-    playMusic(volume=1, loop=true)
-    { return super.play(undefined, volume, 1, 0, loop); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

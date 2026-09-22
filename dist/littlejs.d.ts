@@ -3920,7 +3920,7 @@ declare module "littlejsengine" {
      * @memberof ZzFXM
      * @example
      * // create some music
-     * const music_example = new Music(
+     * const music_example = new ZzFXMusic(
      * [
      *     [                         // instruments
      *       [,0,400]                // simple note
@@ -3941,20 +3941,14 @@ declare module "littlejsengine" {
      *     90            // BPM
      * ]);
      *
-     * // play the music
-     * music_example.play();
+     * // play the music on a loop
+     * music_example.playMusic();
      */
     export class ZzFXMusic extends Sound {
         /** Create a music object and cache the zzfx music samples for later use
          *  @param {[Array, Array, Array, number]} zzfxMusic - Array of zzfx music parameters
          */
         constructor(zzfxMusic: [any[], any[], any[], number]);
-        /** Play the music that loops by default
-         *  @param {number}  [volume] - Volume to play the music at
-         *  @param {boolean} [loop] - Should the music loop?
-         *  @return {SoundInstance} - The sound instance
-         */
-        playMusic(volume?: number, loop?: boolean): SoundInstance;
     }
     /** Generate samples for a ZzFM song with given parameters
      *  @param {Array} instruments - Array of ZzFX sound parameters
