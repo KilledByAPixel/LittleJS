@@ -17713,7 +17713,8 @@ class Render3DPlugin
         this.shadows = false;
         /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
         this.shadowMapSize = 1024;
-        /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper */
+        /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper; it is a square
+         *  facing the light, so it turns as the light does, and about 1.5 times an area's width covers it from any angle */
         this.shadowRange = 40;
         /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera
          *  @type {Vector3|undefined} */

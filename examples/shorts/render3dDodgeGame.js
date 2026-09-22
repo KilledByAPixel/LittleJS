@@ -99,6 +99,8 @@ function gameInit()
     render3D.ambientColor = hsl(.6,.1,.4);
     render3D.lightDirection = vec3(.4,-1,.3);
     render3D.shadows = true;
+    render3D.shadowCenter = vec3(); // pinned over the whole arena
+    render3D.shadowRange = arenaSize*1.5; // it turns with the light
     render3D.gravity.y = -.01;
 
     // make checkered ground

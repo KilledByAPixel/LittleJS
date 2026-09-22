@@ -152,7 +152,8 @@ function gameInit()
     render3D.lightDirection = vec3(.4,-1,.3);
     render3D.ambientColor = hsl(.6,.1,.5);
     render3D.shadows = true;
-    render3D.shadowRange = 45;
+    render3D.shadowRange = 90;
+    render3D.shadowMapSize = 2048; // twice the range, so twice the pixels
 
     // hills from noise, flattened where the road runs
     terrain = buildTerrain();

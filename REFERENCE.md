@@ -926,6 +926,7 @@ light.directional = true          // shine from far away along the light's forwa
 render3D.shadows = true // off by default and free when off, soft shadows (drawSoftShadow) still work alongside
 render3D.shadowMapSize = 1024         // pixels across the shadow map, rebuilt when it changes
 render3D.shadowRange = 40             // world size the map covers around shadowCenter, smaller is sharper
+                                      // it is a square facing the light, so ~1.5x an area's width covers it
 render3D.shadowCenter = undefined // Vector3 center of the shadowed area, read each frame; undefined follows the camera
 render3D.shadowBias = .003 // raise if lit surfaces get speckled with their own shadow, lower if shadows float away
                            // from their casters
