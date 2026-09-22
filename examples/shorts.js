@@ -85,7 +85,7 @@ const exampleList =
     new ExampleInfo('3D Height Map', 'render3dHeightMap.js', 'Terrain from height and color images', false, 'terrain, heightmap, raycast'),
     new ExampleInfo('3D Collision', 'render3dCollision.js', 'Solid objects, bouncing and picking', false, 'solid, sphere, box, cylinder, picking'),
     new ExampleInfo('3D First Person', 'render3dFirstPerson.js', 'Walk a maze with mouse look and WASD', false, 'first person, camera, maze'),
-    new ExampleInfo('3D Lights', 'render3dLights.js', 'Colored point lights and a directional fill', false, 'light, point light, Light3D'),
+    new ExampleInfo('3D Lights', 'render3dLights.js', 'Colored point lights and a directional fill', false, 'light, point light, Light3D, DirectionalLight3D'),
     new ExampleInfo('3D Particles', 'render3dParticles.js', 'Fire, smoke, sparks and a fountain', false, 'particles, emitter, additive'),
     new ExampleInfo('3D Trails', 'render3dTrails.js', 'Trails behind comets and a rippling flag', false, 'trail, ribbon, flag, deform'),
     new ExampleInfo('3D Drawing', 'render3dDraw.js', 'Immediate mode, drawn fresh each frame', false, 'immediate, draw, shadow'),

@@ -20711,9 +20711,7 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
- * - A point light by default: it lights what is near it and fades out by its radius
- * - Set directional to shine from far away instead, from its position toward the origin like a three.js
- *   DirectionalLight: only the direction to it counts, so moving it or its parent swings the light around
+ * - A point light: it lights what is near it and fades out by its radius, DirectionalLight3D shines from far away
  * - Only the sun, render3D.sunDirection, casts shadows and makes highlights, these light without either
  * - Only the 8 lights nearest the camera are used each frame
  * - radius is where the light fades out, and it fades fast, so a small radius wants a higher intensity
@@ -20725,14 +20723,12 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
  * @memberof Render3D
  * @example
  * const torch = new Light3D(vec3(0, 3, 0), 10, hsl(.1, 1, .65));
- * const fill = new Light3D(vec3(-1, 1, 1), 1, hsl(.6, .5, .3)); // from the back left and above
- * fill.directional = true;
  */
 class Light3D extends EngineObject3D
 {
-    /** Create a point light, set directional to make it shine from far away instead
-     *  @param {Vector3} [pos3D] - Where it is, or for a directional light where it shines from, toward the origin
-     *  @param {number} [radius] - Distance where the light fades to nothing, ignored when directional
+    /** Create a point light
+     *  @param {Vector3} [pos3D] - Where it is
+     *  @param {number} [radius] - Distance where the light fades to nothing
      *  @param {Color} [color] - Light color, its alpha fades it
      *  @param {number} [intensity] - Brightness, multiplies the color, above 1 is brighter than white */
     constructor(pos3D=vec3(), radius=5, color=WHITE, intensity=1)
@@ -20745,13 +20741,38 @@ class Light3D extends EngineObject3D
         this.radius = radius;
         /** @property {number} - Brightness, multiplies the color, above 1 is brighter than white */
         this.intensity = intensity;
-        /** @property {boolean} - Shine from far away, from its position toward the origin, instead of out from its position
-         *  with a falloff; parent it to a sun in the sky and the light follows the sun */
+        /** @property {boolean} - Shine from far away, from its position toward the origin, instead of out from its
+         *  position with a falloff; DirectionalLight3D sets it */
         this.directional = false;
     }
 
     /** Lights draw nothing */
     render3D() {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * DirectionalLight3D - A Light3D that shines from far away with no falloff, like sunlight
+ * - It shines from its position toward the origin, like a three.js DirectionalLight: only the direction to it
+ *   counts, so moving it or its parent swings the light around; parent it to a sun in the sky and it follows
+ * - It cannot sit on the origin, since that leaves no direction
+ * - Like every Light3D it casts no shadow and makes no highlight, only the sun, render3D.sunDirection, does
+ * @extends Light3D
+ * @memberof Render3D
+ * @example
+ * const fill = new DirectionalLight3D(vec3(-1, 1, 1), hsl(.6, .5, .3)); // from the back left and above
+ */
+class DirectionalLight3D extends Light3D
+{
+    /** Create a directional light
+     *  @param {Vector3} [pos3D] - Where it shines from, toward the origin
+     *  @param {Color} [color] - Light color, its alpha fades it
+     *  @param {number} [intensity] - Brightness, multiplies the color, above 1 is brighter than white */
+    constructor(pos3D=vec3(0, 1, 0), color=WHITE, intensity=1)
+    {
+        super(pos3D, 0, color, intensity);
+        this.directional = true;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

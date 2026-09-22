@@ -139,6 +139,7 @@ export
     buildText3D,
     HeightMap,
     Light3D,
+    DirectionalLight3D,
     CameraControl3D,
     FirstPersonCamera3D,
     ParticleEmitter3D,

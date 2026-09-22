@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, FirstPersonCamera3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale, setCameraScale } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, FirstPersonCamera3D, EngineObject3D, EngineObject, engineObjects, Light3D, DirectionalLight3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale, setCameraScale } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -2118,11 +2118,14 @@ test('texture filtering settings have their defaults', () =>
     assert.equal(render3D.anisotropy, 4);
 });
 
-test('a Light3D is a point light until directional is set, then it shines from where it is, parent included', () =>
+test('a Light3D is a point light, a DirectionalLight3D shines from where it is, parent included', () =>
 {
-    const light = new Light3D(vec3(0, 5, 0), 4, RED);
-    assert.equal(light.directional, false);
-    light.directional = true; // from straight above, toward the origin
+    assert.equal(new Light3D(vec3(0, 5, 0), 4, RED).directional, false);
+    const light = new DirectionalLight3D(vec3(0, 5, 0), RED, 2); // from straight above, toward the origin
+    assert.ok(light instanceof Light3D);
+    assert.ok(light.directional);
+    assert.equal(light.intensity, 2);
+    assert.equal(light.color.rgbaInt(), RED.rgbaInt());
     nearVec(light.getWorldPos3D().normalize(), 0, 1, 0);
     const sun = new EngineObject3D(vec3(10, 0, 0));
     sun.addChild(light); // parented to a sun in the sky, the light comes from where the sun is
@@ -2275,8 +2278,7 @@ test('a point light with no radius is off, only a directional light carries the 
     engineObjects.length = 0;
     const off = new Light3D(vec3(), 5, RED);
     off.radius = 0; // the other off switch, alpha 0 is the first
-    const sun = new Light3D(vec3(), 5, WHITE);
-    sun.directional = true;
+    const sun = new DirectionalLight3D(vec3(0, 1, 0), WHITE);
     render3D.camera.pos = vec3(0, 0, 10); render3D.updateMatrices(1);
     assert.equal(off.directional, false);
     assert.ok(sun.directional);

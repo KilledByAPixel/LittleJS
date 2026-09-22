@@ -135,8 +135,7 @@ function gameInit()
     render3D.smoothShading = true;
 
     // add cool directional light opposite from the sun
-    const fill = new Light3D(vec3(0,.3,-1), 1, hsl(.55,.4,.3));
-    fill.directional = true;
+    new DirectionalLight3D(vec3(0,.3,-1), hsl(.55,.4,.3));
 
     // an island of noise, higher in the middle and sinking at the edges
     const samples = 65, heights = [], colors = [];

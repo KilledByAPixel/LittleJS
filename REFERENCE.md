@@ -926,8 +926,9 @@ render3D.gravity = vec3(0, -.01, 0) // e.g., vec3() by default so nothing falls;
 new Light3D(pos3D, radius, color, intensity=1) // point light, an EngineObject3D; it drops off fast, so a small
                                   // radius wants an intensity above 1; an alpha, intensity or radius of 0 is off
 light.intensity = 2               // brightness, multiplies the color, above 1 is brighter than white
-light.directional = true          // shine from far away, from its position toward the origin, with no falloff,
-                                  // like a three.js DirectionalLight; moving it or its parent swings the light
+new DirectionalLight3D(pos3D, color, intensity=1) // a Light3D that shines from far away with no falloff, from its
+                                  // position toward the origin like a three.js DirectionalLight; moving it or
+                                  // its parent swings the light, so parent it to a sun mesh and it follows
 // 8 lights reach the shader each frame: every directional light first, then the point lights nearest the camera;
 // a light switched off by its alpha, intensity or radius is left out so it cannot take a slot from one that is on;
 // none of them cast shadows or make highlights, only the sun does
@@ -1220,7 +1221,7 @@ trail.clear()                                 // forget the trail, for when the 
   - camera.fov is in radians, a three.js PerspectiveCamera fov is in degrees
   - A plane lies in XZ facing +Y, a three.js PlaneGeometry stands in XY facing +Z
   - Directional lights point toward where their light comes from, like three.js: render3D.sunDirection, and a
-    directional Light3D shines from its position toward the origin
+    DirectionalLight3D shines from its position toward the origin
   - Colors are plain 0 to 1 values with no color management, and a point light fades out by a radius, not by
     physical intensity units
 
@@ -1238,8 +1239,8 @@ material.side = THREE.DoubleSide          // mesh.doubleSided = true
 material.emissiveIntensity                // obj.emissive
 material.transparent, blending            // obj.transparent, obj.additive
 new THREE.AmbientLight(color)             // render3D.ambientColor
-new THREE.DirectionalLight(color)         // a directional Light3D, it shines from its position the same way; or
-                                          // render3D.sunDirection and sunColor, the one light that casts shadows
+new THREE.DirectionalLight(color)         // new DirectionalLight3D(pos3D, color), it shines from its position the
+                                          // same way; or render3D.sunDirection and sunColor, the one that shadows
 new THREE.PointLight(color, i, distance)  // new Light3D(pos3D, radius, color, intensity)
 light.castShadow, light.shadow.camera     // render3D.shadows, shadowRange and shadowCenter
 scene.fog = new THREE.Fog(c, near, far)   // render3D.setFog(near, far, c)
