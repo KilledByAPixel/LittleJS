@@ -232,10 +232,10 @@ class CanvasLayer extends EngineObject
         ASSERT(isVector2(canvasSize), 'canvasSize must be a Vector2');
         super(pos, size, undefined, angle, WHITE, renderOrder);
 
-        /** @property {HTMLCanvasElement} - The canvas used by this layer */
-        this.canvas = headlessMode ? undefined : new OffscreenCanvas(canvasSize.x, canvasSize.y);
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
-        this.context = this.canvas?.getContext('2d');
+        this.context = headlessMode ? undefined : createCanvasContext(canvasSize.x, canvasSize.y);
+        /** @property {OffscreenCanvas} - The canvas used by this layer */
+        this.canvas = this.context?.canvas;
         /** @property {TextureInfo} - Texture info to use for this object rendering */
         this.textureInfo = new TextureInfo(this.canvas, useWebGL);
 

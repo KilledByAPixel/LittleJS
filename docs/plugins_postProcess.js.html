@@ -24,6 +24,8 @@ let postProcess;
 /////////////////////////////////////////////////////////////////////////
 /**
  * Post Process Plugin - Applies a full screen shader to the rendered output
+ * - Create it after any plugin that draws, since plugins render in the order they are made
+ *   and this one shades what is on the canvas when its turn comes
  * @memberof PostProcess
  */
 class PostProcessPlugin
@@ -153,7 +155,7 @@ class PostProcessPlugin
                 // copy glCanvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
             }
-            
+
             // set uniforms and draw
             const uniformLocation = (name)=>glContext.getUniformLocation(postProcess.shader, name);
             glContext.uniform1i(uniformLocation('iChannel0'), 0);
@@ -183,28 +185,43 @@ class PostProcessPlugin
  * - Pass it to PostProcessPlugin, or edit the string to build an effect on top of it
  * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
  * @param {number} [strength] - How much glow to add
- * @param {number} [size] - How far the glow spreads in pixels
+ * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes
  * @return {string}
  * @memberof PostProcess
  */
 function postProcessBloomShader(threshold=.6, strength=1, size=6)
 {
     ASSERT(isNumber(threshold) &amp;&amp; isNumber(strength) &amp;&amp; isNumber(size), 'bloom settings must be numbers');
-    // two rings of samples around each pixel, the outer one wider and dimmer
+    ASSERT(size > 0, 'bloom size must be above zero');
+    ASSERT(size &lt;= 32, 'a bloom this wide takes a sample every few pixels of every ring, which is hundreds of samples a pixel', size);
+
+    // Taps on three rings over a disc of the given size, one every three pixels or so of each ring
+    // so there is no gap wide enough to show. The count follows the ring all the way out: hold it
+    // still and a wider glow only spreads the same taps further apart, until they show up as the
+    // ring of evenly spaced copies a single ring of eight leaves around anything bright.
+    // Each ring has its own count, odd and unequal, and its own turn off the last, so the little
+    // the taps do miss comes out as fine ripple instead of a shape of its own.
+    const rings = 3;
+    let code = '', taps = 0;
+    for (let j = 0; j &lt; rings; ++j)
+    {
+        const radius = ((j + .5) / rings) ** .5 * size;   // equal area per ring
+        const count = max(5 + 2 * j, round(2 * radius)) | 1;
+        taps += count;
+        code += `
+        for (int k = 0; k &lt; ${count}; ++k)
+        {
+            float a = float(k) * ${(2 * PI / count).toFixed(7)}${j ? ' + ' + (j * 2.3999632).toFixed(7) : ''};
+            glow += max(vec3(0), texture(iChannel0, uv + vec2(cos(a), sin(a)) * ${radius.toFixed(4)} / iResolution.xy).rgb - ${threshold.toFixed(4)});
+        }`;
+    }
     return `
     void mainImage(out vec4 color, vec2 pixel)
     {
         vec2 uv = pixel / iResolution.xy;
         color = texture(iChannel0, uv);
-        vec3 glow = vec3(0);
-        for (int i = 0; i &lt; 8; ++i)
-        {
-            float a = float(i) * 3.14159 / 4.;
-            vec2 d = vec2(cos(a), sin(a)) / iResolution.xy;
-            glow += max(vec3(0), texture(iChannel0, uv + d * ${size.toFixed(3)}).rgb - ${threshold.toFixed(3)});
-            glow += max(vec3(0), texture(iChannel0, uv + d * ${(size / 2).toFixed(3)}).rgb - ${threshold.toFixed(3)});
-        }
-        color.rgb += glow * ${(strength / 16).toFixed(5)};
+        vec3 glow = vec3(0);${code}
+        color.rgb += glow * ${(strength / taps).toFixed(6)};
     }`;
 }
 

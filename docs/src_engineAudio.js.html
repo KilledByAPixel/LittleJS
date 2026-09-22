@@ -44,6 +44,25 @@ function audioInit()
     audioMasterGain = audioContext.createGain();
     audioMasterGain.connect(audioContext.destination);
     audioMasterGain.gain.value = soundVolume; // set starting value
+    document.addEventListener('visibilitychange', audioVisibilityChange);
+}
+
+// a hidden page stops the game, so its sound stops too, and the audio clock with it so every sound picks up
+// exactly where it was; only a suspend made here is undone, not one the browser holds until the first input
+let audioSuspendedWhenHidden = false;
+function audioVisibilityChange()
+{
+    if (document.hidden)
+    {
+        if (!soundPauseWhenHidden || audioContext.state != 'running') return;
+        audioSuspendedWhenHidden = true;
+        audioContext.suspend();
+    }
+    else if (audioSuspendedWhenHidden)
+    {
+        audioSuspendedWhenHidden = false;
+        audioContext.resume();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -239,6 +258,16 @@ class Sound
         return instance;
     }
     
+    /** Play the sound on a loop, the same as play with loop on; stop or change it through the SoundInstance returned
+     *  @param {Vector2} [pos] - World space position to play the sound if any
+     *  @param {number}  [volume] - How much to scale volume by
+     *  @param {number}  [pitch] - How much to scale pitch by
+     *  @param {number}  [randomnessScale] - How much to scale pitch randomness
+     *  @param {boolean} [paused] - Should the sound start paused
+     *  @return {SoundInstance} - The sound instance, or undefined if sound is disabled, not loaded, or running in headless mode */
+    playLoop(pos, volume=1, pitch=1, randomnessScale=1, paused=false)
+    { return this.play(pos, volume, pitch, randomnessScale, true, paused); }
+
     /** Play a music track that loops by default
      *  @param {number} [volume] - Volume to play the music at
      *  @param {boolean} [loop] - Should the music loop?
@@ -390,6 +419,20 @@ class SoundInstance
         this.volume = volume;
         if (this.gainNode)
             this.gainNode.gain.value = volume;
+    }
+
+    /** Set the playback rate of this sound instance, its speed and pitch, while it plays
+     *  - A looping sound can follow something smoothly this way, like an engine with the speed
+     *  @param {number} rate - 1 is normal, 2 is twice as fast and an octave up */
+    setRate(rate)
+    {
+        ASSERT(rate >= 0, 'Sound rate must be positive or zero');
+        // keep the place in the sound, only the speed changes from here, so the current time stays true
+        if (this.isPlaying() &amp;&amp; rate)
+            this.startTime = audioContext.currentTime - this.getCurrentTime() * this.rate / rate;
+        this.rate = rate;
+        if (this.source)
+            this.source.playbackRate.value = rate;
     }
 
     /** Stop this sound instance and reset position to the start */

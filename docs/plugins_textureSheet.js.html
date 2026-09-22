@@ -50,10 +50,10 @@ class TextureSheet
 
         /** @property {number} - Width and height of the sheet in pixels */
         this.size = size;
-        /** @property {OffscreenCanvas} - Canvas holding the packed images */
-        this.canvas = headlessMode ? undefined : new OffscreenCanvas(size, size);
         /** @property {OffscreenCanvasRenderingContext2D} - 2d context for the canvas */
-        this.context = this.canvas?.getContext('2d');
+        this.context = headlessMode ? undefined : createCanvasContext(size);
+        /** @property {OffscreenCanvas} - Canvas holding the packed images */
+        this.canvas = this.context?.canvas;
         /** @property {TextureInfo} - The texture info for this sheet */
         this.textureInfo = new TextureInfo(this.canvas);
         /** @property {Vector2} - Where the next image will be packed */

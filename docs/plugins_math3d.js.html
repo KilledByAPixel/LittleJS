@@ -52,8 +52,23 @@ function randVector3(length=1, coneAngle=PI)
 }
 
 /**
+ * Returns a random Vector3 inside a sphere, spread evenly through its volume, the 3D twin of randInCircle
+ * @param {number} [radius]
+ * @param {number} [minRadius] - Leave a hollow middle this big
+ * @return {Vector3}
+ * @memberof Math3D
+ */
+function randInSphere(radius=1, minRadius=0)
+{
+    // the volume inside a radius grows with its cube, so that is what has to come out even
+    if (radius &lt;= 0) return new Vector3;
+    const ratio = clamp(minRadius / radius);
+    return randVector3(radius * rand(ratio**3, 1) ** (1/3));
+}
+
+/**
  * 3D Vector object, right handed with Y up
- * - Methods return new vectors except set
+ * - Methods return new vectors except set and setFrom
  * @memberof Math3D
  * @example
  * const a = vec3(1, 2, 3);
@@ -354,6 +369,7 @@ class Matrix4
      *  @return {Matrix4} */
     static perspective(fov, aspect, near, far)
     {
+        ASSERT(near > 0 &amp;&amp; far > near, 'a perspective projection needs 0 &lt; near &lt; far, or nothing is visible', near, far);
         const f = 1 / tan(fov/2);
         const r = new Matrix4;
         const m = r.m;
@@ -372,10 +388,13 @@ class Matrix4
      *  @param {number} bottom - Edge of the visible box
      *  @param {number} top - Edge of the visible box
      *  @param {number} near - Closest visible distance
-     *  @param {number} far - Furthest visible distance
+     *  @param {number} far - Furthest visible distance, Infinity is not allowed here
      *  @return {Matrix4} */
     static orthographic(left, right, bottom, top, near, far)
     {
+        // an infinite far plane has no orthographic form: every depth would land on the near plane,
+        // and the formula below works out to NaN, which quietly clips the whole scene away
+        ASSERT(far > near &amp;&amp; far != Infinity, 'an orthographic projection needs a real far plane past near, Infinity is perspective only', near, far);
         const r = new Matrix4;
         const m = r.m;
         m[0]  = 2 / (right - left);
@@ -674,6 +693,28 @@ function collideSphereBox(pos, radius, boxPos, boxSize)
     // center is inside the box, push out along the axis of least penetration
     const offset = pos.subtract(boxPos);
     return pushOutAxis3D(offset, h.x - abs(offset.x), h.y - abs(offset.y), h.z - abs(offset.z), radius);
+}
+
+/**
+ * Returns the vector to move a sphere back inside an axis aligned box, or undefined when it is all inside
+ * - The inside out twin of collideSphereBox, for keeping things in a room or an arena
+ * - A sphere too big for the box on some axis is held at the middle of it on that axis
+ * @param {Vector3} pos - Sphere center
+ * @param {number} radius
+ * @param {Vector3} boxPos
+ * @param {Vector3} boxSize - Full size of the box
+ * @return {Vector3|undefined}
+ * @memberof Math3D
+ */
+function collideSphereInBox(pos, radius, boxPos, boxSize)
+{
+    // the box shrunk by the radius is everywhere the center can be, so clamp the center into it
+    const x = max(0, boxSize.x/2 - radius), y = max(0, boxSize.y/2 - radius), z = max(0, boxSize.z/2 - radius);
+    const push = vec3(
+        clamp(pos.x, boxPos.x - x, boxPos.x + x) - pos.x,
+        clamp(pos.y, boxPos.y - y, boxPos.y + y) - pos.y,
+        clamp(pos.z, boxPos.z - z, boxPos.z + z) - pos.z);
+    return push.lengthSquared() ? push : undefined;
 }
 
 // the axis with the smallest penetration, pointing the way d does, with extra distance added

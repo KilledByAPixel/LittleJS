@@ -137,6 +137,19 @@ async function fetchJSON(url)
 function saveText(text, filename='text', type='text/plain')
 { saveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
 
+/** Create an offscreen canvas to draw into, and return its 2D context
+ *  - The canvas is context.canvas, which is what TextureInfo and the like take
+ *  @param {number} width - In pixels
+ *  @param {number} [height] - In pixels, defaults to the width for a square
+ *  @param {boolean} [willReadFrequently] - Keep it in software, faster when getImageData is called on it often
+ *  @return {OffscreenCanvasRenderingContext2D}
+ *  @memberof Utilities */
+function createCanvasContext(width, height=width, willReadFrequently=false)
+{
+    ASSERT(isNumber(width) &amp;&amp; isNumber(height), 'canvas width and height must be numbers', width, height);
+    return new OffscreenCanvas(width, height).getContext('2d', {willReadFrequently});
+}
+
 /** Save a canvas to disk
  *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
  *  @param {string} [filename]

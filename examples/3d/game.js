@@ -50,8 +50,7 @@ class Player extends EngineObject3D
         this.pos3D.x = clamp(this.pos3D.x, -limit, limit);
         this.pos3D.z = clamp(this.pos3D.z, -limit, limit);
 
-        // space jumps when on the ground, or was a moment ago,
-        // so a bump over a hill does not eat the jump
+        // space jumps when on the ground recently enough
         const ground = terrain.getHeight(this.pos3D) + 1;
         if (this.pos3D.y < ground + .1)
             this.groundTimer.set(.1);
