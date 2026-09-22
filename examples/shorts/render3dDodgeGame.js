@@ -97,10 +97,9 @@ function gameInit()
     render3D.setSky(hsl(.6,.6,.5), hsl(.6,.4,.8), hsl(.1,.3,.4));
     render3D.setFog(30, 80);
     render3D.ambientColor = hsl(.6,.1,.3);
-    render3D.lightDirection = vec3(.4,-1,.3);
     render3D.shadows = true;
-    render3D.shadowCenter = vec3(); // pinned over the whole arena
-    render3D.shadowRange = arenaSize*1.5; // it turns with the light
+    render3D.shadowCenter = vec3();
+    render3D.shadowRange = arenaSize*1.5;
     render3D.gravity.y = -.01;
 
     // make checkered ground
@@ -141,5 +140,5 @@ function gameUpdatePost()
 {
     // camera follows the player
     const followPos = player.pos3D.add(vec3(0,1,0));
-    render3D.camera.follow(followPos, vec3(0,9,16), .1);
+    render3D.camera.follow(followPos, vec3(0,9,16));
 }

@@ -116,7 +116,7 @@ function gameInit()
 {
     new Render3DPlugin;
     canvasClearColor = hsl(.3,.2,.4);
-    render3D.lightDirection = vec3(.4,-1,.3);
+    render3D.lightDirection = vec3(.5,-1,-.5);
     render3D.ambientColor = hsl(.6,.3,.4);
     render3D.shadows = true;
     render3D.shadowRange = levelSize + 4;

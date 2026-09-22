@@ -102,7 +102,6 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky(hsl(.6,.6,.5), hsl(.6,.7,.8), hsl(.3,.1,.5));
     render3D.setFog(45, 140);
-    render3D.lightDirection = vec3(.4,-1,.3);
     render3D.ambientColor = hsl(.6,.1,.5);
     render3D.shadows = true;
     render3D.shadowRange = 150;
