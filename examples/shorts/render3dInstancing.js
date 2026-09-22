@@ -3,9 +3,10 @@ const cubeCount = 5000;
 
 class Cube extends EngineObject3D
 {
-    constructor(pos, mesh)
+    constructor(pos)
     {
-        super(pos, mesh);
+        super(pos, render3D.boxMesh);
+        this.scale3D = vec3(.6);
         this.color = hsl(rand(),.7,.6);
         this.angleVelocity3D = randVector3(.02);
     }
@@ -19,10 +20,9 @@ function gameInit()
     render3D.ambientColor = hsl(.6,.2,.3);
     new CameraControl3D(vec3(), 40, .3, .002);
 
-    // cloud of cubes sharing one mesh
-    const cube = buildBox(.6);
+    // cloud of cubes, all sharing render3D.boxMesh
     for (let i = cubeCount; i--;)
-        new Cube(randVector3(rand(4, 30)), cube);
+        new Cube(randVector3(rand(4, 30)));
 }
 
 function gameUpdate()

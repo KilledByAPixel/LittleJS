@@ -6413,6 +6413,11 @@ declare module "littlejsengine" {
         pixelated: boolean;
         /** @property {number} - Anisotropic filtering for textures seen at an angle, 1 to 16, 1 is off; needs mipmaps */
         anisotropy: number;
+        /** @property {Mesh} - A box of size 1 that drawBox uses, for any object that is a box; set the object's scale3D
+         *  and color instead of editing the mesh, which would change every box that uses it */
+        boxMesh: Mesh;
+        /** @property {Mesh} - A smooth sphere of diameter 1 that drawSphere uses, shared the same way as boxMesh */
+        sphereMesh: Mesh;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
         isRendering: boolean;
         /** @property {boolean} - True while the shadow map is being drawn, draws go to the depth only shader */
@@ -6450,8 +6455,6 @@ declare module "littlejsengine" {
         uniformValues: {};
         shadowMapDrawn: boolean;
         passIsDefault: boolean;
-        boxMesh: any;
-        sphereMesh: any;
         lightPositions: Float32Array;
         lightColors: Float32Array;
         streamBuffer: any;

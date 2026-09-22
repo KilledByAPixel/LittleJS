@@ -1043,6 +1043,9 @@ obj.render3D() // override for custom drawing, the draw state is already set fro
 // into one draw per texture and state
 render3D.drawBox(pos, size, color, rotation)              // size is a vec3 or a number, untextured
 render3D.drawSphere(pos, size, color)                     // size is the diameter, untextured
+render3D.boxMesh render3D.sphereMesh                      // the size 1 meshes those use, for any box or sphere
+                                                          // object so they all draw in one batch; set scale3D and
+                                                          // color on the object, editing the mesh changes them all
 render3D.drawMesh(mesh, matrix, tileInfo, color) // any mesh, batched with its other uses; tileInfo can be a TextureInfo
                                                  // for the whole texture, uvs past 1 repeat when it wraps
 render3D.drawBillboard(pos, size, tileInfo, color, angle, upright) // camera facing quad, unlit, size is a Vector2;

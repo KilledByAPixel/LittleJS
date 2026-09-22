@@ -5,7 +5,7 @@ class Ball extends EngineObject3D
 {
     constructor()
     {
-        super(vec3(), buildSphere());
+        super(vec3(), render3D.sphereMesh);
         this.color = hsl(0,.8,.5);
         this.softShadow = 2;
     }

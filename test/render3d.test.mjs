@@ -1480,11 +1480,24 @@ test('the stage loop sets the draw state from each object, so render3D overrides
     engineObjects.length = 0;
 });
 
-test('drawBox and drawSphere build their unit meshes once, pick finds the nearest object', () =>
+test('the shared box and sphere are there from the start, and drawBox and drawSphere use them', () =>
+{
+    // size 1 each, so an object's scale3D is its size, as for any other size 1 mesh
+    const {boxMesh, sphereMesh} = render3D;
+    assert.ok(boxMesh instanceof Mesh && sphereMesh instanceof Mesh);
+    nearVec(boxMesh.getBounds().max, .5, .5, .5);
+    near(sphereMesh.getBounds().max.y, .5);
+    const box = render3D.bake(()=> render3D.drawBox(vec3(), 1));
+    const sphere = render3D.bake(()=> render3D.drawSphere(vec3(), 1));
+    assert.equal(box.points.length, boxMesh.points.length);
+    assert.equal(sphere.points.length, sphereMesh.points.length);
+    assert.equal(render3D.boxMesh, boxMesh, 'drawing does not replace them');
+});
+
+test('drawBox and drawSphere draw, pick finds the nearest object', () =>
 {
     assert.doesNotThrow(()=> render3D.drawBox(vec3(), 2, RED, vec3(0, 1, 0)));
     assert.doesNotThrow(()=> render3D.drawSphere(vec3(), 2, RED));
-    assert.ok(render3D.boxMesh instanceof Mesh && render3D.sphereMesh instanceof Mesh);
     const nearObject = new EngineObject3D(vec3(0, 0, -5), buildBox()), farObject = new EngineObject3D(vec3(0, 0, -12), buildBox());
     farObject.scale3D = vec3(2);
     const miss = new EngineObject3D(vec3(5, 0, -5), buildBox());

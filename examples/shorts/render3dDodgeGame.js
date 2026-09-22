@@ -1,7 +1,7 @@
 // dodge the tumbling boxes as long as you can
 const arenaSize = 40;
 const soundHit = new Sound([,,520,.02,,.5,,3,,50,-60,,.1]);
-let player, trail, scoreObject, boxMesh, shown, best = 0;
+let player, trail, scoreObject, shown, best = 0;
 let roundTimer = new Timer(0), spawnTimer = new Timer(1);
 
 class Player extends EngineObject3D
@@ -39,7 +39,7 @@ class Box extends EngineObject3D
 {
     constructor(pos)
     {
-        super(pos, boxMesh);
+        super(pos, render3D.boxMesh);
         this.color = hsl(rand(),.7,.5);
         this.scale3D = vec3(2); // scales the collision too
         this.mass = 1; // enable gravity
@@ -116,9 +116,6 @@ function gameInit()
     scoreObject = new EngineObject3D(vec3(0,5,-arenaSize/2));
     scoreObject.color = hsl(.15,1,.7);
     scoreObject.rotation3D.x = -.5;
-
-    // create the box mesh
-    boxMesh = buildBox();
     buildScoreText();
 }
 

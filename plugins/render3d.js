@@ -424,6 +424,13 @@ class Render3DPlugin
         /** @property {number} - Anisotropic filtering for textures seen at an angle, 1 to 16, 1 is off; needs mipmaps */
         this.anisotropy = 4;
 
+        // shared meshes, every object using one draws in the same batch
+        /** @property {Mesh} - A box of size 1 that drawBox uses, for any object that is a box; set the object's scale3D
+         *  and color instead of editing the mesh, which would change every box that uses it */
+        this.boxMesh = buildBox();
+        /** @property {Mesh} - A smooth sphere of diameter 1 that drawSphere uses, shared the same way as boxMesh */
+        this.sphereMesh = buildSphere(1, 16, 8, true);
+
         // read only
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
         this.isRendering = false;
@@ -464,7 +471,6 @@ class Render3DPlugin
         this.uniformValues = {};     // last values sent for the cached vec4 uniforms
         this.shadowMapDrawn = false; // the shadow map is drawn by the first pass of the frame
         this.passIsDefault = true;   // the running pass is the default layer, the only one shadowed
-        this.boxMesh = this.sphereMesh = undefined; // unit shapes for drawBox and drawSphere
         this.lightPositions = new Float32Array(RENDER3D_MAX_LIGHTS * 4); // Light3D uniforms, filled each pass
         this.lightColors = new Float32Array(RENDER3D_MAX_LIGHTS * 4);
 
@@ -887,7 +893,6 @@ class Render3DPlugin
      *  @param {Vector3} [rotation] - vec3(pitch, yaw, roll) */
     drawBox(pos, size=1, color=WHITE, rotation)
     {
-        this.boxMesh ||= buildBox();
         this.drawMesh(this.boxMesh, buildMatrix(pos, rotation, render3DSize3(size)), undefined, color);
     }
 
@@ -897,7 +902,6 @@ class Render3DPlugin
      *  @param {Color} [color] */
     drawSphere(pos, size=1, color=WHITE)
     {
-        this.sphereMesh ||= buildSphere(1, 16, 8, true);
         this.drawMesh(this.sphereMesh, buildMatrix(pos, undefined, vec3(size)), undefined, color);
     }
 

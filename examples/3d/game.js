@@ -15,7 +15,7 @@ setTileDefaultBleed(.5);
 const terrainSize = 90, terrainHeight = 14, orbCount = 8;
 const soundCollect = new Sound([,,500,.02,.1,.2,1,1.5,,,200,.05]);
 const soundEngine = new Sound([,0,80,.01,.03,.1,3,1.5,,,,,,.6]);
-let terrain, player, title, scoreText, orbMesh, score = 0;
+let terrain, player, title, scoreText, score = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // the player rolls over the terrain with a trail behind it
@@ -73,7 +73,8 @@ class Orb extends EngineObject3D
 {
     constructor(pos)
     {
-        super(pos, orbMesh);
+        super(pos, render3D.sphereMesh);
+        this.scale3D = vec3(1.4);
         this.color = hsl(rand(),1,.6);
         this.unlit = true; // its own bright color, which the bloom picks up
         this.angleVelocity3D = vec3(.01,.02,0);
@@ -149,7 +150,6 @@ function gameInit()
         heights.push(heightRow);
         colors.push(colorRow);
     }
-    orbMesh = buildSphere(1.4, 10, 5); // one mesh for every orb, one draw call
     terrain = new HeightMap(heights, vec2(terrainSize), terrainHeight, colors);
     new EngineObject3D(vec3(), terrain.buildMesh());
 

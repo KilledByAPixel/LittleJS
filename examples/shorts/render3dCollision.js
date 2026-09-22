@@ -5,9 +5,9 @@ let balls = [];
 
 class Ball extends EngineObject3D
 {
-    constructor(pos, mesh)
+    constructor(pos)
     {
-        super(pos, mesh);
+        super(pos, render3D.sphereMesh);
         this.color = hsl(rand(),.7,.6);
         this.radius = rand(.4,.8);
         this.scale3D = vec3(this.radius*2);
@@ -53,8 +53,8 @@ function gameInit()
     render3D.smoothShading = true;
 
     // make a solid box
-    const boxMesh = buildBox().setColor(hsl(0,.4,.5));
-    const box = new EngineObject3D(boxPos, boxMesh);
+    const box = new EngineObject3D(boxPos, render3D.boxMesh);
+    box.color = hsl(0,.4,.5);
     box.scale3D = boxSize; // scales the collision too
     box.setCollision();
 
@@ -63,11 +63,10 @@ function gameInit()
     new EngineObject3D(cylinderPos, cylinderMesh.setColor(hsl(.6,.3,.5)));
 
     // make the balls
-    const ballMesh = buildSphere();
     for (let i = 12; i--;)
     {
         const pos = vec3(rand(-6,6), rand(3,8), rand(-6,6));
-        balls.push(new Ball(pos, ballMesh));
+        balls.push(new Ball(pos));
     }
 }
 
