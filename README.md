@@ -44,16 +44,13 @@ The code is very clean and well documented with many examples to get you started
 
 ### 🧊 LittleJS 3D
 
-- Built-in 3D renderer with no dependencies that adds about 21kb gzipped, drawing into the same WebGL canvas as the 2D scene, so 3D can sit behind your sprites, in front of them, or both
-- `EngineObject3D` is an `EngineObject` with a mesh, so update, collision, children, timers and sound all work the way they do in 2D
-- Build shapes in code with box, sphere, plane, cylinder, cone, capsule, torus, lathe and loft builders, give any sprite thickness to make a block model, or load an OBJ file
-- Sunlight with real shadow maps, where cut-out art like a leafy tree casts its true outline, plus ambient light, up to 8 colored point or directional lights, specular highlights, emissive glow and distance fog
-- Height map terrain from an array or an image, with height, normal and raycast lookups for driving and walking on it
-- Instanced drawing puts thousands of copies of a mesh into one draw call
-- 3D particles, trails, ribbons, billboards and text extruded from the engine font
-- Orbit, chase and first person cameras, perspective or orthographic, with mouse picking and 3D positional sound
-- Any object can carry its own shader, in 2D or 3D, and post-processing shaders reach the 3D scene too, including a built-in bloom for glowing lights
-- The [Three.js](https://threejs.org) plugin is still fully supported as an alternative, rendering a Three.js scene behind the LittleJS canvas with `ThreeJSObject` letting LittleJS physics drive its meshes
+- Built-in 3D renderer with no dependencies, drawing into the same canvas as your 2D scene
+- `EngineObject3D` works like `EngineObject` with a mesh, so physics, children, timers and sound carry over
+- Shape builders, extruded sprites and text, height map terrain, and OBJ model loading
+- Sunlight with shadow maps, up to 8 colored lights, specular highlights, emissive glow and fog
+- Particles, trails, billboards, instanced drawing and custom shaders on any object
+- Orbit, chase and first person cameras with mouse picking and 3D positional sound
+- Optional [Three.js](https://threejs.org) plugin to render a Three.js scene with LittleJS gameplay
 
 ### 🔊 Audio
 
