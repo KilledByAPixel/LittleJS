@@ -277,7 +277,8 @@ export class Weapon extends LJS.EngineObject
                 this.recoilTimer.set(.1);
                 const direction = vec2(this.bulletSpeed*this.getMirrorSign(), 0);
                 const velocity = direction.rotate(LJS.rand(-1,1)*this.bulletSpread);
-                new Bullet(this.pos, this.parent, velocity, this.damage);
+                const shootPos = this.pos.add(this.getRight().scale(.5*this.getMirrorSign()));
+                new Bullet(shootPos, this.parent, velocity, this.damage);
 
                 // spawn shell particle
                 this.shellEmitter.emitParticle();
