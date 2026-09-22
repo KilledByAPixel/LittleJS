@@ -24,6 +24,9 @@ let audioContext = new AudioContext;
  *  @memberof Audio */
 let audioMasterGain;
 
+// nodes from setAudioMasterEffect, kept so a call made before engineInit is applied by audioInit
+let audioMasterEffectInput, audioMasterEffectOutput;
+
 /** Default sample rate used for sounds
  *  @default 44100
  *  @memberof Audio */
@@ -40,7 +43,7 @@ function audioInit()
     if (!soundEnable || headlessMode) return;
 
     audioMasterGain = audioContext.createGain();
-    audioMasterGain.connect(audioContext.destination);
+    audioMasterEffectApply();
     audioMasterGain.gain.value = soundVolume; // set starting value
     document.addEventListener('visibilitychange', audioVisibilityChange);
 }
@@ -61,6 +64,43 @@ function audioVisibilityChange()
         audioSuspendedWhenHidden = false;
         audioContext.resume();
     }
+}
+
+/** Route all sound through an effect between the master gain and the speakers
+ *  - Pass the first and last nodes of an effect chain, or one node that is both
+ *  - The output node is disconnected from everything else first, so it only feeds the speakers
+ *  - Call with no arguments to remove the effect, can be called before engineInit
+ *  @param {AudioNode} [input] - Node the master gain connects to
+ *  @param {AudioNode} [output=input] - Node that connects to the audio destination
+ *  @memberof Audio */
+function setAudioMasterEffect(input, output=input)
+{
+    ASSERT(!input || typeof input.connect === 'function', 'input must be an AudioNode');
+    ASSERT(!output || typeof output.connect === 'function', 'output must be an AudioNode');
+
+    // undo the current route, but only that route so other taps on the master gain stay
+    if (audioMasterGain)
+    {
+        audioMasterGain.disconnect(audioMasterEffectInput || audioContext.destination);
+        audioMasterEffectOutput?.disconnect(audioContext.destination);
+    }
+    audioMasterEffectInput = input;
+    audioMasterEffectOutput = output;
+    if (audioMasterGain)
+        audioMasterEffectApply();
+}
+
+// connect the master gain to the speakers, through the master effect if there is one
+function audioMasterEffectApply()
+{
+    if (audioMasterEffectInput)
+    {
+        audioMasterGain.connect(audioMasterEffectInput);
+        audioMasterEffectOutput.disconnect();
+        audioMasterEffectOutput.connect(audioContext.destination);
+    }
+    else
+        audioMasterGain.connect(audioContext.destination);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

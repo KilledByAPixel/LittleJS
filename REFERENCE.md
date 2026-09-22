@@ -377,6 +377,7 @@ soundPauseWhenHidden = true // Pause all sound while the page is hidden, the way
 // Audio globals
 audioContext            // The shared Web Audio context
 audioMasterGain         // Master gain node all sound routes through
+setAudioMasterEffect(input, output=input) // Route all sound through an effect chain, no args to remove it
 audioIsRunning()        // Is the audio context running? (requires user interaction)
 playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate, gainNode, offset=0, onended, output) // Low level sample playback
 createAudioBuffer(sampleChannels, sampleRate) // Copy arrays of samples into an audio buffer

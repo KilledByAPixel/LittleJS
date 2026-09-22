@@ -253,3 +253,15 @@ test('sounds without an output connect to the master gain', () =>
     assert.equal(instance.gainNode.connections[0], LJS.audioMasterGain);
     instance.stop();
 });
+
+test('setAudioMasterEffect before init stores the nodes without touching them', () =>
+{
+    // audioInit has not run in this process, so the master gain does not exist yet
+    assert.equal(LJS.audioMasterGain, undefined);
+    const input = audioContext.createGain();
+    const output = audioContext.createGain();
+    LJS.setAudioMasterEffect(input, output);
+    assert.deepEqual(input.connections, []);
+    assert.deepEqual(output.connections, []);
+    LJS.setAudioMasterEffect(); // clearing before init is fine too
+});

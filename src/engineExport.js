@@ -370,6 +370,7 @@ export
     // Audio
     audioContext,
     audioMasterGain,
+    setAudioMasterEffect,
     audioDefaultSampleRate,
     audioIsRunning,
     Sound,
