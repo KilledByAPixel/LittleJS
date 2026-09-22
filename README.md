@@ -60,6 +60,7 @@ The code is very clean and well documented with many examples to get you started
 - Sound and music with mp3, ogg, or wave files
 - Use [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound generator to play sounds without asset files
 - Spatial audio stereo panning
+- Audio effects plugin with filter, reverb, delay, distortion and compressor
 
 ### 🎮 Input
 

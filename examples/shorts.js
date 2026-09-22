@@ -46,6 +46,7 @@ const exampleList =
     new ExampleInfo('Debug Drawing', 'debugDraw.js', 'Debug drawing system', false, 'debug, circle, line, rectangle'),
     new ExampleInfo('--- AUDIO ---'),
     new ExampleInfo('Sound Effects', 'sound.js', 'ZzFX sound effect generator', false, 'audio, volume, ui'),
+    new ExampleInfo('Audio Effects', 'audioEffects.js', 'Filter, reverb, delay, distortion and a master compressor', false, 'audio, reverb, filter, delay, distortion, ui'),
     new ExampleInfo('Music', 'music.js', 'Load, play, pause and stop music', false, 'music, sound, audio, streaming, volume, ui'),
     new ExampleInfo('Speak', 'speak.js', 'Text-to-speech with language, pitch and rate', false, 'audio, voice, tts, ui'),
     new ExampleInfo('Video', 'videoPlayer.js', 'Play, pause and stop a video', false, 'movie, sound, audio, streaming, volume, ui'),
