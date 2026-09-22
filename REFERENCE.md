@@ -838,7 +838,7 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 - Builders and draws take full sizes (diameters) like buildBox and drawCircle; collision helpers and lights take radii
 - Textures sample through mipmaps in 3D so floors do not shimmer in the distance, crisp up close when tilesPixelated
   is on; render3D.mipmaps = false keeps each texture's own filtering, and 2D sprites always do
-- The 3D scene is on the engine's WebGL canvas, so the post processing plugin shaders it too: call postProcessBloom()
+- The 3D scene is on the engine's WebGL canvas, so the post processing plugin shades it too: call postProcessBloom()
   after new Render3DPlugin to make lights glow, see the render3dGlow demo
 - Opaque draws drop texels under half alpha, so cut out art like a fence or a leafy tree works and its shadow matches;
   see through draws blend instead, set obj.transparent for a sprite that fades
@@ -1205,6 +1205,47 @@ trail.side // Vector3 for which way the ribbon lies flat, recorded with each sam
 // the samples are world space, so width is a world width and scale3D does nothing to a trail; a Light3D's radius is
 // a world distance too, so scale3D does nothing there either
 trail.clear()                                 // forget the trail, for when the object teleports
+```
+
+### Coming from three.js
+- The same conventions: right handed, Y up, cameras and objects face -Z, column major matrices, angles in radians
+- rotation3D is vec3(pitch, yaw, roll), applied roll then pitch then yaw, which is three.js Euler order 'YXZ'
+- Traps when porting code over:
+  - Vector3 methods return a new vector; three.js add, normalize and multiplyScalar change the vector itself, so ported
+    code that relies on that quietly computes the wrong thing
+  - Builders take diameters and full sizes; three.js SphereGeometry, CylinderGeometry and TorusGeometry take radii
+  - camera.fov is in radians, a three.js PerspectiveCamera fov is in degrees
+  - A plane lies in XZ facing +Y, a three.js PlaneGeometry stands in XY facing +Z
+  - render3D.lightDirection is the way sunlight travels, a three.js DirectionalLight shines from its position
+  - Colors are plain 0 to 1 values with no color management, and a point light fades out by a radius, not by
+    physical intensity units
+
+```javascript
+// three.js                               LittleJS 3D
+scene.add(mesh)                           // new EngineObject3D(pos3D, mesh), or render3D.drawMesh each frame
+mesh.position .rotation .scale            // obj.pos3D .rotation3D .scale3D
+parent.add(child)                         // parent.addChild(child), and child.pos3D is then local
+new THREE.BoxGeometry(w, h, d)            // buildBox(vec3(w, h, d)), or render3D.boxMesh with scale3D
+new THREE.SphereGeometry(r)               // buildSphere(r*2), or render3D.sphereMesh with scale3D
+new THREE.PlaneGeometry(w, h)             // render3D.planeMesh with scale3D, lying flat
+new THREE.InstancedMesh(geometry, ...)    // nothing to do, every use of a mesh batches into one draw
+material.color, material.map              // obj.color, and a TileInfo or TextureInfo as obj.tileInfo
+material.side = THREE.DoubleSide          // mesh.doubleSided = true
+material.emissiveIntensity                // obj.emissive
+material.transparent, blending            // obj.transparent, obj.additive
+new THREE.AmbientLight(color)             // render3D.ambientColor
+new THREE.DirectionalLight(color)         // render3D.lightDirection and lightColor, or a directional Light3D
+new THREE.PointLight(color, 1, distance)  // new Light3D(pos3D, radius, color)
+light.castShadow, light.shadow.camera     // render3D.shadows, shadowRange and shadowCenter
+scene.fog = new THREE.Fog(c, near, far)   // render3D.setFog(near, far, c)
+scene.background                          // render3D.setSky(topColor, horizonColor, bottomColor)
+OrbitControls                             // new CameraControl3D(target, distance)
+PointerLockControls                       // new FirstPersonCamera3D
+new THREE.Raycaster()                     // render3D.screenToRay, pick and engineObjectsRaycast3D
+OBJLoader                                 // loadOBJ(url) or parseOBJ(text)
+EffectComposer and UnrealBloomPass        // postProcessBloom()
+renderer.render(scene, camera)            // nothing to do, the engine draws every frame and handles resizing
+geometry.dispose()                        // mesh.dispose(), and setMesh frees the mesh it replaces
 ```
 
 ## LittleJS Three.js Integration
