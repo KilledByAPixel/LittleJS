@@ -214,7 +214,7 @@ function gameInit()
 
     // spawn the player with the camera already behind it, and orbs to collect
     player = new Player;
-    render3D.camera.follow(player.pos3D.add(vec3(0,2,0)), vec3(0,10,18));
+    render3D.camera.follow(player.pos3D, vec3(0,10,18));
     for (let i = orbCount; i--;)
         new Orb(randomGroundPos());
 }
