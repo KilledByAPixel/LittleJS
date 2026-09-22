@@ -115,8 +115,7 @@ function tryMove(moveX, moveZ)
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.canvasClearColor = RED
-    //render3D.setSky(hsl(.6,.6,.5), hsl(.6,.5,.6), hsl(.1,.5,.3));
+    canvasClearColor = hsl(.3,.2,.4);
     render3D.lightDirection = vec3(.4,-1,.3);
     render3D.ambientColor = hsl(.6,.3,.35);
     render3D.shadows = true;
