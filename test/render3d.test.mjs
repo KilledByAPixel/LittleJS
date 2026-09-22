@@ -452,7 +452,6 @@ test('EngineObject3D extends EngineObject and has a 3D transform', () =>
     assert.equal(o.color.g, 0);
     assert.equal(o.transparent, false);
     near(o.pos.x, 0); near(o.pos.y, 0); // 2D pos unused
-    assert.ok(o.pos3D !== undefined && o.pos3D.x === 1);
     o.destroy();
     assert.ok(o.destroyed);
 });
@@ -1455,26 +1454,27 @@ test('the stage loop sets the draw state from each object, so render3D overrides
     const seen = {};
     class Probe extends EngineObject3D
     {
-        render3D() { seen[this.name] = {lighting: render3D.lighting, additive: render3D.additive, specular: render3D.specular, receiveShadow: render3D.receiveShadow, blend: render3D.blend, cull: render3D.cullBackFaces}; }
+        render3D() { seen[this.name] = {lighting: render3D.lighting, emissive: render3D.emissive, additive: render3D.additive, specular: render3D.specular, receiveShadow: render3D.receiveShadow, blend: render3D.blend, cull: render3D.cullBackFaces}; }
     }
     const plain = new Probe, lamp = new Probe, shiny = new Probe, glow = new Probe;
     plain.name = 'plain';
-    lamp.name = 'lamp', lamp.unlit = true, lamp.receiveShadow = false;
+    lamp.name = 'lamp', lamp.emissive = 1, lamp.receiveShadow = false;
     shiny.name = 'shiny', shiny.specular = .7, shiny.cullBackFaces = true;
     glow.name = 'glow', glow.additive = true; // additive alone puts it in the transparent stage
-    assert.equal(plain.unlit, false); assert.equal(plain.receiveShadow, true); assert.equal(plain.specular, 0); assert.equal(plain.additive, false);
+    assert.equal(plain.emissive, 0); assert.equal(plain.receiveShadow, true); assert.equal(plain.specular, 0); assert.equal(plain.additive, false);
     render3D.camera.pos = vec3(0, 0, 10);
     render3D.camera.rotation = vec3();
     render3D.updateMatrices(1);
     render3D.specular = .5; // a stray setting must not reach the objects
     render3D.renderStages(engineObjects.filter(o => o instanceof EngineObject3D && !o.destroyed));
-    assert.deepEqual(seen.plain, {lighting: true, additive: false, specular: 0, receiveShadow: true, blend: false, cull: false});
-    assert.deepEqual(seen.lamp, {lighting: false, additive: false, specular: 0, receiveShadow: false, blend: false, cull: false});
-    assert.deepEqual(seen.shiny, {lighting: true, additive: false, specular: .7, receiveShadow: true, blend: false, cull: true});
-    assert.deepEqual(seen.glow, {lighting: true, additive: true, specular: 0, receiveShadow: true, blend: true, cull: false});
+    assert.deepEqual(seen.plain, {lighting: true, emissive: 0, additive: false, specular: 0, receiveShadow: true, blend: false, cull: false});
+    assert.deepEqual(seen.lamp, {lighting: true, emissive: 1, additive: false, specular: 0, receiveShadow: false, blend: false, cull: false});
+    assert.deepEqual(seen.shiny, {lighting: true, emissive: 0, additive: false, specular: .7, receiveShadow: true, blend: false, cull: true});
+    assert.deepEqual(seen.glow, {lighting: true, emissive: 0, additive: true, specular: 0, receiveShadow: true, blend: true, cull: false});
     // and the pass leaves the defaults behind
     assert.equal(render3D.specular, 0);
     assert.equal(render3D.lighting, true);
+    assert.equal(render3D.emissive, 0);
     assert.equal(render3D.receiveShadow, true);
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;

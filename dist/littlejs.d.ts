@@ -6400,8 +6400,11 @@ declare module "littlejsengine" {
         shadowBias: number;
         /** @property {number} - How much to blur the shadow edges */
         shadowSoftness: number;
-        /** @property {boolean} - Apply lighting, when false draws plain vertex color times texture */
+        /** @property {boolean} - Apply lighting, when false draws plain vertex color times texture and casts no shadow;
+         *  off for billboards, lines, ribbons and soft discs, an object sets emissive instead */
         lighting: boolean;
+        /** @property {number} - How much a surface lights itself, set per object by its emissive */
+        emissive: number;
         /** @property {boolean} - Additive blending instead of alpha, in the transparent stage */
         additive: boolean;
         /** @property {boolean} - Test against the depth buffer, reset to true before each object and callback */
@@ -6801,11 +6804,12 @@ declare module "littlejsengine" {
         transparent: boolean;
         /** @property {boolean} - Additive blending, in the transparent stage */
         additive: boolean;
-        /** @property {boolean} - Draw with lighting off, plain vertex color times texture, for lamps and glowing things; unlit objects cast no shadow */
-        unlit: boolean;
+        /** @property {number} - How much it lights itself: 0 is lit as normal, 1 is its own color with no shading, for
+         *  lamps and glowing things, between is partly self lit, and above 1 is brighter than its color, for bloom */
+        emissive: number;
         /** @property {number} - Strength of the highlight where the directional light reflects, 0 is none and 1 adds the light's full color at its brightest; its size is fixed */
         specular: number;
-        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, additive objects never cast */
         castShadow: boolean;
         /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls around corners */
         collideAsSphere3D: boolean;
@@ -7187,7 +7191,7 @@ declare module "littlejsengine" {
      * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
      * - radius is a world distance, so scale3D does not change it
      * - An alpha or a radius of 0 switches it off, and a light that is off takes none of those slots
-     * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
+     * - Draws nothing itself, add a glow with drawSoftDisc or a small emissive mesh if it should be seen
      * @extends EngineObject3D
      * @memberof Render3D
      * @example

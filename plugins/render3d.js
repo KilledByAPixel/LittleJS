@@ -72,7 +72,7 @@ function render3DCanDraw()
 }
 
 // the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
-const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'lighting', 'receiveShadow', 'specular', 'pixelated'];
+const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated'];
 
 // a copy of the current draw state
 function render3DCaptureBatchState()
@@ -149,7 +149,10 @@ function render3DQuadAxes(center, right, up)
 function render3DSetObjectState(o)
 {
     const r = render3D;
-    r.lighting = !o?.unlit;
+    const emissive = o?.emissive || 0;
+    ASSERT(isNumber(emissive) && emissive >= 0, 'emissive must be a number, 0 or more', emissive);
+    r.lighting = true;
+    r.emissive = emissive;
     r.additive = !!o?.additive;
     r.specular = o?.specular || 0;
     r.receiveShadow = !o || o.receiveShadow;
@@ -385,8 +388,11 @@ class Render3DPlugin
         this.shadowSoftness = 1;
 
         // draw state, read at each draw
-        /** @property {boolean} - Apply lighting, when false draws plain vertex color times texture */
+        /** @property {boolean} - Apply lighting, when false draws plain vertex color times texture and casts no shadow;
+         *  off for billboards, lines, ribbons and soft discs, an object sets emissive instead */
         this.lighting = true;
+        /** @property {number} - How much a surface lights itself, set per object by its emissive */
+        this.emissive = 0;
         /** @property {boolean} - Additive blending instead of alpha, in the transparent stage */
         this.additive = false;
         /** @property {boolean} - Test against the depth buffer, reset to true before each object and callback */
@@ -1294,7 +1300,7 @@ function render3DInitGL()
     // attributes: p position, n normal, t uv, c color, at fixed slots the depth shader also uses
     // vertex uniforms: viewProj, lightViewProj; the model matrix, the normal matrix (the fixed up one for normals),
     //   the tint and the uv rect are vertex attributes, see RENDER3D_VERTEX_INPUTS
-    // fragment uniforms: lightDir (xyz, w = lighting on), lightColor (rgb, a = specular),
+    // fragment uniforms: lightDir (xyz, w = emissive, 1 or more skips the lighting), lightColor (rgb, a = specular),
     //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, tex,
     //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
     //   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive)
@@ -1328,7 +1334,8 @@ function render3DInitGL()
         'vec4 t=texture(tex,T);' +
         'if(shadowParams.w>0.&&t.a<.5)discard;' + // an opaque draw drops see through texels, as the shadow map does
         'vec4 c=C*t;' +
-        'if(lightDir.w>0.){' +
+        'float e=lightDir.w;' +
+        'if(e<1.){' +
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'float nl=dot(n,-lightDir.xyz);' +
         // shadow: compare against the light's depth map with a 3x3 blur, outside the map is lit
@@ -1354,13 +1361,13 @@ function render3DInitGL()
         'float a=directional?1.:max(0.,1.-d/L.w);' +
         'l+=extraLightColors[i].rgb*extraLightColors[i].a*a*a*max(0.,dot(n,v/max(d,1e-6)));' +
         '}' +
-        'c.rgb*=l;' +
+        'c.rgb*=l*(1.-e)+e;' + // lit, blended toward its own color by how emissive it is
         // specular: only where the light hits, skipped entirely when the strength is zero
         'if(lightColor.a>0.){' +
-        'vec3 e=normalize(cameraPos-P);' +
+        'vec3 v=normalize(cameraPos-P);' +
         'vec3 r=reflect(lightDir.xyz,n);' +
-        'c.rgb+=lightColor.rgb*pow(max(dot(r,e),0.),16.)*lightColor.a*step(0.,nl)*s;' +
-        '}}' +
+        'c.rgb+=lightColor.rgb*pow(max(dot(r,v),0.),16.)*lightColor.a*step(0.,nl)*s*(1.-e);' +
+        '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
         'if(ambientColor.a>0.){' +
         'float z=distance(cameraPos,P);' +
         'c.rgb=mix(c.rgb,shadowParams.w<0.?vec3(0):fogColor.rgb,smoothstep(fogColor.a,ambientColor.a,z));' +
@@ -1606,7 +1613,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
 
     // lights, fog and shadows are scene state read at draw time, sent only when they change
     const l = r.lightDirection, ll = l.length() || 1, lc = r.lightColor, ac = r.ambientColor, fc = r.fogColor || canvasClearColor;
-    render3DUniform4f('lightDir', l.x / ll, l.y / ll, l.z / ll, state.lighting ? 1 : 0);
+    render3DUniform4f('lightDir', l.x / ll, l.y / ll, l.z / ll, state.lighting ? state.emissive : 1);
     render3DUniform4f('lightColor', lc.r, lc.g, lc.b, state.specular);
     render3DUniform4f('ambientColor', ac.r, ac.g, ac.b, r.fogEnd);
     render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogStart);
@@ -3001,11 +3008,12 @@ class EngineObject3D extends EngineObject
         this.transparent = !mesh && !!tileInfo;
         /** @property {boolean} - Additive blending, in the transparent stage */
         this.additive = false;
-        /** @property {boolean} - Draw with lighting off, plain vertex color times texture, for lamps and glowing things; unlit objects cast no shadow */
-        this.unlit = false;
+        /** @property {number} - How much it lights itself: 0 is lit as normal, 1 is its own color with no shading, for
+         *  lamps and glowing things, between is partly self lit, and above 1 is brighter than its color, for bloom */
+        this.emissive = 0;
         /** @property {number} - Strength of the highlight where the directional light reflects, 0 is none and 1 adds the light's full color at its brightest; its size is fixed */
         this.specular = 0;
-        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, unlit and additive objects never cast */
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, additive objects never cast */
         this.castShadow = true;
         /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls around corners */
         this.collideAsSphere3D = false;
@@ -3313,7 +3321,7 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
  * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
  * - radius is a world distance, so scale3D does not change it
  * - An alpha or a radius of 0 switches it off, and a light that is off takes none of those slots
- * - Draws nothing itself, add a glow with drawSoftDisc or a small unlit mesh if it should be seen
+ * - Draws nothing itself, add a glow with drawSoftDisc or a small emissive mesh if it should be seen
  * @extends EngineObject3D
  * @memberof Render3D
  * @example

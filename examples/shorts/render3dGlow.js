@@ -5,7 +5,7 @@ class Orb extends EngineObject3D
         super(vec3(), buildSphere(1.5));
         this.color = color;
         this.orbitAngle = angle;
-        this.unlit = true; // full brightness
+        this.emissive = 1; // full brightness
         this.addChild(new Light3D(vec3(), 15, color));
     }
     update()

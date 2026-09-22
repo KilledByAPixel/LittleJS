@@ -943,7 +943,8 @@ render3D.sky = buildSky(topColor, horizonColor, bottomColor, sides, rings) // or
 
 // Draw state, read at each draw; the pass sets it from each object's flags before render3D() and resets it before each
 // callback, so set it inside those, or use the object flags below
-render3D.lighting = true              // false draws plain vertex color times texture
+render3D.lighting = true              // false draws plain vertex color times texture, as billboards and lines do
+render3D.emissive = 0                 // how much a surface lights itself, set from each object's emissive
 render3D.additive = false             // additive blending in the transparent stage
 render3D.specular = 0                 // Phong highlight strength, the shiny spot where the directional light
                                       // reflects: 1 adds the light's full color at its peak, more burns out;
@@ -1020,10 +1021,11 @@ obj.setMesh(mesh)                       // draw a different mesh and free the GP
                                         // still drawing is left alone, so shared builders are safe
 obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
 obj.additive = true                     // additive blending, implies the transparent stage
-obj.unlit = true                        // draw with lighting off, for lamps and glowing things
+obj.emissive = 1                        // how much it lights itself: 0 lit, 1 its own color for lamps and glowing
+                                        // things, between partly self lit, above 1 brighter for bloom; still casts
 obj.specular = .5                       // highlight strength, 0 is none and 1 is full, as render3D.specular
 obj.castShadow = false                  // keep it out of the shadow map; sprites and cut out textures cast their
-                                        // outline, unlit and additive objects never cast
+                                        // outline, additive objects never cast
 obj.receiveShadow = false               // draw it without the shadow map's darkening
 obj.cullBackFaces = true                // skip faces pointing away from the camera, faster for closed meshes
 obj.renderOrder                         // sorts the opaque stage; instanced meshes draw as batches, so set

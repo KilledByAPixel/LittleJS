@@ -5,7 +5,7 @@ class Lamp extends EngineObject3D
         super(vec3(), buildSphere(.4, 8, 4));
         this.color = color;
         this.orbitAngle = angle;
-        this.unlit = true; // drawn in its own color so it looks bright
+        this.emissive = 1; // drawn in its own color so it looks bright
         this.addChild(new Light3D(vec3(), 8, color)); // follows the lamp
     }
     update()

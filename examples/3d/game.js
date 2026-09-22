@@ -84,7 +84,7 @@ class Orb extends EngineObject3D
         super(pos, render3D.sphereMesh);
         this.scale3D = vec3(1.4);
         this.color = hsl(rand(),1,.6);
-        this.unlit = true; // make it appear bright
+        this.emissive = 1; // make it appear bright
         this.angleVelocity3D = vec3(.01,.02,0);
         this.addChild(new Light3D(vec3(), 12, this.color));
     }

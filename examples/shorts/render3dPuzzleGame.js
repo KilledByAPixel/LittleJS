@@ -57,7 +57,7 @@ class Goal extends GridObject
         // light up while a block is on the pad, with a burst when it lands
         const active = boxAt(this.cell.x, this.cell.y);
         const particlePos = cellPos(this.cell.x, this.cell.y, .5);
-        if (active && !this.unlit)
+        if (active && !this.active)
             new ParticleEmitter3D(
                 particlePos, .6, .1,              // pos, emitSize, emitTime
                 500, PI, undefined,               // rate, cone, tileInfo
@@ -67,9 +67,10 @@ class Goal extends GridObject
                 .1, .95, -.004,                   // speed, damping, gravity
                 .1, .5, true                      // fade, randomness, additive
             );
+        this.active = active;
         this.color = active ? litColor : padColor;
         this.light.color.a = active ? 1 : 0;
-        this.unlit = active; // full brightness while a block is on it
+        this.emissive = active ? 1 : .3 + .2*sin(time*4); // pulse while empty
     }
 }
 
