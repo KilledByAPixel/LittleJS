@@ -4,6 +4,7 @@ function gameInit()
 {
     // initialize UI system
     new UISystemPlugin;
+    uiSystem.defaultCornerRadius = 8;
     uiSystem.defaultShadowColor = BLACK;
     canvasClearColor = hsl(.7,.3,.2);
 
@@ -23,7 +24,7 @@ function gameInit()
         new Sound([,.5,,,.1,,,1.5,,,,,,,,.1]),     // pad
     ];
     const w = 200, h = 100, gap = 20;
-    const gridPos = (x, y)=> vec2(x*(w+gap), y*(h+gap)-50); // rows go down
+    const gridPos = (x, y)=> vec2(x*(w+gap), y*(h+gap)-60);
 
     // top row plays a sound through the current effect
     const icons = ['💰', '⚡', '🎹'];
@@ -45,22 +46,23 @@ function gameInit()
         effectButtons.push(button);
         button.onClick = ()=>
         {
-            // every play of these sounds now goes through the effect
+            // playing these sounds now goes through the effect
             for (const sound of sounds)
                 sound.output = effect?.input;
             for (const b of effectButtons)
-                b.color = b === button ? hsl(.55,.6,.5) : hsl(0,0,.7);
+                b.color = b === button ? hsl(.5,.8,.5) : hsl(0,0,.7);
         };
     });
     effectButtons[0].onClick();
 
     // bottom row toggles a compressor on everything
-    const compButton = new UIButton(gridPos(0, 2), vec2(w*2+gap, h), '');
+    const compButton = new UIButton(gridPos(0,2), vec2(w*2+gap, h));
     let compressorOn = false;
     compButton.onClick = ()=>
     {
         compressorOn = !compressorOn;
-        compButton.text = 'Compressor ' + (compressorOn ? 'On' : 'Off');
+        const onText = (compressorOn ? 'On' : 'Off');
+        compButton.text = 'Compressor ' + onText;
         if (compressorOn)
             setAudioMasterEffect(compressor.input, compressor.output);
         else
