@@ -40,7 +40,7 @@ function drawTransparent()
         render3D.drawBillboard(ring(i, 7, 3), vec2(1.5), tile(i%4, 16));
     }
 
-    // rainbow ribbon, ending where it starts so it forms loop
+    // rainbow ribbon, ending where it starts so it forms a loop
     const points = [], widths = [], colors = [];
     for (let i = 0; i <= 60; ++i)
     {

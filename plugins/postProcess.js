@@ -153,7 +153,7 @@ class PostProcessPlugin
                 // copy glCanvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
             }
-            
+
             // set uniforms and draw
             const uniformLocation = (name)=>glContext.getUniformLocation(postProcess.shader, name);
             glContext.uniform1i(uniformLocation('iChannel0'), 0);

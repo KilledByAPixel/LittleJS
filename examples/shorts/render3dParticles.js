@@ -36,7 +36,7 @@ function gameInit()
 
     // sparks, each one a ribbon along its last .15 seconds
     const sparks = new ParticleEmitter3D(
-        vec3(5,2,0),                      // pos
+        vec3(5,2,0),                       // pos
         0, 0,                              // emitSize, emitTime
         200, PI, tile(0,16),               // rate, cone, tileInfo
         hsl(.2,1,.8), hsl(.1,1,.7),        // colorStartA, colorStartB

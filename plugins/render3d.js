@@ -255,14 +255,14 @@ function render3DClearInstances()
 
 // the live objects drawn on one side of the 2D scene
 function render3DLayerObjects(after2D)
-{ return engineObjects.filter(o => !o.destroyed && o instanceof EngineObject3D && render3DIsAfter2D(o) === after2D); }
+{ return engineObjects.filter(o=> !o.destroyed && o instanceof EngineObject3D && render3DIsAfter2D(o) === after2D); }
 
 // the Light3D objects the shader gets this frame: directional lights light the whole scene so they come first,
 // then the point lights nearest the camera
 function render3DCollectLights()
 {
     // a light switched off by its radius or its alpha is left out, so it cannot take one of the few slots
-    const lights = engineObjects.filter(o => !o.destroyed && o instanceof Light3D &&
+    const lights = engineObjects.filter(o=> !o.destroyed && o instanceof Light3D &&
         o.color.a > 0 && (o.directional || o.radius > 0));
     if (lights.length > RENDER3D_MAX_LIGHTS)
     {
@@ -662,7 +662,7 @@ class Render3DPlugin
     drawMesh(mesh, matrix=RENDER3D_IDENTITY, tileInfo, color=WHITE)
     {
         matrix = render3DMatrix(matrix);
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo, it comes before color');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
         ASSERT(isColor(color), 'color must be a Color');
         if (this.capture)
             return void this.capture.combine(mesh, matrix, color);
@@ -1095,7 +1095,7 @@ function render3DRenderDebug()
         for (const p of render3DDebugPrimitives)
             p.draw();
     });
-    render3DDebugPrimitives = render3DDebugPrimitives.filter(p => p.timer < 0); // a Timer compares as negative until it elapses
+    render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.timer < 0); // a Timer compares as negative until it elapses
 }
 
 // record a debug draw for a time
@@ -1442,7 +1442,6 @@ function render3DUniform(name, program=render3D.shader)
     return cache[name] ??= glContext.getUniformLocation(program, name);
 }
 
-// send a vec4 uniform of the main shader only when its value changed since the last send
 // the model matrix, its normal matrix, the tint and the uv rect as constant attributes for one draw
 const render3DNormalScratch = new Float32Array(9);
 function render3DDrawAttribs(m, tint, uvRect)
@@ -1506,7 +1505,7 @@ function render3DUpdateSamplers()
         gl.deleteSampler(sampler); // the set being replaced, a lost context empties this first
     const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
     // four samplers: clamped and wrapping, each smooth or hard edged
-    r.samplers = [false, true].flatMap(pixelated => [gl.CLAMP_TO_EDGE, gl.REPEAT].map(wrap =>
+    r.samplers = [false, true].flatMap(pixelated=> [gl.CLAMP_TO_EDGE, gl.REPEAT].map(wrap=>
     {
         const sampler = gl.createSampler();
         const sharp = pixelated || tilesPixelated;
@@ -1542,6 +1541,7 @@ function render3DBindTexture(tileInfo, state=render3D)
     }
 }
 
+// send a vec4 uniform of the main shader only when its value changed since the last send
 function render3DUniform4f(name, x, y, z, w)
 {
     const values = render3D.uniformValues, last = values[name];
@@ -1626,7 +1626,7 @@ function render3DFrustumPlanes(matrix)
     {
         const p = [m[3] + sign * m[i], m[7] + sign * m[4+i], m[11] + sign * m[8+i], m[15] + sign * m[12+i]];
         const l = hypot(p[0], p[1], p[2]) || 1;
-        planes.push(p.map(v => v / l));
+        planes.push(p.map(v=> v / l));
     }
     return planes;
 }
@@ -1783,7 +1783,7 @@ function render3DRenderShadowMap()
     try
     {
         // see through objects cast only when textured, their alpha cuts the shadow out
-        const casters = render3DLayerObjects(!!r.renderAfter2D).filter(o => o.castShadow && !o.additive && (!o.transparent || o.tileInfo));
+        const casters = render3DLayerObjects(!!r.renderAfter2D).filter(o=> o.castShadow && !o.additive && (!o.transparent || o.tileInfo));
         render3DDrawObjects(casters);
         r.onRenderOpaque?.();
         r.flush();
@@ -2035,7 +2035,7 @@ class Mesh
             if (a.length)
                 a.unshift(a[0]), a.push(a[a.length - 1]);
         }
-        this.normals = this.normals.map(n => n.scale(-1));
+        this.normals = this.normals.map(n=> n.scale(-1));
         this.dirty = true;
         return this;
     }
@@ -2653,31 +2653,31 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
 
     // pixel edges in world space, y runs down the image
     const mesh = new Mesh, sx = size.x / width, sy = size.y / height, hz = depth / 2;
-    const px = x => x * sx - size.x / 2, py = y => size.y / 2 - y * sy;
+    const px = x=> x * sx - size.x / 2, py = y=> size.y / 2 - y * sy;
     const quad = (origin, right, up, normal, color)=>
         mesh.addStrip(render3DQuadAxes(origin.add(right.scale(.5)).add(up.scale(.5)), right.scale(.5), up.scale(.5)), normal, RENDER3D_QUAD_UVS, color);
     const X = vec3(1, 0, 0), Y = vec3(0, 1, 0), Z = vec3(0, 0, 1);
     for (let y = 0; y < height; ++y)
     {
         // front and back faces along each row
-        runs(width, x => solid(x, y), (a, b, c)=>
+        runs(width, x=> solid(x, y), (a, b, c)=>
         {
             const w = X.scale((b - a) * sx), h = Y.scale(sy);
             quad(vec3(px(a), py(y + 1), hz), w, h, Z, c);
             quad(vec3(px(b), py(y + 1), -hz), w.scale(-1), h, Z.scale(-1), c);
         });
         // walls facing up and down where the pixel above or below is empty
-        runs(width, x => solid(x, y - 1) ? undefined : solid(x, y), (a, b, c)=>
+        runs(width, x=> solid(x, y - 1) ? undefined : solid(x, y), (a, b, c)=>
             quad(vec3(px(a), py(y), hz), X.scale((b - a) * sx), Z.scale(-depth), Y, c));
-        runs(width, x => solid(x, y + 1) ? undefined : solid(x, y), (a, b, c)=>
+        runs(width, x=> solid(x, y + 1) ? undefined : solid(x, y), (a, b, c)=>
             quad(vec3(px(a), py(y + 1), -hz), X.scale((b - a) * sx), Z.scale(depth), Y.scale(-1), c));
     }
     for (let x = 0; x < width; ++x)
     {
         // walls facing left and right where the pixel beside is empty
-        runs(height, y => solid(x - 1, y) ? undefined : solid(x, y), (a, b, c)=>
+        runs(height, y=> solid(x - 1, y) ? undefined : solid(x, y), (a, b, c)=>
             quad(vec3(px(x), py(b), -hz), Z.scale(depth), Y.scale((b - a) * sy), X.scale(-1), c));
-        runs(height, y => solid(x + 1, y) ? undefined : solid(x, y), (a, b, c)=>
+        runs(height, y=> solid(x + 1, y) ? undefined : solid(x, y), (a, b, c)=>
             quad(vec3(px(x + 1), py(b), hz), Z.scale(-depth), Y.scale((b - a) * sy), X, c));
     }
     return mesh;
@@ -2960,7 +2960,7 @@ class EngineObject3D extends EngineObject
      *  @param {Color} [color] - Tint */
     constructor(pos3D=vec3(), mesh, tileInfo, color=WHITE)
     {
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo, it comes before color');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
         // a whole texture is stored as the tile that covers it, with no padding or bleed to trim
         // the edges, so this is always a TileInfo like the 2D one and the object stays an EngineObject
         if (tileInfo instanceof TextureInfo)
@@ -3106,7 +3106,7 @@ class EngineObject3D extends EngineObject
         const old = this.mesh;
         this.mesh = mesh;
         // nothing to free and nothing to look for when it was never uploaded
-        if (old && old !== mesh && old.buffer && !engineObjects.some(o => o.mesh === old))
+        if (old && old !== mesh && old.buffer && !engineObjects.some(o=> o.mesh === old))
             old.dispose();
         return mesh;
     }
@@ -3288,7 +3288,7 @@ function engineObjectsRaycast3D(ray, objects=engineObjects)
         if (distance !== undefined)
             hits.push({o, distance});
     }
-    return hits.sort((a, b)=> a.distance - b.distance).map(hit => hit.o);
+    return hits.sort((a, b)=> a.distance - b.distance).map(hit=> hit.o);
 }
 
 /**
@@ -3746,14 +3746,14 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
             case 'vt': uvs.push(vec2(+parts[1], 1 - +parts[2])); break; // OBJ v runs up, tiles run down
             case 'f':
             {
-                const corners = parts.slice(1).map(c => c.split('/'));
+                const corners = parts.slice(1).map(c=> c.split('/'));
                 if (corners.length < 3) break;
-                const points = corners.map(c => lookup(c[0], positions));
+                const points = corners.map(c=> lookup(c[0], positions));
                 ASSERT(points.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
-                const uv = corners.map(c => c[1] ? lookup(c[1], uvs) : RENDER3D_DEFAULT_UV);
-                const hasNormals = corners.every(c => c[2]);
+                const uv = corners.map(c=> c[1] ? lookup(c[1], uvs) : RENDER3D_DEFAULT_UV);
+                const hasNormals = corners.every(c=> c[2]);
                 fileNormals ||= hasNormals;
-                const n = hasNormals ? render3DPolygonStrip(corners.map(c => lookup(c[2], normals)))
+                const n = hasNormals ? render3DPolygonStrip(corners.map(c=> lookup(c[2], normals)))
                     : render3DFaceNormal(points[0], points[1], points[2], points[3]);
                 mesh.addStrip(render3DPolygonStrip(points), n, render3DPolygonStrip(uv));
             }

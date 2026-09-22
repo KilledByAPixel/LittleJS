@@ -68,7 +68,8 @@ function gameInit()
     for (let i = 80; i--;)
     {
         const x = rand(-22,22), z = rand(-22,22), y = terrain.getHeight(x, z);
-        new EngineObject3D(vec3(x,y,z), tree);
+        if (y < terrainHeight/2) // grass is below half height
+            new EngineObject3D(vec3(x,y,z), tree);
     }
 
     // soft shadows follow the ground

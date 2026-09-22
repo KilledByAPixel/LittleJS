@@ -39,7 +39,7 @@ class Car extends EngineObject3D
 
         // a skid mark from each rear wheel, lying flat on the ground
         const mark = hsl(0,0,.1,.7), faded = hsl(0,0,.1,0);
-        this.trails = [-.9, .9].map(x => this.addChild(
+        this.trails = [-.9, .9].map(x=> this.addChild(
             new Trail3D(vec3(x,-.65,1.3), 1.5, .35, undefined, mark, faded)));
     }
     update()
@@ -170,8 +170,7 @@ function gameInit()
         treeObject.scale3D = vec3(rand(1,2));
     }
 
-    // make the player vehicle
-    // start on the road, with the camera already behind the car
+    // make the car on the road, with the camera already behind it
     const start = trackPoint(0);
     start.y = terrain.getHeight(start) + .85;
     car = new Car(start);

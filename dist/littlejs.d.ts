@@ -5959,7 +5959,7 @@ declare module "littlejsengine" {
     export function randInSphere(radius?: number, minRadius?: number): Vector3;
     /**
      * 3D Vector object, right handed with Y up
-     * - Methods return new vectors except set
+     * - Methods return new vectors except set and setFrom
      * @memberof Math3D
      * @example
      * const a = vec3(1, 2, 3);

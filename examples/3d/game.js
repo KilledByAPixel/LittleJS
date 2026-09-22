@@ -59,10 +59,12 @@ class Player extends EngineObject3D
         this.rotation3D.x += this.speed.z;
         this.rotation3D.z -= this.speed.x;
 
-        // an engine note that rises with speed
+        // engine sound loops, playing faster with speed and quiet when still
         const speed = this.speed.length();
-        if (speed > .02 && frame % 6 == 0)
-            render3D.playSound(soundEngine, this.pos3D, .3, .8 + speed*3);
+        if (!this.engineLoop?.isPlaying())
+            this.engineLoop = render3D.playSoundLoop(soundEngine, this.pos3D);
+        this.engineLoop?.setRate(.8 + speed*3);
+        this.engineLoop?.setVolume(min(speed*10, .3));
     }
 }
 
@@ -121,7 +123,7 @@ function buildScoreText()
 
 function gameInit()
 {
-    // the 3D pass draws under the 2D canvas, bloom shaders both
+    // the 3D pass draws first, then bloom shades the WebGL canvas
     new Render3DPlugin;
     postProcessBloom(.85, 2, 8); // the brightest things glow, not the 2D text
     render3D.setSky(hsl(.6,.6,.45), hsl(.55,.4,.7), hsl(.35,.3,.4));

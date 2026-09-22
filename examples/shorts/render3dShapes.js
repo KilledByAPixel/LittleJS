@@ -59,7 +59,7 @@ function gameUpdate()
         buildShapes();
     }
     for (const s of spinners) // S toggles specular
-        s.specular = keyIsDown('KeyS');
+        s.specular = keyIsDown('KeyS') ? 1 : 0;
 }
 
 function gameRenderPost()
