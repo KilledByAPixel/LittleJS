@@ -232,7 +232,8 @@ function gameUpdatePost()
 function gameRenderPost()
 {
     const text = 'arrow keys: roll / space: jump / collect the orbs';
-    drawTextScreen(text, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40), 30, WHITE, 4);
+    const pos = vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40);
+    drawTextScreen(text, pos, 30, WHITE, 4);
 }
 
 engineInit(gameInit, undefined, gameUpdatePost, undefined, gameRenderPost,
