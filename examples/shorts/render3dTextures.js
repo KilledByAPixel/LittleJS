@@ -33,7 +33,7 @@ function gameInit()
     // a tile from the sheet on a standing quad, the shadow takes its shape
     const signMesh = buildGrid(vec2(5));
     const sign = new EngineObject3D(vec3(0, 2.5, -5), signMesh, tile(3, 16));
-    sign.rotation3D = vec3(PI/2, PI, 0);
+    sign.rotation3D = vec3(PI/2, 0, 0);
 }
 
 function gameUpdate()
