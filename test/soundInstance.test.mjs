@@ -323,22 +323,30 @@ test('setAudioMasterEffect reroutes the master gain through an effect and back',
     assert.deepEqual(master.connections, [input]);
     assert.deepEqual(output.connections, [destination]);
 
-    // an effect object replaces it, and the old route is fully undone
+    // an effect object replaces it, and the old route is fully undone (raw nodes get no default back)
     const effect = { input: audioContext.createGain(), output: audioContext.createGain() };
+    effect.output.connect(master); // the way a plugin effect starts
     LJS.setAudioMasterEffect(effect);
     assert.deepEqual(master.connections, [effect.input]);
     assert.deepEqual(output.connections, []);
     assert.deepEqual(effect.output.connections, [destination]);
 
-    // one node is both ends
+    // one node is both ends, and the displaced effect goes back to feeding the master gain
     const node = audioContext.createGain();
     LJS.setAudioMasterEffect(node);
     assert.deepEqual(master.connections, [node]);
     assert.deepEqual(node.connections, [destination]);
-    assert.deepEqual(effect.output.connections, []);
+    assert.deepEqual(effect.output.connections, [master]);
 
-    // clearing restores the direct route
+    // the same effect set twice does not double up
+    LJS.setAudioMasterEffect(effect);
+    LJS.setAudioMasterEffect(effect);
+    assert.deepEqual(master.connections, [effect.input]);
+    assert.deepEqual(effect.output.connections, [destination]);
+    assert.deepEqual(node.connections, []);
+
+    // clearing restores the direct route, and the effect its default route
     LJS.setAudioMasterEffect();
     assert.deepEqual(master.connections, [destination]);
-    assert.deepEqual(node.connections, []);
+    assert.deepEqual(effect.output.connections, [master]);
 });

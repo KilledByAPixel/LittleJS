@@ -27,8 +27,9 @@ let audioMasterGain = audioContext.createGain();
 audioMasterGain.connect(audioContext.destination);
 audioMasterGain.gain.value = soundVolume; // set starting value
 
-// the current master effect, kept so setAudioMasterEffect can undo the route it made
-let audioMasterEffectInput, audioMasterEffectOutput;
+// the current master effect, kept so setAudioMasterEffect can undo the route it made,
+// and whether its output came from an effect, which gets its default route back
+let audioMasterEffectInput, audioMasterEffectOutput, audioMasterEffectOutputIsEffect;
 
 /** Default sample rate used for sounds
  *  @default 44100
@@ -75,8 +76,8 @@ function audioVisibilityChange()
  *  - With one argument a node is both ends, and an effect uses its own input and output
  *  - The output node is disconnected from everything else first, so it only feeds the speakers
  *  - The two ends of a chain must already be connected to each other, like effectA.connect(effectB)
- *  - Call with no arguments to remove the effect
- *  - Debug video capture records the master gain, so master effects are not in the recording
+ *  - Call with no arguments to remove the effect, an effect that was the master goes back to feeding the master gain
+ *  - Debug video capture records the end of the master chain, but loses its tap if the effect changes mid-capture
  *  @param {AudioNode|AudioEffectNodes} [input] - Node or effect the master gain connects to
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect that connects to the audio destination, defaults to the input's output
  *  @memberof Audio */
@@ -84,17 +85,23 @@ function setAudioMasterEffect(input, output)
 {
     // an effect stands in for its nodes, and a node is both ends when no output is passed
     // (the output resolves first since its default comes from the input effect)
+    const outputArg = output || input;
+    const outputIsEffect = !!outputArg && 'input' in outputArg;
     output = audioEffectNode(output, 'output') || audioEffectNode(input, 'output');
     input = audioEffectNode(input, 'input');
     ASSERT(!input || typeof input.connect === 'function', 'input must be an AudioNode or an effect with input and output nodes');
     ASSERT(!output || typeof output.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
 
     // undo the current route, the master gain selectively so other taps on it survive,
-    // but the output node from everything since it only ever fed the speakers
+    // but the output node from everything since it only ever fed the speakers;
+    // an effect's output then goes back to the master gain, its default, so it still works for sounds
     audioMasterGain.disconnect(audioMasterEffectInput || audioContext.destination);
     audioMasterEffectOutput?.disconnect();
+    if (audioMasterEffectOutputIsEffect)
+        audioMasterEffectOutput.connect(audioMasterGain);
     audioMasterEffectInput = input;
     audioMasterEffectOutput = output;
+    audioMasterEffectOutputIsEffect = outputIsEffect;
 
     // connect the master gain to the speakers, through the effect if there is one
     if (input)
@@ -186,6 +193,7 @@ class Sound
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
         /** @property {AudioNode|AudioEffectNodes} - Node or effect to route every play of this sound through instead of the master gain
+         *  - Where this sound's audio goes, unlike AudioEffect.output which is an effect's own node, effects chain with connect()
          *  @type {AudioNode|AudioEffectNodes} */
         this.output = undefined;
 

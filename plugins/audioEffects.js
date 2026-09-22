@@ -46,7 +46,8 @@ class AudioEffect
 
         /** @property {GainNode} - Connect sounds to this node */
         this.input = audioContext.createGain();
-        /** @property {GainNode} - This node carries the mixed result */
+        /** @property {GainNode} - This node carries the mixed result, send it somewhere with connect(), never by assigning here
+         *  - Unlike sound.output, which is where a sound's audio goes and can be set to an effect */
         this.output = audioContext.createGain();
         /** @property {GainNode} - Level of the unprocessed signal */
         this.dryGain = audioContext.createGain();

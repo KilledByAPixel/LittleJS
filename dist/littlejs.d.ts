@@ -2626,8 +2626,8 @@ declare module "littlejsengine" {
      *  - With one argument a node is both ends, and an effect uses its own input and output
      *  - The output node is disconnected from everything else first, so it only feeds the speakers
      *  - The two ends of a chain must already be connected to each other, like effectA.connect(effectB)
-     *  - Call with no arguments to remove the effect
-     *  - Debug video capture records the master gain, so master effects are not in the recording
+     *  - Call with no arguments to remove the effect, an effect that was the master goes back to feeding the master gain
+     *  - Debug video capture records the end of the master chain, but loses its tap if the effect changes mid-capture
      *  @param {AudioNode|AudioEffectNodes} [input] - Node or effect the master gain connects to
      *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect that connects to the audio destination, defaults to the input's output
      *  @memberof Audio */
@@ -2695,6 +2695,7 @@ declare module "littlejsengine" {
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         onloadCallback: (sound: Sound) => Sound;
         /** @property {AudioNode|AudioEffectNodes} - Node or effect to route every play of this sound through instead of the master gain
+         *  - Where this sound's audio goes, unlike AudioEffect.output which is an effect's own node, effects chain with connect()
          *  @type {AudioNode|AudioEffectNodes} */
         output: AudioNode | AudioEffectNodes;
         /** @param {Array<Array<number>|Float32Array>} sampleChannels */
@@ -3976,7 +3977,8 @@ declare module "littlejsengine" {
         constructor(mix?: number);
         /** @property {GainNode} - Connect sounds to this node */
         input: GainNode;
-        /** @property {GainNode} - This node carries the mixed result */
+        /** @property {GainNode} - This node carries the mixed result, send it somewhere with connect(), never by assigning here
+         *  - Unlike sound.output, which is where a sound's audio goes and can be set to an effect */
         output: GainNode;
         /** @property {GainNode} - Level of the unprocessed signal */
         dryGain: GainNode;

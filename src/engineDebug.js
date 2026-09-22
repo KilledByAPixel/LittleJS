@@ -637,7 +637,7 @@ function debugVideoCaptureStart()
         saveDataURL(url, 'capture.webm', 1e3);
     };
 
-    let audioStreamDestination, silentAudioSource;
+    let audioStreamDestination, silentAudioSource, audioTapNode;
     if (soundEnable)
     {
         // create silent audio source
@@ -646,9 +646,11 @@ function debugVideoCaptureStart()
         silentAudioSource.connect(audioMasterGain);
         silentAudioSource.start();
 
-        // connect to audio master gain node
+        // tap the end of the master chain so a master effect is in the recording
+        // (a master effect swapped mid-capture drops the tap, the rest records silent)
         audioStreamDestination = audioContext.createMediaStreamDestination();
-        audioMasterGain.connect(audioStreamDestination);
+        audioTapNode = audioMasterEffectOutput || audioMasterGain;
+        audioTapNode.connect(audioStreamDestination);
         for (const track of audioStreamDestination.stream.getAudioTracks())
             stream.addTrack(track); // add audio tracks to capture stream
     }
@@ -659,7 +661,7 @@ function debugVideoCaptureStart()
     {
         LOG('Video capture not supported in this browser!');
         silentAudioSource?.stop();
-        audioStreamDestination && audioMasterGain.disconnect(audioStreamDestination);
+        audioStreamDestination && audioTapNode.disconnect(audioStreamDestination);
         return;
     }
 
@@ -672,7 +674,8 @@ function debugVideoCaptureStart()
         captureTimer,
         videoTrack,
         silentAudioSource,
-        audioStreamDestination
+        audioStreamDestination,
+        audioTapNode
     };
 }
 
@@ -689,7 +692,11 @@ function debugVideoCaptureStop()
     debugVideoCapture.mediaRecorder?.stop();
     debugVideoCapture.videoTrack?.stop();
     if (debugVideoCapture.audioStreamDestination)
-        audioMasterGain.disconnect(debugVideoCapture.audioStreamDestination);
+    {
+        // the tap is already gone if the master effect changed during the capture
+        try { debugVideoCapture.audioTapNode.disconnect(debugVideoCapture.audioStreamDestination); }
+        catch { }
+    }
     debugVideoCapture = undefined;
 }
 
