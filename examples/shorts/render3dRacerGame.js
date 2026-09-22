@@ -24,7 +24,6 @@ class Car extends EngineObject3D
         this.yaw = PI;
         this.spin = this.steer = 0;
         this.specular = .6;
-        this.cullBackFaces = true;
 
         // four wheels as children so they can roll and steer
         const wheelMesh = buildCylinder(.8, .4, 10).setColor(hsl(.6,.1,.1));
@@ -113,7 +112,6 @@ function gameInit()
     const n = 81, heights = [], colors = [];
     const grassColor = hsl(.3,.4,.3);
     const rockColor = hsl(.1,.2,.4);
-    const roadColor = hsl(.1,.1,.3);
     for (let r = 0; r < n; ++r)
     {
         const heightRow = [], colorRow = [];
@@ -125,8 +123,7 @@ function gameInit()
             const edge = trackDistance(x, z) - roadWidth; // flat past the road
             const blend = smoothStep(clamp(edge/12));
             heightRow.push(lerp(.3, hills, blend));
-            const ground = grassColor.lerp(rockColor, hills);
-            colorRow.push(edge < 1 ? roadColor : ground);
+            colorRow.push(grassColor.lerp(rockColor, hills));
         }
         heights.push(heightRow);
         colors.push(colorRow);
@@ -134,16 +131,16 @@ function gameInit()
     terrain = new HeightMap(heights, vec2(trackSize), 18, colors);
     new EngineObject3D(vec3(), terrain.buildMesh(true));
 
-    // the road is a ribbon along the center line just above the ground, striped
-    const points = [], stripes = [];
+    // the road is a ribbon along the center line just above the ground
+    const points = [];
     for (let i = 0; i < 120; ++i)
     {
         const p = trackPoint(i/120*2*PI);
         p.y = terrain.getHeight(p) + .1;
         points.push(p);
-        stripes.push(hsl(.6, .1, i%8 < 4 ? .2 : .25));
     }
-    new EngineObject3D(vec3(), buildRibbon(points, roadWidth, stripes, true));
+    const road = buildRibbon(points, roadWidth, hsl(.6,.1,.2), true);
+    new EngineObject3D(vec3(), road);
 
     // a post on each side of every gate, the finish line is red
     const post = buildBox(vec3(.6,5,.6));
@@ -172,7 +169,6 @@ function gameInit()
         const treeObject = new EngineObject3D(vec3(x, y, z), tree);
         treeObject.rotation3D.y = rand(2*PI);
         treeObject.scale3D = vec3(rand(.7,1.3));
-        treeObject.cullBackFaces = true;
     }
     car = new Car(trackPoint(0));
 }
@@ -194,8 +190,6 @@ function gameRenderPost()
     drawTextScreen(gate, vec2(mainCanvasSize.x - 140, 50),
         28, YELLOW, 5, BLACK);
     const speed = round(abs(car.speed)*180) + ' KPH';
-    drawTextScreen(speed, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40),
+    drawTextScreen(speed, vec2(110, mainCanvasSize.y - 40),
         36, WHITE, 6, BLACK);
-    drawTextScreen('arrows: drive', vec2(110, mainCanvasSize.y - 40),
-        26, WHITE, 5, BLACK);
 }
