@@ -1,65 +1,25 @@
 // drive laps around a hilly track, hit every gate in order
 const trackSize = 160, roadWidth = 8, gateCount = 4;
 const engineSound = new Sound([,0,91.6,,.4,0,2,2,,,,,.2,1,,,,,,.3,-200]);
-let terrain, car, lapCount = 0, nextGate = 1, bestTime = 0, lapTime = 0;
+let terrain, car, lapCount = 0, nextGate = 1, bestTime = 0;
+let lapTimer = new Timer(0);
 
 // the center line of the track, a wobbly loop on the ground
 function trackRadius(a) { return 42 + 9*sin(a*3) + 5*sin(a*2 + 1); }
 function trackPoint(a) { return vec3(trackRadius(a), 0, 0).rotateY(-a); }
 function trackDistance(x, z)
 { return abs(hypot(x, z) - trackRadius(atan2(z, x))); }
-function trackSide(a)
-{
-    const d = trackPoint(a + .01).subtract(trackPoint(a)).normalize();
-    return vec3(-d.z, 0, d.x);
-}
-
-// rolling noise terrain, flattened along the track
-function buildTerrain()
-{
-    const n = 81, heights = [], colors = [];
-    const grassColor = hsl(.3,.4,.3);
-    const rockColor = hsl(.1,.2,.4);
-    const roadColor = hsl(.1,.1,.3);
-    for (let r = 0; r < n; ++r)
-    {
-        const heightRow = [], colorRow = [];
-        for (let c = 0; c < n; ++c)
-        {
-            const x = (c/(n-1) - .5)*trackSize;
-            const z = (r/(n-1) - .5)*trackSize;
-            const hills = noise2D(x*.025, z*.025);
-            const flat = .3 + .1*sin(atan2(z, x)*2 + 1);
-            const edge = trackDistance(x, z) - roadWidth/2;
-            const blend = smoothStep(clamp(edge/12));
-            heightRow.push(lerp(flat, hills, blend));
-            const ground = grassColor.lerp(rockColor, hills);
-            colorRow.push(blend < .4 ? roadColor : ground);
-        }
-        heights.push(heightRow);
-        colors.push(colorRow);
-    }
-    return new HeightMap(heights, vec2(trackSize), 18, colors);
-}
-
-function buildTree()
-{
-    const mesh = buildCylinder(.5, 3, 7).setColor(hsl(.1,.4,.3));
-    mesh.combine(buildCone(3.2, 4, 8), vec3(0,3,0), hsl(.3,.5,.2));
-    mesh.combine(buildCone(2.2, 3, 8), vec3(0,4.8,0), hsl(.3,.5,.3));
-    return mesh;
-}
 
 class Car extends EngineObject3D
 {
     constructor(pos)
     {
         // make a simple car shaped mesh
-        const carMesh = buildBox(vec3(1.6,.6,3.4)).setColor(hsl(0,.7,.5));
-        carMesh.combine(buildBox(vec3(1.3,.5,1.5)), vec3(0,.5,-.2), hsl(.6,.6,.9));
-        carMesh.combine(buildBox(vec3(1.7,.15,.5)), vec3(0,.6,1.6), hsl(0,0,.2));
+        const body = buildBox(vec3(1.6,.6,3.4)).setColor(hsl(0,.7,.5));
+        body.combine(buildBox(vec3(1.3,.5,1.5)), vec3(0,.5,-.2), hsl(.6,.6,.9));
+        body.combine(buildBox(vec3(1.7,.15,.5)), vec3(0,.6,1.6), hsl(0,0,.2));
 
-        super(pos, carMesh);
+        super(pos, body);
         this.speed = 0;
         this.yaw = PI;
         this.spin = this.steer = 0;
@@ -67,7 +27,8 @@ class Car extends EngineObject3D
         this.cullBackFaces = true;
 
         // four wheels as children so they can roll and steer
-        const wheelMesh = buildCylinder(.8, .4, 10).setColor(hsl(.6,.1,.1)).combine(buildBox(vec3(.5,.44,.1)), undefined, hsl(0,0,.5));
+        const wheelMesh = buildCylinder(.8, .4, 10).setColor(hsl(.6,.1,.1));
+        wheelMesh.combine(buildBox(vec3(.5,.44,.1)), undefined, hsl(0,0,.5));
         this.wheels = [];
         for (let i = 4; i--;)
         {
@@ -126,9 +87,9 @@ class Car extends EngineObject3D
             if (!gate)
             {
                 ++lapCount;
-                const lap = time - lapTime;
+                const lap = lapTimer.get();
                 bestTime = bestTime ? min(bestTime, lap) : lap;
-                lapTime = time;
+                lapTimer.set();
             }
             nextGate = (gate + 1) % gateCount;
         }
@@ -147,33 +108,59 @@ function gameInit()
     render3D.shadowMapSize = 2048; // twice the range, so twice the pixels
 
     // hills from noise, flattened where the road runs
-    terrain = buildTerrain();
+    const n = 81, heights = [], colors = [];
+    const grassColor = hsl(.3,.4,.3);
+    const rockColor = hsl(.1,.2,.4);
+    const roadColor = hsl(.1,.1,.3);
+    for (let r = 0; r < n; ++r)
+    {
+        const heightRow = [], colorRow = [];
+        for (let c = 0; c < n; ++c)
+        {
+            const x = (c/(n-1) - .5)*trackSize;
+            const z = (r/(n-1) - .5)*trackSize;
+            const hills = noise2D(x*.025, z*.025);
+            const edge = trackDistance(x, z) - roadWidth; // flat past the road
+            const blend = smoothStep(clamp(edge/12));
+            heightRow.push(lerp(.3, hills, blend));
+            const ground = grassColor.lerp(rockColor, hills);
+            colorRow.push(edge < 1 ? roadColor : ground);
+        }
+        heights.push(heightRow);
+        colors.push(colorRow);
+    }
+    terrain = new HeightMap(heights, vec2(trackSize), 18, colors);
     new EngineObject3D(vec3(), terrain.buildMesh(true));
 
     // the road is a ribbon along the center line just above the ground, striped
-    const points = [], colors = [];
+    const points = [], stripes = [];
     for (let i = 0; i < 120; ++i)
     {
         const p = trackPoint(i/120*2*PI);
         p.y = terrain.getHeight(p) + .1;
         points.push(p);
-        colors.push(hsl(.6, .1, i%8 < 4 ? .2 : .25));
+        stripes.push(hsl(.6, .1, i%8 < 4 ? .2 : .25));
     }
-    new EngineObject3D(vec3(), buildRibbon(points, roadWidth, colors, true));
+    new EngineObject3D(vec3(), buildRibbon(points, roadWidth, stripes, true));
 
     // a post on each side of every gate, the finish line is red
     const post = buildBox(vec3(.6,5,.6));
     for (let i = gateCount*2; i--;)
     {
         const a = floor(i/2)/gateCount*2*PI, side = i%2 ? 1 : -1;
-        const p = trackPoint(a).add(trackSide(a).scale(side*(roadWidth/2 + 1)));
+        const along = trackPoint(a + .01).subtract(trackPoint(a));
+        const across = vec3(-along.z, 0, along.x);
+        const p = trackPoint(a).add(across.normalize(side*(roadWidth/2 + 1)));
         p.y = terrain.getHeight(p) + 2.5;
         const postObject = new EngineObject3D(p, post);
         postObject.color = i > 1 ? hsl(.15,1,.5) : hsl(0,.7,.5);
     }
 
     // trees clear of the road, sharing one mesh so they draw as one batch
-    const tree = buildTree(), half = trackSize/2;
+    const tree = buildCylinder(.5, 3, 7).setColor(hsl(.1,.4,.3));
+    tree.combine(buildCone(3.2, 4, 8), vec3(0,3,0), hsl(.3,.5,.2));
+    tree.combine(buildCone(2.2, 3, 8), vec3(0,4.8,0), hsl(.3,.5,.3));
+    const half = trackSize/2;
     for (let i = 300; i--;)
     {
         const x = rand(-half, half), z = rand(-half, half);
@@ -186,7 +173,6 @@ function gameInit()
         treeObject.cullBackFaces = true;
     }
     car = new Car(trackPoint(0));
-    lapTime = time;
 }
 
 function gameUpdatePost()
