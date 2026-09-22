@@ -11321,7 +11321,7 @@ class ZzFXMusic extends Sound
 
         if (!soundEnable || headlessMode) return;
         this.randomness = 0;
-        this.sampleChannels = zzfxM(...zzfxMusic);
+        super.sampleChannels = zzfxM(...zzfxMusic); // the setter, without declaring a field that hides it in the typings
         this.sampleRate = audioDefaultSampleRate;
     }
 

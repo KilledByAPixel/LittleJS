@@ -3920,7 +3920,6 @@ declare module "littlejsengine" {
          *  @param {[Array, Array, Array, number]} zzfxMusic - Array of zzfx music parameters
          */
         constructor(zzfxMusic: [any[], any[], any[], number]);
-        sampleChannels: any[];
         /** Play the music that loops by default
          *  @param {number}  [volume] - Volume to play the music at
          *  @param {boolean} [loop] - Should the music loop?
