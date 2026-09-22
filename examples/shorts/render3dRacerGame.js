@@ -41,19 +41,19 @@ function buildTerrain()
     return new HeightMap(heights, vec2(trackSize), 18, colors);
 }
 
-// a car and a tree, each a few builders combined into one mesh
+// the car, a wheel and a tree, each a few builders combined into one mesh
 function buildCar()
 {
     const mesh = buildBox(vec3(1.6,.6,3.4)).setColor(hsl(0,.7,.5));
     mesh.combine(buildBox(vec3(1.3,.5,1.5)), vec3(0,.5,-.2), hsl(.6,.6,.9));
     mesh.combine(buildBox(vec3(1.7,.15,.5)), vec3(0,.6,1.6), hsl(0,0,.2));
-    const wheel = buildCylinder(.8, .4, 10);
-    for (let i = 4; i--;)
-    {
-        const pos = vec3(i&1 ? .9 : -.9, -.3, i&2 ? 1.2 : -1.2);
-        mesh.combine(wheel, buildMatrix(pos, vec3(0,0,PI/2)), hsl(.6,.1,.1));
-    }
     return mesh;
+}
+function buildWheel()
+{
+    // a bar across the hub, or a spinning cylinder would look like it is still
+    const mesh = buildCylinder(.8, .4, 10).setColor(hsl(.6,.1,.1));
+    return mesh.combine(buildBox(vec3(.5,.44,.1)), undefined, hsl(0,0,.5));
 }
 function buildTree()
 {
@@ -70,8 +70,20 @@ class Car extends EngineObject3D
         super(pos, buildCar());
         this.speed = 0;
         this.yaw = PI;
+        this.spin = this.steer = 0;
         this.specular = .6;
         this.cullBackFaces = true;
+
+        // four wheels as children so they can roll, the front two steer
+        const wheelMesh = buildWheel();
+        this.wheels = [];
+        for (let i = 4; i--;)
+        {
+            const pos = vec3(i&1 ? .9 : -.9, -.3, i&2 ? 1.2 : -1.2);
+            const wheel = this.addChild(new EngineObject3D(pos, wheelMesh));
+            wheel.front = !(i&2);
+            this.wheels.push(wheel);
+        }
 
         // a skid mark from each rear wheel, lying flat on the ground
         const mark = hsl(0,0,.1,.7), faded = hsl(0,0,.1,0);
@@ -95,8 +107,16 @@ class Car extends EngineObject3D
         const ahead = this.pos3D.add(forward.scale(1.5));
         const behind = this.pos3D.subtract(forward.scale(1.5));
         const rise = terrain.getHeight(ahead) - terrain.getHeight(behind);
-        const roll = -input.x*this.speed*.6;
-        this.rotation3D = vec3(atan2(rise, 3), this.yaw, roll);
+        this.rotation3D = vec3(atan2(rise, 3), this.yaw, 0);
+
+        // the wheels roll with the speed, turned onto their side by the roll
+        this.spin -= this.speed/.4; // the distance over the wheel radius
+        this.steer = lerp(this.steer, -input.x*.5, .2);
+        for (const wheel of this.wheels)
+        {
+            const steer = wheel.front ? this.steer : 0;
+            wheel.rotation3D = vec3(this.spin, steer, PI/2);
+        }
         for (const trail of this.trails)
             trail.side = vec3(1, 0, 0).rotateY(this.yaw); // lie flat
 
