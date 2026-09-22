@@ -42,6 +42,8 @@ export
     // Audio Effects
     AudioEffect,
     AudioFilter,
+    AudioReverb,
+    AudioDelay,
 
     // UI System
     uiSystem,

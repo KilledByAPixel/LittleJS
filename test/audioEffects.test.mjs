@@ -118,3 +118,46 @@ test('AudioFilter setters ramp the frequency and Q', () =>
     assert.equal(filter.node.Q.value, 5);
     assert.deepEqual(filter.node.Q.scheduled, []);
 });
+
+test('AudioReverb builds a stereo impulse of decaying noise', () =>
+{
+    const reverb = new LJS.AudioReverb(2, 2);
+    assert.equal(reverb.mix, .5);
+    assert.deepEqual(reverb.input.connections, [reverb.dryGain, reverb.node]);
+    assert.deepEqual(reverb.node.connections, [reverb.wetGain]);
+
+    const buffer = reverb.node.buffer;
+    assert.equal(buffer.numberOfChannels, 2);
+    assert.equal(buffer.length, 2000); // duration * sampleRate
+    for (let channel = 2; channel--;)
+    {
+        const samples = buffer.getChannelData(channel);
+        const meanAbs = (from, to)=>
+        {
+            let sum = 0;
+            for (let i = from; i < to; ++i)
+                sum += Math.abs(samples[i]);
+            return sum / (to - from);
+        };
+        assert.ok(meanAbs(0, 100) > meanAbs(1900, 2000), 'impulse should decay');
+        assert.ok(meanAbs(0, 100) > 0, 'impulse should not be silent');
+        for (let i = 2000; i--;)
+            assert.ok(Math.abs(samples[i]) <= 1);
+    }
+});
+
+test('AudioDelay loops feedback through the delay and clamps it', () =>
+{
+    const delay = new LJS.AudioDelay(.25, .4, .5);
+    assert.equal(delay.node.maxDelayTime, 5);
+    assert.equal(delay.node.delayTime.value, .25);
+    assert.equal(delay.feedbackGain.gain.value, .4);
+    assert.deepEqual(delay.input.connections, [delay.dryGain, delay.node]);
+    assert.deepEqual(delay.node.connections, [delay.feedbackGain, delay.wetGain]);
+    assert.deepEqual(delay.feedbackGain.connections, [delay.node]);
+
+    delay.setFeedback(2);
+    assert.equal(delay.feedbackGain.gain.value, .95);
+    delay.setTime(1, .5);
+    assert.deepEqual(delay.node.delayTime.scheduled, [['set', .25, 10], ['ramp', 1, 10.5]]);
+});

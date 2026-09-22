@@ -152,3 +152,98 @@ class AudioFilter extends AudioEffect
         audioParamRamp(this.node.Q, q, fadeTime);
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Reverb effect, puts sounds in a room, cave, or hall
+ * - The impulse response is generated, no audio file needed
+ * @extends AudioEffect
+ * @memberof AudioEffects
+ * @example
+ * const hall = new AudioReverb(4, 1.5, .4);
+ * footstep.output = hall.input;
+ */
+class AudioReverb extends AudioEffect
+{
+    /** Create a reverb effect
+     *  @param {number} [duration] - Seconds until the reverb tail is silent
+     *  @param {number} [decay] - How quickly the tail fades, higher is faster
+     *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+    constructor(duration=2, decay=2, mix=.5)
+    {
+        super(mix);
+        ASSERT(isNumber(duration) && duration > 0, 'duration must be positive');
+        ASSERT(isNumber(decay) && decay >= 0, 'decay must be positive or zero');
+
+        /** @property {ConvolverNode} - The convolver node */
+        this.node = audioContext.createConvolver();
+        this.node.buffer = this.createImpulse(duration, decay);
+        this.connectEffect(this.node);
+    }
+
+    /** Build a stereo impulse response of decaying noise
+     *  @param {number} duration - Seconds until silence
+     *  @param {number} decay - How quickly it fades, higher is faster
+     *  @return {AudioBuffer} */
+    createImpulse(duration, decay)
+    {
+        const sampleRate = audioContext.sampleRate;
+        const length = sampleRate * duration | 0;
+        const buffer = audioContext.createBuffer(2, length, sampleRate);
+        for (let channel = 2; channel--;)
+        {
+            const samples = buffer.getChannelData(channel);
+            for (let i = length; i--;)
+                samples[i] = rand(-1, 1) * (1 - i/length) ** decay;
+        }
+        return buffer;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Delay effect, echoes that repeat and fade
+ * @extends AudioEffect
+ * @memberof AudioEffects
+ * @example
+ * const canyon = new AudioDelay(.4, .5);
+ * shout.output = canyon.input;
+ */
+class AudioDelay extends AudioEffect
+{
+    /** Create a delay effect
+     *  @param {number} [time] - Seconds between echoes, up to 5
+     *  @param {number} [feedback] - How much of each echo repeats, 0 to .95
+     *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+    constructor(time=.3, feedback=.4, mix=.5)
+    {
+        super(mix);
+
+        /** @property {DelayNode} - The delay node */
+        this.node = audioContext.createDelay(5);
+        /** @property {GainNode} - How much of the delayed signal feeds back in */
+        this.feedbackGain = audioContext.createGain();
+        this.node.connect(this.feedbackGain).connect(this.node);
+        this.connectEffect(this.node);
+        this.setTime(time);
+        this.setFeedback(feedback);
+    }
+
+    /** Set the time between echoes
+     *  @param {number} time - Seconds, up to 5
+     *  @param {number} [fadeTime] - Seconds to ramp over, pitch bends while it moves */
+    setTime(time, fadeTime=0)
+    {
+        ASSERT(isNumber(time) && time >= 0 && time <= 5, 'time must be between 0 and 5');
+        audioParamRamp(this.node.delayTime, time, fadeTime);
+    }
+
+    /** Set how much of each echo repeats, clamped below 1 so it always dies out
+     *  @param {number} feedback - 0 to .95
+     *  @param {number} [fadeTime] - Seconds to ramp over */
+    setFeedback(feedback, fadeTime=0)
+    {
+        ASSERT(isNumber(feedback), 'feedback must be a number');
+        audioParamRamp(this.feedbackGain.gain, clamp(feedback, 0, .95), fadeTime);
+    }
+}
