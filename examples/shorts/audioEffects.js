@@ -23,7 +23,7 @@ function gameInit()
         new Sound([1.5,.5,270,,.1,,1,1.5,,,,,,,,.1,.01]),       // pad
     ];
     const w = 200, h = 100, gap = 20;
-    const gridPos = (x, y)=> vec2(x*(w+gap), -y*(h+gap));
+    const gridPos = (x, y)=> vec2(x*(w+gap), 50-y*(h+gap));
 
     // top row plays a sound through the current effect
     const icons = ['💰', '⚡', '🎹'];
