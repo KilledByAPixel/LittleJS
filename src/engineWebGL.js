@@ -46,6 +46,26 @@ const gl_MAX_POLY_VERTEXES = gl_ARRAY_BUFFER_SIZE / gl_POLY_VERTEX_BYTE_STRIDE |
 ///////////////////////////////////////////////////////////////////////////////
 
 // Initialize WebGL, called automatically by the engine
+// the sprite vertex shader, shared by the engine's program and every Shader so one vertex layout fits all
+const gl_VERTEX_SOURCE =
+    '#version 300 es\n' +            // specify GLSL ES version
+    'precision highp float;'+        // use highp for accuracy
+    'uniform mat4 m;'+               // transform matrix
+    'layout(location=0) in vec2 g;'+ // in: geometry
+    'layout(location=1) in vec4 p;'+ // in: position/size
+    'layout(location=2) in vec4 u;'+ // in: uvs
+    'layout(location=3) in vec4 c;'+ // in: color
+    'layout(location=4) in vec4 a;'+ // in: additiveColor
+    'layout(location=5) in float r;'+// in: rotation
+    'out vec2 v,l;'+                 // out: uv, and 0 to 1 across the sprite for a Shader's localUV
+    'out vec4 d,e;'+                 // out: color, additiveColor
+    'void main(){'+                  // shader entry point
+    'vec2 s=(g-.5)*p.zw;'+           // get size offset
+    'gl_Position=m*vec4(p.xy+s*cos(r)-vec2(-s.y,s)*sin(r),1,1);'+ // transform position
+    'v=mix(u.xw,u.zy,g);'+           // pass uv to fragment shader
+    'l=g;d=c;e=a;'+                  // pass local uv and colors to fragment shader
+    '}';                             // end of shader
+
 function glInit(rootElement)
 {
     // keep set of texture infos so they can be restored if context is lost
@@ -88,6 +108,11 @@ function glInit(rootElement)
         for (const info of glTextureInfos)
             info.glTexture = undefined;
         glActiveTexture = undefined;
+        // every Shader compiles again on its next draw, and the first flush after restore picks its program again
+        for (const shader of glShaderObjects)
+            shader.program = undefined;
+        glBatchShader = undefined;
+        glProgramCustom = true;
         // drop any partially-filled batch so the next glFlush doesn't
         // upload stale glBatchCount against fresh empty buffers on restore
         glBatchCount = 0;
@@ -110,22 +135,7 @@ function glInit(rootElement)
     function initWebGL()
     {
         // setup instanced rendering shader program
-        glShader = glCreateProgram(
-            '#version 300 es\n' +     // specify GLSL ES version
-            'precision highp float;'+ // use highp for accuracy
-            'uniform mat4 m;'+        // transform matrix
-            'in vec2 g;'+             // in: geometry
-            'in vec4 p,u,c,a;'+       // in: position/size, uvs, color, additiveColor
-            'in float r;'+            // in: rotation
-            'out vec2 v;'+            // out: uv
-            'out vec4 d,e;'+          // out: color, additiveColor
-            'void main(){'+           // shader entry point
-            'vec2 s=(g-.5)*p.zw;'+    // get size offset
-            'gl_Position=m*vec4(p.xy+s*cos(r)-vec2(-s.y,s)*sin(r),1,1);'+ // transform position
-            'v=mix(u.xw,u.zy,g);'+    // pass uv to fragment shader
-            'd=c;e=a;'+               // pass colors to fragment shader
-            '}'                       // end of shader
-            ,
+        glShader = glCreateProgram(gl_VERTEX_SOURCE,
             '#version 300 es\n' +     // specify GLSL ES version
             'precision highp float;'+ // use highp for accuracy
             'uniform sampler2D s;'+   // texture
@@ -273,6 +283,7 @@ function glPreRender(clear=true)
         -s.x * sa,  s.y * ca, 0, 0,
         1,          1,        1, 0,
         p.x,        p.y,      0, 1];
+    glTransform = transform;
 
     // set the same transform matrix for both shaders
     const initUniform = (program, uniform, value)=>
@@ -391,6 +402,22 @@ function glCreateProgram(vsSource, fsSource)
     if (debug && !glContext.getProgramParameter(program, glContext.LINK_STATUS))
         throw glContext.getProgramInfoLog(program);
     return program;
+}
+
+// a Shader's 2D program, compiled the first time a batch needs it: the snippet's mainImage gives the surface
+// color, then the sprite's color and additive color apply as the engine's own fragment shader does
+function glShaderProgram(shader)
+{
+    return shader.program ||= glCreateProgram(gl_VERTEX_SOURCE,
+        '#version 300 es\n' +
+        'precision highp float;' +
+        'uniform sampler2D iChannel0;' + // the texture
+        'uniform vec3 iResolution;' +    // canvas size in pixels
+        'uniform float iTime;' +         // engine time
+        'in vec2 v,l;in vec4 d,e;out vec4 c;\n' + // a define needs its own line
+        '#define localUV l\n' +
+        shader.fragmentCode + '\n' +
+        'void main(){vec4 t;mainImage(t,v);c=t*d+e;}');
 }
 
 /** Create WebGL texture from an image and init the texture settings
@@ -512,6 +539,21 @@ function glFlush()
         const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
         glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
         glContext.enable(glContext.BLEND);
+
+        // a Shader's program for this batch, or the engine's own again after one
+        if (!glPolyMode && (glBatchShader || glProgramCustom))
+        {
+            const program = glBatchShader ? glShaderProgram(glBatchShader) : glShader;
+            glContext.useProgram(program);
+            glProgramCustom = !!glBatchShader;
+            if (glBatchShader)
+            {
+                const uniform = (name)=> glContext.getUniformLocation(program, name);
+                glContext.uniformMatrix4fv(uniform('m'), false, glTransform);
+                glContext.uniform1f(uniform('iTime'), time);
+                glContext.uniform3f(uniform('iResolution'), glCanvas.width, glCanvas.height, 1);
+            }
+        }
         
         const byteLength = glBatchCount * 
             (glPolyMode ? gl_INDICES_PER_POLY_VERTEX : gl_INDICES_PER_INSTANCE);
@@ -527,6 +569,7 @@ function glFlush()
         glBatchCount = 0;
     }
     glBatchAdditive = glAdditive;
+    glBatchShader = glCustomShader;
 }
 
 /** Flush any sprites still in the buffer and copy to main canvas
@@ -566,7 +609,7 @@ function glSetAntialias(antialias=true)
 function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=-1, rgbaAdditive=0)
 {
     // flush if there is not enough room or if different blend mode
-    if (glBatchCount >= gl_MAX_INSTANCES || glBatchAdditive !== glAdditive)
+    if (glBatchCount >= gl_MAX_INSTANCES || glBatchAdditive !== glAdditive || glBatchShader !== glCustomShader)
         glFlush();
     glSetInstancedMode();
 
