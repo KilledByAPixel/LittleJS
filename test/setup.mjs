@@ -1,15 +1,32 @@
 // Minimal globalThis stubs so dist/littlejs.esm.js can import under Node.
-// The bundle has two top-level side effects that need host objects:
+// The bundle has three top-level side effects that need host objects:
 //   1. `const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;`
 //   2. `let audioContext = new AudioContext;`
+//   3. `let audioMasterGain = audioContext.createGain();` connected to the destination
 // Anything beyond these is on-demand inside functions we don't invoke from tests.
 
 globalThis.window = {};
 
+// gain nodes record their connections so tests can check the audio graph;
+// disconnect(node) drops that one connection, disconnect() drops them all
 globalThis.AudioContext = class AudioContext
 {
     constructor() { this.currentTime = 0; this.destination = {}; this.state = 'running'; }
-    createGain() { return { connect(){}, gain: { value: 0 } }; }
+    createGain()
+    {
+        return {
+            connections: [],
+            connect(node) { this.connections.push(node); return node; },
+            disconnect(node)
+            {
+                if (node === undefined)
+                    this.connections.length = 0;
+                else
+                    this.connections.splice(this.connections.indexOf(node) >>> 0, 1);
+            },
+            gain: { value: 0 },
+        };
+    }
     createBuffer() { return {}; }
     createBufferSource() { return { connect(){}, start(){}, stop(){} }; }
     resume() { return Promise.resolve(); }

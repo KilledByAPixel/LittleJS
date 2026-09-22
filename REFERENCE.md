@@ -386,7 +386,7 @@ playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0,
 ## LittleJS Audio Effects
 - Optional plugin with Web Audio effects, each with a wet/dry mix
 - Route a group of sounds with `sound.output = effect`, or everything with `setAudioMasterEffect(effect)`
-- Chain effects with `effect.connect(next)`; create effects after `engineInit`
+- Chain effects with `effect.connect(next)`
 
 ```javascript
 AudioEffect(mix=1)                                // Base class, input and output gain nodes with a mix between

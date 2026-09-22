@@ -4,7 +4,6 @@
  * - Route a sound through one with sound.output = effect
  * - Route everything with setAudioMasterEffect(effect)
  * - Chain effects with effect.connect(nextEffect)
- * - Create effects after engineInit, in gameInit or later
  * @namespace AudioEffects
  */
 
@@ -61,10 +60,7 @@ class AudioEffect
         this.setMix(mix);
 
         // send the result to the speakers, connect() moves it into a chain instead
-        if (audioMasterGain)
-            this.output.connect(audioMasterGain);
-        else
-            ASSERT(!soundEnable || headlessMode, 'Create audio effects after engineInit, in gameInit or later');
+        this.output.connect(audioMasterGain);
     }
 
     /** Set the wet/dry balance
@@ -286,8 +282,9 @@ class AudioDistortion extends AudioEffect
         this.amount = amount = clamp(amount);
 
         // soft clip curve, drive grows with the square of amount so low values stay subtle
+        // enough points that quiet signals are still shaped at high drive, where the curve is steep near 0
         const drive = 100 * amount * amount;
-        const samples = 256;
+        const samples = 1024;
         const curve = new Float32Array(samples);
         for (let i = samples; i--;)
         {

@@ -58,6 +58,7 @@ test('AudioEffect wires a dry path and a wet path into its output', () =>
     assert.deepEqual(effect.input.connections, [effect.dryGain]);
     assert.deepEqual(effect.dryGain.connections, [effect.output]);
     assert.deepEqual(effect.wetGain.connections, [effect.output]);
+    assert.deepEqual(effect.output.connections, [LJS.audioMasterGain]);
     assert.equal(effect.mix, 1);
     near(effect.dryGain.gain.value, 0);
     near(effect.wetGain.gain.value, 1);
@@ -171,16 +172,16 @@ test('AudioDistortion shapes the wave with a rising curve that clips harder with
     assert.deepEqual(distortion.node.connections, [distortion.wetGain]);
 
     const curve = distortion.node.curve;
-    assert.equal(curve.length, 256);
+    assert.equal(curve.length, 1024);
     near(curve[0], -1, 1e-6);
-    near(curve[255], 1, 1e-6);
-    for (let i = 1; i < 256; ++i)
+    near(curve[1023], 1, 1e-6);
+    for (let i = 1; i < 1024; ++i)
         assert.ok(curve[i] >= curve[i-1], 'curve should rise');
 
     // no drive is a straight line, more drive bends it toward the edges
     distortion.setAmount(0);
     const straight = distortion.node.curve;
-    near(straight[64], 64*2/255 - 1, 1e-6);
+    near(straight[64], 64*2/1023 - 1, 1e-6);
     distortion.setAmount(1);
     assert.ok(distortion.node.curve[64] < straight[64]);
 });

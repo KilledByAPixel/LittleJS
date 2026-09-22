@@ -16,7 +16,13 @@ ctxProto.createGain = function()
     return {
         connections: [],
         connect(node) { this.connections.push(node); return node; },
-        disconnect() {},
+        disconnect(node)
+        {
+            if (node === undefined)
+                this.connections.length = 0;
+            else
+                this.connections.splice(this.connections.indexOf(node) >>> 0, 1);
+        },
         gain: {
             value: 0,
             cancelScheduledValues() {},
@@ -260,24 +266,42 @@ test('sounds without an output connect to the master gain', () =>
 {
     const instance = sound.play();
     assert.equal(instance.output, undefined);
-    // audioInit never runs here, so the master gain is undefined; this pins that
-    // the gain connects exactly once, to whatever the master gain is
-    assert.equal(instance.gainNode.connections.length, 1);
-    assert.equal(instance.gainNode.connections[0], LJS.audioMasterGain);
+    assert.ok(LJS.audioMasterGain, 'the master gain exists from load, before engineInit');
+    assert.deepEqual(instance.gainNode.connections, [LJS.audioMasterGain]);
     instance.stop();
 });
 
-test('setAudioMasterEffect before init stores the nodes without touching them', () =>
+test('setAudioMasterEffect reroutes the master gain through an effect and back', () =>
 {
-    // audioInit has not run in this process, so the master gain does not exist yet
-    assert.equal(LJS.audioMasterGain, undefined);
+    const master = LJS.audioMasterGain;
+    const destination = audioContext.destination;
+    assert.deepEqual(master.connections, [destination]);
+
+    // two raw nodes as the ends of a chain; the output starts on the master gain
+    // the way a plugin effect does, and must end up feeding only the speakers
     const input = audioContext.createGain();
     const output = audioContext.createGain();
+    output.connect(master);
     LJS.setAudioMasterEffect(input, output);
-    assert.deepEqual(input.connections, []);
+    assert.deepEqual(master.connections, [input]);
+    assert.deepEqual(output.connections, [destination]);
+
+    // an effect object replaces it, and the old route is fully undone
+    const effect = { input: audioContext.createGain(), output: audioContext.createGain() };
+    LJS.setAudioMasterEffect(effect);
+    assert.deepEqual(master.connections, [effect.input]);
     assert.deepEqual(output.connections, []);
-    LJS.setAudioMasterEffect({ input, output }); // an effect is accepted too
-    assert.deepEqual(input.connections, []);
-    assert.deepEqual(output.connections, []);
-    LJS.setAudioMasterEffect(); // clearing before init is fine too
+    assert.deepEqual(effect.output.connections, [destination]);
+
+    // one node is both ends
+    const node = audioContext.createGain();
+    LJS.setAudioMasterEffect(node);
+    assert.deepEqual(master.connections, [node]);
+    assert.deepEqual(node.connections, [destination]);
+    assert.deepEqual(effect.output.connections, []);
+
+    // clearing restores the direct route
+    LJS.setAudioMasterEffect();
+    assert.deepEqual(master.connections, [destination]);
+    assert.deepEqual(node.connections, []);
 });

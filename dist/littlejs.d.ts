@@ -2614,7 +2614,7 @@ declare module "littlejsengine" {
      *  @type {AudioContext}
      *  @memberof Audio */
     export let audioContext: AudioContext;
-    /** Master gain node for all audio to pass through
+    /** Master gain node for all audio to pass through, made at load so effects can connect to it any time
      *  @type {GainNode}
      *  @memberof Audio */
     export let audioMasterGain: GainNode;
@@ -2625,7 +2625,7 @@ declare module "littlejsengine" {
      *  - Pass a node or an effect, or the first and last of a chain, each a node or an effect
      *  - With one argument a node is both ends, and an effect uses its own input and output
      *  - The output node is disconnected from everything else first, so it only feeds the speakers
-     *  - Call with no arguments to remove the effect, can be called before engineInit
+     *  - Call with no arguments to remove the effect
      *  - Debug video capture records the master gain, so master effects are not in the recording
      *  @param {AudioNode|AudioEffectNodes} [input] - Node or effect the master gain connects to
      *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect that connects to the audio destination, defaults to the input's output

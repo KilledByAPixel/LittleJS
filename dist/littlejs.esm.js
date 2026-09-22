@@ -7060,12 +7060,13 @@ function touchGamepadPointerUp(e)
  *  @memberof Audio */
 let audioContext = new AudioContext;
 
-/** Master gain node for all audio to pass through
+/** Master gain node for all audio to pass through, made at load so effects can connect to it any time
  *  @type {GainNode}
  *  @memberof Audio */
-let audioMasterGain;
+let audioMasterGain = audioContext.createGain();
+audioMasterGain.connect(audioContext.destination);
 
-// nodes from setAudioMasterEffect, kept so a call made before engineInit is applied by audioInit
+// the current master effect, kept so setAudioMasterEffect can undo the route it made
 let audioMasterEffectInput, audioMasterEffectOutput;
 
 /** Default sample rate used for sounds
@@ -7083,8 +7084,6 @@ function audioInit()
 {
     if (!soundEnable || headlessMode) return;
 
-    audioMasterGain = audioContext.createGain();
-    audioMasterEffectApply();
     audioMasterGain.gain.value = soundVolume; // set starting value
     document.addEventListener('visibilitychange', audioVisibilityChange);
 }
@@ -7115,7 +7114,7 @@ function audioVisibilityChange()
  *  - Pass a node or an effect, or the first and last of a chain, each a node or an effect
  *  - With one argument a node is both ends, and an effect uses its own input and output
  *  - The output node is disconnected from everything else first, so it only feeds the speakers
- *  - Call with no arguments to remove the effect, can be called before engineInit
+ *  - Call with no arguments to remove the effect
  *  - Debug video capture records the master gain, so master effects are not in the recording
  *  @param {AudioNode|AudioEffectNodes} [input] - Node or effect the master gain connects to
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect that connects to the audio destination, defaults to the input's output
@@ -7123,22 +7122,28 @@ function audioVisibilityChange()
 function setAudioMasterEffect(input, output)
 {
     // an effect stands in for its nodes, and a node is both ends when no output is passed
-    input = audioEffectNode(input, 'input');
+    // (the output resolves first since its default comes from the input effect)
     output = audioEffectNode(output, 'output') || audioEffectNode(input, 'output');
+    input = audioEffectNode(input, 'input');
     ASSERT(!input || typeof input.connect === 'function', 'input must be an AudioNode or an effect with input and output nodes');
     ASSERT(!output || typeof output.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
 
-    // the master gain is disconnected selectively so other taps on it survive,
-    // but the output node is dropped from everything since it only ever fed the speakers
-    if (audioMasterGain)
-    {
-        audioMasterGain.disconnect(audioMasterEffectInput || audioContext.destination);
-        audioMasterEffectOutput?.disconnect();
-    }
+    // undo the current route, the master gain selectively so other taps on it survive,
+    // but the output node from everything since it only ever fed the speakers
+    audioMasterGain.disconnect(audioMasterEffectInput || audioContext.destination);
+    audioMasterEffectOutput?.disconnect();
     audioMasterEffectInput = input;
     audioMasterEffectOutput = output;
-    if (audioMasterGain)
-        audioMasterEffectApply();
+
+    // connect the master gain to the speakers, through the effect if there is one
+    if (input)
+    {
+        audioMasterGain.connect(input);
+        output.disconnect();
+        output.connect(audioContext.destination);
+    }
+    else
+        audioMasterGain.connect(audioContext.destination);
 }
 
 // get one of an effect's nodes, or the thing itself when it is already a node
@@ -7150,19 +7155,6 @@ function audioEffectNode(effectOrNode, key)
     if (effectOrNode && 'input' in effectOrNode)
         return /** @type {AudioEffectNodes} */ (effectOrNode)[key];
     return /** @type {AudioNode} */ (effectOrNode);
-}
-
-// connect the master gain to the speakers, through the master effect if there is one
-function audioMasterEffectApply()
-{
-    if (audioMasterEffectInput)
-    {
-        audioMasterGain.connect(audioMasterEffectInput);
-        audioMasterEffectOutput.disconnect();
-        audioMasterEffectOutput.connect(audioContext.destination);
-    }
-    else
-        audioMasterGain.connect(audioContext.destination);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -11514,7 +11506,6 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
  * - Route a sound through one with sound.output = effect
  * - Route everything with setAudioMasterEffect(effect)
  * - Chain effects with effect.connect(nextEffect)
- * - Create effects after engineInit, in gameInit or later
  * @namespace AudioEffects
  */
 
@@ -11569,10 +11560,7 @@ class AudioEffect
         this.setMix(mix);
 
         // send the result to the speakers, connect() moves it into a chain instead
-        if (audioMasterGain)
-            this.output.connect(audioMasterGain);
-        else
-            ASSERT(!soundEnable || headlessMode, 'Create audio effects after engineInit, in gameInit or later');
+        this.output.connect(audioMasterGain);
     }
 
     /** Set the wet/dry balance
@@ -11794,8 +11782,9 @@ class AudioDistortion extends AudioEffect
         this.amount = amount = clamp(amount);
 
         // soft clip curve, drive grows with the square of amount so low values stay subtle
+        // enough points that quiet signals are still shaped at high drive, where the curve is steep near 0
         const drive = 100 * amount * amount;
-        const samples = 256;
+        const samples = 1024;
         const curve = new Float32Array(samples);
         for (let i = samples; i--;)
         {
