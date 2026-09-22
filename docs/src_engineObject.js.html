@@ -73,7 +73,8 @@ class EngineObject
         this.color = color.copy();
         /** @property {Color} - Additive color to apply when rendered */
         this.additiveColor = undefined;
-        /** @property {Shader} - Custom shader to render with, undefined for the engine's own */
+        /** @property {Shader|undefined} - Custom shader to render with, undefined for the engine's own
+         *  @type {Shader|undefined} */
         this.shader = undefined;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         this.mirror = false;

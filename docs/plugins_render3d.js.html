@@ -7,6 +7,7 @@
  * - EngineObject3D is an EngineObject with a 3D position, rotation and mesh
  * - The 3D scene draws under the 2D sprites, so HUD and text land on top
  * - Lighting is the sun plus ambient, with optional extra lights, fog and shadows
+ * - Any object or draw can bring its own Shader, a mainImage snippet the lighting then applies to
  * - Build shapes with buildBox, buildSphere and friends, or load a model with loadOBJ
  * - Requires the Math3D plugin
  * @namespace Render3D
@@ -410,7 +411,8 @@ class Render3DPlugin
         this.mirrored = false;
         /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
         this.specular = 0;
-        /** @property {Shader} - Custom Shader for the next draws, set from each object's shader; undefined draws with the plugin's own */
+        /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined draws with the plugin's own
+         *  @type {Shader|undefined} */
         this.shader = undefined;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
         this.receiveShadow = true;
@@ -3048,6 +3050,7 @@ function render3DReadPixels(textureInfo)
  * - The 2D pos and velocity are still there but nothing draws them
  * - These inherited fields are 2D only and do nothing here: angle, angleVelocity, angleDamping,
  *   additiveColor, drawSize, mirror, clampSpeed, friction and groundObject
+ * - The inherited shader works here as in 2D, and with emissive at 1 its snippet does its own lighting
  * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D,
  *   which is the one way those 2D fields reach a 3D object
  * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D

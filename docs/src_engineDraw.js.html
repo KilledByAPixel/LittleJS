@@ -264,7 +264,8 @@ class TextureInfo
         this.size = image ? vec2(image.width, image.height) : vec2();
         /** @property {Vector2} - inverse of the size, cached for rendering */
         this.sizeInverse = image ? vec2(1/image.width, 1/image.height) : vec2();
-        /** @property {WebGLTexture} - WebGL texture */
+        /** @property {WebGLTexture|undefined} - WebGL texture
+         *  @type {WebGLTexture|undefined} */
         this.glTexture = undefined;
         /** @property {boolean} - true for REPEAT wrap mode, false for CLAMP_TO_EDGE */
         this.wrap = wrap;
@@ -324,9 +325,11 @@ class Shader
         ASSERT(isStringLike(fragmentCode) &amp;&amp; String(fragmentCode).includes('mainImage'), 'a Shader needs fragment code that defines mainImage');
         /** @property {string} - The mainImage snippet */
         this.fragmentCode = String(fragmentCode);
-        /** @property {WebGLProgram} - The 2D program, compiled by the first draw that needs it, read only */
+        /** @property {WebGLProgram|undefined} - The 2D program, compiled by the first draw that needs it, read only
+         *  @type {WebGLProgram|undefined} */
         this.program = undefined;
-        /** @property {WebGLProgram} - The 3D program, compiled by the 3D plugin the same way, read only */
+        /** @property {WebGLProgram|undefined} - The 3D program, compiled by the 3D plugin the same way, read only
+         *  @type {WebGLProgram|undefined} */
         this.program3D = undefined;
         glShaderObjects.push(this); // a lost context drops the programs of every one
     }
