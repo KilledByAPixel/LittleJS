@@ -13,10 +13,10 @@ const levelSize = levelData.length;
 const cellPos = (x, z, y)=> vec3(x - levelSize/2+.5, y, z - levelSize/2+.5);
 const isWall = (x, z)=> levelData[z][x] == '#';
 const boxAt = (x, z)=> boxes.find(b=> b.cell.x == x && b.cell.y == z);
-const padColor = hsl(.1,.6,.3), litColor = hsl(.15,1,.6);
+const padColor = hsl(.1,1,.3), litColor = hsl(.15,1,.6);
 const pushSound = new Sound([.5,,150,.01,,,,,9,-50]);
 let wallMesh, blockMesh, ballMesh, padMesh;
-let level, boxes, goals, player, moves, hoverCell;
+let level, boxes, goals, player, hoverCell;
 
 class GridObject extends EngineObject3D
 {
@@ -77,19 +77,19 @@ class Goal extends GridObject
 function buildLevel()
 {
     level?.forEach(o=> o.destroy());
-    level = [], boxes = [], goals = [], moves = 0;
+    level = [], boxes = [], goals = [];
     for (let z = levelSize; z--;)
     for (let x = levelSize; x--;)
     {
         const c = levelData[z][x];
         if (c == '#')
-            level.push(new EngineObject3D(cellPos(x, z, .5), wallMesh));
+            level.push(new EngineObject3D(cellPos(x, z, .3), wallMesh));
         else if (c == 'G')
             goals.push(new Goal(x, z));
         else if (c == 'B')
-            boxes.push(new GridObject(x, z, blockMesh, hsl(.05,.7,.5), .4));
+            boxes.push(new GridObject(x, z, blockMesh, hsl(.5,.7,.5), .4));
         else if (c == '@')
-            player = new GridObject(x, z, ballMesh, hsl(.5,.8,.6), .4);
+            player = new GridObject(x, z, ballMesh, hsl(0,.9,.6), .4);
     }
     level.push(player, ...boxes, ...goals);
 }
@@ -110,23 +110,21 @@ function tryMove(moveX, moveZ)
         render3D.playSound(pushSound, box.pos3D);
     }
     player.moveTo(x, z);
-    ++moves;
 }
 
 function gameInit()
 {
     new Render3DPlugin;
-    canvasClearColor = hsl(.3,.2,.4);
-    render3D.lightDirection = vec3(.5,-1,-.5);
+    canvasClearColor = hsl(0,.1,.5);
     render3D.ambientColor = hsl(.6,.3,.4);
     render3D.shadows = true;
     render3D.shadowRange = levelSize + 4;
     render3D.shadowCenter = vec3();
 
     // angled orthographic camera looking down at the board
-    render3D.camera.pos = vec3(7,9,7);
+    render3D.camera.pos = vec3(7,8,7);
     render3D.camera.lookAt(vec3(0,.5,0));
-    render3D.camera.orthographic = levelSize+1;
+    render3D.camera.orthographic = levelSize;
 
     // make a checkered floor
     const checker = (x, z)=> hsl(0, 0, (x+z)&1 ? .4 : .3);
@@ -134,8 +132,8 @@ function gameInit()
     new EngineObject3D(vec3(), floorMesh);
 
     // build all the meshes and the level
-    wallMesh = buildBox(.9).setColor(hsl(.6,.2,.4));
-    blockMesh = buildBox(.8);
+    wallMesh = buildBox(vec3(.9,.6,.9)).setColor(hsl(.6,.1,.3));
+    blockMesh = buildBox(vec3(.7,1,.7));
     ballMesh = buildSphere(.8);
     padMesh = buildBox(vec3(1,.1,1));
     buildLevel();
@@ -177,7 +175,7 @@ function gameRender()
 
 function gameRenderPost()
 {
-    const text = 'arrows or click: move / R: reset / moves: ' + moves;
+    const text = 'arrows or click: move / R: reset';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 40, BLACK);
     const solvedPos = vec2(mainCanvasSize.x/2, mainCanvasSize.y - 50);
     const isSolved = goals.every(g=> boxAt(g.cell.x, g.cell.y));
