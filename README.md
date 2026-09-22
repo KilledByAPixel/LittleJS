@@ -44,13 +44,15 @@ The code is very clean and well documented with many examples to get you started
 
 ### 🧊 LittleJS 3D
 
-- Built-in 3D renderer with no dependencies, drawing into the same canvas as your 2D scene
-- `EngineObject3D` works like `EngineObject` with a mesh, so physics, children, timers and sound carry over
-- Shape builders, extruded sprites and text, height map terrain, and OBJ model loading
-- Sunlight with shadow maps, up to 8 colored lights, specular highlights, emissive glow and fog
-- Particles, trails, billboards, instanced drawing and custom shaders on any object
-- Orbit, chase and first person cameras with mouse picking and 3D positional sound
-- Optional [Three.js](https://threejs.org) plugin to render a Three.js scene with LittleJS gameplay
+- Built-in 3D renderer that shares the canvas with your 2D game
+- 3D objects with the same physics, children and timers as 2D
+- Shape builders, extruded sprites and text, and OBJ loading
+- Height map terrain with collision and raycasts
+- Shadow maps, colored lights, specular, emissive glow and fog
+- Particles, trails, billboards and instanced drawing
+- Orbit, chase and first person cameras with mouse picking
+- Custom shaders on any object
+- Optional [Three.js](https://threejs.org) plugin as an alternative renderer
 
 ### 🔊 Audio
 
