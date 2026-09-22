@@ -42,6 +42,25 @@ function audioInit()
     audioMasterGain = audioContext.createGain();
     audioMasterGain.connect(audioContext.destination);
     audioMasterGain.gain.value = soundVolume; // set starting value
+    document.addEventListener('visibilitychange', audioVisibilityChange);
+}
+
+// a hidden page stops the game, so its sound stops too, and the audio clock with it so every sound picks up
+// exactly where it was; only a suspend made here is undone, not one the browser holds until the first input
+let audioSuspendedWhenHidden = false;
+function audioVisibilityChange()
+{
+    if (document.hidden)
+    {
+        if (!soundPauseWhenHidden || audioContext.state != 'running') return;
+        audioSuspendedWhenHidden = true;
+        audioContext.suspend();
+    }
+    else if (audioSuspendedWhenHidden)
+    {
+        audioSuspendedWhenHidden = false;
+        audioContext.resume();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

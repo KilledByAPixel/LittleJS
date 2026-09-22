@@ -3311,6 +3311,14 @@ let soundDefaultRange = 40;
  *  @memberof Settings */
 let soundDefaultTaper = .7;
 
+/** Pause all sound while the page is hidden, and pick up where it was when it shows again
+ *  - A hidden page stops the game, so without this a looping sound plays on over a frozen game
+ *  - Turn it off to keep music playing in a background tab
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let soundPauseWhenHidden = true;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Setters for global variables
 
@@ -3648,6 +3656,11 @@ function setSoundDefaultRange(range) { soundDefaultRange = range; }
  *  @param {number} taper
  *  @memberof Settings */
 function setSoundDefaultTaper(taper) { soundDefaultTaper = taper; }
+
+/** Set if all sound pauses while the page is hidden
+ *  @param {boolean} pause
+ *  @memberof Settings */
+function setSoundPauseWhenHidden(pause) { soundPauseWhenHidden = pause; }
 
 /** Set if watermark with FPS should be shown
  *  @param {boolean} show
@@ -7069,6 +7082,25 @@ function audioInit()
     audioMasterGain = audioContext.createGain();
     audioMasterGain.connect(audioContext.destination);
     audioMasterGain.gain.value = soundVolume; // set starting value
+    document.addEventListener('visibilitychange', audioVisibilityChange);
+}
+
+// a hidden page stops the game, so its sound stops too, and the audio clock with it so every sound picks up
+// exactly where it was; only a suspend made here is undone, not one the browser holds until the first input
+let audioSuspendedWhenHidden = false;
+function audioVisibilityChange()
+{
+    if (document.hidden)
+    {
+        if (!soundPauseWhenHidden || audioContext.state != 'running') return;
+        audioSuspendedWhenHidden = true;
+        audioContext.suspend();
+    }
+    else if (audioSuspendedWhenHidden)
+    {
+        audioSuspendedWhenHidden = false;
+        audioContext.resume();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

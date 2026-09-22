@@ -105,6 +105,7 @@ export
     soundVolume,
     soundDefaultRange,
     soundDefaultTaper,
+    soundPauseWhenHidden,
 
     // Setters for globals
     setCameraPos,
@@ -162,6 +163,7 @@ export
     setSoundVolume,
     setSoundDefaultRange,
     setSoundDefaultTaper,
+    setSoundPauseWhenHidden,
     setDebugWatermark,
     setDebugKey,
 

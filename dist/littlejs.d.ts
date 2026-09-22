@@ -654,6 +654,13 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let soundDefaultTaper: number;
+    /** Pause all sound while the page is hidden, and pick up where it was when it shows again
+     *  - A hidden page stops the game, so without this a looping sound plays on over a frozen game
+     *  - Turn it off to keep music playing in a background tab
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let soundPauseWhenHidden: boolean;
     /** Set position of camera in world space
      *  @param {Vector2} pos
      *  @memberof Settings */
@@ -892,6 +899,10 @@ declare module "littlejsengine" {
      *  @param {number} taper
      *  @memberof Settings */
     export function setSoundDefaultTaper(taper: number): void;
+    /** Set if all sound pauses while the page is hidden
+     *  @param {boolean} pause
+     *  @memberof Settings */
+    export function setSoundPauseWhenHidden(pause: boolean): void;
     /** Set if watermark with FPS should be shown
      *  @param {boolean} show
      *  @memberof Debug */
