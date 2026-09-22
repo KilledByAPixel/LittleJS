@@ -1,6 +1,6 @@
 // drive laps around a hilly track, hit every gate in order
 const trackSize = 160, roadWidth = 8, gateCount = 4;
-const engineSound = new Sound([,0,91.6,,.4,0,2,2,,,,,.2,1,,,,,,.3,-200]);
+const engineSound = new Sound([,0,91,,.4,0,2,2,,,,,.1,1,,,,,,.1,-200]);
 let terrain, car, lapCount = 0, nextGate = 1, bestTime = 0;
 let lapTimer = new Timer(0);
 
