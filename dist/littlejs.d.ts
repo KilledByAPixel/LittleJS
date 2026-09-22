@@ -2694,6 +2694,14 @@ declare module "littlejsengine" {
          *  @return {SoundInstance} - The sound instance, or undefined if sound is disabled, not loaded, or running in headless mode
          */
         play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean, paused?: boolean): SoundInstance;
+        /** Play the sound on a loop, the same as play with loop on; stop or change it through the SoundInstance returned
+         *  @param {Vector2} [pos] - World space position to play the sound if any
+         *  @param {number}  [volume] - How much to scale volume by
+         *  @param {number}  [pitch] - How much to scale pitch by
+         *  @param {number}  [randomnessScale] - How much to scale pitch randomness
+         *  @param {boolean} [paused] - Should the sound start paused
+         *  @return {SoundInstance} - The sound instance, or undefined if sound is disabled, not loaded, or running in headless mode */
+        playLoop(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, paused?: boolean): SoundInstance;
         /** Play a music track that loops by default
          *  @param {number} [volume] - Volume to play the music at
          *  @param {boolean} [loop] - Should the music loop?
@@ -6533,6 +6541,15 @@ declare module "littlejsengine" {
          *  @param {boolean} [loop]
          *  @return {SoundInstance|undefined} - undefined when out of range or sound is off */
         playSound(sound: Sound, pos3D: Vector3, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean): SoundInstance | undefined;
+        /** Play a sound on a loop at a 3D position, the same as playSound with loop on
+         *  - Its volume and pan are set when it starts, change or stop it through the SoundInstance returned
+         *  @param {Sound} sound
+         *  @param {Vector3} pos3D
+         *  @param {number} [volume]
+         *  @param {number} [pitch]
+         *  @param {number} [randomnessScale] - How much to scale pitch randomness
+         *  @return {SoundInstance|undefined} - undefined when out of range or sound is off */
+        playSoundLoop(sound: Sound, pos3D: Vector3, volume?: number, pitch?: number, randomnessScale?: number): SoundInstance | undefined;
         /** Is any part of a sphere on screen this frame, the test that skips meshes the camera cannot see
          *  - While the shadow map is drawing it tests the shadow area instead
          *  @param {Vector3} center

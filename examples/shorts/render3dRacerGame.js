@@ -77,7 +77,8 @@ class Car extends EngineObject3D
 
         // engine sound loops, playing faster with speed
         if (!this.engineLoop?.isPlaying())
-            this.engineLoop = render3D.playSound(engineSound, this.pos3D, .2, 1, 1, true);
+            this.engineLoop =
+                render3D.playSoundLoop(engineSound, this.pos3D, .2);
         this.engineLoop?.setRate(.4 + abs(this.speed)*2);
 
         // gates count in order, the finish line completes a lap

@@ -256,6 +256,16 @@ class Sound
         return instance;
     }
     
+    /** Play the sound on a loop, the same as play with loop on; stop or change it through the SoundInstance returned
+     *  @param {Vector2} [pos] - World space position to play the sound if any
+     *  @param {number}  [volume] - How much to scale volume by
+     *  @param {number}  [pitch] - How much to scale pitch by
+     *  @param {number}  [randomnessScale] - How much to scale pitch randomness
+     *  @param {boolean} [paused] - Should the sound start paused
+     *  @return {SoundInstance} - The sound instance, or undefined if sound is disabled, not loaded, or running in headless mode */
+    playLoop(pos, volume=1, pitch=1, randomnessScale=1, paused=false)
+    { return this.play(pos, volume, pitch, randomnessScale, true, paused); }
+
     /** Play a music track that loops by default
      *  @param {number} [volume] - Volume to play the music at
      *  @param {boolean} [loop] - Should the music loop?

@@ -7296,6 +7296,16 @@ class Sound
         return instance;
     }
     
+    /** Play the sound on a loop, the same as play with loop on; stop or change it through the SoundInstance returned
+     *  @param {Vector2} [pos] - World space position to play the sound if any
+     *  @param {number}  [volume] - How much to scale volume by
+     *  @param {number}  [pitch] - How much to scale pitch by
+     *  @param {number}  [randomnessScale] - How much to scale pitch randomness
+     *  @param {boolean} [paused] - Should the sound start paused
+     *  @return {SoundInstance} - The sound instance, or undefined if sound is disabled, not loaded, or running in headless mode */
+    playLoop(pos, volume=1, pitch=1, randomnessScale=1, paused=false)
+    { return this.play(pos, volume, pitch, randomnessScale, true, paused); }
+
     /** Play a music track that loops by default
      *  @param {number} [volume] - Volume to play the music at
      *  @param {boolean} [loop] - Should the music loop?
@@ -18657,6 +18667,17 @@ class Render3DPlugin
         const rate = pitch + pitch * sound.randomness * randomnessScale * rand(-1, 1);
         return new SoundInstance(sound, volume, rate, pan, loop);
     }
+
+    /** Play a sound on a loop at a 3D position, the same as playSound with loop on
+     *  - Its volume and pan are set when it starts, change or stop it through the SoundInstance returned
+     *  @param {Sound} sound
+     *  @param {Vector3} pos3D
+     *  @param {number} [volume]
+     *  @param {number} [pitch]
+     *  @param {number} [randomnessScale] - How much to scale pitch randomness
+     *  @return {SoundInstance|undefined} - undefined when out of range or sound is off */
+    playSoundLoop(sound, pos3D, volume=1, pitch=1, randomnessScale=1)
+    { return this.playSound(sound, pos3D, volume, pitch, randomnessScale, true); }
 
     /** Is any part of a sphere on screen this frame, the test that skips meshes the camera cannot see
      *  - While the shadow map is drawing it tests the shadow area instead

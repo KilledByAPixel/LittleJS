@@ -336,6 +336,7 @@ combineCanvases()            // Combine all canvases onto mainCanvas (for screen
 Sound(zzfxSound, randomness, range, taper)             // Create a zzfx sound
 Sound(filename, randomness, range, taper)              // Load a wave, mp3, or ogg
 Sound.play(pos, volume=1, pitch=1, randomness=1, loop=false, paused=false) // Play a sound, returns SoundInstance
+Sound.playLoop(pos, volume=1, pitch=1, randomness=1)   // Play on a loop, like play with loop on
 Sound.playMusic(volume=1, loop=true)                   // Play as music with looping
 Sound.playNote(semitoneOffset, pos, volume=1)          // Play as note with a semitone offset
 Sound.getDuration()                                    // Get length of sound in seconds (0 if loading)
@@ -899,6 +900,8 @@ render3D.pick(screenPos or ray, objects)           // {object, distance} of the 
                                                    // or a sprite's size3D; a screen position goes through screenToRay
 render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop) // like sound.play(pos): quieter with
                                                 // distance from the camera, panned by side
+render3D.playSoundLoop(sound, pos3D, volume, pitch, randomnessScale) // the same on a loop; its volume and pan
+                                                // are set when it starts
 render3D.isSphereVisible(center, radius) // the same is-it-on-screen test drawMesh uses, for skipping your own draws
 
 // Lights and fog, read at each draw

@@ -627,6 +627,17 @@ class Render3DPlugin
         return new SoundInstance(sound, volume, rate, pan, loop);
     }
 
+    /** Play a sound on a loop at a 3D position, the same as playSound with loop on
+     *  - Its volume and pan are set when it starts, change or stop it through the SoundInstance returned
+     *  @param {Sound} sound
+     *  @param {Vector3} pos3D
+     *  @param {number} [volume]
+     *  @param {number} [pitch]
+     *  @param {number} [randomnessScale] - How much to scale pitch randomness
+     *  @return {SoundInstance|undefined} - undefined when out of range or sound is off */
+    playSoundLoop(sound, pos3D, volume=1, pitch=1, randomnessScale=1)
+    { return this.playSound(sound, pos3D, volume, pitch, randomnessScale, true); }
+
     /** Is any part of a sphere on screen this frame, the test that skips meshes the camera cannot see
      *  - While the shadow map is drawing it tests the shadow area instead
      *  @param {Vector3} center

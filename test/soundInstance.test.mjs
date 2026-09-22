@@ -172,6 +172,16 @@ test('play paused starts in the paused state', () =>
     instance.stop();
 });
 
+test('playLoop plays the sound on a loop', () =>
+{
+    const instance = sound.playLoop(undefined, .5);
+    assert.equal(instance.loop, true);
+    assert.equal(lastSource.loop, true, 'the source itself loops');
+    assert.equal(instance.volume, .5);
+    instance.stop();
+    assert.equal(sound.play().loop, false, 'play still does not');
+});
+
 test('setVolume updates the gain node', () =>
 {
     const instance = sound.play();

@@ -1480,6 +1480,17 @@ test('the stage loop sets the draw state from each object, so render3D overrides
     engineObjects.length = 0;
 });
 
+test('playSoundLoop is playSound with loop on', () =>
+{
+    // no audio headless, so check what it hands playSound
+    const playSound = render3D.playSound, calls = [];
+    render3D.playSound = (...args)=> calls.push(args);
+    try { render3D.playSoundLoop('sound', vec3(1, 2, 3), .5, 2); }
+    finally { render3D.playSound = playSound; }
+    assert.deepEqual(calls[0].slice(2), [.5, 2, 1, true]);
+    assert.equal(calls[0][0], 'sound');
+});
+
 test('the shared box and sphere are there from the start, and drawBox and drawSphere use them', () =>
 {
     // size 1 each, so an object's scale3D is its size, as for any other size 1 mesh
