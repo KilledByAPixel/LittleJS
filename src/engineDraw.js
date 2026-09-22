@@ -298,6 +298,7 @@ class TextureInfo
  * - Draws that share a Shader share a batch; with no Shader set nothing changes
  * - In 2D it shades textured draws, untextured ones like drawRect draw as they are
  * - Compiled once per renderer by the first draw that needs it; a bad snippet throws with the GLSL log in debug
+ * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, and localUV, 0 to 1 across the sprite
  *   or the mesh's own uv
  * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, lightCount,
@@ -1267,7 +1268,7 @@ function setAdditiveBlendMode(additive=true)
 function setShader(shader)
 {
     ASSERT(!shader || shader instanceof Shader, 'shader must be a Shader');
-    glCustomShader = shader;
+    glCustomShader = shader || undefined; // null is no shader too, so it batches with none
 }
 
 /** Set an extra canvas to composite behind the engine canvases when combining

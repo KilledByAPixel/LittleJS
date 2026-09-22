@@ -10,7 +10,7 @@ void mainImage(out vec4 c, vec2 uv)
 }`);
 
 // toon shading: three light bands from the sun, the point lights and the
-// shadow map, with a rim that brightens the silhouette
+// shadow map; the black outline is a second mesh, see the hull below
 const toonShader = new Shader(`
 void mainImage(out vec4 c, vec2 uv)
 {
@@ -24,9 +24,7 @@ void mainImage(out vec4 c, vec2 uv)
         l += lightColors[i].a*a*a*max(0., dot(n, normalize(v)));
     }
     l = floor(min(l, 1.)*3.)/3.;
-    vec3 eye = normalize(cameraPos - worldPos);
-    float rim = step(.75, 1. - max(dot(n, eye), 0.));
-    c = vec4(vec3(.3, .9, .6)*(ambientColor + sunColor*l) + rim*.4, 1);
+    c = vec4(vec3(.3, .9, .6)*(ambientColor + sunColor*l), 1);
 }`);
 
 function gameInit()
@@ -49,6 +47,15 @@ function gameInit()
     const toon = new EngineObject3D(vec3(3,1.5,0), buildTorus(3, 1));
     toon.shader = toonShader;
     toon.emissive = 1; // the snippet's color is final, no engine lighting
+
+    // the outline: the same mesh pushed out along its normals and turned
+    // inside out, so only its far side draws and shows around the edges
+    const hull = buildTorus(3, 1);
+    hull.points = hull.points.map((p, i)=> p.add(hull.normals[i].scale(.08)));
+    const outline = new EngineObject3D(vec3(), hull.flipNormals());
+    outline.color = hsl(0,0,0);
+    outline.emissive = 1; // flat black
+    toon.addChild(outline);
 
     // a point light that the toon shader reads as lights[0]
     new Light3D(vec3(3,4,3), 8, hsl(.1,1,.6), 2);

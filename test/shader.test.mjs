@@ -27,6 +27,12 @@ test('setShader takes a Shader or nothing, not the snippet itself', () =>
     assert.throws(()=> setShader({}));
 });
 
+test('setShader with null is no shader, like undefined, so the two batch together', () =>
+{
+    setShader(null);
+    setShader(); // and no assert on the way
+});
+
 test('objects start with no shader, 3D objects included', () =>
 {
     assert.equal(new EngineObject(vec2()).shader, undefined);

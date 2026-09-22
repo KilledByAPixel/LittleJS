@@ -159,7 +159,7 @@ function render3DSetObjectState(o)
     r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
     r.pixelated = !!o?.pixelated;
     ASSERT(!o?.shader || o.shader instanceof Shader, 'shader must be a Shader, not the snippet itself');
-    r.shader = o?.shader;
+    r.shader = o?.shader || undefined; // null is no shader too, so it batches with none
     r.depthTest = true;
 }
 
@@ -1365,7 +1365,7 @@ function render3DFragmentSource(fragmentCode)
         'float shadow(){' +
         'if(shadowParams.x<=0.)return 1.;' +
         'vec3 q=S.xyz/S.w*.5+.5;' +
-        'if(any(greaterThan(abs(q-.5),vec3(.5))))return 1.;' +
+        'if(any(greaterThanEqual(abs(q-.5),vec3(.5))))return 1.;' +
         'q.z-=shadowParams.y;' +
         'float s=0.;' +
         'for(int x=-1;x<=1;++x)for(int y=-1;y<=1;++y)' +

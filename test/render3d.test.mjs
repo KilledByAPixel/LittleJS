@@ -1778,10 +1778,14 @@ test('an object\'s shader reaches the draw state, is undefined for the callbacks
     const plain = new Probe(vec3()), shaded = new Probe(vec3());
     plain.name = 'plain'; shaded.name = 'shaded'; shaded.shader = shader;
     render3D.onRenderOpaque = ()=> seen.callback = render3D.shader;
-    render3D.renderStages([shaded, plain]);
+    const cleared = new Probe(vec3());
+    cleared.name = 'cleared'; cleared.shader = null; // a null reaches the state as undefined, so it batches with none
+    render3D.renderStages([shaded, plain, cleared]);
     render3D.onRenderOpaque = undefined;
     assert.equal(seen.shaded, shader);
     assert.equal(seen.plain, undefined);
+    assert.equal(seen.cleared, undefined);
+    cleared.destroy();
     assert.equal(seen.callback, undefined); // reset before the callback, so a shader cannot leak out of an object
     assert.equal(render3D.shader, undefined);
     plain.destroy(); shaded.destroy();

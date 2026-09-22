@@ -3841,6 +3841,7 @@ class TextureInfo
  * - Draws that share a Shader share a batch; with no Shader set nothing changes
  * - In 2D it shades textured draws, untextured ones like drawRect draw as they are
  * - Compiled once per renderer by the first draw that needs it; a bad snippet throws with the GLSL log in debug
+ * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, and localUV, 0 to 1 across the sprite
  *   or the mesh's own uv
  * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, lightCount,
@@ -4810,7 +4811,7 @@ function setAdditiveBlendMode(additive=true)
 function setShader(shader)
 {
     ASSERT(!shader || shader instanceof Shader, 'shader must be a Shader');
-    glCustomShader = shader;
+    glCustomShader = shader || undefined; // null is no shader too, so it batches with none
 }
 
 /** Set an extra canvas to composite behind the engine canvases when combining
@@ -18070,7 +18071,7 @@ function render3DSetObjectState(o)
     r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
     r.pixelated = !!o?.pixelated;
     ASSERT(!o?.shader || o.shader instanceof Shader, 'shader must be a Shader, not the snippet itself');
-    r.shader = o?.shader;
+    r.shader = o?.shader || undefined; // null is no shader too, so it batches with none
     r.depthTest = true;
 }
 
@@ -19276,7 +19277,7 @@ function render3DFragmentSource(fragmentCode)
         'float shadow(){' +
         'if(shadowParams.x<=0.)return 1.;' +
         'vec3 q=S.xyz/S.w*.5+.5;' +
-        'if(any(greaterThan(abs(q-.5),vec3(.5))))return 1.;' +
+        'if(any(greaterThanEqual(abs(q-.5),vec3(.5))))return 1.;' +
         'q.z-=shadowParams.y;' +
         'float s=0.;' +
         'for(int x=-1;x<=1;++x)for(int y=-1;y<=1;++y)' +
