@@ -6858,7 +6858,8 @@ declare module "littlejsengine" {
      * Mesh - A triangle strip with positions, normals, uvs and colors, uploaded once and drawn by matrix
      * - Build with addStrip, addQuad, combine or the shape builders, then render each frame
      * - Its back faces are skipped unless doubleSided is set, which the open builders like buildGrid do for you
-     * - The GPU buffer is created lazily on first render and dropped by dispose
+     * - The GPU buffer is created lazily on first render and dropped by dispose, or freed once the mesh is garbage
+     *   collected, so dispose is only needed to free it right away, like for a mesh rebuilt often
      * @memberof Render3D
      * @example
      * const mesh = buildLathe([[0, -1], [1, 0], [0, 1]], 4); // octahedron
@@ -6966,7 +6967,8 @@ declare module "littlejsengine" {
          *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
          *  @param {Color} [color] - Tint */
         render(matrix?: Matrix4 | Vector3, tileInfo?: TileInfo | TextureInfo, color?: Color): void;
-        /** Delete the GPU buffer, the CPU arrays stay so the mesh can be rendered again */
+        /** Delete the GPU buffer now, the CPU arrays stay so the mesh can be rendered again
+         *  - Optional, the buffer is freed anyway once the mesh is garbage collected, this frees it right away */
         dispose(): void;
     }
     /**
@@ -7198,8 +7200,8 @@ declare module "littlejsengine" {
     /**
      * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
      * - A point light by default: it lights what is near it and fades out by its radius
-     * - Set directional to shine from far away along the light's forward axis instead, aim it with lookAt or rotation3D
-     * - A directional light shines from no particular place, so only its facing counts and moving it does nothing
+     * - Set directional to shine from far away instead, from its position toward the origin like a three.js
+     *   DirectionalLight: only the direction to it counts, so moving it or its parent swings the light around
      * - Only render3D.lightDirection casts shadows, these light without shadowing
      * - Only the 8 lights nearest the camera are used each frame
      * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
@@ -7210,16 +7212,19 @@ declare module "littlejsengine" {
      * @memberof Render3D
      * @example
      * const torch = new Light3D(vec3(0, 3, 0), 10, hsl(.1, 1, .65));
+     * const fill = new Light3D(vec3(-1, 1, 1), 1, hsl(.6, .5, .3)); // from the back left and above
+     * fill.directional = true;
      */
     export class Light3D extends EngineObject3D {
         /** Create a point light, set directional to make it shine from far away instead
-         *  @param {Vector3} [pos3D]
+         *  @param {Vector3} [pos3D] - Where it is, or for a directional light where it shines from, toward the origin
          *  @param {number} [radius] - Distance where the light fades to nothing, ignored when directional
          *  @param {Color} [color] - Light color, alpha scales the brightness */
         constructor(pos3D?: Vector3, radius?: number, color?: Color);
         /** @property {number} - Distance where the light fades to nothing */
         radius: number;
-        /** @property {boolean} - Shine along the light's forward axis from far away instead of out from its position, with no falloff */
+        /** @property {boolean} - Shine from far away, from its position toward the origin, instead of out from its position
+         *  with a falloff; parent it to a sun in the sky and the light follows the sun */
         directional: boolean;
     }
     /**

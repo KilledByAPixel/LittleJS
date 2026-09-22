@@ -924,8 +924,8 @@ render3D.gravity = vec3(0, -.01, 0) // e.g., vec3() by default so nothing falls;
 new Light3D(pos3D, radius, color) // point light, an EngineObject3D; alpha scales brightness so alpha 0 is an off
                                   // switch, a radius of 0 is another, brightness drops off fast so a small radius
                                   // needs a bright color
-light.directional = true          // shine from far away along the light's forward axis, no position and no falloff;
-                                  // aim it with light.lookAt(target) or rotation3D
+light.directional = true          // shine from far away, from its position toward the origin, with no falloff,
+                                  // like a three.js DirectionalLight; moving it or its parent swings the light
 // 8 lights reach the shader each frame: every directional light first, then the point lights nearest the camera;
 // a light switched off by its alpha or radius is left out so it cannot take a slot from one that is on;
 // none of them cast shadows, only render3D.lightDirection does
@@ -1114,7 +1114,8 @@ mesh.getBounds()                              // {min, max} around the vertices
 mesh.center() mesh.fit(size) // move the bounds onto the origin, scale the largest extent to size; both edit in place
                              // and return the mesh
 mesh.render(matrix, tileInfo, color)          // draw it now with the current draw state
-mesh.dispose()                                // free the GPU buffer, the CPU data stays
+mesh.dispose()                                // free the GPU buffer now, the CPU data stays; optional, a mesh
+                                              // that is garbage collected frees its buffer anyway, some time later
 mesh.points mesh.normals mesh.uvs mesh.colors // the vertex arrays, one entry per strip vertex; building one by
                                  // hand you can fill points alone, the rest fall back to up, zero and white
 mesh.instanced = false           // draw this mesh one call per use, in object order, instead of batching it
@@ -1216,7 +1217,8 @@ trail.clear()                                 // forget the trail, for when the 
   - Builders take diameters and full sizes; three.js SphereGeometry, CylinderGeometry and TorusGeometry take radii
   - camera.fov is in radians, a three.js PerspectiveCamera fov is in degrees
   - A plane lies in XZ facing +Y, a three.js PlaneGeometry stands in XY facing +Z
-  - render3D.lightDirection is the way sunlight travels, a three.js DirectionalLight shines from its position
+  - render3D.lightDirection is the way sunlight travels, while a directional Light3D, like a three.js
+    DirectionalLight, shines from its position
   - Colors are plain 0 to 1 values with no color management, and a point light fades out by a radius, not by
     physical intensity units
 
@@ -1234,7 +1236,8 @@ material.side = THREE.DoubleSide          // mesh.doubleSided = true
 material.emissiveIntensity                // obj.emissive
 material.transparent, blending            // obj.transparent, obj.additive
 new THREE.AmbientLight(color)             // render3D.ambientColor
-new THREE.DirectionalLight(color)         // render3D.lightDirection and lightColor, or a directional Light3D
+new THREE.DirectionalLight(color)         // a directional Light3D, it shines from its position the same way; or
+                                          // render3D.lightDirection and lightColor, the one light that casts shadows
 new THREE.PointLight(color, 1, distance)  // new Light3D(pos3D, radius, color)
 light.castShadow, light.shadow.camera     // render3D.shadows, shadowRange and shadowCenter
 scene.fog = new THREE.Fog(c, near, far)   // render3D.setFog(near, far, c)
@@ -1245,7 +1248,8 @@ new THREE.Raycaster()                     // render3D.screenToRay, pick and engi
 OBJLoader                                 // loadOBJ(url) or parseOBJ(text)
 EffectComposer and UnrealBloomPass        // postProcessBloom()
 renderer.render(scene, camera)            // nothing to do, the engine draws every frame and handles resizing
-geometry.dispose()                        // mesh.dispose(), and setMesh frees the mesh it replaces
+geometry.dispose()                        // optional here, a collected mesh frees its buffer; mesh.dispose()
+                                          // frees it now, and setMesh frees the mesh it replaces
 ```
 
 ## LittleJS Three.js Integration

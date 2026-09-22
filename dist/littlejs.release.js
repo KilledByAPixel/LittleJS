@@ -19058,7 +19058,7 @@ function render3DRenderPass(after2D)
     const c = r.camera.pos;
     gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
 
-    // the Light3D objects, a directional one sends the direction toward it and a negative radius
+    // the Light3D objects, a directional one sends the direction toward it, from the origin, and a negative radius
     const lights = render3DCollectLights();
     gl.uniform1i(render3DUniform('extraLightCount'), lights.length);
     if (lights.length)
@@ -19066,7 +19066,8 @@ function render3DRenderPass(after2D)
         const positions = r.lightPositions, colors = r.lightColors;
         lights.forEach((light, i)=>
         {
-            const p = light.directional ? light.getForward3D().scale(-1) : light.getWorldPos3D();
+            const p = light.directional ? light.getWorldPos3D().normalize() : light.getWorldPos3D();
+            ASSERT(!light.directional || p.lengthSquared(), 'a directional light shines from its position toward the origin, so it cannot sit on the origin');
             const c = light.color, k = i * 4;
             positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
             positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
@@ -19271,11 +19272,19 @@ function render3DPolygonStrip(points)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// frees the GPU buffer of a mesh that is garbage collected without dispose, some time after it goes; it holds the
+// buffer and its context, never the mesh, or the mesh could not be collected, and dispose unregisters the mesh
+const render3DMeshBuffers = typeof FinalizationRegistry == 'undefined' ? undefined :
+    new FinalizationRegistry(({buffer, generation})=>
+        generation === render3D?.contextGeneration && glContext?.deleteBuffer(buffer));
+
 /**
  * Mesh - A triangle strip with positions, normals, uvs and colors, uploaded once and drawn by matrix
  * - Build with addStrip, addQuad, combine or the shape builders, then render each frame
  * - Its back faces are skipped unless doubleSided is set, which the open builders like buildGrid do for you
- * - The GPU buffer is created lazily on first render and dropped by dispose
+ * - The GPU buffer is created lazily on first render and dropped by dispose, or freed once the mesh is garbage
+ *   collected, so dispose is only needed to free it right away, like for a mesh rebuilt often
  * @memberof Render3D
  * @example
  * const mesh = buildLathe([[0, -1], [1, 0], [0, 1]], 4); // octahedron
@@ -19547,6 +19556,7 @@ class Mesh
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
         this.contextGeneration = render3D.contextGeneration;
+        render3DMeshBuffers?.register(this, {buffer: this.buffer, generation: this.contextGeneration}, this);
         gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer); // the engine's 2D batch writes through this binding
         return this;
     }
@@ -19557,10 +19567,12 @@ class Mesh
      *  @param {Color} [color] - Tint */
     render(matrix, tileInfo, color) { render3D?.drawMesh(this, matrix, tileInfo, color); }
 
-    /** Delete the GPU buffer, the CPU arrays stay so the mesh can be rendered again */
+    /** Delete the GPU buffer now, the CPU arrays stay so the mesh can be rendered again
+     *  - Optional, the buffer is freed anyway once the mesh is garbage collected, this frees it right away */
     dispose()
     {
         if (!this.buffer) return;
+        render3DMeshBuffers?.unregister(this); // freed here, so not again when the mesh is collected
         // a buffer from a context that was lost is gone with it, and the new context refuses to delete it
         if (this.contextGeneration === render3D?.contextGeneration)
             glContext?.deleteBuffer(this.buffer);
@@ -20697,8 +20709,8 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
 /**
  * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
  * - A point light by default: it lights what is near it and fades out by its radius
- * - Set directional to shine from far away along the light's forward axis instead, aim it with lookAt or rotation3D
- * - A directional light shines from no particular place, so only its facing counts and moving it does nothing
+ * - Set directional to shine from far away instead, from its position toward the origin like a three.js
+ *   DirectionalLight: only the direction to it counts, so moving it or its parent swings the light around
  * - Only render3D.lightDirection casts shadows, these light without shadowing
  * - Only the 8 lights nearest the camera are used each frame
  * - radius is where the light fades out, and it fades fast, so a small radius wants a bright color
@@ -20709,11 +20721,13 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
  * @memberof Render3D
  * @example
  * const torch = new Light3D(vec3(0, 3, 0), 10, hsl(.1, 1, .65));
+ * const fill = new Light3D(vec3(-1, 1, 1), 1, hsl(.6, .5, .3)); // from the back left and above
+ * fill.directional = true;
  */
 class Light3D extends EngineObject3D
 {
     /** Create a point light, set directional to make it shine from far away instead
-     *  @param {Vector3} [pos3D]
+     *  @param {Vector3} [pos3D] - Where it is, or for a directional light where it shines from, toward the origin
      *  @param {number} [radius] - Distance where the light fades to nothing, ignored when directional
      *  @param {Color} [color] - Light color, alpha scales the brightness */
     constructor(pos3D=vec3(), radius=5, color=WHITE)
@@ -20723,7 +20737,8 @@ class Light3D extends EngineObject3D
         this.size3D = vec3(); // not a solid thing to pick or collect
         /** @property {number} - Distance where the light fades to nothing */
         this.radius = radius;
-        /** @property {boolean} - Shine along the light's forward axis from far away instead of out from its position, with no falloff */
+        /** @property {boolean} - Shine from far away, from its position toward the origin, instead of out from its position
+         *  with a falloff; parent it to a sun in the sky and the light follows the sun */
         this.directional = false;
     }
 

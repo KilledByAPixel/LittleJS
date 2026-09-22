@@ -36,8 +36,7 @@ function gameInit()
     for (let i = 3; i--;)
         new Lamp(i*2, hsl(i/3,1,.6));
 
-    // make a directional light
-    const fill = new Light3D(vec3(), 1, hsl(.6,1,.3));
+    // make a directional light shining in from its position
+    const fill = new Light3D(vec3(1,1,.5), 1, hsl(.6,1,.3));
     fill.directional = true;
-    fill.lookAt(vec3(-1,-1,-.5));
 }

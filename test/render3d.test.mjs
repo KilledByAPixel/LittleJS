@@ -2118,14 +2118,16 @@ test('texture filtering settings have their defaults', () =>
     assert.equal(render3D.anisotropy, 4);
 });
 
-test('a Light3D is a point light until directional is set, then it shines along its forward axis', () =>
+test('a Light3D is a point light until directional is set, then it shines from where it is, parent included', () =>
 {
     const light = new Light3D(vec3(0, 5, 0), 4, RED);
     assert.equal(light.directional, false);
-    light.directional = true;
-    light.lookAt(vec3(0, 0, 0)); // straight down from above
-    nearVec(light.getForward3D(), 0, -1, 0);
-    light.destroy();
+    light.directional = true; // from straight above, toward the origin
+    nearVec(light.getWorldPos3D().normalize(), 0, 1, 0);
+    const sun = new EngineObject3D(vec3(10, 0, 0));
+    sun.addChild(light); // parented to a sun in the sky, the light comes from where the sun is
+    nearVec(light.getWorldPos3D().normalize(), 10/Math.hypot(10, 5), 5/Math.hypot(10, 5), 0);
+    sun.destroy();
     engineObjects.length = 0;
 });
 
