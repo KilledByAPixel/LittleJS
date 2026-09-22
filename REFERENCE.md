@@ -276,6 +276,16 @@ TileInfo.offset(offset) // Offset this tile by a certain amount in pixels
 TileInfo.frame(frame)   // Offset this tile by a number of animation frames
 TileInfo.textureInfo    // The texture info for this tile
 
+// Sprite Animation Object - steps a tile through the frames along its row over time, paused with the game
+new SpriteAnimation(tileInfo, frameCount, frameTime=.1) // first frame, how many, seconds each; loops from the start
+animation.loop() .play() .pingPong()  // start over from the first frame: repeat, run once and hold the last
+                                      // frame, or there and back; each returns the animation
+animation.stop()        // hold the current frame, a mode call starts it again
+animation.tileInfo      // the frame to draw now, read it in update or before a drawTile
+animation.frame         // its index, 0 to frameCount-1
+animation.isDone        // true once a play has run through
+animation.speed = 1     // rate multiplier, set before starting
+
 // Texture Info Object
 TextureInfo(image, useWebGL=true, wrap=false) // Created automatically for each image
 TextureInfo.image       // Image source

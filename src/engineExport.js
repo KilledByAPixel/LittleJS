@@ -257,6 +257,7 @@ export
     tile,
     TileInfo,
     TextureInfo,
+    SpriteAnimation,
     Shader,
     mainCanvas,
     mainContext,

@@ -31,7 +31,7 @@ const exampleList =
     new ExampleInfo('Texture', 'texture.js', 'Texture display and manipulation', false, 'sprites, loading, tiles'),
     new ExampleInfo('Texture Wrapped', 'textureWrapped.js', 'Textures tiled with wrap counts', false, 'background, pattern, repeat, tile, sprites'),
     new ExampleInfo('Sprite Atlas', 'spriteAtlas.js', 'Sprite atlas and tile rendering', false, 'sheet, frames, tiles'),
-    new ExampleInfo('Animation', 'animation.js', 'Sprite animation system', false, 'frames, loop, tiles, sprites'),
+    new ExampleInfo('Animation', 'animation.js', 'Sprite animation system', false, 'frames, loop, ping pong, tiles, sprites, SpriteAnimation'),
     new ExampleInfo('Texture Sheet', 'textureSheet.js', 'Pack images into a texture sheet at runtime', false, 'loadSprite, atlas, packing, sprites, frames'),
     new ExampleInfo('Texture Atlas', 'textureAtlas.js', 'Import a pre-packed atlas with named frames', false, 'loadAtlas, packer, animation, sprites'),
     new ExampleInfo('Blending', 'blending.js', 'Additive blending and transparency', false, 'alpha, color, tiles, smooth'),

@@ -1855,6 +1855,68 @@ declare module "littlejsengine" {
         setWrap(wrap?: boolean): void;
     }
     /**
+     * SpriteAnimation - Steps a tile through its frames over time: looping, once, or there and back
+     * - Driven by the engine time like a Timer, so it pauses with the game and needs no update call
+     * - Read tileInfo each frame for the frame to draw, from an object's update or before a drawTile
+     * - loop, play and pingPong each start over from the first frame; stop holds the current one
+     * - Frames follow each other along the row, as tileInfo.frame counts them
+     * @example
+     * const walk = new SpriteAnimation(tile(0, 16), 4, .1); // four frames, a tenth of a second each
+     * const attack = new SpriteAnimation(tile(4, 16), 3, .05).play(); // once, then holds the last frame
+     * // in update: this.tileInfo = (attack.isDone ? walk : attack).tileInfo;
+     * @memberof Draw
+     */
+    export class SpriteAnimation {
+        /** Create an animation over a run of frames, looping from the start
+         *  @param {TileInfo} tileInfo - The first frame
+         *  @param {number} frameCount - How many frames, one or more
+         *  @param {number} [frameTime] - Seconds each frame shows for */
+        constructor(tileInfo: TileInfo, frameCount: number, frameTime?: number);
+        /** @property {TileInfo} - The first frame, the others follow it along the row */
+        firstTile: TileInfo;
+        /** @property {number} - How many frames */
+        frameCount: number;
+        /** @property {number} - Seconds each frame shows for */
+        frameTime: number;
+        /** @property {number} - Rate multiplier, 2 plays twice as fast; set it before starting */
+        speed: number;
+        /** @property {string} - How it runs: 'loop', 'once' or 'pingPong', set by loop, play and pingPong */
+        mode: string;
+        /** @property {number} - Engine time it started at */
+        startTime: number;
+        /** @property {number|undefined} - The frame held by stop, undefined while running
+         *  @type {number|undefined} */
+        heldFrame: number | undefined;
+        /** Start over from the first frame and repeat forever
+         *  @return {SpriteAnimation} */
+        loop(): SpriteAnimation;
+        /** Start over from the first frame, run through once and hold the last frame
+         *  @return {SpriteAnimation} */
+        play(): SpriteAnimation;
+        /** Start over from the first frame and run there and back forever
+         *  @return {SpriteAnimation} */
+        pingPong(): SpriteAnimation;
+        /** Hold the current frame
+         *  @return {SpriteAnimation} */
+        stop(): SpriteAnimation;
+        /** Start over from the first frame in a mode
+         *  @param {string} [mode] - 'loop', 'once' or 'pingPong', the current mode when left out
+         *  @return {SpriteAnimation} */
+        restart(mode?: string): SpriteAnimation;
+        /** How many frames have gone by since the start, fractional
+         *  @return {number} */
+        get elapsedFrames(): number;
+        /** The frame showing now, 0 to frameCount-1
+         *  @return {number} */
+        get frame(): number;
+        /** The tile of the frame showing now
+         *  @return {TileInfo} */
+        get tileInfo(): TileInfo;
+        /** True once a play has shown its last frame for its time
+         *  @return {boolean} */
+        get isDone(): boolean;
+    }
+    /**
      * Shader - A custom fragment shader for objects and draws, 2D or 3D
      * - Write a mainImage function in the post processing style, the renderer wraps it with its own program
      * - It gives the surface color, then the object's color and additive color apply in 2D, and the lighting,
