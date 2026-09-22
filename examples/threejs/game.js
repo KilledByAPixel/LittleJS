@@ -12,7 +12,7 @@
 'use strict';
 
 // import LittleJS module and three.js
-import * as LJS from '../../../dist/littlejs.esm.js';
+import * as LJS from '../../dist/littlejs.esm.js';
 import * as THREE from 'three';
 const {vec2} = LJS;
 

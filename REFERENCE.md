@@ -1206,7 +1206,7 @@ trail.clear()                                 // forget the trail, for when the 
 - Recommended: `setGLEnable(false)` before engineInit so three.js owns the only WebGL context
 - Keep `canvasClearColor` transparent (the default) so the 3D scene shows through, set the background with `threeJS.scene.background`
 - Do not call `renderer.setPixelRatio`, the plugin manages canvas size and DPR
-- See `examples/threejs/` for a side scroller and a 3D platformer demo
+- See `examples/threejs/` for a 3D platformer demo
 
 ```javascript
 // Setup (call in gameInit), THREE is the three.js module you loaded
