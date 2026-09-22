@@ -1838,8 +1838,9 @@ declare module "littlejsengine" {
         size: Vector2;
         /** @property {Vector2} - inverse of the size, cached for rendering */
         sizeInverse: Vector2;
-        /** @property {WebGLTexture} - WebGL texture */
-        glTexture: any;
+        /** @property {WebGLTexture|undefined} - WebGL texture
+         *  @type {WebGLTexture|undefined} */
+        glTexture: WebGLTexture | undefined;
         /** @property {boolean} - true for REPEAT wrap mode, false for CLAMP_TO_EDGE */
         wrap: boolean;
         /** Creates the WebGL texture, updates if already created */
@@ -1883,10 +1884,12 @@ declare module "littlejsengine" {
         constructor(fragmentCode: string);
         /** @property {string} - The mainImage snippet */
         fragmentCode: string;
-        /** @property {WebGLProgram} - The 2D program, compiled by the first draw that needs it, read only */
-        program: any;
-        /** @property {WebGLProgram} - The 3D program, compiled by the 3D plugin the same way, read only */
-        program3D: any;
+        /** @property {WebGLProgram|undefined} - The 2D program, compiled by the first draw that needs it, read only
+         *  @type {WebGLProgram|undefined} */
+        program: WebGLProgram | undefined;
+        /** @property {WebGLProgram|undefined} - The 3D program, compiled by the 3D plugin the same way, read only
+         *  @type {WebGLProgram|undefined} */
+        program3D: WebGLProgram | undefined;
     }
     /**
      * LittleJS Drawing System
@@ -3033,8 +3036,9 @@ declare module "littlejsengine" {
         color: Color;
         /** @property {Color} - Additive color to apply when rendered */
         additiveColor: any;
-        /** @property {Shader} - Custom shader to render with, undefined for the engine's own */
-        shader: any;
+        /** @property {Shader|undefined} - Custom shader to render with, undefined for the engine's own
+         *  @type {Shader|undefined} */
+        shader: Shader | undefined;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         mirror: boolean;
         /** @property {boolean} - Has object been destroyed? */
@@ -3848,12 +3852,15 @@ declare module "littlejsengine" {
         *  new PostProcessPlugin(shaderCode);
         */
         constructor(shaderCode: string, includeMainCanvas?: boolean, feedbackTexture?: boolean);
-        /** @property {WebGLProgram} - Shader for post processing */
-        shader: any;
-        /** @property {WebGLTexture} - Texture for post processing */
-        texture: any;
-        /** @property {WebGLVertexArrayObject} - Vertex array object */
-        vao: any;
+        /** @property {WebGLProgram|undefined} - Shader for post processing
+         *  @type {WebGLProgram|undefined} */
+        shader: WebGLProgram | undefined;
+        /** @property {WebGLTexture|undefined} - Texture for post processing
+         *  @type {WebGLTexture|undefined} */
+        texture: WebGLTexture | undefined;
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object
+         *  @type {WebGLVertexArrayObject|undefined} */
+        vao: WebGLVertexArrayObject | undefined;
     }
     /**
      * Set up post processing with a bloom effect, so bright colors and lights glow
@@ -6587,6 +6594,7 @@ declare module "littlejsengine" {
      * - EngineObject3D is an EngineObject with a 3D position, rotation and mesh
      * - The 3D scene draws under the 2D sprites, so HUD and text land on top
      * - Lighting is the sun plus ambient, with optional extra lights, fog and shadows
+     * - Any object or draw can bring its own Shader, a mainImage snippet the lighting then applies to
      * - Build shapes with buildBox, buildSphere and friends, or load a model with loadOBJ
      * - Requires the Math3D plugin
      * @namespace Render3D
@@ -6663,8 +6671,9 @@ declare module "littlejsengine" {
         mirrored: boolean;
         /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
         specular: number;
-        /** @property {Shader} - Custom Shader for the next draws, set from each object's shader; undefined draws with the plugin's own */
-        shader: any;
+        /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined draws with the plugin's own
+         *  @type {Shader|undefined} */
+        shader: Shader | undefined;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
         receiveShadow: boolean;
         /** @property {Function|undefined} - Draw solid world here, it runs again for shadows so only draw in it
@@ -7007,6 +7016,7 @@ declare module "littlejsengine" {
      * - The 2D pos and velocity are still there but nothing draws them
      * - These inherited fields are 2D only and do nothing here: angle, angleVelocity, angleDamping,
      *   additiveColor, drawSize, mirror, clampSpeed, friction and groundObject
+     * - The inherited shader works here as in 2D, and with emissive at 1 its snippet does its own lighting
      * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D,
      *   which is the one way those 2D fields reach a 3D object
      * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D

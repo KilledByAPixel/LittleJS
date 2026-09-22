@@ -859,7 +859,7 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 - Optional plugin in the dist bundle like the others, draws meshes, billboards (flat pictures that turn to face the
   camera), lines and particles into the engine's WebGL canvas, under the 2D layer by default
 - Requires the 3D Math plugin. One shader: directional, ambient and point lights, specular, fog, shadows, textures,
-  vertex colors
+  vertex colors; any object or draw can bring its own Shader on top of it, see render3D.shader
 - EngineObject3D extends EngineObject, so update, destroy, timers, children and renderOrder all work; the 2D pos is
   ignored by rendering
 - The 3D pass is the part of the frame that draws 3D, and it draws in two rounds: the opaque stage for solid things

@@ -52,7 +52,7 @@ The code is very clean and well documented with many examples to get you started
 - Instanced drawing puts thousands of copies of a mesh into one draw call
 - 3D particles, trails, ribbons, billboards and text extruded from the engine font
 - Orbit, chase and first person cameras, perspective or orthographic, with mouse picking and 3D positional sound
-- Post-processing shaders reach the 3D scene too, including a built-in bloom for glowing lights
+- Any object can carry its own shader, in 2D or 3D, and post-processing shaders reach the 3D scene too, including a built-in bloom for glowing lights
 - The [Three.js](https://threejs.org) plugin is still fully supported as an alternative, rendering a Three.js scene behind the LittleJS canvas with `ThreeJSObject` letting LittleJS physics drive its meshes
 
 ### 🔊 Audio

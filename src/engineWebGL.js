@@ -32,7 +32,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glCanBeEnabled = true;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glUniformLocations = new Map, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -113,6 +113,7 @@ function glInit(rootElement)
             shader.program = undefined;
         glBatchShader = undefined;
         glProgramCustom = true;
+        glUniformLocations = new Map; // the programs those belonged to are gone
         // drop any partially-filled batch so the next glFlush doesn't
         // upload stale glBatchCount against fresh empty buffers on restore
         glBatchCount = 0;
@@ -404,6 +405,14 @@ function glCreateProgram(vsSource, fsSource)
     return program;
 }
 
+// a uniform location, looked up once per program
+function glUniformLocation(program, name)
+{
+    let cache = glUniformLocations.get(program);
+    cache || glUniformLocations.set(program, cache = {});
+    return cache[name] ??= glContext.getUniformLocation(program, name);
+}
+
 // a Shader's 2D program, compiled the first time a batch needs it: the snippet's mainImage gives the surface
 // color, then the sprite's color and additive color apply as the engine's own fragment shader does
 function glShaderProgram(shader)
@@ -548,7 +557,7 @@ function glFlush()
             glProgramCustom = !!glBatchShader;
             if (glBatchShader)
             {
-                const uniform = (name)=> glContext.getUniformLocation(program, name);
+                const uniform = (name)=> glUniformLocation(program, name);
                 glContext.uniformMatrix4fv(uniform('m'), false, glTransform);
                 glContext.uniform1f(uniform('iTime'), time);
                 glContext.uniform3f(uniform('iResolution'), glCanvas.width, glCanvas.height, 1);

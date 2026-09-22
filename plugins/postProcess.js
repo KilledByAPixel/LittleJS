@@ -45,11 +45,14 @@ class PostProcessPlugin
         if (!shaderCode) // default shader pass through
             shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';
 
-        /** @property {WebGLProgram} - Shader for post processing */
+        /** @property {WebGLProgram|undefined} - Shader for post processing
+         *  @type {WebGLProgram|undefined} */
         this.shader = undefined;
-        /** @property {WebGLTexture} - Texture for post processing */
+        /** @property {WebGLTexture|undefined} - Texture for post processing
+         *  @type {WebGLTexture|undefined} */
         this.texture = undefined;
-        /** @property {WebGLVertexArrayObject} - Vertex array object */
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object
+         *  @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
 
         // setup the post processing plugin
