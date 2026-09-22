@@ -1,6 +1,6 @@
 // drive laps around a hilly track, hit every gate in order
 const trackSize = 160, roadWidth = 8, gateCount = 4;
-const engineSound = new Sound([,0,91,,.4,0,2,2,,,,,.1,1,,,,,,.1,-200]);
+const engineSound = new Sound([.5,0,91,,.5,.01,2,,,,,,.14,1,,,,,,,-150]);
 let terrain, car, lapCount = 0, nextGate = 1, bestTime = 0;
 let lapTimer = new Timer(0);
 
@@ -77,7 +77,7 @@ class Car extends EngineObject3D
         // engine sound loops, playing faster with speed
         if (!this.engineLoop?.isPlaying())
             this.engineLoop =
-                render3D.playSoundLoop(engineSound, this.pos3D, .2);
+                render3D.playSoundLoop(engineSound, this.pos3D, .4);
         this.engineLoop?.setRate(.4 + abs(this.speed)*2);
 
         // gates count in order, the finish line completes a lap
@@ -105,10 +105,10 @@ function gameInit()
     render3D.lightDirection = vec3(.4,-1,.3);
     render3D.ambientColor = hsl(.6,.1,.5);
     render3D.shadows = true;
-    render3D.shadowRange = 90;
-    render3D.shadowMapSize = 2048; // twice the range, so twice the pixels
+    render3D.shadowRange = 150;
+    render3D.shadowMapSize = 2048;
 
-    // hills from noise, flattened where the road runs
+    // hills from noise, flattened where the road is
     const n = 81, heights = [], colors = [];
     const grassColor = hsl(.3,.4,.3);
     const rockColor = hsl(.1,.2,.4);
@@ -120,7 +120,7 @@ function gameInit()
             const x = (c/(n-1) - .5)*trackSize;
             const z = (r/(n-1) - .5)*trackSize;
             const hills = noise2D(x*.025, z*.025);
-            const edge = trackDistance(x, z) - roadWidth; // flat past the road
+            const edge = trackDistance(x, z) - roadWidth;
             const blend = smoothStep(clamp(edge/12));
             heightRow.push(lerp(.3, hills, blend));
             colorRow.push(grassColor.lerp(rockColor, hills));
@@ -157,8 +157,8 @@ function gameInit()
 
     // trees clear of the road, sharing one mesh so they draw as one batch
     const tree = buildCylinder(.5, 3, 7).setColor(hsl(.1,.4,.3));
-    tree.combine(buildCone(3.2, 4, 8), vec3(0,3,0), hsl(.3,.5,.2));
-    tree.combine(buildCone(2.2, 3, 8), vec3(0,4.8,0), hsl(.3,.5,.3));
+    tree.combine(buildCone(3.2, 4, 8), vec3(0,2.5,0), hsl(.3,.5,.2));
+    tree.combine(buildCone(2.2, 3, 8), vec3(0,4,0), hsl(.3,.5,.3));
     const half = trackSize/2;
     for (let i = 300; i--;)
     {
@@ -167,9 +167,10 @@ function gameInit()
             continue;
         const y = terrain.getHeight(x, z) + 1.5;
         const treeObject = new EngineObject3D(vec3(x, y, z), tree);
-        treeObject.rotation3D.y = rand(2*PI);
-        treeObject.scale3D = vec3(rand(.7,1.3));
+        treeObject.scale3D = vec3(rand(1,2));
     }
+
+    // make the player vehicle
     car = new Car(trackPoint(0));
 }
 
@@ -182,14 +183,12 @@ function gameUpdatePost()
 
 function gameRenderPost()
 {
-    drawTextScreen('LAP ' + lapCount, vec2(110, 50), 44, WHITE, 6, BLACK);
+    drawTextScreen('LAP ' + lapCount, vec2(95, 40), 44, WHITE, 6);
+    const bestText = 'BEST ' + formatTime(bestTime);
     if (bestTime)
-        drawTextScreen('BEST ' + formatTime(bestTime), vec2(110, 95),
-            26, WHITE, 5, BLACK);
+        drawTextScreen(bestText, vec2(90, 85), 26, WHITE, 5);
     const gate = nextGate ? 'NEXT GATE ' + nextGate : 'FINISH LINE';
-    drawTextScreen(gate, vec2(mainCanvasSize.x - 140, 50),
-        28, YELLOW, 5, BLACK);
-    const speed = round(abs(car.speed)*180) + ' KPH';
-    drawTextScreen(speed, vec2(110, mainCanvasSize.y - 40),
-        36, WHITE, 6, BLACK);
+    drawTextScreen(gate, vec2(mainCanvasSize.x - 120, 40), 28, YELLOW, 5);
+    const speed = round(car.speed*180) + ' KPH';
+    drawTextScreen(speed, vec2(95, mainCanvasSize.y - 40), 44, WHITE, 6);
 }
