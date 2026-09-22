@@ -221,8 +221,8 @@ function gameInit()
 
 function gameUpdate()
 {
-    // C breaks away into a free flying camera, and back to the chase camera
-    if (keyWasPressed('KeyC'))
+    // F breaks away into a free flying camera, and back to the chase camera
+    if (keyWasPressed('KeyF'))
     {
         if (freeCamera)
         {
@@ -250,8 +250,8 @@ function gameUpdatePost()
 
 function gameRenderPost()
 {
-    const text = freeCamera ? 'click: look / WASD: fly / C: back to the ball' :
-        'arrow keys: roll / space: jump / C: free camera';
+    const text = freeCamera ? 'click: look / WASD: fly / F: back to the ball' :
+        'arrow keys: roll / space: jump / F: free camera';
     const pos = vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40);
     drawTextScreen(text, pos, 30, WHITE, 4);
 }

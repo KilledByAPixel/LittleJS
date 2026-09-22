@@ -14,7 +14,7 @@ const mazeData =
     '##########',
 ];
 const mazeSize = vec2(mazeData[0].length, mazeData.length);
-const cellSize = 2, wallHeight = 3, eyeHeight = 1.6;
+const cellSize = 2, wallHeight = 3, eyeHeight = 1.5;
 let player;
 
 // the world position of a maze cell, at a height
@@ -28,7 +28,7 @@ function gameInit()
     render3D.setFog(8, 30);
     render3D.ambientColor = hsl(.6,.2,.4);
     render3D.shadows = true;
-    render3D.shadowCenter = vec3(); // pinned over the whole maze
+    render3D.shadowCenter = vec3();
     render3D.shadowRange = mazeSize.y*cellSize*1.5;
 
     // make a checkered floor and a solid block for every wall
@@ -43,14 +43,15 @@ function gameInit()
         const pos = cellPos(x, z, wallHeight/2);
         const wall = new EngineObject3D(pos, render3D.boxMesh);
         wall.scale3D = vec3(cellSize, wallHeight, cellSize);
-        wall.color = hsl(.08, .3, rand(.45,.55));
+        wall.color = hsl(.08, .3, rand(.4,.5));
         wall.setCollision();
     }
 
     // glowing lamps to find around the maze
     for (const [x, z, hue] of [[8,1,0], [3,3,.3], [5,7,.6]])
     {
-        const lamp = new EngineObject3D(cellPos(x, z, 2), render3D.sphereMesh);
+        const pos = cellPos(x, z, 1.5);
+        const lamp = new EngineObject3D(pos, render3D.sphereMesh);
         lamp.color = hsl(hue,1,.6);
         lamp.scale3D = vec3(.5);
         lamp.emissive = 1;
@@ -58,7 +59,7 @@ function gameInit()
     }
 
     // the player is a first person camera that bumps into walls
-    player = new FirstPersonCamera3D(cellPos(1, 9, eyeHeight), 0, 0);
+    player = new FirstPersonCamera3D(cellPos(1, 9, eyeHeight));
     player.size3D = vec3(1);
     player.collideAsSphere3D = true;
     player.setCollision();
@@ -66,7 +67,7 @@ function gameInit()
 
 function gameUpdate()
 {
-    if (keyWasPressed('KeyF')) // F toggles flying, walking lands at eye height
+    if (keyWasPressed('KeyF')) // F toggles flying
     {
         player.fly = !player.fly;
         if (!player.fly)
@@ -78,5 +79,5 @@ function gameRenderPost()
 {
     const mode = player.fly ? 'flying' : 'walking';
     const text = `click: look / WASD: move / F: fly (${mode})`;
-    drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30);
+    drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }
