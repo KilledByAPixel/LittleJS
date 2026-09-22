@@ -188,7 +188,7 @@ class AudioReverb extends AudioEffect
     createImpulse(duration, decay)
     {
         const sampleRate = audioContext.sampleRate;
-        const length = sampleRate * duration | 0;
+        const length = max(1, sampleRate * duration | 0);
         const buffer = audioContext.createBuffer(2, length, sampleRate);
         for (let channel = 2; channel--;)
         {

@@ -249,6 +249,8 @@ test('sounds without an output connect to the master gain', () =>
 {
     const instance = sound.play();
     assert.equal(instance.output, undefined);
+    // audioInit never runs here, so the master gain is undefined; this pins that
+    // the gain connects exactly once, to whatever the master gain is
     assert.equal(instance.gainNode.connections.length, 1);
     assert.equal(instance.gainNode.connections[0], LJS.audioMasterGain);
     instance.stop();

@@ -2611,9 +2611,11 @@ declare module "littlejsengine" {
      *  @memberof Audio */
     export let audioMasterGain: GainNode;
     /** Route all sound through an effect between the master gain and the speakers
-     *  - Pass the first and last nodes of an effect chain, or one node that is both
+     *  - Pass the first and last nodes of an effect chain, for an AudioEffect that is effect.input and effect.output
+     *  - The one argument form is for a single raw node that is both, never an effect's input
      *  - The output node is disconnected from everything else first, so it only feeds the speakers
      *  - Call with no arguments to remove the effect, can be called before engineInit
+     *  - Debug video capture records the master gain, so master effects are not in the recording
      *  @param {AudioNode} [input] - Node the master gain connects to
      *  @param {AudioNode} [output=input] - Node that connects to the audio destination
      *  @memberof Audio */
@@ -2680,8 +2682,9 @@ declare module "littlejsengine" {
         loadedPercent: number;
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         onloadCallback: (sound: Sound) => Sound;
-        /** @property {AudioNode} - Node to route every play of this sound through instead of the master gain, for effects */
-        output: any;
+        /** @property {AudioNode} - Node to route every play of this sound through instead of the master gain, for effects
+         *  @type {AudioNode} */
+        output: AudioNode;
         /** @param {Array<Array<number>|Float32Array>} sampleChannels */
         set sampleChannels(arg: (number[] | Float32Array)[]);
         /** Sample data for each channel
@@ -2782,8 +2785,9 @@ declare module "littlejsengine" {
         gainNode: GainNode;
         /** @property {AudioBufferSourceNode} - Source node of the audio */
         source: AudioBufferSourceNode;
-        /** @property {AudioNode} - Node to route this instance through, copied from the sound */
-        output: any;
+        /** @property {AudioNode} - Node to route this instance through, copied from the sound
+         *  @type {AudioNode} */
+        output: AudioNode;
         onendedCallback: (source: any) => void;
         /** Start playing the sound instance from the offset time
          *  @param {number} [offset] - Offset in seconds to start playback from

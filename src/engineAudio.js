@@ -67,22 +67,25 @@ function audioVisibilityChange()
 }
 
 /** Route all sound through an effect between the master gain and the speakers
- *  - Pass the first and last nodes of an effect chain, or one node that is both
+ *  - Pass the first and last nodes of an effect chain, for an AudioEffect that is effect.input and effect.output
+ *  - The one argument form is for a single raw node that is both, never an effect's input
  *  - The output node is disconnected from everything else first, so it only feeds the speakers
  *  - Call with no arguments to remove the effect, can be called before engineInit
+ *  - Debug video capture records the master gain, so master effects are not in the recording
  *  @param {AudioNode} [input] - Node the master gain connects to
  *  @param {AudioNode} [output=input] - Node that connects to the audio destination
  *  @memberof Audio */
 function setAudioMasterEffect(input, output=input)
 {
-    ASSERT(!input || typeof input.connect === 'function', 'input must be an AudioNode');
-    ASSERT(!output || typeof output.connect === 'function', 'output must be an AudioNode');
+    ASSERT(!input || typeof input.connect === 'function' && !input.input, 'input must be an AudioNode, for an AudioEffect pass effect.input and effect.output');
+    ASSERT(!output || typeof output.connect === 'function' && !output.input, 'output must be an AudioNode, for an AudioEffect pass effect.input and effect.output');
 
-    // undo the current route, but only that route so other taps on the master gain stay
+    // the master gain is disconnected selectively so other taps on it survive,
+    // but the output node is dropped from everything since it only ever fed the speakers
     if (audioMasterGain)
     {
         audioMasterGain.disconnect(audioMasterEffectInput || audioContext.destination);
-        audioMasterEffectOutput?.disconnect(audioContext.destination);
+        audioMasterEffectOutput?.disconnect();
     }
     audioMasterEffectInput = input;
     audioMasterEffectOutput = output;
@@ -170,7 +173,8 @@ class Sound
         this.loadedPercent = 0;
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
-        /** @property {AudioNode} - Node to route every play of this sound through instead of the master gain, for effects */
+        /** @property {AudioNode} - Node to route every play of this sound through instead of the master gain, for effects
+         *  @type {AudioNode} */
         this.output = undefined;
 
         if (isArray(asset))
@@ -414,7 +418,8 @@ class SoundInstance
         this.gainNode = undefined;
         /** @property {AudioBufferSourceNode} - Source node of the audio */
         this.source = undefined;
-        /** @property {AudioNode} - Node to route this instance through, copied from the sound */
+        /** @property {AudioNode} - Node to route this instance through, copied from the sound
+         *  @type {AudioNode} */
         this.output = sound.output;
         // setup end callback and start sound
         this.onendedCallback = (source)=>
