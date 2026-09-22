@@ -158,6 +158,7 @@ function render3DSetObjectState(o)
     r.receiveShadow = !o || o.receiveShadow;
     r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
     r.pixelated = !!o?.pixelated;
+    ASSERT(!o?.shader || o.shader instanceof Shader, 'shader must be a Shader, not the snippet itself');
     r.shader = o?.shader;
     r.depthTest = true;
 }
@@ -880,7 +881,7 @@ class Render3DPlugin
         // a far plane at Infinity has no midpoint, so put it a long way out instead
         const {near, far} = this.camera;
         const radius = far == Infinity ? near * 1e4 : (near + far) / 2;
-        render3DWithState({lighting: false, blend: false, depthTest: false, depthWrite: false, fogEnd: 0}, ()=>
+        render3DWithState({lighting: false, blend: false, depthTest: false, depthWrite: false, fogEnd: 0, shader: undefined}, ()=>
             this.drawMesh(this.sky, buildMatrix(this.camera.pos, undefined, vec3(radius))));
     }
 
@@ -1121,7 +1122,7 @@ let render3DDebugPrimitives = [];
 function render3DRenderDebug()
 {
     if (!render3DDebugPrimitives.length) return;
-    render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false}, ()=>
+    render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
     {
         for (const p of render3DDebugPrimitives)
             p.draw();
@@ -1411,6 +1412,7 @@ function render3DFragmentSource(fragmentCode)
 // a Shader's 3D program, compiled the first time a draw needs it
 function render3DShaderProgram(shader)
 {
+    ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
     return shader.program3D ||= glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource(shader.fragmentCode));
 }
 

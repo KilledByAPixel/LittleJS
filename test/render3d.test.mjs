@@ -1812,6 +1812,36 @@ test('an object\'s shader reaches the draw state, is undefined for the callbacks
     }
 });
 
+test('a 3D object whose shader is not a Shader is caught by an assert, not a TypeError later', () =>
+{
+    const o = new EngineObject3D(vec3());
+    o.shader = 'void mainImage(out vec4 c, vec2 uv){c=vec4(1);}'; // the snippet itself, a likely slip
+    try { assert.throws(()=> render3D.renderStages([o])); }
+    finally { render3D.shader = undefined; }
+    o.destroy();
+    engineObjects.length = 0;
+});
+
+test('a render3D.shader left set outside the pass does not reach the sky or the debug shapes', () =>
+{
+    const shader = new Shader('void mainImage(out vec4 c, vec2 uv){c=vec4(1);}');
+    const drawMesh = render3D.drawMesh, drawLine = render3D.drawLine, seen = [];
+    render3D.drawMesh = ()=> seen.push(render3D.shader);
+    render3D.drawLine = ()=> seen.push(render3D.shader);
+    render3D.sky = render3D.boxMesh;
+    render3D.program = {}; // so the debug box is recorded
+    debugBox3D(vec3(), 1);
+    render3D.shader = shader; // left set, as if from gameUpdate
+    try { render3D.renderStages([]); }
+    finally
+    {
+        render3D.drawMesh = drawMesh; render3D.drawLine = drawLine;
+        render3D.sky = render3D.program = render3D.shader = undefined;
+    }
+    assert.ok(seen.length >= 2, 'the sky and the debug box drew');
+    assert.ok(seen.every(s => s === undefined), 'neither drew under the leaked shader');
+});
+
 test('render3D.gravity and the inherited damping move objects like the 2D physics, sync2D copies the 2D transform', () =>
 {
     render3D.gravity = vec3(0, -.1, 0);
