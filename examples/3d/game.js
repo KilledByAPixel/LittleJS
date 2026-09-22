@@ -172,7 +172,6 @@ function gameInit()
             continue;
         const treeObject = new EngineObject3D(pos, tree);
         treeObject.scale3D = vec3(rand(.5,1.5));
-        treeObject.cullBackFaces = true;
     }
 
     // crystals around the island, a cone and its mirror image welded together

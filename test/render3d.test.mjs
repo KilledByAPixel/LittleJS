@@ -1459,7 +1459,7 @@ test('the stage loop sets the draw state from each object, so render3D overrides
     const plain = new Probe, lamp = new Probe, shiny = new Probe, glow = new Probe;
     plain.name = 'plain';
     lamp.name = 'lamp', lamp.emissive = 1, lamp.receiveShadow = false;
-    shiny.name = 'shiny', shiny.specular = .7, shiny.cullBackFaces = true;
+    shiny.name = 'shiny', shiny.specular = .7;
     glow.name = 'glow', glow.additive = true; // additive alone puts it in the transparent stage
     assert.equal(plain.emissive, 0); assert.equal(plain.receiveShadow, true); assert.equal(plain.specular, 0); assert.equal(plain.additive, false);
     render3D.camera.pos = vec3(0, 0, 10);
@@ -1469,7 +1469,7 @@ test('the stage loop sets the draw state from each object, so render3D overrides
     render3D.renderStages(engineObjects.filter(o => o instanceof EngineObject3D && !o.destroyed));
     assert.deepEqual(seen.plain, {lighting: true, emissive: 0, additive: false, specular: 0, receiveShadow: true, blend: false, cull: false});
     assert.deepEqual(seen.lamp, {lighting: true, emissive: 1, additive: false, specular: 0, receiveShadow: false, blend: false, cull: false});
-    assert.deepEqual(seen.shiny, {lighting: true, emissive: 0, additive: false, specular: .7, receiveShadow: true, blend: false, cull: true});
+    assert.deepEqual(seen.shiny, {lighting: true, emissive: 0, additive: false, specular: .7, receiveShadow: true, blend: false, cull: false});
     assert.deepEqual(seen.glow, {lighting: true, emissive: 0, additive: true, specular: 0, receiveShadow: true, blend: true, cull: false});
     // and the pass leaves the defaults behind
     assert.equal(render3D.specular, 0);
@@ -2223,6 +2223,27 @@ test('FirstPersonCamera3D with a size and setCollision is pushed out of solids',
     eye.updatePhysics();
     near(eye.pos3D.x, 1); // pushed clear, the wall stays put
     nearVec(wall.pos3D, 0, 0, 0);
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+});
+
+test('meshes cull their back faces unless doubleSided, which the open builders and combine set', () =>
+{
+    assert.equal(new Mesh().doubleSided, false);
+    for (const closed of [buildBox(), buildSphere(), buildCylinder(), buildCone(), buildCapsule(1, 2), buildTorus(),
+        buildLoft([[1, 1, 1, -1], [-1, 1, 1, -1]]), buildLathe([[0, -1], [1, 0], [0, 1]], 4)])
+        assert.equal(closed.doubleSided, false);
+    assert.equal(buildGrid().doubleSided, true);
+    assert.equal(buildRibbon([vec3(), vec3(1, 0, 0)]).doubleSided, true);
+    assert.equal(buildCylinder(1, 1, 8, false, false).doubleSided, true); // no caps, so the inside shows
+    assert.equal(buildLathe([[0, -1], [1, 0], [0, 1]], 4, false, false).doubleSided, false); // poles need no caps
+    assert.equal(new HeightMap([[0, 0], [0, 0]]).buildMesh().doubleSided, true);
+    assert.equal(buildBox().combine(buildBox()).doubleSided, false);
+    assert.equal(buildBox().combine(buildGrid()).doubleSided, true); // an open part leaves it open
+    assert.equal(render3D.planeMesh.doubleSided, false);
+    assert.equal(render3D.planeMeshDoubleSided.doubleSided, true);
+    assert.equal(render3D.planeMesh.vertexCount, render3D.planeMeshDoubleSided.vertexCount); // one square either way
+    assert.equal('cullBackFaces' in new EngineObject3D, false); // it is the mesh's to say now
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
 });

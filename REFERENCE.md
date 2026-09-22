@@ -955,8 +955,8 @@ render3D.specular = 0                 // Phong highlight strength, the shiny spo
                                       // reflects: 1 adds the light's full color at its peak, more burns out;
                                       // the size of the spot is fixed, and a Light3D adds no highlight
 render3D.receiveShadow = true         // false keeps the next draws out of the shadow map's darkening
-render3D.cullBackFaces = false // off by default so one sided meshes like grids and ribbons do not vanish; true skips
-                               // faces pointing away, faster for closed meshes
+render3D.cullBackFaces render3D.mirrored // set from each mesh as it draws: its doubleSided, and whether its
+                               // transform mirrors it; strips leave both off
 render3D.depthTest = true; render3D.depthWrite = true // the transparent stage turns depth writes off, so see-through
                                                       // draws never hide each other
 
@@ -1032,7 +1032,6 @@ obj.specular = .5                       // highlight strength, 0 is none and 1 i
 obj.castShadow = false                  // keep it out of the shadow map; sprites and cut out textures cast their
                                         // outline, additive objects never cast
 obj.receiveShadow = false               // draw it without the shadow map's darkening
-obj.cullBackFaces = true                // skip faces pointing away from the camera, faster for closed meshes
 obj.renderOrder                         // sorts the opaque stage; instanced meshes draw as batches, so set
                                         // mesh.instanced = false on a mesh whose order matters
 obj.renderAfter2D = true // this object on top of the 2D scene, or false for under it; undefined follows
@@ -1064,7 +1063,7 @@ render3D.drawMesh(mesh, matrix, tileInfo, color) // any mesh, batched with its o
                                                  // for the whole texture, uvs past 1 repeat when it wraps
 render3D.drawBillboard(pos, size, tileInfo, color, angle, upright) // camera facing quad, unlit, size is a Vector2;
                                                                    // upright stands on world up
-// list points counter clockwise as seen from the front, or the face points away and cullBackFaces hides it
+// list points counter clockwise as seen from the front, or the face points away and a culling mesh hides it
 render3D.drawQuad(a, b, c, d, tileInfo, color)            // corners in loop order, a is the texture's top left
 render3D.drawTriangle(a, b, c, color)
 render3D.drawLine(posA, posB, width, color)               // camera facing ribbon, unlit
@@ -1115,6 +1114,9 @@ mesh.dispose()                                // free the GPU buffer, the CPU da
 mesh.points mesh.normals mesh.uvs mesh.colors // the vertex arrays, one entry per strip vertex; building one by
                                  // hand you can fill points alone, the rest fall back to up, zero and white
 mesh.instanced = false           // draw this mesh one call per use, in object order, instead of batching it
+mesh.doubleSided = true          // draw both sides, each lit as the side seen; off, the default, skips faces pointing
+                                 // away, faster for closed shapes; buildGrid, buildRibbon and open lathes turn it
+                                 // on, and combine keeps it on if any part had it
 mesh.dirty = true; mesh.upload() // re-upload edited arrays on the next draw, or upload now; upload also measures
                                  // mesh.radius; every method that edits a mesh sets dirty itself
 mesh.vertexCount mesh.radius                  // vertices, and the bounding sphere for culling and picking

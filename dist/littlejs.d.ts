@@ -6410,8 +6410,11 @@ declare module "littlejsengine" {
         depthTest: boolean;
         /** @property {boolean} - Write to the depth buffer, owned by the stages: on for opaque, off for transparent */
         depthWrite: boolean;
-        /** @property {boolean} - Skip faces that point away from the camera, set per object with its cullBackFaces flag */
+        /** @property {boolean} - Skip faces that point away from the camera, set from each mesh's doubleSided as it draws,
+         *  off for strips so they show from both sides */
         cullBackFaces: boolean;
+        /** @property {boolean} - The transform mirrors what it draws, so the other winding is the front, set as each mesh draws */
+        mirrored: boolean;
         /** @property {number} - Strength of the highlight where the directional light reflects, 0 is none and 1 adds the light's full color at its brightest; its size is fixed */
         specular: number;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
@@ -6444,6 +6447,11 @@ declare module "littlejsengine" {
         boxMesh: Mesh;
         /** @property {Mesh} - A smooth sphere of diameter 1 that drawSphere uses, shared the same way as boxMesh */
         sphereMesh: Mesh;
+        /** @property {Mesh} - A flat square of size 1 facing +Y, seen from above only, for floors, water and decals;
+         *  stand it up with the object's rotation3D, and size it with scale3D */
+        planeMesh: Mesh;
+        /** @property {Mesh} - The same square seen and lit from both sides, for signs, cards and leaves */
+        planeMeshDoubleSided: Mesh;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
         isRendering: boolean;
         /** @property {boolean} - True while the shadow map is being drawn, draws go to the depth only shader */
@@ -6588,6 +6596,7 @@ declare module "littlejsengine" {
          *  - Call the same drawStrip, drawQuad and drawBox calls inside, and get a mesh back
          *  - Strips inside a bake ignore their tileInfo, the finished mesh picks the texture when it draws
          *  - drawMesh, drawBox and drawSphere copy their mesh in, moved and tinted, their tileInfo dropped too
+         *  - The mesh skips its back faces like any, set doubleSided when what was drawn is open
          *  @param {Function} drawFunction
          *  @return {Mesh} */
         bake(drawFunction: Function): Mesh;
@@ -6814,8 +6823,6 @@ declare module "littlejsengine" {
         collideAsSphere3D: boolean;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         receiveShadow: boolean;
-        /** @property {boolean} - Skip faces that point away from the camera, faster for closed meshes */
-        cullBackFaces: boolean;
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         renderAfter2D: boolean | undefined;
@@ -6879,6 +6886,9 @@ declare module "littlejsengine" {
         /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call, undefined follows render3D.instancing
          *  @type {boolean|undefined} */
         instanced: boolean | undefined;
+        /** @property {boolean} - Draw both sides, each lit as the side that is seen; off skips the faces pointing away,
+         *  which is faster and right for closed shapes, the open builders like buildGrid and buildRibbon turn it on */
+        doubleSided: boolean;
         instanceCount: number;
         instanceData: any;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
@@ -7440,6 +7450,7 @@ declare module "littlejsengine" {
      * - Reads v, vt, vn and f lines with convex polygons of any size, materials and groups are ignored
      * - Normals come from the file when every corner of a face has one, otherwise from the face
      * - Use mesh.center() and mesh.fit(size) to bring a model of unknown units to the origin
+     * - Back faces are skipped like any mesh, set doubleSided for a model with open walls or single sided parts
      * @param {string} text
      * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3D.smoothShading
      * @return {Mesh}

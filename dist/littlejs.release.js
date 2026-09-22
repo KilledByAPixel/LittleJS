@@ -17422,7 +17422,7 @@ function render3DCanDraw()
 }
 
 // the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
-const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated'];
+const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated'];
 
 // a copy of the current draw state
 function render3DCaptureBatchState()
@@ -17506,7 +17506,7 @@ function render3DSetObjectState(o)
     r.additive = !!o?.additive;
     r.specular = o?.specular || 0;
     r.receiveShadow = !o || o.receiveShadow;
-    r.cullBackFaces = !!o?.cullBackFaces;
+    r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
     r.pixelated = !!o?.pixelated;
     r.depthTest = true;
 }
@@ -17749,8 +17749,11 @@ class Render3DPlugin
         this.depthTest = true;
         /** @property {boolean} - Write to the depth buffer, owned by the stages: on for opaque, off for transparent */
         this.depthWrite = true;
-        /** @property {boolean} - Skip faces that point away from the camera, set per object with its cullBackFaces flag */
+        /** @property {boolean} - Skip faces that point away from the camera, set from each mesh's doubleSided as it draws,
+         *  off for strips so they show from both sides */
         this.cullBackFaces = false;
+        /** @property {boolean} - The transform mirrors what it draws, so the other winding is the front, set as each mesh draws */
+        this.mirrored = false;
         /** @property {number} - Strength of the highlight where the directional light reflects, 0 is none and 1 adds the light's full color at its brightest; its size is fixed */
         this.specular = 0;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
@@ -17787,6 +17790,12 @@ class Render3DPlugin
         this.boxMesh = buildBox();
         /** @property {Mesh} - A smooth sphere of diameter 1 that drawSphere uses, shared the same way as boxMesh */
         this.sphereMesh = buildSphere(1, 16, 8, true);
+        /** @property {Mesh} - A flat square of size 1 facing +Y, seen from above only, for floors, water and decals;
+         *  stand it up with the object's rotation3D, and size it with scale3D */
+        this.planeMesh = buildGrid();
+        this.planeMesh.doubleSided = false;
+        /** @property {Mesh} - The same square seen and lit from both sides, for signs, cards and leaves */
+        this.planeMeshDoubleSided = buildGrid();
 
         // read only
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
@@ -18031,14 +18040,23 @@ class Render3DPlugin
         if (!mesh.bufferCount) return;
         if (this.frustumCulling && !this.isSphereVisible(matrix.getTranslation(), mesh.radius * render3DMaxScale(matrix.m)))
             return;
+        // the mesh says whether its back faces can be skipped, and a mirroring transform, one with a negative
+        // determinant, turns the winding around so the other one is its front
+        const m = matrix.m, cullBackFaces = this.cullBackFaces, mirrored = this.mirrored;
+        this.cullBackFaces = !mesh.doubleSided;
+        this.mirrored = m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]) < 0;
         if (!this.blend && this.depthTest && (mesh.instanced ?? this.instancing)) // the stage draws the batch at its end
-            return render3DInstance(mesh, matrix, tileInfo, color);
-        this.flush();
-        render3DSetDrawUniforms(matrix, tileInfo, color);
-        render3DBindVertexBuffer(mesh.buffer);
-        glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, mesh.bufferCount);
-        ++drawCount;
-        primitiveCount += mesh.bufferCount;
+            render3DInstance(mesh, matrix, tileInfo, color);
+        else
+        {
+            this.flush();
+            render3DSetDrawUniforms(matrix, tileInfo, color);
+            render3DBindVertexBuffer(mesh.buffer);
+            glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, mesh.bufferCount);
+            ++drawCount;
+            primitiveCount += mesh.bufferCount;
+        }
+        this.cullBackFaces = cullBackFaces, this.mirrored = mirrored;
     }
 
     /** Draw a triangle strip, batched into the stream with the current draw state
@@ -18112,6 +18130,7 @@ class Render3DPlugin
      *  - Call the same drawStrip, drawQuad and drawBox calls inside, and get a mesh back
      *  - Strips inside a bake ignore their tileInfo, the finished mesh picks the texture when it draws
      *  - drawMesh, drawBox and drawSphere copy their mesh in, moved and tinted, their tileInfo dropped too
+     *  - The mesh skips its back faces like any, set doubleSided when what was drawn is open
      *  @param {Function} drawFunction
      *  @return {Mesh} */
     bake(drawFunction)
@@ -18687,6 +18706,7 @@ function render3DInitGL()
         'float e=lightDir.w;' +
         'if(e<1.){' +
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
+        'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
         'float nl=dot(n,-lightDir.xyz);' +
         // shadow: compare against the light's depth map with a 3x3 blur, outside the map is lit
         'float s=1.;' +
@@ -18960,6 +18980,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     state.depthTest ? gl.enable(gl.DEPTH_TEST) : gl.disable(gl.DEPTH_TEST);
     gl.depthMask(state.depthWrite);
     state.cullBackFaces ? gl.enable(gl.CULL_FACE) : gl.disable(gl.CULL_FACE);
+    gl.frontFace(state.mirrored ? gl.CCW : gl.CW); // the pass's strips read clockwise, a mirror turns that around
 
     // lights, fog and shadows are scene state read at draw time, sent only when they change
     const l = r.lightDirection, ll = l.length() || 1, lc = r.lightColor, ac = r.ambientColor, fc = r.fogColor || canvasClearColor;
@@ -19286,6 +19307,9 @@ class Mesh
         /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call, undefined follows render3D.instancing
          *  @type {boolean|undefined} */
         this.instanced = undefined;
+        /** @property {boolean} - Draw both sides, each lit as the side that is seen; off skips the faces pointing away,
+         *  which is faster and right for closed shapes, the open builders like buildGrid and buildRibbon turn it on */
+        this.doubleSided = false;
         this.instanceCount = 0; // draws waiting in this mesh's batch, with their values, texture and draw state
         this.instanceData = undefined;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
@@ -19349,6 +19373,7 @@ class Mesh
             this.uvs.push((mesh.uvs[i] || RENDER3D_DEFAULT_UV).copy());
             this.colors.push((mesh.colors[i] || WHITE).multiply(color));
         }
+        this.doubleSided ||= mesh.doubleSided; // an open part leaves the whole mesh open
         this.dirty = true;
         return this;
     }
@@ -19649,6 +19674,9 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
             }
             mesh.addStrip(render3DPolygonStrip(points), vec3(0, up ? 1 : -1, 0), render3DPolygonStrip(uvs));
         }
+
+    // an end left open shows the inside, so it is seen from both sides
+    mesh.doubleSided = !closed && !capped && (abs(profile[0][0]) > 1e-9 || abs(profile[rings-1][0]) > 1e-9);
     return mesh;
 }
 
@@ -19816,6 +19844,7 @@ function buildRibbon(points, width=1, color=WHITE, closed=false, up=vec3(0, 1, 0
         const c = isArray(color) ? [color[i], color[i], color[j], color[j]] : color;
         mesh.addQuad(a[0], a[1], b[1], b[0], c); // counter clockwise seen from above
     }
+    mesh.doubleSided = true; // a flat strip, seen from both sides
     return mesh;
 }
 
@@ -19869,6 +19898,7 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
                     [uv(i, j), uv(i, j + 1), uv(i + 1, j + 1), uv(i + 1, j)]);
         }
     }
+    mesh.doubleSided = true; // a sheet, seen from both sides; terrain seen only from above can turn it off
     return mesh;
 }
 
@@ -20369,8 +20399,6 @@ class EngineObject3D extends EngineObject
         this.collideAsSphere3D = false;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
-        /** @property {boolean} - Skip faces that point away from the camera, faster for closed meshes */
-        this.cullBackFaces = false;
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         this.renderAfter2D = undefined;
@@ -21160,6 +21188,7 @@ class Trail3D extends EngineObject3D
  * - Reads v, vt, vn and f lines with convex polygons of any size, materials and groups are ignored
  * - Normals come from the file when every corner of a face has one, otherwise from the face
  * - Use mesh.center() and mesh.fit(size) to bring a model of unknown units to the origin
+ * - Back faces are skipped like any mesh, set doubleSided for a model with open walls or single sided parts
  * @param {string} text
  * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3D.smoothShading
  * @return {Mesh}
