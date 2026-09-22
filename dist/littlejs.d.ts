@@ -2761,6 +2761,10 @@ declare module "littlejsengine" {
         /** Set the volume of this sound instance
          *  @param {number} volume */
         setVolume(volume: number): void;
+        /** Set the playback rate of this sound instance, its speed and pitch, while it plays
+         *  - A looping sound can follow something smoothly this way, like an engine with the speed
+         *  @param {number} rate - 1 is normal, 2 is twice as fast and an octave up */
+        setRate(rate: number): void;
         /** Stop this sound instance and reset position to the start */
         stop(fadeTime?: number): void;
         /** Pause this sound instance */

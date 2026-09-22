@@ -100,10 +100,11 @@ class Car extends EngineObject3D
         for (const trail of this.trails)
             trail.side = vec3(1, 0, 0).rotateY(this.yaw); // lie flat
 
-        // the engine revs faster with speed
-        if (frame % max(2, round(9 - abs(this.speed)*12)) == 0)
-            render3D.playSound(engineSound, this.pos3D, .1,
-                .5 + abs(this.speed)*2.5);
+        // the engine sound loops, playing faster with speed
+        if (!this.engineLoop?.isPlaying())
+            this.engineLoop = render3D.playSound(engineSound, this.pos3D,
+                .1, 1, 1, true);
+        this.engineLoop?.setRate(.5 + abs(this.speed)*2.5);
 
         // gates count in order, the finish line completes a lap
         const angle = mod(atan2(this.pos3D.z, this.pos3D.x), 2*PI);

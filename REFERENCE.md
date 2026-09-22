@@ -344,6 +344,7 @@ Sound.loadedPercent                                    // Get loading progress (
 
 // SoundInstance
 SoundInstance.setVolume(volume)   // Change volume during playback
+SoundInstance.setRate(rate)       // Change speed and pitch during playback, like an engine loop following speed
 SoundInstance.stop(fadeTime=0)    // Stop with optional fade out
 SoundInstance.pause()             // Pause the sound
 SoundInstance.resume()            // Resume paused sound

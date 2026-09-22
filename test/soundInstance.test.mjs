@@ -54,6 +54,7 @@ const audioContext = LJS.audioContext;
 // zzfx sound with ~.6 seconds of samples (attack 0, sustain .5, release .1)
 const sound = new LJS.Sound([1, 0, 220, 0, .5, .1]);
 const epsilon = 1e-9;
+const near = (a, b)=> assert.ok(Math.abs(a - b) < epsilon, a + ' != ' + b);
 
 test('zzfx sound generates samples and duration', () =>
 {
@@ -178,6 +179,27 @@ test('setVolume updates the gain node', () =>
     assert.equal(instance.volume, .4);
     assert.equal(instance.gainNode.gain.value, .4);
     instance.stop();
+});
+
+test('setRate changes the speed while playing and keeps the place in the sound', () =>
+{
+    audioContext.currentTime = 50;
+    const instance = sound.play();
+    audioContext.currentTime = 50.2;
+    near(instance.getCurrentTime(), .2);
+
+    // twice as fast from here: the place stays at .2 seconds of sound, which is .1 at the new rate
+    instance.setRate(2);
+    assert.equal(instance.rate, 2);
+    assert.equal(lastSource.playbackRate.value, 2);
+    near(instance.getCurrentTime(), .1);
+    audioContext.currentTime = 50.25; // another .05 seconds, which plays .1 of sound
+    near(instance.getCurrentTime(), .15);
+    instance.stop();
+
+    // a stopped instance just keeps the rate for when it starts
+    instance.setRate(.5);
+    assert.equal(instance.rate, .5);
 });
 
 test('sound ending naturally clears the playing state', () =>

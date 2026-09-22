@@ -390,6 +390,20 @@ class SoundInstance
             this.gainNode.gain.value = volume;
     }
 
+    /** Set the playback rate of this sound instance, its speed and pitch, while it plays
+     *  - A looping sound can follow something smoothly this way, like an engine with the speed
+     *  @param {number} rate - 1 is normal, 2 is twice as fast and an octave up */
+    setRate(rate)
+    {
+        ASSERT(rate >= 0, 'Sound rate must be positive or zero');
+        // keep the place in the sound, only the speed changes from here, so the current time stays true
+        if (this.isPlaying() && rate)
+            this.startTime = audioContext.currentTime - this.getCurrentTime() * this.rate / rate;
+        this.rate = rate;
+        if (this.source)
+            this.source.playbackRate.value = rate;
+    }
+
     /** Stop this sound instance and reset position to the start */
     stop(fadeTime=0)
     {
