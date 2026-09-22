@@ -384,6 +384,25 @@ createAudioBuffer(sampleChannels, sampleRate) // Copy arrays of samples into an 
 playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended, output) // Play an audio buffer, shareable between sounds
 ```
 
+## LittleJS Audio Effects
+- Optional plugin with Web Audio effects, each with a wet/dry mix
+- Route a group of sounds with `sound.output = effect.input`, or everything with `setAudioMasterEffect`
+- Chain effects with `effect.connect(next)`; create effects after `engineInit`
+
+```javascript
+AudioEffect(mix=1)                                // Base class, input and output gain nodes with a mix between
+AudioEffect.input / AudioEffect.output            // Connect sounds to input, output goes to the speakers
+AudioEffect.setMix(mix, fadeTime=0)               // 0 is fully dry, 1 is fully wet
+AudioEffect.connect(effectOrNode)                 // Send output into the next effect instead, returns it
+AudioEffect.disconnect()                          // Stop sending output anywhere
+AudioFilter(type='lowpass', frequency=1000, q=1, mix=1) // Muffle sounds, setFrequency(hz, fadeTime) to sweep
+AudioReverb(duration=2, decay=2, mix=.5)          // Room or cave from generated noise, no file needed
+AudioDelay(time=.3, feedback=.4, mix=.5)          // Echoes, setTime and setFeedback while playing
+AudioDistortion(amount=.5, mix=1)                 // Overdrive, setAmount rebuilds the curve
+AudioCompressor(threshold=-24, ratio=12, mix=1)   // Stops clipping on the master bus, setThreshold, setRatio
+effect.node                                       // The wrapped Web Audio node for anything above doesn't cover
+```
+
 ## LittleJS Input System
 - Tracks keyboard down, pressed, and released
 - Tracks mouse buttons, position, and wheel
