@@ -39,6 +39,10 @@ export
     ZzFXMusic,
     zzfxM,
 
+    // Audio Effects
+    AudioEffect,
+    AudioFilter,
+
     // UI System
     uiSystem,
     uiDebug,

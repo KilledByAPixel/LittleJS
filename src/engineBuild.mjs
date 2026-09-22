@@ -43,6 +43,7 @@ const enginePluginFiles =
     `${PLUGIN_FOLDER}/postProcess.js`,
     `${PLUGIN_FOLDER}/lightSystem.js`,
     `${PLUGIN_FOLDER}/zzfxm.js`,
+    `${PLUGIN_FOLDER}/audioEffects.js`,
     `${PLUGIN_FOLDER}/uiSystem.js`,
     `${PLUGIN_FOLDER}/box2d.js`,
     `${PLUGIN_FOLDER}/drawUtilities.js`,
