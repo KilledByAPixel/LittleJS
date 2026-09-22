@@ -848,9 +848,10 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
   a yaw is vec3(-sin(yaw), 0, -cos(yaw)) and right is vec3(cos(yaw), 0, -sin(yaw))
 - Below, a comment that says `e.g.` marks the value on that line as an example, not the default
 - See the `examples/shorts/render3d*.js` demos - features: render3dShapes, render3dBillboards, render3dHeightMap
-  terrain, render3dCollision with picking, render3dLights, render3dParticles, render3dTrails, render3dDraw for
-  immediate drawing, render3dText, render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene,
-  render3dInstancing, render3dTextures, render3dGlow; and `examples/3d` is a full example with all of it in one scene
+  terrain, render3dCollision with picking, render3dFirstPerson for a walking camera, render3dLights,
+  render3dParticles, render3dTrails, render3dDraw for immediate drawing, render3dText, render3dMesh for OBJ loading,
+  render3dLayers for 3D layers in a 2D scene, render3dInstancing, render3dTextures, render3dGlow; and `examples/3d` is
+  a full example with all of it in one scene
   games:
   render3dDodgeGame, render3dRacingGame, render3dPuzzleGame
 
@@ -1059,6 +1060,9 @@ render3D.drawSphere(pos, size, color)                     // size is the diamete
 render3D.boxMesh render3D.sphereMesh                      // the size 1 meshes those use, for any box or sphere
                                                           // object so they all draw in one batch; set scale3D and
                                                           // color on the object, editing the mesh changes them all
+render3D.planeMesh render3D.planeMeshDoubleSided          // a size 1 square facing +Y, seen from above only, or seen
+                                                          // and lit from both sides for signs and cards; stand it
+                                                          // up with rotation3D, size it with scale3D
 render3D.drawMesh(mesh, matrix, tileInfo, color) // any mesh, batched with its other uses; tileInfo can be a TextureInfo
                                                  // for the whole texture, uvs past 1 repeat when it wraps
 render3D.drawBillboard(pos, size, tileInfo, color, angle, upright) // camera facing quad, unlit, size is a Vector2;
@@ -1132,11 +1136,13 @@ buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth) // size is the di
                                                                // to outside edge; it lies flat in the XZ plane like a
                                                                // coin on a table, so rotation3D.x = PI/2 stands it up
 buildLathe(profile, sides=16, smooth, capped=true) // spins an outline around the Y axis like a vase on a wheel; profile
-                                                   // is [[radius, y], ...] bottom to top, a closed profile is a ring
+                                                   // is [[radius, y], ...] bottom to top, a closed profile is a ring;
+                                                   // an uncapped end makes it doubleSided, so its inside shows
 buildRibbon(points, width=1, color, closed, up) // lit quads along a path, for roads and tracks; width and color one or
-                                                // per point
+                                                // per point; doubleSided, so it shows from below too
 buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth) // XZ plane; segments a number or vec2,
-                                                                    // height is (x, z)=> y
+                                                                    // height is (x, z)=> y; doubleSided, turn it
+                                                                    // off for ground only seen from above
 // color is a Color or (x, z)=> Color, where x and z are positions on the mesh itself with (0, 0) at its center; it is
 // called per vertex when smooth and once per cell center when flat, so a checker needs cell sized steps: with
 // buildGrid(vec2(30), 15) the cells are 2 units, so (x, z)=> (floor(x/2) + floor(z/2)) & 1 ? GRAY : WHITE

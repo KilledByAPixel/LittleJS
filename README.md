@@ -46,12 +46,12 @@ The code is very clean and well documented with many examples to get you started
 
 - Built-in 3D renderer with no dependencies that adds about 21kb gzipped, drawing into the same WebGL canvas as the 2D scene, so 3D can sit behind your sprites, in front of them, or both
 - `EngineObject3D` is an `EngineObject` with a mesh, so update, collision, children, timers and sound all work the way they do in 2D
-- Build shapes in code with box, sphere, cylinder, cone, capsule, torus, lathe and loft builders, give any sprite thickness to make a block model, or load an OBJ file
-- Sunlight with real shadow maps, where cut-out art like a leafy tree casts its true outline, plus ambient light, up to 8 colored point or directional lights, specular highlights and distance fog
+- Build shapes in code with box, sphere, plane, cylinder, cone, capsule, torus, lathe and loft builders, give any sprite thickness to make a block model, or load an OBJ file
+- Sunlight with real shadow maps, where cut-out art like a leafy tree casts its true outline, plus ambient light, up to 8 colored point or directional lights, specular highlights, emissive glow and distance fog
 - Height map terrain from an array or an image, with height, normal and raycast lookups for driving and walking on it
 - Instanced drawing puts thousands of copies of a mesh into one draw call
 - 3D particles, trails, ribbons, billboards and text extruded from the engine font
-- Orbit and chase cameras, perspective or orthographic, with mouse picking and 3D positional sound
+- Orbit, chase and first person cameras, perspective or orthographic, with mouse picking and 3D positional sound
 - Post-processing shaders reach the 3D scene too, including a built-in bloom for glowing lights
 - The [Three.js](https://threejs.org) plugin is still fully supported as an alternative, rendering a Three.js scene behind the LittleJS canvas with `ThreeJSObject` letting LittleJS physics drive its meshes
 
@@ -148,7 +148,7 @@ LittleJS comes with several demos both for learning and using as starter project
 - [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data
 - [Box2D Demo](https://killedbyapixel.github.io/LittleJS/examples/box2d/) - Box2D plugin demonstration and testbed
 - [3D Example](https://killedbyapixel.github.io/LittleJS/examples/3d/) - The 3D plugin in one scene: terrain, shadows, lights, sprites, particles and bloom
-- [3D Racer](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Racer%20Game) - Built-in 3D plugin: terrain, shadows and a chase camera in one short file
+- [3D Racing Game](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Racing%20Game) - Built-in 3D plugin: terrain, shadows and a chase camera in one short file
 - [Three.js Platformer](https://killedbyapixel.github.io/LittleJS/examples/threejs/) - 3D platformer with LittleJS gameplay and Three.js rendering
 - [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Sprite rendering benchmark and music system demo
 - [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer

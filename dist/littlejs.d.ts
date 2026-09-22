@@ -6857,6 +6857,7 @@ declare module "littlejsengine" {
     /**
      * Mesh - A triangle strip with positions, normals, uvs and colors, uploaded once and drawn by matrix
      * - Build with addStrip, addQuad, combine or the shape builders, then render each frame
+     * - Its back faces are skipped unless doubleSided is set, which the open builders like buildGrid do for you
      * - The GPU buffer is created lazily on first render and dropped by dispose
      * @memberof Render3D
      * @example
@@ -6972,6 +6973,7 @@ declare module "littlejsengine" {
      * Spin a flat outline around the Y axis to make a round shape, like a vase or a wheel
      * - profile is [[radius, y], ...] from bottom to top
      * - A profile that ends where it starts makes a closed ring like a donut
+     * - An end left open, with a radius and no cap, makes the mesh doubleSided so its inside shows
      * @param {Array<Array<number>>} profile
      * @param {number} [sides] - Around the axis
      * @param {boolean} [smooth] - Defaults to render3D.smoothShading
@@ -7047,6 +7049,8 @@ declare module "littlejsengine" {
      * Build a heightfield grid in the XZ plane centered on the origin
      * - smooth rounds the lighting across cells and colors each corner
      * - flat lights and colors each cell on its own, so a checkerboard stays crisp
+     * - doubleSided, a sheet seen from both sides; turn it off for ground only ever seen from above
+     * - One cell is a plain square, render3D.planeMesh and planeMeshDoubleSided are shared ones
      * @param {Vector2} [size] - World size along X and Z
      * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
      * @param {Color|Function} [color] - One Color for the whole grid, or (x, z) => Color
@@ -7061,6 +7065,7 @@ declare module "littlejsengine" {
     /**
      * Build a lit ribbon along a path, for roads, tracks and walls
      * - Each segment is a flat quad, the sides are across the path in the plane of the up vector
+     * - doubleSided, so it is seen and lit from below as well
      * @param {Array<Vector3>} points - Center line in order
      * @param {number|Array<number>} [width] - Full width, one for all or one per point
      * @param {Color|Array<Color>} [color] - One for all or one per point
