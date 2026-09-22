@@ -1,4 +1,4 @@
-// a small OBJ model, the text any modeler exports: a house with a quad roof
+// an example obj model, a simple house with a roof
 const houseOBJ = `
 v -1 0 -1
 v  1 0 -1
@@ -8,8 +8,8 @@ v -1 1.2 -1
 v  1 1.2 -1
 v  1 1.2  1
 v -1 1.2  1
-v  0 2.2 -1.2
-v  0 2.2  1.2
+v  0 2.2 -.8
+v  0 2.2  .8
 f 1 5 6 2
 f 2 6 7 3
 f 3 7 8 4
@@ -26,13 +26,12 @@ let model, modelName = 'house';
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky(hsl(.6,.7,.6), hsl(.6,.6,.9));
-    render3D.setFog(20, 50);
+    render3D.setSky();
     render3D.shadows = true;
-    new CameraControl3D(vec3(0,2,0), 10, .35); // no idle spin
+    new CameraControl3D(vec3(0,1,0), 10, .4);
 
     // checkerboard floor and the model
-    const checker = (x, z)=> hsl(.3, .2, (x+z)/2&1 ? .5 : .4);
+    const checker = (x, z)=> hsl(0, 0, (x+z)/2&1 ? .6 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(20), 10, checker));
     model = new EngineObject3D(vec3());
     model.color = hsl(.1,.6,.7);
@@ -52,10 +51,10 @@ function gameInit()
     });
 }
 
-// center the model, make it 4 units across, and stand it on the floor
+// center the model, set scale and position
 function setModel(mesh)
 {
-    model.setMesh(mesh.center().fit(4)); // frees the model it replaces
+    model.setMesh(mesh.center().fit(5));
     model.pos3D = vec3(0, -mesh.getBounds().min.y);
 }
 
