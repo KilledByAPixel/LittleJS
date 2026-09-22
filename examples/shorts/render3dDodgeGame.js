@@ -1,6 +1,6 @@
 // dodge the tumbling boxes as long as you can
 const arenaSize = 40;
-const soundHit = new Sound([,,520,.02,,.5,,3,,50,-60,,.1]);
+const soundHit = new Sound([.5,,420,.02,,.3,,3,,-90,-50,,.1]);
 let player, trail, scoreObject, shown, best = 0;
 let roundTimer = new Timer(0), spawnTimer = new Timer(1);
 
@@ -9,7 +9,7 @@ class Player extends EngineObject3D
     constructor()
     {
         super(vec3(0,1.3,0), buildCapsule(1.4, 2.6));
-        this.color = hsl(.5,.8,.6);
+        this.color = hsl(0,1,.6);
         this.specular = .5;
         this.size3D = vec3(1);
         this.collideAsSphere3D = true;
@@ -96,7 +96,7 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky(hsl(.6,.6,.5), hsl(.6,.4,.8), hsl(.1,.3,.4));
     render3D.setFog(30, 80);
-    render3D.ambientColor = hsl(.6,.1,.4);
+    render3D.ambientColor = hsl(.6,.1,.3);
     render3D.lightDirection = vec3(.4,-1,.3);
     render3D.shadows = true;
     render3D.shadowCenter = vec3(); // pinned over the whole arena
@@ -104,7 +104,7 @@ function gameInit()
     render3D.gravity.y = -.01;
 
     // make checkered ground
-    const checker = (x, z)=> hsl(.3, .4, (x+z)/2&1 ? .4 : .3);
+    const checker = (x, z)=> hsl(.5, .2, (x+z)/2&1 ? .5 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize), 20, checker));
 
     // create the player with a trail and light
@@ -112,7 +112,7 @@ function gameInit()
     trail = new Trail3D(vec3(0,-1,0), .4, .6, undefined,
         hsl(.5,1,.7,.5), hsl(.5,1,.7,0), true);
     player.addChild(trail);
-    player.addChild(new Light3D(vec3(0,3,0), 12, hsl(.15,1,.6)));
+    player.addChild(new Light3D(vec3(0,3,0), 15, hsl(.15,1,.6)));
 
     // make the score display
     scoreObject = new EngineObject3D(vec3(0,5,-arenaSize/2));
