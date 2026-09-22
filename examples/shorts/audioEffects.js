@@ -7,7 +7,7 @@ function gameInit()
     uiSystem.defaultShadowColor = BLACK;
     canvasClearColor = hsl(.7,.3,.2);
 
-    // effects are made once and shared by every sound routed through them
+    // effects are made once and shared by every sound using them
     const muffle = new AudioFilter('lowpass', 400);
     const cave = new AudioReverb(3, 2);
     const echo = new AudioDelay(.25, .5);
@@ -18,9 +18,9 @@ function gameInit()
 
     // sounds to try the effects on
     const sounds = [
-        new Sound([,,1675,,.06,.24,1,1.82,,,837,.06]),          // coin
-        new Sound([,,471,,.09,.47,4,1.06,-6.7,,,,,.9,61,.1,,.82,.1]), // zap
-        new Sound([1.5,.5,270,,.1,,1,1.5,,,,,,,,.1,.01]),       // pad
+        new Sound([,,1676,,,.25,1,2,,,838,.05]),   // coin
+        new Sound([,,500,,,.6,4,,-7,,,,,1,60,.1]), // zap
+        new Sound([,.5,,,.1,,,1.5,,,,,,,,.1]),     // pad
     ];
     const w = 200, h = 100, gap = 20;
     const gridPos = (x, y)=> vec2(x*(w+gap), 50-y*(h+gap));
@@ -29,7 +29,8 @@ function gameInit()
     const icons = ['💰', '⚡', '🎹'];
     sounds.forEach((sound, i)=>
     {
-        const button = new UIButton(gridPos(i-1, -1), vec2(w, h), icons[i]);
+        const pos = gridPos(i-1, -1);
+        const button = new UIButton(pos, vec2(w, h), icons[i]);
         button.textHeight = 60;
         button.onClick = ()=> sound.play();
     });
@@ -39,7 +40,8 @@ function gameInit()
         ['Echo', echo], ['Crunch', crunch], ['Chain', chain]];
     effects.forEach(([name, effect], i)=>
     {
-        const button = new UIButton(gridPos(i%3-1, i/3|0), vec2(w, h), name);
+        const pos = gridPos(i%3-1, i/3|0);
+        const button = new UIButton(pos, vec2(w, h), name);
         effectButtons.push(button);
         button.onClick = ()=>
         {
@@ -52,7 +54,7 @@ function gameInit()
     });
     effectButtons[0].onClick();
 
-    // bottom row toggles a compressor on everything via the master bus
+    // bottom row toggles a compressor on everything
     const compButton = new UIButton(gridPos(0, 2), vec2(w*2+gap, h), '');
     let compressorOn = false;
     compButton.onClick = ()=>
