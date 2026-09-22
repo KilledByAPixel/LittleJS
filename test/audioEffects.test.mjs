@@ -81,6 +81,21 @@ test('setMix balances the dry and wet gains, ramping when given a fade', () =>
     assert.deepEqual(effect.wetGain.gain.scheduled, [['set', 1, 10], ['ramp', 0, 10.5]]);
 });
 
+test('a fade keeps the effect alive with a silent source until the ramp ends', () =>
+{
+    const made = ConstantSourceNode.instances;
+    const effect = new LJS.AudioEffect;
+    const before = made.length;
+    effect.setMix(.5);
+    assert.equal(made.length, before, 'no fade makes no keep-alive');
+    effect.setMix(0, .5);
+    assert.equal(made.length, before + 2, 'one keep-alive per param ramp');
+    const keepAlive = made[made.length - 1];
+    assert.equal(keepAlive.offset, 0, 'silent');
+    assert.equal(keepAlive.target, effect.input, 'feeds the effect input');
+    assert.equal(keepAlive.stopTime, 10.5, 'stops when the ramp ends');
+});
+
 test('connect replaces the output connection and returns the target', () =>
 {
     const a = new LJS.AudioEffect;

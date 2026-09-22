@@ -10908,8 +10908,26 @@ class AudioEffect
     {
         ASSERT(isNumber(mix), 'mix must be a number');
         this.mix = mix = clamp(mix);
-        audioParamRamp(this.dryGain.gain, 1-mix, fadeTime);
-        audioParamRamp(this.wetGain.gain, mix, fadeTime);
+        this.rampParam(this.dryGain.gain, 1-mix, fadeTime);
+        this.rampParam(this.wetGain.gain, mix, fadeTime);
+    }
+
+    /** Ramp one of this effect's params, keeping the effect running until the ramp is done
+     *  - The browser drops an effect from rendering while nothing plays through it, which
+     *    would freeze a ramp partway, so a silent source feeds the input for the ramp's length
+     *  @param {AudioParam} param - The param to ramp
+     *  @param {number} value - Where to ramp to
+     *  @param {number} [fadeTime] - Seconds to ramp over, 0 sets the value at once
+     *  @protected */
+    rampParam(param, value, fadeTime=0)
+    {
+        audioParamRamp(param, value, fadeTime);
+        if (!fadeTime) return;
+        const keepAlive = new ConstantSourceNode(audioContext, { offset: 0 });
+        keepAlive.connect(this.input);
+        keepAlive.onended = ()=> keepAlive.disconnect();
+        keepAlive.start();
+        keepAlive.stop(audioContext.currentTime + fadeTime);
     }
 
     /** Send this effect's output into another effect or audio node instead of the speakers
@@ -10976,7 +10994,7 @@ class AudioFilter extends AudioEffect
     setFrequency(frequency, fadeTime=0)
     {
         ASSERT(isNumber(frequency) && frequency >= 0, 'frequency must be positive or zero');
-        audioParamRamp(this.node.frequency, frequency, fadeTime);
+        this.rampParam(this.node.frequency, frequency, fadeTime);
     }
 
     /** Set the resonance at the cutoff
@@ -10985,7 +11003,7 @@ class AudioFilter extends AudioEffect
     setQ(q, fadeTime=0)
     {
         ASSERT(isNumber(q), 'q must be a number');
-        audioParamRamp(this.node.Q, q, fadeTime);
+        this.rampParam(this.node.Q, q, fadeTime);
     }
 }
 
@@ -11080,7 +11098,7 @@ class AudioDelay extends AudioEffect
     setTime(time, fadeTime=0)
     {
         ASSERT(isNumber(time) && time >= 0 && time <= 5, 'time must be between 0 and 5');
-        audioParamRamp(this.node.delayTime, time, fadeTime);
+        this.rampParam(this.node.delayTime, time, fadeTime);
     }
 
     /** Set how much of each echo repeats, clamped below 1 so it always dies out
@@ -11089,7 +11107,7 @@ class AudioDelay extends AudioEffect
     setFeedback(feedback, fadeTime=0)
     {
         ASSERT(isNumber(feedback), 'feedback must be a number');
-        audioParamRamp(this.feedbackGain.gain, clamp(feedback, 0, .95), fadeTime);
+        this.rampParam(this.feedbackGain.gain, clamp(feedback, 0, .95), fadeTime);
     }
 }
 
@@ -11176,7 +11194,7 @@ class AudioCompressor extends AudioEffect
     setThreshold(threshold, fadeTime=0)
     {
         ASSERT(isNumber(threshold), 'threshold must be a number');
-        audioParamRamp(this.node.threshold, threshold, fadeTime);
+        this.rampParam(this.node.threshold, threshold, fadeTime);
     }
 
     /** Set how much the signal is reduced above the threshold
@@ -11185,7 +11203,7 @@ class AudioCompressor extends AudioEffect
     setRatio(ratio, fadeTime=0)
     {
         ASSERT(isNumber(ratio) && ratio >= 1, 'ratio must be 1 or more');
-        audioParamRamp(this.node.ratio, ratio, fadeTime);
+        this.rampParam(this.node.ratio, ratio, fadeTime);
     }
 }
 

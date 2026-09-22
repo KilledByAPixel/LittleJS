@@ -3992,6 +3992,14 @@ declare module "littlejsengine" {
          *  @param {number} mix - 0 is fully dry and 1 is fully wet
          *  @param {number} [fadeTime] - Seconds to ramp over so the change doesn't click */
         setMix(mix: number, fadeTime?: number): void;
+        /** Ramp one of this effect's params, keeping the effect running until the ramp is done
+         *  - The browser drops an effect from rendering while nothing plays through it, which
+         *    would freeze a ramp partway, so a silent source feeds the input for the ramp's length
+         *  @param {AudioParam} param - The param to ramp
+         *  @param {number} value - Where to ramp to
+         *  @param {number} [fadeTime] - Seconds to ramp over, 0 sets the value at once
+         *  @protected */
+        protected rampParam(param: AudioParam, value: number, fadeTime?: number): void;
         /** Send this effect's output into another effect or audio node instead of the speakers
          *  @param {AudioEffect|AudioNode} target - The next effect in the chain, or any audio node
          *  @return {AudioEffect|AudioNode} - The target, so chains read left to right */

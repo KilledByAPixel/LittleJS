@@ -35,6 +35,18 @@ globalThis.AudioContext = class AudioContext
     resume() { return Promise.resolve(); }
 };
 
+// Silent keep-alive sources the audio effects make during a fade; instances are
+// kept so a test can check one was made, where it went, and when it stops
+globalThis.ConstantSourceNode = class ConstantSourceNode
+{
+    static instances = [];
+    constructor(context, options) { this.offset = options?.offset; this.target = undefined; this.stopTime = undefined; ConstantSourceNode.instances.push(this); }
+    connect(node) { this.target = node; return node; }
+    disconnect() { this.target = undefined; }
+    start() {}
+    stop(time) { this.stopTime = time; }
+};
+
 // Minimal in-memory localStorage stub. The bundle reads/writes via
 // bracket-notation (e.g. localStorage[key] = value), which proxies through
 // to plain own-property assignment on this object — no Storage prototype
