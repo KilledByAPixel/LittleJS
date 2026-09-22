@@ -66,9 +66,9 @@ test('sunDirection works at any length, since everything that reads it normalize
 test('Camera3D defaults look down -Z from +Z', () =>
 {
     const c = new Camera3D;
-    nearVec(c.forward(), 0, 0, -1);
-    nearVec(c.right(), 1, 0, 0);
-    nearVec(c.up(), 0, 1, 0);
+    nearVec(c.getForward(), 0, 0, -1);
+    nearVec(c.getRight(), 1, 0, 0);
+    nearVec(c.getUp(), 0, 1, 0);
     assert.ok(c.pos.z > 0);
     near(c.fov, PI/3);
 });
@@ -78,12 +78,12 @@ test('Camera3D lookAt sets pitch and yaw toward the target', () =>
     const c = new Camera3D;
     c.pos = vec3(0, 0, 0);
     c.lookAt(vec3(10, 0, 0));
-    nearVec(c.forward(), 1, 0, 0);
+    nearVec(c.getForward(), 1, 0, 0);
     c.lookAt(vec3(0, 10, 0));
-    nearVec(c.forward(), 0, 1, 0);
+    nearVec(c.getForward(), 0, 1, 0);
     c.lookAt(vec3(0, 0, 10));
-    nearVec(c.forward(), 0, 0, 1);
-    nearVec(c.up(), 0, 1, 0); // no roll
+    nearVec(c.getForward(), 0, 0, 1);
+    nearVec(c.getUp(), 0, 1, 0); // no roll
 });
 
 test('Camera3D view matrix moves the world so the camera is at the origin', () =>
@@ -119,7 +119,7 @@ test('align2D parks the camera on +Z over the 2D camera position', () =>
     c.update2D(540);
     near(c.pos.x, 0); near(c.pos.y, 0);
     near(c.pos.z, 540 / 2 / 32 / Math.tan(c.fov / 2)); // cameraScale defaults to 32
-    nearVec(c.forward(), 0, 0, -1);
+    nearVec(c.getForward(), 0, 0, -1);
     // the automatic path runs from updateMatrices without throwing
     c.align2D = true;
     assert.doesNotThrow(()=> render3D.updateMatrices(16/9));
@@ -909,12 +909,12 @@ test('Camera3D.orbit parks the camera at the distance and angles and looks at th
     const c = new Camera3D;
     c.orbit(vec3(1, 2, 3), 10, 0, 0);
     nearVec(c.pos, 1, 2, 13);
-    nearVec(c.forward(), 0, 0, -1);
+    nearVec(c.getForward(), 0, 0, -1);
     c.orbit(vec3(), 10, PI / 2, PI / 4);
     near(c.pos.distance(vec3()), 10);
     near(c.pos.y, 10 * Math.SQRT1_2);
     near(c.pos.x, 10 * Math.SQRT1_2);
-    nearVec(c.forward(), -c.pos.x / 10, -c.pos.y / 10, 0);
+    nearVec(c.getForward(), -c.pos.x / 10, -c.pos.y / 10, 0);
 });
 
 test('EngineObject3D moves in updatePhysics like 2D, a child in updateTransforms, and has no 2D mass', () =>
@@ -1693,7 +1693,7 @@ test('Camera3D.follow eases toward the offset spot and looks at the target', () 
     nearVec(c.pos, 5, 0, 2);
     c.follow(vec3(10, 0, 0), vec3(0, 0, 4));
     nearVec(c.pos, 10, 0, 4);
-    nearVec(c.forward(), 0, 0, -1);
+    nearVec(c.getForward(), 0, 0, -1);
 });
 
 test('buildRibbon lays lit quads along a path, open or closed, with per point widths and colors', () =>

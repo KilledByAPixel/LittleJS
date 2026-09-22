@@ -889,8 +889,8 @@ render3D.camera.follow(target, offset, percent=1) // chase camera: ease toward t
                                                   // is how far it moves each call, so call it every frame, from
                                                   // gameUpdatePost once the target has moved
 render3D.camera.align2D = true        // lock to the 2D camera so the z=0 plane matches world space
-render3D.camera.forward() .right() .up() // the camera's axes as it is right now; render3D.cameraRight .cameraUp
-                                         // .cameraForward are this frame's, read only
+render3D.camera.getForward() .getRight() .getUp() // the camera's axes as it is right now; render3D.cameraRight
+                                                  // .cameraUp .cameraForward are this frame's, read only
 render3D.viewMatrix .projectionMatrix .viewProjection .shadowMatrix // this frame's, rebuilt by updateMatrices()
 render3D.camera.getMatrix() .getViewMatrix() .getProjectionMatrix(aspect) // built from the camera as it is now
 render3D.worldToScreen(pos, canvasSize) // Vector3 -> screen pixels, undefined when behind the camera; the opposite

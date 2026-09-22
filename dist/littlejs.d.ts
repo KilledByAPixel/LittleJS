@@ -6724,13 +6724,13 @@ declare module "littlejsengine" {
         getProjectionMatrix(aspect: number): Matrix4;
         /** Returns the direction the camera looks
          *  @return {Vector3} */
-        forward(): Vector3;
+        getForward(): Vector3;
         /** Returns the camera's right axis
          *  @return {Vector3} */
-        right(): Vector3;
+        getRight(): Vector3;
         /** Returns the camera's up axis
          *  @return {Vector3} */
-        up(): Vector3;
+        getUp(): Vector3;
         /** Point the camera at a target, sets pitch and yaw and clears roll
          *  @param {Vector3} target */
         lookAt(target: Vector3): void;

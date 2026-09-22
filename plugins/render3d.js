@@ -1245,15 +1245,15 @@ class Camera3D
 
     /** Returns the direction the camera looks
      *  @return {Vector3} */
-    forward() { return render3DAxis(this.getMatrix().m, 8).scale(-1); }
+    getForward() { return render3DAxis(this.getMatrix().m, 8).scale(-1); }
 
     /** Returns the camera's right axis
      *  @return {Vector3} */
-    right() { return render3DAxis(this.getMatrix().m, 0); }
+    getRight() { return render3DAxis(this.getMatrix().m, 0); }
 
     /** Returns the camera's up axis
      *  @return {Vector3} */
-    up() { return render3DAxis(this.getMatrix().m, 4); }
+    getUp() { return render3DAxis(this.getMatrix().m, 4); }
 
     /** Point the camera at a target, sets pitch and yaw and clears roll
      *  @param {Vector3} target */
