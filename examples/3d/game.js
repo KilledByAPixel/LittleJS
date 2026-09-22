@@ -31,6 +31,7 @@ class Player extends EngineObject3D
         this.specular = .5;
         this.speed = vec3();
         this.speedY = 0;
+        this.groundTimer = new Timer;
         this.addChild(new Light3D(vec3(0,1,0), 10, hsl(.55,1,.7)));
         const trailColor = hsl(0,0,.7,.4);
         this.addChild(new Trail3D(vec3(0,-.8,0), 1, .5, undefined,
@@ -49,11 +50,14 @@ class Player extends EngineObject3D
         this.pos3D.x = clamp(this.pos3D.x, -limit, limit);
         this.pos3D.z = clamp(this.pos3D.z, -limit, limit);
 
-        // space jumps when it is on the ground
+        // space jumps when on the ground, or was a moment ago,
+        // so a bump over a hill does not eat the jump
         const ground = terrain.getHeight(this.pos3D) + 1;
-        const onGround = this.pos3D.y < ground + .1;
-        if (onGround && keyWasPressed('Space'))
+        if (this.pos3D.y < ground + .1)
+            this.groundTimer.set(.1);
+        if (this.groundTimer.active() && keyWasPressed('Space'))
         {
+            this.groundTimer.unset();
             this.speedY = .35;
             soundJump.play();
         }
