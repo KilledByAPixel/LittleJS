@@ -1,4 +1,4 @@
-// push every block onto a pad, seen through an angled orthographic camera
+// push every block onto a pad, using an orthographic camera
 const levelData =
 [
     '#######',
@@ -10,12 +10,11 @@ const levelData =
     '#######',
 ];
 const levelSize = levelData.length;
-const cellPos = (x, z, y=0)=>
-    vec3(x - levelSize/2 + .5, y, z - levelSize/2 + .5);
+const cellPos = (x, z, y)=> vec3(x - levelSize/2+.5, y, z - levelSize/2+.5);
 const isWall = (x, z)=> levelData[z][x] == '#';
 const boxAt = (x, z)=> boxes.find(b=> b.cell.x == x && b.cell.y == z);
 const padColor = hsl(.1,.6,.3), litColor = hsl(.15,1,.6);
-const pushSound = new Sound([,,150,.01,.02,.08,1,1.5,,,,,,,,,.05]);
+const pushSound = new Sound([.5,,150,.01,,,,,9,-50]);
 let wallMesh, blockMesh, ballMesh, padMesh;
 let level, boxes, goals, player, moves, hoverCell;
 
@@ -40,7 +39,8 @@ class GridObject extends EngineObject3D
     {
         // slide into the new cell
         const target = cellPos(this.cell.x, this.cell.y, this.height);
-        this.pos3D = this.startPos.lerp(target, this.moveTimer.getPercent());
+        const movePercent = this.moveTimer.getPercent()
+        this.pos3D = this.startPos.lerp(target, movePercent);
     }
 }
 
@@ -48,15 +48,15 @@ class Goal extends GridObject
 {
     constructor(x, z)
     {
-        super(x, z, padMesh, padColor, .03);
+        super(x, z, padMesh, padColor);
         this.light = new Light3D(vec3(0,.57,0), 4, hsl(.1,1,.6,0));
         this.addChild(this.light);
     }
     update()
     {
         // light up while a block is on the pad, with a burst when it lands
-        const lit = !!boxAt(this.cell.x, this.cell.y);
-        if (lit && !this.lit)
+        const active = boxAt(this.cell.x, this.cell.y);
+        if (active && !this.unlit)
             new ParticleEmitter3D(
                 cellPos(this.cell.x, this.cell.y, .5), // pos
                 .6, .1,                           // emitSize, emitTime
@@ -67,10 +67,9 @@ class Goal extends GridObject
                 .07, .95, -.004,                  // speed, damping, gravity
                 .1, .5, true                      // fade, randomness, additive
             );
-        this.lit = lit;
-        this.color = lit ? litColor : padColor;
-        this.unlit = lit;
-        this.light.color.a = lit ? 1 : 0;
+        this.color = active ? litColor : padColor;
+        this.light.color.a = active ? 1 : 0;
+        this.unlit = active;
     }
 }
 
@@ -87,9 +86,9 @@ function buildLevel()
         else if (c == 'G')
             goals.push(new Goal(x, z));
         else if (c == 'B')
-            boxes.push(new GridObject(x, z, blockMesh, hsl(.05,.7,.5), .39));
+            boxes.push(new GridObject(x, z, blockMesh, hsl(.05,.7,.5), .4));
         else if (c == '@')
-            player = new GridObject(x, z, ballMesh, hsl(.5,.8,.6), .35);
+            player = new GridObject(x, z, ballMesh, hsl(.5,.8,.6), .4);
     }
     level.push(player, ...boxes, ...goals);
 }
@@ -116,7 +115,8 @@ function tryMove(moveX, moveZ)
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky(hsl(.6,.6,.5), hsl(.6,.5,.6), hsl(.6,.5,.3));
+    render3D.canvasClearColor = RED
+    //render3D.setSky(hsl(.6,.6,.5), hsl(.6,.5,.6), hsl(.1,.5,.3));
     render3D.lightDirection = vec3(.4,-1,.3);
     render3D.ambientColor = hsl(.6,.3,.35);
     render3D.shadows = true;
@@ -124,24 +124,20 @@ function gameInit()
     render3D.shadowCenter = vec3();
 
     // angled orthographic camera looking down at the board
-    render3D.camera.pos = vec3(7,9,9);
-    render3D.camera.lookAt(vec3());
-    render3D.camera.orthographic = levelSize + 2;
+    render3D.camera.pos = vec3(7,9,7);
+    render3D.camera.lookAt(vec3(0,.5,0));
+    render3D.camera.orthographic = levelSize+1;
 
     // meshes shared by every level
     wallMesh = buildBox(.9).setColor(hsl(.6,.2,.4));
-    blockMesh = buildBox(.78);
-    ballMesh = buildSphere(.7);
-    padMesh = buildBox(vec3(1,.06,1));
+    blockMesh = buildBox(.8);
+    ballMesh = buildSphere(.8);
+    padMesh = buildBox(vec3(1,.1,1));
 
-    // checkered floor, and a trophy that spins on top of the 2D text
+    // checkered floor,
     const checker = (x, z)=> hsl(0, 0, (x+z)&1 ? .4 : .3);
     const floorMesh = buildGrid(vec2(levelSize), levelSize, checker);
-    new EngineObject3D(vec3(0,-.02,0), floorMesh);
-    const trophy = new EngineObject3D(vec3(5,3,-5), buildTorus(1, .3));
-    trophy.color = litColor;
-    trophy.angleVelocity3D = vec3(.01,.03);
-    trophy.renderAfter2D = trophy.unlit = true;
+    new EngineObject3D(vec3(), floorMesh);
     buildLevel();
 }
 
