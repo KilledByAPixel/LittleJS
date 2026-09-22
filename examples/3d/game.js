@@ -13,9 +13,10 @@
 setTileDefaultBleed(.5);
 
 const terrainSize = 90, terrainHeight = 14, orbCount = 8;
-const soundCollect = new Sound([,,500,.02,.1,.2,1,1.5,,,200,.05]);
-const soundEngine = new Sound([,0,80,.01,,,2,5,,,,,,.5]);
-let terrain, player, title, scoreText, score = 0;
+const soundCollect = new Sound([,,,.02,,.5,,3,,-50,40,,.05]);
+const soundEngine = new Sound([,0,80,.01,,.1,2,5,,,,,,.5,,,,,,,-100]);
+const soundJump = new Sound([.5,,140,,,,,.5,12]);
+let terrain, player, title;
 
 ///////////////////////////////////////////////////////////////////////////////
 // the player rolls over the terrain with a trail behind it
@@ -52,7 +53,10 @@ class Player extends EngineObject3D
         const ground = terrain.getHeight(this.pos3D) + 1;
         const onGround = this.pos3D.y < ground + .1;
         if (onGround && keyWasPressed('Space'))
+        {
             this.speedY = .35;
+            soundJump.play();
+        }
         this.speedY -= .015;
         this.pos3D.y = max(ground, this.pos3D.y + this.speedY);
         if (this.pos3D.y == ground)
@@ -62,8 +66,8 @@ class Player extends EngineObject3D
         const speed = this.speed.length();
         if (!this.engineLoop?.isPlaying())
             this.engineLoop = render3D.playSoundLoop(soundEngine, this.pos3D);
-        this.engineLoop?.setRate(.5 + speed*2);
-        this.engineLoop?.setVolume(min(speed*4, .2));
+        this.engineLoop?.setRate(1 + speed*2);
+        this.engineLoop?.setVolume(min(speed*4, .3));
     }
 }
 
@@ -100,10 +104,7 @@ class Orb extends EngineObject3D
             .1, .4, true                          // fade, randomness, additive
         );
         render3D.playSound(soundCollect, this.pos3D);
-        ++score;
-        buildScoreText();
         this.destroy();
-        new Orb(randomGroundPos());
     }
 }
 
@@ -111,11 +112,6 @@ class Orb extends EngineObject3D
 function randomGroundPos()
 {
     return vec3(rand(20, terrainSize/2 - 6), 0, 0).rotateY(rand(2*PI));
-}
-
-function buildScoreText()
-{
-    scoreText.setMesh(buildText3D('ORBS ' + score, 3, .8)); // rebuild text
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -202,13 +198,11 @@ function gameInit()
         sprite.pixelated = true; // hard edged pixels
     }
 
-    // title and score, extruded from the engine font, above the hills
-    const titleMesh = buildText3D('LITTLEJS 3D', 5, 1.5);
-    title = new EngineObject3D(vec3(0,20,-14), titleMesh);
+    // title text, extruded from the engine font
+    const titleMesh = buildText3D('LITTLEJS 3D', 5, 2);
+    title = new EngineObject3D(vec3(0,17,-14), titleMesh);
     title.color = hsl(.1,1,.6);
-    scoreText = new EngineObject3D(vec3(0,14,-14));
-    scoreText.color = WHITE;
-    buildScoreText();
+    title.specular = 1;
 
     // add cool directional light opposite from the sun
     const fill = new Light3D(vec3(), 1, hsl(.55,.4,.3));
@@ -224,17 +218,17 @@ function gameInit()
 
 function gameUpdatePost()
 {
-    // the camera follows the player, after it has moved
-    render3D.camera.follow(player.pos3D.add(vec3(0,2,0)), vec3(0,10,18), .08);
+    // the camera follows the player
+    render3D.camera.follow(player.pos3D, vec3(0,10,18), .08);
 
     // sway the title so its sides catch the light
-    title.rotation3D.y = sin(time*.3)*.5;
+    title.rotation3D.y = sin(time*.3)*.3;
 }
 
 function gameRenderPost()
 {
     const text = 'arrow keys: roll / space: jump / collect the orbs';
-    drawTextScreen(text, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40), 30);
+    drawTextScreen(text, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40), 30, WHITE, 4);
 }
 
 engineInit(gameInit, undefined, gameUpdatePost, undefined, gameRenderPost,
