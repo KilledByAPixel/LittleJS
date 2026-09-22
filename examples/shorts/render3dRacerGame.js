@@ -1,6 +1,6 @@
 // drive laps around a hilly track, hit every gate in order
 const trackSize = 160, roadWidth = 8, gateCount = 4;
-const engineSound = new Sound([,0,90,.01,,,2,3,,,,,,2]);
+const engineSound = new Sound([,0,91.6,,.4,0,2,2,,,,,.2,1,,,,,,.3,-200]);
 let terrain, car, lapCount = 0, nextGate = 1, bestTime = 0, lapTime = 0;
 
 // the center line of the track, a wobbly circle on the ground
@@ -18,7 +18,8 @@ function trackSide(a)
 function buildTerrain()
 {
     const n = 81, heights = [], colors = [];
-    const grassColor = hsl(.3,.4,.3), rockColor = hsl(.1,.2,.4);
+    const grassColor = hsl(.3,.4,.3);
+    const rockColor = hsl(.1,.2,.4);
     const roadColor = hsl(.1,.1,.3);
     for (let r = 0; r < n; ++r)
     {
@@ -123,8 +124,8 @@ class Car extends EngineObject3D
         // the engine sound loops, playing faster with speed
         if (!this.engineLoop?.isPlaying())
             this.engineLoop = render3D.playSound(engineSound, this.pos3D,
-                .1, 1, 1, true);
-        this.engineLoop?.setRate(.5 + abs(this.speed)*2);
+                .2, 1, 1, true);
+        this.engineLoop?.setRate(.4 + abs(this.speed)*2);
 
         // gates count in order, the finish line completes a lap
         const angle = mod(atan2(this.pos3D.z, this.pos3D.x), 2*PI);
