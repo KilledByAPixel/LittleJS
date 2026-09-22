@@ -7051,6 +7051,7 @@ function touchGamepadPointerUp(e)
  * - Speech synthesis for text-to-speech
  * - Music playback with ZzFXM support
  * - Web Audio API integration with master gain control
+ * - Sounds and the master bus can route through effects, see the audio effects plugin
  * @namespace Audio
  */
 
@@ -11590,9 +11591,11 @@ class AudioEffect
      *  @return {AudioEffect|AudioNode} - The target, so chains read left to right */
     connect(target)
     {
-        ASSERT(target && (target instanceof AudioEffect || typeof target.connect === 'function'), 'target must be an AudioEffect or AudioNode');
+        // an effect stands in for its input node, the same rule as sound.output
+        const node = /** @type {AudioNode} */ (target && 'input' in target ? target.input : target);
+        ASSERT(node && typeof node.connect === 'function', 'target must be an AudioEffect or AudioNode');
         this.output.disconnect();
-        this.output.connect(target instanceof AudioEffect ? target.input : target);
+        this.output.connect(node);
         return target;
     }
 
@@ -11737,6 +11740,7 @@ class AudioDelay extends AudioEffect
     }
 
     /** Set the time between echoes
+     *  - Browsers hold a delay in a feedback loop to at least one render quantum, so 0 is not a bypass
      *  @param {number} time - Seconds, up to 5
      *  @param {number} [fadeTime] - Seconds to ramp over, pitch bends while it moves */
     setTime(time, fadeTime=0)

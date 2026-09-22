@@ -2607,6 +2607,7 @@ declare module "littlejsengine" {
      * - Speech synthesis for text-to-speech
      * - Music playback with ZzFXM support
      * - Web Audio API integration with master gain control
+     * - Sounds and the master bus can route through effects, see the audio effects plugin
      * @namespace Audio
      */
     /** Audio context used by the engine
@@ -4071,6 +4072,7 @@ declare module "littlejsengine" {
         /** @property {GainNode} - How much of the delayed signal feeds back in */
         feedbackGain: GainNode;
         /** Set the time between echoes
+         *  - Browsers hold a delay in a feedback loop to at least one render quantum, so 0 is not a bypass
          *  @param {number} time - Seconds, up to 5
          *  @param {number} [fadeTime] - Seconds to ramp over, pitch bends while it moves */
         setTime(time: number, fadeTime?: number): void;

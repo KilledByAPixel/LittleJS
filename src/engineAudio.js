@@ -9,6 +9,7 @@
  * - Speech synthesis for text-to-speech
  * - Music playback with ZzFXM support
  * - Web Audio API integration with master gain control
+ * - Sounds and the master bus can route through effects, see the audio effects plugin
  * @namespace Audio
  */
 

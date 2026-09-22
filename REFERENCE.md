@@ -336,8 +336,8 @@ combineCanvases()            // Combine all canvases onto mainCanvas (for screen
 Sound(zzfxSound, randomness, range, taper)             // Create a zzfx sound
 Sound(filename, randomness, range, taper)              // Load a wave, mp3, or ogg
 Sound.play(pos, volume=1, pitch=1, randomness=1, loop=false, paused=false) // Play a sound, returns SoundInstance
-Sound.playLoop(pos, volume=1, pitch=1, randomness=1)   // Play on a loop, like play with loop on
-Sound.playMusic(volume=1, loop=true)                   // Play as music with looping
+Sound.playLoop(pos, volume=1, pitch=1, randomness=1, paused=false) // Play on a loop, like play with loop on
+Sound.playMusic(volume=1, loop=true, paused=false)     // Play as music with looping
 Sound.playNote(semitoneOffset, pos, volume=1)          // Play as note with a semitone offset
 Sound.getDuration()                                    // Get length of sound in seconds (0 if loading)
 Sound.isLoaded()                                       // Check if sound is fully loaded
@@ -351,8 +351,7 @@ SoundInstance.stop(fadeTime=0)    // Stop with optional fade out
 SoundInstance.pause()             // Pause the sound
 SoundInstance.resume()            // Resume paused sound
 SoundInstance.isPlaying()         // Check if currently playing
-SoundInstance.isPaused()          // Check if paused
-SoundInstance.isStopped()         // Check if stopped
+SoundInstance.isPaused()          // Check if paused or stopped, not playing
 SoundInstance.getCurrentTime()    // Get current playback position
 SoundInstance.getDuration()       // Get total duration
 SoundInstance.getSource()         // Get AudioBufferSourceNode
