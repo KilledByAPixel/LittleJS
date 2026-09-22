@@ -21,7 +21,7 @@ function gameInit()
     // one texture, repeated across the floor and wrapped around shapes
     const bricks = makeBrickTexture();
     new EngineObject3D(vec3(), buildGrid(vec2(20), 1).scaleUVs(8), bricks);
-    const shapes = 
+    const shapes =
     [ buildBox(2), buildSphere(2), buildCylinder(2, 2), buildTorus(3, 1) ];
     for (let i = shapes.length; i--;)
     {
@@ -30,14 +30,14 @@ function gameInit()
         shape.angleVelocity3D = vec3(0, .01);
     }
 
-    // a tile from the sheet on a standing quad
+    // a tile from the sheet on a standing quad, the shadow takes its shape
     const signMesh = buildGrid(vec2(5));
     const sign = new EngineObject3D(vec3(0, 2.5, -5), signMesh, tile(3, 16));
     sign.rotation3D = vec3(PI/2, PI, 0);
 }
 
 function gameUpdate()
-{ 
+{
     if (keyWasPressed('Space')) // space toggles mipmaps
         render3D.mipmaps = !render3D.mipmaps;
 }
