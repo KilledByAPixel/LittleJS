@@ -9,12 +9,12 @@
 
 'use strict';
 
-// pull tile edges in slightly so neighbors on the sheet cannot bleed into them
+// pull in edges to prevent bleeding from neighboring tiles
 setTileDefaultBleed(.5);
 
 const terrainSize = 90, terrainHeight = 14, orbCount = 8;
 const soundCollect = new Sound([,,500,.02,.1,.2,1,1.5,,,200,.05]);
-const soundEngine = new Sound([,0,80,.01,.03,.1,3,1.5,,,,,,.6]);
+const soundEngine = new Sound([,0,80,.01,,,2,5,,,,,,.5]);
 let terrain, player, title, scoreText, score = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -25,12 +25,13 @@ class Player extends EngineObject3D
     constructor()
     {
         super(vec3(0,0,6), buildSphere(2));
+        this.pos3D.y = terrain.getHeight(this.pos3D) + 1; // start on the ground
         this.color = hsl(.55,.8,.6);
         this.specular = .5;
         this.speed = vec3();
         this.speedY = 0;
         this.addChild(new Light3D(vec3(0,1,0), 10, hsl(.55,1,.7)));
-        const trailColor = hsl(.55,1,.7,.4);
+        const trailColor = hsl(0,0,.7,.4);
         this.addChild(new Trail3D(vec3(0,-.8,0), 1, .5, undefined,
             trailColor, trailColor.withAlpha(0), true));
     }
@@ -42,12 +43,12 @@ class Player extends EngineObject3D
         this.speed = this.speed.add(push).scale(.94);
         this.pos3D = this.pos3D.add(this.speed);
 
-        // stay on the island and roll with the slope
+        // stay on the island
         const limit = terrainSize/2 - 4;
         this.pos3D.x = clamp(this.pos3D.x, -limit, limit);
         this.pos3D.z = clamp(this.pos3D.z, -limit, limit);
 
-        // space jumps when it is on the ground, then gravity brings it back
+        // space jumps when it is on the ground
         const ground = terrain.getHeight(this.pos3D) + 1;
         const onGround = this.pos3D.y < ground + .1;
         if (onGround && keyWasPressed('Space'))
@@ -56,15 +57,13 @@ class Player extends EngineObject3D
         this.pos3D.y = max(ground, this.pos3D.y + this.speedY);
         if (this.pos3D.y == ground)
             this.speedY = 0;
-        this.rotation3D.x += this.speed.z;
-        this.rotation3D.z -= this.speed.x;
 
-        // engine sound loops, playing faster with speed and quiet when still
+        // engine sound loops, playing faster and louder with speed
         const speed = this.speed.length();
         if (!this.engineLoop?.isPlaying())
             this.engineLoop = render3D.playSoundLoop(soundEngine, this.pos3D);
-        this.engineLoop?.setRate(.8 + speed*3);
-        this.engineLoop?.setVolume(min(speed*10, .3));
+        this.engineLoop?.setRate(.5 + speed*2);
+        this.engineLoop?.setVolume(min(speed*4, .2));
     }
 }
 
@@ -78,7 +77,7 @@ class Orb extends EngineObject3D
         super(pos, render3D.sphereMesh);
         this.scale3D = vec3(1.4);
         this.color = hsl(rand(),1,.6);
-        this.unlit = true; // its own bright color, which the bloom picks up
+        this.unlit = true; // make it appear bright
         this.angleVelocity3D = vec3(.01,.02,0);
         this.addChild(new Light3D(vec3(), 12, this.color));
     }
@@ -131,7 +130,9 @@ function gameInit()
     render3D.lightDirection = vec3(.4,-1,.3);
     render3D.ambientColor = hsl(.6,.2,.35);
     render3D.shadows = true;
-    render3D.shadowRange = 50;
+    render3D.shadowCenter = vec3(); // pinned over the whole island
+    render3D.shadowRange = terrainSize*1.5; // it turns with the light
+    render3D.shadowMapSize = 2048;
     render3D.smoothShading = true;
 
     // an island of noise, higher in the middle and sinking at the edges
@@ -159,15 +160,14 @@ function gameInit()
     const tree = new Mesh()
         .combine(buildCylinder(.7, 3, 6), vec3(0,1.5,0), hsl(.1,.4,.3))
         .combine(buildCone(4, 5, 7), vec3(0,4.5,0), hsl(.3,.5,.25));
-    for (let i = 250; i--;)
+    for (let i = 100; i--;)
     {
         const pos = randomGroundPos();
         pos.y = terrain.getHeight(pos);
-        if (pos.y < 2 || pos.y > 9)
+        if (pos.y < 2)
             continue;
         const treeObject = new EngineObject3D(pos, tree);
-        treeObject.rotation3D.y = rand(2*PI);
-        treeObject.scale3D = vec3(rand(.7,1.2));
+        treeObject.scale3D = vec3(rand(.5,1.5));
         treeObject.cullBackFaces = true;
     }
 
@@ -203,30 +203,29 @@ function gameInit()
     }
 
     // title and score, extruded from the engine font, above the hills
-    const titleMesh = buildText3D('LITTLEJS 3D', 5, 1.2);
-    title = new EngineObject3D(vec3(0,17,-14), titleMesh);
-    title.color = hsl(.12,1,.6);
-    title.specular = .4;
-    scoreText = new EngineObject3D(vec3(0,12.5,-14));
-    scoreText.color = hsl(.55,.3,.95);
-    scoreText.specular = .3;
+    const titleMesh = buildText3D('LITTLEJS 3D', 5, 1.5);
+    title = new EngineObject3D(vec3(0,20,-14), titleMesh);
+    title.color = hsl(.1,1,.6);
+    scoreText = new EngineObject3D(vec3(0,14,-14));
+    scoreText.color = WHITE;
     buildScoreText();
 
-    // the sun lights things from behind, so a cool fill picks out the fronts
+    // add cool directional light opposite from the sun
     const fill = new Light3D(vec3(), 1, hsl(.55,.4,.3));
     fill.directional = true;
     fill.lookAt(vec3(0,-.3,-1));
 
+    // spawn the player with the camera already behind it, and orbs to collect
     player = new Player;
+    render3D.camera.follow(player.pos3D.add(vec3(0,2,0)), vec3(0,10,18));
     for (let i = orbCount; i--;)
         new Orb(randomGroundPos());
 }
 
 function gameUpdatePost()
 {
-    // the camera and the shadows follow the player, after it has moved
+    // the camera follows the player, after it has moved
     render3D.camera.follow(player.pos3D.add(vec3(0,2,0)), vec3(0,10,18), .08);
-    render3D.shadowCenter = player.pos3D;
 
     // sway the title so its sides catch the light
     title.rotation3D.y = sin(time*.3)*.5;
@@ -238,5 +237,5 @@ function gameRenderPost()
     drawTextScreen(text, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40), 30);
 }
 
-engineInit(gameInit, ()=>{}, gameUpdatePost, ()=>{}, gameRenderPost,
+engineInit(gameInit, undefined, gameUpdatePost, undefined, gameRenderPost,
     ['tiles.png']);
