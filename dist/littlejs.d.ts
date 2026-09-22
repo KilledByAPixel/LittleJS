@@ -2610,6 +2610,14 @@ declare module "littlejsengine" {
      *  @type {GainNode}
      *  @memberof Audio */
     export let audioMasterGain: GainNode;
+    /** Route all sound through an effect between the master gain and the speakers
+     *  - Pass the first and last nodes of an effect chain, or one node that is both
+     *  - The output node is disconnected from everything else first, so it only feeds the speakers
+     *  - Call with no arguments to remove the effect, can be called before engineInit
+     *  @param {AudioNode} [input] - Node the master gain connects to
+     *  @param {AudioNode} [output=input] - Node that connects to the audio destination
+     *  @memberof Audio */
+    export function setAudioMasterEffect(input?: AudioNode, output?: AudioNode): void;
     /** Default sample rate used for sounds
      *  @default 44100
      *  @memberof Audio */
@@ -2672,6 +2680,8 @@ declare module "littlejsengine" {
         loadedPercent: number;
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         onloadCallback: (sound: Sound) => Sound;
+        /** @property {AudioNode} - Node to route every play of this sound through instead of the master gain, for effects */
+        output: any;
         /** @param {Array<Array<number>|Float32Array>} sampleChannels */
         set sampleChannels(arg: (number[] | Float32Array)[]);
         /** Sample data for each channel
@@ -2772,6 +2782,8 @@ declare module "littlejsengine" {
         gainNode: GainNode;
         /** @property {AudioBufferSourceNode} - Source node of the audio */
         source: AudioBufferSourceNode;
+        /** @property {AudioNode} - Node to route this instance through, copied from the sound */
+        output: any;
         onendedCallback: (source: any) => void;
         /** Start playing the sound instance from the offset time
          *  @param {number} [offset] - Offset in seconds to start playback from
@@ -2844,9 +2856,10 @@ declare module "littlejsengine" {
      *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
      *  @param {number}   [offset] - Offset in seconds to start playback from
      *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
+     *  @param {AudioNode} [output] - Node to connect the gain to instead of the master gain, for effects
      *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
      *  @memberof Audio */
-    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback): AudioBufferSourceNode;
+    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback, output?: AudioNode): AudioBufferSourceNode;
     /** Play an audio buffer with given settings
      *  The buffer can be shared by any number of sounds playing at once
      *  @param {AudioBuffer} buffer - The audio buffer to play
@@ -2857,9 +2870,10 @@ declare module "littlejsengine" {
      *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
      *  @param {number}   [offset] - Offset in seconds to start playback from
      *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
+     *  @param {AudioNode} [output] - Node to connect the gain to instead of the master gain, for effects
      *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
      *  @memberof Audio */
-    export function playAudioBuffer(buffer: AudioBuffer, volume?: number, rate?: number, pan?: number, loop?: boolean, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback): AudioBufferSourceNode;
+    export function playAudioBuffer(buffer: AudioBuffer, volume?: number, rate?: number, pan?: number, loop?: boolean, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback, output?: AudioNode): AudioBufferSourceNode;
     /** Copy arrays of samples into a new audio buffer
      *  @param {Array}  sampleChannels - Array of arrays of samples (for stereo playback)
      *  @param {number} [sampleRate=44100] - Sample rate for the sound
@@ -3935,6 +3949,169 @@ declare module "littlejsengine" {
      *  @return {Array} - Left and right channel sample data
      *  @memberof ZzFXM */
     export function zzfxM(instruments: any[], patterns: any[], sequence: any[], BPM?: number): any[];
+    /**
+     * Base class for audio effects, an input and output with a wet/dry mix between them
+     * - Sounds connect to input, output goes to the master gain until connect() moves it
+     * - Subclasses put their nodes between input and the wet gain with connectEffect
+     * @memberof AudioEffects
+     * @example
+     * const cave = new AudioReverb(3, 2);
+     * footstep.output = cave.input; // every play of this sound is in the cave
+     */
+    export class AudioEffect {
+        /** Create an audio effect
+         *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+        constructor(mix?: number);
+        /** @property {GainNode} - Connect sounds to this node */
+        input: GainNode;
+        /** @property {GainNode} - This node carries the mixed result */
+        output: GainNode;
+        /** @property {GainNode} - Level of the unprocessed signal */
+        dryGain: GainNode;
+        /** @property {GainNode} - Level of the processed signal */
+        wetGain: GainNode;
+        /** @property {number} - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+        mix: number;
+        /** Set the wet/dry balance
+         *  @param {number} mix - 0 is fully dry and 1 is fully wet
+         *  @param {number} [fadeTime] - Seconds to ramp over so the change doesn't click */
+        setMix(mix: number, fadeTime?: number): void;
+        /** Send this effect's output into another effect or audio node instead of the speakers
+         *  @param {AudioEffect|AudioNode} target - The next effect in the chain, or any audio node
+         *  @return {AudioEffect|AudioNode} - The target, so chains read left to right */
+        connect(target: AudioEffect | AudioNode): AudioEffect | AudioNode;
+        /** Stop sending this effect's output anywhere */
+        disconnect(): void;
+        /** Wire nodes between the input and the wet gain, for subclasses
+         *  @param {AudioNode} first - Node the input connects to
+         *  @param {AudioNode} [last=first] - Node that connects to the wet gain
+         *  @protected */
+        protected connectEffect(first: AudioNode, last?: AudioNode): void;
+    }
+    /**
+     * Filter effect, muffle sounds underwater or behind a wall
+     * @extends AudioEffect
+     * @memberof AudioEffects
+     * @example
+     * const muffle = new AudioFilter('lowpass', 400);
+     * setAudioMasterEffect(muffle.input, muffle.output);
+     * muffle.setFrequency(20000, .5); // sweep back to clear
+     */
+    export class AudioFilter extends AudioEffect {
+        /** Create a filter effect
+         *  @param {string} [type] - lowpass, highpass, bandpass, notch, etc.
+         *  @param {number} [frequency] - Cutoff or center frequency in Hz
+         *  @param {number} [q] - Resonance at the cutoff, higher is sharper
+         *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+        constructor(type?: string, frequency?: number, q?: number, mix?: number);
+        /** @property {BiquadFilterNode} - The filter node */
+        node: BiquadFilterNode;
+        /** Set the cutoff or center frequency
+         *  @param {number} frequency - Frequency in Hz
+         *  @param {number} [fadeTime] - Seconds to sweep over */
+        setFrequency(frequency: number, fadeTime?: number): void;
+        /** Set the resonance at the cutoff
+         *  @param {number} q - Higher is sharper
+         *  @param {number} [fadeTime] - Seconds to ramp over */
+        setQ(q: number, fadeTime?: number): void;
+    }
+    /**
+     * Reverb effect, puts sounds in a room, cave, or hall
+     * - The impulse response is generated, no audio file needed
+     * @extends AudioEffect
+     * @memberof AudioEffects
+     * @example
+     * const hall = new AudioReverb(4, 1.5, .4);
+     * footstep.output = hall.input;
+     */
+    export class AudioReverb extends AudioEffect {
+        /** Create a reverb effect
+         *  @param {number} [duration] - Seconds until the reverb tail is silent
+         *  @param {number} [decay] - How quickly the tail fades, higher is faster
+         *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+        constructor(duration?: number, decay?: number, mix?: number);
+        /** @property {ConvolverNode} - The convolver node */
+        node: ConvolverNode;
+        /** Build a stereo impulse response of decaying noise
+         *  @param {number} duration - Seconds until silence
+         *  @param {number} decay - How quickly it fades, higher is faster
+         *  @return {AudioBuffer} */
+        createImpulse(duration: number, decay: number): AudioBuffer;
+    }
+    /**
+     * Delay effect, echoes that repeat and fade
+     * @extends AudioEffect
+     * @memberof AudioEffects
+     * @example
+     * const canyon = new AudioDelay(.4, .5);
+     * shout.output = canyon.input;
+     */
+    export class AudioDelay extends AudioEffect {
+        /** Create a delay effect
+         *  @param {number} [time] - Seconds between echoes, up to 5
+         *  @param {number} [feedback] - How much of each echo repeats, 0 to .95
+         *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+        constructor(time?: number, feedback?: number, mix?: number);
+        /** @property {DelayNode} - The delay node */
+        node: DelayNode;
+        /** @property {GainNode} - How much of the delayed signal feeds back in */
+        feedbackGain: GainNode;
+        /** Set the time between echoes
+         *  @param {number} time - Seconds, up to 5
+         *  @param {number} [fadeTime] - Seconds to ramp over, pitch bends while it moves */
+        setTime(time: number, fadeTime?: number): void;
+        /** Set how much of each echo repeats, clamped below 1 so it always dies out
+         *  @param {number} feedback - 0 to .95
+         *  @param {number} [fadeTime] - Seconds to ramp over */
+        setFeedback(feedback: number, fadeTime?: number): void;
+    }
+    /**
+     * Distortion effect, overdrive for radios, damaged robots, and engines
+     * @extends AudioEffect
+     * @memberof AudioEffects
+     * @example
+     * const radio = new AudioDistortion(.8);
+     * voice.output = radio.input;
+     */
+    export class AudioDistortion extends AudioEffect {
+        /** Create a distortion effect
+         *  @param {number} [amount] - How hard to drive the signal, 0 is clean and 1 is crushed
+         *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+        constructor(amount?: number, mix?: number);
+        /** @property {WaveShaperNode} - The wave shaper node */
+        node: WaveShaperNode;
+        /** @property {number} - How hard the signal is driven, 0 is clean and 1 is crushed */
+        amount: number;
+        /** Set how hard to drive the signal, rebuilds the shaping curve
+         *  @param {number} amount - 0 is clean and 1 is crushed */
+        setAmount(amount: number): void;
+    }
+    /**
+     * Compressor effect, evens out loud and quiet so many sounds at once don't clip
+     * - Meant for the master bus, it is not on by default
+     * @extends AudioEffect
+     * @memberof AudioEffects
+     * @example
+     * const compressor = new AudioCompressor;
+     * setAudioMasterEffect(compressor.input, compressor.output);
+     */
+    export class AudioCompressor extends AudioEffect {
+        /** Create a compressor effect
+         *  @param {number} [threshold] - Level in dB above which the signal is reduced
+         *  @param {number} [ratio] - How much to reduce it, 12 means 12 dB in becomes 1 dB out
+         *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+        constructor(threshold?: number, ratio?: number, mix?: number);
+        /** @property {DynamicsCompressorNode} - The compressor node */
+        node: DynamicsCompressorNode;
+        /** Set the level above which the signal is reduced
+         *  @param {number} threshold - Level in dB
+         *  @param {number} [fadeTime] - Seconds to ramp over */
+        setThreshold(threshold: number, fadeTime?: number): void;
+        /** Set how much the signal is reduced above the threshold
+         *  @param {number} ratio - 1 is no reduction, 20 is a hard limit
+         *  @param {number} [fadeTime] - Seconds to ramp over */
+        setRatio(ratio: number, fadeTime?: number): void;
+    }
     /**
      * LittleJS User Interface Plugin
      * - call new UISystemPlugin() to setup the UI system

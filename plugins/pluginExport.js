@@ -44,6 +44,8 @@ export
     AudioFilter,
     AudioReverb,
     AudioDelay,
+    AudioDistortion,
+    AudioCompressor,
 
     // UI System
     uiSystem,

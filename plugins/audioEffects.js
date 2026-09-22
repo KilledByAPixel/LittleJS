@@ -247,3 +247,98 @@ class AudioDelay extends AudioEffect
         audioParamRamp(this.feedbackGain.gain, clamp(feedback, 0, .95), fadeTime);
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Distortion effect, overdrive for radios, damaged robots, and engines
+ * @extends AudioEffect
+ * @memberof AudioEffects
+ * @example
+ * const radio = new AudioDistortion(.8);
+ * voice.output = radio.input;
+ */
+class AudioDistortion extends AudioEffect
+{
+    /** Create a distortion effect
+     *  @param {number} [amount] - How hard to drive the signal, 0 is clean and 1 is crushed
+     *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+    constructor(amount=.5, mix=1)
+    {
+        super(mix);
+
+        /** @property {WaveShaperNode} - The wave shaper node */
+        this.node = audioContext.createWaveShaper();
+        this.node.oversample = '2x';
+        /** @property {number} - How hard the signal is driven, 0 is clean and 1 is crushed */
+        this.amount = amount;
+        this.setAmount(amount);
+        this.connectEffect(this.node);
+    }
+
+    /** Set how hard to drive the signal, rebuilds the shaping curve
+     *  @param {number} amount - 0 is clean and 1 is crushed */
+    setAmount(amount)
+    {
+        ASSERT(isNumber(amount), 'amount must be a number');
+        this.amount = amount = clamp(amount);
+
+        // soft clip curve, drive grows with the square of amount so low values stay subtle
+        const drive = 100 * amount * amount;
+        const samples = 256;
+        const curve = new Float32Array(samples);
+        for (let i = samples; i--;)
+        {
+            const x = i * 2 / (samples - 1) - 1;
+            curve[i] = (1 + drive) * x / (1 + drive * abs(x));
+        }
+        this.node.curve = curve;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Compressor effect, evens out loud and quiet so many sounds at once don't clip
+ * - Meant for the master bus, it is not on by default
+ * @extends AudioEffect
+ * @memberof AudioEffects
+ * @example
+ * const compressor = new AudioCompressor;
+ * setAudioMasterEffect(compressor.input, compressor.output);
+ */
+class AudioCompressor extends AudioEffect
+{
+    /** Create a compressor effect
+     *  @param {number} [threshold] - Level in dB above which the signal is reduced
+     *  @param {number} [ratio] - How much to reduce it, 12 means 12 dB in becomes 1 dB out
+     *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+    constructor(threshold=-24, ratio=12, mix=1)
+    {
+        super(mix);
+        ASSERT(isNumber(threshold), 'threshold must be a number');
+        ASSERT(isNumber(ratio) && ratio >= 1, 'ratio must be 1 or more');
+
+        /** @property {DynamicsCompressorNode} - The compressor node */
+        this.node = audioContext.createDynamicsCompressor();
+        this.node.threshold.value = threshold;
+        this.node.ratio.value = ratio;
+        this.connectEffect(this.node);
+    }
+
+    /** Set the level above which the signal is reduced
+     *  @param {number} threshold - Level in dB
+     *  @param {number} [fadeTime] - Seconds to ramp over */
+    setThreshold(threshold, fadeTime=0)
+    {
+        ASSERT(isNumber(threshold), 'threshold must be a number');
+        audioParamRamp(this.node.threshold, threshold, fadeTime);
+    }
+
+    /** Set how much the signal is reduced above the threshold
+     *  @param {number} ratio - 1 is no reduction, 20 is a hard limit
+     *  @param {number} [fadeTime] - Seconds to ramp over */
+    setRatio(ratio, fadeTime=0)
+    {
+        ASSERT(isNumber(ratio) && ratio >= 1, 'ratio must be 1 or more');
+        audioParamRamp(this.node.ratio, ratio, fadeTime);
+    }
+}

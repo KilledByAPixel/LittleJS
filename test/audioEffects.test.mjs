@@ -161,3 +161,41 @@ test('AudioDelay loops feedback through the delay and clamps it', () =>
     delay.setTime(1, .5);
     assert.deepEqual(delay.node.delayTime.scheduled, [['set', .25, 10], ['ramp', 1, 10.5]]);
 });
+
+test('AudioDistortion shapes the wave with a rising curve that clips harder with amount', () =>
+{
+    const distortion = new LJS.AudioDistortion(.5);
+    assert.equal(distortion.amount, .5);
+    assert.equal(distortion.node.oversample, '2x');
+    assert.deepEqual(distortion.input.connections, [distortion.dryGain, distortion.node]);
+    assert.deepEqual(distortion.node.connections, [distortion.wetGain]);
+
+    const curve = distortion.node.curve;
+    assert.equal(curve.length, 256);
+    near(curve[0], -1, 1e-6);
+    near(curve[255], 1, 1e-6);
+    for (let i = 1; i < 256; ++i)
+        assert.ok(curve[i] >= curve[i-1], 'curve should rise');
+
+    // no drive is a straight line, more drive bends it toward the edges
+    distortion.setAmount(0);
+    const straight = distortion.node.curve;
+    near(straight[64], 64*2/255 - 1, 1e-6);
+    distortion.setAmount(1);
+    assert.ok(distortion.node.curve[64] < straight[64]);
+});
+
+test('AudioCompressor sets threshold and ratio and ramps them', () =>
+{
+    const compressor = new LJS.AudioCompressor(-30, 20);
+    assert.equal(compressor.mix, 1);
+    assert.equal(compressor.node.threshold.value, -30);
+    assert.equal(compressor.node.ratio.value, 20);
+    assert.deepEqual(compressor.input.connections, [compressor.dryGain, compressor.node]);
+    assert.deepEqual(compressor.node.connections, [compressor.wetGain]);
+
+    compressor.setThreshold(-10, 1);
+    assert.deepEqual(compressor.node.threshold.scheduled, [['set', -30, 10], ['ramp', -10, 11]]);
+    compressor.setRatio(4);
+    assert.equal(compressor.node.ratio.value, 4);
+});
