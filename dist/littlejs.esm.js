@@ -7530,14 +7530,29 @@ class SoundInstance
         }
     }
 
-    /** Set the volume of this sound instance
-     *  @param {number} volume */
-    setVolume(volume)
+    /** Set the volume of this sound instance, with an optional fade to it
+     *  - A fade ducks music under dialogue or cross fades two tracks without a click
+     *  @param {number} volume
+     *  @param {number} [fadeTime] - Seconds to fade to the new volume over */
+    setVolume(volume, fadeTime=0)
     {
         ASSERT(volume >= 0, 'Sound volume must be positive or zero');
+        ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
         this.volume = volume;
-        if (this.gainNode)
-            this.gainNode.gain.value = volume;
+        if (!this.gainNode) return;
+
+        // drop any fade still scheduled so stacked calls don't fight,
+        // then ramp from wherever the gain is now or jump straight there
+        const gain = this.gainNode.gain;
+        const startFade = audioContext.currentTime;
+        gain.cancelScheduledValues(startFade);
+        if (fadeTime)
+        {
+            gain.setValueAtTime(gain.value, startFade);
+            gain.linearRampToValueAtTime(volume, startFade + fadeTime);
+        }
+        else
+            gain.value = volume;
     }
 
     /** Set the playback rate of this sound instance, its speed and pitch, while it plays
@@ -7564,15 +7579,17 @@ class SoundInstance
         {
             if (fadeTime)
             {
-                // ramp off gain from current volume (not 1, or low-volume
-                // instances would jump back up before fading);
+                // ramp off gain from where it is now (not 1, or low-volume
+                // instances would jump back up before fading, and a volume
+                // fade in flight carries on down from its current point);
                 // cancel any prior scheduling so stacked stop calls don't
                 // re-anchor partway through a previous fade
+                const gain = this.gainNode.gain;
                 const startFade = audioContext.currentTime;
                 const endFade = startFade + fadeTime;
-                this.gainNode.gain.cancelScheduledValues(startFade);
-                this.gainNode.gain.setValueAtTime(this.volume, startFade);
-                this.gainNode.gain.linearRampToValueAtTime(0, endFade);
+                gain.cancelScheduledValues(startFade);
+                gain.setValueAtTime(gain.value, startFade);
+                gain.linearRampToValueAtTime(0, endFade);
                 this.source.stop(endFade);
             }
             else
@@ -11689,13 +11706,21 @@ class AudioReverb extends AudioEffect
     constructor(duration=2, decay=2, mix=.5)
     {
         super(mix);
-        ASSERT(isNumber(duration) && duration > 0, 'duration must be positive');
-        ASSERT(isNumber(decay) && decay >= 0, 'decay must be positive or zero');
 
         /** @property {ConvolverNode} - The convolver node */
         this.node = audioContext.createConvolver();
-        this.node.buffer = this.createImpulse(duration, decay);
+        this.setRoom(duration, decay);
         this.connectEffect(this.node);
+    }
+
+    /** Change the room by rebuilding the impulse response
+     *  @param {number} duration - Seconds until the reverb tail is silent
+     *  @param {number} [decay] - How quickly the tail fades, higher is faster */
+    setRoom(duration, decay=2)
+    {
+        ASSERT(isNumber(duration) && duration > 0, 'duration must be positive');
+        ASSERT(isNumber(decay) && decay > 0, 'decay must be positive');
+        this.node.buffer = this.createImpulse(duration, decay);
     }
 
     /** Build a stereo impulse response of decaying noise

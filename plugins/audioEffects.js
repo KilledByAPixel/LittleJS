@@ -171,13 +171,21 @@ class AudioReverb extends AudioEffect
     constructor(duration=2, decay=2, mix=.5)
     {
         super(mix);
-        ASSERT(isNumber(duration) && duration > 0, 'duration must be positive');
-        ASSERT(isNumber(decay) && decay >= 0, 'decay must be positive or zero');
 
         /** @property {ConvolverNode} - The convolver node */
         this.node = audioContext.createConvolver();
-        this.node.buffer = this.createImpulse(duration, decay);
+        this.setRoom(duration, decay);
         this.connectEffect(this.node);
+    }
+
+    /** Change the room by rebuilding the impulse response
+     *  @param {number} duration - Seconds until the reverb tail is silent
+     *  @param {number} [decay] - How quickly the tail fades, higher is faster */
+    setRoom(duration, decay=2)
+    {
+        ASSERT(isNumber(duration) && duration > 0, 'duration must be positive');
+        ASSERT(isNumber(decay) && decay > 0, 'decay must be positive');
+        this.node.buffer = this.createImpulse(duration, decay);
     }
 
     /** Build a stereo impulse response of decaying noise

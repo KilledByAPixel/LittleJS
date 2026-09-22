@@ -199,6 +199,24 @@ test('setVolume updates the gain node', () =>
     instance.setVolume(.4);
     assert.equal(instance.volume, .4);
     assert.equal(instance.gainNode.gain.value, .4);
+    assert.deepEqual(instance.gainNode.gain.ramps, [], 'no fade means no ramp');
+    instance.stop();
+});
+
+test('setVolume with a fade ramps the gain, and a plain set cancels a fade in flight', () =>
+{
+    audioContext.currentTime = 90;
+    const instance = sound.play();
+    const gain = instance.gainNode.gain;
+    instance.setVolume(.2, .5);
+    assert.equal(instance.volume, .2, 'the target is the new volume right away');
+    assert.deepEqual(gain.ramps, [[.2, 90.5]], 'gain should ramp to the volume at end of fade');
+
+    // a second fade replaces the first, a plain set drops it and jumps
+    instance.setVolume(.8, 1);
+    assert.deepEqual(gain.ramps, [[.2, 90.5], [.8, 91]]);
+    instance.setVolume(.6);
+    assert.equal(gain.value, .6);
     instance.stop();
 });
 

@@ -127,6 +127,13 @@ test('AudioReverb builds a stereo impulse of decaying noise', () =>
     assert.deepEqual(reverb.input.connections, [reverb.dryGain, reverb.node]);
     assert.deepEqual(reverb.node.connections, [reverb.wetGain]);
 
+    // setRoom rebuilds the impulse for the new duration
+    const first = reverb.node.buffer;
+    reverb.setRoom(1, 3);
+    assert.notEqual(reverb.node.buffer, first);
+    assert.equal(reverb.node.buffer.length, 1000);
+    reverb.setRoom(2, 2);
+
     const buffer = reverb.node.buffer;
     assert.equal(buffer.numberOfChannels, 2);
     assert.equal(buffer.length, 2000); // duration * sampleRate

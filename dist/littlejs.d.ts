@@ -2806,9 +2806,11 @@ declare module "littlejsengine" {
          *  @param {number} [offset] - Offset in seconds to start playback from
          */
         start(offset?: number): void;
-        /** Set the volume of this sound instance
-         *  @param {number} volume */
-        setVolume(volume: number): void;
+        /** Set the volume of this sound instance, with an optional fade to it
+         *  - A fade ducks music under dialogue or cross fades two tracks without a click
+         *  @param {number} volume
+         *  @param {number} [fadeTime] - Seconds to fade to the new volume over */
+        setVolume(volume: number, fadeTime?: number): void;
         /** Set the playback rate of this sound instance, its speed and pitch, while it plays
          *  - A looping sound can follow something smoothly this way, like an engine with the speed
          *  - A rate of 0 freezes the sound in place, its current time is not tracked until it moves again
@@ -4046,6 +4048,10 @@ declare module "littlejsengine" {
         constructor(duration?: number, decay?: number, mix?: number);
         /** @property {ConvolverNode} - The convolver node */
         node: ConvolverNode;
+        /** Change the room by rebuilding the impulse response
+         *  @param {number} duration - Seconds until the reverb tail is silent
+         *  @param {number} [decay] - How quickly the tail fades, higher is faster */
+        setRoom(duration: number, decay?: number): void;
         /** Build a stereo impulse response of decaying noise
          *  @param {number} duration - Seconds until silence
          *  @param {number} decay - How quickly it fades, higher is faster

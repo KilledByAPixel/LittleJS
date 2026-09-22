@@ -347,7 +347,7 @@ Sound.output                                           // Optional node or effec
 
 // SoundInstance
 SoundInstance.start(offset=0)     // Start or restart from a time in seconds, to seek
-SoundInstance.setVolume(volume)   // Change volume during playback
+SoundInstance.setVolume(volume, fadeTime=0) // Change volume during playback, fading to it if given a time
 SoundInstance.setRate(rate)       // Change speed and pitch during playback, like an engine loop following speed
 SoundInstance.stop(fadeTime=0)    // Stop with optional fade out
 SoundInstance.pause()             // Pause the sound
@@ -397,7 +397,7 @@ AudioEffect.setMix(mix, fadeTime=0)               // 0 is fully dry, 1 is fully 
 AudioEffect.connect(effectOrNode)                 // Send output into the next effect instead, returns it
 AudioEffect.disconnect()                          // Stop sending output anywhere
 AudioFilter(type='lowpass', frequency=1000, q=1, mix=1) // Muffle sounds, setFrequency(hz, fadeTime) to sweep
-AudioReverb(duration=2, decay=2, mix=.5)          // Room or cave from generated noise, no file needed
+AudioReverb(duration=2, decay=2, mix=.5)          // Room or cave from generated noise, setRoom(duration, decay) to change it
 AudioDelay(time=.3, feedback=.4, mix=.5)          // Echoes, setTime and setFeedback while playing
 AudioDistortion(amount=.5, mix=1)                 // Overdrive, setAmount rebuilds the curve
 AudioCompressor(threshold=-24, ratio=12, mix=1)   // Stops clipping on the master bus, setThreshold, setRatio
