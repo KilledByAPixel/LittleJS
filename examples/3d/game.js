@@ -161,7 +161,7 @@ function gameInit()
     const tree = new Mesh()
         .combine(buildCylinder(.7, 3, 6), vec3(0,1.5,0), hsl(.1,.4,.3))
         .combine(buildCone(4, 5, 7), vec3(0,4.5,0), hsl(.3,.5,.25));
-    for (let i = 2500; i--;)
+    for (let i = 1000; i--;)
     {
         const pos = randomGroundPos();
         pos.y = terrain.getHeight(pos);
@@ -169,23 +169,6 @@ function gameInit()
             continue;
         const treeObject = new EngineObject3D(pos, tree);
         treeObject.scale3D = vec3(rand(.5,1.5));
-    }
-
-    // crystals around the island, a cone and its mirror image welded together
-    const crystal = new Mesh()
-        .combine(buildCone(2.5, 4, 6), vec3(0,2,0))
-        .combine(buildCone(2.5, 2, 6), buildMatrix(vec3(0,1,0), vec3(PI,0,0)));
-    for (let i = 300; i--;)
-    {
-        const pos = randomGroundPos();
-        pos.y = terrain.getHeight(pos);
-        if (pos.y < 2)
-            continue;
-        const rock = new EngineObject3D(pos, crystal);
-        rock.color = hsl(.55 + rand(-.1,.1), .5, .6);
-        rock.rotation3D.y = rand(2*PI);
-        rock.scale3D = vec3(rand(1,1.8));
-        rock.specular = .6;
     }
 
     // sprites from the tile sheet
