@@ -82,6 +82,7 @@ const exampleList =
     new ExampleInfo('Box2D Pool', 'box2dPool.js', 'Pool table game with Box2D physics', false, 'objects, game'),
     new ExampleInfo('Box2D Tile Layer', 'box2dTileLayer.js', 'Tile layer with Box2D physics', false, 'objects, level, map, grid'),
     new ExampleInfo('--- LITTLEJS 3D ---'),
+    new ExampleInfo('3D Basics', 'render3dBasics.js', 'Text, a cube, a sphere, a light and shadows', false, 'intro, basics, text, light, shadow, camera'),
     new ExampleInfo('3D Shapes', 'render3dShapes.js', 'Every shape builder, lit and shadowed', false, 'mesh, sphere, lathe, shading, specular'),
     new ExampleInfo('3D Billboards', 'render3dBillboards.js', 'Tile sprites that always face the camera', false, 'billboard, sprite, soft shadow'),
     new ExampleInfo('3D Height Map', 'render3dHeightMap.js', 'Terrain from height and color images', false, 'terrain, heightmap, raycast'),
