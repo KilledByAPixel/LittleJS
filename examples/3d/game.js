@@ -126,13 +126,18 @@ function gameInit()
     postProcessBloom(.85, 2, 8); // the brightest things glow, not the 2D text
     render3D.setSky(hsl(.6,.6,.45), hsl(.55,.4,.7), hsl(.35,.3,.4));
     render3D.setFog(40, 130);
-    render3D.lightDirection = vec3(.4,-1,.3);
+    render3D.lightDirection = vec3(.4,-1,-.3);
     render3D.ambientColor = hsl(.6,.2,.35);
     render3D.shadows = true;
     render3D.shadowCenter = vec3(); // pinned over the whole island
     render3D.shadowRange = terrainSize*1.5; // it turns with the light
     render3D.shadowMapSize = 2048;
     render3D.smoothShading = true;
+
+    // add cool directional light opposite from the sun
+    const fill = new Light3D(vec3(), 1, hsl(.55,.4,.3));
+    fill.directional = true;
+    fill.lookAt(vec3(0,-.3,1));
 
     // an island of noise, higher in the middle and sinking at the edges
     const samples = 65, heights = [], colors = [];
@@ -206,11 +211,6 @@ function gameInit()
     title = new EngineObject3D(vec3(0,17,-14), titleMesh);
     title.color = hsl(.1,1,.6);
     title.specular = 1;
-
-    // add cool directional light opposite from the sun
-    const fill = new Light3D(vec3(), 1, hsl(.55,.4,.3));
-    fill.directional = true;
-    fill.lookAt(vec3(0,-.3,-1));
 
     // spawn the player with the camera already behind it, and orbs to collect
     player = new Player;
