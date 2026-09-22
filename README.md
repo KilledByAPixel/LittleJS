@@ -54,7 +54,7 @@ The code is very clean and well documented with many examples to get you started
 - Orbit and chase cameras, perspective or orthographic, with mouse picking and 3D positional sound
 - Post-processing shaders reach the 3D scene too, including a built-in bloom for glowing lights
 - The [Three.js](https://threejs.org) plugin is still fully supported as an alternative, rendering a Three.js scene behind the LittleJS canvas with `ThreeJSObject` letting LittleJS physics drive its meshes
-
+
 ### 🔊 Audio
 
 - Sound and music with mp3, ogg, or wave files
