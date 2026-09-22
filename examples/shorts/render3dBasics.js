@@ -8,7 +8,7 @@ function gameInit()
     render3D.shadows = true;
     render3D.ambientColor = hsl(.6,.2,.3);
     render3D.smoothShading = true;
-    new CameraControl3D(vec3(0,1,0), 18, .3, .002);
+    new CameraControl3D(vec3(0,1,0), 15, .3);
 
     // a checkerboard floor
     const checker = (x, z)=> hsl(.6, .1, (x+z)&1 ? .5 : .4);
@@ -41,6 +41,6 @@ function gameInit()
 
 function gameUpdate()
 {
-    title.rotation3D = vec3(0, sin(time)*.3, 0);
+    title.rotation3D = vec3(0, sin(time)*.2, 0);
     light.pos3D = vec3(8, 3, 0).rotateY(time);
 }
