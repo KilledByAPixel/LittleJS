@@ -19219,56 +19219,71 @@ class Camera3D
 // the four attributes of a 36 byte vertex at the locations the shaders declare: location, size, type, normalize, byte offset
 const RENDER3D_ATTRIBS = [[0, 3, 5126, false, 0], [1, 3, 5126, false, 12], [2, 2, 5126, false, 24], [3, 4, 5121, true, 32]];
 
-function render3DInitGL()
-{
-    if (headlessMode) return;
-    if (!glEnable || !glContext)
-    {
-        console.warn('Render3DPlugin: WebGL not enabled, construct the plugin in gameInit with glEnable set');
-        return;
-    }
-    const gl = glContext, r = render3D;
-    r.uniforms = new Map;
-    r.uniformValues = {};
-    r.attribValues = []; // a fresh context has its own attribute defaults, so nothing sent before it counts
+// the vertex shader, shared by the plugin's program and every Shader's
+// attributes: p position, n normal, t uv, c color, at fixed slots the depth shader also uses
+// uniforms: viewProj, lightViewProj; the model matrix, the normal matrix, the tint and the uv rect are vertex
+// attributes, see RENDER3D_VERTEX_INPUTS; L is the mesh's own uv for a Shader's localUV
+const RENDER3D_VERTEX_SOURCE =
+    '#version 300 es\n' +
+    'precision highp float;' +
+    'uniform mat4 viewProj,lightViewProj;' +
+    RENDER3D_VERTEX_INPUTS +
+    'out vec3 P,N;out vec2 T,L;out vec4 C,S;' +
+    'void main(){' +
+    'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
+    'gl_Position=viewProj*w;' +
+    'P=w.xyz;' +
+    'N=mat3(n0,n1,n2)*n;' +
+    'T=uvRect.xy+t*uvRect.zw;' +
+    'L=t;' +
+    'C=c*tint;' +
+    'S=lightViewProj*w;' +
+    '}';
 
-    // the shader
-    // attributes: p position, n normal, t uv, c color, at fixed slots the depth shader also uses
-    // vertex uniforms: viewProj, lightViewProj; the model matrix, the normal matrix (the fixed up one for normals),
-    //   the tint and the uv rect are vertex attributes, see RENDER3D_VERTEX_INPUTS
-    // fragment uniforms: lightDir (xyz the way the sunlight travels, w = emissive, 1 or more skips the lighting),
-    //   lightColor (the sun's rgb, a = specular),
-    //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, tex,
-    //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
-    //   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive)
-    r.program = glCreateProgram(
-        '#version 300 es\n' +
+// the names a Shader's snippet can use in 3D, over the plugin's own uniforms and varyings
+const RENDER3D_SNIPPET_NAMES =
+    'uniform float iTime;uniform vec3 iResolution;\n' +
+    '#define iChannel0 tex\n' +
+    '#define localUV L\n' +
+    '#define worldPos P\n' +
+    '#define worldNormal N\n' +
+    '#define sunDirection (-lightDir.xyz)\n' +
+    '#define sunColor lightColor.rgb\n' +
+    '#define ambientColor ambientFog.rgb\n' +
+    '#define lightCount extraLightCount\n' +
+    '#define lights extraLights\n' +
+    '#define lightColors extraLightColors\n';
+
+// the fragment shader; given a Shader's snippet, its mainImage replaces the texture sample and all else is the same
+// uniforms: lightDir (xyz the way the sunlight travels, w = emissive, 1 or more skips the lighting),
+//   lightColor (the sun's rgb, a = specular), ambientFog (rgb, a = fogEnd), fogColor (rgb, a = fogStart),
+//   cameraPos, tex, shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
+//   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive)
+function render3DFragmentSource(fragmentCode)
+{
+    return '#version 300 es\n' +
         'precision highp float;' +
-        'uniform mat4 viewProj,lightViewProj;' +
-        RENDER3D_VERTEX_INPUTS +
-        'out vec3 P,N;out vec2 T;out vec4 C,S;' +
-        'void main(){' +
-        'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
-        'gl_Position=viewProj*w;' +
-        'P=w.xyz;' +
-        'N=mat3(n0,n1,n2)*n;' +
-        'T=uvRect.xy+t*uvRect.zw;' +
-        'C=c*tint;' +
-        'S=lightViewProj*w;' +
-        '}'
-        ,
-        '#version 300 es\n' +
-        'precision highp float;' +
-        'uniform vec4 lightDir,lightColor,ambientColor,fogColor,shadowParams;' +
+        'uniform vec4 lightDir,lightColor,ambientFog,fogColor,shadowParams;' +
         'uniform vec4 extraLights[' + RENDER3D_MAX_LIGHTS + '],extraLightColors[' + RENDER3D_MAX_LIGHTS + '];' +
         'uniform int extraLightCount;' +
         'uniform vec3 cameraPos;' +
         'uniform sampler2D tex;' +
         'uniform highp sampler2DShadow shadowMap;' +
-        'in vec3 P,N;in vec2 T;in vec4 C,S;' +
+        'in vec3 P,N;in vec2 T,L;in vec4 C,S;' +
         'out vec4 o;' +
+        // the sun shadow at this fragment, 0 to 1: the light's depth map with a 3x3 blur, outside the map is lit
+        'float shadow(){' +
+        'if(shadowParams.x<=0.)return 1.;' +
+        'vec3 q=S.xyz/S.w*.5+.5;' +
+        'if(any(greaterThan(abs(q-.5),vec3(.5))))return 1.;' +
+        'q.z-=shadowParams.y;' +
+        'float s=0.;' +
+        'for(int x=-1;x<=1;++x)for(int y=-1;y<=1;++y)' +
+        's+=texture(shadowMap,vec3(q.xy+vec2(x,y)*shadowParams.z,q.z));' +
+        'return s/9.;}' +
+        (fragmentCode ? RENDER3D_SNIPPET_NAMES + fragmentCode + '\n' : '') +
         'void main(){' +
-        'vec4 t=texture(tex,T);' +
+        (fragmentCode ? 'vec4 t;mainImage(t,T);' : 'vec4 t=texture(tex,T);') +
         'if(shadowParams.w>0.&&t.a<.5)discard;' + // an opaque draw drops see through texels, as the shadow map does
         'vec4 c=C*t;' +
         'float e=lightDir.w;' +
@@ -19276,18 +19291,8 @@ function render3DInitGL()
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
         'float nl=dot(n,-lightDir.xyz);' +
-        // shadow: compare against the light's depth map with a 3x3 blur, outside the map is lit
-        'float s=1.;' +
-        'if(shadowParams.x>0.){' +
-        'vec3 q=S.xyz/S.w*.5+.5;' +
-        'if(all(lessThan(abs(q-.5),vec3(.5)))){' +
-        'q.z-=shadowParams.y;' +
-        's=0.;' +
-        'for(int x=-1;x<=1;++x)for(int y=-1;y<=1;++y)' +
-        's+=texture(shadowMap,vec3(q.xy+vec2(x,y)*shadowParams.z,q.z));' +
-        's/=9.;' +
-        '}}' +
-        'vec3 l=ambientColor.rgb+lightColor.rgb*max(nl,0.)*s;' +
+        'float s=shadow();' +
+        'vec3 l=ambientFog.rgb+lightColor.rgb*max(nl,0.)*s;' +
         // the Light3D objects, diffuse only: a point light falls off with distance, a directional one does not and
         // carries the direction toward it in xyz, marked by a negative radius
         'for(int i=0;i<' + RENDER3D_MAX_LIGHTS + ';++i){' +
@@ -19306,14 +19311,61 @@ function render3DInitGL()
         'vec3 r=reflect(lightDir.xyz,n);' +
         'c.rgb+=lightColor.rgb*pow(max(dot(r,v),0.),16.)*lightColor.a*step(0.,nl)*s*(1.-e);' +
         '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
-        'if(ambientColor.a>0.){' +
+        'if(ambientFog.a>0.){' +
         'float z=distance(cameraPos,P);' +
-        'c.rgb=mix(c.rgb,shadowParams.w<0.?vec3(0):fogColor.rgb,smoothstep(fogColor.a,ambientColor.a,z));' +
+        'c.rgb=mix(c.rgb,shadowParams.w<0.?vec3(0):fogColor.rgb,smoothstep(fogColor.a,ambientFog.a,z));' +
         '}' +
         'o=vec4(c.rgb,shadowParams.w>0.?1.:c.a);' + // an opaque draw stays opaque whatever the tint alpha says
+        '}';
+}
 
-        '}'
-    );
+// a Shader's 3D program, compiled the first time a draw needs it
+function render3DShaderProgram(shader)
+{
+    return shader.program3D ||= glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource(shader.fragmentCode));
+}
+
+// make a program current for the pass and send it the pass uniforms: the matrices, the camera and the lights,
+// plus the time and canvas size for a Shader's program; the per draw uniform cache starts over
+function render3DUseProgram(program)
+{
+    const gl = glContext, r = render3D;
+    gl.useProgram(r.currentProgram = program);
+    r.uniformValues = {};
+    gl.uniformMatrix4fv(render3DUniform('viewProj'), false, r.viewProjection.m);
+    gl.uniformMatrix4fv(render3DUniform('lightViewProj'), false, r.shadowMatrix.m);
+    gl.uniform1i(render3DUniform('tex'), 0);
+    gl.uniform1i(render3DUniform('shadowMap'), 1);
+    const c = r.camera.pos;
+    gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
+    gl.uniform1i(render3DUniform('extraLightCount'), r.lightCount);
+    if (r.lightCount)
+    {
+        gl.uniform4fv(render3DUniform('extraLights'), r.lightPositions, 0, r.lightCount * 4);
+        gl.uniform4fv(render3DUniform('extraLightColors'), r.lightColors, 0, r.lightCount * 4);
+    }
+    if (program !== r.program)
+    {
+        gl.uniform1f(render3DUniform('iTime'), time);
+        gl.uniform3f(render3DUniform('iResolution'), glCanvas.width, glCanvas.height, 1);
+    }
+}
+
+function render3DInitGL()
+{
+    if (headlessMode) return;
+    if (!glEnable || !glContext)
+    {
+        console.warn('Render3DPlugin: WebGL not enabled, construct the plugin in gameInit with glEnable set');
+        return;
+    }
+    const gl = glContext, r = render3D;
+    r.uniforms = new Map;
+    r.uniformValues = {};
+    r.attribValues = []; // a fresh context has its own attribute defaults, so nothing sent before it counts
+
+    // the shader, see RENDER3D_VERTEX_SOURCE and render3DFragmentSource
+    r.program = glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource());
 
     // the depth only shader for the shadow map, same vertex layout; see through pixels cast nothing,
     // so sprites and cut out textures cast their outline
@@ -19537,6 +19589,10 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     render3DBindTexture(tileInfo, state);
     if (r.shadowPass) return; // the shadow map needs nothing else
 
+    // the program: a Shader's own, compiled by its first draw, or the plugin's; switching sends the pass uniforms
+    const program = state.shader ? render3DShaderProgram(state.shader) : r.program;
+    program === r.currentProgram || render3DUseProgram(program);
+
     // blending, matches the engine's 2D blend functions
     if (state.blend)
     {
@@ -19558,7 +19614,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     const s = r.sunDirection, sl = -(s.length() || 1), lc = r.sunColor, ac = r.ambientColor, fc = r.fogColor || canvasClearColor;
     render3DUniform4f('lightDir', s.x / sl, s.y / sl, s.z / sl, state.lighting ? state.emissive : 1);
     render3DUniform4f('lightColor', lc.r, lc.g, lc.b, state.specular);
-    render3DUniform4f('ambientColor', ac.r, ac.g, ac.b, r.fogEnd);
+    render3DUniform4f('ambientFog', ac.r, ac.g, ac.b, r.fogEnd);
     render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogStart);
     // how the fragment shader finishes: 1 drops see through texels and keeps the draw opaque,
     // 0 blends them away instead, and -1 is additive, which has to fade into fog differently
@@ -19616,7 +19672,6 @@ function render3DRenderPass(after2D)
     render3DClearInstances();
 
     // take over the gl state
-    gl.useProgram(r.currentProgram = r.program);
     gl.bindVertexArray(r.vao);
     // the leading repeat on every strip shifts the triangles by one, which flips
     // which way they read, so tell WebGL that clockwise is the front here
@@ -19624,30 +19679,20 @@ function render3DRenderPass(after2D)
     gl.activeTexture(gl.TEXTURE0);
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT);
-    gl.uniformMatrix4fv(render3DUniform('viewProj'), false, r.viewProjection.m);
-    gl.uniform1i(render3DUniform('tex'), 0);
-    gl.uniform1i(render3DUniform('shadowMap'), 1);
-    const c = r.camera.pos;
-    gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
 
     // the Light3D objects, a directional one sends the direction toward it, from the origin, and a negative radius
     const lights = render3DCollectLights();
-    gl.uniform1i(render3DUniform('extraLightCount'), lights.length);
-    if (lights.length)
+    r.lightCount = lights.length;
+    const positions = r.lightPositions, colors = r.lightColors;
+    lights.forEach((light, i)=>
     {
-        const positions = r.lightPositions, colors = r.lightColors;
-        lights.forEach((light, i)=>
-        {
-            const p = light.directional ? light.getWorldPos3D().normalize() : light.getWorldPos3D();
-            ASSERT(!light.directional || p.lengthSquared(), 'a directional light shines from its position toward the origin, so it cannot sit on the origin');
-            const c = light.color, k = i * 4;
-            positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
-            positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
-            colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a * light.intensity;
-        });
-        gl.uniform4fv(render3DUniform('extraLights'), positions, 0, lights.length * 4);
-        gl.uniform4fv(render3DUniform('extraLightColors'), colors, 0, lights.length * 4);
-    }
+        const p = light.directional ? light.getWorldPos3D().normalize() : light.getWorldPos3D();
+        ASSERT(!light.directional || p.lengthSquared(), 'a directional light shines from its position toward the origin, so it cannot sit on the origin');
+        const c = light.color, k = i * 4;
+        positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
+        positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
+        colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a * light.intensity;
+    });
 
     r.isRendering = true;
     try
@@ -19658,13 +19703,14 @@ function render3DRenderPass(after2D)
             render3DRenderShadowMap();
             r.shadowMapDrawn = true;
         }
-        gl.uniformMatrix4fv(render3DUniform('lightViewProj'), false, r.shadowMatrix.m);
+        render3DUseProgram(r.program); // after the shadow map, so the light matrix it sends is this frame's
         r.renderStages(objects, isDefault);
     }
     finally
     {
         // hand the state back to the engine's 2D batching, even when a draw threw
         r.isRendering = false;
+        r.currentProgram = undefined; // the engine's 2D program takes over below
         r.streamCount = 0;
         r.capture = r.transparentQueue = undefined;
         gl.disable(gl.DEPTH_TEST);
@@ -19748,7 +19794,6 @@ function render3DRenderShadowMap()
 
         // backing store size, mainCanvasSize is css pixels
         gl.viewport(0, 0, glCanvas.width, glCanvas.height);
-        gl.useProgram(r.currentProgram = r.program);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture);
         gl.activeTexture(gl.TEXTURE0);
