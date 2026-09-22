@@ -16,7 +16,7 @@ const boxAt = (x, z)=> boxes.find(b=> b.cell.x == x && b.cell.y == z);
 const padColor = hsl(.1,.6,.3), litColor = hsl(.15,1,.6);
 const pushSound = new Sound([.5,,150,.01,,,,,9,-50]);
 let wallMesh, blockMesh, ballMesh, padMesh;
-let level, boxes, goals, player, moves;
+let level, boxes, goals, player, moves, hoverCell;
 
 class GridObject extends EngineObject3D
 {
@@ -147,6 +147,23 @@ function gameUpdate()
     if (keyWasPressed('ArrowUp'))    tryMove(0, -1);
     if (keyWasPressed('ArrowDown'))  tryMove(0, 1);
     if (keyWasPressed('KeyR'))       buildLevel();
+
+    // the cell under the mouse: a block under it, else where it meets the floor
+    const picked = render3D.pick(mousePosScreen, boxes)?.object;
+    const ground = render3D.screenToGround(mousePosScreen);
+    const toCell = (v)=> clamp(floor(v + levelSize/2), 0, levelSize-1);
+    const groundCell = ground && vec2(toCell(ground.x), toCell(ground.z));
+    hoverCell = picked ? picked.cell : groundCell;
+    if (hoverCell && isWall(hoverCell.x, hoverCell.y))
+        hoverCell = undefined;
+}
+
+function gameRender()
+{
+    // outline the hovered cell with a debug primitive
+    if (hoverCell)
+        debugBox3D(cellPos(hoverCell.x, hoverCell.y, .03),
+            vec3(.95,.05,.95), WHITE);
 }
 
 function gameRenderPost()
