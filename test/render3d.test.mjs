@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale, setCameraScale } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, FirstPersonCamera3D, EngineObject3D, EngineObject, engineObjects, Light3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale, setCameraScale } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -2179,6 +2179,51 @@ test('CameraControl3D turns the camera with the mouse and stops when destroyed',
     near(control.pitch, control.pitchRange.y); // it cannot tip over the top
     assert.equal(control.mesh, undefined);
     control.destroy();
+    engineObjects.length = 0;
+});
+
+test('FirstPersonCamera3D takes over from the camera, puts it at the eye, and walking keeps its fall', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    render3D.camera.pos = vec3(1, 2, 3);
+    render3D.camera.rotation = vec3(.2, .5, 0);
+    const eye = new FirstPersonCamera3D;
+    nearVec(eye.pos3D, 1, 2, 3); // it starts where the camera was, so there is no jump
+    near(eye.yaw, .5); near(eye.pitch, .2);
+    eye.pos3D = vec3(4, 5, 6);
+    eye.pitch = 9;
+    eye.velocity3D = vec3(1, -.5, 1);
+    eye.update();
+    near(eye.pitch, eye.pitchRange.y); // it cannot tip over the top
+    nearVec(render3D.camera.pos, 4, 5, 6);
+    nearVec(render3D.camera.rotation, eye.pitchRange.y, .5, 0);
+    nearVec(eye.velocity3D, 0, -.5, 0); // no keys, so it stops, but its fall is left for gravity
+    eye.fly = true;
+    eye.velocity3D = vec3(1, -.5, 1);
+    eye.update();
+    nearVec(eye.velocity3D, 0, 0, 0); // flying, the keys own every direction
+    assert.equal(eye.mesh, undefined);
+    eye.destroy();
+    engineObjects.length = 0;
+});
+
+test('FirstPersonCamera3D with a size and setCollision is pushed out of solids', () =>
+{
+    for (const o of engineObjects) o.destroy();
+    engineObjects.length = 0;
+    const wall = new EngineObject3D(vec3(), render3D.boxMesh);
+    wall.setCollision();
+    const eye = new FirstPersonCamera3D(vec3(.7, 0, 0), 0, 0);
+    eye.size3D = vec3(1);
+    eye.collideAsSphere3D = true;
+    eye.setCollision();
+    engineObjectsUpdate(); // the engine collects the solid objects here
+    eye.pos3D = vec3(.7, 0, 0); // half a unit of wall and half a unit of eye overlap by .3
+    eye.updatePhysics();
+    near(eye.pos3D.x, 1); // pushed clear, the wall stays put
+    nearVec(wall.pos3D, 0, 0, 0);
+    for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
 });
 

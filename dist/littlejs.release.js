@@ -20764,6 +20764,86 @@ class CameraControl3D extends EngineObject3D
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
+ * FirstPersonCamera3D - Look around with the mouse and move with the keys, with the camera at its position
+ * - Click to capture the mouse so looking needs no button held, Esc lets it go; holding the button looks too, for touch
+ * - WASD or the arrow keys walk level, or move the way it looks when fly is set
+ * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
+ *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
+ * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
+ * - Destroy it to hand the camera back
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * const player = new FirstPersonCamera3D(vec3(0, 1.5, 5));
+ * player.size3D = vec3(1); // bump into solid objects
+ * player.collideAsSphere3D = true;
+ * player.setCollision();
+ */
+class FirstPersonCamera3D extends EngineObject3D
+{
+    /** Create a first person camera, it drives render3D.camera every frame
+     *  @param {Vector3} [pos3D] - Where the eye is, defaults to where the camera is now
+     *  @param {number} [yaw] - Radians around Y, defaults to the camera's
+     *  @param {number} [pitch] - Radians up from level, defaults to the camera's */
+    constructor(pos3D=render3D.camera.pos, yaw=render3D.camera.rotation.y, pitch=render3D.camera.rotation.x)
+    {
+        super(pos3D);
+        this.size3D = vec3(); // not a solid thing to pick or collect until it is given a size
+        this.mass = 1; // so solids push it out, and render3D.gravity pulls on it
+        /** @property {number} - Angle around Y, the mouse turns it */
+        this.yaw = yaw;
+        /** @property {number} - Angle up from level, the mouse tilts it */
+        this.pitch = pitch;
+        /** @property {number} - World units per frame at full speed */
+        this.moveSpeed = .1;
+        /** @property {number} - How far a pixel of mouse movement turns the view */
+        this.lookSpeed = .003;
+        /** @property {Vector2} - Lowest and highest pitch */
+        this.pitchRange = vec2(-1.5, 1.5);
+        /** @property {boolean} - Move the way it looks, up and down included, instead of walking level */
+        this.fly = false;
+        /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
+        this.lockPointer = true;
+    }
+
+    /** Read the mouse and keys and put the camera at the eye, called automatically each frame */
+    update()
+    {
+        // a click captures the mouse, then it looks around while captured or while a button is held
+        if (this.lockPointer && mouseWasPressed(0))
+            pointerLockRequest();
+        if (pointerLockIsActive() || mouseIsDown(0))
+        {
+            this.yaw -= mouseDeltaScreen.x * this.lookSpeed;
+            this.pitch -= mouseDeltaScreen.y * this.lookSpeed;
+        }
+        this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
+
+        // the keys move it level, or the way it looks when flying, and walking keeps its fall
+        const input = keyDirection();
+        const move = vec3(input.x, 0, -input.y).clampLength(1).scale(this.moveSpeed)
+            .rotateX(this.fly ? this.pitch : 0).rotateY(this.yaw);
+        this.velocity3D = this.fly ? move : vec3(move.x, this.velocity3D.y, move.z);
+
+        // the camera sits at the eye, where this frame's physics left it
+        render3D.camera.pos = this.getWorldPos3D();
+        render3D.camera.rotation = vec3(this.pitch, this.yaw, 0);
+    }
+
+    /** Let go of the mouse and stop driving the camera
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        this.lockPointer && pointerLockIsActive() && pointerLockExit();
+        super.destroy(immediate);
+    }
+
+    /** Camera controls draw nothing */
+    render3D() {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
  * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
  * - Each particle is a flat square facing the camera, with a soft round dot when no tile is given
  * - Set trailTime to draw each particle as a streak along where it has been, for sparks

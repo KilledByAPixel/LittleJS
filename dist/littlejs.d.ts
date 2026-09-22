@@ -7245,6 +7245,43 @@ declare module "littlejsengine" {
         pitchRange: Vector2;
     }
     /**
+     * FirstPersonCamera3D - Look around with the mouse and move with the keys, with the camera at its position
+     * - Click to capture the mouse so looking needs no button held, Esc lets it go; holding the button looks too, for touch
+     * - WASD or the arrow keys walk level, or move the way it looks when fly is set
+     * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
+     *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
+     * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
+     * - Destroy it to hand the camera back
+     * @extends EngineObject3D
+     * @memberof Render3D
+     * @example
+     * const player = new FirstPersonCamera3D(vec3(0, 1.5, 5));
+     * player.size3D = vec3(1); // bump into solid objects
+     * player.collideAsSphere3D = true;
+     * player.setCollision();
+     */
+    export class FirstPersonCamera3D extends EngineObject3D {
+        /** Create a first person camera, it drives render3D.camera every frame
+         *  @param {Vector3} [pos3D] - Where the eye is, defaults to where the camera is now
+         *  @param {number} [yaw] - Radians around Y, defaults to the camera's
+         *  @param {number} [pitch] - Radians up from level, defaults to the camera's */
+        constructor(pos3D?: Vector3, yaw?: number, pitch?: number);
+        /** @property {number} - Angle around Y, the mouse turns it */
+        yaw: number;
+        /** @property {number} - Angle up from level, the mouse tilts it */
+        pitch: number;
+        /** @property {number} - World units per frame at full speed */
+        moveSpeed: number;
+        /** @property {number} - How far a pixel of mouse movement turns the view */
+        lookSpeed: number;
+        /** @property {Vector2} - Lowest and highest pitch */
+        pitchRange: Vector2;
+        /** @property {boolean} - Move the way it looks, up and down included, instead of walking level */
+        fly: boolean;
+        /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
+        lockPointer: boolean;
+    }
+    /**
      * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
      * - Each particle is a flat square facing the camera, with a soft round dot when no tile is given
      * - Set trailTime to draw each particle as a streak along where it has been, for sparks

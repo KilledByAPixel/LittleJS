@@ -16,7 +16,7 @@ const terrainSize = 90, terrainHeight = 14, orbCount = 8;
 const soundCollect = new Sound([,,,.02,,.5,,3,,-50,40,,.05]);
 const soundEngine = new Sound([,0,80,.01,,.1,2,5,,,,,,.5,,,,,,,-100]);
 const soundJump = new Sound([.5,,140,,,,,.5,12]);
-let terrain, player, title;
+let terrain, player, title, freeCamera;
 
 ///////////////////////////////////////////////////////////////////////////////
 // the player rolls over the terrain with a trail behind it
@@ -40,7 +40,7 @@ class Player extends EngineObject3D
     update()
     {
         // arrow keys push it along the ground, forward is -Z
-        const move = keyDirection();
+        const move = freeCamera ? vec2() : keyDirection(); // still while flying
         const push = vec3(move.x, 0, -move.y).scale(.02);
         this.speed = this.speed.add(push).scale(.94);
         this.pos3D = this.pos3D.add(this.speed);
@@ -54,7 +54,7 @@ class Player extends EngineObject3D
         const ground = terrain.getHeight(this.pos3D) + 1;
         if (this.pos3D.y < ground + .1)
             this.groundTimer.set(.1);
-        if (this.groundTimer.active() && keyWasPressed('Space'))
+        if (this.groundTimer.active() && !freeCamera && keyWasPressed('Space'))
         {
             this.groundTimer.unset();
             this.speedY = .35;
@@ -219,10 +219,30 @@ function gameInit()
         new Orb(randomGroundPos());
 }
 
+function gameUpdate()
+{
+    // C breaks away into a free flying camera, and back to the chase camera
+    if (keyWasPressed('KeyC'))
+    {
+        if (freeCamera)
+        {
+            freeCamera.destroy();
+            freeCamera = undefined;
+        }
+        else
+        {
+            freeCamera = new FirstPersonCamera3D; // starts where the camera is
+            freeCamera.fly = true;
+            freeCamera.moveSpeed = .3;
+        }
+    }
+}
+
 function gameUpdatePost()
 {
-    // the camera follows the player
-    render3D.camera.follow(player.pos3D, vec3(0,10,18), .08);
+    // the camera follows the player, unless it is flying free
+    if (!freeCamera)
+        render3D.camera.follow(player.pos3D, vec3(0,10,18), .08);
 
     // sway the title so its sides catch the light
     title.rotation3D.y = sin(time*.3)*.3;
@@ -230,10 +250,11 @@ function gameUpdatePost()
 
 function gameRenderPost()
 {
-    const text = 'arrow keys: roll / space: jump / collect the orbs';
+    const text = freeCamera ? 'click: look / WASD: fly / C: back to the ball' :
+        'arrow keys: roll / space: jump / C: free camera';
     const pos = vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40);
     drawTextScreen(text, pos, 30, WHITE, 4);
 }
 
-engineInit(gameInit, undefined, gameUpdatePost, undefined, gameRenderPost,
+engineInit(gameInit, gameUpdate, gameUpdatePost, undefined, gameRenderPost,
     ['tiles.png']);

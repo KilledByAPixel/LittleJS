@@ -879,6 +879,11 @@ render3D.camera.orbit(target, distance, yaw, pitch=.5) // put the camera on an o
 new CameraControl3D(target, distance, pitch=.4, idleSpin=0) // an object that orbits the camera around its pos3D:
                                // drag to turn, wheel to zoom; fields for dragButton, dragSpeed, zoomSpeed, zoomRange,
                                // pitchRange, yaw and idleSpin; destroy it to hand the camera back
+new FirstPersonCamera3D(pos3D, yaw, pitch) // mouse look and WASD or arrows to move, the camera at its pos3D;
+                               // click captures the mouse, Esc lets it go; each defaults to where the camera is now,
+                               // so it takes over without a jump; fields for moveSpeed, lookSpeed, pitchRange,
+                               // lockPointer, and fly to move the way it looks instead of walking level; give it a
+                               // size3D and setCollision() to walk into solids, destroy it to hand the camera back
 render3D.camera.follow(target, offset, percent=1) // chase camera: ease toward target + offset and look at it, percent
                                                   // is how far it moves each call, so call it every frame, from
                                                   // gameUpdatePost once the target has moved

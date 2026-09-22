@@ -140,6 +140,7 @@ export
     HeightMap,
     Light3D,
     CameraControl3D,
+    FirstPersonCamera3D,
     ParticleEmitter3D,
     Trail3D,
     engineObjectsCollect3D,
