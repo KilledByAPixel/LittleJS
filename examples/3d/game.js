@@ -12,7 +12,7 @@
 // pull in edges to prevent bleeding from neighboring tiles
 setTileDefaultBleed(.5);
 
-const terrainSize = 90, terrainHeight = 14, orbCount = 8;
+const terrainSize = 300, terrainHeight = 18, orbCount = 24;
 const soundCollect = new Sound([,,,.02,,.5,,3,,-50,40,,.05]);
 const soundEngine = new Sound([,0,80,.01,,.1,2,5,,,,,,.5,,,,,,,-100]);
 const soundJump = new Sound([.5,,140,,,,,.5,12]);
@@ -114,7 +114,7 @@ class Orb extends EngineObject3D
 // a random spot on the island, clear of the middle where the player starts
 function randomGroundPos()
 {
-    return vec3(rand(20, terrainSize/2 - 6), 0, 0).rotateY(rand(2*PI));
+    return vec3(rand(30, terrainSize/2 - 6), 0, 0).rotateY(rand(2*PI));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -125,27 +125,26 @@ function gameInit()
     new Render3DPlugin;
     postProcessBloom(.85, 2, 8); // the brightest things glow, not the 2D text
     render3D.setSky(hsl(.6,.6,.45), hsl(.55,.4,.7), hsl(.35,.3,.4));
-    render3D.setFog(40, 130);
+    render3D.setFog(60, 200);
     render3D.sunDirection = vec3(-.4,1,.3);
     render3D.ambientColor = hsl(.6,.2,.35);
     render3D.shadows = true;
-    render3D.shadowCenter = vec3(); // pinned over the whole island
-    render3D.shadowRange = terrainSize*1.5; // it turns with the light
-    render3D.shadowMapSize = 2048;
+    render3D.shadowRange = 180; // out to the fog, centered on the player
+    render3D.shadowMapSize = 4096;
     render3D.smoothShading = true;
 
     // add cool directional light opposite from the sun
     new DirectionalLight3D(vec3(0,.3,-1), hsl(.55,.4,.3));
 
     // an island of noise, higher in the middle and sinking at the edges
-    const samples = 65, heights = [], colors = [];
+    const samples = 193, heights = [], colors = [];
     for (let row = 0; row < samples; ++row)
     {
         const heightRow = [], colorRow = [];
         for (let column = 0; column < samples; ++column)
         {
             const x = column/(samples-1) - .5, z = row/(samples-1) - .5;
-            const hills = noise2D(x*8, z*8)*.6 + noise2D(x*20, z*20)*.2;
+            const hills = noise2D(x*24, z*24)*.6 + noise2D(x*60, z*60)*.2;
             const height = clamp(hills + .35 - hypot(x, z)*1.6);
             heightRow.push(height);
             const grass = hsl(.3,.5,.25 + height*.4), rock = hsl(.1,.2,.45);
@@ -162,7 +161,7 @@ function gameInit()
     const tree = new Mesh()
         .combine(buildCylinder(.7, 3, 6), vec3(0,1.5,0), hsl(.1,.4,.3))
         .combine(buildCone(4, 5, 7), vec3(0,4.5,0), hsl(.3,.5,.25));
-    for (let i = 100; i--;)
+    for (let i = 1000; i--;)
     {
         const pos = randomGroundPos();
         pos.y = terrain.getHeight(pos);
@@ -176,7 +175,7 @@ function gameInit()
     const crystal = new Mesh()
         .combine(buildCone(2.5, 4, 6), vec3(0,2,0))
         .combine(buildCone(2.5, 2, 6), buildMatrix(vec3(0,1,0), vec3(PI,0,0)));
-    for (let i = 14; i--;)
+    for (let i = 120; i--;)
     {
         const pos = randomGroundPos();
         pos.y = terrain.getHeight(pos);
@@ -190,14 +189,14 @@ function gameInit()
     }
 
     // sprites from the tile sheet
-    for (let i = 12; i--;)
+    for (let i = 60; i--;)
     {
         const pos = randomGroundPos();
         pos.y = terrain.getHeight(pos) + 1.5;
         if (pos.y < 3)
             continue;
         const sprite = new EngineObject3D(pos, undefined, tile(i%4, 16));
-        sprite.color = hsl(i/12,.7,.7);
+        sprite.color = hsl(i/60,.7,.7);
         sprite.size3D = vec3(3);
         sprite.upright = true;  // stands on the ground
         sprite.pixelated = true; // hard edged pixels
@@ -237,9 +236,11 @@ function gameUpdate()
 
 function gameUpdatePost()
 {
-    // the camera follows the player, unless it is flying free
+    // the camera and the shadow map follow the player; while the camera flies
+    // free the shadows follow the camera instead
     if (!freeCamera)
         render3D.camera.follow(player.pos3D, vec3(0,10,18), .08);
+    render3D.shadowCenter = freeCamera ? undefined : player.pos3D;
 
     // sway the title so its sides catch the light
     title.rotation3D.y = sin(time*.3)*.3;
