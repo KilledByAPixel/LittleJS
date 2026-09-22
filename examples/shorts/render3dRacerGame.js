@@ -3,7 +3,7 @@ const trackSize = 160, roadWidth = 8, gateCount = 4;
 const engineSound = new Sound([,0,91.6,,.4,0,2,2,,,,,.2,1,,,,,,.3,-200]);
 let terrain, car, lapCount = 0, nextGate = 1, bestTime = 0, lapTime = 0;
 
-// the center line of the track, a wobbly circle on the ground
+// the center line of the track, a wobbly loop on the ground
 function trackRadius(a) { return 42 + 9*sin(a*3) + 5*sin(a*2 + 1); }
 function trackPoint(a) { return vec3(trackRadius(a), 0, 0).rotateY(-a); }
 function trackDistance(x, z)
@@ -14,7 +14,7 @@ function trackSide(a)
     return vec3(-d.z, 0, d.x);
 }
 
-// rolling noise terrain, flattened into a corridor along the track
+// rolling noise terrain, flattened along the track
 function buildTerrain()
 {
     const n = 81, heights = [], colors = [];
@@ -26,9 +26,9 @@ function buildTerrain()
         const heightRow = [], colorRow = [];
         for (let c = 0; c < n; ++c)
         {
-            const x = (c/(n-1) - .5)*trackSize, z = (r/(n-1) - .5)*trackSize;
-            const hills = noise2D(x*.025, z*.025)*.75 +
-                noise2D(x*.08, z*.08)*.25;
+            const x = (c/(n-1) - .5)*trackSize;
+            const z = (r/(n-1) - .5)*trackSize;
+            const hills = noise2D(x*.025, z*.025);
             const flat = .3 + .1*sin(atan2(z, x)*2 + 1);
             const edge = trackDistance(x, z) - roadWidth/2;
             const blend = smoothStep(clamp(edge/12));
@@ -42,20 +42,6 @@ function buildTerrain()
     return new HeightMap(heights, vec2(trackSize), 18, colors);
 }
 
-// the car, a wheel and a tree, each a few builders combined into one mesh
-function buildCar()
-{
-    const mesh = buildBox(vec3(1.6,.6,3.4)).setColor(hsl(0,.7,.5));
-    mesh.combine(buildBox(vec3(1.3,.5,1.5)), vec3(0,.5,-.2), hsl(.6,.6,.9));
-    mesh.combine(buildBox(vec3(1.7,.15,.5)), vec3(0,.6,1.6), hsl(0,0,.2));
-    return mesh;
-}
-function buildWheel()
-{
-    // a bar across the hub, or a spinning cylinder would look like it is still
-    const mesh = buildCylinder(.8, .4, 10).setColor(hsl(.6,.1,.1));
-    return mesh.combine(buildBox(vec3(.5,.44,.1)), undefined, hsl(0,0,.5));
-}
 function buildTree()
 {
     const mesh = buildCylinder(.5, 3, 7).setColor(hsl(.1,.4,.3));
@@ -68,15 +54,20 @@ class Car extends EngineObject3D
 {
     constructor(pos)
     {
-        super(pos, buildCar());
+        // make a simple car shaped mesh
+        const carMesh = buildBox(vec3(1.6,.6,3.4)).setColor(hsl(0,.7,.5));
+        carMesh.combine(buildBox(vec3(1.3,.5,1.5)), vec3(0,.5,-.2), hsl(.6,.6,.9));
+        carMesh.combine(buildBox(vec3(1.7,.15,.5)), vec3(0,.6,1.6), hsl(0,0,.2));
+
+        super(pos, carMesh);
         this.speed = 0;
         this.yaw = PI;
         this.spin = this.steer = 0;
         this.specular = .6;
         this.cullBackFaces = true;
 
-        // four wheels as children so they can roll, the front two steer
-        const wheelMesh = buildWheel();
+        // four wheels as children so they can roll and steer
+        const wheelMesh = buildCylinder(.8, .4, 10).setColor(hsl(.6,.1,.1)).combine(buildBox(vec3(.5,.44,.1)), undefined, hsl(0,0,.5));
         this.wheels = [];
         for (let i = 4; i--;)
         {
