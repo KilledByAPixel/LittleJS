@@ -12,7 +12,6 @@ class Player extends EngineObject3D
         this.color = hsl(.5,.8,.6);
         this.specular = .5;
         this.size3D = vec3(1);
-        this.cullBackFaces = true;
         this.collideAsSphere3D = true;
         this.setCollision();
     }
@@ -117,7 +116,7 @@ function gameInit()
     scoreObject = new EngineObject3D(vec3(0,5,-arenaSize/2));
     scoreObject.color = hsl(.15,1,.7);
     scoreObject.rotation3D.x = -.5;
-    
+
     // create the box mesh
     boxMesh = buildBox();
     buildScoreText();
@@ -125,11 +124,11 @@ function gameInit()
 
 function gameUpdate()
 {
-    // boxes spawn from a random side
+    // boxes spawn from a random side with an increasing rate
     const t = roundTimer.get();
     if (spawnTimer.elapsed())
     {
-        spawnTimer.set(rand(.4,.8));
+        spawnTimer.set(rand(.4,.8) / (1 + t/20));
         const pos = vec3(arenaSize/2 + 2, rand(1,6)).rotateY(rand(2*PI));
         new Box(pos);
     }
