@@ -14,7 +14,9 @@ const ctxProto = globalThis.AudioContext.prototype;
 ctxProto.createGain = function()
 {
     return {
-        connect() {}, disconnect() {},
+        connections: [],
+        connect(node) { this.connections.push(node); return node; },
+        disconnect() {},
         gain: {
             value: 0,
             cancelScheduledValues() {},
@@ -227,4 +229,27 @@ test('play returns undefined when sound is disabled', () =>
     assert.equal(sound.play(), undefined);
     LJS.setSoundEnable(true);
     assert.ok(sound.play());
+});
+
+test('sound output routes the gain node through it, and again on resume', () =>
+{
+    const effectInput = { name: 'effect' };
+    const routed = new LJS.Sound([1, 0, 220, 0, .5, .1]);
+    routed.output = effectInput;
+    const instance = routed.play();
+    assert.equal(instance.output, effectInput);
+    assert.deepEqual(instance.gainNode.connections, [effectInput]);
+    instance.pause();
+    instance.resume();
+    assert.deepEqual(instance.gainNode.connections, [effectInput]);
+    instance.stop();
+});
+
+test('sounds without an output connect to the master gain', () =>
+{
+    const instance = sound.play();
+    assert.equal(instance.output, undefined);
+    assert.equal(instance.gainNode.connections.length, 1);
+    assert.equal(instance.gainNode.connections[0], LJS.audioMasterGain);
+    instance.stop();
 });

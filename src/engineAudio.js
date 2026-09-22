@@ -130,6 +130,8 @@ class Sound
         this.loadedPercent = 0;
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
+        /** @property {AudioNode} - Node to route every play of this sound through instead of the master gain, for effects */
+        this.output = undefined;
 
         if (isArray(asset))
         {
@@ -372,6 +374,8 @@ class SoundInstance
         this.gainNode = undefined;
         /** @property {AudioBufferSourceNode} - Source node of the audio */
         this.source = undefined;
+        /** @property {AudioNode} - Node to route this instance through, copied from the sound */
+        this.output = sound.output;
         // setup end callback and start sound
         this.onendedCallback = (source)=>
         {
@@ -395,8 +399,8 @@ class SoundInstance
         // build the shared buffer if it was not made at load time, then play it
         this.sound.buildSampleBuffer();
         this.source = this.sound.sampleBuffer ?
-            playAudioBuffer(this.sound.sampleBuffer, this.volume, this.rate, this.pan, this.loop, this.gainNode, offset, this.onendedCallback) :
-            playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback);
+            playAudioBuffer(this.sound.sampleBuffer, this.volume, this.rate, this.pan, this.loop, this.gainNode, offset, this.onendedCallback, this.output) :
+            playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback, this.output);
         if (this.source)
         {
             this.startTime = audioContext.currentTime - offset;
@@ -577,9 +581,10 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
  *  @param {number}   [offset] - Offset in seconds to start playback from
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
+ *  @param {AudioNode} [output] - Node to connect the gain to instead of the master gain, for effects
  *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended)
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended, output)
 {
     if (!soundEnable || headlessMode) return;
 
@@ -591,7 +596,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     }
 
     const buffer = createAudioBuffer(sampleChannels, sampleRate);
-    return playAudioBuffer(buffer, volume, rate, pan, loop, gainNode, offset, onended);
+    return playAudioBuffer(buffer, volume, rate, pan, loop, gainNode, offset, onended, output);
 }
 
 /** Copy arrays of samples into a new audio buffer
@@ -618,9 +623,10 @@ function createAudioBuffer(sampleChannels, sampleRate=audioDefaultSampleRate)
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
  *  @param {number}   [offset] - Offset in seconds to start playback from
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
+ *  @param {AudioNode} [output] - Node to connect the gain to instead of the master gain, for effects
  *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
  *  @memberof Audio */
-function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended)
+function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended, output)
 {
     if (!soundEnable || headlessMode) return;
 
@@ -640,7 +646,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
     // create and connect gain node
     gainNode = gainNode || audioContext.createGain();
     gainNode.gain.value = volume;
-    gainNode.connect(audioMasterGain);
+    gainNode.connect(output || audioMasterGain);
 
     // connect source to stereo panner and gain
     const pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});

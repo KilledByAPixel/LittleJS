@@ -342,6 +342,7 @@ Sound.playNote(semitoneOffset, pos, volume=1)          // Play as note with a se
 Sound.getDuration()                                    // Get length of sound in seconds (0 if loading)
 Sound.isLoaded()                                       // Check if sound is fully loaded
 Sound.loadedPercent                                    // Get loading progress (0 to 1)
+Sound.output                                           // Optional AudioNode to route every play through, for effects
 
 // SoundInstance
 SoundInstance.setVolume(volume)   // Change volume during playback
@@ -377,9 +378,9 @@ soundPauseWhenHidden = true // Pause all sound while the page is hidden, the way
 audioContext            // The shared Web Audio context
 audioMasterGain         // Master gain node all sound routes through
 audioIsRunning()        // Is the audio context running? (requires user interaction)
-playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate, gainNode, offset=0, onended) // Low level sample playback
+playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate, gainNode, offset=0, onended, output) // Low level sample playback
 createAudioBuffer(sampleChannels, sampleRate) // Copy arrays of samples into an audio buffer
-playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended) // Play an audio buffer, shareable between sounds
+playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended, output) // Play an audio buffer, shareable between sounds
 ```
 
 ## LittleJS Input System
