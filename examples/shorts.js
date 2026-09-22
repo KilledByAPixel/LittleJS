@@ -87,7 +87,7 @@ const exampleList =
     new ExampleInfo('3D Layers', 'render3dLayers.js', '3D objects in front of and behind 2D', false, 'layers, align2D, renderAfter2D'),
     new ExampleInfo('3D Dodge Game', 'render3dDodgeGame.js', 'Dodge boxes tumbling in from every side', false, 'chase camera, shadows, sound'),
     new ExampleInfo('3D Racer Game', 'render3dRacerGame.js', 'Race laps around a hilly track', false, 'racer, terrain, chase camera'),
-    new ExampleInfo('3D Puzzle Game', 'render3dPuzzleGame.js', 'Sokoban style block pushing puzzle', false, 'orthographic, picking, pads'),
+    new ExampleInfo('3D Puzzle Game', 'render3dPuzzleGame.js', 'Sokoban style block pushing puzzle', false, 'orthographic, grid, pads'),
     new ExampleInfo('3D Mesh', 'render3dMesh.js', 'Load an OBJ model, or drop one in', false, 'obj, model, load'),
     new ExampleInfo('3D Textures', 'render3dTextures.js', 'Repeating, wrapped and mipmapped textures', false, 'texture, uv, wrap, mipmap'),
     new ExampleInfo('3D Glow', 'render3dGlow.js', 'Bloom from the post processing plugin', false, 'bloom, post processing, light'),

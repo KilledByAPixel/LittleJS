@@ -39,7 +39,7 @@ class GridObject extends EngineObject3D
     {
         // slide into the new cell
         const target = cellPos(this.cell.x, this.cell.y, this.height);
-        const movePercent = this.moveTimer.getPercent()
+        const movePercent = this.moveTimer.getPercent();
         this.pos3D = this.startPos.lerp(target, movePercent);
     }
 }
@@ -69,7 +69,7 @@ class Goal extends GridObject
             );
         this.color = active ? litColor : padColor;
         this.light.color.a = active ? 1 : 0;
-        this.unlit = active;
+        this.unlit = active; // full brightness while a block is on it
     }
 }
 
@@ -154,6 +154,6 @@ function gameRenderPost()
     const text = 'arrows: move / R: reset / moves: ' + moves;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 40, BLACK);
     const solvedPos = vec2(mainCanvasSize.x/2, mainCanvasSize.y - 50);
-    const isSolved = goals.every(g=> g.lit);
+    const isSolved = goals.every(g=> boxAt(g.cell.x, g.cell.y));
     isSolved && drawTextScreen('SOLVED!', solvedPos, 50, YELLOW);
 }
