@@ -18441,10 +18441,9 @@ class Render3DPlugin
         this.depthTest = true;
         /** @property {boolean} - Write to the depth buffer, owned by the stages: on for opaque, off for transparent */
         this.depthWrite = true;
-        /** @property {boolean} - Skip faces that point away from the camera, set from each mesh's doubleSided as it draws,
-         *  off for strips so they show from both sides */
+        // batch state set by drawMesh from each mesh: whether its back faces are skipped, off for strips so they
+        // show from both sides, and whether its transform mirrors it so the other winding is the front
         this.cullBackFaces = false;
-        /** @property {boolean} - The transform mirrors what it draws, so the other winding is the front, set as each mesh draws */
         this.mirrored = false;
         /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
         this.specular = 0;
@@ -19043,7 +19042,7 @@ class Render3DPlugin
      *  @param {Color} [color] */
     drawLine(posA, posB, width=.1, color=WHITE)
     {
-        this.drawRibbon([posA, posB], width, color);
+        this.drawRibbon([posA, posB], width, undefined, color);
     }
 
     /** Draw a ribbon along a path, unlit and visible from both sides; width and color can change along it
@@ -19051,13 +19050,14 @@ class Render3DPlugin
      *  - A path that ends where it starts is a loop, and joins with no seam
      *  @param {Array<Vector3>} points - Center line in order, at least two
      *  @param {number|Array<number>} [width] - Full width, one for all or one per point
-     *  @param {Color|Array<Color>} [color] - One for all or one per point
      *  @param {TileInfo|TextureInfo} [tileInfo]
+     *  @param {Color|Array<Color>} [color] - One for all or one per point
      *  @param {Vector3|Array<Vector3>} [side] - Direction across the ribbon, one for all or one per point, default faces the camera */
-    drawRibbon(points, width=.1, color=WHITE, tileInfo, side)
+    drawRibbon(points, width=.1, tileInfo, color=WHITE, side)
     {
         const count = points.length;
         ASSERT(count > 1, 'a ribbon needs at least two points');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
         const strip = [], uvs = tileInfo ? [] : undefined, colors = [], forward = this.cameraForward;
         let across = vec3(1, 0, 0); // kept from the last point where the direction vanishes
         // a loop's two ends take their direction across the join, so they meet edge to edge
@@ -19208,7 +19208,7 @@ function debugSphere3D(pos, size=1, color=WHITE, time=0)
             const points = [];
             for (let i = 0; i <= 24; ++i)
                 points.push(pos.add(ring(circle[i*2], circle[i*2 + 1]).scale(r)));
-            render3D.drawRibbon(points, RENDER3D_DEBUG_WIDTH, color);
+            render3D.drawRibbon(points, RENDER3D_DEBUG_WIDTH, undefined, color);
         }
     });
 }
@@ -21818,7 +21818,7 @@ class ParticleEmitter3D extends EngineObject3D
                     widths.push(size * s);
                     colors.push(color.scale(1, s));
                 }
-                render3D.drawRibbon(trail, widths, colors, this.tileInfo);
+                render3D.drawRibbon(trail, widths, this.tileInfo, colors);
             }
             else if (texture)
                 render3D.drawBillboard(p.pos, vec2(size), texture, color, p.angle);
@@ -21916,7 +21916,7 @@ class Trail3D extends EngineObject3D
             colors.push(this.color.lerp(this.colorEnd, age));
             sides?.push(s.side);
         }
-        render3D.drawRibbon(points, widths, colors, this.tileInfo, sides);
+        render3D.drawRibbon(points, widths, this.tileInfo, colors, sides);
     }
 }
 

@@ -6411,10 +6411,7 @@ declare module "littlejsengine" {
         depthTest: boolean;
         /** @property {boolean} - Write to the depth buffer, owned by the stages: on for opaque, off for transparent */
         depthWrite: boolean;
-        /** @property {boolean} - Skip faces that point away from the camera, set from each mesh's doubleSided as it draws,
-         *  off for strips so they show from both sides */
         cullBackFaces: boolean;
-        /** @property {boolean} - The transform mirrors what it draws, so the other winding is the front, set as each mesh draws */
         mirrored: boolean;
         /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
         specular: number;
@@ -6672,10 +6669,10 @@ declare module "littlejsengine" {
          *  - A path that ends where it starts is a loop, and joins with no seam
          *  @param {Array<Vector3>} points - Center line in order, at least two
          *  @param {number|Array<number>} [width] - Full width, one for all or one per point
-         *  @param {Color|Array<Color>} [color] - One for all or one per point
          *  @param {TileInfo|TextureInfo} [tileInfo]
+         *  @param {Color|Array<Color>} [color] - One for all or one per point
          *  @param {Vector3|Array<Vector3>} [side] - Direction across the ribbon, one for all or one per point, default faces the camera */
-        drawRibbon(points: Array<Vector3>, width?: number | Array<number>, color?: Color | Array<Color>, tileInfo?: TileInfo | TextureInfo, side?: Vector3 | Array<Vector3>): void;
+        drawRibbon(points: Array<Vector3>, width?: number | Array<number>, tileInfo?: TileInfo | TextureInfo, color?: Color | Array<Color>, side?: Vector3 | Array<Vector3>): void;
         /** Draw a disc that fades to transparent at the rim, unlit, for glows, puffs and sky dots
          *  @param {Vector3} pos - Center
          *  @param {number} [size] - Diameter

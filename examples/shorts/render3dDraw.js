@@ -49,5 +49,5 @@ function drawTransparent()
         widths.push(.5 + .3*sin(a*5 - time*4));
         colors.push(hsl(t + time*.2, 1, .6, .8));
     }
-    render3D.drawRibbon(points, widths, colors);
+    render3D.drawRibbon(points, widths, undefined, colors);
 }

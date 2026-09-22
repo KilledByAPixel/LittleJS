@@ -1240,7 +1240,7 @@ test('drawRibbon builds a strip with width and color per point, uvs along it, an
     render3D.updateMatrices(1);
     const points = [vec3(0, 0, 0), vec3(2, 0, 0), vec3(4, 0, 0)];
     const tileInfo = new TileInfo(vec2(), vec2(16));
-    const r = render3D.bake(()=> render3D.drawRibbon(points, [1, .5, 0], [RED, WHITE, RED], tileInfo));
+    const r = render3D.bake(()=> render3D.drawRibbon(points, [1, .5, 0], tileInfo, [RED, WHITE, RED]));
     assert.equal(r.vertexCount, 2 * 3 + 2);
     // pairs across the path in the camera plane, the first is the wide end
     nearVec(r.points[1], 0, .5, 0); nearVec(r.points[2], 0, -.5, 0);
@@ -1250,7 +1250,7 @@ test('drawRibbon builds a strip with width and color per point, uvs along it, an
     assert.equal(r.colors[3].g, 1); assert.equal(r.colors[5].g, 0);
     // a side pins the ribbon's plane, culling is left as it was
     render3D.cullBackFaces = true;
-    const s = render3D.bake(()=> render3D.drawRibbon(points, 1, WHITE, undefined, vec3(0, 0, 5)));
+    const s = render3D.bake(()=> render3D.drawRibbon(points, 1, undefined, WHITE, vec3(0, 0, 5)));
     nearVec(s.points[1], 0, 0, .5);
     assert.equal(render3D.cullBackFaces, true);
     render3D.cullBackFaces = false;

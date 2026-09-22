@@ -1074,7 +1074,7 @@ render3D.drawBillboard(pos, size, tileInfo, color, angle, upright) // camera fac
 render3D.drawQuad(a, b, c, d, tileInfo, color)            // corners in loop order, a is the texture's top left
 render3D.drawTriangle(a, b, c, color)
 render3D.drawLine(posA, posB, width, color)               // camera facing ribbon, unlit
-render3D.drawRibbon(points, width, color, tileInfo, side) // strip along a path, unlit, two sided; width and color one
+render3D.drawRibbon(points, width, tileInfo, color, side) // strip along a path, unlit, two sided; width and color one
                                                           // or per point, texture runs along it, side faces the camera
                                                           // unless given; a path ending where it starts joins as a loop
 // soft discs and shadows fade to transparent, so draw them from a transparent object or onRenderTransparent
