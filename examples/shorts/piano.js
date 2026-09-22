@@ -15,7 +15,7 @@ class PianoKey extends UIButton
         this.activeColor = RED;
     }
     onPress()   { this.sound = pianoSound.playNote(this.semitone); }
-    onRelease() { this.sound.stop(.2); }
+    onRelease() { this.sound?.stop(.2); }
 }
 
 function gameInit()

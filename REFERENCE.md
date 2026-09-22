@@ -324,27 +324,29 @@ combineCanvases()            // Combine all canvases onto mainCanvas (for screen
 ```
 
 ## LittleJS Audio System
-- Caches sounds and music for fast playback with frame-spread loading
+- Caches sounds and music for fast playback, every play shares one decoded buffer
 - Individual sound instance control with pause/resume capabilities
 - Can attenuate and apply stereo panning to sounds
-- Ability to play mp3, ogg, and wave files with loading progress tracking
+- Ability to play mp3, ogg, and wave files
+- Route sounds or everything through effects with the audio effects plugin
 - [ZzFX Sound Effect Generator](https://killedbyapixel.github.io/ZzFX)
 - [ZzFXM Music System](https://keithclark.github.io/ZzFXM)
 
 ```javascript
 // Sound Object
-Sound(zzfxSound, randomness, range, taper)             // Create a zzfx sound
-Sound(filename, randomness, range, taper)              // Load a wave, mp3, or ogg
-Sound.play(pos, volume=1, pitch=1, randomness=1, loop=false, paused=false) // Play a sound, returns SoundInstance
-Sound.playLoop(pos, volume=1, pitch=1, randomness=1, paused=false) // Play on a loop, like play with loop on
+Sound(zzfxSound, randomness, range, taper, onloadCallback) // Create a zzfx sound
+Sound(filename, randomness, range, taper, onloadCallback)  // Load a wave, mp3, or ogg
+Sound.play(pos, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false) // Play a sound, returns SoundInstance
+Sound.playLoop(pos, volume=1, pitch=1, randomnessScale=1, paused=false) // Play on a loop, like play with loop on
 Sound.playMusic(volume=1, loop=true, paused=false)     // Play as music with looping
 Sound.playNote(semitoneOffset, pos, volume=1)          // Play as note with a semitone offset
 Sound.getDuration()                                    // Get length of sound in seconds (0 if loading)
 Sound.isLoaded()                                       // Check if sound is fully loaded
-Sound.loadedPercent                                    // Get loading progress (0 to 1)
+Sound.loadedPercent                                    // 0 until a file is decoded, then 1
 Sound.output                                           // Optional node or effect to route every play through
 
 // SoundInstance
+SoundInstance.start(offset=0)     // Start or restart from a time in seconds, to seek
 SoundInstance.setVolume(volume)   // Change volume during playback
 SoundInstance.setRate(rate)       // Change speed and pitch during playback, like an engine loop following speed
 SoundInstance.stop(fadeTime=0)    // Stop with optional fade out
@@ -390,7 +392,7 @@ playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0,
 
 ```javascript
 AudioEffect(mix=1)                                // Base class, input and output gain nodes with a mix between
-AudioEffect.input / AudioEffect.output            // Connect sounds to input, output goes to the speakers
+AudioEffect.input / AudioEffect.output            // Its own nodes, output feeds the master gain until connect() moves it
 AudioEffect.setMix(mix, fadeTime=0)               // 0 is fully dry, 1 is fully wet
 AudioEffect.connect(effectOrNode)                 // Send output into the next effect instead, returns it
 AudioEffect.disconnect()                          // Stop sending output anywhere
@@ -399,7 +401,7 @@ AudioReverb(duration=2, decay=2, mix=.5)          // Room or cave from generated
 AudioDelay(time=.3, feedback=.4, mix=.5)          // Echoes, setTime and setFeedback while playing
 AudioDistortion(amount=.5, mix=1)                 // Overdrive, setAmount rebuilds the curve
 AudioCompressor(threshold=-24, ratio=12, mix=1)   // Stops clipping on the master bus, setThreshold, setRatio
-AudioEffect.node                                  // The wrapped Web Audio node, for anything the above doesn't cover
+AudioFilter.node, AudioReverb.node, ...           // Each effect's wrapped Web Audio node, for anything the above doesn't cover
 ```
 
 ## LittleJS Input System

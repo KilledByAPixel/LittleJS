@@ -2625,6 +2625,7 @@ declare module "littlejsengine" {
      *  - Pass a node or an effect, or the first and last of a chain, each a node or an effect
      *  - With one argument a node is both ends, and an effect uses its own input and output
      *  - The output node is disconnected from everything else first, so it only feeds the speakers
+     *  - The two ends of a chain must already be connected to each other, like effectA.connect(effectB)
      *  - Call with no arguments to remove the effect
      *  - Debug video capture records the master gain, so master effects are not in the recording
      *  @param {AudioNode|AudioEffectNodes} [input] - Node or effect the master gain connects to
@@ -2809,9 +2810,11 @@ declare module "littlejsengine" {
         setVolume(volume: number): void;
         /** Set the playback rate of this sound instance, its speed and pitch, while it plays
          *  - A looping sound can follow something smoothly this way, like an engine with the speed
+         *  - A rate of 0 freezes the sound in place, its current time is not tracked until it moves again
          *  @param {number} rate - 1 is normal, 2 is twice as fast and an octave up */
         setRate(rate: number): void;
-        /** Stop this sound instance and reset position to the start */
+        /** Stop this sound instance and reset position to the start
+         *  @param {number} [fadeTime] - Seconds to fade out over before stopping */
         stop(fadeTime?: number): void;
         /** Pause this sound instance */
         pause(): void;

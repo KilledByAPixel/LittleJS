@@ -49,7 +49,8 @@ class ZzFXMusic extends Sound
         if (!soundEnable || headlessMode) return;
         this.randomness = 0;
         super.sampleChannels = zzfxM(...zzfxMusic); // the setter, without declaring a field that hides it in the typings
-        this.sampleRate = audioDefaultSampleRate;
+        this.loadedPercent = 1; // generated in place, so it is loaded like a zzfx sound
+        this.onloadCallback?.(this);
     }
 }
 

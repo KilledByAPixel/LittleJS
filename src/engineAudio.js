@@ -25,6 +25,7 @@ let audioContext = new AudioContext;
  *  @memberof Audio */
 let audioMasterGain = audioContext.createGain();
 audioMasterGain.connect(audioContext.destination);
+audioMasterGain.gain.value = soundVolume; // set starting value
 
 // the current master effect, kept so setAudioMasterEffect can undo the route it made
 let audioMasterEffectInput, audioMasterEffectOutput;
@@ -44,7 +45,6 @@ function audioInit()
 {
     if (!soundEnable || headlessMode) return;
 
-    audioMasterGain.gain.value = soundVolume; // set starting value
     document.addEventListener('visibilitychange', audioVisibilityChange);
 }
 
@@ -74,6 +74,7 @@ function audioVisibilityChange()
  *  - Pass a node or an effect, or the first and last of a chain, each a node or an effect
  *  - With one argument a node is both ends, and an effect uses its own input and output
  *  - The output node is disconnected from everything else first, so it only feeds the speakers
+ *  - The two ends of a chain must already be connected to each other, like effectA.connect(effectB)
  *  - Call with no arguments to remove the effect
  *  - Debug video capture records the master gain, so master effects are not in the recording
  *  @param {AudioNode|AudioEffectNodes} [input] - Node or effect the master gain connects to
@@ -432,11 +433,15 @@ class SoundInstance
         /** @property {AudioNode|AudioEffectNodes} - Node or effect to route this instance through, copied from the sound
          *  @type {AudioNode|AudioEffectNodes} */
         this.output = sound.output;
-        // setup end callback and start sound
+        // setup end callback and start sound, a sound that ends is stopped, its time back at 0
         this.onendedCallback = (source)=>
         {
             if (source === this.source)
+            {
                 this.source = undefined;
+                this.startTime = undefined;
+                this.pausedTime = 0;
+            }
         };
         if (!paused)
             this.start();
@@ -464,8 +469,9 @@ class SoundInstance
         }
         else
         {
+            // the sound could not start, keep the place so a later resume picks it up
             this.startTime = undefined;
-            this.pausedTime = 0;
+            this.pausedTime = offset;
         }
     }
 
@@ -481,6 +487,7 @@ class SoundInstance
 
     /** Set the playback rate of this sound instance, its speed and pitch, while it plays
      *  - A looping sound can follow something smoothly this way, like an engine with the speed
+     *  - A rate of 0 freezes the sound in place, its current time is not tracked until it moves again
      *  @param {number} rate - 1 is normal, 2 is twice as fast and an octave up */
     setRate(rate)
     {
@@ -493,7 +500,8 @@ class SoundInstance
             this.source.playbackRate.value = rate;
     }
 
-    /** Stop this sound instance and reset position to the start */
+    /** Stop this sound instance and reset position to the start
+     *  @param {number} [fadeTime] - Seconds to fade out over before stopping */
     stop(fadeTime=0)
     {
         ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
@@ -596,7 +604,7 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
     // build utterance and speak
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
-    utterance.volume = volume*soundVolume;
+    utterance.volume = clamp(volume*soundVolume);
     utterance.rate = rate;
     utterance.pitch = pitch;
     speechSynthesis.speak(utterance);
@@ -702,7 +710,9 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
     // create and connect gain node
     gainNode = gainNode || audioContext.createGain();
     gainNode.gain.value = volume;
-    gainNode.connect(audioEffectNode(output, 'input') || audioMasterGain);
+    const outputNode = audioEffectNode(output, 'input') || audioMasterGain;
+    ASSERT(typeof outputNode.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
+    gainNode.connect(outputNode);
 
     // connect source to stereo panner and gain
     const pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});

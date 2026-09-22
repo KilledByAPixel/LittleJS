@@ -80,7 +80,8 @@ function gameInit()
         new UISequencerButton(step, track);
 
     // create play/stop button
-    const playButton = new UIButton(vec2(660,500).subtract(mainCanvasSize.scale(.5)), vec2(180,60), 'PLAY');
+    const playPos = vec2(660,500).subtract(mainCanvasSize.scale(.5));
+    const playButton = new UIButton(playPos, vec2(180,60), 'PLAY');
     playButton.onClick = ()=>
     {
         isPlaying = !isPlaying;
@@ -91,7 +92,8 @@ function gameInit()
     // create tempo slider
     const minTempo = 120, maxTempo = 480;
     const tempoPercent = percent(tempo, minTempo, maxTempo);
-    const tempoSlider = new UISlider(vec2(380,500).subtract(mainCanvasSize.scale(.5)), vec2(340,40), tempoPercent);
+    const tempoPos = vec2(380,500).subtract(mainCanvasSize.scale(.5));
+    const tempoSlider = new UISlider(tempoPos, vec2(340,40), tempoPercent);
     tempoSlider.onChange = ()=>
     {
         tempo = lerp(minTempo, maxTempo, tempoSlider.value);

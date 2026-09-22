@@ -61,9 +61,7 @@ function gameUpdate()
     // update ui
     if (isDisabled)
     {
-        // update loading progress
-        const loadingPercent = musicSound.loadedPercent * 100|0;
-        infoText.text = `Loading: ${loadingPercent}%`;
+        infoText.text = 'Loading...';
     }
     else
     {

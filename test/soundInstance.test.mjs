@@ -220,13 +220,50 @@ test('setRate changes the speed while playing and keeps the place in the sound',
     assert.equal(instance.rate, .5);
 });
 
-test('sound ending naturally clears the playing state', () =>
+test('sound ending naturally clears the playing state and its time is 0', () =>
 {
     audioContext.currentTime = 100;
     const instance = sound.play();
     assert.equal(instance.isPlaying(), true);
     lastSource.listeners.ended(); // simulate the source finishing
     assert.equal(instance.isPlaying(), false);
+    assert.equal(instance.getCurrentTime(), 0);
+});
+
+test('resume on a suspended context keeps the paused position', () =>
+{
+    audioContext.currentTime = 110;
+    const instance = sound.play();
+    audioContext.currentTime = 110.3;
+    instance.pause();
+    audioContext.state = 'suspended';
+    instance.resume(); // cannot start, the place must survive
+    assert.equal(instance.isPlaying(), false);
+    near(instance.getCurrentTime(), .3);
+    audioContext.state = 'running';
+    instance.resume();
+    assert.equal(instance.isPlaying(), true);
+    near(instance.getCurrentTime(), .3);
+    instance.stop();
+});
+
+test('the master gain is at soundVolume from load', () =>
+{
+    // engineInit never runs here, the gain is set where the node is made
+    assert.equal(LJS.audioMasterGain.gain.value, LJS.soundVolume);
+});
+
+test('ZzFXMusic is loaded as soon as it is made and plays as music', () =>
+{
+    // generated in place like a zzfx sound, so the loaded gate the music examples use passes
+    const music = new LJS.ZzFXMusic([[[,0,400]], [[[0,-1,1,0,9,1]]], [0], 90]);
+    assert.equal(music.isLoaded(), true);
+    assert.equal(music.loadedPercent, 1);
+    assert.ok(music.getDuration() > 0);
+    const instance = music.playMusic();
+    assert.equal(instance.isPlaying(), true);
+    assert.equal(instance.loop, true);
+    instance.stop();
 });
 
 test('play returns undefined when sound is disabled', () =>
@@ -239,7 +276,7 @@ test('play returns undefined when sound is disabled', () =>
 
 test('sound output routes the gain node through it, and again on resume', () =>
 {
-    const effectInput = { name: 'effect' };
+    const effectInput = audioContext.createGain();
     const routed = new LJS.Sound([1, 0, 220, 0, .5, .1]);
     routed.output = effectInput;
     const instance = routed.play();
@@ -253,7 +290,7 @@ test('sound output routes the gain node through it, and again on resume', () =>
 
 test('sound output accepts an effect and routes to its input node', () =>
 {
-    const effect = { input: { name: 'in' }, output: { name: 'out' } };
+    const effect = { input: audioContext.createGain(), output: audioContext.createGain() };
     const routed = new LJS.Sound([1, 0, 220, 0, .5, .1]);
     routed.output = effect;
     const instance = routed.play();
