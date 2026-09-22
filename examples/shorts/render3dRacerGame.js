@@ -49,11 +49,11 @@ class Car extends EngineObject3D
         const input = keyDirection();
         const offRoad = trackDistance(this.pos3D.x, this.pos3D.z) - roadWidth/2;
         this.speed += input.y*.01;
-        this.speed *= offRoad < 0 ? .98 : .9;
+        this.speed *= offRoad < 0 ? .99 : .95;
         this.speed = clamp(this.speed, -.15, offRoad < 0 ? .6 : .3);
-        this.yaw -= input.x*.03*clamp(abs(this.speed)*5)*sign(this.speed || 1);
+        this.yaw -= input.x*.03*clamp(abs(this.speed)*5)*sign(this.speed);
 
-        // follow the ground, the nose follows the slope
+        // car follows the angle of the ground
         const forward = vec3(0, 0, -1).rotateY(this.yaw);
         this.pos3D = this.pos3D.add(forward.scale(this.speed));
         this.pos3D.y = terrain.getHeight(this.pos3D) + .85;
@@ -62,21 +62,22 @@ class Car extends EngineObject3D
         const rise = terrain.getHeight(ahead) - terrain.getHeight(behind);
         this.rotation3D = vec3(atan2(rise, 3), this.yaw, 0);
 
-        // the wheels roll with the speed, turned onto their side by the roll
-        this.spin -= this.speed/.4; // the distance over the wheel radius
+        // the wheels roll with the speed
+        this.spin -= this.speed/.4;
         this.steer = lerp(this.steer, -input.x*.5, .2);
         for (const wheel of this.wheels)
         {
             const steer = wheel.front ? this.steer : 0;
             wheel.rotation3D = vec3(this.spin, steer, PI/2);
         }
-        for (const trail of this.trails)
-            trail.side = vec3(1, 0, 0).rotateY(this.yaw); // lie flat
 
-        // the engine sound loops, playing faster with speed
+        // make flat skid marks
+        for (const trail of this.trails)
+            trail.side = vec3(1, 0, 0).rotateY(this.yaw);
+
+        // engine sound loops, playing faster with speed
         if (!this.engineLoop?.isPlaying())
-            this.engineLoop = render3D.playSound(engineSound, this.pos3D,
-                .2, 1, 1, true);
+            this.engineLoop = render3D.playSound(engineSound, this.pos3D, .2, 1, 1, true);
         this.engineLoop?.setRate(.4 + abs(this.speed)*2);
 
         // gates count in order, the finish line completes a lap
