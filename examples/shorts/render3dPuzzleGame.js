@@ -16,7 +16,7 @@ const boxAt = (x, z)=> boxes.find(b=> b.cell.x == x && b.cell.y == z);
 const padColor = hsl(.1,.6,.3), litColor = hsl(.15,1,.6);
 const pushSound = new Sound([.5,,150,.01,,,,,9,-50]);
 let wallMesh, blockMesh, ballMesh, padMesh;
-let level, boxes, goals, player, moves, hoverCell;
+let level, boxes, goals, player, moves;
 
 class GridObject extends EngineObject3D
 {
@@ -56,15 +56,15 @@ class Goal extends GridObject
     {
         // light up while a block is on the pad, with a burst when it lands
         const active = boxAt(this.cell.x, this.cell.y);
+        const particlePos = cellPos(this.cell.x, this.cell.y, .5);
         if (active && !this.unlit)
             new ParticleEmitter3D(
-                cellPos(this.cell.x, this.cell.y, .5), // pos
-                .6, .1,                           // emitSize, emitTime
-                80, PI, undefined,                // rate, cone, tileInfo
+                particlePos, .6, .1,              // pos, emitSize, emitTime
+                500, PI, undefined,               // rate, cone, tileInfo
                 litColor, WHITE,                  // colorStartA, colorStartB
-                hsl(.08,1,.5,0), hsl(.17,1,.5,0), // colorEndA, colorEndB
-                .7, .3, 0,                        // time, sizeStart, sizeEnd
-                .07, .95, -.004,                  // speed, damping, gravity
+                hsl(0,1,.5,0), hsl(.1,1,.5,0),    // colorEndA, colorEndB
+                .5, .3, 0,                        // time, sizeStart, sizeEnd
+                .1, .95, -.004,                   // speed, damping, gravity
                 .1, .5, true                      // fade, randomness, additive
             );
         this.color = active ? litColor : padColor;
@@ -117,7 +117,7 @@ function gameInit()
     new Render3DPlugin;
     canvasClearColor = hsl(.3,.2,.4);
     render3D.lightDirection = vec3(.4,-1,.3);
-    render3D.ambientColor = hsl(.6,.3,.35);
+    render3D.ambientColor = hsl(.6,.3,.4);
     render3D.shadows = true;
     render3D.shadowRange = levelSize + 4;
     render3D.shadowCenter = vec3();
@@ -127,16 +127,16 @@ function gameInit()
     render3D.camera.lookAt(vec3(0,.5,0));
     render3D.camera.orthographic = levelSize+1;
 
-    // meshes shared by every level
+    // make a checkered floor
+    const checker = (x, z)=> hsl(0, 0, (x+z)&1 ? .4 : .3);
+    const floorMesh = buildGrid(vec2(levelSize), levelSize, checker);
+    new EngineObject3D(vec3(), floorMesh);
+
+    // build all the meshes and the level
     wallMesh = buildBox(.9).setColor(hsl(.6,.2,.4));
     blockMesh = buildBox(.8);
     ballMesh = buildSphere(.8);
     padMesh = buildBox(vec3(1,.1,1));
-
-    // checkered floor,
-    const checker = (x, z)=> hsl(0, 0, (x+z)&1 ? .4 : .3);
-    const floorMesh = buildGrid(vec2(levelSize), levelSize, checker);
-    new EngineObject3D(vec3(), floorMesh);
     buildLevel();
 }
 
@@ -147,30 +147,13 @@ function gameUpdate()
     if (keyWasPressed('ArrowUp'))    tryMove(0, -1);
     if (keyWasPressed('ArrowDown'))  tryMove(0, 1);
     if (keyWasPressed('KeyR'))       buildLevel();
-
-    // the cell under the mouse: a block under it, else where it meets the floor
-    const picked = render3D.pick(mousePosScreen, boxes)?.object;
-    const ground = render3D.screenToGround(mousePosScreen);
-    const toCell = (v)=> clamp(floor(v + levelSize/2), 0, levelSize-1);
-    const groundCell = ground && vec2(toCell(ground.x), toCell(ground.z));
-    hoverCell = picked ? picked.cell : groundCell;
-    if (hoverCell && isWall(hoverCell.x, hoverCell.y))
-        hoverCell = undefined;
-}
-
-function gameRender()
-{
-    // outline the hovered cell with a debug primitive
-    if (hoverCell)
-        debugBox3D(cellPos(hoverCell.x, hoverCell.y, .03),
-            vec3(.95,.05,.95), WHITE);
 }
 
 function gameRenderPost()
 {
     const text = 'arrows: move / R: reset / moves: ' + moves;
-    drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30);
-    if (goals.every(g=> g.lit))
-        drawTextScreen('SOLVED!',
-            vec2(mainCanvasSize.x/2, mainCanvasSize.y - 50), 50, litColor);
+    drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 40, BLACK);
+    const solvedPos = vec2(mainCanvasSize.x/2, mainCanvasSize.y - 50);
+    const isSolved = goals.every(g=> g.lit);
+    isSolved && drawTextScreen('SOLVED!', solvedPos, 50, YELLOW);
 }
