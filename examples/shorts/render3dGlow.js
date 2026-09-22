@@ -18,12 +18,12 @@ class Orb extends EngineObject3D
 function gameInit()
 {
     new Render3DPlugin;
-    postProcessBloom(.5, 2, 8); // setup bloom
     render3D.setSky(hsl(.7,.5,.1), hsl(.6,.4,.2));
     render3D.lightColor = hsl(.6,.3,.2);
     render3D.ambientColor = hsl(.6,.3,.15);
     render3D.smoothShading = true;
     new CameraControl3D(vec3(0,2,0), 20, .25, .002);
+    postProcessBloom(.5, 2, 8); // setup bloom
 
     // make floor and pillars
     new EngineObject3D(vec3(), buildGrid(vec2(30), 15, hsl(0,0,.5)));
