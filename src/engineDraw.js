@@ -289,6 +289,47 @@ class TextureInfo
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/**
+ * Shader - A custom fragment shader for objects and draws, 2D or 3D
+ * - Write a mainImage function in the post processing style, the renderer wraps it with its own program
+ * - It gives the surface color, then the object's color and additive color apply in 2D, and the lighting,
+ *   shadows and fog in 3D; set emissive to 1 on a 3D object for the snippet's color to be final
+ * - Set it as obj.shader, or use setShader for 2D draws and render3D.shader for 3D draws
+ * - Draws that share a Shader share a batch; with no Shader set nothing changes
+ * - In 2D it shades textured draws, untextured ones like drawRect draw as they are
+ * - Compiled once per renderer by the first draw that needs it; a bad snippet throws with the GLSL log in debug
+ * - Names in both renderers: iChannel0 the texture, iTime, iResolution, and localUV, 0 to 1 across the sprite
+ *   or the mesh's own uv
+ * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, lightCount,
+ *   lights[i], lightColors[i] and shadow()
+ * @example
+ * const fade = new Shader(`
+ * void mainImage(out vec4 c, vec2 uv)
+ * {
+ *     c = texture(iChannel0, uv);
+ *     c.a *= .5 + .5*sin(iTime);
+ * }`);
+ * obj.shader = fade;
+ * @memberof Draw
+ */
+class Shader
+{
+    /** Create a shader from a fragment snippet that defines void mainImage(out vec4 c, vec2 uv)
+     *  @param {string} fragmentCode */
+    constructor(fragmentCode)
+    {
+        ASSERT(isStringLike(fragmentCode) && String(fragmentCode).includes('mainImage'), 'a Shader needs fragment code that defines mainImage');
+        /** @property {string} - The mainImage snippet */
+        this.fragmentCode = String(fragmentCode);
+        /** @property {WebGLProgram} - The 2D program, compiled by the first draw that needs it, read only */
+        this.program = undefined;
+        /** @property {WebGLProgram} - The 3D program, compiled by the 3D plugin the same way, read only */
+        this.program3D = undefined;
+        glShaderObjects.push(this); // a lost context drops the programs of every one
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Drawing functions
 
 /** Draw textured tile centered in world space
@@ -1217,6 +1258,16 @@ function setAdditiveBlendMode(additive=true)
 {
     glAdditive = additive;
     drawContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+}
+
+/** Set the Shader that 2D draws use from now on, none for the engine's own
+ *  - The object render loop sets each object's own shader, so this is for draws in gameRender and gameRenderPost
+ *  @param {Shader} [shader]
+ *  @memberof Draw */
+function setShader(shader)
+{
+    ASSERT(!shader || shader instanceof Shader, 'shader must be a Shader');
+    glCustomShader = shader;
 }
 
 /** Set an extra canvas to composite behind the engine canvases when combining

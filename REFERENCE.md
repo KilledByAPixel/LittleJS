@@ -254,8 +254,18 @@ drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, tex
 
 // Utility drawing functions
 setAdditiveBlendMode(additive)
+setShader(shader)                  // draw with a custom Shader from now on, none for the engine's own; objects set
+                                   // their own, so this is for draws in gameRender and gameRenderPost
 isFullscreen()
 toggleFullscreen()
+
+// Shader Object - a custom fragment shader for objects and draws, 2D or 3D
+new Shader(fragmentCode)          // fragmentCode defines void mainImage(out vec4 c, vec2 uv) in the post processing
+                                  // style; it gives the surface color, then the object's color and additive color
+                                  // apply in 2D, and the lighting, shadows and fog in 3D
+obj.shader = shader               // any EngineObject or EngineObject3D; draws that share a Shader share a batch
+// names in the snippet: iChannel0 the texture, iTime, iResolution, localUV 0 to 1 across the sprite or the mesh uv;
+// in 2D untextured draws like drawRect are not shaded; a bad snippet throws with the GLSL log in debug builds
 
 // Tile Info Object
 TileInfo(pos, size, textureInfo, padding=0, bleed=0) // Create a tile info object

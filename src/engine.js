@@ -305,7 +305,12 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             gameRender();
             engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
             for (const o of engineObjects)
-                o.destroyed || o.render();
+            {
+                if (o.destroyed) continue;
+                setShader(o.shader); // each object draws with its own shader, or none
+                o.render();
+            }
+            setShader(); // back to the engine's for gameRenderPost
 
             // post rendering
             gameRenderPost();
