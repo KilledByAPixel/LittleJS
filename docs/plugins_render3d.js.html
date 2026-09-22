@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><meta name="description" content="LittleJS is a lightweight HTML5 game engine with fast WebGL rendering, physics, particles, sound, and more!"><meta name="keywords" content="javascript, game engine, html5, webgl, 2d, game development, indie games"><meta name="author" content="Frank Force"><meta property="og:title" content="LittleJS - The Tiny JavaScript Game Engine"><meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound"><meta property="og:type" content="website"><title>Source: plugins/render3d.js</title><!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_render3d.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_render3d.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
  * LittleJS 3D Rendering Plugin
  * - Adds a 3D scene that draws into the same WebGL canvas as the 2D game
  * - Call new Render3DPlugin() in gameInit, then move render3D.camera and make EngineObject3D objects
@@ -68,13 +68,13 @@ function render3DQuadValues(v) { return isArray(v) ? render3DQuadStrip(...v) : v
 // 3D draws are only valid during the pass with a live shader
 function render3DCanDraw()
 {
-    if (!render3D.shader) return false;
+    if (!render3D.program) return false;
     ASSERT(render3D.isRendering, '3D draws are only valid during the 3D pass, draw from an EngineObject3D or render3D.onRenderOpaque');
     return render3D.isRendering;
 }
 
 // the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
-const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated'];
+const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader'];
 
 // a copy of the current draw state
 function render3DCaptureBatchState()
@@ -160,6 +160,8 @@ function render3DSetObjectState(o)
     r.receiveShadow = !o || o.receiveShadow;
     r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
     r.pixelated = !!o?.pixelated;
+    ASSERT(!o?.shader || o.shader instanceof Shader, 'shader must be a Shader, not the snippet itself');
+    r.shader = o?.shader || undefined; // null is no shader too, so it batches with none
     r.depthTest = true;
 }
 
@@ -408,6 +410,8 @@ class Render3DPlugin
         this.mirrored = false;
         /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
         this.specular = 0;
+        /** @property {Shader} - Custom Shader for the next draws, set from each object's shader; undefined draws with the plugin's own */
+        this.shader = undefined;
         /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
         this.receiveShadow = true;
 
@@ -474,7 +478,9 @@ class Render3DPlugin
         this.blend = false;          // blending on, set by the stages
         this.frustumPlanes = [];     // the view as six inward planes [x, y, z, w]
         this.shadowPlanes = [];      // the shadow map's box as six planes
-        this.shader = undefined;     // the main shader, undefined when not available
+        this.program = undefined;    // the main program, undefined when not available
+        this.currentProgram = undefined; // the program in use during a pass, a Shader's or the main one
+        this.lightCount = 0;         // Light3D objects sent this pass
         this.shadowShader = undefined;
         this.vao = undefined;
         this.whiteTexture = undefined; // 1x1 white for untextured draws
@@ -877,7 +883,7 @@ class Render3DPlugin
         // a far plane at Infinity has no midpoint, so put it a long way out instead
         const {near, far} = this.camera;
         const radius = far == Infinity ? near * 1e4 : (near + far) / 2;
-        render3DWithState({lighting: false, blend: false, depthTest: false, depthWrite: false, fogEnd: 0}, ()=>
+        render3DWithState({lighting: false, blend: false, depthTest: false, depthWrite: false, fogEnd: 0, shader: undefined}, ()=>
             this.drawMesh(this.sky, buildMatrix(this.camera.pos, undefined, vec3(radius))));
     }
 
@@ -1118,7 +1124,7 @@ let render3DDebugPrimitives = [];
 function render3DRenderDebug()
 {
     if (!render3DDebugPrimitives.length) return;
-    render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false}, ()=>
+    render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
     {
         for (const p of render3DDebugPrimitives)
             p.draw();
@@ -1130,7 +1136,7 @@ function render3DRenderDebug()
 function render3DDebugPush(duration, draw)
 {
     ASSERT(isNumber(duration), 'duration must be a number');
-    debug &amp;&amp; render3D?.shader &amp;&amp; render3DDebugPrimitives.push({timer: new Timer(duration), draw});
+    debug &amp;&amp; render3D?.program &amp;&amp; render3DDebugPrimitives.push({timer: new Timer(duration), draw});
 }
 
 /** Draw a debug wireframe box
@@ -1305,56 +1311,71 @@ class Camera3D
 // the four attributes of a 36 byte vertex at the locations the shaders declare: location, size, type, normalize, byte offset
 const RENDER3D_ATTRIBS = [[0, 3, 5126, false, 0], [1, 3, 5126, false, 12], [2, 2, 5126, false, 24], [3, 4, 5121, true, 32]];
 
-function render3DInitGL()
-{
-    if (headlessMode) return;
-    if (!glEnable || !glContext)
-    {
-        console.warn('Render3DPlugin: WebGL not enabled, construct the plugin in gameInit with glEnable set');
-        return;
-    }
-    const gl = glContext, r = render3D;
-    r.uniforms = new Map;
-    r.uniformValues = {};
-    r.attribValues = []; // a fresh context has its own attribute defaults, so nothing sent before it counts
+// the vertex shader, shared by the plugin's program and every Shader's
+// attributes: p position, n normal, t uv, c color, at fixed slots the depth shader also uses
+// uniforms: viewProj, lightViewProj; the model matrix, the normal matrix, the tint and the uv rect are vertex
+// attributes, see RENDER3D_VERTEX_INPUTS; L is the mesh's own uv for a Shader's localUV
+const RENDER3D_VERTEX_SOURCE =
+    '#version 300 es\n' +
+    'precision highp float;' +
+    'uniform mat4 viewProj,lightViewProj;' +
+    RENDER3D_VERTEX_INPUTS +
+    'out vec3 P,N;out vec2 T,L;out vec4 C,S;' +
+    'void main(){' +
+    'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
+    'gl_Position=viewProj*w;' +
+    'P=w.xyz;' +
+    'N=mat3(n0,n1,n2)*n;' +
+    'T=uvRect.xy+t*uvRect.zw;' +
+    'L=t;' +
+    'C=c*tint;' +
+    'S=lightViewProj*w;' +
+    '}';
 
-    // the shader
-    // attributes: p position, n normal, t uv, c color, at fixed slots the depth shader also uses
-    // vertex uniforms: viewProj, lightViewProj; the model matrix, the normal matrix (the fixed up one for normals),
-    //   the tint and the uv rect are vertex attributes, see RENDER3D_VERTEX_INPUTS
-    // fragment uniforms: lightDir (xyz the way the sunlight travels, w = emissive, 1 or more skips the lighting),
-    //   lightColor (the sun's rgb, a = specular),
-    //   ambientColor (rgb, a = fogEnd), fogColor (rgb, a = fogStart), cameraPos, tex,
-    //   shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
-    //   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive)
-    r.shader = glCreateProgram(
-        '#version 300 es\n' +
+// the names a Shader's snippet can use in 3D, over the plugin's own uniforms and varyings
+const RENDER3D_SNIPPET_NAMES =
+    'uniform float iTime;uniform vec3 iResolution;\n' +
+    '#define iChannel0 tex\n' +
+    '#define localUV L\n' +
+    '#define worldPos P\n' +
+    '#define worldNormal N\n' +
+    '#define sunDirection (-lightDir.xyz)\n' +
+    '#define sunColor lightColor.rgb\n' +
+    '#define ambientColor ambientFog.rgb\n' +
+    '#define lightCount extraLightCount\n' +
+    '#define lights extraLights\n' +
+    '#define lightColors extraLightColors\n';
+
+// the fragment shader; given a Shader's snippet, its mainImage replaces the texture sample and all else is the same
+// uniforms: lightDir (xyz the way the sunlight travels, w = emissive, 1 or more skips the lighting),
+//   lightColor (the sun's rgb, a = specular), ambientFog (rgb, a = fogEnd), fogColor (rgb, a = fogStart),
+//   cameraPos, tex, shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
+//   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive)
+function render3DFragmentSource(fragmentCode)
+{
+    return '#version 300 es\n' +
         'precision highp float;' +
-        'uniform mat4 viewProj,lightViewProj;' +
-        RENDER3D_VERTEX_INPUTS +
-        'out vec3 P,N;out vec2 T;out vec4 C,S;' +
-        'void main(){' +
-        'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
-        'gl_Position=viewProj*w;' +
-        'P=w.xyz;' +
-        'N=mat3(n0,n1,n2)*n;' +
-        'T=uvRect.xy+t*uvRect.zw;' +
-        'C=c*tint;' +
-        'S=lightViewProj*w;' +
-        '}'
-        ,
-        '#version 300 es\n' +
-        'precision highp float;' +
-        'uniform vec4 lightDir,lightColor,ambientColor,fogColor,shadowParams;' +
+        'uniform vec4 lightDir,lightColor,ambientFog,fogColor,shadowParams;' +
         'uniform vec4 extraLights[' + RENDER3D_MAX_LIGHTS + '],extraLightColors[' + RENDER3D_MAX_LIGHTS + '];' +
         'uniform int extraLightCount;' +
         'uniform vec3 cameraPos;' +
         'uniform sampler2D tex;' +
         'uniform highp sampler2DShadow shadowMap;' +
-        'in vec3 P,N;in vec2 T;in vec4 C,S;' +
+        'in vec3 P,N;in vec2 T,L;in vec4 C,S;' +
         'out vec4 o;' +
+        // the sun shadow at this fragment, 0 to 1: the light's depth map with a 3x3 blur, outside the map is lit
+        'float shadow(){' +
+        'if(shadowParams.x&lt;=0.)return 1.;' +
+        'vec3 q=S.xyz/S.w*.5+.5;' +
+        'if(any(greaterThanEqual(abs(q-.5),vec3(.5))))return 1.;' +
+        'q.z-=shadowParams.y;' +
+        'float s=0.;' +
+        'for(int x=-1;x&lt;=1;++x)for(int y=-1;y&lt;=1;++y)' +
+        's+=texture(shadowMap,vec3(q.xy+vec2(x,y)*shadowParams.z,q.z));' +
+        'return s/9.;}' +
+        (fragmentCode ? RENDER3D_SNIPPET_NAMES + fragmentCode + '\n' : '') +
         'void main(){' +
-        'vec4 t=texture(tex,T);' +
+        (fragmentCode ? 'vec4 t;mainImage(t,T);' : 'vec4 t=texture(tex,T);') +
         'if(shadowParams.w>0.&amp;&amp;t.a&lt;.5)discard;' + // an opaque draw drops see through texels, as the shadow map does
         'vec4 c=C*t;' +
         'float e=lightDir.w;' +
@@ -1362,18 +1383,8 @@ function render3DInitGL()
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
         'float nl=dot(n,-lightDir.xyz);' +
-        // shadow: compare against the light's depth map with a 3x3 blur, outside the map is lit
-        'float s=1.;' +
-        'if(shadowParams.x>0.){' +
-        'vec3 q=S.xyz/S.w*.5+.5;' +
-        'if(all(lessThan(abs(q-.5),vec3(.5)))){' +
-        'q.z-=shadowParams.y;' +
-        's=0.;' +
-        'for(int x=-1;x&lt;=1;++x)for(int y=-1;y&lt;=1;++y)' +
-        's+=texture(shadowMap,vec3(q.xy+vec2(x,y)*shadowParams.z,q.z));' +
-        's/=9.;' +
-        '}}' +
-        'vec3 l=ambientColor.rgb+lightColor.rgb*max(nl,0.)*s;' +
+        'float s=shadow();' +
+        'vec3 l=ambientFog.rgb+lightColor.rgb*max(nl,0.)*s;' +
         // the Light3D objects, diffuse only: a point light falls off with distance, a directional one does not and
         // carries the direction toward it in xyz, marked by a negative radius
         'for(int i=0;i&lt;' + RENDER3D_MAX_LIGHTS + ';++i){' +
@@ -1392,14 +1403,62 @@ function render3DInitGL()
         'vec3 r=reflect(lightDir.xyz,n);' +
         'c.rgb+=lightColor.rgb*pow(max(dot(r,v),0.),16.)*lightColor.a*step(0.,nl)*s*(1.-e);' +
         '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
-        'if(ambientColor.a>0.){' +
+        'if(ambientFog.a>0.){' +
         'float z=distance(cameraPos,P);' +
-        'c.rgb=mix(c.rgb,shadowParams.w&lt;0.?vec3(0):fogColor.rgb,smoothstep(fogColor.a,ambientColor.a,z));' +
+        'c.rgb=mix(c.rgb,shadowParams.w&lt;0.?vec3(0):fogColor.rgb,smoothstep(fogColor.a,ambientFog.a,z));' +
         '}' +
         'o=vec4(c.rgb,shadowParams.w>0.?1.:c.a);' + // an opaque draw stays opaque whatever the tint alpha says
+        '}';
+}
 
-        '}'
-    );
+// a Shader's 3D program, compiled the first time a draw needs it
+function render3DShaderProgram(shader)
+{
+    ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
+    return shader.program3D ||= glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource(shader.fragmentCode));
+}
+
+// make a program current for the pass and send it the pass uniforms: the matrices, the camera and the lights,
+// plus the time and canvas size for a Shader's program; the per draw uniform cache starts over
+function render3DUseProgram(program)
+{
+    const gl = glContext, r = render3D;
+    gl.useProgram(r.currentProgram = program);
+    r.uniformValues = {};
+    gl.uniformMatrix4fv(render3DUniform('viewProj'), false, r.viewProjection.m);
+    gl.uniformMatrix4fv(render3DUniform('lightViewProj'), false, r.shadowMatrix.m);
+    gl.uniform1i(render3DUniform('tex'), 0);
+    gl.uniform1i(render3DUniform('shadowMap'), 1);
+    const c = r.camera.pos;
+    gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
+    gl.uniform1i(render3DUniform('extraLightCount'), r.lightCount);
+    if (r.lightCount)
+    {
+        gl.uniform4fv(render3DUniform('extraLights'), r.lightPositions, 0, r.lightCount * 4);
+        gl.uniform4fv(render3DUniform('extraLightColors'), r.lightColors, 0, r.lightCount * 4);
+    }
+    if (program !== r.program)
+    {
+        gl.uniform1f(render3DUniform('iTime'), time);
+        gl.uniform3f(render3DUniform('iResolution'), glCanvas.width, glCanvas.height, 1);
+    }
+}
+
+function render3DInitGL()
+{
+    if (headlessMode) return;
+    if (!glEnable || !glContext)
+    {
+        console.warn('Render3DPlugin: WebGL not enabled, construct the plugin in gameInit with glEnable set');
+        return;
+    }
+    const gl = glContext, r = render3D;
+    r.uniforms = new Map;
+    r.uniformValues = {};
+    r.attribValues = []; // a fresh context has its own attribute defaults, so nothing sent before it counts
+
+    // the shader, see RENDER3D_VERTEX_SOURCE and render3DFragmentSource
+    r.program = glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource());
 
     // the depth only shader for the shadow map, same vertex layout; see through pixels cast nothing,
     // so sprites and cut out textures cast their outline
@@ -1449,7 +1508,10 @@ function render3DInitGL()
 function render3DContextLost()
 {
     const r = render3D;
-    r.shader = r.shadowShader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
+    r.program = r.currentProgram = r.shadowShader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
+    for (const shader of glShaderObjects)
+        shader.program3D = undefined; // compiled again by the next draw
+    r.lightCount = 0;
     r.instanceBuffers = r.samplers = [];
     r.samplerKey = undefined;
     render3DClearInstances();
@@ -1465,7 +1527,7 @@ function render3DContextRestored()
 }
 
 // a uniform location, looked up once per program
-function render3DUniform(name, program=render3D.shader)
+function render3DUniform(name, program=render3D.currentProgram)
 {
     const u = render3D.uniforms;
     let cache = u.get(program);
@@ -1620,6 +1682,10 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     render3DBindTexture(tileInfo, state);
     if (r.shadowPass) return; // the shadow map needs nothing else
 
+    // the program: a Shader's own, compiled by its first draw, or the plugin's; switching sends the pass uniforms
+    const program = state.shader ? render3DShaderProgram(state.shader) : r.program;
+    program === r.currentProgram || render3DUseProgram(program);
+
     // blending, matches the engine's 2D blend functions
     if (state.blend)
     {
@@ -1641,7 +1707,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     const s = r.sunDirection, sl = -(s.length() || 1), lc = r.sunColor, ac = r.ambientColor, fc = r.fogColor || canvasClearColor;
     render3DUniform4f('lightDir', s.x / sl, s.y / sl, s.z / sl, state.lighting ? state.emissive : 1);
     render3DUniform4f('lightColor', lc.r, lc.g, lc.b, state.specular);
-    render3DUniform4f('ambientColor', ac.r, ac.g, ac.b, r.fogEnd);
+    render3DUniform4f('ambientFog', ac.r, ac.g, ac.b, r.fogEnd);
     render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogStart);
     // how the fragment shader finishes: 1 drops see through texels and keeps the draw opaque,
     // 0 blends them away instead, and -1 is additive, which has to fade into fog differently
@@ -1684,7 +1750,7 @@ function render3DRender()
 function render3DRenderPass(after2D)
 {
     const gl = glContext, r = render3D;
-    if (!r.shader) return; // headless, gl disabled, or context lost
+    if (!r.program) return; // headless, gl disabled, or context lost
     render3DUpdateSamplers();
     ASSERT(!r.fogEnd || r.fogStart &lt; r.fogEnd, 'fogStart must be less than fogEnd');
     ASSERT(!glRenderTarget, 'the 3D pass needs the canvas depth buffer, it can not draw into a render target');
@@ -1699,7 +1765,6 @@ function render3DRenderPass(after2D)
     render3DClearInstances();
 
     // take over the gl state
-    gl.useProgram(r.shader);
     gl.bindVertexArray(r.vao);
     // the leading repeat on every strip shifts the triangles by one, which flips
     // which way they read, so tell WebGL that clockwise is the front here
@@ -1707,30 +1772,20 @@ function render3DRenderPass(after2D)
     gl.activeTexture(gl.TEXTURE0);
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT);
-    gl.uniformMatrix4fv(render3DUniform('viewProj'), false, r.viewProjection.m);
-    gl.uniform1i(render3DUniform('tex'), 0);
-    gl.uniform1i(render3DUniform('shadowMap'), 1);
-    const c = r.camera.pos;
-    gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
 
     // the Light3D objects, a directional one sends the direction toward it, from the origin, and a negative radius
     const lights = render3DCollectLights();
-    gl.uniform1i(render3DUniform('extraLightCount'), lights.length);
-    if (lights.length)
+    r.lightCount = lights.length;
+    const positions = r.lightPositions, colors = r.lightColors;
+    lights.forEach((light, i)=>
     {
-        const positions = r.lightPositions, colors = r.lightColors;
-        lights.forEach((light, i)=>
-        {
-            const p = light.directional ? light.getWorldPos3D().normalize() : light.getWorldPos3D();
-            ASSERT(!light.directional || p.lengthSquared(), 'a directional light shines from its position toward the origin, so it cannot sit on the origin');
-            const c = light.color, k = i * 4;
-            positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
-            positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
-            colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a * light.intensity;
-        });
-        gl.uniform4fv(render3DUniform('extraLights'), positions, 0, lights.length * 4);
-        gl.uniform4fv(render3DUniform('extraLightColors'), colors, 0, lights.length * 4);
-    }
+        const p = light.directional ? light.getWorldPos3D().normalize() : light.getWorldPos3D();
+        ASSERT(!light.directional || p.lengthSquared(), 'a directional light shines from its position toward the origin, so it cannot sit on the origin');
+        const c = light.color, k = i * 4;
+        positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
+        positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
+        colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a * light.intensity;
+    });
 
     r.isRendering = true;
     try
@@ -1741,13 +1796,14 @@ function render3DRenderPass(after2D)
             render3DRenderShadowMap();
             r.shadowMapDrawn = true;
         }
-        gl.uniformMatrix4fv(render3DUniform('lightViewProj'), false, r.shadowMatrix.m);
+        render3DUseProgram(r.program); // after the shadow map, so the light matrix it sends is this frame's
         r.renderStages(objects, isDefault);
     }
     finally
     {
         // hand the state back to the engine's 2D batching, even when a draw threw
         r.isRendering = false;
+        r.currentProgram = undefined; // the engine's 2D program takes over below
         r.streamCount = 0;
         r.capture = r.transparentQueue = undefined;
         gl.disable(gl.DEPTH_TEST);
@@ -1831,7 +1887,6 @@ function render3DRenderShadowMap()
 
         // backing store size, mainCanvasSize is css pixels
         gl.viewport(0, 0, glCanvas.width, glCanvas.height);
-        gl.useProgram(r.shader);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture);
         gl.activeTexture(gl.TEXTURE0);
@@ -2193,7 +2248,7 @@ class Mesh
     upload()
     {
         this.computeRadius();
-        if (!render3D?.shader) return this;
+        if (!render3D?.program) return this;
         this.dispose();
         const count = this.points.length;
         const data = new ArrayBuffer(count * RENDER3D_VERTEX_BYTES);
@@ -3948,4 +4003,4 @@ async function loadOBJ(url, smooth=render3D?.smoothShading)
         throw new Error('loadOBJ failed: ' + url);
     return parseOBJ(await response.text(), smooth);
 }
-</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
