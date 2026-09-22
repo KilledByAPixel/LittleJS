@@ -104,7 +104,7 @@ class Car extends EngineObject3D
         if (!this.engineLoop?.isPlaying())
             this.engineLoop = render3D.playSound(engineSound, this.pos3D,
                 .1, 1, 1, true);
-        this.engineLoop?.setRate(.5 + abs(this.speed)*2.5);
+        this.engineLoop?.setRate(.5 + abs(this.speed)*2);
 
         // gates count in order, the finish line completes a lap
         const angle = mod(atan2(this.pos3D.z, this.pos3D.x), 2*PI);
