@@ -88,7 +88,7 @@ function endRound()
     buildScoreText();
     engineObjects.forEach(o=> o instanceof Box && o.destroy());
     trail.clear();
-    spawnTimer.set(1); // a moment to breathe
+    spawnTimer.set(2); // a moment to breathe
 }
 
 function gameInit()
