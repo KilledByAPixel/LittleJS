@@ -171,7 +171,11 @@ function gameInit()
     }
 
     // make the player vehicle
-    car = new Car(trackPoint(0));
+    // start on the road, with the camera already behind the car
+    const start = trackPoint(0);
+    start.y = terrain.getHeight(start) + .85;
+    car = new Car(start);
+    render3D.camera.follow(car.pos3D, vec3(0,5,10).rotateY(car.yaw));
 }
 
 function gameUpdatePost()
