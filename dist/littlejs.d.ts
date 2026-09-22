@@ -24,6 +24,13 @@ declare module "littlejsengine" {
      */
     export type Canvas2DDrawFunction = (context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => any;
     /**
+     * Anything with input and output audio nodes, like an effect from the audio effects plugin
+     */
+    export type AudioEffectNodes = {
+        input: AudioNode;
+        output: AudioNode;
+    };
+    /**
      * - Function called when a sound ends
      */
     export type AudioEndedCallback = (source: AudioBufferSourceNode) => any;
@@ -2610,16 +2617,19 @@ declare module "littlejsengine" {
      *  @type {GainNode}
      *  @memberof Audio */
     export let audioMasterGain: GainNode;
+    /** Anything with input and output audio nodes, like an effect from the audio effects plugin
+     *  @typedef {{input: AudioNode, output: AudioNode}} AudioEffectNodes
+     *  @memberof Audio */
     /** Route all sound through an effect between the master gain and the speakers
-     *  - Pass the first and last nodes of an effect chain, for an AudioEffect that is effect.input and effect.output
-     *  - The one argument form is for a single raw node that is both, never an effect's input
+     *  - Pass a node or an effect, or the first and last of a chain, each a node or an effect
+     *  - With one argument a node is both ends, and an effect uses its own input and output
      *  - The output node is disconnected from everything else first, so it only feeds the speakers
      *  - Call with no arguments to remove the effect, can be called before engineInit
      *  - Debug video capture records the master gain, so master effects are not in the recording
-     *  @param {AudioNode} [input] - Node the master gain connects to
-     *  @param {AudioNode} [output=input] - Node that connects to the audio destination
+     *  @param {AudioNode|AudioEffectNodes} [input] - Node or effect the master gain connects to
+     *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect that connects to the audio destination, defaults to the input's output
      *  @memberof Audio */
-    export function setAudioMasterEffect(input?: AudioNode, output?: AudioNode): void;
+    export function setAudioMasterEffect(input?: AudioNode | AudioEffectNodes, output?: AudioNode | AudioEffectNodes): void;
     /** Default sample rate used for sounds
      *  @default 44100
      *  @memberof Audio */
@@ -2682,9 +2692,9 @@ declare module "littlejsengine" {
         loadedPercent: number;
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         onloadCallback: (sound: Sound) => Sound;
-        /** @property {AudioNode} - Node to route every play of this sound through instead of the master gain, for effects
-         *  @type {AudioNode} */
-        output: AudioNode;
+        /** @property {AudioNode|AudioEffectNodes} - Node or effect to route every play of this sound through instead of the master gain
+         *  @type {AudioNode|AudioEffectNodes} */
+        output: AudioNode | AudioEffectNodes;
         /** @param {Array<Array<number>|Float32Array>} sampleChannels */
         set sampleChannels(arg: (number[] | Float32Array)[]);
         /** Sample data for each channel
@@ -2785,9 +2795,9 @@ declare module "littlejsengine" {
         gainNode: GainNode;
         /** @property {AudioBufferSourceNode} - Source node of the audio */
         source: AudioBufferSourceNode;
-        /** @property {AudioNode} - Node to route this instance through, copied from the sound
-         *  @type {AudioNode} */
-        output: AudioNode;
+        /** @property {AudioNode|AudioEffectNodes} - Node or effect to route this instance through, copied from the sound
+         *  @type {AudioNode|AudioEffectNodes} */
+        output: AudioNode | AudioEffectNodes;
         onendedCallback: (source: any) => void;
         /** Start playing the sound instance from the offset time
          *  @param {number} [offset] - Offset in seconds to start playback from
@@ -2860,10 +2870,10 @@ declare module "littlejsengine" {
      *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
      *  @param {number}   [offset] - Offset in seconds to start playback from
      *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
-     *  @param {AudioNode} [output] - Node to connect the gain to instead of the master gain, for effects
+     *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
      *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
      *  @memberof Audio */
-    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback, output?: AudioNode): AudioBufferSourceNode;
+    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback, output?: AudioNode | AudioEffectNodes): AudioBufferSourceNode;
     /** Play an audio buffer with given settings
      *  The buffer can be shared by any number of sounds playing at once
      *  @param {AudioBuffer} buffer - The audio buffer to play
@@ -2874,10 +2884,10 @@ declare module "littlejsengine" {
      *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
      *  @param {number}   [offset] - Offset in seconds to start playback from
      *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
-     *  @param {AudioNode} [output] - Node to connect the gain to instead of the master gain, for effects
+     *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
      *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
      *  @memberof Audio */
-    export function playAudioBuffer(buffer: AudioBuffer, volume?: number, rate?: number, pan?: number, loop?: boolean, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback, output?: AudioNode): AudioBufferSourceNode;
+    export function playAudioBuffer(buffer: AudioBuffer, volume?: number, rate?: number, pan?: number, loop?: boolean, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback, output?: AudioNode | AudioEffectNodes): AudioBufferSourceNode;
     /** Copy arrays of samples into a new audio buffer
      *  @param {Array}  sampleChannels - Array of arrays of samples (for stereo playback)
      *  @param {number} [sampleRate=44100] - Sample rate for the sound
@@ -3960,7 +3970,7 @@ declare module "littlejsengine" {
      * @memberof AudioEffects
      * @example
      * const cave = new AudioReverb(3, 2);
-     * footstep.output = cave.input; // every play of this sound is in the cave
+     * footstep.output = cave; // every play of this sound is in the cave
      */
     export class AudioEffect {
         /** Create an audio effect
@@ -3998,16 +4008,16 @@ declare module "littlejsengine" {
      * @memberof AudioEffects
      * @example
      * const muffle = new AudioFilter('lowpass', 400);
-     * setAudioMasterEffect(muffle.input, muffle.output);
+     * setAudioMasterEffect(muffle);
      * muffle.setFrequency(20000, .5); // sweep back to clear
      */
     export class AudioFilter extends AudioEffect {
         /** Create a filter effect
-         *  @param {string} [type] - lowpass, highpass, bandpass, notch, etc.
+         *  @param {BiquadFilterType} [type] - lowpass, highpass, bandpass, notch, etc.
          *  @param {number} [frequency] - Cutoff or center frequency in Hz
          *  @param {number} [q] - Resonance at the cutoff, higher is sharper
          *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
-        constructor(type?: string, frequency?: number, q?: number, mix?: number);
+        constructor(type?: BiquadFilterType, frequency?: number, q?: number, mix?: number);
         /** @property {BiquadFilterNode} - The filter node */
         node: BiquadFilterNode;
         /** Set the cutoff or center frequency
@@ -4026,7 +4036,7 @@ declare module "littlejsengine" {
      * @memberof AudioEffects
      * @example
      * const hall = new AudioReverb(4, 1.5, .4);
-     * footstep.output = hall.input;
+     * footstep.output = hall;
      */
     export class AudioReverb extends AudioEffect {
         /** Create a reverb effect
@@ -4048,7 +4058,7 @@ declare module "littlejsengine" {
      * @memberof AudioEffects
      * @example
      * const canyon = new AudioDelay(.4, .5);
-     * shout.output = canyon.input;
+     * shout.output = canyon;
      */
     export class AudioDelay extends AudioEffect {
         /** Create a delay effect
@@ -4075,7 +4085,7 @@ declare module "littlejsengine" {
      * @memberof AudioEffects
      * @example
      * const radio = new AudioDistortion(.8);
-     * voice.output = radio.input;
+     * voice.output = radio;
      */
     export class AudioDistortion extends AudioEffect {
         /** Create a distortion effect
@@ -4097,7 +4107,7 @@ declare module "littlejsengine" {
      * @memberof AudioEffects
      * @example
      * const compressor = new AudioCompressor;
-     * setAudioMasterEffect(compressor.input, compressor.output);
+     * setAudioMasterEffect(compressor);
      */
     export class AudioCompressor extends AudioEffect {
         /** Create a compressor effect

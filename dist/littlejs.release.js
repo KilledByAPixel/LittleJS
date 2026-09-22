@@ -6415,19 +6415,26 @@ function audioVisibilityChange()
     }
 }
 
+/** Anything with input and output audio nodes, like an effect from the audio effects plugin
+ *  @typedef {{input: AudioNode, output: AudioNode}} AudioEffectNodes
+ *  @memberof Audio */
+
 /** Route all sound through an effect between the master gain and the speakers
- *  - Pass the first and last nodes of an effect chain, for an AudioEffect that is effect.input and effect.output
- *  - The one argument form is for a single raw node that is both, never an effect's input
+ *  - Pass a node or an effect, or the first and last of a chain, each a node or an effect
+ *  - With one argument a node is both ends, and an effect uses its own input and output
  *  - The output node is disconnected from everything else first, so it only feeds the speakers
  *  - Call with no arguments to remove the effect, can be called before engineInit
  *  - Debug video capture records the master gain, so master effects are not in the recording
- *  @param {AudioNode} [input] - Node the master gain connects to
- *  @param {AudioNode} [output=input] - Node that connects to the audio destination
+ *  @param {AudioNode|AudioEffectNodes} [input] - Node or effect the master gain connects to
+ *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect that connects to the audio destination, defaults to the input's output
  *  @memberof Audio */
-function setAudioMasterEffect(input, output=input)
+function setAudioMasterEffect(input, output)
 {
-    ASSERT(!input || typeof input.connect === 'function' && !input.input, 'input must be an AudioNode, for an AudioEffect pass effect.input and effect.output');
-    ASSERT(!output || typeof output.connect === 'function' && !output.input, 'output must be an AudioNode, for an AudioEffect pass effect.input and effect.output');
+    // an effect stands in for its nodes, and a node is both ends when no output is passed
+    input = audioEffectNode(input, 'input');
+    output = audioEffectNode(output, 'output') || audioEffectNode(input, 'output');
+    ASSERT(!input || typeof input.connect === 'function', 'input must be an AudioNode or an effect with input and output nodes');
+    ASSERT(!output || typeof output.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
 
     // the master gain is disconnected selectively so other taps on it survive,
     // but the output node is dropped from everything since it only ever fed the speakers
@@ -6440,6 +6447,17 @@ function setAudioMasterEffect(input, output=input)
     audioMasterEffectOutput = output;
     if (audioMasterGain)
         audioMasterEffectApply();
+}
+
+// get one of an effect's nodes, or the thing itself when it is already a node
+/** @param {AudioNode|AudioEffectNodes|undefined} effectOrNode
+ *  @param {'input'|'output'} key
+ *  @return {AudioNode} */
+function audioEffectNode(effectOrNode, key)
+{
+    if (effectOrNode && 'input' in effectOrNode)
+        return /** @type {AudioEffectNodes} */ (effectOrNode)[key];
+    return /** @type {AudioNode} */ (effectOrNode);
 }
 
 // connect the master gain to the speakers, through the master effect if there is one
@@ -6522,8 +6540,8 @@ class Sound
         this.loadedPercent = 0;
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
-        /** @property {AudioNode} - Node to route every play of this sound through instead of the master gain, for effects
-         *  @type {AudioNode} */
+        /** @property {AudioNode|AudioEffectNodes} - Node or effect to route every play of this sound through instead of the master gain
+         *  @type {AudioNode|AudioEffectNodes} */
         this.output = undefined;
 
         if (isArray(asset))
@@ -6767,8 +6785,8 @@ class SoundInstance
         this.gainNode = undefined;
         /** @property {AudioBufferSourceNode} - Source node of the audio */
         this.source = undefined;
-        /** @property {AudioNode} - Node to route this instance through, copied from the sound
-         *  @type {AudioNode} */
+        /** @property {AudioNode|AudioEffectNodes} - Node or effect to route this instance through, copied from the sound
+         *  @type {AudioNode|AudioEffectNodes} */
         this.output = sound.output;
         // setup end callback and start sound
         this.onendedCallback = (source)=>
@@ -6975,7 +6993,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
  *  @param {number}   [offset] - Offset in seconds to start playback from
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
- *  @param {AudioNode} [output] - Node to connect the gain to instead of the master gain, for effects
+ *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
  *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
  *  @memberof Audio */
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended, output)
@@ -7017,7 +7035,7 @@ function createAudioBuffer(sampleChannels, sampleRate=audioDefaultSampleRate)
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
  *  @param {number}   [offset] - Offset in seconds to start playback from
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
- *  @param {AudioNode} [output] - Node to connect the gain to instead of the master gain, for effects
+ *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
  *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
  *  @memberof Audio */
 function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended, output)
@@ -7040,7 +7058,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
     // create and connect gain node
     gainNode = gainNode || audioContext.createGain();
     gainNode.gain.value = volume;
-    gainNode.connect(output || audioMasterGain);
+    gainNode.connect(audioEffectNode(output, 'input') || audioMasterGain);
 
     // connect source to stereo panner and gain
     const pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});
@@ -10801,8 +10819,8 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 /**
  * LittleJS Audio Effects Plugin
  * - Web Audio effects with a wet/dry mix: filter, reverb, delay, distortion, compressor
- * - Route a sound through one with sound.output = effect.input
- * - Route everything with setAudioMasterEffect(effect.input, effect.output)
+ * - Route a sound through one with sound.output = effect
+ * - Route everything with setAudioMasterEffect(effect)
  * - Chain effects with effect.connect(nextEffect)
  * - Create effects after engineInit, in gameInit or later
  * @namespace AudioEffects
@@ -10833,7 +10851,7 @@ function audioParamRamp(param, value, fadeTime=0)
  * @memberof AudioEffects
  * @example
  * const cave = new AudioReverb(3, 2);
- * footstep.output = cave.input; // every play of this sound is in the cave
+ * footstep.output = cave; // every play of this sound is in the cave
  */
 class AudioEffect
 {
@@ -10908,13 +10926,13 @@ class AudioEffect
  * @memberof AudioEffects
  * @example
  * const muffle = new AudioFilter('lowpass', 400);
- * setAudioMasterEffect(muffle.input, muffle.output);
+ * setAudioMasterEffect(muffle);
  * muffle.setFrequency(20000, .5); // sweep back to clear
  */
 class AudioFilter extends AudioEffect
 {
     /** Create a filter effect
-     *  @param {string} [type] - lowpass, highpass, bandpass, notch, etc.
+     *  @param {BiquadFilterType} [type] - lowpass, highpass, bandpass, notch, etc.
      *  @param {number} [frequency] - Cutoff or center frequency in Hz
      *  @param {number} [q] - Resonance at the cutoff, higher is sharper
      *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
@@ -10959,7 +10977,7 @@ class AudioFilter extends AudioEffect
  * @memberof AudioEffects
  * @example
  * const hall = new AudioReverb(4, 1.5, .4);
- * footstep.output = hall.input;
+ * footstep.output = hall;
  */
 class AudioReverb extends AudioEffect
 {
@@ -11005,7 +11023,7 @@ class AudioReverb extends AudioEffect
  * @memberof AudioEffects
  * @example
  * const canyon = new AudioDelay(.4, .5);
- * shout.output = canyon.input;
+ * shout.output = canyon;
  */
 class AudioDelay extends AudioEffect
 {
@@ -11053,7 +11071,7 @@ class AudioDelay extends AudioEffect
  * @memberof AudioEffects
  * @example
  * const radio = new AudioDistortion(.8);
- * voice.output = radio.input;
+ * voice.output = radio;
  */
 class AudioDistortion extends AudioEffect
 {
@@ -11101,7 +11119,7 @@ class AudioDistortion extends AudioEffect
  * @memberof AudioEffects
  * @example
  * const compressor = new AudioCompressor;
- * setAudioMasterEffect(compressor.input, compressor.output);
+ * setAudioMasterEffect(compressor);
  */
 class AudioCompressor extends AudioEffect
 {

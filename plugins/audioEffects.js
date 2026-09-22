@@ -1,8 +1,8 @@
 /**
  * LittleJS Audio Effects Plugin
  * - Web Audio effects with a wet/dry mix: filter, reverb, delay, distortion, compressor
- * - Route a sound through one with sound.output = effect.input
- * - Route everything with setAudioMasterEffect(effect.input, effect.output)
+ * - Route a sound through one with sound.output = effect
+ * - Route everything with setAudioMasterEffect(effect)
  * - Chain effects with effect.connect(nextEffect)
  * - Create effects after engineInit, in gameInit or later
  * @namespace AudioEffects
@@ -35,7 +35,7 @@ function audioParamRamp(param, value, fadeTime=0)
  * @memberof AudioEffects
  * @example
  * const cave = new AudioReverb(3, 2);
- * footstep.output = cave.input; // every play of this sound is in the cave
+ * footstep.output = cave; // every play of this sound is in the cave
  */
 class AudioEffect
 {
@@ -110,13 +110,13 @@ class AudioEffect
  * @memberof AudioEffects
  * @example
  * const muffle = new AudioFilter('lowpass', 400);
- * setAudioMasterEffect(muffle.input, muffle.output);
+ * setAudioMasterEffect(muffle);
  * muffle.setFrequency(20000, .5); // sweep back to clear
  */
 class AudioFilter extends AudioEffect
 {
     /** Create a filter effect
-     *  @param {string} [type] - lowpass, highpass, bandpass, notch, etc.
+     *  @param {BiquadFilterType} [type] - lowpass, highpass, bandpass, notch, etc.
      *  @param {number} [frequency] - Cutoff or center frequency in Hz
      *  @param {number} [q] - Resonance at the cutoff, higher is sharper
      *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
@@ -161,7 +161,7 @@ class AudioFilter extends AudioEffect
  * @memberof AudioEffects
  * @example
  * const hall = new AudioReverb(4, 1.5, .4);
- * footstep.output = hall.input;
+ * footstep.output = hall;
  */
 class AudioReverb extends AudioEffect
 {
@@ -207,7 +207,7 @@ class AudioReverb extends AudioEffect
  * @memberof AudioEffects
  * @example
  * const canyon = new AudioDelay(.4, .5);
- * shout.output = canyon.input;
+ * shout.output = canyon;
  */
 class AudioDelay extends AudioEffect
 {
@@ -255,7 +255,7 @@ class AudioDelay extends AudioEffect
  * @memberof AudioEffects
  * @example
  * const radio = new AudioDistortion(.8);
- * voice.output = radio.input;
+ * voice.output = radio;
  */
 class AudioDistortion extends AudioEffect
 {
@@ -303,7 +303,7 @@ class AudioDistortion extends AudioEffect
  * @memberof AudioEffects
  * @example
  * const compressor = new AudioCompressor;
- * setAudioMasterEffect(compressor.input, compressor.output);
+ * setAudioMasterEffect(compressor);
  */
 class AudioCompressor extends AudioEffect
 {

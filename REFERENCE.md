@@ -342,7 +342,7 @@ Sound.playNote(semitoneOffset, pos, volume=1)          // Play as note with a se
 Sound.getDuration()                                    // Get length of sound in seconds (0 if loading)
 Sound.isLoaded()                                       // Check if sound is fully loaded
 Sound.loadedPercent                                    // Get loading progress (0 to 1)
-Sound.output                                           // Optional AudioNode to route every play through, for effects
+Sound.output                                           // Optional node or effect to route every play through
 
 // SoundInstance
 SoundInstance.setVolume(volume)   // Change volume during playback
@@ -377,7 +377,7 @@ soundPauseWhenHidden = true // Pause all sound while the page is hidden, the way
 // Audio globals
 audioContext            // The shared Web Audio context
 audioMasterGain         // Master gain node all sound routes through
-setAudioMasterEffect(input, output=input) // Route all sound through an effect chain, pass effect.input and effect.output; no args to remove it
+setAudioMasterEffect(input, output) // Route all sound through a node or effect, or a chain's first and last; no args to remove it
 audioIsRunning()        // Is the audio context running? (requires user interaction)
 playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate, gainNode, offset=0, onended, output) // Low level sample playback
 createAudioBuffer(sampleChannels, sampleRate) // Copy arrays of samples into an audio buffer
@@ -386,7 +386,7 @@ playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0,
 
 ## LittleJS Audio Effects
 - Optional plugin with Web Audio effects, each with a wet/dry mix
-- Route a group of sounds with `sound.output = effect.input`, or everything with `setAudioMasterEffect`
+- Route a group of sounds with `sound.output = effect`, or everything with `setAudioMasterEffect(effect)`
 - Chain effects with `effect.connect(next)`; create effects after `engineInit`
 
 ```javascript

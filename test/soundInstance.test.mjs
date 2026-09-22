@@ -245,6 +245,17 @@ test('sound output routes the gain node through it, and again on resume', () =>
     instance.stop();
 });
 
+test('sound output accepts an effect and routes to its input node', () =>
+{
+    const effect = { input: { name: 'in' }, output: { name: 'out' } };
+    const routed = new LJS.Sound([1, 0, 220, 0, .5, .1]);
+    routed.output = effect;
+    const instance = routed.play();
+    assert.equal(instance.output, effect);
+    assert.deepEqual(instance.gainNode.connections, [effect.input]);
+    instance.stop();
+});
+
 test('sounds without an output connect to the master gain', () =>
 {
     const instance = sound.play();
@@ -263,6 +274,9 @@ test('setAudioMasterEffect before init stores the nodes without touching them', 
     const input = audioContext.createGain();
     const output = audioContext.createGain();
     LJS.setAudioMasterEffect(input, output);
+    assert.deepEqual(input.connections, []);
+    assert.deepEqual(output.connections, []);
+    LJS.setAudioMasterEffect({ input, output }); // an effect is accepted too
     assert.deepEqual(input.connections, []);
     assert.deepEqual(output.connections, []);
     LJS.setAudioMasterEffect(); // clearing before init is fine too

@@ -48,7 +48,7 @@ function gameInit()
         {
             // playing these sounds now goes through the effect
             for (const sound of sounds)
-                sound.output = effect?.input;
+                sound.output = effect;
             for (const b of effectButtons)
                 b.color = b === button ? hsl(.5,.8,.5) : hsl(0,0,.7);
         };
@@ -64,7 +64,7 @@ function gameInit()
         const onText = (compressorOn ? 'On' : 'Off');
         compButton.text = 'Compressor ' + onText;
         if (compressorOn)
-            setAudioMasterEffect(compressor.input, compressor.output);
+            setAudioMasterEffect(compressor);
         else
             setAudioMasterEffect();
     };
