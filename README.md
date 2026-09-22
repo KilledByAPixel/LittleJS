@@ -16,14 +16,12 @@
 ## 🚂 All Aboard!
 
 LittleJS is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance.
-Its small footprint is packed with a comprehensive feature set including rendering, physics, particles, sound, and input handling.
+Its small footprint is packed with a comprehensive feature set including 2D and 3D rendering, physics, particles, sound, and input handling.
 The code is very clean and well documented with many examples to get you started quickly.
 
 ### 🚀 [Join the LittleJS Game Jam](https://itch.io/jam/littlejs-jam)
 
-*The Third Annual LittleJS Game Jam will take place From Oct 2 to Nov 2! Unleash your creativity and develop amazing games using the LittleJS game engine.*
-
-### 😼👍 [LittleJS + JS13k](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - We made a special branch designed for size coding events like JS13k.
+*The Third Annual LittleJS Game Jam will take place from Oct 2 to Nov 2! Unleash your creativity and develop amazing games using the LittleJS game engine.*
 
 <div align='center' markdown='1'>
 
@@ -58,7 +56,7 @@ The code is very clean and well documented with many examples to get you started
 
 - Sound and music with mp3, ogg, or wave files
 - Use [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound generator to play sounds without asset files
-- Spatial audio stereo panning
+- Spatial audio with stereo panning
 - Audio effects plugin with filter, reverb, delay, distortion and compressor
 
 ### 🎮 Input
@@ -112,11 +110,11 @@ npm install
 npm run dev
 ```
 
-Here is a minimal Hello World example game.
+Here is a minimal Hello World example game, with the script path pointing at the engine file from the download or npm package.
 
 ```html
 <!DOCTYPE html>
-<script src="../dist/littlejs.js"></script>
+<script src="node_modules/littlejsengine/dist/littlejs.js"></script>
 <script>
 function gameInit() {}
 function gameUpdate() {}
@@ -129,12 +127,12 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 
 ## Tutorials
 
-- [Making Awesome Games With LittleJS](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT) - A short talk about LittleJS with some tips on how to use it.
+- [Making Awesome Games With LittleJS](https://youtu.be/_dXKU0WgAj8) - A short talk about LittleJS with some tips on how to use it
 - [Tutorial: Breakout](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) - Learn how to make a simple game from scratch
-- [Tutorial: Make a ski game](https://eoinmcgrath.com/little-ski/tutorial.html) - This tutorial by eoinmcg that shows how to make a pixel art style game.
-- [LittleJS Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) - A reference sheet to help you get started.
-- [Little JS FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) - Answers to common questions about LittleJS.
-- [JS13k Branch](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - For size coding events like JS13k there is a special branch that builds to a 7KB zip.
+- [Tutorial: Make a ski game](https://eoinmcgrath.com/little-ski/tutorial.html) - A tutorial by eoinmcg that shows how to make a pixel art style game
+- [LittleJS Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) - A reference sheet to help you get started
+- [LittleJS FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) - Answers to common questions about LittleJS
+- [JS13k Branch](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - A special branch for size coding events that builds to a 7KB zip
 
 ## Examples
 
@@ -142,7 +140,7 @@ LittleJS comes with several demos both for learning and using as starter project
 
 - [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browser with all examples and editable source
 - [LittleJS Arcade](https://killedbyapixel.github.io/LittleJSArcade/) - Over 50 example games you can use as starter projects
-- [Short Examples](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/shorts) - 60+ single-file demos showing off individual engine features
+- [Short Examples](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/shorts) - 80+ single-file demos showing off individual engine features
 - [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post-processing effects
 - [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
 - [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data
@@ -181,7 +179,7 @@ Here are a few of the many amazing games created with LittleJS...
 - [Isletopia](https://store.steampowered.com/app/1861260/Isletopia) - Relaxing strategy game of greenifying barren islands. by [Gamex Studio](https://x.com/gamesgamex)
 - [Tetrimals](https://nixn.itch.io/tetrimals) - A puzzle game mixing Tetris with animals. by [nixn](https://nixn.itch.io/)
 - [Bug&Bee](https://itch.io/jam/littlejs-game-jam-2025/results) - Low fi shoot em up with co-op gameplay. LittleJS Jam 1st place! by [eoinmcg](https://eoinmcg.itch.io/)
-- [Little Platformer](https://psemo.itch.io/little-platformer) - Platformer with many mechanics. LittleJS Jam 2st place! by [PSEMO](https://psemo.itch.io/), [Solita666](https://itch.io/profile/solita666), [GabrielRG](https://gabrielrg.itch.io/), [Nate](https://natesassoon.itch.io/)
+- [Little Platformer](https://psemo.itch.io/little-platformer) - Platformer with many mechanics. LittleJS Jam 2nd place! by [PSEMO](https://psemo.itch.io/), [Solita666](https://itch.io/profile/solita666), [GabrielRG](https://gabrielrg.itch.io/), [Nate](https://natesassoon.itch.io/)
 - [Alien Escape Pinball](https://focaccai.itch.io/alien-pinball) - Pinball game with physics and aliens. by [Focaccai](https://www.focaccai.com/)
 - [LittleJS Jam 2024 Results](https://itch.io/jam/littlejs-jam-2024/results) - All the games from the first LittleJS Game Jam.
 - [LittleJS Jam 2025 Results](https://itch.io/jam/littlejs-game-jam-2025/results) - All the games from the second LittleJS Game Jam.
