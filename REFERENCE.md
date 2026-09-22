@@ -991,6 +991,12 @@ render3D.specular = 0                 // Phong highlight strength, the shiny spo
                                       // 1 adds the sun's full color at its peak, more burns out;
                                       // the size of the spot is fixed, and a Light3D adds no highlight
 render3D.receiveShadow = true         // false keeps the next draws out of the shadow map's darkening
+render3D.shader = undefined           // a Shader for the next draws, set from each object's shader; with emissive 1
+                                      // the snippet's color is final, so it can light itself from these 3D names:
+                                      // worldPos, worldNormal, cameraPos, sunDirection (toward the sun), sunColor,
+                                      // ambientColor, lightCount, lights[i] (xyz position, or direction toward a
+                                      // directional one, w radius, negative when directional), lightColors[i]
+                                      // (rgb, a strength) and shadow(), the sun shadow 0 to 1 at this fragment
 render3D.cullBackFaces render3D.mirrored // set from each mesh as it draws: its doubleSided, and whether its
                                // transform mirrors it; strips leave both off
 render3D.depthTest = true; render3D.depthWrite = true // the transparent stage turns depth writes off, so see-through
@@ -1270,6 +1276,8 @@ material.color, material.map              // obj.color, and a TileInfo or Textur
 material.side = THREE.DoubleSide          // mesh.doubleSided = true
 material.emissiveIntensity                // obj.emissive
 material.transparent, blending            // obj.transparent, obj.additive
+new THREE.ShaderMaterial({fragmentShader}) // obj.shader = new Shader(code), a mainImage snippet the engine wraps;
+                                          // set emissive = 1 for the snippet to do its own lighting
 new THREE.AmbientLight(color)             // render3D.ambientColor
 new THREE.DirectionalLight(color)         // new DirectionalLight3D(pos3D, color), it shines from its position the
                                           // same way; or render3D.sunDirection and sunColor, the one that shadows
