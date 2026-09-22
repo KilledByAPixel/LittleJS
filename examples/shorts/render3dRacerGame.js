@@ -189,8 +189,6 @@ function gameRenderPost()
     const bestText = 'BEST ' + formatTime(bestTime);
     if (bestTime)
         drawTextScreen(bestText, vec2(90, 85), 26, WHITE, 5);
-    const gate = nextGate ? 'NEXT GATE ' + nextGate : 'FINISH LINE';
-    drawTextScreen(gate, vec2(mainCanvasSize.x - 120, 40), 28, YELLOW, 5);
     const speed = round(car.speed*180) + ' KPH';
-    drawTextScreen(speed, vec2(95, mainCanvasSize.y - 40), 44, WHITE, 6);
+    drawTextScreen(speed, vec2(mainCanvasSize.x - 120, 40), 44, WHITE, 6);
 }
