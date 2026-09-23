@@ -61,6 +61,7 @@ test('when logged in the server holds the medals and the local save is left alon
     assert.equal(plugin.pendingUnlocks.get(m1), first);
     assert.equal(await first, true, 'confirmed');
     assert.equal(m1.unlocked, true);
+    assert.equal(plugin.medals.find(m => m.id == 1).unlocked, true, 'the fetched list is kept in step');
     assert.equal(unlockCalls() - before, 1, 'one request');
     assert.equal(plugin.pendingUnlocks.size, 0);
     assert.equal(globalThis.localStorage[SAVE], savedBefore, 'still untouched');

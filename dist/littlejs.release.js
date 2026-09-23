@@ -10229,12 +10229,15 @@ class NewgroundsMedal extends Medal
             return pending.get(this);
         const request = newgrounds.unlockMedal(this.id).then(response=>
         {
-            if (!response?.result?.data?.medal?.unlocked)
+            const serverMedal = response?.result?.data?.medal;
+            if (!serverMedal?.unlocked)
             {
                 // still pending, the keep alive ping resends it
                 debugMedals && false&&LOG('newgrounds did not unlock medal', this.id, response?.result?.error || response?.error);
                 return false;
             }
+            const listed = newgrounds.medals.find(m=> m['id'] == this.id);
+            listed && Object.assign(listed, serverMedal); // keep the fetched list in step
             pending.delete(this);
             return super.unlock();
         });
@@ -10312,6 +10315,7 @@ class NewgroundsPlugin
         }, keepAliveMS);
 
         const medalsResult = await this.call('Medal.getList');
+        medalsForEach(medal=> false&&ASSERT(medal instanceof NewgroundsMedal, 'a logged in game holds its medals on newgrounds, so every medal must be a NewgroundsMedal'));
 
         // bail early if the first call failed (offline / bad session / server error)
         if (!medalsResult || !medalsResult.result || medalsResult.result.error)
