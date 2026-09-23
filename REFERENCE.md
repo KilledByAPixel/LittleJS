@@ -530,8 +530,9 @@ EngineObject.getAliveTime()                        // How long since object was 
 EngineObject.applyAcceleration(acceleration)       // Apply acceleration
 EngineObject.applyForce(force)                     // Apply force
 EngineObject.getMirrorSign()                       // Get mirror direction (1 or -1)
-EngineObject.addChild(child, localPos, localAngle) // Attach a child
-EngineObject.removeChild(child)                    // Remove a child
+EngineObject.addChild(child, localPos, localAngle) // Attach a child at an offset; localPos only exists on a child
+EngineObject.attach(child)                         // Attach a child where it is, the offset worked out for it
+EngineObject.removeChild(child)                    // Remove a child, it stays where it was in the world
 EngineObject.setCollision(solids, isSolid, tiles)  // Set collision; an object with no width or height is not a
                                                    // solid obstacle, so it blocks nothing and nothing blocks it
 EngineObject.persistent = true                     // skipped by engineObjectsDestroy, for things that outlive a
@@ -843,6 +844,7 @@ m.multiply(m2)                 // m = m * m2, m2 is applied to points first
 m.translate(v) m.rotate(euler) m.scale(v)      // append a transform, returns self
 m.invert() m.transpose()       // in place, return self
 m.copy() m.transformPoint(v) m.transformDirection(v) m.getTranslation() // or v.transform(m), v.transformDirection(m)
+m.getScale() m.getRotation()   // the scale and the vec3(pitch, yaw, roll) back out of a transform, a mirror is a negative x
 buildMatrix(pos, rotation, scale, out)         // translate * rotate * scale, any arg optional; out is written into
                                                // instead of a new matrix, for a loop that builds many each frame
 
@@ -1112,7 +1114,8 @@ obj.lookAt(target)                      // turn -Z toward a world space point: s
                                         // a child aims through its parent, since its rotation3D is local
 obj.render3D() // override for custom drawing, the draw state is already set from the flags; render() is empty
 // children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local; addChild's 2D
-// offset arguments do nothing in 3D
+// offset arguments do nothing in 3D; attach keeps a child where it is and works its pos3D, rotation3D and scale3D out,
+// and removeChild leaves it where it was in the world, both as close as those three values can get under a shear
 
 // Draw right now, no object needed - only inside render3D() or a pass callback, drawing elsewhere asserts; strips batch
 // into one draw per texture and state
@@ -1323,6 +1326,7 @@ trail.clear()                                 // forget the trail, for when the 
 scene.add(mesh)                           // new EngineObject3D(pos3D, mesh), or render3D.drawMesh each frame
 mesh.position .rotation .scale            // obj.pos3D .rotation3D .scale3D
 parent.add(child)                         // parent.addChild(child), and child.pos3D is then local
+parent.attach(child)                      // parent.attach(child), kept where it is; remove(child) is removeChild(child)
 new THREE.BoxGeometry(w, h, d)            // buildBox(vec3(w, h, d)), or render3D.boxMesh with scale3D
 new THREE.SphereGeometry(r)               // buildSphere(r*2), or render3D.sphereMesh with scale3D
 new THREE.PlaneGeometry(w, h)             // render3D.planeMesh with scale3D, lying flat

@@ -3797,8 +3797,9 @@ class EngineObject
         /** @property {EngineObject|undefined} - Parent of object if in local space
          *  @type {EngineObject|undefined} */
         this.parent = undefined;
-        /** @property {Vector2} - Local position if child */
-        this.localPos = vec2();
+        /** @property {Vector2|undefined} - Position relative to the parent, only while attached to one
+         *  @type {Vector2|undefined} */
+        this.localPos = undefined;
         /** @property {number} - Local angle if child  */
         this.localAngle = 0;
 
@@ -4173,7 +4174,22 @@ class EngineObject
         return child;
     }
 
-    /** Removes a child from this one
+    /** Attaches a child to this without moving it: the local transform is worked out from where the child is now,
+     *  where addChild takes one; a child of something else is moved over, returns child for chaining
+     *  @param {EngineObject} child
+     *  @return {EngineObject} The child object attached */
+    attach(child)
+    {
+        ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
+        ASSERT(child !== this, 'cannot attach self');
+        child.parent?.removeChild(child);
+        // the local values that updateTransforms turns back into the child's current pos and angle
+        const mirror = this.getMirrorSign(), local = this.worldToLocal(child.pos);
+        local.x *= mirror;
+        return this.addChild(child, local, mirror * (child.angle - this.angle));
+    }
+
+    /** Removes a child from this one, it stays where it is in the world
      *  @param {EngineObject} child */
     removeChild(child)
     {
@@ -18441,6 +18457,33 @@ class Matrix4
      *  @return {Vector3} */
     getTranslation() { return new Vector3(this.m[12], this.m[13], this.m[14]); }
 
+    /** Returns the scale part of this matrix, the length of each axis; a mirroring matrix shows as a negative x
+     *  @return {Vector3} */
+    getScale()
+    {
+        const m = this.m;
+        const x = hypot(m[0], m[1], m[2]), y = hypot(m[4], m[5], m[6]), z = hypot(m[8], m[9], m[10]);
+        const mirrored = m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]) < 0;
+        return new Vector3(mirrored ? -x : x, y, z);
+    }
+
+    /** Returns the rotation part of this matrix as vec3(pitch, yaw, roll), the angles Matrix4.rotation builds it from
+     *  - The scale is divided out first, so it works on a full transform
+     *  - A matrix with shear, from a scaled parent with a turned child, has no exact answer and gets the nearest
+     *  @return {Vector3} */
+    getRotation()
+    {
+        // the axes at unit length, see Matrix4.rotation for which element is which
+        const m = this.m, s = this.getScale();
+        const sx = s.x || 1, sy = s.y || 1, sz = s.z || 1;
+        const m1 = m[1] / sx, m5 = m[5] / sy, m8 = m[8] / sz, m9 = m[9] / sz, m10 = m[10] / sz;
+        const pitch = Math.asin(clamp(-m9, -1, 1));
+        if (abs(m9) < 1 - 1e-6)
+            return new Vector3(pitch, atan2(m8, m10), atan2(m1, m5));
+        // straight up or down: yaw and roll turn about the same axis, so the roll is zero and yaw takes it all
+        return new Vector3(pitch, atan2(m[4] / sy * -m9, m[0] / sx), 0);
+    }
+
     /** Returns a string representation of this matrix for debugging
      *  @return {string} */
     toString()
@@ -21697,7 +21740,8 @@ function buildSky(topColor=hsl(.6, .8, .55), horizonColor=hsl(.6, 1, .9), bottom
  * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
  * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
  * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
- * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
+ * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent; attach keeps the child where
+ *   it is and works the offset out, and removeChild leaves it where it was in the world
  * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
  * @extends EngineObject
  * @memberof Render3D
@@ -21850,6 +21894,40 @@ class EngineObject3D extends EngineObject
         const parent = this.parent instanceof EngineObject3D ? this.parent : undefined;
         const local = parent ? parent.getMatrix().invert().transformPoint(target) : target;
         this.rotation3D = render3DLookRotation(local.subtract(this.pos3D), this.rotation3D);
+    }
+
+    /** Attaches a child without moving it: its pos3D, rotation3D and scale3D become what they have to be under this
+     *  parent to keep its world transform, where addChild takes them as the offset; returns child for chaining
+     *  - A parent scaled unevenly and a child turned under it make a shear, which those three values cannot hold,
+     *    so the child comes out as close as they can get; a uniform scale is exact
+     *  @param {EngineObject} child
+     *  @return {EngineObject} The child object attached */
+    attach(child)
+    {
+        if (!(child instanceof EngineObject3D))
+            return super.attach(child); // a 2D child only has the 2D transform to keep
+        child.parent?.removeChild(child); // keeps its world values, so its own matrix is its world matrix
+        const local = render3DObjectMatrix(this).copy().invert().multiply(render3DObjectMatrix(child));
+        super.attach(child);
+        child.pos3D = local.getTranslation();
+        child.rotation3D = local.getRotation();
+        child.scale3D = local.getScale();
+        return child;
+    }
+
+    /** Removes a child from this one, it stays where it is in the world: its pos3D, rotation3D and scale3D become
+     *  its world values, with the same shear caveat as attach; a child being destroyed is let go as it is
+     *  @param {EngineObject} child */
+    removeChild(child)
+    {
+        if (child instanceof EngineObject3D && !child.destroyed)
+        {
+            const world = render3DObjectMatrix(child);
+            child.pos3D = world.getTranslation();
+            child.rotation3D = world.getRotation();
+            child.scale3D = world.getScale();
+        }
+        super.removeChild(child);
     }
 
     /** Draw a different mesh and free the GPU buffer of the one it replaces

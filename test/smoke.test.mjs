@@ -394,3 +394,33 @@ test('persistent objects survive engineObjectsDestroy but not their own destroy'
     assert.equal(held.destroyed, true);
     engineObjects.length = 0;
 });
+
+test('a detached child stays where it was, attach keeps a child in place, and localPos only exists on a child', () =>
+{
+    const parent = new EngineObject(vec2(5, 5), vec2(1, 1));
+    parent.angle = Math.PI / 2;
+    const child = new EngineObject(vec2(0, 0), vec2(1, 1));
+    assert.equal(child.localPos, undefined, 'a root has no local position');
+    parent.addChild(child, vec2(2, 0), .25);
+    // a positive angle turns clockwise, so a quarter turn takes the local offset (2, 0) to (0, -2)
+    assert.ok(Math.abs(child.pos.x - 5) < 1e-9 && Math.abs(child.pos.y - 3) < 1e-9);
+    parent.removeChild(child);
+    assert.ok(Math.abs(child.pos.x - 5) < 1e-9 && Math.abs(child.pos.y - 3) < 1e-9, 'detached where it was');
+    assert.ok(Math.abs(child.angle - (Math.PI / 2 + .25)) < 1e-9, 'with the angle it had');
+
+    // attach takes the world values back to local ones, so nothing moves, through a mirrored parent as well
+    const loose = new EngineObject(vec2(3, 9), vec2(1, 1));
+    loose.angle = 1;
+    for (const mirror of [false, true])
+    {
+        parent.mirror = mirror;
+        assert.equal(parent.attach(loose), loose);
+        assert.equal(loose.parent, parent);
+        assert.ok(Math.abs(loose.pos.x - 3) < 1e-9 && Math.abs(loose.pos.y - 9) < 1e-9, 'attached in place, mirror ' + mirror);
+        assert.ok(Math.abs(loose.angle - 1) < 1e-9, 'angle kept, mirror ' + mirror);
+        parent.updateTransforms(); // the next frame agrees
+        assert.ok(Math.abs(loose.pos.x - 3) < 1e-9 && Math.abs(loose.pos.y - 9) < 1e-9, 'still in place after an update, mirror ' + mirror);
+        assert.ok(Math.abs(loose.angle - 1) < 1e-9, 'angle still kept, mirror ' + mirror);
+        parent.removeChild(loose);
+    }
+});

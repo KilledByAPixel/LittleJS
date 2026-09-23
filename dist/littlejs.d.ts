@@ -3150,8 +3150,9 @@ declare module "littlejsengine" {
         /** @property {EngineObject|undefined} - Parent of object if in local space
          *  @type {EngineObject|undefined} */
         parent: EngineObject | undefined;
-        /** @property {Vector2} - Local position if child */
-        localPos: Vector2;
+        /** @property {Vector2|undefined} - Position relative to the parent, only while attached to one
+         *  @type {Vector2|undefined} */
+        localPos: Vector2 | undefined;
         /** @property {number} - Local angle if child  */
         localAngle: number;
         /** @property {boolean} - Object collides with the tile collision */
@@ -3233,7 +3234,12 @@ declare module "littlejsengine" {
          *  @param {number}       [localAngle]
          *  @return {EngineObject} The child object added */
         addChild(child: EngineObject, localPos?: Vector2, localAngle?: number): EngineObject;
-        /** Removes a child from this one
+        /** Attaches a child to this without moving it: the local transform is worked out from where the child is now,
+         *  where addChild takes one; a child of something else is moved over, returns child for chaining
+         *  @param {EngineObject} child
+         *  @return {EngineObject} The child object attached */
+        attach(child: EngineObject): EngineObject;
+        /** Removes a child from this one, it stays where it is in the world
          *  @param {EngineObject} child */
         removeChild(child: EngineObject): void;
         /** Check if overlapping another engine object
@@ -6541,6 +6547,14 @@ declare module "littlejsengine" {
         /** Returns the translation part of this matrix
          *  @return {Vector3} */
         getTranslation(): Vector3;
+        /** Returns the scale part of this matrix, the length of each axis; a mirroring matrix shows as a negative x
+         *  @return {Vector3} */
+        getScale(): Vector3;
+        /** Returns the rotation part of this matrix as vec3(pitch, yaw, roll), the angles Matrix4.rotation builds it from
+         *  - The scale is divided out first, so it works on a full transform
+         *  - A matrix with shear, from a scaled parent with a turned child, has no exact answer and gets the nearest
+         *  @return {Vector3} */
+        getRotation(): Vector3;
         /** Returns a string representation of this matrix for debugging
          *  @return {string} */
         toString(): string;
@@ -7134,7 +7148,8 @@ declare module "littlejsengine" {
      * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
      * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
      * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
-     * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
+     * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent; attach keeps the child where
+     *   it is and works the offset out, and removeChild leaves it where it was in the world
      * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
      * @extends EngineObject
      * @memberof Render3D

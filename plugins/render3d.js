@@ -2915,7 +2915,8 @@ function buildSky(topColor=hsl(.6, .8, .55), horizonColor=hsl(.6, 1, .9), bottom
  * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
  * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
  * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
- * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent
+ * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent; attach keeps the child where
+ *   it is and works the offset out, and removeChild leaves it where it was in the world
  * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
  * @extends EngineObject
  * @memberof Render3D
@@ -3068,6 +3069,40 @@ class EngineObject3D extends EngineObject
         const parent = this.parent instanceof EngineObject3D ? this.parent : undefined;
         const local = parent ? parent.getMatrix().invert().transformPoint(target) : target;
         this.rotation3D = render3DLookRotation(local.subtract(this.pos3D), this.rotation3D);
+    }
+
+    /** Attaches a child without moving it: its pos3D, rotation3D and scale3D become what they have to be under this
+     *  parent to keep its world transform, where addChild takes them as the offset; returns child for chaining
+     *  - A parent scaled unevenly and a child turned under it make a shear, which those three values cannot hold,
+     *    so the child comes out as close as they can get; a uniform scale is exact
+     *  @param {EngineObject} child
+     *  @return {EngineObject} The child object attached */
+    attach(child)
+    {
+        if (!(child instanceof EngineObject3D))
+            return super.attach(child); // a 2D child only has the 2D transform to keep
+        child.parent?.removeChild(child); // keeps its world values, so its own matrix is its world matrix
+        const local = render3DObjectMatrix(this).copy().invert().multiply(render3DObjectMatrix(child));
+        super.attach(child);
+        child.pos3D = local.getTranslation();
+        child.rotation3D = local.getRotation();
+        child.scale3D = local.getScale();
+        return child;
+    }
+
+    /** Removes a child from this one, it stays where it is in the world: its pos3D, rotation3D and scale3D become
+     *  its world values, with the same shear caveat as attach; a child being destroyed is let go as it is
+     *  @param {EngineObject} child */
+    removeChild(child)
+    {
+        if (child instanceof EngineObject3D && !child.destroyed)
+        {
+            const world = render3DObjectMatrix(child);
+            child.pos3D = world.getTranslation();
+            child.rotation3D = world.getRotation();
+            child.scale3D = world.getScale();
+        }
+        super.removeChild(child);
     }
 
     /** Draw a different mesh and free the GPU buffer of the one it replaces

@@ -532,6 +532,33 @@ class Matrix4
      *  @return {Vector3} */
     getTranslation() { return new Vector3(this.m[12], this.m[13], this.m[14]); }
 
+    /** Returns the scale part of this matrix, the length of each axis; a mirroring matrix shows as a negative x
+     *  @return {Vector3} */
+    getScale()
+    {
+        const m = this.m;
+        const x = hypot(m[0], m[1], m[2]), y = hypot(m[4], m[5], m[6]), z = hypot(m[8], m[9], m[10]);
+        const mirrored = m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]) < 0;
+        return new Vector3(mirrored ? -x : x, y, z);
+    }
+
+    /** Returns the rotation part of this matrix as vec3(pitch, yaw, roll), the angles Matrix4.rotation builds it from
+     *  - The scale is divided out first, so it works on a full transform
+     *  - A matrix with shear, from a scaled parent with a turned child, has no exact answer and gets the nearest
+     *  @return {Vector3} */
+    getRotation()
+    {
+        // the axes at unit length, see Matrix4.rotation for which element is which
+        const m = this.m, s = this.getScale();
+        const sx = s.x || 1, sy = s.y || 1, sz = s.z || 1;
+        const m1 = m[1] / sx, m5 = m[5] / sy, m8 = m[8] / sz, m9 = m[9] / sz, m10 = m[10] / sz;
+        const pitch = Math.asin(clamp(-m9, -1, 1));
+        if (abs(m9) < 1 - 1e-6)
+            return new Vector3(pitch, atan2(m8, m10), atan2(m1, m5));
+        // straight up or down: yaw and roll turn about the same axis, so the roll is zero and yaw takes it all
+        return new Vector3(pitch, atan2(m[4] / sy * -m9, m[0] / sx), 0);
+    }
+
     /** Returns a string representation of this matrix for debugging
      *  @return {string} */
     toString()

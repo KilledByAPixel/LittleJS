@@ -2480,7 +2480,7 @@ test('an object keeps its world matrix and rebuilds it only when it or its paren
         child.rotation3D.y = PI / 2;
         nearVec(child.getForward3D(), -1, 0, 0);
         parent.removeChild(child);
-        nearVec(child.getMatrix().getTranslation(), 0, 2, 0);
+        nearVec(child.getMatrix().getTranslation(), 5, 2, 0); // let go where it was
     }
     finally { parent.destroy(true); child.destroy(true); engineObjects.length = 0; }
 });
@@ -3292,4 +3292,73 @@ test('a mirroring transform or combine keeps the faces pointing out, the winding
         const boxCenter = center.x < -1 ? vec3(-2, 0, 0) : center.x > 1 ? vec3(2, 0, 0) : vec3(0, 2, 0);
         assert.ok(n.dot(center.subtract(boxCenter)) < 0, `triangle ${t / 3} of the three boxes winds inward`);
     }
+});
+
+test('Matrix4 gives back the scale and the Euler rotation it was built from', () =>
+{
+    const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-6, `${msg}: ${a} vs ${b}`);
+    for (const euler of [vec3(.3, -1.2, .7), vec3(0, 2, 0), vec3(-1.5, .4, 2.5), vec3(1.2, 3, -3)])
+    {
+        const m = buildMatrix(vec3(1, 2, 3), euler, vec3(2, 3, 4));
+        const s = m.getScale(), r = m.getRotation();
+        near(s.x, 2, 'sx'); near(s.y, 3, 'sy'); near(s.z, 4, 'sz');
+        // the angles may differ from the input, but they build the same rotation
+        const a = Matrix4.rotation(euler).m, b = Matrix4.rotation(r).m;
+        for (let i = 0; i < 16; ++i)
+            near(a[i], b[i], 'rotation element ' + i + ' of ' + euler);
+    }
+    // straight up is the singular case, where pitch takes the whole turn and roll is zero
+    const up = Matrix4.rotation(vec3(PI / 2, .5, .5)), r = up.getRotation();
+    const a = up.m, b = Matrix4.rotation(r).m;
+    for (let i = 0; i < 16; ++i)
+        near(a[i], b[i], 'gimbal element ' + i);
+    assert.equal(r.z, 0);
+    // a mirror shows as a negative scale on x
+    const flipped = Matrix4.scaling(vec3(-2, 3, 4)).getScale();
+    near(flipped.x, -2, 'mirrored x'); near(flipped.y, 3, 'y'); near(flipped.z, 4, 'z');
+});
+
+test('a detached EngineObject3D stays where it was, and attach keeps one in place under a turned and scaled parent', () =>
+{
+    const nearVec = (v, x, y, z, msg)=> assert.ok(Math.abs(v.x - x) < 1e-6 && Math.abs(v.y - y) < 1e-6 && Math.abs(v.z - z) < 1e-6, `${msg}: ${v}`);
+    const parent = new EngineObject3D(vec3(10, 0, 0));
+    parent.rotation3D = vec3(0, PI / 2, 0);
+    parent.scale3D = vec3(2);
+    const child = new EngineObject3D(vec3(1, 0, 0), buildBox());
+    child.rotation3D = vec3(0, 0, .5);
+    parent.addChild(child);
+    // a quarter turn about y takes local +x to world -z, doubled
+    nearVec(child.getWorldPos3D(), 10, 0, -2, 'attached');
+    parent.removeChild(child);
+    assert.equal(child.parent, undefined);
+    nearVec(child.pos3D, 10, 0, -2, 'detached where it was');
+    nearVec(child.scale3D, 2, 2, 2, 'with the parent\'s scale');
+    const world = child.getMatrix(), expect = parent.getMatrix().multiply(buildMatrix(vec3(1, 0, 0), vec3(0, 0, .5)));
+    for (let i = 0; i < 16; ++i)
+        assert.ok(Math.abs(world.m[i] - expect.m[i]) < 1e-6, 'same world matrix after the detach, element ' + i);
+
+    // attach: the world matrix is the same before and after, then a detach lands back on the same values
+    const loose = new EngineObject3D(vec3(3, 4, 5), buildBox());
+    loose.rotation3D = vec3(.2, .3, .4);
+    loose.scale3D = vec3(1.5);
+    const before = loose.getMatrix();
+    assert.equal(parent.attach(loose), loose);
+    assert.equal(loose.parent, parent);
+    const after = loose.getMatrix();
+    for (let i = 0; i < 16; ++i)
+        assert.ok(Math.abs(before.m[i] - after.m[i]) < 1e-6, 'attached in place, element ' + i);
+    nearVec(loose.scale3D, .75, .75, .75, 'local scale under a doubled parent');
+    parent.removeChild(loose);
+    nearVec(loose.pos3D, 3, 4, 5, 'back to its world position');
+    nearVec(loose.scale3D, 1.5, 1.5, 1.5, 'back to its scale');
+    const r = Matrix4.rotation(loose.rotation3D).m, r0 = Matrix4.rotation(vec3(.2, .3, .4)).m;
+    for (let i = 0; i < 16; ++i)
+        assert.ok(Math.abs(r[i] - r0[i]) < 1e-6, 'back to its rotation, element ' + i);
+
+    // destroying does none of that: a destroyed child keeps its local values as they are
+    const doomed = new EngineObject3D(vec3(1, 0, 0));
+    parent.addChild(doomed);
+    doomed.destroy();
+    nearVec(doomed.pos3D, 1, 0, 0, 'no conversion for a destroyed child');
+    for (const o of [parent, child, loose, doomed]) o.destroy();
 });

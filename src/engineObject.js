@@ -114,8 +114,9 @@ class EngineObject
         /** @property {EngineObject|undefined} - Parent of object if in local space
          *  @type {EngineObject|undefined} */
         this.parent = undefined;
-        /** @property {Vector2} - Local position if child */
-        this.localPos = vec2();
+        /** @property {Vector2|undefined} - Position relative to the parent, only while attached to one
+         *  @type {Vector2|undefined} */
+        this.localPos = undefined;
         /** @property {number} - Local angle if child  */
         this.localAngle = 0;
 
@@ -490,7 +491,22 @@ class EngineObject
         return child;
     }
 
-    /** Removes a child from this one
+    /** Attaches a child to this without moving it: the local transform is worked out from where the child is now,
+     *  where addChild takes one; a child of something else is moved over, returns child for chaining
+     *  @param {EngineObject} child
+     *  @return {EngineObject} The child object attached */
+    attach(child)
+    {
+        ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
+        ASSERT(child !== this, 'cannot attach self');
+        child.parent?.removeChild(child);
+        // the local values that updateTransforms turns back into the child's current pos and angle
+        const mirror = this.getMirrorSign(), local = this.worldToLocal(child.pos);
+        local.x *= mirror;
+        return this.addChild(child, local, mirror * (child.angle - this.angle));
+    }
+
+    /** Removes a child from this one, it stays where it is in the world
      *  @param {EngineObject} child */
     removeChild(child)
     {
