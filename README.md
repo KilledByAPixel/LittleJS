@@ -29,7 +29,9 @@ The code is very clean and well documented with many examples to get you started
 
 </div>
 
-![LittleJS Screenshot](examples/screenshot.jpg)
+![LittleJS Screenshot1](examples/screenshot.jpg)
+
+![LittleJS Screenshot2](examples/screenshot2.jpg)
 
 ## LittleJS Features
 
