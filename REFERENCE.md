@@ -890,13 +890,12 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
 - Y is up and -Z is forward, so the ground is the XZ plane: 2D input maps to it as vec3(move.x, 0, -move.y), forward for
   a yaw is vec3(-sin(yaw), 0, -cos(yaw)) and right is vec3(cos(yaw), 0, -sin(yaw))
 - Below, a comment that says `e.g.` marks the value on that line as an example, not the default
-- See the `examples/shorts/render3d*.js` demos - features: render3dShapes, render3dBillboards, render3dHeightMap
-  terrain, render3dCollision with picking, render3dFirstPerson for a walking camera, render3dLights,
-  render3dParticles, render3dTrails, render3dDraw for immediate drawing, render3dText, render3dMesh for OBJ loading,
-  render3dLayers for 3D layers in a 2D scene, render3dInstancing, render3dTextures, render3dGlow; and `examples/3d` is
-  a full example with all of it in one scene
-  games:
-  render3dDodgeGame, render3dRacingGame, render3dPuzzleGame
+- See the `examples/shorts/render3d*.js` demos - features: render3dBasics to start, render3dShapes,
+  render3dBillboards, render3dHeightMap terrain, render3dCollision with picking, render3dFirstPerson for a walking
+  camera, render3dLights, render3dParticles, render3dTrails, render3dDraw for immediate drawing, render3dText,
+  render3dMesh for OBJ loading, render3dLayers for 3D layers in a 2D scene, render3dInstancing, render3dTextures,
+  render3dGlow, render3dShaders; games: render3dDodgeGame, render3dRacingGame, render3dPuzzleGame; and `examples/3d`
+  is a full example with all of it in one scene
 
 ```javascript
 // Setup (call in gameInit)
