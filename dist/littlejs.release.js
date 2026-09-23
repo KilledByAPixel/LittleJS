@@ -18111,6 +18111,15 @@ function render3DCaptureBatchState()
         receiveShadow: r.receiveShadow, specular: r.specular, pixelated: r.pixelated, shader: r.shader};
 }
 
+// put a captured draw state back, written out the same way; the transparent stage does this for every queued draw
+function render3DApplyBatchState(s)
+{
+    const r = render3D;
+    r.blend = s.blend, r.additive = s.additive, r.depthTest = s.depthTest, r.depthWrite = s.depthWrite,
+    r.cullBackFaces = s.cullBackFaces, r.mirrored = s.mirrored, r.lighting = s.lighting, r.emissive = s.emissive,
+    r.receiveShadow = s.receiveShadow, r.specular = s.specular, r.pixelated = s.pixelated, r.shader = s.shader;
+}
+
 // true when the current draw state differs from a captured one, so a pending batch must flush first
 function render3DStateChanged(s)
 {
@@ -18805,9 +18814,9 @@ class Render3DPlugin
         const rgba = colorArray ? 0 : (colors || WHITE).rgbaInt();
         for (let k = 0; k < count; ++k)
         {
-            const i = render3DStripIndex(k, n);
+            const i = render3DStripIndex(k, n), p = points[i];
             const uv = uvArray ? uvs[i] : uvs || RENDER3D_DEFAULT_UV;
-            render3DWriteVertex(floats, ints, this.streamCount++ * RENDER3D_VERTEX_FLOATS, points[i],
+            render3DWriteVertex(floats, ints, this.streamCount++ * RENDER3D_VERTEX_FLOATS, p.x, p.y, p.z,
                 normalArray ? normals[i] : normals || RENDER3D_DEFAULT_NORMAL,
                 uvRect.x + uv.x * uvRect.w, uvRect.y + uv.y * uvRect.h, colorArray ? colors[i].rgbaInt() : rgba);
         }
@@ -18923,8 +18932,14 @@ class Render3DPlugin
         if (!queue) return;
         this.transparentQueue = undefined;
         queue.sort((a, b)=> b.distance - a.distance);
-        for (const item of queue)
-            render3DWithState(item.state, item.draw); // each under the state it was queued with
+        // each draw under the state it was queued with, and the state left as it was found
+        const state = render3DCaptureBatchState();
+        try
+        {
+            for (const item of queue)
+                render3DApplyBatchState(item.state), item.draw();
+        }
+        finally { render3DApplyBatchState(state); }
     }
 
     /** Draw render3D.sky around the camera, unlit, unfogged and behind everything, called automatically by the pass */
@@ -19017,19 +19032,27 @@ class Render3DPlugin
         if (this.transparentQueue) // sort by the exact position, a shadow under it sorts by the floor
             return this.queueTransparent(pos, ()=> this.drawBillboard(pos, size, tileInfo, color, angle, upright));
 
-        // the particle path: the quad's six stream vertices written straight in, unlit
-        const count = render3DStripCount(4);
-        const lighting = this.shadowPass && this.lighting; // unlit on screen, in the shadow map the object's flag decides
-        const uvRect = render3DWithState({lighting}, ()=> render3DBeginStrip(count, tileInfo));
+        // the particle path: the quad's six stream vertices written straight in with no vectors made, unlit
+        const lit = this.lighting;
+        this.lighting = this.shadowPass && lit; // unlit on screen, in the shadow map the object's flag decides
+        let uvRect;
+        try { uvRect = render3DBeginStrip(6, tileInfo); }
+        finally { this.lighting = lit; }
         if (!uvRect) return;
-        const corners = render3DBillboardCorners(pos, size, angle, upright), rgba = color.rgbaInt();
-        const floats = this.streamFloats, ints = this.streamInts;
-        for (let k = 0; k < count; ++k)
-        {
-            const i = render3DStripIndex(k, 4), uv = RENDER3D_QUAD_UVS[i];
-            render3DWriteVertex(floats, ints, this.streamCount++ * RENDER3D_VERTEX_FLOATS, corners[i], this.cameraBack,
-                uvRect.x + uv.x * uvRect.w, uvRect.y + uv.y * uvRect.h, rgba);
-        }
+        const a = render3DBillboardAxes(size, angle, upright);
+        const rx = a[0], ry = a[1], rz = a[2], ux = a[3], uy = a[4], uz = a[5];
+        const x = pos.x, y = pos.y, z = pos.z, n = this.cameraBack, rgba = color.rgbaInt();
+        const u0 = uvRect.x, v0 = uvRect.y, u1 = u0 + uvRect.w, v1 = v0 + uvRect.h;
+        const floats = this.streamFloats, ints = this.streamInts, stride = RENDER3D_VERTEX_FLOATS;
+        let j = this.streamCount * stride;
+        this.streamCount += 6;
+        // the corners in strip order with the repeats: top left twice, bottom left, top right, bottom right twice
+        render3DWriteVertex(floats, ints, j, x - rx + ux, y - ry + uy, z - rz + uz, n, u0, v0, rgba);
+        render3DWriteVertex(floats, ints, j += stride, x - rx + ux, y - ry + uy, z - rz + uz, n, u0, v0, rgba);
+        render3DWriteVertex(floats, ints, j += stride, x - rx - ux, y - ry - uy, z - rz - uz, n, u0, v1, rgba);
+        render3DWriteVertex(floats, ints, j += stride, x + rx + ux, y + ry + uy, z + rz + uz, n, u1, v0, rgba);
+        render3DWriteVertex(floats, ints, j += stride, x + rx - ux, y + ry - uy, z + rz - uz, n, u1, v1, rgba);
+        render3DWriteVertex(floats, ints, j += stride, x + rx - ux, y + ry - uy, z + rz - uz, n, u1, v1, rgba);
     }
 
     /** Draw a quad from four corners in loop order, counter clockwise seen from the front, a is the top left of the texture
@@ -19955,20 +19978,31 @@ function render3DBeginStrip(count, tileInfo)
     return render3DGetTileUVs(tileInfo);
 }
 
+// the half axes of a camera facing quad of a size turned by an angle, right then up, in one shared array
+// so a particle costs no vectors; read it before calling again
+const render3DBillboardAxesScratch = new Float64Array(6);
+function render3DBillboardAxes(size, angle, upright)
+{
+    const r = render3D.cameraRight, u = render3D.cameraUp;
+    let rx = r.x, ry = r.y, rz = r.z, ux = u.x, uy = u.y, uz = u.z;
+    if (upright)
+    {
+        // an upright quad stands on world up and only turns to face the camera
+        const l = hypot(rx, rz); // a rolled camera has no flat right
+        rx = l ? rx / l : 1, ry = 0, rz = l ? rz / l : 0;
+        ux = 0, uy = 1, uz = 0;
+    }
+    const c = cos(angle), s = sin(angle), w = size.x / 2, h = size.y / 2, a = render3DBillboardAxesScratch;
+    a[0] = (rx * c + ux * s) * w, a[1] = (ry * c + uy * s) * w, a[2] = (rz * c + uz * s) * w;
+    a[3] = (ux * c - rx * s) * h, a[4] = (uy * c - ry * s) * h, a[5] = (uz * c - rz * s) * h;
+    return a;
+}
+
 // the four corners of a camera facing quad in strip order
 function render3DBillboardCorners(pos, size, angle, upright)
 {
-    // an upright quad stands on world up and only turns to face the camera
-    let r = render3D.cameraRight, u = render3D.cameraUp;
-    if (upright)
-    {
-        const flat = vec3(r.x, 0, r.z);
-        r = flat.lengthSquared() ? flat.normalize() : vec3(1, 0, 0); // a rolled camera has no flat right
-        u = RENDER3D_DEFAULT_NORMAL;
-    }
-    const c = cos(angle), s = sin(angle), w = size.x / 2, h = size.y / 2;
-    const rx = (r.x * c + u.x * s) * w, ry = (r.y * c + u.y * s) * w, rz = (r.z * c + u.z * s) * w;
-    const ux = (u.x * c - r.x * s) * h, uy = (u.y * c - r.y * s) * h, uz = (u.z * c - r.z * s) * h;
+    const a = render3DBillboardAxes(size, angle, upright);
+    const rx = a[0], ry = a[1], rz = a[2], ux = a[3], uy = a[4], uz = a[5];
     return [
         vec3(pos.x - rx + ux, pos.y - ry + uy, pos.z - rz + uz), vec3(pos.x - rx - ux, pos.y - ry - uy, pos.z - rz - uz),
         vec3(pos.x + rx + ux, pos.y + ry + uy, pos.z + rz + uz), vec3(pos.x + rx - ux, pos.y + ry - uy, pos.z + rz - uz)];
@@ -19996,9 +20030,9 @@ function render3DForEachStripVertex(points, normals, uvs, colors, callback)
 }
 
 // write one vertex into a packed buffer at float index j
-function render3DWriteVertex(floats, ints, j, p, n, u, v, rgba)
+function render3DWriteVertex(floats, ints, j, x, y, z, n, u, v, rgba)
 {
-    floats[j]   = p.x; floats[j+1] = p.y; floats[j+2] = p.z;
+    floats[j]   = x;   floats[j+1] = y;   floats[j+2] = z;
     floats[j+3] = n.x; floats[j+4] = n.y; floats[j+5] = n.z;
     floats[j+6] = u;   floats[j+7] = v;
     ints[j+8] = rgba;
@@ -20301,8 +20335,8 @@ class Mesh
         const floats = new Float32Array(data), ints = new Uint32Array(data);
         for (let j = 0; j < count; ++j)
         {
-            const i = vertices[j], uv = this.uvs[i] || RENDER3D_DEFAULT_UV; // a hand built mesh may leave normals, uvs and colors empty
-            render3DWriteVertex(floats, ints, j * RENDER3D_VERTEX_FLOATS, this.points[i],
+            const i = vertices[j], p = this.points[i], uv = this.uvs[i] || RENDER3D_DEFAULT_UV; // a hand built mesh may leave normals, uvs and colors empty
+            render3DWriteVertex(floats, ints, j * RENDER3D_VERTEX_FLOATS, p.x, p.y, p.z,
                 this.normals[i] || RENDER3D_DEFAULT_NORMAL, uv.x, uv.y, (this.colors[i] || WHITE).rgbaInt());
         }
         const gl = glContext, wide = count > 65535;
@@ -20323,26 +20357,49 @@ class Mesh
 
     /** The mesh as an indexed triangle list, what upload sends to the GPU: the strip's real triangles over its
      *  distinct vertices, the joins between its pieces dropped and every triangle facing the way it did in the strip
+     *  - Vertices are compared to a millionth, so two at one place with the same normal, uv and color are one
      *  @return {{vertices: Array<number>, indices: Array<number>}} - vertices are strip indices, one per distinct
      *    vertex; indices are the triangles, three per triangle, into vertices */
     getTriangles()
     {
-        const count = this.points.length, seen = new Map, places = new Map, vertices = [];
+        // each vertex as nine whole numbers, its values in millionths and its color, so vertices hash and compare as
+        // numbers; a hash table over all nine finds the distinct vertices and one over the first three the places,
+        // each slot holding a vertex index plus one and a taken slot moving on to the next
+        const count = this.points.length, values = new Float64Array(count * 9), vertices = [];
         const remap = new Int32Array(count), place = new Int32Array(count);
+        let size = 1;
+        while (size < count * 2) size *= 2;
+        const mask = size - 1, seen = new Int32Array(size), places = new Int32Array(size);
+        const mix = (h, v)=> Math.imul(h ^ v, 0x9e3779b1) >>> 0;
         for (let i = 0; i < count; ++i)
         {
-            const p = this.points[i], n = this.normals[i] || RENDER3D_DEFAULT_NORMAL, uv = this.uvs[i] || RENDER3D_DEFAULT_UV;
-            // places are keyed to a millionth, so a pole at a radius of sin(PI) counts as one place
-            const at = round(p.x * 1e6) + ',' + round(p.y * 1e6) + ',' + round(p.z * 1e6);
-            const key = at + ',' + n.x + ',' + n.y + ',' + n.z + ',' + uv.x + ',' + uv.y + ',' + (this.colors[i] || WHITE).rgbaInt();
-            let j = seen.get(key);
-            if (j === undefined)
-                seen.set(key, j = vertices.length), vertices.push(i);
-            remap[i] = j;
-            let k = places.get(at); // the same place with another normal or uv, as at a lathe's poles
-            if (k === undefined)
-                places.set(at, k = i);
-            place[i] = k;
+            const p = this.points[i], n = this.normals[i] || RENDER3D_DEFAULT_NORMAL, uv = this.uvs[i] || RENDER3D_DEFAULT_UV, k = i * 9;
+            const x = values[k] = round(p.x * 1e6), y = values[k+1] = round(p.y * 1e6), z = values[k+2] = round(p.z * 1e6);
+            values[k+3] = round(n.x * 1e6), values[k+4] = round(n.y * 1e6), values[k+5] = round(n.z * 1e6);
+            values[k+6] = round(uv.x * 1e6), values[k+7] = round(uv.y * 1e6);
+            values[k+8] = (this.colors[i] || WHITE).rgbaInt();
+            let h = mix(mix(mix(0x811c9dc5, x), y), z);
+
+            // the place, shared with a vertex there that has another normal or uv, as at a lathe's poles
+            for (let slot = h & mask;; slot = (slot + 1) & mask)
+            {
+                const o = places[slot] - 1;
+                if (o < 0) { places[slot] = i + 1, place[i] = i; break; }
+                if (values[o*9] === x && values[o*9+1] === y && values[o*9+2] === z) { place[i] = o; break; }
+            }
+
+            // the whole vertex
+            for (let m = 3; m < 9; ++m)
+                h = mix(h, values[k+m]);
+            for (let slot = h & mask;; slot = (slot + 1) & mask)
+            {
+                const o = seen[slot] - 1;
+                if (o < 0) { seen[slot] = i + 1, remap[i] = vertices.length, vertices.push(i); break; }
+                let same = true;
+                for (let m = 0; same && m < 9; ++m)
+                    same = values[o*9+m] === values[k+m];
+                if (same) { remap[i] = remap[o]; break; }
+            }
         }
         const indices = [];
         for (let i = 2; i < count; ++i)

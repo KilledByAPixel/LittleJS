@@ -2469,6 +2469,21 @@ test('getTriangles merges the shared vertices of a sphere and keeps only its rea
     assert.deepEqual(new Mesh().getTriangles(), { vertices: [], indices: [] });
 });
 
+test('getTriangles compares every vertex value to a millionth, so two a hair apart are one vertex', () =>
+{
+    const mesh = new Mesh, a = vec3(0, 0, 0), b = vec3(1, 0, 0), c = vec3(0, 1, 0);
+    mesh.addStrip([a, b, c], vec3(0, 0, 1));
+    mesh.addStrip([a, b, c], vec3(0, 1e-9, 1)); // the same triangle again, its normal off by a billionth
+    const { vertices, indices } = mesh.getTriangles();
+    assert.equal(vertices.length, 3, 'the second strip adds no vertices');
+    assert.equal(indices.length, 6, 'two triangles, the join dropped');
+    // a mesh far from the origin keeps its places apart
+    const far = new Mesh;
+    far.addStrip([vec3(5000, 0, 0), vec3(5001, 0, 0), vec3(5000, 1, 0)]);
+    far.addStrip([vec3(9294.967296, 0, 0), vec3(9295.967296, 0, 0), vec3(9294.967296, 1, 0)]); // 2^32 millionths on
+    assert.equal(far.getTriangles().vertices.length, 6);
+});
+
 test('a Light3D has an intensity that multiplies its color, 1 by default', () =>
 {
     const plain = new Light3D(vec3(), 5, RED), bright = new Light3D(vec3(), 5, RED, 3);

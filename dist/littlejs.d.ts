@@ -7297,6 +7297,7 @@ declare module "littlejsengine" {
         upload(): Mesh;
         /** The mesh as an indexed triangle list, what upload sends to the GPU: the strip's real triangles over its
          *  distinct vertices, the joins between its pieces dropped and every triangle facing the way it did in the strip
+         *  - Vertices are compared to a millionth, so two at one place with the same normal, uv and color are one
          *  @return {{vertices: Array<number>, indices: Array<number>}} - vertices are strip indices, one per distinct
          *    vertex; indices are the triangles, three per triangle, into vertices */
         getTriangles(): {
