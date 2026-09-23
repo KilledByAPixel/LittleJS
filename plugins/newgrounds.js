@@ -34,7 +34,17 @@ class NewgroundsMedal extends Medal
      *  @param {string} [src]         - Image location for the medal
      */
     constructor(id, name, description, icon, src)
-    { super(id, name, description, icon, src); }
+    {
+        super(id, name, description, icon, src);
+
+        /** @property {number|undefined} - Difficulty from the server, 1 easy to 5 brutal, once ready when logged in
+         *  @type {number|undefined} */
+        this.difficulty = undefined;
+
+        /** @property {number|undefined} - Point value from the server, once ready when logged in
+         *  @type {number|undefined} */
+        this.value = undefined;
+    }
 
     /** Whether the local save holds this medal, not while logged in when newgrounds does
      *  @return {boolean} */
@@ -97,7 +107,8 @@ class NewgroundsPlugin
         newgrounds = this; // set global newgrounds object
         /** @property {string} - The newgrounds App ID */
         this.app_id = app_id;
-        /** @property {string|undefined} - AES-128/Base64 encryption key, if any */
+        /** @property {string|undefined} - AES-128/Base64 encryption key, if any
+         *  @type {string|undefined} */
         this.cipher = cipher;
         this.cryptoKey = undefined; // the cipher imported for WebCrypto, on the first encrypted call
         const hasLocation = typeof location != 'undefined';
@@ -113,7 +124,8 @@ class NewgroundsPlugin
         this.pendingUnlocks = new Map;
 
         // get session id from url search params
-        /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
+        /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the server refused it
+         *  @type {string|null} */
         this.session_id = hasLocation ? new URL(location.href).searchParams.get('ngio_session_id') : null;
         // newgrounds holds this player's newgrounds medals: locked until the server says otherwise, the local save leaves them alone
         if (this.session_id)
@@ -140,10 +152,12 @@ class NewgroundsPlugin
 
         const medalsResult = await this.call('Medal.getList');
 
-        // bail early if the first call failed (offline / bad session / server error)
+        // without the server (offline / bad session / server error) the game plays as logged out
         if (!medalsResult || !medalsResult.result || medalsResult.result.error)
         {
-            debugMedals && LOG('Newgrounds session unavailable; skipping plugin init');
+            debugMedals && LOG('Newgrounds session unavailable; medals are local');
+            this.session_id = null;
+            medalsLoad(); // the newgrounds medals are local again, back from the save
             return this;
         }
 
@@ -186,15 +200,16 @@ class NewgroundsPlugin
     postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}); }
 
     /** Get scores from a scoreboard
-     * @param {number} id       - The scoreboard id
-     * @param {string} [user]   - A user's id or name
-     * @param {number} [social] - If true, only social scores will be loaded
-     * @param {number} [skip]   - Number of scores to skip over
-     * @param {number} [limit]  - Number of scores to include in the list
+     * @param {number} id        - The scoreboard id
+     * @param {string} [user]    - A user's id or name
+     * @param {boolean} [social] - If true, only social scores will be loaded
+     * @param {number} [skip]    - Number of scores to skip over
+     * @param {number} [limit]   - Number of scores to include in the list
+     * @param {string} [period]  - 'D' today, which the server assumes when left out, 'W' this week, 'M' this month, 'Y' this year or 'A' all time
      * @return {Promise<Object>} - The response JSON object
      */
-    getScores(id, user, social=0, skip=0, limit=10)
-    { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}); }
+    getScores(id, user, social=false, skip=0, limit=10, period)
+    { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit, 'period':period}); }
 
     /** Send message to log a view
      * @return {Promise<Object>} - The response JSON object */
@@ -228,30 +243,28 @@ class NewgroundsPlugin
      */
     async call(component, parameters)
     {
-        const call = {'component':component, 'parameters':parameters};
-        if (this.cipher)
-        {
-            // the whole call goes encrypted in its place
-            call['secure'] = await this.encrypt(JSON.stringify(call));
-            call['parameters'] = 0;
-        }
-
-        // build the input object
-        const input =
-        {
-            'app_id':     this.app_id,
-            'session_id': this.session_id,
-            'call':       call
-        };
-
-        // build post data
-        const formData = new FormData();
-        formData.append('input', JSON.stringify(input));
-
-        // send post data
         const url = 'https://newgrounds.io/gateway_v3.php';
         try
         {
+            const call = {'component':component, 'parameters':parameters};
+            if (this.cipher)
+            {
+                // the whole call goes encrypted in its place
+                call['secure'] = await this.encrypt(JSON.stringify(call));
+                call['parameters'] = 0;
+            }
+
+            // build the input object
+            const input =
+            {
+                'app_id':     this.app_id,
+                'session_id': this.session_id,
+                'call':       call
+            };
+
+            // send it as post data
+            const formData = new FormData();
+            formData.append('input', JSON.stringify(input));
             const response = await fetch(url, {'method':'POST', 'body':formData});
             const text = await response.text();
             debugMedals && LOG(text);

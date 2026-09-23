@@ -38,3 +38,32 @@ test('a NewgroundsMedal unlocks locally and posts nothing when not logged in', a
     assert.equal(fetches, 0, 'the gateway is not asked without a session');
     assert.equal(JSON.parse(globalThis.localStorage['NG Logged Out'])['7'].unlocked, true, 'saved locally');
 });
+
+test('a call with a cipher posts the encrypted call in place of the plain one', async () =>
+{
+    let input;
+    globalThis.fetch = async (url, options)=>
+    {
+        input = JSON.parse(options.body.get('input'));
+        return { text: async ()=> '{"success":true,"result":{"component":"Gateway.ping","success":true,"data":{}}}' };
+    };
+    const response = await newgrounds.call('Gateway.ping', 0);
+    assert.equal(response.success, true);
+    assert.equal(input.app_id, 'an app');
+    assert.equal(input.session_id, null);
+    assert.equal(input.call.component, 'Gateway.ping');
+    assert.equal(input.call.parameters, 0);
+    assert.equal(typeof input.call.secure, 'string', 'the call is encrypted in place');
+    assert.equal(Buffer.from(input.call.secure, 'base64').length % 16, 0);
+});
+
+test('a call whose body is not JSON, or whose cipher is bad, gives undefined instead of throwing', async () =>
+{
+    globalThis.fetch = async ()=> ({ text: async ()=> '<html>gateway down</html>' });
+    assert.equal(await newgrounds.call('Gateway.ping', 0), undefined);
+
+    newgrounds.cipher = 'not base64!';
+    newgrounds.cryptoKey = undefined;
+    assert.equal(await newgrounds.call('Gateway.ping', 0), undefined, 'a bad cipher is a failed call');
+    newgrounds.cipher = cipher;
+});

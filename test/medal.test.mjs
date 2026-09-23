@@ -170,3 +170,19 @@ test('a medal a service holds is neither loaded nor written, its stored entry st
     assert.equal(stored['2'].unlocked, true);
     assert.equal('3' in stored, false, 'a held medal with no entry gets none');
 });
+
+test('medalsInit can run again for another save without adding the render plugin twice', () =>
+{
+    const m = new Medal(1, 'One');
+    medalsInit(SAVE);
+    m.unlock();
+    // a second registration of the same render function would fail the engine's uniqueness assert
+    assert.doesNotThrow(() => medalsInit('Other Save'));
+    assert.equal(m.unlocked, false, 'the other save has it locked');
+});
+
+test('a medal id must be a number', () =>
+{
+    assert.throws(() => new Medal('1', 'One'));
+    assert.throws(() => new Medal(-1, 'One'));
+});

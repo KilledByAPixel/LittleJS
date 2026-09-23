@@ -10600,7 +10600,7 @@ function drawEngineLogo(t)
  * - Automatic saving to local storage, a medal can say a service like Newgrounds holds it instead
  * - Visual display queue with slide-in notifications
  * - The Newgrounds plugin extends it with NewgroundsMedal, held on the server while logged in
- * - Debug mode to unlock/reset medals during development
+ * - Setting debugMedals in the console skips the load and logs the Newgrounds traffic, for development
  * @namespace Medals
  */
 
@@ -10634,12 +10634,12 @@ let medalDisplaySize = vec2(640, 80);
 let medalsPreventUnlock = false;
 
 /** List of all medals
- *  @type {Object}
+ *  @type {Object<number, Medal>}
  *  @memberof Medals */
 const medals = {};
 
 // Engine internal variables not exposed to documentation
-let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
+let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast, medalsRenderAdded;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -10651,45 +10651,51 @@ let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
  *  @memberof Medals */
 function medalsInit(saveName)
 {
-    // check if medals are unlocked
     medalsSaveName = saveName;
-    if (!debugMedals)
+    medalsLoad();
+
+    // engine automatically renders medals, once however often this is called
+    if (!medalsRenderAdded)
+        engineAddPlugin(undefined, medalsRender);
+    medalsRenderAdded = true;
+}
+
+// check which local medals are unlocked in the save, and write the catalog back
+function medalsLoad()
+{
+    if (debugMedals || !medalsSaveName) return;
+    const saved = readSaveData(medalsSaveName);
+    medalsForEach(medal => {
+        if (medal.isLocal())
+            medal.unlocked = !!(saved[medal.id] && saved[medal.id].unlocked);
+    });
+    medalsSave();
+}
+
+// show the first medal in the queue, sliding it on and off
+function medalsRender()
+{
+    if (!medalsDisplayQueue.length) return;
+
+    // update first medal in queue
+    const medal = medalsDisplayQueue[0];
+    const elapsed = timeReal - medalsDisplayTimeLast;
+    if (!medalsDisplayTimeLast)
+        medalsDisplayTimeLast = timeReal;
+    else if (elapsed > medalDisplayTime)
     {
-        const saved = readSaveData(saveName);
-        medalsForEach(medal => {
-            if (medal.isLocal())
-                medal.unlocked = !!(saved[medal.id] && saved[medal.id].unlocked);
-        });
-        medalsSave();
+        medalsDisplayTimeLast = 0;
+        medalsDisplayQueue.shift();
     }
-
-    // engine automatically renders medals
-    engineAddPlugin(undefined, medalsRender);
-
-    // plugin functions
-    function medalsRender()
+    else
     {
-        if (!medalsDisplayQueue.length) return;
-
-        // update first medal in queue
-        const medal = medalsDisplayQueue[0];
-        const time = timeReal - medalsDisplayTimeLast;
-        if (!medalsDisplayTimeLast)
-            medalsDisplayTimeLast = timeReal;
-        else if (time > medalDisplayTime)
-        {
-            medalsDisplayTimeLast = 0;
-            medalsDisplayQueue.shift();
-        }
-        else
-        {
-            // slide on/off medals
-            const slideOffTime = medalDisplayTime - medalDisplaySlideTime;
-            const hidePercent =
-                time < medalDisplaySlideTime ? 1 - time / medalDisplaySlideTime :
-                time > slideOffTime ? (time - slideOffTime) / medalDisplaySlideTime : 0;
-            medal.render(hidePercent);
-        }
+        // slide on/off medals, the slides share the display time when it is short
+        const slideTime = min(medalDisplaySlideTime, medalDisplayTime/2);
+        const slideOffTime = medalDisplayTime - slideTime;
+        const hidePercent =
+            elapsed < slideTime ? 1 - elapsed / slideTime :
+            elapsed > slideOffTime ? (elapsed - slideOffTime) / slideTime : 0;
+        medal.render(hidePercent);
     }
 }
 
@@ -10764,7 +10770,7 @@ class Medal
      */
     constructor(id, name, description='', icon='🏆', src)
     {
-        ASSERT(id >= 0 && !medals[id]);
+        ASSERT(isNumber(id) && id >= 0 && !medals[id], 'medal id must be a unique number of 0 or more');
 
         /** @property {number} - The unique identifier of the medal */
         this.id = id;
@@ -10781,7 +10787,8 @@ class Medal
         /** @property {boolean} - Is the medal unlocked? */
         this.unlocked = false;
 
-        /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any */
+        /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any
+         *  @type {HTMLImageElement|undefined} */
         this.image = undefined;
         if (src)
             (this.image = new Image).src = src;
@@ -10856,9 +10863,10 @@ class Medal
      */
     renderIcon(pos, size)
     {
-        // draw the image or icon
-        if (this.image)
-            mainContext.drawImage(this.image, pos.x-size/2, pos.y-size/2, size, size);
+        // draw the image once it has loaded, or the icon; a broken image would throw
+        const image = this.image;
+        if (image && image.complete && image.naturalWidth)
+            mainContext.drawImage(image, pos.x-size/2, pos.y-size/2, size, size);
         else
             drawTextScreen(this.icon, pos, size*.7, BLACK);
     }
@@ -10922,7 +10930,17 @@ class NewgroundsMedal extends Medal
      *  @param {string} [src]         - Image location for the medal
      */
     constructor(id, name, description, icon, src)
-    { super(id, name, description, icon, src); }
+    {
+        super(id, name, description, icon, src);
+
+        /** @property {number|undefined} - Difficulty from the server, 1 easy to 5 brutal, once ready when logged in
+         *  @type {number|undefined} */
+        this.difficulty = undefined;
+
+        /** @property {number|undefined} - Point value from the server, once ready when logged in
+         *  @type {number|undefined} */
+        this.value = undefined;
+    }
 
     /** Whether the local save holds this medal, not while logged in when newgrounds does
      *  @return {boolean} */
@@ -10985,7 +11003,8 @@ class NewgroundsPlugin
         newgrounds = this; // set global newgrounds object
         /** @property {string} - The newgrounds App ID */
         this.app_id = app_id;
-        /** @property {string|undefined} - AES-128/Base64 encryption key, if any */
+        /** @property {string|undefined} - AES-128/Base64 encryption key, if any
+         *  @type {string|undefined} */
         this.cipher = cipher;
         this.cryptoKey = undefined; // the cipher imported for WebCrypto, on the first encrypted call
         const hasLocation = typeof location != 'undefined';
@@ -11001,7 +11020,8 @@ class NewgroundsPlugin
         this.pendingUnlocks = new Map;
 
         // get session id from url search params
-        /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
+        /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the server refused it
+         *  @type {string|null} */
         this.session_id = hasLocation ? new URL(location.href).searchParams.get('ngio_session_id') : null;
         // newgrounds holds this player's newgrounds medals: locked until the server says otherwise, the local save leaves them alone
         if (this.session_id)
@@ -11028,10 +11048,12 @@ class NewgroundsPlugin
 
         const medalsResult = await this.call('Medal.getList');
 
-        // bail early if the first call failed (offline / bad session / server error)
+        // without the server (offline / bad session / server error) the game plays as logged out
         if (!medalsResult || !medalsResult.result || medalsResult.result.error)
         {
-            debugMedals && LOG('Newgrounds session unavailable; skipping plugin init');
+            debugMedals && LOG('Newgrounds session unavailable; medals are local');
+            this.session_id = null;
+            medalsLoad(); // the newgrounds medals are local again, back from the save
             return this;
         }
 
@@ -11074,15 +11096,16 @@ class NewgroundsPlugin
     postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}); }
 
     /** Get scores from a scoreboard
-     * @param {number} id       - The scoreboard id
-     * @param {string} [user]   - A user's id or name
-     * @param {number} [social] - If true, only social scores will be loaded
-     * @param {number} [skip]   - Number of scores to skip over
-     * @param {number} [limit]  - Number of scores to include in the list
+     * @param {number} id        - The scoreboard id
+     * @param {string} [user]    - A user's id or name
+     * @param {boolean} [social] - If true, only social scores will be loaded
+     * @param {number} [skip]    - Number of scores to skip over
+     * @param {number} [limit]   - Number of scores to include in the list
+     * @param {string} [period]  - 'D' today, which the server assumes when left out, 'W' this week, 'M' this month, 'Y' this year or 'A' all time
      * @return {Promise<Object>} - The response JSON object
      */
-    getScores(id, user, social=0, skip=0, limit=10)
-    { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}); }
+    getScores(id, user, social=false, skip=0, limit=10, period)
+    { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit, 'period':period}); }
 
     /** Send message to log a view
      * @return {Promise<Object>} - The response JSON object */
@@ -11116,30 +11139,28 @@ class NewgroundsPlugin
      */
     async call(component, parameters)
     {
-        const call = {'component':component, 'parameters':parameters};
-        if (this.cipher)
-        {
-            // the whole call goes encrypted in its place
-            call['secure'] = await this.encrypt(JSON.stringify(call));
-            call['parameters'] = 0;
-        }
-
-        // build the input object
-        const input =
-        {
-            'app_id':     this.app_id,
-            'session_id': this.session_id,
-            'call':       call
-        };
-
-        // build post data
-        const formData = new FormData();
-        formData.append('input', JSON.stringify(input));
-
-        // send post data
         const url = 'https://newgrounds.io/gateway_v3.php';
         try
         {
+            const call = {'component':component, 'parameters':parameters};
+            if (this.cipher)
+            {
+                // the whole call goes encrypted in its place
+                call['secure'] = await this.encrypt(JSON.stringify(call));
+                call['parameters'] = 0;
+            }
+
+            // build the input object
+            const input =
+            {
+                'app_id':     this.app_id,
+                'session_id': this.session_id,
+                'call':       call
+            };
+
+            // send it as post data
+            const formData = new FormData();
+            formData.append('input', JSON.stringify(input));
             const response = await fetch(url, {'method':'POST', 'body':formData});
             const text = await response.text();
             debugMedals && LOG(text);

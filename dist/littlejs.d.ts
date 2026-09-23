@@ -3734,9 +3734,11 @@ declare module "littlejsengine" {
         render(): void;
     }
     /** List of all medals
-     *  @type {Object}
+     *  @type {Object<number, Medal>}
      *  @memberof Medals */
-    export const medals: any;
+    export const medals: {
+        [x: number]: Medal;
+    };
     /** Set to stop medals from being unlockable (like if cheats are enabled)
      *  @type {boolean}
      *  @default
@@ -3825,8 +3827,9 @@ declare module "littlejsengine" {
         icon: string;
         /** @property {boolean} - Is the medal unlocked? */
         unlocked: boolean;
-        /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any */
-        image: HTMLImageElement;
+        /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any
+         *  @type {HTMLImageElement|undefined} */
+        image: HTMLImageElement | undefined;
         /** Unlocks a medal if not already unlocked
          *  - The promise is optional, for when a game wants to know the outcome
          *  @return {Promise<boolean>} - Whether the medal is unlocked, right away unless a service like Newgrounds has to confirm */
@@ -3878,8 +3881,9 @@ declare module "littlejsengine" {
         constructor(app_id: string, cipher?: string);
         /** @property {string} - The newgrounds App ID */
         app_id: string;
-        /** @property {string|undefined} - AES-128/Base64 encryption key, if any */
-        cipher: string;
+        /** @property {string|undefined} - AES-128/Base64 encryption key, if any
+         *  @type {string|undefined} */
+        cipher: string | undefined;
         cryptoKey: CryptoKey;
         /** @property {string} - Hostname used when logging views */
         host: string;
@@ -3890,8 +3894,9 @@ declare module "littlejsengine" {
         /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping, each with the promise of its request
          *  @type {Map<NewgroundsMedal, Promise<boolean>>} */
         pendingUnlocks: Map<NewgroundsMedal, Promise<boolean>>;
-        /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
-        session_id: string;
+        /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the server refused it
+         *  @type {string|null} */
+        session_id: string | null;
         /** @property {Promise<NewgroundsPlugin>} - Resolves once the medals and scoreboards have been fetched, or right away when not logged in */
         ready: Promise<this>;
         init(): Promise<this>;
@@ -3905,14 +3910,15 @@ declare module "littlejsengine" {
          * @return {Promise<Object>} - The response JSON object */
         postScore(id: number, value: number): Promise<any>;
         /** Get scores from a scoreboard
-         * @param {number} id       - The scoreboard id
-         * @param {string} [user]   - A user's id or name
-         * @param {number} [social] - If true, only social scores will be loaded
-         * @param {number} [skip]   - Number of scores to skip over
-         * @param {number} [limit]  - Number of scores to include in the list
+         * @param {number} id        - The scoreboard id
+         * @param {string} [user]    - A user's id or name
+         * @param {boolean} [social] - If true, only social scores will be loaded
+         * @param {number} [skip]    - Number of scores to skip over
+         * @param {number} [limit]   - Number of scores to include in the list
+         * @param {string} [period]  - 'D' today, which the server assumes when left out, 'W' this week, 'M' this month, 'Y' this year or 'A' all time
          * @return {Promise<Object>} - The response JSON object
          */
-        getScores(id: number, user?: string, social?: number, skip?: number, limit?: number): Promise<any>;
+        getScores(id: number, user?: string, social?: boolean, skip?: number, limit?: number, period?: string): Promise<any>;
         /** Send message to log a view
          * @return {Promise<Object>} - The response JSON object */
         logView(): Promise<any>;
@@ -3933,6 +3939,12 @@ declare module "littlejsengine" {
      * @memberof Newgrounds
      */
     export class NewgroundsMedal extends Medal {
+        /** @property {number|undefined} - Difficulty from the server, 1 easy to 5 brutal, once ready when logged in
+         *  @type {number|undefined} */
+        difficulty: number | undefined;
+        /** @property {number|undefined} - Point value from the server, once ready when logged in
+         *  @type {number|undefined} */
+        value: number | undefined;
     }
     /**
      * LittleJS Post Processing Plugin

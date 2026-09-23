@@ -5,7 +5,7 @@
  * - Automatic saving to local storage, a medal can say a service like Newgrounds holds it instead
  * - Visual display queue with slide-in notifications
  * - The Newgrounds plugin extends it with NewgroundsMedal, held on the server while logged in
- * - Debug mode to unlock/reset medals during development
+ * - Setting debugMedals in the console skips the load and logs the Newgrounds traffic, for development
  * @namespace Medals
  */
 
@@ -41,12 +41,12 @@ let medalDisplaySize = vec2(640, 80);
 let medalsPreventUnlock = false;
 
 /** List of all medals
- *  @type {Object}
+ *  @type {Object<number, Medal>}
  *  @memberof Medals */
 const medals = {};
 
 // Engine internal variables not exposed to documentation
-let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
+let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast, medalsRenderAdded;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -58,45 +58,51 @@ let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
  *  @memberof Medals */
 function medalsInit(saveName)
 {
-    // check if medals are unlocked
     medalsSaveName = saveName;
-    if (!debugMedals)
+    medalsLoad();
+
+    // engine automatically renders medals, once however often this is called
+    if (!medalsRenderAdded)
+        engineAddPlugin(undefined, medalsRender);
+    medalsRenderAdded = true;
+}
+
+// check which local medals are unlocked in the save, and write the catalog back
+function medalsLoad()
+{
+    if (debugMedals || !medalsSaveName) return;
+    const saved = readSaveData(medalsSaveName);
+    medalsForEach(medal => {
+        if (medal.isLocal())
+            medal.unlocked = !!(saved[medal.id] && saved[medal.id].unlocked);
+    });
+    medalsSave();
+}
+
+// show the first medal in the queue, sliding it on and off
+function medalsRender()
+{
+    if (!medalsDisplayQueue.length) return;
+
+    // update first medal in queue
+    const medal = medalsDisplayQueue[0];
+    const elapsed = timeReal - medalsDisplayTimeLast;
+    if (!medalsDisplayTimeLast)
+        medalsDisplayTimeLast = timeReal;
+    else if (elapsed > medalDisplayTime)
     {
-        const saved = readSaveData(saveName);
-        medalsForEach(medal => {
-            if (medal.isLocal())
-                medal.unlocked = !!(saved[medal.id] && saved[medal.id].unlocked);
-        });
-        medalsSave();
+        medalsDisplayTimeLast = 0;
+        medalsDisplayQueue.shift();
     }
-
-    // engine automatically renders medals
-    engineAddPlugin(undefined, medalsRender);
-
-    // plugin functions
-    function medalsRender()
+    else
     {
-        if (!medalsDisplayQueue.length) return;
-
-        // update first medal in queue
-        const medal = medalsDisplayQueue[0];
-        const time = timeReal - medalsDisplayTimeLast;
-        if (!medalsDisplayTimeLast)
-            medalsDisplayTimeLast = timeReal;
-        else if (time > medalDisplayTime)
-        {
-            medalsDisplayTimeLast = 0;
-            medalsDisplayQueue.shift();
-        }
-        else
-        {
-            // slide on/off medals
-            const slideOffTime = medalDisplayTime - medalDisplaySlideTime;
-            const hidePercent =
-                time < medalDisplaySlideTime ? 1 - time / medalDisplaySlideTime :
-                time > slideOffTime ? (time - slideOffTime) / medalDisplaySlideTime : 0;
-            medal.render(hidePercent);
-        }
+        // slide on/off medals, the slides share the display time when it is short
+        const slideTime = min(medalDisplaySlideTime, medalDisplayTime/2);
+        const slideOffTime = medalDisplayTime - slideTime;
+        const hidePercent =
+            elapsed < slideTime ? 1 - elapsed / slideTime :
+            elapsed > slideOffTime ? (elapsed - slideOffTime) / slideTime : 0;
+        medal.render(hidePercent);
     }
 }
 
@@ -171,7 +177,7 @@ class Medal
      */
     constructor(id, name, description='', icon='🏆', src)
     {
-        ASSERT(id >= 0 && !medals[id]);
+        ASSERT(isNumber(id) && id >= 0 && !medals[id], 'medal id must be a unique number of 0 or more');
 
         /** @property {number} - The unique identifier of the medal */
         this.id = id;
@@ -188,7 +194,8 @@ class Medal
         /** @property {boolean} - Is the medal unlocked? */
         this.unlocked = false;
 
-        /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any */
+        /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any
+         *  @type {HTMLImageElement|undefined} */
         this.image = undefined;
         if (src)
             (this.image = new Image).src = src;
@@ -263,9 +270,10 @@ class Medal
      */
     renderIcon(pos, size)
     {
-        // draw the image or icon
-        if (this.image)
-            mainContext.drawImage(this.image, pos.x-size/2, pos.y-size/2, size, size);
+        // draw the image once it has loaded, or the icon; a broken image would throw
+        const image = this.image;
+        if (image && image.complete && image.naturalWidth)
+            mainContext.drawImage(image, pos.x-size/2, pos.y-size/2, size, size);
         else
             drawTextScreen(this.icon, pos, size*.7, BLACK);
     }

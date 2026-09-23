@@ -1445,7 +1445,7 @@ new Box2dGearJoint(jointA, jointB, ratio)
 - Achievement/medal system with on-screen popup, save/restore via localStorage
 - Optional Newgrounds integration: syncs medals and scoreboards when hosted on Newgrounds
 - A logged in Newgrounds player's NewgroundsMedals live on the server: they unlock once it confirms and the local save leaves
-  them alone, while a plain Medal is never touched
+  them alone, while a plain Medal is never touched; if the server does not answer at load the game plays as logged out
 - See `examples/shorts/medals.js` for a demo
 
 ```javascript
@@ -1472,9 +1472,13 @@ new NewgroundsPlugin(app_id, cipher) // sets the newgrounds global and fetches t
                                      // app's cipher, calls are encrypted by the browser's own WebCrypto, so the page
                                      // has to be https or localhost and no library is needed
 await newgrounds.ready               // resolves once the medals and scoreboards are in, right away when not logged in
+newgrounds.session_id                // the player's session id, null when not logged in or once the server refused it
+newgrounds.medals                    // the server's medal list once ready; its name, description, icon, value and difficulty
+                                     // replace what the game gave each NewgroundsMedal
+newgrounds.scoreboards               // the server's scoreboard list once ready, with the ids to post and read
 newgrounds.unlockMedal(id)           // Server-side unlock; every call is a fetch and returns a promise of the response
 newgrounds.postScore(id, value)      // Submit to a scoreboard
-await newgrounds.getScores(id, user, social, skip, limit)
+await newgrounds.getScores(id, user, social, skip, limit, period) // period 'D' today (the server default), 'W', 'M', 'Y', 'A' all time
 newgrounds.logView()                 // Track a page view
 newgrounds.pendingUnlocks            // Map of the medals sent to unlock that the server has not confirmed yet to the promise of
                                      // each request; they are resent on the keep alive ping
