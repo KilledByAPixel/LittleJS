@@ -2754,23 +2754,44 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
     const mesh = new Mesh;
     const segmentsX = segments.x, segmentsZ = segments.y;
     const cellX = size.x / segmentsX, cellZ = size.y / segmentsZ;
-    const px = (i)=> i * cellX - size.x / 2, pz = (j)=> j * cellZ - size.y / 2;
-    const point = (i, j)=> { const x = px(i), z = pz(j); return vec3(x, heightFunction(x, z), z); };
-    const normal = (i, j)=> render3DSlopeNormal(heightFunction, px(i), pz(j), cellX / 2, cellZ / 2, size.x / 2, size.y / 2);
-    const uv = (i, j)=> vec2(i / segmentsX, j / segmentsZ);
+    const halfX = size.x / 2, halfZ = size.y / 2, ex = cellX / 2, ez = cellZ / 2;
+    const px = (i)=> i * cellX - halfX, pz = (j)=> j * cellZ - halfZ;
     const cellColor = (i, j)=> !color ? WHITE : isColor(color) ? color : color(px(i), pz(j));
+    // a big terrain has millions of vertices, so each one is made once, shared by the rows above and below it,
+    // and its slope normal is worked out in numbers, the same normal render3DSlopeNormal gives
+    const row = (j)=>
+    {
+        const points = [], normals = [], uvs = [], colors = [], z = pz(j);
+        const z0 = max(z - ez, -halfZ), z1 = min(z + ez, halfZ);
+        for (let i = 0; i <= segmentsX; ++i)
+        {
+            const x = px(i);
+            points.push(vec3(x, heightFunction(x, z), z));
+            uvs.push(vec2(i / segmentsX, j / segmentsZ));
+            if (!smooth) continue;
+            const x0 = max(x - ex, -halfX), x1 = min(x + ex, halfX);
+            const dx = (heightFunction(x1, z) - heightFunction(x0, z)) / (x1 - x0 || 1);
+            const dz = (heightFunction(x, z1) - heightFunction(x, z0)) / (z1 - z0 || 1);
+            const s = 1 / hypot(dx, 1, dz);
+            normals.push(vec3(-dx * s, s, -dz * s));
+            colors.push(cellColor(i, j));
+        }
+        return {points, normals, uvs, colors};
+    };
+    let above = row(0);
     for (let j = 0; j < segmentsZ; ++j)
     {
+        const below = row(j + 1);
         if (smooth)
         {
             // one ribbon per row with vertex normals from the slope
             const points = [], normals = [], uvs = [], colors = [];
             for (let i = 0; i <= segmentsX; ++i)
             {
-                points.push(point(i, j), point(i, j + 1));
-                normals.push(normal(i, j), normal(i, j + 1));
-                uvs.push(uv(i, j), uv(i, j + 1));
-                colors.push(cellColor(i, j), cellColor(i, j + 1));
+                points.push(above.points[i], below.points[i]);
+                normals.push(above.normals[i], below.normals[i]);
+                uvs.push(above.uvs[i], below.uvs[i]);
+                colors.push(above.colors[i], below.colors[i]);
             }
             mesh.addStrip(points, normals, uvs, colors);
         }
@@ -2778,9 +2799,10 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
         {
             // one quad per cell with its face normal and one color sampled at its center
             for (let i = 0; i < segmentsX; ++i)
-                mesh.addQuad(point(i, j), point(i, j + 1), point(i + 1, j + 1), point(i + 1, j), cellColor(i + .5, j + .5),
-                    [uv(i, j), uv(i, j + 1), uv(i + 1, j + 1), uv(i + 1, j)]);
+                mesh.addQuad(above.points[i], below.points[i], below.points[i+1], above.points[i+1], cellColor(i + .5, j + .5),
+                    [above.uvs[i], below.uvs[i], below.uvs[i+1], above.uvs[i+1]]);
         }
+        above = below;
     }
     mesh.doubleSided = true; // a sheet, seen from both sides; terrain seen only from above can turn it off
     return mesh;
