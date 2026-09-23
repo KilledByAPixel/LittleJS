@@ -1247,6 +1247,19 @@ parseOBJ(text, smooth)                        // Mesh from OBJ text, smooth norm
 await loadOBJ(url, smooth) // fetch then parse, in an async gameInit; chain .center().fit(size) for models of unknown
                            // units
 
+// glTF models - the glTF plugin, .gltf with its files beside it or .glb in one file; static meshes with their node
+// placement, vertex colors, material colors and base color textures; no skins, animations or morph targets
+const model = await loadGLTF(url)   // a GLTFModel, in an async gameInit; or await parseGLTF(data, baseUrl) on bytes or
+                                     // JSON you already have
+model.parts                          // one GLTFPart per primitive of every node: name, mesh in model space, color,
+                                     // textureInfo when the material has one and WebGL is on, transparent for a
+                                     // blending material
+model.mesh, model.textureInfo        // everything as one Mesh tinted by its materials, and its texture when every
+                                     // part uses the same one; a model mixing plain and textured parts, or using
+                                     // several textures, draws right through createObject
+model.createObject(pos3D)            // an EngineObject3D with a child per part, each with its own texture and
+                                     // blending; move and turn the root and the parts follow
+
 // Particles - the 3D twin of ParticleEmitter, camera facing billboards sorted with everything transparent
 new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileInfo,
     colorStartA, colorStartB, colorEndA, colorEndB, particleTime, sizeStart, sizeEnd,
@@ -1323,6 +1336,8 @@ OrbitControls                             // new CameraControl3D(target, distanc
 PointerLockControls                       // new FirstPersonCamera3D
 new THREE.Raycaster()                     // render3D.screenToRay, pick and engineObjectsRaycast3D
 OBJLoader                                 // loadOBJ(url) or parseOBJ(text)
+GLTFLoader                                // loadGLTF(url): model.createObject(pos) is the scene as objects, model.mesh
+                                          // is everything as one Mesh
 EffectComposer and UnrealBloomPass        // postProcessBloom()
 renderer.render(scene, camera)            // nothing to do, the engine draws every frame and handles resizing
 position.setUsage(THREE.DynamicDrawUsage) // mesh.dynamicDraw = true once, then mesh.dirty = true when the points

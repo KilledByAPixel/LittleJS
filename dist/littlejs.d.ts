@@ -7941,6 +7941,69 @@ declare module "littlejsengine" {
      * const mesh = await loadOBJ('ship.obj'); // in an async gameInit
      */
     export function loadOBJ(url: string, smooth?: boolean): Promise<Mesh>;
+    /**
+     * GLTFModel - A loaded model: its parts, and everything as one mesh
+     * @memberof GLTF
+     */
+    export class GLTFModel {
+        /** @param {Array<GLTFPart>} parts */
+        constructor(parts: Array<GLTFPart>);
+        /** @property {Array<GLTFPart>} - One per primitive of every node that has a mesh */
+        parts: GLTFPart[];
+        /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo */
+        mesh: Mesh;
+        /** @property {TextureInfo|undefined} - The texture to draw mesh with, when every part uses the same one
+         *  @type {TextureInfo|undefined} */
+        textureInfo: TextureInfo | undefined;
+        /** Make an object at a position with a child per part, so each keeps its own texture, color and blending
+         *  @param {Vector3} [pos3D]
+         *  @return {EngineObject3D} - The root, move and turn it and the parts follow */
+        createObject(pos3D?: Vector3): EngineObject3D;
+    }
+    /**
+     * LittleJS glTF Plugin
+     * - Loads glTF 2.0 models: a .gltf with its .bin and images beside it, or a .glb with everything in one file
+     * - A model comes back as parts, one Mesh per primitive of every node placed by the node tree, each with its
+     *   material's color and base color texture, plus everything combined into one Mesh
+     * - Static geometry only: positions, normals, uvs, vertex colors and indices; skins, animations and morph targets are not read
+     * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
+     * - Requires the Render3D plugin
+     * @namespace GLTF
+     * @example
+     * const model = await loadGLTF('ship.glb');   // in an async gameInit
+     * model.createObject(vec3(0, 1, 0));           // an object with a child per part, textures and all
+     * new EngineObject3D(vec3(), model.mesh);      // or the whole thing as one mesh
+     */
+    /**
+     * GLTFPart - One primitive of a model, placed where its node put it
+     * @memberof GLTF
+     */
+    export class GLTFPart {
+        /** @param {string} name @param {Mesh} mesh @param {Color} color @param {TextureInfo|undefined} textureInfo @param {boolean} transparent */
+        constructor(name: string, mesh: Mesh, color: Color, textureInfo: TextureInfo | undefined, transparent: boolean);
+        /** @property {string} - The node's name, or its mesh's */
+        name: string;
+        /** @property {Mesh} - The geometry in model space, the node transforms applied, with the vertex colors the file had */
+        mesh: Mesh;
+        /** @property {Color} - The material's base color, to draw the mesh tinted with */
+        color: Color;
+        /** @property {TextureInfo|undefined} - The material's base color texture, undefined without one or without WebGL
+         *  @type {TextureInfo|undefined} */
+        textureInfo: TextureInfo | undefined;
+        /** @property {boolean} - The material blends, so the part belongs in the transparent stage */
+        transparent: boolean;
+    }
+    /** Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to
+     *  @param {ArrayBuffer|Object|string} data - GLB bytes, or the glTF JSON as bytes, text or an object
+     *  @param {string} [baseUrl] - Where the .bin and image files are, with its trailing slash; loadGLTF passes the file's folder
+     *  @return {Promise<GLTFModel>}
+     *  @memberof GLTF */
+    export function parseGLTF(data: ArrayBuffer | any | string, baseUrl?: string): Promise<GLTFModel>;
+    /** Load a glTF or GLB model, the .bin and images of a .gltf from beside it
+     *  @param {string} url
+     *  @return {Promise<GLTFModel>}
+     *  @memberof GLTF */
+    export function loadGLTF(url: string): Promise<GLTFModel>;
     /** Draw a debug wireframe box
      *  @param {Vector3} pos - Center
      *  @param {Vector3|number} [size] - Full size, a number for a cube

@@ -53,6 +53,7 @@ const enginePluginFiles =
     `${PLUGIN_FOLDER}/math3d.js`,
     `${PLUGIN_FOLDER}/render3d.js`,
     `${PLUGIN_FOLDER}/render3dExtras.js`,
+    `${PLUGIN_FOLDER}/gltf.js`,
     `${PLUGIN_FOLDER}/threejs.js`,
 ];
 const engineExtraFiles =
