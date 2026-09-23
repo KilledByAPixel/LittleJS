@@ -1257,7 +1257,8 @@ const model = await loadGLTF(url)   // a GLTFModel, in an async gameInit; or awa
                                      // JSON you already have
 model.parts                          // one GLTFPart per primitive of every node: name, mesh in model space, color,
                                      // textureInfo when the material has one and WebGL is on, transparent for a
-                                     // blending material
+                                     // blending material or glass (KHR_materials_transmission), which comes in
+                                     // as a faint tint of its color
 model.mesh, model.textureInfo        // everything as one Mesh tinted by its materials, and its texture when every
                                      // part uses the same one; a model mixing plain and textured parts, or using
                                      // several textures, draws right through createObject

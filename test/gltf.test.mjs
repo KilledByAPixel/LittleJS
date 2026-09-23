@@ -150,3 +150,19 @@ test('a model makes an object with a child per part, and reads strips, fans and 
     assert.equal(fan.mesh.vertexCount, 6);
     nearVec(fan.mesh.points[3], -1, -1, 0); nearVec(fan.mesh.points[5], 1, 1, 0);
 });
+
+test('glass made with KHR_materials_transmission comes in see through, a faint tint of its base color', async () =>
+{
+    const glass = (transmissionFactor)=> ({ pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1] },
+        extensions: { KHR_materials_transmission: { transmissionFactor } } });
+    const model = await parseGLTF({ ...withDataUri, materials: [glass(1)] });
+    const [up] = model.parts;
+    assert.equal(up.transparent, true, 'transmission is see through, though the file says opaque');
+    near(up.color.a, .2, 'full transmission keeps a faint tint');
+    assert.equal(up.color.r, 1);
+    const half = (await parseGLTF({ ...withDataUri, materials: [glass(.5)] })).parts[0];
+    near(half.color.a, .6, 'half transmission');
+    const none = (await parseGLTF({ ...withDataUri, materials: [glass(0)] })).parts[0];
+    assert.equal(none.transparent, false, 'no transmission stays opaque');
+    near(none.color.a, 1);
+});

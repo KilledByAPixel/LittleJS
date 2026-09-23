@@ -8002,6 +8002,7 @@ declare module "littlejsengine" {
      * - A model comes back as parts, one Mesh per primitive of every node placed by the node tree, each with its
      *   material's color and base color texture, plus everything combined into one Mesh
      * - Static geometry only: positions, normals, uvs, vertex colors and indices; skins, animations and morph targets are not read
+     * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too
      * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
      * - Requires the Render3D plugin
      * @namespace GLTF
@@ -8026,7 +8027,7 @@ declare module "littlejsengine" {
         /** @property {TextureInfo|undefined} - The material's base color texture, undefined without one or without WebGL
          *  @type {TextureInfo|undefined} */
         textureInfo: TextureInfo | undefined;
-        /** @property {boolean} - The material blends, so the part belongs in the transparent stage */
+        /** @property {boolean} - The material blends or is glass, so the part belongs in the transparent stage */
         transparent: boolean;
     }
     /** Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to

@@ -22773,6 +22773,7 @@ async function loadOBJ(url, smooth=render3D?.smoothShading)
  * - A model comes back as parts, one Mesh per primitive of every node placed by the node tree, each with its
  *   material's color and base color texture, plus everything combined into one Mesh
  * - Static geometry only: positions, normals, uvs, vertex colors and indices; skins, animations and morph targets are not read
+ * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too
  * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
  * - Requires the Render3D plugin
  * @namespace GLTF
@@ -22801,7 +22802,7 @@ class GLTFPart
         /** @property {TextureInfo|undefined} - The material's base color texture, undefined without one or without WebGL
          *  @type {TextureInfo|undefined} */
         this.textureInfo = textureInfo;
-        /** @property {boolean} - The material blends, so the part belongs in the transparent stage */
+        /** @property {boolean} - The material blends or is glass, so the part belongs in the transparent stage */
         this.transparent = transparent;
     }
 }
@@ -23070,8 +23071,11 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     const material = json.materials?.[primitive.material] || {}, pbr = material.pbrMetallicRoughness || {};
     const factor = pbr.baseColorFactor || [1, 1, 1, 1];
     mesh.doubleSided = !!material.doubleSided;
-    return new GLTFPart(name, mesh, rgb(factor[0], factor[1], factor[2], factor[3]),
-        pbr.baseColorTexture ? textures[pbr.baseColorTexture.index] : undefined, material.alphaMode === 'BLEND');
+    // glass is usually made with transmission, an opaque white material the light passes through, which would
+    // draw solid white; it comes in blended instead, a faint tint of its color that lets the rest show through
+    const transmission = material.extensions?.KHR_materials_transmission?.transmissionFactor || 0;
+    return new GLTFPart(name, mesh, rgb(factor[0], factor[1], factor[2], factor[3] * (1 - .8 * transmission)),
+        pbr.baseColorTexture ? textures[pbr.baseColorTexture.index] : undefined, material.alphaMode === 'BLEND' || transmission > 0);
 }
 
 /**
