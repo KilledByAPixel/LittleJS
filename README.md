@@ -33,7 +33,7 @@ Open **http://localhost:8000/examples/starter/**, edit `examples/starter/game.js
 
 Your whole game lives in `game.js`: `engineInit` starts the engine with five callbacks (init, update, post update, render, post render), and entities are classes extending `EngineObject` that the engine updates, moves, and renders automatically. The starter shows the pattern with tiles, particles, sound, and physics in about 100 lines. **Use the [LittleJS docs](https://killedbyapixel.github.io/LittleJS/docs) as your API reference.** This branch matches the main engine's API, with the details covered in [Migrating to main LittleJS](#-migrating-to-main-littlejs).
 
-The dev page runs the debug build: press `Esc` for the debug overlay, then `1`/`2` for physics and particle debug, `5` for a screenshot, `6` to record video. All debug tooling compiles out of the release zip.
+The dev page runs the debug build: press `Esc` for the debug overlay, then `1`/`2` for physics and particle debug, and `5` for a screenshot. All debug tooling compiles out of the release zip.
 
 When you want a compo-ready zip:
 

@@ -152,17 +152,16 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
         const debugSpeedUp   = debug && keyIsDown('Equal'); // +
         const debugSpeedDown = debug && keyIsDown('Minus'); // -
+        const frameTimeDeltaUnscaledMS = frameTimeDeltaMS;
         if (debug) // +/- to speed/slow time
             frameTimeDeltaMS *= debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
         timeReal += frameTimeDeltaMS / 1e3;
-        // paused buffers time the same way, so a pause screen updates at the
-        // fixed frame rate instead of however fast the display refreshes
-        frameTimeBufferMS += frameTimeDeltaMS;
+        // paused buffers time like the running path, so a pause screen updates
+        // at the fixed frame rate instead of however fast the display refreshes
+        // - on unscaled time, so the debug speed keys do not change it either
+        frameTimeBufferMS += paused ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
         if (!debugSpeedUp)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
-        if (debug && debugVideoCaptureIsActive())
-            frameTimeBufferMS = 0; // disable time smoothing when capturing video
-
         updateCanvas();
 
         // apply time delta smoothing, improves smoothness of framerate in some browsers
@@ -179,12 +178,13 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         {
             if (paused)
             {
-                // update object transforms even when paused, but do not
-                // advance time, run the game, or update objects
-                for (const o of engineObjects)
-                    o.parent || o.updateTransforms();
+                // everything except time, the game, and object updates
+                // - transforms come last, like engineObjectsUpdate does when
+                //   running, so a plugin that moved something is picked up
                 inputUpdate();
                 pluginUpdateList.forEach(f=>f());
+                for (const o of engineObjects)
+                    o.parent || o.updateTransforms();
             }
             else
             {
@@ -238,7 +238,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             }
         }
 
-        debugVideoCaptureUpdate();
         requestAnimationFrame(engineUpdate);
     }
 
