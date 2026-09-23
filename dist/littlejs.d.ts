@@ -3774,6 +3774,7 @@ declare module "littlejsengine" {
      *  @memberof Medals */
     export function medalsForEach(callback: MedalCallbackFunction): void;
     /** Reset all medals to locked and persist the cleared catalog
+     *  - A medal a service like Newgrounds holds is left alone, the service has it
      *  @memberof Medals */
     export function medalsReset(): void;
     /** Set how long to show medals for in seconds
@@ -3851,7 +3852,7 @@ declare module "littlejsengine" {
      * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
      * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
      * - Provides functions to unlock medals, post and read scoreboards and log views
-     * - Keeps connection alive and logs views
+     * - Keeps the session alive with a ping every minute
      * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
      * @namespace Newgrounds
      */
@@ -3865,6 +3866,7 @@ declare module "littlejsengine" {
      */
     export class NewgroundsPlugin {
         /** Create the global newgrounds object
+         *  - Create the medals first: when logged in they are locked here and take their state from the server once it answers
          *  @param {string} app_id   - The newgrounds App ID
          *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; calls are encrypted with
          *    the browser's WebCrypto, which needs a secure page, https or localhost

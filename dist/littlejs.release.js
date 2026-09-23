@@ -9901,7 +9901,7 @@ function drawEngineLogo(t)
  * - Medal class with name, description, icon, and unlock tracking
  * - Automatic saving to local storage, a medal can say a service like Newgrounds holds it instead
  * - Visual display queue with slide-in notifications
- * - Newgrounds API integration for online achievements
+ * - The Newgrounds plugin extends it with NewgroundsMedal, held on the server while logged in
  * - Debug mode to unlock/reset medals during development
  * @namespace Medals
  */
@@ -10008,10 +10008,11 @@ function medalsForEach(callback)
 { Object.values(medals).forEach(medal=>callback(medal)); }
 
 /** Reset all medals to locked and persist the cleared catalog
+ *  - A medal a service like Newgrounds holds is left alone, the service has it
  *  @memberof Medals */
 function medalsReset()
 {
-    medalsForEach(medal => medal.unlocked = false);
+    medalsForEach(medal => medal.isLocal() && (medal.unlocked = false));
     medalsSave();
 }
 
@@ -10197,7 +10198,7 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
  * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
  * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
  * - Provides functions to unlock medals, post and read scoreboards and log views
- * - Keeps connection alive and logs views
+ * - Keeps the session alive with a ping every minute
  * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
  * @namespace Newgrounds
  */
@@ -10231,6 +10232,7 @@ class NewgroundsMedal extends Medal
 
     /** Unlocks a medal if not already unlocked, once newgrounds confirms it when logged in
      *  - The promise is optional, for when a game wants to know the outcome
+     *  - A request that failed or was refused is sent again every minute until the server confirms
      *  @return {Promise<boolean>} - Whether the medal is unlocked, once the server has answered when logged in */
     unlock()
     {
@@ -10244,9 +10246,9 @@ class NewgroundsMedal extends Medal
         const request = newgrounds.unlockMedal(this.id).then(response=>
         {
             const serverMedal = response?.result?.data?.medal;
-            if (!serverMedal?.unlocked)
+            if (!serverMedal?.unlocked || medalsPreventUnlock)
             {
-                // still pending, the keep alive ping resends it
+                // still pending, the keep alive ping resends it once unlocks are allowed
                 debugMedals && false&&LOG('newgrounds did not unlock medal', this.id, response?.result?.error || response?.error);
                 return false;
             }
@@ -10268,6 +10270,7 @@ class NewgroundsMedal extends Medal
 class NewgroundsPlugin
 {
     /** Create the global newgrounds object
+     *  - Create the medals first: when logged in they are locked here and take their state from the server once it answers
      *  @param {string} app_id   - The newgrounds App ID
      *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; calls are encrypted with
      *    the browser's WebCrypto, which needs a secure page, https or localhost

@@ -4,7 +4,7 @@
  * - Medal class with name, description, icon, and unlock tracking
  * - Automatic saving to local storage, a medal can say a service like Newgrounds holds it instead
  * - Visual display queue with slide-in notifications
- * - Newgrounds API integration for online achievements
+ * - The Newgrounds plugin extends it with NewgroundsMedal, held on the server while logged in
  * - Debug mode to unlock/reset medals during development
  * @namespace Medals
  */
@@ -113,10 +113,11 @@ function medalsForEach(callback)
 { Object.values(medals).forEach(medal=>callback(medal)); }
 
 /** Reset all medals to locked and persist the cleared catalog
+ *  - A medal a service like Newgrounds holds is left alone, the service has it
  *  @memberof Medals */
 function medalsReset()
 {
-    medalsForEach(medal => medal.unlocked = false);
+    medalsForEach(medal => medal.isLocal() && (medal.unlocked = false));
     medalsSave();
 }
 

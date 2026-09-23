@@ -98,6 +98,20 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     assert.equal(m3.unlocked, true);
     assert.equal(plugin.pendingUnlocks.size, 0);
 
+    // a confirm that lands after unlocks were prevented waits too, and is resent once they are allowed
+    replies['Medal.unlock'] = { data: { medal: { id: 2, unlocked: true }, medal_score: 5 } };
+    m2.unlocked = false; // as if the server had it locked at load
+    const late = m2.unlock();
+    setMedalsPreventUnlock(true);
+    assert.equal(await late, false, 'not unlocked while prevented');
+    assert.equal(m2.unlocked, false);
+    assert.deepEqual([...plugin.pendingUnlocks.keys()], [m2], 'still pending');
+    setMedalsPreventUnlock(false);
+    keepAlive();
+    assert.equal(await plugin.pendingUnlocks.get(m2), true, 'resent and confirmed');
+    assert.equal(m2.unlocked, true);
+    assert.equal(plugin.pendingUnlocks.size, 0);
+
     // a server refusal stays pending too, and is not resent while unlocks are prevented
     replies['Medal.unlock'] = { success: false, error: { message: 'no such medal', code: 1 } };
     const m4 = new NewgroundsMedal(4, 'Four');

@@ -1459,7 +1459,7 @@ medal.isLocal()                      // Whether the local save holds the medal, 
 medals                               // Global { [id]: Medal } map
 medalsInit(saveName)                 // Restore unlocked state from localStorage under saveName, skipping medals a service holds
 medalsForEach(callback)              // Iterate all registered medals
-medalsReset()                        // Lock all medals and persist the cleared catalog
+medalsReset()                        // Lock all medals and persist the cleared catalog, medals a service holds are left alone
 medalsPreventUnlock                  // Block unlocks (testing / debug)
 
 // Display tuning
@@ -1478,8 +1478,8 @@ await newgrounds.getScores(id, user, social, skip, limit)
 newgrounds.logView()                 // Track a page view
 newgrounds.pendingUnlocks            // Map of the medals sent to unlock that the server has not confirmed yet to the promise of
                                      // each request; they are resent on the keep alive ping
-new NewgroundsMedal(id, name, description, icon) // when logged in, unlock() asks the server and the medal only unlocks and
-                                     // shows once it confirms, so unlocked is still false on return; await the promise for the outcome
+new NewgroundsMedal(id, name, description, icon, src) // when logged in, unlock() asks the server and the medal only unlocks
+                                     // and shows once it confirms, so unlocked is still false on return; await the promise for the outcome
 ```
 
 ## LittleJS Drawing Utilities
