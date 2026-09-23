@@ -2338,6 +2338,24 @@ test('pixelated is part of the draw state, so a batch splits on it', () =>
     engineObjects.length = 0;
 });
 
+test('an object builds its matrix once for the shadow pass and the main pass of a frame, and again next frame', () =>
+{
+    const o = new EngineObject3D(vec3(1, 2, 3), render3D.boxMesh);
+    let builds = 0;
+    const getMatrix = o.getMatrix;
+    o.getMatrix = function() { ++builds; return getMatrix.call(this); };
+    render3D.passId = 1;
+    render3D.renderStages([o]); // the shadow pass and the opaque stage both draw it under one pass id
+    render3D.renderStages([o]);
+    assert.equal(builds, 1);
+    o.pos3D = vec3(5, 5, 5);
+    render3D.passId = 2; // the next frame's pass
+    render3D.renderStages([o]);
+    assert.equal(builds, 2);
+    o.destroy();
+    engineObjects.length = 0;
+});
+
 test('a Light3D has an intensity that multiplies its color, 1 by default', () =>
 {
     const plain = new Light3D(vec3(), 5, RED), bright = new Light3D(vec3(), 5, RED, 3);

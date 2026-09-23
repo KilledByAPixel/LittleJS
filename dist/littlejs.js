@@ -18797,21 +18797,37 @@ function render3DCanDraw()
 const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader'];
 
 // a copy of the current draw state
+// a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out so the
+// compare below stays a handful of direct reads, it runs for every instance drawn
 function render3DCaptureBatchState()
 {
-    const state = {};
-    for (const field of RENDER3D_STATE_FIELDS)
-        state[field] = render3D[field];
-    return state;
+    const r = render3D;
+    return {blend: r.blend, additive: r.additive, depthTest: r.depthTest, depthWrite: r.depthWrite,
+        cullBackFaces: r.cullBackFaces, mirrored: r.mirrored, lighting: r.lighting, emissive: r.emissive,
+        receiveShadow: r.receiveShadow, specular: r.specular, pixelated: r.pixelated, shader: r.shader};
 }
 
 // true when the current draw state differs from a captured one, so a pending batch must flush first
-function render3DStateChanged(state)
+function render3DStateChanged(s)
 {
-    for (const field of RENDER3D_STATE_FIELDS)
-        if (render3D[field] !== state[field])
-            return true;
-    return false;
+    const r = render3D;
+    return r.blend !== s.blend || r.additive !== s.additive || r.depthTest !== s.depthTest
+        || r.depthWrite !== s.depthWrite || r.cullBackFaces !== s.cullBackFaces || r.mirrored !== s.mirrored
+        || r.lighting !== s.lighting || r.emissive !== s.emissive || r.receiveShadow !== s.receiveShadow
+        || r.specular !== s.specular || r.pixelated !== s.pixelated || r.shader !== s.shader;
+}
+
+// whether a sphere is inside the view, or the shadow map's box during the shadow pass, without a vector
+function render3DSphereVisible(x, y, z, radius)
+{
+    const planes = render3D.shadowPass ? render3D.shadowPlanes : render3D.frustumPlanes;
+    for (let i = 0; i < planes.length; ++i)
+    {
+        const p = planes[i];
+        if (p[0]*x + p[1]*y + p[2]*z + p[3] < -radius)
+            return false;
+    }
+    return true;
 }
 
 // run a function with some draw state fields overridden, restored afterward even on a throw
@@ -18929,8 +18945,11 @@ function render3DInstance(mesh, matrix, tileInfo, color)
         mesh.instanceData = data = grown;
     }
     data.set(matrix.m, k);
-    render3DNormalMatrix3(matrix.m, data, k + 16);
-    data[k+25] = color.r; data[k+26] = color.g; data[k+27] = color.b; data[k+28] = color.a;
+    if (!r.shadowPass) // the depth shader reads only the matrix and the uv rect, the rest can stay stale
+    {
+        render3DNormalMatrix3(matrix.m, data, k + 16);
+        data[k+25] = color.r; data[k+26] = color.g; data[k+27] = color.b; data[k+28] = color.a;
+    }
     const uv = render3DGetTileUVs(tileInfo);
     data[k+29] = uv.x; data[k+30] = uv.y; data[k+31] = uv.w; data[k+32] = uv.h;
 }
@@ -19202,6 +19221,7 @@ class Render3DPlugin
         this.program = undefined;    // the main program, undefined when not available
         this.currentProgram = undefined; // the program in use during a pass, a Shader's or the main one
         this.lightCount = 0;         // Light3D objects sent this pass
+        this.passId = 0;             // counts the passes, an object builds its matrix once per pass
         this.shadowShader = undefined;
         this.vao = undefined;
         this.whiteTexture = undefined; // 1x1 white for untextured draws
@@ -19387,13 +19407,7 @@ class Render3DPlugin
      *  @param {Vector3} center
      *  @param {number} radius
      *  @return {boolean} */
-    isSphereVisible(center, radius)
-    {
-        for (const p of this.shadowPass ? this.shadowPlanes : this.frustumPlanes)
-            if (p[0] * center.x + p[1] * center.y + p[2] * center.z + p[3] < -radius)
-                return false;
-        return true;
-    }
+    isSphereVisible(center, radius) { return render3DSphereVisible(center.x, center.y, center.z, radius); }
 
     ///////////////////////////////////////////////////////////////////////////
     // Meshes and the stream
@@ -19417,11 +19431,12 @@ class Render3DPlugin
         if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== this.contextGeneration)
             mesh.upload();
         if (!mesh.bufferCount) return;
-        if (this.frustumCulling && !this.isSphereVisible(matrix.getTranslation(), mesh.radius * render3DMaxScale(matrix.m)))
+        const m = matrix.m;
+        if (this.frustumCulling && !render3DSphereVisible(m[12], m[13], m[14], mesh.radius * render3DMaxScale(m)))
             return;
         // the mesh says whether its back faces can be skipped, and a mirroring transform, one with a negative
         // determinant, turns the winding around so the other one is its front
-        const m = matrix.m, cullBackFaces = this.cullBackFaces, mirrored = this.mirrored;
+        const cullBackFaces = this.cullBackFaces, mirrored = this.mirrored;
         this.cullBackFaces = !mesh.doubleSided;
         this.mirrored = m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]) < 0;
         if (!this.blend && this.depthTest && (mesh.instanced ?? this.instancing)) // the stage draws the batch at its end
@@ -20472,6 +20487,7 @@ function render3DRender()
 function render3DRenderPass(after2D)
 {
     const gl = glContext, r = render3D;
+    ++r.passId; // the shadow pass and the stages below share each object's matrix
     if (!r.program) return; // headless, gl disabled, or context lost
     render3DUpdateSamplers();
     ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
@@ -21852,6 +21868,8 @@ class EngineObject3D extends EngineObject
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         this.renderAfter2D = undefined;
+        this.passMatrix = undefined; // the matrix built for the current pass, see render3D
+        this.matrixPassId = -1;
     }
 
     /** Move by the 3D velocities and push out of solids, called automatically each frame before update, like the 2D physics
@@ -21956,7 +21974,12 @@ class EngineObject3D extends EngineObject
         // an opaque draw comes out solid however low its alpha is, so a fade with no flag looks like nothing happened
         ASSERT(this.transparent || this.additive || this.color.a >= 1, 'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', this.color);
         if (this.mesh)
-            render3D.drawMesh(this.mesh, this.getMatrix(), this.tileInfo, this.color);
+        {
+            // one matrix for the shadow pass and the main pass of a frame, the object is in the same place for both
+            if (this.matrixPassId !== render3D.passId)
+                this.passMatrix = this.getMatrix(), this.matrixPassId = render3D.passId;
+            render3D.drawMesh(this.mesh, this.passMatrix, this.tileInfo, this.color);
+        }
         else if (this.tileInfo)
         {
             // a sprite: size3D grown by its own scale and its parents', the same world size the

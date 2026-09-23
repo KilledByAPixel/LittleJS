@@ -6796,6 +6796,7 @@ declare module "littlejsengine" {
         program: any;
         currentProgram: any;
         lightCount: number;
+        passId: number;
         shadowShader: any;
         vao: any;
         whiteTexture: any;
@@ -7148,6 +7149,8 @@ declare module "littlejsengine" {
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         renderAfter2D: boolean | undefined;
+        passMatrix: Matrix4;
+        matrixPassId: number;
         /** Returns the world position
          *  @return {Vector3} */
         getWorldPos3D(): Vector3;

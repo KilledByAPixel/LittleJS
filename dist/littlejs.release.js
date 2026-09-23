@@ -127,7 +127,7 @@ class EnginePlugin
 function engineAddPlugin(update, render, glContextLost, glContextRestored, preRender)
 {
     // make sure plugin functions are unique
-    ASSERT(!pluginList.find(p=>
+    false&&ASSERT(!pluginList.find(p=>
         p.update === update && p.render === render &&
         p.glContextLost === glContextLost &&
         p.glContextRestored === glContextRestored &&
@@ -161,7 +161,7 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
  *  @example
  *  // Basic engine startup
  *  engineInit(
- *    ()=> { LOG('Game initialized!'); },  // gameInit
+ *    ()=> { false&&LOG('Game initialized!'); },  // gameInit
  *    ()=> { updateGameLogic(); },         // gameUpdate
  *    ()=> { updateUI(); },                // gameUpdatePost
  *    ()=> { drawBackground(); },          // gameRender
@@ -172,11 +172,11 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
 async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement)
 {
     showEngineVersion && console.log(`${engineName} Engine v${engineVersion}`);
-    ASSERT(!mainContext, 'engine already initialized');
+    false&&ASSERT(!mainContext, 'engine already initialized');
     // runtime guard so release builds (where the assert is stripped) don't
     // double-register listeners / double-add canvases on a second call
     if (mainContext) return;
-    ASSERT(isArray(imageSources), 'pass in images as array');
+    false&&ASSERT(isArray(imageSources), 'pass in images as array');
 
     // ensure body exists for minimal HTML where the script runs before <body> is parsed
     if (!document.body)
@@ -445,7 +445,7 @@ function engineUpdateCanvas()
 
         // responsive aspect ratio
         const innerAspect = innerWidth / innerHeight;
-        ASSERT(canvasMinAspect <= canvasMaxAspect);
+        false&&ASSERT(canvasMinAspect <= canvasMaxAspect);
         if (canvasMaxAspect && innerAspect > canvasMaxAspect)
         {
             // full height
@@ -519,13 +519,13 @@ const engineStepMaxFrames = 36000;
  *  @memberof Engine */
 function engineStep(frames=1)
 {
-    ASSERT(engineManualStep,
+    false&&ASSERT(engineManualStep,
         'engineStep requires setEngineManualStep(true) before engineInit');
-    ASSERT(engineUpdateInternal, 'engineStep requires engineInit to complete');
+    false&&ASSERT(engineUpdateInternal, 'engineStep requires engineInit to complete');
     // runtime guard so release builds (where the asserts are stripped) can't
     // start a second requestAnimationFrame chain or call an undefined update
     if (!engineManualStep || !engineUpdateInternal) return;
-    ASSERT(Number.isInteger(frames) && frames >= 0 && frames <= engineStepMaxFrames,
+    false&&ASSERT(Number.isInteger(frames) && frames >= 0 && frames <= engineStepMaxFrames,
         'engineStep requires a whole frame count from 0 to ' + engineStepMaxFrames);
     frames = min(frames, engineStepMaxFrames); // release has no asserts, don't freeze
     for (let i = frames; i > 0; --i)
@@ -846,7 +846,7 @@ function percentLerp(value, percentA, percentB, lerpA, lerpB)
  *  @memberof Math */
 function distanceWrap(valueA, valueB, wrapSize=1)
 {
-    ASSERT(wrapSize > 0, 'distanceWrap wrapSize must be > 0');
+    false&&ASSERT(wrapSize > 0, 'distanceWrap wrapSize must be > 0');
     const d = (valueA - valueB) % wrapSize;
     return d*2 % wrapSize - d;
 }
@@ -1086,10 +1086,10 @@ function isArray(a) { return Array.isArray(a); }
  * @memberof Math */
 function lineTest(posStart, posEnd, testFunction, normal)
 {
-    ASSERT(isVector2(posStart), 'posStart must be a vec2');
-    ASSERT(isVector2(posEnd), 'posEnd must be a vec2');
-    ASSERT(typeof testFunction === 'function', 'testFunction must be a function');
-    ASSERT(!normal || isVector2(normal), 'normal must be a vec2');
+    false&&ASSERT(isVector2(posStart), 'posStart must be a vec2');
+    false&&ASSERT(isVector2(posEnd), 'posEnd must be a vec2');
+    false&&ASSERT(typeof testFunction === 'function', 'testFunction must be a function');
+    false&&ASSERT(!normal || isVector2(normal), 'normal must be a vec2');
 
     // get ray direction and length
     const dx = posEnd.x - posStart.x;
@@ -1243,7 +1243,7 @@ class RandomGenerator
      *  @param {number} [seed] - Starting seed or engine default seed */
     constructor(seed = 123456789)
     {
-        ASSERT(seed !== 0, 'RandomGenerator seed must be non-zero (xorshift is fixed at 0)');
+        false&&ASSERT(seed !== 0, 'RandomGenerator seed must be non-zero (xorshift is fixed at 0)');
         /** @property {number} - random seed */
         this.seed = seed;
     }
@@ -1322,8 +1322,8 @@ class RandomGenerator
      * @return {Color} */
     mutateColor(color, amount=.05, alphaAmount=0)
     {
-        ASSERT_NUMBER_VALID(amount);
-        ASSERT_NUMBER_VALID(alphaAmount);
+        false&&ASSERT_NUMBER_VALID(amount);
+        false&&ASSERT_NUMBER_VALID(alphaAmount);
         return new Color
         (
             color.r + this.float(amount, -amount),
@@ -1356,12 +1356,12 @@ function vec2(x=0, y) { return new Vector2(x, y ?? x); }
 function isVector2(v) { return v instanceof Vector2 && v.isValid(); }
 
 // vector2 asserts
-function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v), 'Vector2 is invalid.', v); }
-function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid.', n); }
+function ASSERT_VECTOR2_VALID(v) { false&&ASSERT(isVector2(v), 'Vector2 is invalid.', v); }
+function ASSERT_NUMBER_VALID(n) { false&&ASSERT(isNumber(n), 'Number is invalid.', n); }
 function ASSERT_VECTOR2_NORMAL(v)
 {
-    ASSERT_VECTOR2_VALID(v);
-    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal.', v);
+    false&&ASSERT_VECTOR2_VALID(v);
+    false&&ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal.', v);
 }
 
 /**
@@ -1385,7 +1385,7 @@ class Vector2
         this.x = x;
         /** @property {number} - Y axis location */
         this.y = y;
-        ASSERT(this.isValid(), 'Constructed Vector2 is invalid.', this);
+        false&&ASSERT(this.isValid(), 'Constructed Vector2 is invalid.', this);
     }
 
     /** Sets values of this vector and returns self
@@ -1396,7 +1396,7 @@ class Vector2
     {
         this.x = x;
         this.y = y;
-        ASSERT_VECTOR2_VALID(this);
+        false&&ASSERT_VECTOR2_VALID(this);
         return this;
     }
 
@@ -1498,8 +1498,8 @@ class Vector2
      * @return {Vector2} */
     setAngle(angle=0, length=1)
     {
-        ASSERT_NUMBER_VALID(angle);
-        ASSERT_NUMBER_VALID(length);
+        false&&ASSERT_NUMBER_VALID(angle);
+        false&&ASSERT_NUMBER_VALID(length);
         this.x = length*sin(angle);
         this.y = length*cos(angle);
         return this;
@@ -1510,7 +1510,7 @@ class Vector2
      * @return {Vector2} */
     rotate(angle)
     {
-        ASSERT_NUMBER_VALID(angle);
+        false&&ASSERT_NUMBER_VALID(angle);
         const c = cos(-angle), s = sin(-angle);
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
@@ -1521,10 +1521,10 @@ class Vector2
      * @return {Vector2} */
     setDirection(direction, length=1)
     {
-        ASSERT_NUMBER_VALID(direction);
-        ASSERT_NUMBER_VALID(length);
+        false&&ASSERT_NUMBER_VALID(direction);
+        false&&ASSERT_NUMBER_VALID(length);
         direction = mod(direction, 4);
-        ASSERT(direction===0 || direction===1 || direction===2 || direction===3,
+        false&&ASSERT(direction===0 || direction===1 || direction===2 || direction===3,
             'Vector2.setDirection() direction must be an integer between 0 and 3.');
         
         this.x = direction%2 ? direction-1 ? -length : length : 0;
@@ -1552,7 +1552,7 @@ class Vector2
      *  @return {Vector2} */
     snap(grid)
     {
-        ASSERT_NUMBER_VALID(grid);
+        false&&ASSERT_NUMBER_VALID(grid);
         return new Vector2(floor(this.x*grid)/grid, floor(this.y*grid)/grid);
     }
 
@@ -1572,8 +1572,8 @@ class Vector2
      * @return {Vector2} */
     lerp(v, percent)
     {
-        ASSERT_VECTOR2_VALID(v);
-        ASSERT_NUMBER_VALID(percent);
+        false&&ASSERT_VECTOR2_VALID(v);
+        false&&ASSERT_NUMBER_VALID(percent);
         const p = clamp(percent);
         return new Vector2(v.x*p + this.x*(1-p), v.y*p + this.y*(1-p));
     }
@@ -1589,7 +1589,7 @@ class Vector2
      * @return {string} */
     toString(digits=3)
     {
-        ASSERT_NUMBER_VALID(digits);
+        false&&ASSERT_NUMBER_VALID(digits);
         if (this.isValid())
             return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
         else
@@ -1632,7 +1632,7 @@ function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 function isColor(c) { return c instanceof Color && c.isValid(); }
 
 // color asserts
-function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c), 'Color is invalid.', c); }
+function ASSERT_COLOR_VALID(c) { false&&ASSERT(isColor(c), 'Color is invalid.', c); }
 
 /**
  * Color object (red, green, blue, alpha) with some helpful functions
@@ -1661,7 +1661,7 @@ class Color
         this.b = b;
         /** @property {number} - Alpha */
         this.a = a;
-        ASSERT(this.isValid(), 'Constructed Color is invalid.', this);
+        false&&ASSERT(this.isValid(), 'Constructed Color is invalid.', this);
     }
 
     /** Sets values of this color and returns self
@@ -1676,7 +1676,7 @@ class Color
         this.g = g;
         this.b = b;
         this.a = a;
-        ASSERT_COLOR_VALID(this);
+        false&&ASSERT_COLOR_VALID(this);
         return this;
     }
 
@@ -1691,7 +1691,7 @@ class Color
     setAlpha(a=1)
     {
         this.a = a;
-        ASSERT_COLOR_VALID(this);
+        false&&ASSERT_COLOR_VALID(this);
         return this;
     }
 
@@ -1741,8 +1741,8 @@ class Color
      * @return {Color} */
     lerp(c, percent)
     {
-        ASSERT_COLOR_VALID(c);
-        ASSERT_NUMBER_VALID(percent);
+        false&&ASSERT_COLOR_VALID(c);
+        false&&ASSERT_NUMBER_VALID(percent);
         const p = clamp(percent);
         return new Color(
             c.r*p + this.r*(1-p),
@@ -1771,7 +1771,7 @@ class Color
         this.g = f(p, q, h);
         this.b = f(p, q, h - 1/3);
         this.a = a;
-        ASSERT_COLOR_VALID(this);
+        false&&ASSERT_COLOR_VALID(this);
         return this;
     }
 
@@ -1807,8 +1807,8 @@ class Color
      * @return {Color} */
     mutate(amount=.05, alphaAmount=0)
     {
-        ASSERT_NUMBER_VALID(amount);
-        ASSERT_NUMBER_VALID(alphaAmount);
+        false&&ASSERT_NUMBER_VALID(amount);
+        false&&ASSERT_NUMBER_VALID(alphaAmount);
         return new Color
         (
             this.r + rand(amount, -amount),
@@ -1834,9 +1834,9 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        ASSERT(isStringLike(hex), 'Color hex code must be a string');
-        ASSERT(hex[0] === '#', 'Color hex code must start with #');
-        ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
+        false&&ASSERT(isStringLike(hex), 'Color hex code must be a string');
+        false&&ASSERT(hex[0] === '#', 'Color hex code must start with #');
+        false&&ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
 
         if (hex.length < 6)
         {
@@ -1855,7 +1855,7 @@ class Color
             this.a = hex.length === 9 ? fromHex(7) : 1;
         }
 
-        ASSERT_COLOR_VALID(this);
+        false&&ASSERT_COLOR_VALID(this);
         return this;
     }
 
@@ -1972,7 +1972,7 @@ class Timer
      *  @param {boolean} [useRealTime] - Should the timer keep running even when the game is paused? (useful for UI) */
     constructor(timeLeft, useRealTime=false)
     {
-        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
+        false&&ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
         this.useRealTime = useRealTime;
         const globalTime = this.getGlobalTime();
         this.time = timeLeft === undefined ? undefined : globalTime + timeLeft;
@@ -1983,7 +1983,7 @@ class Timer
      *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
     set(timeLeft=0)
     {
-        ASSERT(isNumber(timeLeft), 'Timer is invalid.', timeLeft);
+        false&&ASSERT(isNumber(timeLeft), 'Timer is invalid.', timeLeft);
         const globalTime = this.getGlobalTime();
         this.time = globalTime + timeLeft;
         this.setTime = timeLeft;
@@ -1993,7 +1993,7 @@ class Timer
      *  @param {boolean} [useRealTime] */
     setUseRealTime(useRealTime=true)
     {
-        ASSERT(!this.isSet(), 'Cannot change global time setting while timer is set.');
+        false&&ASSERT(!this.isSet(), 'Cannot change global time setting while timer is set.');
         this.useRealTime = useRealTime;
     }
 
@@ -2087,7 +2087,7 @@ function saveText(text, filename='text', type='text/plain')
  *  @memberof Utilities */
 function createCanvasContext(width, height=width, willReadFrequently=false)
 {
-    ASSERT(isNumber(width) && isNumber(height), 'canvas width and height must be numbers', width, height);
+    false&&ASSERT(isNumber(width) && isNumber(height), 'canvas width and height must be numbers', width, height);
     return new OffscreenCanvas(width, height).getContext('2d', {willReadFrequently});
 }
 
@@ -2118,8 +2118,8 @@ function saveCanvas(canvas, filename='screenshot', type='image/png')
  *  @memberof Utilities */
 function saveDataURL(url, filename='download', revokeTime)
 {
-    ASSERT(isStringLike(url), 'saveDataURL requires url string');
-    ASSERT(isStringLike(filename), 'saveDataURL requires filename string');
+    false&&ASSERT(isStringLike(url), 'saveDataURL requires url string');
+    false&&ASSERT(isStringLike(filename), 'saveDataURL requires filename string');
 
     // create link for saving screenshots
     const link = document.createElement('a');
@@ -2137,8 +2137,8 @@ function saveDataURL(url, filename='download', revokeTime)
  *  @memberof Utilities */
 function shareURL(title, url, callback)
 {
-    ASSERT(isStringLike(title), 'shareURL requires title string');
-    ASSERT(isStringLike(url), 'shareURL requires url string');
+    false&&ASSERT(isStringLike(title), 'shareURL requires title string');
+    false&&ASSERT(isStringLike(url), 'shareURL requires url string');
     navigator.share?.({title, url}).then(()=>callback?.());
 }
 
@@ -2151,8 +2151,8 @@ function shareURL(title, url, callback)
  *  @memberof Utilities */
 function readSaveData(saveName, defaultSaveData)
 {
-    ASSERT(isStringLike(saveName), 'readSaveData requires saveName string');
-    ASSERT(defaultSaveData === undefined ||
+    false&&ASSERT(isStringLike(saveName), 'readSaveData requires saveName string');
+    false&&ASSERT(defaultSaveData === undefined ||
         (typeof defaultSaveData === 'object' && defaultSaveData !== null),
         'readSaveData: default must be an object - the result is ' +
         '{...default, ...loaded}, so a scalar default yields {}. ' +
@@ -2167,10 +2167,10 @@ function readSaveData(saveName, defaultSaveData)
         if (data)
         {
             try { loadedData = JSON.parse(data); }
-            catch { LOG('readSaveData: corrupt JSON for', saveName, '— using defaults'); }
+            catch { false&&LOG('readSaveData: corrupt JSON for', saveName, '— using defaults'); }
         }
     }
-    catch { LOG('readSaveData: localStorage unavailable — using defaults'); }
+    catch { false&&LOG('readSaveData: localStorage unavailable — using defaults'); }
     return { ...defaultSaveData, ...loadedData };
 }
 
@@ -2180,10 +2180,10 @@ function readSaveData(saveName, defaultSaveData)
  *  @memberof Utilities */
 function writeSaveData(saveName, saveData)
 {
-    ASSERT(isStringLike(saveName), 'writeSaveData requires saveName string');
+    false&&ASSERT(isStringLike(saveName), 'writeSaveData requires saveName string');
     // tolerate localStorage being unavailable or quota exceeded
     try { localStorage[saveName] = JSON.stringify(saveData); }
-    catch { LOG('writeSaveData: failed to write', saveName); }
+    catch { false&&LOG('writeSaveData: failed to write', saveName); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3035,12 +3035,12 @@ class EngineObject
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=WHITE, renderOrder=0)
     {
         // check passed in params
-        ASSERT(isVector2(pos), 'object pos must be a vec2');
-        ASSERT(isVector2(size), 'object size must be a vec2');
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
-        ASSERT(typeof angle === 'number' && isFinite(angle), 'object angle should be a number');
-        ASSERT(isColor(color), 'object color should be a valid rgba color');
-        ASSERT(typeof renderOrder === 'number', 'object renderOrder should be a number');
+        false&&ASSERT(isVector2(pos), 'object pos must be a vec2');
+        false&&ASSERT(isVector2(size), 'object size must be a vec2');
+        false&&ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
+        false&&ASSERT(typeof angle === 'number' && isFinite(angle), 'object angle should be a number');
+        false&&ASSERT(isColor(color), 'object color should be a valid rgba color');
+        false&&ASSERT(typeof renderOrder === 'number', 'object renderOrder should be a number');
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -3147,7 +3147,7 @@ class EngineObject
     updatePhysics()
     {
         // child objects do not have physics
-        ASSERT(!this.parent);
+        false&&ASSERT(!this.parent);
 
         // bail if a collision callback destroyed us mid-frame
         if (this.destroyed) return;
@@ -3174,8 +3174,8 @@ class EngineObject
         this.angle += this.angleVelocity *= this.angleDamping;
 
         // physics sanity checks
-        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
-        ASSERT(this.damping >= 0 && this.damping <= 1);
+        false&&ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
+        false&&ASSERT(this.damping >= 0 && this.damping <= 1);
 
         // don't do collision for static objects or if solver disabled
         if (!enablePhysicsSolver || !this.mass) return;
@@ -3457,11 +3457,11 @@ class EngineObject
      *  @return {EngineObject} The child object added */
     addChild(child, localPos=vec2(), localAngle=0)
     {
-        ASSERT(!this.destroyed, 'cannot add child to destroyed object');
+        false&&ASSERT(!this.destroyed, 'cannot add child to destroyed object');
         if (this.destroyed) return child;
-        ASSERT(!child.parent && !this.children.includes(child));
-        ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
-        ASSERT(child !== this, 'cannot add self as child');
+        false&&ASSERT(!child.parent && !this.children.includes(child));
+        false&&ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
+        false&&ASSERT(child !== this, 'cannot add self as child');
         this.children.push(child);
         child.parent = this;
         child.localPos = localPos.copy();
@@ -3474,7 +3474,7 @@ class EngineObject
      *  @param {EngineObject} child */
     removeChild(child)
     {
-        ASSERT(child.parent === this && this.children.includes(child));
+        false&&ASSERT(child.parent === this && this.children.includes(child));
         this.children.splice(this.children.indexOf(child), 1);
         child.parent = undefined;
     }
@@ -3500,7 +3500,7 @@ class EngineObject
      *  @param {boolean} [collideRaycast]      - Does it collide with raycasts? */
     setCollision(collideSolidObjects=true, isSolid=true, collideTiles=true, collideRaycast=true)
     {
-        ASSERT(collideSolidObjects || !isSolid, 'solid objects must be set to collide');
+        false&&ASSERT(collideSolidObjects || !isSolid, 'solid objects must be set to collide');
 
         this.collideSolidObjects = collideSolidObjects;
         this.isSolid = isSolid;
@@ -3659,25 +3659,25 @@ let primitiveCount;
  * @memberof Draw */
 function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
 {
-    ASSERT(isVector2(index) || typeof index === 'number', 'index must be a vec2 or number');
-    ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
-    ASSERT(isNumber(texture) || texture instanceof TextureInfo, 'texture must be a number or TextureInfo');
-    ASSERT(isNumber(padding), 'padding must be a number');
+    false&&ASSERT(isVector2(index) || typeof index === 'number', 'index must be a vec2 or number');
+    false&&ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
+    false&&ASSERT(isNumber(texture) || texture instanceof TextureInfo, 'texture must be a number or TextureInfo');
+    false&&ASSERT(isNumber(padding), 'padding must be a number');
 
     if (headlessMode) return new TileInfo;
 
     if (typeof size === 'number')
     {
         // if size is a number, make it a vector
-        ASSERT(size > 0);
+        false&&ASSERT(size > 0);
         size = new Vector2(size, size);
     }
 
     // create tile info object
     const textureInfo = typeof texture === 'number' ?
         textureInfos[texture] : texture;
-    ASSERT(textureInfo instanceof TextureInfo, 'tile texture is not loaded');
-    ASSERT(textureInfo.size.x > 0, 'tile texture is not loaded');
+    false&&ASSERT(textureInfo instanceof TextureInfo, 'tile texture is not loaded');
+    false&&ASSERT(textureInfo.size.x > 0, 'tile texture is not loaded');
 
     // get the position of the tile
     const sizePaddedX = size.x + padding*2;
@@ -3742,13 +3742,13 @@ class TileInfo
     */
     frame(frame)
     {
-        ASSERT(typeof frame === 'number');
+        false&&ASSERT(typeof frame === 'number');
         const w = this.size.x + this.padding*2;
         const h = this.size.y + this.padding*2;
         const x = (this.columns ? frame % this.columns : frame) * w;
         const y = (this.columns ? frame / this.columns | 0 : 0) * h;
-        ASSERT(this.pos.x + x + this.size.x <= this.textureInfo.size.x, 'frame extends beyond texture width!');
-        ASSERT(this.pos.y + y + this.size.y <= this.textureInfo.size.y, 'frame extends beyond texture height!');
+        false&&ASSERT(this.pos.x + x + this.size.x <= this.textureInfo.size.x, 'frame extends beyond texture width!');
+        false&&ASSERT(this.pos.y + y + this.size.y <= this.textureInfo.size.y, 'frame extends beyond texture height!');
         return this.offset(new Vector2(x, y));
     }
 
@@ -3758,7 +3758,7 @@ class TileInfo
     */
     setColumns(columns=0)
     {
-        ASSERT(isNumber(columns) && columns >= 0, 'columns must be a number >= 0');
+        false&&ASSERT(isNumber(columns) && columns >= 0, 'columns must be a number >= 0');
         this.columns = columns;
         return this;
     }
@@ -3854,8 +3854,8 @@ class SpriteAnimation
      *  @param {number} [frameTime] - Seconds each frame shows for */
     constructor(tileInfo, frameCount, frameTime=.1)
     {
-        ASSERT(tileInfo instanceof TileInfo, 'the first frame must be a TileInfo');
-        ASSERT(frameCount >= 1 && frameTime > 0, 'an animation needs at least one frame and a positive frame time');
+        false&&ASSERT(tileInfo instanceof TileInfo, 'the first frame must be a TileInfo');
+        false&&ASSERT(frameCount >= 1 && frameTime > 0, 'an animation needs at least one frame and a positive frame time');
         /** @property {TileInfo} - The first frame, the others follow it along the row */
         this.firstTile = tileInfo;
         /** @property {number} - How many frames */
@@ -3959,7 +3959,7 @@ class Shader
      *  @param {string} fragmentCode */
     constructor(fragmentCode)
     {
-        ASSERT(isStringLike(fragmentCode) && String(fragmentCode).includes('mainImage'), 'a Shader needs fragment code that defines mainImage');
+        false&&ASSERT(isStringLike(fragmentCode) && String(fragmentCode).includes('mainImage'), 'a Shader needs fragment code that defines mainImage');
         /** @property {string} - The mainImage snippet */
         this.fragmentCode = String(fragmentCode);
         /** @property {WebGLProgram|undefined} - The 2D program, compiled by the first draw that needs it, read only
@@ -3990,18 +3990,18 @@ class Shader
 function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isVector2(size), 'size must be a vec2');
-    ASSERT(isColor(color), 'color is invalid');
-    ASSERT(isNumber(angle), 'angle must be a number');
-    ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+    false&&ASSERT(isVector2(size), 'size must be a vec2');
+    false&&ASSERT(isColor(color), 'color is invalid');
+    false&&ASSERT(isNumber(angle), 'angle must be a number');
+    false&&ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
+    false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     const textureInfo = tileInfo?.textureInfo;
     const bleed = tileInfo?.bleed ?? 0;
     if (useWebGL && glEnable)
     {
-        ASSERT(!!glContext, 'WebGL is not enabled!');
+        false&&ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
         if (textureInfo)
@@ -4090,15 +4090,15 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @memberof Draw */
 function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isVector2(size), 'size must be a vec2');
-    ASSERT(isColor(colorTop) && isColor(colorBottom), 'color is invalid');
-    ASSERT(isNumber(angle), 'angle must be a number');
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+    false&&ASSERT(isVector2(size), 'size must be a vec2');
+    false&&ASSERT(isColor(colorTop) && isColor(colorBottom), 'color is invalid');
+    false&&ASSERT(isNumber(angle), 'angle must be a number');
+    false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     if (useWebGL && glEnable)
     {
-        ASSERT(!!glContext, 'WebGL is not enabled!');
+        false&&ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
         {
             // convert to world space
@@ -4158,14 +4158,14 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, an
 function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     angle=0, additiveColor, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isVector2(size), 'size must be a vec2');
-    ASSERT(isVector2(wrapCount), 'wrapCount must be a vec2');
-    ASSERT(isColor(color), 'color is invalid');
-    ASSERT(isNumber(angle), 'angle must be a number');
-    ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
-    ASSERT(!(texture instanceof TileInfo),
+    false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+    false&&ASSERT(isVector2(size), 'size must be a vec2');
+    false&&ASSERT(isVector2(wrapCount), 'wrapCount must be a vec2');
+    false&&ASSERT(isColor(color), 'color is invalid');
+    false&&ASSERT(isNumber(angle), 'angle must be a number');
+    false&&ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
+    false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    false&&ASSERT(!(texture instanceof TileInfo),
         'pass a TextureInfo or texture index, not a TileInfo — use tileInfo.textureInfo');
 
     // short-circuit before texture lookup — textureInfos[0] is undefined in headless mode
@@ -4173,14 +4173,14 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
 
     // resolve texture argument: TextureInfo or index
     const textureInfo = typeof texture === 'number' ? textureInfos[texture] : texture;
-    ASSERT(textureInfo instanceof TextureInfo, 'texture not loaded');
-    ASSERT(textureInfo.size.x > 0, 'texture not loaded');
-    ASSERT(textureInfo.wrap,
+    false&&ASSERT(textureInfo instanceof TextureInfo, 'texture not loaded');
+    false&&ASSERT(textureInfo.size.x > 0, 'texture not loaded');
+    false&&ASSERT(textureInfo.wrap,
         'drawTextureWrapped requires a wrap-enabled texture; call textureInfo.setWrap(true) first');
 
     if (useWebGL && glEnable)
     {
-        ASSERT(!!glContext, 'WebGL is not enabled!');
+        false&&ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
         glSetTexture(textureInfo.glTexture);
@@ -4247,16 +4247,16 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
  *  @memberof Draw */
 function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isArray(points), 'points must be an array');
-    ASSERT(isNumber(width), 'width must be a number');
-    ASSERT(isColor(color), 'color is invalid');
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isNumber(angle), 'angle must be a number');
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    false&&ASSERT(isArray(points), 'points must be an array');
+    false&&ASSERT(isNumber(width), 'width must be a number');
+    false&&ASSERT(isColor(color), 'color is invalid');
+    false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+    false&&ASSERT(isNumber(angle), 'angle must be a number');
+    false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     if (useWebGL && glEnable)
     {
-        ASSERT(!!glContext, 'WebGL is not enabled!');
+        false&&ASSERT(!!glContext, 'WebGL is not enabled!');
         let size = vec2(1);
         if (screenSpace)
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
@@ -4319,8 +4319,8 @@ function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWeb
  *  @memberof Draw */
 function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(size), 'size must be a vec2');
-    ASSERT(isNumber(sides), 'sides must be a number');
+    false&&ASSERT(isVector2(size), 'size must be a vec2');
+    false&&ASSERT(isNumber(sides), 'sides must be a number');
 
     // build regular polygon points
     const points = [];
@@ -4346,16 +4346,16 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
  *  @memberof Draw */
 function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
 {
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isArray(points), 'points must be an array');
-    ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
-    ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
-    ASSERT(isNumber(angle), 'angle must be a number');
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+    false&&ASSERT(isArray(points), 'points must be an array');
+    false&&ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
+    false&&ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+    false&&ASSERT(isNumber(angle), 'angle must be a number');
+    false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     if (useWebGL && glEnable)
     {
-        ASSERT(!!glContext, 'WebGL is not enabled!');
+        false&&ASSERT(!!glContext, 'WebGL is not enabled!');
         let size = vec2(1);
         if (screenSpace)
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
@@ -4396,13 +4396,13 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
  *  @memberof Draw */
 function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isVector2(size), 'size must be a vec2');
-    ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
-    ASSERT(isNumber(angle), 'angle must be a number');
-    ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
-    ASSERT(lineWidth >= 0, 'lineWidth must be a positive value or 0');
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+    false&&ASSERT(isVector2(size), 'size must be a vec2');
+    false&&ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
+    false&&ASSERT(isNumber(angle), 'angle must be a number');
+    false&&ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+    false&&ASSERT(lineWidth >= 0, 'lineWidth must be a positive value or 0');
+    false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     // clamp line width to prevent artifacts
     lineWidth = clamp(lineWidth, 0, min(size.x, size.y));
@@ -4443,7 +4443,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
  *  @memberof Draw */
 function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isNumber(size), 'size must be a number');
+    false&&ASSERT(isNumber(size), 'size must be a number');
     drawEllipse(pos, vec2(size), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context);
 }
 
@@ -4463,17 +4463,17 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
 let drawEllipseGradientOffset = 0;
 function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isVector2(size), 'size must be a vec2');
-    ASSERT(isColor(colorInner) && isColor(colorOuter), 'color is invalid');
-    ASSERT(isNumber(angle), 'angle must be a number');
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+    false&&ASSERT(isVector2(size), 'size must be a vec2');
+    false&&ASSERT(isColor(colorInner) && isColor(colorOuter), 'color is invalid');
+    false&&ASSERT(isNumber(angle), 'angle must be a number');
+    false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     if (headlessMode) return;
 
     if (useWebGL && glEnable)
     {
-        ASSERT(!!glContext, 'WebGL is not enabled!');
+        false&&ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
         {
             // convert to world space
@@ -4541,7 +4541,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
  *  @memberof Draw */
 function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHITE, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isNumber(size), 'size must be a number');
+    false&&ASSERT(isNumber(size), 'size must be a number');
     drawEllipseGradient(pos, vec2(size), colorInner, colorOuter, 0, useWebGL, screenSpace, context);
 }
 
@@ -4565,10 +4565,10 @@ function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHIT
  *  @memberof Draw */
 function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, context=drawContext)
 {
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isVector2(size), 'size must be a vec2');
-    ASSERT(isNumber(angle), 'angle must be a number');
-    ASSERT(typeof drawFunction === 'function', 'drawFunction must be a function');
+    false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+    false&&ASSERT(isVector2(size), 'size must be a vec2');
+    false&&ASSERT(isNumber(angle), 'angle must be a number');
+    false&&ASSERT(typeof drawFunction === 'function', 'drawFunction must be a function');
 
     if (!screenSpace)
     {
@@ -4631,16 +4631,16 @@ function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, 
  *  @memberof Draw */
 function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
 {
-    ASSERT(isStringLike(text), 'text must be a string');
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isNumber(size), 'size must be a number');
-    ASSERT(isColor(color), 'color must be a color');
-    ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
-    ASSERT(isColor(lineColor), 'lineColor must be a color');
-    ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
-    ASSERT(isStringLike(font), 'font must be a string');
-    ASSERT(isStringLike(fontStyle), 'fontStyle must be a string');
-    ASSERT(isNumber(angle), 'angle must be a number');
+    false&&ASSERT(isStringLike(text), 'text must be a string');
+    false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+    false&&ASSERT(isNumber(size), 'size must be a number');
+    false&&ASSERT(isColor(color), 'color must be a color');
+    false&&ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+    false&&ASSERT(isColor(lineColor), 'lineColor must be a color');
+    false&&ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
+    false&&ASSERT(isStringLike(font), 'font must be a string');
+    false&&ASSERT(isStringLike(fontStyle), 'fontStyle must be a string');
+    false&&ASSERT(isNumber(angle), 'angle must be a number');
     
     const lines = (text+'').split('\n');
     const posY = pos.y - (lines.length-1) * size/2; // center vertically
@@ -4674,9 +4674,9 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
  *  @memberof Draw */
 async function loadTexture(textureIndex, src)
 {
-    ASSERT(isNumber(textureIndex), 'textureIndex must be a number');
-    ASSERT(!textureInfos[textureIndex], 'textureIndex is already loaded!');
-    ASSERT(!src || isStringLike(src), 'image src must be a string');
+    false&&ASSERT(isNumber(textureIndex), 'textureIndex must be a number');
+    false&&ASSERT(!textureInfos[textureIndex], 'textureIndex is already loaded!');
+    false&&ASSERT(!src || isStringLike(src), 'image src must be a string');
     
     const image = new Image;
     if (src)
@@ -4698,7 +4698,7 @@ async function loadTexture(textureIndex, src)
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
-    ASSERT(isVector2(screenPos), 'screenPos must be a vec2');
+    false&&ASSERT(isVector2(screenPos), 'screenPos must be a vec2');
 
     let x = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
     let y = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
@@ -4718,7 +4718,7 @@ function screenToWorld(screenPos)
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
-    ASSERT(isVector2(worldPos), 'worldPos must be a vec2');
+    false&&ASSERT(isVector2(worldPos), 'worldPos must be a vec2');
 
     let x = worldPos.x - cameraPos.x;
     let y = worldPos.y - cameraPos.y;
@@ -4742,7 +4742,7 @@ function worldToScreen(worldPos)
  *  @memberof Draw */
 function screenToWorldDelta(screenDelta)
 {
-    ASSERT(isVector2(screenDelta), 'screenDelta must be a vec2');
+    false&&ASSERT(isVector2(screenDelta), 'screenDelta must be a vec2');
 
     let x = screenDelta.x /  cameraScale;
     let y = screenDelta.y / -cameraScale;
@@ -4762,7 +4762,7 @@ function screenToWorldDelta(screenDelta)
  *  @memberof Draw */
 function worldToScreenDelta(worldDelta)
 {
-    ASSERT(isVector2(worldDelta), 'worldDelta must be a vec2');
+    false&&ASSERT(isVector2(worldDelta), 'worldDelta must be a vec2');
 
     let x = worldDelta.x;
     let y = worldDelta.y;
@@ -4784,9 +4784,9 @@ function worldToScreenDelta(worldDelta)
  *  @memberof Draw */
 function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
 {
-    ASSERT(isVector2(screenPos), 'screenPos must be a vec2');
-    ASSERT(isVector2(screenSize), 'screenSize must be a vec2');
-    ASSERT(isNumber(screenAngle), 'screenAngle must be a number');
+    false&&ASSERT(isVector2(screenPos), 'screenPos must be a vec2');
+    false&&ASSERT(isVector2(screenSize), 'screenSize must be a vec2');
+    false&&ASSERT(isNumber(screenAngle), 'screenAngle must be a number');
 
     return [
         screenToWorld(screenPos),
@@ -4814,8 +4814,8 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @memberof Draw */
 function cameraFit(center, size, worldMargin, screenInset)
 {
-    ASSERT(isVector2(center), 'center must be a vec2');
-    ASSERT(isVector2(size), 'size must be a vec2');
+    false&&ASSERT(isVector2(center), 'center must be a vec2');
+    false&&ASSERT(isVector2(size), 'size must be a vec2');
 
     // pad the content
     const margin = padSides(worldMargin);
@@ -4865,8 +4865,8 @@ function cameraFit(center, size, worldMargin, screenInset)
  *  @memberof Draw */
 function isOnScreen(pos, size=0)
 {
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isVector2(size) || isNumber(size), 'size must be a vec2 or number');
+    false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+    false&&ASSERT(isVector2(size) || isNumber(size), 'size must be a vec2 or number');
 
     // cameraScale of 0 collapses world coords; nothing is visible
     if (!cameraScale) return false;
@@ -4909,7 +4909,7 @@ function setAdditiveBlendMode(additive=true)
  *  @memberof Draw */
 function setShader(shader)
 {
-    ASSERT(!shader || shader instanceof Shader, 'shader must be a Shader');
+    false&&ASSERT(!shader || shader instanceof Shader, 'shader must be a Shader');
     glCustomShader = shader || undefined; // null is no shader too, so it batches with none
 }
 
@@ -5109,7 +5109,7 @@ class ImageFont
      */
     constructor(tileInfo)
     {
-        ASSERT(!!tileInfo, 'tileInfo is required for ImageFont');
+        false&&ASSERT(!!tileInfo, 'tileInfo is required for ImageFont');
         
         /** @property {TileInfo} - Tile info for the font */
         this.tileInfo = tileInfo.frame(0);
@@ -5126,12 +5126,12 @@ class ImageFont
      */
     drawText(text, pos, size=1, center, color, useWebGL, context)
     {
-        ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
+        false&&ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
 
         if (typeof size === 'number')
         {
             // if size is a number, make it a vector
-            ASSERT(size > 0);
+            false&&ASSERT(size > 0);
             size *= cameraScale;
             size = new Vector2(size, size);
         }
@@ -5151,10 +5151,10 @@ class ImageFont
      */
     drawTextScreen(text, pos, size, center=true, color=WHITE, useWebGL=glEnable, context)
     {
-        ASSERT(isStringLike(text), 'text must be a string');
-        ASSERT(isVector2(pos), 'pos must be a vec2');
-        ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
-        ASSERT(isColor(color), 'color must be a color');
+        false&&ASSERT(isStringLike(text), 'text must be a string');
+        false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+        false&&ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
+        false&&ASSERT(isColor(color), 'color must be a color');
 
         // if size is a number, make it a vector
         size = typeof size === 'number' ? new Vector2(size, size) : size;
@@ -5351,8 +5351,8 @@ function inputClear()
  *  @memberof Input */
 function keyIsDown(key, device=0)
 {
-    ASSERT(isStringLike(key), 'key must be a number or string');
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    false&&ASSERT(isStringLike(key), 'key must be a number or string');
+    false&&ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 1);
 }
 
@@ -5363,8 +5363,8 @@ function keyIsDown(key, device=0)
  *  @memberof Input */
 function keyWasPressed(key, device=0)
 {
-    ASSERT(isStringLike(key), 'key must be a number or string');
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    false&&ASSERT(isStringLike(key), 'key must be a number or string');
+    false&&ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 2);
 }
 
@@ -5375,8 +5375,8 @@ function keyWasPressed(key, device=0)
  *  @memberof Input */
 function keyWasReleased(key, device=0)
 {
-    ASSERT(isStringLike(key), 'key must be a number or string');
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    false&&ASSERT(isStringLike(key), 'key must be a number or string');
+    false&&ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 4);
 }
 
@@ -5389,10 +5389,10 @@ function keyWasReleased(key, device=0)
  *  @memberof Input */
 function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='ArrowRight')
 {
-    ASSERT(isStringLike(up),    'up key must be a string');
-    ASSERT(isStringLike(down),  'down key must be a string');
-    ASSERT(isStringLike(left),  'left key must be a string');
-    ASSERT(isStringLike(right), 'right key must be a string');
+    false&&ASSERT(isStringLike(up),    'up key must be a string');
+    false&&ASSERT(isStringLike(down),  'down key must be a string');
+    false&&ASSERT(isStringLike(left),  'left key must be a string');
+    false&&ASSERT(isStringLike(right), 'right key must be a string');
     const k = (key)=> keyIsDown(key) ? 1 : 0;
     return vec2(k(right) - k(left), k(up) - k(down));
 }
@@ -5404,7 +5404,7 @@ function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='A
  *  @memberof Input */
 function mouseIsDown(button)
 {
-    ASSERT(isNumber(button), 'mouse button must be a number');
+    false&&ASSERT(isNumber(button), 'mouse button must be a number');
     return keyIsDown(button);
 }
 
@@ -5415,7 +5415,7 @@ function mouseIsDown(button)
  *  @memberof Input */
 function mouseWasPressed(button)
 {
-    ASSERT(isNumber(button), 'mouse button must be a number');
+    false&&ASSERT(isNumber(button), 'mouse button must be a number');
     return keyWasPressed(button);
 }
 
@@ -5426,7 +5426,7 @@ function mouseWasPressed(button)
  *  @memberof Input */
 function mouseWasReleased(button)
 {
-    ASSERT(isNumber(button), 'mouse button must be a number');
+    false&&ASSERT(isNumber(button), 'mouse button must be a number');
     return keyWasReleased(button);
 }
 
@@ -5437,8 +5437,8 @@ function mouseWasReleased(button)
  *  @memberof Input */
 function gamepadIsDown(button, gamepad=gamepadPrimary)
 {
-    ASSERT(isNumber(button), 'button must be a number');
-    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    false&&ASSERT(isNumber(button), 'button must be a number');
+    false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return keyIsDown(button, gamepad+1);
 }
 
@@ -5449,8 +5449,8 @@ function gamepadIsDown(button, gamepad=gamepadPrimary)
  *  @memberof Input */
 function gamepadWasPressed(button, gamepad=gamepadPrimary)
 {
-    ASSERT(isNumber(button), 'button must be a number');
-    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    false&&ASSERT(isNumber(button), 'button must be a number');
+    false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return keyWasPressed(button, gamepad+1);
 }
 
@@ -5461,8 +5461,8 @@ function gamepadWasPressed(button, gamepad=gamepadPrimary)
  *  @memberof Input */
 function gamepadWasReleased(button, gamepad=gamepadPrimary)
 {
-    ASSERT(isNumber(button), 'button must be a number');
-    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    false&&ASSERT(isNumber(button), 'button must be a number');
+    false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return keyWasReleased(button, gamepad+1);
 }
 
@@ -5473,8 +5473,8 @@ function gamepadWasReleased(button, gamepad=gamepadPrimary)
  *  @memberof Input */
 function gamepadStick(stick, gamepad=gamepadPrimary)
 {
-    ASSERT(isNumber(stick), 'stick must be a number');
-    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    false&&ASSERT(isNumber(stick), 'stick must be a number');
+    false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return gamepadStickData[gamepad]?.[stick] ?? vec2();
 }
 
@@ -5484,7 +5484,7 @@ function gamepadStick(stick, gamepad=gamepadPrimary)
  *  @memberof Input */
 function gamepadDpad(gamepad=gamepadPrimary)
 {
-    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return gamepadDpadData[gamepad] ?? vec2();
 }
 
@@ -5494,7 +5494,7 @@ function gamepadDpad(gamepad=gamepadPrimary)
  *  @memberof Input */
 function gamepadConnected(gamepad=gamepadPrimary)
 {
-    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return !!inputData[gamepad+1];
 }
 
@@ -5504,7 +5504,7 @@ function gamepadConnected(gamepad=gamepadPrimary)
  *  @memberof Input */
 function gamepadStickCount(gamepad=gamepadPrimary)
 {
-    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return gamepadStickData[gamepad]?.length ?? 0;
 }
 
@@ -5518,7 +5518,7 @@ function gamepadStickCount(gamepad=gamepadPrimary)
  *  @memberof Input */
 function gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1, weakMagnitude=1, startDelay=0)
 {
-    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
     if (!vibrateEnable || headlessMode) return;
     const pad = navigator?.getGamepads?.()[gamepad];
     pad?.vibrationActuator?.playEffect?.('dual-rumble', {duration, strongMagnitude, weakMagnitude, startDelay});
@@ -5528,7 +5528,7 @@ function gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1,
  *  @memberof Input */
 function gamepadVibrateStop(gamepad=gamepadPrimary)
 {
-    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
     if (!vibrateEnable || headlessMode) return;
     const pad = navigator?.getGamepads?.()[gamepad];
     pad?.vibrationActuator?.reset?.();
@@ -5541,7 +5541,7 @@ function gamepadVibrateStop(gamepad=gamepadPrimary)
  *  @memberof Input */
 function vibrate(pattern=100)
 {
-    ASSERT(isNumber(pattern) || isArray(pattern), 'pattern must be a number or array');
+    false&&ASSERT(isNumber(pattern) || isArray(pattern), 'pattern must be a number or array');
     vibrateEnable && !headlessMode && navigator?.vibrate?.(pattern);
 }
 
@@ -5871,9 +5871,9 @@ function inputUpdate()
         if (touchGamepadEnable && isTouchDevice)
         {
             // a side is either a stick or buttons - setting both is ambiguous
-            ASSERT(!touchGamepadLeftStick || !touchGamepadLeftButtonCount,
+            false&&ASSERT(!touchGamepadLeftStick || !touchGamepadLeftButtonCount,
                 'set touchGamepadLeftStick or touchGamepadLeftButtonCount, not both');
-            ASSERT(!touchGamepadRightStick || !touchGamepadButtonCount,
+            false&&ASSERT(!touchGamepadRightStick || !touchGamepadButtonCount,
                 'set touchGamepadRightStick or touchGamepadButtonCount, not both');
 
             if (!touchGamepadTimer.isSet()) return;
@@ -6596,8 +6596,8 @@ function setAudioMasterEffect(input, output)
     const outputIsEffect = !!outputArg && 'input' in outputArg;
     output = audioEffectNode(output, 'output') || audioEffectNode(input, 'output');
     input = audioEffectNode(input, 'input');
-    ASSERT(!input || typeof input.connect === 'function', 'input must be an AudioNode or an effect with input and output nodes');
-    ASSERT(!output || typeof output.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
+    false&&ASSERT(!input || typeof input.connect === 'function', 'input must be an AudioNode or an effect with input and output nodes');
+    false&&ASSERT(!output || typeof output.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
 
     // undo the current route, the master gain selectively so other taps on it survive,
     // but the output node from everything since it only ever fed the speakers;
@@ -6672,11 +6672,11 @@ class Sound
     {
         if (!soundEnable || headlessMode) return;
 
-        ASSERT(!asset || isArray(asset) || isStringLike(asset), 'asset must be a file name or zzfx array');
-        ASSERT(randomness === undefined || isNumber(randomness), 'randomness must be a number');
-        ASSERT(randomness === undefined || randomness >= 0 && randomness <=1, 'randomness must be between 0 and 1');
-        ASSERT(isNumber(range), 'range must be a number');
-        ASSERT(isNumber(taper), 'taper must be a number');
+        false&&ASSERT(!asset || isArray(asset) || isStringLike(asset), 'asset must be a file name or zzfx array');
+        false&&ASSERT(randomness === undefined || isNumber(randomness), 'randomness must be a number');
+        false&&ASSERT(randomness === undefined || randomness >= 0 && randomness <=1, 'randomness must be between 0 and 1');
+        false&&ASSERT(isNumber(range), 'range must be a number');
+        false&&ASSERT(isNumber(taper), 'taper must be a number');
 
         /** @property {number} - World space max range of sound */
         this.range = range;
@@ -6728,7 +6728,7 @@ class Sound
             // unhandled rejection, the sound just stays unloaded and silent
             const filename = asset;
             this.loadSound(filename).catch(e=>
-                LOG('Sound load failed for', filename, '-', e.message));
+                false&&LOG('Sound load failed for', filename, '-', e.message));
         }
     }
 
@@ -6783,10 +6783,10 @@ class Sound
      */
     play(pos, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false)
     {
-        ASSERT(!pos || isVector2(pos), 'pos must be a vec2');
-        ASSERT(isNumber(volume), 'volume must be a number');
-        ASSERT(isNumber(pitch), 'pitch must be a number');
-        ASSERT(isNumber(randomnessScale), 'randomnessScale must be a number');
+        false&&ASSERT(!pos || isVector2(pos), 'pos must be a vec2');
+        false&&ASSERT(isNumber(volume), 'volume must be a number');
+        false&&ASSERT(isNumber(pitch), 'pitch must be a number');
+        false&&ASSERT(isNumber(randomnessScale), 'randomnessScale must be a number');
 
         if (!soundEnable || headlessMode) return;
         if (!this.sampleBuffer && !this._sampleChannels) return;
@@ -6857,7 +6857,7 @@ class Sound
      */
     playNote(semitoneOffset=0, pos, volume)
     {
-        ASSERT(isNumber(semitoneOffset), 'semitoneOffset must be a number');
+        false&&ASSERT(isNumber(semitoneOffset), 'semitoneOffset must be a number');
         const pitch = getNoteFrequency(semitoneOffset, 1);
         return this.play(pos, volume, pitch, 0);
     }
@@ -6922,10 +6922,10 @@ class SoundInstance
      *  @param {boolean}  [paused] - Should the sound start paused? */
     constructor(sound, volume=1, rate=1, pan=0, loop=false, paused=false)
     {
-        ASSERT(sound instanceof Sound, 'SoundInstance requires a valid Sound object');
-        ASSERT(volume >= 0, 'Sound volume must be positive or zero');
-        ASSERT(rate >= 0, 'Sound rate must be positive or zero');
-        ASSERT(isNumber(pan), 'Sound pan must be a number');
+        false&&ASSERT(sound instanceof Sound, 'SoundInstance requires a valid Sound object');
+        false&&ASSERT(volume >= 0, 'Sound volume must be positive or zero');
+        false&&ASSERT(rate >= 0, 'Sound rate must be positive or zero');
+        false&&ASSERT(isNumber(pan), 'Sound pan must be a number');
 
         /** @property {Sound} - The sound object */
         this.sound = sound;
@@ -6967,7 +6967,7 @@ class SoundInstance
      */
     start(offset=0)
     {
-        ASSERT(offset >= 0, 'Sound start offset must be positive or zero');
+        false&&ASSERT(offset >= 0, 'Sound start offset must be positive or zero');
         if (this.isPlaying())
             this.stop();
         this.gainNode = audioContext.createGain();
@@ -6996,8 +6996,8 @@ class SoundInstance
      *  @param {number} [fadeTime] - Seconds to fade to the new volume over */
     setVolume(volume, fadeTime=0)
     {
-        ASSERT(volume >= 0, 'Sound volume must be positive or zero');
-        ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
+        false&&ASSERT(volume >= 0, 'Sound volume must be positive or zero');
+        false&&ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
         this.volume = volume;
         if (!this.gainNode) return;
 
@@ -7021,7 +7021,7 @@ class SoundInstance
      *  @param {number} rate - 1 is normal, 2 is twice as fast and an octave up */
     setRate(rate)
     {
-        ASSERT(rate >= 0, 'Sound rate must be positive or zero');
+        false&&ASSERT(rate >= 0, 'Sound rate must be positive or zero');
         // keep the place in the sound, only the speed changes from here, so the current time stays true
         if (this.isPlaying() && rate)
             this.startTime = audioContext.currentTime - this.getCurrentTime() * this.rate / rate;
@@ -7034,7 +7034,7 @@ class SoundInstance
      *  @param {number} [fadeTime] - Seconds to fade out over before stopping */
     stop(fadeTime=0)
     {
-        ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
+        false&&ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
         if (this.isPlaying())
         {
             if (fadeTime)
@@ -7125,7 +7125,7 @@ class SoundInstance
  *  @memberof Audio */
 function speak(text, volume=1, rate=1, pitch=1, language='')
 {
-    ASSERT(typeof volume !== 'string', 'speak() signature changed: language is now the last parameter, after pitch');
+    false&&ASSERT(typeof volume !== 'string', 'speak() signature changed: language is now the last parameter, after pitch');
     if (!soundEnable || headlessMode) return;
     if (typeof speechSynthesis === 'undefined') return;
 
@@ -7243,7 +7243,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
     gainNode = gainNode || audioContext.createGain();
     gainNode.gain.value = volume;
     const outputNode = audioEffectNode(output, 'input') || audioMasterGain;
-    ASSERT(typeof outputNode.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
+    false&&ASSERT(typeof outputNode.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
     gainNode.connect(outputNode);
 
     // connect source to stereo panner and gain
@@ -7264,7 +7264,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
     source.start(0, startOffset);
 
     if (debug && debugSound)
-        LOG('sound', 'vol', volume.toFixed(2), 'rate', rate.toFixed(2), 'pan', pan.toFixed(2), loop ? 'loop' : '');
+        false&&LOG('sound', 'vol', volume.toFixed(2), 'rate', rate.toFixed(2), 'pan', pan.toFixed(2), loop ? 'loop' : '');
 
     return source;
 }
@@ -7550,8 +7550,8 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
     }
 
     // validate the tile map data
-    ASSERT(tileMapData.width && tileMapData.height);
-    ASSERT(tileMapData.layers && tileMapData.layers.length);
+    false&&ASSERT(tileMapData.width && tileMapData.height);
+    false&&ASSERT(tileMapData.layers && tileMapData.layers.length);
 
     // create tile layers and fill with data
     const tileLayers = [];
@@ -7560,8 +7560,8 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
     for (let layerIndex=layerCount; layerIndex--;)
     {
         const dataLayer = tileMapData.layers[layerIndex];
-        ASSERT(dataLayer.data && dataLayer.data.length);
-        ASSERT(levelSize.area() === dataLayer.data.length);
+        false&&ASSERT(dataLayer.data && dataLayer.data.length);
+        false&&ASSERT(levelSize.area() === dataLayer.data.length);
 
         const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
@@ -7571,7 +7571,7 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
         const layerColor = dataLayer.tintcolor ?
             new Color().setHex(dataLayer.tintcolor) :
             dataLayer.color || WHITE;
-        ASSERT(isColor(layerColor), 'layer color is not a color');
+        false&&ASSERT(isColor(layerColor), 'layer color is not a color');
 
         for (let x=levelSize.x; x--;)
         for (let y=levelSize.y; y--;)
@@ -7651,7 +7651,7 @@ class CanvasLayer extends EngineObject
     */
     constructor(pos, size, angle=0, renderOrder=0, canvasSize=vec2(512), useWebGL=true)
     {
-        ASSERT(isVector2(canvasSize), 'canvasSize must be a Vector2');
+        false&&ASSERT(isVector2(canvasSize), 'canvasSize must be a Vector2');
         super(pos, size, undefined, angle, WHITE, renderOrder);
 
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
@@ -7778,8 +7778,8 @@ class TileLayer extends CanvasLayer
     setData(layerPos, data, redraw=false)
     {
         layerPos = layerPos.floor();
-        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
-        ASSERT(data instanceof TileLayerData, 'data must be a TileLayerData');
+        false&&ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
+        false&&ASSERT(data instanceof TileLayerData, 'data must be a TileLayerData');
 
         if (!layerPos.arrayCheck(this.size)) return;
         this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)] = data;
@@ -7800,7 +7800,7 @@ class TileLayer extends CanvasLayer
      *  @return {TileLayerData|undefined} */
     getData(layerPos)
     {
-        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
+        false&&ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
         return layerPos.arrayCheck(this.size) ? this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)] : undefined;
     }
 
@@ -7818,7 +7818,7 @@ class TileLayer extends CanvasLayer
     // Render the tile layer, called automatically by the engine
     render()
     {
-        ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
+        false&&ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
@@ -7847,7 +7847,7 @@ class TileLayer extends CanvasLayer
     redrawStart(clear=false)
     {
         if (!this.context) return;
-        ASSERT(drawContext !== this.context);
+        false&&ASSERT(drawContext !== this.context);
         
         // save current render settings
         /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
@@ -7883,7 +7883,7 @@ class TileLayer extends CanvasLayer
     redrawEnd()
     {
         if (!this.context) return;
-        ASSERT(drawContext === this.context);
+        false&&ASSERT(drawContext === this.context);
 
         // set stuff back to normal
         if (this.isUsingWebGL)
@@ -7900,7 +7900,7 @@ class TileLayer extends CanvasLayer
     drawTileData(layerPos, clear=true)
     {
         if (!this.context) return;
-        ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
+        false&&ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
         
         // clear out where the tile was, can be skipped for fully opaque tiles
         const drawSize = this.tileInfo?.size ?? vec2(1);
@@ -7924,7 +7924,7 @@ class TileLayer extends CanvasLayer
     redrawTileData(layerPos, clear=true)
     {
         if (!this.context) return;
-        ASSERT(drawContext !== this.context, 'redrawStart() should not be active when calling redrawTileData(), instead use drawTileData()');
+        false&&ASSERT(drawContext !== this.context, 'redrawStart() should not be active when calling redrawTileData(), instead use drawTileData()');
 
         this.redrawStart();
         this.drawTileData(layerPos, clear);
@@ -7993,7 +7993,7 @@ class TileLayer extends CanvasLayer
      */
     clearLayerRect(pos, size)
     {
-        ASSERT(drawContext === this.context, 'must call redrawStart() before clearing tiles');
+        false&&ASSERT(drawContext === this.context, 'must call redrawStart() before clearing tiles');
 
         const x = pos.x, y = this.canvas.height - pos.y - size.y;
         const useWebGL = this.hasWebGL();
@@ -8043,7 +8043,7 @@ class TileCollisionLayer extends TileLayer
 
         // remove from collision layers array and destroy
         const index = tileCollisionLayers.indexOf(this);
-        ASSERT(index >= 0, 'tile collision layer not found in array');
+        false&&ASSERT(index >= 0, 'tile collision layer not found in array');
         index >= 0 && tileCollisionLayers.splice(index, 1);
         super.destroy();
     }
@@ -8052,7 +8052,7 @@ class TileCollisionLayer extends TileLayer
     *  @param {Vector2} size - width and height of tile collision 2d grid */
     initCollision(size)
     {
-        ASSERT(isVector2(size), 'size must be a Vector2');
+        false&&ASSERT(isVector2(size), 'size must be a Vector2');
         this.size = size.floor();
         this.collisionData = [];
         this.collisionData.length = size.area();
@@ -8064,7 +8064,7 @@ class TileCollisionLayer extends TileLayer
     *  @param {number}  [data] */
     setCollisionData(layerPos, data=1)
     {
-        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
+        false&&ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
         const i = (layerPos.y|0)*this.size.x + (layerPos.x|0);
         layerPos.arrayCheck(this.size) && (this.collisionData[i] = data);
     }
@@ -8079,7 +8079,7 @@ class TileCollisionLayer extends TileLayer
     *  @return {number} */
     getCollisionData(layerPos)
     {
-        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
+        false&&ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
         const i = (layerPos.y|0)*this.size.x + (layerPos.x|0);
         return layerPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
     }
@@ -8091,8 +8091,8 @@ class TileCollisionLayer extends TileLayer
     *  @return {boolean} */
     collisionTest(pos, size=new Vector2, callbackObject)
     {
-        ASSERT(isVector2(pos) && isVector2(size), 'pos and size must be Vector2s');
-        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
+        false&&ASSERT(isVector2(pos) && isVector2(size), 'pos and size must be Vector2s');
+        false&&ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
 
         // make function to check for collision
         const collisionTest = callbackObject ? typeof callbackObject === 'function' ?
@@ -8135,8 +8135,8 @@ class TileCollisionLayer extends TileLayer
     *  @return {Vector2|undefined} */
     collisionRaycast(posStart, posEnd, callbackObject, normal)
     {
-        ASSERT(isVector2(posStart) && isVector2(posEnd), 'positions must be Vector2s');
-        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
+        false&&ASSERT(isVector2(posStart) && isVector2(posEnd), 'positions must be Vector2s');
+        false&&ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
 
         // make function to check for collision
         const collisionTest = callbackObject ? typeof callbackObject === 'function' ?
@@ -8350,8 +8350,8 @@ class ParticleEmitter extends EngineObject
     update()
     {
         // physics sanity checks
-        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
-        ASSERT(this.damping >= 0 && this.damping <= 1);
+        false&&ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
+        false&&ASSERT(this.damping >= 0 && this.damping <= 1);
 
         if (this.velocityInheritance)
         {
@@ -8797,7 +8797,7 @@ function glInit(rootElement)
         glEnable = false; // disable WebGL rendering
         glCanvas.style.display = 'none'; // hide the gl canvas
         e.preventDefault(); // prevent default to allow restoration
-        LOG('WebGL context lost! Switching to Canvas2d rendering.');
+        false&&LOG('WebGL context lost! Switching to Canvas2d rendering.');
 
         // remove WebGL textures
         for (const info of glTextureInfos)
@@ -8819,7 +8819,7 @@ function glInit(rootElement)
     {
         glEnable = true; // re-enable WebGL rendering
         glCanvas.style.display = ''; // show the gl canvas
-        LOG('WebGL context restored, reinitializing...');
+        false&&LOG('WebGL context restored, reinitializing...');
 
         // reinit WebGL and restore textures
         initWebGL();
@@ -8946,7 +8946,7 @@ function glPreRender(clear=true)
 {
     if (!glEnable || !glContext) return;
 
-    ASSERT(!glBatchCount, 'glPreRender called with unflushed batch.');
+    false&&ASSERT(!glBatchCount, 'glPreRender called with unflushed batch.');
 
     // mainCanvasSize is css pixels, the backing store is scaled by the pixel
     // ratio, render targets are offscreen so they are never scaled
@@ -9186,7 +9186,7 @@ function glSetTextureData(texture, image)
     if (!glContext) return;
 
     // build the texture
-    ASSERT(image?.width > 0, 'Invalid image data.');
+    false&&ASSERT(image?.width > 0, 'Invalid image data.');
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
 
@@ -9293,7 +9293,7 @@ function glCopyToContext(context)
  *  @memberof WebGL */
 function glSetAntialias(antialias=true)
 {
-    ASSERT(!glCanvas, 'must be called before engineInit');
+    false&&ASSERT(!glCanvas, 'must be called before engineInit');
     glAntialias = antialias;
 }
 
@@ -9403,7 +9403,7 @@ function glDrawPoints(points, rgba)
     const vertCount = points.length + 2;
     if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
         glFlush();
-    ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
+    false&&ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
     if (vertCount >= gl_MAX_POLY_VERTEXES) return; // release-build safety net
     glSetPolyMode();
   
@@ -9433,7 +9433,7 @@ function glDrawColoredPoints(points, pointColors)
     const vertCount = points.length + 2;
     if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
         glFlush();
-    ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
+    false&&ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
     if (vertCount >= gl_MAX_POLY_VERTEXES) return; // release-build safety net
     glSetPolyMode();
   
@@ -10008,7 +10008,7 @@ class Medal
      */
     constructor(id, name, description='', icon='🏆', src)
     {
-        ASSERT(id >= 0 && !medals[id]);
+        false&&ASSERT(id >= 0 && !medals[id]);
 
         /** @property {number} - The unique identifier of the medal */
         this.id = id;
@@ -10039,7 +10039,7 @@ class Medal
     {
         if (medalsPreventUnlock || this.unlocked) return;
 
-        ASSERT(medalsSaveName, 'save name must be set');
+        false&&ASSERT(medalsSaveName, 'save name must be set');
         this.unlocked = true;
         medalsSave();
         medalsDisplayQueue.push(this);
@@ -10183,8 +10183,8 @@ class NewgroundsPlugin
      */
     constructor(app_id, cipher, cryptoJS)
     {
-        ASSERT(!newgrounds, 'there can only be one newgrounds object');
-        ASSERT(!cipher || cryptoJS, 'must provide cryptojs if there is a cipher');
+        false&&ASSERT(!newgrounds, 'there can only be one newgrounds object');
+        false&&ASSERT(!cipher || cryptoJS, 'must provide cryptojs if there is a cipher');
 
         newgrounds = this; // set global newgrounds object
         /** @property {string} - The newgrounds App ID */
@@ -10212,7 +10212,7 @@ class NewgroundsPlugin
         // XHRs that are guaranteed to also fail
         if (!medalsResult || !medalsResult.result || medalsResult.result.error)
         {
-            debugMedals && LOG('Newgrounds session unavailable; skipping plugin init');
+            debugMedals && false&&LOG('Newgrounds session unavailable; skipping plugin init');
             this.medals = [];
             this.scoreboards = [];
             return;
@@ -10220,7 +10220,7 @@ class NewgroundsPlugin
 
         /** @property {Array} - Medals fetched from Newgrounds (empty until session is active) */
         this.medals = medalsResult.result.data?.['medals'] || [];
-        debugMedals && LOG(this.medals);
+        debugMedals && false&&LOG(this.medals);
         for (const newgroundsMedal of this.medals)
         {
             const medal = medals[newgroundsMedal['id']];
@@ -10244,7 +10244,7 @@ class NewgroundsPlugin
         const scoreboardResult = this.call('ScoreBoard.getBoards');
         /** @property {Array} - Scoreboards fetched from Newgrounds */
         this.scoreboards = scoreboardResult?.result?.data?.scoreboards || [];
-        debugMedals && LOG(this.scoreboards);
+        debugMedals && false&&LOG(this.scoreboards);
 
         // keep the session alive with a ping every minute
         const keepAliveMS = 60 * 1e3;
@@ -10313,12 +10313,12 @@ class NewgroundsPlugin
         try { xmlHttp.send(formData); }
         catch(e)
         {
-            debugMedals && LOG('newgrounds call failed', e);
+            debugMedals && false&&LOG('newgrounds call failed', e);
             return;
         }
-        debugMedals && LOG(xmlHttp.responseText);
+        debugMedals && false&&LOG(xmlHttp.responseText);
         try { return xmlHttp.responseText && JSON.parse(xmlHttp.responseText); }
-        catch(e) { debugMedals && LOG('newgrounds response is not valid JSON', e); }
+        catch(e) { debugMedals && false&&LOG('newgrounds response is not valid JSON', e); }
     }
 }
 /**
@@ -10359,8 +10359,8 @@ class PostProcessPlugin
     */
     constructor(shaderCode, includeMainCanvas=false, feedbackTexture=false)
     {
-        ASSERT(!postProcess, 'Post process already initialized');
-        ASSERT(!(includeMainCanvas && feedbackTexture), 'Post process cannot both include main canvas and use feedback texture');
+        false&&ASSERT(!postProcess, 'Post process already initialized');
+        false&&ASSERT(!(includeMainCanvas && feedbackTexture), 'Post process cannot both include main canvas and use feedback texture');
         postProcess = this;
 
         if (!shaderCode) // default shader pass through
@@ -10427,12 +10427,12 @@ class PostProcessPlugin
         {
             postProcess.shader = undefined;
             postProcess.texture = undefined;
-            LOG('PostProcessPlugin: WebGL context lost');
+            false&&LOG('PostProcessPlugin: WebGL context lost');
         }
         function postProcessContextRestored()
         {
             initPostProcess();
-            LOG('PostProcessPlugin: WebGL context restored');
+            false&&LOG('PostProcessPlugin: WebGL context restored');
         }
         function postProcessRender()
         {
@@ -10513,9 +10513,9 @@ class PostProcessPlugin
  */
 function postProcessBloomShader(threshold=.6, strength=1, size=6)
 {
-    ASSERT(isNumber(threshold) && isNumber(strength) && isNumber(size), 'bloom settings must be numbers');
-    ASSERT(size > 0, 'bloom size must be above zero');
-    ASSERT(size <= 32, 'a bloom this wide takes a sample every few pixels of every ring, which is hundreds of samples a pixel', size);
+    false&&ASSERT(isNumber(threshold) && isNumber(strength) && isNumber(size), 'bloom settings must be numbers');
+    false&&ASSERT(size > 0, 'bloom size must be above zero');
+    false&&ASSERT(size <= 32, 'a bloom this wide takes a sample every few pixels of every ring, which is hundreds of samples a pixel', size);
 
     // Taps on three rings over a disc of the given size, one every three pixels or so of each ring
     // so there is no gap wide enough to show. The count follows the ring all the way out: hold it
@@ -10606,8 +10606,8 @@ class LightSystemPlugin
      */
     constructor(textureSize, ambientColor)
     {
-        ASSERT(!lightSystem, 'LightSystemPlugin already initialized');
-        ASSERT(!postProcess, 'LightSystemPlugin must be created before PostProcessPlugin');
+        false&&ASSERT(!lightSystem, 'LightSystemPlugin already initialized');
+        false&&ASSERT(!postProcess, 'LightSystemPlugin must be created before PostProcessPlugin');
         lightSystem = this;
 
         /** @property {boolean} - When false, the render pass is skipped entirely */
@@ -10790,12 +10790,12 @@ class LightSystemPlugin
             lightSystem.compositeShader = undefined;
             lightSystem.lightVAO = undefined;
             lightSystem.compositeVAO = undefined;
-            LOG('LightSystemPlugin: WebGL context lost');
+            false&&LOG('LightSystemPlugin: WebGL context lost');
         }
         function lightSystemContextRestored()
         {
             initLightSystem();
-            LOG('LightSystemPlugin: WebGL context restored');
+            false&&LOG('LightSystemPlugin: WebGL context restored');
         }
     }
 
@@ -10869,8 +10869,8 @@ class Light extends EngineObject
     constructor(pos, radius, color, fadeRange)
     {
         super(pos, vec2(1), undefined, 0, color);
-        ASSERT(isNumber(radius) && radius >= 0, 'Light radius must be a non-negative number');
-        ASSERT(fadeRange === undefined || (isNumber(fadeRange) && fadeRange >= 0),
+        false&&ASSERT(isNumber(radius) && radius >= 0, 'Light radius must be a non-negative number');
+        false&&ASSERT(fadeRange === undefined || (isNumber(fadeRange) && fadeRange >= 0),
             'Light fadeRange must be a non-negative number when provided');
 
         /** @property {number} - Total extent of the light in world units */
@@ -11064,7 +11064,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 // ramp an audio param to a value, cancelling anything already scheduled so stacked calls don't fight
 function audioParamRamp(param, value, fadeTime=0)
 {
-    ASSERT(fadeTime >= 0, 'fadeTime must be positive or zero');
+    false&&ASSERT(fadeTime >= 0, 'fadeTime must be positive or zero');
     const startTime = audioContext.currentTime;
     param.cancelScheduledValues(startTime);
     if (fadeTime)
@@ -11092,7 +11092,7 @@ class AudioEffect
      *  @param {number} [mix] - Wet/dry balance, 0 is fully dry and 1 is fully wet */
     constructor(mix=1)
     {
-        ASSERT(isNumber(mix), 'mix must be a number');
+        false&&ASSERT(isNumber(mix), 'mix must be a number');
 
         /** @property {GainNode} - Connect sounds to this node */
         this.input = audioContext.createGain();
@@ -11119,7 +11119,7 @@ class AudioEffect
      *  @param {number} [fadeTime] - Seconds to ramp over so the change doesn't click */
     setMix(mix, fadeTime=0)
     {
-        ASSERT(isNumber(mix), 'mix must be a number');
+        false&&ASSERT(isNumber(mix), 'mix must be a number');
         this.mix = mix = clamp(mix);
         this.rampParam(this.dryGain.gain, 1-mix, fadeTime);
         this.rampParam(this.wetGain.gain, mix, fadeTime);
@@ -11150,7 +11150,7 @@ class AudioEffect
     {
         // an effect stands in for its input node, the same rule as sound.output
         const node = /** @type {AudioNode} */ (target && 'input' in target ? target.input : target);
-        ASSERT(node && typeof node.connect === 'function', 'target must be an AudioEffect or AudioNode');
+        false&&ASSERT(node && typeof node.connect === 'function', 'target must be an AudioEffect or AudioNode');
         this.output.disconnect();
         this.output.connect(node);
         return target;
@@ -11190,8 +11190,8 @@ class AudioFilter extends AudioEffect
     constructor(type='lowpass', frequency=1000, q=1, mix=1)
     {
         super(mix);
-        ASSERT(isNumber(frequency) && frequency >= 0, 'frequency must be positive or zero');
-        ASSERT(isNumber(q), 'q must be a number');
+        false&&ASSERT(isNumber(frequency) && frequency >= 0, 'frequency must be positive or zero');
+        false&&ASSERT(isNumber(q), 'q must be a number');
 
         /** @property {BiquadFilterNode} - The filter node */
         this.node = audioContext.createBiquadFilter();
@@ -11206,7 +11206,7 @@ class AudioFilter extends AudioEffect
      *  @param {number} [fadeTime] - Seconds to sweep over */
     setFrequency(frequency, fadeTime=0)
     {
-        ASSERT(isNumber(frequency) && frequency >= 0, 'frequency must be positive or zero');
+        false&&ASSERT(isNumber(frequency) && frequency >= 0, 'frequency must be positive or zero');
         this.rampParam(this.node.frequency, frequency, fadeTime);
     }
 
@@ -11215,7 +11215,7 @@ class AudioFilter extends AudioEffect
      *  @param {number} [fadeTime] - Seconds to ramp over */
     setQ(q, fadeTime=0)
     {
-        ASSERT(isNumber(q), 'q must be a number');
+        false&&ASSERT(isNumber(q), 'q must be a number');
         this.rampParam(this.node.Q, q, fadeTime);
     }
 }
@@ -11251,8 +11251,8 @@ class AudioReverb extends AudioEffect
      *  @param {number} [decay] - How quickly the tail fades, higher is faster */
     setRoom(duration, decay=2)
     {
-        ASSERT(isNumber(duration) && duration > 0, 'duration must be positive');
-        ASSERT(isNumber(decay) && decay > 0, 'decay must be positive');
+        false&&ASSERT(isNumber(duration) && duration > 0, 'duration must be positive');
+        false&&ASSERT(isNumber(decay) && decay > 0, 'decay must be positive');
         this.node.buffer = this.createImpulse(duration, decay);
     }
 
@@ -11310,7 +11310,7 @@ class AudioDelay extends AudioEffect
      *  @param {number} [fadeTime] - Seconds to ramp over, pitch bends while it moves */
     setTime(time, fadeTime=0)
     {
-        ASSERT(isNumber(time) && time >= 0 && time <= 5, 'time must be between 0 and 5');
+        false&&ASSERT(isNumber(time) && time >= 0 && time <= 5, 'time must be between 0 and 5');
         this.rampParam(this.node.delayTime, time, fadeTime);
     }
 
@@ -11319,7 +11319,7 @@ class AudioDelay extends AudioEffect
      *  @param {number} [fadeTime] - Seconds to ramp over */
     setFeedback(feedback, fadeTime=0)
     {
-        ASSERT(isNumber(feedback), 'feedback must be a number');
+        false&&ASSERT(isNumber(feedback), 'feedback must be a number');
         this.rampParam(this.feedbackGain.gain, clamp(feedback, 0, .95), fadeTime);
     }
 }
@@ -11355,7 +11355,7 @@ class AudioDistortion extends AudioEffect
      *  @param {number} amount - 0 is clean and 1 is crushed */
     setAmount(amount)
     {
-        ASSERT(isNumber(amount), 'amount must be a number');
+        false&&ASSERT(isNumber(amount), 'amount must be a number');
         this.amount = amount = clamp(amount);
 
         // soft clip curve, drive grows with the square of amount so low values stay subtle
@@ -11391,8 +11391,8 @@ class AudioCompressor extends AudioEffect
     constructor(threshold=-24, ratio=12, mix=1)
     {
         super(mix);
-        ASSERT(isNumber(threshold), 'threshold must be a number');
-        ASSERT(isNumber(ratio) && ratio >= 1, 'ratio must be 1 or more');
+        false&&ASSERT(isNumber(threshold), 'threshold must be a number');
+        false&&ASSERT(isNumber(ratio) && ratio >= 1, 'ratio must be 1 or more');
 
         /** @property {DynamicsCompressorNode} - The compressor node */
         this.node = audioContext.createDynamicsCompressor();
@@ -11406,7 +11406,7 @@ class AudioCompressor extends AudioEffect
      *  @param {number} [fadeTime] - Seconds to ramp over */
     setThreshold(threshold, fadeTime=0)
     {
-        ASSERT(isNumber(threshold), 'threshold must be a number');
+        false&&ASSERT(isNumber(threshold), 'threshold must be a number');
         this.rampParam(this.node.threshold, threshold, fadeTime);
     }
 
@@ -11415,7 +11415,7 @@ class AudioCompressor extends AudioEffect
      *  @param {number} [fadeTime] - Seconds to ramp over */
     setRatio(ratio, fadeTime=0)
     {
-        ASSERT(isNumber(ratio) && ratio >= 1, 'ratio must be 1 or more');
+        false&&ASSERT(isNumber(ratio) && ratio >= 1, 'ratio must be 1 or more');
         this.rampParam(this.node.ratio, ratio, fadeTime);
     }
 }
@@ -11470,7 +11470,7 @@ class UISystemPlugin
      */
     constructor(context=mainContext)
     {
-        ASSERT(!uiSystem, 'UI system already initialized');
+        false&&ASSERT(!uiSystem, 'UI system already initialized');
         uiSystem = this;
 
         // default settings
@@ -11741,12 +11741,12 @@ class UISystemPlugin
     *  @param {Color}   [shadowOffset] */
     drawRect(pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, cornerRadius=0, gradientColor, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
-        ASSERT(isVector2(pos), 'pos must be a vec2');
-        ASSERT(isVector2(size), 'size must be a vec2');
-        ASSERT(isColor(color), 'color must be a color');
-        ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
-        ASSERT(isColor(lineColor), 'lineColor must be a color');
-        ASSERT(isNumber(cornerRadius), 'cornerRadius must be a number');
+        false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+        false&&ASSERT(isVector2(size), 'size must be a vec2');
+        false&&ASSERT(isColor(color), 'color must be a color');
+        false&&ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+        false&&ASSERT(isColor(lineColor), 'lineColor must be a color');
+        false&&ASSERT(isNumber(cornerRadius), 'cornerRadius must be a number');
         
         const context = uiSystem.uiContext;
         if (gradientColor)
@@ -11792,10 +11792,10 @@ class UISystemPlugin
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor] */
     drawLine(posA, posB, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor)
     {
-        ASSERT(isVector2(posA), 'posA must be a vec2');
-        ASSERT(isVector2(posB), 'posB must be a vec2');
-        ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
-        ASSERT(isColor(lineColor), 'lineColor must be a color');
+        false&&ASSERT(isVector2(posA), 'posA must be a vec2');
+        false&&ASSERT(isVector2(posB), 'posB must be a vec2');
+        false&&ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+        false&&ASSERT(isColor(lineColor), 'lineColor must be a color');
 
         const context = uiSystem.uiContext;
         context.strokeStyle = lineColor.toString();
@@ -12037,7 +12037,7 @@ class UISystemPlugin
      */
     showConfirmDialog(text='Are you sure?', yesCallback, noCallback, size=vec2(500,250), exitKey='Escape')
     {
-        ASSERT(!uiSystem.confirmDialog);
+        false&&ASSERT(!uiSystem.confirmDialog);
 
         const savedNavigationDirection = uiSystem.navigationDirection;
 
@@ -12083,7 +12083,7 @@ class UISystemPlugin
         // close menu and return to normal navigation
         function closeMenu()
         {
-            ASSERT(uiSystem.confirmDialog === confirmMenu);
+            false&&ASSERT(uiSystem.confirmDialog === confirmMenu);
             confirmMenu.destroy();
             uiSystem.confirmDialog = undefined;
             uiSystem.navigationDirection = savedNavigationDirection;
@@ -12105,8 +12105,8 @@ class UIObject
      */
     constructor(pos=vec2(), size=vec2())
     {
-        ASSERT(isVector2(pos), 'ui object pos must be a vec2');
-        ASSERT(isVector2(size), 'ui object size must be a vec2');
+        false&&ASSERT(isVector2(pos), 'ui object pos must be a vec2');
+        false&&ASSERT(isVector2(size), 'ui object size must be a vec2');
 
         /** @property {Vector2} - Position you set: an offset from this object's
          *  anchor point (the parent box, or the canvas for roots). This is the
@@ -12200,7 +12200,7 @@ class UIObject
      *  @return {UIObject} The child object added */
     addChild(child)
     {
-        ASSERT(!child.parent && !this.children.includes(child));
+        false&&ASSERT(!child.parent && !this.children.includes(child));
         this.children.push(child);
         child.parent = this;
         return child;
@@ -12210,7 +12210,7 @@ class UIObject
      *  @param {UIObject} child */
     removeChild(child)
     {
-        ASSERT(child.parent === this && this.children.includes(child));
+        false&&ASSERT(child.parent === this && this.children.includes(child));
         this.children.splice(this.children.indexOf(child), 1);
         child.parent = undefined;
     }
@@ -12455,9 +12455,9 @@ class UIText extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isStringLike(text), 'ui text must be a string');
-        ASSERT(['left','center','right'].includes(align), 'ui text align must be left, center, or right');
-        ASSERT(isStringLike(font), 'ui text font must be a string');
+        false&&ASSERT(isStringLike(text), 'ui text must be a string');
+        false&&ASSERT(['left','center','right'].includes(align), 'ui text align must be left, center, or right');
+        false&&ASSERT(isStringLike(font), 'ui text font must be a string');
 
         // set properties
         this.text = text;
@@ -12505,7 +12505,7 @@ class UITextInput extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isStringLike(text), 'ui text must be a string');
+        false&&ASSERT(isStringLike(text), 'ui text must be a string');
 
         /** @property {number} - Max length of input (0 = no limit) */
         this.maxLength = 0;
@@ -12602,9 +12602,9 @@ class UITile extends UIObject
     {
         super(pos, size);
 
-        ASSERT(tileInfo instanceof TileInfo, 'ui tile tileInfo must be a TileInfo');
-        ASSERT(isColor(color), 'ui tile color must be a color');
-        ASSERT(isNumber(angle), 'ui tile angle must be a number');
+        false&&ASSERT(tileInfo instanceof TileInfo, 'ui tile tileInfo must be a TileInfo');
+        false&&ASSERT(isColor(color), 'ui tile color must be a color');
+        false&&ASSERT(isNumber(angle), 'ui tile angle must be a number');
 
         /** @property {TileInfo} - Tile image to use */
         this.tileInfo = tileInfo;
@@ -12642,8 +12642,8 @@ class UIButton extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isStringLike(text), 'ui button must be a string');
-        ASSERT(isColor(color), 'ui button color must be a color');
+        false&&ASSERT(isStringLike(text), 'ui button must be a string');
+        false&&ASSERT(isColor(color), 'ui button color must be a color');
 
         /** @property {Vector2} - Text offset for the button */
         this.textOffset = vec2();
@@ -12683,8 +12683,8 @@ class UICheckbox extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isStringLike(text), 'ui checkbox must be a string');
-        ASSERT(isColor(color), 'ui checkbox color must be a color');
+        false&&ASSERT(isStringLike(text), 'ui checkbox must be a string');
+        false&&ASSERT(isColor(color), 'ui checkbox color must be a color');
 
         /** @property {boolean} - Is the checkbox currently checked? */
         this.checked = checked;
@@ -12739,10 +12739,10 @@ class UISlider extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isNumber(value), 'ui slider value must be a number');
-        ASSERT(isStringLike(text), 'ui slider must be a string');
-        ASSERT(isColor(color), 'ui slider color must be a color');
-        ASSERT(isColor(handleColor), 'ui slider handleColor must be a color');
+        false&&ASSERT(isNumber(value), 'ui slider value must be a number');
+        false&&ASSERT(isStringLike(text), 'ui slider must be a string');
+        false&&ASSERT(isColor(color), 'ui slider color must be a color');
+        false&&ASSERT(isColor(handleColor), 'ui slider handleColor must be a color');
 
         /** @property {number} - Current percentage value of this slider 0-1 */
         this.value = value;
@@ -12859,8 +12859,8 @@ class UIVideo extends UIObject
     {
         super(pos, size || vec2());
         
-        ASSERT(isStringLike(src), 'video src must be a string');
-        ASSERT(isNumber(volume), 'video volume must be a number');
+        false&&ASSERT(isStringLike(src), 'video src must be a string');
+        false&&ASSERT(isNumber(volume), 'video volume must be a number');
 
         this.color = BLACK; // default to black background
         this.cornerRadius = 0; // default to no corner radius
@@ -13003,9 +13003,9 @@ class UILayout extends UIObject
     {
         super(pos);
 
-        ASSERT(isNumber(columns) && columns >= 1, 'ui layout columns must be a number >= 1');
-        ASSERT(isNumber(gap), 'ui layout gap must be a number');
-        ASSERT(isNumber(padding), 'ui layout padding must be a number');
+        false&&ASSERT(isNumber(columns) && columns >= 1, 'ui layout columns must be a number >= 1');
+        false&&ASSERT(isNumber(gap), 'ui layout gap must be a number');
+        false&&ASSERT(isNumber(padding), 'ui layout padding must be a number');
 
         /** @property {number} - Number of columns in the layout */
         this.columns = columns;
@@ -13187,7 +13187,7 @@ class Box2dObject extends EngineObject
         if (this.destroyed) return;
 
         // destroy physics body, fixtures, and joints
-        ASSERT(this.body, 'Box2dObject has no body to destroy');
+        false&&ASSERT(this.body, 'Box2dObject has no body to destroy');
         box2d.world.DestroyBody(this.body);
 
         // remove from tracked list so paused / headless sessions don't leak
@@ -13266,9 +13266,9 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
     {
-        ASSERT(isNumber(density), 'density must be a number');
-        ASSERT(isNumber(friction), 'friction must be a number');
-        ASSERT(isNumber(restitution), 'restitution must be a number');
+        false&&ASSERT(isNumber(density), 'density must be a number');
+        false&&ASSERT(isNumber(friction), 'friction must be a number');
+        false&&ASSERT(isNumber(restitution), 'restitution must be a number');
 
         const fd = new box2d.instance.b2FixtureDef();
         fd.set_shape(shape);
@@ -13291,10 +13291,10 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addBox(size=vec2(1), offset=vec2(), angle=0, density, friction, restitution, isSensor)
     {
-        ASSERT(isVector2(size), 'size must be a Vector2');
-        ASSERT(size.x > 0 && size.y > 0, 'size must be positive');
-        ASSERT(isVector2(offset), 'offset must be a Vector2');
-        ASSERT(isNumber(angle), 'angle must be a number');
+        false&&ASSERT(isVector2(size), 'size must be a Vector2');
+        false&&ASSERT(size.x > 0 && size.y > 0, 'size must be positive');
+        false&&ASSERT(isVector2(offset), 'offset must be a Vector2');
+        false&&ASSERT(isNumber(angle), 'angle must be a number');
 
         const shape = new box2d.instance.b2PolygonShape();
         shape.SetAsBox(size.x/2, size.y/2, box2d.vec2dTo(offset), -angle);
@@ -13309,11 +13309,11 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addPoly(points, density, friction, restitution, isSensor)
     {
-        ASSERT(isArray(points), 'points must be an array');
+        false&&ASSERT(isArray(points), 'points must be an array');
 
         function box2dCreatePolygonShape(points)
         {
-            ASSERT(3 <= points.length && points.length <= 8);
+            false&&ASSERT(3 <= points.length && points.length <= 8);
             const buffer = box2d.instance._malloc(points.length * 8);
             for (let i=0, offset=0; i<points.length; ++i)
             {
@@ -13342,8 +13342,8 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addRegularPoly(diameter=1, sides=8, density, friction, restitution, isSensor)
     {
-        ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
-        ASSERT(isNumber(sides) && sides>2, 'sides must be a positive number greater than 2');
+        false&&ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
+        false&&ASSERT(isNumber(sides) && sides>2, 'sides must be a positive number greater than 2');
 
         const points = [];
         const radius = diameter/2;
@@ -13360,7 +13360,7 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addRandomPoly(diameter=1, density, friction, restitution, isSensor)
     {
-        ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
+        false&&ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
 
         const sides = randInt(3, 9);
         const points = [];
@@ -13379,8 +13379,8 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addCircle(diameter=1, offset=vec2(), density, friction, restitution, isSensor)
     {
-        ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
-        ASSERT(isVector2(offset), 'offset must be a Vector2');
+        false&&ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
+        false&&ASSERT(isVector2(offset), 'offset must be a Vector2');
         
         const shape = new box2d.instance.b2CircleShape();
         shape.set_m_p(box2d.vec2dTo(offset));
@@ -13397,8 +13397,8 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addEdge(point1, point2, density, friction, restitution, isSensor)
     {
-        ASSERT(isVector2(point1), 'point1 must be a Vector2');
-        ASSERT(isVector2(point2), 'point2 must be a Vector2');
+        false&&ASSERT(isVector2(point1), 'point1 must be a Vector2');
+        false&&ASSERT(isVector2(point2), 'point2 must be a Vector2');
 
         const shape = new box2d.instance.b2EdgeShape();
         shape.Set(box2d.vec2dTo(point1), box2d.vec2dTo(point2));
@@ -13413,7 +13413,7 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addEdgeList(points, density, friction, restitution, isSensor)
     {
-        ASSERT(isArray(points), 'points must be an array');
+        false&&ASSERT(isArray(points), 'points must be an array');
         const fixtures = [], edgePoints = [];
         for (let i=0; i<points.length-1; ++i)
         {
@@ -13439,7 +13439,7 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addEdgeLoop(points, density, friction, restitution, isSensor)
     {
-        ASSERT(isArray(points), 'points must be an array');
+        false&&ASSERT(isArray(points), 'points must be an array');
         const fixtures = [], edgePoints = [];
         const getPoint = i=> points[mod(i,points.length)];
         for (let i=0; i<points.length; ++i)
@@ -13783,7 +13783,7 @@ class Box2dTileLayer extends Box2dStaticObject
     *  @param {TileCollisionLayer} tileLayer - Tile layer for this object */
     constructor(tileLayer)
     {
-        ASSERT(tileLayer instanceof TileCollisionLayer, 'tileLayer must be a TileCollisionLayer');
+        false&&ASSERT(tileLayer instanceof TileCollisionLayer, 'tileLayer must be a TileCollisionLayer');
         super(tileLayer.pos, tileLayer.size);
 
         /** @property {TileLayer} - The tile layer */
@@ -14742,7 +14742,7 @@ class Box2dPlugin
      *  @param {Object} instance */
     constructor(instance)
     {
-        ASSERT(!box2d, 'Box2D already initialized');
+        false&&ASSERT(!box2d, 'Box2D already initialized');
         box2d = this;
 
         /** @property {Object} - The Box2d instance */
@@ -14990,7 +14990,7 @@ class Box2dPlugin
      *  @param {Object} v */
     vec2From(v)
     {
-        ASSERT(v instanceof box2d.instance.b2Vec2);
+        false&&ASSERT(v instanceof box2d.instance.b2Vec2);
         return new Vector2(v.get_x(), v.get_y()); 
     }
 
@@ -15006,7 +15006,7 @@ class Box2dPlugin
      *  @param {Vector2} v */
     vec2dTo(v)
     {
-        ASSERT(isVector2(v));
+        false&&ASSERT(isVector2(v));
         return new box2d.instance.b2Vec2(v.x, v.y);
     }
 
@@ -15030,7 +15030,7 @@ class Box2dPlugin
                 return box2d.instance.castObject(o, box2d.instance.b2ChainShape);
         }
         
-        ASSERT(false, 'Unknown box2d object type');
+        false&&ASSERT(false, 'Unknown box2d object type');
     }
 
     /** casts a box2d object to a joint type
@@ -15063,7 +15063,7 @@ class Box2dPlugin
                 return box2d.instance.castObject(o, box2d.instance.b2MotorJoint);
         }
         
-        ASSERT(false, 'Unknown box2d object type');
+        false&&ASSERT(false, 'Unknown box2d object type');
     }
 }
 
@@ -15352,8 +15352,8 @@ function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false
  *  @memberof DrawUtilities */
 function getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=glCircleSides)
 {
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isNumber(size) && isNumber(percent), 'size and percent must be numbers');
+    false&&ASSERT(isVector2(pos), 'pos must be a vec2');
+    false&&ASSERT(isNumber(size) && isNumber(percent), 'size and percent must be numbers');
 
     // map phase to a signed terminator curve: -1 new, 0 half, 1 full
     let p = mod(percent*4, 4); // quarter phase 0..4
@@ -15426,7 +15426,7 @@ class TextureSheet
      *  @param {number} [size] - Width and height of the sheet in pixels */
     constructor(size=textureSheetSize)
     {
-        ASSERT(size > 0, 'texture sheet size must be positive');
+        false&&ASSERT(size > 0, 'texture sheet size must be positive');
 
         /** @property {number} - Width and height of the sheet in pixels */
         this.size = size;
@@ -15459,24 +15459,24 @@ class TextureSheet
      *  @return {TileInfo} Tile for the packed image, or undefined if the sheet is full */
     tryAdd(imageSize, frameSize=imageSize, padding=textureSheetPadding, sourcePadding=0)
     {
-        ASSERT(isVector2(imageSize) && isVector2(frameSize), 'sizes must be vec2');
-        ASSERT(frameSize.x > 0 && frameSize.y > 0, 'frame size must be positive');
+        false&&ASSERT(isVector2(imageSize) && isVector2(frameSize), 'sizes must be vec2');
+        false&&ASSERT(frameSize.x > 0 && frameSize.y > 0, 'frame size must be positive');
 
         if (isNumber(sourcePadding))
             sourcePadding = vec2(sourcePadding);
-        ASSERT(isVector2(sourcePadding) && sourcePadding.x >= 0 && sourcePadding.y >= 0,
+        false&&ASSERT(isVector2(sourcePadding) && sourcePadding.x >= 0 && sourcePadding.y >= 0,
             'sourcePadding must be a number or vec2 >= 0');
 
         // the source may have its own padding baked in around each frame
         const sourceCellWidth = frameSize.x + sourcePadding.x*2;
         const sourceCellHeight = frameSize.y + sourcePadding.y*2;
-        ASSERT(imageSize.x % sourceCellWidth === 0 && imageSize.y % sourceCellHeight === 0,
+        false&&ASSERT(imageSize.x % sourceCellWidth === 0 && imageSize.y % sourceCellHeight === 0,
             'image size must be a multiple of the padded frame size');
 
         const cellWidth = frameSize.x + padding*2;
         const cellHeight = frameSize.y + padding*2;
         const maxColumns = this.size / cellWidth | 0;
-        ASSERT(maxColumns > 0, 'frame is too wide to fit on a texture sheet');
+        false&&ASSERT(maxColumns > 0, 'frame is too wide to fit on a texture sheet');
 
         // keep the layout of the source image, but narrow it if a row is too wide
         // frames wrap down to the next row, which TileInfo.frame handles via columns
@@ -15514,7 +15514,7 @@ class TextureSheet
      *  @param {number|Vector2} [sourcePadding] - How many pixels padding around each frame in the source image */
     drawImage(image, tileInfo, update=true, sourcePadding=0)
     {
-        ASSERT(!!this.context, 'texture sheet has no canvas');
+        false&&ASSERT(!!this.context, 'texture sheet has no canvas');
 
         if (isNumber(sourcePadding))
             sourcePadding = vec2(sourcePadding);
@@ -15574,10 +15574,10 @@ class TextureSheet
  *  @memberof TextureSheets */
 function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0)
 {
-    ASSERT(isStringLike(src), 'image src must be a string');
-    ASSERT(!frameSize || isVector2(frameSize) || isNumber(frameSize), 'frameSize must be a vec2 or number');
-    ASSERT(isNumber(padding), 'padding must be a number');
-    ASSERT(isNumber(sourcePadding) || isVector2(sourcePadding), 'sourcePadding must be a number or vec2');
+    false&&ASSERT(isStringLike(src), 'image src must be a string');
+    false&&ASSERT(!frameSize || isVector2(frameSize) || isNumber(frameSize), 'frameSize must be a vec2 or number');
+    false&&ASSERT(isNumber(padding), 'padding must be a number');
+    false&&ASSERT(isNumber(sourcePadding) || isVector2(sourcePadding), 'sourcePadding must be a number or vec2');
 
     if (isNumber(frameSize))
         frameSize = vec2(frameSize);
@@ -15615,7 +15615,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
         else
         {
             // leave the tile empty if the image failed to load
-            LOG('loadSprite failed to load image:', src);
+            false&&LOG('loadSprite failed to load image:', src);
         }
 
         // upload to webgl once per batch, when the last pending load finishes
@@ -15645,9 +15645,9 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
  *  @memberof TextureSheets */
 function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
 {
-    ASSERT(isStringLike(imageSrc), 'atlas image src must be a string');
-    ASSERT(isStringLike(jsonSrc) || typeof jsonSrc === 'object', 'atlas json must be a path or object');
-    ASSERT(isNumber(padding), 'padding must be a number');
+    false&&ASSERT(isStringLike(imageSrc), 'atlas image src must be a string');
+    false&&ASSERT(isStringLike(jsonSrc) || typeof jsonSrc === 'object', 'atlas json must be a path or object');
+    false&&ASSERT(isNumber(padding), 'padding must be a number');
 
     const atlas = {};
     if (headlessMode) return atlas;
@@ -15707,7 +15707,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
         else
         {
             // leave the atlas empty if either file failed to load
-            LOG('loadAtlas failed to load:', imageSrc, jsonSrc);
+            false&&LOG('loadAtlas failed to load:', imageSrc, jsonSrc);
         }
 
         // upload to webgl once per batch, when the last pending load finishes
@@ -15726,7 +15726,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
  *  @memberof TextureSheets */
 function parseAtlas(data)
 {
-    ASSERT(!!data?.frames, 'unrecognized atlas format, expected TexturePacker or Aseprite json');
+    false&&ASSERT(!!data?.frames, 'unrecognized atlas format, expected TexturePacker or Aseprite json');
 
     // normalize both hash and array frame layouts into a single list
     const frames = (isArray(data.frames) ?
@@ -15821,7 +15821,7 @@ function textureSheetAdd(imageSize, frameSize, padding, sourcePadding)
     {
         sheet = textureSheetCreate();
         tile = sheet.tryAdd(imageSize, frameSize, padding, sourcePadding);
-        ASSERT(!!tile, 'image is too large to fit on a texture sheet');
+        false&&ASSERT(!!tile, 'image is too large to fit on a texture sheet');
     }
     return {sheet, tile};
 }
@@ -15889,18 +15889,18 @@ class Tween
      *  @param {boolean} [options.paused=false] - Start in paused state */
     constructor(callback, start = 0, end = 1, duration = 1, options = {})
     {
-        ASSERT(typeof callback === 'function', 'Tween callback must be a function');
+        false&&ASSERT(typeof callback === 'function', 'Tween callback must be a function');
         if (isLerpable(start))
         {
-            ASSERT(start.constructor === end.constructor,
+            false&&ASSERT(start.constructor === end.constructor,
                 'Tween start and end must be the same type');
         }
         else
         {
-            ASSERT(isNumber(start), 'Tween start must be a number or have a .lerp method');
-            ASSERT(isNumber(end),   'Tween end must be a number when start is a number');
+            false&&ASSERT(isNumber(start), 'Tween start must be a number or have a .lerp method');
+            false&&ASSERT(isNumber(end),   'Tween end must be a number when start is a number');
         }
-        ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
+        false&&ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
 
         /** @property {function((number|Vector2|Color)):void} - Called with the interpolated value each frame */
         this.callback = callback;
@@ -16259,8 +16259,8 @@ const Ease =
  */
 function tweenProperty(target, propertyPath, start, end, duration = 1, options = {})
 {
-    ASSERT(target != null && typeof target === 'object', 'tweenProperty target must be an object');
-    ASSERT(isStringLike(propertyPath) && propertyPath.length > 0, 'tweenProperty propertyPath must be a non-empty string');
+    false&&ASSERT(target != null && typeof target === 'object', 'tweenProperty target must be an object');
+    false&&ASSERT(isStringLike(propertyPath) && propertyPath.length > 0, 'tweenProperty propertyPath must be a non-empty string');
 
     const parts = propertyPath.split('.');
     const lastKey = parts.pop();
@@ -16270,7 +16270,7 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
         for (const k of parts)
         {
             obj = obj[k];
-            ASSERT(obj != null, 'tweenProperty path does not resolve: ' + propertyPath);
+            false&&ASSERT(obj != null, 'tweenProperty path does not resolve: ' + propertyPath);
         }
         obj[lastKey] = value;
     };
@@ -16467,7 +16467,7 @@ class PathFinder
         }
         else
         {
-            ASSERT(source && isVector2(source.size) && typeof source.getCollisionData === 'function',
+            false&&ASSERT(source && isVector2(source.size) && typeof source.getCollisionData === 'function',
                 'PathFinder requires a Vector2 size or a TileCollisionLayer');
             this.size = source.size;
             this.tileLayer = source;
@@ -16590,9 +16590,9 @@ class PathFinder
      *  @private */
     aStarSearch(startNode, endNode)
     {
-        ASSERT(startNode && endNode, 'aStarSearch needs both endpoints');
-        ASSERT(startNode !== endNode, 'aStarSearch: start and end must differ — caller should handle trivial case');
-        ASSERT(startNode.walkable && endNode.walkable, 'aStarSearch: endpoints must be walkable');
+        false&&ASSERT(startNode && endNode, 'aStarSearch needs both endpoints');
+        false&&ASSERT(startNode !== endNode, 'aStarSearch: start and end must differ — caller should handle trivial case');
+        false&&ASSERT(startNode.walkable && endNode.walkable, 'aStarSearch: endpoints must be walkable');
 
         const openList = [startNode];
         startNode.isOpen = true;
@@ -16689,7 +16689,7 @@ class PathFinder
      *  @memberof PathFinding */
     getNearestClearNode(worldPos, searchRange = 10, rebuild = true)
     {
-        ASSERT(isVector2(worldPos), 'worldPos must be a Vector2');
+        false&&ASSERT(isVector2(worldPos), 'worldPos must be a Vector2');
         if (rebuild) this.buildNodeData();
 
         // Inline worldToTile to avoid a Vector2 allocation per call.
@@ -16941,7 +16941,7 @@ class PathFinder
                         break;
                     }
                 }
-                ASSERT(searchIndex < original.length, 'smoothPathStringPull: ran out of candidates');
+                false&&ASSERT(searchIndex < original.length, 'smoothPathStringPull: ran out of candidates');
             }
         }
 
@@ -16991,8 +16991,8 @@ class PathFinder
      *  @private */
     isLineClear(startPos, endPos)
     {
-        ASSERT(isVector2(startPos) && isVector2(endPos), 'isLineClear needs Vector2 endpoints');
-        ASSERT(this.isNodeClear(startPos.x, startPos.y) && this.isNodeClear(endPos.x, endPos.y),
+        false&&ASSERT(isVector2(startPos) && isVector2(endPos), 'isLineClear needs Vector2 endpoints');
+        false&&ASSERT(this.isNodeClear(startPos.x, startPos.y) && this.isNodeClear(endPos.x, endPos.y),
             'isLineClear endpoints must be in-bounds and clear');
 
         const dx = endPos.x - startPos.x;
@@ -17108,7 +17108,7 @@ class PathFinder
      *  @memberof PathFinding */
     findPath(startPos, endPos)
     {
-        ASSERT(isVector2(startPos) && isVector2(endPos), 'findPath needs Vector2 endpoints');
+        false&&ASSERT(isVector2(startPos) && isVector2(endPos), 'findPath needs Vector2 endpoints');
 
         this.buildNodeData();
 
@@ -17187,7 +17187,7 @@ function vec3(x=0, y, z)
 function isVector3(v) { return v instanceof Vector3 && v.isValid(); }
 
 // debug check that a value is a usable Vector3, stripped in release like the 2D one
-function ASSERT_VECTOR3_VALID(v) { ASSERT(isVector3(v), 'Vector3 is invalid.', v); }
+function ASSERT_VECTOR3_VALID(v) { false&&ASSERT(isVector3(v), 'Vector3 is invalid.', v); }
 
 /**
  * Returns a random Vector3 of a given length, pointing any direction evenly, or within a cone around +Y
@@ -17234,7 +17234,7 @@ class Vector3
      *  @param {number} [z] */
     constructor(x=0, y=0, z=0)
     {
-        ASSERT(isNumber(x) && isNumber(y) && isNumber(z), 'Vector3 components must be numbers');
+        false&&ASSERT(isNumber(x) && isNumber(y) && isNumber(z), 'Vector3 components must be numbers');
         /** @property {number} - X axis location */
         this.x = x;
         /** @property {number} - Y axis location */
@@ -17248,7 +17248,7 @@ class Vector3
      *  @param {number} [y]
      *  @param {number} [z]
      *  @return {Vector3} */
-    set(x=0, y=0, z=0) { this.x = x; this.y = y; this.z = z; ASSERT_VECTOR3_VALID(this); return this; }
+    set(x=0, y=0, z=0) { this.x = x; this.y = y; this.z = z; false&&ASSERT_VECTOR3_VALID(this); return this; }
 
     /** Copies the values of another vector into this one and returns self
      *  @param {Vector3} v
@@ -17348,7 +17348,7 @@ class Vector3
      *  @return {Vector3} */
     lerp(v, percent)
     {
-        ASSERT_VECTOR3_VALID(v);
+        false&&ASSERT_VECTOR3_VALID(v);
         return this.add(v.subtract(this).scale(clamp(percent)));
     }
 
@@ -17358,7 +17358,7 @@ class Vector3
      *  @return {Vector3} */
     rotate(axis, angle)
     {
-        ASSERT_VECTOR3_VALID(axis); // unlike Vector2.rotate this takes an axis first
+        false&&ASSERT_VECTOR3_VALID(axis); // unlike Vector2.rotate this takes an axis first
         // Rodrigues' formula: the part along the axis stays, the rest turns
         const c = cos(angle), s = sin(angle), d = axis.dot(this) * (1 - c);
         return this.scale(c).add(axis.cross(this).scale(s)).add(axis.scale(d));
@@ -17408,7 +17408,7 @@ class Vector3
      *  @return {Vector3} */
     snap(grid)
     {
-        ASSERT_NUMBER_VALID(grid);
+        false&&ASSERT_NUMBER_VALID(grid);
         return new Vector3(floor(this.x*grid)/grid, floor(this.y*grid)/grid, floor(this.z*grid)/grid);
     }
 
@@ -17462,7 +17462,7 @@ class Matrix4
     {
         /** @property {Float32Array} - The 16 column major values */
         this.m = new Float32Array(16);
-        ASSERT(!m || m.length == 16, 'Matrix4 takes 16 values, use copy() to duplicate a matrix');
+        false&&ASSERT(!m || m.length == 16, 'Matrix4 takes 16 values, use copy() to duplicate a matrix');
         if (m)
             this.m.set(m);
         else
@@ -17478,7 +17478,7 @@ class Matrix4
      *  @return {Matrix4} */
     static translation(v)
     {
-        ASSERT_VECTOR3_VALID(v);
+        false&&ASSERT_VECTOR3_VALID(v);
         const r = new Matrix4;
         r.m[12] = v.x; r.m[13] = v.y; r.m[14] = v.z;
         return r;
@@ -17489,7 +17489,7 @@ class Matrix4
      *  @return {Matrix4} */
     static rotation(euler)
     {
-        ASSERT_VECTOR3_VALID(euler);
+        false&&ASSERT_VECTOR3_VALID(euler);
         const cx = cos(euler.x), sx = sin(euler.x);
         const cy = cos(euler.y), sy = sin(euler.y);
         const cz = cos(euler.z), sz = sin(euler.z);
@@ -17507,7 +17507,7 @@ class Matrix4
      *  @return {Matrix4} */
     static scaling(v)
     {
-        ASSERT_VECTOR3_VALID(v);
+        false&&ASSERT_VECTOR3_VALID(v);
         const r = new Matrix4;
         r.m[0] = v.x; r.m[5] = v.y; r.m[10] = v.z;
         return r;
@@ -17521,7 +17521,7 @@ class Matrix4
      *  @return {Matrix4} */
     static perspective(fov, aspect, near, far)
     {
-        ASSERT(near > 0 && far > near, 'a perspective projection needs 0 < near < far, or nothing is visible', near, far);
+        false&&ASSERT(near > 0 && far > near, 'a perspective projection needs 0 < near < far, or nothing is visible', near, far);
         const f = 1 / tan(fov/2);
         const r = new Matrix4;
         const m = r.m;
@@ -17546,7 +17546,7 @@ class Matrix4
     {
         // an infinite far plane has no orthographic form: every depth would land on the near plane,
         // and the formula below works out to NaN, which quietly clips the whole scene away
-        ASSERT(far > near && far != Infinity, 'an orthographic projection needs a real far plane past near, Infinity is perspective only', near, far);
+        false&&ASSERT(far > near && far != Infinity, 'an orthographic projection needs a real far plane past near, Infinity is perspective only', near, far);
         const r = new Matrix4;
         const m = r.m;
         m[0]  = 2 / (right - left);
@@ -17709,8 +17709,8 @@ class Matrix4
  */
 function buildMatrix(pos, rotation, scale)
 {
-    ASSERT(!pos || isVector3(pos), 'pos must be a Vector3', pos);
-    ASSERT(!scale || isVector3(scale), 'scale must be a Vector3', scale);
+    false&&ASSERT(!pos || isVector3(pos), 'pos must be a Vector3', pos);
+    false&&ASSERT(!scale || isVector3(scale), 'scale must be a Vector3', scale);
     // scale the rotation columns and drop the position in, instead of multiplying three matrices
     // an object that is not turned at all is most of a big scene, and identity is what the six
     // trig calls would have worked out to anyway
@@ -17745,8 +17745,8 @@ class Ray3D
      *  @param {Vector3} [direction] - Defaults to -Z, forward */
     constructor(origin=vec3(), direction=vec3(0, 0, -1))
     {
-        ASSERT_VECTOR3_VALID(origin);
-        ASSERT_VECTOR3_VALID(direction);
+        false&&ASSERT_VECTOR3_VALID(origin);
+        false&&ASSERT_VECTOR3_VALID(direction);
         /** @property {Vector3} - Where the ray starts */
         this.origin = origin;
         /** @property {Vector3} - Which way it goes */
@@ -18091,7 +18091,7 @@ function render3DQuadValues(v) { return isArray(v) ? render3DQuadStrip(...v) : v
 function render3DCanDraw()
 {
     if (!render3D.program) return false;
-    ASSERT(render3D.isRendering, '3D draws are only valid during the 3D pass, draw from an EngineObject3D or render3D.onRenderOpaque');
+    false&&ASSERT(render3D.isRendering, '3D draws are only valid during the 3D pass, draw from an EngineObject3D or render3D.onRenderOpaque');
     return render3D.isRendering;
 }
 
@@ -18099,21 +18099,37 @@ function render3DCanDraw()
 const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader'];
 
 // a copy of the current draw state
+// a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out so the
+// compare below stays a handful of direct reads, it runs for every instance drawn
 function render3DCaptureBatchState()
 {
-    const state = {};
-    for (const field of RENDER3D_STATE_FIELDS)
-        state[field] = render3D[field];
-    return state;
+    const r = render3D;
+    return {blend: r.blend, additive: r.additive, depthTest: r.depthTest, depthWrite: r.depthWrite,
+        cullBackFaces: r.cullBackFaces, mirrored: r.mirrored, lighting: r.lighting, emissive: r.emissive,
+        receiveShadow: r.receiveShadow, specular: r.specular, pixelated: r.pixelated, shader: r.shader};
 }
 
 // true when the current draw state differs from a captured one, so a pending batch must flush first
-function render3DStateChanged(state)
+function render3DStateChanged(s)
 {
-    for (const field of RENDER3D_STATE_FIELDS)
-        if (render3D[field] !== state[field])
-            return true;
-    return false;
+    const r = render3D;
+    return r.blend !== s.blend || r.additive !== s.additive || r.depthTest !== s.depthTest
+        || r.depthWrite !== s.depthWrite || r.cullBackFaces !== s.cullBackFaces || r.mirrored !== s.mirrored
+        || r.lighting !== s.lighting || r.emissive !== s.emissive || r.receiveShadow !== s.receiveShadow
+        || r.specular !== s.specular || r.pixelated !== s.pixelated || r.shader !== s.shader;
+}
+
+// whether a sphere is inside the view, or the shadow map's box during the shadow pass, without a vector
+function render3DSphereVisible(x, y, z, radius)
+{
+    const planes = render3D.shadowPass ? render3D.shadowPlanes : render3D.frustumPlanes;
+    for (let i = 0; i < planes.length; ++i)
+    {
+        const p = planes[i];
+        if (p[0]*x + p[1]*y + p[2]*z + p[3] < -radius)
+            return false;
+    }
+    return true;
 }
 
 // run a function with some draw state fields overridden, restored afterward even on a throw
@@ -18137,7 +18153,7 @@ function render3DMatrix(matrix)
 {
     if (matrix instanceof Vector3)
         return buildMatrix(matrix);
-    ASSERT(matrix instanceof Matrix4, 'takes a Matrix4, or a Vector3 for a position');
+    false&&ASSERT(matrix instanceof Matrix4, 'takes a Matrix4, or a Vector3 for a position');
     return matrix;
 }
 
@@ -18174,7 +18190,7 @@ function render3DSetObjectState(o)
 {
     const r = render3D;
     const emissive = o?.emissive || 0;
-    ASSERT(isNumber(emissive) && emissive >= 0, 'emissive must be a number, 0 or more', emissive);
+    false&&ASSERT(isNumber(emissive) && emissive >= 0, 'emissive must be a number, 0 or more', emissive);
     r.lighting = true;
     r.emissive = emissive;
     r.additive = !!o?.additive;
@@ -18182,7 +18198,7 @@ function render3DSetObjectState(o)
     r.receiveShadow = !o || o.receiveShadow;
     r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
     r.pixelated = !!o?.pixelated;
-    ASSERT(!o?.shader || o.shader instanceof Shader, 'shader must be a Shader, not the snippet itself');
+    false&&ASSERT(!o?.shader || o.shader instanceof Shader, 'shader must be a Shader, not the snippet itself');
     r.shader = o?.shader || undefined; // null is no shader too, so it batches with none
     r.depthTest = true;
 }
@@ -18231,8 +18247,11 @@ function render3DInstance(mesh, matrix, tileInfo, color)
         mesh.instanceData = data = grown;
     }
     data.set(matrix.m, k);
-    render3DNormalMatrix3(matrix.m, data, k + 16);
-    data[k+25] = color.r; data[k+26] = color.g; data[k+27] = color.b; data[k+28] = color.a;
+    if (!r.shadowPass) // the depth shader reads only the matrix and the uv rect, the rest can stay stale
+    {
+        render3DNormalMatrix3(matrix.m, data, k + 16);
+        data[k+25] = color.r; data[k+26] = color.g; data[k+27] = color.b; data[k+28] = color.a;
+    }
     const uv = render3DGetTileUVs(tileInfo);
     data[k+29] = uv.x; data[k+30] = uv.y; data[k+31] = uv.w; data[k+32] = uv.h;
 }
@@ -18368,7 +18387,7 @@ class Render3DPlugin
     /** Create the global 3D renderer, call in gameInit */
     constructor()
     {
-        ASSERT(!render3D, 'Render3D plugin already initialized');
+        false&&ASSERT(!render3D, 'Render3D plugin already initialized');
         render3D = this;
 
         /** @property {Camera3D} - The camera */
@@ -18504,6 +18523,7 @@ class Render3DPlugin
         this.program = undefined;    // the main program, undefined when not available
         this.currentProgram = undefined; // the program in use during a pass, a Shader's or the main one
         this.lightCount = 0;         // Light3D objects sent this pass
+        this.passId = 0;             // counts the passes, an object builds its matrix once per pass
         this.shadowShader = undefined;
         this.vao = undefined;
         this.whiteTexture = undefined; // 1x1 white for untextured draws
@@ -18656,8 +18676,8 @@ class Render3DPlugin
     playSound(sound, pos3D, volume=1, pitch=1, randomnessScale=1, loop=false)
     {
         // keep in step with Sound.play, only the pan differs
-        ASSERT(sound instanceof Sound, 'sound must be a Sound');
-        ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
+        false&&ASSERT(sound instanceof Sound, 'sound must be a Sound');
+        false&&ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
         if (!soundEnable || headlessMode) return;
         if (!sound.sampleBuffer && !sound._sampleChannels) return; // still loading
         const offset = pos3D.subtract(this.camera.pos), range = sound.range;
@@ -18689,13 +18709,7 @@ class Render3DPlugin
      *  @param {Vector3} center
      *  @param {number} radius
      *  @return {boolean} */
-    isSphereVisible(center, radius)
-    {
-        for (const p of this.shadowPass ? this.shadowPlanes : this.frustumPlanes)
-            if (p[0] * center.x + p[1] * center.y + p[2] * center.z + p[3] < -radius)
-                return false;
-        return true;
-    }
+    isSphereVisible(center, radius) { return render3DSphereVisible(center.x, center.y, center.z, radius); }
 
     ///////////////////////////////////////////////////////////////////////////
     // Meshes and the stream
@@ -18708,8 +18722,8 @@ class Render3DPlugin
     drawMesh(mesh, matrix=RENDER3D_IDENTITY, tileInfo, color=WHITE)
     {
         matrix = render3DMatrix(matrix);
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
-        ASSERT(isColor(color), 'color must be a Color');
+        false&&ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
+        false&&ASSERT(isColor(color), 'color must be a Color');
         if (this.capture)
             return void this.capture.combine(mesh, matrix, color);
         if (this.transparentQueue)
@@ -18719,11 +18733,12 @@ class Render3DPlugin
         if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== this.contextGeneration)
             mesh.upload();
         if (!mesh.bufferCount) return;
-        if (this.frustumCulling && !this.isSphereVisible(matrix.getTranslation(), mesh.radius * render3DMaxScale(matrix.m)))
+        const m = matrix.m;
+        if (this.frustumCulling && !render3DSphereVisible(m[12], m[13], m[14], mesh.radius * render3DMaxScale(m)))
             return;
         // the mesh says whether its back faces can be skipped, and a mirroring transform, one with a negative
         // determinant, turns the winding around so the other one is its front
-        const m = matrix.m, cullBackFaces = this.cullBackFaces, mirrored = this.mirrored;
+        const cullBackFaces = this.cullBackFaces, mirrored = this.mirrored;
         this.cullBackFaces = !mesh.doubleSided;
         this.mirrored = m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]) < 0;
         if (!this.blend && this.depthTest && (mesh.instanced ?? this.instancing)) // the stage draws the batch at its end
@@ -18765,7 +18780,7 @@ class Render3DPlugin
                 x += p.x, y += p.y, z += p.z;
             return this.queueTransparent(vec3(x, y, z).scale(1 / points.length), ()=> this.drawStrip(points, normals, uvs, colors, tileInfo));
         }
-        ASSERT(isArray(points) && points.length > 2, 'strip needs at least 3 points');
+        false&&ASSERT(isArray(points) && points.length > 2, 'strip needs at least 3 points');
         const n = points.length, count = render3DStripCount(n);
         const uvRect = render3DBeginStrip(count, tileInfo);
         if (!uvRect) return;
@@ -18817,7 +18832,7 @@ class Render3DPlugin
     bake(drawFunction)
     {
         this.flush();
-        ASSERT(!this.capture, 'bake cannot be nested');
+        false&&ASSERT(!this.capture, 'bake cannot be nested');
         const mesh = this.capture = new Mesh;
         try { drawFunction(); }
         finally { this.capture = undefined; }
@@ -18913,7 +18928,7 @@ class Render3DPlugin
     /** Rebuild the light's view projection around the shadow center, called automatically each frame shadows are on */
     updateShadowMatrix()
     {
-        ASSERT(this.shadowRange > 0, 'shadowRange must be positive');
+        false&&ASSERT(this.shadowRange > 0, 'shadowRange must be positive');
         const range = this.shadowRange > 0 ? this.shadowRange : 1, half = range / 2;
         const toSun = this.sunDirection.normalize();
         const center = this.shadowCenter || this.camera.pos.add(this.cameraForward.scale(half * .8));
@@ -19046,8 +19061,8 @@ class Render3DPlugin
     drawRibbon(points, width=.1, tileInfo, color=WHITE, side)
     {
         const count = points.length;
-        ASSERT(count > 1, 'a ribbon needs at least two points');
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
+        false&&ASSERT(count > 1, 'a ribbon needs at least two points');
+        false&&ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
         const strip = [], uvs = tileInfo ? [] : undefined, colors = [], forward = this.cameraForward;
         let across = vec3(1, 0, 0); // kept from the last point where the direction vanishes
         // a loop's two ends take their direction across the join, so they meet edge to edge
@@ -19116,7 +19131,7 @@ class Render3DPlugin
 function render3DAssertBlending()
 {
     const r = render3D;
-    ASSERT(r.blend || r.capture || r.shadowPass || !r.isRendering, 'soft discs and shadows need blending: set the object transparent or draw from onRenderTransparent');
+    false&&ASSERT(r.blend || r.capture || r.shadowPass || !r.isRendering, 'soft discs and shadows need blending: set the object transparent or draw from onRenderTransparent');
 }
 
 // draw the three rings of a soft disc as unlit strips, pointAt(cos, sin, radius) gives the world point
@@ -19158,7 +19173,7 @@ function render3DRenderDebug()
 // record a debug draw for a time
 function render3DDebugPush(duration, draw)
 {
-    ASSERT(isNumber(duration), 'duration must be a number');
+    false&&ASSERT(isNumber(duration), 'duration must be a number');
     debug && render3D?.program && render3DDebugPrimitives.push({timer: new Timer(duration), draw});
 }
 
@@ -19320,7 +19335,7 @@ class Camera3D
         const distance = halfHeight / tan(this.fov/2);
         // a zoomed out 2D camera sits a long way back, far enough to fall past the far plane and
         // clip the whole scene away, which looks like nothing rendering at all
-        ASSERT(!canvasHeight || distance < this.far,
+        false&&ASSERT(!canvasHeight || distance < this.far,
             'align2D needs this camera distance to match the 2D view, raise camera.far past it', distance);
         this.orthographic &&= halfHeight * 2; // an orthographic camera stays orthographic and shows the same height
         this.pos = vec3(cameraPos.x, cameraPos.y, distance);
@@ -19437,7 +19452,7 @@ function render3DFragmentSource(fragmentCode)
 // a Shader's 3D program, compiled the first time a draw needs it
 function render3DShaderProgram(shader)
 {
-    ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
+    false&&ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
     return shader.program3D ||= glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource(shader.fragmentCode));
 }
 
@@ -19774,10 +19789,11 @@ function render3DRender()
 function render3DRenderPass(after2D)
 {
     const gl = glContext, r = render3D;
+    ++r.passId; // the shadow pass and the stages below share each object's matrix
     if (!r.program) return; // headless, gl disabled, or context lost
     render3DUpdateSamplers();
-    ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
-    ASSERT(!glRenderTarget, 'the 3D pass needs the canvas depth buffer, it can not draw into a render target');
+    false&&ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
+    false&&ASSERT(!glRenderTarget, 'the 3D pass needs the canvas depth buffer, it can not draw into a render target');
     const isDefault = after2D === !!r.renderAfter2D, objects = render3DLayerObjects(after2D);
     if (!isDefault && !objects.length) return;
     r.passIsDefault = isDefault;
@@ -19804,7 +19820,7 @@ function render3DRenderPass(after2D)
     lights.forEach((light, i)=>
     {
         const p = light.directional ? light.getWorldPos3D().normalize() : light.getWorldPos3D();
-        ASSERT(!light.directional || p.lengthSquared(), 'a directional light shines from its position toward the origin, so it cannot sit on the origin');
+        false&&ASSERT(!light.directional || p.lengthSquared(), 'a directional light shines from its position toward the origin, so it cannot sit on the origin');
         const c = light.color, k = i * 4;
         positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
         positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
@@ -19847,7 +19863,7 @@ function render3DRenderPass(after2D)
 function render3DUpdateShadowMap(size)
 {
     const gl = glContext, r = render3D;
-    ASSERT(size > 0, 'shadowMapSize must be positive');
+    false&&ASSERT(size > 0, 'shadowMapSize must be positive');
     if (r.shadowTexture && r.shadowTextureSize === size) return;
     r.shadowTexture && gl.deleteTexture(r.shadowTexture);
     r.shadowFramebuffer && gl.deleteFramebuffer(r.shadowFramebuffer);
@@ -19867,7 +19883,7 @@ function render3DUpdateShadowMap(size)
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, texture, 0);
     gl.drawBuffers([gl.NONE]); // depth only
     gl.readBuffer(gl.NONE);
-    ASSERT(gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE, 'shadow map framebuffer is incomplete, try a smaller shadowMapSize');
+    false&&ASSERT(gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE, 'shadow map framebuffer is incomplete, try a smaller shadowMapSize');
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     r.shadowTextureSize = size;
 }
@@ -19931,7 +19947,7 @@ function render3DBeginStrip(count, tileInfo)
     const r = render3D;
     if (!render3DCanDraw()) return;
     if (r.shadowPass && !r.lighting) return; // unlit things cast no shadow
-    ASSERT(count <= RENDER3D_MAX_STREAM_VERTS, 'strip is too large for the stream, bake it into a mesh');
+    false&&ASSERT(count <= RENDER3D_MAX_STREAM_VERTS, 'strip is too large for the stream, bake it into a mesh');
     if (count > RENDER3D_MAX_STREAM_VERTS) return;
     const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
     if (r.streamCount && (textureInfo !== r.streamTileInfo || render3DStateChanged(r.streamState)
@@ -19970,7 +19986,7 @@ function render3DStripIndex(k, n) { return k < 1 ? 0 : k <= n ? k - 1 : n - 1; }
 // normals, uvs and colors may be one value for all points, an array per point, or undefined
 function render3DForEachStripVertex(points, normals, uvs, colors, callback)
 {
-    ASSERT(isArray(points) && points.length > 2, 'strip needs at least 3 points');
+    false&&ASSERT(isArray(points) && points.length > 2, 'strip needs at least 3 points');
     const n = points.length, count = render3DStripCount(n);
     const normalArray = isArray(normals), uvArray = isArray(uvs), colorArray = isArray(colors);
     for (let k = 0; k < count; ++k)
@@ -20335,9 +20351,9 @@ class Mesh
  */
 function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=true)
 {
-    ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
+    false&&ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
     sides |= 0;
-    ASSERT(sides > 2, 'lathe needs at least 3 sides');
+    false&&ASSERT(sides > 2, 'lathe needs at least 3 sides');
     const mesh = new Mesh;
     const rings = profile.length;
     const point = (i, a)=> vec3(sin(a) * profile[i][0], profile[i][1], cos(a) * profile[i][0]);
@@ -20469,7 +20485,7 @@ function buildCone(size=1, height=1, sides=16, smooth=render3D?.smoothShading, c
  */
 function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
 {
-    ASSERT(rings > 1, 'sphere needs at least 2 rings');
+    false&&ASSERT(rings > 1, 'sphere needs at least 2 rings');
     const profile = [];
     for (let i = 0; i <= rings; ++i)
     {
@@ -20492,7 +20508,7 @@ function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
 function buildCapsule(size=1, height=1, sides=16, rings=4, smooth=render3D?.smoothShading)
 {
     // the rounded ends alone are already the size tall, so a shorter capsule is only a sphere
-    ASSERT(height >= size, 'a capsule is at least as tall as it is wide, the ends take up the size', size, height);
+    false&&ASSERT(height >= size, 'a capsule is at least as tall as it is wide, the ends take up the size', size, height);
     const profile = [], r = size / 2, straight = max(0, height - size) / 2;
     for (let i = 0; i <= rings; ++i)
     {
@@ -20519,7 +20535,7 @@ function buildCapsule(size=1, height=1, sides=16, rings=4, smooth=render3D?.smoo
  */
 function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3D?.smoothShading)
 {
-    ASSERT(tubeSize <= size, 'the tube must fit inside the torus');
+    false&&ASSERT(tubeSize <= size, 'the tube must fit inside the torus');
     const profile = [], radius = (size - tubeSize) / 2, tubeRadius = tubeSize / 2;
     for (let i = 0; i <= tubeSides; ++i)
     {
@@ -20573,7 +20589,7 @@ function buildBox(size=1)
  */
 function buildRibbon(points, width=1, color=WHITE, closed=false, up=vec3(0, 1, 0))
 {
-    ASSERT(isArray(points) && points.length > 1, 'ribbon needs at least 2 points');
+    false&&ASSERT(isArray(points) && points.length > 1, 'ribbon needs at least 2 points');
     const mesh = new Mesh, count = points.length, edges = [];
     let across = (abs(up.y) < .9 ? vec3(0, 1, 0) : vec3(1, 0, 0)).cross(up).normalize(); // anything across up
     for (let i = 0; i < count; ++i)
@@ -20617,7 +20633,7 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
 {
     if (isNumber(segments))
         segments = vec2(segments);
-    ASSERT(segments.x > 0 && segments.y > 0 && segments.x % 1 === 0 && segments.y % 1 === 0, 'grid segments must be whole numbers above zero');
+    false&&ASSERT(segments.x > 0 && segments.y > 0 && segments.x % 1 === 0 && segments.y % 1 === 0, 'grid segments must be whole numbers above zero');
     const mesh = new Mesh;
     const segmentsX = segments.x, segmentsZ = segments.y;
     const cellX = size.x / segmentsX, cellZ = size.y / segmentsZ;
@@ -20666,9 +20682,9 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
  */
 function buildLoft(stations)
 {
-    ASSERT(isArray(stations) && stations.length > 1, 'loft needs at least 2 stations');
+    false&&ASSERT(isArray(stations) && stations.length > 1, 'loft needs at least 2 stations');
     // the caps and the winding both assume the nose leads, so the other order turns the hull inside out
-    ASSERT(stations[0][0] > stations[stations.length-1][0], 'loft stations go nose first, from the largest z to the smallest');
+    false&&ASSERT(stations[0][0] > stations[stations.length-1][0], 'loft stations go nose first, from the largest z to the smallest');
     const mesh = new Mesh;
     // section points: left, top, right, bottom, wound clockwise seen from +z
     const section = ([z, w, t, b, m=.5])=>
@@ -20762,7 +20778,7 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
     }
     else
     {
-        ASSERT(isArray(pixels) && pixels.length, 'pixels must be a TileInfo or rows of pixels');
+        false&&ASSERT(isArray(pixels) && pixels.length, 'pixels must be a TileInfo or rows of pixels');
         height = rows.length, width = rows[0].length;
     }
 
@@ -20838,7 +20854,7 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
  */
 function buildText3D(text, size=1, depth=.2, font=engineImageFont)
 {
-    ASSERT(font instanceof ImageFont, 'font must be an ImageFont, the engine font loads before gameInit');
+    false&&ASSERT(font instanceof ImageFont, 'font must be an ImageFont, the engine font loads before gameInit');
     const tileInfo = font.tileInfo, padding = tileInfo.padding;
     const paddedX = tileInfo.size.x + padding * 2, paddedY = tileInfo.size.y + padding * 2;
     const columns = tileInfo.textureInfo.size.x / paddedX | 0;
@@ -20894,8 +20910,8 @@ class HeightMap
             heights = render3DImageToArray(heights, (r)=> r / 255);
         if (colors && !isArray(colors))
             colors = render3DImageToArray(colors, (r, g, b, a)=> rgb(r / 255, g / 255, b / 255, a / 255));
-        ASSERT(isArray(heights) && heights.length > 1 && isArray(heights[0]) && heights[0].length > 1, 'height map needs at least 2 rows and 2 columns');
-        ASSERT(size.x > 0 && size.y > 0, 'height map size must be positive, a zero size has nowhere to look things up');
+        false&&ASSERT(isArray(heights) && heights.length > 1 && isArray(heights[0]) && heights[0].length > 1, 'height map needs at least 2 rows and 2 columns');
+        false&&ASSERT(size.x > 0 && size.y > 0, 'height map size must be positive, a zero size has nowhere to look things up');
 
         /** @property {Array<Array<number>>} - Heights 0-1 as [row][column], rows along Z */
         this.heights = heights;
@@ -21025,8 +21041,8 @@ function render3DImageData(image)
 {
     if (image instanceof TextureInfo)
         image = image.image;
-    ASSERT(image && image.width && image.height, 'image is not loaded');
-    ASSERT(workReadCanvas, 'reading an image needs a canvas, pass arrays in headless mode');
+    false&&ASSERT(image && image.width && image.height, 'image is not loaded');
+    false&&ASSERT(workReadCanvas, 'reading an image needs a canvas, pass arrays in headless mode');
     const width = image.width, height = image.height;
     workReadCanvas.width = width;
     workReadCanvas.height = height;
@@ -21099,14 +21115,14 @@ class EngineObject3D extends EngineObject
      *  @param {Color} [color] - Tint */
     constructor(pos3D=vec3(), mesh, tileInfo, color=WHITE)
     {
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
+        false&&ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
         // a whole texture is stored as the tile that covers it, with no padding or bleed to trim
         // the edges, so this is always a TileInfo like the 2D one and the object stays an EngineObject
         if (tileInfo instanceof TextureInfo)
             tileInfo = new TileInfo(vec2(), tileInfo.size, tileInfo, 0, 0);
         super(vec2(), vec2(), tileInfo, 0, color);
-        ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
-        ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
+        false&&ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
+        false&&ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
         this.mass = 0; // static: no 2D physics, and no 3D gravity until a mass is set
 
         /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
@@ -21154,6 +21170,8 @@ class EngineObject3D extends EngineObject
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         this.renderAfter2D = undefined;
+        this.passMatrix = undefined; // the matrix built for the current pass, see render3D
+        this.matrixPassId = -1;
     }
 
     /** Move by the 3D velocities and push out of solids, called automatically each frame before update, like the 2D physics
@@ -21163,7 +21181,7 @@ class EngineObject3D extends EngineObject
     updatePhysics()
     {
         // a sync2D object collides in 2D, which measures the 2D size, and that starts at zero on a 3D object
-        ASSERT(!this.sync2D || !this.collideSolidObjects || (this.size.x && this.size.y),
+        false&&ASSERT(!this.sync2D || !this.collideSolidObjects || (this.size.x && this.size.y),
             'a sync2D object collides in 2D, so give it a 2D size as well as a size3D', this.size);
         if (this.sync2D)
             super.updatePhysics();
@@ -21240,7 +21258,7 @@ class EngineObject3D extends EngineObject
      *  @return {Mesh|undefined} - The mesh passed in */
     setMesh(mesh)
     {
-        ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
+        false&&ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
         const old = this.mesh;
         this.mesh = mesh;
         // nothing to free and nothing to look for when it was never uploaded
@@ -21256,9 +21274,14 @@ class EngineObject3D extends EngineObject
     render3D()
     {
         // an opaque draw comes out solid however low its alpha is, so a fade with no flag looks like nothing happened
-        ASSERT(this.transparent || this.additive || this.color.a >= 1, 'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', this.color);
+        false&&ASSERT(this.transparent || this.additive || this.color.a >= 1, 'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', this.color);
         if (this.mesh)
-            render3D.drawMesh(this.mesh, this.getMatrix(), this.tileInfo, this.color);
+        {
+            // one matrix for the shadow pass and the main pass of a frame, the object is in the same place for both
+            if (this.matrixPassId !== render3D.passId)
+                this.passMatrix = this.getMatrix(), this.matrixPassId = render3D.passId;
+            render3D.drawMesh(this.mesh, this.passMatrix, this.tileInfo, this.color);
+        }
         else if (this.tileInfo)
         {
             // a sprite: size3D grown by its own scale and its parents', the same world size the
@@ -21292,7 +21315,7 @@ function render3DMove(o)
 // costs six trig calls and a matrix for every pair tested, which is the whole cost of a crowded scene
 function render3DSolidShape(o)
 {
-    ASSERT(!o.parent, 'a child rides along with its parent, it has no world pos3D of its own to collide with');
+    false&&ASSERT(!o.parent, 'a child rides along with its parent, it has no world pos3D of its own to collide with');
     const s = o.size3D, k = o.scale3D;
     const kx = abs(k.x), ky = abs(k.y), kz = abs(k.z);
     if (o.collideAsSphere3D)
@@ -21466,8 +21489,8 @@ class Light3D extends EngineObject3D
     constructor(pos3D=vec3(), radius=5, color=WHITE, intensity=1)
     {
         super(pos3D, undefined, undefined, color);
-        ASSERT(radius >= 0, 'light radius cannot be negative, 0 is an off switch like an alpha of 0');
-        ASSERT(intensity >= 0, 'light intensity cannot be negative, 0 is an off switch');
+        false&&ASSERT(radius >= 0, 'light radius cannot be negative, 0 is an off switch like an alpha of 0');
+        false&&ASSERT(intensity >= 0, 'light intensity cannot be negative, 0 is an off switch');
         this.size3D = vec3(); // not a solid thing to pick or collect
         /** @property {number} - Distance where the light fades to nothing */
         this.radius = radius;
@@ -21997,7 +22020,7 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
                 const corners = parts.slice(1).map(c=> c.split('/'));
                 if (corners.length < 3) break;
                 const points = corners.map(c=> lookup(c[0], positions));
-                ASSERT(points.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
+                false&&ASSERT(points.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
                 const uv = corners.map(c=> c[1] ? lookup(c[1], uvs) : RENDER3D_DEFAULT_UV);
                 const hasNormals = corners.every(c=> c[2]);
                 fileNormals ||= hasNormals;
@@ -22063,11 +22086,11 @@ class ThreeJSPlugin
      *  @param {number} [cameraFOV] - Vertical field of view in degrees */
     constructor(THREE, cameraFOV=60)
     {
-        ASSERT(!threeJS, 'ThreeJS plugin already initialized');
+        false&&ASSERT(!threeJS, 'ThreeJS plugin already initialized');
         threeJS = this;
         if (headlessMode) return;
-        ASSERT(mainCanvas, 'ThreeJS plugin must be created after engineInit, call in gameInit');
-        ASSERT(THREE && THREE.WebGLRenderer, 'three.js module must be passed in');
+        false&&ASSERT(mainCanvas, 'ThreeJS plugin must be created after engineInit, call in gameInit');
+        false&&ASSERT(THREE && THREE.WebGLRenderer, 'three.js module must be passed in');
 
         /** @property {Object} - The three.js module passed into the constructor */
         this.THREE = THREE;
@@ -22149,7 +22172,7 @@ class ThreeJSObject extends EngineObject
     constructor(pos, size, mesh, z=0)
     {
         super(pos, size);
-        ASSERT(threeJS, 'ThreeJS plugin must be initialized first');
+        false&&ASSERT(threeJS, 'ThreeJS plugin must be initialized first');
 
         /** @property {Object} - The three.js object3d this object drives */
         this.mesh = mesh;

@@ -119,7 +119,7 @@ async function buildAll()
                 ...engineSourceFiles,
                 ...enginePluginFiles
             ],
-            [], true
+            [stripDebugCallsStep], true
         )
     ]);
 
@@ -219,6 +219,17 @@ function uglifyBuildStep(filename)
 };
 
 // Add license to top of file
+// Guard every ASSERT and LOG call in the release build so its arguments are never evaluated
+// - engineRelease.js makes them empty functions, but a call still evaluates its arguments first,
+//   so isVector3 checks and message strings would run in release; false&& short circuits them
+//   and the minifiers then drop the dead calls entirely
+// - The helpers like ASSERT_VECTOR3_VALID are guarded the same way, their definitions are skipped by name
+function stripDebugCallsStep(filename)
+{
+    const source = fs.readFileSync(filename, 'utf8');
+    fs.writeFileSync(filename, source.replace(/(?<!function )\b(ASSERT\w*|LOG)\(/g, 'false&&$1('), {flag: 'w+'});
+}
+
 function addLicenseStep(filename)
 {
     try
