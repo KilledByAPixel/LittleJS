@@ -3857,8 +3857,13 @@ class EngineObject
             this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
         }
 
-        // apply physics
-        const oldPos = this.pos.copy();
+        // physics sanity checks
+        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
+        ASSERT(this.damping >= 0 && this.damping <= 1);
+
+        // apply physics; only the solver needs where the object was, so only then is it copied
+        const solve = enablePhysicsSolver && this.mass;
+        const oldPos = solve ? this.pos.copy() : undefined;
         this.velocity.x *= this.damping;
         this.velocity.y *= this.damping;
         if (this.mass)
@@ -3871,12 +3876,8 @@ class EngineObject
         this.pos.y += this.velocity.y;
         this.angle += this.angleVelocity *= this.angleDamping;
 
-        // physics sanity checks
-        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
-        ASSERT(this.damping >= 0 && this.damping <= 1);
-
         // don't do collision for static objects or if solver disabled
-        if (!enablePhysicsSolver || !this.mass) return;
+        if (!solve) return;
 
         const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
         if (this.groundObject)
@@ -9262,8 +9263,9 @@ class Particle
             return;
         }
 
-        // apply physics
-        const oldPos = this.pos.copy();
+        // apply physics; only the tile collision needs where the particle was, so only then is it copied
+        const solve = enablePhysicsSolver && collideTiles;
+        const oldPos = solve ? this.pos.copy() : undefined;
         this.velocity.x *= damping;
         this.velocity.y *= damping;
         this.pos.x += this.velocity.x += gravity.x * gravityScale;
@@ -9271,7 +9273,7 @@ class Particle
         this.angle += this.angleVelocity *= angleDamping;
 
         // don't do collision if solver disabled
-        if (!enablePhysicsSolver || !collideTiles) return;
+        if (!solve) return;
         
         // apply max circular speed to prevent going through collision
         const length2 = this.velocity.lengthSquared();

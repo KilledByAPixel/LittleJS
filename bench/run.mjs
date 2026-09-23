@@ -33,7 +33,7 @@ else
     console.log('usage: node bench/run.mjs <' + Object.keys(pairs).join('|') + '> [sizes...] [-- extra query], or page urls');
     process.exit(1);
 }
-const server = serve(8765);
+const server = await serve(), base = 'http://localhost:' + server.address().port + '/';
 const browser = await launchChrome();
 for (const url of urls)
 {
@@ -41,7 +41,7 @@ for (const url of urls)
     const errors = [];
     page.on('pageerror', e => errors.push(e.message.slice(0, 160)));
     page.on('console', m => m.type() === 'error' && !m.text().includes('Failed to load resource') && errors.push(m.text().slice(0, 160)));
-    await page.goto('http://localhost:8765/' + url + extra);
+    await page.goto(base + url + extra);
     let result;
     try
     {

@@ -174,8 +174,13 @@ class EngineObject
             this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
         }
 
-        // apply physics
-        const oldPos = this.pos.copy();
+        // physics sanity checks
+        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
+        ASSERT(this.damping >= 0 && this.damping <= 1);
+
+        // apply physics; only the solver needs where the object was, so only then is it copied
+        const solve = enablePhysicsSolver && this.mass;
+        const oldPos = solve ? this.pos.copy() : undefined;
         this.velocity.x *= this.damping;
         this.velocity.y *= this.damping;
         if (this.mass)
@@ -188,12 +193,8 @@ class EngineObject
         this.pos.y += this.velocity.y;
         this.angle += this.angleVelocity *= this.angleDamping;
 
-        // physics sanity checks
-        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
-        ASSERT(this.damping >= 0 && this.damping <= 1);
-
         // don't do collision for static objects or if solver disabled
-        if (!enablePhysicsSolver || !this.mass) return;
+        if (!solve) return;
 
         const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
         if (this.groundObject)

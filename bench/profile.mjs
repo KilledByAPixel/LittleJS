@@ -4,10 +4,10 @@
 import { serve } from './serve.mjs';
 import { launchChrome } from './browser.mjs';
 const url = process.argv[2] || 'bench/cubes.html?n=5000';
-const server = serve(8765);
+const server = await serve(), base = 'http://localhost:' + server.address().port + '/';
 const browser = await launchChrome();
 const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
-await page.goto('http://localhost:8765/' + url);
+await page.goto(base + url);
 await page.waitForTimeout(3000); // past the warm up
 const cdp = await page.context().newCDPSession(page);
 await cdp.send('Profiler.enable');

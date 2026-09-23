@@ -400,8 +400,9 @@ class Particle
             return;
         }
 
-        // apply physics
-        const oldPos = this.pos.copy();
+        // apply physics; only the tile collision needs where the particle was, so only then is it copied
+        const solve = enablePhysicsSolver && collideTiles;
+        const oldPos = solve ? this.pos.copy() : undefined;
         this.velocity.x *= damping;
         this.velocity.y *= damping;
         this.pos.x += this.velocity.x += gravity.x * gravityScale;
@@ -409,7 +410,7 @@ class Particle
         this.angle += this.angleVelocity *= angleDamping;
 
         // don't do collision if solver disabled
-        if (!enablePhysicsSolver || !collideTiles) return;
+        if (!solve) return;
         
         // apply max circular speed to prevent going through collision
         const length2 = this.velocity.lengthSquared();
