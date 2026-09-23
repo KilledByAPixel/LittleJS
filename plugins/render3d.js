@@ -1624,8 +1624,9 @@ function render3DBindTexture(tileInfo, state=render3D)
     const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
     const texture = textureInfo?.glTexture || r.whiteTexture;
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    if (!r.mipmaps && !state.pixelated)
-        return gl.bindSampler(0, null); // the texture's own filtering, as in 2D
+    if (texture === r.whiteTexture || !r.mipmaps && !state.pixelated)
+        return gl.bindSampler(0, null); // the texture's own filtering, as in 2D; the white texel needs no mipmaps
+                                        // or anisotropy, and filtering it that way costs every untextured fragment
     gl.bindSampler(0, r.samplers[(textureInfo?.wrap ? 1 : 0) + (state.pixelated ? 2 : 0)]);
     if (!state.pixelated && !r.mipmapped.has(texture)) // a hard edged draw never reads them
     {
