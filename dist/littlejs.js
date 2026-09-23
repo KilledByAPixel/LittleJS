@@ -10309,8 +10309,32 @@ function glPolyStrip(points)
     if (signedArea(points) < 0)
         points = points.slice().reverse();
 
+    // a convex polygon, which every circle, ellipse and regular polygon is, zigzags between its two sides
+    // into one strip with no bridges, so it skips the ear clipping below and draws with a fifth of the vertices
+    // convex is every corner turning left, and the edges going right then left only once each way round, since
+    // a star listed point by point also turns left at every corner but winds around twice
+    const e = 1e-9, n = points.length;
+    let convex = true, flips = 0, lastSide = 0;
+    for (let i = 0; convex && i < n; ++i)
+    {
+        const a = points[(i + n - 1) % n], b = points[i], dx = points[(i + 1) % n].x - b.x;
+        convex = cross(a, b, points[(i + 1) % n]) > -e;
+        const side = dx > e ? 1 : dx < -e ? -1 : 0;
+        if (side && side !== lastSide)
+            lastSide && ++flips, lastSide = side;
+    }
+    if (convex && flips <= 2)
+    {
+        const strip = [points[0]];
+        for (let i = 1, j = n - 1; i <= j; ++i, --j)
+        {
+            strip.push(points[i]);
+            i === j || strip.push(points[j]);
+        }
+        return strip;
+    }
+
     // check if point is inside triangle
-    const e = 1e-9;
     const pointInTriangle = (p, a, b, c)=>
     {
         const c1 = cross(a, b, p);
