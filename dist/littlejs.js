@@ -21023,7 +21023,9 @@ class Mesh
         for (let i = 0; i < count; ++i)
         {
             const p = this.points[i], n = this.normals[i] || RENDER3D_DEFAULT_NORMAL, uv = this.uvs[i] || RENDER3D_DEFAULT_UV;
-            const at = p.x + ',' + p.y + ',' + p.z, key = at + ',' + n.x + ',' + n.y + ',' + n.z + ',' + uv.x + ',' + uv.y + ',' + (this.colors[i] || WHITE).rgbaInt();
+            // places are keyed to a millionth, so a pole at a radius of sin(PI) counts as one place
+            const at = round(p.x * 1e6) + ',' + round(p.y * 1e6) + ',' + round(p.z * 1e6);
+            const key = at + ',' + n.x + ',' + n.y + ',' + n.z + ',' + uv.x + ',' + uv.y + ',' + (this.colors[i] || WHITE).rgbaInt();
             let j = seen.get(key);
             if (j === undefined)
                 seen.set(key, j = vertices.length), vertices.push(i);
