@@ -20354,10 +20354,10 @@ function render3DDrawAttribs(m, tint, uvRect)
 // set a constant vec4 attribute only when its value changed since the last time
 function render3DAttrib4f(location, x, y, z, w)
 {
-    const values = render3D.attribValues, last = values[location];
-    if (last && last[0] === x && last[1] === y && last[2] === z && last[3] === w)
+    const values = render3D.attribValues, last = values[location] ||= [NaN, NaN, NaN, NaN]; // kept, not made per draw
+    if (last[0] === x && last[1] === y && last[2] === z && last[3] === w)
         return;
-    values[location] = [x, y, z, w];
+    last[0] = x, last[1] = y, last[2] = z, last[3] = w;
     glContext.vertexAttrib4f(location, x, y, z, w);
 }
 
@@ -20413,10 +20413,10 @@ function render3DBindTexture(tileInfo, state=render3D)
 // send a vec4 uniform of the main shader only when its value changed since the last send
 function render3DUniform4f(name, x, y, z, w)
 {
-    const values = render3D.uniformValues, last = values[name];
-    if (last && last[0] === x && last[1] === y && last[2] === z && last[3] === w)
+    const values = render3D.uniformValues, last = values[name] ||= [NaN, NaN, NaN, NaN]; // kept, not made per draw
+    if (last[0] === x && last[1] === y && last[2] === z && last[3] === w)
         return;
-    values[name] = [x, y, z, w];
+    last[0] = x, last[1] = y, last[2] = z, last[3] = w;
     glContext.uniform4f(render3DUniform(name), x, y, z, w);
 }
 
