@@ -19027,8 +19027,8 @@ class Render3DPlugin
      *  @param {boolean} [upright] - Stand on world up and only turn to face the camera, for sprites on the ground */
     drawBillboard(pos, size=vec2(1), tileInfo, color=WHITE, angle=0, upright=false)
     {
-        if (this.capture)
-            return this.drawStripUnlit(render3DBillboardCorners(pos, size, angle, upright), this.cameraBack, RENDER3D_QUAD_UVS, color, tileInfo);
+        if (this.capture) // the mesh keeps the color, so it gets its own, the particles reuse theirs
+            return this.drawStripUnlit(render3DBillboardCorners(pos, size, angle, upright), this.cameraBack, RENDER3D_QUAD_UVS, color.copy(), tileInfo);
         if (this.transparentQueue) // sort by the exact position, a shadow under it sorts by the floor
             return this.queueTransparent(pos, ()=> this.drawBillboard(pos, size, tileInfo, color, angle, upright));
 
@@ -21399,15 +21399,17 @@ class EngineObject3D extends EngineObject
 // move an object by its 3D velocities, an object with mass falling with render3D.gravity and slowing by its damping
 function render3DMove(o)
 {
+    // the vectors change in place, as the 2D object's do: this runs for every object every frame
+    const p = o.pos3D, v = o.velocity3D, r = o.rotation3D, a = o.angleVelocity3D;
     if (o.mass && !o.sync2D) // a 2D driven object gets the 2D gravity instead
     {
         // damped first and gravity added after, the order EngineObject.updatePhysics uses,
         // so the same mass, damping and gravity fall the same way in both
-        const v = o.velocity3D, g = render3D.gravity, s = o.gravityScale, d = o.damping;
-        o.velocity3D = vec3(v.x * d + g.x * s, v.y * d + g.y * s, v.z * d + g.z * s);
+        const g = render3D.gravity, s = o.gravityScale, d = o.damping;
+        v.x = v.x * d + g.x * s, v.y = v.y * d + g.y * s, v.z = v.z * d + g.z * s;
     }
-    o.pos3D = o.pos3D.add(o.velocity3D);
-    o.rotation3D = o.rotation3D.add(o.angleVelocity3D);
+    p.x += v.x, p.y += v.y, p.z += v.z;
+    r.x += a.x, r.y += a.y, r.z += a.z;
 }
 
 // where a solid object is in the world and what it collides as: the sphere that fits size3D, or the size3D box,
@@ -21937,6 +21939,9 @@ class FirstPersonCamera3D extends EngineObject3D
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// the color and size of the particle being drawn, shared by every emitter so the draw loop makes no objects
+const render3DParticleColor = new Color, render3DParticleSize = vec2();
+
 /**
  * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
  * - Each particle is a flat square facing the camera, with a soft round dot when no tile is given
@@ -22062,16 +22067,17 @@ class ParticleEmitter3D extends EngineObject3D
         {
             // damped first and gravity added after, the order the 2D particle uses, so the same
             // damping and gravity give the same arc in both
-            const p = particles[i], v = p.velocity;
-            v.x *= this.damping, v.y *= this.damping, v.z *= this.damping; // in place, this runs per particle
+            const p = particles[i], v = p.velocity, pos = p.pos;
+            // everything in place, no vectors made: this runs for every particle every frame
+            v.x *= this.damping, v.y *= this.damping, v.z *= this.damping;
             v.y += this.gravity * scale; // a bigger effect has to fall faster to keep the same arc
-            p.pos = p.pos.add(v);
+            pos.x += v.x, pos.y += v.y, pos.z += v.z;
             p.angle += p.angleVelocity *= this.angleDamping;
             if (this.trailTime)
             {
-                // remember where it has been, oldest first
+                // remember where it has been, oldest first, a copy since the position keeps moving
                 const trail = p.trail || (p.trail = []);
-                trail.push(p.pos);
+                trail.push(pos.copy());
                 const extra = trail.length - this.trailTime / timeDelta;
                 extra > 0 && trail.splice(0, extra);
             }
@@ -22127,12 +22133,16 @@ class ParticleEmitter3D extends EngineObject3D
         if (render3D.transparentQueue)
             return render3D.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
         const fade = this.fadeRate / 2, texture = this.tileInfo || render3DSoftDot(); // no dot headless
+        const color = render3DParticleColor, size = render3DParticleSize; // shared, so a particle makes no objects
         for (const p of this.particles)
         {
-            const t = p.age / p.life;
+            const t = p.age / p.life, a = p.colorStart, b = p.colorEnd;
             const alpha = t < fade ? t / fade : t > 1 - fade ? (1 - t) / fade : 1;
-            const color = p.colorStart.lerp(p.colorEnd, t), size = lerp(p.sizeStart, p.sizeEnd, t);
-            color.a *= alpha;
+            color.r = a.r + (b.r - a.r) * t;
+            color.g = a.g + (b.g - a.g) * t;
+            color.b = a.b + (b.b - a.b) * t;
+            color.a = (a.a + (b.a - a.a) * t) * alpha;
+            size.x = size.y = lerp(p.sizeStart, p.sizeEnd, t);
             const trail = p.trail;
             if (trail && trail.length > 1)
             {
@@ -22141,15 +22151,15 @@ class ParticleEmitter3D extends EngineObject3D
                 for (let i = 0; i < trail.length; ++i)
                 {
                     const s = (i + 1) / trail.length;
-                    widths.push(size * s);
+                    widths.push(size.x * s);
                     colors.push(color.scale(1, s));
                 }
                 render3D.drawRibbon(trail, widths, this.tileInfo, colors);
             }
             else if (texture)
-                render3D.drawBillboard(p.pos, vec2(size), texture, color, p.angle);
+                render3D.drawBillboard(p.pos, size, texture, color, p.angle);
             else
-                render3D.drawSoftDisc(p.pos, size, color, undefined, 8); // no canvas for the dot, headless
+                render3D.drawSoftDisc(p.pos, size.x, color, undefined, 8); // no canvas for the dot, headless
         }
     }
 }

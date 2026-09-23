@@ -1299,6 +1299,50 @@ test('ParticleEmitter3D trailTime keeps a path per particle and draws ribbons', 
     e.destroy();
 });
 
+test('ParticleEmitter3D moves each particle in place, and a trail keeps its own copies of where it was', () =>
+{
+    const e = new ParticleEmitter3D(vec3(), 0, 0, 0, 0, undefined, WHITE, WHITE, WHITE, WHITE, 10, 1, 1, .5, 1, 0, 0, 0);
+    e.emitParticle();
+    const p = e.particles[0], pos = p.pos;
+    e.update();
+    assert.equal(p.pos, pos, 'the same vector, moved');
+    nearVec(pos, 0, .5, 0);
+    e.trailTime = 1;
+    e.update();
+    e.update();
+    assert.equal(p.trail.length, 2);
+    assert.notEqual(p.trail[0], p.trail[1]);
+    assert.notEqual(p.trail[1], p.pos, 'a copy, not the vector that keeps moving');
+    nearVec(p.trail[0], 0, 1, 0);
+    nearVec(p.trail[1], 0, 1.5, 0);
+    e.destroy();
+});
+
+test('an EngineObject3D moves and turns its own vectors in place each frame, like the 2D object', () =>
+{
+    const o = new EngineObject3D(vec3(1, 2, 3)), pos = o.pos3D, rotation = o.rotation3D, velocity = o.velocity3D;
+    o.velocity3D.set(.1, 0, 0);
+    o.angleVelocity3D.set(0, .5, 0);
+    o.mass = 1; // falls with render3D.gravity, damped, and still the same velocity vector
+    try
+    {
+        o.updatePhysics();
+        assert.equal(o.pos3D, pos);
+        assert.equal(o.rotation3D, rotation);
+        assert.equal(o.velocity3D, velocity);
+        nearVec(pos, 1.1, 2, 3);
+        nearVec(rotation, 0, .5, 0);
+    }
+    finally { o.destroy(); }
+});
+
+test('drawBillboard in a bake keeps its own copy of the color', () =>
+{
+    const color = rgb(1, 0, 0), mesh = render3D.bake(()=> render3D.drawBillboard(vec3(), vec2(1), undefined, color));
+    color.g = 1;
+    assert.equal(mesh.colors[0].g, 0, 'a color reused for the next draw must not reach back into the mesh');
+});
+
 test('buildExtrude merges pixel runs into quads with outward walls and pixel colors', () =>
 {
     // a solid 2x2 block: 2 front, 2 back and 4 walls merged along their runs
