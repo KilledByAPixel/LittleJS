@@ -20816,7 +20816,7 @@ class Mesh
     /** Create an empty mesh */
     constructor()
     {
-        /** @property {Array<Vector3>} - Vertex positions in strip order
+        /** @property {Array<Vector3>} - Vertex positions, in strip order or one per vertex of an indexed mesh
          *  @type {Array<Vector3>} */
         this.points = [];
         /** @property {Array<Vector3>} - Vertex normals
@@ -21100,8 +21100,9 @@ class Mesh
         return this.radius = r ** .5;
     }
 
-    /** Derive normals from the strip's triangles
-     *  @param {boolean} [smooth] - Round the lighting across faces instead of giving each face a hard edge
+    /** Derive normals from the triangles, of the strip or of the index list
+     *  @param {boolean} [smooth] - Round the lighting across faces instead of giving each face a hard edge; flat
+     *    normals on an indexed mesh give every corner its own vertex
      *  @return {Mesh} */
     computeNormals(smooth=false)
     {

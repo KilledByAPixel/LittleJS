@@ -7209,7 +7209,7 @@ declare module "littlejsengine" {
      * mesh.render(buildMatrix(vec3(0, 1, 0)), undefined, RED);
      */
     export class Mesh {
-        /** @property {Array<Vector3>} - Vertex positions in strip order
+        /** @property {Array<Vector3>} - Vertex positions, in strip order or one per vertex of an indexed mesh
          *  @type {Array<Vector3>} */
         points: Array<Vector3>;
         /** @property {Array<Vector3>} - Vertex normals
@@ -7331,8 +7331,9 @@ declare module "littlejsengine" {
         /** Measure the bounding sphere around the origin into radius, called by upload
          *  @return {number} */
         computeRadius(): number;
-        /** Derive normals from the strip's triangles
-         *  @param {boolean} [smooth] - Round the lighting across faces instead of giving each face a hard edge
+        /** Derive normals from the triangles, of the strip or of the index list
+         *  @param {boolean} [smooth] - Round the lighting across faces instead of giving each face a hard edge; flat
+         *    normals on an indexed mesh give every corner its own vertex
          *  @return {Mesh} */
         computeNormals(smooth?: boolean): Mesh;
         /** Pack the vertices and create the GPU buffer, called automatically by render
