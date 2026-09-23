@@ -3846,7 +3846,7 @@ declare module "littlejsengine" {
      * - When logged in, Newgrounds holds the player's medals: they unlock once the server confirms and the local save is left alone
      * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
      * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
-     * - provides functions to interact with medals scoreboards
+     * - Provides functions to unlock medals, post and read scoreboards and log views
      * - Keeps connection alive and logs views
      * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
      * @namespace Newgrounds
@@ -3922,7 +3922,7 @@ declare module "littlejsengine" {
         call(component: string, parameters?: any): Promise<any>;
     }
     /**
-     * Newgrounds medal auto unlocks in newgrounds API
+     * Newgrounds medal, unlocks on Newgrounds as well; when logged in it only unlocks once the server confirms
      * @extends Medal
      * @memberof Newgrounds
      */
