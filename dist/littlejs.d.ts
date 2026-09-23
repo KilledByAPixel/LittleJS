@@ -7801,9 +7801,16 @@ declare module "littlejsengine" {
         trailTime: number;
         /** @property {number} - Radians per frame each particle turns in the camera plane, either way; 0 is no spin */
         angleSpeed: number;
-        /** @property {Array<Object>} - Live particles
-         *  @type {Array<Object>} */
-        particles: Array<any>;
+        /** @property {Float32Array} - The live particles, 21 floats each: position, velocity, start and end color, start
+         *  and end size, life, age, angle, spin, and trail point count; the emitter owns them, nothing else needs to */
+        particleData: Float32Array;
+        /** @property {number} - How many particles are alive, the first that many of particleData */
+        particleCount: number;
+        /** @property {Float32Array|undefined} - The trail points of every particle, trailMax per particle oldest first, when trailTime is set
+         *  @type {Float32Array|undefined} */
+        trailData: Float32Array | undefined;
+        /** @property {number} - Trail points kept per particle, from trailTime */
+        trailMax: number;
         emitTimeBuffer: number;
         worldPos3D: Vector3;
         /** Spawn one particle now */

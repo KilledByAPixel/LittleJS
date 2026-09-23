@@ -2,6 +2,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, FirstPersonCamera3D, EngineObject3D, EngineObject, engineObjects, Light3D, DirectionalLight3D, Shader, InstancedMesh3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale, setCameraScale } from '../dist/littlejs.esm.js';
 
+// a ParticleEmitter3D keeps its particles in one typed array, 21 floats each; read one back as an object for the checks
+const PARTICLE_FLOATS = 21;
+const particle = (e, i)=> { const d = e.particleData, k = i * PARTICLE_FLOATS; return {
+    pos: vec3(d[k], d[k+1], d[k+2]), velocity: vec3(d[k+3], d[k+4], d[k+5]),
+    colorStart: rgb(d[k+6], d[k+7], d[k+8], d[k+9]), colorEnd: rgb(d[k+10], d[k+11], d[k+12], d[k+13]),
+    sizeStart: d[k+14], sizeEnd: d[k+15], life: d[k+16], age: d[k+17], angle: d[k+18], angleVelocity: d[k+19], trailCount: d[k+20] }; };
+const particles = (e)=> Array.from({ length: e.particleCount }, (_, i)=> particle(e, i));
+const trailPoint = (e, i, j)=> { const t = (i * e.trailMax + j) * 3, d = e.trailData; return vec3(d[t], d[t+1], d[t+2]); };
+
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x); near(v.y, y); near(v.z, z); };
@@ -463,10 +472,9 @@ test('a 3D particle damps and then falls, the order the 2D particle uses', () =>
     const damping = .9, gravity = -.02;
     const e = new ParticleEmitter3D(vec3(), 0, 0, 0, PI, undefined, WHITE, WHITE, WHITE, WHITE, 10, 1, 1, 0, damping, gravity, 0, 0);
     e.emitParticle();
-    const p = e.particles[0];
-    p.velocity = vec3(1, -.5, 2);
+    e.particleData.set([1, -.5, 2], 3); // the first particle's velocity
     e.update();
-    nearVec(p.velocity, 1 * damping, -.5 * damping + gravity, 2 * damping);
+    nearVec(particle(e, 0).velocity, 1 * damping, -.5 * damping + gravity, 2 * damping);
     e.destroy(true);
 });
 
@@ -969,15 +977,15 @@ test('ParticleEmitter3D emits at its rate along its rotated axis and moves parti
     const e = new ParticleEmitter3D(vec3(5, 0, 0), 0, 0, 600, 0, undefined, RED, RED, WHITE, WHITE, 1, .5, 1, .2, 1, -.01, .1, 0);
     e.rotation3D.z = PI / 2; // local +Y becomes world -X
     e.update();
-    assert.equal(e.particles.length, 10);
-    const p = e.particles[0];
+    assert.equal(e.particleCount, 10);
+    const p = particle(e, 0);
     nearVec(p.velocity, -.2, -.01, 0);       // speed .2 along -X, one frame of gravity
     nearVec(p.pos, 4.8, -.01, 0);            // spawned at the emitter and moved once
     near(p.life, 1); near(p.sizeStart, .5); near(p.sizeEnd, 1);
     assert.equal(p.colorStart.r, 1); assert.equal(p.colorStart.g, 0);
     e.update();
-    assert.equal(e.particles.length, 20);
-    nearVec(e.particles[0].velocity, -.2, -.02, 0);
+    assert.equal(e.particleCount, 20);
+    nearVec(particle(e, 0).velocity, -.2, -.02, 0);
     // untextured particles render as 8 sided soft discs, textured ones as billboards, and the additive flag is left alone
     render3D.updateMatrices(1);
     render3D.additive = false;
@@ -989,7 +997,7 @@ test('ParticleEmitter3D emits at its rate along its rotated axis and moves parti
     // an emitter with no rate never spawns, a box emit size spawns inside the box
     const box = new ParticleEmitter3D(vec3(), vec3(2, 4, 6), 0, 600, PI);
     box.update();
-    assert.ok(box.particles.every(q => Math.abs(q.pos.x) <= 1 + .3 && Math.abs(q.pos.y) <= 2 + .3 && Math.abs(q.pos.z) <= 3 + .3));
+    assert.ok(particles(box).every(q => Math.abs(q.pos.x) <= 1 + .3 && Math.abs(q.pos.y) <= 2 + .3 && Math.abs(q.pos.z) <= 3 + .3));
     e.destroy(); box.destroy();
 });
 
@@ -998,11 +1006,11 @@ test('ParticleEmitter3D particles die after their life', () =>
     // particles age on the frame they spawn, so a 3 frame life survives two more updates
     const e = new ParticleEmitter3D(vec3(), 0, 0, 60, PI, undefined, WHITE, WHITE, WHITE, WHITE, 3 / 60, 1, 1, 0, 1, 0, .1, 0);
     e.update(); // spawns 1, age 1
-    assert.equal(e.particles.length, 1);
+    assert.equal(e.particleCount, 1);
     e.update(); // spawns 1, ages 2 and 1
-    assert.equal(e.particles.length, 2);
+    assert.equal(e.particleCount, 2);
     e.update(); // spawns 1, the first reaches 3 and dies
-    assert.equal(e.particles.length, 2);
+    assert.equal(e.particleCount, 2);
     e.destroy();
 });
 
@@ -1017,12 +1025,12 @@ test('scaling a ParticleEmitter3D scales the whole effect, not just the spawn ar
         return e;
     };
     const one = make(1), four = make(4);
-    near(four.particles[0].velocity.length(), one.particles[0].velocity.length() * 4);
-    near(four.particles[0].sizeStart, one.particles[0].sizeStart * 4);
-    near(four.particles[0].sizeEnd, one.particles[0].sizeEnd * 4);
+    near(particle(four, 0).velocity.length(), particle(one, 0).velocity.length() * 4);
+    near(particle(four, 0).sizeStart, particle(one, 0).sizeStart * 4);
+    near(particle(four, 0).sizeEnd, particle(one, 0).sizeEnd * 4);
 
     // and gravity too, or a scaled up effect would arc flatter than the one it copies
-    const fall = (e)=> { const before = e.particles[0].velocity.y; e.update(); return e.particles[0].velocity.y - before; };
+    const fall = (e)=> { const before = particle(e, 0).velocity.y; e.update(); return particle(e, 0).velocity.y - before; };
     near(fall(four), fall(one) * 4);
     one.destroy(true); four.destroy(true);
 
@@ -1031,10 +1039,10 @@ test('scaling a ParticleEmitter3D scales the whole effect, not just the spawn ar
     parent.scale3D = vec3(3);
     const child = make(1);
     parent.addChild(child);
-    child.particles.length = 0;
+    child.particleCount = 0;
     child.emitParticle();
     const plain = make(1);
-    near(child.particles[0].sizeStart, plain.particles[0].sizeStart * 3);
+    near(particle(child, 0).sizeStart, particle(plain, 0).sizeStart * 3);
     parent.destroy(true); plain.destroy(true);
 });
 
@@ -1055,8 +1063,8 @@ test('ParticleEmitter3D particles turn when asked and sit still by default', () 
 
     // the default is no spin at all, and has to draw exactly what it drew before there was any
     const still = make(0);
-    assert.equal(still.particles[0].angle, 0);
-    assert.equal(still.particles[0].angleVelocity, 0);
+    assert.equal(particle(still, 0).angle, 0);
+    assert.equal(particle(still, 0).angleVelocity, 0);
     const before = corners(still);
     still.update();
     assert.equal(corners(still), before, 'a particle with no spin moved');
@@ -1070,17 +1078,17 @@ test('ParticleEmitter3D particles turn when asked and sit still by default', () 
     spun.destroy(true);
 
     const damped = make(.1, .5);
-    const v0 = Math.abs(damped.particles[0].angleVelocity);
+    const v0 = Math.abs(particle(damped, 0).angleVelocity);
     damped.update();
-    near(Math.abs(damped.particles[0].angleVelocity), v0 * .5);
+    near(Math.abs(particle(damped, 0).angleVelocity), v0 * .5);
     damped.destroy(true);
 
     // and they spin both ways from random starting angles, like the 2D particle
     const many = make(.1);
     for (let i = 0; i < 200; ++i) many.emitParticle();
-    assert.ok(many.particles.some(p => p.angleVelocity > 0) && many.particles.some(p => p.angleVelocity < 0),
+    assert.ok(particles(many).some(p => p.angleVelocity > 0) && particles(many).some(p => p.angleVelocity < 0),
         'every particle spun the same way');
-    const angles = many.particles.map(p => p.angle);
+    const angles = particles(many).map(p => p.angle);
     assert.ok(Math.max(...angles) - Math.min(...angles) > 5, 'starting angles are not spread around');
     many.destroy(true);
 });
@@ -1093,14 +1101,14 @@ test('ParticleEmitter3D lives out its emit time even when it emits nothing', () 
     byHand.update();
     assert.ok(!byHand.destroyed, 'an emitter fed by hand destroyed itself before emitting anything');
     byHand.emitParticle();
-    assert.equal(byHand.particles.length, 1);
+    assert.equal(byHand.particleCount, 1);
     byHand.destroy(true);
 
     setParticleEmitRateScale(0);
     const quiet = new ParticleEmitter3D(vec3(), 0, 1, 60);
     quiet.update();
     assert.ok(!quiet.destroyed, 'turning the global emit rate down destroyed a timed emitter');
-    assert.equal(quiet.particles.length, 0, 'a scale of zero should still emit nothing');
+    assert.equal(quiet.particleCount, 0, 'a scale of zero should still emit nothing');
     quiet.destroy(true);
     setParticleEmitRateScale(1);
 });
@@ -1289,8 +1297,8 @@ test('ParticleEmitter3D trailTime keeps a path per particle and draws ribbons', 
     e.trailTime = 3 / 60;
     for (let i = 4; i--;)
         e.update();
-    assert.deepEqual(e.particles.map(p => p.trail.length).sort(), [1, 2, 3, 3]);
-    nearVec(e.particles[0].trail[0], 0, .2, 0); // the oldest kept point, the two before it were dropped
+    assert.deepEqual(particles(e).map(p => p.trailCount).sort(), [1, 2, 3, 3]);
+    nearVec(trailPoint(e, 0, 0), 0, .2, 0); // the oldest kept point, the two before it were dropped
     render3D.updateMatrices(1);
     // trails of 3, 3 and 2 draw ribbons, the newest with one point is still a soft disc
     assert.equal(render3D.bake(()=> e.render3D()).vertexCount, 8 + 8 + 6 + 3 * (2 * 9 + 2));
@@ -1299,22 +1307,26 @@ test('ParticleEmitter3D trailTime keeps a path per particle and draws ribbons', 
     e.destroy();
 });
 
-test('ParticleEmitter3D moves each particle in place, and a trail keeps its own copies of where it was', () =>
+test('ParticleEmitter3D keeps its particles in one typed array and moves them there, with their trails beside', () =>
 {
     const e = new ParticleEmitter3D(vec3(), 0, 0, 0, 0, undefined, WHITE, WHITE, WHITE, WHITE, 10, 1, 1, .5, 1, 0, 0, 0);
     e.emitParticle();
-    const p = e.particles[0], pos = p.pos;
+    assert.equal(e.particleCount, 1);
     e.update();
-    assert.equal(p.pos, pos, 'the same vector, moved');
-    nearVec(pos, 0, .5, 0);
+    nearVec(particle(e, 0).pos, 0, .5, 0);
     e.trailTime = 1;
     e.update();
     e.update();
-    assert.equal(p.trail.length, 2);
-    assert.notEqual(p.trail[0], p.trail[1]);
-    assert.notEqual(p.trail[1], p.pos, 'a copy, not the vector that keeps moving');
-    nearVec(p.trail[0], 0, 1, 0);
-    nearVec(p.trail[1], 0, 1.5, 0);
+    assert.equal(particle(e, 0).trailCount, 2);
+    nearVec(trailPoint(e, 0, 0), 0, 1, 0);
+    nearVec(trailPoint(e, 0, 1), 0, 1.5, 0);
+    // a dead particle's slot is taken by the last one, trail and all
+    e.emitParticle(); e.emitParticle();
+    e.particleData[16] = 0; // the first one's life is over
+    e.update();
+    assert.equal(e.particleCount, 2);
+    nearVec(particle(e, 0).pos, 0, .5, 0);
+    assert.equal(particle(e, 0).trailCount, 1);
     e.destroy();
 });
 
@@ -1342,7 +1354,7 @@ test('a ParticleEmitter3D draws its particles as one instance batch of the billb
     tileInfo.textureInfo = { sizeInverse: vec2(1 / 64) }; // enough of a texture to place the tile, headless has no real one
     const e = new ParticleEmitter3D(vec3(), 0, 0, 0, 0, tileInfo, RED, RED, WHITE, WHITE, 10, 2, 2, 0, 1, 0, 0, 0);
     for (let i = 0; i < 3; ++i)
-        e.emitParticle(), e.particles[i].pos.set(i, 5, 0);
+        e.emitParticle(), e.particleData.set([i, 5, 0], i * PARTICLE_FLOATS);
     render3D.updateMatrices(1);
     render3D.isRendering = true;
     render3D.program = {}; // a stand in, headless nothing uploads or draws
@@ -2122,10 +2134,10 @@ test('destroying an emitter or trail lets what is already out finish, like the 2
     ship.destroy();
     assert.ok(!emitter.destroyed && emitter.parent === undefined && emitter.emitTime < 0);
     nearVec(emitter.pos3D, 5, 0, 0); // keeps its world position when detached
-    assert.equal(emitter.particles.length, 3);
+    assert.equal(emitter.particleCount, 3);
     emitter.update();
-    assert.equal(emitter.particles.length, 3, 'stopped emitting');
-    emitter.particles.length = 0;
+    assert.equal(emitter.particleCount, 3, 'stopped emitting');
+    emitter.particleCount = 0;
     emitter.update();
     assert.ok(emitter.destroyed);
     const empty = new ParticleEmitter3D(vec3(), 0, 0, 60, PI);

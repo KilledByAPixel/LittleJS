@@ -22679,8 +22679,11 @@ class FirstPersonCamera3D extends EngineObject3D
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// the color and size of the particle being drawn, shared by every emitter so the draw loop makes no objects
-const render3DParticleColor = new Color, render3DParticleSize = vec2();
+// a particle is this many floats of its emitter's particleData: position, velocity, start color, end color, start
+// and end size, life, age, angle, spin, and how many trail points it has in trailData
+const RENDER3D_PARTICLE_FLOATS = 21;
+// the position, color and size of the particle being drawn, shared by every emitter so the draw loop makes no objects
+const render3DParticlePos = vec3(), render3DParticleColor = new Color, render3DParticleSize = vec2();
 
 /**
  * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
@@ -22772,9 +22775,16 @@ class ParticleEmitter3D extends EngineObject3D
         this.angleSpeed = 0;
         /** @property {number} - Per frame multiplier on that spin, 1 keeps it */
         this.angleDamping = 1;
-        /** @property {Array<Object>} - Live particles
-         *  @type {Array<Object>} */
-        this.particles = [];
+        /** @property {Float32Array} - The live particles, 21 floats each: position, velocity, start and end color, start
+         *  and end size, life, age, angle, spin, and trail point count; the emitter owns them, nothing else needs to */
+        this.particleData = new Float32Array(64 * RENDER3D_PARTICLE_FLOATS);
+        /** @property {number} - How many particles are alive, the first that many of particleData */
+        this.particleCount = 0;
+        /** @property {Float32Array|undefined} - The trail points of every particle, trailMax per particle oldest first, when trailTime is set
+         *  @type {Float32Array|undefined} */
+        this.trailData = undefined;
+        /** @property {number} - Trail points kept per particle, from trailTime */
+        this.trailMax = 0;
         this.emitTimeBuffer = 0;
     }
 
@@ -22798,31 +22808,51 @@ class ParticleEmitter3D extends EngineObject3D
                     this.emitParticle();
             }
         }
-        else if (!this.particles.length)
+        else if (!this.particleCount)
             this.destroy();
 
-        // move the particles and drop the dead ones
-        const particles = this.particles;
-        for (let i = particles.length; i--;)
+        // the trail storage follows trailTime, a change starts every trail over
+        const trailMax = this.trailTime ? max(1, round(this.trailTime / timeDelta)) : 0;
+        if (trailMax !== this.trailMax)
+        {
+            this.trailMax = trailMax;
+            this.trailData = trailMax ? new Float32Array(this.particleData.length / RENDER3D_PARTICLE_FLOATS * trailMax * 3) : undefined;
+            for (let k = 20; k < this.particleData.length; k += RENDER3D_PARTICLE_FLOATS)
+                this.particleData[k] = 0;
+        }
+
+        // move the particles and drop the dead ones, all in the typed array: this runs for every particle every frame
+        const F = RENDER3D_PARTICLE_FLOATS, data = this.particleData, trail = this.trailData;
+        const damping = this.damping, gravity = this.gravity * scale, angleDamping = this.angleDamping; // a bigger effect has to fall faster to keep the same arc
+        for (let i = this.particleCount; i--;)
         {
             // damped first and gravity added after, the order the 2D particle uses, so the same
             // damping and gravity give the same arc in both
-            const p = particles[i], v = p.velocity, pos = p.pos;
-            // everything in place, no vectors made: this runs for every particle every frame
-            v.x *= this.damping, v.y *= this.damping, v.z *= this.damping;
-            v.y += this.gravity * scale; // a bigger effect has to fall faster to keep the same arc
-            pos.x += v.x, pos.y += v.y, pos.z += v.z;
-            p.angle += p.angleVelocity *= this.angleDamping;
-            if (this.trailTime)
+            const k = i * F;
+            const vx = data[k+3] *= damping, vy = data[k+4] = data[k+4] * damping + gravity, vz = data[k+5] *= damping;
+            data[k] += vx, data[k+1] += vy, data[k+2] += vz;
+            data[k+18] += data[k+19] *= angleDamping;
+            const t = i * trailMax * 3;
+            if (trailMax)
             {
-                // remember where it has been, oldest first, a copy since the position keeps moving
-                const trail = p.trail || (p.trail = []);
-                trail.push(pos.copy());
-                const extra = trail.length - this.trailTime / timeDelta;
-                extra > 0 && trail.splice(0, extra);
+                // remember where it has been, oldest first; a full trail drops its oldest point
+                let n = data[k+20];
+                if (n === trailMax)
+                    trail.copyWithin(t, t + 3, t + n * 3), --n;
+                const j = t + n * 3;
+                trail[j] = data[k], trail[j+1] = data[k+1], trail[j+2] = data[k+2];
+                data[k+20] = n + 1;
             }
-            if ((p.age += timeDelta) >= p.life)
-                particles[i] = particles[particles.length - 1], particles.pop(); // swap with the last, order does not matter
+            if ((data[k+17] += timeDelta) >= data[k+16])
+            {
+                // dead: the last particle takes its slot, trail and all, order does not matter
+                const last = --this.particleCount, kl = last * F;
+                if (i !== last)
+                {
+                    data.copyWithin(k, kl, kl + F);
+                    trailMax && trail.copyWithin(t, last * trailMax * 3, (last + 1) * trailMax * 3);
+                }
+            }
         }
     }
 
@@ -22830,7 +22860,7 @@ class ParticleEmitter3D extends EngineObject3D
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        if (immediate || !this.particles.length || this.destroyed)
+        if (immediate || !this.particleCount || this.destroyed)
             return super.destroy(immediate);
         this.emitTime = -1; // stops emitting, and update destroys it once the particles are gone
         render3DDetach(this); // the particles are in world space, they no longer need the parent
@@ -22852,18 +22882,36 @@ class ParticleEmitter3D extends EngineObject3D
         // direction inside the cone around local +Y
         const direction = matrix.transformDirection(randVector3(1, this.emitConeAngle)).normalize();
 
-        this.particles.push({
-            pos: matrix.transformPoint(offset),
-            velocity: direction.scale(this.speed * random() * scale),
-            colorStart: randColor(this.colorStartA, this.colorStartB, true),
-            colorEnd: randColor(this.colorEndA, this.colorEndB, true),
-            sizeStart: this.sizeStart * random() * scale,
-            sizeEnd: this.sizeEnd * random() * scale,
-            life: this.particleTime * random(),
-            // a spinning particle starts anywhere and turns either way, one that is not stays at zero
-            angle: this.angleSpeed ? rand(2*PI) : 0,
-            angleVelocity: this.angleSpeed ? this.angleSpeed * random() * randSign() : 0,
-            age: 0 });
+        const pos = matrix.transformPoint(offset), speed = this.speed * random() * scale;
+        const colorStart = randColor(this.colorStartA, this.colorStartB, true), colorEnd = randColor(this.colorEndA, this.colorEndB, true);
+
+        // room for one more, doubling as the set grows, the trails along with it
+        const F = RENDER3D_PARTICLE_FLOATS, k = this.particleCount++ * F;
+        if (k + F > this.particleData.length)
+        {
+            const grown = new Float32Array(this.particleData.length * 2);
+            grown.set(this.particleData);
+            this.particleData = grown;
+            if (this.trailData)
+            {
+                const trails = new Float32Array(this.trailData.length * 2);
+                trails.set(this.trailData);
+                this.trailData = trails;
+            }
+        }
+        const data = this.particleData;
+        data[k] = pos.x, data[k+1] = pos.y, data[k+2] = pos.z;
+        data[k+3] = direction.x * speed, data[k+4] = direction.y * speed, data[k+5] = direction.z * speed;
+        data[k+6] = colorStart.r, data[k+7] = colorStart.g, data[k+8] = colorStart.b, data[k+9] = colorStart.a;
+        data[k+10] = colorEnd.r, data[k+11] = colorEnd.g, data[k+12] = colorEnd.b, data[k+13] = colorEnd.a;
+        data[k+14] = this.sizeStart * random() * scale;
+        data[k+15] = this.sizeEnd * random() * scale;
+        data[k+16] = this.particleTime * random(); // life
+        data[k+17] = 0; // age
+        // a spinning particle starts anywhere and turns either way, one that is not stays at zero
+        data[k+18] = this.angleSpeed ? rand(2*PI) : 0;
+        data[k+19] = this.angleSpeed ? this.angleSpeed * random() * randSign() : 0;
+        data[k+20] = 0; // trail points
     }
 
     /** Draw the particles, as flat squares or as streaks when trailTime is set
@@ -22892,54 +22940,60 @@ class ParticleEmitter3D extends EngineObject3D
             r.cullBackFaces = r.mirrored = false;
         }
         const cr = r.cameraRight, cu = r.cameraUp, cb = r.cameraBack, shadowPass = r.shadowPass;
+        const F = RENDER3D_PARTICLE_FLOATS, particles = this.particleData, trailMax = this.trailMax, pos = render3DParticlePos;
         try
         {
-            for (const p of this.particles)
+            for (let i = 0, count = this.particleCount; i < count; ++i)
             {
-                const t = p.age / p.life, a = p.colorStart, b = p.colorEnd;
+                const p = i * F, t = particles[p+17] / particles[p+16];
                 const alpha = t < fade ? t / fade : t > 1 - fade ? (1 - t) / fade : 1;
-                color.r = a.r + (b.r - a.r) * t;
-                color.g = a.g + (b.g - a.g) * t;
-                color.b = a.b + (b.b - a.b) * t;
-                color.a = (a.a + (b.a - a.a) * t) * alpha;
-                const s = size.x = size.y = lerp(p.sizeStart, p.sizeEnd, t);
-                const trail = p.trail;
-                if (trail && trail.length > 1)
+                color.r = particles[p+6] + (particles[p+10] - particles[p+6]) * t;
+                color.g = particles[p+7] + (particles[p+11] - particles[p+7]) * t;
+                color.b = particles[p+8] + (particles[p+12] - particles[p+8]) * t;
+                color.a = (particles[p+9] + (particles[p+13] - particles[p+9]) * t) * alpha;
+                const s = size.x = size.y = lerp(particles[p+14], particles[p+15], t), angle = particles[p+18];
+                const trailCount = particles[p+20];
+                if (trailCount > 1)
                 {
                     // a ribbon from the tail to the head, the tail thins and fades out
-                    const widths = [], colors = [];
-                    for (let i = 0; i < trail.length; ++i)
+                    const trail = this.trailData, points = [], widths = [], colors = [];
+                    for (let j = 0; j < trailCount; ++j)
                     {
-                        const f = (i + 1) / trail.length;
+                        const f = (j + 1) / trailCount, q = (i * trailMax + j) * 3;
+                        points.push(vec3(trail[q], trail[q+1], trail[q+2]));
                         widths.push(s * f);
                         colors.push(color.scale(1, f));
                     }
-                    r.drawRibbon(trail, widths, this.tileInfo, colors);
+                    r.drawRibbon(points, widths, this.tileInfo, colors);
                 }
                 else if (instanced)
                 {
                     // the axes turned by the particle's angle in the camera plane, as drawBillboard turns them
                     let rx = cr.x, ry = cr.y, rz = cr.z, ux = cu.x, uy = cu.y, uz = cu.z;
-                    if (p.angle)
+                    if (angle)
                     {
-                        const c = cos(p.angle), n = sin(p.angle);
+                        const c = cos(angle), n = sin(angle);
                         rx = cr.x * c + cu.x * n, ry = cr.y * c + cu.y * n, rz = cr.z * c + cu.z * n;
                         ux = cu.x * c - cr.x * n, uy = cu.y * c - cr.y * n, uz = cu.z * c - cr.z * n;
                     }
-                    const k = render3DInstanceSlot(quad, textureInfo), pos = p.pos;
+                    const k = render3DInstanceSlot(quad, textureInfo);
                     data = quad.instanceData;
                     data[k]    = rx * s; data[k+1]  = ry * s; data[k+2]  = rz * s; data[k+3]  = 0;
                     data[k+4]  = ux * s; data[k+5]  = uy * s; data[k+6]  = uz * s; data[k+7]  = 0;
                     data[k+8]  = cb.x;   data[k+9]  = cb.y;   data[k+10] = cb.z;   data[k+11] = 0;
-                    data[k+12] = pos.x;  data[k+13] = pos.y;  data[k+14] = pos.z;  data[k+15] = 1;
+                    data[k+12] = particles[p]; data[k+13] = particles[p+1]; data[k+14] = particles[p+2]; data[k+15] = 1;
                     if (!shadowPass)
                         data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a;
                     data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
                 }
-                else if (texture)
-                    r.drawBillboard(p.pos, size, texture, color, p.angle);
                 else
-                    r.drawSoftDisc(p.pos, s, color, undefined, 8); // no canvas for the dot, headless
+                {
+                    pos.x = particles[p], pos.y = particles[p+1], pos.z = particles[p+2];
+                    if (texture)
+                        r.drawBillboard(pos, size, texture, color, angle);
+                    else
+                        r.drawSoftDisc(pos, s, color, undefined, 8); // no canvas for the dot, headless
+                }
             }
         }
         finally

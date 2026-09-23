@@ -1259,6 +1259,8 @@ emitter.angleSpeed = .05; emitter.angleDamping = 1 // tumble each particle in th
                        // start, damped each frame; 0 is no spin, which is the default, and the 2D emitter takes these
                        // as constructor arguments instead
 emitter.emitParticle()  // fire one particle now, on top of the emit rate
+emitter.particleCount   // how many are alive; they live in emitter.particleData, 21 floats each, owned by the
+                        // emitter and drawn as one instanced batch of render3D.billboardMesh, so nothing else touches them
 
 // Trails - a ribbon through where the object has been, parent it to something that moves
 new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over
