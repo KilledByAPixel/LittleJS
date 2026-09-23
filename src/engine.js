@@ -245,31 +245,53 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     {
         if (headlessMode) return;
         
+        let w, h;
         if (canvasFixedSize.x)
         {
-            // clear canvas and set fixed size
-            mainCanvas.width  = canvasFixedSize.x;
-            mainCanvas.height = canvasFixedSize.y;
-            
+            // use fixed size
+            w = canvasFixedSize.x;
+            h = canvasFixedSize.y;
+
             // fit to window by adding space on top or bottom if necessary
             const aspect = innerWidth / innerHeight;
-            const fixedAspect = mainCanvas.width / mainCanvas.height;
+            const fixedAspect = w / h;
             (glCanvas||mainCanvas).style.width = mainCanvas.style.width = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
             (glCanvas||mainCanvas).style.height = mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
         }
         else
         {
-            // clear canvas and set size to same as window
-            mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
-            mainCanvas.height = min(innerHeight, canvasMaxSize.y);
+            // use same size as window
+            w = min(innerWidth,  canvasMaxSize.x);
+            h = min(innerHeight, canvasMaxSize.y);
         }
-        
-        // clear overlay canvas and set size
-        overlayCanvas.width  = mainCanvas.width;
-        overlayCanvas.height = mainCanvas.height;
+
+        // only assign the size when it actually changes
+        // - assigning width or height reallocates the canvas and makes the
+        //   browser rebuild the page, which was a real bottleneck in some
+        //   browsers when done every frame
+        // - assigning it also clears the canvas and resets the context, so
+        //   when the size is unchanged do both of those by hand instead
+        // - the engine never leaves a transform or blend mode set, it pairs
+        //   every save with a restore and every setAdditiveBlendMode with its
+        //   reset, so those two lines below exist only to keep a GAME that
+        //   leaves them set working the way it did when the resize cleared
+        //   them. Dropping them saves 36 bytes if you never do that
+        if (mainCanvas.width != w || mainCanvas.height != h)
+        {
+            mainCanvas.width  = overlayCanvas.width  = w;
+            mainCanvas.height = overlayCanvas.height = h;
+        }
+        else
+        {
+            mainContext.setTransform(1, 0, 0, 1, 0, 0);
+            overlayContext.setTransform(1, 0, 0, 1, 0, 0);
+            mainContext.globalCompositeOperation = overlayContext.globalCompositeOperation = 'source-over';
+            mainContext.clearRect(0, 0, w, h);
+            overlayContext.clearRect(0, 0, w, h);
+        }
 
         // save canvas size
-        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+        mainCanvasSize = vec2(w, h);
     }
 
     // wait for gameInit to load
