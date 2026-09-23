@@ -119,6 +119,19 @@ test('Matrix4 rotation applies roll, then pitch, then yaw', () =>
     nearVec(m.transformDirection(vec3(0, 0, 1)), 1, 0, 0);
 });
 
+test('buildMatrix and Matrix4.rotation write into a matrix given to them, resetting what a previous use left', () =>
+{
+    const out = new Matrix4;
+    const pos = vec3(3, -4, 5), scale = vec3(2, .5, 7), turn = vec3(.3, 1.1, -.7);
+    assert.equal(buildMatrix(pos, turn, scale, out), out);
+    assert.deepEqual([...out.m], [...buildMatrix(pos, turn, scale).m]);
+    // the same matrix reused for an unturned build, every element comes back fresh
+    assert.equal(buildMatrix(pos, undefined, scale, out), out);
+    assert.deepEqual([...out.m], [...buildMatrix(pos, undefined, scale).m]);
+    assert.equal(Matrix4.rotation(turn, out), out);
+    assert.deepEqual([...out.m], [...Matrix4.rotation(turn).m]);
+});
+
 test('buildMatrix treats a rotation of zero as no rotation at all', () =>
 {
     // it skips the six trig calls for an object that is not turned, which is most of a big

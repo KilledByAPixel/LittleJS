@@ -3513,7 +3513,7 @@ class InstancedMesh3D extends EngineObject3D
         const data = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS, m = matrix.m;
         data.set(m, k);
         render3DNormalMatrix3(m, data, k + 16);
-        this.radius = max(this.radius, hypot(m[12], m[13], m[14]) + (this.mesh.radius || 0) * render3DMaxScale(m));
+        this.radius = max(this.radius, (m[12]*m[12] + m[13]*m[13] + m[14]*m[14]) ** .5 + (this.mesh.radius || 0) * render3DMaxScale(m));
         this.markDirty(i);
     }
 

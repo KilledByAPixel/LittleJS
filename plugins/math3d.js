@@ -288,6 +288,7 @@ class Vector3
 
 // scratch for multiply, nothing keeps a reference to it
 const matrix4Scratch = new Float32Array(16);
+const matrix4Identity = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
 
 /**
  * 4x4 transform matrix for moving, rotating and scaling points in 3D
@@ -330,22 +331,23 @@ class Matrix4
         return r;
     }
 
-    /** Returns a new rotation matrix, rolled first, then pitched, then yawed
+    /** Returns a rotation matrix, rolled first, then pitched, then yawed
      *  @param {Vector3} euler - vec3(pitch, yaw, roll) in radians
+     *  @param {Matrix4} [matrix] - Written into instead of a new one, for a loop that builds many
      *  @return {Matrix4} */
-    static rotation(euler)
+    static rotation(euler, matrix=new Matrix4)
     {
         ASSERT_VECTOR3_VALID(euler);
         const cx = cos(euler.x), sx = sin(euler.x);
         const cy = cos(euler.y), sy = sin(euler.y);
         const cz = cos(euler.z), sz = sin(euler.z);
-        const r = new Matrix4;
-        const m = r.m;
-        // R = Ry * Rx * Rz written out, column major
-        m[0] = cy*cz + sy*sx*sz;  m[1] = cx*sz;  m[2]  = -sy*cz + cy*sx*sz;
-        m[4] = -cy*sz + sy*sx*cz; m[5] = cx*cz;  m[6]  = sy*sz + cy*sx*cz;
-        m[8] = sy*cx;             m[9] = -sx;    m[10] = cy*cx;
-        return r;
+        const m = matrix.m;
+        // R = Ry * Rx * Rz written out, column major, every element set so a reused matrix comes out clean
+        m[0] = cy*cz + sy*sx*sz;  m[1] = cx*sz;  m[2]  = -sy*cz + cy*sx*sz; m[3] = 0;
+        m[4] = -cy*sz + sy*sx*cz; m[5] = cx*cz;  m[6]  = sy*sz + cy*sx*cz;  m[7] = 0;
+        m[8] = sy*cx;             m[9] = -sx;    m[10] = cy*cx;             m[11] = 0;
+        m[12] = m[13] = m[14] = 0; m[15] = 1;
+        return matrix;
     }
 
     /** Returns a new scale matrix
@@ -553,15 +555,16 @@ class Matrix4
  * @return {Matrix4}
  * @memberof Math3D
  */
-function buildMatrix(pos, rotation, scale)
+function buildMatrix(pos, rotation, scale, matrix=new Matrix4)
 {
     ASSERT(!pos || isVector3(pos), 'pos must be a Vector3', pos);
     ASSERT(!scale || isVector3(scale), 'scale must be a Vector3', scale);
+    ASSERT(matrix instanceof Matrix4, 'the matrix to write into must be a Matrix4');
     // scale the rotation columns and drop the position in, instead of multiplying three matrices
     // an object that is not turned at all is most of a big scene, and identity is what the six
     // trig calls would have worked out to anyway
-    const turned = rotation && (rotation.x || rotation.y || rotation.z);
-    const matrix = turned ? Matrix4.rotation(rotation) : new Matrix4, m = matrix.m;
+    const turned = rotation && (rotation.x || rotation.y || rotation.z), m = matrix.m;
+    turned ? Matrix4.rotation(rotation, matrix) : m.set(matrix4Identity);
     if (scale)
     {
         m[0] *= scale.x; m[1] *= scale.x; m[2]  *= scale.x;

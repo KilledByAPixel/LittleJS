@@ -834,7 +834,7 @@ v.abs() v.floor() v.round() v.snap(grid) v.copy() v.set(x, y, z) v.setFrom(v2) v
 // Matrices - m.m is a column major Float32Array(16), the order WebGL wants, so it goes to a shader as is
 // euler is vec3(pitch, yaw, roll) in radians: applied to points as roll (Z), then pitch (X), then yaw (Y)
 // +pitch looks up, +yaw turns left for something facing -Z, +roll rolls counter clockwise around Z
-Matrix4.translation(v) Matrix4.rotation(euler) Matrix4.scaling(v)   // new Matrix4 or Matrix4.identity() is the identity
+Matrix4.translation(v) Matrix4.rotation(euler, out) Matrix4.scaling(v)   // new Matrix4 or Matrix4.identity() is the identity
 Matrix4.perspective(fov, aspect, near, far)    // fov is vertical, radians
 Matrix4.orthographic(left, right, bottom, top, near, far)
 Matrix4.lookAt(eye, target, up)                // transform of an object at eye facing target, invert it for the view
@@ -843,7 +843,8 @@ m.multiply(m2)                 // m = m * m2, m2 is applied to points first
 m.translate(v) m.rotate(euler) m.scale(v)      // append a transform, returns self
 m.invert() m.transpose()       // in place, return self
 m.copy() m.transformPoint(v) m.transformDirection(v) m.getTranslation() // or v.transform(m), v.transformDirection(m)
-buildMatrix(pos, rotation, scale)              // translate * rotate * scale, any arg optional
+buildMatrix(pos, rotation, scale, out)         // translate * rotate * scale, any arg optional; out is written into
+                                               // instead of a new matrix, for a loop that builds many each frame
 
 // Collision - boxes are axis aligned and centered with full size, spheres and cylinders take a radius, cylinders stand
 // on Y

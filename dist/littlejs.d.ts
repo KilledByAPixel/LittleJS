@@ -6431,10 +6431,11 @@ declare module "littlejsengine" {
          *  @param {Vector3} v
          *  @return {Matrix4} */
         static translation(v: Vector3): Matrix4;
-        /** Returns a new rotation matrix, rolled first, then pitched, then yawed
+        /** Returns a rotation matrix, rolled first, then pitched, then yawed
          *  @param {Vector3} euler - vec3(pitch, yaw, roll) in radians
+         *  @param {Matrix4} [matrix] - Written into instead of a new one, for a loop that builds many
          *  @return {Matrix4} */
-        static rotation(euler: Vector3): Matrix4;
+        static rotation(euler: Vector3, matrix?: Matrix4): Matrix4;
         /** Returns a new scale matrix
          *  @param {Vector3} v
          *  @return {Matrix4} */
@@ -6543,7 +6544,7 @@ declare module "littlejsengine" {
      * @return {Matrix4}
      * @memberof Math3D
      */
-    export function buildMatrix(pos?: Vector3, rotation?: Vector3, scale?: Vector3): Matrix4;
+    export function buildMatrix(pos?: Vector3, rotation?: Vector3, scale?: Vector3, matrix?: Matrix4): Matrix4;
     /**
      * Check if a point is inside an axis aligned box, boundary is inclusive
      * @param {Vector3} point
