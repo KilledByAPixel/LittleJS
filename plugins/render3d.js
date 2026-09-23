@@ -255,6 +255,9 @@ function render3DFlushInstances(only)
 }
 
 // draw a mesh count times from a buffer that holds the per instance values, under a draw state
+// the arrays are turned on with their instance divisor for this one call and both are turned off after: a single
+// draw reads these slots as constant attributes, and in Firefox a draw that reads a constant through a slot whose
+// divisor is set leaves the next batch on that slot reading the wrong values
 function render3DDrawInstanced(mesh, buffer, count, textureInfo, state)
 {
     const gl = glContext;
@@ -263,12 +266,16 @@ function render3DDrawInstanced(mesh, buffer, count, textureInfo, state)
     {
         gl.vertexAttribPointer(location, size, gl.FLOAT, false, RENDER3D_INSTANCE_BYTES, offset);
         gl.enableVertexAttribArray(location);
+        gl.vertexAttribDivisor(location, 1);
     }
     render3DSetDrawUniforms(RENDER3D_IDENTITY, textureInfo, WHITE, RENDER3D_FULL_UV_RECT, state);
     render3DBindMesh(mesh);
     gl.drawElementsInstanced(gl.TRIANGLES, mesh.bufferCount, mesh.indexType, 0, count);
     for (const [location] of RENDER3D_INSTANCE_ATTRIBS)
+    {
         gl.disableVertexAttribArray(location);
+        gl.vertexAttribDivisor(location, 0);
+    }
     ++drawCount;
     primitiveCount += mesh.bufferCount / 3 * count;
 }
@@ -1500,12 +1507,11 @@ function render3DInitGL()
     );
 
     // the vertex array object with the attributes enabled once, pointers are set per buffer by render3DBindVertexBuffer
+    // the per instance attributes get their divisor only while a batch has them on, see render3DDrawInstanced
     r.vao = gl.createVertexArray();
     gl.bindVertexArray(r.vao);
     for (const [location] of RENDER3D_ATTRIBS)
         gl.enableVertexAttribArray(location);
-    for (const [location] of RENDER3D_INSTANCE_ATTRIBS)
-        gl.vertexAttribDivisor(location, 1); // one value per instance whenever a batch turns these arrays on
 
     // the stream buffer
     r.streamBuffer = gl.createBuffer();

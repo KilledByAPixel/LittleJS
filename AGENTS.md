@@ -184,6 +184,7 @@ drawEllipse(pos, size, color)           // filled ellipse
 - **Files are stored with LF endings** - with `core.autocrlf` on, a working copy may be CRLF, so an edit script normalizes `
 ` to `
 ` before matching and writes LF back, or the whole file shows as changed
+- **An instance divisor stays on a slot only while its array is enabled** - in Firefox, a plain draw that reads a constant attribute through a slot whose divisor is set makes the next instanced draw on that slot read garbage; Chrome does not care, so test the 3D plugin in Firefox too. `render3DDrawInstanced` sets the divisors with the arrays and clears both after
 - **A Shader on a 2D untextured draw does nothing** - `drawRect` carries its color in the additive slot with a zero tint, so the snippet's output multiplies away; draw a white tile instead
 
 ## Developer workflows
@@ -202,7 +203,7 @@ npm test
 - [test/setup.mjs](test/setup.mjs) stubs minimal DOM and enables headless mode. Most tests shouldn't call `engineInit` or `render()`, or assume `time` advances — construct objects directly instead.
 - To test time-driven logic (timers, cooldowns, spawns), call `setEngineManualStep(true)` before `engineInit`, then advance with `engineStep(frames)`. See [test/engineStep.test.mjs](test/engineStep.test.mjs). Call `engineInit` once per file at module scope: `frame` and `time` are module globals and monotonic, and `node --test` gives each test file its own process.
 - Zero test dependencies — uses Node's built-in `node --test`. Match the style in [test/](test/) when adding new ones.
-- [test/render3d.test.mjs](test/render3d.test.mjs) covers the 3D plugins headless: builder geometry and winding, draw state and batching decisions, collision and cameras. Nothing that needs a GPU (culling, lighting, a compiled shader) can be tested there; check that in headless Chrome with SwiftShader (`--use-angle=swiftshader --enable-unsafe-swiftshader`) through playwright-core, and never open a visible browser window. Those harnesses live under `.claude/` and are not part of the repo.
+- [test/render3d.test.mjs](test/render3d.test.mjs) covers the 3D plugins headless: builder geometry and winding, draw state and batching decisions, collision and cameras. Nothing that needs a GPU (culling, lighting, a compiled shader) can be tested there; check that in headless Chrome with SwiftShader (`--use-angle=swiftshader --enable-unsafe-swiftshader`) through playwright-core, and never open a visible browser window. Firefox renders WebGL differently enough to matter, and its `--headless` mode runs pages without a window too, though its screenshot leaves the WebGL canvas out; have the page read its own pixels with `readPixels` and post them to a local server. Those harnesses live under `.claude/` and are not part of the repo.
 - CI runs build + test on every push/PR ([.github/workflows/test.yml](.github/workflows/test.yml)).
 
 ### Documentation
