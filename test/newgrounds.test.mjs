@@ -26,14 +26,15 @@ test('NewgroundsPlugin encrypts a call with WebCrypto as AES-128 CBC, the iv fir
     assert.notEqual(again, secure, 'a fresh iv every time');
 });
 
-test('a NewgroundsMedal unlocks locally and posts nothing when not logged in', () =>
+test('a NewgroundsMedal unlocks locally and posts nothing when not logged in', async () =>
 {
     let fetches = 0;
     globalThis.fetch = async ()=> { ++fetches; return { text: async ()=> '' }; };
     const medal = new NewgroundsMedal(7, 'Seven');
     medalsInit('NG Logged Out');
-    medal.unlock();
-    assert.equal(medal.unlocked, true);
+    const unlocked = medal.unlock();
+    assert.equal(medal.unlocked, true, 'right away');
+    assert.equal(await unlocked, true, 'and the promise says so');
     assert.equal(fetches, 0, 'the gateway is not asked without a session');
     assert.equal(JSON.parse(globalThis.localStorage['NG Logged Out'])['7'].unlocked, true, 'saved locally');
 });

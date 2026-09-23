@@ -35,32 +35,31 @@ class NewgroundsMedal extends Medal
     constructor(id, name, description, icon, src)
     { super(id, name, description, icon, src); }
 
-    /** Unlocks a medal if not already unlocked, once newgrounds confirms it when logged in */
+    /** Unlocks a medal if not already unlocked, once newgrounds confirms it when logged in
+     *  - The promise is optional, for when a game wants to know the outcome
+     *  @return {Promise<boolean>} - Whether the medal is unlocked, once the server has answered when logged in */
     unlock()
     {
-        if (medalsPreventUnlock || this.unlocked) return;
-        if (!newgrounds || !newgrounds.session_id)
-        {
-            // logged out, the local save holds the medal
-            super.unlock();
-            return;
-        }
+        if (medalsPreventUnlock || this.unlocked || !newgrounds || !newgrounds.session_id)
+            return super.unlock(); // logged out, the local save holds the medal
 
         // logged in, newgrounds holds the medal: it unlocks once the server confirms, one request at a time
         const pending = newgrounds.pendingUnlocks;
-        if (pending.has(this)) return;
-        pending.add(this);
-        newgrounds.unlockMedal(this.id).then(response=>
+        if (pending.has(this))
+            return pending.get(this);
+        const request = newgrounds.unlockMedal(this.id).then(response=>
         {
             if (!response?.result?.data?.medal?.unlocked)
             {
                 // still pending, the keep alive ping resends it
                 debugMedals && LOG('newgrounds did not unlock medal', this.id, response?.result?.error || response?.error);
-                return;
+                return false;
             }
             pending.delete(this);
-            super.unlock();
+            return super.unlock();
         });
+        pending.set(this, request);
+        return request;
     }
 }
 
@@ -99,9 +98,9 @@ class NewgroundsPlugin
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         this.scoreboards = [];
 
-        /** @property {Set<NewgroundsMedal>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping
-         *  @type {Set<NewgroundsMedal>} */
-        this.pendingUnlocks = new Set;
+        /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping, each with the promise of its request
+         *  @type {Map<NewgroundsMedal, Promise<boolean>>} */
+        this.pendingUnlocks = new Map;
 
         // get session id from url search params
         /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
@@ -126,7 +125,7 @@ class NewgroundsPlugin
         {
             this.call('Gateway.ping', 0);
             if (medalsPreventUnlock) return; // they stay pending until unlocks are allowed again
-            const pending = [...this.pendingUnlocks];
+            const pending = [...this.pendingUnlocks.keys()];
             this.pendingUnlocks.clear();
             for (const medal of pending)
                 medal.unlock();

@@ -3826,8 +3826,10 @@ declare module "littlejsengine" {
         unlocked: boolean;
         /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any */
         image: HTMLImageElement;
-        /** Unlocks a medal if not already unlocked */
-        unlock(): void;
+        /** Unlocks a medal if not already unlocked
+         *  - The promise is optional, for when a game wants to know the outcome
+         *  @return {Promise<boolean>} - Whether the medal is unlocked, right away unless a service like Newgrounds has to confirm */
+        unlock(): Promise<boolean>;
         /** Render a medal
          *  @param {number} [hidePercent] - How much to slide the medal off screen
          */
@@ -3879,9 +3881,9 @@ declare module "littlejsengine" {
         medals: any[];
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         scoreboards: any[];
-        /** @property {Set<NewgroundsMedal>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping
-         *  @type {Set<NewgroundsMedal>} */
-        pendingUnlocks: Set<NewgroundsMedal>;
+        /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping, each with the promise of its request
+         *  @type {Map<NewgroundsMedal, Promise<boolean>>} */
+        pendingUnlocks: Map<NewgroundsMedal, Promise<boolean>>;
         /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
         session_id: string;
         /** @property {Promise<NewgroundsPlugin>} - Resolves once the medals and scoreboards have been fetched, or right away when not logged in */

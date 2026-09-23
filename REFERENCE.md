@@ -1450,7 +1450,8 @@ new Box2dGearJoint(jointA, jointB, ratio)
 ```javascript
 // Medals
 new Medal(id, name, description='', icon='🏆', src)  // src is optional image url
-medal.unlock()                       // Mark unlocked, save, and queue the popup
+medal.unlock()                       // Mark unlocked, save, and queue the popup; the promise it returns is optional
+                                     // and resolves with whether the medal is unlocked, right away unless a server has to confirm
 medal.unlocked                       // True after unlock
 
 medals                               // Global { [id]: Medal } map
@@ -1473,9 +1474,10 @@ newgrounds.unlockMedal(id)           // Server-side unlock; every call is a fetc
 newgrounds.postScore(id, value)      // Submit to a scoreboard
 await newgrounds.getScores(id, user, social, skip, limit)
 newgrounds.logView()                 // Track a page view
-newgrounds.pendingUnlocks            // Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping
-new NewgroundsMedal(id, name, description, icon) // when logged in, unlock() asks the server and the medal only
-                                     // unlocks and shows once it confirms, so unlocked is still false on return
+newgrounds.pendingUnlocks            // Map of the medals sent to unlock that the server has not confirmed yet to the promise of
+                                     // each request; they are resent on the keep alive ping
+new NewgroundsMedal(id, name, description, icon) // when logged in, unlock() asks the server and the medal only unlocks and
+                                     // shows once it confirms, so unlocked is still false on return; await the promise for the outcome
 ```
 
 ## LittleJS Drawing Utilities

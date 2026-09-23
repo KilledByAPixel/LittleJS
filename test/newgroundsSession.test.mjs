@@ -48,53 +48,58 @@ test('when logged in the server holds the medals and the local save is left alon
     assert.equal(m2.unlocked, true, 'the server list is the state');
     assert.equal(m1.description, 'from the server (5)');
     assert.equal(globalThis.localStorage[SAVE], savedBefore, 'the local save is untouched');
+    assert.equal(await m2.unlock(), true, 'an unlocked medal answers right away');
 
     // an unlock only lands once the server confirms it, and asking every frame sends one request
     replies['Medal.unlock'] = { data: { medal: { id: 1, unlocked: true }, medal_score: 5 } };
     let before = unlockCalls();
-    m1.unlock();
-    m1.unlock();
-    m1.unlock();
+    const first = m1.unlock();
+    assert.equal(m1.unlock(), first, 'the same promise while the request is out');
+    assert.equal(m1.unlock(), first);
     assert.equal(m1.unlocked, false, 'not yet');
-    assert.deepEqual([...plugin.pendingUnlocks], [m1], 'pending while the request is out');
-    await flush();
-    assert.equal(m1.unlocked, true, 'confirmed');
+    assert.deepEqual([...plugin.pendingUnlocks.keys()], [m1], 'pending while the request is out');
+    assert.equal(plugin.pendingUnlocks.get(m1), first);
+    assert.equal(await first, true, 'confirmed');
+    assert.equal(m1.unlocked, true);
     assert.equal(unlockCalls() - before, 1, 'one request');
     assert.equal(plugin.pendingUnlocks.size, 0);
     assert.equal(globalThis.localStorage[SAVE], savedBefore, 'still untouched');
 
     // a failed call keeps the medal locked and pending, and the keep alive resends it
     replies['Medal.unlock'] = new Error('offline');
-    m3.unlock();
-    await flush();
+    const failed = m3.unlock();
+    assert.equal(await failed, false, 'the outcome of the failed request');
     assert.equal(m3.unlocked, false);
-    assert.deepEqual([...plugin.pendingUnlocks], [m3]);
+    assert.equal(m3.unlock(), failed, 'the failed request stands until the keep alive resends');
+    assert.deepEqual([...plugin.pendingUnlocks.keys()], [m3]);
     before = calls.length;
     replies['Medal.unlock'] = { data: { medal: { id: 3, unlocked: true }, medal_score: 5 } };
     keepAlive();
-    await flush();
+    const resent = plugin.pendingUnlocks.get(m3);
+    assert.notEqual(resent, failed, 'a fresh request');
+    assert.equal(await resent, true, 'resent and confirmed');
     assert.deepEqual(calls.slice(before), ['Gateway.ping', 'Medal.unlock']);
-    assert.equal(m3.unlocked, true, 'resent and confirmed');
+    assert.equal(m3.unlocked, true);
     assert.equal(plugin.pendingUnlocks.size, 0);
 
     // a server refusal stays pending too, and is not resent while unlocks are prevented
     replies['Medal.unlock'] = { success: false, error: { message: 'no such medal', code: 1 } };
     const m4 = new NewgroundsMedal(4, 'Four');
-    m4.unlock();
-    await flush();
+    assert.equal(await m4.unlock(), false, 'refused');
     assert.equal(m4.unlocked, false);
-    assert.deepEqual([...plugin.pendingUnlocks], [m4]);
+    assert.deepEqual([...plugin.pendingUnlocks.keys()], [m4]);
     setMedalsPreventUnlock(true);
+    assert.equal(await m4.unlock(), false, 'prevented');
     before = unlockCalls();
     keepAlive();
     await flush();
     assert.equal(unlockCalls(), before, 'not resent');
-    assert.deepEqual([...plugin.pendingUnlocks], [m4], 'still pending');
+    assert.deepEqual([...plugin.pendingUnlocks.keys()], [m4], 'still pending');
     setMedalsPreventUnlock(false);
     keepAlive();
     await flush();
     assert.equal(unlockCalls(), before + 1, 'resent once unlocks are allowed');
-    assert.deepEqual([...plugin.pendingUnlocks], [m4], 'refused again');
+    assert.deepEqual([...plugin.pendingUnlocks.keys()], [m4], 'refused again');
 
     // a later medalsInit skips the local save as well, and a reset does not write it
     globalThis.localStorage['NG Other'] = JSON.stringify({ '4': { name: 'Four', unlocked: true } });

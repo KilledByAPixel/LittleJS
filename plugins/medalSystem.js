@@ -191,15 +191,19 @@ class Medal
         medals[id] = this;
     }
 
-    /** Unlocks a medal if not already unlocked */
+    /** Unlocks a medal if not already unlocked
+     *  - The promise is optional, for when a game wants to know the outcome
+     *  @return {Promise<boolean>} - Whether the medal is unlocked, right away unless a service like Newgrounds has to confirm */
     unlock()
     {
-        if (medalsPreventUnlock || this.unlocked) return;
-
-        ASSERT(medalsSaveName, 'save name must be set');
-        this.unlocked = true;
-        medalsSave();
-        medalsDisplayQueue.push(this);
+        if (!medalsPreventUnlock && !this.unlocked)
+        {
+            ASSERT(medalsSaveName, 'save name must be set');
+            this.unlocked = true;
+            medalsSave();
+            medalsDisplayQueue.push(this);
+        }
+        return Promise.resolve(this.unlocked);
     }
 
     /** Render a medal

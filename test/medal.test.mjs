@@ -1,6 +1,6 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Medal, medals, medalsInit, medalsReset } from '../dist/littlejs.esm.js';
+import { Medal, medals, medalsInit, medalsReset, setMedalsPreventUnlock } from '../dist/littlejs.esm.js';
 
 // Use a unique id range per test to avoid the global `medals` registry
 // colliding with tests in smoke.test.mjs (which uses ids 100, 101).
@@ -98,15 +98,28 @@ test('unlock sets the flag and writes the full object', () =>
     assert.equal(stored['1'].unlocked, false);
 });
 
-test('unlock is a no-op when already unlocked', () =>
+test('unlock is a no-op when already unlocked', async () =>
 {
     const m = new Medal(1, 'One', '', '🏆');
     medalsInit(SAVE);
-    m.unlock();
+    assert.equal(await m.unlock(), true, 'the optional promise resolves right away');
     // hand-corrupt storage so we can detect a second write
     globalThis.localStorage[SAVE] = 'SENTINEL';
-    m.unlock();
+    assert.equal(await m.unlock(), true, 'still unlocked');
     assert.equal(globalThis.localStorage[SAVE], 'SENTINEL');
+});
+
+test('unlock resolves false when unlocks are prevented', async () =>
+{
+    const m = new Medal(1, 'One', '', '🏆');
+    medalsInit(SAVE);
+    setMedalsPreventUnlock(true);
+    try
+    {
+        assert.equal(await m.unlock(), false);
+        assert.equal(m.unlocked, false);
+    }
+    finally { setMedalsPreventUnlock(false); }
 });
 
 test('medalsReset clears unlocked flags and persists the catalog', () =>
