@@ -7234,6 +7234,11 @@ declare module "littlejsengine" {
          *  the mesh keeps its GPU layout and a dirty upload only rewrites the vertices into the buffer it has; the strip
          *  must keep the same points in the same order, a new point count asserts */
         dynamicDraw: boolean;
+        /** @property {Int32Array|undefined} - Which strip entries are one vertex, set by a builder that knows, one whole number
+         *  per entry with equal numbers meaning the same vertex; upload skips its search for them, then drops the keys, since
+         *  an edit after that may tell the entries apart; adding geometry or recomputing normals drops them too
+         *  @type {Int32Array|undefined} */
+        vertexKeys: Int32Array | undefined;
         vertexLayout: any;
         instanceCount: number;
         instanceData: any;

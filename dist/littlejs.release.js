@@ -20055,6 +20055,21 @@ function render3DWriteVertex(floats, ints, j, x, y, z, n, u, v, rgba)
     ints[j+8] = rgba;
 }
 
+// the triangles of a strip of count entries as an index list, given which vertex each entry maps to and which place
+// it is at: the strip's triangle i is (i-2, i-1, i), its odd ones read the other way as the GPU reads a strip, and a
+// triangle with two corners in one place has no area, it is a join between pieces or a sliver at a pole, and is left out
+function render3DStripTriangles(count, remap, place)
+{
+    const indices = [];
+    for (let i = 2; i < count; ++i)
+    {
+        const a = i & 1 ? i - 1 : i - 2, b = i & 1 ? i - 2 : i - 1;
+        if (place[a] != place[b] && place[b] != place[i] && place[a] != place[i])
+            indices.push(remap[a], remap[b], remap[i]);
+    }
+    return indices;
+}
+
 // a mesh's packed vertex data for the GPU, one vertex per entry of a layout, which is the strip index of each
 function render3DMeshVertexData(mesh, vertices)
 {
@@ -20145,6 +20160,11 @@ class Mesh
          *  the mesh keeps its GPU layout and a dirty upload only rewrites the vertices into the buffer it has; the strip
          *  must keep the same points in the same order, a new point count asserts */
         this.dynamicDraw = false;
+        /** @property {Int32Array|undefined} - Which strip entries are one vertex, set by a builder that knows, one whole number
+         *  per entry with equal numbers meaning the same vertex; upload skips its search for them, then drops the keys, since
+         *  an edit after that may tell the entries apart; adding geometry or recomputing normals drops them too
+         *  @type {Int32Array|undefined} */
+        this.vertexKeys = undefined;
         this.vertexLayout = undefined; // the strip index of each GPU vertex and the point count of the last upload, for a dynamicDraw mesh
         this.instanceCount = 0; // draws waiting in this mesh's batch, with their values, texture and draw state
         this.instanceData = undefined;
@@ -20175,6 +20195,7 @@ class Mesh
             this.uvs.push(uv);
             this.colors.push(c);
         });
+        this.vertexKeys = undefined; // the new entries have no keys
         this.dirty = true;
         return this;
     }
@@ -20210,6 +20231,7 @@ class Mesh
             this.colors.push((mesh.colors[i] || WHITE).multiply(color));
         }
         this.doubleSided ||= mesh.doubleSided; // an open part leaves the whole mesh open
+        this.vertexKeys = undefined; // the new entries have no keys
         this.dirty = true;
         return this;
     }
@@ -20355,6 +20377,7 @@ class Mesh
             faceNormals.forEach((f, i)=> f && (normals[i] = normals[i+1] = normals[i+2] = f));
 
         this.normals = normals;
+        this.vertexKeys = undefined; // flat normals tell entries at one place apart
         this.dirty = true;
         return this;
     }
@@ -20382,6 +20405,7 @@ class Mesh
         this.dispose();
         const {vertices, indices} = this.getTriangles(), count = vertices.length, wide = count > 65535;
         this.vertexLayout = this.dynamicDraw ? {vertices, pointCount: this.points.length} : undefined;
+        this.vertexKeys = undefined; // used once: an edit after this may tell entries apart
         this.buffer = gl.createBuffer();
         this.indexBuffer = gl.createBuffer();
         this.bufferCount = indices.length;
@@ -20404,11 +20428,31 @@ class Mesh
      *    vertex; indices are the triangles, three per triangle, into vertices */
     getTriangles()
     {
+        const count = this.points.length, vertices = [];
+        const remap = new Int32Array(count), place = new Int32Array(count), keys = this.vertexKeys;
+        if (keys && keys.length === count)
+        {
+            // a builder said which entries are one vertex: the first entry with a key stands for every entry with it,
+            // and is their place, so nothing is searched
+            const first = new Int32Array(count).fill(-1);
+            for (let i = 0; i < count; ++i)
+            {
+                const key = keys[i];
+                false&&ASSERT(key >= 0 && key < count, 'vertexKeys must be whole numbers below the entry count', key);
+                const j = first[key];
+                if (j < 0)
+                    first[key] = i, remap[i] = vertices.length, vertices.push(i);
+                else
+                    remap[i] = remap[j];
+                place[i] = first[key];
+            }
+            return {vertices, indices: render3DStripTriangles(count, remap, place)};
+        }
+
         // each vertex as nine whole numbers, its values in millionths and its color, so vertices hash and compare as
         // numbers; a hash table over all nine finds the distinct vertices and one over the first three the places,
         // each slot holding a vertex index plus one and a taken slot moving on to the next
-        const count = this.points.length, values = new Float64Array(count * 9), vertices = [];
-        const remap = new Int32Array(count), place = new Int32Array(count);
+        const values = new Float64Array(count * 9);
         let size = 1;
         while (size < count * 2) size *= 2;
         const mask = size - 1, seen = new Int32Array(size), places = new Int32Array(size);
@@ -20443,16 +20487,7 @@ class Mesh
                 if (same) { remap[i] = remap[o]; break; }
             }
         }
-        const indices = [];
-        for (let i = 2; i < count; ++i)
-        {
-            // the strip's triangle i, its odd ones read the other way as the GPU reads a strip; a triangle with two
-            // corners in one place has no area, it is a join between pieces or a sliver at a pole, and is left out
-            const a = i & 1 ? i - 1 : i - 2, b = i & 1 ? i - 2 : i - 1;
-            if (place[a] != place[b] && place[b] != place[i] && place[a] != place[i])
-                indices.push(remap[a], remap[b], remap[i]);
-        }
-        return {vertices, indices};
+        return {vertices, indices: render3DStripTriangles(count, remap, place)};
     }
 
     /** Draw the mesh with the current draw state, batched with its other uses in the opaque stage
@@ -20830,6 +20865,21 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
                     [above.uvs[i], below.uvs[i], below.uvs[i+1], above.uvs[i+1]]);
         }
         above = below;
+    }
+    if (smooth)
+    {
+        // the grid knows which strip entries are one vertex, each shared by the rows above and below it and by the
+        // repeats at the ends of its ribbons, so the upload of a big terrain skips searching millions of entries
+        const n = 2 * (segmentsX + 1) + 2, keys = mesh.vertexKeys = new Int32Array(mesh.points.length);
+        const id = (i, j)=> j * (segmentsX + 1) + i;
+        for (let j = 0; j < segmentsZ; ++j)
+        {
+            const start = j * n;
+            keys[start] = id(0, j); // the leading repeat
+            for (let i = 0; i <= segmentsX; ++i)
+                keys[start + 1 + 2*i] = id(i, j), keys[start + 2 + 2*i] = id(i, j + 1);
+            keys[start + n - 1] = id(segmentsX, j + 1); // the trailing repeat
+        }
     }
     mesh.doubleSided = true; // a sheet, seen from both sides; terrain seen only from above can turn it off
     return mesh;

@@ -2567,6 +2567,24 @@ test('getTriangles merges the shared vertices of a sphere and keeps only its rea
     assert.deepEqual(new Mesh().getTriangles(), { vertices: [], indices: [] });
 });
 
+test('a smooth buildGrid says which strip entries are one vertex, and getTriangles gets the same triangles from that as from its search', () =>
+{
+    for (const [size, segments] of [[vec2(4, 2), vec2(3, 2)], [vec2(1), 1], [vec2(5), vec2(1, 4)]])
+    {
+        const mesh = buildGrid(size, segments, (x, z)=> rgb(x, z, 0), (x, z)=> x * z, true);
+        assert.ok(mesh.vertexKeys instanceof Int32Array && mesh.vertexKeys.length === mesh.points.length, 'keys, one per strip entry');
+        const keyed = mesh.getTriangles();
+        mesh.vertexKeys = undefined;
+        const searched = mesh.getTriangles();
+        assert.deepEqual(keyed, searched, 'the keys must say exactly what the search finds');
+    }
+    assert.equal(buildGrid(vec2(2), 2, undefined, undefined, false).vertexKeys, undefined, 'a flat grid shares vertices only where its face normals happen to match, so it keeps the search');
+    // adding geometry drops the keys, since the new entries have none
+    const grown = buildGrid(vec2(2), 2, undefined, undefined, true);
+    grown.addStrip([vec3(), vec3(1), vec3(2)]);
+    assert.equal(grown.vertexKeys, undefined);
+});
+
 test('getTriangles compares every vertex value to a millionth, so two a hair apart are one vertex', () =>
 {
     const mesh = new Mesh, a = vec3(0, 0, 0), b = vec3(1, 0, 0), c = vec3(0, 1, 0);
