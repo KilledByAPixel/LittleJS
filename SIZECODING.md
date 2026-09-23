@@ -706,7 +706,13 @@ wrong way. What is left at that point is the feature price list
   helpers. **Rewrite the calls to `false&&ASSERT(...)` in the build**, so
   they are dead at parse time and the minifier drops them; count what you
   rewrote and fail the build if any call was left, because the ones that
-  slip through are invisible and permanent.
+  slip through are invisible and permanent. The LittleJS JS13K starter's
+  build does this, so on that branch it is already handled. Check the
+  blast radius before extending such a guard to every empty function: on
+  that engine the debug draw calls were all inside `if (debugRaycast)`
+  style blocks that already fold away, so guarding them too was byte
+  identical, and a `false&&` in front of a function whose return value is
+  used would change what the expression evaluates to.
 - **Dead code is not quite free.** A debug-only edit that shipped nothing
   moved the zip +3: the post-minify output was the same size but one live
   statement was shaped differently (a comma became a semicolon), because

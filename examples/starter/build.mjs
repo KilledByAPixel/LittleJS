@@ -171,6 +171,13 @@ function Build(outputFile, files=[], buildSteps=[])
 //   shipped and ran on every addChild
 // - "false&&" makes the whole thing dead at parse time, so nothing is
 //   evaluated and the minifiers drop it
+// - ASSERT and LOG are the only ones that need this. Guarding every other
+//   empty function in engineRelease.js as well, plus the ASSERT_*_VALID
+//   wrappers, was verified to produce byte identical minified output: the
+//   debug calls carrying real arguments all sit inside "if (debugRaycast)"
+//   style blocks that fold away, and the ungated ones take no arguments.
+//   Do not extend this list without measuring, and note that some of those
+//   functions have return values that "false&&" would change.
 function guardAsserts(buffer)
 {
     // every mention that is not a property access, so "foo.LOG(" is skipped
