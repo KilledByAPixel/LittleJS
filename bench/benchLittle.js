@@ -3,7 +3,7 @@
 // perFrame runs once per rendered frame just before the 3D pass, which is where per frame work belongs: the fixed
 // timestep runs gameUpdate several times a frame below 60 fps, so a loop there would count several times over
 // after 60 warm up renders the next 300 are timed and window.benchResult is set; benchExtra adds fields to it
-let benchName, benchN, benchFrames = 0, benchStart, benchFrameMs, benchRendered, benchPerFrameMs = 0, benchPhaseFrames = 0;
+let benchName, benchN, benchFrames = 0, benchStart, benchFrameMs, benchRendered, benchPerFrameMs = 0, benchPhaseFrames = 0, benchUpdates = 0;
 const benchExtra = {};
 function benchInit(name, n, perFrame)
 {
@@ -16,7 +16,9 @@ function benchInit(name, n, perFrame)
         gpuTimer.end(benchRendered);
         gpuTimer.gl && gpuTimer.poll();
     });
-    engineAddPlugin(undefined, undefined, undefined, undefined, ()=>
+    // the engine's fixed timestep runs gameUpdate up to three times a rendered frame to catch up below 60 fps, so the
+    // result says how many updates a frame got: 1 at 60 fps, 3 on a page that is well behind
+    engineAddPlugin(()=> { benchStart && !benchFrameMs && ++benchUpdates; }, undefined, undefined, undefined, ()=>
     {
         const t = performance.now();
         perFrame?.();
@@ -39,7 +41,8 @@ function benchFrame()
     if (benchFrameMs && !window.benchResult && (gpuTimer.done || !gpuTimer.supported))
     {
         const r = window.benchResult = { engine: benchName, n: benchN, ms: +benchFrameMs.toFixed(2), fps: +(1000 / benchFrameMs).toFixed(1),
-            gpu: gpuTimer.supported ? gpuTimer.ms : 'n/a', perFrame: +(benchPerFrameMs / (benchPhaseFrames || 1)).toFixed(2), ...benchExtra };
+            gpu: gpuTimer.supported ? gpuTimer.ms : 'n/a', perFrame: +(benchPerFrameMs / (benchPhaseFrames || 1)).toFixed(2),
+            updates: +(benchUpdates / 300).toFixed(2), ...benchExtra };
         console.log(r.logged = `${benchName} ${benchN}: ${r.ms} ms frame, ${r.fps} fps, ${r.gpu} ms gpu`);
     }
     window.benchResult && drawTextScreen(window.benchResult.logged, vec2(mainCanvasSize.x / 2, 30), 24, BLACK, 0);

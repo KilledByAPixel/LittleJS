@@ -36,6 +36,9 @@ say nothing about real hardware. `profile.mjs` prints where the JS time goes.
   frame is at the refresh rate: when the CPU is the bottleneck the GPU idles between commands and that idle
   counts, so a CPU bound page shows a large gpu number that is really CPU time.
 - **js** or **update** and **render** are CPU phases measured in the page.
+- **updates** is how many engine updates each rendered frame got on a LittleJS page. The fixed timestep runs
+  gameUpdate up to three times a frame to catch up below 60 fps, so a page that reads 3 is doing three times the
+  update work per frame that it would at 60 fps; compare object counts where it still reads 1.
 - Run a page twice. The spread between two runs of the same page is the noise floor; a difference smaller than
   that means nothing.
 
