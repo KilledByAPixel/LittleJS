@@ -18050,15 +18050,14 @@ let render3D;
 const RENDER3D_VERTEX_FLOATS = 9;
 const RENDER3D_VERTEX_BYTES = RENDER3D_VERTEX_FLOATS * 4;
 
-// per draw values the shaders read as vertex attributes: the model matrix columns (4-7), the normal matrix columns
-// (8-10), the tint (11) and the uv rect (12); constants for one draw, one per instance for a batch
-const RENDER3D_INSTANCE_FLOATS = 33;
+// per draw values the shaders read as vertex attributes: the model matrix columns (4-7), the tint (11) and the
+// uv rect (12); constants for one draw, one per instance for a batch; the shader derives the normal matrix
+const RENDER3D_INSTANCE_FLOATS = 24; // the matrix, the tint and the uv rect; the shader derives the normal matrix
 const RENDER3D_INSTANCE_BYTES = RENDER3D_INSTANCE_FLOATS * 4;
-const RENDER3D_INSTANCE_ATTRIBS = [[4, 4, 0], [5, 4, 16], [6, 4, 32], [7, 4, 48], [8, 3, 64], [9, 3, 76], [10, 3, 88], [11, 4, 100], [12, 4, 116]];
+const RENDER3D_INSTANCE_ATTRIBS = [[4, 4, 0], [5, 4, 16], [6, 4, 32], [7, 4, 48], [11, 4, 64], [12, 4, 80]];
 const RENDER3D_VERTEX_INPUTS =
     'layout(location=0) in vec3 p;layout(location=1) in vec3 n;layout(location=2) in vec2 t;layout(location=3) in vec4 c;' +
     'layout(location=4) in vec4 m0;layout(location=5) in vec4 m1;layout(location=6) in vec4 m2;layout(location=7) in vec4 m3;' +
-    'layout(location=8) in vec3 n0;layout(location=9) in vec3 n1;layout(location=10) in vec3 n2;' +
     'layout(location=11) in vec4 tint;layout(location=12) in vec4 uvRect;';
 const RENDER3D_MAX_STREAM_VERTS = 32768;
 const RENDER3D_MAX_LIGHTS = 8; // Light3D objects per frame, the shader loops over this many
@@ -18250,13 +18249,10 @@ function render3DInstance(mesh, matrix, tileInfo, color)
         mesh.instanceData = data = grown;
     }
     data.set(matrix.m, k);
-    if (!r.shadowPass) // the depth shader reads only the matrix and the uv rect, the rest can stay stale
-    {
-        render3DNormalMatrix3(matrix.m, data, k + 16);
-        data[k+25] = color.r; data[k+26] = color.g; data[k+27] = color.b; data[k+28] = color.a;
-    }
+    if (!r.shadowPass) // the depth shader reads only the matrix and the uv rect, the tint can stay stale
+        data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a;
     const uv = render3DGetTileUVs(tileInfo);
-    data[k+29] = uv.x; data[k+30] = uv.y; data[k+31] = uv.w; data[k+32] = uv.h;
+    data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
 }
 
 // draw the pending batches, or just one mesh's, each as a single instanced call
@@ -19362,8 +19358,11 @@ const RENDER3D_ATTRIBS = [[0, 3, 5126, false, 0], [1, 3, 5126, false, 12], [2, 2
 
 // the vertex shader, shared by the plugin's program and every Shader's
 // attributes: p position, n normal, t uv, c color, at fixed slots the depth shader also uses
-// uniforms: viewProj, lightViewProj; the model matrix, the normal matrix, the tint and the uv rect are vertex
-// attributes, see RENDER3D_VERTEX_INPUTS; L is the mesh's own uv for a Shader's localUV
+// uniforms: viewProj, lightViewProj; the model matrix, the tint and the uv rect are vertex attributes, see
+// RENDER3D_VERTEX_INPUTS; L is the mesh's own uv for a Shader's localUV
+// the normal matrix comes from the model matrix here: each column over its squared length, which is the inverse
+// transpose of any rotation and scale, mirrored or not, and skips a 3x3 inverse per draw on the CPU; a sheared
+// matrix, one built by multiplying rotations with scales between them, gets normals that are only close
 const RENDER3D_VERTEX_SOURCE =
     '#version 300 es\n' +
     'precision highp float;' +
@@ -19374,7 +19373,8 @@ const RENDER3D_VERTEX_SOURCE =
     'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
     'gl_Position=viewProj*w;' +
     'P=w.xyz;' +
-    'N=mat3(n0,n1,n2)*n;' +
+    'vec3 c0=m0.xyz,c1=m1.xyz,c2=m2.xyz;' +
+    'N=mat3(c0/dot(c0,c0),c1/dot(c1,c1),c2/dot(c2,c2))*n;' +
     'T=uvRect.xy+t*uvRect.zw;' +
     'L=t;' +
     'C=c*tint;' +
@@ -19584,8 +19584,7 @@ function render3DUniform(name, program=render3D.currentProgram)
     return cache[name] ??= glContext.getUniformLocation(program, name);
 }
 
-// the model matrix, its normal matrix, the tint and the uv rect as constant attributes for one draw
-const render3DNormalScratch = new Float32Array(9);
+// the model matrix, the tint and the uv rect as constant attributes for one draw
 function render3DDrawAttribs(m, tint, uvRect)
 {
     const gl = glContext;
@@ -19593,13 +19592,6 @@ function render3DDrawAttribs(m, tint, uvRect)
     gl.vertexAttrib4f(5, m[4], m[5], m[6], m[7]);
     gl.vertexAttrib4f(6, m[8], m[9], m[10], m[11]);
     gl.vertexAttrib4f(7, m[12], m[13], m[14], m[15]);
-    if (!render3D.shadowPass) // the shadow map has no lighting
-    {
-        const n = render3DNormalMatrix3(m, render3DNormalScratch, 0);
-        gl.vertexAttrib3f(8, n[0], n[1], n[2]);
-        gl.vertexAttrib3f(9, n[3], n[4], n[5]);
-        gl.vertexAttrib3f(10, n[6], n[7], n[8]);
-    }
     render3DAttrib4f(11, tint.r, tint.g, tint.b, tint.a);
     render3DAttrib4f(12, uvRect.x, uvRect.y, uvRect.w, uvRect.h);
 }
@@ -19612,27 +19604,6 @@ function render3DAttrib4f(location, x, y, z, w)
         return;
     values[location] = [x, y, z, w];
     glContext.vertexAttrib4f(location, x, y, z, w);
-}
-
-// write the 3x3 matrix that keeps normals pointing out when the model matrix scales unevenly, the inverse transpose
-// of its top left 3x3 by cofactors; a flat model with no inverse keeps its own axes
-function render3DNormalMatrix3(m, out, offset)
-{
-    const a = m[0], b = m[1], c = m[2], d = m[4], e = m[5], f = m[6], g = m[8], h = m[9], i = m[10];
-    const c00 = e*i - h*f, c01 = h*c - b*i, c02 = b*f - e*c;
-    const det = a*c00 + d*c01 + g*c02;
-    if (abs(det) < 1e-12)
-    {
-        out[offset] = a; out[offset+1] = b; out[offset+2] = c;
-        out[offset+3] = d; out[offset+4] = e; out[offset+5] = f;
-        out[offset+6] = g; out[offset+7] = h; out[offset+8] = i;
-        return out;
-    }
-    const s = 1 / det;
-    out[offset]   = c00 * s;             out[offset+1] = (g*f - d*i) * s;   out[offset+2] = (d*h - g*e) * s;
-    out[offset+3] = c01 * s;             out[offset+4] = (a*i - g*c) * s;   out[offset+5] = (g*b - a*h) * s;
-    out[offset+6] = c02 * s;             out[offset+7] = (d*c - a*f) * s;   out[offset+8] = (a*e - d*b) * s;
-    return out;
 }
 
 // textures in 3D shrink into the distance far more than sprites do, so the pass samples them through their mipmaps;
@@ -21508,8 +21479,8 @@ class InstancedMesh3D extends EngineObject3D
         this.count = count;
         /** @property {number} - How many instances it was made with */
         this.maxCount = count;
-        /** @property {Float32Array} - The per instance values the shader reads, 33 floats each: the matrix, its
-         *  normal matrix, the color and the uv rect; edit it directly and call markDirty for the instances changed */
+        /** @property {Float32Array} - The per instance values the shader reads, 24 floats each: the matrix, the color
+         *  and the uv rect; edit it directly and call markDirty for the instances changed */
         this.instanceData = new Float32Array(count * RENDER3D_INSTANCE_FLOATS);
         /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for culling */
         this.radius = 0;
@@ -21525,8 +21496,8 @@ class InstancedMesh3D extends EngineObject3D
         {
             this.setMatrixAt(i, RENDER3D_IDENTITY);
             const k = i * RENDER3D_INSTANCE_FLOATS;
-            data[k+25] = color.r; data[k+26] = color.g; data[k+27] = color.b; data[k+28] = color.a;
-            data[k+29] = uv.x; data[k+30] = uv.y; data[k+31] = uv.w; data[k+32] = uv.h;
+            data[k+16] = color.r; data[k+17] = color.g; data[k+18] = color.b; data[k+19] = color.a;
+            data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
         }
     }
 
@@ -21538,7 +21509,6 @@ class InstancedMesh3D extends EngineObject3D
         false&&ASSERT(i >= 0 && i < this.maxCount, 'instance index out of range');
         const data = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS, m = matrix.m;
         data.set(m, k);
-        render3DNormalMatrix3(m, data, k + 16);
         this.radius = max(this.radius, (m[12]*m[12] + m[13]*m[13] + m[14]*m[14]) ** .5 + (this.mesh.radius || 0) * render3DMaxScale(m));
         this.markDirty(i);
     }
@@ -21562,7 +21532,7 @@ class InstancedMesh3D extends EngineObject3D
         false&&ASSERT(i >= 0 && i < this.maxCount, 'instance index out of range');
         false&&ASSERT(isColor(color), 'color must be a Color');
         const data = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS;
-        data[k+25] = color.r; data[k+26] = color.g; data[k+27] = color.b; data[k+28] = color.a;
+        data[k+16] = color.r; data[k+17] = color.g; data[k+18] = color.b; data[k+19] = color.a;
         this.markDirty(i);
     }
 
@@ -21590,7 +21560,7 @@ class InstancedMesh3D extends EngineObject3D
         if (this.uvTileInfo !== this.tileInfo)
         {
             const uv = render3DGetTileUVs(this.tileInfo), data = this.instanceData;
-            for (let k = 29; k < data.length; k += RENDER3D_INSTANCE_FLOATS)
+            for (let k = 20; k < data.length; k += RENDER3D_INSTANCE_FLOATS)
                 data[k] = uv.x, data[k+1] = uv.y, data[k+2] = uv.w, data[k+3] = uv.h;
             this.uvTileInfo = this.tileInfo;
             this.dirtyStart = 0, this.dirtyEnd = this.maxCount;

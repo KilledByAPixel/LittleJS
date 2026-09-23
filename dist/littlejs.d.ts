@@ -7325,8 +7325,8 @@ declare module "littlejsengine" {
         count: number;
         /** @property {number} - How many instances it was made with */
         maxCount: number;
-        /** @property {Float32Array} - The per instance values the shader reads, 33 floats each: the matrix, its
-         *  normal matrix, the color and the uv rect; edit it directly and call markDirty for the instances changed */
+        /** @property {Float32Array} - The per instance values the shader reads, 24 floats each: the matrix, the color
+         *  and the uv rect; edit it directly and call markDirty for the instances changed */
         instanceData: Float32Array;
         /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for culling */
         radius: number;

@@ -2363,12 +2363,11 @@ test('an InstancedMesh3D starts every instance at the origin in the object color
     assert.equal(set.count, 3);
     assert.equal(set.maxCount, 3);
     const d = set.instanceData;
-    assert.equal(d.length, 3 * 33);
+    assert.equal(d.length, 3 * 24);
     assert.deepEqual([...d.subarray(0, 16)], [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); // the matrix
-    assert.deepEqual([...d.subarray(16, 25)], [1,0,0, 0,1,0, 0,0,1]); // its normal matrix
-    assert.deepEqual([...d.subarray(25, 29)], [1, 0, 0, 1]); // the color
-    assert.deepEqual([...d.subarray(29, 33)], [0, 0, 1, 1]); // the whole texture
-    assert.deepEqual([...d.subarray(2*33, 2*33 + 16)], [...d.subarray(0, 16)]); // every instance the same
+    assert.deepEqual([...d.subarray(16, 20)], [1, 0, 0, 1]); // the color
+    assert.deepEqual([...d.subarray(20, 24)], [0, 0, 1, 1]); // the whole texture
+    assert.deepEqual([...d.subarray(2*24, 2*24 + 16)], [...d.subarray(0, 16)]); // every instance the same
     assert.equal(set.dirtyStart, 0);
     assert.equal(set.dirtyEnd, 3);
     assert.throws(()=> new InstancedMesh3D(render3D.boxMesh, 0));
@@ -2383,14 +2382,13 @@ test('setMatrixAt and setColorAt write one instance, widen the dirty range and t
     set.dirtyStart = Infinity, set.dirtyEnd = 0; // as after an upload
     const m = buildMatrix(vec3(1, 2, 3), vec3(0, PI/2, 0), vec3(2));
     set.setMatrixAt(2, m);
-    const k = 2 * 33;
+    const k = 2 * 24;
     assert.deepEqual([...set.instanceData.subarray(k, k + 16)], [...m.m]);
-    assert.notDeepEqual([...set.instanceData.subarray(k + 16, k + 25)], [1,0,0, 0,1,0, 0,0,1], 'the normal matrix follows the transform');
     nearVec(set.getMatrixAt(2).getTranslation(), 1, 2, 3);
     assert.equal(set.dirtyStart, 2);
     assert.equal(set.dirtyEnd, 3);
     set.setColorAt(0, RED);
-    assert.deepEqual([...set.instanceData.subarray(25, 29)], [1, 0, 0, 1]);
+    assert.deepEqual([...set.instanceData.subarray(16, 20)], [1, 0, 0, 1]);
     assert.equal(set.dirtyStart, 0);
     assert.equal(set.dirtyEnd, 3);
     assert.ok(set.radius >= Math.hypot(1, 2, 3), 'the bounding sphere reaches the instance');
