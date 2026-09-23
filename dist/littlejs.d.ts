@@ -7184,6 +7184,8 @@ declare module "littlejsengine" {
      * Mesh - A triangle strip with positions, normals, uvs and colors, uploaded once and drawn by matrix
      * - Build with addStrip, addQuad, combine or the shape builders, then render each frame
      * - Its back faces are skipped unless doubleSided is set, which the open builders like buildGrid do for you
+     * - The strip is the authoring form; upload sends the GPU an indexed triangle list of its real triangles over its
+     *   distinct vertices, see getTriangles, so the joins between its pieces cost nothing to draw
      * - The GPU buffer is created lazily on first render and dropped by dispose, or freed once the mesh is garbage
      *   collected, so dispose is only needed to free it right away, like for a mesh rebuilt often
      * @memberof Render3D
@@ -7204,11 +7206,15 @@ declare module "littlejsengine" {
         /** @property {Array<Color>} - Vertex colors
          *  @type {Array<Color>} */
         colors: Array<Color>;
-        /** @property {WebGLBuffer|undefined} - GPU buffer, created by upload
+        /** @property {WebGLBuffer|undefined} - GPU vertex buffer, created by upload
          *  @type {WebGLBuffer|undefined} */
         buffer: WebGLBuffer | undefined;
-        /** @property {number} - Vertices in the GPU buffer */
+        /** @property {WebGLBuffer|undefined} - GPU index buffer, the triangles, created by upload
+         *  @type {WebGLBuffer|undefined} */
+        indexBuffer: WebGLBuffer | undefined;
+        /** @property {number} - Indices in the GPU index buffer, three per triangle */
         bufferCount: number;
+        indexType: number;
         /** @property {boolean} - The mesh changed and needs uploading again, set it yourself if you edit the arrays */
         dirty: boolean;
         /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call, undefined follows render3D.instancing
@@ -7288,6 +7294,14 @@ declare module "littlejsengine" {
         /** Pack the vertices and create the GPU buffer, called automatically by render
          *  @return {Mesh} */
         upload(): Mesh;
+        /** The mesh as an indexed triangle list, what upload sends to the GPU: the strip's real triangles over its
+         *  distinct vertices, the joins between its pieces dropped and every triangle facing the way it did in the strip
+         *  @return {{vertices: Array<number>, indices: Array<number>}} - vertices are strip indices, one per distinct
+         *    vertex; indices are the triangles, three per triangle, into vertices */
+        getTriangles(): {
+            vertices: Array<number>;
+            indices: Array<number>;
+        };
         /** Draw the mesh with the current draw state, batched with its other uses in the opaque stage
          *  @param {Matrix4|Vector3} [matrix] - Object transform, or just a position to draw it at
          *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture

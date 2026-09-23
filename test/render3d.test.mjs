@@ -2408,6 +2408,38 @@ test('an InstancedMesh3D in the stage loop draws nothing headless and throws not
     engineObjects.length = 0;
 });
 
+// the strip's triangle i is (i-2, i-1, i), and the odd ones read the other way, as the GPU reads a strip
+const stripFacing = (mesh, tri)=>
+{
+    const [a, b, c] = tri.map(i => mesh.points[i]), n = mesh.normals[tri[0]];
+    const ab = b.subtract(a), ac = c.subtract(a);
+    return ab.cross(ac).dot(n);
+};
+
+test('getTriangles turns the box strip into 24 vertices and 12 real triangles that all face the same way', () =>
+{
+    const box = buildBox();
+    const { vertices, indices } = box.getTriangles();
+    assert.equal(vertices.length, 24, 'four corners a face, no repeats');
+    assert.equal(indices.length, 36, 'twelve triangles, the joins dropped');
+    assert.ok(indices.every(i => i >= 0 && i < 24));
+    const signs = new Set();
+    for (let t = 0; t < indices.length; t += 3)
+        signs.add(Math.sign(stripFacing(box, [vertices[indices[t]], vertices[indices[t+1]], vertices[indices[t+2]]])));
+    assert.deepEqual([...signs], [-1], 'every triangle reads clockwise from outside, the front the pass draws');
+});
+
+test('getTriangles merges the shared vertices of a sphere and keeps only its real triangles', () =>
+{
+    const { vertices, indices } = buildSphere().getTriangles(); // 16 sides, 8 rings, flat shaded
+    assert.equal(vertices.length, 512);
+    assert.equal(indices.length, 224 * 3);
+    const smooth = buildSphere(1, 16, 8, true).getTriangles(); // smooth shading shares normals too
+    assert.ok(smooth.vertices.length < 200, 'shared normals merge further: ' + smooth.vertices.length);
+    assert.equal(smooth.indices.length, 224 * 3);
+    assert.deepEqual(new Mesh().getTriangles(), { vertices: [], indices: [] });
+});
+
 test('a Light3D has an intensity that multiplies its color, 1 by default', () =>
 {
     const plain = new Light3D(vec3(), 5, RED), bright = new Light3D(vec3(), 5, RED, 3);

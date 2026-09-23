@@ -18292,12 +18292,12 @@ function render3DDrawInstanced(mesh, buffer, count, textureInfo, state)
         gl.enableVertexAttribArray(location);
     }
     render3DSetDrawUniforms(RENDER3D_IDENTITY, textureInfo, WHITE, RENDER3D_FULL_UV_RECT, state);
-    render3DBindVertexBuffer(mesh.buffer);
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, mesh.bufferCount, count);
+    render3DBindMesh(mesh);
+    gl.drawElementsInstanced(gl.TRIANGLES, mesh.bufferCount, mesh.indexType, 0, count);
     for (const [location] of RENDER3D_INSTANCE_ATTRIBS)
         gl.disableVertexAttribArray(location);
     ++drawCount;
-    primitiveCount += mesh.bufferCount * count;
+    primitiveCount += mesh.bufferCount / 3 * count;
 }
 
 // forget the pending batches, for a frame that threw or a lost context
@@ -18754,10 +18754,10 @@ class Render3DPlugin
         {
             this.flush();
             render3DSetDrawUniforms(matrix, tileInfo, color);
-            render3DBindVertexBuffer(mesh.buffer);
-            glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, mesh.bufferCount);
+            render3DBindMesh(mesh);
+            glContext.drawElements(glContext.TRIANGLES, mesh.bufferCount, mesh.indexType, 0);
             ++drawCount;
-            primitiveCount += mesh.bufferCount;
+            primitiveCount += mesh.bufferCount / 3;
         }
         this.cullBackFaces = cullBackFaces, this.mirrored = mirrored;
     }
@@ -19674,6 +19674,13 @@ function render3DBindVertexBuffer(buffer)
         gl.vertexAttribPointer(a[0], a[1], a[2], a[3], RENDER3D_VERTEX_BYTES, a[4]);
 }
 
+// a mesh's vertices and its triangle indices, ready for drawElements
+function render3DBindMesh(mesh)
+{
+    render3DBindVertexBuffer(mesh.buffer);
+    glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
+}
+
 // where a tile sits in its texture, pulled in slightly at the edges so neighbors do not bleed in
 // this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
@@ -20008,13 +20015,19 @@ function render3DPolygonStrip(points)
 // frees the GPU buffer of a mesh that is garbage collected without dispose, some time after it goes; it holds the
 // buffer and its context, never the mesh, or the mesh could not be collected, and dispose unregisters the mesh
 const render3DMeshBuffers = typeof FinalizationRegistry == 'undefined' ? undefined :
-    new FinalizationRegistry(({buffer, generation})=>
-        generation === render3D?.contextGeneration && glContext?.deleteBuffer(buffer));
+    new FinalizationRegistry(({buffer, indexBuffer, generation})=>
+    {
+        if (generation !== render3D?.contextGeneration || !glContext) return;
+        glContext.deleteBuffer(buffer);
+        glContext.deleteBuffer(indexBuffer);
+    });
 
 /**
  * Mesh - A triangle strip with positions, normals, uvs and colors, uploaded once and drawn by matrix
  * - Build with addStrip, addQuad, combine or the shape builders, then render each frame
  * - Its back faces are skipped unless doubleSided is set, which the open builders like buildGrid do for you
+ * - The strip is the authoring form; upload sends the GPU an indexed triangle list of its real triangles over its
+ *   distinct vertices, see getTriangles, so the joins between its pieces cost nothing to draw
  * - The GPU buffer is created lazily on first render and dropped by dispose, or freed once the mesh is garbage
  *   collected, so dispose is only needed to free it right away, like for a mesh rebuilt often
  * @memberof Render3D
@@ -20039,11 +20052,15 @@ class Mesh
         /** @property {Array<Color>} - Vertex colors
          *  @type {Array<Color>} */
         this.colors = [];
-        /** @property {WebGLBuffer|undefined} - GPU buffer, created by upload
+        /** @property {WebGLBuffer|undefined} - GPU vertex buffer, created by upload
          *  @type {WebGLBuffer|undefined} */
         this.buffer = undefined;
-        /** @property {number} - Vertices in the GPU buffer */
+        /** @property {WebGLBuffer|undefined} - GPU index buffer, the triangles, created by upload
+         *  @type {WebGLBuffer|undefined} */
+        this.indexBuffer = undefined;
+        /** @property {number} - Indices in the GPU index buffer, three per triangle */
         this.bufferCount = 0;
+        this.indexType = 0; // gl.UNSIGNED_SHORT, or UNSIGNED_INT past 65535 vertices
         /** @property {boolean} - The mesh changed and needs uploading again, set it yourself if you edit the arrays */
         this.dirty = false;
         /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call, undefined follows render3D.instancing
@@ -20272,25 +20289,62 @@ class Mesh
         this.computeRadius();
         if (!render3D?.program) return this;
         this.dispose();
-        const count = this.points.length;
+        const {vertices, indices} = this.getTriangles(), count = vertices.length;
         const data = new ArrayBuffer(count * RENDER3D_VERTEX_BYTES);
         const floats = new Float32Array(data), ints = new Uint32Array(data);
-        for (let i = 0; i < count; ++i)
+        for (let j = 0; j < count; ++j)
         {
-            const uv = this.uvs[i] || RENDER3D_DEFAULT_UV; // a hand built mesh may leave normals, uvs and colors empty
-            render3DWriteVertex(floats, ints, i * RENDER3D_VERTEX_FLOATS, this.points[i],
+            const i = vertices[j], uv = this.uvs[i] || RENDER3D_DEFAULT_UV; // a hand built mesh may leave normals, uvs and colors empty
+            render3DWriteVertex(floats, ints, j * RENDER3D_VERTEX_FLOATS, this.points[i],
                 this.normals[i] || RENDER3D_DEFAULT_NORMAL, uv.x, uv.y, (this.colors[i] || WHITE).rgbaInt());
         }
-        const gl = glContext;
+        const gl = glContext, wide = count > 65535;
         this.buffer = gl.createBuffer();
-        this.bufferCount = count;
+        this.indexBuffer = gl.createBuffer();
+        this.bufferCount = indices.length;
+        this.indexType = wide ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
         this.dirty = false;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, wide ? new Uint32Array(indices) : new Uint16Array(indices), gl.STATIC_DRAW);
         this.contextGeneration = render3D.contextGeneration;
-        render3DMeshBuffers?.register(this, {buffer: this.buffer, generation: this.contextGeneration}, this);
+        render3DMeshBuffers?.register(this, {buffer: this.buffer, indexBuffer: this.indexBuffer, generation: this.contextGeneration}, this);
         gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer); // the engine's 2D batch writes through this binding
         return this;
+    }
+
+    /** The mesh as an indexed triangle list, what upload sends to the GPU: the strip's real triangles over its
+     *  distinct vertices, the joins between its pieces dropped and every triangle facing the way it did in the strip
+     *  @return {{vertices: Array<number>, indices: Array<number>}} - vertices are strip indices, one per distinct
+     *    vertex; indices are the triangles, three per triangle, into vertices */
+    getTriangles()
+    {
+        const count = this.points.length, seen = new Map, places = new Map, vertices = [];
+        const remap = new Int32Array(count), place = new Int32Array(count);
+        for (let i = 0; i < count; ++i)
+        {
+            const p = this.points[i], n = this.normals[i] || RENDER3D_DEFAULT_NORMAL, uv = this.uvs[i] || RENDER3D_DEFAULT_UV;
+            const at = p.x + ',' + p.y + ',' + p.z, key = at + ',' + n.x + ',' + n.y + ',' + n.z + ',' + uv.x + ',' + uv.y + ',' + (this.colors[i] || WHITE).rgbaInt();
+            let j = seen.get(key);
+            if (j === undefined)
+                seen.set(key, j = vertices.length), vertices.push(i);
+            remap[i] = j;
+            let k = places.get(at); // the same place with another normal or uv, as at a lathe's poles
+            if (k === undefined)
+                places.set(at, k = i);
+            place[i] = k;
+        }
+        const indices = [];
+        for (let i = 2; i < count; ++i)
+        {
+            // the strip's triangle i, its odd ones read the other way as the GPU reads a strip; a triangle with two
+            // corners in one place has no area, it is a join between pieces or a sliver at a pole, and is left out
+            const a = i & 1 ? i - 1 : i - 2, b = i & 1 ? i - 2 : i - 1;
+            if (place[a] != place[b] && place[b] != place[i] && place[a] != place[i])
+                indices.push(remap[a], remap[b], remap[i]);
+        }
+        return {vertices, indices};
     }
 
     /** Draw the mesh with the current draw state, batched with its other uses in the opaque stage
@@ -20307,8 +20361,8 @@ class Mesh
         render3DMeshBuffers?.unregister(this); // freed here, so not again when the mesh is collected
         // a buffer from a context that was lost is gone with it, and the new context refuses to delete it
         if (this.contextGeneration === render3D?.contextGeneration)
-            glContext?.deleteBuffer(this.buffer);
-        this.buffer = undefined;
+            glContext?.deleteBuffer(this.buffer), glContext?.deleteBuffer(this.indexBuffer);
+        this.buffer = this.indexBuffer = undefined;
         this.bufferCount = 0;
     }
 }
