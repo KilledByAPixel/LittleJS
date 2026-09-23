@@ -1120,6 +1120,8 @@ render3D.boxMesh render3D.sphereMesh                      // the size 1 meshes t
 render3D.planeMesh render3D.planeMeshDoubleSided          // a size 1 square facing +Y, seen from above only, or seen
                                                           // and lit from both sides for signs and cards; stand it
                                                           // up with rotation3D, size it with scale3D
+render3D.billboardMesh                                    // a size 1 square facing +Z with the tile across it, what a
+                                                          // ParticleEmitter3D draws its particles as instances of
 render3D.drawMesh(mesh, matrix, tileInfo, color) // any mesh, batched with its other uses; tileInfo can be a TextureInfo
                                                  // for the whole texture, uvs past 1 repeat when it wraps
 render3D.drawBillboard(pos, size, tileInfo, color, angle, upright) // camera facing quad, unlit, size is a Vector2;

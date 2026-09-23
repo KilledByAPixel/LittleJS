@@ -18936,7 +18936,19 @@ function render3DDetach(o)
 // add a draw of a mesh to its batch; a batch is one mesh under one texture and draw state, so a change flushes it
 function render3DInstance(mesh, matrix, tileInfo, color)
 {
-    const r = render3D, textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
+    const k = render3DInstanceSlot(mesh, tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo), data = mesh.instanceData;
+    data.set(matrix.m, k);
+    if (!render3D.shadowPass) // the depth shader reads only the matrix and the uv rect, the tint can stay stale
+        data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a;
+    const uv = render3DGetTileUVs(tileInfo);
+    data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
+}
+
+// make room for one more instance of a mesh under a texture and the current draw state, flushing a batch that
+// differs first, and return where its 24 floats go in mesh.instanceData: the matrix, the tint and the uv rect
+function render3DInstanceSlot(mesh, textureInfo)
+{
+    const r = render3D;
     if (mesh.instanceCount && (mesh.instanceTextureInfo !== textureInfo || render3DStateChanged(mesh.instanceState)))
         render3DFlushInstances(mesh);
     if (!mesh.instanceCount)
@@ -18955,11 +18967,7 @@ function render3DInstance(mesh, matrix, tileInfo, color)
         data && grown.set(data);
         mesh.instanceData = data = grown;
     }
-    data.set(matrix.m, k);
-    if (!r.shadowPass) // the depth shader reads only the matrix and the uv rect, the tint can stay stale
-        data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a;
-    const uv = render3DGetTileUVs(tileInfo);
-    data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
+    return k;
 }
 
 // draw the pending batches, or just one mesh's, each as a single instanced call
@@ -19215,6 +19223,10 @@ class Render3DPlugin
         this.planeMesh.doubleSided = false;
         /** @property {Mesh} - The same square seen and lit from both sides, for signs, cards and leaves */
         this.planeMeshDoubleSided = buildGrid();
+        /** @property {Mesh} - A square of size 1 facing +Z with the tile across it, the corners in the order drawBillboard
+         *  writes them; a ParticleEmitter3D draws its particles as instances of it, each with its own matrix */
+        this.billboardMesh = new Mesh().addStrip([vec3(-.5, .5, 0), vec3(-.5, -.5, 0), vec3(.5, .5, 0), vec3(.5, -.5, 0)], vec3(0, 0, 1), RENDER3D_QUAD_UVS);
+        this.billboardMesh.doubleSided = true;
 
         // read only
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
@@ -21050,7 +21062,7 @@ class Mesh
     upload()
     {
         this.computeRadius();
-        if (!render3D?.program) return this;
+        if (!render3D?.program || !glContext) return this;
         const gl = glContext, layout = this.vertexLayout;
         if (this.dynamicDraw && this.buffer && this.contextGeneration === render3D.contextGeneration)
         {
@@ -22855,39 +22867,89 @@ class ParticleEmitter3D extends EngineObject3D
     }
 
     /** Draw the particles, as flat squares or as streaks when trailTime is set
-     *  - The whole emitter sorts as one thing, its particles are not sorted against each other */
+     *  - The whole emitter sorts as one thing, its particles are not sorted against each other
+     *  - With render3D.instancing on the squares go out as one instanced draw of render3D.billboardMesh */
     render3D()
     {
-        if (render3D.transparentQueue)
-            return render3D.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
+        const r = render3D;
+        if (r.transparentQueue)
+            return r.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
         const fade = this.fadeRate / 2, texture = this.tileInfo || render3DSoftDot(); // no dot headless
         const color = render3DParticleColor, size = render3DParticleSize; // shared, so a particle makes no objects
-        for (const p of this.particles)
+
+        // the instanced path: one matrix per particle, its right and up axes the quad's size long, facing the camera,
+        // written straight into the batch; the batch draws at the end so the order of the transparent stage holds
+        const quad = r.billboardMesh, instanced = texture && r.instancing && !r.capture && render3DCanDraw();
+        let data, textureInfo, uv, lit;
+        if (instanced)
         {
-            const t = p.age / p.life, a = p.colorStart, b = p.colorEnd;
-            const alpha = t < fade ? t / fade : t > 1 - fade ? (1 - t) / fade : 1;
-            color.r = a.r + (b.r - a.r) * t;
-            color.g = a.g + (b.g - a.g) * t;
-            color.b = a.b + (b.b - a.b) * t;
-            color.a = (a.a + (b.a - a.a) * t) * alpha;
-            size.x = size.y = lerp(p.sizeStart, p.sizeEnd, t);
-            const trail = p.trail;
-            if (trail && trail.length > 1)
+            if (!quad.buffer || quad.dirty || quad.contextGeneration !== r.contextGeneration)
+                quad.upload();
+            textureInfo = texture instanceof TileInfo ? texture.textureInfo : texture;
+            uv = render3DGetTileUVs(texture);
+            lit = r.lighting;
+            r.lighting = r.shadowPass && lit; // unlit on screen, in the shadow map the object's flag decides
+            r.cullBackFaces = r.mirrored = false;
+        }
+        const cr = r.cameraRight, cu = r.cameraUp, cb = r.cameraBack, shadowPass = r.shadowPass;
+        try
+        {
+            for (const p of this.particles)
             {
-                // a ribbon from the tail to the head, the tail thins and fades out
-                const widths = [], colors = [];
-                for (let i = 0; i < trail.length; ++i)
+                const t = p.age / p.life, a = p.colorStart, b = p.colorEnd;
+                const alpha = t < fade ? t / fade : t > 1 - fade ? (1 - t) / fade : 1;
+                color.r = a.r + (b.r - a.r) * t;
+                color.g = a.g + (b.g - a.g) * t;
+                color.b = a.b + (b.b - a.b) * t;
+                color.a = (a.a + (b.a - a.a) * t) * alpha;
+                const s = size.x = size.y = lerp(p.sizeStart, p.sizeEnd, t);
+                const trail = p.trail;
+                if (trail && trail.length > 1)
                 {
-                    const s = (i + 1) / trail.length;
-                    widths.push(size.x * s);
-                    colors.push(color.scale(1, s));
+                    // a ribbon from the tail to the head, the tail thins and fades out
+                    const widths = [], colors = [];
+                    for (let i = 0; i < trail.length; ++i)
+                    {
+                        const f = (i + 1) / trail.length;
+                        widths.push(s * f);
+                        colors.push(color.scale(1, f));
+                    }
+                    r.drawRibbon(trail, widths, this.tileInfo, colors);
                 }
-                render3D.drawRibbon(trail, widths, this.tileInfo, colors);
+                else if (instanced)
+                {
+                    // the axes turned by the particle's angle in the camera plane, as drawBillboard turns them
+                    let rx = cr.x, ry = cr.y, rz = cr.z, ux = cu.x, uy = cu.y, uz = cu.z;
+                    if (p.angle)
+                    {
+                        const c = cos(p.angle), n = sin(p.angle);
+                        rx = cr.x * c + cu.x * n, ry = cr.y * c + cu.y * n, rz = cr.z * c + cu.z * n;
+                        ux = cu.x * c - cr.x * n, uy = cu.y * c - cr.y * n, uz = cu.z * c - cr.z * n;
+                    }
+                    const k = render3DInstanceSlot(quad, textureInfo), pos = p.pos;
+                    data = quad.instanceData;
+                    data[k]    = rx * s; data[k+1]  = ry * s; data[k+2]  = rz * s; data[k+3]  = 0;
+                    data[k+4]  = ux * s; data[k+5]  = uy * s; data[k+6]  = uz * s; data[k+7]  = 0;
+                    data[k+8]  = cb.x;   data[k+9]  = cb.y;   data[k+10] = cb.z;   data[k+11] = 0;
+                    data[k+12] = pos.x;  data[k+13] = pos.y;  data[k+14] = pos.z;  data[k+15] = 1;
+                    if (!shadowPass)
+                        data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a;
+                    data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
+                }
+                else if (texture)
+                    r.drawBillboard(p.pos, size, texture, color, p.angle);
+                else
+                    r.drawSoftDisc(p.pos, s, color, undefined, 8); // no canvas for the dot, headless
             }
-            else if (texture)
-                render3D.drawBillboard(p.pos, size, texture, color, p.angle);
-            else
-                render3D.drawSoftDisc(p.pos, size.x, color, undefined, 8); // no canvas for the dot, headless
+        }
+        finally
+        {
+            if (instanced)
+            {
+                r.lighting = lit;
+                r.flush(); // whatever the stream holds from before this emitter draws first
+                render3DFlushInstances(quad);
+            }
         }
     }
 }

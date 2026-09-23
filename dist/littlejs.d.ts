@@ -6773,6 +6773,9 @@ declare module "littlejsengine" {
         planeMesh: Mesh;
         /** @property {Mesh} - The same square seen and lit from both sides, for signs, cards and leaves */
         planeMeshDoubleSided: Mesh;
+        /** @property {Mesh} - A square of size 1 facing +Z with the tile across it, the corners in the order drawBillboard
+         *  writes them; a ParticleEmitter3D draws its particles as instances of it, each with its own matrix */
+        billboardMesh: Mesh;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
         isRendering: boolean;
         /** @property {boolean} - True while the shadow map is being drawn, draws go to the depth only shader */
@@ -7806,7 +7809,8 @@ declare module "littlejsengine" {
         /** Spawn one particle now */
         emitParticle(): void;
         /** Draw the particles, as flat squares or as streaks when trailTime is set
-         *  - The whole emitter sorts as one thing, its particles are not sorted against each other */
+         *  - The whole emitter sorts as one thing, its particles are not sorted against each other
+         *  - With render3D.instancing on the squares go out as one instanced draw of render3D.billboardMesh */
         render3D(): any;
     }
     /**

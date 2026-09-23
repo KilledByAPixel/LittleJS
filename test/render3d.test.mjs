@@ -1336,6 +1336,45 @@ test('an EngineObject3D moves and turns its own vectors in place each frame, lik
     finally { o.destroy(); }
 });
 
+test('a ParticleEmitter3D draws its particles as one instance batch of the billboard quad, not through the stream', () =>
+{
+    const tileInfo = new TileInfo(vec2(), vec2(16));
+    tileInfo.textureInfo = { sizeInverse: vec2(1 / 64) }; // enough of a texture to place the tile, headless has no real one
+    const e = new ParticleEmitter3D(vec3(), 0, 0, 0, 0, tileInfo, RED, RED, WHITE, WHITE, 10, 2, 2, 0, 1, 0, 0, 0);
+    for (let i = 0; i < 3; ++i)
+        e.emitParticle(), e.particles[i].pos.set(i, 5, 0);
+    render3D.updateMatrices(1);
+    render3D.isRendering = true;
+    render3D.program = {}; // a stand in, headless nothing uploads or draws
+    try
+    {
+        e.render3D();
+        const quad = render3D.billboardMesh, data = quad.instanceData;
+        assert.ok(quad.buffer === undefined && !render3D.streamCount, 'nothing went to the stream');
+        assert.ok(data, 'the quad got instance data');
+        for (let i = 0; i < 3; ++i)
+        {
+            const k = i * 24;
+            nearVec(vec3(data[k+12], data[k+13], data[k+14]), i, 5, 0);   // the particle's position is the translation
+            near(Math.hypot(data[k], data[k+1], data[k+2]), 2);           // the right axis is the particle's size long
+            near(Math.hypot(data[k+4], data[k+5], data[k+6]), 2);
+            near(data[k+16], 1), near(data[k+17], 0), near(data[k+18], 0); // red at the start of its life
+        }
+        assert.equal(quad.instanceCount, 0, 'the batch is flushed by the end of the draw, so the transparent order holds');
+        render3D.instancing = false;
+        e.render3D();
+        assert.equal(render3D.streamCount, 3 * 6, 'with instancing off the particles go through the stream');
+    }
+    finally
+    {
+        render3D.instancing = true;
+        render3D.program = undefined;
+        render3D.isRendering = false;
+        render3D.streamCount = 0;
+        e.destroy();
+    }
+});
+
 test('drawBillboard in a bake keeps its own copy of the color', () =>
 {
     const color = rgb(1, 0, 0), mesh = render3D.bake(()=> render3D.drawBillboard(vec3(), vec2(1), undefined, color));
