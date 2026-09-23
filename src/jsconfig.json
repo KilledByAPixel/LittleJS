@@ -7,7 +7,6 @@
     "strict": false
   },
   "exclude": [
-    "engineRelease.js",
-    "engineExport.js"
+    "engineRelease.js"
   ]
 }

@@ -45,7 +45,7 @@ That writes `examples/starter/game.zip` and prints the size against the limit, f
 
 **Use `npm start` rather than opening `index.html` directly.** Over `file://` the browser treats `tiles.png` as cross-origin, so the WebGL texture upload throws a `SecurityError` and nothing renders. `serve.js` is a dependency-free static server that exists only to avoid that. Set `PORT` to change the port.
 
-`npm run build:engine` generates the `dist/` bundles and TypeScript definitions, and `npm test` runs a quick headless engine smoke test. You do not need either to make a game.
+`npm test` runs a quick headless engine smoke test. You do not need it to make a game.
 
 **`npm run test:release` builds the zip and then drives the built page in headless Chrome**, failing on any page error or on a page that stops animating. This is the only test that looks at what you actually submit. The dev page and `npm test` both run the readable sources, so neither can see a Closure rename that broke a DOM call, a `FEATURES` strip that took too much, or an HTML shell that parses but never runs the script. Those bugs are invisible until someone opens the zip. It skips with a notice if you have no Chrome or Edge, and `CHROME_PATH` points it at any other Chromium build. Add steps to `WALK_STEPS` in [test/release.mjs](test/release.mjs) as your game grows so the walk reaches every screen.
 
@@ -78,7 +78,7 @@ Add your own files to `sourceFiles`, and runtime assets to `dataFiles`.
 
 **Start by not worrying about it.** Closure in `ADVANCED` mode already deletes every engine function your game never calls, so unused features mostly cost nothing.
 
-It also folds away flags that default to `false` on its own: it sees the initializer, sees nothing ever writes it, and deletes the block. So `showSplashScreen` and `headlessMode` already cost nothing.
+It also folds away flags that default to `false` on its own: it sees the initializer, sees nothing ever writes it, and deletes the block. So `headlessMode` and `touchGamepadEnable` already cost nothing.
 
 What it *cannot* delete is code behind a flag that defaults to `true`. The engine declares those as mutable `let` bindings so their setters work, and Closure has to keep both branches of every `if (glEnable)`. That is why the whole WebGL implementation survives in a game that never draws with it. The `FEATURES` block fixes that by rewriting a disabled flag to `const false` and emptying its setter before Closure runs:
 

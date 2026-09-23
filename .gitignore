@@ -4,9 +4,6 @@ node_modules
 # editor files
 .vscode
 
-# engine build output (generate with: npm run build:engine)
-dist
-
 # example builds
 examples/starter/build
 examples/starter/*.zip

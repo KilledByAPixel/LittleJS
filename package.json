@@ -25,7 +25,6 @@
   "scripts": {
     "start": "node serve.js",
     "build": "node examples/starter/build.mjs",
-    "build:engine": "node src/engineBuild.mjs",
     "test": "node test/smoke.mjs",
     "test:release": "npm run build && node test/release.mjs"
   },
@@ -33,7 +32,6 @@
     "ect-bin": "~1.4.1",
     "google-closure-compiler": "~20230502.0.0",
     "roadroller": "~2.1.0",
-    "typescript": "~5.1.6",
     "uglify-js": "~3.17.4"
   }
 }
