@@ -3539,7 +3539,8 @@ class InstancedMesh3D extends EngineObject3D
         ASSERT(i >= 0 && i < this.maxCount, 'instance index out of range');
         const data = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS, m = matrix.m;
         data.set(m, k);
-        this.radius = max(this.radius, (m[12]*m[12] + m[13]*m[13] + m[14]*m[14]) ** .5 + (this.mesh.radius || 0) * render3DMaxScale(m));
+        const meshRadius = this.mesh.radius || this.mesh.computeRadius(); // the builders leave it to upload
+        this.radius = max(this.radius, (m[12]*m[12] + m[13]*m[13] + m[14]*m[14]) ** .5 + meshRadius * render3DMaxScale(m));
         this.markDirty(i);
     }
 
@@ -3566,7 +3567,7 @@ class InstancedMesh3D extends EngineObject3D
         this.markDirty(i);
     }
 
-    /** Note that an instance changed, so it uploads before the next draw; set and setColorAt call this
+    /** Note that an instance changed, so it uploads before the next draw; setMatrixAt and setColorAt call this
      *  @param {number} i */
     markDirty(i)
     {

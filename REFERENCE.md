@@ -1184,6 +1184,8 @@ mesh.dirty = true; mesh.upload() // re-upload edited arrays on the next draw, or
                                  // mesh.radius; every method that edits a mesh sets dirty itself
 mesh.vertexCount mesh.radius                  // vertices, and the bounding sphere for culling and picking
 mesh.computeRadius()                          // measure mesh.radius now, without uploading
+mesh.getTriangles()                           // {vertices, indices}: the strip as the indexed triangle list upload sends,
+                                              // its distinct vertices and real triangles, for an exporter or a check
 
 // Shape builders - return a Mesh centered on the origin, sizes are full sizes, smooth defaults to the plugin setting
 buildBox(size=1)                              // a vec3 or a number, six faces with uvs, always flat
@@ -1288,8 +1290,9 @@ parent.add(child)                         // parent.addChild(child), and child.p
 new THREE.BoxGeometry(w, h, d)            // buildBox(vec3(w, h, d)), or render3D.boxMesh with scale3D
 new THREE.SphereGeometry(r)               // buildSphere(r*2), or render3D.sphereMesh with scale3D
 new THREE.PlaneGeometry(w, h)             // render3D.planeMesh with scale3D, lying flat
-new THREE.InstancedMesh(geometry, m, n)   // new InstancedMesh3D(mesh, n) with setMatrixAt and setColorAt; objects and
-                                          // drawMesh batch by themselves too, rebuilt each frame
+new THREE.InstancedMesh(geometry, m, n)   // new InstancedMesh3D(mesh, n) with setMatrixAt and setColorAt, but its
+                                          // instances are in world space, the object's transform does not move them;
+                                          // objects and drawMesh batch by themselves too, rebuilt each frame
 material.color, material.map              // obj.color, and a TileInfo or TextureInfo as obj.tileInfo
 material.side = THREE.DoubleSide          // mesh.doubleSided = true
 material.emissiveIntensity                // obj.emissive

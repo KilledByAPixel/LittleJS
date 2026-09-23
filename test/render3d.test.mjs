@@ -2398,6 +2398,19 @@ test('setMatrixAt and setColorAt write one instance, widen the dirty range and t
     engineObjects.length = 0;
 });
 
+test('an InstancedMesh3D measures a mesh that has never uploaded, so its bounding sphere holds every instance', () =>
+{
+    const box = buildBox(vec3(2)); // corners at 1,1,1; the builders leave radius to upload
+    assert.equal(box.radius, 0);
+    const set = new InstancedMesh3D(box, 2);
+    const boxRadius = Math.hypot(1, 1, 1);
+    assert.ok(Math.abs(set.radius - boxRadius) < 1e-5, 'an instance at the origin reaches the mesh corners: ' + set.radius);
+    set.setMatrixAt(1, buildMatrix(vec3(0, 0, 10), undefined, vec3(3)));
+    assert.ok(set.radius >= 10 + 3 * boxRadius - 1e-5, 'a scaled instance away from the origin: ' + set.radius);
+    set.destroy();
+    engineObjects.length = 0;
+});
+
 test('an InstancedMesh3D in the stage loop draws nothing headless and throws nothing', () =>
 {
     const set = new InstancedMesh3D(render3D.boxMesh, 2);

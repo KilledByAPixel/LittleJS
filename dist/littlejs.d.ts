@@ -7363,7 +7363,7 @@ declare module "littlejsengine" {
          *  @param {number} i
          *  @param {Color} color */
         setColorAt(i: number, color: Color): void;
-        /** Note that an instance changed, so it uploads before the next draw; set and setColorAt call this
+        /** Note that an instance changed, so it uploads before the next draw; setMatrixAt and setColorAt call this
          *  @param {number} i */
         markDirty(i: number): void;
     }
