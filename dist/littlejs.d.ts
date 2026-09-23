@@ -7188,11 +7188,12 @@ declare module "littlejsengine" {
         render3D(): void;
     }
     /**
-     * Mesh - A triangle strip with positions, normals, uvs and colors, uploaded once and drawn by matrix
+     * Mesh - Triangles with positions, normals, uvs and colors, uploaded once and drawn by matrix
      * - Build with addStrip, addQuad, combine or the shape builders, then render each frame
      * - Its back faces are skipped unless doubleSided is set, which the open builders like buildGrid do for you
-     * - The strip is the authoring form; upload sends the GPU an indexed triangle list of its real triangles over its
-     *   distinct vertices, see getTriangles, so the joins between its pieces cost nothing to draw
+     * - Two forms: a triangle strip, what the builders make, or an indexed list of triangles over their own vertices,
+     *   what addTriangles and the model loaders make; upload sends the GPU an indexed list either way, see getTriangles,
+     *   so a strip's joins between its pieces cost nothing to draw, and toIndexed turns a strip mesh into the list form
      * - The GPU buffer is created lazily on first render and dropped by dispose, or freed once the mesh is garbage
      *   collected, so dispose is only needed to free it right away, like for a mesh rebuilt often
      * @memberof Render3D
@@ -7234,6 +7235,11 @@ declare module "littlejsengine" {
          *  the mesh keeps its GPU layout and a dirty upload only rewrites the vertices into the buffer it has; the strip
          *  must keep the same points in the same order, a new point count asserts */
         dynamicDraw: boolean;
+        /** @property {Array<number>|undefined} - The mesh as an indexed triangle list instead of a strip: the arrays hold each vertex
+         *  once and this says how they join, three vertex numbers per triangle, counter clockwise seen from the front like a
+         *  strip's first triangle; addTriangles and the loaders fill it, toIndexed turns a strip mesh into this form
+         *  @type {Array<number>|undefined} */
+        indices: Array<number> | undefined;
         /** @property {Int32Array|undefined} - Which strip entries are one vertex, set by a builder that knows, one whole number
          *  per entry with equal numbers meaning the same vertex; upload skips its search for them, then drops the keys, since
          *  an edit after that may tell the entries apart; adding geometry or recomputing normals drops them too
@@ -7258,6 +7264,20 @@ declare module "littlejsengine" {
          *  @param {Color|Array<Color>} [colors] - One for all or one per point, default white
          *  @return {Mesh} */
         addStrip(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>): Mesh;
+        /** Add triangles over their own vertices, the indexed form a model file comes in
+         *  - The mesh becomes indexed: a strip mesh is turned into triangles first, and strips added later join as triangles
+         *  - List each triangle counter clockwise as seen from the front, like a strip's first triangle
+         *  @param {Array<Vector3>} points - Each vertex once
+         *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
+         *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, default zero
+         *  @param {Color|Array<Color>} [colors] - One for all or one per point, default white
+         *  @param {Array<number>} indices - Three vertex numbers per triangle, into points
+         *  @return {Mesh} */
+        addTriangles(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>, indices: Array<number>): Mesh;
+        /** Turn a strip mesh into the indexed form, each distinct vertex once and the real triangles over them, in place
+         *  - An indexed mesh is left as it is; the builders make strips and a loader makes this, and either draws the same
+         *  @return {Mesh} */
+        toIndexed(): Mesh;
         /** Add a flat quad from four corners in loop order, counter clockwise seen from the front, a is the top left of the texture
          *  @param {Vector3} a
          *  @param {Vector3} b

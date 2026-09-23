@@ -20055,6 +20055,18 @@ function render3DWriteVertex(floats, ints, j, x, y, z, n, u, v, rgba)
     ints[j+8] = rgba;
 }
 
+// turn every triangle of an index list the other way round, in place: the authoring form reads counter clockwise
+// from the front and the pass draws clockwise, as a strip's triangles come out after its leading repeat
+function render3DFlipTriangles(indices)
+{
+    for (let t = 0; t < indices.length; t += 3)
+    {
+        const b = indices[t+1];
+        indices[t+1] = indices[t+2], indices[t+2] = b;
+    }
+    return indices;
+}
+
 // the triangles of a strip of count entries as an index list, given which vertex each entry maps to and which place
 // it is at: the strip's triangle i is (i-2, i-1, i), its odd ones read the other way as the GPU reads a strip, and a
 // triangle with two corners in one place has no area, it is a join between pieces or a sliver at a pole, and is left out
@@ -20110,11 +20122,12 @@ const render3DMeshBuffers = typeof FinalizationRegistry == 'undefined' ? undefin
     });
 
 /**
- * Mesh - A triangle strip with positions, normals, uvs and colors, uploaded once and drawn by matrix
+ * Mesh - Triangles with positions, normals, uvs and colors, uploaded once and drawn by matrix
  * - Build with addStrip, addQuad, combine or the shape builders, then render each frame
  * - Its back faces are skipped unless doubleSided is set, which the open builders like buildGrid do for you
- * - The strip is the authoring form; upload sends the GPU an indexed triangle list of its real triangles over its
- *   distinct vertices, see getTriangles, so the joins between its pieces cost nothing to draw
+ * - Two forms: a triangle strip, what the builders make, or an indexed list of triangles over their own vertices,
+ *   what addTriangles and the model loaders make; upload sends the GPU an indexed list either way, see getTriangles,
+ *   so a strip's joins between its pieces cost nothing to draw, and toIndexed turns a strip mesh into the list form
  * - The GPU buffer is created lazily on first render and dropped by dispose, or freed once the mesh is garbage
  *   collected, so dispose is only needed to free it right away, like for a mesh rebuilt often
  * @memberof Render3D
@@ -20160,6 +20173,11 @@ class Mesh
          *  the mesh keeps its GPU layout and a dirty upload only rewrites the vertices into the buffer it has; the strip
          *  must keep the same points in the same order, a new point count asserts */
         this.dynamicDraw = false;
+        /** @property {Array<number>|undefined} - The mesh as an indexed triangle list instead of a strip: the arrays hold each vertex
+         *  once and this says how they join, three vertex numbers per triangle, counter clockwise seen from the front like a
+         *  strip's first triangle; addTriangles and the loaders fill it, toIndexed turns a strip mesh into this form
+         *  @type {Array<number>|undefined} */
+        this.indices = undefined;
         /** @property {Int32Array|undefined} - Which strip entries are one vertex, set by a builder that knows, one whole number
          *  per entry with equal numbers meaning the same vertex; upload skips its search for them, then drops the keys, since
          *  an edit after that may tell the entries apart; adding geometry or recomputing normals drops them too
@@ -20188,6 +20206,12 @@ class Mesh
      *  @return {Mesh} */
     addStrip(points, normals, uvs, colors)
     {
+        if (this.indices)
+        {
+            // an indexed mesh takes the strip as the triangles it makes
+            const part = new Mesh().addStrip(points, normals, uvs, colors).toIndexed();
+            return this.addTriangles(part.points, part.normals, part.uvs, part.colors, part.indices);
+        }
         render3DForEachStripVertex(points, normals, uvs, colors, (p, n, uv, c)=>
         {
             this.points.push(p);
@@ -20196,6 +20220,52 @@ class Mesh
             this.colors.push(c);
         });
         this.vertexKeys = undefined; // the new entries have no keys
+        this.dirty = true;
+        return this;
+    }
+
+    /** Add triangles over their own vertices, the indexed form a model file comes in
+     *  - The mesh becomes indexed: a strip mesh is turned into triangles first, and strips added later join as triangles
+     *  - List each triangle counter clockwise as seen from the front, like a strip's first triangle
+     *  @param {Array<Vector3>} points - Each vertex once
+     *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
+     *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, default zero
+     *  @param {Color|Array<Color>} [colors] - One for all or one per point, default white
+     *  @param {Array<number>} indices - Three vertex numbers per triangle, into points
+     *  @return {Mesh} */
+    addTriangles(points, normals, uvs, colors, indices)
+    {
+        false&&ASSERT(isArray(points) && isArray(indices) && indices.length % 3 === 0, 'addTriangles takes points and three indices per triangle');
+        false&&ASSERT(indices.every(i=> i >= 0 && i < points.length && i % 1 === 0), 'an index points past the vertices given');
+        this.toIndexed();
+        const offset = this.points.length, normalArray = isArray(normals), uvArray = isArray(uvs), colorArray = isArray(colors);
+        for (let i = 0; i < points.length; ++i)
+        {
+            this.points.push(points[i]);
+            this.normals.push(normalArray ? normals[i] : normals || RENDER3D_DEFAULT_NORMAL);
+            this.uvs.push(uvArray ? uvs[i] : uvs || RENDER3D_DEFAULT_UV);
+            this.colors.push(colorArray ? colors[i] : colors || WHITE);
+        }
+        for (const i of indices)
+            this.indices.push(i + offset);
+        this.dirty = true;
+        return this;
+    }
+
+    /** Turn a strip mesh into the indexed form, each distinct vertex once and the real triangles over them, in place
+     *  - An indexed mesh is left as it is; the builders make strips and a loader makes this, and either draws the same
+     *  @return {Mesh} */
+    toIndexed()
+    {
+        if (this.indices) return this;
+        const {vertices, indices} = this.getTriangles();
+        this.points = vertices.map(i=> this.points[i]);
+        this.normals = vertices.map(i=> this.normals[i] || RENDER3D_DEFAULT_NORMAL);
+        this.uvs = vertices.map(i=> this.uvs[i] || RENDER3D_DEFAULT_UV);
+        this.colors = vertices.map(i=> this.colors[i] || WHITE);
+        // the list upload sends reads clockwise, the pass draws it that way; the authoring form is counter clockwise
+        this.indices = render3DFlipTriangles(indices);
+        this.vertexKeys = undefined;
         this.dirty = true;
         return this;
     }
@@ -20223,12 +20293,22 @@ class Mesh
     {
         matrix = render3DMatrix(matrix); // most parts only need moving into place
         const normalMatrix = render3DNormalMatrix(matrix);
-        for (let i = 0; i < mesh.points.length; ++i)
+        let part = mesh;
+        if (this.indices || mesh.indices)
         {
-            this.points.push(matrix.transformPoint(mesh.points[i]));
-            this.normals.push(normalMatrix.transformDirection(mesh.normals[i] || RENDER3D_DEFAULT_NORMAL).normalize());
-            this.uvs.push((mesh.uvs[i] || RENDER3D_DEFAULT_UV).copy());
-            this.colors.push((mesh.colors[i] || WHITE).multiply(color));
+            // one of them is indexed, so both are: the part as a copy if it is a strip
+            this.toIndexed();
+            part = mesh.indices ? mesh : new Mesh().combine(mesh).toIndexed();
+            const offset = this.points.length;
+            for (const i of part.indices)
+                this.indices.push(i + offset);
+        }
+        for (let i = 0; i < part.points.length; ++i)
+        {
+            this.points.push(matrix.transformPoint(part.points[i]));
+            this.normals.push(normalMatrix.transformDirection(part.normals[i] || RENDER3D_DEFAULT_NORMAL).normalize());
+            this.uvs.push((part.uvs[i] || RENDER3D_DEFAULT_UV).copy());
+            this.colors.push((part.colors[i] || WHITE).multiply(color));
         }
         this.doubleSided ||= mesh.doubleSided; // an open part leaves the whole mesh open
         this.vertexKeys = undefined; // the new entries have no keys
@@ -20268,12 +20348,20 @@ class Mesh
      *  @return {Mesh} */
     flipNormals()
     {
-        // one extra point at each end flips which way every triangle faces, and keeps the count even
-        for (const key of ['points', 'normals', 'uvs', 'colors'])
+        if (this.indices)
         {
-            const a = this[key];
-            if (a.length)
-                a.unshift(a[0]), a.push(a[a.length - 1]);
+            render3DFlipTriangles(this.indices); // every triangle read the other way round
+        }
+        else
+        {
+            // one extra point at each end flips which way every triangle faces, and keeps the count even
+            for (const key of ['points', 'normals', 'uvs', 'colors'])
+            {
+                const a = this[key];
+                if (a.length)
+                    a.unshift(a[0]), a.push(a[a.length - 1]);
+            }
+            this.vertexKeys = undefined;
         }
         this.normals = this.normals.map(n=> n.scale(-1));
         this.dirty = true;
@@ -20341,6 +20429,35 @@ class Mesh
      *  @return {Mesh} */
     computeNormals(smooth=false)
     {
+        if (this.indices)
+        {
+            // the triangles are listed: smooth normals add up around each vertex by index, weighted by the corner
+            // angle like the strip's; flat ones need a vertex per corner, so the vertices are split up first
+            if (!smooth)
+            {
+                const split = (a)=> this.indices.map(i=> a[i]);
+                this.points = split(this.points), this.normals = split(this.normals), this.uvs = split(this.uvs), this.colors = split(this.colors);
+                this.indices = this.indices.map((_, i)=> i);
+            }
+            const points = this.points, indices = this.indices, sums = points.map(()=> vec3());
+            for (let t = 0; t < indices.length; t += 3)
+            {
+                const a = points[indices[t]], b = points[indices[t+1]], c = points[indices[t+2]];
+                const cross = b.subtract(a).cross(c.subtract(a));
+                if (!cross.lengthSquared()) continue;
+                const normal = cross.normalize();
+                for (let j = 0; j < 3; ++j)
+                {
+                    const p = points[indices[t+j]], u = points[indices[t+(j+1)%3]].subtract(p), v = points[indices[t+(j+2)%3]].subtract(p);
+                    const angle = Math.acos(clamp(u.dot(v) / (u.length() * v.length() || 1), -1, 1));
+                    sums[indices[t+j]] = sums[indices[t+j]].add(normal.scale(angle));
+                }
+            }
+            this.normals = sums.map(s=> s.lengthSquared() ? s.normalize() : RENDER3D_DEFAULT_NORMAL);
+            this.dirty = true;
+            return this;
+        }
+
         // the outward normal of each triangle in the strip
         const points = this.points, n = points.length;
         const faceNormals = [];
@@ -20429,6 +20546,13 @@ class Mesh
     getTriangles()
     {
         const count = this.points.length, vertices = [];
+        if (this.indices)
+        {
+            // already a list: every vertex as it is, and the triangles read the way the pass draws, clockwise
+            for (let i = 0; i < count; ++i)
+                vertices.push(i);
+            return {vertices, indices: render3DFlipTriangles(this.indices.slice())};
+        }
         const remap = new Int32Array(count), place = new Int32Array(count), keys = this.vertexKeys;
         if (keys && keys.length === count)
         {
@@ -22519,8 +22643,9 @@ class Trail3D extends EngineObject3D
  */
 function parseOBJ(text, smooth=render3D?.smoothShading)
 {
-    const positions = [], normals = [], uvs = [], mesh = new Mesh;
-    let fileNormals = false;
+    const positions = [], normals = [], uvs = [];
+    const points = [], vertexNormals = [], vertexUVs = [], indices = [], seen = new Map;
+    let fileNormals = false, face = 0;
 
     // OBJ indices count from 1, and a negative one counts back from the end of the list so far
     const lookup = (s, list)=> { const i = parseInt(s); return list[i < 0 ? list.length + i : i - 1]; };
@@ -22536,17 +22661,35 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
             {
                 const corners = parts.slice(1).map(c=> c.split('/'));
                 if (corners.length < 3) break;
-                const points = corners.map(c=> lookup(c[0], positions));
-                false&&ASSERT(points.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
-                const uv = corners.map(c=> c[1] ? lookup(c[1], uvs) : RENDER3D_DEFAULT_UV);
+                const facePoints = corners.map(c=> lookup(c[0], positions));
+                false&&ASSERT(facePoints.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
                 const hasNormals = corners.every(c=> c[2]);
                 fileNormals ||= hasNormals;
-                const n = hasNormals ? render3DPolygonStrip(corners.map(c=> lookup(c[2], normals)))
-                    : render3DFaceNormal(points[0], points[1], points[2], points[3]);
-                mesh.addStrip(render3DPolygonStrip(points), n, render3DPolygonStrip(uv));
+                const faceNormal = hasNormals ? undefined : render3DFaceNormal(facePoints[0], facePoints[1], facePoints[2], facePoints[3]);
+                // a corner is one vertex with the same position, uv and normal; without file normals the face's own
+                // normal keeps its corners apart, unless they will be smoothed, when the position and uv are enough
+                const ids = corners.map((c, i)=>
+                {
+                    const key = c[0] + '/' + (c[1] || '') + '/' + (hasNormals ? c[2] : smooth ? '' : 'f' + face);
+                    let id = seen.get(key);
+                    if (id === undefined)
+                    {
+                        seen.set(key, id = points.length);
+                        points.push(facePoints[i]);
+                        vertexUVs.push(c[1] ? lookup(c[1], uvs) : RENDER3D_DEFAULT_UV);
+                        vertexNormals.push(hasNormals ? lookup(c[2], normals) : faceNormal);
+                    }
+                    return id;
+                });
+                // a fan around the second corner, counter clockwise as the file lists them; that cuts a quad along
+                // the same diagonal the strip form did, so a smoothed model shades the same as before
+                for (let k = 2; k < ids.length; ++k)
+                    indices.push(ids[1], ids[k], ids[(k + 1) % ids.length]);
+                ++face;
             }
         }
     }
+    const mesh = new Mesh().addTriangles(points, vertexNormals, vertexUVs, undefined, indices);
     if (!fileNormals && smooth)
         mesh.computeNormals(true);
     return mesh;

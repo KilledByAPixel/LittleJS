@@ -255,6 +255,20 @@ test('Mesh.render is safe headless and dispose clears the buffer', () =>
 function assertOutward(mesh, msg)
 {
     const p = mesh.points;
+    if (mesh.indices)
+    {
+        const idx = mesh.indices;
+        for (let t = 0; t < idx.length; t += 3)
+        {
+            const a = p[idx[t]], b = p[idx[t+1]], c = p[idx[t+2]], n = b.subtract(a).cross(c.subtract(a));
+            if (n.lengthSquared() < 1e-9) continue;
+            const center = a.add(b).add(c).scale(1/3);
+            assert.ok(n.dot(center) > 0, `${msg}: triangle ${t / 3} winds inward`);
+            for (let j = 0; j < 3; ++j)
+                assert.ok(mesh.normals[idx[t+j]].dot(n) > 0, `${msg}: normal ${idx[t+j]} disagrees with its face`);
+        }
+        return;
+    }
     for (let i = 0; i + 2 < p.length; ++i)
     {
         const a = p[i], b = p[i+1], c = p[i+2];
@@ -1130,10 +1144,11 @@ f 1 2 3 4
 f 8 7 6 5
 `;
 
-test('parseOBJ reads vertices and faces into outward strips with flat normals', () =>
+test('parseOBJ reads vertices and faces into an outward indexed mesh with flat normals', () =>
 {
     const m = parseOBJ(houseOBJ, false);
-    assert.equal(m.vertexCount, 6 * 6); // six quads
+    assert.equal(m.vertexCount, 6 * 4); // six quads, each with its own four corners
+    assert.equal(m.indices.length, 6 * 2 * 3);
     assertOutward(m, 'obj box');
     nearVec(m.normals[1], 0, 0, -1); // first face is the -Z wall
     for (const p of m.points)
@@ -1154,12 +1169,14 @@ vn 0 0 1
 f -3/-3/-1 -2/-2/-1 -1/-1/-1
 `;
     const m = parseOBJ(text, true);
-    assert.equal(m.vertexCount, 6); // one triangle
+    assert.equal(m.vertexCount, 3); // one triangle
+    assert.deepEqual(m.indices, [1, 2, 0], 'the one triangle, cut from its second corner like a quad would be');
     nearVec(m.normals[1], 0, 0, 1);  // the file normal, not recomputed even though smooth is set
-    near(m.uvs[1].y, 1);             // OBJ v runs up, so vt 0 0 lands at the bottom of the tile
-    near(m.uvs[3].y, 0);             // vt 0 1 is the top
+    near(m.uvs[0].y, 1);             // OBJ v runs up, so vt 0 0 lands at the bottom of the tile
+    near(m.uvs[2].y, 0);             // vt 0 1 is the top
     // without file normals, smooth computes averaged vertex normals
     const smooth = parseOBJ(houseOBJ, true);
+    assert.equal(smooth.vertexCount, 8, 'smoothed, the faces share their corners');
     const corner = smooth.points.findIndex(p => p.x === 1 && p.y === 1 && p.z === 1);
     assert.ok(smooth.normals[corner].x > 0 && smooth.normals[corner].y > 0 && smooth.normals[corner].z > 0);
     near(smooth.normals[corner].length(), 1);
@@ -2583,6 +2600,52 @@ test('a smooth buildGrid says which strip entries are one vertex, and getTriangl
     const grown = buildGrid(vec2(2), 2, undefined, undefined, true);
     grown.addStrip([vec3(), vec3(1), vec3(2)]);
     assert.equal(grown.vertexKeys, undefined);
+});
+
+test('addTriangles builds an indexed mesh that uploads as it is, its triangles read clockwise by the pass', () =>
+{
+    const m = new Mesh, quad = [vec3(-1, -1, 0), vec3(1, -1, 0), vec3(1, 1, 0), vec3(-1, 1, 0)];
+    m.addTriangles(quad, vec3(0, 0, 1), undefined, RED, [0, 1, 2, 0, 2, 3]); // counter clockwise seen from +z
+    assert.deepEqual(m.indices, [0, 1, 2, 0, 2, 3]);
+    assert.equal(m.vertexCount, 4);
+    assert.equal(m.colors[3], RED);
+    const { vertices, indices } = m.getTriangles();
+    assert.deepEqual(vertices, [0, 1, 2, 3]);
+    assert.deepEqual(indices, [0, 2, 1, 0, 3, 2], 'the pass draws clockwise, like a strip comes out');
+    assert.equal(Math.sign(stripFacing(m, [0, 2, 1])), -1);
+});
+
+test('a strip mesh turns indexed when triangles are added, strips join an indexed mesh as triangles, and combine crosses the forms', () =>
+{
+    const box = buildBox();
+    box.addTriangles([vec3(0, 2, 0), vec3(1, 2, 0), vec3(0, 3, 0)], vec3(0, 0, 1), undefined, undefined, [0, 1, 2]);
+    assert.equal(box.vertexCount, 24 + 3, 'the box welded to its 24 vertices, then the triangle');
+    assert.equal(box.indices.length, 36 + 3);
+    box.addStrip([vec3(0, 5, 0), vec3(1, 5, 0), vec3(0, 6, 0)]);
+    assert.equal(box.vertexCount, 30);
+    assert.equal(box.indices.length, 42);
+    assert.equal(box.getTriangles().indices.length, 42);
+    const strip = buildBox(), indexed = new Mesh().combine(buildSphere(1, 8, 4)).toIndexed();
+    const a = new Mesh().combine(strip).combine(indexed), b = new Mesh().combine(indexed).combine(strip);
+    assert.equal(a.indices.length, 36 + indexed.indices.length);
+    assert.equal(b.getTriangles().indices.length, a.getTriangles().indices.length);
+    assertOutward(a, 'box then sphere');
+    assertOutward(b, 'sphere then box');
+});
+
+test('computeNormals and flipNormals work on an indexed mesh, flat normals splitting the vertices', () =>
+{
+    const m = new Mesh, quad = [vec3(-1, -1, 0), vec3(1, -1, 0), vec3(1, 1, 0), vec3(-1, 1, 0)];
+    m.addTriangles(quad, undefined, undefined, undefined, [0, 1, 2, 0, 2, 3]);
+    m.computeNormals(true);
+    assert.equal(m.vertexCount, 4);
+    for (const n of m.normals) nearVec(n, 0, 0, 1);
+    m.computeNormals(false);
+    assert.equal(m.vertexCount, 6, 'one vertex per corner');
+    nearVec(m.normals[5], 0, 0, 1);
+    m.flipNormals();
+    nearVec(m.normals[0], 0, 0, -1);
+    assert.deepEqual(m.indices.slice(0, 3), [0, 2, 1]);
 });
 
 test('getTriangles compares every vertex value to a millionth, so two a hair apart are one vertex', () =>

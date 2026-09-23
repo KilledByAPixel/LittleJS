@@ -1162,6 +1162,11 @@ mesh.addStrip(points, normals, uvs, colors) // one strip in strip order, counter
                                             // joined by an invisible flat triangle, so they do not look connected
 mesh.addQuad(a, b, c, d, color, uvs) // corners in loop order, counter clockwise seen from the front; color and uvs one
                                      // or per corner
+mesh.addTriangles(points, normals, uvs, colors, indices) // triangles over their own vertices, the form a model file
+                                     // comes in: each vertex once, three indices per triangle counter clockwise from
+                                     // the front; the mesh becomes indexed, a strip already in it is welded first
+mesh.toIndexed()                     // turn a strip mesh into the indexed form in place, each distinct vertex once
+mesh.indices                         // the triangles of an indexed mesh, undefined for a strip; either form draws the same
 mesh.combine(otherMesh, matrix, color)        // append a transformed, tinted copy, to build one shape out of several;
                                               // matrix can be a vec3 when the part only needs moving into place
 mesh.scaleUVs(scale)                          // repeat a wrapping texture across the mesh, a vec2 or a number
@@ -1175,8 +1180,9 @@ mesh.center() mesh.fit(size) // move the bounds onto the origin, scale the large
 mesh.render(matrix, tileInfo, color)          // draw it now with the current draw state
 mesh.dispose()                                // free the GPU buffer now, the CPU data stays; optional, a mesh
                                               // that is garbage collected frees its buffer anyway, some time later
-mesh.points mesh.normals mesh.uvs mesh.colors // the vertex arrays, one entry per strip vertex; building one by
-                                 // hand you can fill points alone, the rest fall back to up, zero and white
+mesh.points mesh.normals mesh.uvs mesh.colors // the vertex arrays, one entry per strip vertex, or per vertex of an
+                                 // indexed mesh; building one by hand you can fill points alone, the rest fall
+                                 // back to up, zero and white
 mesh.instanced = false           // draw this mesh one call per use, in object order, instead of batching it
 mesh.doubleSided = true          // draw both sides, each lit as the side seen; off, the default, skips faces pointing
                                  // away, faster for closed shapes; buildGrid, buildRibbon and open lathes turn it
@@ -1189,7 +1195,8 @@ mesh.dynamicDraw = true          // set once for a mesh whose values change ever
 mesh.vertexCount mesh.radius                  // vertices, and the bounding sphere for culling and picking
 mesh.computeRadius()                          // measure mesh.radius now, without uploading
 mesh.getTriangles()                           // {vertices, indices}: the strip as the indexed triangle list upload sends,
-                                              // its distinct vertices and real triangles, for an exporter or a check
+                                              // its distinct vertices and real triangles, for an exporter or a check; an
+                                              // indexed mesh gives its own, read clockwise as the pass draws
 
 // Shape builders - return a Mesh centered on the origin, sizes are full sizes, smooth defaults to the plugin setting
 buildBox(size=1)                              // a vec3 or a number, six faces with uvs, always flat
