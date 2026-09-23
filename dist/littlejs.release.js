@@ -18037,7 +18037,8 @@ function raycastBox(ray, pos, size)
  * - The 3D scene draws under the 2D sprites, so HUD and text land on top
  * - Lighting is the sun plus ambient, with optional extra lights, fog and shadows
  * - Any object or draw can bring its own Shader, a mainImage snippet the lighting then applies to
- * - Build shapes with buildBox, buildSphere and friends, or load a model with loadOBJ
+ * - Build shapes with buildBox, buildSphere, buildGrid and buildLathe; the other builders, terrain, particles,
+ *   camera controls and the OBJ loader are in the Render3D Extras plugin, which goes after this one
  * - Requires the Math3D plugin
  * @namespace Render3D
  */
@@ -18071,10 +18072,6 @@ const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
 const RENDER3D_SHADOW_COLOR = Object.freeze(hsl(0, 0, 0, .5));
 const RENDER3D_IDENTITY = new Matrix4; // never modified
 const RENDER3D_DEBUG_WIDTH = .05; // line width of the debug primitives
-// gap between lines of 3D text, as a share of the character height; flat text can let lines touch
-// the way the 2D font does, but extruded glyphs seen from an angle then overlap the line below
-const RENDER3D_TEXT_LEADING = 1.3;
-
 ///////////////////////////////////////////////////////////////////////////////
 // Private helpers
 
@@ -18176,15 +18173,6 @@ function render3DNormalMatrix(matrix) { return matrix.copy().invert().transpose(
 // a column of a matrix as a direction: 0 is the right axis, 4 up, 8 back
 function render3DAxis(m, i) { return vec3(m[i], m[i+1], m[i+2]); }
 
-// surface normal from the slope of a height function, sampled half a cell each way but kept inside the half sizes
-function render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ)
-{
-    const x0 = max(x - ex, -halfX), x1 = min(x + ex, halfX), z0 = max(z - ez, -halfZ), z1 = min(z + ez, halfZ);
-    const dx = (heightFunction(x1, z) - heightFunction(x0, z)) / (x1 - x0 || 1);
-    const dz = (heightFunction(x, z1) - heightFunction(x, z0)) / (z1 - z0 || 1);
-    return vec3(-dx, 1, -dz).normalize();
-}
-
 // the largest axis scale of a matrix, how much it grows a bounding sphere
 function render3DMaxScale(m)
 {
@@ -18225,16 +18213,6 @@ function render3DDrawObjects(objects)
         o.render3D();
     }
     render3DSetObjectState();
-}
-
-// let go of the parent but stay where the object was in the world; a destroyed parent has already let go, so the
-// position remembered by the last update stands in
-function render3DDetach(o)
-{
-    if (o.parent)
-        o.pos3D = o.getWorldPos3D(), o.parent.removeChild(o);
-    else if (o.worldPos3D)
-        o.pos3D = o.worldPos3D;
 }
 
 // add a draw of a mesh to its batch; a batch is one mesh under one texture and draw state, so a change flushes it
@@ -18374,20 +18352,6 @@ function render3DCircle(sides)
         render3DCircleCache.set(sides, circle);
     }
     return circle;
-}
-
-// a soft white dot for untextured particles, made once from a canvas, undefined headless or without a canvas
-let render3DSoftDotTexture;
-function render3DSoftDot()
-{
-    if (render3DSoftDotTexture || !glContext || typeof OffscreenCanvas == 'undefined') return render3DSoftDotTexture;
-    const size = 32, context = createCanvasContext(size);
-    const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-    for (const [stop, alpha] of [[0, 1], [.33, .9], [.67, .7], [1, 0]]) // the same falloff as a soft disc
-        gradient.addColorStop(stop, 'rgba(255,255,255,' + alpha + ')');
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, size, size);
-    return render3DSoftDotTexture = new TextureInfo(context.canvas);
 }
 
 // the rotation that points -Z along a direction, as vec3(pitch, yaw, 0); a zero direction keeps the current one
@@ -19166,8 +19130,9 @@ class Render3DPlugin
     drawSoftShadow(pos, size=1, floorHeight=0, color=RENDER3D_SHADOW_COLOR, lift=.02)
     {
         render3DAssertBlending();
+        // a HeightMap is in the extras plugin, so it is known by its getHeight rather than its class
         const height = isNumber(floorHeight) ? ()=> floorHeight
-            : floorHeight instanceof HeightMap ? (x, z)=> floorHeight.getHeight(x, z) : floorHeight;
+            : floorHeight.getHeight ? (x, z)=> floorHeight.getHeight(x, z) : floorHeight;
         if (this.transparentQueue && !this.capture) // sort from the floor, under whatever casts it
             return this.queueTransparent(vec3(pos.x, height(pos.x, pos.z) + lift, pos.z), ()=> this.drawSoftShadow(pos, size, floorHeight, color, lift));
         render3DDrawSoftDisc(size / 2, color, 16, RENDER3D_DEFAULT_NORMAL, (c, s, r)=>
@@ -20748,36 +20713,6 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
 }
 
 /**
- * Build a cylinder standing on the Y axis, centered on the origin
- * @param {number} [size] - Diameter
- * @param {number} [height]
- * @param {number} [sides] - Around
- * @param {boolean} [smooth] - Defaults to render3D.smoothShading
- * @param {boolean} [capped] - Close the ends
- * @return {Mesh}
- * @memberof Render3D
- */
-function buildCylinder(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true)
-{
-    return buildLathe([[size / 2, -height / 2], [size / 2, height / 2]], sides, smooth, capped);
-}
-
-/**
- * Build a cone standing on the Y axis, centered on the origin, the point up
- * @param {number} [size] - Diameter of the base
- * @param {number} [height]
- * @param {number} [sides] - Around
- * @param {boolean} [smooth] - Defaults to render3D.smoothShading
- * @param {boolean} [capped] - Close the base
- * @return {Mesh}
- * @memberof Render3D
- */
-function buildCone(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true)
-{
-    return buildLathe([[size / 2, -height / 2], [0, height / 2]], sides, smooth, capped);
-}
-
-/**
  * Build a sphere centered on the origin
  * @param {number} [size] - Diameter
  * @param {number} [sides] - Around
@@ -20794,56 +20729,6 @@ function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
     {
         const a = i / rings * PI - PI/2;
         profile.push([cos(a) * size / 2, sin(a) * size / 2]);
-    }
-    return buildLathe(profile, sides, smooth);
-}
-
-/**
- * Build a capsule standing on the Y axis, centered on the origin: a cylinder with a half sphere on each end
- * @param {number} [size] - Diameter
- * @param {number} [height] - Total height including the rounded ends, at least the size
- * @param {number} [sides] - Around
- * @param {number} [rings] - On each end
- * @param {boolean} [smooth] - Defaults to render3D.smoothShading
- * @return {Mesh}
- * @memberof Render3D
- */
-function buildCapsule(size=1, height=1, sides=16, rings=4, smooth=render3D?.smoothShading)
-{
-    // the rounded ends alone are already the size tall, so a shorter capsule is only a sphere
-    false&&ASSERT(height >= size, 'a capsule is at least as tall as it is wide, the ends take up the size', size, height);
-    const profile = [], r = size / 2, straight = max(0, height - size) / 2;
-    for (let i = 0; i <= rings; ++i)
-    {
-        const a = i / rings * PI / 2;
-        profile.push([r * sin(a), -straight - r * cos(a)]);
-    }
-    for (let i = 0; i <= rings; ++i)
-    {
-        const a = i / rings * PI / 2;
-        profile.push([r * cos(a), straight + r * sin(a)]);
-    }
-    return buildLathe(profile, sides, smooth);
-}
-
-/**
- * Build a donut lying flat around the Y axis
- * @param {number} [size] - Diameter of the whole donut, outside edge to outside edge
- * @param {number} [tubeSize] - Diameter of the tube
- * @param {number} [sides] - Around the ring
- * @param {number} [tubeSides] - Around the tube
- * @param {boolean} [smooth] - Defaults to render3D.smoothShading
- * @return {Mesh}
- * @memberof Render3D
- */
-function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3D?.smoothShading)
-{
-    false&&ASSERT(tubeSize <= size, 'the tube must fit inside the torus');
-    const profile = [], radius = (size - tubeSize) / 2, tubeRadius = tubeSize / 2;
-    for (let i = 0; i <= tubeSides; ++i)
-    {
-        const a = i / tubeSides * 2 * PI;
-        profile.push([radius + tubeRadius * cos(a), tubeRadius * sin(a)]);
     }
     return buildLathe(profile, sides, smooth);
 }
@@ -20873,46 +20758,6 @@ function buildBox(size=1)
         const right = r.multiply(half), up = u.multiply(half);
         mesh.addStrip(render3DQuadAxes(center, right, up), n, RENDER3D_QUAD_UVS);
     }
-    return mesh;
-}
-
-/**
- * Build a lit ribbon along a path, for roads, tracks and walls
- * - Each segment is a flat quad, the sides are across the path in the plane of the up vector
- * - doubleSided, so it is seen and lit from below as well
- * @param {Array<Vector3>} points - Center line in order
- * @param {number|Array<number>} [width] - Full width, one for all or one per point
- * @param {Color|Array<Color>} [color] - One for all or one per point
- * @param {boolean} [closed] - Join the last point back to the first
- * @param {Vector3} [up] - Which way the ribbon faces
- * @return {Mesh}
- * @memberof Render3D
- * @example
- * const road = buildRibbon(trackPoints, 8, GRAY, true); // a loop of road
- */
-function buildRibbon(points, width=1, color=WHITE, closed=false, up=vec3(0, 1, 0))
-{
-    false&&ASSERT(isArray(points) && points.length > 1, 'ribbon needs at least 2 points');
-    const mesh = new Mesh, count = points.length, edges = [];
-    let across = (abs(up.y) < .9 ? vec3(0, 1, 0) : vec3(1, 0, 0)).cross(up).normalize(); // anything across up
-    for (let i = 0; i < count; ++i)
-    {
-        // across the path, from the tangent through this point; a step along up keeps the last across
-        const next = points[closed ? (i + 1) % count : min(i + 1, count - 1)];
-        const last = points[closed ? (i + count - 1) % count : max(i - 1, 0)];
-        const dir = next.subtract(last).cross(up);
-        if (dir.lengthSquared() > 1e-12)
-            across = dir.normalize();
-        const half = across.scale((isArray(width) ? width[i] : width) / 2);
-        edges.push([points[i].subtract(half), points[i].add(half)]);
-    }
-    for (let i = 0; i + 1 < count + (closed ? 1 : 0); ++i)
-    {
-        const j = (i + 1) % count, a = edges[i], b = edges[j];
-        const c = isArray(color) ? [color[i], color[i], color[j], color[j]] : color;
-        mesh.addQuad(a[0], a[1], b[1], b[0], c); // counter clockwise seen from above
-    }
-    mesh.doubleSided = true; // a flat strip, seen from both sides
     return mesh;
 }
 
@@ -21010,38 +20855,6 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
 }
 
 /**
- * Build a hull from a row of diamond shaped slices along Z, for ships, planes and cars
- * - Each slice is [z, width, top, bottom, sideHeight]
- * - sideHeight is 0 to 1 and puts the side corners between the bottom and the top
- * - List the slices nose first, with the nose at the largest z
- * @param {Array<Array<number>>} stations
- * @return {Mesh}
- * @memberof Render3D
- * @example
- * const hull = buildLoft([[1.2, .4, .2, -.1], [0, 1.4, .5, -.4], [-1, 1, .3, -.3]]);
- */
-function buildLoft(stations)
-{
-    false&&ASSERT(isArray(stations) && stations.length > 1, 'loft needs at least 2 stations');
-    // the caps and the winding both assume the nose leads, so the other order turns the hull inside out
-    false&&ASSERT(stations[0][0] > stations[stations.length-1][0], 'loft stations go nose first, from the largest z to the smallest');
-    const mesh = new Mesh;
-    // section points: left, top, right, bottom, wound clockwise seen from +z
-    const section = ([z, w, t, b, m=.5])=>
-        [vec3(-w / 2, lerp(b, t, m), z), vec3(0, t, z), vec3(w / 2, lerp(b, t, m), z), vec3(0, b, z)];
-    for (let i = 0; i + 1 < stations.length; ++i)
-    {
-        const s1 = section(stations[i]), s2 = section(stations[i + 1]);
-        for (let k = 0; k < 4; ++k)
-            mesh.addQuad(s1[k], s1[(k + 1) % 4], s2[(k + 1) % 4], s2[k]);
-    }
-    const tail = section(stations[stations.length - 1]), nose = section(stations[0]);
-    mesh.addQuad(tail[0], tail[1], tail[2], tail[3]);
-    mesh.addQuad(nose[3], nose[2], nose[1], nose[0]);
-    return mesh;
-}
-
-/**
  * Build a sky dome: a sphere colored by direction, wound to be seen from inside
  * - set it as render3D.sky and the pass draws it around the camera behind everything
  * @param {Color} [topColor] - Straight up
@@ -21078,344 +20891,6 @@ function buildSky(topColor=hsl(.6, .8, .55), horizonColor=hsl(.6, 1, .9), bottom
         mesh.addStrip(points, undefined, undefined, colors);
     }
     return mesh;
-}
-
-/**
- * Turn a sprite into a 3D block model by giving its pixels thickness
- * - A pixel counts as solid when it is more than half opaque
- * - Each pixel keeps its own color, so white art takes the object's tint
- * - Runs of matching pixels merge into one face, and side walls appear only at the sprite's edges
- * - A texture's pixels are read once and kept, so redrawing a canvas texture will not change what this builds
- * - Pixels can also be an array of rows, each a Color, a truthy value for white, or a falsy value for empty
- * @param {TileInfo|Array<Array<Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels,
- *  each a Color (empty when see through), a truthy value for white or a falsy value for empty
- * @param {Vector2} [size] - World width and height of the whole tile, centered like buildBox
- * @param {number} [depth] - Thickness along Z
- * @return {Mesh}
- * @memberof Render3D
- * @example
- * new EngineObject3D(vec3(), buildExtrude(tile(3, 16), vec2(2), .5)); // a chunky version of tile 3
- */
-function buildExtrude(pixels, size=vec2(1), depth=1)
-{
-    let rows = pixels, width, height;
-    if (pixels instanceof TileInfo)
-    {
-        // colors for the tile's pixels only, undefined where alpha is half or less
-        const image = render3DReadPixels(pixels.textureInfo), data = image.data;
-        const x0 = pixels.pos.x | 0, y0 = pixels.pos.y | 0;
-        width = pixels.size.x | 0, height = pixels.size.y | 0;
-        rows = [];
-        for (let y = 0; y < height; ++y)
-        {
-            const row = rows[y] = [];
-            for (let x = 0; x < width; ++x)
-            {
-                const k = ((y0 + y) * image.width + x0 + x) * 4;
-                row.push(data[k + 3] > 127 ? rgb(data[k] / 255, data[k + 1] / 255, data[k + 2] / 255) : undefined);
-            }
-        }
-    }
-    else
-    {
-        false&&ASSERT(isArray(pixels) && pixels.length, 'pixels must be a TileInfo or rows of pixels');
-        height = rows.length, width = rows[0].length;
-    }
-
-    // the color of a solid pixel, undefined outside or where it is empty
-    const solid = (x, y)=>
-    {
-        if (x < 0 || y < 0 || x >= width || y >= height) return;
-        const c = rows[y] && rows[y][x];
-        if (!c) return;
-        return isColor(c) ? (c.a > .5 ? c : undefined) : WHITE; // a see through Color is empty too
-    };
-    const same = (a, b)=> a === b || !!a && !!b && a.rgbaInt() === b.rgbaInt();
-
-    // call emit(start, end, color) for each run of same colored pixels, colorAt(i) undefined breaks the run
-    const runs = (count, colorAt, emit)=>
-    {
-        let start = 0, color;
-        for (let i = 0; i <= count; ++i)
-        {
-            const c = i < count ? colorAt(i) : undefined;
-            if (same(c, color)) continue;
-            if (color) emit(start, i, color);
-            start = i, color = c;
-        }
-    };
-
-    // pixel edges in world space, y runs down the image
-    const mesh = new Mesh, sx = size.x / width, sy = size.y / height, hz = depth / 2;
-    const px = x=> x * sx - size.x / 2, py = y=> size.y / 2 - y * sy;
-    const quad = (origin, right, up, normal, color)=>
-        mesh.addStrip(render3DQuadAxes(origin.add(right.scale(.5)).add(up.scale(.5)), right.scale(.5), up.scale(.5)), normal, RENDER3D_QUAD_UVS, color);
-    const X = vec3(1, 0, 0), Y = vec3(0, 1, 0), Z = vec3(0, 0, 1);
-    for (let y = 0; y < height; ++y)
-    {
-        // front and back faces along each row
-        runs(width, x=> solid(x, y), (a, b, c)=>
-        {
-            const w = X.scale((b - a) * sx), h = Y.scale(sy);
-            quad(vec3(px(a), py(y + 1), hz), w, h, Z, c);
-            quad(vec3(px(b), py(y + 1), -hz), w.scale(-1), h, Z.scale(-1), c);
-        });
-        // walls facing up and down where the pixel above or below is empty
-        runs(width, x=> solid(x, y - 1) ? undefined : solid(x, y), (a, b, c)=>
-            quad(vec3(px(a), py(y), hz), X.scale((b - a) * sx), Z.scale(-depth), Y, c));
-        runs(width, x=> solid(x, y + 1) ? undefined : solid(x, y), (a, b, c)=>
-            quad(vec3(px(a), py(y + 1), -hz), X.scale((b - a) * sx), Z.scale(depth), Y.scale(-1), c));
-    }
-    for (let x = 0; x < width; ++x)
-    {
-        // walls facing left and right where the pixel beside is empty
-        runs(height, y=> solid(x - 1, y) ? undefined : solid(x, y), (a, b, c)=>
-            quad(vec3(px(x), py(b), -hz), Z.scale(depth), Y.scale((b - a) * sy), X.scale(-1), c));
-        runs(height, y=> solid(x + 1, y) ? undefined : solid(x, y), (a, b, c)=>
-            quad(vec3(px(x + 1), py(b), hz), Z.scale(-depth), Y.scale((b - a) * sy), X, c));
-    }
-    return mesh;
-}
-
-/**
- * Build a mesh of extruded text from an image font, the engine font by default so it needs no assets
- * - Each glyph is extruded once per font and reused, the block is centered and faces +Z
- * - Newlines stack downward, spaced a little wider than the character height so the sides do not collide
- * - Every call builds a new mesh, dispose the old one when text changes often
- * - Glyphs are white in the engine font, so the object's color tints the text
- * @param {string|number} text
- * @param {number} [size] - Character height in world units
- * @param {number} [depth] - Thickness along Z
- * @param {ImageFont} [font] - Defaults to engineImageFont
- * @return {Mesh}
- * @memberof Render3D
- * @example
- * new EngineObject3D(vec3(0, 2, 0), buildText3D('HELLO'), undefined, YELLOW);
- */
-function buildText3D(text, size=1, depth=.2, font=engineImageFont)
-{
-    false&&ASSERT(font instanceof ImageFont, 'font must be an ImageFont, the engine font loads before gameInit');
-    const tileInfo = font.tileInfo, padding = tileInfo.padding;
-    const paddedX = tileInfo.size.x + padding * 2, paddedY = tileInfo.size.y + padding * 2;
-    const columns = tileInfo.textureInfo.size.x / paddedX | 0;
-    let glyphs = render3DGlyphCache.get(font); // unit sized, scaled when combined
-    glyphs || render3DGlyphCache.set(font, glyphs = new Map);
-    const charSize = vec2(size * tileInfo.size.x / tileInfo.size.y, size);
-    const mesh = new Mesh, lines = (text + '').split('\n');
-    lines.forEach((line, j)=>
-    {
-        const y = ((lines.length - 1) / 2 - j) * charSize.y * RENDER3D_TEXT_LEADING;
-        for (let i = 0; i < line.length; ++i)
-        {
-            const charCode = line.charCodeAt(i);
-            const index = charCode < 32 || charCode > 127 ? 95 : charCode - 32; // like ImageFont
-            if (!index) continue; // space
-            let glyph = glyphs.get(index);
-            if (!glyph)
-            {
-                const pos = vec2(index % columns * paddedX + padding, (index / columns | 0) * paddedY + padding);
-                glyphs.set(index, glyph = buildExtrude(new TileInfo(pos, tileInfo.size, tileInfo.textureInfo)));
-            }
-            const x = (i - (line.length - 1) / 2) * charSize.x;
-            mesh.combine(glyph, buildMatrix(vec3(x, y, 0), undefined, vec3(charSize.x, charSize.y, depth)));
-        }
-    });
-    return mesh;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/**
- * HeightMap - Terrain built from a grid of heights, with a mesh, a height lookup and a raycast
- * - heights is a 2D array [row][column] of 0 to 1 values
- * - Row 0 is the far edge at -Z and column 0 is the left edge at -X
- * - It can be an image instead, where the red channel is the height
- * - colors is an optional 2D array of Colors or an image, sampled per vertex
- * - images are read through a canvas, so they must be same origin or loaded with crossOrigin set
- * @memberof Render3D
- * @example
- * const terrain = new HeightMap(heightImage, vec2(100, 100), 10, colorImage);
- * new EngineObject3D(vec3(), terrain.buildMesh());
- * const y = terrain.getHeight(x, z); // stand things on it
- */
-class HeightMap
-{
-    /** Create a height map from an array or an image
-     *  @param {Array<Array<number>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} heights
-     *  @param {Vector2} [size] - World size along X and Z
-     *  @param {number} [height] - World height of a full value
-     *  @param {Array<Array<Color>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} [colors] */
-    constructor(heights, size=vec2(1), height=1, colors)
-    {
-        if (!isArray(heights))
-            heights = render3DImageToArray(heights, (r)=> r / 255);
-        if (colors && !isArray(colors))
-            colors = render3DImageToArray(colors, (r, g, b, a)=> rgb(r / 255, g / 255, b / 255, a / 255));
-        false&&ASSERT(isArray(heights) && heights.length > 1 && isArray(heights[0]) && heights[0].length > 1, 'height map needs at least 2 rows and 2 columns');
-        false&&ASSERT(size.x > 0 && size.y > 0, 'height map size must be positive, a zero size has nowhere to look things up');
-
-        /** @property {Array<Array<number>>} - Heights 0-1 as [row][column], rows along Z */
-        this.heights = heights;
-        /** @property {Array<Array<Color>>|undefined} - Vertex colors as [row][column], undefined for white
-         *  @type {Array<Array<Color>>|undefined} */
-        this.colors = colors;
-        /** @property {Vector2} - World size along X and Z */
-        this.size = size.copy();
-        /** @property {number} - World height of a full value */
-        this.height = height;
-    }
-
-    /** Number of rows, along Z
-     *  @return {number} */
-    get rows() { return this.heights.length; }
-
-    /** Number of columns, along X
-     *  @return {number} */
-    get columns() { return this.heights[0].length; }
-
-    /** World height at a position, exactly the height of the mesh buildMesh draws there, clamped at the edges
-     *  @param {number|Vector3} x - X, or a position to take X and Z from
-     *  @param {number} [z]
-     *  @return {number} */
-    getHeight(x, z)
-    {
-        if (x instanceof Vector3)
-            z = x.z, x = x.x; // a position works as well as its two numbers, its own y is ignored
-        const columns = this.columns, rows = this.rows, h = this.heights;
-        const u = clamp((x / this.size.x + .5) * (columns - 1), 0, columns - 1);
-        const v = clamp((z / this.size.y + .5) * (rows - 1), 0, rows - 1);
-        const i = min(floor(u), columns - 2), j = min(floor(v), rows - 2);
-        const fu = u - i, fv = v - j;
-        // each cell is two triangles split from (i, j+1) to (i+1, j), the same split buildGrid's quads use
-        const a = h[j][i], b = h[j+1][i], c = h[j+1][i+1], d = h[j][i+1];
-        const height = fu + fv <= 1 ? a + fu * (d - a) + fv * (b - a) : c + (1 - fu) * (b - c) + (1 - fv) * (d - c);
-        return height * this.height;
-    }
-
-    /** Surface normal at a position, from the slope across a sample
-     *  @param {number|Vector3} x - X, or a position to take X and Z from
-     *  @param {number} [z]
-     *  @return {Vector3} */
-    getNormal(x, z)
-    {
-        if (x instanceof Vector3)
-            z = x.z, x = x.x;
-        const ex = this.size.x / (this.columns - 1) / 2, ez = this.size.y / (this.rows - 1) / 2;
-        return render3DSlopeNormal((x, z)=> this.getHeight(x, z), x, z, ex, ez, this.size.x / 2, this.size.y / 2);
-    }
-
-    /** Color of the nearest sample to a position, white when there are no colors
-     *  @param {number|Vector3} x - X, or a position to take X and Z from
-     *  @param {number} [z]
-     *  @return {Color} */
-    getColor(x, z)
-    {
-        if (x instanceof Vector3)
-            z = x.z, x = x.x;
-        const c = this.colors;
-        if (!c) return WHITE;
-        const columns = c[0].length, rows = c.length;
-        const i = clamp(round((x / this.size.x + .5) * (columns - 1)), 0, columns - 1);
-        const j = clamp(round((z / this.size.y + .5) * (rows - 1)), 0, rows - 1);
-        return c[j][i];
-    }
-
-    /** Distance along a ray to where it crosses the terrain surface, or undefined for a miss
-     *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
-     *  - A ray that starts under the ground crosses on its way out, so the hit is still on the surface
-     *  @param {Ray3D} ray - From screenToRay, or any ray
-     *  @return {number|undefined} */
-    raycast(ray)
-    {
-        const {origin, direction} = ray;
-        const size = this.size, height = this.height, length = direction.length();
-        if (!length) return;
-
-        // clip to the box around the terrain, and walk it in half cell steps from there
-        let t = raycastBox(ray, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
-        if (t === undefined) return;
-        const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
-        const step = cell / 2 / length, end = t + hypot(size.x, size.y, height) / length;
-        if (!(step > 0)) return; // a zero size
-
-        // is the ray below the ground this far along, or undefined where it is off the map
-        const under = (at)=>
-        {
-            const p = origin.add(direction.scale(at));
-            if (abs(p.x) > size.x / 2 || abs(p.z) > size.y / 2) return;
-            return p.y <= this.getHeight(p.x, p.z);
-        };
-
-        // look for where the ray changes sides, so one coming up from under the ground
-        // lands on the surface it breaks through instead of wherever it entered the box
-        const startUnder = under(t);
-        if (startUnder === undefined) return; // it meets the box outside the map itself
-        for (; t < end; t += step)
-        {
-            const u = under(t + step);
-            if (u === undefined) return; // it left the map before crossing
-            if (u === startUnder) continue;
-
-            // it crossed between the last two samples, halve the gap until it is exact
-            let a = t, b = t + step;
-            for (let i = 0; i < 16; ++i)
-            {
-                const mid = (a + b) / 2;
-                under(mid) === startUnder ? a = mid : b = mid;
-            }
-            return b;
-        }
-    }
-
-    /** Build the terrain mesh, one vertex per sample, centered on the origin
-     *  @param {boolean} [smooth] - Defaults to render3D.smoothShading
-     *  @return {Mesh} */
-    buildMesh(smooth=render3D?.smoothShading)
-    {
-        return buildGrid(this.size, vec2(this.columns - 1, this.rows - 1),
-            this.colors && ((x, z)=> this.getColor(x, z)), (x, z)=> this.getHeight(x, z), smooth);
-    }
-}
-
-// read an image's pixel bytes through the engine's work canvas, as {data, width, height}
-function render3DImageData(image)
-{
-    if (image instanceof TextureInfo)
-        image = image.image;
-    false&&ASSERT(image && image.width && image.height, 'image is not loaded');
-    false&&ASSERT(workReadCanvas, 'reading an image needs a canvas, pass arrays in headless mode');
-    const width = image.width, height = image.height;
-    workReadCanvas.width = width;
-    workReadCanvas.height = height;
-    workReadContext.drawImage(image, 0, 0);
-    return workReadContext.getImageData(0, 0, width, height);
-}
-
-// read an image into a 2D array [row][column], sample is called with (r, g, b, a) bytes for each pixel
-function render3DImageToArray(image, sample)
-{
-    const {data, width, height} = render3DImageData(image);
-    const rows = [];
-    for (let y = 0; y < height; ++y)
-    {
-        const row = rows[y] = [];
-        for (let x = 0; x < width; ++x)
-        {
-            const k = (y * width + x) * 4;
-            row.push(sample(data[k], data[k+1], data[k+2], data[k+3]));
-        }
-    }
-    return rows;
-}
-
-// extruded glyph meshes by font, and the pixel bytes of a texture, read once per image
-const render3DGlyphCache = new WeakMap, render3DPixelCache = new WeakMap;
-function render3DReadPixels(textureInfo)
-{
-    const image = textureInfo.image;
-    let pixels = render3DPixelCache.get(image);
-    if (!pixels)
-        render3DPixelCache.set(image, pixels = render3DImageData(image));
-    return pixels;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -22057,6 +21532,547 @@ class DirectionalLight3D extends Light3D
         super(pos3D, 0, color, intensity);
         this.directional = true;
     }
+}
+
+/*
+ * LittleJS 3D Extras Plugin
+ * - Things built on the 3D renderer that it does not need in order to draw: the rest of the shape builders,
+ *   HeightMap terrain, the camera controls, ParticleEmitter3D and Trail3D, and the OBJ loader
+ * - Requires the Render3D plugin and goes after it, everything here is part of its Render3D namespace
+ */
+
+///////////////////////////////////////////////////////////////////////////////
+// Helpers used only here
+
+// gap between lines of 3D text, as a share of the character height; flat text can let lines touch
+// the way the 2D font does, but extruded glyphs seen from an angle then overlap the line below
+const RENDER3D_TEXT_LEADING = 1.3;
+
+// surface normal from the slope of a height function, sampled half a cell each way but kept inside the half sizes
+function render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ)
+{
+    const x0 = max(x - ex, -halfX), x1 = min(x + ex, halfX), z0 = max(z - ez, -halfZ), z1 = min(z + ez, halfZ);
+    const dx = (heightFunction(x1, z) - heightFunction(x0, z)) / (x1 - x0 || 1);
+    const dz = (heightFunction(x, z1) - heightFunction(x, z0)) / (z1 - z0 || 1);
+    return vec3(-dx, 1, -dz).normalize();
+}
+
+// let go of the parent but stay where the object was in the world; a destroyed parent has already let go, so the
+// position remembered by the last update stands in
+function render3DDetach(o)
+{
+    if (o.parent)
+        o.pos3D = o.getWorldPos3D(), o.parent.removeChild(o);
+    else if (o.worldPos3D)
+        o.pos3D = o.worldPos3D;
+}
+
+// a soft white dot for untextured particles, made once from a canvas, undefined headless or without a canvas
+let render3DSoftDotTexture;
+function render3DSoftDot()
+{
+    if (render3DSoftDotTexture || !glContext || typeof OffscreenCanvas == 'undefined') return render3DSoftDotTexture;
+    const size = 32, context = createCanvasContext(size);
+    const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    for (const [stop, alpha] of [[0, 1], [.33, .9], [.67, .7], [1, 0]]) // the same falloff as a soft disc
+        gradient.addColorStop(stop, 'rgba(255,255,255,' + alpha + ')');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, size, size);
+    return render3DSoftDotTexture = new TextureInfo(context.canvas);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// The rest of the shape builders: buildLathe, buildSphere, buildBox, buildGrid and buildSky live with the
+// renderer, since it hands those out itself
+
+/**
+ * Build a cylinder standing on the Y axis, centered on the origin
+ * @param {number} [size] - Diameter
+ * @param {number} [height]
+ * @param {number} [sides] - Around
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
+ * @param {boolean} [capped] - Close the ends
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildCylinder(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true)
+{
+    return buildLathe([[size / 2, -height / 2], [size / 2, height / 2]], sides, smooth, capped);
+}
+
+/**
+ * Build a cone standing on the Y axis, centered on the origin, the point up
+ * @param {number} [size] - Diameter of the base
+ * @param {number} [height]
+ * @param {number} [sides] - Around
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
+ * @param {boolean} [capped] - Close the base
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildCone(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true)
+{
+    return buildLathe([[size / 2, -height / 2], [0, height / 2]], sides, smooth, capped);
+}
+
+/**
+ * Build a capsule standing on the Y axis, centered on the origin: a cylinder with a half sphere on each end
+ * @param {number} [size] - Diameter
+ * @param {number} [height] - Total height including the rounded ends, at least the size
+ * @param {number} [sides] - Around
+ * @param {number} [rings] - On each end
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildCapsule(size=1, height=1, sides=16, rings=4, smooth=render3D?.smoothShading)
+{
+    // the rounded ends alone are already the size tall, so a shorter capsule is only a sphere
+    false&&ASSERT(height >= size, 'a capsule is at least as tall as it is wide, the ends take up the size', size, height);
+    const profile = [], r = size / 2, straight = max(0, height - size) / 2;
+    for (let i = 0; i <= rings; ++i)
+    {
+        const a = i / rings * PI / 2;
+        profile.push([r * sin(a), -straight - r * cos(a)]);
+    }
+    for (let i = 0; i <= rings; ++i)
+    {
+        const a = i / rings * PI / 2;
+        profile.push([r * cos(a), straight + r * sin(a)]);
+    }
+    return buildLathe(profile, sides, smooth);
+}
+
+/**
+ * Build a donut lying flat around the Y axis
+ * @param {number} [size] - Diameter of the whole donut, outside edge to outside edge
+ * @param {number} [tubeSize] - Diameter of the tube
+ * @param {number} [sides] - Around the ring
+ * @param {number} [tubeSides] - Around the tube
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3D?.smoothShading)
+{
+    false&&ASSERT(tubeSize <= size, 'the tube must fit inside the torus');
+    const profile = [], radius = (size - tubeSize) / 2, tubeRadius = tubeSize / 2;
+    for (let i = 0; i <= tubeSides; ++i)
+    {
+        const a = i / tubeSides * 2 * PI;
+        profile.push([radius + tubeRadius * cos(a), tubeRadius * sin(a)]);
+    }
+    return buildLathe(profile, sides, smooth);
+}
+
+/**
+ * Build a lit ribbon along a path, for roads, tracks and walls
+ * - Each segment is a flat quad, the sides are across the path in the plane of the up vector
+ * - doubleSided, so it is seen and lit from below as well
+ * @param {Array<Vector3>} points - Center line in order
+ * @param {number|Array<number>} [width] - Full width, one for all or one per point
+ * @param {Color|Array<Color>} [color] - One for all or one per point
+ * @param {boolean} [closed] - Join the last point back to the first
+ * @param {Vector3} [up] - Which way the ribbon faces
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * const road = buildRibbon(trackPoints, 8, GRAY, true); // a loop of road
+ */
+function buildRibbon(points, width=1, color=WHITE, closed=false, up=vec3(0, 1, 0))
+{
+    false&&ASSERT(isArray(points) && points.length > 1, 'ribbon needs at least 2 points');
+    const mesh = new Mesh, count = points.length, edges = [];
+    let across = (abs(up.y) < .9 ? vec3(0, 1, 0) : vec3(1, 0, 0)).cross(up).normalize(); // anything across up
+    for (let i = 0; i < count; ++i)
+    {
+        // across the path, from the tangent through this point; a step along up keeps the last across
+        const next = points[closed ? (i + 1) % count : min(i + 1, count - 1)];
+        const last = points[closed ? (i + count - 1) % count : max(i - 1, 0)];
+        const dir = next.subtract(last).cross(up);
+        if (dir.lengthSquared() > 1e-12)
+            across = dir.normalize();
+        const half = across.scale((isArray(width) ? width[i] : width) / 2);
+        edges.push([points[i].subtract(half), points[i].add(half)]);
+    }
+    for (let i = 0; i + 1 < count + (closed ? 1 : 0); ++i)
+    {
+        const j = (i + 1) % count, a = edges[i], b = edges[j];
+        const c = isArray(color) ? [color[i], color[i], color[j], color[j]] : color;
+        mesh.addQuad(a[0], a[1], b[1], b[0], c); // counter clockwise seen from above
+    }
+    mesh.doubleSided = true; // a flat strip, seen from both sides
+    return mesh;
+}
+
+/**
+ * Build a hull from a row of diamond shaped slices along Z, for ships, planes and cars
+ * - Each slice is [z, width, top, bottom, sideHeight]
+ * - sideHeight is 0 to 1 and puts the side corners between the bottom and the top
+ * - List the slices nose first, with the nose at the largest z
+ * @param {Array<Array<number>>} stations
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * const hull = buildLoft([[1.2, .4, .2, -.1], [0, 1.4, .5, -.4], [-1, 1, .3, -.3]]);
+ */
+function buildLoft(stations)
+{
+    false&&ASSERT(isArray(stations) && stations.length > 1, 'loft needs at least 2 stations');
+    // the caps and the winding both assume the nose leads, so the other order turns the hull inside out
+    false&&ASSERT(stations[0][0] > stations[stations.length-1][0], 'loft stations go nose first, from the largest z to the smallest');
+    const mesh = new Mesh;
+    // section points: left, top, right, bottom, wound clockwise seen from +z
+    const section = ([z, w, t, b, m=.5])=>
+        [vec3(-w / 2, lerp(b, t, m), z), vec3(0, t, z), vec3(w / 2, lerp(b, t, m), z), vec3(0, b, z)];
+    for (let i = 0; i + 1 < stations.length; ++i)
+    {
+        const s1 = section(stations[i]), s2 = section(stations[i + 1]);
+        for (let k = 0; k < 4; ++k)
+            mesh.addQuad(s1[k], s1[(k + 1) % 4], s2[(k + 1) % 4], s2[k]);
+    }
+    const tail = section(stations[stations.length - 1]), nose = section(stations[0]);
+    mesh.addQuad(tail[0], tail[1], tail[2], tail[3]);
+    mesh.addQuad(nose[3], nose[2], nose[1], nose[0]);
+    return mesh;
+}
+
+/**
+ * Turn a sprite into a 3D block model by giving its pixels thickness
+ * - A pixel counts as solid when it is more than half opaque
+ * - Each pixel keeps its own color, so white art takes the object's tint
+ * - Runs of matching pixels merge into one face, and side walls appear only at the sprite's edges
+ * - A texture's pixels are read once and kept, so redrawing a canvas texture will not change what this builds
+ * - Pixels can also be an array of rows, each a Color, a truthy value for white, or a falsy value for empty
+ * @param {TileInfo|Array<Array<Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels,
+ *  each a Color (empty when see through), a truthy value for white or a falsy value for empty
+ * @param {Vector2} [size] - World width and height of the whole tile, centered like buildBox
+ * @param {number} [depth] - Thickness along Z
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * new EngineObject3D(vec3(), buildExtrude(tile(3, 16), vec2(2), .5)); // a chunky version of tile 3
+ */
+function buildExtrude(pixels, size=vec2(1), depth=1)
+{
+    let rows = pixels, width, height;
+    if (pixels instanceof TileInfo)
+    {
+        // colors for the tile's pixels only, undefined where alpha is half or less
+        const image = render3DReadPixels(pixels.textureInfo), data = image.data;
+        const x0 = pixels.pos.x | 0, y0 = pixels.pos.y | 0;
+        width = pixels.size.x | 0, height = pixels.size.y | 0;
+        rows = [];
+        for (let y = 0; y < height; ++y)
+        {
+            const row = rows[y] = [];
+            for (let x = 0; x < width; ++x)
+            {
+                const k = ((y0 + y) * image.width + x0 + x) * 4;
+                row.push(data[k + 3] > 127 ? rgb(data[k] / 255, data[k + 1] / 255, data[k + 2] / 255) : undefined);
+            }
+        }
+    }
+    else
+    {
+        false&&ASSERT(isArray(pixels) && pixels.length, 'pixels must be a TileInfo or rows of pixels');
+        height = rows.length, width = rows[0].length;
+    }
+
+    // the color of a solid pixel, undefined outside or where it is empty
+    const solid = (x, y)=>
+    {
+        if (x < 0 || y < 0 || x >= width || y >= height) return;
+        const c = rows[y] && rows[y][x];
+        if (!c) return;
+        return isColor(c) ? (c.a > .5 ? c : undefined) : WHITE; // a see through Color is empty too
+    };
+    const same = (a, b)=> a === b || !!a && !!b && a.rgbaInt() === b.rgbaInt();
+
+    // call emit(start, end, color) for each run of same colored pixels, colorAt(i) undefined breaks the run
+    const runs = (count, colorAt, emit)=>
+    {
+        let start = 0, color;
+        for (let i = 0; i <= count; ++i)
+        {
+            const c = i < count ? colorAt(i) : undefined;
+            if (same(c, color)) continue;
+            if (color) emit(start, i, color);
+            start = i, color = c;
+        }
+    };
+
+    // pixel edges in world space, y runs down the image
+    const mesh = new Mesh, sx = size.x / width, sy = size.y / height, hz = depth / 2;
+    const px = x=> x * sx - size.x / 2, py = y=> size.y / 2 - y * sy;
+    const quad = (origin, right, up, normal, color)=>
+        mesh.addStrip(render3DQuadAxes(origin.add(right.scale(.5)).add(up.scale(.5)), right.scale(.5), up.scale(.5)), normal, RENDER3D_QUAD_UVS, color);
+    const X = vec3(1, 0, 0), Y = vec3(0, 1, 0), Z = vec3(0, 0, 1);
+    for (let y = 0; y < height; ++y)
+    {
+        // front and back faces along each row
+        runs(width, x=> solid(x, y), (a, b, c)=>
+        {
+            const w = X.scale((b - a) * sx), h = Y.scale(sy);
+            quad(vec3(px(a), py(y + 1), hz), w, h, Z, c);
+            quad(vec3(px(b), py(y + 1), -hz), w.scale(-1), h, Z.scale(-1), c);
+        });
+        // walls facing up and down where the pixel above or below is empty
+        runs(width, x=> solid(x, y - 1) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(a), py(y), hz), X.scale((b - a) * sx), Z.scale(-depth), Y, c));
+        runs(width, x=> solid(x, y + 1) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(a), py(y + 1), -hz), X.scale((b - a) * sx), Z.scale(depth), Y.scale(-1), c));
+    }
+    for (let x = 0; x < width; ++x)
+    {
+        // walls facing left and right where the pixel beside is empty
+        runs(height, y=> solid(x - 1, y) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(x), py(b), -hz), Z.scale(depth), Y.scale((b - a) * sy), X.scale(-1), c));
+        runs(height, y=> solid(x + 1, y) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(x + 1), py(b), hz), Z.scale(-depth), Y.scale((b - a) * sy), X, c));
+    }
+    return mesh;
+}
+
+/**
+ * Build a mesh of extruded text from an image font, the engine font by default so it needs no assets
+ * - Each glyph is extruded once per font and reused, the block is centered and faces +Z
+ * - Newlines stack downward, spaced a little wider than the character height so the sides do not collide
+ * - Every call builds a new mesh, dispose the old one when text changes often
+ * - Glyphs are white in the engine font, so the object's color tints the text
+ * @param {string|number} text
+ * @param {number} [size] - Character height in world units
+ * @param {number} [depth] - Thickness along Z
+ * @param {ImageFont} [font] - Defaults to engineImageFont
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * new EngineObject3D(vec3(0, 2, 0), buildText3D('HELLO'), undefined, YELLOW);
+ */
+function buildText3D(text, size=1, depth=.2, font=engineImageFont)
+{
+    false&&ASSERT(font instanceof ImageFont, 'font must be an ImageFont, the engine font loads before gameInit');
+    const tileInfo = font.tileInfo, padding = tileInfo.padding;
+    const paddedX = tileInfo.size.x + padding * 2, paddedY = tileInfo.size.y + padding * 2;
+    const columns = tileInfo.textureInfo.size.x / paddedX | 0;
+    let glyphs = render3DGlyphCache.get(font); // unit sized, scaled when combined
+    glyphs || render3DGlyphCache.set(font, glyphs = new Map);
+    const charSize = vec2(size * tileInfo.size.x / tileInfo.size.y, size);
+    const mesh = new Mesh, lines = (text + '').split('\n');
+    lines.forEach((line, j)=>
+    {
+        const y = ((lines.length - 1) / 2 - j) * charSize.y * RENDER3D_TEXT_LEADING;
+        for (let i = 0; i < line.length; ++i)
+        {
+            const charCode = line.charCodeAt(i);
+            const index = charCode < 32 || charCode > 127 ? 95 : charCode - 32; // like ImageFont
+            if (!index) continue; // space
+            let glyph = glyphs.get(index);
+            if (!glyph)
+            {
+                const pos = vec2(index % columns * paddedX + padding, (index / columns | 0) * paddedY + padding);
+                glyphs.set(index, glyph = buildExtrude(new TileInfo(pos, tileInfo.size, tileInfo.textureInfo)));
+            }
+            const x = (i - (line.length - 1) / 2) * charSize.x;
+            mesh.combine(glyph, buildMatrix(vec3(x, y, 0), undefined, vec3(charSize.x, charSize.y, depth)));
+        }
+    });
+    return mesh;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * HeightMap - Terrain built from a grid of heights, with a mesh, a height lookup and a raycast
+ * - heights is a 2D array [row][column] of 0 to 1 values
+ * - Row 0 is the far edge at -Z and column 0 is the left edge at -X
+ * - It can be an image instead, where the red channel is the height
+ * - colors is an optional 2D array of Colors or an image, sampled per vertex
+ * - images are read through a canvas, so they must be same origin or loaded with crossOrigin set
+ * @memberof Render3D
+ * @example
+ * const terrain = new HeightMap(heightImage, vec2(100, 100), 10, colorImage);
+ * new EngineObject3D(vec3(), terrain.buildMesh());
+ * const y = terrain.getHeight(x, z); // stand things on it
+ */
+class HeightMap
+{
+    /** Create a height map from an array or an image
+     *  @param {Array<Array<number>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} heights
+     *  @param {Vector2} [size] - World size along X and Z
+     *  @param {number} [height] - World height of a full value
+     *  @param {Array<Array<Color>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} [colors] */
+    constructor(heights, size=vec2(1), height=1, colors)
+    {
+        if (!isArray(heights))
+            heights = render3DImageToArray(heights, (r)=> r / 255);
+        if (colors && !isArray(colors))
+            colors = render3DImageToArray(colors, (r, g, b, a)=> rgb(r / 255, g / 255, b / 255, a / 255));
+        false&&ASSERT(isArray(heights) && heights.length > 1 && isArray(heights[0]) && heights[0].length > 1, 'height map needs at least 2 rows and 2 columns');
+        false&&ASSERT(size.x > 0 && size.y > 0, 'height map size must be positive, a zero size has nowhere to look things up');
+
+        /** @property {Array<Array<number>>} - Heights 0-1 as [row][column], rows along Z */
+        this.heights = heights;
+        /** @property {Array<Array<Color>>|undefined} - Vertex colors as [row][column], undefined for white
+         *  @type {Array<Array<Color>>|undefined} */
+        this.colors = colors;
+        /** @property {Vector2} - World size along X and Z */
+        this.size = size.copy();
+        /** @property {number} - World height of a full value */
+        this.height = height;
+    }
+
+    /** Number of rows, along Z
+     *  @return {number} */
+    get rows() { return this.heights.length; }
+
+    /** Number of columns, along X
+     *  @return {number} */
+    get columns() { return this.heights[0].length; }
+
+    /** World height at a position, exactly the height of the mesh buildMesh draws there, clamped at the edges
+     *  @param {number|Vector3} x - X, or a position to take X and Z from
+     *  @param {number} [z]
+     *  @return {number} */
+    getHeight(x, z)
+    {
+        if (x instanceof Vector3)
+            z = x.z, x = x.x; // a position works as well as its two numbers, its own y is ignored
+        const columns = this.columns, rows = this.rows, h = this.heights;
+        const u = clamp((x / this.size.x + .5) * (columns - 1), 0, columns - 1);
+        const v = clamp((z / this.size.y + .5) * (rows - 1), 0, rows - 1);
+        const i = min(floor(u), columns - 2), j = min(floor(v), rows - 2);
+        const fu = u - i, fv = v - j;
+        // each cell is two triangles split from (i, j+1) to (i+1, j), the same split buildGrid's quads use
+        const a = h[j][i], b = h[j+1][i], c = h[j+1][i+1], d = h[j][i+1];
+        const height = fu + fv <= 1 ? a + fu * (d - a) + fv * (b - a) : c + (1 - fu) * (b - c) + (1 - fv) * (d - c);
+        return height * this.height;
+    }
+
+    /** Surface normal at a position, from the slope across a sample
+     *  @param {number|Vector3} x - X, or a position to take X and Z from
+     *  @param {number} [z]
+     *  @return {Vector3} */
+    getNormal(x, z)
+    {
+        if (x instanceof Vector3)
+            z = x.z, x = x.x;
+        const ex = this.size.x / (this.columns - 1) / 2, ez = this.size.y / (this.rows - 1) / 2;
+        return render3DSlopeNormal((x, z)=> this.getHeight(x, z), x, z, ex, ez, this.size.x / 2, this.size.y / 2);
+    }
+
+    /** Color of the nearest sample to a position, white when there are no colors
+     *  @param {number|Vector3} x - X, or a position to take X and Z from
+     *  @param {number} [z]
+     *  @return {Color} */
+    getColor(x, z)
+    {
+        if (x instanceof Vector3)
+            z = x.z, x = x.x;
+        const c = this.colors;
+        if (!c) return WHITE;
+        const columns = c[0].length, rows = c.length;
+        const i = clamp(round((x / this.size.x + .5) * (columns - 1)), 0, columns - 1);
+        const j = clamp(round((z / this.size.y + .5) * (rows - 1)), 0, rows - 1);
+        return c[j][i];
+    }
+
+    /** Distance along a ray to where it crosses the terrain surface, or undefined for a miss
+     *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
+     *  - A ray that starts under the ground crosses on its way out, so the hit is still on the surface
+     *  @param {Ray3D} ray - From screenToRay, or any ray
+     *  @return {number|undefined} */
+    raycast(ray)
+    {
+        const {origin, direction} = ray;
+        const size = this.size, height = this.height, length = direction.length();
+        if (!length) return;
+
+        // clip to the box around the terrain, and walk it in half cell steps from there
+        let t = raycastBox(ray, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
+        if (t === undefined) return;
+        const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
+        const step = cell / 2 / length, end = t + hypot(size.x, size.y, height) / length;
+        if (!(step > 0)) return; // a zero size
+
+        // is the ray below the ground this far along, or undefined where it is off the map
+        const under = (at)=>
+        {
+            const p = origin.add(direction.scale(at));
+            if (abs(p.x) > size.x / 2 || abs(p.z) > size.y / 2) return;
+            return p.y <= this.getHeight(p.x, p.z);
+        };
+
+        // look for where the ray changes sides, so one coming up from under the ground
+        // lands on the surface it breaks through instead of wherever it entered the box
+        const startUnder = under(t);
+        if (startUnder === undefined) return; // it meets the box outside the map itself
+        for (; t < end; t += step)
+        {
+            const u = under(t + step);
+            if (u === undefined) return; // it left the map before crossing
+            if (u === startUnder) continue;
+
+            // it crossed between the last two samples, halve the gap until it is exact
+            let a = t, b = t + step;
+            for (let i = 0; i < 16; ++i)
+            {
+                const mid = (a + b) / 2;
+                under(mid) === startUnder ? a = mid : b = mid;
+            }
+            return b;
+        }
+    }
+
+    /** Build the terrain mesh, one vertex per sample, centered on the origin
+     *  @param {boolean} [smooth] - Defaults to render3D.smoothShading
+     *  @return {Mesh} */
+    buildMesh(smooth=render3D?.smoothShading)
+    {
+        return buildGrid(this.size, vec2(this.columns - 1, this.rows - 1),
+            this.colors && ((x, z)=> this.getColor(x, z)), (x, z)=> this.getHeight(x, z), smooth);
+    }
+}
+
+// read an image's pixel bytes through the engine's work canvas, as {data, width, height}
+function render3DImageData(image)
+{
+    if (image instanceof TextureInfo)
+        image = image.image;
+    false&&ASSERT(image && image.width && image.height, 'image is not loaded');
+    false&&ASSERT(workReadCanvas, 'reading an image needs a canvas, pass arrays in headless mode');
+    const width = image.width, height = image.height;
+    workReadCanvas.width = width;
+    workReadCanvas.height = height;
+    workReadContext.drawImage(image, 0, 0);
+    return workReadContext.getImageData(0, 0, width, height);
+}
+
+// read an image into a 2D array [row][column], sample is called with (r, g, b, a) bytes for each pixel
+function render3DImageToArray(image, sample)
+{
+    const {data, width, height} = render3DImageData(image);
+    const rows = [];
+    for (let y = 0; y < height; ++y)
+    {
+        const row = rows[y] = [];
+        for (let x = 0; x < width; ++x)
+        {
+            const k = (y * width + x) * 4;
+            row.push(sample(data[k], data[k+1], data[k+2], data[k+3]));
+        }
+    }
+    return rows;
+}
+
+// extruded glyph meshes by font, and the pixel bytes of a texture, read once per image
+const render3DGlyphCache = new WeakMap, render3DPixelCache = new WeakMap;
+function render3DReadPixels(textureInfo)
+{
+    const image = textureInfo.image;
+    let pixels = render3DPixelCache.get(image);
+    if (!pixels)
+        render3DPixelCache.set(image, pixels = render3DImageData(image));
+    return pixels;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

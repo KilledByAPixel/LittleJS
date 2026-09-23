@@ -6659,7 +6659,8 @@ declare module "littlejsengine" {
      * - The 3D scene draws under the 2D sprites, so HUD and text land on top
      * - Lighting is the sun plus ambient, with optional extra lights, fog and shadows
      * - Any object or draw can bring its own Shader, a mainImage snippet the lighting then applies to
-     * - Build shapes with buildBox, buildSphere and friends, or load a model with loadOBJ
+     * - Build shapes with buildBox, buildSphere, buildGrid and buildLathe; the other builders, terrain, particles,
+     *   camera controls and the OBJ loader are in the Render3D Extras plugin, which goes after this one
      * - Requires the Math3D plugin
      * @namespace Render3D
      */

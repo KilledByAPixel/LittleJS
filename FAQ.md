@@ -244,7 +244,8 @@ Plugins are self-contained features that live alongside the engine but aren't pa
 | Plugin | Purpose |
 |--------|---------|
 | `math3d.js` | `Vector3` and `Matrix4` for 3D games and plugins, with 3D collision and raycast helpers |
-| `render3d.js` | The built-in 3D renderer: meshes, lights, shadows, fog, terrain and 3D particles, into the same canvas as the 2D scene (needs `math3d.js`) |
+| `render3d.js` | The built-in 3D renderer: meshes, lights, shadows, fog and EngineObject3D, into the same canvas as the 2D scene (needs `math3d.js`) |
+| `render3dExtras.js` | The rest of the 3D toolkit on top of it: more shape builders, terrain, camera controls, 3D particles and trails, and the OBJ loader |
 | `threejs.js` | Renders a Three.js scene behind the LittleJS canvas, an alternative to `render3d.js` |
 | `box2d.js` | Full Box2D physics via WebAssembly (more realistic than the built-in arcade physics) |
 | `lightSystem.js` | 2D dynamic lighting, lights accumulate into a lightmap that darkens the unlit scene |

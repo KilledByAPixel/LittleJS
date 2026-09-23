@@ -27,7 +27,7 @@ LittleJS is a modular HTML5 game engine with:
 
 - **Core engine**: `src/engine*.js` (main loop, objects, rendering, physics, input, etc.)
 - **Plugins**: `plugins/*.js` (optional features like Box2D, post-processing, UI, audio helpers, etc.)
-- **3D**: `plugins/math3d.js` (Vector3, Matrix4, Ray3D, 3D collision and raycasts) and `plugins/render3d.js` (the 3D renderer: meshes, builders, lights, shadows, EngineObject3D, cameras, particles). Both are plugins in the same bundle, and `plugins/threejs.js` is the alternative that renders with Three.js.
+- **3D**: `plugins/math3d.js` (Vector3, Matrix4, Ray3D, 3D collision and raycasts) and `plugins/render3d.js` (the 3D renderer: meshes, the basic builders, lights, shadows, EngineObject3D, instancing) with `plugins/render3dExtras.js` after it (the other builders, HeightMap, camera controls, particles, trails, the OBJ loader: things built on the renderer that it does not need to draw). All are plugins in the same bundle, and `plugins/threejs.js` is the alternative that renders with Three.js.
 - **Build system**: `src/engineBuild.mjs` (concatenates modules into distributable bundles)
 
 ## Repo structure and file types
