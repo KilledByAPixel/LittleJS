@@ -955,7 +955,7 @@ render3D.isSphereVisible(center, radius) // the same is-it-on-screen test drawMe
 // Lights and fog, read at each draw
 render3D.sunDirection = vec3(-.3, 1, .5) // toward the sun, where its light comes from, like a directional Light3D;
                                          // any length, it is normalized for you; the sun is the one light that
-                                         // casts shadows and makes specular highlights
+                                         // casts shadows
 render3D.sunColor = hsl(.08, 1, .95) // e.g., WHITE by default
 render3D.ambientColor = hsl(0, 0, .3)
 render3D.fogColor = undefined         // uses canvasClearColor when undefined
@@ -997,9 +997,9 @@ render3D.sky = buildSky(topColor, horizonColor, bottomColor, sides, rings) // or
 render3D.lighting = true              // false draws plain vertex color times texture, as billboards and lines do
 render3D.emissive = 0                 // how much a surface lights itself, set from each object's emissive
 render3D.additive = false             // additive blending in the transparent stage
-render3D.specular = 0                 // Phong highlight strength, the shiny spot where the sunlight reflects:
-                                      // 1 adds the sun's full color at its peak, more burns out;
-                                      // the size of the spot is fixed, and a Light3D adds no highlight
+render3D.specular = 0                 // Phong highlight strength, the shiny spot where the sun and each
+                                      // Light3D reflect: 1 adds a light's full color at its peak, more burns
+                                      // out; the size of the spot is fixed
 render3D.receiveShadow = true         // false keeps the next draws out of the shadow map's darkening
 render3D.shader = undefined           // a Shader for the next draws, set from each object's shader; with emissive 1
                                       // the snippet's color is final, so it can light itself from these 3D names:

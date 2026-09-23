@@ -6686,7 +6686,7 @@ declare module "littlejsengine" {
         camera: Camera3D;
         /** @property {Vector3} - Direction toward the sun, where its light comes from, like a directional Light3D;
          *  read at each draw, and any length will do, the shading and the shadows normalize it themselves;
-         *  the sun is the one light that casts shadows and makes specular highlights */
+         *  the sun is the one light that casts shadows */
         sunDirection: Vector3;
         /** @property {Color} - Sunlight color */
         sunColor: Color;
@@ -6733,7 +6733,7 @@ declare module "littlejsengine" {
         depthWrite: boolean;
         cullBackFaces: boolean;
         mirrored: boolean;
-        /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
         specular: number;
         /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined draws with the plugin's own
          *  @type {Shader|undefined} */
@@ -7140,7 +7140,7 @@ declare module "littlejsengine" {
         /** @property {number} - How much it lights itself: 0 is lit as normal, 1 is its own color with no shading, for
          *  lamps and glowing things, between is partly self lit, and above 1 is brighter than its color, for bloom */
         emissive: number;
-        /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
         specular: number;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, additive objects never cast */
         castShadow: boolean;
@@ -7599,7 +7599,7 @@ declare module "littlejsengine" {
     /**
      * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
      * - A point light: it lights what is near it and fades out by its radius, DirectionalLight3D shines from far away
-     * - Only the sun, render3D.sunDirection, casts shadows and makes highlights, these light without either
+     * - Only the sun, render3D.sunDirection, casts shadows; these light and make highlights without one
      * - Only the 8 lights nearest the camera are used each frame
      * - radius is where the light fades out, and it fades fast, so a small radius wants a higher intensity
      * - intensity multiplies the color, above 1 for a light brighter than white
@@ -7631,7 +7631,7 @@ declare module "littlejsengine" {
      * - It shines from its position toward the origin, like a three.js DirectionalLight: only the direction to it
      *   counts, so moving it or its parent swings the light around; parent it to a sun in the sky and it follows
      * - It cannot sit on the origin, since that leaves no direction
-     * - Like every Light3D it casts no shadow and makes no highlight, only the sun, render3D.sunDirection, does
+     * - Like every Light3D it casts no shadow, only the sun, render3D.sunDirection, does
      * @extends Light3D
      * @memberof Render3D
      * @example

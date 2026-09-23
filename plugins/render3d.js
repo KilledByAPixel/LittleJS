@@ -392,7 +392,7 @@ class Render3DPlugin
         // lights and fog
         /** @property {Vector3} - Direction toward the sun, where its light comes from, like a directional Light3D;
          *  read at each draw, and any length will do, the shading and the shadows normalize it themselves;
-         *  the sun is the one light that casts shadows and makes specular highlights */
+         *  the sun is the one light that casts shadows */
         this.sunDirection = vec3(-.3, 1, .5);
         /** @property {Color} - Sunlight color */
         this.sunColor = WHITE.copy();
@@ -445,7 +445,7 @@ class Render3DPlugin
         // show from both sides, and whether its transform mirrors it so the other winding is the front
         this.cullBackFaces = false;
         this.mirrored = false;
-        /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
         this.specular = 0;
         /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined draws with the plugin's own
          *  @type {Shader|undefined} */
@@ -1437,8 +1437,9 @@ function render3DFragmentSource(fragmentCode)
         'float nl=dot(n,-lightDir.xyz);' +
         'float s=shadow();' +
         'vec3 l=ambientFog.rgb+lightColor.rgb*max(nl,0.)*s;' +
-        // the Light3D objects, diffuse only: a point light falls off with distance, a directional one does not and
-        // carries the direction toward it in xyz, marked by a negative radius
+        // the Light3D objects: a point light falls off with distance, a directional one does not and carries the
+        // direction toward it in xyz, marked by a negative radius; each adds its own highlight when there is a strength
+        'vec3 eye=lightColor.a>0.?normalize(cameraPos-P):vec3(0),sp=vec3(0);' +
         'for(int i=0;i<' + RENDER3D_MAX_LIGHTS + ';++i){' +
         'if(i>=extraLightCount)break;' +
         'vec4 L=extraLights[i];' +
@@ -1446,14 +1447,18 @@ function render3DFragmentSource(fragmentCode)
         'vec3 v=directional?L.xyz:L.xyz-P;' +
         'float d=length(v);' +
         'float a=directional?1.:max(0.,1.-d/L.w);' +
-        'l+=extraLightColors[i].rgb*extraLightColors[i].a*a*a*max(0.,dot(n,v/max(d,1e-6)));' +
+        'v/=max(d,1e-6);' +
+        'float ln=dot(n,v);' +
+        'vec3 lc=extraLightColors[i].rgb*extraLightColors[i].a*a*a;' +
+        'l+=lc*max(0.,ln);' +
+        'if(lightColor.a>0.)sp+=lc*pow(max(dot(reflect(-v,n),eye),0.),16.)*step(0.,ln);' +
         '}' +
         'c.rgb*=l*(1.-e)+e;' + // lit, blended toward its own color by how emissive it is
-        // specular: only where the light hits, skipped entirely when the strength is zero
+        // specular: the sun's only where its light hits and out of shadow, then the Light3D highlights,
+        // skipped entirely when the strength is zero
         'if(lightColor.a>0.){' +
-        'vec3 v=normalize(cameraPos-P);' +
         'vec3 r=reflect(lightDir.xyz,n);' +
-        'c.rgb+=lightColor.rgb*pow(max(dot(r,v),0.),16.)*lightColor.a*step(0.,nl)*s*(1.-e);' +
+        'c.rgb+=lightColor.rgb*pow(max(dot(r,eye),0.),16.)*lightColor.a*step(0.,nl)*s*(1.-e)+sp*lightColor.a*(1.-e);' +
         '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
         'if(ambientFog.a>0.){' +
         'float z=distance(cameraPos,P);' +
@@ -3234,7 +3239,7 @@ class EngineObject3D extends EngineObject
         /** @property {number} - How much it lights itself: 0 is lit as normal, 1 is its own color with no shading, for
          *  lamps and glowing things, between is partly self lit, and above 1 is brighter than its color, for bloom */
         this.emissive = 0;
-        /** @property {number} - Strength of the highlight where the sunlight reflects, 0 is none and 1 adds the sun's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
         this.specular = 0;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, additive objects never cast */
         this.castShadow = true;
@@ -3704,7 +3709,7 @@ class InstancedMesh3D extends EngineObject3D
 /**
  * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
  * - A point light: it lights what is near it and fades out by its radius, DirectionalLight3D shines from far away
- * - Only the sun, render3D.sunDirection, casts shadows and makes highlights, these light without either
+ * - Only the sun, render3D.sunDirection, casts shadows; these light and make highlights without one
  * - Only the 8 lights nearest the camera are used each frame
  * - radius is where the light fades out, and it fades fast, so a small radius wants a higher intensity
  * - intensity multiplies the color, above 1 for a light brighter than white
@@ -3748,7 +3753,7 @@ class Light3D extends EngineObject3D
  * - It shines from its position toward the origin, like a three.js DirectionalLight: only the direction to it
  *   counts, so moving it or its parent swings the light around; parent it to a sun in the sky and it follows
  * - It cannot sit on the origin, since that leaves no direction
- * - Like every Light3D it casts no shadow and makes no highlight, only the sun, render3D.sunDirection, does
+ * - Like every Light3D it casts no shadow, only the sun, render3D.sunDirection, does
  * @extends Light3D
  * @memberof Render3D
  * @example
