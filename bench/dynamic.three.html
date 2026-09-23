@@ -1,0 +1,61 @@
+<!DOCTYPE html><head><title>three.js dynamic mesh bench</title>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js" } }
+</script>
+<script src=gpuTimer.js></script>
+<script src=benchOther.js></script>
+<style>html, body { margin: 0; overflow: hidden } canvas { display: block }</style></head><body>
+<canvas id=c></canvas>
+<script type=module>
+// a PlaneGeometry of s by s cells whose heights change every frame through its position attribute, the same scene
+// as dynamic.html; ?s=128 sets the cells per side, ?normals=1 calls computeVertexNormals each frame too,
+// ?rebuild=1 makes a new PlaneGeometry each frame, ?aa=0 antialiasing off, ?w=1280&h=720 fixes the canvas size
+import * as THREE from 'three';
+THREE.ColorManagement.enabled = false;
+const params = new URLSearchParams(location.search);
+const s = +params.get('s') || 128, normals = params.get('normals') === '1', rebuild = params.get('rebuild') === '1', aa = params.get('aa') !== '0';
+const w = +params.get('w') || innerWidth, h = +params.get('h') || (params.get('w') ? 720 : innerHeight);
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: aa });
+renderer.setSize(w, h);
+renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color().setHSL(.6, .5, .8);
+const camera = new THREE.PerspectiveCamera(60, w / h, .1, 1000);
+camera.position.set(0, 40, 80);
+camera.lookAt(0, 0, 0);
+const sun = new THREE.DirectionalLight(0xffffff, Math.PI);
+sun.position.set(-30, 100, 50);
+scene.add(sun, new THREE.AmbientLight(0xffffff, .3 * Math.PI));
+let t = 0;
+const height = (x, z)=> 3 * Math.sin(x * .2 + t) * Math.cos(z * .2 + t * .7);
+// the plane lies in xy and is rotated flat; its y is the world -z, its z the height
+function makeGeometry()
+{
+    const geometry = new THREE.PlaneGeometry(100, 100, s, s), p = geometry.attributes.position;
+    p.setUsage(THREE.DynamicDrawUsage);
+    for (let i = 0; i < p.count; ++i)
+        p.setZ(i, height(p.getX(i), -p.getY(i)));
+    geometry.computeVertexNormals();
+    return geometry;
+}
+const material = new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL(.55, .5, .5) });
+const mesh = new THREE.Mesh(makeGeometry(), material);
+mesh.rotation.x = -Math.PI / 2;
+scene.add(mesh);
+function update()
+{
+    t += 1 / 60;
+    if (rebuild)
+    {
+        mesh.geometry.dispose();
+        mesh.geometry = makeGeometry();
+        return;
+    }
+    const p = mesh.geometry.attributes.position;
+    for (let i = 0; i < p.count; ++i)
+        p.setZ(i, height(p.getX(i), -p.getY(i)));
+    p.needsUpdate = true;
+    normals && mesh.geometry.computeVertexNormals();
+}
+benchRun('three.js dynamic mesh', s, renderer.getContext(), update, ()=> renderer.render(scene, camera));
+</script>

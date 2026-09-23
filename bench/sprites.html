@@ -1,0 +1,35 @@
+<!DOCTYPE html><head><title>LittleJS sprite bench</title></head><body style=margin:0>
+<script src=../dist/littlejs.release.js></script>
+<script src=gpuTimer.js></script>
+<script src=benchLittle.js></script>
+<script>
+// n textured sprites, EngineObject3D with a tileInfo and no mesh, scattered over a lit ground; the same scene
+// as sprites.three.html, where each is a THREE.Sprite
+// ?n=10000 sets the count, ?sort=0 turns transparent sorting off, ?opaque=1 draws them alpha tested in the opaque
+// stage instead, ?aa=0 antialiasing off, ?w=1280&h=720 fixes the canvas size
+const params = new URLSearchParams(location.search);
+const n = +params.get('n') || 10000;
+if (params.get('aa') === '0') glSetAntialias(false);
+if (params.get('w')) setCanvasFixedSize(vec2(+params.get('w'), +params.get('h') || 720));
+function gameInit()
+{
+    setCanvasClearColor(hsl(.6, .5, .8));
+    benchInit('LittleJS sprites', n);
+    new Render3DPlugin;
+    render3D.shadows = false;
+    render3D.sunDirection = vec3(-.3, 1, .5);
+    render3D.ambientColor = hsl(0, 0, .3);
+    render3D.camera.pos = vec3(0, 40, 80);
+    render3D.camera.lookAt(vec3());
+    render3D.camera.fov = PI/3;
+    if (params.get('sort') === '0') render3D.sortTransparent = false;
+    new EngineObject3D(vec3(), buildGrid(vec2(200), 1, hsl(0, 0, .5)));
+    for (let i = 0; i < n; ++i)
+    {
+        const o = new EngineObject3D(vec3(rand(-60, 60), rand(.5, 8), rand(-60, 60)), undefined, textureInfos[0], hsl(rand(), .7, .6));
+        o.size3D = vec3(1.5);
+        if (params.get('opaque')) o.transparent = false;
+    }
+}
+engineInit(gameInit, ()=>{}, ()=>{}, ()=>{}, benchFrame, ['../examples/shorts/tiles.png']);
+</script>

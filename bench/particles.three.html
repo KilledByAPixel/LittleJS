@@ -1,0 +1,91 @@
+<!DOCTYPE html><head><title>three.js particle bench</title>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js" } }
+</script>
+<script src=gpuTimer.js></script>
+<script src=benchOther.js></script>
+<style>html, body { margin: 0; overflow: hidden } canvas { display: block }</style></head><body>
+<canvas id=c></canvas>
+<script type=module>
+// n additive soft dot particles as one THREE.Points with a per point size and color shader, the usual three.js
+// particle system, simulated in typed arrays at the engine's fixed 60 Hz; the same scene as particles.html
+// ?n=20000 sets the count, ?life=2 the particle life, ?aa=0 antialiasing off, ?w=1280&h=720 fixes the canvas size
+import * as THREE from 'three';
+THREE.ColorManagement.enabled = false;
+const params = new URLSearchParams(location.search);
+const n = +params.get('n') || 20000, life = +params.get('life') || 2, aa = params.get('aa') !== '0';
+const w = +params.get('w') || innerWidth, h = +params.get('h') || (params.get('w') ? 720 : innerHeight);
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: aa });
+renderer.setSize(w, h);
+renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color().setHSL(.6, .5, .2);
+const fov = 60, camera = new THREE.PerspectiveCamera(fov, w / h, .1, 1000);
+camera.position.set(0, 20, 60);
+camera.lookAt(0, 10, 0);
+const sun = new THREE.DirectionalLight(0xffffff, Math.PI);
+sun.position.set(-30, 100, 50);
+scene.add(sun, new THREE.AmbientLight(0xffffff, .3 * Math.PI));
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshLambertMaterial({ color: 0x808080 }));
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+// the particles: position, velocity, start and end color, start and end size, life and age per particle
+const rand = (a = 1, b = 0)=> b + Math.random() * (a - b);
+const pos = new Float32Array(n * 3), vel = new Float32Array(n * 3), colorA = new Float32Array(n * 4), colorB = new Float32Array(n * 4);
+const sizeA = new Float32Array(n), sizeB = new Float32Array(n), lives = new Float32Array(n), ages = new Float32Array(n);
+const drawColor = new Float32Array(n * 4), drawSize = new Float32Array(n);
+const randomness = .2, fade = .1, hslA = new THREE.Color(), hslB = new THREE.Color();
+function spawn(i)
+{
+    const r = ()=> rand(1 + randomness, 1 - randomness);
+    pos[i*3] = rand(20, -20), pos[i*3+1] = 10 + rand(10, -10), pos[i*3+2] = rand(20, -20);
+    // a random direction at the emit speed, like randVector3 inside a full cone
+    const a = rand(2 * Math.PI), z = rand(2) - 1, s = Math.sqrt(1 - z * z), speed = .05 * r();
+    vel[i*3] = Math.cos(a) * s * speed, vel[i*3+1] = z * speed, vel[i*3+2] = Math.sin(a) * s * speed;
+    hslA.setHSL(.1, 1, .6).lerp(hslB.setHSL(.6, 1, .6), Math.random());
+    colorA.set([hslA.r, hslA.g, hslA.b, .5], i * 4);
+    hslA.setHSL(0, 1, .5).lerp(hslB.setHSL(.7, 1, .5), Math.random());
+    colorB.set([hslA.r, hslA.g, hslA.b, 0], i * 4);
+    sizeA[i] = .5 * r(), sizeB[i] = 1.5 * r();
+    lives[i] = life * r(), ages[i] = 0;
+}
+for (let i = 0; i < n; ++i)
+    spawn(i), ages[i] = rand(lives[i]);
+const geometry = new THREE.BufferGeometry();
+const positionAttribute = new THREE.BufferAttribute(pos, 3), colorAttribute = new THREE.BufferAttribute(drawColor, 4), sizeAttribute = new THREE.BufferAttribute(drawSize, 1);
+positionAttribute.setUsage(THREE.DynamicDrawUsage), colorAttribute.setUsage(THREE.DynamicDrawUsage), sizeAttribute.setUsage(THREE.DynamicDrawUsage);
+geometry.setAttribute('position', positionAttribute);
+geometry.setAttribute('pcolor', colorAttribute);
+geometry.setAttribute('psize', sizeAttribute);
+const material = new THREE.ShaderMaterial({
+    uniforms: { map: { value: new THREE.CanvasTexture(benchSoftDot()) }, scale: { value: h / 2 / Math.tan(fov / 2 * Math.PI / 180) } },
+    vertexShader: 'attribute float psize;attribute vec4 pcolor;varying vec4 vColor;uniform float scale;' +
+        'void main(){vColor=pcolor;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=psize*scale/-mv.z;gl_Position=projectionMatrix*mv;}',
+    fragmentShader: 'uniform sampler2D map;varying vec4 vColor;void main(){gl_FragColor=vColor*texture2D(map,gl_PointCoord);}',
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+const points = new THREE.Points(geometry, material);
+points.frustumCulled = false;
+scene.add(points);
+
+function update()
+{
+    for (let steps = benchSteps(); steps--;)
+        for (let i = 0; i < n; ++i)
+        {
+            pos[i*3] += vel[i*3], pos[i*3+1] += vel[i*3+1], pos[i*3+2] += vel[i*3+2];
+            if ((ages[i] += 1 / 60) >= lives[i]) spawn(i);
+        }
+    // the frame's color, alpha and size from each particle's age
+    for (let i = 0; i < n; ++i)
+    {
+        const t = ages[i] / lives[i], f = fade / 2, alpha = t < f ? t / f : t > 1 - f ? (1 - t) / f : 1;
+        for (let k = 0; k < 4; ++k)
+            drawColor[i*4+k] = colorA[i*4+k] + (colorB[i*4+k] - colorA[i*4+k]) * t;
+        drawColor[i*4+3] *= alpha;
+        drawSize[i] = sizeA[i] + (sizeB[i] - sizeA[i]) * t;
+    }
+    positionAttribute.needsUpdate = colorAttribute.needsUpdate = sizeAttribute.needsUpdate = true;
+}
+benchRun('three.js particles', n, renderer.getContext(), update, ()=> renderer.render(scene, camera));
+</script>

@@ -17,3 +17,5 @@ examples/electron/*win32*
 docs/superpowers/
 .claude/
 .vscode/
+# bench copies of older builds for comparisons
+bench/*.prev.js

@@ -1,0 +1,62 @@
+<!DOCTYPE html><head><title>PixiJS sprite bench</title>
+<script src=https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js></script>
+<script src=gpuTimer.js></script>
+<script src=benchOther.js></script>
+<style>html, body { margin: 0; overflow: hidden } canvas { display: block }</style></head><body>
+<script>
+// n tiles bouncing around the screen as PixiJS sprites in a Container, the same scene as sprites2d.html;
+// ?n=10000 sets the count, ?particles=1 uses a ParticleContainer, the fast path for sprites that only move,
+// ?aa=0 antialiasing off, ?w=1280&h=720 fixes the canvas size
+(async ()=>
+{
+    const params = new URLSearchParams(location.search);
+    const n = +params.get('n') || 10000, particles = params.get('particles') === '1', aa = params.get('aa') !== '0';
+    const w = +params.get('w') || innerWidth, h = +params.get('h') || (params.get('w') ? 720 : innerHeight);
+    const app = new PIXI.Application();
+    await app.init({ width: w, height: h, antialias: aa, autoStart: false, preference: 'webgl', background: 0x99b8e6 });
+    document.body.appendChild(app.canvas);
+    const sheet = await PIXI.Assets.load('../examples/shorts/tiles.png');
+    const texture = new PIXI.Texture({ source: sheet.source, frame: new PIXI.Rectangle(0, 0, 16, 16) });
+    const rand = (a, b)=> a + Math.random() * (b - a);
+    const x = new Float32Array(n), y = new Float32Array(n), vx = new Float32Array(n), vy = new Float32Array(n);
+    for (let i = 0; i < n; ++i)
+        x[i] = rand(0, w), y[i] = rand(0, h), vx[i] = rand(-3, 3), vy[i] = rand(-3, 3);
+    const items = [];
+    if (particles)
+    {
+        const container = new PIXI.ParticleContainer({ dynamicProperties: { position: true, rotation: false, uvs: false, color: false } });
+        for (let i = 0; i < n; ++i)
+        {
+            const p = new PIXI.Particle({ texture, x: x[i], y: y[i], scaleX: 2, scaleY: 2, anchorX: .5, anchorY: .5 });
+            container.addParticle(p);
+            items.push(p);
+        }
+        app.stage.addChild(container);
+    }
+    else
+    {
+        const container = new PIXI.Container();
+        for (let i = 0; i < n; ++i)
+        {
+            const sprite = new PIXI.Sprite(texture);
+            sprite.anchor.set(.5);
+            sprite.scale.set(2);
+            sprite.position.set(x[i], y[i]);
+            container.addChild(sprite);
+            items.push(sprite);
+        }
+        app.stage.addChild(container);
+    }
+    function update()
+    {
+        for (let i = 0; i < n; ++i)
+        {
+            x[i] += vx[i], y[i] += vy[i];
+            if (x[i] < 0 || x[i] > w) vx[i] = -vx[i];
+            if (y[i] < 0 || y[i] > h) vy[i] = -vy[i];
+            items[i].x = x[i], items[i].y = y[i];
+        }
+    }
+    benchRun(particles ? 'PixiJS particles' : 'PixiJS', n, app.renderer.gl, update, ()=> app.render());
+})();
+</script>

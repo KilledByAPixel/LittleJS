@@ -1,0 +1,124 @@
+<!DOCTYPE html><head><title>three.js bench</title>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js" } }
+</script>
+<script src=gpuTimer.js></script>
+<style>html, body { margin: 0; overflow: hidden } canvas { display: block }</style></head><body>
+<canvas id=c></canvas>
+<script type=module>
+// n spinning lit cubes over a ground plane with a 2048 shadow map, the same scene as cubes.html
+// ?n=5000 sets the count; one InstancedMesh holds the cubes, ?instanced=0 uses a Mesh per cube instead;
+// ?shadows=0 turns the shadow map off, ?aa=0 turns antialiasing off, ?w=1280&h=720 fixes the canvas size;
+// after 60 warm up frames the next 300 are timed and window.benchResult is set
+import * as THREE from 'three';
+// plain 0 to 1 colors lit as they are, like LittleJS, instead of sRGB decoded to linear and encoded back;
+// ?colormanaged=1 keeps the three.js default
+THREE.ColorManagement.enabled = new URLSearchParams(location.search).get('colormanaged') === '1';
+const params = new URLSearchParams(location.search);
+const n = +params.get('n') || 5000, instanced = params.get('instanced') !== '0';
+const shadows = params.get('shadows') !== '0', aa = params.get('aa') !== '0', size = +params.get('size') || 1; // ?size=.1 makes the cubes tiny
+const w = +params.get('w') || innerWidth, h = +params.get('h') || (params.get('w') ? 720 : innerHeight);
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: aa });
+renderer.setSize(w, h);
+renderer.shadowMap.enabled = shadows;
+if (!THREE.ColorManagement.enabled) renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+renderer.sortObjects = params.get('sort') !== '0'; // ?sort=0 draws in creation order like LittleJS
+const scene = new THREE.Scene();
+scene.background = new THREE.Color().setHSL(.6, .5, .8);
+const camera = new THREE.PerspectiveCamera(60, w / h, .1, 1000);
+camera.position.set(0, 40, 80);
+camera.lookAt(0, 0, 0);
+
+const sun = new THREE.DirectionalLight(0xffffff, Math.PI); // physical units since r155, PI is the old 1
+sun.position.set(-30, 100, 50);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = sun.shadow.camera.bottom = -75; // the same 150 wide box as render3D.shadowRange
+sun.shadow.camera.right = sun.shadow.camera.top = 75;
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 400;
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0xffffff, .3 * Math.PI));
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshLambertMaterial({ color: 0x808080 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const geometry = new THREE.BoxGeometry(size, size, size);
+const rand = (a, b)=> a + Math.random() * (b - a);
+const spins = [], cubes = [];
+let mesh, dummy;
+if (instanced)
+{
+    mesh = new THREE.InstancedMesh(geometry, new THREE.MeshLambertMaterial(), n);
+    mesh.castShadow = mesh.receiveShadow = true;
+    dummy = new THREE.Object3D();
+    for (let i = 0; i < n; ++i)
+    {
+        dummy.position.set(rand(-60, 60), rand(.5, 8), rand(-60, 60));
+        dummy.rotation.set(0, 0, 0);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+        mesh.setColorAt(i, new THREE.Color().setHSL(Math.random(), .7, .6));
+        spins.push(rand(.01, .05));
+    }
+    scene.add(mesh);
+}
+else
+{
+    for (let i = 0; i < n; ++i)
+    {
+        const cube = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL(Math.random(), .7, .6) }));
+        cube.position.set(rand(-60, 60), rand(.5, 8), rand(-60, 60));
+        cube.castShadow = cube.receiveShadow = true;
+        scene.add(cube);
+        cubes.push(cube);
+        spins.push(rand(.01, .05));
+    }
+}
+
+const label = document.createElement('div');
+label.style.cssText = 'position:fixed;top:14px;width:100%;text-align:center;color:#000;font:24px sans-serif';
+document.body.appendChild(label);
+let frames = 0, startTime, frameMs, result;
+const angles = new Float32Array(n);
+function frame()
+{
+    requestAnimationFrame(frame);
+    if (instanced)
+    {
+        for (let i = 0; i < n; ++i)
+        {
+            mesh.getMatrixAt(i, dummy.matrix);
+            dummy.position.setFromMatrixPosition(dummy.matrix);
+            dummy.rotation.set(0, angles[i] += spins[i], 0);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(i, dummy.matrix);
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+    }
+    else
+        for (let i = 0; i < n; ++i)
+            cubes[i].rotation.y += spins[i];
+    gpuTimer.begin(renderer.getContext());
+    renderer.render(scene, camera);
+    gpuTimer.end();
+    window.benchFrames = (window.benchFrames || 0) + 1; // for the profiler
+    gpuTimer.poll();
+
+    const now = performance.now();
+    if (!startTime)
+    {
+        if (++frames == 60) { startTime = now; frames = 0; }
+    }
+    else if (!frameMs && ++frames == 300)
+        frameMs = (now - startTime) / 300;
+    if (frameMs && !result && (gpuTimer.done || !gpuTimer.supported))
+        result = window.benchResult = { engine: instanced ? 'three.js instanced' : 'three.js', n, ms: +frameMs.toFixed(2), fps: +(1000/frameMs).toFixed(1), gpu: gpuTimer.supported ? gpuTimer.ms : 'n/a' };
+    if (result && !result.logged) // nothing shown while measuring
+        label.textContent = result.logged = `${result.engine} ${n} cubes: ${result.ms} ms frame, ${result.fps} fps, ${result.gpu} ms gpu`, console.log(result.logged);
+}
+frame();
+</script>

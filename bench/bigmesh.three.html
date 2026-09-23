@@ -1,0 +1,52 @@
+<!DOCTYPE html><head><title>three.js big mesh bench</title>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js" } }
+</script>
+<script src=gpuTimer.js></script>
+<script src=benchOther.js></script>
+<style>html, body { margin: 0; overflow: hidden } canvas { display: block }</style></head><body>
+<canvas id=c></canvas>
+<script type=module>
+// one hilly PlaneGeometry of s by s cells with a 2048 shadow map, the same scene as bigmesh.html; benchResult.build
+// is the ms to make the geometry with its normals, and benchResult.upload the ms of the first render, which sends it
+// ?s=500 sets the cells per side, ?shadows=0 turns the shadow map off, ?aa=0 antialiasing off, ?w=1280&h=720 fixes the canvas size
+import * as THREE from 'three';
+THREE.ColorManagement.enabled = false;
+const params = new URLSearchParams(location.search);
+const s = +params.get('s') || 500, shadows = params.get('shadows') !== '0', aa = params.get('aa') !== '0';
+const w = +params.get('w') || innerWidth, h = +params.get('h') || (params.get('w') ? 720 : innerHeight);
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: aa });
+renderer.setSize(w, h);
+renderer.shadowMap.enabled = shadows;
+renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color().setHSL(.6, .5, .8);
+const camera = new THREE.PerspectiveCamera(60, w / h, .1, 1000);
+camera.position.set(0, 40, 80);
+camera.lookAt(0, 0, 0);
+const sun = new THREE.DirectionalLight(0xffffff, Math.PI);
+sun.position.set(-30, 100, 50);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = sun.shadow.camera.bottom = -75;
+sun.shadow.camera.right = sun.shadow.camera.top = 75;
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 400;
+scene.add(sun, new THREE.AmbientLight(0xffffff, .3 * Math.PI));
+const height = (x, z)=> 4 * Math.sin(x * .1) * Math.cos(z * .13);
+let t = performance.now();
+const geometry = new THREE.PlaneGeometry(200, 200, s, s), p = geometry.attributes.position;
+for (let i = 0; i < p.count; ++i)
+    p.setZ(i, height(p.getX(i), -p.getY(i)));
+geometry.computeVertexNormals();
+benchExtra.build = +(performance.now() - t).toFixed(0);
+benchExtra.triangles = geometry.index.count / 3;
+const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL(.3, .4, .5) }));
+mesh.rotation.x = -Math.PI / 2;
+mesh.castShadow = mesh.receiveShadow = true;
+scene.add(mesh);
+t = performance.now();
+renderer.render(scene, camera);
+benchExtra.upload = +(performance.now() - t).toFixed(0);
+benchRun('three.js big mesh', s, renderer.getContext(), ()=> {}, ()=> renderer.render(scene, camera));
+</script>

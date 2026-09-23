@@ -1,0 +1,61 @@
+<!DOCTYPE html><head><title>LittleJS big mesh bench</title></head><body style=margin:0>
+<script>
+// ?prev=1 loads littlejs.release.prev.js beside this page, a copy of an older release build, to compare builds
+document.write('<script src="' + (/[?&]prev=1/.test(location.search) ? 'littlejs.release.prev.js' : '../dist/littlejs.release.js') + '"></script>');
+</script>
+<script src=gpuTimer.js></script>
+<script src=benchLittle.js></script>
+<script>
+// one hilly grid of s by s cells, 2 s squared triangles, lit with a 2048 shadow map like the cube bench; the same
+// scene as bigmesh.three.html; benchResult.build is the ms to build the mesh and benchResult.upload the ms to
+// turn it into triangles and send it to the GPU
+// ?s=500 sets the cells per side, ?shadows=0 turns the shadow map off, ?nearest=1 samples the shadow map without the
+// hardware 2x2 filter so each tap is one fetch like three.js, ?emissive=1 skips the lighting and shadow per pixel,
+// ?aa=0 antialiasing off, ?w=1280&h=720 fixes the canvas size
+const params = new URLSearchParams(location.search);
+const s = +params.get('s') || 500, shadows = params.get('shadows') !== '0';
+if (params.get('aa') === '0') glSetAntialias(false);
+if (params.get('w')) setCanvasFixedSize(vec2(+params.get('w'), +params.get('h') || 720));
+const height = (x, z)=> 4 * sin(x * .1) * cos(z * .13);
+function gameInit()
+{
+    setCanvasClearColor(hsl(.6, .5, .8));
+    let mesh;
+    benchInit('LittleJS big mesh', s, ()=>
+    {
+        if (params.get('nearest') === '1' && render3D.shadowTexture && !window.nearestSet)
+        {
+            // the shadow map exists after the first frame: plain compares, no 2x2 filter per tap
+            const gl = glContext;
+            window.nearestSet = true;
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, render3D.shadowTexture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.activeTexture(gl.TEXTURE0);
+        }
+        if (mesh.buffer) return;
+        const t = performance.now();
+        mesh.upload();
+        benchExtra.upload = +(performance.now() - t).toFixed(0);
+        benchExtra.triangles = mesh.bufferCount / 3;
+    });
+    new Render3DPlugin;
+    render3D.shadows = shadows;
+    render3D.shadowMapSize = 2048;
+    render3D.shadowRange = 150;
+    render3D.shadowCenter = vec3();
+    render3D.sunDirection = vec3(-.3, 1, .5);
+    render3D.ambientColor = hsl(0, 0, .3);
+    render3D.camera.pos = vec3(0, 40, 80);
+    render3D.camera.lookAt(vec3());
+    render3D.camera.fov = PI/3;
+    const t = performance.now();
+    mesh = buildGrid(vec2(200), s, hsl(.3, .4, .5), height, true);
+    mesh.doubleSided = false;
+    benchExtra.build = +(performance.now() - t).toFixed(0);
+    const terrain = new EngineObject3D(vec3(), mesh);
+    if (params.get('emissive') === '1') terrain.emissive = 1;
+}
+engineInit(gameInit, ()=>{}, ()=>{}, ()=>{}, benchFrame);
+</script>

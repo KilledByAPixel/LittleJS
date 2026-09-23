@@ -1,0 +1,35 @@
+<!DOCTYPE html><head><title>LittleJS particle bench</title></head><body style=margin:0>
+<script src=../dist/littlejs.release.js></script>
+<script src=gpuTimer.js></script>
+<script src=benchLittle.js></script>
+<script>
+// n additive soft dot particles alive in one ParticleEmitter3D over a lit ground, the same scene as particles.three.html
+// ?n=20000 sets the count, ?life=2 the particle life in seconds, ?trail=1 draws each as a ribbon over its last .2 s,
+// ?sort=0 turns transparent sorting off, ?aa=0 antialiasing off, ?w=1280&h=720 fixes the canvas size
+const params = new URLSearchParams(location.search);
+const n = +params.get('n') || 20000, life = +params.get('life') || 2;
+if (params.get('aa') === '0') glSetAntialias(false);
+if (params.get('w')) setCanvasFixedSize(vec2(+params.get('w'), +params.get('h') || 720));
+function gameInit()
+{
+    setCanvasClearColor(hsl(.6, .5, .2));
+    benchInit('LittleJS particles', n);
+    new Render3DPlugin;
+    render3D.shadows = false;
+    render3D.sunDirection = vec3(-.3, 1, .5);
+    render3D.ambientColor = hsl(0, 0, .3);
+    render3D.camera.pos = vec3(0, 20, 60);
+    render3D.camera.lookAt(vec3(0, 10, 0));
+    render3D.camera.fov = PI/3;
+    if (params.get('sort') === '0') render3D.sortTransparent = false;
+    new EngineObject3D(vec3(), buildGrid(vec2(100), 1, hsl(0, 0, .5)));
+    // fed at n per life so about n are alive, drifting through a 40 wide box
+    const e = new ParticleEmitter3D(vec3(0, 10, 0), vec3(40, 20, 40), 0, n / life, PI, undefined,
+        hsl(.1, 1, .6, .5), hsl(.6, 1, .6, .5), hsl(0, 1, .5, 0), hsl(.7, 1, .5, 0),
+        life, .5, 1.5, .05, 1, 0, .2, .2, true);
+    if (params.get('trail')) e.trailTime = .2;
+    for (let i = 0; i < n; ++i) // full from the first frame
+        e.emitParticle(), e.particleData[i * 21 + 17] = rand(e.particleData[i * 21 + 16]); // any age within its life
+}
+engineInit(gameInit, ()=>{}, ()=>{}, ()=>{}, benchFrame);
+</script>

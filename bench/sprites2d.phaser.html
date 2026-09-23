@@ -1,0 +1,50 @@
+<!DOCTYPE html><head><title>Phaser sprite bench</title>
+<script src=https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js></script>
+<script src=gpuTimer.js></script>
+<script src=benchOther.js></script>
+<style>html, body { margin: 0; overflow: hidden } canvas { display: block }</style></head><body>
+<script>
+// n tiles bouncing around the screen as Phaser images, the same scene as sprites2d.html; Phaser runs its own loop,
+// so the GPU timer wraps its render events and benchTick counts the frames
+// ?n=10000 sets the count, ?blitter=1 uses a Blitter, Phaser's fast path for many copies of one texture,
+// ?aa=0 antialiasing off, ?w=1280&h=720 fixes the canvas size
+const params = new URLSearchParams(location.search);
+const n = +params.get('n') || 10000, blitter = params.get('blitter') === '1', aa = params.get('aa') !== '0';
+const w = +params.get('w') || innerWidth, h = +params.get('h') || (params.get('w') ? 720 : innerHeight);
+const rand = (a, b)=> a + Math.random() * (b - a);
+const x = new Float32Array(n), y = new Float32Array(n), vx = new Float32Array(n), vy = new Float32Array(n);
+for (let i = 0; i < n; ++i)
+    x[i] = rand(0, w), y[i] = rand(0, h), vx[i] = rand(-3, 3), vy[i] = rand(-3, 3);
+const items = [];
+const game = new Phaser.Game({
+    type: Phaser.WEBGL, width: w, height: h, backgroundColor: '#99b8e6', render: { antialias: aa },
+    scene: {
+        preload() { this.load.spritesheet('tiles', '../examples/shorts/tiles.png', { frameWidth: 16, frameHeight: 16 }); },
+        create()
+        {
+            if (blitter)
+            {
+                const b = this.add.blitter(0, 0, 'tiles', 0);
+                for (let i = 0; i < n; ++i)
+                    items.push(b.create(x[i], y[i]));
+            }
+            else
+                for (let i = 0; i < n; ++i)
+                    items.push(this.add.image(x[i], y[i], 'tiles', 0).setScale(2));
+            const name = blitter ? 'Phaser blitter' : 'Phaser';
+            this.game.events.on(Phaser.Core.Events.PRE_RENDER, ()=> gpuTimer.begin(this.game.renderer.gl));
+            this.game.events.on(Phaser.Core.Events.POST_RENDER, ()=> { gpuTimer.end(); benchTick(name, n); });
+        },
+        update()
+        {
+            for (let i = 0; i < n; ++i)
+            {
+                x[i] += vx[i], y[i] += vy[i];
+                if (x[i] < 0 || x[i] > w) vx[i] = -vx[i];
+                if (y[i] < 0 || y[i] > h) vy[i] = -vy[i];
+                items[i].x = x[i], items[i].y = y[i];
+            }
+        },
+    },
+});
+</script>

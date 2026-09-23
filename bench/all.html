@@ -1,0 +1,73 @@
+<!DOCTYPE html><head><title>LittleJS bench, all pages</title>
+<style>
+body { margin: 0; background: #222; color: #ddd; font: 14px monospace }
+iframe { display: block; width: 1280px; height: 720px; border: 0; background: #000 }
+pre { margin: 0; padding: 8px 12px; white-space: pre-wrap }
+button { margin: 8px 12px; font: inherit }
+</style></head><body>
+<iframe id=frame></iframe>
+<button id=copy>copy results</button>
+<pre id=out></pre>
+<script>
+// runs every bench page in turn in the frame above, at 1280 by 720, and prints one line per result here and in
+// the console, so one run gives the whole table to copy; each page runs twice, in turn with its twins, so the
+// spread between two runs of the same page shows; ?quick=1 runs each once, ?only=particles runs one set,
+// ?smoke=1 runs the first pair small
+const params = new URLSearchParams(location.search);
+const sets = {
+    cubes: [['cubes.html?n=10000', 'cubes.three.html?n=10000'], ['cubes.html?n=30000', 'cubes.three.html?n=30000'],
+        ['cubes.html?n=30000&instanced=1', 'cubes.three.html?n=30000&instanced=0']],
+    particles: [['particles.html?n=20000', 'particles.three.html?n=20000'], ['particles.html?n=100000', 'particles.three.html?n=100000']],
+    sprites: [['sprites.html?n=10000', 'sprites.three.html?n=10000']],
+    dynamic: [['dynamic.html?s=256', 'dynamic.three.html?s=256'], ['dynamic.html?s=256&dynamic=0']],
+    bigmesh: [['bigmesh.html?s=500', 'bigmesh.three.html?s=500'], ['bigmesh.html?s=500&shadows=0', 'bigmesh.three.html?s=500&shadows=0'],
+        ['bigmesh.html?s=1000', 'bigmesh.three.html?s=1000']],
+    sprites2d: [['sprites2d.html?n=20000', 'sprites2d.pixi.html?n=20000', 'sprites2d.phaser.html?n=20000'],
+        ['sprites2d.html?n=100000', 'sprites2d.pixi.html?n=100000', 'sprites2d.pixi.html?n=100000&particles=1', 'sprites2d.phaser.html?n=100000&blitter=1'],
+        ['sprites2d.html?n=100000&objects=1']],
+};
+const only = params.get('only');
+const pairs = params.get('smoke') === '1' ? [['cubes.html?n=500', 'cubes.three.html?n=500']] : Object.entries(sets).filter(([k])=> !only || k === only).flatMap(([, v])=> v);
+const list = [];
+const rounds = params.get('quick') === '1' ? 1 : 2;
+for (const pair of pairs)
+    for (let r = 0; r < rounds; ++r)
+        list.push(...pair);
+const out = document.getElementById('out'), frame = document.getElementById('frame');
+const lines = [];
+function print(line)
+{
+    lines.push(line);
+    out.textContent = lines.join('\n');
+    console.log(line);
+}
+document.getElementById('copy').onclick = ()=> navigator.clipboard.writeText(lines.join('\n'));
+const gl = document.createElement('canvas').getContext('webgl2'), info = gl?.getExtension('WEBGL_debug_renderer_info');
+print(new Date().toISOString().slice(0, 16) + ' ' + navigator.userAgent.match(/(Chrome|Firefox)\/[\d.]+/)?.[0] + ' ' + (info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown gpu') + ' 1280x720 dpr ' + devicePixelRatio);
+const sleep = (ms)=> new Promise(r => setTimeout(r, ms));
+async function run(url)
+{
+    frame.src = url + '&w=1280&h=720';
+    const start = performance.now();
+    while (performance.now() - start < 180000)
+    {
+        await sleep(250);
+        let result;
+        try { result = frame.contentWindow?.benchResult; } catch {}
+        if (result)
+        {
+            const extra = Object.entries(result).filter(([k])=> !['engine', 'n', 'ms', 'fps', 'gpu', 'logged'].includes(k)).map(([k, v])=> k + ' ' + v).join(', ');
+            print(url.padEnd(44) + ' frame ' + String(result.ms).padStart(6) + ' ms, gpu ' + String(result.gpu).padStart(6) + ' ms' + (extra ? ', ' + extra : ''));
+            return;
+        }
+    }
+    print(url.padEnd(44) + ' timed out');
+}
+(async ()=>
+{
+    for (const url of list)
+        await run(url);
+    print('done, ' + list.length + ' runs');
+    frame.src = 'about:blank';
+})();
+</script>

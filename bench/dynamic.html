@@ -1,0 +1,48 @@
+<!DOCTYPE html><head><title>LittleJS dynamic mesh bench</title></head><body style=margin:0>
+<script src=../dist/littlejs.release.js></script>
+<script src=gpuTimer.js></script>
+<script src=benchLittle.js></script>
+<script>
+// a grid of s by s cells whose heights change every frame, so the mesh uploads again each frame; the same scene as
+// dynamic.three.html, where the position attribute is marked for update
+// ?s=128 sets the cells per side, ?normals=1 recomputes smooth normals each frame too, ?rebuild=1 builds a new mesh
+// with buildGrid each frame instead of moving the points, ?dynamic=0 leaves mesh.dynamicDraw off, ?aa=0 antialiasing off, ?w=1280&h=720 fixes the canvas size
+const params = new URLSearchParams(location.search);
+const s = +params.get('s') || 128, normals = params.get('normals') === '1', rebuild = params.get('rebuild') === '1';
+if (params.get('aa') === '0') glSetAntialias(false);
+if (params.get('w')) setCanvasFixedSize(vec2(+params.get('w'), +params.get('h') || 720));
+let t = 0;
+const height = (x, z)=> 3 * sin(x * .2 + t) * cos(z * .2 + t * .7);
+function gameInit()
+{
+    setCanvasClearColor(hsl(.6, .5, .8));
+    let object, mesh;
+    benchInit('LittleJS dynamic mesh', s, ()=>
+    {
+        t += 1 / 60;
+        if (rebuild)
+        {
+            mesh = buildGrid(vec2(100), s, hsl(.55, .5, .5), height, true);
+            mesh.doubleSided = false;
+            object.setMesh(mesh);
+            return;
+        }
+        for (const p of mesh.points)
+            p.y = height(p.x, p.z);
+        normals && mesh.computeNormals(true);
+        mesh.dirty = true;
+    });
+    new Render3DPlugin;
+    render3D.shadows = false;
+    render3D.sunDirection = vec3(-.3, 1, .5);
+    render3D.ambientColor = hsl(0, 0, .3);
+    render3D.camera.pos = vec3(0, 40, 80);
+    render3D.camera.lookAt(vec3());
+    render3D.camera.fov = PI/3;
+    mesh = buildGrid(vec2(100), s, hsl(.55, .5, .5), height, true);
+    mesh.doubleSided = false;
+    mesh.dynamicDraw = params.get('dynamic') !== '0';
+    object = new EngineObject3D(vec3(), mesh);
+}
+engineInit(gameInit, ()=>{}, ()=>{}, ()=>{}, benchFrame);
+</script>

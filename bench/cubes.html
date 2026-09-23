@@ -1,0 +1,145 @@
+<!DOCTYPE html><head><title>LittleJS 3D bench</title></head><body style=margin:0>
+<script src=../dist/littlejs.release.js></script>
+<script src=gpuTimer.js></script>
+<script>
+// n spinning lit cubes over a ground plane with a 2048 shadow map, the same scene as cubes.three.html
+// ?n=5000 sets the count, ?shadows=0 turns the shadow map off, ?aa=0 turns antialiasing off, ?w=1280&h=720 fixes
+// the canvas size; after 60 warm up renders the next 300 are timed and window.benchResult is set
+const params = new URLSearchParams(location.search);
+const n = +params.get('n') || 5000, shadows = params.get('shadows') !== '0', size = +params.get('size') || 1; // ?size=.1 makes the cubes tiny
+const useObjects = params.get('objects') !== '0'; // ?objects=0 keeps the cubes in arrays and draws them with drawMesh
+const retained = params.get('instanced') === '1';  // ?instanced=1 keeps them in an InstancedMesh3D, like an InstancedMesh
+const benchName = retained ? 'LittleJS InstancedMesh3D' : useObjects ? 'LittleJS' : 'LittleJS drawMesh';
+if (params.get('aa') === '0') glSetAntialias(false);
+if (params.get('w')) setCanvasFixedSize(vec2(+params.get('w'), +params.get('h') || 720));
+let frames = 0, startTime, frameMs, result, rendered = false;
+// the GPU timer starts in a pre render hook made before the 3D plugin, so it wraps only the drawing like the
+// three.js page's does; the CPU phases: the spin loop in update, and the render from that hook to the end of
+// the animation frame callback, which is where the engine issues its GL work
+let renderStart = 0, updateMs = 0, renderMs = 0, phaseFrames = 0;
+const raf = requestAnimationFrame;
+window.requestAnimationFrame = (cb)=> raf((t)=>
+{
+    rendered = false;
+    renderStart = 0;
+    cb(t);
+    gpuTimer.end(rendered);
+    gpuTimer.gl && gpuTimer.poll();
+    if (rendered && startTime && !result)
+        renderMs += performance.now() - renderStart, ++phaseFrames;
+});
+
+class Cube extends EngineObject3D
+{
+    constructor(pos, color, spin)
+    {
+        super(pos, render3D.boxMesh, undefined, color);
+        this.scale3D = vec3(size);
+        if (params.get('emissive')) this.emissive = 1; // ?emissive=1 skips the lighting per pixel
+        this.angleVelocity3D = vec3(0, spin, 0);
+    }
+}
+
+function gameInit()
+{
+    setCanvasClearColor(hsl(.6, .5, .8));
+    if (params.get('no3d')) return; // ?no3d=1 measures the engine's own per frame cost with nothing 3D
+    // the spin runs here, once per rendered frame like the three.js page, not in gameUpdate: the fixed timestep
+    // runs several updates per frame once a frame is slower than 60 fps, which would count the loop several times
+    engineAddPlugin(undefined, undefined, undefined, undefined, ()=>
+    {
+        const t = performance.now();
+        spin?.();
+        if (startTime && !result)
+            updateMs += performance.now() - t;
+        renderStart = performance.now();
+        gpuTimer.begin(glContext);
+    });
+    new Render3DPlugin;
+    render3D.shadows = shadows;
+    if (params.get('aniso') === '0') render3D.anisotropy = 0; // ?aniso=0 and ?mipmaps=0 test the texture sampling cost
+    if (params.get('mipmaps') === '0') render3D.mipmaps = false;
+    render3D.shadowMapSize = 2048;
+    render3D.shadowRange = 150;
+    render3D.shadowCenter = vec3();
+    render3D.sunDirection = vec3(-.3, 1, .5);
+    render3D.ambientColor = hsl(0, 0, .3);
+    render3D.camera.pos = vec3(0, 40, 80);
+    render3D.camera.lookAt(vec3());
+    render3D.camera.fov = PI/3;
+    const ground = new EngineObject3D(vec3(), buildGrid(vec2(200), 1, hsl(0, 0, .5)));
+    ground.castShadow = false;
+    if (retained)
+    {
+        // an InstancedMesh3D: each matrix is set once a frame in gameUpdate like setMatrixAt on an InstancedMesh
+        const set = new InstancedMesh3D(render3D.boxMesh, n), positions = [], spins = [];
+        const angles = new Float32Array(n), scale = vec3(size), rotation = vec3(), scratch = new Matrix4;
+        for (let i = 0; i < n; ++i)
+        {
+            positions.push(vec3(rand(-60, 60), rand(.5, 8), rand(-60, 60)));
+            spins.push(rand(.01, .05));
+            set.setColorAt(i, hsl(rand(), .7, .6));
+        }
+        spin = ()=>
+        {
+            for (let i = 0; i < n; ++i)
+                set.setMatrixAt(i, buildMatrix(positions[i], rotation.set(0, angles[i] += spins[i], 0), scale, scratch));
+        };
+        return;
+    }
+    if (useObjects)
+    {
+        for (let i = 0; i < n; ++i)
+            new Cube(vec3(rand(-60, 60), rand(.5, 8), rand(-60, 60)), hsl(rand(), .7, .6), rand(.01, .05));
+        return;
+    }
+    // no objects: the cubes live in arrays, each matrix is rebuilt once a frame in gameUpdate like an
+    // InstancedMesh's setMatrixAt, and the draws each frame batch into one instanced call per pass
+    const positions = [], colors = [], spins = [], angles = new Float32Array(n), scale = vec3(size);
+    for (let i = 0; i < n; ++i)
+    {
+        positions.push(vec3(rand(-60, 60), rand(.5, 8), rand(-60, 60)));
+        colors.push(hsl(rand(), .7, .6));
+        spins.push(rand(.01, .05));
+        matrices.push(buildMatrix(positions[i], undefined, scale));
+    }
+    const rotation = vec3();
+    spin = ()=>
+    {
+        for (let i = 0; i < n; ++i)
+            buildMatrix(positions[i], rotation.set(0, angles[i] += spins[i], 0), scale, matrices[i]);
+    };
+    render3D.onRenderOpaque = ()=>
+    {
+        const boxMesh = render3D.boxMesh;
+        for (let i = 0; i < n; ++i)
+            render3D.drawMesh(boxMesh, matrices[i], undefined, colors[i]);
+    };
+}
+
+const matrices = [];
+let spin;
+function gameUpdate() {}
+
+function gameRenderPost()
+{
+    rendered = true;
+    const now = performance.now();
+    if (!startTime)
+    {
+        if (++frames == 60) { startTime = now; frames = 0; }
+    }
+    else if (!frameMs && ++frames == 300)
+        frameMs = (now - startTime) / 300;
+    if (frameMs && !result && (gpuTimer.done || !gpuTimer.supported))
+        result = window.benchResult = { engine: benchName, n, ms: +frameMs.toFixed(2), fps: +(1000/frameMs).toFixed(1), gpu: gpuTimer.supported ? gpuTimer.ms : 'n/a',
+            update: +(updateMs / phaseFrames).toFixed(2), render: +(renderMs / phaseFrames).toFixed(2) };
+    window.benchFrames = (window.benchFrames || 0) + 1; // for the profiler
+    if (!result) return; // nothing drawn while measuring
+    if (!result.logged)
+        console.log(result.logged = `${benchName} ${n} cubes: ${result.ms} ms frame, ${result.fps} fps, ${result.gpu} ms gpu, cpu: ${result.update} ms update, ${result.render} ms render`);
+    drawTextScreen(result.logged, vec2(mainCanvasSize.x/2, 30), 24, BLACK, 0);
+}
+
+engineInit(gameInit, gameUpdate, ()=>{}, ()=>{}, gameRenderPost);
+</script>

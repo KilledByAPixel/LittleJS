@@ -1,0 +1,63 @@
+<!DOCTYPE html><head><title>LittleJS 2D sprite bench</title></head><body style=margin:0>
+<script src=../dist/littlejs.release.js></script>
+<script src=gpuTimer.js></script>
+<script src=benchLittle.js></script>
+<script>
+// n tiles bouncing around the screen, the classic bunnymark, drawn with drawTile from typed arrays; the same
+// scene as sprites2d.pixi.html and sprites2d.phaser.html
+// ?n=10000 sets the count, ?objects=1 makes each one an EngineObject moved and drawn by the engine instead,
+// ?aa=0 antialiasing off, ?w=1280&h=720 fixes the canvas size
+const params = new URLSearchParams(location.search);
+const n = +params.get('n') || 10000, objects = params.get('objects') === '1';
+if (params.get('aa') === '0') glSetAntialias(false);
+if (params.get('w')) setCanvasFixedSize(vec2(+params.get('w'), +params.get('h') || 720));
+const x = new Float32Array(n), y = new Float32Array(n), vx = new Float32Array(n), vy = new Float32Array(n);
+const size = vec2(32), pos = vec2();
+let halfW, halfH, tileInfo;
+class Bunny extends EngineObject
+{
+    constructor(i)
+    {
+        super(vec2(x[i], y[i]), size, tileInfo);
+        this.velocity = vec2(vx[i], vy[i]);
+        this.gravityScale = 0;
+    }
+    update()
+    {
+        // bounce off the edges, the same rule as the array version
+        const p = this.pos, v = this.velocity;
+        if (p.x < -halfW || p.x > halfW) v.x = -v.x;
+        if (p.y < -halfH || p.y > halfH) v.y = -v.y;
+        super.update();
+    }
+}
+function gameInit()
+{
+    cameraScale = 1; // one world unit is one pixel, the camera at the middle of the screen
+    setCanvasClearColor(hsl(.6, .5, .8));
+    halfW = mainCanvasSize.x / 2, halfH = mainCanvasSize.y / 2;
+    tileInfo = tile(0, 16);
+    for (let i = 0; i < n; ++i)
+        x[i] = rand(-halfW, halfW), y[i] = rand(-halfH, halfH), vx[i] = rand(-3, 3), vy[i] = rand(-3, 3);
+    benchInit(objects ? 'LittleJS 2D objects' : 'LittleJS 2D', n, objects ? undefined : ()=>
+    {
+        // the move runs here, once per rendered frame like the other pages, not in gameUpdate
+        for (let i = 0; i < n; ++i)
+        {
+            x[i] += vx[i], y[i] += vy[i];
+            if (x[i] < -halfW || x[i] > halfW) vx[i] = -vx[i];
+            if (y[i] < -halfH || y[i] > halfH) vy[i] = -vy[i];
+        }
+    });
+    if (objects)
+        for (let i = 0; i < n; ++i)
+            new Bunny(i);
+}
+function gameRender()
+{
+    if (objects) return;
+    for (let i = 0; i < n; ++i)
+        pos.x = x[i], pos.y = y[i], drawTile(pos, size, tileInfo);
+}
+engineInit(gameInit, ()=>{}, ()=>{}, gameRender, benchFrame, ['../examples/shorts/tiles.png']);
+</script>
