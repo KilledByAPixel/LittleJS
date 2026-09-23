@@ -1473,8 +1473,9 @@ newgrounds.unlockMedal(id)           // Server-side unlock; every call is a fetc
 newgrounds.postScore(id, value)      // Submit to a scoreboard
 await newgrounds.getScores(id, user, social, skip, limit)
 newgrounds.logView()                 // Track a page view
-newgrounds.pendingUnlocks            // Medals the server has not confirmed yet, resent on the keep alive ping
-new NewgroundsMedal(id, name, description, icon) // unlock() waits for the server to confirm when logged in
+newgrounds.pendingUnlocks            // Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping
+new NewgroundsMedal(id, name, description, icon) // when logged in, unlock() asks the server and the medal only
+                                     // unlocks and shows once it confirms, so unlocked is still false on return
 ```
 
 ## LittleJS Drawing Utilities

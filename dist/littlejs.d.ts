@@ -3879,7 +3879,7 @@ declare module "littlejsengine" {
         medals: any[];
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         scoreboards: any[];
-        /** @property {Set<NewgroundsMedal>} - Medals the server has not confirmed unlocking yet, resent on the keep alive ping
+        /** @property {Set<NewgroundsMedal>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping
          *  @type {Set<NewgroundsMedal>} */
         pendingUnlocks: Set<NewgroundsMedal>;
         /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */

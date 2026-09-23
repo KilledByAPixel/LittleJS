@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NewgroundsPlugin, newgrounds } from '../dist/littlejs.esm.js';
+import { NewgroundsPlugin, NewgroundsMedal, newgrounds, medalsInit } from '../dist/littlejs.esm.js';
 
 // a 128 bit key as the Newgrounds app settings give it, base64
 const keyBytes = Uint8Array.from({ length: 16 }, (_, i)=> i * 17 & 255);
@@ -24,4 +24,16 @@ test('NewgroundsPlugin encrypts a call with WebCrypto as AES-128 CBC, the iv fir
     assert.equal(new TextDecoder().decode(plain), '{"component":"Medal.unlock"}');
     const again = await plugin.encrypt('{"component":"Medal.unlock"}');
     assert.notEqual(again, secure, 'a fresh iv every time');
+});
+
+test('a NewgroundsMedal unlocks locally and posts nothing when not logged in', () =>
+{
+    let fetches = 0;
+    globalThis.fetch = async ()=> { ++fetches; return { text: async ()=> '' }; };
+    const medal = new NewgroundsMedal(7, 'Seven');
+    medalsInit('NG Logged Out');
+    medal.unlock();
+    assert.equal(medal.unlocked, true);
+    assert.equal(fetches, 0, 'the gateway is not asked without a session');
+    assert.equal(JSON.parse(globalThis.localStorage['NG Logged Out'])['7'].unlocked, true, 'saved locally');
 });

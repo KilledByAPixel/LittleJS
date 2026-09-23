@@ -10920,13 +10920,20 @@ class NewgroundsMedal extends Medal
             return;
         }
 
-        // logged in, newgrounds holds the medal: it unlocks once the server confirms, and is resent until then
+        // logged in, newgrounds holds the medal: it unlocks once the server confirms, one request at a time
+        const pending = newgrounds.pendingUnlocks;
+        if (pending.has(this)) return;
+        pending.add(this);
         newgrounds.unlockMedal(this.id).then(response=>
         {
-            if (response?.result?.data?.medal?.unlocked)
-                super.unlock();
-            else
-                newgrounds.pendingUnlocks.add(this);
+            if (!response?.result?.data?.medal?.unlocked)
+            {
+                // still pending, the keep alive ping resends it
+                debugMedals && LOG('newgrounds did not unlock medal', this.id, response?.result?.error || response?.error);
+                return;
+            }
+            pending.delete(this);
+            super.unlock();
         });
     }
 }
@@ -10966,7 +10973,7 @@ class NewgroundsPlugin
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         this.scoreboards = [];
 
-        /** @property {Set<NewgroundsMedal>} - Medals the server has not confirmed unlocking yet, resent on the keep alive ping
+        /** @property {Set<NewgroundsMedal>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping
          *  @type {Set<NewgroundsMedal>} */
         this.pendingUnlocks = new Set;
 
@@ -10984,9 +10991,21 @@ class NewgroundsPlugin
         this.ready = this.session_id ? this.init() : Promise.resolve(this); // only use newgrounds when logged in
     }
 
-    // fetch the medals and scoreboards, then keep the session alive
+    // keep the session alive, then fetch the medals and scoreboards
     async init()
     {
+        // ping every minute, and resend the unlocks the server has not confirmed
+        const keepAliveMS = 60 * 1e3;
+        setInterval(()=>
+        {
+            this.call('Gateway.ping', 0);
+            if (medalsPreventUnlock) return; // they stay pending until unlocks are allowed again
+            const pending = [...this.pendingUnlocks];
+            this.pendingUnlocks.clear();
+            for (const medal of pending)
+                medal.unlock();
+        }, keepAliveMS);
+
         const medalsResult = await this.call('Medal.getList');
 
         // bail early if the first call failed (offline / bad session / server error)
@@ -11008,7 +11027,7 @@ class NewgroundsPlugin
                 medal.image.src =   newgroundsMedal['icon'];
                 medal.name =        newgroundsMedal['name'];
                 medal.description = newgroundsMedal['description'];
-                medal.unlocked =    newgroundsMedal['unlocked'];
+                medal.unlocked =    medal.unlocked || !!newgroundsMedal['unlocked']; // an unlock may have landed first
                 medal.difficulty =  newgroundsMedal['difficulty'];
                 medal.value =       newgroundsMedal['value'];
 
@@ -11020,17 +11039,6 @@ class NewgroundsPlugin
         const scoreboardResult = await this.call('ScoreBoard.getBoards');
         this.scoreboards = scoreboardResult?.result?.data?.scoreboards || [];
         debugMedals && LOG(this.scoreboards);
-
-        // keep the session alive with a ping every minute, and resend the unlocks it has not confirmed
-        const keepAliveMS = 60 * 1e3;
-        setInterval(()=>
-        {
-            this.call('Gateway.ping', 0);
-            const pending = [...this.pendingUnlocks];
-            this.pendingUnlocks.clear();
-            for (const medal of pending)
-                medal.unlock();
-        }, keepAliveMS);
         return this;
     }
 
