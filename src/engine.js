@@ -269,13 +269,11 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // - assigning width or height reallocates the canvas and makes the
         //   browser rebuild the page, which was a real bottleneck in some
         //   browsers when done every frame
-        // - assigning it also clears the canvas and resets the context, so
-        //   when the size is unchanged do both of those by hand instead
-        // - the engine never leaves a transform or blend mode set, it pairs
-        //   every save with a restore and every setAdditiveBlendMode with its
-        //   reset, so those two lines below exist only to keep a GAME that
-        //   leaves them set working the way it did when the resize cleared
-        //   them. Dropping them saves 36 bytes if you never do that
+        // - assigning it also cleared the canvas, so when the size is
+        //   unchanged clear by hand instead
+        // - it used to reset the whole 2D context too. It no longer does, so
+        //   whatever you set on a context stays set: put back any transform
+        //   or blend mode you change, the engine pairs its own
         if (mainCanvas.width != w || mainCanvas.height != h)
         {
             mainCanvas.width  = overlayCanvas.width  = w;
@@ -283,9 +281,17 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         }
         else
         {
-            mainContext.setTransform(1, 0, 0, 1, 0, 0);
-            overlayContext.setTransform(1, 0, 0, 1, 0, 0);
-            mainContext.globalCompositeOperation = overlayContext.globalCompositeOperation = 'source-over';
+            // catch state the last frame left behind, see the note above
+            // - everything here lives inside the ASSERT arguments so the
+            //   release build drops it whole, do not wrap these in a loop:
+            //   the loop would be live code and survive
+            ASSERT(mainContext.getTransform().isIdentity && overlayContext.getTransform().isIdentity,
+                'A canvas transform was still applied at the end of the frame. The engine stopped resizing the canvas every frame, which is what used to reset the 2D context, so put back any transform you set.');
+            ASSERT(mainContext.globalCompositeOperation == 'source-over' && overlayContext.globalCompositeOperation == 'source-over',
+                'A blend mode was still set at the end of the frame. Call setAdditiveBlendMode(false) when you are done with it, the engine no longer resets the 2D context for you.');
+            ASSERT(mainContext.globalAlpha == 1 && overlayContext.globalAlpha == 1,
+                'A global alpha was still set at the end of the frame. Set it back to 1, the engine no longer resets the 2D context for you.');
+
             mainContext.clearRect(0, 0, w, h);
             overlayContext.clearRect(0, 0, w, h);
         }

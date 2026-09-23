@@ -507,19 +507,21 @@ move the zip by a few bytes, which is noise rather than cost (section 6).
    week of micro-optimisation. Words themselves are almost free (they
    compress); LINES of unique text are not.
 5. **Redundant inputs and controls.** Five duplicate keys: −35.
-6. **Defensive state restoration the engine does not need.** An engine
-   that stops reassigning `canvas.width` every frame, because assigning it
+6. **Defensive state restoration, replaced by an assert.** An engine that
+   stops reassigning `canvas.width` every frame, because assigning it
    reallocates the canvas and makes the browser rebuild the page, has to
    clear and reset the context by hand instead. Clearing both canvases
-   cost 25; restoring the transform and blend mode cost **36 more**, and
-   that part exists only so a GAME that leaves a transform applied or
-   additive blending on keeps working the way it did when the resize
-   cleared them. The engine itself pairs every `save` with a `restore`.
-   Look for this shape wherever an engine protects you from your own
-   unbalanced state: if your game pairs its own calls, the guard is yours
-   to delete. Measure it before assuming it is small, and be honest about
-   whether you really do pair them, because the failure is silent and
-   visual.
+   cost 25; restoring the transform, blend mode and alpha cost **36
+   more** — and that part only protected a game that left them set, since
+   the engine pairs its own calls. **Delete the restore and assert the
+   invariant instead.** Three `ASSERT`s at the end of the frame, one per
+   piece of state, name whichever one was left set, and they cost zero
+   because the release build drops asserts and their arguments whole
+   (section 6). You get a louder failure than the silent repair gave you,
+   for 36 bytes less. One catch: keep the whole check *inside* the ASSERT
+   arguments. Wrapping the three in a `for` loop over the two contexts put
+   the loop in live code and cost 15 bytes even though its body compiled
+   away.
 
 A kit's cost is in the builder, not its last user: deleting three of the
 four things built from one welded kit measured 29, while deleting the kit
