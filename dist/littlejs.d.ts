@@ -7297,6 +7297,62 @@ declare module "littlejsengine" {
         dispose(): void;
     }
     /**
+     * InstancedMesh3D - Many copies of one mesh drawn as one call, with their transforms kept on the GPU
+     * - For big sets that mostly stay put: an instance costs nothing per frame until it changes, so a hundred thousand
+     *   trees cost what one tree does; objects and drawMesh batch by themselves too, but rebuild their batch every frame
+     * - setMatrixAt and setColorAt change one instance, and only the changed range uploads before the next draw
+     * - The instances are in world space; the object's own pos3D, rotation3D and scale3D do not move them
+     * - The whole set is culled by one bounding sphere around the origin, and casts and receives shadows like any object
+     * - The object's flags cover the whole set, one emissive, one tileInfo, one shader; only the colors are per instance
+     * - A mirrored instance, one with a negative scale, shows its inside unless the mesh is doubleSided
+     * - A transparent set draws in one go in the transparent stage, its instances are not sorted against each other
+     * @extends EngineObject3D
+     * @memberof Render3D
+     * @example
+     * const forest = new InstancedMesh3D(treeMesh, 1000);
+     * for (let i = 0; i < 1000; ++i)
+     *     forest.setMatrixAt(i, buildMatrix(randomGroundPos(), vec3(0, rand(2*PI), 0)));
+     */
+    export class InstancedMesh3D extends EngineObject3D {
+        /** Create a set of instances of a mesh, each at the origin in the object's color until it is set
+         *  @param {Mesh} mesh
+         *  @param {number} count - How many instances there is room for, all of them draw until count is lowered
+         *  @param {TileInfo|TextureInfo} [tileInfo] - Texture for all of them
+         *  @param {Color} [color] - The color they start with */
+        constructor(mesh: Mesh, count: number, tileInfo?: TileInfo | TextureInfo, color?: Color);
+        /** @property {number} - How many instances draw, the first ones, up to the count it was made with */
+        count: number;
+        /** @property {number} - How many instances it was made with */
+        maxCount: number;
+        /** @property {Float32Array} - The per instance values the shader reads, 33 floats each: the matrix, its
+         *  normal matrix, the color and the uv rect; edit it directly and call markDirty for the instances changed */
+        instanceData: Float32Array;
+        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for culling */
+        radius: number;
+        /** @property {number} - First instance to upload before the next draw */
+        dirtyStart: number;
+        /** @property {number} - One past the last instance to upload, so nothing uploads when it is not past dirtyStart */
+        dirtyEnd: number;
+        buffer: WebGLBuffer;
+        bufferGeneration: number;
+        uvTileInfo: TileInfo | TextureInfo;
+        /** Place an instance, in world space
+         *  @param {number} i
+         *  @param {Matrix4} matrix */
+        setMatrixAt(i: number, matrix: Matrix4): void;
+        /** The matrix of an instance
+         *  @param {number} i
+         *  @return {Matrix4} */
+        getMatrixAt(i: number): Matrix4;
+        /** Color an instance
+         *  @param {number} i
+         *  @param {Color} color */
+        setColorAt(i: number, color: Color): void;
+        /** Note that an instance changed, so it uploads before the next draw; set and setColorAt call this
+         *  @param {number} i */
+        markDirty(i: number): void;
+    }
+    /**
      * Spin a flat outline around the Y axis to make a round shape, like a vase or a wheel
      * - profile is [[radius, y], ...] from bottom to top
      * - A profile that ends where it starts makes a closed ring like a donut

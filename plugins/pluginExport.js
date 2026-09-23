@@ -132,6 +132,7 @@ export
     Camera3D,
     EngineObject3D,
     Mesh,
+    InstancedMesh3D,
     buildLathe,
     buildCylinder,
     buildSphere,

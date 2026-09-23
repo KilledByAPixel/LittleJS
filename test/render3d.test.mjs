@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, FirstPersonCamera3D, EngineObject3D, EngineObject, engineObjects, Light3D, DirectionalLight3D, Shader, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale, setCameraScale } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, FirstPersonCamera3D, EngineObject3D, EngineObject, engineObjects, Light3D, DirectionalLight3D, Shader, InstancedMesh3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale, setCameraScale } from '../dist/littlejs.esm.js';
 
 // the plugin is a module singleton, these tests run in order in one process and share it
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-5, msg || `${a} != ${b}`);
@@ -2353,6 +2353,60 @@ test('an object builds its matrix once for the shadow pass and the main pass of 
     render3D.renderStages([o]);
     assert.equal(builds, 2);
     o.destroy();
+    engineObjects.length = 0;
+});
+
+test('an InstancedMesh3D starts every instance at the origin in the object color, all of it waiting to upload', () =>
+{
+    const set = new InstancedMesh3D(render3D.boxMesh, 3, undefined, RED);
+    assert.ok(set instanceof EngineObject3D);
+    assert.equal(set.count, 3);
+    assert.equal(set.maxCount, 3);
+    const d = set.instanceData;
+    assert.equal(d.length, 3 * 33);
+    assert.deepEqual([...d.subarray(0, 16)], [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); // the matrix
+    assert.deepEqual([...d.subarray(16, 25)], [1,0,0, 0,1,0, 0,0,1]); // its normal matrix
+    assert.deepEqual([...d.subarray(25, 29)], [1, 0, 0, 1]); // the color
+    assert.deepEqual([...d.subarray(29, 33)], [0, 0, 1, 1]); // the whole texture
+    assert.deepEqual([...d.subarray(2*33, 2*33 + 16)], [...d.subarray(0, 16)]); // every instance the same
+    assert.equal(set.dirtyStart, 0);
+    assert.equal(set.dirtyEnd, 3);
+    assert.throws(()=> new InstancedMesh3D(render3D.boxMesh, 0));
+    assert.throws(()=> new InstancedMesh3D(undefined, 3));
+    set.destroy();
+    engineObjects.length = 0;
+});
+
+test('setMatrixAt and setColorAt write one instance, widen the dirty range and the bounds, and read back', () =>
+{
+    const set = new InstancedMesh3D(render3D.boxMesh, 4);
+    set.dirtyStart = Infinity, set.dirtyEnd = 0; // as after an upload
+    const m = buildMatrix(vec3(1, 2, 3), vec3(0, PI/2, 0), vec3(2));
+    set.setMatrixAt(2, m);
+    const k = 2 * 33;
+    assert.deepEqual([...set.instanceData.subarray(k, k + 16)], [...m.m]);
+    assert.notDeepEqual([...set.instanceData.subarray(k + 16, k + 25)], [1,0,0, 0,1,0, 0,0,1], 'the normal matrix follows the transform');
+    nearVec(set.getMatrixAt(2).getTranslation(), 1, 2, 3);
+    assert.equal(set.dirtyStart, 2);
+    assert.equal(set.dirtyEnd, 3);
+    set.setColorAt(0, RED);
+    assert.deepEqual([...set.instanceData.subarray(25, 29)], [1, 0, 0, 1]);
+    assert.equal(set.dirtyStart, 0);
+    assert.equal(set.dirtyEnd, 3);
+    assert.ok(set.radius >= Math.hypot(1, 2, 3), 'the bounding sphere reaches the instance');
+    assert.throws(()=> set.setMatrixAt(4, m)); // past the end
+    assert.throws(()=> set.setColorAt(-1, RED));
+    set.destroy();
+    engineObjects.length = 0;
+});
+
+test('an InstancedMesh3D in the stage loop draws nothing headless and throws nothing', () =>
+{
+    const set = new InstancedMesh3D(render3D.boxMesh, 2);
+    render3D.renderStages([set]);
+    set.count = 1; // draw fewer than were made
+    render3D.renderStages([set]);
+    set.destroy();
     engineObjects.length = 0;
 });
 

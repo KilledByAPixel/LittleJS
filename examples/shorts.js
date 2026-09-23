@@ -97,7 +97,7 @@ const exampleList =
     new ExampleInfo('3D Mesh', 'render3dMesh.js', 'Load an OBJ model, or drop one in', false, 'obj, model, load'),
     new ExampleInfo('3D Textures', 'render3dTextures.js', 'Repeating, wrapped and mipmapped textures', false, 'texture, uv, wrap, mipmap'),
     new ExampleInfo('3D Glow', 'render3dGlow.js', 'Bloom from the post processing plugin', false, 'bloom, post processing, light'),
-    new ExampleInfo('3D Instancing', 'render3dInstancing.js', 'Thousands of cubes in one draw call', false, 'instancing, batch, performance'),
+    new ExampleInfo('3D Instancing', 'render3dInstancing.js', 'Thousands of cubes in one draw call', false, 'instancing, batch, performance, InstancedMesh3D'),
     new ExampleInfo('3D Shaders', 'render3dShaders.js', 'Custom surface and lighting shaders', false, 'shader, Shader, lighting, toon'),
     new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball bouncing', false, 'objects, collision'),
