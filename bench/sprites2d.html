@@ -12,7 +12,7 @@ const n = +params.get('n') || 10000, objects = params.get('objects') === '1';
 if (params.get('aa') === '0') glSetAntialias(false);
 if (params.get('w')) setCanvasFixedSize(vec2(+params.get('w'), +params.get('h') || 720));
 const x = new Float32Array(n), y = new Float32Array(n), vx = new Float32Array(n), vy = new Float32Array(n);
-const size = vec2(32), pos = vec2();
+const size = vec2(16), pos = vec2(); // the tile's own size, the Phaser blitter cannot scale its bobs
 let halfW, halfH, tileInfo;
 class Bunny extends EngineObject
 {
@@ -36,7 +36,7 @@ function gameInit()
     cameraScale = 1; // one world unit is one pixel, the camera at the middle of the screen
     setCanvasClearColor(hsl(.6, .5, .8));
     halfW = mainCanvasSize.x / 2, halfH = mainCanvasSize.y / 2;
-    tileInfo = tile(0, 16);
+    tileInfo = tile(2, 16); // the small character; tiles are pixel sharp by default, so the edges stay clean at 100k
     for (let i = 0; i < n; ++i)
         x[i] = rand(-halfW, halfW), y[i] = rand(-halfH, halfH), vx[i] = rand(-3, 3), vy[i] = rand(-3, 3);
     benchInit(objects ? 'LittleJS 2D objects' : 'LittleJS 2D', n, objects ? undefined : ()=>

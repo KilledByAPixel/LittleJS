@@ -17,20 +17,20 @@ for (let i = 0; i < n; ++i)
     x[i] = rand(0, w), y[i] = rand(0, h), vx[i] = rand(-3, 3), vy[i] = rand(-3, 3);
 const items = [];
 const game = new Phaser.Game({
-    type: Phaser.WEBGL, width: w, height: h, backgroundColor: '#99b8e6', render: { antialias: aa },
+    type: Phaser.WEBGL, width: w, height: h, backgroundColor: '#99b8e6', render: { antialias: aa, pixelArt: true }, // pixel sharp like the others
     scene: {
         preload() { this.load.spritesheet('tiles', '../examples/shorts/tiles.png', { frameWidth: 16, frameHeight: 16 }); },
         create()
         {
             if (blitter)
             {
-                const b = this.add.blitter(0, 0, 'tiles', 0);
+                const b = this.add.blitter(0, 0, 'tiles', 2); // the small character
                 for (let i = 0; i < n; ++i)
                     items.push(b.create(x[i], y[i]));
             }
             else
                 for (let i = 0; i < n; ++i)
-                    items.push(this.add.image(x[i], y[i], 'tiles', 0).setScale(2));
+                    items.push(this.add.image(x[i], y[i], 'tiles', 2));
             const name = blitter ? 'Phaser blitter' : 'Phaser';
             this.game.events.on(Phaser.Core.Events.PRE_RENDER, ()=> gpuTimer.begin(this.game.renderer.gl));
             this.game.events.on(Phaser.Core.Events.POST_RENDER, ()=> { gpuTimer.end(); benchTick(name, n); });

@@ -16,7 +16,8 @@
     await app.init({ width: w, height: h, antialias: aa, autoStart: false, preference: 'webgl', background: 0x99b8e6 });
     document.body.appendChild(app.canvas);
     const sheet = await PIXI.Assets.load('../examples/shorts/tiles.png');
-    const texture = new PIXI.Texture({ source: sheet.source, frame: new PIXI.Rectangle(0, 0, 16, 16) });
+    sheet.source.scaleMode = 'nearest'; // pixel sharp, like the LittleJS page, so the edges stay clean
+    const texture = new PIXI.Texture({ source: sheet.source, frame: new PIXI.Rectangle(32, 0, 16, 16) }); // the small character
     const rand = (a, b)=> a + Math.random() * (b - a);
     const x = new Float32Array(n), y = new Float32Array(n), vx = new Float32Array(n), vy = new Float32Array(n);
     for (let i = 0; i < n; ++i)
@@ -27,7 +28,7 @@
         const container = new PIXI.ParticleContainer({ dynamicProperties: { position: true, rotation: false, uvs: false, color: false } });
         for (let i = 0; i < n; ++i)
         {
-            const p = new PIXI.Particle({ texture, x: x[i], y: y[i], scaleX: 2, scaleY: 2, anchorX: .5, anchorY: .5 });
+            const p = new PIXI.Particle({ texture, x: x[i], y: y[i], anchorX: .5, anchorY: .5 });
             container.addParticle(p);
             items.push(p);
         }
@@ -40,7 +41,6 @@
         {
             const sprite = new PIXI.Sprite(texture);
             sprite.anchor.set(.5);
-            sprite.scale.set(2);
             sprite.position.set(x[i], y[i]);
             container.addChild(sprite);
             items.push(sprite);
