@@ -18560,7 +18560,6 @@ class Render3DPlugin
         this.program = undefined;    // the main program, undefined when not available
         this.currentProgram = undefined; // the program in use during a pass, a Shader's or the main one
         this.lightCount = 0;         // Light3D objects sent this pass
-        this.passId = 0;             // counts the passes, an object builds its matrix once per pass
         this.shadowShader = undefined;
         this.vao = undefined;
         this.whiteTexture = undefined; // 1x1 white for untextured draws
@@ -18914,7 +18913,7 @@ class Render3DPlugin
                 {
                     // the shadow grows with the object, by the same scale picking and culling
                     // measure it at, so one size set once holds however the object is scaled
-                    const m = o.getMatrix();
+                    const m = render3DObjectMatrix(o);
                     this.drawSoftShadow(m.getTranslation(), o.softShadow * render3DMaxScale(m.m), this.softShadowHeight);
                 }
             isDefault && this.onRenderTransparent?.();
@@ -19827,7 +19826,6 @@ function render3DRender()
 function render3DRenderPass(after2D)
 {
     const gl = glContext, r = render3D;
-    ++r.passId; // the shadow pass and the stages below share each object's matrix
     if (!r.program) return; // headless, gl disabled, or context lost
     render3DUpdateSamplers();
     false&&ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
@@ -21338,8 +21336,11 @@ class EngineObject3D extends EngineObject
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         this.renderAfter2D = undefined;
-        this.passMatrix = undefined; // the matrix built for the current pass, see render3D
-        this.matrixPassId = -1;
+        this.worldMatrix = new Matrix4;  // the world transform, kept up to date by render3DObjectMatrix; getMatrix returns a copy
+        this.matrixBuilt = new Float64Array(9).fill(NaN); // the position, rotation and scale it was built from
+        this.matrixVersion = 0;          // counts the rebuilds, so a child knows when its parent's changed
+        this.matrixParent = undefined;   // the parent it was built under, and that parent's version then
+        this.matrixParentVersion = 0;
     }
 
     /** Move by the 3D velocities and push out of solids, called automatically each frame before update, like the 2D physics
@@ -21386,27 +21387,24 @@ class EngineObject3D extends EngineObject
 
     /** Returns the world position
      *  @return {Vector3} */
-    getWorldPos3D() { return this.getMatrix().getTranslation(); }
+    getWorldPos3D() { return render3DObjectMatrix(this).getTranslation(); }
 
     /** Returns the direction the object faces, its -Z axis in the world
      *  @return {Vector3} */
-    getForward3D() { return render3DAxis(this.getMatrix().m, 8).normalize(-1); }
+    getForward3D() { return render3DAxis(render3DObjectMatrix(this).m, 8).normalize(-1); }
 
     /** Returns the object's right axis in the world
      *  @return {Vector3} */
-    getRight3D() { return render3DAxis(this.getMatrix().m, 0).normalize(); }
+    getRight3D() { return render3DAxis(render3DObjectMatrix(this).m, 0).normalize(); }
 
     /** Returns the object's up axis in the world
      *  @return {Vector3} */
-    getUp3D() { return render3DAxis(this.getMatrix().m, 4).normalize(); }
+    getUp3D() { return render3DAxis(render3DObjectMatrix(this).m, 4).normalize(); }
 
-    /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
+    /** Returns a copy of the object's world transform, relative to the parent's when attached to an EngineObject3D
+     *  - The object keeps its matrix and rebuilds it only when its position, rotation or scale changed, so this is cheap to call
      *  @return {Matrix4} */
-    getMatrix()
-    {
-        const matrix = buildMatrix(this.pos3D, this.rotation3D, this.scale3D);
-        return this.parent instanceof EngineObject3D ? this.parent.getMatrix().multiply(matrix) : matrix;
-    }
+    getMatrix() { return render3DObjectMatrix(this).copy(); }
 
     /** Turn the object so its -Z axis points at a world space target, sets pitch and yaw and clears roll
      *  @param {Vector3} target */
@@ -21443,23 +21441,50 @@ class EngineObject3D extends EngineObject
     {
         // an opaque draw comes out solid however low its alpha is, so a fade with no flag looks like nothing happened
         false&&ASSERT(this.transparent || this.additive || this.color.a >= 1, 'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', this.color);
-        // one matrix for the shadow pass and the main pass of a frame, the object is in the same place for both;
-        // outside a pass, as in a bake, the object may have moved since the last call, so it is built fresh
-        const r = render3D;
-        if (this.matrixPassId !== r.passId || !r.isRendering)
-            this.passMatrix = this.getMatrix(), this.matrixPassId = r.passId;
+        // the matrix the object keeps, rebuilt only when it moved, the same one for the shadow pass and the main pass
+        const matrix = render3DObjectMatrix(this);
         if (this.mesh)
-            render3D.drawMesh(this.mesh, this.passMatrix, this.tileInfo, this.color);
+            render3D.drawMesh(this.mesh, matrix, this.tileInfo, this.color);
         else if (this.tileInfo)
         {
             // a sprite: size3D grown by its own scale and its parents', the same world size the
             // collect, pick and solid collision helpers measure it at
-            const m = this.passMatrix.m;
+            const m = matrix.m;
             render3D.drawBillboard(vec3(m[12], m[13], m[14]),
                 vec2(this.size3D.x * hypot(m[0], m[1], m[2]), this.size3D.y * hypot(m[4], m[5], m[6])),
                 this.tileInfo, this.color, this.rotation3D.z, this.upright);
         }
     }
+}
+
+// an object's world matrix, the one it keeps: rebuilt only when its position, rotation or scale changed since the
+// last build, or its parent's matrix did, so an object that stands still costs nine compares a frame instead of
+// the trig and a new matrix; the matrix returned is the object's own, read it and never change it
+const render3DLocalMatrix = new Matrix4;
+function render3DObjectMatrix(o)
+{
+    const parent = o.parent instanceof EngineObject3D ? o.parent : undefined;
+    const parentMatrix = parent && render3DObjectMatrix(parent); // the parent first, so its version is current
+    const p = o.pos3D, r = o.rotation3D, s = o.scale3D, k = o.matrixBuilt;
+    if (k[0] !== p.x || k[1] !== p.y || k[2] !== p.z || k[3] !== r.x || k[4] !== r.y || k[5] !== r.z
+        || k[6] !== s.x || k[7] !== s.y || k[8] !== s.z || o.matrixParent !== parent
+        || parent && o.matrixParentVersion !== parent.matrixVersion)
+    {
+        k[0] = p.x, k[1] = p.y, k[2] = p.z, k[3] = r.x, k[4] = r.y, k[5] = r.z, k[6] = s.x, k[7] = s.y, k[8] = s.z;
+        if (parent)
+        {
+            // the parent's world matrix times the local one
+            buildMatrix(p, r, s, render3DLocalMatrix);
+            o.worldMatrix.m.set(parentMatrix.m);
+            o.worldMatrix.multiply(render3DLocalMatrix);
+            o.matrixParentVersion = parent.matrixVersion;
+        }
+        else
+            buildMatrix(p, r, s, o.worldMatrix);
+        o.matrixParent = parent;
+        ++o.matrixVersion;
+    }
+    return o.worldMatrix;
 }
 
 // move an object by its 3D velocities, an object with mass falling with render3D.gravity and slowing by its damping
@@ -21581,7 +21606,7 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects)
     for (const o of objects)
     {
         if (!(o instanceof EngineObject3D) || o.destroyed) continue;
-        const m = o.getMatrix().m, s = o.size3D; // the box in world space, scaled by the object and its parents
+        const m = render3DObjectMatrix(o).m, s = o.size3D; // the box in world space, scaled by the object and its parents
         if (!(s.x || s.y || s.z)) continue;
         const worldSize = vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
         if (isOverlapping3D(pos, size, vec3(m[12], m[13], m[14]), worldSize))
@@ -21596,7 +21621,7 @@ function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) return;
     if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
-    const matrix = o.getMatrix(), mesh = o.mesh; // a sprite is picked by its size3D
+    const matrix = render3DObjectMatrix(o), mesh = o.mesh; // a sprite is picked by its size3D
     const radius = (mesh ? mesh.radius || mesh.computeRadius() : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxScale(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
     return raycastSphere(ray, matrix.getTranslation(), radius);
@@ -22118,7 +22143,7 @@ class ParticleEmitter3D extends EngineObject3D
     update()
     {
         // one transform for the frame: where the emitter is, and how big the effect it makes is
-        const matrix = this.getMatrix();
+        const matrix = render3DObjectMatrix(this); // the object's own, read only
         this.worldPos3D = matrix.getTranslation(); // remembered for when the parent is destroyed
         const scale = render3DMaxScale(matrix.m);
 
@@ -22196,7 +22221,7 @@ class ParticleEmitter3D extends EngineObject3D
     emitParticle()
     {
         const random = ()=> rand(1 - this.randomness, 1 + this.randomness);
-        const matrix = this.getMatrix();
+        const matrix = render3DObjectMatrix(this); // the object's own, read only
         // the whole effect grows with the emitter, not just the area the particles start in
         const scale = render3DMaxScale(matrix.m);
 

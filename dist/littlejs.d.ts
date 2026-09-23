@@ -6801,7 +6801,6 @@ declare module "littlejsengine" {
         program: any;
         currentProgram: any;
         lightCount: number;
-        passId: number;
         shadowShader: any;
         vao: any;
         whiteTexture: any;
@@ -7154,8 +7153,11 @@ declare module "littlejsengine" {
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         renderAfter2D: boolean | undefined;
-        passMatrix: Matrix4;
-        matrixPassId: number;
+        worldMatrix: Matrix4;
+        matrixBuilt: Float64Array;
+        matrixVersion: number;
+        matrixParent: any;
+        matrixParentVersion: number;
         /** Returns the world position
          *  @return {Vector3} */
         getWorldPos3D(): Vector3;
@@ -7168,7 +7170,8 @@ declare module "littlejsengine" {
         /** Returns the object's up axis in the world
          *  @return {Vector3} */
         getUp3D(): Vector3;
-        /** Returns the object's world transform, relative to the parent's when attached to an EngineObject3D
+        /** Returns a copy of the object's world transform, relative to the parent's when attached to an EngineObject3D
+         *  - The object keeps its matrix and rebuilds it only when its position, rotation or scale changed, so this is cheap to call
          *  @return {Matrix4} */
         getMatrix(): Matrix4;
         /** Turn the object so its -Z axis points at a world space target, sets pitch and yaw and clears roll
@@ -7812,7 +7815,7 @@ declare module "littlejsengine" {
         /** @property {number} - Trail points kept per particle, from trailTime */
         trailMax: number;
         emitTimeBuffer: number;
-        worldPos3D: Vector3;
+        worldPos3D: any;
         /** Spawn one particle now */
         emitParticle(): void;
         /** Draw the particles, as flat squares or as streaks when trailTime is set

@@ -2433,27 +2433,30 @@ test('pixelated is part of the draw state, so a batch splits on it', () =>
     engineObjects.length = 0;
 });
 
-test('an object builds its matrix once for the shadow pass and the main pass of a frame, and again next frame', () =>
+test('an object keeps its world matrix and rebuilds it only when it or its parent moved, getMatrix giving a copy', () =>
 {
-    const o = new EngineObject3D(vec3(1, 2, 3), render3D.boxMesh);
-    let builds = 0;
-    const getMatrix = o.getMatrix;
-    o.getMatrix = function() { ++builds; return getMatrix.call(this); };
-    render3D.passId = 1;
-    render3D.isRendering = true; // headless nothing draws, but the pass is what the cache is keyed to
-    render3D.renderStages([o]); // the shadow pass and the opaque stage both draw it under one pass id
-    render3D.renderStages([o]);
-    assert.equal(builds, 1);
-    o.pos3D = vec3(5, 5, 5);
-    render3D.passId = 2; // the next frame's pass
-    render3D.renderStages([o]);
-    assert.equal(builds, 2);
-    render3D.isRendering = false;
-    o.render3D(); // outside a pass, as in a bake, every call sees where the object is now
-    o.render3D();
-    assert.equal(builds, 4);
-    o.destroy();
-    engineObjects.length = 0;
+    const parent = new EngineObject3D(vec3(1, 0, 0)), child = new EngineObject3D(vec3(0, 2, 0));
+    parent.addChild(child);
+    try
+    {
+        const copy = child.getMatrix(), kept = child.worldMatrix;
+        nearVec(copy.getTranslation(), 1, 2, 0);
+        assert.notEqual(copy, kept, 'a copy, so a caller can change it');
+        copy.m[12] = 99;
+        assert.equal(child.getMatrix().m[12], 1, 'and the kept one is untouched');
+        assert.equal(child.worldMatrix, kept, 'the same matrix kept across calls');
+        const version = child.matrixVersion;
+        child.getMatrix(); child.getMatrix();
+        assert.equal(child.matrixVersion, version, 'nothing moved, nothing rebuilt');
+        parent.pos3D.x = 5; // moved in place, the way the engine moves it
+        nearVec(child.getMatrix().getTranslation(), 5, 2, 0);
+        assert.equal(child.matrixVersion, version + 1, 'the parent moved, so the child rebuilt');
+        child.rotation3D.y = PI / 2;
+        nearVec(child.getForward3D(), -1, 0, 0);
+        parent.removeChild(child);
+        nearVec(child.getMatrix().getTranslation(), 0, 2, 0);
+    }
+    finally { parent.destroy(true); child.destroy(true); engineObjects.length = 0; }
 });
 
 test('an InstancedMesh3D starts every instance at the origin in the object color, all of it waiting to upload', () =>
