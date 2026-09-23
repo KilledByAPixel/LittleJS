@@ -2648,6 +2648,21 @@ test('computeNormals and flipNormals work on an indexed mesh, flat normals split
     assert.deepEqual(m.indices.slice(0, 3), [0, 2, 1]);
 });
 
+test('an indexed mesh split for flat normals smooths back together by position, so shading can be toggled', () =>
+{
+    // two triangles bent along the edge b c, in different planes
+    const a = vec3(-1, 0, 0), b = vec3(0, 0, -1), c = vec3(0, 0, 1), d = vec3(1, 1, 0);
+    const m = new Mesh().addTriangles([a, b, c, d], undefined, undefined, undefined, [0, 1, 2, 2, 1, 3]);
+    m.computeNormals(false);
+    assert.equal(m.vertexCount, 6);
+    nearVec(m.normals[1], 0, -1, 0);                          // b on the flat triangle
+    near(m.normals[4].x, Math.SQRT1_2); near(m.normals[4].y, -Math.SQRT1_2); // b on the tilted one
+    m.computeNormals(true);
+    assert.equal(m.vertexCount, 6, 'the vertices stay split, only the normals agree');
+    assert.ok(m.normals[1].x > .1 && m.normals[1].y < -.5, 'between the two faces');
+    nearVec(m.normals[4], m.normals[1].x, m.normals[1].y, m.normals[1].z);
+});
+
 test('getTriangles compares every vertex value to a millionth, so two a hair apart are one vertex', () =>
 {
     const mesh = new Mesh, a = vec3(0, 0, 0), b = vec3(1, 0, 0), c = vec3(0, 1, 0);

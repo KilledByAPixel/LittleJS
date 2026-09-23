@@ -20396,29 +20396,37 @@ class Mesh
     {
         if (this.indices)
         {
-            // the triangles are listed: smooth normals add up around each vertex by index, weighted by the corner
-            // angle like the strip's; flat ones need a vertex per corner, so the vertices are split up first
+            // the triangles are listed: smooth normals add up around each position, weighted by the corner angle
+            // like the strip's, so vertices split apart at one place smooth back together and a mesh can go flat and
+            // smooth again; flat ones need a vertex per corner, so the vertices are split up first
             if (!smooth)
             {
                 const split = (a)=> this.indices.map(i=> a[i]);
                 this.points = split(this.points), this.normals = split(this.normals), this.uvs = split(this.uvs), this.colors = split(this.colors);
                 this.indices = this.indices.map((_, i)=> i);
             }
-            const points = this.points, indices = this.indices, sums = points.map(()=> vec3());
+            const points = this.points, indices = this.indices, normals = points.map(()=> RENDER3D_DEFAULT_NORMAL), sums = new Map;
+            const key = (p)=> `${round(p.x * 1e5)},${round(p.y * 1e5)},${round(p.z * 1e5)}`;
             for (let t = 0; t < indices.length; t += 3)
             {
                 const a = points[indices[t]], b = points[indices[t+1]], c = points[indices[t+2]];
                 const cross = b.subtract(a).cross(c.subtract(a));
                 if (!cross.lengthSquared()) continue;
                 const normal = cross.normalize();
+                if (!smooth)
+                {
+                    normals[indices[t]] = normals[indices[t+1]] = normals[indices[t+2]] = normal; // its own three corners
+                    continue;
+                }
                 for (let j = 0; j < 3; ++j)
                 {
                     const p = points[indices[t+j]], u = points[indices[t+(j+1)%3]].subtract(p), v = points[indices[t+(j+2)%3]].subtract(p);
                     const angle = Math.acos(clamp(u.dot(v) / (u.length() * v.length() || 1), -1, 1));
-                    sums[indices[t+j]] = sums[indices[t+j]].add(normal.scale(angle));
+                    const k = key(p);
+                    sums.set(k, (sums.get(k) || vec3()).add(normal.scale(angle)));
                 }
             }
-            this.normals = sums.map(s=> s.lengthSquared() ? s.normalize() : RENDER3D_DEFAULT_NORMAL);
+            this.normals = smooth ? points.map(p=> { const s = sums.get(key(p)); return s && s.lengthSquared() ? s.normalize() : RENDER3D_DEFAULT_NORMAL; }) : normals;
             this.dirty = true;
             return this;
         }

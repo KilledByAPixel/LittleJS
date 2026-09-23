@@ -34,11 +34,10 @@ function gameInit()
     const checker = (x, z)=> hsl(0, 0, (x+z)/2&1 ? .6 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(20), 10, checker));
     model = new EngineObject3D(vec3());
-    model.color = hsl(.1,.6,.7);
     model.angleVelocity3D = vec3(0, .005);
-    setModel(parseOBJ(houseOBJ));
+    setModel(parseOBJ(houseOBJ), hsl(.1,.6,.7));
 
-    // drop any .obj file on the page to see it
+    // drop an .obj, .glb or .gltf file on the page to see it
     const stop = (e)=> e.preventDefault();
     document.addEventListener('dragover', stop);
     document.addEventListener('drop', async (e)=>
@@ -46,16 +45,31 @@ function gameInit()
         stop(e);
         const file = e.dataTransfer.files[0];
         if (!file) return;
-        setModel(parseOBJ(await file.text()));
-        modelName = file.name;
+        try
+        {
+            if (/\.obj$/i.test(file.name))
+                setModel(parseOBJ(await file.text()), hsl(.1,.6,.7));
+            else
+            {
+                // a glb has everything in one file; a gltf needs its
+                // buffers and images inside it as data uris to work dropped
+                const gltf = await parseGLTF(await file.arrayBuffer());
+                setModel(gltf.mesh, WHITE, gltf.textureInfo);
+            }
+            modelName = file.name;
+        }
+        catch (error) { modelName = file.name + ' failed: ' + error.message; }
     });
 }
 
-// center the model, set scale and position
-function setModel(mesh)
+// center the model, set scale and position, and give it its color and texture
+function setModel(mesh, color, textureInfo)
 {
     model.setMesh(mesh.center().fit(5));
     model.pos3D = vec3(0, -mesh.getBounds().min.y);
+    model.color = color;
+    model.tileInfo = textureInfo &&
+        new TileInfo(vec2(), textureInfo.size, textureInfo, 0, 0);
 }
 
 function gameUpdate()
@@ -69,6 +83,7 @@ function gameUpdate()
 
 function gameRenderPost()
 {
-    const text = `drop an .obj file / space: toggle shading / ${modelName}`;
+    const text = 'drop an .obj, .glb or .gltf file / space: toggle shading / '
+        + modelName;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }
