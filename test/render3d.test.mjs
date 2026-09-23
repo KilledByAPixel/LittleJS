@@ -1185,14 +1185,23 @@ f -3/-3/-1 -2/-2/-1 -1/-1/-1
 test('setSky builds the dome, keeps it, and matches the fog color to the horizon', () =>
 {
     const horizon = rgb(.5, .6, .7);
+    assert.equal(render3D.ambientGroundColor, undefined, 'plain ambient until a sky or the game sets it');
     const sky = render3D.setSky(rgb(0, 0, 1), horizon);
     assert.ok(sky instanceof Mesh && render3D.sky === sky);
     assert.equal(render3D.fogColor.r, .5);
     assert.ok(render3D.fogColor !== horizon); // a copy
+    // the sky lights the scene too: ambient from above is the top color and from below the bottom color, both at half
+    assert.equal(render3D.ambientColor.b, .5); assert.equal(render3D.ambientColor.r, 0);
+    near(render3D.ambientGroundColor.r, .25); near(render3D.ambientGroundColor.g, .3); // the bottom defaults to the horizon
+    assert.ok(render3D.ambientGroundColor !== horizon);
+    render3D.setSky(rgb(0, 0, 1), horizon, rgb(.2, .1, 0), .8);
+    near(render3D.ambientColor.b, .8); near(render3D.ambientGroundColor.r, .16);
     render3D.setSky();
     assert.ok(render3D.sky !== sky);
     render3D.sky = undefined;
     render3D.fogColor = undefined;
+    render3D.ambientColor = rgb(.3, .3, .3); // back to the default
+    render3D.ambientGroundColor = undefined;
 });
 
 test('renderAfter2D defaults off and objects follow it unless they set their own', () =>

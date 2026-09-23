@@ -957,7 +957,9 @@ render3D.sunDirection = vec3(-.3, 1, .5) // toward the sun, where its light come
                                          // any length, it is normalized for you; the sun is the one light that
                                          // casts shadows
 render3D.sunColor = hsl(.08, 1, .95) // e.g., WHITE by default
-render3D.ambientColor = hsl(0, 0, .3)
+render3D.ambientColor = hsl(0, 0, .3)  // from above once ambientGroundColor is set
+render3D.ambientGroundColor = undefined // set, ambient blends from it on faces pointing down to ambientColor on
+                                        // faces pointing up, the way a sky and a ground light a scene; setSky sets both
 render3D.fogColor = undefined         // uses canvasClearColor when undefined
 render3D.fogStart = 20; render3D.fogEnd = 100 // e.g., both 0 by default which is no fog; measured by camera distance,
                                               // fogEnd 0 disables fog; additive draws fade out with distance instead
@@ -987,8 +989,10 @@ render3D.shadowBias = .003 // raise if lit surfaces get speckled with their own 
 render3D.shadowSoftness = 1           // how far to blur the shadow edge, in shadow map pixels
 
 // Sky
-render3D.setSky(topColor, horizonColor, bottomColor) // dome colors straight up, level and straight down; sets
-                                                     // render3D.sky and fogColor
+render3D.setSky(topColor, horizonColor, bottomColor, ambient=.5) // dome colors straight up, level and straight
+                                                     // down; sets render3D.sky, fogColor to the horizon, and the
+                                                     // ambient light to the top color from above and the bottom
+                                                     // color from below, both times ambient; 0 leaves ambient dark
 render3D.setFog(fogStart, fogEnd, fogColor) // the fog distances and color at once, no color keeps the current one
 render3D.sky = buildSky(topColor, horizonColor, bottomColor, sides, rings) // or set a dome yourself
 
@@ -1326,6 +1330,7 @@ material.transparent, blending            // obj.transparent, obj.additive
 new THREE.ShaderMaterial({fragmentShader}) // obj.shader = new Shader(code), a mainImage snippet the engine wraps;
                                           // set emissive = 1 for the snippet to do its own lighting
 new THREE.AmbientLight(color)             // render3D.ambientColor
+new THREE.HemisphereLight(sky, ground)    // render3D.ambientColor and ambientGroundColor, which setSky sets from its colors
 new THREE.DirectionalLight(color)         // new DirectionalLight3D(pos3D, color), it shines from its position the
                                           // same way; or render3D.sunDirection and sunColor, the one that shadows
 new THREE.PointLight(color, i, distance)  // new Light3D(pos3D, radius, color, intensity)

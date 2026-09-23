@@ -19095,8 +19095,12 @@ class Render3DPlugin
         this.sunDirection = vec3(-.3, 1, .5);
         /** @property {Color} - Sunlight color */
         this.sunColor = WHITE.copy();
-        /** @property {Color} - Ambient light color */
+        /** @property {Color} - Ambient light color, from above when ambientGroundColor is set */
         this.ambientColor = hsl(0, 0, .3);
+        /** @property {Color|undefined} - Ambient light from below: set, the ambient blends from this on faces pointing down
+         *  to ambientColor on faces pointing up, the way a sky and a ground light a scene; setSky sets both from its colors
+         *  @type {Color|undefined} */
+        this.ambientGroundColor = undefined;
         /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined
          *  @type {Color|undefined} */
         this.fogColor = undefined;
@@ -19645,16 +19649,20 @@ class Render3DPlugin
         this.shadowPlanes = render3DFrustumPlanes(this.shadowMatrix);
     }
 
-    /** Build a sky dome, set it as the sky and set the fog color to the horizon color
+    /** Build a sky dome, set it as the sky, and light the scene by it: the fog takes the horizon color, and the
+     *  ambient light comes from the top color above and the bottom color below, both at the ambient strength
      *  @param {Color} [topColor] - Straight up
      *  @param {Color} [horizonColor] - Level with the camera
      *  @param {Color} [bottomColor] - Straight down, defaults to the horizon color
+     *  @param {number} [ambient] - How much of the sky colors lights the scene as ambient, 0 for none
      *  @return {Mesh} - The dome, also in render3D.sky */
-    setSky(topColor, horizonColor=hsl(.6, 1, .9), bottomColor)
+    setSky(topColor=hsl(.6, .8, .55), horizonColor=hsl(.6, 1, .9), bottomColor=horizonColor, ambient=.5)
     {
         this.sky?.dispose();
         this.sky = buildSky(topColor, horizonColor, bottomColor);
         this.fogColor = horizonColor.copy();
+        this.ambientColor = topColor.scale(ambient, 1);
+        this.ambientGroundColor = bottomColor.scale(ambient, 1);
         return this.sky;
     }
 
@@ -20097,6 +20105,7 @@ const RENDER3D_SNIPPET_NAMES =
     '#define sunDirection (-lightDir.xyz)\n' +
     '#define sunColor lightColor.rgb\n' +
     '#define ambientColor ambientFog.rgb\n' +
+    '#define ambientGroundColor ambientGround.rgb\n' +
     '#define lightCount extraLightCount\n' +
     '#define lights extraLights\n' +
     '#define lightColors extraLightColors\n';
@@ -20110,7 +20119,7 @@ function render3DFragmentSource(fragmentCode)
 {
     return '#version 300 es\n' +
         'precision highp float;' +
-        'uniform vec4 lightDir,lightColor,ambientFog,fogColor,shadowParams;' +
+        'uniform vec4 lightDir,lightColor,ambientFog,ambientGround,fogColor,shadowParams;' +
         'uniform vec4 extraLights[' + RENDER3D_MAX_LIGHTS + '],extraLightColors[' + RENDER3D_MAX_LIGHTS + '];' +
         'uniform int extraLightCount;' +
         'uniform vec3 cameraPos;' +
@@ -20139,7 +20148,8 @@ function render3DFragmentSource(fragmentCode)
         'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
         'float nl=dot(n,-lightDir.xyz);' +
         'float s=shadow();' +
-        'vec3 l=ambientFog.rgb+lightColor.rgb*max(nl,0.)*s;' +
+        // the ambient: one color, or blended from the ground color below to the sky color above by the way the face points
+        'vec3 l=(ambientGround.a>0.?mix(ambientGround.rgb,ambientFog.rgb,n.y*.5+.5):ambientFog.rgb)+lightColor.rgb*max(nl,0.)*s;' +
         // the Light3D objects: a point light falls off with distance, a directional one does not and carries the
         // direction toward it in xyz, marked by a negative radius; each adds its own highlight when there is a strength
         'vec3 eye=lightColor.a>0.?normalize(cameraPos-P):vec3(0),sp=vec3(0);' +
@@ -20447,6 +20457,9 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     render3DUniform4f('lightDir', s.x / sl, s.y / sl, s.z / sl, state.lighting ? state.emissive : 1);
     render3DUniform4f('lightColor', lc.r, lc.g, lc.b, state.specular);
     render3DUniform4f('ambientFog', ac.r, ac.g, ac.b, r.fogEnd);
+    const gc = r.ambientGroundColor;
+    gc ? render3DUniform4f('ambientGround', gc.r, gc.g, gc.b, 1) : render3DUniform4f('ambientGround', 0, 0, 0, 0); // a is on
+
     render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogStart);
     // how the fragment shader finishes: 1 drops see through texels and keeps the draw opaque,
     // 0 blends them away instead, and -1 is additive, which has to fade into fog differently

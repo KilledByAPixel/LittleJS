@@ -6691,8 +6691,12 @@ declare module "littlejsengine" {
         sunDirection: Vector3;
         /** @property {Color} - Sunlight color */
         sunColor: Color;
-        /** @property {Color} - Ambient light color */
+        /** @property {Color} - Ambient light color, from above when ambientGroundColor is set */
         ambientColor: Color;
+        /** @property {Color|undefined} - Ambient light from below: set, the ambient blends from this on faces pointing down
+         *  to ambientColor on faces pointing up, the way a sky and a ground light a scene; setSky sets both from its colors
+         *  @type {Color|undefined} */
+        ambientGroundColor: Color | undefined;
         /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined
          *  @type {Color|undefined} */
         fogColor: Color | undefined;
@@ -6942,12 +6946,14 @@ declare module "littlejsengine" {
         drawSky(): void;
         /** Rebuild the light's view projection around the shadow center, called automatically each frame shadows are on */
         updateShadowMatrix(): void;
-        /** Build a sky dome, set it as the sky and set the fog color to the horizon color
+        /** Build a sky dome, set it as the sky, and light the scene by it: the fog takes the horizon color, and the
+         *  ambient light comes from the top color above and the bottom color below, both at the ambient strength
          *  @param {Color} [topColor] - Straight up
          *  @param {Color} [horizonColor] - Level with the camera
          *  @param {Color} [bottomColor] - Straight down, defaults to the horizon color
+         *  @param {number} [ambient] - How much of the sky colors lights the scene as ambient, 0 for none
          *  @return {Mesh} - The dome, also in render3D.sky */
-        setSky(topColor?: Color, horizonColor?: Color, bottomColor?: Color): Mesh;
+        setSky(topColor?: Color, horizonColor?: Color, bottomColor?: Color, ambient?: number): Mesh;
         /** Set where fog starts and ends, and its color
          *  @param {number} fogStart - Distance from the camera where fog starts
          *  @param {number} fogEnd - Distance where fog is total, 0 disables fog
