@@ -1,7 +1,8 @@
 /**
  * LittleJS Newgrounds Plugin
  * - NewgroundsMedal extends Medal with Newgrounds API functionality
- * - When logged in, Newgrounds holds the player's medals: they unlock once the server confirms and the local save is left alone
+ * - When logged in, Newgrounds holds the player's NewgroundsMedals: they unlock once the server confirms and the local save leaves them alone
+ * - A plain Medal is never touched, so a game can use the plugin for scoreboards alone
  * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
  * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
  * - Provides functions to unlock medals, post and read scoreboards and log views
@@ -35,12 +36,16 @@ class NewgroundsMedal extends Medal
     constructor(id, name, description, icon, src)
     { super(id, name, description, icon, src); }
 
+    /** Whether the local save holds this medal, not while logged in when newgrounds does
+     *  @return {boolean} */
+    isLocal() { return !newgrounds || !newgrounds.session_id; }
+
     /** Unlocks a medal if not already unlocked, once newgrounds confirms it when logged in
      *  - The promise is optional, for when a game wants to know the outcome
      *  @return {Promise<boolean>} - Whether the medal is unlocked, once the server has answered when logged in */
     unlock()
     {
-        if (medalsPreventUnlock || this.unlocked || !newgrounds || !newgrounds.session_id)
+        if (medalsPreventUnlock || this.unlocked || this.isLocal())
             return super.unlock(); // nothing to send, or logged out and the local save holds the medal
 
         // logged in, newgrounds holds the medal: it unlocks once the server confirms, one request at a time
@@ -108,12 +113,9 @@ class NewgroundsPlugin
         // get session id from url search params
         /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
         this.session_id = hasLocation ? new URL(location.href).searchParams.get('ngio_session_id') : null;
+        // newgrounds holds this player's newgrounds medals: locked until the server says otherwise, the local save leaves them alone
         if (this.session_id)
-        {
-            // newgrounds holds this player's medals, the local save is only for logged out play
-            medalsPreventSave = true;
-            medalsForEach(medal=> medal.unlocked = false); // locked until the server says otherwise
-        }
+            medalsForEach(medal=> medal instanceof NewgroundsMedal && (medal.unlocked = false));
 
         /** @property {Promise<NewgroundsPlugin>} - Resolves once the medals and scoreboards have been fetched, or right away when not logged in */
         this.ready = this.session_id ? this.init() : Promise.resolve(this); // only use newgrounds when logged in
@@ -135,7 +137,6 @@ class NewgroundsPlugin
         }, keepAliveMS);
 
         const medalsResult = await this.call('Medal.getList');
-        medalsForEach(medal=> ASSERT(medal instanceof NewgroundsMedal, 'a logged in game holds its medals on newgrounds, so every medal must be a NewgroundsMedal'));
 
         // bail early if the first call failed (offline / bad session / server error)
         if (!medalsResult || !medalsResult.result || medalsResult.result.error)
@@ -149,7 +150,7 @@ class NewgroundsPlugin
         for (const newgroundsMedal of this.medals)
         {
             const medal = medals[newgroundsMedal['id']];
-            if (medal)
+            if (medal instanceof NewgroundsMedal) // a plain medal with the same id is left alone
             {
                 // copy newgrounds medal data
                 medal.image =       new Image;

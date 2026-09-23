@@ -3760,7 +3760,7 @@ declare module "littlejsengine" {
     /** Initialize medals with a save name used for storage
      *  - Call this after creating all medals
      *  - Checks if medals are unlocked
-     *  - The local save is left alone when a service like Newgrounds holds the player's medals
+     *  - A medal a service like Newgrounds holds is left as it is, see Medal.isLocal
      *  @param {string} saveName
      *  @memberof Medals */
     export function medalsInit(saveName: string): void;
@@ -3830,6 +3830,9 @@ declare module "littlejsengine" {
          *  - The promise is optional, for when a game wants to know the outcome
          *  @return {Promise<boolean>} - Whether the medal is unlocked, right away unless a service like Newgrounds has to confirm */
         unlock(): Promise<boolean>;
+        /** Whether the local save holds this medal, it is neither loaded nor written while a service like Newgrounds holds it
+         *  @return {boolean} */
+        isLocal(): boolean;
         /** Render a medal
          *  @param {number} [hidePercent] - How much to slide the medal off screen
          */
@@ -3843,7 +3846,8 @@ declare module "littlejsengine" {
     /**
      * LittleJS Newgrounds Plugin
      * - NewgroundsMedal extends Medal with Newgrounds API functionality
-     * - When logged in, Newgrounds holds the player's medals: they unlock once the server confirms and the local save is left alone
+     * - When logged in, Newgrounds holds the player's NewgroundsMedals: they unlock once the server confirms and the local save leaves them alone
+     * - A plain Medal is never touched, so a game can use the plugin for scoreboards alone
      * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
      * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
      * - Provides functions to unlock medals, post and read scoreboards and log views

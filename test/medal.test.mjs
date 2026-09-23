@@ -147,3 +147,26 @@ test('medal constructed with src includes src in stored object', () =>
     const stored = JSON.parse(globalThis.localStorage[SAVE]);
     assert.equal(stored['1'].src, 'medals/foo.png');
 });
+
+test('a medal a service holds is neither loaded nor written, its stored entry stays for when it is local again', () =>
+{
+    globalThis.localStorage[SAVE] = JSON.stringify({
+        '1': { name: 'Held', description: 'old', icon: '🏆', unlocked: true },
+        '2': { name: 'Two', description: '', icon: '🏆', unlocked: true },
+    });
+    const held = new Medal(1, 'One', 'new');
+    held.isLocal = ()=> false;
+    const m2 = new Medal(2, 'Two');
+    const m3 = new Medal(3, 'Three');
+    m3.isLocal = ()=> false;
+    medalsInit(SAVE);
+    assert.equal(held.unlocked, false, 'not loaded');
+    assert.equal(m2.unlocked, true);
+
+    held.unlock();
+    m2.unlock();
+    const stored = JSON.parse(globalThis.localStorage[SAVE]);
+    assert.deepEqual(stored['1'], { name: 'Held', description: 'old', icon: '🏆', unlocked: true }, 'kept as it was');
+    assert.equal(stored['2'].unlocked, true);
+    assert.equal('3' in stored, false, 'a held medal with no entry gets none');
+});

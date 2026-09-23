@@ -2,7 +2,7 @@
  * LittleJS Medal System
  * - Achievement/trophy system for games
  * - Medal class with name, description, icon, and unlock tracking
- * - Automatic saving to local storage, unless a service like Newgrounds holds the player's medals
+ * - Automatic saving to local storage, a medal can say a service like Newgrounds holds it instead
  * - Visual display queue with slide-in notifications
  * - Newgrounds API integration for online achievements
  * - Debug mode to unlock/reset medals during development
@@ -48,26 +48,24 @@ const medals = {};
 // Engine internal variables not exposed to documentation
 let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
 
-// set by a service that holds the player's medals, like newgrounds when logged in, so the local save is left alone
-let medalsPreventSave = false;
-
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Initialize medals with a save name used for storage
  *  - Call this after creating all medals
  *  - Checks if medals are unlocked
- *  - The local save is left alone when a service like Newgrounds holds the player's medals
+ *  - A medal a service like Newgrounds holds is left as it is, see Medal.isLocal
  *  @param {string} saveName
  *  @memberof Medals */
 function medalsInit(saveName)
 {
     // check if medals are unlocked
     medalsSaveName = saveName;
-    if (!debugMedals && !medalsPreventSave)
+    if (!debugMedals)
     {
         const saved = readSaveData(saveName);
         medalsForEach(medal => {
-            medal.unlocked = !!(saved[medal.id] && saved[medal.id].unlocked);
+            if (medal.isLocal())
+                medal.unlocked = !!(saved[medal.id] && saved[medal.id].unlocked);
         });
         medalsSave();
     }
@@ -124,9 +122,16 @@ function medalsReset()
 
 function medalsSave()
 {
-    if (!medalsSaveName || medalsPreventSave) return;
+    if (!medalsSaveName) return;
+    const saved = readSaveData(medalsSaveName);
     const data = {};
     medalsForEach(medal => {
+        if (!medal.isLocal())
+        {
+            // a service holds this medal, its entry stays as it was for when it is local again
+            if (saved[medal.id]) data[medal.id] = saved[medal.id];
+            return;
+        }
         const entry = {
             name: medal.name,
             description: medal.description,
@@ -205,6 +210,10 @@ class Medal
         }
         return Promise.resolve(this.unlocked);
     }
+
+    /** Whether the local save holds this medal, it is neither loaded nor written while a service like Newgrounds holds it
+     *  @return {boolean} */
+    isLocal() { return true; }
 
     /** Render a medal
      *  @param {number} [hidePercent] - How much to slide the medal off screen

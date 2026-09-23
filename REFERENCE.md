@@ -1444,7 +1444,8 @@ new Box2dGearJoint(jointA, jointB, ratio)
 ## LittleJS Medals & Newgrounds
 - Achievement/medal system with on-screen popup, save/restore via localStorage
 - Optional Newgrounds integration: syncs medals and scoreboards when hosted on Newgrounds
-- A logged in Newgrounds player's medals live on the server: they unlock once it confirms, and the local save is only for logged out play
+- A logged in Newgrounds player's NewgroundsMedals live on the server: they unlock once it confirms and the local save leaves
+  them alone, while a plain Medal is never touched
 - See `examples/shorts/medals.js` for a demo
 
 ```javascript
@@ -1453,9 +1454,10 @@ new Medal(id, name, description='', icon='🏆', src)  // src is optional image 
 medal.unlock()                       // Mark unlocked, save, and queue the popup; the promise it returns is optional
                                      // and resolves with whether the medal is unlocked, right away unless a server has to confirm
 medal.unlocked                       // True after unlock
+medal.isLocal()                      // Whether the local save holds the medal, false for a NewgroundsMedal while logged in
 
 medals                               // Global { [id]: Medal } map
-medalsInit(saveName)                 // Restore unlocked state from localStorage under saveName, unless logged in to Newgrounds
+medalsInit(saveName)                 // Restore unlocked state from localStorage under saveName, skipping medals a service holds
 medalsForEach(callback)              // Iterate all registered medals
 medalsReset()                        // Lock all medals and persist the cleared catalog
 medalsPreventUnlock                  // Block unlocks (testing / debug)

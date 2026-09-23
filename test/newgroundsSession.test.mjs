@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NewgroundsPlugin, NewgroundsMedal, medalsInit, medalsReset, setMedalsPreventUnlock } from '../dist/littlejs.esm.js';
+import { NewgroundsPlugin, NewgroundsMedal, Medal, medalsInit, medalsReset, setMedalsPreventUnlock } from '../dist/littlejs.esm.js';
 
 // A logged in session: the plugin reads the session id from the page url, and every call is a fetch.
 // The fetch is stubbed per component with the gateway's result object, and the keep alive interval is
@@ -20,35 +20,50 @@ let keepAlive;
 globalThis.setInterval = fn => { keepAlive = fn; return 0; };
 const flush = ()=> new Promise(resolve => setImmediate(resolve));
 const unlockCalls = ()=> calls.filter(c => c == 'Medal.unlock').length;
+const SAVE = 'NG Game';
+const stored = ()=> JSON.parse(globalThis.localStorage[SAVE]);
+const storedNewgrounds = ()=> [1, 2, 3].map(id => stored()[id]);
 
-test('when logged in the server holds the medals and the local save is left alone', async () =>
+test('when logged in the server holds the newgrounds medals, the local save keeps their old entries and plain medals go on as before', async () =>
 {
     // a save from whoever played logged out on this browser
-    const SAVE = 'NG Game';
     globalThis.localStorage[SAVE] = JSON.stringify({ '1': { name: 'One', unlocked: true } });
     const m1 = new NewgroundsMedal(1, 'One');
     const m2 = new NewgroundsMedal(2, 'Two');
     const m3 = new NewgroundsMedal(3, 'Three');
+    const plain = new Medal(9, 'Plain');
     medalsInit(SAVE);
     assert.equal(m1.unlocked, true, 'the local save applies before the plugin exists');
-    const savedBefore = globalThis.localStorage[SAVE];
+    assert.equal(m1.isLocal(), true);
+    const savedBefore = storedNewgrounds();
+    assert.equal(savedBefore[0].unlocked, true);
 
-    // the session locks everything until the server answers
+    // the session locks the newgrounds medals until the server answers, a plain medal is not touched
     replies['Medal.getList'] = { data: { medals: [
         { id: 1, name: 'Server One', description: 'from the server', icon: 'one.png', unlocked: false, value: 5 },
         { id: 2, name: 'Server Two', description: '', icon: 'two.png', unlocked: true },
+        { id: 9, name: 'Server Nine', description: '', icon: 'nine.png', unlocked: true },
     ]}};
     replies['ScoreBoard.getBoards'] = { data: { scoreboards: [] } };
     const plugin = new NewgroundsPlugin('an app');
     assert.equal(plugin.session_id, 'abc123');
     assert.equal(m1.unlocked, false, 'locked as soon as the session is known');
+    assert.equal(m1.isLocal(), false);
+    assert.equal(plain.isLocal(), true);
     assert.ok(keepAlive, 'the keep alive is set up before the first server call');
     await plugin.ready;
     assert.equal(m1.unlocked, false);
     assert.equal(m2.unlocked, true, 'the server list is the state');
     assert.equal(m1.description, 'from the server (5)');
-    assert.equal(globalThis.localStorage[SAVE], savedBefore, 'the local save is untouched');
+    assert.equal(plain.name, 'Plain', 'a plain medal with a server id is left alone');
+    assert.equal(plain.unlocked, false);
+    assert.deepEqual(storedNewgrounds(), savedBefore, 'the local save is untouched');
     assert.equal(await m2.unlock(), true, 'an unlocked medal answers right away');
+
+    // a plain medal still unlocks and saves locally, and the newgrounds entries in the save stay as they were
+    assert.equal(await plain.unlock(), true);
+    assert.equal(stored()[9].unlocked, true, 'saved');
+    assert.deepEqual(storedNewgrounds(), savedBefore, 'offline progress on newgrounds medals is kept for logged out play');
 
     // an unlock only lands once the server confirms it, and asking every frame sends one request
     replies['Medal.unlock'] = { data: { medal: { id: 1, unlocked: true }, medal_score: 5 } };
@@ -64,7 +79,7 @@ test('when logged in the server holds the medals and the local save is left alon
     assert.equal(plugin.medals.find(m => m.id == 1).unlocked, true, 'the fetched list is kept in step');
     assert.equal(unlockCalls() - before, 1, 'one request');
     assert.equal(plugin.pendingUnlocks.size, 0);
-    assert.equal(globalThis.localStorage[SAVE], savedBefore, 'still untouched');
+    assert.deepEqual(storedNewgrounds(), savedBefore, 'still untouched');
 
     // a failed call keeps the medal locked and pending, and the keep alive resends it
     replies['Medal.unlock'] = new Error('offline');
@@ -102,11 +117,14 @@ test('when logged in the server holds the medals and the local save is left alon
     assert.equal(unlockCalls(), before + 1, 'resent once unlocks are allowed');
     assert.deepEqual([...plugin.pendingUnlocks.keys()], [m4], 'refused again');
 
-    // a later medalsInit skips the local save as well, and a reset does not write it
-    globalThis.localStorage['NG Other'] = JSON.stringify({ '4': { name: 'Four', unlocked: true } });
+    // a later medalsInit skips the newgrounds medals in the local save, and a reset keeps their entries
+    globalThis.localStorage['NG Other'] = JSON.stringify({ '4': { name: 'Four', unlocked: true }, '9': { name: 'Plain', unlocked: true } });
     medalsInit('NG Other');
-    assert.equal(m4.unlocked, false, 'the local save is not read');
+    assert.equal(m4.unlocked, false, 'the local save is not read for a newgrounds medal');
+    assert.equal(plain.unlocked, true, 'but it is for a plain one');
     medalsReset();
-    assert.equal(globalThis.localStorage['NG Other'], JSON.stringify({ '4': { name: 'Four', unlocked: true } }), 'not written');
-    assert.equal(globalThis.localStorage[SAVE], savedBefore);
+    const other = JSON.parse(globalThis.localStorage['NG Other']);
+    assert.deepEqual(other['4'], { name: 'Four', unlocked: true }, 'kept as it was');
+    assert.equal(other['9'].unlocked, false, 'the plain medal is reset');
+    assert.deepEqual(storedNewgrounds(), savedBefore);
 });
