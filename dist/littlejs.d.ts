@@ -3760,6 +3760,7 @@ declare module "littlejsengine" {
     /** Initialize medals with a save name used for storage
      *  - Call this after creating all medals
      *  - Checks if medals are unlocked
+     *  - The local save is left alone when a service like Newgrounds holds the player's medals
      *  @param {string} saveName
      *  @memberof Medals */
     export function medalsInit(saveName: string): void;
@@ -3840,6 +3841,7 @@ declare module "littlejsengine" {
     /**
      * LittleJS Newgrounds Plugin
      * - NewgroundsMedal extends Medal with Newgrounds API functionality
+     * - When logged in, Newgrounds holds the player's medals: they unlock once the server confirms and the local save is left alone
      * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
      * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
      * - provides functions to interact with medals scoreboards
@@ -3877,14 +3879,17 @@ declare module "littlejsengine" {
         medals: any[];
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         scoreboards: any[];
+        /** @property {Set<NewgroundsMedal>} - Medals the server has not confirmed unlocking yet, resent on the keep alive ping
+         *  @type {Set<NewgroundsMedal>} */
+        pendingUnlocks: Set<NewgroundsMedal>;
         /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
         session_id: string;
         /** @property {Promise<NewgroundsPlugin>} - Resolves once the medals and scoreboards have been fetched, or right away when not logged in */
         ready: Promise<this>;
         init(): Promise<this>;
-        /** Send message to unlock a medal by id
+        /** Send message to unlock a medal by id, the medal itself waits for the response
          * @param {number} id - The medal id
-         * @return {Promise<Object>} - The response JSON object */
+         * @return {Promise<Object>} - The response JSON object, undefined when the call failed */
         unlockMedal(id: number): Promise<any>;
         /** Send message to post score
          * @param {number} id    - The scoreboard id

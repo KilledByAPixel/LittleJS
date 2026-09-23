@@ -10597,7 +10597,7 @@ function drawEngineLogo(t)
  * LittleJS Medal System
  * - Achievement/trophy system for games
  * - Medal class with name, description, icon, and unlock tracking
- * - Automatic saving to local storage
+ * - Automatic saving to local storage, unless a service like Newgrounds holds the player's medals
  * - Visual display queue with slide-in notifications
  * - Newgrounds API integration for online achievements
  * - Debug mode to unlock/reset medals during development
@@ -10641,22 +10641,24 @@ const medals = {};
 // Engine internal variables not exposed to documentation
 let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
 
+// set by a service that holds the player's medals, like newgrounds when logged in, so the local save is left alone
+let medalsPreventSave = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Initialize medals with a save name used for storage
  *  - Call this after creating all medals
  *  - Checks if medals are unlocked
+ *  - The local save is left alone when a service like Newgrounds holds the player's medals
  *  @param {string} saveName
  *  @memberof Medals */
 function medalsInit(saveName)
 {
     // check if medals are unlocked
     medalsSaveName = saveName;
-    if (!debugMedals)
+    if (!debugMedals && !medalsPreventSave)
     {
-        let saved = {};
-        try { saved = JSON.parse(localStorage[saveName] || '{}'); }
-        catch (e) { saved = {}; }
+        const saved = readSaveData(saveName);
         medalsForEach(medal => {
             medal.unlocked = !!(saved[medal.id] && saved[medal.id].unlocked);
         });
@@ -10715,7 +10717,7 @@ function medalsReset()
 
 function medalsSave()
 {
-    if (!medalsSaveName) return;
+    if (!medalsSaveName || medalsPreventSave) return;
     const data = {};
     medalsForEach(medal => {
         const entry = {
@@ -10727,7 +10729,7 @@ function medalsSave()
         if (medal.image) entry.src = medal.image.src;
         data[medal.id] = entry;
     });
-    localStorage[medalsSaveName] = JSON.stringify(data);
+    writeSaveData(medalsSaveName, data);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -10875,6 +10877,7 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
 /**
  * LittleJS Newgrounds Plugin
  * - NewgroundsMedal extends Medal with Newgrounds API functionality
+ * - When logged in, Newgrounds holds the player's medals: they unlock once the server confirms and the local save is left alone
  * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
  * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
  * - provides functions to interact with medals scoreboards
@@ -10906,11 +10909,25 @@ class NewgroundsMedal extends Medal
     constructor(id, name, description, icon, src)
     { super(id, name, description, icon, src); }
 
-    /** Unlocks a medal if not already unlocked */
+    /** Unlocks a medal if not already unlocked, once newgrounds confirms it when logged in */
     unlock()
     {
-        super.unlock();
-        newgrounds && newgrounds.unlockMedal(this.id);
+        if (medalsPreventUnlock || this.unlocked) return;
+        if (!newgrounds || !newgrounds.session_id)
+        {
+            // logged out, the local save holds the medal
+            super.unlock();
+            return;
+        }
+
+        // logged in, newgrounds holds the medal: it unlocks once the server confirms, and is resent until then
+        newgrounds.unlockMedal(this.id).then(response=>
+        {
+            if (response?.result?.data?.medal?.unlocked)
+                super.unlock();
+            else
+                newgrounds.pendingUnlocks.add(this);
+        });
     }
 }
 
@@ -10949,9 +10966,19 @@ class NewgroundsPlugin
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         this.scoreboards = [];
 
+        /** @property {Set<NewgroundsMedal>} - Medals the server has not confirmed unlocking yet, resent on the keep alive ping
+         *  @type {Set<NewgroundsMedal>} */
+        this.pendingUnlocks = new Set;
+
         // get session id from url search params
         /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
         this.session_id = hasLocation ? new URL(location.href).searchParams.get('ngio_session_id') : null;
+        if (this.session_id)
+        {
+            // newgrounds holds this player's medals, the local save is only for logged out play
+            medalsPreventSave = true;
+            medalsForEach(medal=> medal.unlocked = false); // locked until the server says otherwise
+        }
 
         /** @property {Promise<NewgroundsPlugin>} - Resolves once the medals and scoreboards have been fetched, or right away when not logged in */
         this.ready = this.session_id ? this.init() : Promise.resolve(this); // only use newgrounds when logged in
@@ -10994,15 +11021,22 @@ class NewgroundsPlugin
         this.scoreboards = scoreboardResult?.result?.data?.scoreboards || [];
         debugMedals && LOG(this.scoreboards);
 
-        // keep the session alive with a ping every minute
+        // keep the session alive with a ping every minute, and resend the unlocks it has not confirmed
         const keepAliveMS = 60 * 1e3;
-        setInterval(()=>this.call('Gateway.ping', 0), keepAliveMS);
+        setInterval(()=>
+        {
+            this.call('Gateway.ping', 0);
+            const pending = [...this.pendingUnlocks];
+            this.pendingUnlocks.clear();
+            for (const medal of pending)
+                medal.unlock();
+        }, keepAliveMS);
         return this;
     }
 
-    /** Send message to unlock a medal by id
+    /** Send message to unlock a medal by id, the medal itself waits for the response
      * @param {number} id - The medal id
-     * @return {Promise<Object>} - The response JSON object */
+     * @return {Promise<Object>} - The response JSON object, undefined when the call failed */
     unlockMedal(id) { return this.call('Medal.unlock', {'id':id}); }
 
     /** Send message to post score

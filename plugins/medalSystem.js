@@ -2,7 +2,7 @@
  * LittleJS Medal System
  * - Achievement/trophy system for games
  * - Medal class with name, description, icon, and unlock tracking
- * - Automatic saving to local storage
+ * - Automatic saving to local storage, unless a service like Newgrounds holds the player's medals
  * - Visual display queue with slide-in notifications
  * - Newgrounds API integration for online achievements
  * - Debug mode to unlock/reset medals during development
@@ -48,22 +48,24 @@ const medals = {};
 // Engine internal variables not exposed to documentation
 let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
 
+// set by a service that holds the player's medals, like newgrounds when logged in, so the local save is left alone
+let medalsPreventSave = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Initialize medals with a save name used for storage
  *  - Call this after creating all medals
  *  - Checks if medals are unlocked
+ *  - The local save is left alone when a service like Newgrounds holds the player's medals
  *  @param {string} saveName
  *  @memberof Medals */
 function medalsInit(saveName)
 {
     // check if medals are unlocked
     medalsSaveName = saveName;
-    if (!debugMedals)
+    if (!debugMedals && !medalsPreventSave)
     {
-        let saved = {};
-        try { saved = JSON.parse(localStorage[saveName] || '{}'); }
-        catch (e) { saved = {}; }
+        const saved = readSaveData(saveName);
         medalsForEach(medal => {
             medal.unlocked = !!(saved[medal.id] && saved[medal.id].unlocked);
         });
@@ -122,7 +124,7 @@ function medalsReset()
 
 function medalsSave()
 {
-    if (!medalsSaveName) return;
+    if (!medalsSaveName || medalsPreventSave) return;
     const data = {};
     medalsForEach(medal => {
         const entry = {
@@ -134,7 +136,7 @@ function medalsSave()
         if (medal.image) entry.src = medal.image.src;
         data[medal.id] = entry;
     });
-    localStorage[medalsSaveName] = JSON.stringify(data);
+    writeSaveData(medalsSaveName, data);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
