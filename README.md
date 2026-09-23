@@ -56,6 +56,7 @@ That writes `examples/starter/game.zip` and prints the size against the limit, f
 | Stage | What it does |
 |---|---|
 | Concatenate | Joins `sourceFiles` into one file and strips CR so a CRLF checkout builds the same bytes as an LF one. No modules, everything shares one global scope. |
+| Guard asserts | Short circuits every `ASSERT` and `LOG` call with `false&&` so their arguments never run. |
 | Feature flags | Rewrites anything disabled in `FEATURES` to a compile time constant so the next stage can delete it. |
 | Closure Compiler | `ADVANCED` mode. Renames everything and deletes every function the game never calls. |
 | UglifyJS | A second `-c -m --toplevel` pass. `--toplevel` also mangles and drops top level names, worth 54 bytes. Safe here because the build inlines everything into one script that nothing external references, but if you hand-write an HTML page with its own `<script>` calling into your game, remove it. |
@@ -64,6 +65,8 @@ That writes `examples/starter/game.zip` and prints the size against the limit, f
 | ect zip | Zips the inlined HTML plus `dataFiles`. This is what you submit. |
 
 Also at the top of `build.mjs`: `DEBUG_BUILD` keeps the intermediate files so you can see what each stage produced, `USE_ROADROLLER` turns off the slow stage while iterating, and `ROADROLLER_EXTREME` passes `--optimize 2`, which takes a minute of work for a few bytes, so save it for the end.
+
+**Asserts are guarded, not just emptied.** `ASSERT` and `LOG` are empty functions in `engineRelease.js`, but an empty function is only free if nobody evaluates what you pass it, and a call evaluates its arguments first regardless. Closure deletes the calls it can prove pure, which is most of them, but not ones like `ASSERT(!this.children.includes(child))`: it cannot know `Array.prototype.includes` has no side effect, so that scan shipped and ran on every `addChild` and `removeChild`. The build now rewrites every call to `false&&ASSERT(...)`, which is dead at parse time, worth 26 bytes and the wasted work. It counts the calls it found and fails the build if it could not rewrite all of them, so an assert written in a spelling the pattern misses stops the build instead of silently shipping. Your own `ASSERT` and `LOG` calls in `game.js` are covered too.
 
 **`ROADROLLER_ARGS` pins the compressor.** Left empty, roadroller runs a randomized ~30 attempt parameter search on every build, so the same source packs to a different size each time. That spread was 7 bytes on the starter, which is more than most single changes are worth, and it makes A/B measurement meaningless. Once your game is roughly stable, copy the ``use `-Zab32 -Zdy0 ...` to replicate`` arguments a build prints into `ROADROLLER_ARGS`. Builds then become reproducible and every byte you see is real. Empty it and re-search after the source has moved a lot, and judge the new arguments by the zip size, not by the number the search prints.
 

@@ -694,6 +694,19 @@ wrong way. What is left at that point is the feature price list
 - **Deleting code can make the zip bigger until the packer is retuned**,
   and moving debug-only code shifted a build by 9 as pure noise. Know the
   noise floor before reading a small number.
+- **An empty function still evaluates its arguments.** Compiling `ASSERT`
+  and `LOG` down to `function ASSERT(){}` in the release does NOT stop
+  `ASSERT(isValid(pos), 'message')` from calling `isValid` on every frame,
+  because a call evaluates its arguments before it calls anything. A
+  compiler removes the ones it can prove pure, and misses the rest: it
+  cannot know `Array.prototype.includes` has no side effect, so
+  `ASSERT(!this.children.includes(child))` shipped its linear scan and ran
+  it on every add and remove. One engine found 425 such call sites still
+  live in its release, showing up in the profile as its own validation
+  helpers. **Rewrite the calls to `false&&ASSERT(...)` in the build**, so
+  they are dead at parse time and the minifier drops them; count what you
+  rewrote and fail the build if any call was left, because the ones that
+  slip through are invisible and permanent.
 - **Dead code is not quite free.** A debug-only edit that shipped nothing
   moved the zip +3: the post-minify output was the same size but one live
   statement was shaped differently (a comma became a semicolon), because

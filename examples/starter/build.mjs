@@ -141,6 +141,9 @@ function Build(outputFile, files=[], buildSteps=[])
     //   still builds, just bigger
     buffer = buffer.replace(/\r/g, '');
 
+    // stop asserts from evaluating their arguments in the release
+    buffer = guardAsserts(buffer);
+
     // strip out disabled features before minifying
     buffer = applyFeatureFlags(buffer);
 
@@ -158,6 +161,43 @@ function Build(outputFile, files=[], buildSteps=[])
 //   whole subsystem behind them survives even in a game that never uses it
 // - turning the flag into 'const false' and emptying its setter lets Closure
 //   prove the branch is dead and delete it
+// Short circuit every ASSERT and LOG call so its arguments never run
+// - ASSERT and LOG are empty functions in engineRelease.js, but an empty
+//   function is only free if nobody evaluates what you pass it, and a call
+//   evaluates its arguments first no matter what the function does
+// - Closure deletes the ones it can prove pure, which is most of them, but
+//   not calls like ASSERT(!this.children.includes(child)): it cannot know
+//   that Array.prototype.includes has no side effect, so the linear scan
+//   shipped and ran on every addChild
+// - "false&&" makes the whole thing dead at parse time, so nothing is
+//   evaluated and the minifiers drop it
+function guardAsserts(buffer)
+{
+    // every mention that is not a property access, so "foo.LOG(" is skipped
+    // but a call spelled "ASSERT (x)" with a space is still counted
+    const anyPattern  = /(?<![.\w$])(ASSERT|LOG)\s*\(/g;
+    // the "function ASSERT(){}" declarations, which must be left alone
+    const declPattern = /(?<=function\s{1,40})(ASSERT|LOG)\s*\(/g;
+    // what we actually rewrite
+    const callPattern = /(?<![.\w$])(?<!function\s{1,40})(ASSERT|LOG)\(/g;
+
+    const total = (buffer.match(anyPattern)  || []).length;
+    const decls = (buffer.match(declPattern) || []).length;
+    const calls = total - decls;
+
+    buffer = buffer.replace(callPattern, 'false&&$1(');
+    const guarded = (buffer.match(/false&&(ASSERT|LOG)\(/g) || []).length;
+
+    // a call that slipped through would silently ship and run every frame,
+    // so refuse to build rather than trust the pattern
+    if (!calls || guarded !== calls)
+        handleError(`found ${calls} call(s), guarded ${guarded}`,
+            'Failed to guard asserts!');
+
+    console.log(`Asserts guarded: ${guarded}`);
+    return buffer;
+}
+
 function applyFeatureFlags(buffer)
 {
     for (const feature in FEATURE_FLAGS)
