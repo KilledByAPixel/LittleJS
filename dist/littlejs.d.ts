@@ -2177,7 +2177,20 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawCircle(pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-    export function drawEllipseGradient(pos: any, size: Vector2, colorInner: Color, colorOuter: Color, angle: number, useWebGL: boolean, screenSpace: boolean, context: any): void;
+    /** Draw an ellipse filled with a radial gradient from the center to the rim
+     *  - Best when batched with other untextured polys
+     *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
+     *  - Stacking gradients at the exact same position may show a faint vertical artifact
+     *  @param {Vector2} pos
+     *  @param {Vector2} [size=vec2(1)] - Width and height diameter
+     *  @param {Color}   [colorInner=WHITE]
+     *  @param {Color}   [colorOuter=CLEAR_WHITE]
+     *  @param {number}  [angle]
+     *  @param {boolean} [useWebGL=glEnable]
+     *  @param {boolean} [screenSpace]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+     *  @memberof Draw */
+    export function drawEllipseGradient(pos: Vector2, size?: Vector2, colorInner?: Color, colorOuter?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw a circle filled with a radial gradient from the center to the rim
      *  - Best when batched with other untextured polys
      *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
@@ -3088,16 +3101,18 @@ declare module "littlejsengine" {
         pos: Vector2;
         /** @property {Vector2} - World space width and height of the object */
         size: Vector2;
-        /** @property {Vector2} - Size of object used for drawing, uses size if not set */
-        drawSize: any;
+        /** @property {Vector2|undefined} - Size of object used for drawing, uses size if not set
+         *  @type {Vector2|undefined} */
+        drawSize: Vector2 | undefined;
         /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
         tileInfo: TileInfo;
         /** @property {number} - Angle to rotate the object */
         angle: number;
         /** @property {Color} - Color to apply when rendered */
         color: Color;
-        /** @property {Color} - Additive color to apply when rendered */
-        additiveColor: any;
+        /** @property {Color|undefined} - Additive color to apply when rendered
+         *  @type {Color|undefined} */
+        additiveColor: Color | undefined;
         /** @property {Shader|undefined} - Custom shader to render with, undefined for the engine's own
          *  @type {Shader|undefined} */
         shader: Shader | undefined;
@@ -3125,14 +3140,16 @@ declare module "littlejsengine" {
         angleVelocity: number;
         /** @property {number} - Track when object was created  */
         spawnTime: number;
-        /** @property {Array<EngineObject>} - List of children of this object */
-        children: any[];
+        /** @property {Array<EngineObject>} - List of children of this object
+         *  @type {Array<EngineObject>} */
+        children: Array<EngineObject>;
         /** @property {boolean} - Limit object speed along x and y axis */
         clampSpeed: boolean;
         /** @property {EngineObject} - Object we are standing on, if any  */
         groundObject: EngineObject | TileCollisionLayer;
-        /** @property {EngineObject} - Parent of object if in local space  */
-        parent: any;
+        /** @property {EngineObject|undefined} - Parent of object if in local space
+         *  @type {EngineObject|undefined} */
+        parent: EngineObject | undefined;
         /** @property {Vector2} - Local position if child */
         localPos: Vector2;
         /** @property {number} - Local angle if child  */
@@ -3180,10 +3197,10 @@ declare module "littlejsengine" {
         collideWithTile(tileData: number, pos: Vector2): boolean;
         /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
          *  @param {EngineObject} object - the object to test against
-         *  @param {Object} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
+         *  @param {Vector3} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
          *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity
          */
-        collideWithObject(object: EngineObject, push?: any): boolean;
+        collideWithObject(object: EngineObject, push?: Vector3): boolean;
         /** Get this object's up vector
          *  @param {number} [scale] - length of the vector
          *  @return {Vector2} */
@@ -3625,18 +3642,22 @@ declare module "littlejsengine" {
         localSpace: boolean;
         /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         trailScale: number;
-        /** @property {ParticleCallback} - Callback when particle is created */
-        particleCreateCallback: any;
-        /** @property {ParticleCallback} - Callback when particle is destroyed */
-        particleDestroyCallback: any;
-        /** @property {ParticleCollideCallback} - Callback when particle collides */
-        particleCollideCallback: any;
+        /** @property {ParticleCallback|undefined} - Callback when particle is created
+         *  @type {ParticleCallback|undefined} */
+        particleCreateCallback: ParticleCallback | undefined;
+        /** @property {ParticleCallback|undefined} - Callback when particle is destroyed
+         *  @type {ParticleCallback|undefined} */
+        particleDestroyCallback: ParticleCallback | undefined;
+        /** @property {ParticleCollideCallback|undefined} - Callback when particle collides
+         *  @type {ParticleCollideCallback|undefined} */
+        particleCollideCallback: ParticleCollideCallback | undefined;
         /** @property {number} - Percentage of velocity to pass to particles (0-1) */
         velocityInheritance: number;
         /** @property {number} - Track particle emit time */
         emitTimeBuffer: number;
-        /** @property {Array<Particle>} - Array of particles for this emitter */
-        particles: any[];
+        /** @property {Array<Particle>} - Array of particles for this emitter
+         *  @type {Array<Particle>} */
+        particles: Array<Particle>;
         previousAngle: number;
         previousPos: Vector2;
         /** Spawn one particle
@@ -4000,16 +4021,21 @@ declare module "littlejsengine" {
         ambientColor: Color;
         /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize in css pixels at init time, so it is not scaled by canvasPixelRatio) */
         textureSize: Vector2;
-        /** @property {WebGLTexture} - The lightmap texture */
-        texture: any;
-        /** @property {WebGLProgram} - Shader for drawing per-Light falloff blobs into the lightmap */
-        lightShader: any;
-        /** @property {WebGLProgram} - Shader for compositing the lightmap over the main scene */
-        compositeShader: any;
-        /** @property {WebGLVertexArrayObject} - Vertex array object for the light shader */
-        lightVAO: any;
-        /** @property {WebGLVertexArrayObject} - Vertex array object for the composite shader */
-        compositeVAO: any;
+        /** @property {WebGLTexture|undefined} - The lightmap texture
+         *  @type {WebGLTexture|undefined} */
+        texture: WebGLTexture | undefined;
+        /** @property {WebGLProgram|undefined} - Shader for drawing per-Light falloff blobs into the lightmap
+         *  @type {WebGLProgram|undefined} */
+        lightShader: WebGLProgram | undefined;
+        /** @property {WebGLProgram|undefined} - Shader for compositing the lightmap over the main scene
+         *  @type {WebGLProgram|undefined} */
+        compositeShader: WebGLProgram | undefined;
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the light shader
+         *  @type {WebGLVertexArrayObject|undefined} */
+        lightVAO: WebGLVertexArrayObject | undefined;
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the composite shader
+         *  @type {WebGLVertexArrayObject|undefined} */
+        compositeVAO: WebGLVertexArrayObject | undefined;
         /** Draw a single Light's falloff blob into the currently bound lightmap.
          *  Called by Light.renderLight() during the plugin's render pass.
          *  @param {Light} light */

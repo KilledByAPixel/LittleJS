@@ -903,6 +903,7 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
     drawEllipse(pos, vec2(size), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context);
 }
 
+let drawEllipseGradientOffset = 0;
 /** Draw an ellipse filled with a radial gradient from the center to the rim
  *  - Best when batched with other untextured polys
  *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
@@ -916,7 +917,6 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-let drawEllipseGradientOffset = 0;
 function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');

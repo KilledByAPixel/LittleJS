@@ -164,17 +164,21 @@ class ParticleEmitter extends EngineObject
         this.localSpace        = localSpace;
         /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         this.trailScale        = 0;
-        /** @property {ParticleCallback} - Callback when particle is created */
+        /** @property {ParticleCallback|undefined} - Callback when particle is created
+         *  @type {ParticleCallback|undefined} */
         this.particleCreateCallback = undefined;
-        /** @property {ParticleCallback} - Callback when particle is destroyed */
+        /** @property {ParticleCallback|undefined} - Callback when particle is destroyed
+         *  @type {ParticleCallback|undefined} */
         this.particleDestroyCallback = undefined;
-        /** @property {ParticleCollideCallback} - Callback when particle collides */
+        /** @property {ParticleCollideCallback|undefined} - Callback when particle collides
+         *  @type {ParticleCollideCallback|undefined} */
         this.particleCollideCallback = undefined;
         /** @property {number} - Percentage of velocity to pass to particles (0-1) */
         this.velocityInheritance = 0;
         /** @property {number} - Track particle emit time */
         this.emitTimeBuffer = 0;
-        /** @property {Array<Particle>} - Array of particles for this emitter */
+        /** @property {Array<Particle>} - Array of particles for this emitter
+         *  @type {Array<Particle>} */
         this.particles = [];
 
         // track previous position and angle

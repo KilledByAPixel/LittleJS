@@ -3046,7 +3046,8 @@ class EngineObject
         this.pos = pos.copy();
         /** @property {Vector2} - World space width and height of the object */
         this.size = size.copy();
-        /** @property {Vector2} - Size of object used for drawing, uses size if not set */
+        /** @property {Vector2|undefined} - Size of object used for drawing, uses size if not set
+         *  @type {Vector2|undefined} */
         this.drawSize = undefined;
         /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
         this.tileInfo = tileInfo;
@@ -3054,7 +3055,8 @@ class EngineObject
         this.angle = angle;
         /** @property {Color} - Color to apply when rendered */
         this.color = color.copy();
-        /** @property {Color} - Additive color to apply when rendered */
+        /** @property {Color|undefined} - Additive color to apply when rendered
+         *  @type {Color|undefined} */
         this.additiveColor = undefined;
         /** @property {Shader|undefined} - Custom shader to render with, undefined for the engine's own
          *  @type {Shader|undefined} */
@@ -3085,7 +3087,8 @@ class EngineObject
         this.angleVelocity = 0;
         /** @property {number} - Track when object was created  */
         this.spawnTime = time;
-        /** @property {Array<EngineObject>} - List of children of this object */
+        /** @property {Array<EngineObject>} - List of children of this object
+         *  @type {Array<EngineObject>} */
         this.children = [];
         /** @property {boolean} - Limit object speed along x and y axis */
         this.clampSpeed = true;
@@ -3093,7 +3096,8 @@ class EngineObject
         this.groundObject = undefined;
 
         // parent child system
-        /** @property {EngineObject} - Parent of object if in local space  */
+        /** @property {EngineObject|undefined} - Parent of object if in local space
+         *  @type {EngineObject|undefined} */
         this.parent = undefined;
         /** @property {Vector2} - Local position if child */
         this.localPos = vec2();
@@ -3409,7 +3413,7 @@ class EngineObject
 
     /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
      *  @param {EngineObject} object - the object to test against
-     *  @param {Object} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
+     *  @param {Vector3} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity
      */
     collideWithObject(object, push) { return true; }
@@ -4448,6 +4452,7 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
     drawEllipse(pos, vec2(size), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context);
 }
 
+let drawEllipseGradientOffset = 0;
 /** Draw an ellipse filled with a radial gradient from the center to the rim
  *  - Best when batched with other untextured polys
  *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
@@ -4461,7 +4466,6 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-let drawEllipseGradientOffset = 0;
 function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
     false&&ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -8329,17 +8333,21 @@ class ParticleEmitter extends EngineObject
         this.localSpace        = localSpace;
         /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         this.trailScale        = 0;
-        /** @property {ParticleCallback} - Callback when particle is created */
+        /** @property {ParticleCallback|undefined} - Callback when particle is created
+         *  @type {ParticleCallback|undefined} */
         this.particleCreateCallback = undefined;
-        /** @property {ParticleCallback} - Callback when particle is destroyed */
+        /** @property {ParticleCallback|undefined} - Callback when particle is destroyed
+         *  @type {ParticleCallback|undefined} */
         this.particleDestroyCallback = undefined;
-        /** @property {ParticleCollideCallback} - Callback when particle collides */
+        /** @property {ParticleCollideCallback|undefined} - Callback when particle collides
+         *  @type {ParticleCollideCallback|undefined} */
         this.particleCollideCallback = undefined;
         /** @property {number} - Percentage of velocity to pass to particles (0-1) */
         this.velocityInheritance = 0;
         /** @property {number} - Track particle emit time */
         this.emitTimeBuffer = 0;
-        /** @property {Array<Particle>} - Array of particles for this emitter */
+        /** @property {Array<Particle>} - Array of particles for this emitter
+         *  @type {Array<Particle>} */
         this.particles = [];
 
         // track previous position and angle
@@ -10637,15 +10645,20 @@ class LightSystemPlugin
         /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize in css pixels at init time, so it is not scaled by canvasPixelRatio) */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
 
-        /** @property {WebGLTexture} - The lightmap texture */
+        /** @property {WebGLTexture|undefined} - The lightmap texture
+         *  @type {WebGLTexture|undefined} */
         this.texture = undefined;
-        /** @property {WebGLProgram} - Shader for drawing per-Light falloff blobs into the lightmap */
+        /** @property {WebGLProgram|undefined} - Shader for drawing per-Light falloff blobs into the lightmap
+         *  @type {WebGLProgram|undefined} */
         this.lightShader = undefined;
-        /** @property {WebGLProgram} - Shader for compositing the lightmap over the main scene */
+        /** @property {WebGLProgram|undefined} - Shader for compositing the lightmap over the main scene
+         *  @type {WebGLProgram|undefined} */
         this.compositeShader = undefined;
-        /** @property {WebGLVertexArrayObject} - Vertex array object for the light shader */
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the light shader
+         *  @type {WebGLVertexArrayObject|undefined} */
         this.lightVAO = undefined;
-        /** @property {WebGLVertexArrayObject} - Vertex array object for the composite shader */
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the composite shader
+         *  @type {WebGLVertexArrayObject|undefined} */
         this.compositeVAO = undefined;
 
         initLightSystem();

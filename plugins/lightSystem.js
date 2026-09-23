@@ -56,15 +56,20 @@ class LightSystemPlugin
         /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize in css pixels at init time, so it is not scaled by canvasPixelRatio) */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
 
-        /** @property {WebGLTexture} - The lightmap texture */
+        /** @property {WebGLTexture|undefined} - The lightmap texture
+         *  @type {WebGLTexture|undefined} */
         this.texture = undefined;
-        /** @property {WebGLProgram} - Shader for drawing per-Light falloff blobs into the lightmap */
+        /** @property {WebGLProgram|undefined} - Shader for drawing per-Light falloff blobs into the lightmap
+         *  @type {WebGLProgram|undefined} */
         this.lightShader = undefined;
-        /** @property {WebGLProgram} - Shader for compositing the lightmap over the main scene */
+        /** @property {WebGLProgram|undefined} - Shader for compositing the lightmap over the main scene
+         *  @type {WebGLProgram|undefined} */
         this.compositeShader = undefined;
-        /** @property {WebGLVertexArrayObject} - Vertex array object for the light shader */
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the light shader
+         *  @type {WebGLVertexArrayObject|undefined} */
         this.lightVAO = undefined;
-        /** @property {WebGLVertexArrayObject} - Vertex array object for the composite shader */
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the composite shader
+         *  @type {WebGLVertexArrayObject|undefined} */
         this.compositeVAO = undefined;
 
         initLightSystem();
