@@ -189,7 +189,9 @@ class SoundWave extends Sound
         {
             this.sampleChannels = [];
             for (let i = audioBuffer.numberOfChannels; i--;)
-                this.sampleChannels[i] = Array.from(audioBuffer.getChannelData(i));
+                // take the decoded channel directly, it is already the format
+                // playSamples needs and copying it stalled on long sounds
+                this.sampleChannels[i] = audioBuffer.getChannelData(i);
             this.sampleRate = audioBuffer.sampleRate;
         }).then(() => onloadCallback && onloadCallback(this));
     }
@@ -282,7 +284,7 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
     // build utterance and speak
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
-    utterance.volume = 2*volume*soundVolume;
+    utterance.volume = clamp(volume*soundVolume);
     utterance.rate = rate;
     utterance.pitch = pitch;
     speechSynthesis.speak(utterance);

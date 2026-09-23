@@ -28,7 +28,10 @@ const window = { ontouchstart: undefined };
 const document = { createElement: () => ({ getContext: () => ({}), style: {} }) };
 class Image { }
 class AudioContext { }
-const requestAnimationFrame = () => {};
+// capture the loop instead of dropping it, so the pause check below can
+// drive the engine by hand at a chosen refresh rate
+let rafCallback;
+const requestAnimationFrame = cb => rafCallback = cb;
 `;
 
 const test = `
@@ -113,9 +116,36 @@ function gameInit()
     // blend mode uses main's name
     if (typeof setAdditiveBlendMode != 'function') throw 'setAdditiveBlendMode missing';
 
-    console.log('SMOKE TEST PASSED');
+    console.log('ENGINE CHECKS PASSED');
 }
-engineInit(gameInit, ()=>{}, ()=>{}, ()=>{}, ()=>{}, []);
+
+// the paused update rate is fixed, not the display refresh rate
+// - a pause screen must not animate twice as fast on a 144Hz monitor, and
+//   this is invisible on a 60Hz machine, so it only shows up in a test
+let updates = 0, postUpdates = 0;
+await engineInit(gameInit, ()=> ++updates, ()=> ++postUpdates, ()=>{}, ()=>{}, []);
+
+let t = 0;
+const stepDisplay = (hz, frames)=> { for (let i = frames; i--;) rafCallback(t += 1e3/hz); };
+
+// one second of a 144Hz display while running
+updates = postUpdates = 0;
+stepDisplay(144, 144);
+if (updates != frameRate) throw 'running updated ' + updates + ' times, expected ' + frameRate;
+
+// one second paused, at the same refresh rate
+setPaused(true);
+const timeAtPause = time, frameAtPause = frame;
+updates = postUpdates = 0;
+stepDisplay(144, 144);
+if (updates) throw 'gameUpdate ran ' + updates + ' times while paused';
+if (time != timeAtPause) throw 'time advanced while paused';
+if (frame != frameAtPause) throw 'frame advanced while paused';
+if (abs(postUpdates - frameRate) > frameRate/5)
+    throw 'paused ticked ' + postUpdates + ' times, expected near ' + frameRate;
+setPaused(false);
+
+console.log('SMOKE TEST PASSED');
 `;
 
 let code = stubs;
@@ -123,5 +153,5 @@ for (const f of files)
     code += readFileSync(join(root, f), 'utf8') + '\n';
 code += test;
 
-const run = new Function(code);
-run();
+// engineInit is async, so the body runs as an async function
+await new Function('return (async()=>{' + code + '})()')();

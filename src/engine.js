@@ -155,7 +155,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         if (debug) // +/- to speed/slow time
             frameTimeDeltaMS *= debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
         timeReal += frameTimeDeltaMS / 1e3;
-        frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
+        // paused buffers time the same way, so a pause screen updates at the
+        // fixed frame rate instead of however fast the display refreshes
+        frameTimeBufferMS += frameTimeDeltaMS;
         if (!debugSpeedUp)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
         if (debug && debugVideoCaptureIsActive())
@@ -163,30 +165,28 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
         updateCanvas();
 
-        if (paused)
+        // apply time delta smoothing, improves smoothness of framerate in some browsers
+        let deltaSmooth = 0;
+        if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
         {
-            // update object transforms even when paused
-            for (const o of engineObjects)
-                o.parent || o.updateTransforms();
-            inputUpdate();
-            pluginUpdateList.forEach(f=>f());
-            debugUpdate();
-            gameUpdatePost();
-            inputUpdatePost();
+            // force at least one update each frame since it is waiting for refresh
+            deltaSmooth = frameTimeBufferMS;
+            frameTimeBufferMS = 0;
         }
-        else
+
+        // update multiple frames if necessary in case of slow framerate
+        for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
         {
-            // apply time delta smoothing, improves smoothness of framerate in some browsers
-            let deltaSmooth = 0;
-            if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
+            if (paused)
             {
-                // force at least one update each frame since it is waiting for refresh
-                deltaSmooth = frameTimeBufferMS;
-                frameTimeBufferMS = 0;
+                // update object transforms even when paused, but do not
+                // advance time, run the game, or update objects
+                for (const o of engineObjects)
+                    o.parent || o.updateTransforms();
+                inputUpdate();
+                pluginUpdateList.forEach(f=>f());
             }
-            
-            // update multiple frames if necessary in case of slow framerate
-            for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
+            else
             {
                 // increment frame and update time
                 time = frame++ / frameRate;
@@ -196,16 +196,16 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 gameUpdate();
                 pluginUpdateList.forEach(f=>f());
                 engineObjectsUpdate();
-
-                // do post update
-                debugUpdate();
-                gameUpdatePost();
-                inputUpdatePost();
             }
 
-            // add the time smoothing back in
-            frameTimeBufferMS += deltaSmooth;
+            // do post update
+            debugUpdate();
+            gameUpdatePost();
+            inputUpdatePost();
         }
+
+        // add the time smoothing back in
+        frameTimeBufferMS += deltaSmooth;
 
         if (!headlessMode)
         {

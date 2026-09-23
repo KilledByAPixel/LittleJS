@@ -173,6 +173,8 @@ instance.stop(fadeTime); // optional fade out
 
 `engineVersion` is `1.18.25-js13k`, the mainline release this branch's API is aligned with and the migration notes are verified against. The branch does not track mainline release for release; it takes fixes, renames, and structural changes selectively when they do not cost bytes, and skips the large `engineDraw` / `engineInput` / `engineWebGL` feature growth and the plugin system.
 
+Main was reviewed again through **1.19.4** (September 2026) and the fixes that were free were taken: the `speak` volume overflow, decoded sound samples used without a copy, and the paused update rate. Deliberately not taken, because each adds bytes to always-running code for performance or features this branch does not have: the 3D plugins and their collision work, `Shader`, `SpriteAnimation`, `AudioEffect` and the master effect chain, `SoundInstance` playback controls, shared audio buffers, device pixel ratio support, and skipping renders when nothing changed. The API is still aligned to 1.18.25, so the migration notes above stand.
+
 ## 📏 [Size Coding for JS13K](SIZECODING.md)
 ## 💥 [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
 ## 🛠️ [Main LittleJS Repo](https://github.com/KilledByAPixel/LittleJS)
