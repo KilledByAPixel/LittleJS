@@ -552,6 +552,7 @@ class Matrix4
  * @param {Vector3} [pos]
  * @param {Vector3} [rotation] - vec3(pitch, yaw, roll) in radians
  * @param {Vector3} [scale]
+ * @param {Matrix4} [matrix] - Written into instead of a new one, for a loop that builds many
  * @return {Matrix4}
  * @memberof Math3D
  */

@@ -2345,6 +2345,7 @@ test('an object builds its matrix once for the shadow pass and the main pass of 
     const getMatrix = o.getMatrix;
     o.getMatrix = function() { ++builds; return getMatrix.call(this); };
     render3D.passId = 1;
+    render3D.isRendering = true; // headless nothing draws, but the pass is what the cache is keyed to
     render3D.renderStages([o]); // the shadow pass and the opaque stage both draw it under one pass id
     render3D.renderStages([o]);
     assert.equal(builds, 1);
@@ -2352,6 +2353,10 @@ test('an object builds its matrix once for the shadow pass and the main pass of 
     render3D.passId = 2; // the next frame's pass
     render3D.renderStages([o]);
     assert.equal(builds, 2);
+    render3D.isRendering = false;
+    o.render3D(); // outside a pass, as in a bake, every call sees where the object is now
+    o.render3D();
+    assert.equal(builds, 4);
     o.destroy();
     engineObjects.length = 0;
 });
@@ -2407,6 +2412,17 @@ test('an InstancedMesh3D measures a mesh that has never uploaded, so its boundin
     assert.ok(Math.abs(set.radius - boxRadius) < 1e-5, 'an instance at the origin reaches the mesh corners: ' + set.radius);
     set.setMatrixAt(1, buildMatrix(vec3(0, 0, 10), undefined, vec3(3)));
     assert.ok(set.radius >= 10 + 3 * boxRadius - 1e-5, 'a scaled instance away from the origin: ' + set.radius);
+    set.destroy();
+    engineObjects.length = 0;
+});
+
+test('pick and the collect helpers do not see an InstancedMesh3D, its instances are not objects', () =>
+{
+    const set = new InstancedMesh3D(render3D.boxMesh, 2);
+    const ray = new Ray3D(vec3(0, 0, 5), vec3(0, 0, -1)); // straight through the set's bounding sphere at the origin
+    assert.equal(render3D.pick(ray, [set]), undefined);
+    assert.deepEqual(engineObjectsRaycast3D(ray, [set]), []);
+    assert.deepEqual(engineObjectsCollect3D(vec3(), 1, [set]), []);
     set.destroy();
     engineObjects.length = 0;
 });

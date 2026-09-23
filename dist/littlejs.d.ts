@@ -6541,6 +6541,7 @@ declare module "littlejsengine" {
      * @param {Vector3} [pos]
      * @param {Vector3} [rotation] - vec3(pitch, yaw, roll) in radians
      * @param {Vector3} [scale]
+     * @param {Matrix4} [matrix] - Written into instead of a new one, for a loop that builds many
      * @return {Matrix4}
      * @memberof Math3D
      */
@@ -7321,6 +7322,7 @@ declare module "littlejsengine" {
      * - The object's flags cover the whole set, one emissive, one tileInfo, one shader; only the colors are per instance
      * - A mirrored instance, one with a negative scale, shows its inside unless the mesh is doubleSided
      * - A transparent set draws in one go in the transparent stage, its instances are not sorted against each other
+     * - pick, the raycast and the collect helpers do not see the instances, test them yourself from instanceData
      * @extends EngineObject3D
      * @memberof Render3D
      * @example

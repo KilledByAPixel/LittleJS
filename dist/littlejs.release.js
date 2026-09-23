@@ -17706,6 +17706,7 @@ class Matrix4
  * @param {Vector3} [pos]
  * @param {Vector3} [rotation] - vec3(pitch, yaw, roll) in radians
  * @param {Vector3} [scale]
+ * @param {Matrix4} [matrix] - Written into instead of a new one, for a loop that builds many
  * @return {Matrix4}
  * @memberof Math3D
  */
@@ -18052,7 +18053,7 @@ const RENDER3D_VERTEX_BYTES = RENDER3D_VERTEX_FLOATS * 4;
 
 // per draw values the shaders read as vertex attributes: the model matrix columns (4-7), the tint (11) and the
 // uv rect (12); constants for one draw, one per instance for a batch; the shader derives the normal matrix
-const RENDER3D_INSTANCE_FLOATS = 24; // the matrix, the tint and the uv rect; the shader derives the normal matrix
+const RENDER3D_INSTANCE_FLOATS = 24;
 const RENDER3D_INSTANCE_BYTES = RENDER3D_INSTANCE_FLOATS * 4;
 const RENDER3D_INSTANCE_ATTRIBS = [[4, 4, 0], [5, 4, 16], [6, 4, 32], [7, 4, 48], [11, 4, 64], [12, 4, 80]];
 const RENDER3D_VERTEX_INPUTS =
@@ -18100,7 +18101,6 @@ function render3DCanDraw()
 // the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
 const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader'];
 
-// a copy of the current draw state
 // a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out so the
 // compare below stays a handful of direct reads, it runs for every instance drawn
 function render3DCaptureBatchState()
@@ -19561,7 +19561,8 @@ function render3DContextLost()
     for (const shader of glShaderObjects)
         shader.program3D = undefined; // compiled again by the next draw
     r.lightCount = 0;
-    r.instanceBuffers = r.samplers = [];
+    r.instanceBuffers = [];
+    r.samplers = [];
     r.samplerKey = undefined;
     render3DClearInstances();
     r.shadowFramebuffer = r.shadowTexture = undefined;
@@ -21313,18 +21314,18 @@ class EngineObject3D extends EngineObject
     {
         // an opaque draw comes out solid however low its alpha is, so a fade with no flag looks like nothing happened
         false&&ASSERT(this.transparent || this.additive || this.color.a >= 1, 'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', this.color);
+        // one matrix for the shadow pass and the main pass of a frame, the object is in the same place for both;
+        // outside a pass, as in a bake, the object may have moved since the last call, so it is built fresh
+        const r = render3D;
+        if (this.matrixPassId !== r.passId || !r.isRendering)
+            this.passMatrix = this.getMatrix(), this.matrixPassId = r.passId;
         if (this.mesh)
-        {
-            // one matrix for the shadow pass and the main pass of a frame, the object is in the same place for both
-            if (this.matrixPassId !== render3D.passId)
-                this.passMatrix = this.getMatrix(), this.matrixPassId = render3D.passId;
             render3D.drawMesh(this.mesh, this.passMatrix, this.tileInfo, this.color);
-        }
         else if (this.tileInfo)
         {
             // a sprite: size3D grown by its own scale and its parents', the same world size the
             // collect, pick and solid collision helpers measure it at
-            const m = this.getMatrix().m;
+            const m = this.passMatrix.m;
             render3D.drawBillboard(vec3(m[12], m[13], m[14]),
                 vec2(this.size3D.x * hypot(m[0], m[1], m[2]), this.size3D.y * hypot(m[4], m[5], m[6])),
                 this.tileInfo, this.color, this.rotation3D.z, this.upright);
@@ -21463,6 +21464,7 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects)
 function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) return;
+    if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
     const matrix = o.getMatrix(), mesh = o.mesh; // a sprite is picked by its size3D
     const radius = (mesh ? mesh.radius || mesh.computeRadius() : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxScale(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
@@ -21512,6 +21514,7 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
  * - The object's flags cover the whole set, one emissive, one tileInfo, one shader; only the colors are per instance
  * - A mirrored instance, one with a negative scale, shows its inside unless the mesh is doubleSided
  * - A transparent set draws in one go in the transparent stage, its instances are not sorted against each other
+ * - pick, the raycast and the collect helpers do not see the instances, test them yourself from instanceData
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -21531,6 +21534,7 @@ class InstancedMesh3D extends EngineObject3D
         super(vec3(), mesh, tileInfo, color);
         false&&ASSERT(mesh instanceof Mesh, 'an InstancedMesh3D needs a Mesh');
         false&&ASSERT(count >= 1, 'an InstancedMesh3D needs room for at least one instance');
+        this.size3D = vec3(); // not a solid thing to pick or collect
         /** @property {number} - How many instances draw, the first ones, up to the count it was made with */
         this.count = count;
         /** @property {number} - How many instances it was made with */
