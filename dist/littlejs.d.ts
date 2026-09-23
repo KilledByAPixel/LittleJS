@@ -7224,6 +7224,11 @@ declare module "littlejsengine" {
         /** @property {boolean} - Draw both sides, each lit as the side that is seen; off skips the faces pointing away,
          *  which is faster and right for closed shapes, the open builders like buildGrid and buildRibbon turn it on */
         doubleSided: boolean;
+        /** @property {boolean} - The values change often but the shape never does, for a water surface or a cloth: set once,
+         *  the mesh keeps its GPU layout and a dirty upload only rewrites the vertices into the buffer it has; the strip
+         *  must keep the same points in the same order, a new point count asserts */
+        dynamicDraw: boolean;
+        vertexLayout: any;
         instanceCount: number;
         instanceData: any;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */

@@ -20741,6 +20741,20 @@ function render3DWriteVertex(floats, ints, j, x, y, z, n, u, v, rgba)
     ints[j+8] = rgba;
 }
 
+// a mesh's packed vertex data for the GPU, one vertex per entry of a layout, which is the strip index of each
+function render3DMeshVertexData(mesh, vertices)
+{
+    const count = vertices.length, data = new ArrayBuffer(count * RENDER3D_VERTEX_BYTES);
+    const floats = new Float32Array(data), ints = new Uint32Array(data);
+    for (let j = 0; j < count; ++j)
+    {
+        const i = vertices[j], p = mesh.points[i], uv = mesh.uvs[i] || RENDER3D_DEFAULT_UV; // a hand built mesh may leave normals, uvs and colors empty
+        render3DWriteVertex(floats, ints, j * RENDER3D_VERTEX_FLOATS, p.x, p.y, p.z,
+            mesh.normals[i] || RENDER3D_DEFAULT_NORMAL, uv.x, uv.y, (mesh.colors[i] || WHITE).rgbaInt());
+    }
+    return data;
+}
+
 // reorder a convex polygon's points, counter clockwise from outside, into one triangle strip
 function render3DPolygonStrip(points)
 {
@@ -20813,6 +20827,11 @@ class Mesh
         /** @property {boolean} - Draw both sides, each lit as the side that is seen; off skips the faces pointing away,
          *  which is faster and right for closed shapes, the open builders like buildGrid and buildRibbon turn it on */
         this.doubleSided = false;
+        /** @property {boolean} - The values change often but the shape never does, for a water surface or a cloth: set once,
+         *  the mesh keeps its GPU layout and a dirty upload only rewrites the vertices into the buffer it has; the strip
+         *  must keep the same points in the same order, a new point count asserts */
+        this.dynamicDraw = false;
+        this.vertexLayout = undefined; // the strip index of each GPU vertex and the point count of the last upload, for a dynamicDraw mesh
         this.instanceCount = 0; // draws waiting in this mesh's batch, with their values, texture and draw state
         this.instanceData = undefined;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
@@ -21032,24 +21051,30 @@ class Mesh
     {
         this.computeRadius();
         if (!render3D?.program) return this;
-        this.dispose();
-        const {vertices, indices} = this.getTriangles(), count = vertices.length;
-        const data = new ArrayBuffer(count * RENDER3D_VERTEX_BYTES);
-        const floats = new Float32Array(data), ints = new Uint32Array(data);
-        for (let j = 0; j < count; ++j)
+        const gl = glContext, layout = this.vertexLayout;
+        if (this.dynamicDraw && this.buffer && this.contextGeneration === render3D.contextGeneration)
         {
-            const i = vertices[j], p = this.points[i], uv = this.uvs[i] || RENDER3D_DEFAULT_UV; // a hand built mesh may leave normals, uvs and colors empty
-            render3DWriteVertex(floats, ints, j * RENDER3D_VERTEX_FLOATS, p.x, p.y, p.z,
-                this.normals[i] || RENDER3D_DEFAULT_NORMAL, uv.x, uv.y, (this.colors[i] || WHITE).rgbaInt());
+            // the layout of the last upload stands, only the values are written again into the buffer it has
+            ASSERT(layout.pointCount === this.points.length, 'a dynamicDraw mesh keeps its shape, the same points in the same order; for a new shape make a new mesh or turn dynamicDraw off', this.points.length);
+            if (layout.pointCount === this.points.length)
+            {
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, 0, render3DMeshVertexData(this, layout.vertices));
+                gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer);
+                this.dirty = false;
+                return this;
+            }
         }
-        const gl = glContext, wide = count > 65535;
+        this.dispose();
+        const {vertices, indices} = this.getTriangles(), count = vertices.length, wide = count > 65535;
+        this.vertexLayout = this.dynamicDraw ? {vertices, pointCount: this.points.length} : undefined;
         this.buffer = gl.createBuffer();
         this.indexBuffer = gl.createBuffer();
         this.bufferCount = indices.length;
         this.indexType = wide ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
         this.dirty = false;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, render3DMeshVertexData(this, vertices), this.dynamicDraw ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, wide ? new Uint32Array(indices) : new Uint16Array(indices), gl.STATIC_DRAW);
         this.contextGeneration = render3D.contextGeneration;

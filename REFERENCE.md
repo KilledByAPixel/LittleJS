@@ -1181,6 +1181,9 @@ mesh.doubleSided = true          // draw both sides, each lit as the side seen; 
                                  // on, and combine keeps it on if any part had it
 mesh.dirty = true; mesh.upload() // re-upload edited arrays on the next draw, or upload now; upload also measures
                                  // mesh.radius; every method that edits a mesh sets dirty itself
+mesh.dynamicDraw = true          // set once for a mesh whose values change every frame, a water surface or a
+                                 // cloth: it keeps its GPU layout, so a dirty upload only rewrites the vertices;
+                                 // the strip must keep the same points in the same order, a new point count asserts
 mesh.vertexCount mesh.radius                  // vertices, and the bounding sphere for culling and picking
 mesh.computeRadius()                          // measure mesh.radius now, without uploading
 mesh.getTriangles()                           // {vertices, indices}: the strip as the indexed triangle list upload sends,
@@ -1311,6 +1314,8 @@ new THREE.Raycaster()                     // render3D.screenToRay, pick and engi
 OBJLoader                                 // loadOBJ(url) or parseOBJ(text)
 EffectComposer and UnrealBloomPass        // postProcessBloom()
 renderer.render(scene, camera)            // nothing to do, the engine draws every frame and handles resizing
+position.setUsage(THREE.DynamicDrawUsage) // mesh.dynamicDraw = true once, then mesh.dirty = true when the points
+                                          // move, like position.needsUpdate = true
 geometry.dispose()                        // optional here, a collected mesh frees its buffer; mesh.dispose()
                                           // frees it now, and setMesh frees the mesh it replaces
 ```
