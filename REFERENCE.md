@@ -1458,11 +1458,13 @@ medalDisplaySlideTime / setMedalDisplaySlideTime(seconds)
 medalDisplaySize / setMedalDisplaySize(vec2)
 
 // Newgrounds integration (only used when hosted on Newgrounds)
-await newgrounds                     // The global is set by NewgroundsPlugin
-new NewgroundsPlugin(app_id, cipher) // Auto-fetches medals and scoreboards
-newgrounds.unlockMedal(id)           // Server-side unlock
+new NewgroundsPlugin(app_id, cipher) // sets the newgrounds global and fetches the medals and scoreboards; with the
+                                     // app's cipher, calls are encrypted by the browser's own WebCrypto, so the page
+                                     // has to be https or localhost and no library is needed
+await newgrounds.ready               // resolves once the medals and scoreboards are in, right away when not logged in
+newgrounds.unlockMedal(id)           // Server-side unlock; every call is a fetch and returns a promise of the response
 newgrounds.postScore(id, value)      // Submit to a scoreboard
-newgrounds.getScores(id, user, social, skip, limit)
+await newgrounds.getScores(id, user, social, skip, limit)
 newgrounds.logView()                 // Track a page view
 new NewgroundsMedal(id, name, description, icon)
 ```

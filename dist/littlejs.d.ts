@@ -3814,9 +3814,10 @@ declare module "littlejsengine" {
      * LittleJS Newgrounds Plugin
      * - NewgroundsMedal extends Medal with Newgrounds API functionality
      * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
-     * - Uses CryptoJS for encryption if optional cipher is provided
+     * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
      * - provides functions to interact with medals scoreboards
      * - Keeps connection alive and logs views
+     * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
      * @namespace Newgrounds
      */
     /** Global Newgrounds object
@@ -3829,52 +3830,62 @@ declare module "littlejsengine" {
      */
     export class NewgroundsPlugin {
         /** Create the global newgrounds object
-         *  @param {string} app_id     - The newgrounds App ID
-         *  @param {string} [cipher]   - The encryption Key (AES-128/Base64)
-         *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher
+         *  @param {string} app_id   - The newgrounds App ID
+         *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; calls are encrypted with
+         *    the browser's WebCrypto, which needs a secure page, https or localhost
          *  @example
          *  // create the newgrounds object, replace the app id with your own
          *  const app_id = 'your_app_id_here';
          *  new NewgroundsPlugin(app_id);
          */
-        constructor(app_id: string, cipher?: string, cryptoJS?: any);
+        constructor(app_id: string, cipher?: string);
         /** @property {string} - The newgrounds App ID */
         app_id: string;
         /** @property {string|undefined} - AES-128/Base64 encryption key, if any */
         cipher: string;
-        /** @property {Object|undefined} - CryptoJS instance used when cipher is set */
-        cryptoJS: any;
+        cryptoKey: CryptoKey;
         /** @property {string} - Hostname used when logging views */
         host: string;
+        /** @property {Array} - Medals fetched from Newgrounds, empty until ready */
+        medals: any[];
+        /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
+        scoreboards: any[];
         /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
         session_id: string;
-        medals: any;
-        scoreboards: any;
+        /** @property {Promise<NewgroundsPlugin>} - Resolves once the medals and scoreboards have been fetched, or right away when not logged in */
+        ready: Promise<this>;
+        init(): Promise<this>;
         /** Send message to unlock a medal by id
-         * @param {number} id - The medal id */
-        unlockMedal(id: number): any;
+         * @param {number} id - The medal id
+         * @return {Promise<Object>} - The response JSON object */
+        unlockMedal(id: number): Promise<any>;
         /** Send message to post score
          * @param {number} id    - The scoreboard id
-         * @param {number} value - The score value */
-        postScore(id: number, value: number): any;
+         * @param {number} value - The score value
+         * @return {Promise<Object>} - The response JSON object */
+        postScore(id: number, value: number): Promise<any>;
         /** Get scores from a scoreboard
          * @param {number} id       - The scoreboard id
          * @param {string} [user]   - A user's id or name
          * @param {number} [social] - If true, only social scores will be loaded
          * @param {number} [skip]   - Number of scores to skip over
          * @param {number} [limit]  - Number of scores to include in the list
-         * @return {Object}         - The response JSON object
+         * @return {Promise<Object>} - The response JSON object
          */
-        getScores(id: number, user?: string, social?: number, skip?: number, limit?: number): any;
-        /** Send message to log a view */
-        logView(): any;
+        getScores(id: number, user?: string, social?: number, skip?: number, limit?: number): Promise<any>;
+        /** Send message to log a view
+         * @return {Promise<Object>} - The response JSON object */
+        logView(): Promise<any>;
+        /** Encrypt text the way the Newgrounds gateway expects, AES-128 CBC with a random iv in front, as Base64
+         * @param {string} text
+         * @return {Promise<string>} */
+        encrypt(text: string): Promise<string>;
         /** Send a message to call a component of the Newgrounds API
          * @param {string}  component    - Name of the component
          * @param {Object}  [parameters] - Parameters to use for call
-         * @param {boolean} [async]      - If true, don't wait for response before continuing
-         * @return {Object}              - The response JSON object
+         * @return {Promise<Object>}     - The response JSON object, undefined when the call failed
          */
-        call(component: string, parameters?: any, async?: boolean): any;
+        call(component: string, parameters?: any): Promise<any>;
     }
     /**
      * Newgrounds medal auto unlocks in newgrounds API

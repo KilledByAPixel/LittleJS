@@ -10126,13 +10126,14 @@ function setMedalDisplaySize(size) { medalDisplaySize = size.copy(); }
  *  @memberof Settings */
 function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUnlock; }
 
-/** 
+/**
  * LittleJS Newgrounds Plugin
  * - NewgroundsMedal extends Medal with Newgrounds API functionality
  * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
- * - Uses CryptoJS for encryption if optional cipher is provided
+ * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
  * - provides functions to interact with medals scoreboards
  * - Keeps connection alive and logs views
+ * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
  * @namespace Newgrounds
  */
 
@@ -10168,59 +10169,60 @@ class NewgroundsMedal extends Medal
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** 
+/**
  * Newgrounds API object
  * @memberof Newgrounds
  */
 class NewgroundsPlugin
 {
     /** Create the global newgrounds object
-     *  @param {string} app_id     - The newgrounds App ID
-     *  @param {string} [cipher]   - The encryption Key (AES-128/Base64)
-     *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher 
+     *  @param {string} app_id   - The newgrounds App ID
+     *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; calls are encrypted with
+     *    the browser's WebCrypto, which needs a secure page, https or localhost
      *  @example
      *  // create the newgrounds object, replace the app id with your own
      *  const app_id = 'your_app_id_here';
      *  new NewgroundsPlugin(app_id);
      */
-    constructor(app_id, cipher, cryptoJS)
+    constructor(app_id, cipher)
     {
         false&&ASSERT(!newgrounds, 'there can only be one newgrounds object');
-        false&&ASSERT(!cipher || cryptoJS, 'must provide cryptojs if there is a cipher');
+        false&&ASSERT(!cipher || typeof crypto != 'undefined' && crypto.subtle, 'a cipher needs WebCrypto, which the browser only has on a secure page');
 
         newgrounds = this; // set global newgrounds object
         /** @property {string} - The newgrounds App ID */
         this.app_id = app_id;
         /** @property {string|undefined} - AES-128/Base64 encryption key, if any */
         this.cipher = cipher;
-        /** @property {Object|undefined} - CryptoJS instance used when cipher is set */
-        this.cryptoJS = cryptoJS;
+        this.cryptoKey = undefined; // the cipher imported for WebCrypto, on the first encrypted call
+        const hasLocation = typeof location != 'undefined';
         /** @property {string} - Hostname used when logging views */
-        this.host = location ? location.hostname : '';
+        this.host = hasLocation ? location.hostname : '';
+        /** @property {Array} - Medals fetched from Newgrounds, empty until ready */
+        this.medals = [];
+        /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
+        this.scoreboards = [];
 
         // get session id from url search params
-        const url = new URL(location.href);
         /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
-        this.session_id = url.searchParams.get('ngio_session_id');
+        this.session_id = hasLocation ? new URL(location.href).searchParams.get('ngio_session_id') : null;
 
-        if (!this.session_id)
-            return; // only use newgrounds when logged in
+        /** @property {Promise<NewgroundsPlugin>} - Resolves once the medals and scoreboards have been fetched, or right away when not logged in */
+        this.ready = this.session_id ? this.init() : Promise.resolve(this); // only use newgrounds when logged in
+    }
 
-        // get medals
-        const medalsResult = this.call('Medal.getList');
+    // fetch the medals and scoreboards, then keep the session alive
+    async init()
+    {
+        const medalsResult = await this.call('Medal.getList');
 
-        // bail early if the first call failed (offline / bad session /
-        // server error) so we don't block the main thread on more sync
-        // XHRs that are guaranteed to also fail
+        // bail early if the first call failed (offline / bad session / server error)
         if (!medalsResult || !medalsResult.result || medalsResult.result.error)
         {
             debugMedals && false&&LOG('Newgrounds session unavailable; skipping plugin init');
-            this.medals = [];
-            this.scoreboards = [];
-            return;
+            return this;
         }
 
-        /** @property {Array} - Medals fetched from Newgrounds (empty until session is active) */
         this.medals = medalsResult.result.data?.['medals'] || [];
         debugMedals && false&&LOG(this.medals);
         for (const newgroundsMedal of this.medals)
@@ -10242,25 +10244,26 @@ class NewgroundsPlugin
             }
         }
 
-        // get scoreboards
-        const scoreboardResult = this.call('ScoreBoard.getBoards');
-        /** @property {Array} - Scoreboards fetched from Newgrounds */
+        const scoreboardResult = await this.call('ScoreBoard.getBoards');
         this.scoreboards = scoreboardResult?.result?.data?.scoreboards || [];
         debugMedals && false&&LOG(this.scoreboards);
 
         // keep the session alive with a ping every minute
         const keepAliveMS = 60 * 1e3;
-        setInterval(()=>this.call('Gateway.ping', 0, true), keepAliveMS);
+        setInterval(()=>this.call('Gateway.ping', 0), keepAliveMS);
+        return this;
     }
 
     /** Send message to unlock a medal by id
-     * @param {number} id - The medal id */
-    unlockMedal(id) { return this.call('Medal.unlock', {'id':id}, true); }
+     * @param {number} id - The medal id
+     * @return {Promise<Object>} - The response JSON object */
+    unlockMedal(id) { return this.call('Medal.unlock', {'id':id}); }
 
     /** Send message to post score
      * @param {number} id    - The scoreboard id
-     * @param {number} value - The score value */
-    postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, true); }
+     * @param {number} value - The score value
+     * @return {Promise<Object>} - The response JSON object */
+    postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}); }
 
     /** Get scores from a scoreboard
      * @param {number} id       - The scoreboard id
@@ -10268,31 +10271,48 @@ class NewgroundsPlugin
      * @param {number} [social] - If true, only social scores will be loaded
      * @param {number} [skip]   - Number of scores to skip over
      * @param {number} [limit]  - Number of scores to include in the list
-     * @return {Object}         - The response JSON object
+     * @return {Promise<Object>} - The response JSON object
      */
     getScores(id, user, social=0, skip=0, limit=10)
     { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}); }
 
-    /** Send message to log a view */
-    logView() { return this.call('App.logView', {'host':this.host}, true); }
+    /** Send message to log a view
+     * @return {Promise<Object>} - The response JSON object */
+    logView() { return this.call('App.logView', {'host':this.host}); }
+
+    /** Encrypt text the way the Newgrounds gateway expects, AES-128 CBC with a random iv in front, as Base64
+     * @param {string} text
+     * @return {Promise<string>} */
+    async encrypt(text)
+    {
+        if (!this.cryptoKey)
+        {
+            const keyBytes = Uint8Array.from(atob(this.cipher), c=> c.charCodeAt(0));
+            this.cryptoKey = await crypto.subtle.importKey('raw', keyBytes, 'AES-CBC', false, ['encrypt']);
+        }
+        const iv = crypto.getRandomValues(new Uint8Array(16));
+        const encrypted = new Uint8Array(await crypto.subtle.encrypt({'name':'AES-CBC', iv}, this.cryptoKey, new TextEncoder().encode(text)));
+        const bytes = new Uint8Array(iv.length + encrypted.length);
+        bytes.set(iv);
+        bytes.set(encrypted, iv.length);
+        let binary = '';
+        for (const b of bytes)
+            binary += String.fromCharCode(b);
+        return btoa(binary);
+    }
 
     /** Send a message to call a component of the Newgrounds API
      * @param {string}  component    - Name of the component
      * @param {Object}  [parameters] - Parameters to use for call
-     * @param {boolean} [async]      - If true, don't wait for response before continuing
-     * @return {Object}              - The response JSON object
+     * @return {Promise<Object>}     - The response JSON object, undefined when the call failed
      */
-    call(component, parameters, async=false)
+    async call(component, parameters)
     {
         const call = {'component':component, 'parameters':parameters};
         if (this.cipher)
         {
-            // encrypt using AES-128 Base64 with cryptoJS
-            const cryptoJS = this.cryptoJS;
-            const aesKey = cryptoJS['enc']['Base64']['parse'](this.cipher);
-            const iv = cryptoJS['lib']['WordArray']['random'](16);
-            const encrypted = cryptoJS['AES']['encrypt'](JSON.stringify(call), aesKey, {'iv':iv});
-            call['secure'] = cryptoJS['enc']['Base64']['stringify'](iv.concat(encrypted['ciphertext']));
+            // the whole call goes encrypted in its place
+            call['secure'] = await this.encrypt(JSON.stringify(call));
             call['parameters'] = 0;
         }
 
@@ -10307,22 +10327,20 @@ class NewgroundsPlugin
         // build post data
         const formData = new FormData();
         formData.append('input', JSON.stringify(input));
-        
+
         // send post data
-        const xmlHttp = new XMLHttpRequest();
         const url = 'https://newgrounds.io/gateway_v3.php';
-        xmlHttp.open('POST', url, !debugMedals && async);
-        try { xmlHttp.send(formData); }
-        catch(e)
+        try
         {
-            debugMedals && false&&LOG('newgrounds call failed', e);
-            return;
+            const response = await fetch(url, {'method':'POST', 'body':formData});
+            const text = await response.text();
+            debugMedals && false&&LOG(text);
+            return text && JSON.parse(text);
         }
-        debugMedals && false&&LOG(xmlHttp.responseText);
-        try { return xmlHttp.responseText && JSON.parse(xmlHttp.responseText); }
-        catch(e) { debugMedals && false&&LOG('newgrounds response is not valid JSON', e); }
+        catch(e) { debugMedals && false&&LOG('newgrounds call failed', e); }
     }
 }
+
 /**
  * LittleJS Post Processing Plugin
  * - Supports shadertoy style post processing shaders
