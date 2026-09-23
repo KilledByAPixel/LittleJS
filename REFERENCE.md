@@ -1262,7 +1262,11 @@ model.mesh, model.textureInfo        // everything as one Mesh tinted by its mat
                                      // part uses the same one; a model mixing plain and textured parts, or using
                                      // several textures, draws right through createObject
 model.createObject(pos3D)            // an EngineObject3D with a child per part, each with its own texture and
-                                     // blending; move and turn the root and the parts follow
+                                     // blending, so windows and other see through parts show; move and turn
+                                     // the root and the parts follow
+model.center().fit(size)             // move the model's bounds onto the origin and scale its largest extent to
+                                     // size, every part together, like Mesh.center and fit; getBounds and
+                                     // transform(matrix) as well
 
 // Particles - the 3D twin of ParticleEmitter, camera facing billboards sorted with everything transparent
 new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileInfo,

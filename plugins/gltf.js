@@ -62,7 +62,40 @@ class GLTFModel
         this.textureInfo = textures.size === 1 ? textures.values().next().value : undefined;
     }
 
-    /** Make an object at a position with a child per part, so each keeps its own texture, color and blending
+    /** The box around every part
+     *  @return {{min: Vector3, max: Vector3}} */
+    getBounds() { return this.mesh.getBounds(); }
+
+    /** Move every part so the center of the model's bounds is on the origin, like Mesh.center
+     *  @return {GLTFModel} */
+    center()
+    {
+        const bounds = this.getBounds();
+        return this.transform(bounds.min.add(bounds.max).scale(-.5));
+    }
+
+    /** Scale every part evenly so the model's largest extent is a size, like Mesh.fit, for models of unknown units
+     *  @param {number} [size]
+     *  @return {GLTFModel} */
+    fit(size=1)
+    {
+        const bounds = this.getBounds(), extent = bounds.max.subtract(bounds.min);
+        return this.transform(Matrix4.scaling(vec3(size / (max(extent.x, extent.y, extent.z) || 1))));
+    }
+
+    /** Move, turn or scale every part and the combined mesh together
+     *  @param {Matrix4|Vector3} matrix - Transform, or just an offset to move by
+     *  @return {GLTFModel} */
+    transform(matrix)
+    {
+        for (const part of this.parts)
+            part.mesh.transform(matrix);
+        this.mesh.transform(matrix);
+        return this;
+    }
+
+    /** Make an object at a position with a child per part, so each keeps its own texture, color and blending;
+     *  the way to show a model with windows or other see through parts, which the combined mesh draws solid
      *  @param {Vector3} [pos3D]
      *  @return {EngineObject3D} - The root, move and turn it and the parts follow */
     createObject(pos3D=vec3())

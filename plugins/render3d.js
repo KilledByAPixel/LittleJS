@@ -212,13 +212,12 @@ function render3DInstanceSlot(mesh, textureInfo)
     }
 
     // room for one more, doubling as the batch grows
-    let data = mesh.instanceData;
-    const k = mesh.instanceCount++ * RENDER3D_INSTANCE_FLOATS;
+    const data = mesh.instanceData, k = mesh.instanceCount++ * RENDER3D_INSTANCE_FLOATS;
     if (!data || data.length < k + RENDER3D_INSTANCE_FLOATS)
     {
         const grown = new Float32Array(max(64 * RENDER3D_INSTANCE_FLOATS, data ? data.length * 2 : 0));
         data && grown.set(data);
-        mesh.instanceData = data = grown;
+        mesh.instanceData = grown;
     }
     return k;
 }

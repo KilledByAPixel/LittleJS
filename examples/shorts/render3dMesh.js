@@ -21,6 +21,7 @@ f 5 9 6
 f 7 10 8
 `;
 
+const modelSize = 5;
 let model, modelName = 'house';
 
 function gameInit()
@@ -28,14 +29,16 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky();
     render3D.shadows = true;
+    // the shadow map covers just the model, so it is sharp at this distance
+    render3D.shadowMapSize = 2048;
+    render3D.shadowRange = modelSize * 2;
+    render3D.shadowCenter = vec3(0, modelSize/2, 0);
     new CameraControl3D(vec3(0,1,0), 10, .4);
 
     // checkerboard floor and the model
     const checker = (x, z)=> hsl(0, 0, (x+z)/2&1 ? .6 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(20), 10, checker));
-    model = new EngineObject3D(vec3());
-    model.angleVelocity3D = vec3(0, .005);
-    setModel(parseOBJ(houseOBJ), hsl(.1,.6,.7));
+    setModel(parseOBJ(houseOBJ));
 
     // drop an .obj, .glb or .gltf file on the page to see it
     const stop = (e)=> e.preventDefault();
@@ -48,13 +51,12 @@ function gameInit()
         try
         {
             if (/\.obj$/i.test(file.name))
-                setModel(parseOBJ(await file.text()), hsl(.1,.6,.7));
+                setModel(parseOBJ(await file.text()));
             else
             {
                 // a glb has everything in one file; a gltf needs its
                 // buffers and images inside it as data uris to work dropped
-                const gltf = await parseGLTF(await file.arrayBuffer());
-                setModel(gltf.mesh, WHITE, gltf.textureInfo);
+                setModel(await parseGLTF(await file.arrayBuffer()));
             }
             modelName = file.name;
         }
@@ -62,14 +64,17 @@ function gameInit()
     });
 }
 
-// center the model, set scale and position, and give it its color and texture
-function setModel(mesh, color, textureInfo)
+// show a Mesh or a GLTFModel: centered, scaled to size, standing on the floor
+function setModel(loaded)
 {
-    model.setMesh(mesh.center().fit(5));
-    model.pos3D = vec3(0, -mesh.getBounds().min.y);
-    model.color = color;
-    model.tileInfo = textureInfo &&
-        new TileInfo(vec2(), textureInfo.size, textureInfo, 0, 0);
+    model?.destroy(true);
+    loaded.center().fit(modelSize);
+    const pos = vec3(0, -loaded.getBounds().min.y, 0);
+    if (loaded instanceof GLTFModel)
+        model = loaded.createObject(pos); // a child per part, windows and all
+    else
+        model = new EngineObject3D(pos, loaded, undefined, hsl(.1,.6,.7));
+    model.angleVelocity3D = vec3(0, .005);
 }
 
 function gameUpdate()
@@ -77,7 +82,8 @@ function gameUpdate()
     if (keyWasPressed('Space')) // space toggles shading
     {
         render3D.smoothShading = !render3D.smoothShading;
-        model.mesh.computeNormals(render3D.smoothShading);
+        for (const o of [model, ...model.children])
+            o.mesh?.computeNormals(render3D.smoothShading);
     }
 }
 

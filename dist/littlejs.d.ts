@@ -7962,7 +7962,25 @@ declare module "littlejsengine" {
         /** @property {TextureInfo|undefined} - The texture to draw mesh with, when every part uses the same one
          *  @type {TextureInfo|undefined} */
         textureInfo: TextureInfo | undefined;
-        /** Make an object at a position with a child per part, so each keeps its own texture, color and blending
+        /** The box around every part
+         *  @return {{min: Vector3, max: Vector3}} */
+        getBounds(): {
+            min: Vector3;
+            max: Vector3;
+        };
+        /** Move every part so the center of the model's bounds is on the origin, like Mesh.center
+         *  @return {GLTFModel} */
+        center(): GLTFModel;
+        /** Scale every part evenly so the model's largest extent is a size, like Mesh.fit, for models of unknown units
+         *  @param {number} [size]
+         *  @return {GLTFModel} */
+        fit(size?: number): GLTFModel;
+        /** Move, turn or scale every part and the combined mesh together
+         *  @param {Matrix4|Vector3} matrix - Transform, or just an offset to move by
+         *  @return {GLTFModel} */
+        transform(matrix: Matrix4 | Vector3): GLTFModel;
+        /** Make an object at a position with a child per part, so each keeps its own texture, color and blending;
+         *  the way to show a model with windows or other see through parts, which the combined mesh draws solid
          *  @param {Vector3} [pos3D]
          *  @return {EngineObject3D} - The root, move and turn it and the parts follow */
         createObject(pos3D?: Vector3): EngineObject3D;

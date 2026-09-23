@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseGLTF, GLTFModel, GLTFPart, vec3, RED, EngineObject3D, engineObjects } from '../dist/littlejs.esm.js';
+import { parseGLTF, GLTFModel, GLTFPart, vec3, EngineObject3D, engineObjects } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-4, `${msg || ''} ${a} vs ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x, 'x'); near(v.y, y, 'y'); near(v.z, z, 'z'); };
@@ -109,6 +109,14 @@ test('a model makes an object with a child per part, and reads strips, fans and 
         nearVec(root.children[1].getWorldPos3D(), 5, 0, 0);
     }
     finally { root.destroy(true); engineObjects.length = 0; }
+
+    // center and fit move every part and the combined mesh together
+    const fitted = await parseGLTF(withDataUri);
+    fitted.center().fit(2);
+    const bounds = fitted.getBounds(), extent = bounds.max.subtract(bounds.min);
+    near(Math.max(extent.x, extent.y, extent.z), 2);
+    near(bounds.min.x + bounds.max.x, 0); near(bounds.min.y + bounds.max.y, 0);
+    nearVec(fitted.parts[0].mesh.points[0], fitted.mesh.points[0].x, fitted.mesh.points[0].y, fitted.mesh.points[0].z);
 
     // a strip of four vertices with interleaved position and a normalized byte color, and a fan over the same vertices
     const data = new ArrayBuffer(4 * 16), dv = new DataView(data);
