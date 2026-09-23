@@ -13,7 +13,6 @@
  * - Particle effect system
  * - Medal system tracks and displays achievements
  * - Debug tools and debug rendering system
- * - Post processing effects
  * - Call engineInit() to start it up!
  * @namespace Engine
  */

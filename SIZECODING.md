@@ -188,11 +188,11 @@ In LittleJS, measured on the starter:
 
 | flag folded off | saving | what goes |
 |---|---:|---|
-| `soundEnable` | 794 | all audio: ZzFX sounds, music, speech |
-| `glEnable` | 792 | WebGL sprite batching, falls back to canvas 2D |
-| `enablePhysicsSolver` | 488 | collision response, object and tile |
-| `gamepadsEnable` | 247 | gamepad input |
-| `touchInputEnable` | 152 | touch input and the on-screen gamepad |
+| `soundEnable` | 786 | all audio: ZzFX sounds, music, speech |
+| `glEnable` | 778 | WebGL sprite batching, falls back to canvas 2D |
+| `enablePhysicsSolver` | 477 | collision response, object and tile |
+| `gamepadsEnable` | 237 | gamepad input |
+| `touchInputEnable` | 140 | touch input and the on-screen gamepad |
 | all five | **~2,500** | a silent keyboard-and-mouse game in canvas 2D |
 
 That is about 19% of the budget. Query functions the game calls itself,

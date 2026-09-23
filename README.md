@@ -10,7 +10,7 @@
 
 [LittleJS](https://github.com/KilledByAPixel/LittleJS) is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance. This branch is a size-optimized fork for size coding competitions like [JS13K](https://js13kgames.com/). It exists so the main line engine can keep growing while this version stays small enough to keep minifying. Many JS13K games have been made with LittleJS, including several top 10 finishers. See [the list below](#-js13k-games-made-with-littlejs).
 
-**The starter builds to a ~7700 byte zip against the 13312 byte limit.** That is 58% of the budget with the whole engine included: WebGL rendering, physics, particles, tile layers, sound, medals and input, plus the `tiles.png` sprite sheet in the zip. Turning off features you do not use frees up nearly 2KB more. Thanks to the way compression works, the remaining 40% goes a long way!
+**The starter builds to a ~7700 byte zip against the 13312 byte limit.** That is 58% of the budget with the whole engine included: WebGL rendering, physics, particles, tile layers, sound, medals and input, plus the `tiles.png` sprite sheet in the zip. Turning off features you do not use frees up about 2.5KB more. Thanks to the way compression works, the remaining 40% goes a long way!
 
 Games written here are meant to port back to regular LittleJS after the compo. See [Migrating to main LittleJS](#-migrating-to-main-littlejs).
 
@@ -95,11 +95,11 @@ const FEATURES =
 
 | Disabled | Saving | What you lose |
 |---|---:|---|
-| `touch` | 152 | Touch input and the on-screen touch gamepad |
-| `gamepad` | 247 | Gamepad input with multiple controller support |
-| `webgl` | **792** | WebGL sprite batching, rendering falls back to canvas 2D |
-| `sound` | **794** | All audio: ZzFX sounds, music, and speech |
-| `physics` | **488** | All collision response, object vs object and object vs tile |
+| `touch` | 140 | Touch input and the on-screen touch gamepad |
+| `gamepad` | 237 | Gamepad input with multiple controller support |
+| `webgl` | **778** | WebGL sprite batching, rendering falls back to canvas 2D |
+| `sound` | **786** | All audio: ZzFX sounds, music, and speech |
+| `physics` | **477** | All collision response, object vs object and object vs tile |
 | all five | **~2500** | A silent keyboard-and-mouse game drawn with canvas 2D |
 
 Around 2.5KB, roughly 19% of the budget, for a silent keyboard-and-mouse game. Disabling `physics` removes the automatic collision response including tile bouncing, but query functions you call yourself, like `tileCollisionTest` or `getTileCollisionData`, always survive because your game references them.
