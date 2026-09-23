@@ -18886,6 +18886,10 @@ function render3DMatrix(matrix)
 // the matrix that keeps normals pointing out when an object is scaled unevenly
 function render3DNormalMatrix(matrix) { return matrix.copy().invert().transpose(); }
 
+// whether a matrix mirrors, its determinant negative, so what it moves reads the other way round
+function render3DMirrors(m)
+{ return m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]) < 0; }
+
 // a column of a matrix as a direction: 0 is the right axis, 4 up, 8 back
 function render3DAxis(m, i) { return vec3(m[i], m[i+1], m[i+2]); }
 
@@ -19459,7 +19463,7 @@ class Render3DPlugin
         // determinant, turns the winding around so the other one is its front
         const cullBackFaces = this.cullBackFaces, mirrored = this.mirrored;
         this.cullBackFaces = !mesh.doubleSided;
-        this.mirrored = m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]) < 0;
+        this.mirrored = render3DMirrors(m);
         if (!this.blend && this.depthTest && (mesh.instanced ?? this.instancing)) // the stage draws the batch at its end
             render3DInstance(mesh, matrix, tileInfo, color);
         else
@@ -20802,6 +20806,21 @@ function render3DPolygonStrip(points)
     return strip;
 }
 
+// turn every triangle of a mesh the other way round, the normals left alone: an index list reads each one in the
+// other order, and a strip gets one extra point at each end, which flips every triangle and keeps the count even
+function render3DFlipWinding(mesh)
+{
+    if (mesh.indices)
+        return void render3DFlipTriangles(mesh.indices);
+    for (const key of ['points', 'normals', 'uvs', 'colors'])
+    {
+        const a = mesh[key];
+        if (a.length)
+            a.unshift(a[0]), a.push(a[a.length - 1]);
+    }
+    mesh.vertexKeys = undefined;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 // frees the GPU buffer of a mesh that is garbage collected without dispose, some time after it goes; it holds the
@@ -20985,19 +21004,26 @@ class Mesh
     combine(mesh, matrix=RENDER3D_IDENTITY, color=WHITE)
     {
         matrix = render3DMatrix(matrix); // most parts only need moving into place
-        const normalMatrix = render3DNormalMatrix(matrix);
-        let part = mesh;
+        const normalMatrix = render3DNormalMatrix(matrix), mirrors = render3DMirrors(matrix.m);
+        let part = mesh, order;
         if (this.indices || mesh.indices)
         {
             // one of them is indexed, so both are: the part as a copy if it is a strip
             this.toIndexed();
             part = mesh.indices ? mesh : new Mesh().combine(mesh).toIndexed();
-            const offset = this.points.length;
-            for (const i of part.indices)
-                this.indices.push(i + offset);
+            const offset = this.points.length, indices = part.indices;
+            for (let t = 0; t < indices.length; t += 3) // a mirror turns every triangle the other way round
+                this.indices.push(indices[t] + offset, indices[t + (mirrors ? 2 : 1)] + offset, indices[t + (mirrors ? 1 : 2)] + offset);
         }
-        for (let i = 0; i < part.points.length; ++i)
+        else if (mirrors && part.points.length)
         {
+            // a strip reads the other way round with one more point at each end, as in flipNormals
+            const last = part.points.length - 1;
+            order = [0, ...part.points.keys(), last];
+        }
+        for (let j = 0, count = order ? order.length : part.points.length; j < count; ++j)
+        {
+            const i = order ? order[j] : j;
             this.points.push(matrix.transformPoint(part.points[i]));
             this.normals.push(normalMatrix.transformDirection(part.normals[i] || RENDER3D_DEFAULT_NORMAL).normalize());
             this.uvs.push((part.uvs[i] || RENDER3D_DEFAULT_UV).copy());
@@ -21033,6 +21059,7 @@ class Mesh
             // a mesh built by hand may have no normals yet, and then there is nothing to turn
             this.normals[i] &&= normalMatrix.transformDirection(this.normals[i]).normalize();
         }
+        render3DMirrors(matrix.m) && render3DFlipWinding(this); // a mirror would leave the faces pointing in
         this.dirty = true;
         return this;
     }
@@ -21041,21 +21068,7 @@ class Mesh
      *  @return {Mesh} */
     flipNormals()
     {
-        if (this.indices)
-        {
-            render3DFlipTriangles(this.indices); // every triangle read the other way round
-        }
-        else
-        {
-            // one extra point at each end flips which way every triangle faces, and keeps the count even
-            for (const key of ['points', 'normals', 'uvs', 'colors'])
-            {
-                const a = this[key];
-                if (a.length)
-                    a.unshift(a[0]), a.push(a[a.length - 1]);
-            }
-            this.vertexKeys = undefined;
-        }
+        render3DFlipWinding(this);
         this.normals = this.normals.map(n=> n.scale(-1));
         this.dirty = true;
         return this;
@@ -23622,6 +23635,10 @@ async function parseGLTF(data, baseUrl='')
         json = JSON.parse(json);
     if (!json.asset || !String(json.asset.version).startsWith('2'))
         throw new Error('only glTF 2.0 is read'); // a file problem, not a code one, so it throws in every build
+    // compressed geometry has no plain accessors to read; the other extensions add to what is here, and can be left out
+    for (const name of json.extensionsRequired || [])
+        if (name === 'KHR_draco_mesh_compression' || name === 'EXT_meshopt_compression')
+            throw new Error(`glTF with ${name} is not read, export it uncompressed`);
 
     // the buffers: the GLB's own, a data uri, or a file beside the model
     const buffers = await Promise.all((json.buffers || []).map((buffer, i)=>
@@ -23640,7 +23657,9 @@ async function parseGLTF(data, baseUrl='')
         if (!glContext || typeof createImageBitmap == 'undefined') return;
         try
         {
-            const image = json.images[texture.source], sampler = json.samplers?.[texture.sampler] || {};
+            // a WebP or AVIF image is named by its extension, the browser decodes those like any other
+            const source = texture.source ?? texture.extensions?.EXT_texture_webp?.source ?? texture.extensions?.EXT_texture_avif?.source;
+            const image = json.images[source], sampler = json.samplers?.[texture.sampler] || {};
             let blob;
             if (image.uri)
                 blob = await gltfFetch(image.uri, baseUrl).then(r=> r.blob());
@@ -23771,9 +23790,11 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     mesh.doubleSided = !!material.doubleSided;
     // glass is usually made with transmission, an opaque white material the light passes through, which would
     // draw solid white; it comes in blended instead, a faint tint of its color that lets the rest show through
+    // only a blending material reads its alpha, an opaque or masked one is solid whatever the factor says
     const transmission = material.extensions?.KHR_materials_transmission?.transmissionFactor || 0;
-    return new GLTFPart(name, mesh, rgb(factor[0], factor[1], factor[2], factor[3] * (1 - .8 * transmission)),
-        pbr.baseColorTexture ? textures[pbr.baseColorTexture.index] : undefined, material.alphaMode === 'BLEND' || transmission > 0);
+    const blend = material.alphaMode === 'BLEND', alpha = (blend ? factor[3] : 1) * (1 - .8 * transmission);
+    return new GLTFPart(name, mesh, rgb(factor[0], factor[1], factor[2], alpha),
+        pbr.baseColorTexture ? textures[pbr.baseColorTexture.index] : undefined, blend || transmission > 0);
 }
 
 /**

@@ -166,3 +166,20 @@ test('glass made with KHR_materials_transmission comes in see through, a faint t
     assert.equal(none.transparent, false, 'no transmission stays opaque');
     near(none.color.a, 1);
 });
+
+test('a mirrored node keeps its faces pointing out, an opaque material ignores its alpha, compressed files say why they fail', async () =>
+{
+    const mirrored = { ...withDataUri, nodes: [{ mesh: 0, scale: [-1, 1, 1] }], scenes: [{ nodes: [0] }] };
+    const [part] = (await parseGLTF(mirrored)).parts;
+    assert.deepEqual(part.mesh.indices, [0, 2, 1, 0, 3, 2], 'every triangle turned the other way round');
+
+    const faded = (alphaMode)=> parseGLTF({ ...withDataUri, materials: [{ alphaMode, pbrMetallicRoughness: { baseColorFactor: [1, 0, 0, .5] } }] });
+    near((await faded('OPAQUE')).parts[0].color.a, 1, 'opaque is opaque whatever the alpha');
+    near((await faded(undefined)).parts[0].color.a, 1, 'opaque is the default');
+    near((await faded('MASK')).parts[0].color.a, 1, 'a mask cuts by the texture');
+    near((await faded('BLEND')).parts[0].color.a, .5, 'blend keeps it');
+
+    await assert.rejects(parseGLTF({ ...withDataUri, extensionsRequired: ['KHR_draco_mesh_compression'] }), /KHR_draco_mesh_compression/);
+    await assert.rejects(parseGLTF({ ...withDataUri, extensionsRequired: ['EXT_meshopt_compression'] }), /EXT_meshopt_compression/);
+    await assert.doesNotReject(parseGLTF({ ...withDataUri, extensionsRequired: ['KHR_materials_transmission', 'EXT_texture_webp'] }));
+});

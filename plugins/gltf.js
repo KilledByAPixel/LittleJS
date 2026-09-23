@@ -157,6 +157,10 @@ async function parseGLTF(data, baseUrl='')
         json = JSON.parse(json);
     if (!json.asset || !String(json.asset.version).startsWith('2'))
         throw new Error('only glTF 2.0 is read'); // a file problem, not a code one, so it throws in every build
+    // compressed geometry has no plain accessors to read; the other extensions add to what is here, and can be left out
+    for (const name of json.extensionsRequired || [])
+        if (name === 'KHR_draco_mesh_compression' || name === 'EXT_meshopt_compression')
+            throw new Error(`glTF with ${name} is not read, export it uncompressed`);
 
     // the buffers: the GLB's own, a data uri, or a file beside the model
     const buffers = await Promise.all((json.buffers || []).map((buffer, i)=>
@@ -175,7 +179,9 @@ async function parseGLTF(data, baseUrl='')
         if (!glContext || typeof createImageBitmap == 'undefined') return;
         try
         {
-            const image = json.images[texture.source], sampler = json.samplers?.[texture.sampler] || {};
+            // a WebP or AVIF image is named by its extension, the browser decodes those like any other
+            const source = texture.source ?? texture.extensions?.EXT_texture_webp?.source ?? texture.extensions?.EXT_texture_avif?.source;
+            const image = json.images[source], sampler = json.samplers?.[texture.sampler] || {};
             let blob;
             if (image.uri)
                 blob = await gltfFetch(image.uri, baseUrl).then(r=> r.blob());
@@ -306,7 +312,9 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     mesh.doubleSided = !!material.doubleSided;
     // glass is usually made with transmission, an opaque white material the light passes through, which would
     // draw solid white; it comes in blended instead, a faint tint of its color that lets the rest show through
+    // only a blending material reads its alpha, an opaque or masked one is solid whatever the factor says
     const transmission = material.extensions?.KHR_materials_transmission?.transmissionFactor || 0;
-    return new GLTFPart(name, mesh, rgb(factor[0], factor[1], factor[2], factor[3] * (1 - .8 * transmission)),
-        pbr.baseColorTexture ? textures[pbr.baseColorTexture.index] : undefined, material.alphaMode === 'BLEND' || transmission > 0);
+    const blend = material.alphaMode === 'BLEND', alpha = (blend ? factor[3] : 1) * (1 - .8 * transmission);
+    return new GLTFPart(name, mesh, rgb(factor[0], factor[1], factor[2], alpha),
+        pbr.baseColorTexture ? textures[pbr.baseColorTexture.index] : undefined, blend || transmission > 0);
 }

@@ -3270,3 +3270,26 @@ test('worldToScreen and screenToRay are opposites, on the main canvas or any oth
     near(big.x, small.x * 2);
     near(big.y, small.y * 2);
 });
+
+test('a mirroring transform or combine keeps the faces pointing out, the winding turned with the points', () =>
+{
+    const mirror = Matrix4.scaling(vec3(-1, 1, 1));
+    assertOutward(buildBox().transform(mirror), 'strip box mirrored');
+    assertOutward(buildBox().toIndexed().transform(mirror), 'indexed box mirrored');
+    assertOutward(buildSphere(1, 8, 4).transform(Matrix4.scaling(vec3(-1, -1, -1))), 'sphere through the origin');
+    assertOutward(buildBox().transform(Matrix4.scaling(vec3(-1, -1, 1))), 'two mirrors are a turn');
+    assertOutward(new Mesh().combine(buildBox(), mirror), 'strip combined mirrored');
+    assertOutward(new Mesh().combine(buildBox().toIndexed(), mirror), 'indexed combined mirrored');
+    // a mirrored part after a plain one, and a plain one after it, each keeps its own faces
+    const both = new Mesh().combine(buildBox(), vec3(-2, 0, 0)).combine(buildBox(), buildMatrix(vec3(2, 0, 0), undefined, vec3(-1, 1, 1)))
+        .combine(buildBox(), vec3(0, 2, 0));
+    const faces = both.getTriangles(), p = both.points;
+    for (let t = 0; t < faces.indices.length; t += 3)
+    {
+        // what upload sends reads clockwise from the front, so the cross product points in
+        const [a, b, c] = [0, 1, 2].map(j=> p[faces.vertices[faces.indices[t + j]]]);
+        const n = b.subtract(a).cross(c.subtract(a)), center = a.add(b).add(c).scale(1/3);
+        const boxCenter = center.x < -1 ? vec3(-2, 0, 0) : center.x > 1 ? vec3(2, 0, 0) : vec3(0, 2, 0);
+        assert.ok(n.dot(center.subtract(boxCenter)) < 0, `triangle ${t / 3} of the three boxes winds inward`);
+    }
+});

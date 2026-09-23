@@ -1174,7 +1174,7 @@ mesh.indices                         // the triangles of an indexed mesh, undefi
 mesh.combine(otherMesh, matrix, color)        // append a transformed, tinted copy, to build one shape out of several;
                                               // matrix can be a vec3 when the part only needs moving into place
 mesh.scaleUVs(scale)                          // repeat a wrapping texture across the mesh, a vec2 or a number
-mesh.transform(matrix)                        // move every vertex in place
+mesh.transform(matrix)                        // move every vertex in place, a mirror turns the faces too
 mesh.flipNormals()                            // turn it inside out, for rooms and domes seen from within
 mesh.setColor(color)                          // every vertex color
 mesh.computeNormals(smooth=false)             // derive normals from the triangles
@@ -1252,7 +1252,8 @@ await loadOBJ(url, smooth) // fetch then parse, in an async gameInit; chain .cen
                            // units
 
 // glTF models - the glTF plugin, .gltf with its files beside it or .glb in one file; static meshes with their node
-// placement, vertex colors, material colors and base color textures; no skins, animations or morph targets
+// placement, vertex colors, material colors and base color textures; no skins, animations or morph targets, and
+// no Draco or meshopt compressed geometry, which throws saying so
 const model = await loadGLTF(url)   // a GLTFModel, in an async gameInit; or await parseGLTF(data, baseUrl) on bytes or
                                      // JSON you already have
 model.parts                          // one GLTFPart per primitive of every node: name, mesh in model space, color,
