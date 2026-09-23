@@ -97,8 +97,8 @@ class EngineObject
         // parent child system
         /** @property {EngineObject} - Parent of object if in local space  */
         this.parent = undefined;
-        /** @property {Vector2}      - Local position if child */
-        this.localPos = vec2();
+        /** @property {Vector2|undefined} - Position relative to the parent, only while attached to one */
+        this.localPos = undefined;
         /** @property {Number}       - Local angle if child  */
         this.localAngle = 0;
 
@@ -147,8 +147,15 @@ class EngineObject
             this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
         }
 
-        // apply physics
-        const oldPos = this.pos.copy();
+        // physics sanity checks
+        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
+        ASSERT(this.damping >= 0 && this.damping <= 1);
+
+        // apply physics; only collision response needs where the object was, so only then is it copied
+        // - particles are engine objects here, with mass for gravity but no collision by default,
+        //   so testing the collision flags too is what spares them a vector every frame
+        // - every read of oldPos is inside the collideSolidObjects or collideTiles block below
+        const oldPos = enablePhysicsSolver && this.mass && (this.collideSolidObjects || this.collideTiles) && this.pos.copy();
         this.velocity.x *= this.damping;
         this.velocity.y *= this.damping;
         if (this.mass) // don't apply gravity to static objects
@@ -160,10 +167,8 @@ class EngineObject
         this.pos.y += this.velocity.y;
         this.angle += this.angleVelocity *= this.angleDamping;
 
-        // physics sanity checks
-        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
-        ASSERT(this.damping >= 0 && this.damping <= 1);
-        if (!enablePhysicsSolver || !this.mass) // don't do collision for static objects
+        // don't do collision for static objects or if solver disabled
+        if (!enablePhysicsSolver || !this.mass)
             return;
 
         const wasMovingDown = this.velocity.y < 0;

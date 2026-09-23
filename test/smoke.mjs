@@ -104,6 +104,16 @@ function gameInit()
     particle.velocity = vec2(.1, 0);
     particle.update();
     if (particle.pos.x <= px) throw 'particle physics not applied';
+
+    // a particle that cannot collide must not copy its old position each frame
+    // - particles have mass for gravity, so a mass-only check would still copy,
+    //   which is what main's version does and why this branch tests the flags
+    let copies = 0;
+    const realCopy = Vector2.prototype.copy;
+    Vector2.prototype.copy = function() { ++copies; return realCopy.call(this); };
+    for (let i = 10; i--;) particle.update();
+    Vector2.prototype.copy = realCopy;
+    if (copies) throw 'a non-colliding particle copied its position ' + copies + ' times in 10 updates';
     emitter.destroy();
     if (!emitter.destroyed) throw 'emitter destroy failed';
 
@@ -115,6 +125,27 @@ function gameInit()
 
     // blend mode uses main's name
     if (typeof setAdditiveBlendMode != 'function') throw 'setAdditiveBlendMode missing';
+
+    // physics through update(): a falling object lands on a tile floor
+    // - collision response reads oldPos, which is only copied when the solver runs
+    initTileCollision(vec2(10, 10));
+    for (let x = 0; x < 10; x++) setTileCollisionData(vec2(x, 2));
+    setGravity(vec2(0, -.02));
+    const faller = new EngineObject(vec2(5, 6), vec2(1));
+    faller.setCollision();
+    faller.mass = 1;
+    for (let i = 0; i < 200; i++) faller.update();
+    setGravity(vec2());
+    if (!(faller.pos.y > 3 && faller.pos.y < 3.6)) throw 'faller should land on the floor, y ' + faller.pos.y;
+
+    // localPos only exists on a child, and a child follows a rotating parent
+    const parent = new EngineObject(vec2(10, 10));
+    const child = new EngineObject;
+    if (child.localPos !== undefined) throw 'localPos should start undefined';
+    parent.addChild(child, vec2(2, 0));
+    parent.angle = PI/2;
+    parent.updateTransforms();
+    if (abs(child.pos.x - 10) > 1e-9 || abs(child.pos.y - 8) > 1e-9) throw 'child should follow its parent, got ' + child.pos;
 
     console.log('ENGINE CHECKS PASSED');
 }
