@@ -91,6 +91,17 @@ function setPaused(isPaused=true) { paused = isPaused; }
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
+
+// the pairs of objects asked about a collision this update and left overlapping, asker then other, so the other's own
+// physics does not ask again
+const engineObjectsCollidePairs = [];
+function engineObjectsCollidePairAsked(asker, other)
+{
+    for (let i = 0; i < engineObjectsCollidePairs.length; i += 2)
+        if (engineObjectsCollidePairs[i] === asker && engineObjectsCollidePairs[i+1] === other)
+            return true;
+    return false;
+}
 let engineInitialized = false; // engineInit ran, with or without a canvas
 let engineObjectsUpdateCount = 0; // passes of engineObjectsUpdate so far, how a child knows it moved this pass
 const engineChildStack = []; // the children being updated, taken off the live lists so one leaving does not skip the next
@@ -222,10 +233,11 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         timeReal += frameTimeDeltaMS * debugScale / 1e3;
         const combinedScale = timeScale * debugScale;
         frameTimeDeltaMS *= combinedScale;
-        // when paused tick on unscaled time so the pause update rate stays
-        // fixed instead of following however fast the display refreshes
-        frameTimeBufferMS += paused ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
-        frameTimeBufferMS = min(frameTimeBufferMS, 50 * (paused ? 1 : max(1, combinedScale))); // clamp min framerate
+        // paused or a time scale of 0 is frozen: it ticks on unscaled time, so the update rate stays fixed instead of
+        // following however fast the display refreshes, and gameUpdatePost and input still run to leave it
+        const frozen = paused || !combinedScale;
+        frameTimeBufferMS += frozen ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
+        frameTimeBufferMS = min(frameTimeBufferMS, 50 * (frozen ? 1 : max(1, combinedScale))); // clamp min framerate
 
         // apply time delta smoothing, improves smoothness of framerate in some browsers
         let wasUpdated = false, deltaSmooth = 0;
@@ -239,18 +251,18 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // update multiple frames if necessary in case of slow framerate
         for (; frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
         {
-            // increment frame and update time, paused does not advance time
-            if (!paused)
+            // increment frame and update time, frozen does not advance time
+            if (!frozen)
                 time = frame++ / frameRate;
 
-            // update game and objects, when paused update everything except them
+            // update game and objects, when frozen update everything except them
             wasUpdated = true;
             engineUpdateCanvas();
             inputUpdate();
-            if (!paused)
+            if (!frozen)
                 gameUpdate();
             pluginList.forEach(plugin=>plugin.update?.());
-            if (paused)
+            if (frozen)
             {
                 // update object transforms even when paused
                 for (const o of engineObjects)
@@ -506,7 +518,8 @@ function engineUpdateCanvas()
         mainContext.fillStyle = BLACK.toString();
     }
 
-    // set default line join and cap
+    // set default line join and cap, round on purpose: it looks better, suits text and keeps sharp corners from
+    // spiking far out; WebGL outlines are square and mitered for speed, the two are not meant to match
     mainContext.lineJoin = 'round';
     mainContext.lineCap  = 'round';
 }
@@ -546,6 +559,7 @@ function engineStep(frames=1)
 function engineObjectsUpdate()
 {
     ++engineObjectsUpdateCount;
+    engineObjectsCollidePairs.length = 0;
     // get list of solid objects for physics optimization
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 

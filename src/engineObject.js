@@ -230,10 +230,18 @@ class EngineObject
                 // check collision
                 if (!this.isOverlappingObject(o)) continue;
 
+                // each moving object checks its own contacts, so a pair the other one already asked about this frame
+                // and left overlapping, ignored or only nudged apart, is not asked twice
+                if (engineObjectsCollidePairAsked(o, this)) continue;
+
                 // notify objects of collision and check if should be resolved
                 const collide1 = this.collideWithObject(o);
                 const collide2 = o.collideWithObject(this);
-                if (!collide1 || !collide2) continue;
+                if (!collide1 || !collide2)
+                {
+                    engineObjectsCollidePairs.push(this, o);
+                    continue;
+                }
 
                 if (isOverlapping(oldPos, this.size, o.pos, o.size))
                 {
@@ -245,6 +253,7 @@ class EngineObject
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away other object if not fixed
                         o.velocity = o.velocity.subtract(velocity);
+                    engineObjectsCollidePairs.push(this, o);
 
                     debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
@@ -431,10 +440,9 @@ class EngineObject
     collideWithTile(tileData, pos) { return tileData > 0; }
 
     /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
-     *  - In 2D each moving object tests its own contacts, so a pair of two moving objects that stays overlapping is
-     *    asked twice a frame, once from each side; in 3D a pair is asked once. An object that destroys itself here is
-     *    gone at the end of the frame and is still asked about the pairs left this frame, so a bullet that should hit
-     *    one thing, or a pickup that adds to a score, checks its own destroyed flag first
+     *  - Both objects of a touching pair are asked once a frame, whichever order they update in; an object that
+     *    destroys itself here is gone at the end of the frame and is still asked about the pairs left this frame, so a
+     *    bullet that should hit one thing checks its own destroyed flag first
      *  @param {EngineObject} object - the object to test against
      *  @param {Vector3} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity

@@ -52,7 +52,7 @@ class CarObject extends Box2dObject
         const input = mouseIsDown(0) ? 1 : 
             mouseIsDown(2) ? -1 : keyDirection().x ;
         let s = this.wheels[0].motorJoint.getMotorSpeed();
-        s = input ? clamp(s - input, -maxSpeed, maxSpeed) : 0;
+        s = input ? clamp(s + input, -maxSpeed, maxSpeed) : 0;
         this.wheels[0].motorJoint.setMotorSpeed(s);
         cameraPos.x = this.pos.x;
     }

@@ -43,6 +43,11 @@ let debugKey = 'Escape';
  *  @memberof Debug */
 let debugOverlay = false;
 
+/** Open or close the debug overlay from code, as the debug key does; does nothing in release builds
+ *  @param {boolean} [show]
+ *  @memberof Debug */
+function setDebugOverlay(show=true) { debug && (debugOverlay = !!show); }
+
 // the shadow behind debug text, so it reads over anything: the overlay menu and the mouse text both use it;
 // a smaller blur is tighter and darker, a larger one softer and fainter
 const debugTextShadowColor = '#000', debugTextShadowBlur = 9;

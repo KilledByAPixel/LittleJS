@@ -372,7 +372,7 @@ declare module "littlejsengine" {
     export let cameraScale: number;
     /** Scale applied to engine time, can be used for slow motion or fast forward
      *  - 1 is normal speed, 2 is double speed, 0.5 is half speed
-     *  - 0 freezes everything, gameUpdatePost and input included, use setPaused for a pause the game can leave
+     *  - 0 freezes the game like a pause without setting the paused flag, gameUpdatePost and input still run
      *  - Should be >= 0; stacks multiplicatively with the debug +/- shortcut
      *  @type {number}
      *  @default
@@ -561,6 +561,7 @@ declare module "littlejsengine" {
      *  - setTouchGamepadButtonCount(1) to use face buttons as right analog stick
      *  - Analog stick buttons 10 and 11 are also activated when virtual sticks are touched
      *  - Rendered as a full-viewport HTML/SVG overlay, so controls may sit outside the game canvas
+     *  - It is gamepad 0 once touched; a real gamepad being used takes over and hides it until the screen is touched again
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -689,7 +690,7 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export function setCameraScale(scale: number): void;
     /** Set scale applied to engine time
-     *  - 0 stops the whole update, gameUpdatePost and input too, use setPaused for a pause the game can come back from
+     *  - 0 freezes the game like a pause, gameUpdatePost and input still run so the game can set it back
      *  @param {number} scale - 0 or more
      *  @memberof Settings */
     export function setTimeScale(scale: number): void;
@@ -928,6 +929,10 @@ declare module "littlejsengine" {
      *  @param {string} key
      *  @memberof Debug */
     export function setDebugKey(key: string): void;
+    /** Open or close the debug overlay from code, as the debug key does; does nothing in release builds
+     *  @param {boolean} [show]
+     *  @memberof Debug */
+    export function setDebugOverlay(show?: boolean): void;
     /**
      * LittleJS Math Classes and Functions
      * - Comprehensive math utilities for game development
@@ -1865,6 +1870,12 @@ declare module "littlejsengine" {
          *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE */
         setWrap(wrap?: boolean): void;
     }
+    /** Load a texture at a specific index after engineInit, the images passed to engineInit load this way
+     *  @param {number} textureIndex - Index to store the texture at, an unused one
+     *  @param {string} [src] - Image source path
+     *  @return {Promise} Promise that resolves when texture is loaded
+     *  @memberof Draw */
+    export function loadTexture(textureIndex: number, src?: string): Promise<any>;
     /**
      * SpriteAnimation - Steps a tile through its frames over time: looping, once, or there and back
      * - Driven by the engine time like a Timer, so it pauses with the game and needs no update call
@@ -2261,7 +2272,7 @@ declare module "littlejsengine" {
      *  @param {string}  [font=fontDefault]
      *  @param {string}  [fontStyle]
      *  @param {number}  [maxWidth]
-     *  @param {number}  [angle]
+     *  @param {number}  [angle] - Clockwise, like the other screen space draws
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
     export function drawTextScreen(text: string | number, pos: Vector2, size: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2715,7 +2726,7 @@ declare module "littlejsengine" {
     /** Cancel any ongoing vibration
      *  @memberof Input */
     export function vibrateStop(): void;
-    /** Request to lock the pointer, does not work on touch devices
+    /** Request to lock the pointer, for a mouse; a device with only touch refuses it
      *  @memberof Input */
     export function pointerLockRequest(): void;
     /** Request to unlock the pointer
@@ -3221,10 +3232,9 @@ declare module "littlejsengine" {
          *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
         collideWithTile(tileData: number, pos: Vector2): boolean;
         /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
-         *  - In 2D each moving object tests its own contacts, so a pair of two moving objects that stays overlapping is
-         *    asked twice a frame, once from each side; in 3D a pair is asked once. An object that destroys itself here is
-         *    gone at the end of the frame and is still asked about the pairs left this frame, so a bullet that should hit
-         *    one thing, or a pickup that adds to a score, checks its own destroyed flag first
+         *  - Both objects of a touching pair are asked once a frame, whichever order they update in; an object that
+         *    destroys itself here is gone at the end of the frame and is still asked about the pairs left this frame, so a
+         *    bullet that should hit one thing checks its own destroyed flag first
          *  @param {EngineObject} object - the object to test against
          *  @param {Vector3} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
          *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity
@@ -4594,9 +4604,9 @@ declare module "littlejsengine" {
          *  Centers the dialog on the screen with darkened background
          *  @param {string} [text] - The message to display
          *  @param {Function} [yesCallback] - Called when Yes is clicked
-         *  @param {Function} [noCallback] - Called when No is clicked
+         *  @param {Function} [noCallback] - Called when No is clicked, or the exit key closes it
          *  @param {Vector2} [size] - Size of the confirmation dialog
-         *  @param {string} [exitKey] - Key that can exit the menu
+         *  @param {string} [exitKey] - Key that closes the menu as No
          *  @return {UIObject} The confirmation menu object
          */
         showConfirmDialog(text?: string, yesCallback?: Function, noCallback?: Function, size?: Vector2, exitKey?: string): UIObject;
@@ -5106,6 +5116,7 @@ declare module "littlejsengine" {
      * - A LittleJS object with Box2D physics, dynamic by default
      * - Provides interface for Box2D body and fixture functions
      * - Each object can have multiple fixtures and joints
+     * - Angular values are clockwise like angle: angular velocity, torque, joint angles, limits and motor speeds
      * @extends EngineObject
      * @memberof Box2D
      */
@@ -5230,7 +5241,7 @@ declare module "littlejsengine" {
         /** Gets the linear velocity
          *  @return {Vector2} */
         getLinearVelocity(): Vector2;
-        /** Gets the angular velocity
+        /** Gets the angular velocity, clockwise like angle
          *  @return {number} */
         getAngularVelocity(): number;
         /** Gets the mass
@@ -5258,7 +5269,7 @@ declare module "littlejsengine" {
         /** Sets the linear velocity
          *  @param {Vector2} velocity */
         setLinearVelocity(velocity: Vector2): void;
-        /** Sets the angular velocity
+        /** Sets the angular velocity, clockwise like angle
          *  @param {number} angularVelocity */
         setAngularVelocity(angularVelocity: number): void;
         /** Sets the linear damping
@@ -5326,11 +5337,11 @@ declare module "littlejsengine" {
          *  @param {Vector2} impulse
          *  @param {Vector2} [pos] */
         applyImpulse(impulse: Vector2, pos?: Vector2): void;
-        /** Apply torque to this object
+        /** Apply torque to this object, clockwise like angle
          *  @param {number} torque */
         applyTorque(torque: number): void;
         /** Apply an instantaneous angular impulse. Changes angular velocity by
-         *  impulse / inertia immediately.
+         *  impulse / inertia immediately, clockwise like angle.
          *  @param {number} impulse */
         applyAngularImpulse(impulse: number): void;
         /** Check if this object has any fixtures
@@ -5422,6 +5433,7 @@ declare module "littlejsengine" {
      * Box2D Joint
      * - Base class for Box2D joints
      * - A joint is used to connect objects together
+     * - Angular values are clockwise like angle: joint angles and speeds, limits, motor speeds and torques
      * @memberof Box2D
      */
     export class Box2dJoint {
@@ -5448,7 +5460,7 @@ declare module "littlejsengine" {
          *  @param {number} time
          *  @return {Vector2} */
         getReactionForce(time: number): Vector2;
-        /** Get the reaction torque on bodyB in N*m given a time step
+        /** Get the reaction torque on bodyB in N*m given a time step, clockwise like angle
          *  @param {number} time
          *  @return {number} */
         getReactionTorque(time: number): number;
@@ -5600,10 +5612,10 @@ declare module "littlejsengine" {
         /** Get the reference angle, objectB angle minus objectA angle in the reference state
          *  @return {number} */
         getReferenceAngle(): number;
-        /** Get the current joint angle
+        /** Get the current joint angle, clockwise like angle
          *  @return {number} */
         getJointAngle(): number;
-        /** Get the current joint angle speed in radians per second
+        /** Get the current joint angle speed in radians per second, clockwise like angle
          *  @return {number} */
         getJointSpeed(): number;
         /** Is the joint limit enabled?
@@ -5612,13 +5624,13 @@ declare module "littlejsengine" {
         /** Enable/disable the joint limit
          *  @param {boolean} [enable] */
         enableLimit(enable?: boolean): any;
-        /** Get the lower joint limit
+        /** Get the lower joint limit, clockwise like angle
          *  @return {number} */
         getLowerLimit(): number;
-        /** Get the upper joint limit
+        /** Get the upper joint limit, clockwise like angle
          *  @return {number} */
         getUpperLimit(): number;
-        /** Set the joint limits
+        /** Set the joint limits, clockwise like angle
          *  @param {number} min
          *  @param {number} max */
         setLimits(min: number, max: number): any;
@@ -5628,19 +5640,19 @@ declare module "littlejsengine" {
         /** Enable/disable the joint motor
          *  @param {boolean} [enable] */
         enableMotor(enable?: boolean): any;
-        /** Set the motor speed
+        /** Set the motor speed, clockwise like angle
          *  @param {number} speed */
         setMotorSpeed(speed: number): any;
-        /** Get the motor speed
+        /** Get the motor speed, clockwise like angle
          *  @return {number} */
         getMotorSpeed(): number;
-        /** Set the motor torque
+        /** Set the max motor torque, a magnitude
          *  @param {number} torque */
         setMaxMotorTorque(torque: number): any;
         /** Get the max motor torque
          *  @return {number} */
         getMaxMotorTorque(): number;
-        /** Get the motor torque given a time step
+        /** Get the motor torque given a time step, clockwise like angle
          *  @param {number} time
          *  @return {number} */
         getMotorTorque(time: number): number;
@@ -5650,6 +5662,7 @@ declare module "littlejsengine" {
      * - A gear joint is used to connect two joints together
      * - Either joint can be a revolute or prismatic joint
      * - You specify a gear ratio to bind the motions together
+     * - joint1's angle or translation plus ratio times joint2's stays constant, angles clockwise like angle
      * @extends Box2dJoint
      * @memberof Box2D
      */
@@ -5663,6 +5676,7 @@ declare module "littlejsengine" {
         constructor(objectA: Box2dObject, objectB: Box2dObject, joint1: Box2dJoint, joint2: Box2dJoint, ratio?: number);
         joint1: Box2dJoint;
         joint2: Box2dJoint;
+        ratioSign: number;
         /** Get the first joint
          *  @return {Box2dJoint} */
         getJoint1(): Box2dJoint;
@@ -5702,7 +5716,7 @@ declare module "littlejsengine" {
         /** Get the local joint axis relative to bodyA
          *  @return {Vector2} */
         getLocalAxisA(): Vector2;
-        /** Get the reference angle
+        /** Get the reference angle, objectB angle minus objectA angle in the reference state
          *  @return {number} */
         getReferenceAngle(): number;
         /** Get the current joint translation
@@ -5778,7 +5792,8 @@ declare module "littlejsengine" {
         /** Get the current joint translation
          *  @return {number} */
         getJointTranslation(): number;
-        /** Get the current joint translation speed
+        /** Get the current joint rotation speed in radians per second, clockwise like angle,
+         *  which is what this version of Box2D measures for a wheel joint
          *  @return {number} */
         getJointSpeed(): number;
         /** Is the joint motor enabled?
@@ -5787,19 +5802,19 @@ declare module "littlejsengine" {
         /** Enable/disable the joint motor
          *  @param {boolean} [enable] */
         enableMotor(enable?: boolean): any;
-        /** Set the motor speed
+        /** Set the motor speed, the wheel's turn in radians per second, clockwise like angle
          *  @param {number} speed */
         setMotorSpeed(speed: number): any;
-        /** Get the motor speed
+        /** Get the motor speed, clockwise like angle
          *  @return {number} */
         getMotorSpeed(): number;
-        /** Set the maximum motor torque
+        /** Set the maximum motor torque, a magnitude
          *  @param {number} torque */
         setMaxMotorTorque(torque: number): any;
         /** Get the max motor torque
          *  @return {number} */
         getMaxMotorTorque(): number;
-        /** Get the motor torque for a time step
+        /** Get the motor torque for a time step, clockwise like angle
          *  @param {number} time
          *  @return {number} */
         getMotorTorque(time: number): number;
@@ -5835,7 +5850,7 @@ declare module "littlejsengine" {
         /** Get the local anchor point relative to objectB's origin
          *  @return {Vector2} */
         getLocalAnchorB(): Vector2;
-        /** Get the reference angle
+        /** Get the reference angle, objectB angle minus objectA angle in the reference state
          *  @return {number} */
         getReferenceAngle(): number;
         /** Set the frequency in Hertz
@@ -5943,10 +5958,10 @@ declare module "littlejsengine" {
         /** Get the target linear offset, in frame A, in meters.
          *  @return {Vector2} */
         getLinearOffset(): Vector2;
-        /** Set the target angular offset
+        /** Set the target angular offset, objectB angle minus objectA angle, clockwise like angle
          *  @param {number} offset */
         setAngularOffset(offset: number): void;
-        /** Get the target angular offset
+        /** Get the target angular offset, objectB angle minus objectA angle, clockwise like angle
          *  @return {number} */
         getAngularOffset(): number;
         /** Set the maximum friction force
@@ -6423,6 +6438,8 @@ declare module "littlejsengine" {
         g: number;
         /** @property {number} - A* F-score: G + heuristic */
         f: number;
+        /** @property {number} - A* heuristic: the estimated cost left to the goal, breaks ties between equal F */
+        h: number;
         /** @property {PathFinderNode|null} - Parent for path reconstruction
          *  @type {PathFinderNode|null} */
         parent: PathFinderNode | null;
@@ -8255,9 +8272,9 @@ declare module "littlejsengine" {
      * - Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
      *   GLTFObject that createObject makes; a skinned character's walk is not read
      * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too
-     * - An OPAQUE material still gets holes where its texture's alpha is under half, since the 3D pass cuts those texels
-     *   out of every solid draw, and MASK always cuts at half, alphaCutoff is not read; export a solid texture without
-     *   alpha, or with alpha 1 all over
+     * - An OPAQUE material, the default, ignores its texture's alpha as the format says: a texture only such materials
+     *   use loads with its alpha set to 1, so the 3D pass cuts no holes in it; MASK always cuts at half, alphaCutoff
+     *   is not read
      * - Material and vertex colors are linear in glTF and are converted to sRGB at load, the space textures are in
      * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
      * - Requires the Render3D plugin
@@ -8277,7 +8294,8 @@ declare module "littlejsengine" {
         constructor(name: string, mesh: Mesh, color: Color, textureInfo: TextureInfo | undefined, transparent: boolean);
         /** @property {string} - The node's name, or its mesh's */
         name: string;
-        /** @property {Mesh} - The geometry in model space, the node transforms applied, with the vertex colors the file had */
+        /** @property {Mesh} - The geometry in model space, the node transforms applied, with the vertex colors the file had;
+         *  a node resting at scale 0 is applied at scale 1 there, so an animation can grow it from nothing */
         mesh: Mesh;
         /** @property {Color} - The material's base color, to draw the mesh tinted with */
         color: Color;
@@ -8361,7 +8379,7 @@ declare module "littlejsengine" {
      *  @memberof GLTF */
     export function parseGLTF(data: ArrayBuffer | any | string, baseUrl?: string): Promise<GLTFModel>;
     /** Load a glTF or GLB model, the .bin and images of a .gltf from beside it
-     *  - An OPAQUE material's texture still cuts holes where its alpha is under half, give a solid one alpha 1
+     *  - A texture only OPAQUE materials use loads with its alpha set to 1, so the 3D pass cuts no holes in it
      *  @param {string} url
      *  @return {Promise<GLTFModel>}
      *  @memberof GLTF */

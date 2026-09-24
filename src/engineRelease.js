@@ -38,6 +38,7 @@ function debugText       (){}
 function debugClear      (){}
 function debugScreenshot (){}
 function debugShowErrors(){}
+function setDebugOverlay(){}
 function debugVideoCaptureIsActive(){ return false; }
 function debugVideoCaptureStart (){}
 function debugVideoCaptureStop  (){}

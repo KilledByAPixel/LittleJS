@@ -681,6 +681,9 @@ class FirstPersonCamera3D extends EngineObject3D
     /** Read the mouse and keys and put the camera at the eye, called automatically each frame */
     update()
     {
+        // only a root moves by its own physics, a child follows its parent, so gravity would still pull one that flies
+        ASSERT(!this.fly || !this.parent, 'a flying FirstPersonCamera3D moves on its own, it cannot be a child');
+
         // a click captures the mouse, then it looks around while captured or while a button is held
         if (this.lockPointer && mouseWasPressed(0))
             pointerLockRequest();

@@ -523,9 +523,9 @@ function glSetTextureData(texture, image)
     glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
 }
 
-/** Tells WebGL to create or update the glTexture and start tracking it
+/** Internal: tells WebGL to create or update the glTexture and start tracking it, TextureInfo calls it
  *  @param {TextureInfo} textureInfo
- *  @memberof WebGL */
+ *  @ignore */
 function glRegisterTextureInfo(textureInfo)
 {
     if (headlessMode) return;
@@ -542,9 +542,9 @@ function glRegisterTextureInfo(textureInfo)
         textureInfo.glTexture = glCreateTexture(textureInfo.image, textureInfo.wrap);
 }
 
-/** Tells WebGL to destroy the glTexture and stop tracking it
+/** Internal: tells WebGL to destroy the glTexture and stop tracking it, TextureInfo calls it
  *  @param {TextureInfo} textureInfo
- *  @memberof WebGL */
+ *  @ignore */
 function glUnregisterTextureInfo(textureInfo)
 {
     if (headlessMode) return;

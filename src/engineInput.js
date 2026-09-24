@@ -118,6 +118,27 @@ const inputWASDToArrow = {KeyW:'ArrowUp', KeyS:'ArrowDown', KeyA:'ArrowLeft', Ke
 const inputArrowToWASD = {ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', ArrowRight:'KeyD'};
 const inputKeysHeld = new Set; // the keys physically down, since an arrow's slot is shared with its alias
 let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, cleared with the input so only a new touch presses
+let inputLastTouchTime = -1e9; // when a touch event last came, the mouse events a browser makes from a tap follow it
+
+// is this mouse event one the browser made from a touch, which the touch input already handled
+function inputIsTouchMouseEvent(e)
+{ return e.sourceCapabilities?.firesTouchEvents || performance.now() - inputLastTouchTime < 500; }
+
+// is a real gamepad being used, a button down or a standard stick pushed, only read to hand over from the touch
+// gamepad, a non standard pad's axes may rest at full deflection so they are not trusted here
+function inputRealGamepadUsed()
+{
+    for (const gamepad of inputGetGamepads())
+    {
+        if (!gamepad) continue;
+        for (const button of gamepad.buttons)
+            if (button.pressed) return true;
+        if (gamepad.mapping === 'standard')
+            for (let j = 0; j < 4 && j < gamepad.axes.length; ++j)
+                if (abs(gamepad.axes[j]) > .5) return true;
+    }
+    return false;
+}
 
 // let go of every keyboard key, for when something else takes the keyboard, like a text field
 function inputClearKeyboard()
@@ -366,12 +387,14 @@ function vibrateStop() { vibrate(0); }
 ///////////////////////////////////////////////////////////////////////////////
 // Pointer Lock
 
-/** Request to lock the pointer, does not work on touch devices
+/** Request to lock the pointer, for a mouse; a device with only touch refuses it
  *  @memberof Input */
 function pointerLockRequest()
 {
-    // newer browsers return a promise that rejects when the lock is refused, like just after Esc left it
-    !isTouchDevice && mainCanvas.requestPointerLock?.()?.catch?.(()=>{});
+    // newer browsers return a promise that rejects when the lock is refused, like just after Esc left it,
+    // or on a phone; a touchscreen laptop's mouse can still lock
+    try { mainCanvas.requestPointerLock?.()?.catch?.(()=>{}); }
+    catch { }
 }
 
 /** Request to unlock the pointer
@@ -503,7 +526,8 @@ function inputInit()
     }
     function onMouseDown(e)
     {
-        if (isTouchDevice && touchInputEnable) return;
+        // a mouse on a touchscreen laptop works, only the mouse events a tap makes are left to the touch input
+        if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
 
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
@@ -520,7 +544,7 @@ function inputInit()
     }
     function onMouseUp(e)
     {
-        if (isTouchDevice && touchInputEnable) return;
+        if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
 
         inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
     }
@@ -571,6 +595,7 @@ function inputInit()
         function handleTouch(e)
         {
             if (!touchInputEnable) return;
+            inputLastTouchTime = performance.now();
 
             // fix stalled audio requiring user interaction
             if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
@@ -710,9 +735,14 @@ function inputUpdate()
                 'set touchGamepadLeftStick or touchGamepadLeftButtonCount, not both');
             ASSERT(!touchGamepadRightStick || !touchGamepadButtonCount,
                 'set touchGamepadRightStick or touchGamepadButtonCount, not both');
+        }
 
-            if (!touchGamepadTimer.isSet()) return;
-
+        // the touch gamepad owns gamepad 0 once touched, until a real gamepad is used: that one takes over and the
+        // touch gamepad hides until the screen is touched again
+        if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet() && gamepadsEnable && inputRealGamepadUsed())
+            touchGamepadTimer.unset();
+        if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet())
+        {
             // read virtual analog stick
             gamepadPrimary = 0; // touch gamepad uses index 0
             const sticks = gamepadStickData[0] ?? (gamepadStickData[0] = []);
@@ -754,8 +784,9 @@ function inputUpdate()
                     vibrate(touchGamepadVibration);
             }
             touchGamepadButtonsPressed.length = 0;
+            gamepadButtonsLast[0] = undefined; // a real gamepad 0 starts fresh when it takes over again
 
-            // disable normal gamepads when touch gamepad is active
+            // real gamepads are not read while the touch gamepad is in use
             return;
         }
 

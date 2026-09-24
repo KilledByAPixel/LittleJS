@@ -42,6 +42,8 @@ class PathFinderNode
         this.g = 0;
         /** @property {number} - A* F-score: G + heuristic */
         this.f = 0;
+        /** @property {number} - A* heuristic: the estimated cost left to the goal, breaks ties between equal F */
+        this.h = 0;
         /** @property {PathFinderNode|null} - Parent for path reconstruction
          *  @type {PathFinderNode|null} */
         this.parent = null;
@@ -58,6 +60,7 @@ class PathFinderNode
         this.cost = 0;
         this.g = 0;
         this.f = 0;
+        this.h = 0;
         this.parent = null;
         this.isOpen = false;
         this.isClosed = false;
@@ -242,7 +245,7 @@ class PathFinder
         const searchNodes = this.searchNodes;
         for (const n of searchNodes)
         {
-            n.g = n.f = 0;
+            n.g = n.f = n.h = 0;
             n.parent = null;
             n.isOpen = n.isClosed = false;
         }
@@ -257,13 +260,19 @@ class PathFinder
         {
             // Find the open node with the smallest f score (linear scan).
             // Same as the C++ — fine up to a few thousand nodes.
+            // Equal scores go to the node nearer the goal, so open ground is
+            // crossed nearly straight instead of widening in a band of ties;
+            // the path is just as short, only which of equal paths can change.
+            // Scores are sums of diagonals, so equal is within a hair.
             let bestIndex = 0;
-            let bestF = openList[0].f;
+            let bestF = openList[0].f, bestH = openList[0].h;
             for (let i = 1; i < openList.length; ++i)
             {
-                if (openList[i].f < bestF)
+                const node = openList[i];
+                if (node.f < bestF - 1e-9 || node.f < bestF + 1e-9 && node.h < bestH)
                 {
-                    bestF = openList[i].f;
+                    bestF = node.f;
+                    bestH = node.h;
                     bestIndex = i;
                 }
             }
@@ -322,6 +331,7 @@ class PathFinder
                 const adx = abs(endNode.pos.x - neighbor.pos.x);
                 const ady = abs(endNode.pos.y - neighbor.pos.y);
                 const h = max(adx, ady) + (Math.SQRT2 - 1) * min(adx, ady);
+                neighbor.h = h;
                 neighbor.f = neighbor.g + h * this.heuristicWeight;
             }
         }

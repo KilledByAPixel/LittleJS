@@ -32,7 +32,7 @@ let cameraScale = 32;
 
 /** Scale applied to engine time, can be used for slow motion or fast forward
  *  - 1 is normal speed, 2 is double speed, 0.5 is half speed
- *  - 0 freezes everything, gameUpdatePost and input included, use setPaused for a pause the game can leave
+ *  - 0 freezes the game like a pause without setting the paused flag, gameUpdatePost and input still run
  *  - Should be >= 0; stacks multiplicatively with the debug +/- shortcut
  *  @type {number}
  *  @default
@@ -269,6 +269,7 @@ let touchInputEnable = true;
  *  - setTouchGamepadButtonCount(1) to use face buttons as right analog stick
  *  - Analog stick buttons 10 and 11 are also activated when virtual sticks are touched
  *  - Rendered as a full-viewport HTML/SVG overlay, so controls may sit outside the game canvas
+ *  - It is gamepad 0 once touched; a real gamepad being used takes over and hides it until the screen is touched again
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -425,7 +426,7 @@ function setCameraAngle(angle) { cameraAngle = angle; }
 function setCameraScale(scale) { cameraScale = scale; }
 
 /** Set scale applied to engine time
- *  - 0 stops the whole update, gameUpdatePost and input too, use setPaused for a pause the game can come back from
+ *  - 0 freezes the game like a pause, gameUpdatePost and input still run so the game can set it back
  *  @param {number} scale - 0 or more
  *  @memberof Settings */
 function setTimeScale(scale)

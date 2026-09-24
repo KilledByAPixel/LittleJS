@@ -342,8 +342,8 @@ function oscillate(frequency=1, amplitude=1, t=time, offset=0, type=0)
     const phase = mod(offset + t*frequency, 1);
     let value;
     
-    if (type === 1) // triangle
-        value = 2 * abs(2 * phase - 1) - 1;
+    if (type === 1) // triangle, from 0 up and back like the others
+        value = 1 - 2 * abs(2 * phase - 1);
     else if (type === 2) // square
         value = phase < .5 ? -1 : 1;
     else if (type === 3) // sawtooth

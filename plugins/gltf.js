@@ -7,9 +7,9 @@
  * - Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
  *   GLTFObject that createObject makes; a skinned character's walk is not read
  * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too
- * - An OPAQUE material still gets holes where its texture's alpha is under half, since the 3D pass cuts those texels
- *   out of every solid draw, and MASK always cuts at half, alphaCutoff is not read; export a solid texture without
- *   alpha, or with alpha 1 all over
+ * - An OPAQUE material, the default, ignores its texture's alpha as the format says: a texture only such materials
+ *   use loads with its alpha set to 1, so the 3D pass cuts no holes in it; MASK always cuts at half, alphaCutoff
+ *   is not read
  * - Material and vertex colors are linear in glTF and are converted to sRGB at load, the space textures are in
  * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
  * - Requires the Render3D plugin
@@ -35,7 +35,8 @@ class GLTFPart
     {
         /** @property {string} - The node's name, or its mesh's */
         this.name = name;
-        /** @property {Mesh} - The geometry in model space, the node transforms applied, with the vertex colors the file had */
+        /** @property {Mesh} - The geometry in model space, the node transforms applied, with the vertex colors the file had;
+         *  a node resting at scale 0 is applied at scale 1 there, so an animation can grow it from nothing */
         this.mesh = mesh;
         /** @property {Color} - The material's base color, to draw the mesh tinted with */
         this.color = color;
@@ -92,8 +93,8 @@ class GLTFModel
         this.modelMatrix = new Matrix4;       // what center, fit and transform did to the parts, animation works through it
         /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo */
         this.mesh = new Mesh;
-        for (const part of parts)
-            this.mesh.combine(part.mesh, RENDER3D_IDENTITY, part.color);
+        for (const part of parts) // a part baked at scale 1 from a node resting at 0 goes in as it rests
+            this.mesh.combine(part.mesh, nodeTree?.restPose?.[part.node] || RENDER3D_IDENTITY, part.color);
         // the one texture every part uses, when they all do; a part without one has no uvs into it, so a model
         // that mixes plain and textured parts, or uses several textures, is drawn through createObject instead
         const textures = new Set(parts.map(p=> p.textureInfo));
@@ -240,6 +241,15 @@ class GLTFObject extends EngineObject3D
             const o = new EngineObject3D(vec3(), part.mesh, part.textureInfo, part.color);
             o.transparent = part.transparent;
             o.pixelated = part.pixelated;
+            const rest = model.nodeTree?.restPose?.[part.node];
+            if (rest)
+            {
+                // baked at scale 1 from a node resting at 0, it starts as it rests, where a pose would put it
+                const modelMatrix = model.modelMatrix, m = modelMatrix.copy().multiply(rest).multiply(modelMatrix.copy().invert());
+                o.pos3D = m.getTranslation();
+                o.rotation3D = m.getRotation();
+                o.scale3D = m.getScale();
+            }
             this.addChild(o);
             this.parts.push(o);
         }
@@ -305,7 +315,7 @@ class GLTFObject extends EngineObject3D
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Load a glTF or GLB model, the .bin and images of a .gltf from beside it
- *  - An OPAQUE material's texture still cuts holes where its alpha is under half, give a solid one alpha 1
+ *  - A texture only OPAQUE materials use loads with its alpha set to 1, so the 3D pass cuts no holes in it
  *  @param {string} url
  *  @return {Promise<GLTFModel>}
  *  @memberof GLTF */
@@ -367,6 +377,7 @@ async function parseGLTF(data, baseUrl='')
     // the textures, decoded together first; none without WebGL, and a failed image only logs; only the base color
     // textures are drawn with, so the normal, roughness and other maps are not loaded at all
     const baseColorTextures = new Set((json.materials || []).map(m=> m.pbrMetallicRoughness?.baseColorTexture?.index));
+    const opaqueTextures = gltfOpaqueTextures(json);
     const textures = await Promise.all((json.textures || []).map(async (texture, index)=>
     {
         if (!glContext || typeof createImageBitmap == 'undefined' || !baseColorTextures.has(index)) return;
@@ -383,20 +394,36 @@ async function parseGLTF(data, baseUrl='')
                 const view = json.bufferViews[image.bufferView];
                 blob = new Blob([new Uint8Array(buffers[view.buffer], view.byteOffset || 0, view.byteLength)], {type: image.mimeType});
             }
-            return new TextureInfo(await createImageBitmap(blob), true, sampler.wrapS !== 33071); // CLAMP_TO_EDGE
+            // an OPAQUE material ignores its texture's alpha, which the 3D pass would cut holes by, so a texture only
+            // those use has it set to 1; decoded as stored for that, and a jpeg has no alpha to set
+            const opaque = opaqueTextures.has(index) && blob.type !== 'image/jpeg';
+            const bitmap = opaque ? await createImageBitmap(blob, {premultiplyAlpha: 'none'}).then(gltfOpaqueImage) : await createImageBitmap(blob);
+            return new TextureInfo(bitmap, true, sampler.wrapS !== 33071); // CLAMP_TO_EDGE
         }
         catch (e) { LOG('glTF image not loaded', e); }
     }));
 
     // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it;
     // each node's parent and resting place are kept, so an animation can move a part from where it rests
-    const parts = [], parents = [], restInverse = [];
-    const visit = (index, parentMatrix, parentIndex)=>
+    const parts = [], parents = [], restInverse = [], restPose = [];
+    const visit = (index, parentMatrix, parentIndex, parentRest)=>
     {
         const node = json.nodes[index], local = gltfNodeMatrix(node);
-        const matrix = parentMatrix ? parentMatrix.copy().multiply(local) : local;
+        let matrix = parentMatrix ? parentMatrix.copy().multiply(local) : local;
+        let rest = parentRest && parentRest.copy().multiply(local); // where it rests, when that is not where it is baked
+        if (!node.matrix && node.scale?.includes(0))
+        {
+            // resting at scale 0, like a pop in exported at its first frame, would bake its parts onto a point and
+            // leave no inverse to pose them from; it and its children are baked at scale 1 on that axis instead,
+            // and a pose takes them back to 0, or up from there as an animation says
+            rest ||= matrix;
+            const unscaled = gltfNodeMatrix({...node, scale: node.scale.map(s=> s || 1)});
+            matrix = parentMatrix ? parentMatrix.copy().multiply(unscaled) : unscaled;
+        }
         parents[index] = parentIndex;
         restInverse[index] = matrix.copy().invert();
+        if (rest)
+            restPose[index] = rest.copy().multiply(restInverse[index]); // from where it is baked to where it rests
         if (node.mesh !== undefined)
         {
             const mesh = json.meshes[node.mesh];
@@ -409,7 +436,7 @@ async function parseGLTF(data, baseUrl='')
             }
         }
         for (const child of node.children || [])
-            visit(child, matrix, index);
+            visit(child, matrix, index, rest);
     };
     const scene = json.scenes?.[json.scene ?? 0];
     if (scene)
@@ -432,7 +459,7 @@ async function parseGLTF(data, baseUrl='')
                 times: gltfAccessor(json, buffers, sampler.input).data, values: gltfAccessor(json, buffers, sampler.output).data,
                 components: c.target.path === 'rotation' ? 4 : 3};
         })));
-    return new GLTFModel(parts, animations, {nodes: json.nodes, parents, restInverse});
+    return new GLTFModel(parts, animations, {nodes: json.nodes, parents, restInverse, restPose});
 }
 
 // a node's translation, rotation and scale as arrays to animate, copies so the file's stay as they rest
@@ -440,6 +467,45 @@ function gltfNodeTRS(node)
 {
     return {translation: [...(node.translation || [0, 0, 0])], rotation: [...(node.rotation || [0, 0, 0, 1])],
         scale: [...(node.scale || [1, 1, 1])]};
+}
+
+// the base color textures that only OPAQUE materials use, the default mode, which the format says ignores alpha;
+// one a MASK or BLEND material also uses keeps its alpha for that
+function gltfOpaqueTextures(json)
+{
+    const opaque = new Set, cut = new Set;
+    for (const material of json.materials || [])
+    {
+        const index = material.pbrMetallicRoughness?.baseColorTexture?.index;
+        if (index !== undefined)
+            (!material.alphaMode || material.alphaMode === 'OPAQUE' ? opaque : cut).add(index);
+    }
+    for (const index of cut)
+        opaque.delete(index);
+    return opaque;
+}
+
+// an image decoded without premultiplied alpha, given alpha 1 all over and its colors as they are; read back through
+// a framebuffer, since a 2D canvas would multiply the colors by the alpha and lose those under a clear texel
+function gltfOpaqueImage(image)
+{
+    const gl = glContext, {width, height} = image;
+    if (gl.isContextLost()) return image; // nothing to read back through, it keeps its alpha
+    const texture = gl.createTexture(), framebuffer = gl.createFramebuffer(), bound = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    const data = new Uint8ClampedArray(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data); // row 0 is the image's first row, as uploaded
+    gl.bindFramebuffer(gl.FRAMEBUFFER, bound);
+    gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+    gl.deleteFramebuffer(framebuffer);
+    gl.deleteTexture(texture);
+    for (let i = 3; i < data.length; i += 4)
+        data[i] = 255;
+    image.close();
+    return createImageBitmap(new ImageData(data, width, height));
 }
 
 // write a channel's value at a time into out: its keys held before the first and after the last, stepped, straight

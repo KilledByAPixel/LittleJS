@@ -1080,7 +1080,6 @@ function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, 
     if (maxWidth !== undefined)
         maxWidth *= cameraScale;
     angle -= cameraAngle;
-    angle *= -1;
 
     drawTextScreen(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, angle, context);
 }
@@ -1097,7 +1096,7 @@ function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, 
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
- *  @param {number}  [angle]
+ *  @param {number}  [angle] - Clockwise, like the other screen space draws
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
 function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
@@ -1123,7 +1122,7 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     context.font = fontStyle + ' ' + size + 'px '+ font;
     context.textBaseline = 'middle';
     context.translate(pos.x, pos.y);
-    context.rotate(-angle);
+    context.rotate(angle);
     let yOffset = -(lines.length-1) * size/2; // center vertically
     lines.forEach(line=>
     {
@@ -1137,8 +1136,8 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
 ///////////////////////////////////////////////////////////////////////////////
 // Drawing utilities
 
-/** Load a texture at a specific index
- *  @param {number} textureIndex - Index to store the texture at
+/** Load a texture at a specific index after engineInit, the images passed to engineInit load this way
+ *  @param {number} textureIndex - Index to store the texture at, an unused one
  *  @param {string} [src] - Image source path
  *  @return {Promise} Promise that resolves when texture is loaded
  *  @memberof Draw */
@@ -1453,8 +1452,9 @@ function bakeTintedImage(image, color, additiveColor)
     return workReadCanvas;
 }
 
-/** Helper function to draw an image with color and additive color applied
+/** Internal: draw an image with color and additive color applied in Canvas2D, drawTile calls it
  *  This is slower then normal drawImage when color is applied
+    *  @ignore
     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
     *  @param {HTMLImageElement|OffscreenCanvas} image
     *  @param {number} sx

@@ -76,6 +76,7 @@ function box2dSetDebug(enable) { box2dDebug = enable; }
  * - A LittleJS object with Box2D physics, dynamic by default
  * - Provides interface for Box2D body and fixture functions
  * - Each object can have multiple fixtures and joints
+ * - Angular values are clockwise like angle: angular velocity, torque, joint angles, limits and motor speeds
  * @extends EngineObject
  * @memberof Box2D
  */
@@ -447,9 +448,9 @@ class Box2dObject extends EngineObject
      *  @return {Vector2} */
     getLinearVelocity() { return box2d.vec2From(this.body.GetLinearVelocity()); }
 
-    /** Gets the angular velocity
+    /** Gets the angular velocity, clockwise like angle
      *  @return {number} */
-    getAngularVelocity() { return this.body.GetAngularVelocity(); }
+    getAngularVelocity() { return -this.body.GetAngularVelocity(); } // box2d uses reverse angle
 
     /** Gets the mass
      *  @return {number} */
@@ -501,10 +502,10 @@ class Box2dObject extends EngineObject
     setLinearVelocity(velocity)
     { this.body.SetLinearVelocity(box2dTemp(velocity)); }
 
-    /** Sets the angular velocity
+    /** Sets the angular velocity, clockwise like angle
      *  @param {number} angularVelocity */
     setAngularVelocity(angularVelocity)
-    { this.body.SetAngularVelocity(angularVelocity); }
+    { this.body.SetAngularVelocity(-angularVelocity); }
 
     /** Sets the linear damping
      *  @param {number} damping */
@@ -639,16 +640,16 @@ class Box2dObject extends EngineObject
         this.body.ApplyLinearImpulse(box2dTemp(impulse), box2dTemp(pos, 1));
     }
 
-    /** Apply torque to this object
+    /** Apply torque to this object, clockwise like angle
      *  @param {number} torque */
     applyTorque(torque)
     {
         this.setAwake();
-        this.body.ApplyTorque(torque);
+        this.body.ApplyTorque(-torque);
     }
 
     /** Apply angular acceleration to this object (changes angular velocity by
-     *  acceleration, mass-independent — matches EngineObject semantics).
+     *  acceleration, mass-independent, clockwise — matches EngineObject.applyAngularAcceleration).
      *  @param {number} acceleration */
     applyAngularAcceleration(acceleration)
     {
@@ -660,12 +661,12 @@ class Box2dObject extends EngineObject
     }
 
     /** Apply an instantaneous angular impulse. Changes angular velocity by
-     *  impulse / inertia immediately.
+     *  impulse / inertia immediately, clockwise like angle.
      *  @param {number} impulse */
     applyAngularImpulse(impulse)
     {
         this.setAwake();
-        this.body.ApplyAngularImpulse(impulse);
+        this.body.ApplyAngularImpulse(-impulse);
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -867,6 +868,7 @@ class Box2dRaycastResult
  * Box2D Joint
  * - Base class for Box2D joints 
  * - A joint is used to connect objects together
+ * - Angular values are clockwise like angle: joint angles and speeds, limits, motor speeds and torques
  * @memberof Box2D
  */
 class Box2dJoint
@@ -921,10 +923,10 @@ class Box2dJoint
      *  @return {Vector2} */
     getReactionForce(time)  { return box2d.vec2From(this.box2dJoint.GetReactionForce(1/time));}
 
-    /** Get the reaction torque on bodyB in N*m given a time step
+    /** Get the reaction torque on bodyB in N*m given a time step, clockwise like angle
      *  @param {number} time
      *  @return {number} */
-    getReactionTorque(time) { return this.box2dJoint.GetReactionTorque(1/time);}
+    getReactionTorque(time) { return -this.box2dJoint.GetReactionTorque(1/time);} // box2d uses reverse angle
     
     /** Check if the connected bodies should collide
      *  @return {boolean} */
@@ -1161,17 +1163,17 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @return {Vector2} */
     getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
 
-    /** Get the reference angle, objectB angle minus objectA angle in the reference state 
+    /** Get the reference angle, objectB angle minus objectA angle in the reference state
      *  @return {number} */
-    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+    getReferenceAngle() { return -this.box2dJoint.GetReferenceAngle(); } // box2d uses reverse angle
 
-    /** Get the current joint angle
+    /** Get the current joint angle, clockwise like angle
      *  @return {number} */
-    getJointAngle() { return this.box2dJoint.GetJointAngle(); }
+    getJointAngle() { return -this.box2dJoint.GetJointAngle(); }
 
-    /** Get the current joint angle speed in radians per second
+    /** Get the current joint angle speed in radians per second, clockwise like angle
      *  @return {number} */
-    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+    getJointSpeed() { return -this.box2dJoint.GetJointSpeed(); }
 
     /** Is the joint limit enabled?
      *  @return {boolean} */
@@ -1181,18 +1183,18 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @param {boolean} [enable] */
     enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
 
-    /** Get the lower joint limit
+    /** Get the lower joint limit, clockwise like angle
      *  @return {number} */
-    getLowerLimit() { return this.box2dJoint.GetLowerLimit(); }
+    getLowerLimit() { return -this.box2dJoint.GetUpperLimit(); } // reversed, so Box2D's upper is the lower
 
-    /** Get the upper joint limit
+    /** Get the upper joint limit, clockwise like angle
      *  @return {number} */
-    getUpperLimit() { return this.box2dJoint.GetUpperLimit(); }
+    getUpperLimit() { return -this.box2dJoint.GetLowerLimit(); }
 
-    /** Set the joint limits
+    /** Set the joint limits, clockwise like angle
      *  @param {number} min
      *  @param {number} max */
-    setLimits(min, max) { return this.box2dJoint.SetLimits(min, max); }
+    setLimits(min, max) { return this.box2dJoint.SetLimits(-max, -min); }
 
     /** Is the joint motor enabled?
      *  @return {boolean} */
@@ -1202,15 +1204,15 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @param {boolean} [enable] */
     enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
 
-    /** Set the motor speed
+    /** Set the motor speed, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
 
-    /** Get the motor speed
+    /** Get the motor speed, clockwise like angle
      *  @return {number} */
-    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+    getMotorSpeed() { return -this.box2dJoint.GetMotorSpeed(); }
 
-    /** Set the motor torque
+    /** Set the max motor torque, a magnitude
      *  @param {number} torque */
     setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
 
@@ -1218,10 +1220,10 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
-    /** Get the motor torque given a time step
-     *  @param {number} time 
+    /** Get the motor torque given a time step, clockwise like angle
+     *  @param {number} time
      *  @return {number} */
-    getMotorTorque(time) { return this.box2dJoint.GetMotorTorque(1/time); }
+    getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1230,6 +1232,7 @@ class Box2dRevoluteJoint extends Box2dJoint
  * - A gear joint is used to connect two joints together
  * - Either joint can be a revolute or prismatic joint
  * - You specify a gear ratio to bind the motions together
+ * - joint1's angle or translation plus ratio times joint2's stays constant, angles clockwise like angle
  * @extends Box2dJoint
  * @memberof Box2D
  */
@@ -1243,16 +1246,20 @@ class Box2dGearJoint extends Box2dJoint
      *  @param {number} [ratio] */
     constructor(objectA, objectB, joint1, joint2, ratio=1)
     {
+        // Box2D's angles are reversed and its translations are not, so a revolute joint geared to a prismatic one
+        // needs the ratio reversed too, two of a kind keep it
+        const ratioSign = (joint1 instanceof Box2dRevoluteJoint) === (joint2 instanceof Box2dRevoluteJoint) ? 1 : -1;
         const jointDef = new box2d.instance.b2GearJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
         jointDef.set_joint1(joint1.box2dJoint);
         jointDef.set_joint2(joint2.box2dJoint);
-        jointDef.set_ratio(ratio);
+        jointDef.set_ratio(ratio * ratioSign);
         super(jointDef);
 
         this.joint1 = joint1;
         this.joint2 = joint2;
+        this.ratioSign = ratioSign;
     }
 
     /** Get the first joint
@@ -1265,11 +1272,11 @@ class Box2dGearJoint extends Box2dJoint
 
     /** Set the gear ratio
      *  @param {number} ratio */
-    setRatio(ratio) { return this.box2dJoint.SetRatio(ratio); }
+    setRatio(ratio) { return this.box2dJoint.SetRatio(ratio * this.ratioSign); }
 
     /** Get the gear ratio
      *  @return {number} */
-    getRatio() { return this.box2dJoint.GetRatio(); }
+    getRatio() { return this.box2dJoint.GetRatio() * this.ratioSign; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1319,14 +1326,14 @@ class Box2dPrismaticJoint extends Box2dJoint
      *  @return {Vector2} */
     getLocalAxisA() { return box2d.vec2From(this.box2dJoint.GetLocalAxisA()); }
     
-    /** Get the reference angle
+    /** Get the reference angle, objectB angle minus objectA angle in the reference state
      *  @return {number} */
-    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+    getReferenceAngle() { return -this.box2dJoint.GetReferenceAngle(); } // box2d uses reverse angle
 
     /** Get the current joint translation
      *  @return {number} */
     getJointTranslation() { return this.box2dJoint.GetJointTranslation(); }
-    
+
     /** Get the current joint translation speed
      *  @return {number} */
     getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
@@ -1431,9 +1438,10 @@ class Box2dWheelJoint extends Box2dJoint
      *  @return {number} */
     getJointTranslation() { return this.box2dJoint.GetJointTranslation(); }
 
-    /** Get the current joint translation speed
+    /** Get the current joint rotation speed in radians per second, clockwise like angle,
+     *  which is what this version of Box2D measures for a wheel joint
      *  @return {number} */
-    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+    getJointSpeed() { return -this.box2dJoint.GetJointSpeed(); } // box2d uses reverse angle
 
     /** Is the joint motor enabled?
      *  @return {boolean} */
@@ -1443,15 +1451,15 @@ class Box2dWheelJoint extends Box2dJoint
      *  @param {boolean} [enable] */
     enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
 
-    /** Set the motor speed
+    /** Set the motor speed, the wheel's turn in radians per second, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
 
-    /** Get the motor speed
+    /** Get the motor speed, clockwise like angle
      *  @return {number} */
-    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+    getMotorSpeed() { return -this.box2dJoint.GetMotorSpeed(); }
 
-    /** Set the maximum motor torque
+    /** Set the maximum motor torque, a magnitude
      *  @param {number} torque */
     setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
 
@@ -1459,10 +1467,10 @@ class Box2dWheelJoint extends Box2dJoint
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
-    /** Get the motor torque for a time step
+    /** Get the motor torque for a time step, clockwise like angle
      *  @param {number} time
      *  @return {number} */
-    getMotorTorque(time) { return this.box2dJoint.GetMotorTorque(1/time); }
+    getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
 
     /** Set the spring frequency in Hertz
      *  @param {number} hz */
@@ -1518,9 +1526,9 @@ class Box2dWeldJoint extends Box2dJoint
      *  @return {Vector2} */
     getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
 
-    /** Get the reference angle
+    /** Get the reference angle, objectB angle minus objectA angle in the reference state
      *  @return {number} */
-    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+    getReferenceAngle() { return -this.box2dJoint.GetReferenceAngle(); } // box2d uses reverse angle
 
     /** Set the frequency in Hertz
      *  @param {number} hz */
@@ -1695,13 +1703,13 @@ class Box2dMotorJoint extends Box2dJoint
      *  @return {Vector2} */
     getLinearOffset() { return box2d.vec2From(this.box2dJoint.GetLinearOffset()); }
 
-    /** Set the target angular offset
+    /** Set the target angular offset, objectB angle minus objectA angle, clockwise like angle
      *  @param {number} offset */
-    setAngularOffset(offset) { this.box2dJoint.SetAngularOffset(offset); }
+    setAngularOffset(offset) { this.box2dJoint.SetAngularOffset(-offset); } // box2d uses reverse angle
 
-    /** Get the target angular offset
+    /** Get the target angular offset, objectB angle minus objectA angle, clockwise like angle
      *  @return {number} */
-    getAngularOffset() { return this.box2dJoint.GetAngularOffset(); }
+    getAngularOffset() { return -this.box2dJoint.GetAngularOffset(); }
 
     /** Set the maximum friction force
      *  @param {number} force */

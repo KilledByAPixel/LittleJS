@@ -662,9 +662,9 @@ class UISystemPlugin
      *  Centers the dialog on the screen with darkened background
      *  @param {string} [text] - The message to display
      *  @param {Function} [yesCallback] - Called when Yes is clicked
-     *  @param {Function} [noCallback] - Called when No is clicked
+     *  @param {Function} [noCallback] - Called when No is clicked, or the exit key closes it
      *  @param {Vector2} [size] - Size of the confirmation dialog
-     *  @param {string} [exitKey] - Key that can exit the menu
+     *  @param {string} [exitKey] - Key that closes the menu as No
      *  @return {UIObject} The confirmation menu object
      */
     showConfirmDialog(text='Are you sure?', yesCallback, noCallback, size=vec2(500,250), exitKey='Escape')
@@ -687,7 +687,10 @@ class UISystemPlugin
         confirmMenu.onUpdate = ()=>
         {
             if (keyWasPressed(exitKey))
-                closeMenu();
+            {
+                closeMenu(); // the exit key answers no
+                noCallback && noCallback();
+            }
         }
         confirmMenu.isMouseOverlapping = ()=> true; // always hover
         

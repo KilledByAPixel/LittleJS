@@ -151,7 +151,7 @@ export class CarObject extends LJS.Box2dObject
         const maxSpeed = 40;
         const input = LJS.keyDirection().x;
         let s = this.wheelMotorJoint.getMotorSpeed();
-        s = input ? LJS.clamp(s - input, -maxSpeed, maxSpeed) : 0;
+        s = input ? LJS.clamp(s + input, -maxSpeed, maxSpeed) : 0;
         this.wheelMotorJoint.setMotorSpeed(s);
     }
     destroy()
@@ -506,7 +506,7 @@ export class RagdollObject extends LJS.Box2dObject
         {
             const hip = pos.add(vec2(side*torsoWidth/4, -torsoHeight/2));
             const upperLeg = addLimb(vec2(side*torsoWidth/4, -torsoHeight/2 - upperLegLen/2), vec2(limbWidth, upperLegLen));
-            addJoint(this, upperLeg, hip, -.5, 2.5);
+            addJoint(this, upperLeg, hip, -2.5, .5);
 
             const knee = hip.add(vec2(0, -upperLegLen));
             const lowerLeg = addLimb(vec2(side*torsoWidth/4, -torsoHeight/2 - upperLegLen - lowerLegLen/2), vec2(limbWidth, lowerLegLen));

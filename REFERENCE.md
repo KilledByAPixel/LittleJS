@@ -293,6 +293,7 @@ TextureInfo.size        // Size of the image
 TextureInfo.glTexture   // WebGL texture
 TextureInfo.wrap        // Whether texture is set to REPEAT (true) or CLAMP_TO_EDGE
 TextureInfo.setWrap(wrap=true) // Enable or disable wrapping for this texture
+await loadTexture(textureIndex, src) // Load an image after engineInit into textureInfos[textureIndex], for tile(i, size, textureIndex)
 
 // Image Font Object draws text using characters in an image
 ImageFont(tileInfo)     // Create a font from a tile sheet
@@ -481,7 +482,7 @@ gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1, weakMagn
 gamepadVibrateStop(gamepad=gamepadPrimary)         // Stop gamepad vibration
 
 // Touch Gamepad
-touchGamepadEnable = false            // Is on screen touch gamepad enabled?
+touchGamepadEnable = false            // Is on screen touch gamepad enabled? A real gamepad in use takes over
 touchGamepadAnalog = true             // Is touch gamepad analog or 8 way dpad?
 touchGamepadSize = 100                // Size of touch gamepad
 touchGamepadAlpha = .3                // Alpha of touch gamepad
@@ -746,7 +747,7 @@ uiSystem.destroyObjects()              // Remove all UI elements
 uiSetDebug(enable)                     // Toggle uiDebug rendering of widget bounds
 
 // Confirm dialog
-uiSystem.showConfirmDialog(text='Are you sure?', yes, no, size, exitKey='Escape')
+uiSystem.showConfirmDialog(text='Are you sure?', yes, no, size, exitKey='Escape') // the exit key answers no
 
 // Drawing helpers (use these instead of the engine's draw* during UI rendering)
 uiSystem.drawRect(pos, size, color, lineWidth, lineColor, cornerRadius, gradientColor, shadowColor, shadowBlur, shadowOffset)
@@ -1419,6 +1420,7 @@ obj.syncMesh()                 // copy the 2D transform to the mesh
 - Optional plugin wrapping the Box2D physics engine (via box2d.wasm.js)
 - Drop-in replacement for engine objects: `Box2dObject extends EngineObject`
 - Joints, raycasting, polygon/circle/edge fixtures
+- Angular values are clockwise like `angle`: angular velocity, torque, joint angles and limits, motor speeds
 - See `examples/box2d/` for a full demo
 
 ```javascript
@@ -1632,7 +1634,7 @@ saveDataURL(url, filename='download', revokeTime)           // Save url to a fil
 debug                // Is debug enabled?
 debugPointSize = .5  // Size to render debug points by default
 debugKey = 'Escape'  // Key code used to toggle debug mode
-debugOverlay         // Is the debug overlay is active?
+debugOverlay         // Is the debug overlay is active? setDebugOverlay(show=true) opens or closes it from code
 debugWatermark       // Should watermark with FPS appear in debug mode?
 ```
 

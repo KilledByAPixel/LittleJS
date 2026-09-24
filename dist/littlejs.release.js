@@ -94,6 +94,17 @@ function setPaused(isPaused=true) { paused = isPaused; }
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
+
+// the pairs of objects asked about a collision this update and left overlapping, asker then other, so the other's own
+// physics does not ask again
+const engineObjectsCollidePairs = [];
+function engineObjectsCollidePairAsked(asker, other)
+{
+    for (let i = 0; i < engineObjectsCollidePairs.length; i += 2)
+        if (engineObjectsCollidePairs[i] === asker && engineObjectsCollidePairs[i+1] === other)
+            return true;
+    return false;
+}
 let engineInitialized = false; // engineInit ran, with or without a canvas
 let engineObjectsUpdateCount = 0; // passes of engineObjectsUpdate so far, how a child knows it moved this pass
 const engineChildStack = []; // the children being updated, taken off the live lists so one leaving does not skip the next
@@ -225,10 +236,11 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         timeReal += frameTimeDeltaMS * debugScale / 1e3;
         const combinedScale = timeScale * debugScale;
         frameTimeDeltaMS *= combinedScale;
-        // when paused tick on unscaled time so the pause update rate stays
-        // fixed instead of following however fast the display refreshes
-        frameTimeBufferMS += paused ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
-        frameTimeBufferMS = min(frameTimeBufferMS, 50 * (paused ? 1 : max(1, combinedScale))); // clamp min framerate
+        // paused or a time scale of 0 is frozen: it ticks on unscaled time, so the update rate stays fixed instead of
+        // following however fast the display refreshes, and gameUpdatePost and input still run to leave it
+        const frozen = paused || !combinedScale;
+        frameTimeBufferMS += frozen ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
+        frameTimeBufferMS = min(frameTimeBufferMS, 50 * (frozen ? 1 : max(1, combinedScale))); // clamp min framerate
 
         // apply time delta smoothing, improves smoothness of framerate in some browsers
         let wasUpdated = false, deltaSmooth = 0;
@@ -242,18 +254,18 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // update multiple frames if necessary in case of slow framerate
         for (; frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
         {
-            // increment frame and update time, paused does not advance time
-            if (!paused)
+            // increment frame and update time, frozen does not advance time
+            if (!frozen)
                 time = frame++ / frameRate;
 
-            // update game and objects, when paused update everything except them
+            // update game and objects, when frozen update everything except them
             wasUpdated = true;
             engineUpdateCanvas();
             inputUpdate();
-            if (!paused)
+            if (!frozen)
                 gameUpdate();
             pluginList.forEach(plugin=>plugin.update?.());
-            if (paused)
+            if (frozen)
             {
                 // update object transforms even when paused
                 for (const o of engineObjects)
@@ -509,7 +521,8 @@ function engineUpdateCanvas()
         mainContext.fillStyle = BLACK.toString();
     }
 
-    // set default line join and cap
+    // set default line join and cap, round on purpose: it looks better, suits text and keeps sharp corners from
+    // spiking far out; WebGL outlines are square and mitered for speed, the two are not meant to match
     mainContext.lineJoin = 'round';
     mainContext.lineCap  = 'round';
 }
@@ -549,6 +562,7 @@ function engineStep(frames=1)
 function engineObjectsUpdate()
 {
     ++engineObjectsUpdateCount;
+    engineObjectsCollidePairs.length = 0;
     // get list of solid objects for physics optimization
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
@@ -714,6 +728,7 @@ function debugText       (){}
 function debugClear      (){}
 function debugScreenshot (){}
 function debugShowErrors(){}
+function setDebugOverlay(){}
 function debugVideoCaptureIsActive(){ return false; }
 function debugVideoCaptureStart (){}
 function debugVideoCaptureStop  (){}
@@ -1061,8 +1076,8 @@ function oscillate(frequency=1, amplitude=1, t=time, offset=0, type=0)
     const phase = mod(offset + t*frequency, 1);
     let value;
     
-    if (type === 1) // triangle
-        value = 2 * abs(2 * phase - 1) - 1;
+    if (type === 1) // triangle, from 0 up and back like the others
+        value = 1 - 2 * abs(2 * phase - 1);
     else if (type === 2) // square
         value = phase < .5 ? -1 : 1;
     else if (type === 3) // sawtooth
@@ -2287,7 +2302,7 @@ let cameraScale = 32;
 
 /** Scale applied to engine time, can be used for slow motion or fast forward
  *  - 1 is normal speed, 2 is double speed, 0.5 is half speed
- *  - 0 freezes everything, gameUpdatePost and input included, use setPaused for a pause the game can leave
+ *  - 0 freezes the game like a pause without setting the paused flag, gameUpdatePost and input still run
  *  - Should be >= 0; stacks multiplicatively with the debug +/- shortcut
  *  @type {number}
  *  @default
@@ -2524,6 +2539,7 @@ let touchInputEnable = true;
  *  - setTouchGamepadButtonCount(1) to use face buttons as right analog stick
  *  - Analog stick buttons 10 and 11 are also activated when virtual sticks are touched
  *  - Rendered as a full-viewport HTML/SVG overlay, so controls may sit outside the game canvas
+ *  - It is gamepad 0 once touched; a real gamepad being used takes over and hides it until the screen is touched again
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -2680,7 +2696,7 @@ function setCameraAngle(angle) { cameraAngle = angle; }
 function setCameraScale(scale) { cameraScale = scale; }
 
 /** Set scale applied to engine time
- *  - 0 stops the whole update, gameUpdatePost and input too, use setPaused for a pause the game can come back from
+ *  - 0 freezes the game like a pause, gameUpdatePost and input still run so the game can set it back
  *  @param {number} scale - 0 or more
  *  @memberof Settings */
 function setTimeScale(scale)
@@ -3249,10 +3265,18 @@ class EngineObject
                 // check collision
                 if (!this.isOverlappingObject(o)) continue;
 
+                // each moving object checks its own contacts, so a pair the other one already asked about this frame
+                // and left overlapping, ignored or only nudged apart, is not asked twice
+                if (engineObjectsCollidePairAsked(o, this)) continue;
+
                 // notify objects of collision and check if should be resolved
                 const collide1 = this.collideWithObject(o);
                 const collide2 = o.collideWithObject(this);
-                if (!collide1 || !collide2) continue;
+                if (!collide1 || !collide2)
+                {
+                    engineObjectsCollidePairs.push(this, o);
+                    continue;
+                }
 
                 if (isOverlapping(oldPos, this.size, o.pos, o.size))
                 {
@@ -3264,6 +3288,7 @@ class EngineObject
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away other object if not fixed
                         o.velocity = o.velocity.subtract(velocity);
+                    engineObjectsCollidePairs.push(this, o);
 
                     debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
@@ -3450,10 +3475,9 @@ class EngineObject
     collideWithTile(tileData, pos) { return tileData > 0; }
 
     /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
-     *  - In 2D each moving object tests its own contacts, so a pair of two moving objects that stays overlapping is
-     *    asked twice a frame, once from each side; in 3D a pair is asked once. An object that destroys itself here is
-     *    gone at the end of the frame and is still asked about the pairs left this frame, so a bullet that should hit
-     *    one thing, or a pickup that adds to a score, checks its own destroyed flag first
+     *  - Both objects of a touching pair are asked once a frame, whichever order they update in; an object that
+     *    destroys itself here is gone at the end of the frame and is still asked about the pairs left this frame, so a
+     *    bullet that should hit one thing checks its own destroyed flag first
      *  @param {EngineObject} object - the object to test against
      *  @param {Vector3} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity
@@ -4690,7 +4714,6 @@ function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, 
     if (maxWidth !== undefined)
         maxWidth *= cameraScale;
     angle -= cameraAngle;
-    angle *= -1;
 
     drawTextScreen(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, angle, context);
 }
@@ -4707,7 +4730,7 @@ function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, 
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
- *  @param {number}  [angle]
+ *  @param {number}  [angle] - Clockwise, like the other screen space draws
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
 function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
@@ -4733,7 +4756,7 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     context.font = fontStyle + ' ' + size + 'px '+ font;
     context.textBaseline = 'middle';
     context.translate(pos.x, pos.y);
-    context.rotate(-angle);
+    context.rotate(angle);
     let yOffset = -(lines.length-1) * size/2; // center vertically
     lines.forEach(line=>
     {
@@ -4747,8 +4770,8 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
 ///////////////////////////////////////////////////////////////////////////////
 // Drawing utilities
 
-/** Load a texture at a specific index
- *  @param {number} textureIndex - Index to store the texture at
+/** Load a texture at a specific index after engineInit, the images passed to engineInit load this way
+ *  @param {number} textureIndex - Index to store the texture at, an unused one
  *  @param {string} [src] - Image source path
  *  @return {Promise} Promise that resolves when texture is loaded
  *  @memberof Draw */
@@ -5063,8 +5086,9 @@ function bakeTintedImage(image, color, additiveColor)
     return workReadCanvas;
 }
 
-/** Helper function to draw an image with color and additive color applied
+/** Internal: draw an image with color and additive color applied in Canvas2D, drawTile calls it
  *  This is slower then normal drawImage when color is applied
+    *  @ignore
     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
     *  @param {HTMLImageElement|OffscreenCanvas} image
     *  @param {number} sx
@@ -5414,6 +5438,27 @@ const inputWASDToArrow = {KeyW:'ArrowUp', KeyS:'ArrowDown', KeyA:'ArrowLeft', Ke
 const inputArrowToWASD = {ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', ArrowRight:'KeyD'};
 const inputKeysHeld = new Set; // the keys physically down, since an arrow's slot is shared with its alias
 let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, cleared with the input so only a new touch presses
+let inputLastTouchTime = -1e9; // when a touch event last came, the mouse events a browser makes from a tap follow it
+
+// is this mouse event one the browser made from a touch, which the touch input already handled
+function inputIsTouchMouseEvent(e)
+{ return e.sourceCapabilities?.firesTouchEvents || performance.now() - inputLastTouchTime < 500; }
+
+// is a real gamepad being used, a button down or a standard stick pushed, only read to hand over from the touch
+// gamepad, a non standard pad's axes may rest at full deflection so they are not trusted here
+function inputRealGamepadUsed()
+{
+    for (const gamepad of inputGetGamepads())
+    {
+        if (!gamepad) continue;
+        for (const button of gamepad.buttons)
+            if (button.pressed) return true;
+        if (gamepad.mapping === 'standard')
+            for (let j = 0; j < 4 && j < gamepad.axes.length; ++j)
+                if (abs(gamepad.axes[j]) > .5) return true;
+    }
+    return false;
+}
 
 // let go of every keyboard key, for when something else takes the keyboard, like a text field
 function inputClearKeyboard()
@@ -5662,12 +5707,14 @@ function vibrateStop() { vibrate(0); }
 ///////////////////////////////////////////////////////////////////////////////
 // Pointer Lock
 
-/** Request to lock the pointer, does not work on touch devices
+/** Request to lock the pointer, for a mouse; a device with only touch refuses it
  *  @memberof Input */
 function pointerLockRequest()
 {
-    // newer browsers return a promise that rejects when the lock is refused, like just after Esc left it
-    !isTouchDevice && mainCanvas.requestPointerLock?.()?.catch?.(()=>{});
+    // newer browsers return a promise that rejects when the lock is refused, like just after Esc left it,
+    // or on a phone; a touchscreen laptop's mouse can still lock
+    try { mainCanvas.requestPointerLock?.()?.catch?.(()=>{}); }
+    catch { }
 }
 
 /** Request to unlock the pointer
@@ -5799,7 +5846,8 @@ function inputInit()
     }
     function onMouseDown(e)
     {
-        if (isTouchDevice && touchInputEnable) return;
+        // a mouse on a touchscreen laptop works, only the mouse events a tap makes are left to the touch input
+        if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
 
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
@@ -5816,7 +5864,7 @@ function inputInit()
     }
     function onMouseUp(e)
     {
-        if (isTouchDevice && touchInputEnable) return;
+        if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
 
         inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
     }
@@ -5867,6 +5915,7 @@ function inputInit()
         function handleTouch(e)
         {
             if (!touchInputEnable) return;
+            inputLastTouchTime = performance.now();
 
             // fix stalled audio requiring user interaction
             if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
@@ -6006,9 +6055,14 @@ function inputUpdate()
                 'set touchGamepadLeftStick or touchGamepadLeftButtonCount, not both');
             false&&ASSERT(!touchGamepadRightStick || !touchGamepadButtonCount,
                 'set touchGamepadRightStick or touchGamepadButtonCount, not both');
+        }
 
-            if (!touchGamepadTimer.isSet()) return;
-
+        // the touch gamepad owns gamepad 0 once touched, until a real gamepad is used: that one takes over and the
+        // touch gamepad hides until the screen is touched again
+        if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet() && gamepadsEnable && inputRealGamepadUsed())
+            touchGamepadTimer.unset();
+        if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet())
+        {
             // read virtual analog stick
             gamepadPrimary = 0; // touch gamepad uses index 0
             const sticks = gamepadStickData[0] ?? (gamepadStickData[0] = []);
@@ -6050,8 +6104,9 @@ function inputUpdate()
                     vibrate(touchGamepadVibration);
             }
             touchGamepadButtonsPressed.length = 0;
+            gamepadButtonsLast[0] = undefined; // a real gamepad 0 starts fresh when it takes over again
 
-            // disable normal gamepads when touch gamepad is active
+            // real gamepads are not read while the touch gamepad is in use
             return;
         }
 
@@ -9431,9 +9486,9 @@ function glSetTextureData(texture, image)
     glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
 }
 
-/** Tells WebGL to create or update the glTexture and start tracking it
+/** Internal: tells WebGL to create or update the glTexture and start tracking it, TextureInfo calls it
  *  @param {TextureInfo} textureInfo
- *  @memberof WebGL */
+ *  @ignore */
 function glRegisterTextureInfo(textureInfo)
 {
     if (headlessMode) return;
@@ -9450,9 +9505,9 @@ function glRegisterTextureInfo(textureInfo)
         textureInfo.glTexture = glCreateTexture(textureInfo.image, textureInfo.wrap);
 }
 
-/** Tells WebGL to destroy the glTexture and stop tracking it
+/** Internal: tells WebGL to destroy the glTexture and stop tracking it, TextureInfo calls it
  *  @param {TextureInfo} textureInfo
- *  @memberof WebGL */
+ *  @ignore */
 function glUnregisterTextureInfo(textureInfo)
 {
     if (headlessMode) return;
@@ -12604,9 +12659,9 @@ class UISystemPlugin
      *  Centers the dialog on the screen with darkened background
      *  @param {string} [text] - The message to display
      *  @param {Function} [yesCallback] - Called when Yes is clicked
-     *  @param {Function} [noCallback] - Called when No is clicked
+     *  @param {Function} [noCallback] - Called when No is clicked, or the exit key closes it
      *  @param {Vector2} [size] - Size of the confirmation dialog
-     *  @param {string} [exitKey] - Key that can exit the menu
+     *  @param {string} [exitKey] - Key that closes the menu as No
      *  @return {UIObject} The confirmation menu object
      */
     showConfirmDialog(text='Are you sure?', yesCallback, noCallback, size=vec2(500,250), exitKey='Escape')
@@ -12629,7 +12684,10 @@ class UISystemPlugin
         confirmMenu.onUpdate = ()=>
         {
             if (keyWasPressed(exitKey))
-                closeMenu();
+            {
+                closeMenu(); // the exit key answers no
+                noCallback && noCallback();
+            }
         }
         confirmMenu.isMouseOverlapping = ()=> true; // always hover
         
@@ -13837,6 +13895,7 @@ function box2dSetDebug(enable) { box2dDebug = enable; }
  * - A LittleJS object with Box2D physics, dynamic by default
  * - Provides interface for Box2D body and fixture functions
  * - Each object can have multiple fixtures and joints
+ * - Angular values are clockwise like angle: angular velocity, torque, joint angles, limits and motor speeds
  * @extends EngineObject
  * @memberof Box2D
  */
@@ -14208,9 +14267,9 @@ class Box2dObject extends EngineObject
      *  @return {Vector2} */
     getLinearVelocity() { return box2d.vec2From(this.body.GetLinearVelocity()); }
 
-    /** Gets the angular velocity
+    /** Gets the angular velocity, clockwise like angle
      *  @return {number} */
-    getAngularVelocity() { return this.body.GetAngularVelocity(); }
+    getAngularVelocity() { return -this.body.GetAngularVelocity(); } // box2d uses reverse angle
 
     /** Gets the mass
      *  @return {number} */
@@ -14262,10 +14321,10 @@ class Box2dObject extends EngineObject
     setLinearVelocity(velocity)
     { this.body.SetLinearVelocity(box2dTemp(velocity)); }
 
-    /** Sets the angular velocity
+    /** Sets the angular velocity, clockwise like angle
      *  @param {number} angularVelocity */
     setAngularVelocity(angularVelocity)
-    { this.body.SetAngularVelocity(angularVelocity); }
+    { this.body.SetAngularVelocity(-angularVelocity); }
 
     /** Sets the linear damping
      *  @param {number} damping */
@@ -14400,16 +14459,16 @@ class Box2dObject extends EngineObject
         this.body.ApplyLinearImpulse(box2dTemp(impulse), box2dTemp(pos, 1));
     }
 
-    /** Apply torque to this object
+    /** Apply torque to this object, clockwise like angle
      *  @param {number} torque */
     applyTorque(torque)
     {
         this.setAwake();
-        this.body.ApplyTorque(torque);
+        this.body.ApplyTorque(-torque);
     }
 
     /** Apply angular acceleration to this object (changes angular velocity by
-     *  acceleration, mass-independent — matches EngineObject semantics).
+     *  acceleration, mass-independent, clockwise — matches EngineObject.applyAngularAcceleration).
      *  @param {number} acceleration */
     applyAngularAcceleration(acceleration)
     {
@@ -14421,12 +14480,12 @@ class Box2dObject extends EngineObject
     }
 
     /** Apply an instantaneous angular impulse. Changes angular velocity by
-     *  impulse / inertia immediately.
+     *  impulse / inertia immediately, clockwise like angle.
      *  @param {number} impulse */
     applyAngularImpulse(impulse)
     {
         this.setAwake();
-        this.body.ApplyAngularImpulse(impulse);
+        this.body.ApplyAngularImpulse(-impulse);
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -14628,6 +14687,7 @@ class Box2dRaycastResult
  * Box2D Joint
  * - Base class for Box2D joints 
  * - A joint is used to connect objects together
+ * - Angular values are clockwise like angle: joint angles and speeds, limits, motor speeds and torques
  * @memberof Box2D
  */
 class Box2dJoint
@@ -14682,10 +14742,10 @@ class Box2dJoint
      *  @return {Vector2} */
     getReactionForce(time)  { return box2d.vec2From(this.box2dJoint.GetReactionForce(1/time));}
 
-    /** Get the reaction torque on bodyB in N*m given a time step
+    /** Get the reaction torque on bodyB in N*m given a time step, clockwise like angle
      *  @param {number} time
      *  @return {number} */
-    getReactionTorque(time) { return this.box2dJoint.GetReactionTorque(1/time);}
+    getReactionTorque(time) { return -this.box2dJoint.GetReactionTorque(1/time);} // box2d uses reverse angle
     
     /** Check if the connected bodies should collide
      *  @return {boolean} */
@@ -14922,17 +14982,17 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @return {Vector2} */
     getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
 
-    /** Get the reference angle, objectB angle minus objectA angle in the reference state 
+    /** Get the reference angle, objectB angle minus objectA angle in the reference state
      *  @return {number} */
-    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+    getReferenceAngle() { return -this.box2dJoint.GetReferenceAngle(); } // box2d uses reverse angle
 
-    /** Get the current joint angle
+    /** Get the current joint angle, clockwise like angle
      *  @return {number} */
-    getJointAngle() { return this.box2dJoint.GetJointAngle(); }
+    getJointAngle() { return -this.box2dJoint.GetJointAngle(); }
 
-    /** Get the current joint angle speed in radians per second
+    /** Get the current joint angle speed in radians per second, clockwise like angle
      *  @return {number} */
-    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+    getJointSpeed() { return -this.box2dJoint.GetJointSpeed(); }
 
     /** Is the joint limit enabled?
      *  @return {boolean} */
@@ -14942,18 +15002,18 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @param {boolean} [enable] */
     enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
 
-    /** Get the lower joint limit
+    /** Get the lower joint limit, clockwise like angle
      *  @return {number} */
-    getLowerLimit() { return this.box2dJoint.GetLowerLimit(); }
+    getLowerLimit() { return -this.box2dJoint.GetUpperLimit(); } // reversed, so Box2D's upper is the lower
 
-    /** Get the upper joint limit
+    /** Get the upper joint limit, clockwise like angle
      *  @return {number} */
-    getUpperLimit() { return this.box2dJoint.GetUpperLimit(); }
+    getUpperLimit() { return -this.box2dJoint.GetLowerLimit(); }
 
-    /** Set the joint limits
+    /** Set the joint limits, clockwise like angle
      *  @param {number} min
      *  @param {number} max */
-    setLimits(min, max) { return this.box2dJoint.SetLimits(min, max); }
+    setLimits(min, max) { return this.box2dJoint.SetLimits(-max, -min); }
 
     /** Is the joint motor enabled?
      *  @return {boolean} */
@@ -14963,15 +15023,15 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @param {boolean} [enable] */
     enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
 
-    /** Set the motor speed
+    /** Set the motor speed, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
 
-    /** Get the motor speed
+    /** Get the motor speed, clockwise like angle
      *  @return {number} */
-    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+    getMotorSpeed() { return -this.box2dJoint.GetMotorSpeed(); }
 
-    /** Set the motor torque
+    /** Set the max motor torque, a magnitude
      *  @param {number} torque */
     setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
 
@@ -14979,10 +15039,10 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
-    /** Get the motor torque given a time step
-     *  @param {number} time 
+    /** Get the motor torque given a time step, clockwise like angle
+     *  @param {number} time
      *  @return {number} */
-    getMotorTorque(time) { return this.box2dJoint.GetMotorTorque(1/time); }
+    getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -14991,6 +15051,7 @@ class Box2dRevoluteJoint extends Box2dJoint
  * - A gear joint is used to connect two joints together
  * - Either joint can be a revolute or prismatic joint
  * - You specify a gear ratio to bind the motions together
+ * - joint1's angle or translation plus ratio times joint2's stays constant, angles clockwise like angle
  * @extends Box2dJoint
  * @memberof Box2D
  */
@@ -15004,16 +15065,20 @@ class Box2dGearJoint extends Box2dJoint
      *  @param {number} [ratio] */
     constructor(objectA, objectB, joint1, joint2, ratio=1)
     {
+        // Box2D's angles are reversed and its translations are not, so a revolute joint geared to a prismatic one
+        // needs the ratio reversed too, two of a kind keep it
+        const ratioSign = (joint1 instanceof Box2dRevoluteJoint) === (joint2 instanceof Box2dRevoluteJoint) ? 1 : -1;
         const jointDef = new box2d.instance.b2GearJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
         jointDef.set_joint1(joint1.box2dJoint);
         jointDef.set_joint2(joint2.box2dJoint);
-        jointDef.set_ratio(ratio);
+        jointDef.set_ratio(ratio * ratioSign);
         super(jointDef);
 
         this.joint1 = joint1;
         this.joint2 = joint2;
+        this.ratioSign = ratioSign;
     }
 
     /** Get the first joint
@@ -15026,11 +15091,11 @@ class Box2dGearJoint extends Box2dJoint
 
     /** Set the gear ratio
      *  @param {number} ratio */
-    setRatio(ratio) { return this.box2dJoint.SetRatio(ratio); }
+    setRatio(ratio) { return this.box2dJoint.SetRatio(ratio * this.ratioSign); }
 
     /** Get the gear ratio
      *  @return {number} */
-    getRatio() { return this.box2dJoint.GetRatio(); }
+    getRatio() { return this.box2dJoint.GetRatio() * this.ratioSign; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -15080,14 +15145,14 @@ class Box2dPrismaticJoint extends Box2dJoint
      *  @return {Vector2} */
     getLocalAxisA() { return box2d.vec2From(this.box2dJoint.GetLocalAxisA()); }
     
-    /** Get the reference angle
+    /** Get the reference angle, objectB angle minus objectA angle in the reference state
      *  @return {number} */
-    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+    getReferenceAngle() { return -this.box2dJoint.GetReferenceAngle(); } // box2d uses reverse angle
 
     /** Get the current joint translation
      *  @return {number} */
     getJointTranslation() { return this.box2dJoint.GetJointTranslation(); }
-    
+
     /** Get the current joint translation speed
      *  @return {number} */
     getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
@@ -15192,9 +15257,10 @@ class Box2dWheelJoint extends Box2dJoint
      *  @return {number} */
     getJointTranslation() { return this.box2dJoint.GetJointTranslation(); }
 
-    /** Get the current joint translation speed
+    /** Get the current joint rotation speed in radians per second, clockwise like angle,
+     *  which is what this version of Box2D measures for a wheel joint
      *  @return {number} */
-    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+    getJointSpeed() { return -this.box2dJoint.GetJointSpeed(); } // box2d uses reverse angle
 
     /** Is the joint motor enabled?
      *  @return {boolean} */
@@ -15204,15 +15270,15 @@ class Box2dWheelJoint extends Box2dJoint
      *  @param {boolean} [enable] */
     enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
 
-    /** Set the motor speed
+    /** Set the motor speed, the wheel's turn in radians per second, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
 
-    /** Get the motor speed
+    /** Get the motor speed, clockwise like angle
      *  @return {number} */
-    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+    getMotorSpeed() { return -this.box2dJoint.GetMotorSpeed(); }
 
-    /** Set the maximum motor torque
+    /** Set the maximum motor torque, a magnitude
      *  @param {number} torque */
     setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
 
@@ -15220,10 +15286,10 @@ class Box2dWheelJoint extends Box2dJoint
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
-    /** Get the motor torque for a time step
+    /** Get the motor torque for a time step, clockwise like angle
      *  @param {number} time
      *  @return {number} */
-    getMotorTorque(time) { return this.box2dJoint.GetMotorTorque(1/time); }
+    getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
 
     /** Set the spring frequency in Hertz
      *  @param {number} hz */
@@ -15279,9 +15345,9 @@ class Box2dWeldJoint extends Box2dJoint
      *  @return {Vector2} */
     getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
 
-    /** Get the reference angle
+    /** Get the reference angle, objectB angle minus objectA angle in the reference state
      *  @return {number} */
-    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+    getReferenceAngle() { return -this.box2dJoint.GetReferenceAngle(); } // box2d uses reverse angle
 
     /** Set the frequency in Hertz
      *  @param {number} hz */
@@ -15456,13 +15522,13 @@ class Box2dMotorJoint extends Box2dJoint
      *  @return {Vector2} */
     getLinearOffset() { return box2d.vec2From(this.box2dJoint.GetLinearOffset()); }
 
-    /** Set the target angular offset
+    /** Set the target angular offset, objectB angle minus objectA angle, clockwise like angle
      *  @param {number} offset */
-    setAngularOffset(offset) { this.box2dJoint.SetAngularOffset(offset); }
+    setAngularOffset(offset) { this.box2dJoint.SetAngularOffset(-offset); } // box2d uses reverse angle
 
-    /** Get the target angular offset
+    /** Get the target angular offset, objectB angle minus objectA angle, clockwise like angle
      *  @return {number} */
-    getAngularOffset() { return this.box2dJoint.GetAngularOffset(); }
+    getAngularOffset() { return -this.box2dJoint.GetAngularOffset(); }
 
     /** Set the maximum friction force
      *  @param {number} force */
@@ -17290,6 +17356,8 @@ class PathFinderNode
         this.g = 0;
         /** @property {number} - A* F-score: G + heuristic */
         this.f = 0;
+        /** @property {number} - A* heuristic: the estimated cost left to the goal, breaks ties between equal F */
+        this.h = 0;
         /** @property {PathFinderNode|null} - Parent for path reconstruction
          *  @type {PathFinderNode|null} */
         this.parent = null;
@@ -17306,6 +17374,7 @@ class PathFinderNode
         this.cost = 0;
         this.g = 0;
         this.f = 0;
+        this.h = 0;
         this.parent = null;
         this.isOpen = false;
         this.isClosed = false;
@@ -17490,7 +17559,7 @@ class PathFinder
         const searchNodes = this.searchNodes;
         for (const n of searchNodes)
         {
-            n.g = n.f = 0;
+            n.g = n.f = n.h = 0;
             n.parent = null;
             n.isOpen = n.isClosed = false;
         }
@@ -17505,13 +17574,19 @@ class PathFinder
         {
             // Find the open node with the smallest f score (linear scan).
             // Same as the C++ — fine up to a few thousand nodes.
+            // Equal scores go to the node nearer the goal, so open ground is
+            // crossed nearly straight instead of widening in a band of ties;
+            // the path is just as short, only which of equal paths can change.
+            // Scores are sums of diagonals, so equal is within a hair.
             let bestIndex = 0;
-            let bestF = openList[0].f;
+            let bestF = openList[0].f, bestH = openList[0].h;
             for (let i = 1; i < openList.length; ++i)
             {
-                if (openList[i].f < bestF)
+                const node = openList[i];
+                if (node.f < bestF - 1e-9 || node.f < bestF + 1e-9 && node.h < bestH)
                 {
-                    bestF = openList[i].f;
+                    bestF = node.f;
+                    bestH = node.h;
                     bestIndex = i;
                 }
             }
@@ -17570,6 +17645,7 @@ class PathFinder
                 const adx = abs(endNode.pos.x - neighbor.pos.x);
                 const ady = abs(endNode.pos.y - neighbor.pos.y);
                 const h = max(adx, ady) + (Math.SQRT2 - 1) * min(adx, ady);
+                neighbor.h = h;
                 neighbor.f = neighbor.g + h * this.heuristicWeight;
             }
         }
@@ -23254,6 +23330,9 @@ class FirstPersonCamera3D extends EngineObject3D
     /** Read the mouse and keys and put the camera at the eye, called automatically each frame */
     update()
     {
+        // only a root moves by its own physics, a child follows its parent, so gravity would still pull one that flies
+        false&&ASSERT(!this.fly || !this.parent, 'a flying FirstPersonCamera3D moves on its own, it cannot be a child');
+
         // a click captures the mouse, then it looks around while captured or while a button is held
         if (this.lockPointer && mouseWasPressed(0))
             pointerLockRequest();
@@ -23815,9 +23894,9 @@ async function loadOBJ(url, smooth=render3D?.smoothShading)
  * - Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
  *   GLTFObject that createObject makes; a skinned character's walk is not read
  * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too
- * - An OPAQUE material still gets holes where its texture's alpha is under half, since the 3D pass cuts those texels
- *   out of every solid draw, and MASK always cuts at half, alphaCutoff is not read; export a solid texture without
- *   alpha, or with alpha 1 all over
+ * - An OPAQUE material, the default, ignores its texture's alpha as the format says: a texture only such materials
+ *   use loads with its alpha set to 1, so the 3D pass cuts no holes in it; MASK always cuts at half, alphaCutoff
+ *   is not read
  * - Material and vertex colors are linear in glTF and are converted to sRGB at load, the space textures are in
  * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
  * - Requires the Render3D plugin
@@ -23841,7 +23920,8 @@ class GLTFPart
     {
         /** @property {string} - The node's name, or its mesh's */
         this.name = name;
-        /** @property {Mesh} - The geometry in model space, the node transforms applied, with the vertex colors the file had */
+        /** @property {Mesh} - The geometry in model space, the node transforms applied, with the vertex colors the file had;
+         *  a node resting at scale 0 is applied at scale 1 there, so an animation can grow it from nothing */
         this.mesh = mesh;
         /** @property {Color} - The material's base color, to draw the mesh tinted with */
         this.color = color;
@@ -23898,8 +23978,8 @@ class GLTFModel
         this.modelMatrix = new Matrix4;       // what center, fit and transform did to the parts, animation works through it
         /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo */
         this.mesh = new Mesh;
-        for (const part of parts)
-            this.mesh.combine(part.mesh, RENDER3D_IDENTITY, part.color);
+        for (const part of parts) // a part baked at scale 1 from a node resting at 0 goes in as it rests
+            this.mesh.combine(part.mesh, nodeTree?.restPose?.[part.node] || RENDER3D_IDENTITY, part.color);
         // the one texture every part uses, when they all do; a part without one has no uvs into it, so a model
         // that mixes plain and textured parts, or uses several textures, is drawn through createObject instead
         const textures = new Set(parts.map(p=> p.textureInfo));
@@ -24046,6 +24126,15 @@ class GLTFObject extends EngineObject3D
             const o = new EngineObject3D(vec3(), part.mesh, part.textureInfo, part.color);
             o.transparent = part.transparent;
             o.pixelated = part.pixelated;
+            const rest = model.nodeTree?.restPose?.[part.node];
+            if (rest)
+            {
+                // baked at scale 1 from a node resting at 0, it starts as it rests, where a pose would put it
+                const modelMatrix = model.modelMatrix, m = modelMatrix.copy().multiply(rest).multiply(modelMatrix.copy().invert());
+                o.pos3D = m.getTranslation();
+                o.rotation3D = m.getRotation();
+                o.scale3D = m.getScale();
+            }
             this.addChild(o);
             this.parts.push(o);
         }
@@ -24111,7 +24200,7 @@ class GLTFObject extends EngineObject3D
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Load a glTF or GLB model, the .bin and images of a .gltf from beside it
- *  - An OPAQUE material's texture still cuts holes where its alpha is under half, give a solid one alpha 1
+ *  - A texture only OPAQUE materials use loads with its alpha set to 1, so the 3D pass cuts no holes in it
  *  @param {string} url
  *  @return {Promise<GLTFModel>}
  *  @memberof GLTF */
@@ -24173,6 +24262,7 @@ async function parseGLTF(data, baseUrl='')
     // the textures, decoded together first; none without WebGL, and a failed image only logs; only the base color
     // textures are drawn with, so the normal, roughness and other maps are not loaded at all
     const baseColorTextures = new Set((json.materials || []).map(m=> m.pbrMetallicRoughness?.baseColorTexture?.index));
+    const opaqueTextures = gltfOpaqueTextures(json);
     const textures = await Promise.all((json.textures || []).map(async (texture, index)=>
     {
         if (!glContext || typeof createImageBitmap == 'undefined' || !baseColorTextures.has(index)) return;
@@ -24189,20 +24279,36 @@ async function parseGLTF(data, baseUrl='')
                 const view = json.bufferViews[image.bufferView];
                 blob = new Blob([new Uint8Array(buffers[view.buffer], view.byteOffset || 0, view.byteLength)], {type: image.mimeType});
             }
-            return new TextureInfo(await createImageBitmap(blob), true, sampler.wrapS !== 33071); // CLAMP_TO_EDGE
+            // an OPAQUE material ignores its texture's alpha, which the 3D pass would cut holes by, so a texture only
+            // those use has it set to 1; decoded as stored for that, and a jpeg has no alpha to set
+            const opaque = opaqueTextures.has(index) && blob.type !== 'image/jpeg';
+            const bitmap = opaque ? await createImageBitmap(blob, {premultiplyAlpha: 'none'}).then(gltfOpaqueImage) : await createImageBitmap(blob);
+            return new TextureInfo(bitmap, true, sampler.wrapS !== 33071); // CLAMP_TO_EDGE
         }
         catch (e) { false&&LOG('glTF image not loaded', e); }
     }));
 
     // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it;
     // each node's parent and resting place are kept, so an animation can move a part from where it rests
-    const parts = [], parents = [], restInverse = [];
-    const visit = (index, parentMatrix, parentIndex)=>
+    const parts = [], parents = [], restInverse = [], restPose = [];
+    const visit = (index, parentMatrix, parentIndex, parentRest)=>
     {
         const node = json.nodes[index], local = gltfNodeMatrix(node);
-        const matrix = parentMatrix ? parentMatrix.copy().multiply(local) : local;
+        let matrix = parentMatrix ? parentMatrix.copy().multiply(local) : local;
+        let rest = parentRest && parentRest.copy().multiply(local); // where it rests, when that is not where it is baked
+        if (!node.matrix && node.scale?.includes(0))
+        {
+            // resting at scale 0, like a pop in exported at its first frame, would bake its parts onto a point and
+            // leave no inverse to pose them from; it and its children are baked at scale 1 on that axis instead,
+            // and a pose takes them back to 0, or up from there as an animation says
+            rest ||= matrix;
+            const unscaled = gltfNodeMatrix({...node, scale: node.scale.map(s=> s || 1)});
+            matrix = parentMatrix ? parentMatrix.copy().multiply(unscaled) : unscaled;
+        }
         parents[index] = parentIndex;
         restInverse[index] = matrix.copy().invert();
+        if (rest)
+            restPose[index] = rest.copy().multiply(restInverse[index]); // from where it is baked to where it rests
         if (node.mesh !== undefined)
         {
             const mesh = json.meshes[node.mesh];
@@ -24215,7 +24321,7 @@ async function parseGLTF(data, baseUrl='')
             }
         }
         for (const child of node.children || [])
-            visit(child, matrix, index);
+            visit(child, matrix, index, rest);
     };
     const scene = json.scenes?.[json.scene ?? 0];
     if (scene)
@@ -24238,7 +24344,7 @@ async function parseGLTF(data, baseUrl='')
                 times: gltfAccessor(json, buffers, sampler.input).data, values: gltfAccessor(json, buffers, sampler.output).data,
                 components: c.target.path === 'rotation' ? 4 : 3};
         })));
-    return new GLTFModel(parts, animations, {nodes: json.nodes, parents, restInverse});
+    return new GLTFModel(parts, animations, {nodes: json.nodes, parents, restInverse, restPose});
 }
 
 // a node's translation, rotation and scale as arrays to animate, copies so the file's stay as they rest
@@ -24246,6 +24352,45 @@ function gltfNodeTRS(node)
 {
     return {translation: [...(node.translation || [0, 0, 0])], rotation: [...(node.rotation || [0, 0, 0, 1])],
         scale: [...(node.scale || [1, 1, 1])]};
+}
+
+// the base color textures that only OPAQUE materials use, the default mode, which the format says ignores alpha;
+// one a MASK or BLEND material also uses keeps its alpha for that
+function gltfOpaqueTextures(json)
+{
+    const opaque = new Set, cut = new Set;
+    for (const material of json.materials || [])
+    {
+        const index = material.pbrMetallicRoughness?.baseColorTexture?.index;
+        if (index !== undefined)
+            (!material.alphaMode || material.alphaMode === 'OPAQUE' ? opaque : cut).add(index);
+    }
+    for (const index of cut)
+        opaque.delete(index);
+    return opaque;
+}
+
+// an image decoded without premultiplied alpha, given alpha 1 all over and its colors as they are; read back through
+// a framebuffer, since a 2D canvas would multiply the colors by the alpha and lose those under a clear texel
+function gltfOpaqueImage(image)
+{
+    const gl = glContext, {width, height} = image;
+    if (gl.isContextLost()) return image; // nothing to read back through, it keeps its alpha
+    const texture = gl.createTexture(), framebuffer = gl.createFramebuffer(), bound = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    const data = new Uint8ClampedArray(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data); // row 0 is the image's first row, as uploaded
+    gl.bindFramebuffer(gl.FRAMEBUFFER, bound);
+    gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+    gl.deleteFramebuffer(framebuffer);
+    gl.deleteTexture(texture);
+    for (let i = 3; i < data.length; i += 4)
+        data[i] = 255;
+    image.close();
+    return createImageBitmap(new ImageData(data, width, height));
 }
 
 // write a channel's value at a time into out: its keys held before the first and after the last, stepped, straight

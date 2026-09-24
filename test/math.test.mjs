@@ -501,8 +501,8 @@ test('oscillate sine (default)', () =>
 test('oscillate triangle', () =>
 {
     // triangle (type 1) at phase=0 -> peaks at amp; phase=0.5 -> 0
-    assert(near(oscillate(1, 1, 0, 0, 1), 1));
-    assert(near(oscillate(1, 1, 0.5, 0, 1), 0));
+    assert(near(oscillate(1, 1, 0, 0, 1), 0)); // starts at 0 and rises, like the sine
+    assert(near(oscillate(1, 1, 0.5, 0, 1), 1));
     // must stay in [0, amplitude]
     for (let i = 0; i <= 20; i++)
     {

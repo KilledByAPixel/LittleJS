@@ -167,6 +167,7 @@ export
     setSoundPauseWhenHidden,
     setDebugWatermark,
     setDebugKey,
+    setDebugOverlay,
 
     // Math
     PI,
@@ -258,6 +259,7 @@ export
     tile,
     TileInfo,
     TextureInfo,
+    loadTexture,
     SpriteAnimation,
     Shader,
     mainCanvas,
