@@ -4,7 +4,13 @@
 
 'use strict';
 
-/** 
+// Set by the first addChild, so a game that never attaches objects pays
+// nothing for the parent child system
+// - without addChild no object has a parent or children, so every path
+//   this guards was a no-op anyway, the guard only lets Closure delete it
+let objectChildrenUsed;
+
+/**
  * LittleJS Object Base Object Class
  * - Top level object class used by the engine
  * - Automatically adds self to object list
@@ -29,13 +35,6 @@
  * const pos = vec2(2,3);
  * const object = new EngineObject(pos);
  */
-
-// Set by the first addChild, so a game that never attaches objects pays
-// nothing for the parent child system
-// - without addChild no object has a parent or children, so every path
-//   this guards was a no-op anyway, the guard only lets Closure delete it
-let objectChildrenUsed;
-
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects

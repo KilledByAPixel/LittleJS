@@ -319,6 +319,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode)
 {
     if (!soundEnable || headlessMode) return;
+    ASSERT(!soundMasterGainEnable || audioMasterGain, 'setSoundMasterGainEnable(true) must be called before engineInit');
 
     // create buffer and source
     const channelCount = sampleChannels.length;
