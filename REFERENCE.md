@@ -1492,8 +1492,8 @@ newgrounds.postScore(boardId, score);
 new NewgroundsMedal(id, name, description, icon, src) // when logged in, unlock() asks the server and the medal only
                                      // unlocks and shows once it confirms; await the promise for the outcome
 new NewgroundsPlugin(app_id, cipher) // sets the newgrounds global, logs a view and fetches the lists; with the app's
-                                     // cipher, calls are encrypted by the browser's own WebCrypto, so the page has to
-                                     // be https or localhost and no library is needed
+                                     // cipher, medal unlocks and posted scores are encrypted by the browser's own
+                                     // WebCrypto, so the page has to be https or localhost and no library is needed
 await newgrounds.ready               // resolves once the session is checked and the lists are in, empty if the server
                                      // could not be reached; needed before reading the lists, user, a NewgroundsMedal's
                                      // server fields and, when logged in, its unlocked state
@@ -1509,8 +1509,8 @@ await newgrounds.getScores(id, user, social, skip, limit, period) // the scores 
                                      // narrows it down, and without either it is the whole board even when logged in
 newgrounds.unlockMedal(id)           // low level request only, the medal is not changed; games call medal.unlock()
 newgrounds.pendingUnlocks            // advanced: the medals sent to unlock and not yet confirmed, with their promises
-newgrounds.resendUnlocks()           // advanced: send the ones that came back unconfirmed again now, as the keep alive
-                                     // ping does every minute
+newgrounds.resendUnlocks()           // advanced: send the ones whose request did not reach the server again now, as
+                                     // the keep alive ping does every minute; one the server refused is not resent
 ```
 
 ## LittleJS Drawing Utilities

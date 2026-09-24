@@ -84,27 +84,35 @@ test('a NewgroundsMedal unlocks locally and posts nothing when not logged in', a
     assert.equal(JSON.parse(globalThis.localStorage['NG Guest'])['10'].unlocked, true, 'saved locally');
 });
 
-test('a call with a cipher posts the encrypted call in place of the plain one', async () =>
+test('a cipher encrypts the calls Newgrounds secures in place of the plain call, and only those', async () =>
 {
-    replies['Gateway.ping'] = { data: {} };
-    const response = await newgrounds.call('Gateway.ping', 0);
+    replies['ScoreBoard.postScore'] = { data: { success: false, error: { message: 'Login Required', code: 104 } } };
+    const response = await newgrounds.postScore(3, 100);
     assert.equal(response.success, true);
     assert.equal(input.app_id, 'an app');
     assert.equal(input.session_id, null);
-    assert.equal(input.call.component, 'Gateway.ping');
+    assert.equal(input.call.component, 'ScoreBoard.postScore');
     assert.equal(input.call.parameters, 0);
     assert.equal(typeof input.call.secure, 'string', 'the call is encrypted in place');
     assert.equal(Buffer.from(input.call.secure, 'base64').length % 16, 0);
+
+    replies['Gateway.ping'] = { data: {} };
+    await newgrounds.call('Gateway.ping', 0);
+    assert.equal(input.call.secure, undefined, 'the rest go plain');
+    assert.equal(calls.includes('App.logView'), true);
 });
 
 test('a call whose body is not JSON, or whose cipher is bad, gives undefined instead of throwing', async () =>
 {
+    const gateway = globalThis.fetch;
     globalThis.fetch = async ()=> ({ text: async ()=> '<html>gateway down</html>' });
     assert.equal(await newgrounds.call('Gateway.ping', 0), undefined);
+    globalThis.fetch = gateway;
 
     newgrounds.cipher = 'not base64!';
     newgrounds.cryptoKey = undefined;
-    assert.equal(await newgrounds.call('Gateway.ping', 0), undefined, 'a bad cipher is a failed call');
+    assert.equal(await newgrounds.call('Medal.unlock', { id: 7 }), undefined, 'a bad cipher fails a secured call');
+    assert.equal((await newgrounds.call('Gateway.ping', 0)).success, true, 'and nothing else');
     newgrounds.cipher = cipher;
 });
 

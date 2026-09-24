@@ -3854,8 +3854,9 @@ declare module "littlejsengine" {
      * - A plain Medal is never touched, so a game can use the plugin for scoreboards alone
      * - Without a session the medal and scoreboard lists still come in, so the medals get their names and icons; unlocking on the server and posting scores need a logged in player
      * - Create the medals as NewgroundsMedals with their ids on Newgrounds, then new NewgroundsPlugin(app_id, cipher); medalsInit is still needed, before or after
-     * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
+     * - Encrypts medal unlocks and posted scores, the calls Newgrounds secures, with the browser's own WebCrypto when the app has a cipher, no library needed
      * - Logs a view when it starts, and provides functions to unlock medals and to post and read scoreboards
+     * - Tells the Newgrounds page around the game when a medal unlocks or a score posts, as the official client does
      * - Keeps the session alive with a ping every minute when logged in
      * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
      * @namespace Newgrounds
@@ -3874,8 +3875,8 @@ declare module "littlejsengine" {
          *  - Create the medals first: they take their name and icon from the server once it answers, and when logged in they are locked here until it does
          *  - Call medalsInit too, before or after: an unlock asserts without it, and it keeps the medals while not logged in
          *  @param {string} app_id   - The Newgrounds App ID
-         *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; calls are encrypted with
-         *    the browser's WebCrypto, which needs a secure page, https or localhost
+         *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; medal unlocks and posted
+         *    scores are encrypted with the browser's WebCrypto, which needs a secure page, https or localhost
          *  @example
          *  // create the newgrounds object, replace the app id with your own
          *  const app_id = 'your_app_id_here';
@@ -3914,7 +3915,7 @@ declare module "littlejsengine" {
         /** Log the view, check the session, fetch the medals and scoreboards, then keep the session alive; the constructor runs it once
          *  @private */
         private init;
-        /** Send the unlocks that came back unconfirmed again, which the keep alive ping does every minute
+        /** Send the unlocks whose request did not reach the server again, which the keep alive ping does every minute
          *  - A request still out is left to answer, and while unlocks are prevented they wait */
         resendUnlocks(): void;
         /** Send a request to unlock a medal by id, the local medal is not changed; NewgroundsMedal.unlock sends this and waits for the answer

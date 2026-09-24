@@ -5,8 +5,9 @@
  * - A plain Medal is never touched, so a game can use the plugin for scoreboards alone
  * - Without a session the medal and scoreboard lists still come in, so the medals get their names and icons; unlocking on the server and posting scores need a logged in player
  * - Create the medals as NewgroundsMedals with their ids on Newgrounds, then new NewgroundsPlugin(app_id, cipher); medalsInit is still needed, before or after
- * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
+ * - Encrypts medal unlocks and posted scores, the calls Newgrounds secures, with the browser's own WebCrypto when the app has a cipher, no library needed
  * - Logs a view when it starts, and provides functions to unlock medals and to post and read scoreboards
+ * - Tells the Newgrounds page around the game when a medal unlocks or a score posts, as the official client does
  * - Keeps the session alive with a ping every minute when logged in
  * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
  * @namespace Newgrounds
@@ -20,7 +21,12 @@
 let newgrounds;
 
 // Engine internal variables not exposed to documentation
-const newgroundsUnlocksToResend = new Set; // pending medals whose request came back unconfirmed
+const newgroundsUnlocksToResend = new Set; // pending medals whose request did not reach the server
+const newgroundsSecureComponents = ['Medal.unlock', 'ScoreBoard.postScore']; // the calls encrypted with a cipher
+
+// tell the Newgrounds page around the game, with the message the official client sends
+function newgroundsNotifyPage(component, id)
+{ globalThis.top?.postMessage(JSON.stringify({'ngioComponent':component, 'id':id}), '*'); }
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
@@ -56,8 +62,8 @@ class NewgroundsMedal extends Medal
 
     /** Unlocks a medal if not already unlocked, once Newgrounds confirms it when logged in
      *  - The promise is optional, for when a game wants to know the outcome
-     *  - A request that came back unconfirmed is sent again with the keep alive ping every minute until the server confirms
-     *  - Calling it again while the medal is pending returns the same promise; resendUnlocks sends the unconfirmed ones now
+     *  - A request that did not reach the server is sent again with the keep alive ping every minute, one the server
+     *    refused is not; calling unlock again while the medal is pending returns the same promise
      *  @return {Promise<boolean>} - Whether the medal is unlocked, once the server has answered when logged in */
     unlock()
     {
@@ -74,15 +80,19 @@ class NewgroundsMedal extends Medal
             const serverMedal = response?.result?.data?.medal;
             if (!serverMedal?.unlocked || medalsPreventUnlock)
             {
-                // still pending: the keep alive ping resends it, unless the session dropped and the medal is local now
+                // still pending: a request that did not reach the server, or a confirm while unlocks are prevented,
+                // waits for the keep alive ping, unless the session dropped and the medal is local now
                 debugMedals && LOG('Newgrounds did not unlock medal', this.id, response?.result?.data?.error || response?.error);
-                if (!this.isLocal())
+                if (!this.isLocal() && (!response || serverMedal?.unlocked))
                     newgroundsUnlocksToResend.add(this);
                 return this.unlocked;
             }
             const listed = newgrounds.medals.find(m=> m['id'] == this.id);
             listed && Object.assign(listed, serverMedal); // keep the fetched list in step
+            if (serverMedal['icon'] && serverMedal['icon'] != this.image?.src)
+                (this.image = new Image).src = serverMedal['icon']; // a secret medal shows its real icon once unlocked
             pending.delete(this);
+            newgroundsNotifyPage('Medal.unlock', this.id);
             return super.unlock();
         });
         pending.set(this, request);
@@ -102,8 +112,8 @@ class NewgroundsPlugin
      *  - Create the medals first: they take their name and icon from the server once it answers, and when logged in they are locked here until it does
      *  - Call medalsInit too, before or after: an unlock asserts without it, and it keeps the medals while not logged in
      *  @param {string} app_id   - The Newgrounds App ID
-     *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; calls are encrypted with
-     *    the browser's WebCrypto, which needs a secure page, https or localhost
+     *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; medal unlocks and posted
+     *    scores are encrypted with the browser's WebCrypto, which needs a secure page, https or localhost
      *  @example
      *  // create the newgrounds object, replace the app id with your own
      *  const app_id = 'your_app_id_here';
@@ -229,7 +239,7 @@ class NewgroundsPlugin
         return this;
     }
 
-    /** Send the unlocks that came back unconfirmed again, which the keep alive ping does every minute
+    /** Send the unlocks whose request did not reach the server again, which the keep alive ping does every minute
      *  - A request still out is left to answer, and while unlocks are prevented they wait */
     resendUnlocks()
     {
@@ -252,7 +262,14 @@ class NewgroundsPlugin
      *  @param {number} value - The score value, a whole number
      *  @return {Promise<Object>} - The response JSON object, undefined when the call failed; result.data.success says whether
      *    it posted, which needs a logged in player */
-    postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}); }
+    postScore(id, value)
+    {
+        return this.call('ScoreBoard.postScore', {'id':id, 'value':value}).then(response=>
+        {
+            response?.result?.data?.success && newgroundsNotifyPage('ScoreBoard.postScore', id);
+            return response;
+        });
+    }
 
     /** Get scores from a scoreboard
      *  @param {number} id        - The scoreboard id
@@ -306,7 +323,7 @@ class NewgroundsPlugin
         try
         {
             const call = {'component':component, 'parameters':parameters};
-            if (this.cipher)
+            if (this.cipher && newgroundsSecureComponents.includes(component))
             {
                 // the whole call goes encrypted in its place
                 call['secure'] = await this.encrypt(JSON.stringify(call));
