@@ -86,7 +86,7 @@ test('a NewgroundsMedal unlocks locally and posts nothing when not logged in', a
 
 test('a cipher encrypts the calls Newgrounds secures in place of the plain call, and only those', async () =>
 {
-    replies['ScoreBoard.postScore'] = { data: { success: false, error: { message: 'Login Required', code: 104 } } };
+    replies['ScoreBoard.postScore'] = { data: { success: false, error: { message: 'Login Required', code: 110 } } };
     const response = await newgrounds.postScore(3, 100);
     assert.equal(response.success, true);
     assert.equal(input.app_id, 'an app');

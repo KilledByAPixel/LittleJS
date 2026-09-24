@@ -103,17 +103,17 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     assert.deepEqual([...plugin.pendingUnlocks.keys()], [m3]);
     setMedalsPreventUnlock(true);
     before = unlockCalls();
-    keepAlive();
+    await keepAlive();
     await flush();
     assert.equal(unlockCalls(), before, 'not resent while unlocks are prevented');
     setMedalsPreventUnlock(false);
     before = calls.length;
     replies['Medal.unlock'] = { data: { medal: { id: 3, unlocked: true, icon: 'https://img.ngfiles.com/three.png' }, medal_score: 5 } };
-    keepAlive();
+    await keepAlive();
     const resent = plugin.pendingUnlocks.get(m3);
     assert.notEqual(resent, failed, 'a fresh request');
     assert.equal(await resent, true, 'resent and confirmed');
-    assert.deepEqual(calls.slice(before), ['Gateway.ping', 'Medal.unlock']);
+    assert.deepEqual(calls.slice(before), ['App.checkSession', 'Medal.unlock'], 'the session is checked, then the unlock resent');
     assert.equal(m3.unlocked, true);
     assert.equal(m3.image.src, 'https://img.ngfiles.com/three.png', 'the icon the server sends with the unlock, a secret medal\'s real one');
     assert.equal(plugin.pendingUnlocks.size, 0);
@@ -124,7 +124,7 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     const m5 = new NewgroundsMedal(5, 'Five');
     const out = m5.unlock();
     before = unlockCalls();
-    keepAlive();
+    await keepAlive();
     await flush();
     assert.equal(unlockCalls(), before, 'not resent while out');
     assert.equal(plugin.pendingUnlocks.get(m5), out);
@@ -142,7 +142,7 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     assert.equal(m2.unlocked, false);
     assert.deepEqual([...plugin.pendingUnlocks.keys()], [m2], 'still pending');
     setMedalsPreventUnlock(false);
-    keepAlive();
+    await keepAlive();
     assert.equal(await plugin.pendingUnlocks.get(m2), true, 'resent and confirmed');
     assert.equal(m2.unlocked, true);
     assert.equal(plugin.pendingUnlocks.size, 0);
@@ -155,7 +155,7 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     assert.equal(m4.unlocked, false);
     assert.equal(m4.unlock(), refused, 'the same answer, nothing sent');
     before = unlockCalls();
-    keepAlive();
+    await keepAlive();
     await flush();
     assert.equal(unlockCalls(), before, 'not resent');
     assert.deepEqual([...plugin.pendingUnlocks.keys()], [m4], 'still pending');
@@ -164,8 +164,9 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     toPage.length = 0;
     replies['ScoreBoard.postScore'] = { data: { success: true, score: { value: 100 }, scoreboard: { id: 3 } } };
     assert.equal((await plugin.postScore(3, 100)).result.data.success, true);
-    replies['ScoreBoard.postScore'] = { data: { success: false, error: { message: 'Login Required', code: 104 } } };
+    replies['ScoreBoard.postScore'] = { data: { success: false, error: { message: 'Invalid Scoreboard ID', code: 203 } } };
     await plugin.postScore(3, 100);
+    assert.equal(plugin.session_id, 'abc123', 'a refusal that is not about the session keeps it');
     assert.deepEqual(toPage, [{ ngioComponent: 'ScoreBoard.postScore', id: 3 }]);
 
     // a later medalsInit skips the newgrounds medals in the local save, and a reset keeps their entries

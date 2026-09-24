@@ -1445,8 +1445,8 @@ new Box2dGearJoint(jointA, jointB, ratio)
 - Achievement/medal system with on-screen popup, save/restore via localStorage
 - Optional Newgrounds plugin for medals held on the server and for scoreboards
 - While a player is logged in to Newgrounds, the server holds their NewgroundsMedals: they unlock once it confirms and
-  the local save leaves them alone; a plain Medal is never touched, and if the session check fails at load the game
-  plays as not logged in
+  the local save leaves them alone; a plain Medal is never touched, and once the session is lost, at load or later,
+  the game plays as not logged in
 - Without a session the medal and scoreboard lists still come in, so the medals get their names and icons; unlocking
   on the server and posting a score need a logged in player, and an unlock earned while not logged in stays local
 - See `examples/shorts/medals.js` for a demo
@@ -1497,7 +1497,7 @@ new NewgroundsPlugin(app_id, cipher) // sets the newgrounds global, logs a view 
 await newgrounds.ready               // resolves once the session is checked and the lists are in, empty if the server
                                      // could not be reached; needed before reading the lists, user, a NewgroundsMedal's
                                      // server fields and, when logged in, its unlocked state
-newgrounds.session_id                // the player's session id, null when not logged in or the session check failed
+newgrounds.session_id                // the player's session id, null when not logged in or once the session is lost
 newgrounds.user                      // the logged in player once ready, with id, name, url, supporter; null otherwise
 newgrounds.medals                    // the server's medal list once ready; each NewgroundsMedal takes its name, image,
                                      // value, difficulty and description with " (value)" added
@@ -1510,7 +1510,7 @@ await newgrounds.getScores(id, user, social, skip, limit, period) // the scores 
 newgrounds.unlockMedal(id)           // low level request only, the medal is not changed; games call medal.unlock()
 newgrounds.pendingUnlocks            // advanced: the medals sent to unlock and not yet confirmed, with their promises
 newgrounds.resendUnlocks()           // advanced: send the ones whose request did not reach the server again now, as
-                                     // the keep alive ping does every minute; one the server refused is not resent
+                                     // the minute's session check does; one the server refused is not resent
 ```
 
 ## LittleJS Drawing Utilities

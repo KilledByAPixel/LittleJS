@@ -3857,7 +3857,8 @@ declare module "littlejsengine" {
      * - Encrypts medal unlocks and posted scores, the calls Newgrounds secures, with the browser's own WebCrypto when the app has a cipher, no library needed
      * - Logs a view when it starts, and provides functions to unlock medals and to post and read scoreboards
      * - Tells the Newgrounds page around the game when a medal unlocks or a score posts, as the official client does
-     * - Keeps the session alive with a ping every minute when logged in
+     * - Checks the session every minute when logged in, which keeps it alive, and plays as not logged in once it is lost
+     * - A request that takes longer than 15 seconds fails like one that could not reach the server
      * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
      * @namespace Newgrounds
      */
@@ -3907,7 +3908,7 @@ declare module "littlejsengine" {
         /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock and not yet confirmed, with their request's promise
          *  @type {Map<NewgroundsMedal, Promise<boolean>>} */
         pendingUnlocks: Map<NewgroundsMedal, Promise<boolean>>;
-        /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the session check failed
+        /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the session is lost
          *  @type {string|null} */
         session_id: string | null;
         /** @property {Promise<NewgroundsPlugin>} - Resolves once the session is checked and the lists are in, empty if the server could not be reached */
@@ -3915,6 +3916,10 @@ declare module "littlejsengine" {
         /** Log the view, check the session, fetch the medals and scoreboards, then keep the session alive; the constructor runs it once
          *  @private */
         private init;
+        /** Play as not logged in from now on: the NewgroundsMedals come back from the local save, keeping the unlocks the
+         *  server confirmed meanwhile, and the unlocks still out unlock locally
+         *  @private */
+        private dropSession;
         /** Send the unlocks whose request did not reach the server again, which the keep alive ping does every minute
          *  - A request still out is left to answer, and while unlocks are prevented they wait */
         resendUnlocks(): void;
@@ -3947,8 +3952,8 @@ declare module "littlejsengine" {
          *  @param {string}  component    - Name of the component
          *  @param {Object}  [parameters] - Parameters to use for call
          *  @param {string|null} [session_id] - The session to send, the player's by default
-         *  @return {Promise<Object>}     - The response JSON object, undefined when the call failed; a component's own success
-         *    and error are in result.data
+         *  @return {Promise<Object>}     - The response JSON object, undefined when the call failed or took over 15 seconds;
+         *    a component's own success and error are in result.data
          */
         call(component: string, parameters?: any, session_id?: string | null): Promise<any>;
     }

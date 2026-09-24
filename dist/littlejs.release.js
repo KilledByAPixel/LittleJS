@@ -10209,7 +10209,8 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
  * - Encrypts medal unlocks and posted scores, the calls Newgrounds secures, with the browser's own WebCrypto when the app has a cipher, no library needed
  * - Logs a view when it starts, and provides functions to unlock medals and to post and read scoreboards
  * - Tells the Newgrounds page around the game when a medal unlocks or a score posts, as the official client does
- * - Keeps the session alive with a ping every minute when logged in
+ * - Checks the session every minute when logged in, which keeps it alive, and plays as not logged in once it is lost
+ * - A request that takes longer than 15 seconds fails like one that could not reach the server
  * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
  * @namespace Newgrounds
  */
@@ -10222,6 +10223,12 @@ let newgrounds;
 // Engine internal variables not exposed to documentation
 const newgroundsUnlocksToResend = new Set; // pending medals whose request did not reach the server
 const newgroundsSecureComponents = ['Medal.unlock', 'ScoreBoard.postScore']; // the calls encrypted with a cipher
+const newgroundsSessionErrors = [104, 110, 111]; // expired session, login required, session cancelled
+const newgroundsTimeoutMS = 15e3; // how long a request may take before it fails
+
+// whether the server answered that the session is gone, as opposed to a request that failed on the way
+function newgroundsSessionLost(response)
+{ return newgroundsSessionErrors.includes(response?.result?.data?.error?.code ?? response?.error?.code); }
 
 // tell the Newgrounds page around the game, with the message the official client sends
 function newgroundsNotifyPage(component, id)
@@ -10263,6 +10270,7 @@ class NewgroundsMedal extends Medal
      *  - The promise is optional, for when a game wants to know the outcome
      *  - A request that did not reach the server is sent again with the keep alive ping every minute, one the server
      *    refused is not; calling unlock again while the medal is pending returns the same promise
+     *  - An answer that the session is gone makes the game play as not logged in, and this medal unlocks locally
      *  @return {Promise<boolean>} - Whether the medal is unlocked, once the server has answered when logged in */
     unlock()
     {
@@ -10276,6 +10284,8 @@ class NewgroundsMedal extends Medal
             return pending.get(this);
         const request = newgrounds.unlockMedal(this.id).then(response=>
         {
+            if (newgroundsSessionLost(response))
+                newgrounds.dropSession(); // the pending unlocks, this one too, are local now
             const serverMedal = response?.result?.data?.medal;
             if (!serverMedal?.unlocked || medalsPreventUnlock)
             {
@@ -10347,7 +10357,7 @@ class NewgroundsPlugin
         this.pendingUnlocks = new Map;
 
         // get session id from url search params
-        /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the session check failed
+        /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the session is lost
          *  @type {string|null} */
         this.session_id = hasLocation ? new URL(location.href).searchParams.get('ngio_session_id') : null;
         // Newgrounds holds this player's NewgroundsMedals: locked until the server says otherwise, the local save leaves them alone
@@ -10375,22 +10385,7 @@ class NewgroundsPlugin
             if (medalList)
                 this.user = user;
             else
-            {
-                // without the server (offline / bad session / server error) the game plays as not logged in
-                debugMedals && false&&LOG('Newgrounds session unavailable; medals are local');
-                const confirmed = Object.values(medals).filter(medal=> medal.unlocked);
-                this.session_id = null;
-                medalsLoad(); // the NewgroundsMedals are local again, back from the save
-                confirmed.forEach(medal=> medal.unlocked = true);
-                medalsSave();
-
-                // the unlocks still out are local too, they unlock now
-                const pending = [...this.pendingUnlocks.keys()];
-                this.pendingUnlocks.clear();
-                newgroundsUnlocksToResend.clear();
-                for (const medal of pending)
-                    medal.unlock();
-            }
+                this.dropSession(); // without the server (offline / bad session / server error)
         }
 
         // not logged in, the list comes too, without the unlocks
@@ -10428,14 +10423,40 @@ class NewgroundsPlugin
         if (!this.session_id)
             return this;
 
-        // logged in, ping every minute and resend the unlocks the server has not confirmed
-        const keepAliveMS = 60 * 1e3;
-        setInterval(()=>
+        // logged in, check the session every minute, which keeps it alive, and resend the unlocks that did not reach the server
+        const keepAlive = setInterval(async ()=>
         {
-            this.call('Gateway.ping', 0);
+            if (!this.session_id)
+                return clearInterval(keepAlive);
+            const response = await this.call('App.checkSession');
+            const session = response?.result?.data?.['session'];
+            if (newgroundsSessionLost(response) || session && (session['expired'] || !session['user']))
+                return this.dropSession();
             this.resendUnlocks();
-        }, keepAliveMS);
+        }, 60e3);
         return this;
+    }
+
+    /** Play as not logged in from now on: the NewgroundsMedals come back from the local save, keeping the unlocks the
+     *  server confirmed meanwhile, and the unlocks still out unlock locally
+     *  @private */
+    dropSession()
+    {
+        if (!this.session_id) return;
+        debugMedals && false&&LOG('Newgrounds session unavailable; medals are local');
+        const confirmed = Object.values(medals).filter(medal=> medal.unlocked);
+        this.session_id = null;
+        this.user = null;
+        medalsLoad(); // the NewgroundsMedals are local again, back from the save
+        confirmed.forEach(medal=> medal.unlocked = true);
+        medalsSave();
+
+        // the unlocks still out are local too, they unlock now
+        const pending = [...this.pendingUnlocks.keys()];
+        this.pendingUnlocks.clear();
+        newgroundsUnlocksToResend.clear();
+        for (const medal of pending)
+            medal.unlock();
     }
 
     /** Send the unlocks whose request did not reach the server again, which the keep alive ping does every minute
@@ -10466,6 +10487,7 @@ class NewgroundsPlugin
         return this.call('ScoreBoard.postScore', {'id':id, 'value':value}).then(response=>
         {
             response?.result?.data?.success && newgroundsNotifyPage('ScoreBoard.postScore', id);
+            newgroundsSessionLost(response) && this.dropSession();
             return response;
         });
     }
@@ -10513,8 +10535,8 @@ class NewgroundsPlugin
      *  @param {string}  component    - Name of the component
      *  @param {Object}  [parameters] - Parameters to use for call
      *  @param {string|null} [session_id] - The session to send, the player's by default
-     *  @return {Promise<Object>}     - The response JSON object, undefined when the call failed; a component's own success
-     *    and error are in result.data
+     *  @return {Promise<Object>}     - The response JSON object, undefined when the call failed or took over 15 seconds;
+     *    a component's own success and error are in result.data
      */
     async call(component, parameters, session_id=this.session_id)
     {
@@ -10540,7 +10562,8 @@ class NewgroundsPlugin
             // send it as post data
             const formData = new FormData();
             formData.append('input', JSON.stringify(input));
-            const response = await fetch(url, {'method':'POST', 'body':formData});
+            const signal = globalThis.AbortSignal?.timeout?.(newgroundsTimeoutMS); // a stalled request fails
+            const response = await fetch(url, {'method':'POST', 'body':formData, 'signal':signal});
             const text = await response.text();
             debugMedals && false&&LOG(text);
             return text ? JSON.parse(text) : undefined;
