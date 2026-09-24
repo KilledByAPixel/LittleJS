@@ -2177,7 +2177,7 @@ class Mesh
         {
             // an indexed mesh takes the strip as the triangles it makes
             const part = new Mesh().addStrip(points, normals, uvs, colors).toIndexed();
-            return this.addTriangles(part.points, part.normals, part.uvs, part.colors, part.indices);
+            return this.addTriangles(part.points, part.indices, part.normals, part.uvs, part.colors);
         }
         render3DForEachStripVertex(points, normals, uvs, colors, (p, n, uv, c)=>
         {
@@ -2195,12 +2195,12 @@ class Mesh
      *  - The mesh becomes indexed: a strip mesh is turned into triangles first, and strips added later join as triangles
      *  - List each triangle counter clockwise as seen from the front, like a strip's first triangle
      *  @param {Array<Vector3>} points - Each vertex once
+     *  @param {Array<number>} indices - Three vertex numbers per triangle, into points
      *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
      *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, default zero
      *  @param {Color|Array<Color>} [colors] - One for all or one per point, default white
-     *  @param {Array<number>} indices - Three vertex numbers per triangle, into points
      *  @return {Mesh} */
-    addTriangles(points, normals, uvs, colors, indices)
+    addTriangles(points, indices, normals, uvs, colors)
     {
         ASSERT(isArray(points) && isArray(indices) && indices.length % 3 === 0, 'addTriangles takes points and three indices per triangle');
         ASSERT(indices.every(i=> i >= 0 && i < points.length && i % 1 === 0), 'an index points past the vertices given');
@@ -2996,6 +2996,7 @@ class EngineObject3D extends EngineObject
         this.matrixVersion = 0;          // counts the rebuilds, so a child knows when its parent's changed
         this.matrixParent = undefined;   // the parent it was built under, and that parent's version then
         this.matrixParentVersion = 0;
+        this.movePass = engineObjectsUpdateCount; // the engine pass a child last moved in, so a refresh is not a step
     }
 
     /** Move by the 3D velocities and push out of solids, called automatically each frame before update, like the 2D physics
@@ -3021,8 +3022,13 @@ class EngineObject3D extends EngineObject
     {
         if (!paused)
         {
-            // a child is never given updatePhysics, so it moves here, as an offset from its parent
-            this.parent && render3DMove(this);
+            // a child is never given updatePhysics, so it moves here, as an offset from its parent: once per
+            // engine pass, since addChild, attach and a game bring the transforms up to date too
+            if (this.parent && this.movePass !== engineObjectsUpdateCount)
+            {
+                this.movePass = engineObjectsUpdateCount;
+                render3DMove(this);
+            }
             if (this.sync2D)
                 this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
         }
@@ -3056,7 +3062,7 @@ class EngineObject3D extends EngineObject
      *  @return {Vector3} */
     getUp3D() { return render3DAxis(render3DObjectMatrix(this).m, 4).normalize(); }
 
-    /** Returns a copy of the object's world transform, relative to the parent's when attached to an EngineObject3D
+    /** Returns a copy of the object's world transform, the parent's included when attached to an EngineObject3D
      *  - The object keeps its matrix and rebuilds it only when its position, rotation or scale changed, so this is cheap to call
      *  @return {Matrix4} */
     getMatrix() { return render3DObjectMatrix(this).copy(); }

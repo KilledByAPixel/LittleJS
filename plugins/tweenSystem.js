@@ -490,9 +490,15 @@ function tweenUpdate(gameDelta, realDelta)
         realDelta = gameDelta;
     }
 
-    // Iterate in reverse so removals don't disturb iteration.
+    // Iterate in reverse so removals don't disturb iteration; a callback may stop
+    // any tween, even all of them, so the index is checked against the list after it.
     for (let i = tweenActive.length; i--;)
     {
+        if (i >= tweenActive.length)
+        {
+            i = tweenActive.length; // a callback shortened the list, carry on from its end
+            continue;
+        }
         const t = tweenActive[i];
         if (t.paused) continue;
         const dt = t.useRealTime ? realDelta : gameDelta;
@@ -507,10 +513,17 @@ function tweenUpdate(gameDelta, realDelta)
         {
             // Completion: fire end value, remove from active, fire then-callback.
             t.callback(t.interp(0));
-            tweenActive.splice(i, 1);
+            const j = tweenActive.indexOf(t); // this one, wherever the callback left it
+            if (j >= 0) tweenActive.splice(j, 1);
             const cb = t.thenCallback;
             t.thenCallback = undefined;
             if (cb) cb();
+        }
+        // carry on from where this tween is now, when a callback moved it
+        if (tweenActive[i] !== t)
+        {
+            const j = tweenActive.indexOf(t);
+            i = j < 0 ? min(i, tweenActive.length) : j;
         }
     }
 }

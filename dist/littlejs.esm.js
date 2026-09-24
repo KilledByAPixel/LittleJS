@@ -69,7 +69,7 @@ let frame = 0;
  *  @memberof Engine */
 let time = 0;
 
-/** Actual clock time since start in seconds (not affected by pause, timescale, or frame rate clamping)
+/** Actual clock time since start in seconds (not affected by pause, timescale, or frame rate clamping; the debug speed keys scale it in debug builds)
  *  @type {number}
  *  @memberof Engine */
 let timeReal = 0;
@@ -94,6 +94,9 @@ function setPaused(isPaused=true) { paused = isPaused; }
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
+let engineInitialized = false; // engineInit ran, with or without a canvas
+let engineObjectsUpdateCount = 0; // passes of engineObjectsUpdate so far, how a child knows it moved this pass
+const engineChildStack = []; // the children being updated, taken off the live lists so one leaving does not skip the next
 let showEngineVersion = true;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -172,10 +175,11 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
 async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement)
 {
     showEngineVersion && console.log(`${engineName} Engine v${engineVersion}`);
-    ASSERT(!mainContext, 'engine already initialized');
+    ASSERT(!engineInitialized, 'engine already initialized');
     // runtime guard so release builds (where the assert is stripped) don't
     // double-register listeners / double-add canvases on a second call
-    if (mainContext) return;
+    if (engineInitialized) return;
+    engineInitialized = true;
     ASSERT(isArray(imageSources), 'pass in images as array');
 
     // ensure body exists for minimal HTML where the script runs before <body> is parsed
@@ -532,11 +536,12 @@ function engineStep(frames=1)
         engineUpdateInternal(frameTimeLastMS + 1e3 / frameRate);
 }
 
-/** Update each engine object, remove destroyed objects, and update time
+/** Update each engine object and remove destroyed objects; time and frame do not advance, engineStep does that
  * can be called manually if objects need to be updated outside of main loop
  *  @memberof Engine */
 function engineObjectsUpdate()
 {
+    ++engineObjectsUpdateCount;
     // get list of solid objects for physics optimization
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
@@ -545,14 +550,23 @@ function engineObjectsUpdate()
         if (!o.parent && !o.destroyed)
             o.updatePhysics();
 
-    // recursive object update
+    // recursive object update: the children are walked from a copy on a shared stack, since a child that
+    // destroys itself leaves its parent's list on the spot and the next child would slide past the loop
+    function updateChildObjects(children)
+    {
+        const start = engineChildStack.length;
+        for (const child of children)
+            engineChildStack.push(child);
+        for (let i = start; i < engineChildStack.length; ++i)
+            updateChildObject(engineChildStack[i]);
+        engineChildStack.length = start;
+    }
     function updateChildObject(o)
     {
         if (o.destroyed) return;
 
         o.update();
-        for (const child of o.children)
-            updateChildObject(child);
+        updateChildObjects(o.children);
     }
     for (const o of engineObjects)
     {
@@ -560,8 +574,7 @@ function engineObjectsUpdate()
 
         // update top level objects
         o.update();
-        for (const child of o.children)
-            updateChildObject(child);
+        updateChildObjects(o.children);
         o.updateTransforms();
     }
 
@@ -6013,7 +6026,7 @@ let gamepadPrimary = 0;
 
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
+const isTouchDevice = !headlessMode && typeof window != 'undefined' && window.ontouchstart !== undefined;
 
 /** Prevents input continuing to the default browser handling
  *  This is useful to disable for html menus so the browser can handle input normally
@@ -7241,17 +7254,20 @@ function touchGamepadPointerUp(e)
  * @namespace Audio
  */
 
-/** Audio context used by the engine
+/** Audio context used by the engine, undefined outside a browser, where the engine runs headless
  *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext = new AudioContext;
+let audioContext = typeof AudioContext == 'undefined' ? undefined : new AudioContext;
 
 /** Master gain node for all audio to pass through, made at load so effects can connect to it any time
  *  @type {GainNode}
  *  @memberof Audio */
-let audioMasterGain = audioContext.createGain();
-audioMasterGain.connect(audioContext.destination);
-audioMasterGain.gain.value = soundVolume; // set starting value
+let audioMasterGain = audioContext?.createGain();
+if (audioMasterGain)
+{
+    audioMasterGain.connect(audioContext.destination);
+    audioMasterGain.gain.value = soundVolume; // set starting value
+}
 
 // the current master effect, kept so setAudioMasterEffect can undo the route it made,
 // and whether its output came from an effect, which gets its default route back
@@ -8204,9 +8220,10 @@ function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
 }
 
 /**
- *  @callback TileCollisionCallback - Function to handle a tile collision test
+ *  @callback TileCollisionCallback - Decides whether a tile counts as solid for a collision test or raycast
  *  @param {number} tileData - the value of the tile at the position
  *  @param {Vector2} pos - world space position of tile where the collision occurred
+ *  @return {boolean} - true for a hit; a callback that returns nothing lets everything through
  *  @memberof TileLayers
  */
 
@@ -8217,7 +8234,7 @@ function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
  *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
  *  @param {Vector2} [normal] - Optional normal of the surface hit
  *  @param {boolean} [solidOnly=true] - Only check solid layers?
- *  @return {Vector2|undefined} - position of the center of the tile hit or undefined if no hit
+ *  @return {Vector2|undefined} - where the ray meets the first tile hit, nudged just inside it, or undefined if no hit
  *  @memberof TileLayers */
 function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnly=true)
 {
@@ -8569,8 +8586,8 @@ class TileLayer extends CanvasLayer
         ASSERT(drawContext !== this.context);
         
         // save current render settings
-        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
-        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor];
+        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color]} */
+        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor];
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
@@ -8580,6 +8597,7 @@ class TileLayer extends CanvasLayer
         canvasClearColor = CLEAR_BLACK;
         cameraPos = this.size.multiply(tileSize).scale(.5);
         cameraScale = 1;
+        cameraAngle = 0; // the tiles are drawn flat, the world camera turns the whole layer later
 
         // set render target to this layer
         this.isUsingWebGL = this.hasWebGL();
@@ -8607,7 +8625,7 @@ class TileLayer extends CanvasLayer
         // set stuff back to normal
         if (this.isUsingWebGL)
             glSetRenderTarget();
-        [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
+        [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position in the tile layer
@@ -8862,15 +8880,16 @@ class TileCollisionLayer extends TileLayer
             (tileData, pos)=> callbackObject(tileData, pos) :
             (tileData, pos)=> callbackObject.collideWithTile(tileData, pos) :
             (tileData)=> tileData > 0;
+        // the line is walked in the layer's own space, so its cells are the tiles wherever the layer sits
+        const offset = this.pos, worldPos = new Vector2;
         const testFunction = (pos)=>
         {
-            const tileData = this.getCollisionData(localPos.set(pos.x - this.pos.x, pos.y - this.pos.y));
-            return tileData && collisionTest(tileData, pos);
+            const tileData = this.getCollisionData(pos);
+            return tileData && collisionTest(tileData, worldPos.set(pos.x + offset.x, pos.y + offset.y));
         }
-
-        // use line test against tile collision
-        const localPos = new Vector2;
-        const hitPos = lineTest(posStart, posEnd, testFunction, normal);
+        const hitPos = lineTest(posStart.subtract(offset), posEnd.subtract(offset), testFunction, normal);
+        if (hitPos)
+            hitPos.x += offset.x, hitPos.y += offset.y;
         if (debugRaycast && hitPos)
         {
             const tilePos = hitPos.floor().add(vec2(.5));
@@ -8903,10 +8922,11 @@ class TileCollisionLayer extends TileLayer
  */
 
 /**
- *  @callback ParticleCollideCallback - Collide callback for particles
+ *  @callback ParticleCollideCallback - Decides whether a particle stops at a tile, it is a filter rather than a notice
  *  @param {Particle} particle
  *  @param {number} tileData
  *  @param {Vector2} pos
+ *  @return {boolean} - true to stop the particle there; a callback that returns nothing lets it pass through
  *  @memberof Particles
  */
 
@@ -9131,10 +9151,12 @@ class ParticleEmitter extends EngineObject
         let pos = this.emitCircle ?            // check if circle emitter
             randInCircle(this.emitSize.x/2)    // circle emitter
             : vec2(rand(-.5,.5), rand(-.5,.5)) // box emitter
-                .multiply(this.emitSize).rotate(this.angle)
+                .multiply(this.emitSize);
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)
         {
+            // into the world: a local space particle is turned with the emitter when it draws instead
+            this.emitCircle || (pos = pos.rotate(this.angle));
             pos.x += this.pos.x;
             pos.y += this.pos.y;
             angle += this.angle;
@@ -9290,23 +9312,25 @@ class Particle
         // apply physics; only the tile collision needs where the particle was, so only then is it copied
         const solve = enablePhysicsSolver && collideTiles;
         const oldPos = solve ? this.pos.copy() : undefined;
-        this.velocity.x *= damping;
-        this.velocity.y *= damping;
-        this.pos.x += this.velocity.x += gravity.x * gravityScale;
-        this.pos.y += this.velocity.y += gravity.y * gravityScale;
+        this.velocity.x = this.velocity.x * damping + gravity.x * gravityScale;
+        this.velocity.y = this.velocity.y * damping + gravity.y * gravityScale;
+        if (solve)
+        {
+            // apply max circular speed to prevent going through collision, before the move it protects
+            const length2 = this.velocity.lengthSquared();
+            if (length2 > objectMaxSpeed*objectMaxSpeed)
+            {
+                const s = objectMaxSpeed / length2**.5;
+                this.velocity.x *= s;
+                this.velocity.y *= s;
+            }
+        }
+        this.pos.x += this.velocity.x;
+        this.pos.y += this.velocity.y;
         this.angle += this.angleVelocity *= angleDamping;
 
         // don't do collision if solver disabled
         if (!solve) return;
-        
-        // apply max circular speed to prevent going through collision
-        const length2 = this.velocity.lengthSquared();
-        if (length2 > objectMaxSpeed*objectMaxSpeed)
-        {
-            const s = objectMaxSpeed / length2**.5;
-            this.velocity.x *= s;
-            this.velocity.y *= s;
-        }
 
         // check collision against tiles
         this.groundObject = undefined;
@@ -12443,7 +12467,8 @@ class UISystemPlugin
         this.defaultHoverColor = hsl(0,0,.9);
         /** @property {Color} - Default color for disabled UI elements */
         this.defaultDisabledColor = hsl(0,0,.3);
-        /** @property {Color} - Uses a gradient fill combined with color */
+        /** @property {Color|undefined} - Uses a gradient fill combined with color
+         *  @type {Color|undefined} */
         this.defaultGradientColor = undefined;
         /** @property {number} - Default line width for UI elements */
         this.defaultLineWidth = 4;
@@ -12453,11 +12478,14 @@ class UISystemPlugin
         this.defaultTextFitScale = .8;
         /** @property {string} - Default font for UI elements */
         this.defaultFont = fontDefault;
-        /** @property {Sound} - Default sound when interactive UI element is pressed */
+        /** @property {Sound|undefined} - Default sound when interactive UI element is pressed
+         *  @type {Sound|undefined} */
         this.defaultSoundPress = undefined;
-        /** @property {Sound} - Default sound when interactive UI element is released */
+        /** @property {Sound|undefined} - Default sound when interactive UI element is released
+         *  @type {Sound|undefined} */
         this.defaultSoundRelease = undefined;
-        /** @property {Sound} - Default sound when interactive UI element is clicked */
+        /** @property {Sound|undefined} - Default sound when interactive UI element is clicked
+         *  @type {Sound|undefined} */
         this.defaultSoundClick = undefined;
         /** @property {Color} - Color for shadow */
         this.defaultShadowColor = CLEAR_BLACK;
@@ -12469,13 +12497,14 @@ class UISystemPlugin
         this.nativeHeight = 0;
 
         // navigation properties
-        /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
+        /** @property {UIObject|undefined} - Object currently selected by navigation (gamepad or keyboard)
+         *  @type {UIObject|undefined} */
         this.navigationObject = undefined;
         /** @property {Timer} - Cool down timer for navigation inputs */
         this.navigationTimer = new Timer(undefined, true);
         /** @property {number} - Time between navigation inputs in seconds */
         this.navigationDelay = .2;
-        /** @property {boolean} - should the navigation be horizontal, vertical, or both? */
+        /** @property {number} - Which way keys and gamepads move the selection: 0 horizontal, 1 vertical, 2 both */
         this.navigationDirection = 1;
         /** @property {boolean} - True if user last used navigation instead of mouse */
         this.navigationMode = false;
@@ -12485,13 +12514,17 @@ class UISystemPlugin
         this.uiObjects = [];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
         this.uiContext = context;
-        /** @property {UIObject} - Object user is currently interacting with */
+        /** @property {UIObject|undefined} - Object user is currently interacting with
+         *  @type {UIObject|undefined} */
         this.activeObject = undefined;
-        /** @property {UIObject} - Top most object user is over */
+        /** @property {UIObject|undefined} - Top most object user is over
+         *  @type {UIObject|undefined} */
         this.hoverObject = undefined;
-        /** @property {UIObject} - Hover object at start of update */
+        /** @property {UIObject|undefined} - Hover object at start of update
+         *  @type {UIObject|undefined} */
         this.lastHoverObject = undefined;
-        /** @property {UIObject} - Current confirm menu being shown */
+        /** @property {UIObject|undefined} - Current confirm menu being shown
+         *  @type {UIObject|undefined} */
         this.confirmDialog = undefined;
         /** @private */
         this._keyInputObject = undefined;
@@ -13076,9 +13109,11 @@ class UIObject
         this.size = size.copy();
         /** @property {Color} - Color of the object */
         this.color = uiSystem.defaultColor.copy();
-        /** @property {Color} - Color of the object when active, uses hoverColor if undefined */
+        /** @property {Color|undefined} - Color of the object when active, uses hoverColor if undefined
+         *  @type {Color|undefined} */
         this.activeColor = undefined;
-        /** @property {string} - Text for this ui object */
+        /** @property {string|undefined} - Text for this ui object
+         *  @type {string|undefined} */
         this.text = undefined;
         /** @property {Color} - Color when disabled */
         this.disabledColor = uiSystem.defaultDisabledColor.copy();
@@ -13098,15 +13133,19 @@ class UIObject
         this.cornerRadius = uiSystem.defaultCornerRadius;
         /** @property {string} - Font for this object */
         this.font = uiSystem.defaultFont;
-        /** @property {string} - Font style for this object or undefined */
+        /** @property {string|undefined} - Font style for this object or undefined
+         *  @type {string|undefined} */
         this.fontStyle = undefined;
-        /** @property {number} - Override for text width */
+        /** @property {number|undefined} - Override for text width
+         *  @type {number|undefined} */
         this.textWidth = undefined;
-        /** @property {number} - Override for text height */
+        /** @property {number|undefined} - Override for text height
+         *  @type {number|undefined} */
         this.textHeight = undefined;
         /** @property {number} - Scale text to fit in the object */
         this.textFitScale = uiSystem.defaultTextFitScale;
-        /** @property {Vector2} - How much to offset the text shadow or undefined */
+        /** @property {Vector2|undefined} - How much to offset the text shadow or undefined
+         *  @type {Vector2|undefined} */
         this.textShadow = undefined;
         /** @property {number} - Color for text line drawing  */
         this.textLineColor = uiSystem.defaultLineColor.copy();
@@ -13116,7 +13155,8 @@ class UIObject
         this.visible  = true;
         /** @property {Array<UIObject>} - A list of this object's children */
         this.children = [];
-        /** @property {UIObject} - This object's parent, position is in parent space */
+        /** @property {UIObject|undefined} - This object's parent, position is in parent space
+         *  @type {UIObject|undefined} */
         this.parent = undefined;
         /** @property {number} - Added size to make small buttons easier to touch on mobile devices */
         this.extraTouchSize = 0;
@@ -13138,7 +13178,8 @@ class UIObject
         this.shadowBlur = uiSystem.defaultShadowBlur;
         /** @property {Vector2} - Offset of shadow blur */
         this.shadowOffset = uiSystem.defaultShadowOffset?.copy();
-        /** @property {number} - Optional navigation order index, lower values are selected first */
+        /** @property {number|undefined} - Optional navigation order index, lower values are selected first
+         *  @type {number|undefined} */
         this.navigationIndex = undefined;
         /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
         this.navigationAutoSelect = false;
@@ -17284,9 +17325,15 @@ function tweenUpdate(gameDelta, realDelta)
         realDelta = gameDelta;
     }
 
-    // Iterate in reverse so removals don't disturb iteration.
+    // Iterate in reverse so removals don't disturb iteration; a callback may stop
+    // any tween, even all of them, so the index is checked against the list after it.
     for (let i = tweenActive.length; i--;)
     {
+        if (i >= tweenActive.length)
+        {
+            i = tweenActive.length; // a callback shortened the list, carry on from its end
+            continue;
+        }
         const t = tweenActive[i];
         if (t.paused) continue;
         const dt = t.useRealTime ? realDelta : gameDelta;
@@ -17301,10 +17348,17 @@ function tweenUpdate(gameDelta, realDelta)
         {
             // Completion: fire end value, remove from active, fire then-callback.
             t.callback(t.interp(0));
-            tweenActive.splice(i, 1);
+            const j = tweenActive.indexOf(t); // this one, wherever the callback left it
+            if (j >= 0) tweenActive.splice(j, 1);
             const cb = t.thenCallback;
             t.thenCallback = undefined;
             if (cb) cb();
+        }
+        // carry on from where this tween is now, when a callback moved it
+        if (tweenActive[i] !== t)
+        {
+            const j = tweenActive.indexOf(t);
+            i = j < 0 ? min(i, tweenActive.length) : j;
         }
     }
 }
@@ -21186,7 +21240,7 @@ class Mesh
         {
             // an indexed mesh takes the strip as the triangles it makes
             const part = new Mesh().addStrip(points, normals, uvs, colors).toIndexed();
-            return this.addTriangles(part.points, part.normals, part.uvs, part.colors, part.indices);
+            return this.addTriangles(part.points, part.indices, part.normals, part.uvs, part.colors);
         }
         render3DForEachStripVertex(points, normals, uvs, colors, (p, n, uv, c)=>
         {
@@ -21204,12 +21258,12 @@ class Mesh
      *  - The mesh becomes indexed: a strip mesh is turned into triangles first, and strips added later join as triangles
      *  - List each triangle counter clockwise as seen from the front, like a strip's first triangle
      *  @param {Array<Vector3>} points - Each vertex once
+     *  @param {Array<number>} indices - Three vertex numbers per triangle, into points
      *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
      *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, default zero
      *  @param {Color|Array<Color>} [colors] - One for all or one per point, default white
-     *  @param {Array<number>} indices - Three vertex numbers per triangle, into points
      *  @return {Mesh} */
-    addTriangles(points, normals, uvs, colors, indices)
+    addTriangles(points, indices, normals, uvs, colors)
     {
         ASSERT(isArray(points) && isArray(indices) && indices.length % 3 === 0, 'addTriangles takes points and three indices per triangle');
         ASSERT(indices.every(i=> i >= 0 && i < points.length && i % 1 === 0), 'an index points past the vertices given');
@@ -22005,6 +22059,7 @@ class EngineObject3D extends EngineObject
         this.matrixVersion = 0;          // counts the rebuilds, so a child knows when its parent's changed
         this.matrixParent = undefined;   // the parent it was built under, and that parent's version then
         this.matrixParentVersion = 0;
+        this.movePass = engineObjectsUpdateCount; // the engine pass a child last moved in, so a refresh is not a step
     }
 
     /** Move by the 3D velocities and push out of solids, called automatically each frame before update, like the 2D physics
@@ -22030,8 +22085,13 @@ class EngineObject3D extends EngineObject
     {
         if (!paused)
         {
-            // a child is never given updatePhysics, so it moves here, as an offset from its parent
-            this.parent && render3DMove(this);
+            // a child is never given updatePhysics, so it moves here, as an offset from its parent: once per
+            // engine pass, since addChild, attach and a game bring the transforms up to date too
+            if (this.parent && this.movePass !== engineObjectsUpdateCount)
+            {
+                this.movePass = engineObjectsUpdateCount;
+                render3DMove(this);
+            }
             if (this.sync2D)
                 this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
         }
@@ -22065,7 +22125,7 @@ class EngineObject3D extends EngineObject
      *  @return {Vector3} */
     getUp3D() { return render3DAxis(render3DObjectMatrix(this).m, 4).normalize(); }
 
-    /** Returns a copy of the object's world transform, relative to the parent's when attached to an EngineObject3D
+    /** Returns a copy of the object's world transform, the parent's included when attached to an EngineObject3D
      *  - The object keeps its matrix and rebuilds it only when its position, rotation or scale changed, so this is cheap to call
      *  @return {Matrix4} */
     getMatrix() { return render3DObjectMatrix(this).copy(); }
@@ -23754,7 +23814,7 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
             }
         }
     }
-    const mesh = new Mesh().addTriangles(points, vertexNormals, vertexUVs, undefined, indices);
+    const mesh = new Mesh().addTriangles(points, indices, vertexNormals, vertexUVs);
     if (!fileNormals && smooth)
         mesh.computeNormals(true);
     return mesh;
@@ -23992,7 +24052,7 @@ async function parseGLTF(data, baseUrl='')
     };
     const scene = json.scenes?.[json.scene ?? 0];
     if (scene)
-        scene.nodes.forEach(i=> visit(i));
+        (scene.nodes || []).forEach(i=> visit(i)); // a scene may be empty
     else if (json.nodes)
     {
         // no scene: every node that is not another's child is a root
@@ -24012,9 +24072,11 @@ function gltfFetch(uri, baseUrl)
             data[i] = bytes.charCodeAt(i);
         return Promise.resolve(new Response(data.buffer, {headers: {'Content-Type': uri.slice(5, uri.indexOf(';'))}}));
     }
-    return fetch(baseUrl + uri).then(r=>
+    // a uri with a scheme is a whole address, the rest are beside the model
+    const url = /^[a-z][a-z0-9+.-]*:/i.test(uri) ? uri : baseUrl + uri;
+    return fetch(url).then(r=>
     {
-        if (!r.ok) throw new Error('glTF file not found: ' + baseUrl + uri);
+        if (!r.ok) throw new Error('glTF file not found: ' + url);
         return r;
     });
 }
@@ -24081,7 +24143,7 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
         indices = indices.flatMap((_, i, s)=> i < 2 ? [] : i & 1 ? [s[i-1], s[i-2], s[i]] : [s[i-2], s[i-1], s[i]]);
     else if (mode === 6) // a fan around the first entry
         indices = indices.flatMap((_, i, s)=> i < 2 ? [] : [s[0], s[i-1], s[i]]);
-    const mesh = new Mesh().addTriangles(points, normals, uvs, colors, indices);
+    const mesh = new Mesh().addTriangles(points, indices, normals, uvs, colors);
     normals || mesh.computeNormals(false); // flat when the file gives none, as the format says
     mesh.transform(matrix);
     const material = json.materials?.[primitive.material] || {}, pbr = material.pbrMetallicRoughness || {};

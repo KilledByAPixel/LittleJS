@@ -15,17 +15,20 @@
 
 'use strict';
 
-/** Audio context used by the engine
+/** Audio context used by the engine, undefined outside a browser, where the engine runs headless
  *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext = new AudioContext;
+let audioContext = typeof AudioContext == 'undefined' ? undefined : new AudioContext;
 
 /** Master gain node for all audio to pass through, made at load so effects can connect to it any time
  *  @type {GainNode}
  *  @memberof Audio */
-let audioMasterGain = audioContext.createGain();
-audioMasterGain.connect(audioContext.destination);
-audioMasterGain.gain.value = soundVolume; // set starting value
+let audioMasterGain = audioContext?.createGain();
+if (audioMasterGain)
+{
+    audioMasterGain.connect(audioContext.destination);
+    audioMasterGain.gain.value = soundVolume; // set starting value
+}
 
 // the current master effect, kept so setAudioMasterEffect can undo the route it made,
 // and whether its output came from an effect, which gets its default route back

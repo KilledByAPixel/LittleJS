@@ -183,3 +183,20 @@ test('a mirrored node keeps its faces pointing out, an opaque material ignores i
     await assert.rejects(parseGLTF({ ...withDataUri, extensionsRequired: ['EXT_meshopt_compression'] }), /EXT_meshopt_compression/);
     await assert.doesNotReject(parseGLTF({ ...withDataUri, extensionsRequired: ['KHR_materials_transmission', 'EXT_texture_webp'] }));
 });
+
+test('an empty scene loads as an empty model, and an absolute uri is fetched as it is', async () =>
+{
+    const empty = await parseGLTF({ asset: { version: '2.0' }, scenes: [{}], scene: 0 });
+    assert.equal(empty.parts.length, 0);
+    assert.equal(empty.mesh.vertexCount, 0);
+
+    const urls = [], realFetch = globalThis.fetch;
+    globalThis.fetch = async (url)=> { urls.push(url); return { ok: true, arrayBuffer: async ()=> buffer }; };
+    try
+    {
+        await parseGLTF({ ...json, buffers: [{ byteLength: 160, uri: 'https://cdn.test/model.bin' }] }, 'https://host.test/assets/');
+        await parseGLTF({ ...json, buffers: [{ byteLength: 160, uri: 'model.bin' }] }, 'https://host.test/assets/');
+    }
+    finally { globalThis.fetch = realFetch; }
+    assert.deepEqual(urls, ['https://cdn.test/model.bin', 'https://host.test/assets/model.bin']);
+});

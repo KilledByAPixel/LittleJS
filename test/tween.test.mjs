@@ -574,3 +574,28 @@ test('Tween.getValue returns a Vector2 for Vector2 tweens', () =>
     assert(near(v.y, 0));
     t.stop();
 });
+
+test('a callback that stops every tween, or another one, does not break the update, and the finished one is the one removed', () =>
+{
+    tweenStopAll();
+    let ended = 0;
+    // three tweens: the one that finishes first stops all from its callback, so the loop must not read past the end
+    new Tween(()=> {}, 0, 1, 5);
+    new Tween((v)=> { v >= 1 && tweenStopAll(); }, 0, 1, 1);
+    new Tween(()=> {}, 0, 1, 5);
+    assert.doesNotThrow(()=> tweenUpdate(1));
+
+    // a finishing tween whose callback stops a tween before it: the finished one is removed, the other stays
+    const stays = new Tween(()=> {}, 0, 1, 5);
+    const first = new Tween(()=> {}, 0, 1, 5);
+    const done = new Tween((v)=> { v >= 1 && first.stop(); }, 0, 1, 1).then(()=> ++ended);
+    tweenUpdate(1);
+    assert.equal(ended, 1, 'the finished tween ran its then');
+    assert.doesNotThrow(()=> tweenUpdate(1));
+    let moved = 0;
+    stays.then(()=> ++moved);
+    tweenUpdate(10);
+    assert.equal(moved, 1, 'the tween that was not stopped finished later');
+    assert.equal(done.thenCallback, undefined);
+    tweenStopAll();
+});

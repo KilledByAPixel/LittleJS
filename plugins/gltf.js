@@ -215,7 +215,7 @@ async function parseGLTF(data, baseUrl='')
     };
     const scene = json.scenes?.[json.scene ?? 0];
     if (scene)
-        scene.nodes.forEach(i=> visit(i));
+        (scene.nodes || []).forEach(i=> visit(i)); // a scene may be empty
     else if (json.nodes)
     {
         // no scene: every node that is not another's child is a root
@@ -235,9 +235,11 @@ function gltfFetch(uri, baseUrl)
             data[i] = bytes.charCodeAt(i);
         return Promise.resolve(new Response(data.buffer, {headers: {'Content-Type': uri.slice(5, uri.indexOf(';'))}}));
     }
-    return fetch(baseUrl + uri).then(r=>
+    // a uri with a scheme is a whole address, the rest are beside the model
+    const url = /^[a-z][a-z0-9+.-]*:/i.test(uri) ? uri : baseUrl + uri;
+    return fetch(url).then(r=>
     {
-        if (!r.ok) throw new Error('glTF file not found: ' + baseUrl + uri);
+        if (!r.ok) throw new Error('glTF file not found: ' + url);
         return r;
     });
 }
@@ -304,7 +306,7 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
         indices = indices.flatMap((_, i, s)=> i < 2 ? [] : i & 1 ? [s[i-1], s[i-2], s[i]] : [s[i-2], s[i-1], s[i]]);
     else if (mode === 6) // a fan around the first entry
         indices = indices.flatMap((_, i, s)=> i < 2 ? [] : [s[0], s[i-1], s[i]]);
-    const mesh = new Mesh().addTriangles(points, normals, uvs, colors, indices);
+    const mesh = new Mesh().addTriangles(points, indices, normals, uvs, colors);
     normals || mesh.computeNormals(false); // flat when the file gives none, as the format says
     mesh.transform(matrix);
     const material = json.materials?.[primitive.material] || {}, pbr = material.pbrMetallicRoughness || {};

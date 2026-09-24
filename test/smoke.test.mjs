@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
     EngineObject, ParticleEmitter, TileLayerData, TileInfo, TextureInfo,
     TileLayer, CanvasLayer, Medal,
-    Timer, tile, vec2, rgb, engineObjects, engineObjectsDestroy,
+    Timer, tile, vec2, rgb, engineObjects, engineObjectsDestroy, engineObjectsUpdate, objectMaxSpeed,
 } from '../dist/littlejs.esm.js';
 
 const near = (a, b, eps=1e-9) => Math.abs(a - b) <= eps;
@@ -423,4 +423,67 @@ test('a detached child stays where it was, attach keeps a child in place, and lo
         assert.ok(Math.abs(loose.angle - 1) < 1e-9, 'angle still kept, mirror ' + mirror);
         parent.removeChild(loose);
     }
+});
+
+test('a child that destroys itself in update does not skip the sibling after it', () =>
+{
+    const parent = new EngineObject(vec2(), vec2(1));
+    const counts = [0, 0, 0];
+    const make = (i, dies)=>
+    {
+        const o = new EngineObject(vec2(), vec2(1));
+        o.update = ()=> { ++counts[i]; dies && o.destroy(); };
+        parent.addChild(o);
+        return o;
+    };
+    make(0, true); make(1, false); make(2, false);
+    engineObjectsUpdate();
+    assert.deepEqual(counts, [1, 1, 1], 'every child updated once');
+    assert.equal(parent.children.length, 2);
+    // a child that destroys the one before it and the one after it
+    for (const child of [...parent.children]) child.destroy();
+    const before = make(0, false), killer = new EngineObject(vec2(), vec2(1));
+    let killerRuns = 0;
+    killer.update = ()=> { ++killerRuns; before.destroy(); parent.children[parent.children.length - 1].destroy(); };
+    parent.addChild(killer);
+    const after = make(2, false);
+    counts.fill(0);
+    engineObjectsUpdate();
+    assert.equal(killerRuns, 1, 'the killer ran once');
+    assert.ok(before.destroyed && after.destroyed);
+    assert.ok(counts[2] <= 1, 'nothing ran twice');
+    assert.deepEqual(parent.children, [killer]);
+    parent.destroy();
+    engineObjectsUpdate();
+});
+
+test('a particle emitter in local space spawns its box unrotated, and a fast particle is slowed before it moves', () =>
+{
+    // a 4 by 2 box turned a quarter: in world space it spans 2 across and 4 up, in local space it is the box itself
+    for (const localSpace of [false, true])
+    {
+        const e = new ParticleEmitter(vec2(), Math.PI / 2, vec2(4, 2), 0, 0);
+        e.localSpace = localSpace;
+        let maxX = 0, maxY = 0;
+        for (let i = 0; i < 300; ++i)
+        {
+            const p = e.emitParticle();
+            maxX = Math.max(maxX, Math.abs(p.pos.x)); maxY = Math.max(maxY, Math.abs(p.pos.y));
+        }
+        if (localSpace)
+            assert.ok(maxX > 1.5 && maxY < 1.01, 'local box unrotated, spans ' + maxX + ' by ' + maxY);
+        else
+            assert.ok(maxX < 1.01 && maxY > 1.5, 'world box turned, spans ' + maxX + ' by ' + maxY);
+        e.destroy();
+    }
+    // the speed limit that keeps a particle from passing through a wall has to apply before the step it protects
+    const e = new ParticleEmitter(vec2(), 0, 0, 0, 0, 1);
+    e.collideTiles = true;
+    e.damping = 1;
+    const p = e.emitParticle();
+    p.pos.set(0, 0);
+    p.velocity.set(3, 0);
+    p.update();
+    assert.ok(p.pos.x <= objectMaxSpeed + 1e-9, 'moved ' + p.pos.x + ', no further than the speed limit');
+    e.destroy();
 });

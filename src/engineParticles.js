@@ -20,10 +20,11 @@
  */
 
 /**
- *  @callback ParticleCollideCallback - Collide callback for particles
+ *  @callback ParticleCollideCallback - Decides whether a particle stops at a tile, it is a filter rather than a notice
  *  @param {Particle} particle
  *  @param {number} tileData
  *  @param {Vector2} pos
+ *  @return {boolean} - true to stop the particle there; a callback that returns nothing lets it pass through
  *  @memberof Particles
  */
 
@@ -248,10 +249,12 @@ class ParticleEmitter extends EngineObject
         let pos = this.emitCircle ?            // check if circle emitter
             randInCircle(this.emitSize.x/2)    // circle emitter
             : vec2(rand(-.5,.5), rand(-.5,.5)) // box emitter
-                .multiply(this.emitSize).rotate(this.angle)
+                .multiply(this.emitSize);
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)
         {
+            // into the world: a local space particle is turned with the emitter when it draws instead
+            this.emitCircle || (pos = pos.rotate(this.angle));
             pos.x += this.pos.x;
             pos.y += this.pos.y;
             angle += this.angle;
@@ -407,23 +410,25 @@ class Particle
         // apply physics; only the tile collision needs where the particle was, so only then is it copied
         const solve = enablePhysicsSolver && collideTiles;
         const oldPos = solve ? this.pos.copy() : undefined;
-        this.velocity.x *= damping;
-        this.velocity.y *= damping;
-        this.pos.x += this.velocity.x += gravity.x * gravityScale;
-        this.pos.y += this.velocity.y += gravity.y * gravityScale;
+        this.velocity.x = this.velocity.x * damping + gravity.x * gravityScale;
+        this.velocity.y = this.velocity.y * damping + gravity.y * gravityScale;
+        if (solve)
+        {
+            // apply max circular speed to prevent going through collision, before the move it protects
+            const length2 = this.velocity.lengthSquared();
+            if (length2 > objectMaxSpeed*objectMaxSpeed)
+            {
+                const s = objectMaxSpeed / length2**.5;
+                this.velocity.x *= s;
+                this.velocity.y *= s;
+            }
+        }
+        this.pos.x += this.velocity.x;
+        this.pos.y += this.velocity.y;
         this.angle += this.angleVelocity *= angleDamping;
 
         // don't do collision if solver disabled
         if (!solve) return;
-        
-        // apply max circular speed to prevent going through collision
-        const length2 = this.velocity.lengthSquared();
-        if (length2 > objectMaxSpeed*objectMaxSpeed)
-        {
-            const s = objectMaxSpeed / length2**.5;
-            this.velocity.x *= s;
-            this.velocity.y *= s;
-        }
 
         // check collision against tiles
         this.groundObject = undefined;

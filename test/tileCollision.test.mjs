@@ -80,3 +80,21 @@ test('tileCollisionGetData: no collision at the unoffset position', () =>
     assert.equal(tileCollisionGetData(vec2(1.5, 1.5)), 0);
     layer.destroy();
 });
+
+test('collisionRaycast on a layer at a fractional position hits the tile edge where the tile really is', () =>
+{
+    // the layer sits half a unit over, so its first tile spans x from .5 to 1.5
+    const layer = new TileCollisionLayer(vec2(.5, 0), vec2(4, 4), tile(0, 16), 0, false);
+    layer.setCollisionData(vec2(0, 0), 1);
+    const normal = vec2();
+    const hit = layer.collisionRaycast(vec2(0, .5), vec2(2, .5), undefined, normal);
+    assert.ok(hit, 'hit');
+    assert.ok(Math.abs(hit.x - .5) < 1e-6, 'hit at the edge of the tile, x ' + hit.x);
+    assert.equal(normal.x, -1);
+    assert.ok(layer.collisionRaycast(vec2(0, .5), vec2(.75, .5)), 'a short ray that reaches the tile hits it');
+    assert.equal(layer.collisionRaycast(vec2(0, .5), vec2(.4, .5)), undefined, 'one that stops short misses');
+    // and from the other side, the far edge at 1.5
+    const back = layer.collisionRaycast(vec2(3, .5), vec2(0, .5), undefined, normal);
+    assert.ok(Math.abs(back.x - 1.5) < 1e-6, 'far edge, x ' + back.x);
+    assert.equal(normal.x, 1);
+});

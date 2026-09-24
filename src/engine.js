@@ -66,7 +66,7 @@ let frame = 0;
  *  @memberof Engine */
 let time = 0;
 
-/** Actual clock time since start in seconds (not affected by pause, timescale, or frame rate clamping)
+/** Actual clock time since start in seconds (not affected by pause, timescale, or frame rate clamping; the debug speed keys scale it in debug builds)
  *  @type {number}
  *  @memberof Engine */
 let timeReal = 0;
@@ -91,6 +91,9 @@ function setPaused(isPaused=true) { paused = isPaused; }
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
+let engineInitialized = false; // engineInit ran, with or without a canvas
+let engineObjectsUpdateCount = 0; // passes of engineObjectsUpdate so far, how a child knows it moved this pass
+const engineChildStack = []; // the children being updated, taken off the live lists so one leaving does not skip the next
 let showEngineVersion = true;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -169,10 +172,11 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
 async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement)
 {
     showEngineVersion && console.log(`${engineName} Engine v${engineVersion}`);
-    ASSERT(!mainContext, 'engine already initialized');
+    ASSERT(!engineInitialized, 'engine already initialized');
     // runtime guard so release builds (where the assert is stripped) don't
     // double-register listeners / double-add canvases on a second call
-    if (mainContext) return;
+    if (engineInitialized) return;
+    engineInitialized = true;
     ASSERT(isArray(imageSources), 'pass in images as array');
 
     // ensure body exists for minimal HTML where the script runs before <body> is parsed
@@ -529,11 +533,12 @@ function engineStep(frames=1)
         engineUpdateInternal(frameTimeLastMS + 1e3 / frameRate);
 }
 
-/** Update each engine object, remove destroyed objects, and update time
+/** Update each engine object and remove destroyed objects; time and frame do not advance, engineStep does that
  * can be called manually if objects need to be updated outside of main loop
  *  @memberof Engine */
 function engineObjectsUpdate()
 {
+    ++engineObjectsUpdateCount;
     // get list of solid objects for physics optimization
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
@@ -542,14 +547,23 @@ function engineObjectsUpdate()
         if (!o.parent && !o.destroyed)
             o.updatePhysics();
 
-    // recursive object update
+    // recursive object update: the children are walked from a copy on a shared stack, since a child that
+    // destroys itself leaves its parent's list on the spot and the next child would slide past the loop
+    function updateChildObjects(children)
+    {
+        const start = engineChildStack.length;
+        for (const child of children)
+            engineChildStack.push(child);
+        for (let i = start; i < engineChildStack.length; ++i)
+            updateChildObject(engineChildStack[i]);
+        engineChildStack.length = start;
+    }
     function updateChildObject(o)
     {
         if (o.destroyed) return;
 
         o.update();
-        for (const child of o.children)
-            updateChildObject(child);
+        updateChildObjects(o.children);
     }
     for (const o of engineObjects)
     {
@@ -557,8 +571,7 @@ function engineObjectsUpdate()
 
         // update top level objects
         o.update();
-        for (const child of o.children)
-            updateChildObject(child);
+        updateChildObjects(o.children);
         o.updateTransforms();
     }
 

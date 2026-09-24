@@ -953,7 +953,7 @@ test('EngineObject3D moves in updatePhysics like 2D, a child in updateTransforms
     const child = new EngineObject3D(vec3(0, 0, 1));
     o.addChild(child);
     child.velocity3D = vec3(0, 1, 0);
-    o.updateTransforms(); // the engine never gives a child updatePhysics, the root's updateTransforms moves it
+    engineObjectsUpdate(); // the engine never gives a child updatePhysics, the root's updateTransforms moves it in the pass
     nearVec(child.pos3D, 0, 1, 1);
     child.destroy();
     o.destroy();
@@ -2614,7 +2614,7 @@ test('a smooth buildGrid says which strip entries are one vertex, and getTriangl
 test('addTriangles builds an indexed mesh that uploads as it is, its triangles read clockwise by the pass', () =>
 {
     const m = new Mesh, quad = [vec3(-1, -1, 0), vec3(1, -1, 0), vec3(1, 1, 0), vec3(-1, 1, 0)];
-    m.addTriangles(quad, vec3(0, 0, 1), undefined, RED, [0, 1, 2, 0, 2, 3]); // counter clockwise seen from +z
+    m.addTriangles(quad, [0, 1, 2, 0, 2, 3], vec3(0, 0, 1), undefined, RED); // counter clockwise seen from +z
     assert.deepEqual(m.indices, [0, 1, 2, 0, 2, 3]);
     assert.equal(m.vertexCount, 4);
     assert.equal(m.colors[3], RED);
@@ -2627,7 +2627,7 @@ test('addTriangles builds an indexed mesh that uploads as it is, its triangles r
 test('a strip mesh turns indexed when triangles are added, strips join an indexed mesh as triangles, and combine crosses the forms', () =>
 {
     const box = buildBox();
-    box.addTriangles([vec3(0, 2, 0), vec3(1, 2, 0), vec3(0, 3, 0)], vec3(0, 0, 1), undefined, undefined, [0, 1, 2]);
+    box.addTriangles([vec3(0, 2, 0), vec3(1, 2, 0), vec3(0, 3, 0)], [0, 1, 2], vec3(0, 0, 1));
     assert.equal(box.vertexCount, 24 + 3, 'the box welded to its 24 vertices, then the triangle');
     assert.equal(box.indices.length, 36 + 3);
     box.addStrip([vec3(0, 5, 0), vec3(1, 5, 0), vec3(0, 6, 0)]);
@@ -2645,7 +2645,7 @@ test('a strip mesh turns indexed when triangles are added, strips join an indexe
 test('computeNormals and flipNormals work on an indexed mesh, flat normals splitting the vertices', () =>
 {
     const m = new Mesh, quad = [vec3(-1, -1, 0), vec3(1, -1, 0), vec3(1, 1, 0), vec3(-1, 1, 0)];
-    m.addTriangles(quad, undefined, undefined, undefined, [0, 1, 2, 0, 2, 3]);
+    m.addTriangles(quad, [0, 1, 2, 0, 2, 3]);
     m.computeNormals(true);
     assert.equal(m.vertexCount, 4);
     for (const n of m.normals) nearVec(n, 0, 0, 1);
@@ -2661,7 +2661,7 @@ test('an indexed mesh split for flat normals smooths back together by position, 
 {
     // two triangles bent along the edge b c, in different planes
     const a = vec3(-1, 0, 0), b = vec3(0, 0, -1), c = vec3(0, 0, 1), d = vec3(1, 1, 0);
-    const m = new Mesh().addTriangles([a, b, c, d], undefined, undefined, undefined, [0, 1, 2, 2, 1, 3]);
+    const m = new Mesh().addTriangles([a, b, c, d], [0, 1, 2, 2, 1, 3]);
     m.computeNormals(false);
     assert.equal(m.vertexCount, 6);
     nearVec(m.normals[1], 0, -1, 0);                          // b on the flat triangle
@@ -3361,4 +3361,22 @@ test('a detached EngineObject3D stays where it was, and attach keeps one in plac
     doomed.destroy();
     nearVec(doomed.pos3D, 1, 0, 0, 'no conversion for a destroyed child');
     for (const o of [parent, child, loose, doomed]) o.destroy();
+});
+
+test('attaching a moving 3D child does not step it, and a child moves once a frame however often its transforms update', () =>
+{
+    const parent = new EngineObject3D(vec3()), child = new EngineObject3D(vec3(2, 0, 0));
+    child.velocity3D = vec3(1, 0, 0);
+    parent.addChild(child);
+    assert.equal(child.pos3D.x, 2, 'attached where it was put');
+    parent.updateTransforms(); parent.updateTransforms();
+    assert.equal(child.pos3D.x, 2, 'a transform refresh is not a step');
+    engineObjectsUpdate();
+    assert.equal(child.pos3D.x, 3, 'the frame moved it once');
+    const loose = new EngineObject3D(vec3(5, 0, 0));
+    loose.velocity3D = vec3(1, 0, 0);
+    parent.attach(loose);
+    assert.equal(loose.pos3D.x, 5, 'attach does not step it either');
+    for (const o of [parent, child, loose]) o.destroy();
+    engineObjectsUpdate();
 });

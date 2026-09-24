@@ -61,9 +61,10 @@ function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
 }
 
 /**
- *  @callback TileCollisionCallback - Function to handle a tile collision test
+ *  @callback TileCollisionCallback - Decides whether a tile counts as solid for a collision test or raycast
  *  @param {number} tileData - the value of the tile at the position
  *  @param {Vector2} pos - world space position of tile where the collision occurred
+ *  @return {boolean} - true for a hit; a callback that returns nothing lets everything through
  *  @memberof TileLayers
  */
 
@@ -74,7 +75,7 @@ function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
  *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
  *  @param {Vector2} [normal] - Optional normal of the surface hit
  *  @param {boolean} [solidOnly=true] - Only check solid layers?
- *  @return {Vector2|undefined} - position of the center of the tile hit or undefined if no hit
+ *  @return {Vector2|undefined} - where the ray meets the first tile hit, nudged just inside it, or undefined if no hit
  *  @memberof TileLayers */
 function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnly=true)
 {
@@ -426,8 +427,8 @@ class TileLayer extends CanvasLayer
         ASSERT(drawContext !== this.context);
         
         // save current render settings
-        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
-        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor];
+        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color]} */
+        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor];
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
@@ -437,6 +438,7 @@ class TileLayer extends CanvasLayer
         canvasClearColor = CLEAR_BLACK;
         cameraPos = this.size.multiply(tileSize).scale(.5);
         cameraScale = 1;
+        cameraAngle = 0; // the tiles are drawn flat, the world camera turns the whole layer later
 
         // set render target to this layer
         this.isUsingWebGL = this.hasWebGL();
@@ -464,7 +466,7 @@ class TileLayer extends CanvasLayer
         // set stuff back to normal
         if (this.isUsingWebGL)
             glSetRenderTarget();
-        [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
+        [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position in the tile layer
@@ -719,15 +721,16 @@ class TileCollisionLayer extends TileLayer
             (tileData, pos)=> callbackObject(tileData, pos) :
             (tileData, pos)=> callbackObject.collideWithTile(tileData, pos) :
             (tileData)=> tileData > 0;
+        // the line is walked in the layer's own space, so its cells are the tiles wherever the layer sits
+        const offset = this.pos, worldPos = new Vector2;
         const testFunction = (pos)=>
         {
-            const tileData = this.getCollisionData(localPos.set(pos.x - this.pos.x, pos.y - this.pos.y));
-            return tileData && collisionTest(tileData, pos);
+            const tileData = this.getCollisionData(pos);
+            return tileData && collisionTest(tileData, worldPos.set(pos.x + offset.x, pos.y + offset.y));
         }
-
-        // use line test against tile collision
-        const localPos = new Vector2;
-        const hitPos = lineTest(posStart, posEnd, testFunction, normal);
+        const hitPos = lineTest(posStart.subtract(offset), posEnd.subtract(offset), testFunction, normal);
+        if (hitPos)
+            hitPos.x += offset.x, hitPos.y += offset.y;
         if (debugRaycast && hitPos)
         {
             const tilePos = hitPos.floor().add(vec2(.5));

@@ -79,7 +79,7 @@ let gamepadPrimary = 0;
 
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
+const isTouchDevice = !headlessMode && typeof window != 'undefined' && window.ontouchstart !== undefined;
 
 /** Prevents input continuing to the default browser handling
  *  This is useful to disable for html menus so the browser can handle input normally

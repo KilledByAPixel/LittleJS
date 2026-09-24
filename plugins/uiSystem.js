@@ -68,7 +68,8 @@ class UISystemPlugin
         this.defaultHoverColor = hsl(0,0,.9);
         /** @property {Color} - Default color for disabled UI elements */
         this.defaultDisabledColor = hsl(0,0,.3);
-        /** @property {Color} - Uses a gradient fill combined with color */
+        /** @property {Color|undefined} - Uses a gradient fill combined with color
+         *  @type {Color|undefined} */
         this.defaultGradientColor = undefined;
         /** @property {number} - Default line width for UI elements */
         this.defaultLineWidth = 4;
@@ -78,11 +79,14 @@ class UISystemPlugin
         this.defaultTextFitScale = .8;
         /** @property {string} - Default font for UI elements */
         this.defaultFont = fontDefault;
-        /** @property {Sound} - Default sound when interactive UI element is pressed */
+        /** @property {Sound|undefined} - Default sound when interactive UI element is pressed
+         *  @type {Sound|undefined} */
         this.defaultSoundPress = undefined;
-        /** @property {Sound} - Default sound when interactive UI element is released */
+        /** @property {Sound|undefined} - Default sound when interactive UI element is released
+         *  @type {Sound|undefined} */
         this.defaultSoundRelease = undefined;
-        /** @property {Sound} - Default sound when interactive UI element is clicked */
+        /** @property {Sound|undefined} - Default sound when interactive UI element is clicked
+         *  @type {Sound|undefined} */
         this.defaultSoundClick = undefined;
         /** @property {Color} - Color for shadow */
         this.defaultShadowColor = CLEAR_BLACK;
@@ -94,13 +98,14 @@ class UISystemPlugin
         this.nativeHeight = 0;
 
         // navigation properties
-        /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
+        /** @property {UIObject|undefined} - Object currently selected by navigation (gamepad or keyboard)
+         *  @type {UIObject|undefined} */
         this.navigationObject = undefined;
         /** @property {Timer} - Cool down timer for navigation inputs */
         this.navigationTimer = new Timer(undefined, true);
         /** @property {number} - Time between navigation inputs in seconds */
         this.navigationDelay = .2;
-        /** @property {boolean} - should the navigation be horizontal, vertical, or both? */
+        /** @property {number} - Which way keys and gamepads move the selection: 0 horizontal, 1 vertical, 2 both */
         this.navigationDirection = 1;
         /** @property {boolean} - True if user last used navigation instead of mouse */
         this.navigationMode = false;
@@ -110,13 +115,17 @@ class UISystemPlugin
         this.uiObjects = [];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
         this.uiContext = context;
-        /** @property {UIObject} - Object user is currently interacting with */
+        /** @property {UIObject|undefined} - Object user is currently interacting with
+         *  @type {UIObject|undefined} */
         this.activeObject = undefined;
-        /** @property {UIObject} - Top most object user is over */
+        /** @property {UIObject|undefined} - Top most object user is over
+         *  @type {UIObject|undefined} */
         this.hoverObject = undefined;
-        /** @property {UIObject} - Hover object at start of update */
+        /** @property {UIObject|undefined} - Hover object at start of update
+         *  @type {UIObject|undefined} */
         this.lastHoverObject = undefined;
-        /** @property {UIObject} - Current confirm menu being shown */
+        /** @property {UIObject|undefined} - Current confirm menu being shown
+         *  @type {UIObject|undefined} */
         this.confirmDialog = undefined;
         /** @private */
         this._keyInputObject = undefined;
@@ -701,9 +710,11 @@ class UIObject
         this.size = size.copy();
         /** @property {Color} - Color of the object */
         this.color = uiSystem.defaultColor.copy();
-        /** @property {Color} - Color of the object when active, uses hoverColor if undefined */
+        /** @property {Color|undefined} - Color of the object when active, uses hoverColor if undefined
+         *  @type {Color|undefined} */
         this.activeColor = undefined;
-        /** @property {string} - Text for this ui object */
+        /** @property {string|undefined} - Text for this ui object
+         *  @type {string|undefined} */
         this.text = undefined;
         /** @property {Color} - Color when disabled */
         this.disabledColor = uiSystem.defaultDisabledColor.copy();
@@ -723,15 +734,19 @@ class UIObject
         this.cornerRadius = uiSystem.defaultCornerRadius;
         /** @property {string} - Font for this object */
         this.font = uiSystem.defaultFont;
-        /** @property {string} - Font style for this object or undefined */
+        /** @property {string|undefined} - Font style for this object or undefined
+         *  @type {string|undefined} */
         this.fontStyle = undefined;
-        /** @property {number} - Override for text width */
+        /** @property {number|undefined} - Override for text width
+         *  @type {number|undefined} */
         this.textWidth = undefined;
-        /** @property {number} - Override for text height */
+        /** @property {number|undefined} - Override for text height
+         *  @type {number|undefined} */
         this.textHeight = undefined;
         /** @property {number} - Scale text to fit in the object */
         this.textFitScale = uiSystem.defaultTextFitScale;
-        /** @property {Vector2} - How much to offset the text shadow or undefined */
+        /** @property {Vector2|undefined} - How much to offset the text shadow or undefined
+         *  @type {Vector2|undefined} */
         this.textShadow = undefined;
         /** @property {number} - Color for text line drawing  */
         this.textLineColor = uiSystem.defaultLineColor.copy();
@@ -741,7 +756,8 @@ class UIObject
         this.visible  = true;
         /** @property {Array<UIObject>} - A list of this object's children */
         this.children = [];
-        /** @property {UIObject} - This object's parent, position is in parent space */
+        /** @property {UIObject|undefined} - This object's parent, position is in parent space
+         *  @type {UIObject|undefined} */
         this.parent = undefined;
         /** @property {number} - Added size to make small buttons easier to touch on mobile devices */
         this.extraTouchSize = 0;
@@ -763,7 +779,8 @@ class UIObject
         this.shadowBlur = uiSystem.defaultShadowBlur;
         /** @property {Vector2} - Offset of shadow blur */
         this.shadowOffset = uiSystem.defaultShadowOffset?.copy();
-        /** @property {number} - Optional navigation order index, lower values are selected first */
+        /** @property {number|undefined} - Optional navigation order index, lower values are selected first
+         *  @type {number|undefined} */
         this.navigationIndex = undefined;
         /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
         this.navigationAutoSelect = false;

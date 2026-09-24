@@ -35,9 +35,9 @@ declare module "littlejsengine" {
      */
     export type AudioEndedCallback = (source: AudioBufferSourceNode) => any;
     /**
-     * - Function to handle a tile collision test
+     * - Decides whether a tile counts as solid for a collision test or raycast
      */
-    export type TileCollisionCallback = (tileData: number, pos: Vector2) => any;
+    export type TileCollisionCallback = (tileData: number, pos: Vector2) => boolean;
     /**
      * - Function that processes a medal
      */
@@ -47,9 +47,9 @@ declare module "littlejsengine" {
      */
     export type ParticleCallback = (particle: Particle) => any;
     /**
-     * - Collide callback for particles
+     * - Decides whether a particle stops at a tile, it is a filter rather than a notice
      */
-    export type ParticleCollideCallback = (particle: Particle, tileData: number, pos: Vector2) => any;
+    export type ParticleCollideCallback = (particle: Particle, tileData: number, pos: Vector2) => boolean;
     /**
      * LittleJS - The Tiny Fast JavaScript Game Engine
      * MIT License - Copyright 2021 Frank Force
@@ -107,7 +107,7 @@ declare module "littlejsengine" {
      *  @type {number}
      *  @memberof Engine */
     export let time: number;
-    /** Actual clock time since start in seconds (not affected by pause, timescale, or frame rate clamping)
+    /** Actual clock time since start in seconds (not affected by pause, timescale, or frame rate clamping; the debug speed keys scale it in debug builds)
      *  @type {number}
      *  @memberof Engine */
     export let timeReal: number;
@@ -164,7 +164,7 @@ declare module "littlejsengine" {
      *  engineStep(600); // advance 10 seconds of game time
      *  @memberof Engine */
     export function engineStep(frames?: number): void;
-    /** Update each engine object, remove destroyed objects, and update time
+    /** Update each engine object and remove destroyed objects; time and frame do not advance, engineStep does that
      * can be called manually if objects need to be updated outside of main loop
      *  @memberof Engine */
     export function engineObjectsUpdate(): void;
@@ -2728,7 +2728,7 @@ declare module "littlejsengine" {
      * - Sounds and the master bus can route through effects, see the audio effects plugin
      * @namespace Audio
      */
-    /** Audio context used by the engine
+    /** Audio context used by the engine, undefined outside a browser, where the engine runs headless
      *  @type {AudioContext}
      *  @memberof Audio */
     export let audioContext: AudioContext;
@@ -3295,9 +3295,10 @@ declare module "littlejsengine" {
      *  @memberof TileLayers */
     export function tileCollisionTest(pos: Vector2, size?: Vector2, callbackObject?: EngineObject | TileCollisionCallback, solidOnly?: boolean): TileCollisionLayer;
     /**
-     *  @callback TileCollisionCallback - Function to handle a tile collision test
+     *  @callback TileCollisionCallback - Decides whether a tile counts as solid for a collision test or raycast
      *  @param {number} tileData - the value of the tile at the position
      *  @param {Vector2} pos - world space position of tile where the collision occurred
+     *  @return {boolean} - true for a hit; a callback that returns nothing lets everything through
      *  @memberof TileLayers
      */
     /** Return the exact position of the boundary of first tile hit, undefined if nothing was hit.
@@ -3307,7 +3308,7 @@ declare module "littlejsengine" {
      *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
      *  @param {Vector2} [normal] - Optional normal of the surface hit
      *  @param {boolean} [solidOnly=true] - Only check solid layers?
-     *  @return {Vector2|undefined} - position of the center of the tile hit or undefined if no hit
+     *  @return {Vector2|undefined} - where the ray meets the first tile hit, nudged just inside it, or undefined if no hit
      *  @memberof TileLayers */
     export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, callbackObject?: EngineObject | TileCollisionCallback, normal?: Vector2, solidOnly?: boolean): Vector2 | undefined;
     /**
@@ -3491,8 +3492,8 @@ declare module "littlejsengine" {
         getData(layerPos: Vector2): TileLayerData | undefined;
         /** Called after this layer is redrawn, does nothing by default */
         onRedraw(): void;
-        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
-        savedRenderSettings: [CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color];
+        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color]} */
+        savedRenderSettings: [CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color];
     }
     /**
      * Tile Collision Layer - a tile layer with collision
@@ -3551,10 +3552,11 @@ declare module "littlejsengine" {
      *  @memberof Particles
      */
     /**
-     *  @callback ParticleCollideCallback - Collide callback for particles
+     *  @callback ParticleCollideCallback - Decides whether a particle stops at a tile, it is a filter rather than a notice
      *  @param {Particle} particle
      *  @param {number} tileData
      *  @param {Vector2} pos
+     *  @return {boolean} - true to stop the particle there; a callback that returns nothing lets it pass through
      *  @memberof Particles
      */
     /**
@@ -4399,8 +4401,9 @@ declare module "littlejsengine" {
         defaultHoverColor: Color;
         /** @property {Color} - Default color for disabled UI elements */
         defaultDisabledColor: Color;
-        /** @property {Color} - Uses a gradient fill combined with color */
-        defaultGradientColor: any;
+        /** @property {Color|undefined} - Uses a gradient fill combined with color
+         *  @type {Color|undefined} */
+        defaultGradientColor: Color | undefined;
         /** @property {number} - Default line width for UI elements */
         defaultLineWidth: number;
         /** @property {number} - Default rounded rect corner radius for UI elements */
@@ -4409,12 +4412,15 @@ declare module "littlejsengine" {
         defaultTextFitScale: number;
         /** @property {string} - Default font for UI elements */
         defaultFont: string;
-        /** @property {Sound} - Default sound when interactive UI element is pressed */
-        defaultSoundPress: any;
-        /** @property {Sound} - Default sound when interactive UI element is released */
-        defaultSoundRelease: any;
-        /** @property {Sound} - Default sound when interactive UI element is clicked */
-        defaultSoundClick: any;
+        /** @property {Sound|undefined} - Default sound when interactive UI element is pressed
+         *  @type {Sound|undefined} */
+        defaultSoundPress: Sound | undefined;
+        /** @property {Sound|undefined} - Default sound when interactive UI element is released
+         *  @type {Sound|undefined} */
+        defaultSoundRelease: Sound | undefined;
+        /** @property {Sound|undefined} - Default sound when interactive UI element is clicked
+         *  @type {Sound|undefined} */
+        defaultSoundClick: Sound | undefined;
         /** @property {Color} - Color for shadow */
         defaultShadowColor: Color;
         /** @property {number} - Size of shadow blur */
@@ -4423,13 +4429,14 @@ declare module "littlejsengine" {
         defaultShadowOffset: Vector2;
         /** @property {number} - If set ui coords will be renormalized to this canvas height */
         nativeHeight: number;
-        /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
-        navigationObject: any;
+        /** @property {UIObject|undefined} - Object currently selected by navigation (gamepad or keyboard)
+         *  @type {UIObject|undefined} */
+        navigationObject: UIObject | undefined;
         /** @property {Timer} - Cool down timer for navigation inputs */
         navigationTimer: Timer;
         /** @property {number} - Time between navigation inputs in seconds */
         navigationDelay: number;
-        /** @property {boolean} - should the navigation be horizontal, vertical, or both? */
+        /** @property {number} - Which way keys and gamepads move the selection: 0 horizontal, 1 vertical, 2 both */
         navigationDirection: number;
         /** @property {boolean} - True if user last used navigation instead of mouse */
         navigationMode: boolean;
@@ -4437,14 +4444,18 @@ declare module "littlejsengine" {
         uiObjects: any[];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
         uiContext: CanvasRenderingContext2D;
-        /** @property {UIObject} - Object user is currently interacting with */
-        activeObject: any;
-        /** @property {UIObject} - Top most object user is over */
-        hoverObject: any;
-        /** @property {UIObject} - Hover object at start of update */
-        lastHoverObject: any;
-        /** @property {UIObject} - Current confirm menu being shown */
-        confirmDialog: any;
+        /** @property {UIObject|undefined} - Object user is currently interacting with
+         *  @type {UIObject|undefined} */
+        activeObject: UIObject | undefined;
+        /** @property {UIObject|undefined} - Top most object user is over
+         *  @type {UIObject|undefined} */
+        hoverObject: UIObject | undefined;
+        /** @property {UIObject|undefined} - Hover object at start of update
+         *  @type {UIObject|undefined} */
+        lastHoverObject: UIObject | undefined;
+        /** @property {UIObject|undefined} - Current confirm menu being shown
+         *  @type {UIObject|undefined} */
+        confirmDialog: UIObject | undefined;
         /** @private */
         private _keyInputObject;
         /** @private */
@@ -4565,10 +4576,12 @@ declare module "littlejsengine" {
         size: Vector2;
         /** @property {Color} - Color of the object */
         color: Color;
-        /** @property {Color} - Color of the object when active, uses hoverColor if undefined */
-        activeColor: any;
-        /** @property {string} - Text for this ui object */
-        text: any;
+        /** @property {Color|undefined} - Color of the object when active, uses hoverColor if undefined
+         *  @type {Color|undefined} */
+        activeColor: Color | undefined;
+        /** @property {string|undefined} - Text for this ui object
+         *  @type {string|undefined} */
+        text: string | undefined;
         /** @property {Color} - Color when disabled */
         disabledColor: Color;
         /** @property {boolean} - Is this object disabled? */
@@ -4580,23 +4593,27 @@ declare module "littlejsengine" {
         /** @property {Color} - Color for line drawing */
         lineColor: Color;
         /** @property {Color} - Uses a gradient fill combined with color */
-        gradientColor: any;
+        gradientColor: Color;
         /** @property {number} - Width for line drawing */
         lineWidth: number;
         /** @property {number} - Corner radius for rounded rects */
         cornerRadius: number;
         /** @property {string} - Font for this object */
         font: string;
-        /** @property {string} - Font style for this object or undefined */
-        fontStyle: any;
-        /** @property {number} - Override for text width */
-        textWidth: any;
-        /** @property {number} - Override for text height */
-        textHeight: any;
+        /** @property {string|undefined} - Font style for this object or undefined
+         *  @type {string|undefined} */
+        fontStyle: string | undefined;
+        /** @property {number|undefined} - Override for text width
+         *  @type {number|undefined} */
+        textWidth: number | undefined;
+        /** @property {number|undefined} - Override for text height
+         *  @type {number|undefined} */
+        textHeight: number | undefined;
         /** @property {number} - Scale text to fit in the object */
         textFitScale: number;
-        /** @property {Vector2} - How much to offset the text shadow or undefined */
-        textShadow: any;
+        /** @property {Vector2|undefined} - How much to offset the text shadow or undefined
+         *  @type {Vector2|undefined} */
+        textShadow: Vector2 | undefined;
         /** @property {number} - Color for text line drawing  */
         textLineColor: Color;
         /** @property {number} - Width for text line drawing */
@@ -4605,16 +4622,17 @@ declare module "littlejsengine" {
         visible: boolean;
         /** @property {Array<UIObject>} - A list of this object's children */
         children: any[];
-        /** @property {UIObject} - This object's parent, position is in parent space */
-        parent: any;
+        /** @property {UIObject|undefined} - This object's parent, position is in parent space
+         *  @type {UIObject|undefined} */
+        parent: UIObject | undefined;
         /** @property {number} - Added size to make small buttons easier to touch on mobile devices */
         extraTouchSize: number;
         /** @property {Sound} - Sound when interactive element is pressed */
-        soundPress: any;
+        soundPress: Sound;
         /** @property {Sound} - Sound when interactive element is released */
-        soundRelease: any;
+        soundRelease: Sound;
         /** @property {Sound} - Sound when interactive element is clicked */
-        soundClick: any;
+        soundClick: Sound;
         /** @property {boolean} - Is this element interactive */
         interactive: boolean;
         /** @property {boolean} - Activate when dragged over with mouse held down */
@@ -4627,8 +4645,9 @@ declare module "littlejsengine" {
         shadowBlur: number;
         /** @property {Vector2} - Offset of shadow blur */
         shadowOffset: Vector2;
-        /** @property {number} - Optional navigation order index, lower values are selected first */
-        navigationIndex: any;
+        /** @property {number|undefined} - Optional navigation order index, lower values are selected first
+         *  @type {number|undefined} */
+        navigationIndex: number | undefined;
         /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
         navigationAutoSelect: boolean;
         /** @property {Vector2} - Where on parent (or canvas if no parent) this object is anchored.
@@ -4707,8 +4726,8 @@ declare module "littlejsengine" {
          *  @param {string}  [font=uiSystem.defaultFont]
          */
         constructor(pos?: Vector2, size?: Vector2, text?: string, align?: string, font?: string);
-        text: string;
         align: string;
+        gradientColor: any;
     }
     /**
      * UITextInput - An editable text input field
@@ -4726,7 +4745,6 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, text?: string);
         /** @property {number} - Max length of input (0 = no limit) */
         maxLength: number;
-        text: string;
         click(): void;
         /** Stop editing the text */
         stopEditing(): void;
@@ -4771,7 +4789,6 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, text?: string, color?: Color);
         /** @property {Vector2} - Text offset for the button */
         textOffset: Vector2;
-        text: string;
     }
     /**
      * UICheckbox - A UI object that acts as a checkbox
@@ -4789,7 +4806,6 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, checked?: boolean, text?: string, color?: Color);
         /** @property {boolean} - Is the checkbox currently checked? */
         checked: boolean;
-        text: string;
         click(): void;
     }
     /**
@@ -4813,7 +4829,6 @@ declare module "littlejsengine" {
         handleColor: Color;
         /** @property {boolean} - Should it fill up like a progress bar? */
         fillMode: boolean;
-        text: string;
     }
     /**
      * VideoPlayerUIObject - A UI object that plays video
@@ -7267,6 +7282,7 @@ declare module "littlejsengine" {
         matrixVersion: number;
         matrixParent: any;
         matrixParentVersion: number;
+        movePass: number;
         /** Returns the world position
          *  @return {Vector3} */
         getWorldPos3D(): Vector3;
@@ -7279,7 +7295,7 @@ declare module "littlejsengine" {
         /** Returns the object's up axis in the world
          *  @return {Vector3} */
         getUp3D(): Vector3;
-        /** Returns a copy of the object's world transform, relative to the parent's when attached to an EngineObject3D
+        /** Returns a copy of the object's world transform, the parent's included when attached to an EngineObject3D
          *  - The object keeps its matrix and rebuilds it only when its position, rotation or scale changed, so this is cheap to call
          *  @return {Matrix4} */
         getMatrix(): Matrix4;
@@ -7377,12 +7393,12 @@ declare module "littlejsengine" {
          *  - The mesh becomes indexed: a strip mesh is turned into triangles first, and strips added later join as triangles
          *  - List each triangle counter clockwise as seen from the front, like a strip's first triangle
          *  @param {Array<Vector3>} points - Each vertex once
+         *  @param {Array<number>} indices - Three vertex numbers per triangle, into points
          *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
          *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, default zero
          *  @param {Color|Array<Color>} [colors] - One for all or one per point, default white
-         *  @param {Array<number>} indices - Three vertex numbers per triangle, into points
          *  @return {Mesh} */
-        addTriangles(points: Array<Vector3>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>, indices: Array<number>): Mesh;
+        addTriangles(points: Array<Vector3>, indices: Array<number>, normals?: Vector3 | Array<Vector3>, uvs?: Vector2 | Array<Vector2>, colors?: Color | Array<Color>): Mesh;
         /** Turn a strip mesh into the indexed form, each distinct vertex once and the real triangles over them, in place
          *  - An indexed mesh is left as it is; the builders make strips and a loader makes this, and either draws the same
          *  @return {Mesh} */

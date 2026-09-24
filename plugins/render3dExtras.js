@@ -1171,7 +1171,7 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
             }
         }
     }
-    const mesh = new Mesh().addTriangles(points, vertexNormals, vertexUVs, undefined, indices);
+    const mesh = new Mesh().addTriangles(points, indices, vertexNormals, vertexUVs);
     if (!fileNormals && smooth)
         mesh.computeNormals(true);
     return mesh;

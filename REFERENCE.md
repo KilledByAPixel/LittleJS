@@ -21,7 +21,7 @@ engineVersion         // Version of the engine
 frameRate             // Fixed frame rate for updates (60)
 frame                 // Current update frame
 time                  // Game time since start in seconds (stops when paused)
-timeReal              // Real time since start in seconds (keeps running when paused)
+timeReal              // Real time since start in seconds (keeps running when paused; the debug speed keys scale it)
 timeDelta             // Time between updates (1/60)
 timeScale = 1         // Scales deltaTime applied to the game
 paused                // Is the game paused? (set with setPaused)
@@ -612,7 +612,7 @@ TileCollisionLayer(pos, size, tileInfo=tile())      // Create a tile collision l
 TileCollisionLayer.setCollisionData(pos, data=1)    // Set tile collision data at pos
 tileCollisionGetData(pos)                           // Get tile collision data at pos
 tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
-tileCollisionRaycast(posStart, posEnd, object)      // Return the center of tile if hit
+tileCollisionRaycast(posStart, posEnd, object)      // Where the ray meets the first tile hit, or undefined
 tileCollisionLayers                                 // List of all tile collision layers
 tileLayersLoad(tileMapData, tileInfo)               // Load tile layers from exported data
 
@@ -1169,7 +1169,7 @@ mesh.addStrip(points, normals, uvs, colors) // one strip in strip order, counter
                                             // joined by an invisible flat triangle, so they do not look connected
 mesh.addQuad(a, b, c, d, color, uvs) // corners in loop order, counter clockwise seen from the front; color and uvs one
                                      // or per corner
-mesh.addTriangles(points, normals, uvs, colors, indices) // triangles over their own vertices, the form a model file
+mesh.addTriangles(points, indices, normals, uvs, colors) // triangles over their own vertices, the form a model file
                                      // comes in: each vertex once, three indices per triangle counter clockwise from
                                      // the front; the mesh becomes indexed, a strip already in it is welded first
 mesh.toIndexed()                     // turn a strip mesh into the indexed form in place, each distinct vertex once
