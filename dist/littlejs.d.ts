@@ -3852,7 +3852,7 @@ declare module "littlejsengine" {
      * - NewgroundsMedal extends Medal with Newgrounds API functionality
      * - When logged in, Newgrounds holds the player's NewgroundsMedals: they unlock once the server confirms and the local save leaves them alone
      * - A plain Medal is never touched, so a game can use the plugin for scoreboards alone
-     * - A guest with no session gets nothing fetched, though getScores and logView still work for them
+     * - A guest with no session gets the medal and scoreboard lists too, so names, icons and leaderboards show; only unlocking needs a login
      * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
      * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
      * - Provides functions to unlock medals, post and read scoreboards and log views
@@ -3889,7 +3889,7 @@ declare module "littlejsengine" {
         cryptoKey: CryptoKey | undefined;
         /** @property {string} - Hostname used when logging views */
         host: string;
-        /** @property {Array} - Medals fetched from Newgrounds, empty until ready */
+        /** @property {Array} - Medals fetched from Newgrounds, empty until ready, with the unlocks only when logged in */
         medals: any[];
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         scoreboards: any[];
@@ -3902,7 +3902,7 @@ declare module "littlejsengine" {
         /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the server refused it
          *  @type {string|null} */
         session_id: string | null;
-        /** @property {Promise<NewgroundsPlugin>} - Resolves once the session is checked and the medals and scoreboards have been fetched, or right away when not logged in */
+        /** @property {Promise<NewgroundsPlugin>} - Resolves once the session is checked and the medals and scoreboards have been fetched */
         ready: Promise<this>;
         init(): Promise<this>;
         /** Send the unlocks the server has not confirmed again, which the keep alive ping does every minute */

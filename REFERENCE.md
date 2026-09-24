@@ -1446,7 +1446,7 @@ new Box2dGearJoint(jointA, jointB, ratio)
 - Optional Newgrounds integration: syncs medals and scoreboards when hosted on Newgrounds
 - A logged in Newgrounds player's NewgroundsMedals live on the server: they unlock once it confirms and the local save leaves
   them alone, while a plain Medal is never touched; if the server does not know the session at load the game plays as logged out
-- Nothing is fetched for a guest with no session, though `getScores` and `logView` still work for them
+- A guest with no session gets the medal and scoreboard lists too, so names, icons and leaderboards show; only unlocking needs a login
 - See `examples/shorts/medals.js` for a demo
 
 ```javascript
@@ -1472,12 +1472,11 @@ medalDisplaySize / setMedalDisplaySize(vec2)
 new NewgroundsPlugin(app_id, cipher) // sets the newgrounds global and fetches the medals and scoreboards; with the
                                      // app's cipher, calls are encrypted by the browser's own WebCrypto, so the page
                                      // has to be https or localhost and no library is needed
-await newgrounds.ready               // resolves once the session is checked and the medals and scoreboards are in, right away
-                                     // when not logged in
+await newgrounds.ready               // resolves once the session is checked and the medals and scoreboards are in
 newgrounds.session_id                // the player's session id, null when not logged in or once the server refused it
 newgrounds.user                      // the logged in player once ready, with id, name, url and supporter; null when not logged in
 newgrounds.medals                    // the server's medal list once ready; its name, description, icon, value and difficulty
-                                     // replace what the game gave each NewgroundsMedal
+                                     // replace what the game gave each NewgroundsMedal, and the unlocks come only when logged in
 newgrounds.scoreboards               // the server's scoreboard list once ready, with the ids to post and read
 newgrounds.unlockMedal(id)           // Server-side unlock; every call is a fetch and returns a promise of the response
 newgrounds.postScore(id, value)      // Submit to a scoreboard

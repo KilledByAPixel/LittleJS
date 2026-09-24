@@ -10901,7 +10901,7 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
  * - NewgroundsMedal extends Medal with Newgrounds API functionality
  * - When logged in, Newgrounds holds the player's NewgroundsMedals: they unlock once the server confirms and the local save leaves them alone
  * - A plain Medal is never touched, so a game can use the plugin for scoreboards alone
- * - A guest with no session gets nothing fetched, though getScores and logView still work for them
+ * - A guest with no session gets the medal and scoreboard lists too, so names, icons and leaderboards show; only unlocking needs a login
  * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
  * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
  * - Provides functions to unlock medals, post and read scoreboards and log views
@@ -11012,7 +11012,7 @@ class NewgroundsPlugin
         const hasLocation = typeof location != 'undefined';
         /** @property {string} - Hostname used when logging views */
         this.host = hasLocation ? location.hostname : '';
-        /** @property {Array} - Medals fetched from Newgrounds, empty until ready */
+        /** @property {Array} - Medals fetched from Newgrounds, empty until ready, with the unlocks only when logged in */
         this.medals = [];
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         this.scoreboards = [];
@@ -11032,31 +11032,36 @@ class NewgroundsPlugin
         if (this.session_id)
             medalsForEach(medal=> medal instanceof NewgroundsMedal && (medal.unlocked = false));
 
-        /** @property {Promise<NewgroundsPlugin>} - Resolves once the session is checked and the medals and scoreboards have been fetched, or right away when not logged in */
-        this.ready = this.session_id ? this.init() : Promise.resolve(this); // only use newgrounds when logged in
+        /** @property {Promise<NewgroundsPlugin>} - Resolves once the session is checked and the medals and scoreboards have been fetched */
+        this.ready = this.init();
     }
 
     // check the session, fetch the medals and scoreboards, then keep the session alive
     async init()
     {
-        // the player is logged in when the server knows the session and it has a user
-        const sessionResult = await this.call('App.checkSession');
-        const session = sessionResult?.result?.data?.['session'];
-        const user = session && !session['expired'] && session['user'];
-        const medalsResult = user && await this.call('Medal.getList');
-
-        // without the server (offline / bad session / server error) the game plays as logged out
-        if (!medalsResult || !medalsResult.result || medalsResult.result.error)
+        let medalsResult;
+        if (this.session_id)
         {
-            debugMedals && LOG('Newgrounds session unavailable; medals are local');
-            this.session_id = null;
-            medalsLoad(); // the Newgrounds medals are local again, back from the save
-            this.resendUnlocks(); // and so are the unlocks sent meanwhile, they unlock now
-            return this;
+            // the player is logged in when the server knows the session, it has a user and the medals come in
+            const sessionResult = await this.call('App.checkSession');
+            const session = sessionResult?.result?.data?.['session'];
+            const user = session && !session['expired'] && session['user'];
+            medalsResult = user && await this.call('Medal.getList');
+            if (!medalsResult?.result?.data)
+            {
+                // without the server (offline / bad session / server error) the game plays as logged out
+                debugMedals && LOG('Newgrounds session unavailable; medals are local');
+                this.session_id = null;
+                medalsLoad(); // the Newgrounds medals are local again, back from the save
+                this.resendUnlocks(); // and so are the unlocks sent meanwhile, they unlock now
+                return this;
+            }
+            this.user = user;
         }
-        this.user = user;
+        else
+            medalsResult = await this.call('Medal.getList'); // a guest gets the list too, without the unlocks
 
-        this.medals = medalsResult.result.data?.['medals'] || [];
+        this.medals = medalsResult?.result?.data?.['medals'] || [];
         debugMedals && LOG(this.medals);
         for (const newgroundsMedal of this.medals)
         {
@@ -11080,8 +11085,10 @@ class NewgroundsPlugin
         const scoreboardResult = await this.call('ScoreBoard.getBoards');
         this.scoreboards = scoreboardResult?.result?.data?.scoreboards || [];
         debugMedals && LOG(this.scoreboards);
+        if (!this.session_id)
+            return this;
 
-        // ping every minute, and resend the unlocks the server has not confirmed
+        // logged in, ping every minute and resend the unlocks the server has not confirmed
         const keepAliveMS = 60 * 1e3;
         setInterval(()=>
         {
