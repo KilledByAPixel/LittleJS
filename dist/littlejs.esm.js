@@ -705,6 +705,11 @@ let debugKey = 'Escape';
  *  @memberof Debug */
 let debugOverlay = false;
 
+// the shadow behind debug text, so it reads over anything: the overlay menu and the mouse text both use it;
+// a smaller blur is tighter and darker, a larger one softer and fainter
+const debugTextShadowColor = '#000', debugTextShadowBlur = 9;
+function debugTextShadow(context) { context.shadowColor = debugTextShadowColor; context.shadowBlur = debugTextShadowBlur; }
+
 // Engine internal variables not exposed to documentation
 let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugSound = false, debugTiles = false, debugTakeScreenshot;
 
@@ -961,6 +966,15 @@ function debugUpdate()
         debugVideoCaptureStart();
 }
 
+// the text beside the mouse, with the same shadow as the overlay
+function debugMouseText(text)
+{
+    mainContext.save();
+    debugTextShadow(mainContext);
+    drawTextScreen(text, mousePosScreen, 24, WHITE, 0, BLACK, 'center', 'monospace', undefined, undefined, 0, mainContext);
+    mainContext.restore();
+}
+
 // the center of the tile under a world position, on the grid of the collision layer that has a tile there
 function debugTileCellCenter(pos)
 {
@@ -1209,13 +1223,13 @@ function debugRender()
         debugText += debugTileText();
         debugText += '\n\n--- object info ---\n';
         debugText += debugObject.toString();
-        drawTextScreen(debugText, mousePosScreen, 24, rgb(), .05, undefined, 'center', 'monospace');
+        debugMouseText(debugText);
     }
     else if (debugOverlay && debugTiles)
     {
         // no object to pick, the tiles under the mouse on their own
         const text = debugTileText();
-        text && drawTextScreen('mouse pos = ' + mousePos + text, mousePosScreen, 24, rgb(), .05, undefined, 'center', 'monospace');
+        text && debugMouseText('mouse pos = ' + mousePos + text);
     }
 
     {
@@ -1227,8 +1241,7 @@ function debugRender()
         debugContext.textAlign = 'left';
         debugContext.textBaseline = 'top';
         debugContext.font = fontSize + 'px monospace';
-        debugContext.shadowColor = '#000';
-        debugContext.shadowBlur = 9;
+        debugTextShadow(debugContext);
 
         let x = 9, y = 0, h = lineHeight;
         if (debugOverlay)
