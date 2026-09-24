@@ -16,11 +16,11 @@ const calls = [];
 let input;
 globalThis.fetch = async (url, options) =>
 {
-    input = JSON.parse(options.body.get('input'));
-    calls.push(input.call.component);
-    const reply = replies[input.call.component];
+    input = JSON.parse(options.body.get('request'));
+    calls.push(input.execute.component);
+    const reply = replies[input.execute.component];
     if (reply instanceof Error) throw reply;
-    return { text: async ()=> JSON.stringify({ success: true, result: { component: input.call.component, success: true, ...reply } }) };
+    return { text: async ()=> JSON.stringify({ success: true, result: { component: input.execute.component, success: true, ...reply } }) };
 };
 let intervals = 0;
 globalThis.setInterval = ()=> ++intervals;
@@ -91,14 +91,15 @@ test('a cipher encrypts the calls Newgrounds secures in place of the plain call,
     assert.equal(response.success, true);
     assert.equal(input.app_id, 'an app');
     assert.equal(input.session_id, null);
-    assert.equal(input.call.component, 'ScoreBoard.postScore');
-    assert.equal(input.call.parameters, 0);
-    assert.equal(typeof input.call.secure, 'string', 'the call is encrypted in place');
-    assert.equal(Buffer.from(input.call.secure, 'base64').length % 16, 0);
+    assert.deepEqual(Object.keys(input.execute), ['secure'], 'only the encrypted call goes, as the docs give it');
+    const bytes = Buffer.from(input.execute.secure, 'base64');
+    const key = await crypto.subtle.importKey('raw', keyBytes, 'AES-CBC', false, ['decrypt']);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: bytes.subarray(0, 16) }, key, bytes.subarray(16));
+    assert.deepEqual(JSON.parse(new TextDecoder().decode(plain)), { component: 'ScoreBoard.postScore', parameters: { id: 3, value: 100 } });
 
     replies['Gateway.ping'] = { data: {} };
     await newgrounds.call('Gateway.ping', 0);
-    assert.equal(input.call.secure, undefined, 'the rest go plain');
+    assert.equal(input.execute.secure, undefined, 'the rest go plain');
     assert.equal(calls.includes('App.logView'), true);
 });
 

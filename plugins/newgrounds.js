@@ -346,28 +346,24 @@ class NewgroundsPlugin
      */
     async call(component, parameters, session_id=this.session_id)
     {
-        const url = 'https://newgrounds.io/gateway_v3.php';
+        const url = 'https://www.newgrounds.io/gateway_v3.php';
         try
         {
-            const call = {'component':component, 'parameters':parameters};
+            let execute = {'component':component, 'parameters':parameters};
             if (this.cipher && newgroundsSecureComponents.includes(component))
-            {
-                // the whole call goes encrypted in its place
-                call['secure'] = await this.encrypt(JSON.stringify(call));
-                call['parameters'] = 0;
-            }
+                execute = {'secure': await this.encrypt(JSON.stringify(execute))}; // only the encrypted call goes
 
-            // build the input object
-            const input =
+            // build the request object, in the form the Newgrounds.io docs give
+            const request =
             {
                 'app_id':     this.app_id,
                 'session_id': session_id,
-                'call':       call
+                'execute':    execute
             };
 
             // send it as post data
             const formData = new FormData();
-            formData.append('input', JSON.stringify(input));
+            formData.append('request', JSON.stringify(request));
             const signal = globalThis.AbortSignal?.timeout?.(newgroundsTimeoutMS); // a stalled request fails
             const response = await fetch(url, {'method':'POST', 'body':formData, 'signal':signal});
             const text = await response.text();

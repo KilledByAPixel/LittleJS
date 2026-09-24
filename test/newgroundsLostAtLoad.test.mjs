@@ -10,8 +10,8 @@ const flush = ()=> new Promise(resolve => setImmediate(resolve));
 const calls = [];
 globalThis.fetch = async (url, options) =>
 {
-    const input = JSON.parse(options.body.get('input'));
-    const component = input.call.component;
+    const input = JSON.parse(options.body.get('request'));
+    const component = input.execute.component;
     calls.push(component);
     let data = { success: true };
     if (component == 'App.checkSession')

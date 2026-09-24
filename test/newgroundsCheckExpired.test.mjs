@@ -16,7 +16,7 @@ const signals = [];
 let stall = false;
 globalThis.fetch = (url, options) =>
 {
-    const { call } = JSON.parse(options.body.get('input'));
+    const { execute: call } = JSON.parse(options.body.get('request'));
     calls.push(call.component);
     signals.push(options.signal);
     if (stall && call.component == 'ScoreBoard.getBoards') // never answers, until the deadline aborts it

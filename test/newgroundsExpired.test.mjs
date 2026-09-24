@@ -8,7 +8,7 @@ globalThis.location = { href: 'https://uploads.ungrounded.net/game/?ngio_session
 const calls = [];
 globalThis.fetch = async (url, options) =>
 {
-    const { call } = JSON.parse(options.body.get('input'));
+    const { execute: call } = JSON.parse(options.body.get('request'));
     calls.push(call.component);
     const data = { success: true, session: { id: 'old', user: null, expired: false, passport_url: 'https://www.newgrounds.com/passport/' } };
     return { text: async ()=> JSON.stringify({ success: true, result: { component: call.component, success: true, data } }) };

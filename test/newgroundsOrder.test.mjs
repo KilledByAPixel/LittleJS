@@ -20,7 +20,7 @@ const replies =
 };
 globalThis.fetch = async (url, options) =>
 {
-    const { call } = JSON.parse(options.body.get('input'));
+    const { execute: call } = JSON.parse(options.body.get('request'));
     const reply = typeof replies[call.component] == 'function' ?
         replies[call.component](call.parameters.id) : replies[call.component];
     if (call.component == 'Medal.getList')

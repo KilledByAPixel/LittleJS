@@ -20,7 +20,7 @@ const replies =
 const calls = [];
 globalThis.fetch = async (url, options) =>
 {
-    const { call } = JSON.parse(options.body.get('input'));
+    const { execute: call } = JSON.parse(options.body.get('request'));
     calls.push(call.component);
     const reply = await replies[call.component]();
     return { text: async ()=> JSON.stringify({ success: true, result: { component: call.component, success: true, ...reply } }) };
