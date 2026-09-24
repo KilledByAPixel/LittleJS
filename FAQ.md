@@ -72,21 +72,22 @@ The most basic example is just an empty project.
 <title>LittleJS Hello World Demo</title>
 <meta charset=utf-8>
 </head><body>
-
-<script src=../../dist/littlejs.js></script>
-<script src=game.js></script>
-</body></html>
+<script src=game.js type=module></script>
 ```
 
 [Empty Example JavaScript file:](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/empty/game.js)
 ```javascript
 /*
     Little JS Hello World Demo
-    - Just prints "Hello World!"
+    - Just prints 'Hello World!'
     - A good starting point for new projects
 */
 
 'use strict';
+
+// import LittleJS module
+import * as LJS from '../../dist/littlejs.esm.js';
+const {vec2, hsl} = LJS;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -121,13 +122,15 @@ function gameRenderPost()
 {
     // called after objects are rendered
     // draw effects or hud that appear above all objects
-    drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80);
+    LJS.drawTextScreen('Hello World!', LJS.mainCanvasSize.scale(.5), 80);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
+LJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
 ```
+
+The empty example is an ES module, so engine names come from the `LJS` namespace. For a classic setup where the engine is a plain `<script src=../../dist/littlejs.js>` tag and every engine name is a global, start from [examples/starter](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/starter) instead.
 
 This is the simplest setup — two files served by a local web server. If you'd rather start from a bundler-based project with hot reload, see [How do I use Vite with LittleJS?](#how-do-i-use-vite-with-littlejs) for the official Vite starter template.
 
@@ -246,18 +249,19 @@ Plugins are self-contained features that live alongside the engine but aren't pa
 | `math3d.js` | `Vector3` and `Matrix4` for 3D games and plugins, with 3D collision and raycast helpers |
 | `render3d.js` | The built-in 3D renderer: meshes, lights, shadows, fog and EngineObject3D, into the same canvas as the 2D scene (needs `math3d.js`) |
 | `render3dExtras.js` | The rest of the 3D toolkit on top of it: more shape builders, terrain, camera controls, 3D particles and trails, and the OBJ loader |
-| `gltf.js` | Loads glTF and GLB models onto the 3D renderer: static meshes with their node placement, colors and textures |
+| `gltf.js` | Loads glTF and GLB models onto the 3D renderer: meshes, node placement and node animations, colors and textures |
 | `threejs.js` | Renders a Three.js scene behind the LittleJS canvas, an alternative to `render3d.js` |
 | `box2d.js` | Full Box2D physics via WebAssembly (more realistic than the built-in arcade physics) |
 | `lightSystem.js` | 2D dynamic lighting, lights accumulate into a lightmap that darkens the unlit scene |
 | `textureSheet.js` | Packs images into texture sheets as they load, and imports TexturePacker and Aseprite atlases |
 | `postProcess.js` | Shadertoy-style fragment shaders for screen-wide effects |
-| `uiSystem.js` | Lightweight in-engine UI widgets (buttons, text, tabs) |
+| `uiSystem.js` | Lightweight in-engine UI widgets (buttons, text, checkboxes, sliders, text input, video, layout) |
 | `tweenSystem.js` | Tween any property over time with easing curves |
 | `pathFinder.js` | Grid-based A* pathfinding with optional path smoothing |
 | `medalSystem.js` | Achievement / medal tracking with popup notifications |
 | `newgrounds.js` | Newgrounds.io integration (medals held on the server, scoreboards) |
 | `zzfxm.js` | Procedural chiptune music via the `ZzFXMusic` class |
+| `audioEffects.js` | Web Audio effects like filter, reverb, delay, distortion and compressor, for a group of sounds or everything |
 | `drawUtilities.js` | Higher-level drawing helpers like nine-slice and three-slice |
 
 This self-contained design means the community can also ship plugins independently of the main repo — you can write your own plugin as just a JavaScript file that uses the engine's public API.
@@ -279,7 +283,7 @@ Key things the template sets up for you:
 - `base: './'` in `vite.config.js` so the build works on GitHub Pages, itch.io, and other subdirectory hosts without further config.
 - Assets in `public/` (like `tiles.png`) are served at the site root in dev and copied to the build output, so `engineInit(..., ['tiles.png'])` works in both modes without a separate import.
 - A `public/.nojekyll` marker so GitHub Pages serves Vite's `_`-prefixed chunk files correctly.
-- A full page reload on save instead of partial HMR, since LittleJS has engine-level global state (canvas, WebGL, input listeners, the RAF loop) that doesn't survive a module hot swap. The relevant line in `src/main.js` is `if (import.meta.hot) import.meta.hot.accept(() => location.reload())`.
+- A full page reload on save instead of partial HMR, since LittleJS has engine-level global state (canvas, WebGL, input listeners, the RAF loop) that doesn't survive a module hot swap. The full reload is a small plugin in `vite.config.js`.
 
 Requires Node 20.19+ or 22.12+ (Vite 7 requirement). Other community projects like [Michael Haynie's LittleJS Jam project](https://github.com/michael-dean-haynie/littlejs-game-jam-2024) are good real-world references for more elaborate Vite setups.
 
@@ -473,7 +477,7 @@ setCameraScale(20);  // zoom camera to 20 pixels per world unit
 
 ### How do I use post-processing shaders?
 
-LittleJS supports Shadertoy-style fragment shaders as a final pass on the rendered output via the post-process plugin. Create the plugin with your shader source before `engineInit`:
+LittleJS supports Shadertoy-style fragment shaders as a final pass on the rendered output via the post-process plugin. Create the plugin with your shader source in `gameInit`, once `engineInit` has set up WebGL:
 
 ```javascript
 const shader = `
@@ -483,7 +487,11 @@ void mainImage(out vec4 c, vec2 p) {
     c.rgb *= 1.0 - distance(uv, vec2(0.5)) * 0.7; // vignette
 }`;
 
-new PostProcessPlugin(shader);
+function gameInit()
+{
+    new PostProcessPlugin(shader);
+}
+
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 ```
 
@@ -518,19 +526,19 @@ sound_click.play(pos, volume, pitch); // play a sound
 
 ### How do I play music?
 
-For procedural chiptune music, use the `ZzFXMusic` class from the [ZzFXM plugin](plugins/zzfxm.js). It extends `Sound` and accepts a ZzFXM-format song array — the music is generated on the fly so it adds essentially no bytes to your build. For longer scored music, load an mp3 or ogg file with the regular `Sound` class and pass `true` as the loop parameter.
+For procedural chiptune music, use the `ZzFXMusic` class from the [ZzFXM plugin](plugins/zzfxm.js). It extends `Sound` and accepts a ZzFXM-format song array — the music is generated on the fly so it adds essentially no bytes to your build. For longer scored music, load an mp3 or ogg file with the regular `Sound` class and play it with `playMusic`, which loops by default.
 
 ```javascript
 // procedural ZzFXM music (tiny, generated at runtime)
-const music = new ZzFXMusic(zzfxmSongData);
-music.play();
+const song = new ZzFXMusic(zzfxmSongData);
+const songInstance = song.playMusic();
 
 // or load an mp3/ogg and loop it
-const music = new Sound('music.mp3');
-music.play(undefined, 1, 1, 0, true); // pos, volume, rate, pan, loop
+const track = new Sound('music.mp3');
+const trackInstance = track.playMusic(1, true); // volume, loop
 ```
 
-Both pause automatically when the tab loses focus (audio context suspends) and resume when it comes back. Use `music.stop()` to halt playback.
+Both pause automatically when the tab loses focus (audio context suspends) and resume when it comes back. `playMusic` returns a `SoundInstance`; keep it and call `songInstance.stop()` to halt playback.
 
 ### Why doesn't my audio play until the user clicks something?
 
@@ -614,7 +622,7 @@ class MyObject extends EngineObject
 
     update()
     {
-        // update object physics and position
+        // custom logic; physics runs separately in updatePhysics
         super.update(); 
     }
 
@@ -651,8 +659,7 @@ ship.addChild(turret, vec2(0, .5));  // turret sits .5 units above the ship in l
 
 A few things to know:
 - **Mirroring a parent flips children** — a mirrored ship has its turret on the correct side automatically (`localPos.x` and `localAngle` are inverted).
-- **Velocity is not inherited** — physics runs on the world transform after parenting, so a child doesn't automatically pick up the parent's velocity. If you need that, set the child's velocity manually before attaching.
-- **For decorative attachments** that shouldn't be affected by physics, set `gravityScale = 0` and skip `setCollision()` on the child.
+- **Children have no physics of their own** — they follow the parent's transform, so a child's velocity, gravity and collision do nothing while it is attached. Detach it with `removeChild` to let physics move it again.
 
 ### How do collisions work?
 
@@ -797,7 +804,7 @@ In addition to your browser's built-in developer tools, LittleJS has its own deb
 
 ```javascript
 debugRect(pos, size, color);           // outline a rectangle
-debugCircle(pos, radius, color);       // outline a circle
+debugCircle(pos, diameter, color);     // outline a circle
 debugLine(posA, posB, color);          // a line between two points
 debugText(string, pos, size, color);   // text at a world position
 debugPoint(pos, color);                // small marker

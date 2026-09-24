@@ -1,4 +1,5 @@
 const saveName = 'LittleJS Save Demo';
+let saveData;
 
 function gameInit()
 {

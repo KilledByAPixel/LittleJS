@@ -343,7 +343,7 @@ test('UI and tween types come out typed in the d.ts', () =>
     assert.doesNotMatch(object, /children: any/);
     assert.match(object, /destroyed: boolean;/);
     assert.match(object, /update\(\): void;/);
-    assert.match(object, /align: string;/);
+    assert.match(object, /align: ['"]left['"] \| ['"]center['"] \| ['"]right['"];/);
     assert.doesNotMatch(text, /gradientColor: any/);
     assert.match(body('Tween'), /start: [^;]*Vector3[^;]*;/);
 });

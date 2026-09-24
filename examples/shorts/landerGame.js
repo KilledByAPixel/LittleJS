@@ -29,8 +29,8 @@ class Player extends EngineObject
         new ParticleEmitter(
             this.pos, 0,         // pos, angle
             1, .1, 300, 3.14, 0, // emitSize, emitTime, rate, cone, tile
-            rgb(1,.5,.1), rgb(1,.1,.1),     // colorStartA, colorStartB
-            rgb(1,.5,.1,0), rgb(1,.1,.1,0), // colorEndA, colorEndB
+            hsl(.07,1,.55), hsl(0,1,.55),     // colorStartA, colorStartB
+            hsl(.07,1,.55,0), hsl(0,1,.55,0), // colorEndA, colorEndB
             .7, .8, .2, .2, .05,   // time, start, end, speed, angleSpeed
             .9, 1, -.2, 3.14, .05, // damp, angleDamp, gravity, cone, fade
             1, 0, 1                // randomness, collide, additive

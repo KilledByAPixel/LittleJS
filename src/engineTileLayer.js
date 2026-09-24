@@ -33,6 +33,8 @@ function tileCollisionAssertWhole(layer)
 function tileCollisionGetData(pos, solidOnly=true)
 {
     // check all tile collision layers, in scalars since particles ask this every frame
+    // solid (positive) data wins, a negative marker is returned only when no layer is solid there
+    let found = 0;
     for (const layer of tileCollisionLayers)
         if (!solidOnly || layer.isSolid)
         {
@@ -41,10 +43,11 @@ function tileCollisionGetData(pos, solidOnly=true)
             if (x >= 0 && y >= 0 && x < size.x && y < size.y)
             {
                 const data = layer.collisionData[(y|0)*size.x + (x|0)];
-                if (data) return data;
+                if (data > 0) return data;
+                if (data && !found) found = data;
             }
         }
-    return 0;
+    return found;
 }
 
 /** Check if a tile layer collides with another object
@@ -172,7 +175,7 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
                 // Tiled keeps a tile's flips in its top bits, horizontal, vertical and diagonal, the diagonal
                 // applied first; each of the 8 is a quarter turn direction with or without a mirror
                 const [direction, mirror] = tileLayersTiledFlips[data >>> 29];
-                const tileIndex = (data & 0x1fffffff) - 1; // bit 28, a hexagonal turn, is not read
+                const tileIndex = (data & 0x0fffffff) - 1; // bit 28, a hexagonal turn, is not read
                 const layerData = new TileLayerData(tileIndex, direction, !!mirror, layerColor);
                 tileLayer.setData(pos, layerData);
 
@@ -228,6 +231,9 @@ class TileLayerData
  * Canvas Layer - cached off screen rendering system
  * - Contains an offscreen canvas that can be rendered to
  * - WebGL rendering is optional, call updateWebGL to enable/update
+ * - A TileLayer using WebGL redraws into its texture and leaves this canvas blank, so drawing on its context
+ *   only shows on a layer made with useWebGL=false (or with WebGL off); use drawLayerTile/drawLayerRect inside
+ *   redrawStart/End for drawing that works both ways
  * @extends EngineObject
  * @memberof TileLayers
  * @example
@@ -286,8 +292,16 @@ class CanvasLayer extends EngineObject
     *  @memberof Draw */
     draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=false, context)
     {
+        // the canvas may have been resized since, updateWebGL only refreshes the size for WebGL
+        const t = this.textureInfo, c = this.canvas;
+        if (c && !this.hasWebGL() && (c.width !== t.size.x || c.height !== t.size.y))
+        {
+            t.size = vec2(c.width, c.height);
+            t.sizeInverse = vec2(1/c.width, 1/c.height);
+        }
+
         // draw the canvas layer as a single tile that uses the whole texture
-        const tileInfo = new TileInfo().setFullImage(this.textureInfo);
+        const tileInfo = new TileInfo().setFullImage(t);
         const useWebGL = this.hasWebGL();
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
@@ -326,6 +340,7 @@ class TileLayer extends CanvasLayer
     */
     constructor(pos, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
     {
+        size = size.floor(); // whole cells, a fractional size would never finish filling the data
         const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
         super(pos, size, 0, renderOrder, canvasSize, useWebGL);
         
@@ -336,6 +351,8 @@ class TileLayer extends CanvasLayer
         this.data = [];
         /** @property {boolean} - Is this layer using a webgl texture? */
         this.isUsingWebGL = false;
+        // set when WebGL is turned off under this layer, so it redraws when WebGL comes back
+        this.redrawOnGLEnable = false;
         /** @property {boolean} - Show this layer's bounds and values when the debug overlay's Debug Tiles is on,
          *  turn it off for layers that only add noise */
         this.debugShow = true;
@@ -408,6 +425,13 @@ class TileLayer extends CanvasLayer
         {
             // redraw the layer if webgl was disabled or context lost
             this.isUsingWebGL = false;
+            this.redrawOnGLEnable = true;
+            this.redraw();
+        }
+        else if (glEnable && this.redrawOnGLEnable)
+        {
+            // webgl is back, its texture still holds the tiles from before it was turned off
+            this.redrawOnGLEnable = false;
             this.redraw();
         }
     }
@@ -633,7 +657,7 @@ class TileCollisionLayer extends TileLayer
         // keep track of all collision layers
         tileCollisionLayers.push(this);
 
-        // tile collision layers are solid by default
+        /** @property {boolean} - Solid layers block objects and particles, the solidOnly tests skip the others */
         this.isSolid = true;
     }
 

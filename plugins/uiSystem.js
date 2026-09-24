@@ -43,7 +43,7 @@ function uiSetDebug(debugMode)
 class UISystemPlugin
 {
     /** Create the global UI system object
-     *  @param {CanvasRenderingContext2D} [context]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @example
      *  // create the ui plugin object
      *  new UISystemPlugin;
@@ -51,6 +51,7 @@ class UISystemPlugin
     constructor(context=mainContext)
     {
         ASSERT(!uiSystem, 'UI system already initialized');
+        ASSERT(context || headlessMode, 'create the UISystemPlugin after engineInit, in gameInit');
         uiSystem = this;
 
         // default settings
@@ -128,7 +129,8 @@ class UISystemPlugin
         /** @property {UIObject|undefined} - Current confirm menu being shown
          *  @type {UIObject|undefined} */
         this.confirmDialog = undefined;
-        /** @private */
+        /** @private
+         *  @type {UIObject|undefined} */
         this._keyInputObject = undefined;
         /** @private
          *  @type {Array<Array<any>>|undefined} */
@@ -201,7 +203,16 @@ class UISystemPlugin
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
             uiSystem.hoverObject = undefined;
-            
+
+            // a hidden object is not updated, so the one whose hover ends by hiding it, itself or through a parent,
+            // is left here; a disabled one still updates and handles its own leave
+            const lastHoverObject = uiSystem.lastHoverObject;
+            if (lastHoverObject && !lastHoverObject.destroyed && uiObjectIsHidden(lastHoverObject))
+            {
+                uiSystem.lastHoverObject = undefined;
+                lastHoverObject.onLeave();
+            }
+
             if (mouseWasPressed(0))
             {
                 // exit navigation mode on mouse press
@@ -210,11 +221,9 @@ class UISystemPlugin
             }
             if (uiSystem.keyInputObject)
             {
-                // handle text input
+                // handle text input, navigation keeps its place for when the edit ends
                 uiSystem.activeObject = uiSystem.keyInputObject;
                 uiSystem.hoverObject = uiSystem.keyInputObject;
-                uiSystem.navigationMode = false;
-                uiSystem.navigationObject = undefined;
             }
 
             // navigation with gamepad/keyboard
@@ -461,7 +470,7 @@ class UISystemPlugin
     *  @param {Color}   [color=uiSystem.defaultColor]
     *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-    *  @param {string}  [align]
+    *  @param {'left'|'center'|'right'} [align]
     *  @param {string}  [font=uiSystem.defaultFont]
     *  @param {string}  [fontStyle]
     *  @param {boolean} [applyMaxWidth=true]
@@ -541,7 +550,7 @@ class UISystemPlugin
     /** Object to send keyboard input to (typically a UITextInput), which keeps the keys from the game while set.
      *  The keyboard listeners are only attached while this is set,
      *  so games that never use text input pay no event-handling cost.
-     *  @type {UIObject} */
+     *  @type {UIObject|undefined} */
     get keyInputObject() { return this._keyInputObject; }
     set keyInputObject(obj)
     {
@@ -586,21 +595,20 @@ class UISystemPlugin
 
             if (o.isInteractive() && o.navigationIndex !== undefined)
                 objects.push(o);
-            for (let i=o.children.length; i--;)
-                getNavigableRecursive(o.children[i]);
+            for (const child of o.children)
+                getNavigableRecursive(child);
         }
 
         // get all the valid navigable objects recursively
         let objects = [];
-        for (let i = uiSystem.uiObjects.length; i--;)
+        for (const o of uiSystem.uiObjects)
         {
-            const o = uiSystem.uiObjects[i];
             if (uiSystem.confirmDialog && o !== uiSystem.confirmDialog)
                 continue;
             o.parent || getNavigableRecursive(o);
         }
 
-        // sort by navigationIndex (lower numbers first)
+        // sort by navigationIndex (lower numbers first), ties keep creation and child order
         objects.sort((a, b)=> a.navigationIndex - b.navigationIndex);
         return objects;
     }
@@ -757,6 +765,15 @@ function uiObjectIsDisabled(o)
     return false;
 }
 
+// whether a UI object is hidden, itself or through a parent
+function uiObjectIsHidden(o)
+{
+    for (; o; o = o.parent)
+        if (!o.visible)
+            return true;
+    return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * UI Object - Base level object for all UI elements
@@ -769,6 +786,7 @@ class UIObject
      */
     constructor(pos=vec2(), size=vec2())
     {
+        ASSERT(uiSystem, 'create the UISystemPlugin before UI objects');
         ASSERT(isVector2(pos), 'ui object pos must be a vec2');
         ASSERT(isVector2(size), 'ui object size must be a vec2');
 
@@ -823,7 +841,8 @@ class UIObject
         this.textFitScale = uiSystem.defaultTextFitScale;
         /** @property {Vector2|undefined} - How much to offset the text shadow or undefined.
          *  UIText draws it in its shadowColor, which is clear by default, so set that too;
-         *  the blurred shadow then shows as well unless shadowBlur and shadowOffset are zero
+         *  the blurred shadow then shows as well unless shadowBlur and shadowOffset are zero.
+         *  The other widgets draw it in black
          *  @type {Vector2|undefined} */
         this.textShadow = undefined;
         /** @property {Color} - Color for text line drawing  */
@@ -840,11 +859,14 @@ class UIObject
         this.parent = undefined;
         /** @property {number} - Added size to make small buttons easier to touch on mobile devices */
         this.extraTouchSize = 0;
-        /** @property {Sound} - Sound when interactive element is pressed */
+        /** @property {Sound|undefined} - Sound when interactive element is pressed
+         *  @type {Sound|undefined} */
         this.soundPress = uiSystem.defaultSoundPress;
-        /** @property {Sound} - Sound when interactive element is released */
+        /** @property {Sound|undefined} - Sound when interactive element is released
+         *  @type {Sound|undefined} */
         this.soundRelease = uiSystem.defaultSoundRelease;
-        /** @property {Sound} - Sound when interactive element is clicked */
+        /** @property {Sound|undefined} - Sound when interactive element is clicked
+         *  @type {Sound|undefined} */
         this.soundClick = uiSystem.defaultSoundClick;
         /** @property {boolean} - Is this element interactive */
         this.interactive = false;
@@ -852,7 +874,7 @@ class UIObject
         this.dragActivate = false;
         /** @property {boolean} - True if this can be a hover object */
         this.canBeHover = true;
-        /** @property {Color} - Color for shadow, undefined if no shadow */
+        /** @property {Color} - Color for shadow */
         this.shadowColor = uiSystem.defaultShadowColor?.copy();
         /** @property {number} - Size of shadow blur */
         this.shadowBlur = uiSystem.defaultShadowBlur;
@@ -867,7 +889,8 @@ class UIObject
          *  Components in [-1, 1]: (0,0)=center, (-1,-1)=top-left, (1,1)=bottom-right.
          *  Also acts as self-pivot — e.g. (1,-1) puts your top-right corner at the anchor point. */
         this.anchor = vec2();
-        /** @property {string} - Horizontal text alignment: left, center, or right */
+        /** @property {'left'|'center'|'right'} - Horizontal text alignment: left, center, or right
+         *  @type {'left'|'center'|'right'} */
         this.align = 'center';
         /** @property {boolean} - Has this object been destroyed? */
         this.destroyed = false;
@@ -965,7 +988,8 @@ class UIObject
         const wasHover = uiSystem.lastHoverObject === this;
         const isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
-        const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
+        // a press and release in one frame is a press too, as it is for a button that is not drag activated
+        const mousePress = mouseWasPressed(0) || this.dragActivate && mouseDown;
         if (this.canBeHover)
         if (!uiSystem.navigationMode) // no mouse hover in navigation mode
         if (mousePress || isActive || (!mouseDown && !isTouchDevice))
@@ -1068,8 +1092,8 @@ class UIObject
     /** @return {boolean} - Is this object in keyboard input mode */
     isKeyInputObject() { return uiSystem.keyInputObject === this; }
 
-    /** @return {boolean} - Can it be interacted with */
-    isInteractive() { return this.interactive && this.visible && !this.disabled;}
+    /** @return {boolean} - Can it be interacted with, it and every parent visible and enabled */
+    isInteractive() { return this.interactive && uiObjectIsUsable(this); }
 
     /** Returns string containing info about this object for debugging
      *  @return {string} */
@@ -1134,6 +1158,10 @@ class UIObject
 
     /** Called when the state of this object changes */
     onChange() {}
+
+    /** Called with each key while this is the keyInputObject
+     *  @param {KeyboardEvent} e */
+    onKeyDown(e) {}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1148,7 +1176,7 @@ class UIText extends UIObject
      *  @param {Vector2} [pos]
      *  @param {Vector2} [size]
      *  @param {string}  [text]
-     *  @param {string}  [align]
+     *  @param {'left'|'center'|'right'} [align]
      *  @param {string}  [font=uiSystem.defaultFont]
      */
     constructor(pos, size, text='', align='center', font=uiSystem.defaultFont)
@@ -1168,8 +1196,8 @@ class UIText extends UIObject
         this.canBeHover = false;
         
         // no background by default
-        this.color = CLEAR_BLACK;
-        this.shadowColor = CLEAR_BLACK;
+        this.color = CLEAR_BLACK.copy();
+        this.shadowColor = CLEAR_BLACK.copy();
         /** @type {Color|undefined} */
         this.gradientColor = undefined;
         this.lineWidth = 0;
@@ -1217,12 +1245,15 @@ class UITextInput extends UIObject
         this.canBeHover = true;
     }
 
-    click()
+    /** Start editing the text, called when it is clicked
+     *  @param {boolean} [playSound] */
+    click(playSound=true)
     {
         // start editing the text, the gamepad press that started it is used up so it does not stop it too
         uiSystem.keyInputObject = this;
         inputClearKey(0, gamepadPrimary+1, 0, 1, 0);
         this.onClick();
+        playSound && this.soundClick && this.soundClick.play();
     }
 
     /** Stop editing the text */
@@ -1242,12 +1273,13 @@ class UITextInput extends UIObject
      *  @param {KeyboardEvent} [e] */
     onKeyDown(e)
     {
+        // named keys by key, so numpad Enter works as Enter
         const code = e.code, key = e.key
-        if (e.repeat && (code === 'Enter' || code === 'Space'))
+        if (e.repeat && (key === 'Enter' || code === 'Space'))
             return; // a key held when editing began repeats, it should not type or stop editing
-        if (code === 'Backspace')
+        if (key === 'Backspace')
             this.text = this.text.slice(0, -1);
-        else if (code === 'Enter' || code === 'Escape')
+        else if (key === 'Enter' || key === 'Escape')
             this.stopEditing();
         else if (key.length === 1) // printable characters
         {
@@ -1270,8 +1302,10 @@ class UITextInput extends UIObject
         if (mouseWasPressed(0) && !this.isMouseOverlapping() ||
             gamepadWasPressed(0, gamepadPrimary))
         {
+            // the press that stopped it is used up, by the mouse or the gamepad
             this.stopEditing();
             inputClearKey(0,0);
+            inputClearKey(0, gamepadPrimary+1, 0, 1, 0);
         }
     }
 
@@ -1298,9 +1332,9 @@ class UITextInput extends UIObject
 class UITile extends UIObject
 {
     /** Create a UITile object
-     *  @param {Vector2}  [pos]
-     *  @param {Vector2}  [size]
-     *  @param {TileInfo} [tileInfo]
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  size
+     *  @param {TileInfo} tileInfo
      *  @param {Color}    [color=WHITE]
      *  @param {number}   [angle]
      *  @param {boolean}  [mirror]
@@ -1323,7 +1357,7 @@ class UITile extends UIObject
         this.color = color.copy();
 
         // no shadow by default
-        this.shadowColor = CLEAR_BLACK;
+        this.shadowColor = CLEAR_BLACK.copy();
     }
     render()
     {
@@ -1574,7 +1608,7 @@ class UIVideo extends UIObject
         ASSERT(isStringLike(src), 'video src must be a string');
         ASSERT(isNumber(volume), 'video volume must be a number');
 
-        this.color = BLACK; // default to black background
+        this.color = BLACK.copy(); // default to black background
         this.cornerRadius = 0; // default to no corner radius
 
         /** @property {number} - The video volume */
@@ -1586,8 +1620,10 @@ class UIVideo extends UIObject
         this.video.loop = loop;
         this.video.volume = clamp(volume * soundVolume);
         this.video.muted = !soundEnable;
-        this.soundEnabled = soundEnable; // the sound setting the mute last followed
+        /** @private */
+        this._soundEnabled = soundEnable; // the sound setting the mute last followed
         this.video.style.display = 'none';
+        this.video.playsInline = true; // an iPhone would play it fullscreen and block its muted autoplay
         this.video.src = src;
         document.body.appendChild(this.video);
         autoplay && this.play();
@@ -1654,7 +1690,11 @@ class UIVideo extends UIObject
     /** Seek to time in seconds
      *  @param {number} time - Time in seconds to seek to */
     setTime(time)
-    { this.video.currentTime = clamp(time, 0, this.getDuration()); }
+    {
+        // before the metadata loads there is no duration to clamp to, and the time set is where it starts
+        const duration = this.video.duration;
+        this.video.currentTime = duration ? clamp(time, 0, duration) : max(time, 0);
+    }
 
     update()
     {
@@ -1663,8 +1703,8 @@ class UIVideo extends UIObject
         // update volume based on global sound volume, and the mute when sound is turned on or off,
         // so a game's own mute stays until then
         this.video.volume = clamp(this.volume * soundVolume);
-        if (this.soundEnabled !== soundEnable)
-            this.video.muted = !(this.soundEnabled = soundEnable);
+        if (this._soundEnabled !== soundEnable)
+            this.video.muted = !(this._soundEnabled = soundEnable);
     }
     
     /** Render video to UI canvas */
@@ -1732,11 +1772,13 @@ class UILayout extends UIObject
 
         if (transparent)
         {
-            // pure positioning helper - skip background, outline, and shadow
-            this.color = CLEAR_BLACK;
+            // pure positioning helper - skip background, outline, and shadow,
+            // and leave clicks in its gaps and padding to the game
+            this.color = CLEAR_BLACK.copy();
             this.gradientColor = undefined;
             this.lineWidth = 0;
-            this.shadowColor = CLEAR_BLACK;
+            this.shadowColor = CLEAR_BLACK.copy();
+            this.canBeHover = false;
         }
         this.relayout();
     }
@@ -1768,10 +1810,12 @@ class UILayout extends UIObject
         if (!n)
         {
             this.size = vec2(this.padding * 2);
+            this.parent instanceof UILayout && this.parent.relayout(); // a layout it is in takes its new size
             return;
         }
 
-        const cols = min(this.columns, n); // no empty columns, they would push it off center
+        // whole columns, at least one, and no empty ones, they would push it off center
+        const cols = clamp(floor(this.columns), 1, n);
         const rows = ceil(n / cols);
         const colWidths = new Array(cols).fill(0);
         const rowHeights = new Array(rows).fill(0);
@@ -1820,5 +1864,6 @@ class UILayout extends UIObject
 
         // container size = content + padding on all sides
         this.size = vec2(contentWidth + this.padding * 2, contentHeight + this.padding * 2);
+        this.parent instanceof UILayout && this.parent.relayout(); // a layout it is in takes its new size
     }
 }

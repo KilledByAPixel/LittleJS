@@ -153,8 +153,10 @@ function inputClearKeyboard()
  *  @memberof Input */
 function inputClear()
 {
-    inputData.length = 0;
-    inputData[0] = [];
+    // empty every device but keep which gamepad slots exist, so gamepadConnected still reads true through a
+    // clear, like the one every frame while the window is unfocused; a disconnect clears its slot in the poll
+    for (let i = inputData.length; i--;)
+        if (!i || inputData[i]) inputData[i] = [];
     inputKeysHeld.clear();
     inputWasTouching = 0;
     // release the touch gamepad, a finger still on it has to lift before it can take a control again
@@ -179,7 +181,7 @@ function inputClear()
 function keyIsDown(key, device=0)
 {
     ASSERT(isStringLike(key), 'key must be a number or string');
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 1);
 }
 
@@ -191,7 +193,7 @@ function keyIsDown(key, device=0)
 function keyWasPressed(key, device=0)
 {
     ASSERT(isStringLike(key), 'key must be a number or string');
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 2);
 }
 
@@ -203,7 +205,7 @@ function keyWasPressed(key, device=0)
 function keyWasReleased(key, device=0)
 {
     ASSERT(isStringLike(key), 'key must be a number or string');
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 4);
 }
 
@@ -352,6 +354,7 @@ function gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1,
 }
 
 /** Stop vibration on a gamepad
+ *  @param {number} [gamepad] - gamepad index
  *  @memberof Input */
 function gamepadVibrateStop(gamepad=gamepadPrimary)
 {
@@ -427,7 +430,7 @@ const gamepadAxisCentered = [];
 const gamepadAxisCenteredFrames = 15;
 
 // touch gamepad internal variables
-const touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadSticks = [];
+const touchGamepadTimer = new Timer(undefined, true), touchGamepadButtons = [], touchGamepadSticks = [];
 // buttons pressed since the last poll, so a tap that lifts before the poll still counts
 const touchGamepadButtonsPressed = [];
 // floating stick anchors (stage-local CSS pixels) and owning pointer ids, indexed by stick (0=left, 1=right)
@@ -546,7 +549,9 @@ function inputInit()
     {
         if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
 
-        inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
+        // released only if it was pressed, like a key or a touch
+        if (inputData[0][e.button] & 1)
+            inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
     }
     function onMouseMove(e)
     {
@@ -727,16 +732,6 @@ function inputUpdate()
             return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
         };
 
-        // update touch gamepad if enabled
-        if (touchGamepadEnable && isTouchDevice)
-        {
-            // a side is either a stick or buttons - setting both is ambiguous
-            ASSERT(!touchGamepadLeftStick || !touchGamepadLeftButtonCount,
-                'set touchGamepadLeftStick or touchGamepadLeftButtonCount, not both');
-            ASSERT(!touchGamepadRightStick || !touchGamepadButtonCount,
-                'set touchGamepadRightStick or touchGamepadButtonCount, not both');
-        }
-
         // the touch gamepad owns gamepad 0 once touched, until a real gamepad is used: that one takes over and the
         // touch gamepad hides until the screen is touched again
         if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet() && gamepadsEnable && inputRealGamepadUsed())
@@ -795,12 +790,12 @@ function inputUpdate()
         if (!gamepadsEnable || !debug && !document.hasFocus())
             return void (gamepadButtonsLast.length = 0);
 
-        // poll gamepads; with none to read, every slot that had one is cleared, so a
-        // refused or vanished gamepad does not leave its buttons held
+        // poll gamepads; every slot is visited and a slot with no gamepad is cleared, so a refused or
+        // vanished gamepad does not leave its buttons held, even past the end of a shorter array
+        // like the one Firefox returns after the highest numbered gamepad disconnects
         const maxGamepads = 8;
         const gamepads = inputGetGamepads();
-        const gamepadCount = gamepads.length ? min(maxGamepads, gamepads.length) : maxGamepads;
-        for (let i=0; i<gamepadCount; ++i)
+        for (let i=0; i<maxGamepads; ++i)
         {
             // get or create gamepad data
             const gamepad = gamepads[i];
@@ -1036,14 +1031,14 @@ function touchGamepadRelayout()
         {
             const zone = touchGamepadSideZones[side], edge = side ? 'right' : 'left';
             zone.style.display = touchGamepadSideHasControl(side) ? '' : 'none';
-            if (touchGamepadFloating)
+            if (touchGamepadFloating && touchGamepadSideStick(side))
             {
-                // bottom 60% grabs the control; the top 40% passes through. A side with no
+                // bottom 60% grabs the stick; the top 40% passes through. A side with no
                 // control on the other side uses the full width (matching the hit-test)
                 const width = touchGamepadSideHasControl(side ? 0 : 1) ? '50%' : '100%';
                 setZone(zone, `${edge}:0;bottom:0;width:${width};height:60%`);
             }
-            else // fixed: a compact box hugging the corner control
+            else // fixed, and face buttons which never float: a compact box hugging the corner control
                 setZone(zone, `${edge}:0;bottom:0;width:${3*S}px;height:${3*S}px`);
         }
         touchGamepadZoneC.style.display = touchGamepadCenterButtonSize ? '' : 'none';

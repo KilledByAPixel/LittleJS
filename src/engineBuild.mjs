@@ -97,7 +97,7 @@ console.log(`Engine built in ${((Date.now() - startTime)/1e3).toFixed(2)} second
 
 async function buildAll()
 {
-    // Build independent base versions in parallel
+    // Build independent base versions
     await Promise.all([
         Build
         (
@@ -125,7 +125,7 @@ async function buildAll()
         )
     ]);
 
-    // Build dependent versions in parallel
+    // Build dependent versions
     await Promise.all([
         Build
         (
@@ -204,7 +204,7 @@ function closureCompilerStep(filename)
     fs.copyFileSync(filename, filenameTemp);
     try
     {
-        execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --jscomp_off=*`);
+        execSync(`npx google-closure-compiler --js="${filenameTemp}" --js_output_file="${filename}" --jscomp_off=*`);
         fs.rmSync(filenameTemp);
     }
     catch (e) { handleError(e, 'Failed to run Closure Compiler step!'); }
@@ -215,12 +215,11 @@ function uglifyBuildStep(filename)
 {
     try
     {
-        execSync(`npx uglifyjs ${filename} -o ${filename}`);
+        execSync(`npx uglifyjs "${filename}" -o "${filename}"`);
     }
     catch (e) { handleError(e,'Failed to run Uglify minification step!'); }
 };
 
-// Add license to top of file
 // Guard every ASSERT and LOG call in the release build so its arguments are never evaluated
 // - engineRelease.js makes them empty functions, but a call still evaluates its arguments first,
 //   so isVector3 checks and message strings would run in release; false&& short circuits them
@@ -232,6 +231,7 @@ function stripDebugCallsStep(filename)
     fs.writeFileSync(filename, source.replace(/(?<!function )\b(ASSERT\w*|LOG)\(/g, 'false&&$1('), {flag: 'w+'});
 }
 
+// Add license to top of file
 function addLicenseStep(filename)
 {
     try
@@ -250,7 +250,7 @@ function typeScriptBuildStep(filename)
     try
     {
         const tsFilename = join(BUILD_FOLDER, `${ENGINE_NAME}.d.ts`);
-        execSync(`npx -p typescript tsc ${filename} --declaration --allowJs --emitDeclarationOnly --outFile ${tsFilename}`);
+        execSync(`npx -p typescript tsc "${filename}" --declaration --allowJs --emitDeclarationOnly --outFile "${tsFilename}"`);
 
         // Make declare module part use the package name littlejsengine
         let fileContent = fs.readFileSync(tsFilename, 'utf8');

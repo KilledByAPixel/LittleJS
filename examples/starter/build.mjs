@@ -80,20 +80,20 @@ function closureCompilerStep(filename)
     // use closer compiler to minify the code
     const filenameTemp = filename + '.tmp';
     fs.copyFileSync(filename, filenameTemp);
-    execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=ADVANCED --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
+    execSync(`npx google-closure-compiler --js="${filenameTemp}" --js_output_file="${filename}" --compilation_level=ADVANCED --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
     fs.rmSync(filenameTemp);
 }
 
 function uglifyBuildStep(filename)
 {
     console.log('Running uglify...');
-    execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
+    execSync(`npx uglifyjs "${filename}" -c -m -o "${filename}"`, {stdio: 'inherit'});
 }
 
 function roadrollerBuildStep(filename)
 {
     console.log('Running roadroller...');
-    execSync(`npx roadroller ${filename} -o ${filename}`, {stdio: 'inherit'});
+    execSync(`npx roadroller "${filename}" -o "${filename}"`, {stdio: 'inherit'});
 }
 
 function htmlBuildStep(filename)

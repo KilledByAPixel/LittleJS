@@ -29,10 +29,6 @@ function tweenDeactivate(tween)
     tweenActive.splice(tweenActive.indexOf(tween), 1);
 }
 
-// Time tracking for delta computation between engine plugin calls.
-let tweenLastTime = 0;
-let tweenLastTimeReal = 0;
-
 // True if the value is an instance of a class that exposes a numeric-percent
 // `lerp(other, percent)` method (Vector2, Color, or any future class).
 function tweenIsLerpable(v) { return v && typeof v.lerp === 'function'; }
@@ -55,9 +51,9 @@ class Tween
      *  any object exposing a `lerp(other, percent) => sameType` method. The
      *  callback receives the interpolated value (a number, or a fresh instance
      *  for lerp-able types). Both endpoints must be the same type.
-     *  @param {function((number|Vector2|Vector3|Color)):void} callback - Called with the interpolated value each frame
-     *  @param {number|Vector2|Vector3|Color} [start=0] - Starting value
-     *  @param {number|Vector2|Vector3|Color} [end=1] - Ending value
+     *  @param {function(any):void} callback - Called with the interpolated value each frame
+     *  @param {number|Vector2|Vector3|Color|object} [start=0] - Starting value
+     *  @param {number|Vector2|Vector3|Color|object} [end=1] - Ending value
      *  @param {number} [duration=1] - Duration in seconds
      *  @param {Object} [options]
      *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
@@ -78,11 +74,13 @@ class Tween
         }
         ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
 
-        /** @property {function((number|Vector2|Vector3|Color)):void} - Called with the interpolated value each frame */
+        /** @property {function(any):void} - Called with the interpolated value each frame */
         this.callback = callback;
-        /** @property {number|Vector2|Vector3|Color} - Starting value */
+        /** @property {number|Vector2|Vector3|Color|object} - Starting value
+         *  @type {number|Vector2|Vector3|Color|object} */
         this.start = start;
-        /** @property {number|Vector2|Vector3|Color} - Ending value */
+        /** @property {number|Vector2|Vector3|Color|object} - Ending value
+         *  @type {number|Vector2|Vector3|Color|object} */
         this.end = end;
         /** @property {number} - Total duration in seconds */
         this.duration = duration;
@@ -104,6 +102,11 @@ class Tween
         /** Whether it is in the active list, see isActive
          *  @private */
         this.active = false;
+        /** Engine time and real time of its last engine update, it moves by what passed since
+         *  @private */
+        this.lastTime = time;
+        /** @private */
+        this.lastTimeReal = timeReal;
 
         tweenActivate(this);
         // Snap target to start immediately.
@@ -187,6 +190,8 @@ class Tween
     {
         this.life = this.duration;
         this.paused = false;
+        this.lastTime = time;
+        this.lastTimeReal = timeReal;
         tweenActivate(this);
         this.callback(this.interp(this.duration));
     }
@@ -302,7 +307,7 @@ const Ease =
      *  @memberof TweenSystem */
     BACK: (x) => x * x * (2.70158 * x - 1.70158),
 
-    /** Elastic ease-in: oscillates with decreasing amplitude.
+    /** Elastic ease-in: oscillations that grow toward the end.
      *  @param {number} x
      *  @returns {number}
      *  @memberof TweenSystem */
@@ -311,7 +316,8 @@ const Ease =
         x === 1 ? 1 :
         -(2 ** (10 * x - 10)) * sin(((37 - 40 * x) * PI) / 6),
 
-    /** Spring-like ease-out: oscillates outward after passing the target.
+    /** Spring ease-in: wobbles around the start before springing to the end;
+     *  `Ease.OUT(Ease.SPRING)` overshoots and settles on the target.
      *  @param {number} x
      *  @returns {number}
      *  @memberof TweenSystem */
@@ -322,7 +328,7 @@ const Ease =
             (1 - x)) *
             (1.0 + 1.2 * x),
 
-    /** Bouncing ease-in: slow ramp with bouncing impacts near the end.
+    /** Bouncing ease-in: small bounces near the start, then a rise to the end.
      *  Symmetric with the other base curves, which are all ease-in. To get the
      *  classic "object falls and hits the ground" shape (bounces near x=1),
      *  wrap with `Ease.OUT`: `Ease.OUT(Ease.BOUNCE)`.
@@ -330,7 +336,7 @@ const Ease =
      *  @returns {number}
      *  @memberof TweenSystem
      *  @example
-     *  Ease.BOUNCE                  // ease-in bounce (slow, then bouncy at end)
+     *  Ease.BOUNCE                  // ease-in bounce (bouncy at start)
      *  Ease.OUT(Ease.BOUNCE)        // ease-out bounce (object hits ground)
      *  Ease.IN_OUT(Ease.BOUNCE)     // bounces at both ends
      */
@@ -438,10 +444,13 @@ const Ease =
  *  any object with a `lerp(other, percent) => sameType` method.
  *  @param {Object} target - The object whose property is being animated
  *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'` or `'color'`
- *  @param {number|Vector2|Vector3|Color} start - Starting value
- *  @param {number|Vector2|Vector3|Color} end - Ending value
+ *  @param {number|Vector2|Vector3|Color|object} start - Starting value
+ *  @param {number|Vector2|Vector3|Color|object} end - Ending value
  *  @param {number} [duration=1] - Duration in seconds
  *  @param {Object} [options] - Same options as the Tween constructor
+ *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
+ *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused
+ *  @param {boolean} [options.paused=false] - Start in paused state
  *  @returns {Tween}
  *  @memberof TweenSystem
  *  @example
@@ -480,14 +489,23 @@ function tweenCarryOvershoot(tween)
     tween.life = duration ? min(tween.life, 0) % duration + duration : 1e-9;
 }
 
+// How many iterations the update that finished one ran through: that one and every whole one after it
+function tweenPassed(tween)
+{
+    const duration = tween.duration;
+    return duration ? 1 + floor(-min(tween.life, 0) / duration) : 1;
+}
+
 // Continuation that schedules the next loop iteration when one finishes.
 // Reuses the same Tween object across iterations so the user's handle
 // from `.loop()` keeps working — calling `.stop()` mid-loop now cancels
 // the entire chain instead of just the current iteration.
 function tweenLoopContinuation(tween)
 {
-    if (tween.loopRemaining !== Infinity && tween.loopRemaining <= 1) return;
-    if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
+    // count every iteration that went by, a finite loop ends once they run out
+    const passed = tweenPassed(tween);
+    if (tween.loopRemaining <= passed) return; // Infinity never runs out
+    tween.loopRemaining -= passed;
     tweenCarryOvershoot(tween);
     tween.thenCallback = () => tweenLoopContinuation(tween);
     tweenActivate(tween);
@@ -498,11 +516,25 @@ function tweenLoopContinuation(tween)
 // Continuation for pingPong: swaps start and end on the same tween each iteration.
 function tweenPingPongContinuation(tween)
 {
-    if (tween.loopRemaining !== Infinity && tween.loopRemaining <= 1) return;
-    if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
-    const tmp = tween.start;
-    tween.start = tween.end;
-    tween.end = tmp;
+    // swap the ends once for each iteration that went by, but when they run out the last one keeps its
+    // direction, so it ends on the end it really reached and a restart plays that way again
+    const passed = tweenPassed(tween);
+    const done = tween.loopRemaining <= passed; // Infinity never runs out
+    const swaps = done ? max(tween.loopRemaining - 1, 0) : passed;
+    if (swaps & 1)
+    {
+        const tmp = tween.start;
+        tween.start = tween.end;
+        tween.end = tmp;
+    }
+    if (done)
+    {
+        // the completion gave the other end, give the one it finished on
+        if (swaps & 1)
+            tween.callback(tween.interp(0));
+        return;
+    }
+    tween.loopRemaining -= passed;
     tweenCarryOvershoot(tween);
     tween.thenCallback = () => tweenPingPongContinuation(tween);
     tweenActivate(tween);
@@ -515,20 +547,15 @@ function tweenPingPongContinuation(tween)
  *  real time tweens move. May also be
  *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
  *  — useful for headless tests or custom replay/scrubbing systems.
- *  @param {number} [gameDelta] - Game-time delta in seconds; default: game time since the last engine update
- *  @param {number} [realDelta] - Real-time delta in seconds; default: real time since the last engine update
+ *  @param {number} [gameDelta] - Game-time delta in seconds; default: game time since the tween's last engine update
+ *  @param {number} [realDelta] - Real-time delta in seconds; default: real time since the tween's last engine update
  *  @memberof TweenSystem */
 function tweenUpdate(gameDelta, realDelta)
 {
-    if (gameDelta === undefined)
-    {
-        // Engine path: compute deltas from engine time globals.
-        gameDelta = time - tweenLastTime;
-        realDelta = timeReal - tweenLastTimeReal;
-        tweenLastTime = time;
-        tweenLastTimeReal = timeReal;
-    }
-    else if (realDelta === undefined)
+    // Engine path: each tween moves by the time since its own last update, so one made
+    // this update, before or after this call, first moves on the next, like a Timer
+    const enginePath = gameDelta === undefined;
+    if (!enginePath && realDelta === undefined)
     {
         // Manual path with one arg: real and game advance together.
         realDelta = gameDelta;
@@ -544,12 +571,21 @@ function tweenUpdate(gameDelta, realDelta)
     for (let i = list.length; i--;)
     {
         const t = list[i];
-        if (!t.active || t.paused) continue;
-        const dt = t.useRealTime ? realDelta : gameDelta;
-        if (dt <= 0) continue;
+        if (!t.active) continue;
+        let dt;
+        if (enginePath)
+        {
+            // a paused tween keeps count too, so it does not jump when resumed
+            dt = t.useRealTime ? timeReal - t.lastTimeReal : time - t.lastTime;
+            t.lastTime = time;
+            t.lastTimeReal = timeReal;
+        }
+        else
+            dt = t.useRealTime ? realDelta : gameDelta;
+        if (t.paused || dt <= 0) continue;
 
         t.life -= dt;
-        if (t.life > 0)
+        if (t.life > 1e-9) // the engine's deltas add up a rounding error short of the duration
         {
             t.callback(t.interp(t.life));
         }

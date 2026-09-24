@@ -1,3 +1,5 @@
+let mouseJoint, groundObject;
+
 async function gameInit()
 {
     // setup box2d

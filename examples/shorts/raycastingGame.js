@@ -35,7 +35,7 @@ function gameRender()
     {
         // draw horizontal slices to create floor and ceiling
         const h = 9;
-        let pos = vec2(), size = vec2(39, .15), color = rgb();
+        let pos = vec2(), size = vec2(39, .15), color = hsl();
         for (let y=-h; y<h; y+=.1)
         {
             const p = 1.01 - abs(y/h)
@@ -52,7 +52,7 @@ function gameRender()
         const pos = vec2(), endPos = vec2(), size = vec2(.15);
         const tileInfo = new TileInfo(vec2(), vec2(0,16));
         const normal = vec2(), light = vec2().setAngle(2);
-        const color = rgb();
+        const color = hsl();
         for (pos.x=-w; pos.x<w; pos.x+=.1)
         {
             // cast ray for this slice

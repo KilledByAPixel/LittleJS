@@ -62,7 +62,7 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 
 /** Asserts if the expression is false, does nothing in release builds
  *  Halts execution if the assert fails and throws an error
- *  @param {boolean} assert
+ *  @param {*} assert - any value, the assert fails when it is falsy
  *  @param {...Object} output - error message output
  *  @memberof Debug */
 function ASSERT(assert, ...output)
@@ -269,7 +269,7 @@ function debugShowErrors()
         }
     };
     onunhandledrejection = (event)=>
-        showError(event.reason.stack || event.reason);
+        showError(event.reason?.stack || event.reason);
     onerror = (message, source, lineno, colno)=>
         showError(`${message}\n${source}\nLn ${lineno}, Col ${colno}`);
 }
@@ -415,6 +415,15 @@ function debugTileText(layers)
 
 function debugRender()
 {
+    if (debugTakeScreenshot)
+    {
+        // combine canvases, remove alpha and save, before the capture check so it is taken during video capture too
+        glFlush();
+        combineCanvases();
+        saveCanvas(mainCanvas);
+        debugTakeScreenshot = 0;
+    }
+
     if (debugVideoCaptureIsActive())
     {
         // don't show debug info when capturing video, but still drop the expired primitives so they don't pile up
@@ -430,14 +439,6 @@ function debugRender()
 
     const savedDrawCount = drawCount;
     const savedPrimitiveCount = primitiveCount;
-
-    if (debugTakeScreenshot)
-    {
-        // combine canvases, remove alpha and save
-        combineCanvases();
-        saveCanvas(mainCanvas);
-        debugTakeScreenshot = 0;
-    }
 
     const debugContext = mainContext;
     if (debugGamepads && gamepadsEnable)
@@ -461,7 +462,7 @@ function debugRender()
                 debugText('Main', cornerPos.add(vec2(-stickScale*2, 0)),1, '#0f0');
 
             // read analog sticks
-            const stickCount = gamepadStickData[i].length;
+            const stickCount = gamepadStickCount(i); // none after an inputClear this frame
             for (let j = 0; j < stickCount; j++)
             {
                 if (!(j in gamepadStickData[i]))
@@ -585,7 +586,7 @@ function debugRender()
             {
                 // circle
                 debugContext.beginPath();
-                debugContext.arc(0, 0, p.size*scale/2, 0, 9);
+                debugContext.arc(0, 0, abs(p.size)*scale/2, 0, 9); // a negative radius would throw
                 p.fill && debugContext.fill();
                 debugContext.stroke();
             }
@@ -750,7 +751,7 @@ function debugVideoCaptureStart()
         // setup captureStream to capture manually by passing 0
         const stream = mainCanvas.captureStream(0);
         videoTrack = stream.getVideoTracks()[0];
-        videoTrack.applyConstraints({frameRate:frameRate});
+        videoTrack.applyConstraints({frameRate:frameRate}).catch(()=>{});
 
         // set up the media recorder
         mediaRecorder = new MediaRecorder(stream,

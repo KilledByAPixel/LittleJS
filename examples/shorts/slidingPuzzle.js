@@ -7,7 +7,7 @@ class PuzzlePiece extends EngineObject
     constructor(gridPos, size)
     {
         const x = gridPos.x, y = gridPos.y;
-        const color = rgb(x/(gridSize.x-1), y/(gridSize.y-1), 1);
+        const color = hsl(.5 + x/(gridSize.x-1)/3, 1, .4 + y/(gridSize.y-1)/3);
         super(gridPos.multiply(size), size, 0, 0, color);
         this.gridPos = gridPos;
         this.text = x + y*gridSize.x;

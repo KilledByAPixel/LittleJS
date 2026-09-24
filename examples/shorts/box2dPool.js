@@ -1,5 +1,6 @@
 const hitSound = new Sound([,.1,2e3,,,.01,,,,,,,,1]);
 const maxHitDistance = 6;
+let cueBall;
 
 class Ball extends Box2dObject
 {

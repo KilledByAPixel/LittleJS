@@ -12,7 +12,7 @@
 import * as LJS from '../../dist/littlejs.esm.js';
 import * as GameEffects from './gameEffects.js';
 import * as Game from './game.js';
-const {vec2, hsl, rgb, Timer} = LJS;
+const {vec2, hsl, Timer} = LJS;
 
 export class GameObject extends LJS.EngineObject 
 {
@@ -248,8 +248,8 @@ export class Weapon extends LJS.EngineObject
         this.addChild(this.shellEmitter = new LJS.ParticleEmitter(
             vec2(), 0, 0, 0, 0, .1,  // pos, angle, size, time, rate, cone
             0,                       // tileInfo
-            rgb(1,.8,.5), rgb(.9,.7,.5), // colorStartA, colorStartB
-            rgb(1,.8,.5), rgb(.9,.7,.5), // colorEndA, colorEndB
+            hsl(.1,1,.75), hsl(1/12,2/3,.7), // colorStartA, colorStartB
+            hsl(.1,1,.75), hsl(1/12,2/3,.7), // colorEndA, colorEndB
             3, .1, .1, .15, .1, // time, sizeStart, sizeEnd, speed, angleSpeed
             1, .95, 1, 0, 0,    // damp, angleDamp, gravity, particleCone, fade
             .1, 1               // randomness, collide
@@ -296,7 +296,7 @@ export class Bullet extends LJS.EngineObject
     constructor(pos, attacker, velocity, damage) 
     { 
         super(pos, vec2());
-        this.color = rgb(1,1,0);
+        this.color = hsl(1/6,1,.5);
         this.velocity = velocity;
         this.attacker = attacker;
         this.damage = damage;
@@ -323,8 +323,8 @@ export class Bullet extends LJS.EngineObject
         {
             new LJS.ParticleEmitter(
                 this.pos, 0, .2, .1, 50, 3.14, Game.spriteAtlas.circle, // pos, emit info, tileInfo
-                rgb(1,1,.1), rgb(1,1,1),   // colorStartA, colorStartB
-                rgb(1,1,.1,0), rgb(1,1,1,0), // colorEndA, colorEndB
+                hsl(1/6,1,.55), hsl(0,0,1),     // colorStartA, colorStartB
+                hsl(1/6,1,.55,0), hsl(0,0,1,0), // colorEndA, colorEndB
                 .1, .5, .1, .05, 0, // particleTime, sizeStart, sizeEnd, speed, angleSpeed
                 1, 1, .5, 3.14, .1, // damping, angleDamping, gravityScale, cone, fadeRate, 
                 .5, 0, 1            // randomness, collide, additive, randomColorLinear
@@ -366,8 +366,8 @@ export class Bullet extends LJS.EngineObject
         const emitter = new LJS.ParticleEmitter(
             this.pos, 0, 0, .1, 100, .5, // pos, angle, size, time, rate, cone
             0,                           // tileInfo
-            rgb(1,1,0), rgb(1,0,0), // colorStartA, colorStartB
-            rgb(1,1,0), rgb(1,0,0), // colorEndA, colorEndB
+            hsl(1/6,1,.5), hsl(0,1,.5), // colorStartA, colorStartB
+            hsl(1/6,1,.5), hsl(0,1,.5), // colorEndA, colorEndB
             .2, .2, 0, .1, .1,  // time, sizeStart, sizeEnd, speed, angleSpeed
             1, 1, .5, 3.14, .1, // damp, angleDamp, gravityScale, particleCone, fade, 
             .5, 1, 1            // randomness, collide, additive

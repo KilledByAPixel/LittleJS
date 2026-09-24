@@ -95,15 +95,16 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
 
-// the pairs of objects asked about a collision this update and left overlapping, asker then other, so the other's own
-// physics does not ask again
-const engineObjectsCollidePairs = [];
+// the pairs of objects asked about a collision this update and left overlapping, so the other's own physics does not
+// ask again, a set of others for each asker so the lookup stays quick when many objects pile up on one spot
+const engineObjectsCollidePairs = new Map;
 function engineObjectsCollidePairAsked(asker, other)
+{ return !!engineObjectsCollidePairs.get(asker)?.has(other); }
+function engineObjectsCollidePairAdd(asker, other)
 {
-    for (let i = 0; i < engineObjectsCollidePairs.length; i += 2)
-        if (engineObjectsCollidePairs[i] === asker && engineObjectsCollidePairs[i+1] === other)
-            return true;
-    return false;
+    let others = engineObjectsCollidePairs.get(asker);
+    others || engineObjectsCollidePairs.set(asker, others = new Set);
+    others.add(other);
 }
 let engineInitialized = false; // engineInit ran, with or without a canvas
 let engineObjectsUpdateCount = 0; // passes of engineObjectsUpdate so far, how a child knows it moved this pass
@@ -132,6 +133,7 @@ class EnginePlugin
  */
 
 /** Add a new update function for a plugin
+ *  - update runs on every fixed tick, paused and timeScale 0 included; a plugin that simulates should skip those
  *  @param {PluginCallback} [update]
  *  @param {PluginCallback} [render]
  *  @param {PluginCallback} [glContextLost]
@@ -165,11 +167,11 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
  */
 
 /** Startup LittleJS engine with your callback functions
- *  @param {GameInitCallback} gameInit - Called once after the engine starts up, can be async for loading
- *  @param {GameCallback} gameUpdate - Called every frame before objects are updated (60fps), use for game logic
- *  @param {GameCallback} gameUpdatePost - Called after physics and objects are updated, even when paused, use for UI updates
- *  @param {GameCallback} gameRender - Called before objects are rendered, use for drawing backgrounds/world elements
- *  @param {GameCallback} gameRenderPost - Called after objects are rendered, use for drawing UI/overlays
+ *  @param {GameInitCallback} [gameInit] - Called once after the engine starts up, can be async for loading
+ *  @param {GameCallback} [gameUpdate] - Called every frame before objects are updated (60fps), use for game logic
+ *  @param {GameCallback} [gameUpdatePost] - Called after physics and objects are updated, even when paused, use for UI updates
+ *  @param {GameCallback} [gameRender] - Called before objects are rendered, use for drawing backgrounds/world elements
+ *  @param {GameCallback} [gameRenderPost] - Called after objects are rendered, use for drawing UI/overlays
  *  @param {Array<string>} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png'])
  *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
  *  @example
@@ -211,6 +213,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
         // setup gl rendering if enabled
         glPreRender();
+        setShader(); // a shader left set last frame does not carry into this one
 
         // plugins that draw underneath the 2D layer
         pluginList.forEach(plugin=>plugin.preRender?.());
@@ -254,18 +257,21 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // update multiple frames if necessary in case of slow framerate
         for (; frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
         {
+            // read again each tick, so a pause set by the game stops the rest of this frame's catch-up ticks
+            const frozenTick = paused || !(timeScale * debugScale);
+
             // increment frame and update time, frozen does not advance time
-            if (!frozen)
+            if (!frozenTick)
                 time = frame++ / frameRate;
 
             // update game and objects, when frozen update everything except them
             wasUpdated = true;
             engineUpdateCanvas();
             inputUpdate();
-            if (!frozen)
+            if (!frozenTick)
                 gameUpdate();
             pluginList.forEach(plugin=>plugin.update?.());
-            if (frozen)
+            if (frozenTick)
             {
                 // update object transforms even when paused
                 for (const o of engineObjects)
@@ -335,6 +341,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
             // post rendering
             gameRenderPost();
+            setShader(); // plugin, input and debug draws start from the engine's state
+            setAdditiveBlendMode(false);
             pluginList.forEach(plugin=>plugin.render?.());
             inputRender();
             debugRender();
@@ -468,7 +476,7 @@ function engineUpdateCanvas()
 
         // responsive aspect ratio
         const innerAspect = innerWidth / innerHeight;
-        false&&ASSERT(canvasMinAspect <= canvasMaxAspect);
+        false&&ASSERT(!canvasMaxAspect || canvasMinAspect <= canvasMaxAspect);
         if (canvasMaxAspect && innerAspect > canvasMaxAspect)
         {
             // full height
@@ -562,7 +570,7 @@ function engineStep(frames=1)
 function engineObjectsUpdate()
 {
     ++engineObjectsUpdateCount;
-    engineObjectsCollidePairs.length = 0;
+    engineObjectsCollidePairs.clear();
     // get list of solid objects for physics optimization
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
@@ -587,15 +595,19 @@ function engineObjectsUpdate()
     {
         if (o.destroyed || o.updatePass === pass) return;
 
+        // its parent is up to date, so it updates from where it is now, and its children from where it is after
         o.updatePass = pass;
+        o.updateTransforms(false);
         o.update();
+        o.children.length && o.updateTransforms(false);
         updateChildObjects(o.children);
     }
     for (const o of engineObjects)
     {
         if (o.parent || o.destroyed || o.updatePass === pass) continue; // a child that let go is not updated twice
 
-        // update top level objects
+        // update top level objects, each child places itself before it updates so it sees this frame's position,
+        // then the whole tree is placed again so what the children changed in their localPos lands before render
         o.updatePass = pass;
         o.update();
         updateChildObjects(o.children);
@@ -610,7 +622,7 @@ function engineObjectsUpdate()
  *  - This can be used to clear out all objects when restarting a level
  *  - Objects with the persistent flag set are left alone, for things that outlive a level
  *  - Objects can override their destroy function to do cleanup or stick around
- *  @param {boolean} [immediate] - should attached effects be allowed to die off?
+ *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first
  *  @memberof Engine */
 function engineObjectsDestroy(immediate=true)
 {
@@ -667,9 +679,14 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @memberof Engine */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
-{ engineObjectsCollect(pos, size, objects).forEach(o => callbackFunction(o)); }
+{
+    // an object an earlier callback destroyed is skipped
+    for (const o of engineObjectsCollect(pos, size, objects))
+        o.destroyed || callbackFunction(o);
+}
 
 /** Return a list of objects intersecting a ray, objects destroyed this frame left out
+ *  - Only objects with collideRaycast set are hit, which setCollision turns on
  *  @param {Vector2} start
  *  @param {Vector2} end
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
@@ -1559,7 +1576,7 @@ class Vector2
     }
 
     /** Sets this this vector to point in the specified integer direction (0-3), corresponding to multiples of 90 degree rotation
-     * @param {number} [direction]
+     * @param {number} direction
      * @param {number} [length]
      * @return {Vector2} */
     setDirection(direction, length=1)
@@ -1588,7 +1605,7 @@ class Vector2
      * @return {Vector2} */
     floor() { return new Vector2(floor(this.x), floor(this.y)); }
 
-    /** Returns a copy of this vector snapped to a grid. Note that `grid` is
+    /** Returns a copy of this vector snapped down to a grid. Note that `grid` is
      *  the number of snap steps per unit (so `grid=2` snaps to halves and
      *  `grid=0.5` snaps to twos), not the cell size.
      *  @param {number} grid - snap steps per unit
@@ -1906,10 +1923,11 @@ class Color
      * @return {number} */
     rgbaInt()
     {
-        const r = clamp(this.r)*255|0;
-        const g = clamp(this.g)*255<<8;
-        const b = clamp(this.b)*255<<16;
-        const a = clamp(this.a)*255<<24;
+        // round like toString, so WebGL and Canvas2D colors match
+        const r = clamp(this.r)*255+.5|0;
+        const g = clamp(this.g)*255+.5<<8;
+        const b = clamp(this.b)*255+.5<<16;
+        const a = clamp(this.a)*255+.5<<24;
         return r + g + b + a;
     }
 
@@ -2018,7 +2036,9 @@ class Timer
         false&&ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
         this.useRealTime = useRealTime;
         const globalTime = this.getGlobalTime();
+        /** @type {number|undefined} */
         this.time = timeLeft === undefined ? undefined : globalTime + timeLeft;
+        /** @type {number|undefined} */
         this.setTime = timeLeft;
     }
 
@@ -2094,7 +2114,7 @@ class Timer
  *  @memberof Utilities */
 function formatTime(t)
 {
-    const signStr = t < 0 ? '-' : '';
+    const signStr = t <= -1 ? '-' : ''; // no sign when it shows 0:00
     t = abs(t)|0;
     return signStr + (t/60|0) + ':' + (t%60<10?'0':'') + t%60;
 }
@@ -2346,7 +2366,6 @@ let canvasMinAspect = 0;
 let canvasMaxAspect = 0;
 
 /** Fixed size of the canvas in css pixels, if enabled canvas size never changes
- * - you may also need to set mainCanvasSize if using screen space coords in startup
  * - canvasPixelRatio still applies, it only scales the backing store
  *  @type {Vector2}
  *  @default Vector2()
@@ -2456,13 +2475,13 @@ let enablePhysicsSolver = true;
  *  @memberof Settings */
 let objectDefaultMass = 1;
 
-/** How much to slow velocity by each frame (0-1)
+/** Fraction of velocity objects keep each frame, 1 keeps all of it, 0 stops at once
  *  @type {number}
  *  @default
  *  @memberof Settings */
 let objectDefaultDamping = 1;
 
-/** How much to slow angular velocity each frame (0-1)
+/** Fraction of angular velocity objects keep each frame, 1 keeps all of it, 0 stops at once
  *  @type {number}
  *  @default
  *  @memberof Settings */
@@ -2474,19 +2493,20 @@ let objectDefaultAngleDamping = 1;
  *  @memberof Settings */
 let objectDefaultRestitution = 0;
 
-/** How much to slow when touching (0-1)
+/** Fraction of sliding speed objects keep each frame on the ground, 1 is no friction, 0 stops at once
+ *  - The more slippery of an object and its ground is used
  *  @type {number}
  *  @default
  *  @memberof Settings */
 let objectDefaultFriction = .8;
 
-/** Clamp max speed to avoid fast objects missing collisions
+/** Clamp max speed to avoid fast objects missing collisions, in world units per frame on each axis
  *  @type {number}
  *  @default
  *  @memberof Settings */
 let objectMaxSpeed = 1;
 
-/** How much gravity to apply to objects, negative Y is down
+/** How much gravity to apply to objects, negative Y is down, in world units per frame per frame
  *  @type {Vector2}
  *  @default
  *  @memberof Settings */
@@ -2536,7 +2556,7 @@ let touchInputEnable = true;
 
 /** True if touch gamepad should appear on mobile devices
  *  - Supports left analog stick, 4 face buttons and start button (button 9)
- *  - setTouchGamepadButtonCount(1) to use face buttons as right analog stick
+ *  - setTouchGamepadRightStick(true) for a right analog stick in place of the face buttons
  *  - Analog stick buttons 10 and 11 are also activated when virtual sticks are touched
  *  - Rendered as a full-viewport HTML/SVG overlay, so controls may sit outside the game canvas
  *  - It is gamepad 0 once touched; a real gamepad being used takes over and hides it until the screen is touched again
@@ -3121,21 +3141,22 @@ class EngineObject
         // physical properties
         /** @property {number} - How heavy the object is, static if 0 */
         this.mass = objectDefaultMass;
-        /** @property {number} - How much to slow down velocity each frame (0-1) */
+        /** @property {number} - Fraction of velocity kept each frame, 1 keeps all of it, 0 stops at once */
         this.damping = objectDefaultDamping;
-        /** @property {number} - How much to slow down rotation each frame (0-1) */
+        /** @property {number} - Fraction of angular velocity kept each frame, 1 keeps all of it, 0 stops at once */
         this.angleDamping = objectDefaultAngleDamping;
         /** @property {number} - How bouncy the object is when colliding (0-1) */
         this.restitution = objectDefaultRestitution;
-        /** @property {number} - How much friction to apply when sliding (0-1) */
+        /** @property {number} - Fraction of sliding speed kept each frame on the ground, 1 is no friction, 0 stops at
+         *  once, the more slippery of the object and its ground is used */
         this.friction  = objectDefaultFriction;
         /** @property {number} - How much to scale gravity by for this object */
         this.gravityScale = 1;
         /** @property {number} - Objects are sorted by render order */
         this.renderOrder = renderOrder;
-        /** @property {Vector2} - Velocity of the object */
+        /** @property {Vector2} - Velocity of the object, in world units per frame */
         this.velocity = vec2();
-        /** @property {number} - Angular velocity of the object */
+        /** @property {number} - Angular velocity of the object, in radians per frame */
         this.angleVelocity = 0;
         /** @property {number} - Track when object was created  */
         this.spawnTime = time;
@@ -3176,8 +3197,9 @@ class EngineObject
         engineObjects.push(this);
     }
 
-    /** Update the object transform, called automatically by engine even when paused */
-    updateTransforms()
+    /** Update the object transform, called automatically by engine even when paused
+     *  @param {boolean} [updateChildren] - Also update the children's transforms */
+    updateTransforms(updateChildren=true)
     {
         const parent = this.parent;
         if (parent)
@@ -3197,8 +3219,9 @@ class EngineObject
         }
 
         // update children
-        for (const child of this.children)
-            child.updateTransforms();
+        if (updateChildren)
+            for (const child of this.children)
+                child.updateTransforms();
     }
 
     /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object. */
@@ -3274,7 +3297,7 @@ class EngineObject
                 const collide2 = o.collideWithObject(this);
                 if (!collide1 || !collide2)
                 {
-                    engineObjectsCollidePairs.push(this, o);
+                    engineObjectsCollidePairAdd(this, o);
                     continue;
                 }
 
@@ -3288,7 +3311,7 @@ class EngineObject
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away other object if not fixed
                         o.velocity = o.velocity.subtract(velocity);
-                    engineObjectsCollidePairs.push(this, o);
+                    engineObjectsCollidePairAdd(this, o);
 
                     debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
@@ -3437,7 +3460,7 @@ class EngineObject
     renderLight() {}
 
     /** Destroy this object, destroy its children, detach its parent, and mark it for removal
-     *  @param {boolean} [immediate] - should attached effects be allowed to die off? */
+     *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
     destroy(immediate=false)
     {
         if (this.destroyed) return;
@@ -3977,7 +4000,7 @@ class SpriteAnimation
      *  @return {SpriteAnimation} */
     loop() { return this.restart('loop'); }
 
-    /** Start over from the first frame, run through once and hold the last frame
+    /** Start over from the first frame, run through once and hold the last frame, last to first at a negative speed
      *  @return {SpriteAnimation} */
     play() { return this.restart('once'); }
 
@@ -4011,8 +4034,8 @@ class SpriteAnimation
         if (this.heldFrame !== undefined)
             return this.heldFrame;
         const n = this.frameCount, f = floor(this.elapsedFrames);
-        if (this.mode == 'once')
-            return clamp(f, 0, n - 1);
+        if (this.mode == 'once') // backward it counts down from the last frame, showing it from the start
+            return clamp(this.speed < 0 ? n - 1 + ceil(this.elapsedFrames) : f, 0, n - 1);
         if (this.mode == 'loop')
             return mod(f, n);
         const period = max(2 * n - 2, 1), k = mod(f, period); // there and back, the ends once each
@@ -4025,7 +4048,7 @@ class SpriteAnimation
 
     /** True once a play has shown its last frame for its time
      *  @return {boolean} */
-    get isDone() { return this.mode == 'once' && this.heldFrame === undefined && this.elapsedFrames >= this.frameCount; }
+    get isDone() { return this.mode == 'once' && this.heldFrame === undefined && abs(this.elapsedFrames) >= this.frameCount; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4037,6 +4060,9 @@ class SpriteAnimation
  * - Set it as obj.shader, or use setShader for 2D draws and render3D.shader for 3D draws
  * - Draws that share a Shader share a batch; with no Shader set nothing changes
  * - In 2D it shades textured draws, untextured ones like drawRect draw as they are
+ * - A tile layer drawn in WebGL holds premultiplied color, so there iChannel0 reads premultiplied texels and the
+ *   snippet's color is taken as premultiplied too; premultipliedTexture is true there, so a snippet that changes
+ *   the alpha scales the rgb with it: `if (premultipliedTexture) c.rgb *= k;`
  * - Compiled once per renderer by the first draw that needs it; a bad snippet throws with the GLSL log in debug
  * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, and localUV, 0 to 1 across the sprite
@@ -4097,7 +4123,11 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
     false&&ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
     false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
+
     const textureInfo = tileInfo?.textureInfo;
+    if (textureInfo && !(tileInfo.size.x && tileInfo.size.y))
+        return; // a tile with no area draws nothing, like a sprite still loading
     const bleed = tileInfo?.bleed ?? 0;
     if (useWebGL && glEnable)
     {
@@ -4106,6 +4136,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
         if (textureInfo)
         {
+            false&&ASSERT(!!textureInfo.glTexture, 'texture has no WebGL texture, draw it with useWebGL false');
             // calculate uvs and render
             const sizeInverse = textureInfo.sizeInverse;
             const x = tileInfo.pos.x * sizeInverse.x;
@@ -4195,6 +4226,8 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, an
     false&&ASSERT(isColor(colorTop) && isColor(colorBottom), 'color is invalid');
     false&&ASSERT(isNumber(angle), 'angle must be a number');
     false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
 
     if (useWebGL && glEnable)
     {
@@ -4352,6 +4385,8 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
     false&&ASSERT(isNumber(angle), 'angle must be a number');
     false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
+
     if (useWebGL && glEnable)
     {
         false&&ASSERT(!!glContext, 'WebGL is not enabled!');
@@ -4367,8 +4402,11 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
         ++primitiveCount;
         drawCanvas2D(pos, vec2(1), angle, false, (context)=>
         {
+            // Canvas2D ignores a width of 0 or below and keeps the last one, WebGL draws none for 0
+            // and a negative width as its size, the outline turned inside out
+            if (!width) return;
             context.strokeStyle = color.toString();
-            context.lineWidth = width;
+            context.lineWidth = abs(width);
             context.beginPath();
             for (let i=0; i<points.length; ++i)
             {
@@ -4452,6 +4490,8 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
     false&&ASSERT(isNumber(angle), 'angle must be a number');
     false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
+
     if (useWebGL && glEnable)
     {
         false&&ASSERT(!!glContext, 'WebGL is not enabled!');
@@ -4474,7 +4514,7 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
                 context.lineTo(point.x, point.y);
             context.closePath();
             context.fill();
-            if (lineWidth)
+            if (lineWidth > 0) // as in WebGL, Canvas2D would stroke a width below 0 with the last one
             {
                 context.strokeStyle = lineColor.toString();
                 context.lineWidth = lineWidth;
@@ -4483,6 +4523,9 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
         }, screenSpace, context);
     }
 }
+
+// the unit rings drawEllipse fills with in WebGL, one for each side count
+const drawEllipseRings = new Map;
 
 /** Draw colored ellipse using passed in point
  *  @param {Vector2} pos
@@ -4505,14 +4548,36 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
     false&&ASSERT(lineWidth >= 0, 'lineWidth must be a positive value or 0');
     false&&ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
-    // clamp line width to prevent artifacts
-    lineWidth = clamp(lineWidth, 0, min(size.x, size.y));
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
+
+    // clamp line width to prevent artifacts, a negative size draws mirrored
+    lineWidth = clamp(lineWidth, 0, min(abs(size.x), abs(size.y)));
 
     if (useWebGL && glEnable)
     {
-        // draw as a regular polygon
         const sides = glCircleSides;
-        drawRegularPoly(pos, size, sides, color, lineWidth, lineColor, angle, useWebGL, screenSpace, context);
+        if (lineWidth > 0)
+        {
+            // draw as a regular polygon, the outline is made from the points at their size
+            drawRegularPoly(pos, size, sides, color, lineWidth, lineColor, angle, useWebGL, screenSpace, context);
+            return;
+        }
+
+        // a fill is a unit ring scaled, made once for each side count and already in strip order
+        let ring = drawEllipseRings.get(sides);
+        if (!ring)
+        {
+            const points = [];
+            for (let i=sides; i--;)
+            {
+                const a = (i/sides)*PI*2;
+                points.push(vec2(sin(a), cos(a)));
+            }
+            drawEllipseRings.set(sides, ring = glPolyStrip(points));
+        }
+        if (screenSpace)
+            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+        glDrawPointsTransform(ring, color.rgbaInt(), pos.x, pos.y, size.x/2, size.y/2, angle, false);
     }
     else
     {
@@ -4522,9 +4587,9 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
         {
             context.fillStyle = color.toString();
             context.beginPath();
-            context.ellipse(0, 0, size.x/2, size.y/2, 0, 0, 9);
+            context.ellipse(0, 0, abs(size.x)/2, abs(size.y)/2, 0, 0, 9); // it throws on a negative radius
             context.fill();
-            if (lineWidth)
+            if (lineWidth > 0)
             {
                 context.strokeStyle = lineColor.toString();
                 context.lineWidth = lineWidth;
@@ -4662,7 +4727,7 @@ function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHIT
  *  @param {Vector2}  size
  *  @param {number}   [angle]
  *  @param {boolean}  [mirror]
- *  @param {Canvas2DDrawFunction} [drawFunction]
+ *  @param {Canvas2DDrawFunction} [drawFunction] - Needed, marked optional only because the ones before it are
  *  @param {boolean}  [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
@@ -4672,6 +4737,8 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
     false&&ASSERT(isVector2(size), 'size must be a vec2');
     false&&ASSERT(isNumber(angle), 'angle must be a number');
     false&&ASSERT(typeof drawFunction === 'function', 'drawFunction must be a function');
+
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
 
     if (!screenSpace)
     {
@@ -4698,7 +4765,7 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
- *  @param {CanvasTextAlign}  [textAlign='center']
+ *  @param {'left'|'center'|'right'} [textAlign='center']
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
@@ -4726,7 +4793,7 @@ function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, 
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
- *  @param {CanvasTextAlign}  [textAlign]
+ *  @param {'left'|'center'|'right'} [textAlign]
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
@@ -4745,6 +4812,8 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     false&&ASSERT(isStringLike(font), 'font must be a string');
     false&&ASSERT(isStringLike(fontStyle), 'fontStyle must be a string');
     false&&ASSERT(isNumber(angle), 'angle must be a number');
+
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
     
     const lines = (text+'').split('\n');
     // save before style mutations so caller's context state is preserved
@@ -4773,7 +4842,7 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
 /** Load a texture at a specific index after engineInit, the images passed to engineInit load this way
  *  @param {number} textureIndex - Index to store the texture at, an unused one
  *  @param {string} [src] - Image source path
- *  @return {Promise} Promise that resolves when texture is loaded
+ *  @return {Promise<TextureInfo>} Resolves to the texture info once the image loads, or fails to with a warning
  *  @memberof Draw */
 async function loadTexture(textureIndex, src)
 {
@@ -4786,13 +4855,18 @@ async function loadTexture(textureIndex, src)
     {
         await new Promise(resolve =>
         {
-            image.onerror = image.onload = resolve;
+            image.onload = resolve;
+            image.onerror = ()=>
+            {
+                console.warn('failed to load image: ' + src); // in release too, like the WebGL warning
+                resolve();
+            };
             image.crossOrigin = 'anonymous';
             image.src = src;
         });
     }
     
-    textureInfos[textureIndex] = new TextureInfo(image);
+    return textureInfos[textureIndex] = new TextureInfo(image);
 }
 
 /** Convert from screen to world space coordinates
@@ -4859,7 +4933,7 @@ function screenToWorldDelta(screenDelta)
     return new Vector2(x, y);
 }
 
-/** Convert from screen to world space coordinates for a directional vector (no translation)
+/** Convert from world to screen space coordinates for a directional vector (no translation)
  *  @param {Vector2} worldDelta
  *  @return {Vector2}
  *  @memberof Draw */
@@ -5473,8 +5547,10 @@ function inputClearKeyboard()
  *  @memberof Input */
 function inputClear()
 {
-    inputData.length = 0;
-    inputData[0] = [];
+    // empty every device but keep which gamepad slots exist, so gamepadConnected still reads true through a
+    // clear, like the one every frame while the window is unfocused; a disconnect clears its slot in the poll
+    for (let i = inputData.length; i--;)
+        if (!i || inputData[i]) inputData[i] = [];
     inputKeysHeld.clear();
     inputWasTouching = 0;
     // release the touch gamepad, a finger still on it has to lift before it can take a control again
@@ -5499,7 +5575,7 @@ function inputClear()
 function keyIsDown(key, device=0)
 {
     false&&ASSERT(isStringLike(key), 'key must be a number or string');
-    false&&ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 1);
 }
 
@@ -5511,7 +5587,7 @@ function keyIsDown(key, device=0)
 function keyWasPressed(key, device=0)
 {
     false&&ASSERT(isStringLike(key), 'key must be a number or string');
-    false&&ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 2);
 }
 
@@ -5523,7 +5599,7 @@ function keyWasPressed(key, device=0)
 function keyWasReleased(key, device=0)
 {
     false&&ASSERT(isStringLike(key), 'key must be a number or string');
-    false&&ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 4);
 }
 
@@ -5672,6 +5748,7 @@ function gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1,
 }
 
 /** Stop vibration on a gamepad
+ *  @param {number} [gamepad] - gamepad index
  *  @memberof Input */
 function gamepadVibrateStop(gamepad=gamepadPrimary)
 {
@@ -5747,7 +5824,7 @@ const gamepadAxisCentered = [];
 const gamepadAxisCenteredFrames = 15;
 
 // touch gamepad internal variables
-const touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadSticks = [];
+const touchGamepadTimer = new Timer(undefined, true), touchGamepadButtons = [], touchGamepadSticks = [];
 // buttons pressed since the last poll, so a tap that lifts before the poll still counts
 const touchGamepadButtonsPressed = [];
 // floating stick anchors (stage-local CSS pixels) and owning pointer ids, indexed by stick (0=left, 1=right)
@@ -5866,7 +5943,9 @@ function inputInit()
     {
         if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
 
-        inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
+        // released only if it was pressed, like a key or a touch
+        if (inputData[0][e.button] & 1)
+            inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
     }
     function onMouseMove(e)
     {
@@ -6047,16 +6126,6 @@ function inputUpdate()
             return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
         };
 
-        // update touch gamepad if enabled
-        if (touchGamepadEnable && isTouchDevice)
-        {
-            // a side is either a stick or buttons - setting both is ambiguous
-            false&&ASSERT(!touchGamepadLeftStick || !touchGamepadLeftButtonCount,
-                'set touchGamepadLeftStick or touchGamepadLeftButtonCount, not both');
-            false&&ASSERT(!touchGamepadRightStick || !touchGamepadButtonCount,
-                'set touchGamepadRightStick or touchGamepadButtonCount, not both');
-        }
-
         // the touch gamepad owns gamepad 0 once touched, until a real gamepad is used: that one takes over and the
         // touch gamepad hides until the screen is touched again
         if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet() && gamepadsEnable && inputRealGamepadUsed())
@@ -6115,12 +6184,12 @@ function inputUpdate()
         if (!gamepadsEnable || !debug && !document.hasFocus())
             return void (gamepadButtonsLast.length = 0);
 
-        // poll gamepads; with none to read, every slot that had one is cleared, so a
-        // refused or vanished gamepad does not leave its buttons held
+        // poll gamepads; every slot is visited and a slot with no gamepad is cleared, so a refused or
+        // vanished gamepad does not leave its buttons held, even past the end of a shorter array
+        // like the one Firefox returns after the highest numbered gamepad disconnects
         const maxGamepads = 8;
         const gamepads = inputGetGamepads();
-        const gamepadCount = gamepads.length ? min(maxGamepads, gamepads.length) : maxGamepads;
-        for (let i=0; i<gamepadCount; ++i)
+        for (let i=0; i<maxGamepads; ++i)
         {
             // get or create gamepad data
             const gamepad = gamepads[i];
@@ -6356,14 +6425,14 @@ function touchGamepadRelayout()
         {
             const zone = touchGamepadSideZones[side], edge = side ? 'right' : 'left';
             zone.style.display = touchGamepadSideHasControl(side) ? '' : 'none';
-            if (touchGamepadFloating)
+            if (touchGamepadFloating && touchGamepadSideStick(side))
             {
-                // bottom 60% grabs the control; the top 40% passes through. A side with no
+                // bottom 60% grabs the stick; the top 40% passes through. A side with no
                 // control on the other side uses the full width (matching the hit-test)
                 const width = touchGamepadSideHasControl(side ? 0 : 1) ? '50%' : '100%';
                 setZone(zone, `${edge}:0;bottom:0;width:${width};height:60%`);
             }
-            else // fixed: a compact box hugging the corner control
+            else // fixed, and face buttons which never float: a compact box hugging the corner control
                 setZone(zone, `${edge}:0;bottom:0;width:${3*S}px;height:${3*S}px`);
         }
         touchGamepadZoneC.style.display = touchGamepadCenterButtonSize ? '' : 'none';
@@ -6745,10 +6814,10 @@ let audioMasterEffectInput, audioMasterEffectOutput, audioMasterEffectOutputIsEf
 const audioDefaultSampleRate = 44100;
 
 /** Check if the audio context is running and available for playback
- *  @return {boolean} - True if the audio context is running
+ *  @return {boolean} - True if the audio context is running, false when there is none
  *  @memberof Audio */
 function audioIsRunning()
-{ return audioContext.state === 'running'; }
+{ return audioContext?.state === 'running'; }
 
 function audioInit()
 {
@@ -6799,6 +6868,7 @@ function setAudioMasterEffect(input, output)
     input = audioEffectNode(input, 'input');
     false&&ASSERT(!input || typeof input.connect === 'function', 'input must be an AudioNode or an effect with input and output nodes');
     false&&ASSERT(!output || typeof output.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
+    if (!audioMasterGain) return; // no audio outside a browser, where the engine runs headless
 
     // undo the current route, the master gain selectively so other taps on it survive,
     // but the output node from everything since it only ever fed the speakers;
@@ -7409,8 +7479,10 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
 
     if (!audioIsRunning())
     {
-        // fix stalled audio, don't build a buffer that can't be played
-        audioContext.resume();
+        // fix stalled audio, don't build a buffer that can't be played;
+        // but a context suspended because the page is hidden stays suspended until it shows
+        if (!audioSuspendedWhenHidden)
+            audioContext.resume();
         return;
     }
 
@@ -7451,8 +7523,10 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
 
     if (!audioIsRunning())
     {
-        // fix stalled audio, this sound won't be able to play
-        audioContext.resume();
+        // fix stalled audio, this sound won't be able to play;
+        // but a context suspended because the page is hidden stays suspended until it shows
+        if (!audioSuspendedWhenHidden)
+            audioContext.resume();
         return;
     }
 
@@ -7679,6 +7753,8 @@ function tileCollisionAssertWhole(layer)
 function tileCollisionGetData(pos, solidOnly=true)
 {
     // check all tile collision layers, in scalars since particles ask this every frame
+    // solid (positive) data wins, a negative marker is returned only when no layer is solid there
+    let found = 0;
     for (const layer of tileCollisionLayers)
         if (!solidOnly || layer.isSolid)
         {
@@ -7687,10 +7763,11 @@ function tileCollisionGetData(pos, solidOnly=true)
             if (x >= 0 && y >= 0 && x < size.x && y < size.y)
             {
                 const data = layer.collisionData[(y|0)*size.x + (x|0)];
-                if (data) return data;
+                if (data > 0) return data;
+                if (data && !found) found = data;
             }
         }
-    return 0;
+    return found;
 }
 
 /** Check if a tile layer collides with another object
@@ -7818,7 +7895,7 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
                 // Tiled keeps a tile's flips in its top bits, horizontal, vertical and diagonal, the diagonal
                 // applied first; each of the 8 is a quarter turn direction with or without a mirror
                 const [direction, mirror] = tileLayersTiledFlips[data >>> 29];
-                const tileIndex = (data & 0x1fffffff) - 1; // bit 28, a hexagonal turn, is not read
+                const tileIndex = (data & 0x0fffffff) - 1; // bit 28, a hexagonal turn, is not read
                 const layerData = new TileLayerData(tileIndex, direction, !!mirror, layerColor);
                 tileLayer.setData(pos, layerData);
 
@@ -7874,6 +7951,9 @@ class TileLayerData
  * Canvas Layer - cached off screen rendering system
  * - Contains an offscreen canvas that can be rendered to
  * - WebGL rendering is optional, call updateWebGL to enable/update
+ * - A TileLayer using WebGL redraws into its texture and leaves this canvas blank, so drawing on its context
+ *   only shows on a layer made with useWebGL=false (or with WebGL off); use drawLayerTile/drawLayerRect inside
+ *   redrawStart/End for drawing that works both ways
  * @extends EngineObject
  * @memberof TileLayers
  * @example
@@ -7932,8 +8012,16 @@ class CanvasLayer extends EngineObject
     *  @memberof Draw */
     draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=false, context)
     {
+        // the canvas may have been resized since, updateWebGL only refreshes the size for WebGL
+        const t = this.textureInfo, c = this.canvas;
+        if (c && !this.hasWebGL() && (c.width !== t.size.x || c.height !== t.size.y))
+        {
+            t.size = vec2(c.width, c.height);
+            t.sizeInverse = vec2(1/c.width, 1/c.height);
+        }
+
         // draw the canvas layer as a single tile that uses the whole texture
-        const tileInfo = new TileInfo().setFullImage(this.textureInfo);
+        const tileInfo = new TileInfo().setFullImage(t);
         const useWebGL = this.hasWebGL();
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
@@ -7972,6 +8060,7 @@ class TileLayer extends CanvasLayer
     */
     constructor(pos, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
     {
+        size = size.floor(); // whole cells, a fractional size would never finish filling the data
         const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
         super(pos, size, 0, renderOrder, canvasSize, useWebGL);
         
@@ -7982,6 +8071,8 @@ class TileLayer extends CanvasLayer
         this.data = [];
         /** @property {boolean} - Is this layer using a webgl texture? */
         this.isUsingWebGL = false;
+        // set when WebGL is turned off under this layer, so it redraws when WebGL comes back
+        this.redrawOnGLEnable = false;
         /** @property {boolean} - Show this layer's bounds and values when the debug overlay's Debug Tiles is on,
          *  turn it off for layers that only add noise */
         this.debugShow = true;
@@ -8054,6 +8145,13 @@ class TileLayer extends CanvasLayer
         {
             // redraw the layer if webgl was disabled or context lost
             this.isUsingWebGL = false;
+            this.redrawOnGLEnable = true;
+            this.redraw();
+        }
+        else if (glEnable && this.redrawOnGLEnable)
+        {
+            // webgl is back, its texture still holds the tiles from before it was turned off
+            this.redrawOnGLEnable = false;
             this.redraw();
         }
     }
@@ -8279,7 +8377,7 @@ class TileCollisionLayer extends TileLayer
         // keep track of all collision layers
         tileCollisionLayers.push(this);
 
-        // tile collision layers are solid by default
+        /** @property {boolean} - Solid layers block objects and particles, the solidOnly tests skip the others */
         this.isSolid = true;
     }
 
@@ -8594,9 +8692,10 @@ class ParticleEmitter extends EngineObject
          *  @type {Array<Particle>} */
         this.particles = [];
 
-        // track previous position and angle
+        // track previous position and angle, set on the first update once a parent has placed the emitter
+        /** @type {Vector2|undefined} */
+        this.previousPos = undefined;
         this.previousAngle = this.angle;
-        this.previousPos = this.pos.copy();
     }
 
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
@@ -8606,6 +8705,12 @@ class ParticleEmitter extends EngineObject
         false&&ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         false&&ASSERT(this.damping >= 0 && this.damping <= 1);
 
+        if (!this.previousPos)
+        {
+            // first update, addChild moves an emitter after it is made
+            this.previousPos = this.pos.copy();
+            this.previousAngle = this.angle;
+        }
         if (this.velocityInheritance)
         {
             // pass emitter velocity to particles
@@ -8613,10 +8718,11 @@ class ParticleEmitter extends EngineObject
             this.velocity.x = p * (this.pos.x - this.previousPos.x);
             this.velocity.y = p * (this.pos.y - this.previousPos.y);
             this.angleVelocity = p * (this.angle - this.previousAngle);
-            this.previousAngle = this.angle;
-            this.previousPos.x = this.pos.x;
-            this.previousPos.y = this.pos.y;
         }
+        // tracked even while velocityInheritance is off, so turning it on does not jump
+        this.previousAngle = this.angle;
+        this.previousPos.x = this.pos.x;
+        this.previousPos.y = this.pos.y;
 
         // update emitter
         if (this.isActive())
@@ -8727,7 +8833,7 @@ class ParticleEmitter extends EngineObject
     isActive() { return !this.emitTime || this.getAliveTime() < this.emitTime; }
 
     /** Destroy the particle emitter
-     *  @param {boolean} [immediate] - should particle emitters and other attached effects be allowed to die off */
+     *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
     destroy(immediate=false)
     {
         if (this.destroyed) return;
@@ -8743,8 +8849,19 @@ class ParticleEmitter extends EngineObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// scratch vector reused by Particle.render to avoid per-frame allocations
-const particleDrawPos = new Vector2, particleDrawSize = new Vector2;
+// scratch vectors reused by Particle.render and the tile collision to avoid per-frame allocations
+const particleDrawPos = new Vector2, particleDrawSize = new Vector2, particleCollidePos = new Vector2;
+
+// tests if a particle collides with tiles at x, y, through its emitter's collide callback if it has one
+function particleCollideTest(particle, collideCallback, x, y)
+{
+    const data = tileCollisionGetData(particleCollidePos.set(x, y));
+    if (!collideCallback)
+        return data > 0;
+
+    // the callback gets its own vector, made only when there is a tile to decide on
+    return !!data && !!collideCallback(particle, data, vec2(x, y));
+}
 
 /**
  * Particle Object - Created automatically by Particle Emitters
@@ -8774,7 +8891,7 @@ class Particle
         this.pos = pos;
         /** @property {number} */
         this.angle = angle;
-        /** @property {Vector2} */
+        /** @property {Vector2} - Current size, updated as it renders */
         this.size = vec2(sizeStart);
         /** @property {Color} */
         this.color = colorStart.copy();
@@ -8827,9 +8944,9 @@ class Particle
             return;
         }
 
-        // apply physics; only the tile collision needs where the particle was, so only then is it copied
+        // apply physics; only the tile collision needs where the particle was
         const solve = enablePhysicsSolver && collideTiles;
-        const oldPos = solve ? this.pos.copy() : undefined;
+        const oldX = this.pos.x, oldY = this.pos.y;
         this.velocity.x = this.velocity.x * damping + gravity.x * gravityScale;
         this.velocity.y = this.velocity.y * damping + gravity.y * gravityScale;
         if (solve)
@@ -8852,28 +8969,22 @@ class Particle
 
         // check collision against tiles
         this.groundObject = undefined;
-        const testCollision = collideCallback ? (pos)=>
-        {
-            const data = tileCollisionGetData(pos);
-            return data && collideCallback(this, data, pos);
-        } : (pos)=> tileCollisionGetData(pos) > 0;
-
-        if (testCollision(this.pos))
+        if (particleCollideTest(this, collideCallback, this.pos.x, this.pos.y))
         {
             // if already was stuck in collision, don't do anything
             const hitLayer = tileCollisionTest(this.pos);
-            if (!testCollision(oldPos))
+            if (!particleCollideTest(this, collideCallback, oldX, oldY))
             {
                 // test which side we bounced off (or both if a corner)
-                const isBlockedX = testCollision(vec2(this.pos.x, oldPos.y));
-                const isBlockedY = testCollision(vec2(oldPos.x, this.pos.y));
+                const isBlockedX = particleCollideTest(this, collideCallback, this.pos.x, oldY);
+                const isBlockedY = particleCollideTest(this, collideCallback, oldX, this.pos.y);
                 // collide callback may hit where the layer test does not, so hitLayer can be undefined
                 const hitRestitution = hitLayer ? max(restitution, hitLayer.restitution) : restitution;
                 const hitFriction = hitLayer ? max(friction, hitLayer.friction) : friction;
                 if (isBlockedX)
                 {
                     // move to previous X position and bounce
-                    this.pos.x = oldPos.x;
+                    this.pos.x = oldX;
                     this.velocity.x *= -hitRestitution;
                     this.velocity.y *= hitFriction;
                 }
@@ -8884,7 +8995,7 @@ class Particle
                         this.groundObject = hitLayer;
 
                     // move to previous Y position and bounce
-                    this.pos.y = oldPos.y;
+                    this.pos.y = oldY;
                     this.velocity.y *= -hitRestitution;
                     this.velocity.x *= hitFriction;
                 }
@@ -8919,6 +9030,7 @@ class Particle
         // lerp color and size
         const p1 = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1, p2 = 1-p1;
         const radius = p2 * this.sizeStart + p1 * this.sizeEnd;
+        this.size.set(radius, radius); // kept current for callbacks, drawn from the scratch since a trail stretches it
         const size = particleDrawSize.set(radius, radius);
         const alphaFade = p1 < fadeRate ? p1/fadeRate : 
             p1 > 1-fadeRate ? (1-p1)/fadeRate : 1;
@@ -8995,7 +9107,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glMipmappedTextures = new WeakSet, glMipmapsStale = new Set, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
+let glMipmappedTextures = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -9028,6 +9140,16 @@ const gl_VERTEX_SOURCE =
     'v=mix(u.xw,u.zy,g);'+           // pass uv to fragment shader
     'l=g;d=c;e=a;'+                  // pass local uv and colors to fragment shader
     '}';                             // end of shader
+
+// the end of every sprite fragment shader, the engine's and each Shader's: t is the surface color
+// a render target's texture holds premultiplied color, so that batch blends with ONE and premultiplies here,
+// giving what a straight texel gives, clamped as the blend clamps it: exactly when the additive alpha is 0 or
+// the texel is clear or opaque, and close otherwise, since the straight color is not kept to be multiplied
+const gl_FRAGMENT_TINT_SOURCE =
+    'c=t*d+e;'+                      // modulate by color plus additive
+    'if(premultipliedTexture){'+     // a render target
+    'c.a=min(c.a,1.);'+              // the alpha the blend uses
+    'c.rgb=min(t.rgb*d.rgb*min(d.a+e.a,1.)+e.rgb*c.a,c.a);}';
 
 function glInit(rootElement)
 {
@@ -9092,6 +9214,7 @@ function glInit(rootElement)
         // reinit WebGL and restore textures
         glMipmappedTextures = new WeakSet;
         glMipmapsStale.clear();
+        glPremultipliedTextures = new WeakSet; // the tile layers draw into their new textures again below
         initWebGL();
         for (const info of glTextureInfos)
             info.glTexture = glCreateTexture(info.image, info.wrap);
@@ -9109,13 +9232,16 @@ function glInit(rootElement)
             '#version 300 es\n' +     // specify GLSL ES version
             'precision highp float;'+ // use highp for accuracy
             'uniform sampler2D s;'+   // texture
+            'uniform bool premultipliedTexture;'+ // is the texture a render target
             'in vec2 v;'+             // in: uv
             'in vec4 d,e;'+           // in: color, additiveColor
             'out vec4 c;'+            // out: color
             'void main(){'+           // shader entry point
-            'c=texture(s,v)*d+e;'+    // modulate texture by color plus additive
+            'vec4 t=texture(s,v);'+   // sample the texture
+            gl_FRAGMENT_TINT_SOURCE + // apply color and additive
             '}'                       // end of shader
         );
+        glShaderPremultiplied = false; // a new program starts with its uniforms at 0
 
         // setup poly rendering shaders
         glPolyShader = glCreateProgram(
@@ -9283,15 +9409,15 @@ function glPreRender(clear=true)
     glSetInstancedMode(true);
 }
 
-/** Clear the canvas and setup the viewport
+/** Clear the canvas or render target to canvasClearColor
  *  @memberof WebGL */
 function glClearCanvas()
 {
     if (!glContext) return;
 
-    // clear using the canvasClearColor
+    // clear using the canvasClearColor, premultiplied like everything the blend writes
     const color = canvasClearColor;
-    glContext.clearColor(color.r, color.g, color.b, color.a);
+    glContext.clearColor(color.r*color.a, color.g*color.a, color.b*color.a, color.a);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
@@ -9403,10 +9529,11 @@ function glShaderProgram(shader)
         'uniform sampler2D iChannel0;' + // the texture
         'uniform vec3 iResolution;' +    // canvas size in pixels
         'uniform float iTime;' +         // engine time
+        'uniform bool premultipliedTexture;' + // is the texture a render target
         'in vec2 v,l;in vec4 d,e;out vec4 c;\n' + // a define needs its own line
         '#define localUV l\n' +
         shader.fragmentCode + '\n' +
-        'void main(){vec4 t;mainImage(t,v);c=t*d+e;}');
+        'void main(){vec4 t;mainImage(t,v);' + gl_FRAGMENT_TINT_SOURCE + '}');
 }
 
 /** Create WebGL texture from an image and init the texture settings
@@ -9477,6 +9604,7 @@ function glSetTextureData(texture, image)
     false&&ASSERT(image?.width > 0, 'Invalid image data.');
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
+    glPremultipliedTextures.delete(texture); // an image uploads straight color, even into a used render target
 
     // keep mipmaps in sync with new level 0 data, for any texture that has them
     if (glMipmappedTextures.has(texture))
@@ -9515,9 +9643,16 @@ function glUnregisterTextureInfo(textureInfo)
     // delete texture info from tracking list even if gl is not enabled
     glTextureInfos.delete(textureInfo);
 
-    // unset and destroy the texture
+    // unset and destroy the texture, drawing what is batched with it first, since deleting unbinds it
     const glTexture = textureInfo.glTexture;
     textureInfo.glTexture = undefined;
+    if (glTexture && glTexture === glActiveTexture)
+    {
+        glFlush();
+        glActiveTexture = undefined; // so nothing binds the deleted texture again
+    }
+    glMipmapsStale.delete(glTexture);
+    glPremultipliedTextures.delete(glTexture);
     glDeleteTexture(glTexture);
 }
 
@@ -9527,9 +9662,14 @@ function glFlush()
 {
     if (glEnable && glContext && glBatchCount)
     {
+        // a render target holds premultiplied color, a batch drawing one takes its color as it is
+        // glSetTexture flushes on every change, so the whole batch drew with the bound texture
+        const premultiplied = !glPolyMode && glPremultipliedTextures.has(glActiveTexture);
+
         // set blend mode
+        const sourceBlend = premultiplied ? glContext.ONE : glContext.SRC_ALPHA;
         const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
-        glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
+        glContext.blendFuncSeparate(sourceBlend, destBlend, glContext.ONE, destBlend);
         glContext.enable(glContext.BLEND);
 
         // a Shader's program for this batch, or the engine's own again after one
@@ -9546,9 +9686,16 @@ function glFlush()
                 // a render target is the size glPreRender gave its viewport
                 const resolution = glRenderTarget ? mainCanvasSize : glCanvas;
                 glContext.uniform3f(uniform('iResolution'), resolution.x ?? resolution.width, resolution.y ?? resolution.height, 1);
+                glContext.uniform1i(uniform('premultipliedTexture'), +premultiplied);
             }
         }
-        
+        if (!glPolyMode && !glBatchShader && glShaderPremultiplied !== premultiplied)
+        {
+            // the engine's program is the one in use, and it keeps the flag until it changes
+            glContext.uniform1i(glUniformLocation(glShader, 'premultipliedTexture'), +premultiplied);
+            glShaderPremultiplied = premultiplied;
+        }
+
         const byteLength = glBatchCount * 
             (glPolyMode ? gl_INDICES_PER_POLY_VERTEX : gl_INDICES_PER_INSTANCE);
         glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, glPositionData, 0, byteLength);
@@ -9742,8 +9889,9 @@ function glDrawColoredPoints(points, pointColors)
 }
 
 /** Set the WebGL render target to the given texture or back to the canvas
+ *  - What is drawn into a texture is stored premultiplied, and draws of that texture blend it as such
  *  @param {WebGLTexture} [texture] - a texture or undefined to use normal glCanvas
- *  @param {boolean} [clear] - should the render target be cleared
+ *  @param {boolean} [clear] - should the render target be cleared, to canvasClearColor, CLEAR_BLACK for a transparent one
  *  @memberof WebGL */
 function glSetRenderTarget(texture, clear=false)
 {
@@ -9752,6 +9900,7 @@ function glSetRenderTarget(texture, clear=false)
     const previousTarget = glRenderTarget;
     if (texture)
     {
+        glPremultipliedTextures.add(texture); // the blend writes premultiplied color into it
         // coming from the canvas, keep its transform and blend mode to put back after
         glRenderTarget || (glRenderTargetSaved = [glTransform, glAdditive]);
         glRenderTarget = texture;
@@ -9791,6 +9940,8 @@ function glSetRenderTarget(texture, clear=false)
 }
 
 /** Clear out a rectangle area of the WebGL canvas or render target
+ *  - In framebuffer pixels from the bottom left: backing store pixels on the canvas, texture pixels in a
+ *    render target
  *  @param {number} x
  *  @param {number} y
  *  @param {number} width
@@ -10913,7 +11064,7 @@ let postProcess;
 class PostProcessPlugin
 {
     /** Create global post processing shader
-    *  @param {string} shaderCode
+    *  @param {string} [shaderCode] - Shadertoy style mainImage code, a pass-through when left out
     *  @param {boolean} [includeMainCanvas] - combine mainCanvas onto glCanvas
     *  @param {boolean} [feedbackTexture] - use glCanvas from previous frame as the texture
     *  @example
@@ -10922,6 +11073,7 @@ class PostProcessPlugin
     */
     constructor(shaderCode, includeMainCanvas=false, feedbackTexture=false)
     {
+        false&&ASSERT(engineInitialized || headlessMode, 'create the plugin after engineInit, e.g. in gameInit');
         false&&ASSERT(!postProcess, 'Post process already initialized');
         false&&ASSERT(!(includeMainCanvas && feedbackTexture), 'Post process cannot both include main canvas and use feedback texture');
         postProcess = this;
@@ -11170,7 +11322,7 @@ let lightSystem;
 class LightSystemPlugin
 {
     /** Create the global light system plugin.
-     *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to mainCanvasSize, which is css pixels, so the lightmap is not scaled by canvasPixelRatio; pass mainCanvasSize.scale(getCanvasPixelRatio()) for a full resolution lightmap)
+     *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to following mainCanvasSize, which is css pixels, so the lightmap is not scaled by canvasPixelRatio; pass mainCanvasSize.scale(getCanvasPixelRatio()) for a full resolution lightmap)
      *  @param {Color}   [ambientColor] - Color applied to unlit areas of the scene (defaults to BLACK = pitch dark). Set a small RGB like rgb(0.1,0.1,0.15) for a faint "moonlight" baseline so unlit areas aren't fully black.
      *  @example
      *  // simplest usage
@@ -11178,6 +11330,7 @@ class LightSystemPlugin
      */
     constructor(textureSize, ambientColor)
     {
+        false&&ASSERT(engineInitialized || headlessMode, 'create the plugin after engineInit, e.g. in gameInit');
         false&&ASSERT(!lightSystem, 'LightSystemPlugin already initialized');
         false&&ASSERT(!postProcess, 'LightSystemPlugin must be created before PostProcessPlugin');
         lightSystem = this;
@@ -11186,8 +11339,10 @@ class LightSystemPlugin
         this.enabled = true;
         /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
         this.ambientColor = (ambientColor || BLACK).copy();
-        /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize in css pixels at init time, so it is not scaled by canvasPixelRatio) */
+        /** @property {Vector2} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
+        /** @property {boolean} - True when no size was passed, so the lightmap follows mainCanvasSize */
+        this.textureSizeAuto = !textureSize;
 
         /** @property {WebGLTexture|undefined} - The lightmap texture
          *  @type {WebGLTexture|undefined} */
@@ -11219,8 +11374,9 @@ class LightSystemPlugin
             }
 
             // resolve texture size default at init time (mainCanvasSize may
-            // not be set yet at the moment the constructor first ran)
-            if (!lightSystem.textureSize)
+            // not be set yet at the moment the constructor first ran), and
+            // again on a context restore, the canvas may have changed since
+            if (lightSystem.textureSizeAuto)
                 lightSystem.textureSize = mainCanvasSize.copy();
 
             // allocate the lightmap texture with null data at textureSize
@@ -11309,6 +11465,22 @@ class LightSystemPlugin
             // 1. flush any in-flight sprite batch from earlier render passes
             glFlush();
             const prevAdditive = glAdditive;
+
+            // an automatic size follows the canvas, so reallocate the lightmap when
+            // the canvas changed size, after the flush so the batch keeps its texture
+            const size = lightSystem.textureSize;
+            if (lightSystem.textureSizeAuto &&
+                (size.x !== mainCanvasSize.x || size.y !== mainCanvasSize.y))
+            {
+                lightSystem.textureSize = mainCanvasSize.copy();
+                glContext.bindTexture(glContext.TEXTURE_2D, lightSystem.texture);
+                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA,
+                    mainCanvasSize.x, mainCanvasSize.y, 0,
+                    glContext.RGBA, glContext.UNSIGNED_BYTE, null);
+                // put back the texture the engine tracks, a draw in renderLight must not sample the lightmap
+                if (glActiveTexture)
+                    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+            }
 
             // 2. bind lightmap as render target, clear to ambientColor
             const ac = lightSystem.ambientColor;
@@ -11518,6 +11690,7 @@ class ZzFXMusic extends Sound
         if (!soundEnable || headlessMode) return;
         this.randomness = 0;
         super.sampleChannels = zzfxM(...zzfxMusic); // the setter, without declaring a field that hides it in the typings
+        this.buildSampleBuffer(); // hand the samples to an audio buffer now, like a zzfx sound, so the arrays are released
         this.loadedPercent = 1; // generated in place, so it is loaded like a zzfx sound
         this.onloadCallback?.(this);
     }
@@ -11671,6 +11844,10 @@ class AudioEffect
     {
         false&&ASSERT(isNumber(mix), 'mix must be a number');
 
+        /** @property {number} - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+        this.mix = clamp(mix);
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
+
         /** @property {GainNode} - Connect sounds to this node */
         this.input = audioContext.createGain();
         /** @property {GainNode} - This node carries the mixed result, send it somewhere with connect(), never by assigning here
@@ -11680,8 +11857,6 @@ class AudioEffect
         this.dryGain = audioContext.createGain();
         /** @property {GainNode} - Level of the processed signal */
         this.wetGain = audioContext.createGain();
-        /** @property {number} - Wet/dry balance, 0 is fully dry and 1 is fully wet */
-        this.mix = mix;
 
         this.input.connect(this.dryGain).connect(this.output);
         this.wetGain.connect(this.output);
@@ -11698,6 +11873,7 @@ class AudioEffect
     {
         false&&ASSERT(isNumber(mix), 'mix must be a number');
         this.mix = mix = clamp(mix);
+        if (!audioContext) return;
         this.rampParam(this.dryGain.gain, 1-mix, fadeTime);
         this.rampParam(this.wetGain.gain, mix, fadeTime);
     }
@@ -11721,10 +11897,13 @@ class AudioEffect
     }
 
     /** Send this effect's output into another effect or audio node instead of the speakers
-     *  @param {AudioEffect|AudioNode} target - The next effect in the chain, or any audio node
-     *  @return {AudioEffect|AudioNode} - The target, so chains read left to right */
+     *  @template {AudioEffect|AudioNode} T
+     *  @param {T} target - The next effect in the chain, or any audio node
+     *  @return {T} - The target, so chains read left to right */
     connect(target)
     {
+        if (!audioContext) return target; // no audio outside a browser, where the engine runs headless
+
         // an effect stands in for its input node, the same rule as sound.output
         const node = /** @type {AudioNode} */ (target && 'input' in target ? target.input : target);
         false&&ASSERT(node && typeof node.connect === 'function', 'target must be an AudioEffect or AudioNode');
@@ -11734,7 +11913,7 @@ class AudioEffect
     }
 
     /** Stop sending this effect's output anywhere */
-    disconnect() { this.output.disconnect(); }
+    disconnect() { this.output?.disconnect(); }
 
     /** Wire nodes between the input and the wet gain, for subclasses
      *  @param {AudioNode} first - Node the input connects to
@@ -11769,6 +11948,7 @@ class AudioFilter extends AudioEffect
         super(mix);
         false&&ASSERT(isNumber(frequency) && frequency >= 0, 'frequency must be positive or zero');
         false&&ASSERT(isNumber(q), 'q must be a number');
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {BiquadFilterNode} - The filter node */
         this.node = audioContext.createBiquadFilter();
@@ -11784,6 +11964,7 @@ class AudioFilter extends AudioEffect
     setFrequency(frequency, fadeTime=0)
     {
         false&&ASSERT(isNumber(frequency) && frequency >= 0, 'frequency must be positive or zero');
+        if (!audioContext) return;
         this.rampParam(this.node.frequency, frequency, fadeTime);
     }
 
@@ -11793,6 +11974,7 @@ class AudioFilter extends AudioEffect
     setQ(q, fadeTime=0)
     {
         false&&ASSERT(isNumber(q), 'q must be a number');
+        if (!audioContext) return;
         this.rampParam(this.node.Q, q, fadeTime);
     }
 }
@@ -11816,6 +11998,7 @@ class AudioReverb extends AudioEffect
     constructor(duration=2, decay=2, mix=.5)
     {
         super(mix);
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {ConvolverNode} - The convolver node */
         this.node = audioContext.createConvolver();
@@ -11830,6 +12013,7 @@ class AudioReverb extends AudioEffect
     {
         false&&ASSERT(isNumber(duration) && duration > 0, 'duration must be positive');
         false&&ASSERT(isNumber(decay) && decay > 0, 'decay must be positive');
+        if (!audioContext) return;
         this.node.buffer = this.createImpulse(duration, decay);
     }
 
@@ -11870,6 +12054,7 @@ class AudioDelay extends AudioEffect
     constructor(time=.3, feedback=.4, mix=.5)
     {
         super(mix);
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {DelayNode} - The delay node */
         this.node = audioContext.createDelay(5);
@@ -11888,6 +12073,7 @@ class AudioDelay extends AudioEffect
     setTime(time, fadeTime=0)
     {
         false&&ASSERT(isNumber(time) && time >= 0 && time <= 5, 'time must be between 0 and 5');
+        if (!audioContext) return;
         this.rampParam(this.node.delayTime, time, fadeTime);
     }
 
@@ -11897,6 +12083,7 @@ class AudioDelay extends AudioEffect
     setFeedback(feedback, fadeTime=0)
     {
         false&&ASSERT(isNumber(feedback), 'feedback must be a number');
+        if (!audioContext) return;
         this.rampParam(this.feedbackGain.gain, clamp(feedback, 0, .95), fadeTime);
     }
 }
@@ -11919,11 +12106,13 @@ class AudioDistortion extends AudioEffect
     {
         super(mix);
 
+        /** @property {number} - How hard the signal is driven, 0 is clean and 1 is crushed */
+        this.amount = clamp(amount);
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
+
         /** @property {WaveShaperNode} - The wave shaper node */
         this.node = audioContext.createWaveShaper();
         this.node.oversample = '2x';
-        /** @property {number} - How hard the signal is driven, 0 is clean and 1 is crushed */
-        this.amount = amount;
         this.setAmount(amount);
         this.connectEffect(this.node);
     }
@@ -11934,6 +12123,7 @@ class AudioDistortion extends AudioEffect
     {
         false&&ASSERT(isNumber(amount), 'amount must be a number');
         this.amount = amount = clamp(amount);
+        if (!audioContext) return;
 
         // soft clip curve, drive grows with the square of amount so low values stay subtle
         // enough points that quiet signals are still shaped at high drive, where the curve is steep near 0
@@ -11970,6 +12160,7 @@ class AudioCompressor extends AudioEffect
         super(mix);
         false&&ASSERT(isNumber(threshold), 'threshold must be a number');
         false&&ASSERT(isNumber(ratio) && ratio >= 1, 'ratio must be 1 or more');
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {DynamicsCompressorNode} - The compressor node */
         this.node = audioContext.createDynamicsCompressor();
@@ -11984,6 +12175,7 @@ class AudioCompressor extends AudioEffect
     setThreshold(threshold, fadeTime=0)
     {
         false&&ASSERT(isNumber(threshold), 'threshold must be a number');
+        if (!audioContext) return;
         this.rampParam(this.node.threshold, threshold, fadeTime);
     }
 
@@ -11993,6 +12185,7 @@ class AudioCompressor extends AudioEffect
     setRatio(ratio, fadeTime=0)
     {
         false&&ASSERT(isNumber(ratio) && ratio >= 1, 'ratio must be 1 or more');
+        if (!audioContext) return;
         this.rampParam(this.node.ratio, ratio, fadeTime);
     }
 }
@@ -12040,7 +12233,7 @@ function uiSetDebug(debugMode)
 class UISystemPlugin
 {
     /** Create the global UI system object
-     *  @param {CanvasRenderingContext2D} [context]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @example
      *  // create the ui plugin object
      *  new UISystemPlugin;
@@ -12048,6 +12241,7 @@ class UISystemPlugin
     constructor(context=mainContext)
     {
         false&&ASSERT(!uiSystem, 'UI system already initialized');
+        false&&ASSERT(context || headlessMode, 'create the UISystemPlugin after engineInit, in gameInit');
         uiSystem = this;
 
         // default settings
@@ -12125,7 +12319,8 @@ class UISystemPlugin
         /** @property {UIObject|undefined} - Current confirm menu being shown
          *  @type {UIObject|undefined} */
         this.confirmDialog = undefined;
-        /** @private */
+        /** @private
+         *  @type {UIObject|undefined} */
         this._keyInputObject = undefined;
         /** @private
          *  @type {Array<Array<any>>|undefined} */
@@ -12198,7 +12393,16 @@ class UISystemPlugin
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
             uiSystem.hoverObject = undefined;
-            
+
+            // a hidden object is not updated, so the one whose hover ends by hiding it, itself or through a parent,
+            // is left here; a disabled one still updates and handles its own leave
+            const lastHoverObject = uiSystem.lastHoverObject;
+            if (lastHoverObject && !lastHoverObject.destroyed && uiObjectIsHidden(lastHoverObject))
+            {
+                uiSystem.lastHoverObject = undefined;
+                lastHoverObject.onLeave();
+            }
+
             if (mouseWasPressed(0))
             {
                 // exit navigation mode on mouse press
@@ -12207,11 +12411,9 @@ class UISystemPlugin
             }
             if (uiSystem.keyInputObject)
             {
-                // handle text input
+                // handle text input, navigation keeps its place for when the edit ends
                 uiSystem.activeObject = uiSystem.keyInputObject;
                 uiSystem.hoverObject = uiSystem.keyInputObject;
-                uiSystem.navigationMode = false;
-                uiSystem.navigationObject = undefined;
             }
 
             // navigation with gamepad/keyboard
@@ -12458,7 +12660,7 @@ class UISystemPlugin
     *  @param {Color}   [color=uiSystem.defaultColor]
     *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-    *  @param {string}  [align]
+    *  @param {'left'|'center'|'right'} [align]
     *  @param {string}  [font=uiSystem.defaultFont]
     *  @param {string}  [fontStyle]
     *  @param {boolean} [applyMaxWidth=true]
@@ -12538,7 +12740,7 @@ class UISystemPlugin
     /** Object to send keyboard input to (typically a UITextInput), which keeps the keys from the game while set.
      *  The keyboard listeners are only attached while this is set,
      *  so games that never use text input pay no event-handling cost.
-     *  @type {UIObject} */
+     *  @type {UIObject|undefined} */
     get keyInputObject() { return this._keyInputObject; }
     set keyInputObject(obj)
     {
@@ -12583,21 +12785,20 @@ class UISystemPlugin
 
             if (o.isInteractive() && o.navigationIndex !== undefined)
                 objects.push(o);
-            for (let i=o.children.length; i--;)
-                getNavigableRecursive(o.children[i]);
+            for (const child of o.children)
+                getNavigableRecursive(child);
         }
 
         // get all the valid navigable objects recursively
         let objects = [];
-        for (let i = uiSystem.uiObjects.length; i--;)
+        for (const o of uiSystem.uiObjects)
         {
-            const o = uiSystem.uiObjects[i];
             if (uiSystem.confirmDialog && o !== uiSystem.confirmDialog)
                 continue;
             o.parent || getNavigableRecursive(o);
         }
 
-        // sort by navigationIndex (lower numbers first)
+        // sort by navigationIndex (lower numbers first), ties keep creation and child order
         objects.sort((a, b)=> a.navigationIndex - b.navigationIndex);
         return objects;
     }
@@ -12754,6 +12955,15 @@ function uiObjectIsDisabled(o)
     return false;
 }
 
+// whether a UI object is hidden, itself or through a parent
+function uiObjectIsHidden(o)
+{
+    for (; o; o = o.parent)
+        if (!o.visible)
+            return true;
+    return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * UI Object - Base level object for all UI elements
@@ -12766,6 +12976,7 @@ class UIObject
      */
     constructor(pos=vec2(), size=vec2())
     {
+        false&&ASSERT(uiSystem, 'create the UISystemPlugin before UI objects');
         false&&ASSERT(isVector2(pos), 'ui object pos must be a vec2');
         false&&ASSERT(isVector2(size), 'ui object size must be a vec2');
 
@@ -12820,7 +13031,8 @@ class UIObject
         this.textFitScale = uiSystem.defaultTextFitScale;
         /** @property {Vector2|undefined} - How much to offset the text shadow or undefined.
          *  UIText draws it in its shadowColor, which is clear by default, so set that too;
-         *  the blurred shadow then shows as well unless shadowBlur and shadowOffset are zero
+         *  the blurred shadow then shows as well unless shadowBlur and shadowOffset are zero.
+         *  The other widgets draw it in black
          *  @type {Vector2|undefined} */
         this.textShadow = undefined;
         /** @property {Color} - Color for text line drawing  */
@@ -12837,11 +13049,14 @@ class UIObject
         this.parent = undefined;
         /** @property {number} - Added size to make small buttons easier to touch on mobile devices */
         this.extraTouchSize = 0;
-        /** @property {Sound} - Sound when interactive element is pressed */
+        /** @property {Sound|undefined} - Sound when interactive element is pressed
+         *  @type {Sound|undefined} */
         this.soundPress = uiSystem.defaultSoundPress;
-        /** @property {Sound} - Sound when interactive element is released */
+        /** @property {Sound|undefined} - Sound when interactive element is released
+         *  @type {Sound|undefined} */
         this.soundRelease = uiSystem.defaultSoundRelease;
-        /** @property {Sound} - Sound when interactive element is clicked */
+        /** @property {Sound|undefined} - Sound when interactive element is clicked
+         *  @type {Sound|undefined} */
         this.soundClick = uiSystem.defaultSoundClick;
         /** @property {boolean} - Is this element interactive */
         this.interactive = false;
@@ -12849,7 +13064,7 @@ class UIObject
         this.dragActivate = false;
         /** @property {boolean} - True if this can be a hover object */
         this.canBeHover = true;
-        /** @property {Color} - Color for shadow, undefined if no shadow */
+        /** @property {Color} - Color for shadow */
         this.shadowColor = uiSystem.defaultShadowColor?.copy();
         /** @property {number} - Size of shadow blur */
         this.shadowBlur = uiSystem.defaultShadowBlur;
@@ -12864,7 +13079,8 @@ class UIObject
          *  Components in [-1, 1]: (0,0)=center, (-1,-1)=top-left, (1,1)=bottom-right.
          *  Also acts as self-pivot — e.g. (1,-1) puts your top-right corner at the anchor point. */
         this.anchor = vec2();
-        /** @property {string} - Horizontal text alignment: left, center, or right */
+        /** @property {'left'|'center'|'right'} - Horizontal text alignment: left, center, or right
+         *  @type {'left'|'center'|'right'} */
         this.align = 'center';
         /** @property {boolean} - Has this object been destroyed? */
         this.destroyed = false;
@@ -12962,7 +13178,8 @@ class UIObject
         const wasHover = uiSystem.lastHoverObject === this;
         const isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
-        const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
+        // a press and release in one frame is a press too, as it is for a button that is not drag activated
+        const mousePress = mouseWasPressed(0) || this.dragActivate && mouseDown;
         if (this.canBeHover)
         if (!uiSystem.navigationMode) // no mouse hover in navigation mode
         if (mousePress || isActive || (!mouseDown && !isTouchDevice))
@@ -13065,8 +13282,8 @@ class UIObject
     /** @return {boolean} - Is this object in keyboard input mode */
     isKeyInputObject() { return uiSystem.keyInputObject === this; }
 
-    /** @return {boolean} - Can it be interacted with */
-    isInteractive() { return this.interactive && this.visible && !this.disabled;}
+    /** @return {boolean} - Can it be interacted with, it and every parent visible and enabled */
+    isInteractive() { return this.interactive && uiObjectIsUsable(this); }
 
     /** Returns string containing info about this object for debugging
      *  @return {string} */
@@ -13131,6 +13348,10 @@ class UIObject
 
     /** Called when the state of this object changes */
     onChange() {}
+
+    /** Called with each key while this is the keyInputObject
+     *  @param {KeyboardEvent} e */
+    onKeyDown(e) {}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -13145,7 +13366,7 @@ class UIText extends UIObject
      *  @param {Vector2} [pos]
      *  @param {Vector2} [size]
      *  @param {string}  [text]
-     *  @param {string}  [align]
+     *  @param {'left'|'center'|'right'} [align]
      *  @param {string}  [font=uiSystem.defaultFont]
      */
     constructor(pos, size, text='', align='center', font=uiSystem.defaultFont)
@@ -13165,8 +13386,8 @@ class UIText extends UIObject
         this.canBeHover = false;
         
         // no background by default
-        this.color = CLEAR_BLACK;
-        this.shadowColor = CLEAR_BLACK;
+        this.color = CLEAR_BLACK.copy();
+        this.shadowColor = CLEAR_BLACK.copy();
         /** @type {Color|undefined} */
         this.gradientColor = undefined;
         this.lineWidth = 0;
@@ -13214,12 +13435,15 @@ class UITextInput extends UIObject
         this.canBeHover = true;
     }
 
-    click()
+    /** Start editing the text, called when it is clicked
+     *  @param {boolean} [playSound] */
+    click(playSound=true)
     {
         // start editing the text, the gamepad press that started it is used up so it does not stop it too
         uiSystem.keyInputObject = this;
         inputClearKey(0, gamepadPrimary+1, 0, 1, 0);
         this.onClick();
+        playSound && this.soundClick && this.soundClick.play();
     }
 
     /** Stop editing the text */
@@ -13239,12 +13463,13 @@ class UITextInput extends UIObject
      *  @param {KeyboardEvent} [e] */
     onKeyDown(e)
     {
+        // named keys by key, so numpad Enter works as Enter
         const code = e.code, key = e.key
-        if (e.repeat && (code === 'Enter' || code === 'Space'))
+        if (e.repeat && (key === 'Enter' || code === 'Space'))
             return; // a key held when editing began repeats, it should not type or stop editing
-        if (code === 'Backspace')
+        if (key === 'Backspace')
             this.text = this.text.slice(0, -1);
-        else if (code === 'Enter' || code === 'Escape')
+        else if (key === 'Enter' || key === 'Escape')
             this.stopEditing();
         else if (key.length === 1) // printable characters
         {
@@ -13267,8 +13492,10 @@ class UITextInput extends UIObject
         if (mouseWasPressed(0) && !this.isMouseOverlapping() ||
             gamepadWasPressed(0, gamepadPrimary))
         {
+            // the press that stopped it is used up, by the mouse or the gamepad
             this.stopEditing();
             inputClearKey(0,0);
+            inputClearKey(0, gamepadPrimary+1, 0, 1, 0);
         }
     }
 
@@ -13295,9 +13522,9 @@ class UITextInput extends UIObject
 class UITile extends UIObject
 {
     /** Create a UITile object
-     *  @param {Vector2}  [pos]
-     *  @param {Vector2}  [size]
-     *  @param {TileInfo} [tileInfo]
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  size
+     *  @param {TileInfo} tileInfo
      *  @param {Color}    [color=WHITE]
      *  @param {number}   [angle]
      *  @param {boolean}  [mirror]
@@ -13320,7 +13547,7 @@ class UITile extends UIObject
         this.color = color.copy();
 
         // no shadow by default
-        this.shadowColor = CLEAR_BLACK;
+        this.shadowColor = CLEAR_BLACK.copy();
     }
     render()
     {
@@ -13571,7 +13798,7 @@ class UIVideo extends UIObject
         false&&ASSERT(isStringLike(src), 'video src must be a string');
         false&&ASSERT(isNumber(volume), 'video volume must be a number');
 
-        this.color = BLACK; // default to black background
+        this.color = BLACK.copy(); // default to black background
         this.cornerRadius = 0; // default to no corner radius
 
         /** @property {number} - The video volume */
@@ -13583,8 +13810,10 @@ class UIVideo extends UIObject
         this.video.loop = loop;
         this.video.volume = clamp(volume * soundVolume);
         this.video.muted = !soundEnable;
-        this.soundEnabled = soundEnable; // the sound setting the mute last followed
+        /** @private */
+        this._soundEnabled = soundEnable; // the sound setting the mute last followed
         this.video.style.display = 'none';
+        this.video.playsInline = true; // an iPhone would play it fullscreen and block its muted autoplay
         this.video.src = src;
         document.body.appendChild(this.video);
         autoplay && this.play();
@@ -13651,7 +13880,11 @@ class UIVideo extends UIObject
     /** Seek to time in seconds
      *  @param {number} time - Time in seconds to seek to */
     setTime(time)
-    { this.video.currentTime = clamp(time, 0, this.getDuration()); }
+    {
+        // before the metadata loads there is no duration to clamp to, and the time set is where it starts
+        const duration = this.video.duration;
+        this.video.currentTime = duration ? clamp(time, 0, duration) : max(time, 0);
+    }
 
     update()
     {
@@ -13660,8 +13893,8 @@ class UIVideo extends UIObject
         // update volume based on global sound volume, and the mute when sound is turned on or off,
         // so a game's own mute stays until then
         this.video.volume = clamp(this.volume * soundVolume);
-        if (this.soundEnabled !== soundEnable)
-            this.video.muted = !(this.soundEnabled = soundEnable);
+        if (this._soundEnabled !== soundEnable)
+            this.video.muted = !(this._soundEnabled = soundEnable);
     }
     
     /** Render video to UI canvas */
@@ -13729,11 +13962,13 @@ class UILayout extends UIObject
 
         if (transparent)
         {
-            // pure positioning helper - skip background, outline, and shadow
-            this.color = CLEAR_BLACK;
+            // pure positioning helper - skip background, outline, and shadow,
+            // and leave clicks in its gaps and padding to the game
+            this.color = CLEAR_BLACK.copy();
             this.gradientColor = undefined;
             this.lineWidth = 0;
-            this.shadowColor = CLEAR_BLACK;
+            this.shadowColor = CLEAR_BLACK.copy();
+            this.canBeHover = false;
         }
         this.relayout();
     }
@@ -13765,10 +14000,12 @@ class UILayout extends UIObject
         if (!n)
         {
             this.size = vec2(this.padding * 2);
+            this.parent instanceof UILayout && this.parent.relayout(); // a layout it is in takes its new size
             return;
         }
 
-        const cols = min(this.columns, n); // no empty columns, they would push it off center
+        // whole columns, at least one, and no empty ones, they would push it off center
+        const cols = clamp(floor(this.columns), 1, n);
         const rows = ceil(n / cols);
         const colWidths = new Array(cols).fill(0);
         const rowHeights = new Array(rows).fill(0);
@@ -13817,6 +14054,7 @@ class UILayout extends UIObject
 
         // container size = content + padding on all sides
         this.size = vec2(contentWidth + this.padding * 2, contentHeight + this.padding * 2);
+        this.parent instanceof UILayout && this.parent.relayout(); // a layout it is in takes its new size
     }
 }
 /**
@@ -13863,6 +14101,14 @@ function box2dTemp(v, slot=0)
 const box2dQueryObjects = {};
 function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
 
+// what Box2D adds to the inertia for a center of mass away from the origin, in float32 as it does it, so taking it
+// off again gives exactly what Box2D keeps: an inertia of 0, a locked rotation, stays 0 and not a speck either side
+function box2dCenterInertia(mass, x, y)
+{
+    const f = Math.fround;
+    return f(f(mass)*f(f(f(x)*f(x)) + f(f(y)*f(y))));
+}
+
 // what cannot happen while the world steps, like losing a body from a contact callback: done now, or queued until
 // the step is done; a body going calls endContact for what it touched, and a destroy from there waits in the queue
 // too, since the contact it would free is still in use, so the queue runs one at a time in the order things came
@@ -13883,6 +14129,14 @@ function box2dRunPending()
 
 // each Box2dJoint by its native pointer, so a joint Box2D destroys along with a body can let go of its wrapper
 const box2dJoints = new Map;
+
+// a gear joint keeps pointers to the joints it gears and to their bodies, so it goes before either joint does
+function box2dDestroyGears(joint)
+{
+    for (const gear of box2dJoints.values())
+        if (gear instanceof Box2dGearJoint && (gear.joint1 === joint || gear.joint2 === joint))
+            gear.destroy();
+}
 
 /** Enable Box2D debug drawing
  *  @param {boolean} enable
@@ -13947,10 +14201,11 @@ class Box2dObject extends EngineObject
 
         // destroy physics body, fixtures, and joints; from a contact callback the world is still
         // stepping and cannot lose a body, so it goes as soon as the step is done; the object
-        // leaves box2d.objects at the next step, or the next frame while paused
+        // leaves box2d.objects at the next step, or the next frame while paused or time is stopped;
+        // the body lets go of it after, since destroying it calls endContact, which finds it there
         false&&ASSERT(this.body, 'Box2dObject has no body to destroy');
         const body = this.body;
-        box2dWhenUnlocked(()=> { box2d.world.DestroyBody(body); this.body = undefined; });
+        box2dWhenUnlocked(()=> { box2d.world.DestroyBody(body); body.object = undefined; this.body = undefined; });
         super.destroy();
     }
 
@@ -14064,7 +14319,8 @@ class Box2dObject extends EngineObject
         return fixture;
     }
 
-    /** Add a polygon shape to the body
+    /** Add a polygon shape to the body, the convex hull of its points; Box2D takes 3 to 8 points,
+     *  not all in a line, and no fixture is made from any other; points closer than .001 count as one
      *  @param {Array<Vector2>} points
      *  @param {number}  [density]
      *  @param {number}  [friction]
@@ -14076,7 +14332,18 @@ class Box2dObject extends EngineObject
 
         function box2dCreatePolygonShape(points)
         {
-            false&&ASSERT(3 <= points.length && points.length <= 8);
+            // Box2D stops for good on two hull points that nearly meet, like a loop whose last point is its first
+            points = points.filter((p, i)=> points.slice(0, i).every(q=> p.distanceSquared(q) > 1e-6));
+
+            // Box2D stops for good on a polygon it cannot take, so one with too many points or no area makes none;
+            // it takes the convex hull, which is at least as big as the biggest triangle of the points
+            let area = 0; // twice the biggest triangle's
+            if (3 <= points.length && points.length <= 8)
+                for (const a of points) for (const b of points) for (const c of points)
+                    area = max(area, abs(b.subtract(a).cross(c.subtract(a))));
+            false&&ASSERT(area >= 1e-6, 'Box2D polygons need 3 to 8 points, not all in a line');
+            if (!(area >= 1e-6)) return;
+
             const buffer = box2d.instance._malloc(points.length * 8);
             for (let i=0, offset=0; i<points.length; ++i)
             {
@@ -14093,6 +14360,7 @@ class Box2dObject extends EngineObject
         }
 
         const shape = box2dCreatePolygonShape(points);
+        if (!shape) return;
         const fixture = this.addShape(shape, density, friction, restitution, isSensor);
         box2d.instance.destroy(shape); // the fixture has its own copy
         return fixture;
@@ -14100,7 +14368,7 @@ class Box2dObject extends EngineObject
 
     /** Add a regular polygon shape to the body
      *  @param {number}  [diameter]
-     *  @param {number}  [sides]
+     *  @param {number}  [sides] - 3 to 8, the most Box2D polygons have
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
@@ -14109,6 +14377,8 @@ class Box2dObject extends EngineObject
     {
         false&&ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
         false&&ASSERT(isNumber(sides) && sides>2, 'sides must be a positive number greater than 2');
+        false&&ASSERT(sides <= 8, 'Box2D polygons have at most 8 sides');
+        sides = min(sides, 8); // more would stop Box2D for good
 
         const points = [];
         const radius = diameter/2;
@@ -14235,8 +14505,8 @@ class Box2dObject extends EngineObject
         return fixtures;
     }
 
-    /** Destroy a fixture from the body
-     *  @param {Object} [fixture] */
+    /** Destroy a fixture from the body, from a contact callback once the step is done
+     *  @param {Object} fixture */
     destroyFixture(fixture)
     {
         // an edge list or loop that loses a fixture is no longer one line, what is left of it draws edge by edge
@@ -14248,8 +14518,11 @@ class Box2dObject extends EngineObject
             edgeFixtures.forEach((p, pointer)=> p === points && edgeFixtures.delete(pointer));
         }
 
-        // not once the body is gone, which takes its fixtures with it
-        box2dWhenUnlocked(()=> this.body && this.body.DestroyFixture(fixture));
+        // not once the body is gone, which takes its fixtures with it, or once the fixture is,
+        // since a second destroy of it, like one from each of two contacts in a step, stops Box2D for good
+        const pointer = box2d.instance.getPointer(fixture);
+        box2dWhenUnlocked(()=> this.body && this.getFixtureList().some(f=> box2d.instance.getPointer(f) === pointer)
+            && this.body.DestroyFixture(fixture));
     }
 
     /** Destroy all fixture from the body */
@@ -14275,9 +14548,14 @@ class Box2dObject extends EngineObject
      *  @return {number} */
     getMass() { return this.body.GetMass(); }
 
-    /** Gets the rotational inertia
+    /** Gets the rotational inertia about the center of mass
      *  @return {number} */
-    getInertia() { return this.body.GetInertia(); }
+    getInertia()
+    {
+        // Box2D gives it about the body origin
+        const center = this.body.GetLocalCenter();
+        return max(0, Math.fround(this.body.GetInertia() - box2dCenterInertia(this.getMass(), center.get_x(), center.get_y())));
+    }
 
     /** Check if this object is awake
      *  @return {boolean} */
@@ -14371,18 +14649,19 @@ class Box2dObject extends EngineObject
      *  @param {number} mass */
     setMass(mass) { this.setMassData(undefined, mass) }
     
-    /** Set the moment of inertia of the body
+    /** Set the moment of inertia of the body, about its center of mass
      *  @param {number} momentOfInertia */
     setMomentOfInertia(momentOfInertia)
     { this.setMassData(undefined, undefined, momentOfInertia) }
-    
+
     /** Reset the mass, center of mass, and moment, from a contact callback once the step is done */
     resetMassData() { box2dWhenUnlocked(()=> this.body && this.body.ResetMassData()); }
-    
-    /** Set the mass data of the body, from a contact callback once the step is done
+
+    /** Set the mass data of the body, from a contact callback once the step is done;
+     *  a mass of 0 or less becomes 1, use setBodyType for a static body
      *  @param {Vector2} [localCenter]
      *  @param {number}  [mass]
-     *  @param {number}  [momentOfInertia] */
+     *  @param {number}  [momentOfInertia] - About the center of mass */
     setMassData(localCenter, mass, momentOfInertia)
     {
         localCenter = localCenter && localCenter.copy(); // as it is now, even if it waits for the step
@@ -14391,10 +14670,21 @@ class Box2dObject extends EngineObject
             if (!this.body) return;
             const data = box2dQueryObject('massData', 'b2MassData'); // reused, GetMassData fills it in
             this.body.GetMassData(data);
-            // use !== undefined so setMass(0) (static-equivalent) isn't silently ignored
-            if (localCenter !== undefined) data.set_center(box2dTemp(localCenter));
-            if (mass !== undefined) data.set_mass(mass);
-            if (momentOfInertia !== undefined) data.set_I(momentOfInertia);
+
+            // Box2D's inertia is about the body origin, so it is turned to the center of mass and back; kept as
+            // it was, one for the old mass and center goes below 0 about the new ones, which stops Box2D for good
+            const center = data.get_center(), oldMass = data.get_mass();
+            const cx = localCenter ? localCenter.x : center.get_x(), cy = localCenter ? localCenter.y : center.get_y();
+            // it is worked out in float32 as Box2D does it, which must come out above 0 or the rotation is locked
+            const f = Math.fround;
+            const oldInertia = f(data.get_I() - box2dCenterInertia(oldMass, center.get_x(), center.get_y()));
+            const inertia = momentOfInertia ?? oldInertia;
+            mass ??= oldMass;
+            const offset = box2dCenterInertia(mass > 0 ? mass : 1, cx, cy); // a mass of 0 or less is 1 to Box2D
+            const I = f(inertia + offset);
+            data.set_mass(mass);
+            data.set_center(box2dTemp(vec2(cx, cy)));
+            data.set_I(inertia > 0 && f(I - offset) > 0 ? I : 0);
             this.body.SetMassData(data);
         });
     }
@@ -14710,6 +15000,7 @@ class Box2dJoint
         const joint = this.box2dJoint;
         if (!joint) return; // destroyed already, or with one of its objects
         this.box2dJoint = 0;
+        box2dDestroyGears(this);
 
         // a body destroyed before it, in the same step, takes the joint with it and lets go of it here
         const pointer = box2d.instance.getPointer(joint);
@@ -14820,8 +15111,8 @@ class Box2dDistanceJoint extends Box2dJoint
     /** Create a distance joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchorA
-     *  @param {Vector2} anchorB
+     *  @param {Vector2} [anchorA] - World position, objectA's position if not given
+     *  @param {Vector2} [anchorB] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, collide=false)
     {
@@ -14904,8 +15195,8 @@ class Box2dRopeJoint extends Box2dJoint
     /** Create a rope joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchorA
-     *  @param {Vector2} anchorB
+     *  @param {Vector2} [anchorA] - World position, objectA's position if not given
+     *  @param {Vector2} [anchorB] - World position, objectB's position if not given
      *  @param {number} [extraLength]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, extraLength=0, collide=false)
@@ -14957,7 +15248,7 @@ class Box2dRevoluteJoint extends Box2dJoint
     /** Create a revolute joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
@@ -15052,6 +15343,7 @@ class Box2dRevoluteJoint extends Box2dJoint
  * - Either joint can be a revolute or prismatic joint
  * - You specify a gear ratio to bind the motions together
  * - joint1's angle or translation plus ratio times joint2's stays constant, angles clockwise like angle
+ * - It is destroyed along with either joint, or an object either joint is on
  * @extends Box2dJoint
  * @memberof Box2D
  */
@@ -15113,7 +15405,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     /** Create a prismatic joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {Vector2} [worldAxis]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
@@ -15222,7 +15514,7 @@ class Box2dWheelJoint extends Box2dJoint
     /** Create a wheel joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {Vector2} [worldAxis]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
@@ -15320,21 +15612,25 @@ class Box2dWeldJoint extends Box2dJoint
     /** Create a weld joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
+        const referenceAngle = objectB.body.GetAngle() - objectA.body.GetAngle();
         const jointDef = new box2d.instance.b2WeldJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
         jointDef.set_localAnchorA(box2dTemp(localAnchorA));
         jointDef.set_localAnchorB(box2dTemp(localAnchorB));
-        jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
+        jointDef.set_referenceAngle(referenceAngle);
         jointDef.set_collideConnected(collide);
         super(jointDef);
+
+        // kept here, since the binding cannot read it back from a weld joint; box2d uses reverse angle
+        this.referenceAngle = -referenceAngle;
     }
 
     /** Get the local anchor point relative to objectA's origin
@@ -15347,7 +15643,7 @@ class Box2dWeldJoint extends Box2dJoint
 
     /** Get the reference angle, objectB angle minus objectA angle in the reference state
      *  @return {number} */
-    getReferenceAngle() { return -this.box2dJoint.GetReferenceAngle(); } // box2d uses reverse angle
+    getReferenceAngle() { return this.referenceAngle; }
 
     /** Set the frequency in Hertz
      *  @param {number} hz */
@@ -15379,7 +15675,7 @@ class Box2dFrictionJoint extends Box2dJoint
     /** Create a friction joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
@@ -15436,8 +15732,8 @@ class Box2dPulleyJoint extends Box2dJoint
      *  @param {Box2dObject} objectB
      *  @param {Vector2} groundAnchorA
      *  @param {Vector2} groundAnchorB
-     *  @param {Vector2} anchorA
-     *  @param {Vector2} anchorB
+     *  @param {Vector2} [anchorA] - World position, objectA's position if not given
+     *  @param {Vector2} [anchorB] - World position, objectB's position if not given
      *  @param {number}  [ratio]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio=1, collide=false)
@@ -15468,11 +15764,11 @@ class Box2dPulleyJoint extends Box2dJoint
      *  @return {Vector2} */
     getGroundAnchorB() { return box2d.vec2From(this.box2dJoint.GetGroundAnchorB()); }
 
-    /** Get the current length of the segment attached to objectA
+    /** Get the rest length of the segment attached to objectA, set at creation
      *  @return {number} */
     getLengthA() { return this.box2dJoint.GetLengthA(); }
 
-    /** Get the current length of the segment attached to objectB
+    /** Get the rest length of the segment attached to objectB, set at creation
      *  @return {number} */
     getLengthB(){ return this.box2dJoint.GetLengthB(); }
 
@@ -15530,11 +15826,11 @@ class Box2dMotorJoint extends Box2dJoint
      *  @return {number} */
     getAngularOffset() { return -this.box2dJoint.GetAngularOffset(); }
 
-    /** Set the maximum friction force
+    /** Set the maximum force
      *  @param {number} force */
     setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
 
-    /** Get the maximum friction force
+    /** Get the maximum force
      *  @return {number} */
     getMaxForce() { return this.box2dJoint.GetMaxForce(); }
 
@@ -15592,13 +15888,17 @@ class Box2dPlugin
          *  @type {number} */
         this.bodyTypeDynamic = instance.b2_dynamicBody;
 
-        // a body that goes takes its joints with it, their wrappers let go of them
+        // a body that goes takes its joints with it, their wrappers let go of them, and a gear joint on one of them
+        // goes too, since it would keep pointers to what was freed; it hangs off other bodies, so it goes after
         const destructionListener = new box2d.instance.JSDestructionListener();
         destructionListener.SayGoodbyeJoint = function(jointPointer)
         {
             const joint = box2dJoints.get(jointPointer);
             if (joint)
+            {
+                box2dDestroyGears(joint);
                 joint.box2dJoint = 0;
+            }
             box2dJoints.delete(jointPointer);
         };
         destructionListener.SayGoodbyeFixture = function() {};
@@ -15655,8 +15955,9 @@ class Box2dPlugin
     // raycasting and querying
 
     /** raycast and return a list of all the results
-     *  @param {Vector2} start 
-     *  @param {Vector2} end */
+     *  @param {Vector2} start
+     *  @param {Vector2} end
+     *  @return {Array<Box2dRaycastResult>} */
     raycastAll(start, end)
     {
         // a ray with no length fails an assert that stops Box2D for good, measured as Box2D does in 32 bit floats,
@@ -15670,8 +15971,9 @@ class Box2dPlugin
         raycastCallback.ReportFixture = function(fixturePointer, point, normal, fraction)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
-            if (!fixture.GetBody().object)
-                return 1; // a raw body with no Box2dObject, continue getting results
+            const o = fixture.GetBody().object;
+            if (!o || o.destroyed)
+                return 1; // a raw body with no Box2dObject or one destroyed this step, continue getting results
             point  = box2d.vec2FromPointer(point);
             normal = box2d.vec2FromPointer(normal);
             raycastResults.push(new Box2dRaycastResult(fixture, point, normal, fraction));
@@ -15685,8 +15987,9 @@ class Box2dPlugin
     }
 
     /** raycast and return the first result
-     *  @param {Vector2} start 
-     *  @param {Vector2} end */
+     *  @param {Vector2} start
+     *  @param {Vector2} end
+     *  @return {Box2dRaycastResult|undefined} */
     raycast(start, end)
     {
         const raycastResults = box2d.raycastAll(start, end);
@@ -15696,8 +15999,9 @@ class Box2dPlugin
     }
 
     /** box aabb cast and return all the objects
-     *  @param {Vector2} pos 
-     *  @param {Vector2} size */
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
+     *  @return {Array<Box2dObject>} */
     boxCastAll(pos, size)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
@@ -15705,7 +16009,7 @@ class Box2dPlugin
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
             const o = fixture.GetBody().object;
-            if (o && !queryObjects.includes(o)) // skip raw bodies with no Box2dObject
+            if (o && !o.destroyed && !queryObjects.includes(o)) // skip raw bodies and ones destroyed this step
                 queryObjects.push(o); // add if not already in list
             return true; // continue getting results
         };
@@ -15721,16 +16025,20 @@ class Box2dPlugin
     }
 
     /** box aabb cast and return the first object
-     *  @param {Vector2} pos 
-     *  @param {Vector2} size */
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
+     *  @return {Box2dObject|undefined} */
     boxCast(pos, size)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
-            queryObject = fixture.GetBody().object;
-            return !queryObject; // stop getting results, unless a raw body with no Box2dObject
+            const o = fixture.GetBody().object;
+            if (!o || o.destroyed)
+                return true; // a raw body with no Box2dObject or one destroyed this step, continue getting results
+            queryObject = o;
+            return false; // stop getting results
         };
 
         const aabb = box2dQueryObject('aabb', 'b2AABB');
@@ -15743,9 +16051,10 @@ class Box2dPlugin
         return queryObject;
     }
 
-    /** circle cast and return all the objects
-     *  @param {Vector2} pos 
-     *  @param {number} diameter */
+    /** circle cast and return all the objects whose position is within the circle
+     *  @param {Vector2} pos
+     *  @param {number} diameter
+     *  @return {Array<Box2dObject>} */
     circleCastAll(pos, diameter)
     {
         const radius2 = (diameter/2)**2;
@@ -15753,9 +16062,10 @@ class Box2dPlugin
         return results.filter(o=>o.pos.distanceSquared(pos) < radius2);
     }
 
-    /** circle cast and return the first object
-     *  @param {Vector2} pos 
-     *  @param {number} diameter */
+    /** circle cast and return the object whose position is nearest, of those within the circle
+     *  @param {Vector2} pos
+     *  @param {number} diameter
+     *  @return {Box2dObject|undefined} */
     circleCast(pos, diameter)
     {
         const radius2 = (diameter/2)**2;
@@ -15775,8 +16085,9 @@ class Box2dPlugin
     }
 
     /** point cast and return the first object
-     *  @param {Vector2} pos 
-     *  @param {boolean} [dynamicOnly] */
+     *  @param {Vector2} pos
+     *  @param {boolean} [dynamicOnly]
+     *  @return {Box2dObject|undefined} */
     pointCast(pos, dynamicOnly=true)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
@@ -15787,8 +16098,11 @@ class Box2dPlugin
                 return true; // continue getting results
             if (!fixture.TestPoint(box2dTemp(pos)))
                 return true; // continue getting results
-            queryObject = fixture.GetBody().object;
-            return !queryObject; // stop getting results, unless a raw body with no Box2dObject
+            const o = fixture.GetBody().object;
+            if (!o || o.destroyed)
+                return true; // a raw body with no Box2dObject or one destroyed this step, continue getting results
+            queryObject = o;
+            return false; // stop getting results
         };
 
         const aabb = box2dQueryObject('aabb', 'b2AABB');
@@ -15944,9 +16258,10 @@ async function box2dInit()
     // add the box2d plugin to the engine
     function box2dUpdate()
     {
-        if (paused)
+        // frozen like the engine objects while paused or time is stopped
+        if (paused || !timeScale)
         {
-            // what was destroyed while paused leaves the list, the step does it otherwise
+            // what was destroyed while frozen leaves the list, the step does it otherwise
             box2d.objects = box2d.objects.filter(o=>!o.destroyed);
             return;
         }
@@ -16374,7 +16689,7 @@ class TextureSheet
     }
 
     /** Draw an image into this sheet at a tile returned by tryAdd
-     *  @param {HTMLImageElement} image - Source image to copy from
+     *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image - Source image to copy from
      *  @param {TileInfo} tileInfo - Where to put it, from tryAdd
      *  @param {boolean} [update] - Upload to webgl now, pass false when batching
      *  @param {number|Vector2} [sourcePadding] - How many pixels padding around each frame in the source image */
@@ -16505,7 +16820,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
  *  @param {string} imageSrc - Atlas image path
  *  @param {string|Object} jsonSrc - Atlas json path, or already parsed json data
  *  @param {number} [padding] - How many pixels padding around each frame
- *  @return {Object} Object mapping frame and animation names to TileInfos
+ *  @return {Object<string, TileInfo>} Object mapping frame and animation names to TileInfos
  *  @example
  *  const atlas = loadAtlas('sprites.png', 'sprites.json');
  *  await spritesReady();
@@ -16764,10 +17079,6 @@ function tweenDeactivate(tween)
     tweenActive.splice(tweenActive.indexOf(tween), 1);
 }
 
-// Time tracking for delta computation between engine plugin calls.
-let tweenLastTime = 0;
-let tweenLastTimeReal = 0;
-
 // True if the value is an instance of a class that exposes a numeric-percent
 // `lerp(other, percent)` method (Vector2, Color, or any future class).
 function tweenIsLerpable(v) { return v && typeof v.lerp === 'function'; }
@@ -16790,9 +17101,9 @@ class Tween
      *  any object exposing a `lerp(other, percent) => sameType` method. The
      *  callback receives the interpolated value (a number, or a fresh instance
      *  for lerp-able types). Both endpoints must be the same type.
-     *  @param {function((number|Vector2|Vector3|Color)):void} callback - Called with the interpolated value each frame
-     *  @param {number|Vector2|Vector3|Color} [start=0] - Starting value
-     *  @param {number|Vector2|Vector3|Color} [end=1] - Ending value
+     *  @param {function(any):void} callback - Called with the interpolated value each frame
+     *  @param {number|Vector2|Vector3|Color|object} [start=0] - Starting value
+     *  @param {number|Vector2|Vector3|Color|object} [end=1] - Ending value
      *  @param {number} [duration=1] - Duration in seconds
      *  @param {Object} [options]
      *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
@@ -16813,11 +17124,13 @@ class Tween
         }
         false&&ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
 
-        /** @property {function((number|Vector2|Vector3|Color)):void} - Called with the interpolated value each frame */
+        /** @property {function(any):void} - Called with the interpolated value each frame */
         this.callback = callback;
-        /** @property {number|Vector2|Vector3|Color} - Starting value */
+        /** @property {number|Vector2|Vector3|Color|object} - Starting value
+         *  @type {number|Vector2|Vector3|Color|object} */
         this.start = start;
-        /** @property {number|Vector2|Vector3|Color} - Ending value */
+        /** @property {number|Vector2|Vector3|Color|object} - Ending value
+         *  @type {number|Vector2|Vector3|Color|object} */
         this.end = end;
         /** @property {number} - Total duration in seconds */
         this.duration = duration;
@@ -16839,6 +17152,11 @@ class Tween
         /** Whether it is in the active list, see isActive
          *  @private */
         this.active = false;
+        /** Engine time and real time of its last engine update, it moves by what passed since
+         *  @private */
+        this.lastTime = time;
+        /** @private */
+        this.lastTimeReal = timeReal;
 
         tweenActivate(this);
         // Snap target to start immediately.
@@ -16922,6 +17240,8 @@ class Tween
     {
         this.life = this.duration;
         this.paused = false;
+        this.lastTime = time;
+        this.lastTimeReal = timeReal;
         tweenActivate(this);
         this.callback(this.interp(this.duration));
     }
@@ -17037,7 +17357,7 @@ const Ease =
      *  @memberof TweenSystem */
     BACK: (x) => x * x * (2.70158 * x - 1.70158),
 
-    /** Elastic ease-in: oscillates with decreasing amplitude.
+    /** Elastic ease-in: oscillations that grow toward the end.
      *  @param {number} x
      *  @returns {number}
      *  @memberof TweenSystem */
@@ -17046,7 +17366,8 @@ const Ease =
         x === 1 ? 1 :
         -(2 ** (10 * x - 10)) * sin(((37 - 40 * x) * PI) / 6),
 
-    /** Spring-like ease-out: oscillates outward after passing the target.
+    /** Spring ease-in: wobbles around the start before springing to the end;
+     *  `Ease.OUT(Ease.SPRING)` overshoots and settles on the target.
      *  @param {number} x
      *  @returns {number}
      *  @memberof TweenSystem */
@@ -17057,7 +17378,7 @@ const Ease =
             (1 - x)) *
             (1.0 + 1.2 * x),
 
-    /** Bouncing ease-in: slow ramp with bouncing impacts near the end.
+    /** Bouncing ease-in: small bounces near the start, then a rise to the end.
      *  Symmetric with the other base curves, which are all ease-in. To get the
      *  classic "object falls and hits the ground" shape (bounces near x=1),
      *  wrap with `Ease.OUT`: `Ease.OUT(Ease.BOUNCE)`.
@@ -17065,7 +17386,7 @@ const Ease =
      *  @returns {number}
      *  @memberof TweenSystem
      *  @example
-     *  Ease.BOUNCE                  // ease-in bounce (slow, then bouncy at end)
+     *  Ease.BOUNCE                  // ease-in bounce (bouncy at start)
      *  Ease.OUT(Ease.BOUNCE)        // ease-out bounce (object hits ground)
      *  Ease.IN_OUT(Ease.BOUNCE)     // bounces at both ends
      */
@@ -17173,10 +17494,13 @@ const Ease =
  *  any object with a `lerp(other, percent) => sameType` method.
  *  @param {Object} target - The object whose property is being animated
  *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'` or `'color'`
- *  @param {number|Vector2|Vector3|Color} start - Starting value
- *  @param {number|Vector2|Vector3|Color} end - Ending value
+ *  @param {number|Vector2|Vector3|Color|object} start - Starting value
+ *  @param {number|Vector2|Vector3|Color|object} end - Ending value
  *  @param {number} [duration=1] - Duration in seconds
  *  @param {Object} [options] - Same options as the Tween constructor
+ *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
+ *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused
+ *  @param {boolean} [options.paused=false] - Start in paused state
  *  @returns {Tween}
  *  @memberof TweenSystem
  *  @example
@@ -17215,14 +17539,23 @@ function tweenCarryOvershoot(tween)
     tween.life = duration ? min(tween.life, 0) % duration + duration : 1e-9;
 }
 
+// How many iterations the update that finished one ran through: that one and every whole one after it
+function tweenPassed(tween)
+{
+    const duration = tween.duration;
+    return duration ? 1 + floor(-min(tween.life, 0) / duration) : 1;
+}
+
 // Continuation that schedules the next loop iteration when one finishes.
 // Reuses the same Tween object across iterations so the user's handle
 // from `.loop()` keeps working — calling `.stop()` mid-loop now cancels
 // the entire chain instead of just the current iteration.
 function tweenLoopContinuation(tween)
 {
-    if (tween.loopRemaining !== Infinity && tween.loopRemaining <= 1) return;
-    if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
+    // count every iteration that went by, a finite loop ends once they run out
+    const passed = tweenPassed(tween);
+    if (tween.loopRemaining <= passed) return; // Infinity never runs out
+    tween.loopRemaining -= passed;
     tweenCarryOvershoot(tween);
     tween.thenCallback = () => tweenLoopContinuation(tween);
     tweenActivate(tween);
@@ -17233,11 +17566,25 @@ function tweenLoopContinuation(tween)
 // Continuation for pingPong: swaps start and end on the same tween each iteration.
 function tweenPingPongContinuation(tween)
 {
-    if (tween.loopRemaining !== Infinity && tween.loopRemaining <= 1) return;
-    if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
-    const tmp = tween.start;
-    tween.start = tween.end;
-    tween.end = tmp;
+    // swap the ends once for each iteration that went by, but when they run out the last one keeps its
+    // direction, so it ends on the end it really reached and a restart plays that way again
+    const passed = tweenPassed(tween);
+    const done = tween.loopRemaining <= passed; // Infinity never runs out
+    const swaps = done ? max(tween.loopRemaining - 1, 0) : passed;
+    if (swaps & 1)
+    {
+        const tmp = tween.start;
+        tween.start = tween.end;
+        tween.end = tmp;
+    }
+    if (done)
+    {
+        // the completion gave the other end, give the one it finished on
+        if (swaps & 1)
+            tween.callback(tween.interp(0));
+        return;
+    }
+    tween.loopRemaining -= passed;
     tweenCarryOvershoot(tween);
     tween.thenCallback = () => tweenPingPongContinuation(tween);
     tweenActivate(tween);
@@ -17250,20 +17597,15 @@ function tweenPingPongContinuation(tween)
  *  real time tweens move. May also be
  *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
  *  — useful for headless tests or custom replay/scrubbing systems.
- *  @param {number} [gameDelta] - Game-time delta in seconds; default: game time since the last engine update
- *  @param {number} [realDelta] - Real-time delta in seconds; default: real time since the last engine update
+ *  @param {number} [gameDelta] - Game-time delta in seconds; default: game time since the tween's last engine update
+ *  @param {number} [realDelta] - Real-time delta in seconds; default: real time since the tween's last engine update
  *  @memberof TweenSystem */
 function tweenUpdate(gameDelta, realDelta)
 {
-    if (gameDelta === undefined)
-    {
-        // Engine path: compute deltas from engine time globals.
-        gameDelta = time - tweenLastTime;
-        realDelta = timeReal - tweenLastTimeReal;
-        tweenLastTime = time;
-        tweenLastTimeReal = timeReal;
-    }
-    else if (realDelta === undefined)
+    // Engine path: each tween moves by the time since its own last update, so one made
+    // this update, before or after this call, first moves on the next, like a Timer
+    const enginePath = gameDelta === undefined;
+    if (!enginePath && realDelta === undefined)
     {
         // Manual path with one arg: real and game advance together.
         realDelta = gameDelta;
@@ -17279,12 +17621,21 @@ function tweenUpdate(gameDelta, realDelta)
     for (let i = list.length; i--;)
     {
         const t = list[i];
-        if (!t.active || t.paused) continue;
-        const dt = t.useRealTime ? realDelta : gameDelta;
-        if (dt <= 0) continue;
+        if (!t.active) continue;
+        let dt;
+        if (enginePath)
+        {
+            // a paused tween keeps count too, so it does not jump when resumed
+            dt = t.useRealTime ? timeReal - t.lastTimeReal : time - t.lastTime;
+            t.lastTime = time;
+            t.lastTimeReal = timeReal;
+        }
+        else
+            dt = t.useRealTime ? realDelta : gameDelta;
+        if (t.paused || dt <= 0) continue;
 
         t.life -= dt;
-        if (t.life > 0)
+        if (t.life > 1e-9) // the engine's deltas add up a rounding error short of the duration
         {
             t.callback(t.interp(t.life));
         }
@@ -17456,7 +17807,8 @@ class PathFinder
     }
 
     /** Default walkability: if a tile layer was provided, returns true when the
-     *  cell has no solid collision data; otherwise returns true. Override on
+     *  cell has no solid (positive) collision data, so negative data is open
+     *  like it is to the engine's collision; otherwise returns true. Override on
      *  the instance or via a subclass.
      *  @param {number} x - Tile x
      *  @param {number} y - Tile y
@@ -17464,7 +17816,7 @@ class PathFinder
     isWalkable(x, y)
     {
         if (!this.tileLayer) return true;
-        return !this.tileLayer.getCollisionData(this.collisionScratch.set(x, y));
+        return !(this.tileLayer.getCollisionData(this.collisionScratch.set(x, y)) > 0);
     }
 
     /** Default extra cost for stepping on a cell. Returns 0 (free) by default.
@@ -17512,8 +17864,7 @@ class PathFinder
 
     /** Reset all nodes and re-populate walkable / cost / posWorld from the
      *  current isWalkable / getCost overrides. Called at the start of
-     *  findPath; exposed so tests and tooling can drive it directly.
-     *  @private */
+     *  findPath; call it directly before searches made with rebuild=false. */
     buildNodeData()
     {
         const w = this.size.x;
@@ -19073,6 +19424,7 @@ function render3DCanDraw()
 }
 
 // the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
+// the three functions below write them out by hand for speed, so a new field goes in all four
 const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader'];
 
 // a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out so the
@@ -19364,6 +19716,7 @@ class Render3DPlugin
     {
         false&&ASSERT(!render3D, 'Render3D plugin already initialized');
         render3D = this;
+        false&&ASSERT(Object.keys(render3DCaptureBatchState()).join() === RENDER3D_STATE_FIELDS.join(), 'the batch state functions must list RENDER3D_STATE_FIELDS');
 
         /** @property {Camera3D} - The camera */
         this.camera = new Camera3D;
@@ -19390,8 +19743,8 @@ class Render3DPlugin
         this.fogEnd = 0;
         /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale; sync2D objects use the 2D gravity */
         this.gravity = vec3();
-        /** @property {number|HeightMap|Function} - Floor for objects with a softShadow: a height, a HeightMap, or (x, z) => y
-         *  @type {number|HeightMap|Function} */
+        /** @property {number|HeightMap|function(number, number): number} - Floor for objects with a softShadow: a height, a HeightMap, or (x, z) => y
+         *  @type {number|HeightMap|function(number, number): number} */
         this.softShadowHeight = 0;
         /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for flat faces */
         this.smoothShading = false;
@@ -19518,7 +19871,9 @@ class Render3DPlugin
         this.vao = undefined;
         /** @type {WebGLTexture|undefined} */
         this.whiteTexture = undefined; // 1x1 white for untextured draws
+        /** @type {Array<WebGLSampler>} */
         this.samplers = [];            // how textures are filtered in 3D, clamped and wrapping, see render3DInitGL
+        /** @type {string|undefined} */
         this.samplerKey = undefined;   // the settings the samplers were made for, they are rebuilt when it changes
         /** @type {WebGLTexture|undefined} */
         this.shadowTexture = undefined;
@@ -19527,6 +19882,7 @@ class Render3DPlugin
         this.shadowTextureSize = 0;
         this.contextGeneration = 0;  // counts context losses, a mesh uploaded under an older one uploads again
         this.uniforms = new Map;     // uniform locations by program
+        /** @type {Object<string, Array<number>>} */
         this.uniformValues = {};     // last values sent for the cached vec4 uniforms
         this.shadowMapDrawn = false; // the shadow map is drawn by the first pass of the frame
         this.passIsDefault = true;   // the running pass is the default layer, the only one shadowed
@@ -19536,19 +19892,23 @@ class Render3DPlugin
         // the stream of immediate mode draws
         /** @type {WebGLBuffer|undefined} */
         this.streamBuffer = undefined;
+        /** @type {Array<WebGLBuffer>} */
         this.instanceBuffers = [];       // the per instance values of the batches being drawn, used in turn
         this.instanceBufferIndex = 0;
+        /** @type {Array<Mesh>} */
         this.instanceMeshes = [];        // meshes with a batch pending this stage
+        /** @type {Array<Array<number>>} */
         this.attribValues = [];          // last values sent for the cached constant attributes
         this.streamData = new ArrayBuffer(RENDER3D_MAX_STREAM_VERTS * RENDER3D_VERTEX_BYTES);
         this.streamFloats = new Float32Array(this.streamData);
         this.streamInts = new Uint32Array(this.streamData);
         this.streamCount = 0;
+        /** @type {TextureInfo|undefined} */
         this.streamTileInfo = undefined;
         this.streamState = undefined; // captured state the pending batch was drawn under
         /** @type {Mesh|undefined} */
         this.capture = undefined;     // the mesh a bake is filling
-        /** @type {Array<{distance: number, state: Object, draw: Function}>|undefined} */
+        /** @type {Array<{distance: number, state: Object, draw: function(): void}>|undefined} */
         this.transparentQueue = undefined; // draws queued during the transparent stage, replayed far to near
 
         render3DInitGL();
@@ -19682,7 +20042,9 @@ class Render3DPlugin
             const distance = offset.length();
             if (distance > range)
                 return; // out of range
-            volume *= percent(distance, range, range * sound.taper);
+            const taperRange = range * sound.taper;
+            if (distance > taperRange)
+                volume *= percent(distance, range, taperRange);
         }
         const pan = offset.normalize().dot(this.cameraRight);
         const rate = pitch + pitch * sound.randomness * randomnessScale * rand(-1, 1);
@@ -19714,7 +20076,8 @@ class Render3DPlugin
      *  @param {Mesh} mesh
      *  @param {Matrix4|Vector3} [matrix] - Object transform, or just a position to draw it at
      *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
-     *  @param {Color} [color] - Tint */
+     *  @param {Color} [color] - Tint
+     *  @return {void} */
     drawMesh(mesh, matrix=RENDER3D_IDENTITY, tileInfo, color=WHITE)
     {
         matrix = render3DMatrix(matrix);
@@ -19723,7 +20086,11 @@ class Render3DPlugin
         if (this.capture)
             return void this.capture.combine(mesh, matrix, color);
         if (this.transparentQueue)
-            return this.queueTransparent(matrix.getTranslation(), ()=> this.drawMesh(mesh, matrix, tileInfo, color));
+        {
+            // the queue replays later, so it keeps copies of what a caller may reuse, like a scratch matrix
+            const m = matrix.copy(), c = color.copy();
+            return this.queueTransparent(m.getTranslation(), ()=> this.drawMesh(mesh, m, tileInfo, c));
+        }
         if (!render3DCanDraw()) return;
         if (this.shadowPass && !this.lighting) return; // unlit things cast no shadow
         if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== this.contextGeneration)
@@ -19759,11 +20126,13 @@ class Render3DPlugin
      *  - List the first three points counter clockwise as seen from the front, or the face points away
      *    and may vanish when back faces are culled
      *  - inside a bake the strip goes into the mesh instead, in the transparent stage it is queued for sorting
+     *    and the arrays are read when the queue replays, so leave them unchanged until the stage ends
      *  @param {Array<Vector3>} points - In strip order
      *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
      *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, 0-1 across the tile
      *  @param {Color|Array<Color>} [colors] - One for all or one per point, vertex colors come before the texture
-     *  @param {TileInfo|TextureInfo} [tileInfo] - Texture for this strip */
+     *  @param {TileInfo|TextureInfo} [tileInfo] - Texture for this strip
+     *  @return {void} */
     drawStrip(points, normals, uvs, colors, tileInfo)
     {
         if (this.capture)
@@ -19892,12 +20261,17 @@ class Render3DPlugin
     }
 
     /** Queue a draw for the transparent stage, replayed far to near with the current draw state, or draw it now when sorting is off
+     *  - The draw runs later, so it should hold copies of any values the caller may change before then
      *  @param {Vector3} pos - Where the draw is, for sorting
-     *  @param {Function} draw */
+     *  @param {function(): void} draw
+     *  @return {void} */
     queueTransparent(pos, draw)
     {
         if (!this.transparentQueue)
-            return draw();
+        {
+            draw();
+            return;
+        }
         this.transparentQueue.push({distance: pos.distanceSquared(this.camera.pos), state: render3DCaptureBatchState(), draw});
     }
 
@@ -20004,13 +20378,17 @@ class Render3DPlugin
      *  @param {TileInfo|TextureInfo} [tileInfo]
      *  @param {Color} [color]
      *  @param {number} [angle] - Rotation in the camera plane, counter clockwise
-     *  @param {boolean} [upright] - Stand on world up and only turn to face the camera, for sprites on the ground */
+     *  @param {boolean} [upright] - Stand on world up and only turn to face the camera, for sprites on the ground
+     *  @return {void} */
     drawBillboard(pos, size=vec2(1), tileInfo, color=WHITE, angle=0, upright=false)
     {
         if (this.capture) // the mesh keeps the color, so it gets its own, the particles reuse theirs
             return this.drawStripUnlit(render3DBillboardCorners(pos, size, angle, upright), this.cameraBack, RENDER3D_QUAD_UVS, color.copy(), tileInfo);
         if (this.transparentQueue) // sort by the exact position, a shadow under it sorts by the floor
-            return this.queueTransparent(pos, ()=> this.drawBillboard(pos, size, tileInfo, color, angle, upright));
+        {
+            const p = pos.copy(), s = size.copy(), c = color.copy(); // copies, the queue replays later
+            return this.queueTransparent(p, ()=> this.drawBillboard(p, s, tileInfo, c, angle, upright));
+        }
 
         // the particle path: the quad's six stream vertices written straight in with no vectors made, unlit
         const lit = this.lighting;
@@ -20044,6 +20422,8 @@ class Render3DPlugin
      *  @param {Color|Array<Color>} [color] - One for all or one per corner */
     drawQuad(a, b, c, d, tileInfo, color=WHITE)
     {
+        if (this.transparentQueue) // the queue replays later, so it keeps copies of what a caller may reuse
+            a = a.copy(), b = b.copy(), c = c.copy(), d = d.copy(), color = isArray(color) ? color.map(k=> k.copy()) : color.copy();
         this.drawStrip(render3DQuadStrip(a, b, c, d), render3DFaceNormal(a, b, c, d), RENDER3D_QUAD_UVS, render3DQuadValues(color), tileInfo);
     }
 
@@ -20054,6 +20434,8 @@ class Render3DPlugin
      *  @param {Color} [color] */
     drawTriangle(a, b, c, color=WHITE)
     {
+        if (this.transparentQueue) // the queue replays later, so it keeps copies of what a caller may reuse
+            a = a.copy(), b = b.copy(), c = c.copy(), color = color.copy();
         this.drawStrip([a, b, c], render3DFaceNormal(a, b, c), undefined, color);
     }
 
@@ -20088,7 +20470,9 @@ class Render3DPlugin
         {
             const p = points[i];
             const w = isArray(width) ? width[i] : width;
-            const c = isArray(color) ? color[i] : color;
+            let c = isArray(color) ? color[i] : color;
+            if (this.transparentQueue) // the queue replays later, so it keeps a copy of a color a caller may reuse
+                c = c.copy();
             const s = side && (isArray(side) ? side[i] : side);
             // across the path in the camera plane unless a side is given
             const next = points[i < count - 1 ? i + 1 : loop ? 1 : i];
@@ -20109,12 +20493,16 @@ class Render3DPlugin
      *  @param {number} [size] - Diameter
      *  @param {Color} [color]
      *  @param {Vector3} [normal] - Facing direction, faces the camera by default
-     *  @param {number} [sides] */
+     *  @param {number} [sides]
+     *  @return {void} */
     drawSoftDisc(pos, size=1, color=WHITE, normal=this.cameraBack, sides=16)
     {
         render3DAssertBlending();
         if (this.transparentQueue && !this.capture)
-            return this.queueTransparent(pos, ()=> this.drawSoftDisc(pos, size, color, normal, sides));
+        {
+            const p = pos.copy(), c = color.copy(), n = normal.copy(); // copies, the queue replays later
+            return this.queueTransparent(p, ()=> this.drawSoftDisc(p, size, c, n, sides));
+        }
         // basis in the disc's plane
         const n = normal.normalize();
         const helper = abs(n.y) < .9 ? vec3(0, 1, 0) : vec3(1, 0, 0);
@@ -20127,9 +20515,10 @@ class Render3DPlugin
      *  - Draw it from onRenderTransparent or from a transparent object
      *  @param {Vector3} pos - Position of the thing casting the shadow
      *  @param {number} [size] - Diameter
-     *  @param {number|HeightMap|Function} [floorHeight] - Height of the ground, a HeightMap, or (x, z) => y to follow terrain
+     *  @param {number|HeightMap|function(number, number): number} [floorHeight] - Height of the ground, a HeightMap, or (x, z) => y to follow terrain
      *  @param {Color} [color]
-     *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground */
+     *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground
+     *  @return {void} */
     drawSoftShadow(pos, size=1, floorHeight=0, color=RENDER3D_SHADOW_COLOR, lift=.02)
     {
         render3DAssertBlending();
@@ -20137,7 +20526,10 @@ class Render3DPlugin
         const height = isNumber(floorHeight) ? ()=> floorHeight
             : floorHeight.getHeight ? (x, z)=> floorHeight.getHeight(x, z) : floorHeight;
         if (this.transparentQueue && !this.capture) // sort from the floor, under whatever casts it
-            return this.queueTransparent(vec3(pos.x, height(pos.x, pos.z) + lift, pos.z), ()=> this.drawSoftShadow(pos, size, floorHeight, color, lift));
+        {
+            const p = pos.copy(), c = color.copy(); // copies, the queue replays later
+            return this.queueTransparent(vec3(p.x, height(p.x, p.z) + lift, p.z), ()=> this.drawSoftShadow(p, size, floorHeight, c, lift));
+        }
         render3DDrawSoftDisc(size / 2, color, 16, RENDER3D_DEFAULT_NORMAL, (c, s, r)=>
         {
             const x = pos.x + c * r, z = pos.z + s * r;
@@ -20180,11 +20572,14 @@ let render3DDebugPrimitives = [];
 function render3DRenderDebug()
 {
     if (!render3DDebugPrimitives.length) return;
-    render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
+    if (!debugVideoCaptureIsActive()) // hidden from a video capture like the 2D ones, but they still expire
     {
-        for (const p of render3DDebugPrimitives)
-            p.draw();
-    });
+        render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
+        {
+            for (const p of render3DDebugPrimitives)
+                p.draw();
+        });
+    }
     render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.timer < 0); // a Timer compares as negative until it elapses
 }
 
@@ -20192,7 +20587,7 @@ function render3DRenderDebug()
 function render3DDebugPush(duration, draw)
 {
     false&&ASSERT(isNumber(duration), 'duration must be a number');
-    debug && render3D?.program && render3DDebugPrimitives.push({timer: new Timer(duration), draw});
+    debug && glEnable && render3D?.program && render3DDebugPrimitives.push({timer: new Timer(duration), draw});
 }
 
 /** Draw a debug wireframe box
@@ -20223,6 +20618,7 @@ function debugBox3D(pos, size=1, color=WHITE, time=0, rotation)
  *  @memberof Render3D */
 function debugSphere3D(pos, size=1, color=WHITE, time=0)
 {
+    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
     const circle = render3DCircle(24), r = size / 2;
     render3DDebugPush(time, ()=>
     {
@@ -20245,6 +20641,7 @@ function debugSphere3D(pos, size=1, color=WHITE, time=0)
  *  @memberof Render3D */
 function debugLine3D(posA, posB, color=WHITE, width=RENDER3D_DEBUG_WIDTH, time=0)
 {
+    posA = posA.copy(), posB = posB.copy(); // where they are now, a timed one stays put when the ends move
     render3DDebugPush(time, ()=> render3D.drawLine(posA, posB, width, color));
 }
 
@@ -20256,6 +20653,7 @@ function debugLine3D(posA, posB, color=WHITE, width=RENDER3D_DEBUG_WIDTH, time=0
  *  @memberof Render3D */
 function debugPoint3D(pos, color=WHITE, time=0, size=.2)
 {
+    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
     render3DDebugPush(time, ()=>
     {
         for (const axis of [vec3(size / 2, 0, 0), vec3(0, size / 2, 0), vec3(0, 0, size / 2)])
@@ -20705,7 +21103,7 @@ function render3DBindMesh(mesh)
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 function render3DGetTileUVs(tileInfo)
 {
-    if (!(tileInfo instanceof TileInfo))
+    if (!(tileInfo instanceof TileInfo) || !tileInfo.textureInfo) // a headless tile has no texture
         return RENDER3D_FULL_UV_RECT;
     const inv = tileInfo.textureInfo.sizeInverse, rect = render3DTileUVRect;
     const bleedX = inv.x * tileInfo.bleed, bleedY = inv.y * tileInfo.bleed;
@@ -20800,7 +21198,7 @@ function render3DRender()
 function render3DRenderPass(after2D)
 {
     const gl = glContext, r = render3D;
-    if (!r.program) return; // headless, gl disabled, or context lost
+    if (!r.program || !glEnable) return; // headless, gl disabled, or context lost
     render3DUpdateSamplers();
     false&&ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
     false&&ASSERT(!glRenderTarget, 'the 3D pass needs the canvas depth buffer, it can not draw into a render target');
@@ -20816,16 +21214,8 @@ function render3DRenderPass(after2D)
     r.capture = r.transparentQueue = undefined;
     render3DClearInstances();
 
-    // take over the gl state
-    gl.bindVertexArray(r.vao);
-    // the leading repeat on every strip shifts the triangles by one, which flips
-    // which way they read, so tell WebGL that clockwise is the front here
-    gl.frontFace(gl.CW);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.depthMask(true);
-    gl.clear(gl.DEPTH_BUFFER_BIT);
-
     // the Light3D objects, a directional one sends the direction toward it, from the origin, and a negative radius
+    // gathered before the gl state is taken over, so an assert here leaves nothing to hand back
     const lights = render3DCollectLights();
     r.lightCount = lights.length;
     const positions = r.lightPositions, colors = r.lightColors;
@@ -20838,6 +21228,15 @@ function render3DRenderPass(after2D)
         positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
         colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a * light.intensity;
     });
+
+    // take over the gl state
+    gl.bindVertexArray(r.vao);
+    // the leading repeat on every strip shifts the triangles by one, which flips
+    // which way they read, so tell WebGL that clockwise is the front here
+    gl.frontFace(gl.CW);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.depthMask(true);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
 
     r.isRendering = true;
     try
@@ -21184,6 +21583,7 @@ class Mesh
          *  an edit after that may tell the entries apart; adding geometry or recomputing normals drops them too
          *  @type {Int32Array|undefined} */
         this.vertexKeys = undefined;
+        /** @type {{vertices: Array<number>, pointCount: number, data: ArrayBuffer}|undefined} */
         this.vertexLayout = undefined; // the strip index of each GPU vertex, the point count and packed data of the last upload, for a dynamicDraw mesh
         this.instanceCount = 0; // draws waiting in this mesh's batch, with their values, texture and draw state
         /** @type {Float32Array|undefined} */
@@ -21811,10 +22211,10 @@ function buildBox(size=1)
  * - flat lights and colors each cell on its own, so a checkerboard stays crisp
  * - doubleSided, a sheet seen from both sides; turn it off for ground only ever seen from above
  * - One cell is a plain square, render3D.planeMesh and planeMeshDoubleSided are shared ones
- * @param {Vector2} [size] - World size along X and Z
+ * @param {Vector2|number} [size] - World size along X and Z, a number for a square
  * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
- * @param {Color|Function} [color] - One Color for the whole grid, or (x, z) => Color
- * @param {Function} [heightFunction] - (x, z) => y, default flat
+ * @param {Color|function(number, number): Color} [color] - One Color for the whole grid, or (x, z) => Color
+ * @param {function(number, number): number} [heightFunction] - (x, z) => y, default flat
  * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @return {Mesh}
  * @memberof Render3D
@@ -21823,6 +22223,8 @@ function buildBox(size=1)
  */
 function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth=render3D?.smoothShading)
 {
+    if (isNumber(size))
+        size = vec2(size);
     if (isNumber(segments))
         segments = vec2(segments);
     false&&ASSERT(segments.x > 0 && segments.y > 0 && segments.x % 1 === 0 && segments.y % 1 === 0, 'grid segments must be whole numbers above zero');
@@ -22033,6 +22435,7 @@ class EngineObject3D extends EngineObject
         this.worldMatrix = new Matrix4;  // the world transform, kept up to date by render3DObjectMatrix; getMatrix returns a copy
         this.matrixBuilt = new Float64Array(9).fill(NaN); // the position, rotation and scale it was built from
         this.matrixVersion = 0;          // counts the rebuilds, so a child knows when its parent's changed
+        /** @type {EngineObject3D|undefined} */
         this.matrixParent = undefined;   // the parent it was built under, and that parent's version then
         this.matrixParentVersion = 0;
         this.movePass = engineObjectsUpdateCount; // the engine pass a child last moved in, so a refresh is not a step
@@ -22056,8 +22459,9 @@ class EngineObject3D extends EngineObject
     }
 
     /** Move a child by its own velocities, bring a sync2D object's pos3D up to its 2D pos, then update the children,
-     *  called automatically each frame */
-    updateTransforms()
+     *  called automatically each frame
+     *  @param {boolean} [updateChildren] - Also update the children's transforms */
+    updateTransforms(updateChildren=true)
     {
         if (!paused)
         {
@@ -22071,7 +22475,7 @@ class EngineObject3D extends EngineObject
             if (this.sync2D)
                 this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
         }
-        super.updateTransforms();
+        super.updateTransforms(updateChildren);
     }
 
     /** Set how this object collides, the same flags as in 2D
@@ -22185,7 +22589,8 @@ class EngineObject3D extends EngineObject
     /** 2D rendering is skipped, the mesh is drawn by render3D during the 3D pass */
     render() {}
 
-    /** Draw the object in 3D, called by the 3D pass with the draw state set from this object's flags, draws the mesh by default */
+    /** Draw the object in 3D, called by the 3D pass with the draw state set from this object's flags, draws the mesh by default
+     *  @return {void} */
     render3D()
     {
         // an opaque draw comes out solid however low its alpha is, so a fade with no flag looks like nothing happened
@@ -22331,10 +22736,10 @@ function render3DCollideSolid(a)
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
         if (weightA)
             shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
-        const normal = push.normalize();
-        if (a.velocity3D.dot(normal) < 0)
+        const normal = push.normalize(); // mass 0 keeps its velocity too, so a moving platform keeps moving
+        if (weightA && a.velocity3D.dot(normal) < 0)
             a.velocity3D = a.velocity3D.reflect(normal, a.restitution);
-        if (b.velocity3D.dot(normal) > 0)
+        if (weightB && b.velocity3D.dot(normal) > 0)
             b.velocity3D = b.velocity3D.reflect(normal, b.restitution);
     }
 }
@@ -22400,14 +22805,18 @@ function engineObjectsRaycast3D(ray, objects=engineObjects)
 
 /**
  * Call a function for each EngineObject3D whose box overlaps a box
+ * - An object destroyed by an earlier callback is skipped
  * @param {Vector3} pos - Center of the box
  * @param {Vector3|number} size - Full size of the box, a number for a cube
- * @param {Function} callback
+ * @param {function(EngineObject3D): void} callback
  * @param {Array<EngineObject>} [objects] - Defaults to every object
  * @memberof Render3D
  */
 function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
-{ engineObjectsCollect3D(pos, size, objects).forEach(callback); }
+{
+    for (const o of engineObjectsCollect3D(pos, size, objects))
+        o.destroyed || callback(o);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
@@ -22521,7 +22930,8 @@ class InstancedMesh3D extends EngineObject3D
         this.radius = this.reach + meshRadius * this.maxScale;
     }
 
-    /** Draws every instance as one call, uploading the ones that changed first */
+    /** Draws every instance as one call, uploading the ones that changed first
+     *  @return {void} */
     render3D()
     {
         const r = render3D, gl = glContext, mesh = this.mesh;
@@ -22970,6 +23380,8 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
     const tileInfo = font.tileInfo, padding = tileInfo.padding;
     const paddedX = tileInfo.size.x + padding * 2, paddedY = tileInfo.size.y + padding * 2;
     const columns = tileInfo.textureInfo.size.x / paddedX | 0;
+    // where the font starts in its texture, like ImageFont, the glyph indices count from there
+    const firstIndex = ((tileInfo.pos.y - padding) / paddedY | 0) * columns + ((tileInfo.pos.x - padding) / paddedX | 0);
     let glyphs = render3DGlyphCache.get(font); // unit sized, scaled when combined
     glyphs || render3DGlyphCache.set(font, glyphs = new Map);
     const charSize = vec2(size * tileInfo.size.x / tileInfo.size.y, size);
@@ -22985,7 +23397,8 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
             let glyph = glyphs.get(index);
             if (!glyph)
             {
-                const pos = vec2(index % columns * paddedX + padding, (index / columns | 0) * paddedY + padding);
+                const g = firstIndex + index;
+                const pos = vec2(g % columns * paddedX + padding, (g / columns | 0) * paddedY + padding);
                 glyphs.set(index, glyph = buildExtrude(new TileInfo(pos, tileInfo.size, tileInfo.textureInfo)));
             }
             const x = (i - (line.length - 1) / 2) * charSize.x;
@@ -23224,7 +23637,7 @@ class CameraControl3D extends EngineObject3D
     /** Create a camera control, it drives render3D.camera every frame
      *  @param {Vector3} [target] - The point to look at, its pos3D
      *  @param {number} [distance] - How far the camera sits from the target
-     *  @param {number} [pitch] - Angle above the horizon, PI/2 looks straight down
+     *  @param {number} [pitch] - Angle above the horizon, PI/2 looks straight down, clamped to pitchRange
      *  @param {number} [idleSpin] - Turned each frame while not dragging, 0 holds still */
     constructor(target=vec3(), distance=10, pitch=.4, idleSpin=0)
     {
@@ -23246,8 +23659,8 @@ class CameraControl3D extends EngineObject3D
         this.zoomSpeed = .1;
         /** @property {Vector2} - Closest and furthest the wheel can zoom to */
         this.zoomRange = vec2(distance/4, distance*3);
-        /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top */
-        this.pitchRange = vec2(-.2, 1.4);
+        /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top, widened to hold the pitch given */
+        this.pitchRange = vec2(min(-.2, pitch), max(1.4, pitch));
     }
 
     /** Read the mouse and put the camera on its orbit, called automatically each frame */
@@ -23473,6 +23886,9 @@ class ParticleEmitter3D extends EngineObject3D
         this.trailData = undefined;
         /** @property {number} - Trail points kept per particle, from trailTime */
         this.trailMax = 0;
+        /** @property {Vector3|undefined} - Where the emitter was at its last update, for when its parent is destroyed
+         *  @type {Vector3|undefined} */
+        this.worldPos3D = undefined;
         this.emitTimeBuffer = 0;
     }
 
@@ -23604,7 +24020,8 @@ class ParticleEmitter3D extends EngineObject3D
 
     /** Draw the particles, as flat squares or as streaks when trailTime is set
      *  - The whole emitter sorts as one thing, its particles are not sorted against each other
-     *  - With render3D.instancing on the squares go out as one instanced draw of render3D.billboardMesh */
+     *  - With render3D.instancing on the squares go out as one instanced draw of render3D.billboardMesh
+     *  @return {void} */
     render3D()
     {
         const r = render3D;
@@ -23737,8 +24154,8 @@ class Trail3D extends EngineObject3D
         /** @property {Vector3|undefined} - Direction across the ribbon, recorded with each sample, undefined faces the camera
          *  @type {Vector3|undefined} */
         this.side = undefined;
-        /** @property {Array<Object>} - Recorded samples, oldest first
-         *  @type {Array<Object>} */
+        /** @property {Array<{pos: Vector3, side: Vector3|undefined, time: number}>} - Recorded samples, oldest first
+         *  @type {Array<{pos: Vector3, side: Vector3|undefined, time: number}>} */
         this.samples = [];
     }
 
@@ -23770,7 +24187,8 @@ class Trail3D extends EngineObject3D
         this.finishing && !samples.length && this.destroy();
     }
 
-    /** Draw the ribbon */
+    /** Draw the ribbon
+     *  @return {void} */
     render3D()
     {
         const samples = this.samples;
@@ -24624,6 +25042,14 @@ class ThreeJSPlugin
         this.camera = new THREE.PerspectiveCamera(cameraFOV, 1, .1, 1e3);
         /** @property {boolean} - Lock the camera to the LittleJS 2D camera so the z=0 plane matches world space */
         this.cameraAlign2D = true;
+        /** @property {number|undefined} - Near plane of the aligned camera before any zoom out, from camera.near on the
+         *  first aligned frame; while aligned, change this rather than camera.near
+         *  @type {number|undefined} */
+        this.cameraNear = undefined;
+        /** @property {number|undefined} - Far plane of the aligned camera before any zoom out, from camera.far on the
+         *  first aligned frame; while aligned, change this rather than camera.far
+         *  @type {number|undefined} */
+        this.cameraFar = undefined;
 
         // insert the canvas below the engine canvases and match the layout
         const threeCanvas = this.renderer.domElement;
@@ -24644,13 +25070,15 @@ class ThreeJSPlugin
     {
         const halfHeight = mainCanvasSize.y / 2 / cameraScale; // half visible height in world units
         const distance = halfHeight / tan(this.camera.fov/2 * PI/180);
-        if (distance * 2 > this.camera.far)
+
+        // zoomed out far enough that the z=0 plane would be past the far plane, push both planes out together
+        // so the depth precision stays what it was, and bring them back from where they began when zoomed in again
+        const baseNear = this.cameraNear ??= this.camera.near, baseFar = this.cameraFar ??= this.camera.far;
+        const scale = max(1, distance * 2 / baseFar), near = baseNear * scale, far = baseFar * scale;
+        if (near != this.camera.near || far != this.camera.far)
         {
-            // zoomed out far enough that the z=0 plane would be past the far plane, push both planes out together
-            // so the depth precision stays what it was
-            const scale = distance * 2 / this.camera.far;
-            this.camera.near *= scale;
-            this.camera.far *= scale;
+            this.camera.near = near;
+            this.camera.far = far;
             this.camera.updateProjectionMatrix();
         }
         this.camera.position.set(cameraPos.x, cameraPos.y, distance);
@@ -24716,10 +25144,11 @@ class ThreeJSObject extends EngineObject
         }
     }
 
-    /** Update the transform and sync the mesh to it, after the parent has placed a child, and while paused too */
-    updateTransforms()
+    /** Update the transform and sync the mesh to it, after the parent has placed a child, and while paused too
+     *  @param {boolean} [updateChildren] - Also update the children's transforms */
+    updateTransforms(updateChildren=true)
     {
-        super.updateTransforms();
+        super.updateTransforms(updateChildren);
         this.syncMesh();
     }
 

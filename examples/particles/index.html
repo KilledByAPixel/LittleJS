@@ -450,15 +450,20 @@ function getCode()
         }
         else if (type == 'color')
         {
-            const c = particleSystem[name];
-            value = `new Color(${trimFloat(c.r)}, ${trimFloat(c.g)}, ${trimFloat(c.b)}, ${trimFloat(c.a)})`;
+            const [h, s, l, a] = particleSystem[name].HSLA();
+            value = `hsl(${trimFloat(h)}, ${trimFloat(s)}, ${trimFloat(l)}, ${trimFloat(a)})`;
         }
         else if (type == 'checkbox')
-            value = particleSystem[name] ? 1 : 0;
+            value = !!particleSystem[name];
         else if (name == 'emitSize')
             value = trimFloat(particleSystem.emitSize.x);
         else
             value = trimFloat(particleSystem[name]);
+
+        // collideTiles has no setting here, but it comes before additive
+        if (name == 'additive')
+            code += expand ? '  false,\t// collideTiles\n' : 'false, ';
+
         if (expand)
             code += '  ';
         code += value;

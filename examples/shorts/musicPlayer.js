@@ -1,4 +1,5 @@
 let musicVolume = .8, musicSound, musicInstance;
+let musicPlayer, playButton, stopButton, progressBar;
 
 function gameInit()
 {

@@ -40,10 +40,10 @@ let audioMasterEffectInput, audioMasterEffectOutput, audioMasterEffectOutputIsEf
 const audioDefaultSampleRate = 44100;
 
 /** Check if the audio context is running and available for playback
- *  @return {boolean} - True if the audio context is running
+ *  @return {boolean} - True if the audio context is running, false when there is none
  *  @memberof Audio */
 function audioIsRunning()
-{ return audioContext.state === 'running'; }
+{ return audioContext?.state === 'running'; }
 
 function audioInit()
 {
@@ -94,6 +94,7 @@ function setAudioMasterEffect(input, output)
     input = audioEffectNode(input, 'input');
     ASSERT(!input || typeof input.connect === 'function', 'input must be an AudioNode or an effect with input and output nodes');
     ASSERT(!output || typeof output.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
+    if (!audioMasterGain) return; // no audio outside a browser, where the engine runs headless
 
     // undo the current route, the master gain selectively so other taps on it survive,
     // but the output node from everything since it only ever fed the speakers;
@@ -704,8 +705,10 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
 
     if (!audioIsRunning())
     {
-        // fix stalled audio, don't build a buffer that can't be played
-        audioContext.resume();
+        // fix stalled audio, don't build a buffer that can't be played;
+        // but a context suspended because the page is hidden stays suspended until it shows
+        if (!audioSuspendedWhenHidden)
+            audioContext.resume();
         return;
     }
 
@@ -746,8 +749,10 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
 
     if (!audioIsRunning())
     {
-        // fix stalled audio, this sound won't be able to play
-        audioContext.resume();
+        // fix stalled audio, this sound won't be able to play;
+        // but a context suspended because the page is hidden stays suspended until it shows
+        if (!audioSuspendedWhenHidden)
+            audioContext.resume();
         return;
     }
 

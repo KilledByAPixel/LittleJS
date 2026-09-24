@@ -26,7 +26,9 @@ function gameRender()
     {
         const sheet = textureSheets[i];
         const pos = vec2(-9 + i*8, 2);
-        drawTile(pos, vec2(7), new TileInfo(vec2(), vec2(sheet.size), sheet.textureInfo));
+        const size = vec2(sheet.size);
+        const sheetTile = new TileInfo(vec2(), size, sheet.textureInfo);
+        drawTile(pos, vec2(7), sheetTile);
         drawText('sheet ' + i, pos.add(vec2(0, 4.5)), 1);
     }
 

@@ -2,9 +2,9 @@ function gameRender()
 {
     // additive blending
     setAdditiveBlendMode();
-    drawCircle(vec2(-8,-2), 7, rgb(0,0,.5));
-    drawCircle(vec2(-6, 2), 7, rgb(0,1,0));
-    drawCircle(vec2(-4,-2), 7, rgb(1,0,0));
+    drawCircle(vec2(-8,-2), 7, hsl(2/3,1,.25));
+    drawCircle(vec2(-6, 2), 7, hsl(1/3,1,.5));
+    drawCircle(vec2(-4,-2), 7, hsl(0,1,.5));
 
     // alpha blending
     setAdditiveBlendMode(false);

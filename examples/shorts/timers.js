@@ -1,4 +1,5 @@
 const timerSound = new Sound([2,0,999,,,,,1.5,,.3,-99,.1,1.63,,,.11]);
+let timerButton, timerSlider;
 
 function gameInit()
 {

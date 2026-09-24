@@ -825,7 +825,7 @@ class Vector2
     }
 
     /** Sets this this vector to point in the specified integer direction (0-3), corresponding to multiples of 90 degree rotation
-     * @param {number} [direction]
+     * @param {number} direction
      * @param {number} [length]
      * @return {Vector2} */
     setDirection(direction, length=1)
@@ -854,7 +854,7 @@ class Vector2
      * @return {Vector2} */
     floor() { return new Vector2(floor(this.x), floor(this.y)); }
 
-    /** Returns a copy of this vector snapped to a grid. Note that `grid` is
+    /** Returns a copy of this vector snapped down to a grid. Note that `grid` is
      *  the number of snap steps per unit (so `grid=2` snaps to halves and
      *  `grid=0.5` snaps to twos), not the cell size.
      *  @param {number} grid - snap steps per unit
@@ -1172,10 +1172,11 @@ class Color
      * @return {number} */
     rgbaInt()
     {
-        const r = clamp(this.r)*255|0;
-        const g = clamp(this.g)*255<<8;
-        const b = clamp(this.b)*255<<16;
-        const a = clamp(this.a)*255<<24;
+        // round like toString, so WebGL and Canvas2D colors match
+        const r = clamp(this.r)*255+.5|0;
+        const g = clamp(this.g)*255+.5<<8;
+        const b = clamp(this.b)*255+.5<<16;
+        const a = clamp(this.a)*255+.5<<24;
         return r + g + b + a;
     }
 

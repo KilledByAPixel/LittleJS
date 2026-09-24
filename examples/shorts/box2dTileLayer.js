@@ -1,3 +1,5 @@
+let box2DTileLayer;
+
 async function gameInit()
 {
     // setup box2d

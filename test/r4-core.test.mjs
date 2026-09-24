@@ -191,7 +191,7 @@ test('a SpriteAnimation played backward stays in range', () =>
     const first = new TileInfo(vec2(), vec2(16), undefined);
     for (const mode of ['loop', 'once', 'pingPong'])
     {
-        const animation = new SpriteAnimation(first, 4, .1, mode);
+        const animation = new SpriteAnimation(first, 4, .1).restart(mode);
         animation.speed = -1;
         animation.startTime -= 1.05; // 10.5 frames back, so frame -11
         const frame = animation.frame;

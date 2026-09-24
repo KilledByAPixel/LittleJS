@@ -23,6 +23,7 @@ class Player extends EngineObject
             const bullet = new EngineObject(pos, vec2(.2,.5), 0, this.angle);
             bullet.velocity = this.getUp(.5);
             bullet.velocity = bullet.velocity.add(this.velocity);
+            bullet.update = ()=> bullet.getAliveTime() > 2 && bullet.destroy();
             this.shootTimer.set(.1);
         }
 
@@ -43,7 +44,7 @@ function gameRender()
     const range = 32, halfRange = range/2;
 
     // precreate variables to avoid overhead
-    const pos = vec2(), size = vec2(), color = rgb();
+    const pos = vec2(), size = vec2(), color = hsl();
     const x = cameraPos.x, y = cameraPos.y;
     for (let i=1e3; i--;)
     {

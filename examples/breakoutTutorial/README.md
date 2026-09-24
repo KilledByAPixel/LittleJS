@@ -80,11 +80,11 @@ To enable it we will set canvasFixedSize in gameInit to use 720p resolution.
 LJS.setCanvasFixedSize(vec2(1280, 720)); // use a 720p fixed size canvas
 ```
 
-Before we tweak the level size, let's add this bit of code to gameRender to show the size of the level. This will cause some rects to be drawn each frame before the engine objects. To create color objects we pass in RGB values between 0 and 1.
+Before we tweak the level size, let's add this bit of code to gameRender to show the size of the level. This will cause some rects to be drawn each frame before the engine objects. To create color objects we pass hue, saturation and lightness values between 0 and 1 to hsl, a saturation of 0 gives a gray.
 
 ```javascript
-LJS.drawRect(LJS.cameraPos, vec2(100), rgb(.5,.5,.5)); // draw background
-LJS.drawRect(LJS.cameraPos, levelSize, rgb(.1,.1,.1)); // draw level boundary
+LJS.drawRect(LJS.cameraPos, vec2(100), hsl(0,0,.5)); // draw background
+LJS.drawRect(LJS.cameraPos, levelSize, hsl(0,0,.1)); // draw level boundary
 ```
 
 We also need to make levelSize a global by moving it to the top so it can be accessed from other functions.
@@ -239,7 +239,7 @@ new Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)) // top
 Now we have white walls around the outside that block the ball. These walls should be invisible so we will set their color to be transparent by adding another line to the Wall constructor.
 
 ```javascript
-this.color = rgb(0,0,0,0); // make object invisible
+this.color = hsl(0,0,0,0); // make object invisible
 ```
 
 ## Debug Display
@@ -414,9 +414,11 @@ This will be a one shot type of effect, not a continuous emitter so change emitT
 
 Make sure you replace the first parameter, vec2(), with this.pos so the effect appears wherever the brick is, otherwise it will spawn at the world origin.
 
+The designer writes code for a plain script where every engine name is global, so in this module project put `LJS.` in front of `ParticleEmitter` and `tile`; `vec2` and `hsl` are already taken from `LJS` at the top of the file. Here the tile is left `undefined` for plain untextured particles.
+
 ```javascript
 // create explosion effect
-new LJS.ParticleEmitter(this.pos, 0, 0, 0.1, 100, 3.14, 0, rgb(1, 1, 1, 1), rgb(1, 1, 1, 1), rgb(1, 1, 1, 0), rgb(1, 1, 1, 0), 0.5, 0.1, 1, 0.1, 0.05, 1, 1, 0, 3.14, 0.1, 0.2, 0, 0, 1);
+new LJS.ParticleEmitter(this.pos, 0, 0, 0.1, 100, 3.14, undefined, hsl(0, 0, 1, 1), hsl(0, 0, 1, 1), hsl(0, 0, 1, 0), hsl(0, 0, 1, 0), 0.5, 0.1, 1, 0.1, 0.05, 1, 1, 0, 3.14, 0.1, 0.2, false, false, true);
 ```
 
 Now you should see this simple particle effect play wherever a brick breaks. You can continue tweaking the parameters to make your own effect or use the one I made which also uses this.color to change the particle's color so it matches the brick.
@@ -488,7 +490,7 @@ While we are working in the ball's collideWithObject function, let's also make i
 
 ```javascript
 // speed up the ball
-const speed = min(1.04*this.velocity.length(), .5);
+const speed = LJS.min(1.04*this.velocity.length(), .5);
 this.velocity = this.velocity.normalize(speed);
 ```
 

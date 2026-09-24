@@ -1,3 +1,5 @@
+let cometEmitter;
+
 function gameInit()
 {
     gravity.y = -.01; // set default gravity
@@ -7,8 +9,8 @@ function gameInit()
         vec2(-5,0), 0,                 // pos, angle
         2, 0, 200, PI,                 // emitSize, emitTime, rate, cone
         tile(0),                       // tileInfo
-        rgb(1,.5,.1), rgb(1,.1,.1),    // colorStartA, colorStartB
-        rgb(1,.5,.1,0), rgb(1,.1,.1,0),// colorEndA, colorEndB
+        hsl(.07,1,.55), hsl(0,1,.55),    // colorStartA, colorStartB
+        hsl(.07,1,.55,0), hsl(0,1,.55,0),// colorEndA, colorEndB
         .7, 2, 0, .2, .05, // time, sizeStart, sizeEnd, speed, angleSpeed
         .9, 1, -1, PI, .05,// damp, angleDamp, gravity, particleCone, fade
         .5, 0, 1, 0        // randomness, collide, additive, colorLinear
@@ -31,8 +33,8 @@ function gameInit()
         vec2(), 0,                   // pos, angle
         0, 0, 100, PI,               // emitSize, emitTime, rate, cone
         tile(0),                     // tileInfo
-        rgb(1,1,.3,.2), rgb(1,.5,.1,.2),// colorStartA, colorStartB
-        rgb(1,0,0,0), rgb(.5,0,1,0),    // colorEndA, colorEndB
+        hsl(1/6,1,.65,.2), hsl(.07,1,.55,.2),// colorStartA, colorStartB
+        hsl(0,1,.5,0), hsl(.75,1,.5,0),       // colorEndA, colorEndB
         1, 1, 3, .01, 0,    // time, sizeStart, sizeEnd, speed, angleSpeed
         .95, 1, .02, PI, .2,// damp, angleDamp, gravity, particleCone, fade
         .3, 0, 1, 0         // randomness, collide, additive, colorLinear

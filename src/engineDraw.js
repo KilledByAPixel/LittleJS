@@ -343,7 +343,7 @@ class SpriteAnimation
      *  @return {SpriteAnimation} */
     loop() { return this.restart('loop'); }
 
-    /** Start over from the first frame, run through once and hold the last frame
+    /** Start over from the first frame, run through once and hold the last frame, last to first at a negative speed
      *  @return {SpriteAnimation} */
     play() { return this.restart('once'); }
 
@@ -377,8 +377,8 @@ class SpriteAnimation
         if (this.heldFrame !== undefined)
             return this.heldFrame;
         const n = this.frameCount, f = floor(this.elapsedFrames);
-        if (this.mode == 'once')
-            return clamp(f, 0, n - 1);
+        if (this.mode == 'once') // backward it counts down from the last frame, showing it from the start
+            return clamp(this.speed < 0 ? n - 1 + ceil(this.elapsedFrames) : f, 0, n - 1);
         if (this.mode == 'loop')
             return mod(f, n);
         const period = max(2 * n - 2, 1), k = mod(f, period); // there and back, the ends once each
@@ -391,7 +391,7 @@ class SpriteAnimation
 
     /** True once a play has shown its last frame for its time
      *  @return {boolean} */
-    get isDone() { return this.mode == 'once' && this.heldFrame === undefined && this.elapsedFrames >= this.frameCount; }
+    get isDone() { return this.mode == 'once' && this.heldFrame === undefined && abs(this.elapsedFrames) >= this.frameCount; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -403,6 +403,9 @@ class SpriteAnimation
  * - Set it as obj.shader, or use setShader for 2D draws and render3D.shader for 3D draws
  * - Draws that share a Shader share a batch; with no Shader set nothing changes
  * - In 2D it shades textured draws, untextured ones like drawRect draw as they are
+ * - A tile layer drawn in WebGL holds premultiplied color, so there iChannel0 reads premultiplied texels and the
+ *   snippet's color is taken as premultiplied too; premultipliedTexture is true there, so a snippet that changes
+ *   the alpha scales the rgb with it: `if (premultipliedTexture) c.rgb *= k;`
  * - Compiled once per renderer by the first draw that needs it; a bad snippet throws with the GLSL log in debug
  * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, and localUV, 0 to 1 across the sprite
@@ -463,7 +466,11 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
     ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
+
     const textureInfo = tileInfo?.textureInfo;
+    if (textureInfo && !(tileInfo.size.x && tileInfo.size.y))
+        return; // a tile with no area draws nothing, like a sprite still loading
     const bleed = tileInfo?.bleed ?? 0;
     if (useWebGL && glEnable)
     {
@@ -472,6 +479,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
         if (textureInfo)
         {
+            ASSERT(!!textureInfo.glTexture, 'texture has no WebGL texture, draw it with useWebGL false');
             // calculate uvs and render
             const sizeInverse = textureInfo.sizeInverse;
             const x = tileInfo.pos.x * sizeInverse.x;
@@ -561,6 +569,8 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, an
     ASSERT(isColor(colorTop) && isColor(colorBottom), 'color is invalid');
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
 
     if (useWebGL && glEnable)
     {
@@ -718,6 +728,8 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
+
     if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
@@ -733,8 +745,11 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
         ++primitiveCount;
         drawCanvas2D(pos, vec2(1), angle, false, (context)=>
         {
+            // Canvas2D ignores a width of 0 or below and keeps the last one, WebGL draws none for 0
+            // and a negative width as its size, the outline turned inside out
+            if (!width) return;
             context.strokeStyle = color.toString();
-            context.lineWidth = width;
+            context.lineWidth = abs(width);
             context.beginPath();
             for (let i=0; i<points.length; ++i)
             {
@@ -818,6 +833,8 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
+
     if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
@@ -840,7 +857,7 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
                 context.lineTo(point.x, point.y);
             context.closePath();
             context.fill();
-            if (lineWidth)
+            if (lineWidth > 0) // as in WebGL, Canvas2D would stroke a width below 0 with the last one
             {
                 context.strokeStyle = lineColor.toString();
                 context.lineWidth = lineWidth;
@@ -849,6 +866,9 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
         }, screenSpace, context);
     }
 }
+
+// the unit rings drawEllipse fills with in WebGL, one for each side count
+const drawEllipseRings = new Map;
 
 /** Draw colored ellipse using passed in point
  *  @param {Vector2} pos
@@ -871,14 +891,36 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
     ASSERT(lineWidth >= 0, 'lineWidth must be a positive value or 0');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
-    // clamp line width to prevent artifacts
-    lineWidth = clamp(lineWidth, 0, min(size.x, size.y));
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
+
+    // clamp line width to prevent artifacts, a negative size draws mirrored
+    lineWidth = clamp(lineWidth, 0, min(abs(size.x), abs(size.y)));
 
     if (useWebGL && glEnable)
     {
-        // draw as a regular polygon
         const sides = glCircleSides;
-        drawRegularPoly(pos, size, sides, color, lineWidth, lineColor, angle, useWebGL, screenSpace, context);
+        if (lineWidth > 0)
+        {
+            // draw as a regular polygon, the outline is made from the points at their size
+            drawRegularPoly(pos, size, sides, color, lineWidth, lineColor, angle, useWebGL, screenSpace, context);
+            return;
+        }
+
+        // a fill is a unit ring scaled, made once for each side count and already in strip order
+        let ring = drawEllipseRings.get(sides);
+        if (!ring)
+        {
+            const points = [];
+            for (let i=sides; i--;)
+            {
+                const a = (i/sides)*PI*2;
+                points.push(vec2(sin(a), cos(a)));
+            }
+            drawEllipseRings.set(sides, ring = glPolyStrip(points));
+        }
+        if (screenSpace)
+            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+        glDrawPointsTransform(ring, color.rgbaInt(), pos.x, pos.y, size.x/2, size.y/2, angle, false);
     }
     else
     {
@@ -888,9 +930,9 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
         {
             context.fillStyle = color.toString();
             context.beginPath();
-            context.ellipse(0, 0, size.x/2, size.y/2, 0, 0, 9);
+            context.ellipse(0, 0, abs(size.x)/2, abs(size.y)/2, 0, 0, 9); // it throws on a negative radius
             context.fill();
-            if (lineWidth)
+            if (lineWidth > 0)
             {
                 context.strokeStyle = lineColor.toString();
                 context.lineWidth = lineWidth;
@@ -1028,7 +1070,7 @@ function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHIT
  *  @param {Vector2}  size
  *  @param {number}   [angle]
  *  @param {boolean}  [mirror]
- *  @param {Canvas2DDrawFunction} [drawFunction]
+ *  @param {Canvas2DDrawFunction} [drawFunction] - Needed, marked optional only because the ones before it are
  *  @param {boolean}  [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
@@ -1038,6 +1080,8 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
     ASSERT(isVector2(size), 'size must be a vec2');
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(typeof drawFunction === 'function', 'drawFunction must be a function');
+
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
 
     if (!screenSpace)
     {
@@ -1064,7 +1108,7 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
- *  @param {CanvasTextAlign}  [textAlign='center']
+ *  @param {'left'|'center'|'right'} [textAlign='center']
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
@@ -1092,7 +1136,7 @@ function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, 
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
- *  @param {CanvasTextAlign}  [textAlign]
+ *  @param {'left'|'center'|'right'} [textAlign]
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
@@ -1111,6 +1155,8 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     ASSERT(isStringLike(font), 'font must be a string');
     ASSERT(isStringLike(fontStyle), 'fontStyle must be a string');
     ASSERT(isNumber(angle), 'angle must be a number');
+
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
     
     const lines = (text+'').split('\n');
     // save before style mutations so caller's context state is preserved
@@ -1139,7 +1185,7 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
 /** Load a texture at a specific index after engineInit, the images passed to engineInit load this way
  *  @param {number} textureIndex - Index to store the texture at, an unused one
  *  @param {string} [src] - Image source path
- *  @return {Promise} Promise that resolves when texture is loaded
+ *  @return {Promise<TextureInfo>} Resolves to the texture info once the image loads, or fails to with a warning
  *  @memberof Draw */
 async function loadTexture(textureIndex, src)
 {
@@ -1152,13 +1198,18 @@ async function loadTexture(textureIndex, src)
     {
         await new Promise(resolve =>
         {
-            image.onerror = image.onload = resolve;
+            image.onload = resolve;
+            image.onerror = ()=>
+            {
+                console.warn('failed to load image: ' + src); // in release too, like the WebGL warning
+                resolve();
+            };
             image.crossOrigin = 'anonymous';
             image.src = src;
         });
     }
     
-    textureInfos[textureIndex] = new TextureInfo(image);
+    return textureInfos[textureIndex] = new TextureInfo(image);
 }
 
 /** Convert from screen to world space coordinates
@@ -1225,7 +1276,7 @@ function screenToWorldDelta(screenDelta)
     return new Vector2(x, y);
 }
 
-/** Convert from screen to world space coordinates for a directional vector (no translation)
+/** Convert from world to screen space coordinates for a directional vector (no translation)
  *  @param {Vector2} worldDelta
  *  @return {Vector2}
  *  @memberof Draw */

@@ -142,7 +142,8 @@ class PathFinder
     }
 
     /** Default walkability: if a tile layer was provided, returns true when the
-     *  cell has no solid collision data; otherwise returns true. Override on
+     *  cell has no solid (positive) collision data, so negative data is open
+     *  like it is to the engine's collision; otherwise returns true. Override on
      *  the instance or via a subclass.
      *  @param {number} x - Tile x
      *  @param {number} y - Tile y
@@ -150,7 +151,7 @@ class PathFinder
     isWalkable(x, y)
     {
         if (!this.tileLayer) return true;
-        return !this.tileLayer.getCollisionData(this.collisionScratch.set(x, y));
+        return !(this.tileLayer.getCollisionData(this.collisionScratch.set(x, y)) > 0);
     }
 
     /** Default extra cost for stepping on a cell. Returns 0 (free) by default.
@@ -198,8 +199,7 @@ class PathFinder
 
     /** Reset all nodes and re-populate walkable / cost / posWorld from the
      *  current isWalkable / getCost overrides. Called at the start of
-     *  findPath; exposed so tests and tooling can drive it directly.
-     *  @private */
+     *  findPath; call it directly before searches made with rebuild=false. */
     buildNodeData()
     {
         const w = this.size.x;

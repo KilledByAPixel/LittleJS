@@ -31,7 +31,7 @@ let postProcess;
 class PostProcessPlugin
 {
     /** Create global post processing shader
-    *  @param {string} shaderCode
+    *  @param {string} [shaderCode] - Shadertoy style mainImage code, a pass-through when left out
     *  @param {boolean} [includeMainCanvas] - combine mainCanvas onto glCanvas
     *  @param {boolean} [feedbackTexture] - use glCanvas from previous frame as the texture
     *  @example
@@ -40,6 +40,7 @@ class PostProcessPlugin
     */
     constructor(shaderCode, includeMainCanvas=false, feedbackTexture=false)
     {
+        ASSERT(engineInitialized || headlessMode, 'create the plugin after engineInit, e.g. in gameInit');
         ASSERT(!postProcess, 'Post process already initialized');
         ASSERT(!(includeMainCanvas && feedbackTexture), 'Post process cannot both include main canvas and use feedback texture');
         postProcess = this;

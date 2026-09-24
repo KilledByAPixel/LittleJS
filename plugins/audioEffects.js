@@ -44,6 +44,10 @@ class AudioEffect
     {
         ASSERT(isNumber(mix), 'mix must be a number');
 
+        /** @property {number} - Wet/dry balance, 0 is fully dry and 1 is fully wet */
+        this.mix = clamp(mix);
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
+
         /** @property {GainNode} - Connect sounds to this node */
         this.input = audioContext.createGain();
         /** @property {GainNode} - This node carries the mixed result, send it somewhere with connect(), never by assigning here
@@ -53,8 +57,6 @@ class AudioEffect
         this.dryGain = audioContext.createGain();
         /** @property {GainNode} - Level of the processed signal */
         this.wetGain = audioContext.createGain();
-        /** @property {number} - Wet/dry balance, 0 is fully dry and 1 is fully wet */
-        this.mix = mix;
 
         this.input.connect(this.dryGain).connect(this.output);
         this.wetGain.connect(this.output);
@@ -71,6 +73,7 @@ class AudioEffect
     {
         ASSERT(isNumber(mix), 'mix must be a number');
         this.mix = mix = clamp(mix);
+        if (!audioContext) return;
         this.rampParam(this.dryGain.gain, 1-mix, fadeTime);
         this.rampParam(this.wetGain.gain, mix, fadeTime);
     }
@@ -94,10 +97,13 @@ class AudioEffect
     }
 
     /** Send this effect's output into another effect or audio node instead of the speakers
-     *  @param {AudioEffect|AudioNode} target - The next effect in the chain, or any audio node
-     *  @return {AudioEffect|AudioNode} - The target, so chains read left to right */
+     *  @template {AudioEffect|AudioNode} T
+     *  @param {T} target - The next effect in the chain, or any audio node
+     *  @return {T} - The target, so chains read left to right */
     connect(target)
     {
+        if (!audioContext) return target; // no audio outside a browser, where the engine runs headless
+
         // an effect stands in for its input node, the same rule as sound.output
         const node = /** @type {AudioNode} */ (target && 'input' in target ? target.input : target);
         ASSERT(node && typeof node.connect === 'function', 'target must be an AudioEffect or AudioNode');
@@ -107,7 +113,7 @@ class AudioEffect
     }
 
     /** Stop sending this effect's output anywhere */
-    disconnect() { this.output.disconnect(); }
+    disconnect() { this.output?.disconnect(); }
 
     /** Wire nodes between the input and the wet gain, for subclasses
      *  @param {AudioNode} first - Node the input connects to
@@ -142,6 +148,7 @@ class AudioFilter extends AudioEffect
         super(mix);
         ASSERT(isNumber(frequency) && frequency >= 0, 'frequency must be positive or zero');
         ASSERT(isNumber(q), 'q must be a number');
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {BiquadFilterNode} - The filter node */
         this.node = audioContext.createBiquadFilter();
@@ -157,6 +164,7 @@ class AudioFilter extends AudioEffect
     setFrequency(frequency, fadeTime=0)
     {
         ASSERT(isNumber(frequency) && frequency >= 0, 'frequency must be positive or zero');
+        if (!audioContext) return;
         this.rampParam(this.node.frequency, frequency, fadeTime);
     }
 
@@ -166,6 +174,7 @@ class AudioFilter extends AudioEffect
     setQ(q, fadeTime=0)
     {
         ASSERT(isNumber(q), 'q must be a number');
+        if (!audioContext) return;
         this.rampParam(this.node.Q, q, fadeTime);
     }
 }
@@ -189,6 +198,7 @@ class AudioReverb extends AudioEffect
     constructor(duration=2, decay=2, mix=.5)
     {
         super(mix);
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {ConvolverNode} - The convolver node */
         this.node = audioContext.createConvolver();
@@ -203,6 +213,7 @@ class AudioReverb extends AudioEffect
     {
         ASSERT(isNumber(duration) && duration > 0, 'duration must be positive');
         ASSERT(isNumber(decay) && decay > 0, 'decay must be positive');
+        if (!audioContext) return;
         this.node.buffer = this.createImpulse(duration, decay);
     }
 
@@ -243,6 +254,7 @@ class AudioDelay extends AudioEffect
     constructor(time=.3, feedback=.4, mix=.5)
     {
         super(mix);
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {DelayNode} - The delay node */
         this.node = audioContext.createDelay(5);
@@ -261,6 +273,7 @@ class AudioDelay extends AudioEffect
     setTime(time, fadeTime=0)
     {
         ASSERT(isNumber(time) && time >= 0 && time <= 5, 'time must be between 0 and 5');
+        if (!audioContext) return;
         this.rampParam(this.node.delayTime, time, fadeTime);
     }
 
@@ -270,6 +283,7 @@ class AudioDelay extends AudioEffect
     setFeedback(feedback, fadeTime=0)
     {
         ASSERT(isNumber(feedback), 'feedback must be a number');
+        if (!audioContext) return;
         this.rampParam(this.feedbackGain.gain, clamp(feedback, 0, .95), fadeTime);
     }
 }
@@ -292,11 +306,13 @@ class AudioDistortion extends AudioEffect
     {
         super(mix);
 
+        /** @property {number} - How hard the signal is driven, 0 is clean and 1 is crushed */
+        this.amount = clamp(amount);
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
+
         /** @property {WaveShaperNode} - The wave shaper node */
         this.node = audioContext.createWaveShaper();
         this.node.oversample = '2x';
-        /** @property {number} - How hard the signal is driven, 0 is clean and 1 is crushed */
-        this.amount = amount;
         this.setAmount(amount);
         this.connectEffect(this.node);
     }
@@ -307,6 +323,7 @@ class AudioDistortion extends AudioEffect
     {
         ASSERT(isNumber(amount), 'amount must be a number');
         this.amount = amount = clamp(amount);
+        if (!audioContext) return;
 
         // soft clip curve, drive grows with the square of amount so low values stay subtle
         // enough points that quiet signals are still shaped at high drive, where the curve is steep near 0
@@ -343,6 +360,7 @@ class AudioCompressor extends AudioEffect
         super(mix);
         ASSERT(isNumber(threshold), 'threshold must be a number');
         ASSERT(isNumber(ratio) && ratio >= 1, 'ratio must be 1 or more');
+        if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {DynamicsCompressorNode} - The compressor node */
         this.node = audioContext.createDynamicsCompressor();
@@ -357,6 +375,7 @@ class AudioCompressor extends AudioEffect
     setThreshold(threshold, fadeTime=0)
     {
         ASSERT(isNumber(threshold), 'threshold must be a number');
+        if (!audioContext) return;
         this.rampParam(this.node.threshold, threshold, fadeTime);
     }
 
@@ -366,6 +385,7 @@ class AudioCompressor extends AudioEffect
     setRatio(ratio, fadeTime=0)
     {
         ASSERT(isNumber(ratio) && ratio >= 1, 'ratio must be 1 or more');
+        if (!audioContext) return;
         this.rampParam(this.node.ratio, ratio, fadeTime);
     }
 }

@@ -69,6 +69,7 @@ function render3DCanDraw()
 }
 
 // the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
+// the three functions below write them out by hand for speed, so a new field goes in all four
 const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader'];
 
 // a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out so the
@@ -360,6 +361,7 @@ class Render3DPlugin
     {
         ASSERT(!render3D, 'Render3D plugin already initialized');
         render3D = this;
+        ASSERT(Object.keys(render3DCaptureBatchState()).join() === RENDER3D_STATE_FIELDS.join(), 'the batch state functions must list RENDER3D_STATE_FIELDS');
 
         /** @property {Camera3D} - The camera */
         this.camera = new Camera3D;
@@ -386,8 +388,8 @@ class Render3DPlugin
         this.fogEnd = 0;
         /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale; sync2D objects use the 2D gravity */
         this.gravity = vec3();
-        /** @property {number|HeightMap|Function} - Floor for objects with a softShadow: a height, a HeightMap, or (x, z) => y
-         *  @type {number|HeightMap|Function} */
+        /** @property {number|HeightMap|function(number, number): number} - Floor for objects with a softShadow: a height, a HeightMap, or (x, z) => y
+         *  @type {number|HeightMap|function(number, number): number} */
         this.softShadowHeight = 0;
         /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for flat faces */
         this.smoothShading = false;
@@ -514,7 +516,9 @@ class Render3DPlugin
         this.vao = undefined;
         /** @type {WebGLTexture|undefined} */
         this.whiteTexture = undefined; // 1x1 white for untextured draws
+        /** @type {Array<WebGLSampler>} */
         this.samplers = [];            // how textures are filtered in 3D, clamped and wrapping, see render3DInitGL
+        /** @type {string|undefined} */
         this.samplerKey = undefined;   // the settings the samplers were made for, they are rebuilt when it changes
         /** @type {WebGLTexture|undefined} */
         this.shadowTexture = undefined;
@@ -523,6 +527,7 @@ class Render3DPlugin
         this.shadowTextureSize = 0;
         this.contextGeneration = 0;  // counts context losses, a mesh uploaded under an older one uploads again
         this.uniforms = new Map;     // uniform locations by program
+        /** @type {Object<string, Array<number>>} */
         this.uniformValues = {};     // last values sent for the cached vec4 uniforms
         this.shadowMapDrawn = false; // the shadow map is drawn by the first pass of the frame
         this.passIsDefault = true;   // the running pass is the default layer, the only one shadowed
@@ -532,19 +537,23 @@ class Render3DPlugin
         // the stream of immediate mode draws
         /** @type {WebGLBuffer|undefined} */
         this.streamBuffer = undefined;
+        /** @type {Array<WebGLBuffer>} */
         this.instanceBuffers = [];       // the per instance values of the batches being drawn, used in turn
         this.instanceBufferIndex = 0;
+        /** @type {Array<Mesh>} */
         this.instanceMeshes = [];        // meshes with a batch pending this stage
+        /** @type {Array<Array<number>>} */
         this.attribValues = [];          // last values sent for the cached constant attributes
         this.streamData = new ArrayBuffer(RENDER3D_MAX_STREAM_VERTS * RENDER3D_VERTEX_BYTES);
         this.streamFloats = new Float32Array(this.streamData);
         this.streamInts = new Uint32Array(this.streamData);
         this.streamCount = 0;
+        /** @type {TextureInfo|undefined} */
         this.streamTileInfo = undefined;
         this.streamState = undefined; // captured state the pending batch was drawn under
         /** @type {Mesh|undefined} */
         this.capture = undefined;     // the mesh a bake is filling
-        /** @type {Array<{distance: number, state: Object, draw: Function}>|undefined} */
+        /** @type {Array<{distance: number, state: Object, draw: function(): void}>|undefined} */
         this.transparentQueue = undefined; // draws queued during the transparent stage, replayed far to near
 
         render3DInitGL();
@@ -678,7 +687,9 @@ class Render3DPlugin
             const distance = offset.length();
             if (distance > range)
                 return; // out of range
-            volume *= percent(distance, range, range * sound.taper);
+            const taperRange = range * sound.taper;
+            if (distance > taperRange)
+                volume *= percent(distance, range, taperRange);
         }
         const pan = offset.normalize().dot(this.cameraRight);
         const rate = pitch + pitch * sound.randomness * randomnessScale * rand(-1, 1);
@@ -710,7 +721,8 @@ class Render3DPlugin
      *  @param {Mesh} mesh
      *  @param {Matrix4|Vector3} [matrix] - Object transform, or just a position to draw it at
      *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile or the whole texture
-     *  @param {Color} [color] - Tint */
+     *  @param {Color} [color] - Tint
+     *  @return {void} */
     drawMesh(mesh, matrix=RENDER3D_IDENTITY, tileInfo, color=WHITE)
     {
         matrix = render3DMatrix(matrix);
@@ -719,7 +731,11 @@ class Render3DPlugin
         if (this.capture)
             return void this.capture.combine(mesh, matrix, color);
         if (this.transparentQueue)
-            return this.queueTransparent(matrix.getTranslation(), ()=> this.drawMesh(mesh, matrix, tileInfo, color));
+        {
+            // the queue replays later, so it keeps copies of what a caller may reuse, like a scratch matrix
+            const m = matrix.copy(), c = color.copy();
+            return this.queueTransparent(m.getTranslation(), ()=> this.drawMesh(mesh, m, tileInfo, c));
+        }
         if (!render3DCanDraw()) return;
         if (this.shadowPass && !this.lighting) return; // unlit things cast no shadow
         if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== this.contextGeneration)
@@ -755,11 +771,13 @@ class Render3DPlugin
      *  - List the first three points counter clockwise as seen from the front, or the face points away
      *    and may vanish when back faces are culled
      *  - inside a bake the strip goes into the mesh instead, in the transparent stage it is queued for sorting
+     *    and the arrays are read when the queue replays, so leave them unchanged until the stage ends
      *  @param {Array<Vector3>} points - In strip order
      *  @param {Vector3|Array<Vector3>} [normals] - One for all or one per point, default up
      *  @param {Vector2|Array<Vector2>} [uvs] - One for all or one per point, 0-1 across the tile
      *  @param {Color|Array<Color>} [colors] - One for all or one per point, vertex colors come before the texture
-     *  @param {TileInfo|TextureInfo} [tileInfo] - Texture for this strip */
+     *  @param {TileInfo|TextureInfo} [tileInfo] - Texture for this strip
+     *  @return {void} */
     drawStrip(points, normals, uvs, colors, tileInfo)
     {
         if (this.capture)
@@ -888,12 +906,17 @@ class Render3DPlugin
     }
 
     /** Queue a draw for the transparent stage, replayed far to near with the current draw state, or draw it now when sorting is off
+     *  - The draw runs later, so it should hold copies of any values the caller may change before then
      *  @param {Vector3} pos - Where the draw is, for sorting
-     *  @param {Function} draw */
+     *  @param {function(): void} draw
+     *  @return {void} */
     queueTransparent(pos, draw)
     {
         if (!this.transparentQueue)
-            return draw();
+        {
+            draw();
+            return;
+        }
         this.transparentQueue.push({distance: pos.distanceSquared(this.camera.pos), state: render3DCaptureBatchState(), draw});
     }
 
@@ -1000,13 +1023,17 @@ class Render3DPlugin
      *  @param {TileInfo|TextureInfo} [tileInfo]
      *  @param {Color} [color]
      *  @param {number} [angle] - Rotation in the camera plane, counter clockwise
-     *  @param {boolean} [upright] - Stand on world up and only turn to face the camera, for sprites on the ground */
+     *  @param {boolean} [upright] - Stand on world up and only turn to face the camera, for sprites on the ground
+     *  @return {void} */
     drawBillboard(pos, size=vec2(1), tileInfo, color=WHITE, angle=0, upright=false)
     {
         if (this.capture) // the mesh keeps the color, so it gets its own, the particles reuse theirs
             return this.drawStripUnlit(render3DBillboardCorners(pos, size, angle, upright), this.cameraBack, RENDER3D_QUAD_UVS, color.copy(), tileInfo);
         if (this.transparentQueue) // sort by the exact position, a shadow under it sorts by the floor
-            return this.queueTransparent(pos, ()=> this.drawBillboard(pos, size, tileInfo, color, angle, upright));
+        {
+            const p = pos.copy(), s = size.copy(), c = color.copy(); // copies, the queue replays later
+            return this.queueTransparent(p, ()=> this.drawBillboard(p, s, tileInfo, c, angle, upright));
+        }
 
         // the particle path: the quad's six stream vertices written straight in with no vectors made, unlit
         const lit = this.lighting;
@@ -1040,6 +1067,8 @@ class Render3DPlugin
      *  @param {Color|Array<Color>} [color] - One for all or one per corner */
     drawQuad(a, b, c, d, tileInfo, color=WHITE)
     {
+        if (this.transparentQueue) // the queue replays later, so it keeps copies of what a caller may reuse
+            a = a.copy(), b = b.copy(), c = c.copy(), d = d.copy(), color = isArray(color) ? color.map(k=> k.copy()) : color.copy();
         this.drawStrip(render3DQuadStrip(a, b, c, d), render3DFaceNormal(a, b, c, d), RENDER3D_QUAD_UVS, render3DQuadValues(color), tileInfo);
     }
 
@@ -1050,6 +1079,8 @@ class Render3DPlugin
      *  @param {Color} [color] */
     drawTriangle(a, b, c, color=WHITE)
     {
+        if (this.transparentQueue) // the queue replays later, so it keeps copies of what a caller may reuse
+            a = a.copy(), b = b.copy(), c = c.copy(), color = color.copy();
         this.drawStrip([a, b, c], render3DFaceNormal(a, b, c), undefined, color);
     }
 
@@ -1084,7 +1115,9 @@ class Render3DPlugin
         {
             const p = points[i];
             const w = isArray(width) ? width[i] : width;
-            const c = isArray(color) ? color[i] : color;
+            let c = isArray(color) ? color[i] : color;
+            if (this.transparentQueue) // the queue replays later, so it keeps a copy of a color a caller may reuse
+                c = c.copy();
             const s = side && (isArray(side) ? side[i] : side);
             // across the path in the camera plane unless a side is given
             const next = points[i < count - 1 ? i + 1 : loop ? 1 : i];
@@ -1105,12 +1138,16 @@ class Render3DPlugin
      *  @param {number} [size] - Diameter
      *  @param {Color} [color]
      *  @param {Vector3} [normal] - Facing direction, faces the camera by default
-     *  @param {number} [sides] */
+     *  @param {number} [sides]
+     *  @return {void} */
     drawSoftDisc(pos, size=1, color=WHITE, normal=this.cameraBack, sides=16)
     {
         render3DAssertBlending();
         if (this.transparentQueue && !this.capture)
-            return this.queueTransparent(pos, ()=> this.drawSoftDisc(pos, size, color, normal, sides));
+        {
+            const p = pos.copy(), c = color.copy(), n = normal.copy(); // copies, the queue replays later
+            return this.queueTransparent(p, ()=> this.drawSoftDisc(p, size, c, n, sides));
+        }
         // basis in the disc's plane
         const n = normal.normalize();
         const helper = abs(n.y) < .9 ? vec3(0, 1, 0) : vec3(1, 0, 0);
@@ -1123,9 +1160,10 @@ class Render3DPlugin
      *  - Draw it from onRenderTransparent or from a transparent object
      *  @param {Vector3} pos - Position of the thing casting the shadow
      *  @param {number} [size] - Diameter
-     *  @param {number|HeightMap|Function} [floorHeight] - Height of the ground, a HeightMap, or (x, z) => y to follow terrain
+     *  @param {number|HeightMap|function(number, number): number} [floorHeight] - Height of the ground, a HeightMap, or (x, z) => y to follow terrain
      *  @param {Color} [color]
-     *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground */
+     *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground
+     *  @return {void} */
     drawSoftShadow(pos, size=1, floorHeight=0, color=RENDER3D_SHADOW_COLOR, lift=.02)
     {
         render3DAssertBlending();
@@ -1133,7 +1171,10 @@ class Render3DPlugin
         const height = isNumber(floorHeight) ? ()=> floorHeight
             : floorHeight.getHeight ? (x, z)=> floorHeight.getHeight(x, z) : floorHeight;
         if (this.transparentQueue && !this.capture) // sort from the floor, under whatever casts it
-            return this.queueTransparent(vec3(pos.x, height(pos.x, pos.z) + lift, pos.z), ()=> this.drawSoftShadow(pos, size, floorHeight, color, lift));
+        {
+            const p = pos.copy(), c = color.copy(); // copies, the queue replays later
+            return this.queueTransparent(vec3(p.x, height(p.x, p.z) + lift, p.z), ()=> this.drawSoftShadow(p, size, floorHeight, c, lift));
+        }
         render3DDrawSoftDisc(size / 2, color, 16, RENDER3D_DEFAULT_NORMAL, (c, s, r)=>
         {
             const x = pos.x + c * r, z = pos.z + s * r;
@@ -1176,11 +1217,14 @@ let render3DDebugPrimitives = [];
 function render3DRenderDebug()
 {
     if (!render3DDebugPrimitives.length) return;
-    render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
+    if (!debugVideoCaptureIsActive()) // hidden from a video capture like the 2D ones, but they still expire
     {
-        for (const p of render3DDebugPrimitives)
-            p.draw();
-    });
+        render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
+        {
+            for (const p of render3DDebugPrimitives)
+                p.draw();
+        });
+    }
     render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.timer < 0); // a Timer compares as negative until it elapses
 }
 
@@ -1188,7 +1232,7 @@ function render3DRenderDebug()
 function render3DDebugPush(duration, draw)
 {
     ASSERT(isNumber(duration), 'duration must be a number');
-    debug && render3D?.program && render3DDebugPrimitives.push({timer: new Timer(duration), draw});
+    debug && glEnable && render3D?.program && render3DDebugPrimitives.push({timer: new Timer(duration), draw});
 }
 
 /** Draw a debug wireframe box
@@ -1219,6 +1263,7 @@ function debugBox3D(pos, size=1, color=WHITE, time=0, rotation)
  *  @memberof Render3D */
 function debugSphere3D(pos, size=1, color=WHITE, time=0)
 {
+    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
     const circle = render3DCircle(24), r = size / 2;
     render3DDebugPush(time, ()=>
     {
@@ -1241,6 +1286,7 @@ function debugSphere3D(pos, size=1, color=WHITE, time=0)
  *  @memberof Render3D */
 function debugLine3D(posA, posB, color=WHITE, width=RENDER3D_DEBUG_WIDTH, time=0)
 {
+    posA = posA.copy(), posB = posB.copy(); // where they are now, a timed one stays put when the ends move
     render3DDebugPush(time, ()=> render3D.drawLine(posA, posB, width, color));
 }
 
@@ -1252,6 +1298,7 @@ function debugLine3D(posA, posB, color=WHITE, width=RENDER3D_DEBUG_WIDTH, time=0
  *  @memberof Render3D */
 function debugPoint3D(pos, color=WHITE, time=0, size=.2)
 {
+    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
     render3DDebugPush(time, ()=>
     {
         for (const axis of [vec3(size / 2, 0, 0), vec3(0, size / 2, 0), vec3(0, 0, size / 2)])
@@ -1701,7 +1748,7 @@ function render3DBindMesh(mesh)
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 function render3DGetTileUVs(tileInfo)
 {
-    if (!(tileInfo instanceof TileInfo))
+    if (!(tileInfo instanceof TileInfo) || !tileInfo.textureInfo) // a headless tile has no texture
         return RENDER3D_FULL_UV_RECT;
     const inv = tileInfo.textureInfo.sizeInverse, rect = render3DTileUVRect;
     const bleedX = inv.x * tileInfo.bleed, bleedY = inv.y * tileInfo.bleed;
@@ -1796,7 +1843,7 @@ function render3DRender()
 function render3DRenderPass(after2D)
 {
     const gl = glContext, r = render3D;
-    if (!r.program) return; // headless, gl disabled, or context lost
+    if (!r.program || !glEnable) return; // headless, gl disabled, or context lost
     render3DUpdateSamplers();
     ASSERT(!r.fogEnd || r.fogStart < r.fogEnd, 'fogStart must be less than fogEnd');
     ASSERT(!glRenderTarget, 'the 3D pass needs the canvas depth buffer, it can not draw into a render target');
@@ -1812,16 +1859,8 @@ function render3DRenderPass(after2D)
     r.capture = r.transparentQueue = undefined;
     render3DClearInstances();
 
-    // take over the gl state
-    gl.bindVertexArray(r.vao);
-    // the leading repeat on every strip shifts the triangles by one, which flips
-    // which way they read, so tell WebGL that clockwise is the front here
-    gl.frontFace(gl.CW);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.depthMask(true);
-    gl.clear(gl.DEPTH_BUFFER_BIT);
-
     // the Light3D objects, a directional one sends the direction toward it, from the origin, and a negative radius
+    // gathered before the gl state is taken over, so an assert here leaves nothing to hand back
     const lights = render3DCollectLights();
     r.lightCount = lights.length;
     const positions = r.lightPositions, colors = r.lightColors;
@@ -1834,6 +1873,15 @@ function render3DRenderPass(after2D)
         positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
         colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a * light.intensity;
     });
+
+    // take over the gl state
+    gl.bindVertexArray(r.vao);
+    // the leading repeat on every strip shifts the triangles by one, which flips
+    // which way they read, so tell WebGL that clockwise is the front here
+    gl.frontFace(gl.CW);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.depthMask(true);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
 
     r.isRendering = true;
     try
@@ -2180,6 +2228,7 @@ class Mesh
          *  an edit after that may tell the entries apart; adding geometry or recomputing normals drops them too
          *  @type {Int32Array|undefined} */
         this.vertexKeys = undefined;
+        /** @type {{vertices: Array<number>, pointCount: number, data: ArrayBuffer}|undefined} */
         this.vertexLayout = undefined; // the strip index of each GPU vertex, the point count and packed data of the last upload, for a dynamicDraw mesh
         this.instanceCount = 0; // draws waiting in this mesh's batch, with their values, texture and draw state
         /** @type {Float32Array|undefined} */
@@ -2807,10 +2856,10 @@ function buildBox(size=1)
  * - flat lights and colors each cell on its own, so a checkerboard stays crisp
  * - doubleSided, a sheet seen from both sides; turn it off for ground only ever seen from above
  * - One cell is a plain square, render3D.planeMesh and planeMeshDoubleSided are shared ones
- * @param {Vector2} [size] - World size along X and Z
+ * @param {Vector2|number} [size] - World size along X and Z, a number for a square
  * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
- * @param {Color|Function} [color] - One Color for the whole grid, or (x, z) => Color
- * @param {Function} [heightFunction] - (x, z) => y, default flat
+ * @param {Color|function(number, number): Color} [color] - One Color for the whole grid, or (x, z) => Color
+ * @param {function(number, number): number} [heightFunction] - (x, z) => y, default flat
  * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @return {Mesh}
  * @memberof Render3D
@@ -2819,6 +2868,8 @@ function buildBox(size=1)
  */
 function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth=render3D?.smoothShading)
 {
+    if (isNumber(size))
+        size = vec2(size);
     if (isNumber(segments))
         segments = vec2(segments);
     ASSERT(segments.x > 0 && segments.y > 0 && segments.x % 1 === 0 && segments.y % 1 === 0, 'grid segments must be whole numbers above zero');
@@ -3029,6 +3080,7 @@ class EngineObject3D extends EngineObject
         this.worldMatrix = new Matrix4;  // the world transform, kept up to date by render3DObjectMatrix; getMatrix returns a copy
         this.matrixBuilt = new Float64Array(9).fill(NaN); // the position, rotation and scale it was built from
         this.matrixVersion = 0;          // counts the rebuilds, so a child knows when its parent's changed
+        /** @type {EngineObject3D|undefined} */
         this.matrixParent = undefined;   // the parent it was built under, and that parent's version then
         this.matrixParentVersion = 0;
         this.movePass = engineObjectsUpdateCount; // the engine pass a child last moved in, so a refresh is not a step
@@ -3052,8 +3104,9 @@ class EngineObject3D extends EngineObject
     }
 
     /** Move a child by its own velocities, bring a sync2D object's pos3D up to its 2D pos, then update the children,
-     *  called automatically each frame */
-    updateTransforms()
+     *  called automatically each frame
+     *  @param {boolean} [updateChildren] - Also update the children's transforms */
+    updateTransforms(updateChildren=true)
     {
         if (!paused)
         {
@@ -3067,7 +3120,7 @@ class EngineObject3D extends EngineObject
             if (this.sync2D)
                 this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
         }
-        super.updateTransforms();
+        super.updateTransforms(updateChildren);
     }
 
     /** Set how this object collides, the same flags as in 2D
@@ -3181,7 +3234,8 @@ class EngineObject3D extends EngineObject
     /** 2D rendering is skipped, the mesh is drawn by render3D during the 3D pass */
     render() {}
 
-    /** Draw the object in 3D, called by the 3D pass with the draw state set from this object's flags, draws the mesh by default */
+    /** Draw the object in 3D, called by the 3D pass with the draw state set from this object's flags, draws the mesh by default
+     *  @return {void} */
     render3D()
     {
         // an opaque draw comes out solid however low its alpha is, so a fade with no flag looks like nothing happened
@@ -3327,10 +3381,10 @@ function render3DCollideSolid(a)
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
         if (weightA)
             shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
-        const normal = push.normalize();
-        if (a.velocity3D.dot(normal) < 0)
+        const normal = push.normalize(); // mass 0 keeps its velocity too, so a moving platform keeps moving
+        if (weightA && a.velocity3D.dot(normal) < 0)
             a.velocity3D = a.velocity3D.reflect(normal, a.restitution);
-        if (b.velocity3D.dot(normal) > 0)
+        if (weightB && b.velocity3D.dot(normal) > 0)
             b.velocity3D = b.velocity3D.reflect(normal, b.restitution);
     }
 }
@@ -3396,14 +3450,18 @@ function engineObjectsRaycast3D(ray, objects=engineObjects)
 
 /**
  * Call a function for each EngineObject3D whose box overlaps a box
+ * - An object destroyed by an earlier callback is skipped
  * @param {Vector3} pos - Center of the box
  * @param {Vector3|number} size - Full size of the box, a number for a cube
- * @param {Function} callback
+ * @param {function(EngineObject3D): void} callback
  * @param {Array<EngineObject>} [objects] - Defaults to every object
  * @memberof Render3D
  */
 function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
-{ engineObjectsCollect3D(pos, size, objects).forEach(callback); }
+{
+    for (const o of engineObjectsCollect3D(pos, size, objects))
+        o.destroyed || callback(o);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
@@ -3517,7 +3575,8 @@ class InstancedMesh3D extends EngineObject3D
         this.radius = this.reach + meshRadius * this.maxScale;
     }
 
-    /** Draws every instance as one call, uploading the ones that changed first */
+    /** Draws every instance as one call, uploading the ones that changed first
+     *  @return {void} */
     render3D()
     {
         const r = render3D, gl = glContext, mesh = this.mesh;

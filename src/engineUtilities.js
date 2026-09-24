@@ -32,7 +32,9 @@ class Timer
         ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
         this.useRealTime = useRealTime;
         const globalTime = this.getGlobalTime();
+        /** @type {number|undefined} */
         this.time = timeLeft === undefined ? undefined : globalTime + timeLeft;
+        /** @type {number|undefined} */
         this.setTime = timeLeft;
     }
 
@@ -108,7 +110,7 @@ class Timer
  *  @memberof Utilities */
 function formatTime(t)
 {
-    const signStr = t < 0 ? '-' : '';
+    const signStr = t <= -1 ? '-' : ''; // no sign when it shows 0:00
     t = abs(t)|0;
     return signStr + (t/60|0) + ':' + (t%60<10?'0':'') + t%60;
 }

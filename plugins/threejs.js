@@ -50,6 +50,14 @@ class ThreeJSPlugin
         this.camera = new THREE.PerspectiveCamera(cameraFOV, 1, .1, 1e3);
         /** @property {boolean} - Lock the camera to the LittleJS 2D camera so the z=0 plane matches world space */
         this.cameraAlign2D = true;
+        /** @property {number|undefined} - Near plane of the aligned camera before any zoom out, from camera.near on the
+         *  first aligned frame; while aligned, change this rather than camera.near
+         *  @type {number|undefined} */
+        this.cameraNear = undefined;
+        /** @property {number|undefined} - Far plane of the aligned camera before any zoom out, from camera.far on the
+         *  first aligned frame; while aligned, change this rather than camera.far
+         *  @type {number|undefined} */
+        this.cameraFar = undefined;
 
         // insert the canvas below the engine canvases and match the layout
         const threeCanvas = this.renderer.domElement;
@@ -70,13 +78,15 @@ class ThreeJSPlugin
     {
         const halfHeight = mainCanvasSize.y / 2 / cameraScale; // half visible height in world units
         const distance = halfHeight / tan(this.camera.fov/2 * PI/180);
-        if (distance * 2 > this.camera.far)
+
+        // zoomed out far enough that the z=0 plane would be past the far plane, push both planes out together
+        // so the depth precision stays what it was, and bring them back from where they began when zoomed in again
+        const baseNear = this.cameraNear ??= this.camera.near, baseFar = this.cameraFar ??= this.camera.far;
+        const scale = max(1, distance * 2 / baseFar), near = baseNear * scale, far = baseFar * scale;
+        if (near != this.camera.near || far != this.camera.far)
         {
-            // zoomed out far enough that the z=0 plane would be past the far plane, push both planes out together
-            // so the depth precision stays what it was
-            const scale = distance * 2 / this.camera.far;
-            this.camera.near *= scale;
-            this.camera.far *= scale;
+            this.camera.near = near;
+            this.camera.far = far;
             this.camera.updateProjectionMatrix();
         }
         this.camera.position.set(cameraPos.x, cameraPos.y, distance);
@@ -142,10 +152,11 @@ class ThreeJSObject extends EngineObject
         }
     }
 
-    /** Update the transform and sync the mesh to it, after the parent has placed a child, and while paused too */
-    updateTransforms()
+    /** Update the transform and sync the mesh to it, after the parent has placed a child, and while paused too
+     *  @param {boolean} [updateChildren] - Also update the children's transforms */
+    updateTransforms(updateChildren=true)
     {
-        super.updateTransforms();
+        super.updateTransforms(updateChildren);
         this.syncMesh();
     }
 

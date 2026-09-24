@@ -10,7 +10,7 @@
 
 // import LittleJS module
 import * as LJS from '../../dist/littlejs.esm.js';
-const {vec2, rgb, hsl, tile} = LJS;
+const {vec2, hsl, tile} = LJS;
 
 ///////////////////////////////////////////////////////////////////////////////
 // do not use pixelated rendering
@@ -35,13 +35,13 @@ let level, levelSize, levelFall, fallTimer, swapTimer, swapPosA, swapPosB, swapR
 // tiles
 const tileColors = 
 [
-    rgb(1,0,0),
-    rgb(1,1,1),
-    rgb(1,1,0),
-    rgb(0,1,0),
-    rgb(0,.6,1),
-    rgb(.8,0,1),
-    rgb(.5,.5,.5),
+    hsl(0,1,.5),
+    hsl(0,0,1),
+    hsl(1/6,1,.5),
+    hsl(1/3,1,.5),
+    hsl(.57,1,.5),
+    hsl(.8,1,.5),
+    hsl(0,0,.5),
 ];
 const tileTypeCount = tileColors.length;
 

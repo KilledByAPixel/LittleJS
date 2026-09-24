@@ -1,3 +1,5 @@
+let videoPlayer;
+
 function gameInit()
 {
     new UISystemPlugin;

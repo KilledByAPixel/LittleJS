@@ -19,7 +19,7 @@
 
 // import LittleJS module
 import * as LJS from '../../dist/littlejs.esm.min.js';
-const {vec2, rgb} = LJS;
+const {vec2, hsl} = LJS;
 
 // keep our own list of simple sprites and track fps
 let sprites, tileLayer, timeMS, fpsDisplay, statsDisplay, spriteColor, spriteAdditiveColor, musicInstance, hasClicked;
@@ -48,7 +48,7 @@ function gameInit()
     LJS.setCanvasFixedSize(vec2(1920, 1080)); // 1080p
     LJS.setCameraScale(20);
     LJS.setCameraPos(tileLayer.size.scale(.5));
-    LJS.setCanvasClearColor(rgb(.4,.4,.4));
+    LJS.setCanvasClearColor(hsl(0,0,.4));
     LJS.setGravity(vec2(0,-.005));
     sprites = [];
 
@@ -65,7 +65,7 @@ function gameUpdate()
     {
         hasClicked = true;
         spriteColor = LJS.randColor();
-        spriteAdditiveColor = LJS.randColor(rgb(.5,.5,.5, 0), rgb(0,0,0,0));
+        spriteAdditiveColor = LJS.randColor(hsl(0,0,.5,0), hsl(0,0,0,0));
     }
     
     // right click = drop test object

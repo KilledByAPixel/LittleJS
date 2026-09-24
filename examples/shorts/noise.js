@@ -8,7 +8,7 @@ function gameRender()
     const ox = cameraPos.x - size.x / 2;
     const oy = cameraPos.y - size.y / 2;
     const scale = .3;
-    const pos = vec2(), s = vec2(cell), color = rgb();
+    const pos = vec2(), s = vec2(cell), color = hsl();
     for (let i = 0; i < cols; ++i)
     for (let j = 0; j < rows; ++j)
     {

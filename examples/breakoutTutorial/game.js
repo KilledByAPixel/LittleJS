@@ -9,7 +9,7 @@
 
 // import LittleJS module
 import * as LJS from '../../dist/littlejs.esm.js';
-const {vec2, rgb} = LJS;
+const {vec2, hsl} = LJS;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -92,7 +92,7 @@ class Wall extends LJS.EngineObject
 
         this.setCollision(); // make object collide
         this.mass = 0; // make object have static physics
-        this.color = rgb(0,0,0,0); // make object invisible
+        this.color = hsl(0,0,0,0); // make object invisible
     }
 }
 
@@ -176,8 +176,8 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    LJS.drawRect(LJS.cameraPos, vec2(100), rgb(.5,.5,.5)); // draw background
-    LJS.drawRect(LJS.cameraPos, levelSize, rgb(.1,.1,.1)); // draw level boundary
+    LJS.drawRect(LJS.cameraPos, vec2(100), hsl(0,0,.5)); // draw background
+    LJS.drawRect(LJS.cameraPos, levelSize, hsl(0,0,.1)); // draw level boundary
 }
 
 ///////////////////////////////////////////////////////////////////////////////

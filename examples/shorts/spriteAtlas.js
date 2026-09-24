@@ -1,3 +1,5 @@
+let spriteAtlas;
+
 function gameInit()
 {
     // create a table of all sprites

@@ -182,9 +182,10 @@ class ParticleEmitter extends EngineObject
          *  @type {Array<Particle>} */
         this.particles = [];
 
-        // track previous position and angle
+        // track previous position and angle, set on the first update once a parent has placed the emitter
+        /** @type {Vector2|undefined} */
+        this.previousPos = undefined;
         this.previousAngle = this.angle;
-        this.previousPos = this.pos.copy();
     }
 
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
@@ -194,6 +195,12 @@ class ParticleEmitter extends EngineObject
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
 
+        if (!this.previousPos)
+        {
+            // first update, addChild moves an emitter after it is made
+            this.previousPos = this.pos.copy();
+            this.previousAngle = this.angle;
+        }
         if (this.velocityInheritance)
         {
             // pass emitter velocity to particles
@@ -201,10 +208,11 @@ class ParticleEmitter extends EngineObject
             this.velocity.x = p * (this.pos.x - this.previousPos.x);
             this.velocity.y = p * (this.pos.y - this.previousPos.y);
             this.angleVelocity = p * (this.angle - this.previousAngle);
-            this.previousAngle = this.angle;
-            this.previousPos.x = this.pos.x;
-            this.previousPos.y = this.pos.y;
         }
+        // tracked even while velocityInheritance is off, so turning it on does not jump
+        this.previousAngle = this.angle;
+        this.previousPos.x = this.pos.x;
+        this.previousPos.y = this.pos.y;
 
         // update emitter
         if (this.isActive())
@@ -315,7 +323,7 @@ class ParticleEmitter extends EngineObject
     isActive() { return !this.emitTime || this.getAliveTime() < this.emitTime; }
 
     /** Destroy the particle emitter
-     *  @param {boolean} [immediate] - should particle emitters and other attached effects be allowed to die off */
+     *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
     destroy(immediate=false)
     {
         if (this.destroyed) return;
@@ -331,8 +339,19 @@ class ParticleEmitter extends EngineObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// scratch vector reused by Particle.render to avoid per-frame allocations
-const particleDrawPos = new Vector2, particleDrawSize = new Vector2;
+// scratch vectors reused by Particle.render and the tile collision to avoid per-frame allocations
+const particleDrawPos = new Vector2, particleDrawSize = new Vector2, particleCollidePos = new Vector2;
+
+// tests if a particle collides with tiles at x, y, through its emitter's collide callback if it has one
+function particleCollideTest(particle, collideCallback, x, y)
+{
+    const data = tileCollisionGetData(particleCollidePos.set(x, y));
+    if (!collideCallback)
+        return data > 0;
+
+    // the callback gets its own vector, made only when there is a tile to decide on
+    return !!data && !!collideCallback(particle, data, vec2(x, y));
+}
 
 /**
  * Particle Object - Created automatically by Particle Emitters
@@ -362,7 +381,7 @@ class Particle
         this.pos = pos;
         /** @property {number} */
         this.angle = angle;
-        /** @property {Vector2} */
+        /** @property {Vector2} - Current size, updated as it renders */
         this.size = vec2(sizeStart);
         /** @property {Color} */
         this.color = colorStart.copy();
@@ -415,9 +434,9 @@ class Particle
             return;
         }
 
-        // apply physics; only the tile collision needs where the particle was, so only then is it copied
+        // apply physics; only the tile collision needs where the particle was
         const solve = enablePhysicsSolver && collideTiles;
-        const oldPos = solve ? this.pos.copy() : undefined;
+        const oldX = this.pos.x, oldY = this.pos.y;
         this.velocity.x = this.velocity.x * damping + gravity.x * gravityScale;
         this.velocity.y = this.velocity.y * damping + gravity.y * gravityScale;
         if (solve)
@@ -440,28 +459,22 @@ class Particle
 
         // check collision against tiles
         this.groundObject = undefined;
-        const testCollision = collideCallback ? (pos)=>
-        {
-            const data = tileCollisionGetData(pos);
-            return data && collideCallback(this, data, pos);
-        } : (pos)=> tileCollisionGetData(pos) > 0;
-
-        if (testCollision(this.pos))
+        if (particleCollideTest(this, collideCallback, this.pos.x, this.pos.y))
         {
             // if already was stuck in collision, don't do anything
             const hitLayer = tileCollisionTest(this.pos);
-            if (!testCollision(oldPos))
+            if (!particleCollideTest(this, collideCallback, oldX, oldY))
             {
                 // test which side we bounced off (or both if a corner)
-                const isBlockedX = testCollision(vec2(this.pos.x, oldPos.y));
-                const isBlockedY = testCollision(vec2(oldPos.x, this.pos.y));
+                const isBlockedX = particleCollideTest(this, collideCallback, this.pos.x, oldY);
+                const isBlockedY = particleCollideTest(this, collideCallback, oldX, this.pos.y);
                 // collide callback may hit where the layer test does not, so hitLayer can be undefined
                 const hitRestitution = hitLayer ? max(restitution, hitLayer.restitution) : restitution;
                 const hitFriction = hitLayer ? max(friction, hitLayer.friction) : friction;
                 if (isBlockedX)
                 {
                     // move to previous X position and bounce
-                    this.pos.x = oldPos.x;
+                    this.pos.x = oldX;
                     this.velocity.x *= -hitRestitution;
                     this.velocity.y *= hitFriction;
                 }
@@ -472,7 +485,7 @@ class Particle
                         this.groundObject = hitLayer;
 
                     // move to previous Y position and bounce
-                    this.pos.y = oldPos.y;
+                    this.pos.y = oldY;
                     this.velocity.y *= -hitRestitution;
                     this.velocity.x *= hitFriction;
                 }
@@ -507,6 +520,7 @@ class Particle
         // lerp color and size
         const p1 = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1, p2 = 1-p1;
         const radius = p2 * this.sizeStart + p1 * this.sizeEnd;
+        this.size.set(radius, radius); // kept current for callbacks, drawn from the scratch since a trail stretches it
         const size = particleDrawSize.set(radius, radius);
         const alphaFade = p1 < fadeRate ? p1/fadeRate : 
             p1 > 1-fadeRate ? (1-p1)/fadeRate : 1;

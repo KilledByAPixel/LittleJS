@@ -1,3 +1,5 @@
+let mouseLight;
+
 function gameInit()
 {
     new LightSystemPlugin;

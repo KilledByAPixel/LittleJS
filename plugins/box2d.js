@@ -44,6 +44,14 @@ function box2dTemp(v, slot=0)
 const box2dQueryObjects = {};
 function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
 
+// what Box2D adds to the inertia for a center of mass away from the origin, in float32 as it does it, so taking it
+// off again gives exactly what Box2D keeps: an inertia of 0, a locked rotation, stays 0 and not a speck either side
+function box2dCenterInertia(mass, x, y)
+{
+    const f = Math.fround;
+    return f(f(mass)*f(f(f(x)*f(x)) + f(f(y)*f(y))));
+}
+
 // what cannot happen while the world steps, like losing a body from a contact callback: done now, or queued until
 // the step is done; a body going calls endContact for what it touched, and a destroy from there waits in the queue
 // too, since the contact it would free is still in use, so the queue runs one at a time in the order things came
@@ -64,6 +72,14 @@ function box2dRunPending()
 
 // each Box2dJoint by its native pointer, so a joint Box2D destroys along with a body can let go of its wrapper
 const box2dJoints = new Map;
+
+// a gear joint keeps pointers to the joints it gears and to their bodies, so it goes before either joint does
+function box2dDestroyGears(joint)
+{
+    for (const gear of box2dJoints.values())
+        if (gear instanceof Box2dGearJoint && (gear.joint1 === joint || gear.joint2 === joint))
+            gear.destroy();
+}
 
 /** Enable Box2D debug drawing
  *  @param {boolean} enable
@@ -128,10 +144,11 @@ class Box2dObject extends EngineObject
 
         // destroy physics body, fixtures, and joints; from a contact callback the world is still
         // stepping and cannot lose a body, so it goes as soon as the step is done; the object
-        // leaves box2d.objects at the next step, or the next frame while paused
+        // leaves box2d.objects at the next step, or the next frame while paused or time is stopped;
+        // the body lets go of it after, since destroying it calls endContact, which finds it there
         ASSERT(this.body, 'Box2dObject has no body to destroy');
         const body = this.body;
-        box2dWhenUnlocked(()=> { box2d.world.DestroyBody(body); this.body = undefined; });
+        box2dWhenUnlocked(()=> { box2d.world.DestroyBody(body); body.object = undefined; this.body = undefined; });
         super.destroy();
     }
 
@@ -245,7 +262,8 @@ class Box2dObject extends EngineObject
         return fixture;
     }
 
-    /** Add a polygon shape to the body
+    /** Add a polygon shape to the body, the convex hull of its points; Box2D takes 3 to 8 points,
+     *  not all in a line, and no fixture is made from any other; points closer than .001 count as one
      *  @param {Array<Vector2>} points
      *  @param {number}  [density]
      *  @param {number}  [friction]
@@ -257,7 +275,18 @@ class Box2dObject extends EngineObject
 
         function box2dCreatePolygonShape(points)
         {
-            ASSERT(3 <= points.length && points.length <= 8);
+            // Box2D stops for good on two hull points that nearly meet, like a loop whose last point is its first
+            points = points.filter((p, i)=> points.slice(0, i).every(q=> p.distanceSquared(q) > 1e-6));
+
+            // Box2D stops for good on a polygon it cannot take, so one with too many points or no area makes none;
+            // it takes the convex hull, which is at least as big as the biggest triangle of the points
+            let area = 0; // twice the biggest triangle's
+            if (3 <= points.length && points.length <= 8)
+                for (const a of points) for (const b of points) for (const c of points)
+                    area = max(area, abs(b.subtract(a).cross(c.subtract(a))));
+            ASSERT(area >= 1e-6, 'Box2D polygons need 3 to 8 points, not all in a line');
+            if (!(area >= 1e-6)) return;
+
             const buffer = box2d.instance._malloc(points.length * 8);
             for (let i=0, offset=0; i<points.length; ++i)
             {
@@ -274,6 +303,7 @@ class Box2dObject extends EngineObject
         }
 
         const shape = box2dCreatePolygonShape(points);
+        if (!shape) return;
         const fixture = this.addShape(shape, density, friction, restitution, isSensor);
         box2d.instance.destroy(shape); // the fixture has its own copy
         return fixture;
@@ -281,7 +311,7 @@ class Box2dObject extends EngineObject
 
     /** Add a regular polygon shape to the body
      *  @param {number}  [diameter]
-     *  @param {number}  [sides]
+     *  @param {number}  [sides] - 3 to 8, the most Box2D polygons have
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
@@ -290,6 +320,8 @@ class Box2dObject extends EngineObject
     {
         ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
         ASSERT(isNumber(sides) && sides>2, 'sides must be a positive number greater than 2');
+        ASSERT(sides <= 8, 'Box2D polygons have at most 8 sides');
+        sides = min(sides, 8); // more would stop Box2D for good
 
         const points = [];
         const radius = diameter/2;
@@ -416,8 +448,8 @@ class Box2dObject extends EngineObject
         return fixtures;
     }
 
-    /** Destroy a fixture from the body
-     *  @param {Object} [fixture] */
+    /** Destroy a fixture from the body, from a contact callback once the step is done
+     *  @param {Object} fixture */
     destroyFixture(fixture)
     {
         // an edge list or loop that loses a fixture is no longer one line, what is left of it draws edge by edge
@@ -429,8 +461,11 @@ class Box2dObject extends EngineObject
             edgeFixtures.forEach((p, pointer)=> p === points && edgeFixtures.delete(pointer));
         }
 
-        // not once the body is gone, which takes its fixtures with it
-        box2dWhenUnlocked(()=> this.body && this.body.DestroyFixture(fixture));
+        // not once the body is gone, which takes its fixtures with it, or once the fixture is,
+        // since a second destroy of it, like one from each of two contacts in a step, stops Box2D for good
+        const pointer = box2d.instance.getPointer(fixture);
+        box2dWhenUnlocked(()=> this.body && this.getFixtureList().some(f=> box2d.instance.getPointer(f) === pointer)
+            && this.body.DestroyFixture(fixture));
     }
 
     /** Destroy all fixture from the body */
@@ -456,9 +491,14 @@ class Box2dObject extends EngineObject
      *  @return {number} */
     getMass() { return this.body.GetMass(); }
 
-    /** Gets the rotational inertia
+    /** Gets the rotational inertia about the center of mass
      *  @return {number} */
-    getInertia() { return this.body.GetInertia(); }
+    getInertia()
+    {
+        // Box2D gives it about the body origin
+        const center = this.body.GetLocalCenter();
+        return max(0, Math.fround(this.body.GetInertia() - box2dCenterInertia(this.getMass(), center.get_x(), center.get_y())));
+    }
 
     /** Check if this object is awake
      *  @return {boolean} */
@@ -552,18 +592,19 @@ class Box2dObject extends EngineObject
      *  @param {number} mass */
     setMass(mass) { this.setMassData(undefined, mass) }
     
-    /** Set the moment of inertia of the body
+    /** Set the moment of inertia of the body, about its center of mass
      *  @param {number} momentOfInertia */
     setMomentOfInertia(momentOfInertia)
     { this.setMassData(undefined, undefined, momentOfInertia) }
-    
+
     /** Reset the mass, center of mass, and moment, from a contact callback once the step is done */
     resetMassData() { box2dWhenUnlocked(()=> this.body && this.body.ResetMassData()); }
-    
-    /** Set the mass data of the body, from a contact callback once the step is done
+
+    /** Set the mass data of the body, from a contact callback once the step is done;
+     *  a mass of 0 or less becomes 1, use setBodyType for a static body
      *  @param {Vector2} [localCenter]
      *  @param {number}  [mass]
-     *  @param {number}  [momentOfInertia] */
+     *  @param {number}  [momentOfInertia] - About the center of mass */
     setMassData(localCenter, mass, momentOfInertia)
     {
         localCenter = localCenter && localCenter.copy(); // as it is now, even if it waits for the step
@@ -572,10 +613,21 @@ class Box2dObject extends EngineObject
             if (!this.body) return;
             const data = box2dQueryObject('massData', 'b2MassData'); // reused, GetMassData fills it in
             this.body.GetMassData(data);
-            // use !== undefined so setMass(0) (static-equivalent) isn't silently ignored
-            if (localCenter !== undefined) data.set_center(box2dTemp(localCenter));
-            if (mass !== undefined) data.set_mass(mass);
-            if (momentOfInertia !== undefined) data.set_I(momentOfInertia);
+
+            // Box2D's inertia is about the body origin, so it is turned to the center of mass and back; kept as
+            // it was, one for the old mass and center goes below 0 about the new ones, which stops Box2D for good
+            const center = data.get_center(), oldMass = data.get_mass();
+            const cx = localCenter ? localCenter.x : center.get_x(), cy = localCenter ? localCenter.y : center.get_y();
+            // it is worked out in float32 as Box2D does it, which must come out above 0 or the rotation is locked
+            const f = Math.fround;
+            const oldInertia = f(data.get_I() - box2dCenterInertia(oldMass, center.get_x(), center.get_y()));
+            const inertia = momentOfInertia ?? oldInertia;
+            mass ??= oldMass;
+            const offset = box2dCenterInertia(mass > 0 ? mass : 1, cx, cy); // a mass of 0 or less is 1 to Box2D
+            const I = f(inertia + offset);
+            data.set_mass(mass);
+            data.set_center(box2dTemp(vec2(cx, cy)));
+            data.set_I(inertia > 0 && f(I - offset) > 0 ? I : 0);
             this.body.SetMassData(data);
         });
     }
@@ -891,6 +943,7 @@ class Box2dJoint
         const joint = this.box2dJoint;
         if (!joint) return; // destroyed already, or with one of its objects
         this.box2dJoint = 0;
+        box2dDestroyGears(this);
 
         // a body destroyed before it, in the same step, takes the joint with it and lets go of it here
         const pointer = box2d.instance.getPointer(joint);
@@ -1001,8 +1054,8 @@ class Box2dDistanceJoint extends Box2dJoint
     /** Create a distance joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchorA
-     *  @param {Vector2} anchorB
+     *  @param {Vector2} [anchorA] - World position, objectA's position if not given
+     *  @param {Vector2} [anchorB] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, collide=false)
     {
@@ -1085,8 +1138,8 @@ class Box2dRopeJoint extends Box2dJoint
     /** Create a rope joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchorA
-     *  @param {Vector2} anchorB
+     *  @param {Vector2} [anchorA] - World position, objectA's position if not given
+     *  @param {Vector2} [anchorB] - World position, objectB's position if not given
      *  @param {number} [extraLength]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, extraLength=0, collide=false)
@@ -1138,7 +1191,7 @@ class Box2dRevoluteJoint extends Box2dJoint
     /** Create a revolute joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
@@ -1233,6 +1286,7 @@ class Box2dRevoluteJoint extends Box2dJoint
  * - Either joint can be a revolute or prismatic joint
  * - You specify a gear ratio to bind the motions together
  * - joint1's angle or translation plus ratio times joint2's stays constant, angles clockwise like angle
+ * - It is destroyed along with either joint, or an object either joint is on
  * @extends Box2dJoint
  * @memberof Box2D
  */
@@ -1294,7 +1348,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     /** Create a prismatic joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {Vector2} [worldAxis]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
@@ -1403,7 +1457,7 @@ class Box2dWheelJoint extends Box2dJoint
     /** Create a wheel joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {Vector2} [worldAxis]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
@@ -1501,21 +1555,25 @@ class Box2dWeldJoint extends Box2dJoint
     /** Create a weld joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
+        const referenceAngle = objectB.body.GetAngle() - objectA.body.GetAngle();
         const jointDef = new box2d.instance.b2WeldJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
         jointDef.set_localAnchorA(box2dTemp(localAnchorA));
         jointDef.set_localAnchorB(box2dTemp(localAnchorB));
-        jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
+        jointDef.set_referenceAngle(referenceAngle);
         jointDef.set_collideConnected(collide);
         super(jointDef);
+
+        // kept here, since the binding cannot read it back from a weld joint; box2d uses reverse angle
+        this.referenceAngle = -referenceAngle;
     }
 
     /** Get the local anchor point relative to objectA's origin
@@ -1528,7 +1586,7 @@ class Box2dWeldJoint extends Box2dJoint
 
     /** Get the reference angle, objectB angle minus objectA angle in the reference state
      *  @return {number} */
-    getReferenceAngle() { return -this.box2dJoint.GetReferenceAngle(); } // box2d uses reverse angle
+    getReferenceAngle() { return this.referenceAngle; }
 
     /** Set the frequency in Hertz
      *  @param {number} hz */
@@ -1560,7 +1618,7 @@ class Box2dFrictionJoint extends Box2dJoint
     /** Create a friction joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
@@ -1617,8 +1675,8 @@ class Box2dPulleyJoint extends Box2dJoint
      *  @param {Box2dObject} objectB
      *  @param {Vector2} groundAnchorA
      *  @param {Vector2} groundAnchorB
-     *  @param {Vector2} anchorA
-     *  @param {Vector2} anchorB
+     *  @param {Vector2} [anchorA] - World position, objectA's position if not given
+     *  @param {Vector2} [anchorB] - World position, objectB's position if not given
      *  @param {number}  [ratio]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio=1, collide=false)
@@ -1649,11 +1707,11 @@ class Box2dPulleyJoint extends Box2dJoint
      *  @return {Vector2} */
     getGroundAnchorB() { return box2d.vec2From(this.box2dJoint.GetGroundAnchorB()); }
 
-    /** Get the current length of the segment attached to objectA
+    /** Get the rest length of the segment attached to objectA, set at creation
      *  @return {number} */
     getLengthA() { return this.box2dJoint.GetLengthA(); }
 
-    /** Get the current length of the segment attached to objectB
+    /** Get the rest length of the segment attached to objectB, set at creation
      *  @return {number} */
     getLengthB(){ return this.box2dJoint.GetLengthB(); }
 
@@ -1711,11 +1769,11 @@ class Box2dMotorJoint extends Box2dJoint
      *  @return {number} */
     getAngularOffset() { return -this.box2dJoint.GetAngularOffset(); }
 
-    /** Set the maximum friction force
+    /** Set the maximum force
      *  @param {number} force */
     setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
 
-    /** Get the maximum friction force
+    /** Get the maximum force
      *  @return {number} */
     getMaxForce() { return this.box2dJoint.GetMaxForce(); }
 
@@ -1773,13 +1831,17 @@ class Box2dPlugin
          *  @type {number} */
         this.bodyTypeDynamic = instance.b2_dynamicBody;
 
-        // a body that goes takes its joints with it, their wrappers let go of them
+        // a body that goes takes its joints with it, their wrappers let go of them, and a gear joint on one of them
+        // goes too, since it would keep pointers to what was freed; it hangs off other bodies, so it goes after
         const destructionListener = new box2d.instance.JSDestructionListener();
         destructionListener.SayGoodbyeJoint = function(jointPointer)
         {
             const joint = box2dJoints.get(jointPointer);
             if (joint)
+            {
+                box2dDestroyGears(joint);
                 joint.box2dJoint = 0;
+            }
             box2dJoints.delete(jointPointer);
         };
         destructionListener.SayGoodbyeFixture = function() {};
@@ -1836,8 +1898,9 @@ class Box2dPlugin
     // raycasting and querying
 
     /** raycast and return a list of all the results
-     *  @param {Vector2} start 
-     *  @param {Vector2} end */
+     *  @param {Vector2} start
+     *  @param {Vector2} end
+     *  @return {Array<Box2dRaycastResult>} */
     raycastAll(start, end)
     {
         // a ray with no length fails an assert that stops Box2D for good, measured as Box2D does in 32 bit floats,
@@ -1851,8 +1914,9 @@ class Box2dPlugin
         raycastCallback.ReportFixture = function(fixturePointer, point, normal, fraction)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
-            if (!fixture.GetBody().object)
-                return 1; // a raw body with no Box2dObject, continue getting results
+            const o = fixture.GetBody().object;
+            if (!o || o.destroyed)
+                return 1; // a raw body with no Box2dObject or one destroyed this step, continue getting results
             point  = box2d.vec2FromPointer(point);
             normal = box2d.vec2FromPointer(normal);
             raycastResults.push(new Box2dRaycastResult(fixture, point, normal, fraction));
@@ -1866,8 +1930,9 @@ class Box2dPlugin
     }
 
     /** raycast and return the first result
-     *  @param {Vector2} start 
-     *  @param {Vector2} end */
+     *  @param {Vector2} start
+     *  @param {Vector2} end
+     *  @return {Box2dRaycastResult|undefined} */
     raycast(start, end)
     {
         const raycastResults = box2d.raycastAll(start, end);
@@ -1877,8 +1942,9 @@ class Box2dPlugin
     }
 
     /** box aabb cast and return all the objects
-     *  @param {Vector2} pos 
-     *  @param {Vector2} size */
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
+     *  @return {Array<Box2dObject>} */
     boxCastAll(pos, size)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
@@ -1886,7 +1952,7 @@ class Box2dPlugin
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
             const o = fixture.GetBody().object;
-            if (o && !queryObjects.includes(o)) // skip raw bodies with no Box2dObject
+            if (o && !o.destroyed && !queryObjects.includes(o)) // skip raw bodies and ones destroyed this step
                 queryObjects.push(o); // add if not already in list
             return true; // continue getting results
         };
@@ -1902,16 +1968,20 @@ class Box2dPlugin
     }
 
     /** box aabb cast and return the first object
-     *  @param {Vector2} pos 
-     *  @param {Vector2} size */
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
+     *  @return {Box2dObject|undefined} */
     boxCast(pos, size)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
-            queryObject = fixture.GetBody().object;
-            return !queryObject; // stop getting results, unless a raw body with no Box2dObject
+            const o = fixture.GetBody().object;
+            if (!o || o.destroyed)
+                return true; // a raw body with no Box2dObject or one destroyed this step, continue getting results
+            queryObject = o;
+            return false; // stop getting results
         };
 
         const aabb = box2dQueryObject('aabb', 'b2AABB');
@@ -1924,9 +1994,10 @@ class Box2dPlugin
         return queryObject;
     }
 
-    /** circle cast and return all the objects
-     *  @param {Vector2} pos 
-     *  @param {number} diameter */
+    /** circle cast and return all the objects whose position is within the circle
+     *  @param {Vector2} pos
+     *  @param {number} diameter
+     *  @return {Array<Box2dObject>} */
     circleCastAll(pos, diameter)
     {
         const radius2 = (diameter/2)**2;
@@ -1934,9 +2005,10 @@ class Box2dPlugin
         return results.filter(o=>o.pos.distanceSquared(pos) < radius2);
     }
 
-    /** circle cast and return the first object
-     *  @param {Vector2} pos 
-     *  @param {number} diameter */
+    /** circle cast and return the object whose position is nearest, of those within the circle
+     *  @param {Vector2} pos
+     *  @param {number} diameter
+     *  @return {Box2dObject|undefined} */
     circleCast(pos, diameter)
     {
         const radius2 = (diameter/2)**2;
@@ -1956,8 +2028,9 @@ class Box2dPlugin
     }
 
     /** point cast and return the first object
-     *  @param {Vector2} pos 
-     *  @param {boolean} [dynamicOnly] */
+     *  @param {Vector2} pos
+     *  @param {boolean} [dynamicOnly]
+     *  @return {Box2dObject|undefined} */
     pointCast(pos, dynamicOnly=true)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
@@ -1968,8 +2041,11 @@ class Box2dPlugin
                 return true; // continue getting results
             if (!fixture.TestPoint(box2dTemp(pos)))
                 return true; // continue getting results
-            queryObject = fixture.GetBody().object;
-            return !queryObject; // stop getting results, unless a raw body with no Box2dObject
+            const o = fixture.GetBody().object;
+            if (!o || o.destroyed)
+                return true; // a raw body with no Box2dObject or one destroyed this step, continue getting results
+            queryObject = o;
+            return false; // stop getting results
         };
 
         const aabb = box2dQueryObject('aabb', 'b2AABB');
@@ -2125,9 +2201,10 @@ async function box2dInit()
     // add the box2d plugin to the engine
     function box2dUpdate()
     {
-        if (paused)
+        // frozen like the engine objects while paused or time is stopped
+        if (paused || !timeScale)
         {
-            // what was destroyed while paused leaves the list, the step does it otherwise
+            // what was destroyed while frozen leaves the list, the step does it otherwise
             box2d.objects = box2d.objects.filter(o=>!o.destroyed);
             return;
         }

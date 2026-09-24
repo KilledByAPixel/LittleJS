@@ -13,7 +13,6 @@ function gameInit()
     menu.addChild(new UIText(vec2(), vec2(400, 60), 'Level Select'));
 
     // inner 3x2 grid of level select buttons
-    // build fully before adding so outer reads its final size
     const grid = new UILayout(vec2(), 3, 20, 0, true);
     for (let i = 1; i <= 6; ++i)
     {

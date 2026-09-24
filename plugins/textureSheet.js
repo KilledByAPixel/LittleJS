@@ -129,7 +129,7 @@ class TextureSheet
     }
 
     /** Draw an image into this sheet at a tile returned by tryAdd
-     *  @param {HTMLImageElement} image - Source image to copy from
+     *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image - Source image to copy from
      *  @param {TileInfo} tileInfo - Where to put it, from tryAdd
      *  @param {boolean} [update] - Upload to webgl now, pass false when batching
      *  @param {number|Vector2} [sourcePadding] - How many pixels padding around each frame in the source image */
@@ -260,7 +260,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
  *  @param {string} imageSrc - Atlas image path
  *  @param {string|Object} jsonSrc - Atlas json path, or already parsed json data
  *  @param {number} [padding] - How many pixels padding around each frame
- *  @return {Object} Object mapping frame and animation names to TileInfos
+ *  @return {Object<string, TileInfo>} Object mapping frame and animation names to TileInfos
  *  @example
  *  const atlas = loadAtlas('sprites.png', 'sprites.json');
  *  await spritesReady();

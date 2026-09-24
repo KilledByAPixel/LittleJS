@@ -92,15 +92,16 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
 
-// the pairs of objects asked about a collision this update and left overlapping, asker then other, so the other's own
-// physics does not ask again
-const engineObjectsCollidePairs = [];
+// the pairs of objects asked about a collision this update and left overlapping, so the other's own physics does not
+// ask again, a set of others for each asker so the lookup stays quick when many objects pile up on one spot
+const engineObjectsCollidePairs = new Map;
 function engineObjectsCollidePairAsked(asker, other)
+{ return !!engineObjectsCollidePairs.get(asker)?.has(other); }
+function engineObjectsCollidePairAdd(asker, other)
 {
-    for (let i = 0; i < engineObjectsCollidePairs.length; i += 2)
-        if (engineObjectsCollidePairs[i] === asker && engineObjectsCollidePairs[i+1] === other)
-            return true;
-    return false;
+    let others = engineObjectsCollidePairs.get(asker);
+    others || engineObjectsCollidePairs.set(asker, others = new Set);
+    others.add(other);
 }
 let engineInitialized = false; // engineInit ran, with or without a canvas
 let engineObjectsUpdateCount = 0; // passes of engineObjectsUpdate so far, how a child knows it moved this pass
@@ -129,6 +130,7 @@ class EnginePlugin
  */
 
 /** Add a new update function for a plugin
+ *  - update runs on every fixed tick, paused and timeScale 0 included; a plugin that simulates should skip those
  *  @param {PluginCallback} [update]
  *  @param {PluginCallback} [render]
  *  @param {PluginCallback} [glContextLost]
@@ -162,11 +164,11 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
  */
 
 /** Startup LittleJS engine with your callback functions
- *  @param {GameInitCallback} gameInit - Called once after the engine starts up, can be async for loading
- *  @param {GameCallback} gameUpdate - Called every frame before objects are updated (60fps), use for game logic
- *  @param {GameCallback} gameUpdatePost - Called after physics and objects are updated, even when paused, use for UI updates
- *  @param {GameCallback} gameRender - Called before objects are rendered, use for drawing backgrounds/world elements
- *  @param {GameCallback} gameRenderPost - Called after objects are rendered, use for drawing UI/overlays
+ *  @param {GameInitCallback} [gameInit] - Called once after the engine starts up, can be async for loading
+ *  @param {GameCallback} [gameUpdate] - Called every frame before objects are updated (60fps), use for game logic
+ *  @param {GameCallback} [gameUpdatePost] - Called after physics and objects are updated, even when paused, use for UI updates
+ *  @param {GameCallback} [gameRender] - Called before objects are rendered, use for drawing backgrounds/world elements
+ *  @param {GameCallback} [gameRenderPost] - Called after objects are rendered, use for drawing UI/overlays
  *  @param {Array<string>} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png'])
  *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
  *  @example
@@ -208,6 +210,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
         // setup gl rendering if enabled
         glPreRender();
+        setShader(); // a shader left set last frame does not carry into this one
 
         // plugins that draw underneath the 2D layer
         pluginList.forEach(plugin=>plugin.preRender?.());
@@ -251,18 +254,21 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // update multiple frames if necessary in case of slow framerate
         for (; frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
         {
+            // read again each tick, so a pause set by the game stops the rest of this frame's catch-up ticks
+            const frozenTick = paused || !(timeScale * debugScale);
+
             // increment frame and update time, frozen does not advance time
-            if (!frozen)
+            if (!frozenTick)
                 time = frame++ / frameRate;
 
             // update game and objects, when frozen update everything except them
             wasUpdated = true;
             engineUpdateCanvas();
             inputUpdate();
-            if (!frozen)
+            if (!frozenTick)
                 gameUpdate();
             pluginList.forEach(plugin=>plugin.update?.());
-            if (frozen)
+            if (frozenTick)
             {
                 // update object transforms even when paused
                 for (const o of engineObjects)
@@ -332,6 +338,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
             // post rendering
             gameRenderPost();
+            setShader(); // plugin, input and debug draws start from the engine's state
+            setAdditiveBlendMode(false);
             pluginList.forEach(plugin=>plugin.render?.());
             inputRender();
             debugRender();
@@ -465,7 +473,7 @@ function engineUpdateCanvas()
 
         // responsive aspect ratio
         const innerAspect = innerWidth / innerHeight;
-        ASSERT(canvasMinAspect <= canvasMaxAspect);
+        ASSERT(!canvasMaxAspect || canvasMinAspect <= canvasMaxAspect);
         if (canvasMaxAspect && innerAspect > canvasMaxAspect)
         {
             // full height
@@ -559,7 +567,7 @@ function engineStep(frames=1)
 function engineObjectsUpdate()
 {
     ++engineObjectsUpdateCount;
-    engineObjectsCollidePairs.length = 0;
+    engineObjectsCollidePairs.clear();
     // get list of solid objects for physics optimization
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
@@ -584,15 +592,19 @@ function engineObjectsUpdate()
     {
         if (o.destroyed || o.updatePass === pass) return;
 
+        // its parent is up to date, so it updates from where it is now, and its children from where it is after
         o.updatePass = pass;
+        o.updateTransforms(false);
         o.update();
+        o.children.length && o.updateTransforms(false);
         updateChildObjects(o.children);
     }
     for (const o of engineObjects)
     {
         if (o.parent || o.destroyed || o.updatePass === pass) continue; // a child that let go is not updated twice
 
-        // update top level objects
+        // update top level objects, each child places itself before it updates so it sees this frame's position,
+        // then the whole tree is placed again so what the children changed in their localPos lands before render
         o.updatePass = pass;
         o.update();
         updateChildObjects(o.children);
@@ -607,7 +619,7 @@ function engineObjectsUpdate()
  *  - This can be used to clear out all objects when restarting a level
  *  - Objects with the persistent flag set are left alone, for things that outlive a level
  *  - Objects can override their destroy function to do cleanup or stick around
- *  @param {boolean} [immediate] - should attached effects be allowed to die off?
+ *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first
  *  @memberof Engine */
 function engineObjectsDestroy(immediate=true)
 {
@@ -664,9 +676,14 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @memberof Engine */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
-{ engineObjectsCollect(pos, size, objects).forEach(o => callbackFunction(o)); }
+{
+    // an object an earlier callback destroyed is skipped
+    for (const o of engineObjectsCollect(pos, size, objects))
+        o.destroyed || callbackFunction(o);
+}
 
 /** Return a list of objects intersecting a ray, objects destroyed this frame left out
+ *  - Only objects with collideRaycast set are hit, which setCollision turns on
  *  @param {Vector2} start
  *  @param {Vector2} end
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check

@@ -1,5 +1,6 @@
 const musicSound = new Sound('song.mp3');
 let musicVolume = .8, musicInstance;
+let musicPlayer, infoText, playButton, stopButton;
 
 function gameInit()
 {

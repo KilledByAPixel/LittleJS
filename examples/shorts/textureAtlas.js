@@ -5,7 +5,7 @@ let atlas;
 
 async function gameInit()
 {
-    // the json usually comes from a file, inline here to keep the demo self contained
+    // the json usually comes from a file, inline here to keep it self contained
     atlas = loadAtlas('tiles.png', {frames: {
         'spin_0.png': {frame: {x:0,   y:0,   w:128, h:128}},
         'spin_1.png': {frame: {x:128, y:0,   w:128, h:128}},

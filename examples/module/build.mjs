@@ -92,7 +92,7 @@ function moduleFixStep(filename)
 function uglifyBuildStep(filename)
 {
     console.log('Running uglify...');
-    execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
+    execSync(`npx uglifyjs "${filename}" -c -m -o "${filename}"`, {stdio: 'inherit'});
 }
 
 function htmlBuildStep()

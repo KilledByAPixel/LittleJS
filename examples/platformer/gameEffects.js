@@ -13,7 +13,7 @@
 // import LittleJS module
 import * as LJS from '../../dist/littlejs.esm.js';
 import * as GameLevel from './gameLevel.js';
-const {vec2, hsl, rgb} = LJS;
+const {vec2, hsl} = LJS;
 
 ///////////////////////////////////////////////////////////////////////////////
 // sound effects
@@ -122,8 +122,8 @@ export function explosion(pos, radius=3)
         pos, 0,                         // pos, angle
         radius/2, .1, 100*radius, 3.14, // emitSize, emitTime, rate, cone
         0,                              // tileInfo
-        rgb(1,.5,.1),   rgb(1,.1,.1),   // colorStartA, colorStartB
-        rgb(1,.5,.1,0), rgb(1,.1,.1,0), // colorEndA, colorEndB
+        hsl(.07,1,.55),   hsl(0,1,.55),   // colorStartA, colorStartB
+        hsl(.07,1,.55,0), hsl(0,1,.55,0), // colorEndA, colorEndB
         .7, .8, .2, .2, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
         .9, 1, -.2, 3.14, .05, // damp, angleDamp, gravity, particleCone, fade
         .5, 0, 1, 0, 1e9       // randomness, collide, additive, colorLinear, renderOrder

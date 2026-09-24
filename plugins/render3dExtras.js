@@ -321,6 +321,8 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
     const tileInfo = font.tileInfo, padding = tileInfo.padding;
     const paddedX = tileInfo.size.x + padding * 2, paddedY = tileInfo.size.y + padding * 2;
     const columns = tileInfo.textureInfo.size.x / paddedX | 0;
+    // where the font starts in its texture, like ImageFont, the glyph indices count from there
+    const firstIndex = ((tileInfo.pos.y - padding) / paddedY | 0) * columns + ((tileInfo.pos.x - padding) / paddedX | 0);
     let glyphs = render3DGlyphCache.get(font); // unit sized, scaled when combined
     glyphs || render3DGlyphCache.set(font, glyphs = new Map);
     const charSize = vec2(size * tileInfo.size.x / tileInfo.size.y, size);
@@ -336,7 +338,8 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
             let glyph = glyphs.get(index);
             if (!glyph)
             {
-                const pos = vec2(index % columns * paddedX + padding, (index / columns | 0) * paddedY + padding);
+                const g = firstIndex + index;
+                const pos = vec2(g % columns * paddedX + padding, (g / columns | 0) * paddedY + padding);
                 glyphs.set(index, glyph = buildExtrude(new TileInfo(pos, tileInfo.size, tileInfo.textureInfo)));
             }
             const x = (i - (line.length - 1) / 2) * charSize.x;
@@ -575,7 +578,7 @@ class CameraControl3D extends EngineObject3D
     /** Create a camera control, it drives render3D.camera every frame
      *  @param {Vector3} [target] - The point to look at, its pos3D
      *  @param {number} [distance] - How far the camera sits from the target
-     *  @param {number} [pitch] - Angle above the horizon, PI/2 looks straight down
+     *  @param {number} [pitch] - Angle above the horizon, PI/2 looks straight down, clamped to pitchRange
      *  @param {number} [idleSpin] - Turned each frame while not dragging, 0 holds still */
     constructor(target=vec3(), distance=10, pitch=.4, idleSpin=0)
     {
@@ -597,8 +600,8 @@ class CameraControl3D extends EngineObject3D
         this.zoomSpeed = .1;
         /** @property {Vector2} - Closest and furthest the wheel can zoom to */
         this.zoomRange = vec2(distance/4, distance*3);
-        /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top */
-        this.pitchRange = vec2(-.2, 1.4);
+        /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top, widened to hold the pitch given */
+        this.pitchRange = vec2(min(-.2, pitch), max(1.4, pitch));
     }
 
     /** Read the mouse and put the camera on its orbit, called automatically each frame */
@@ -824,6 +827,9 @@ class ParticleEmitter3D extends EngineObject3D
         this.trailData = undefined;
         /** @property {number} - Trail points kept per particle, from trailTime */
         this.trailMax = 0;
+        /** @property {Vector3|undefined} - Where the emitter was at its last update, for when its parent is destroyed
+         *  @type {Vector3|undefined} */
+        this.worldPos3D = undefined;
         this.emitTimeBuffer = 0;
     }
 
@@ -955,7 +961,8 @@ class ParticleEmitter3D extends EngineObject3D
 
     /** Draw the particles, as flat squares or as streaks when trailTime is set
      *  - The whole emitter sorts as one thing, its particles are not sorted against each other
-     *  - With render3D.instancing on the squares go out as one instanced draw of render3D.billboardMesh */
+     *  - With render3D.instancing on the squares go out as one instanced draw of render3D.billboardMesh
+     *  @return {void} */
     render3D()
     {
         const r = render3D;
@@ -1088,8 +1095,8 @@ class Trail3D extends EngineObject3D
         /** @property {Vector3|undefined} - Direction across the ribbon, recorded with each sample, undefined faces the camera
          *  @type {Vector3|undefined} */
         this.side = undefined;
-        /** @property {Array<Object>} - Recorded samples, oldest first
-         *  @type {Array<Object>} */
+        /** @property {Array<{pos: Vector3, side: Vector3|undefined, time: number}>} - Recorded samples, oldest first
+         *  @type {Array<{pos: Vector3, side: Vector3|undefined, time: number}>} */
         this.samples = [];
     }
 
@@ -1121,7 +1128,8 @@ class Trail3D extends EngineObject3D
         this.finishing && !samples.length && this.destroy();
     }
 
-    /** Draw the ribbon */
+    /** Draw the ribbon
+     *  @return {void} */
     render3D()
     {
         const samples = this.samples;

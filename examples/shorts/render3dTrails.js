@@ -26,6 +26,7 @@ class Flag extends EngineObject3D
     {
         super(pos, buildGrid(vec2(4,2.5), vec2(16,10), hsl(0,.7,.6)));
         this.rotation3D.x = PI/2; // stand the grid up
+        this.mesh.dynamicDraw = true; // its points move every frame
     }
     update()
     {

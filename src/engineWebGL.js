@@ -32,7 +32,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glMipmappedTextures = new WeakSet, glMipmapsStale = new Set, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
+let glMipmappedTextures = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -65,6 +65,16 @@ const gl_VERTEX_SOURCE =
     'v=mix(u.xw,u.zy,g);'+           // pass uv to fragment shader
     'l=g;d=c;e=a;'+                  // pass local uv and colors to fragment shader
     '}';                             // end of shader
+
+// the end of every sprite fragment shader, the engine's and each Shader's: t is the surface color
+// a render target's texture holds premultiplied color, so that batch blends with ONE and premultiplies here,
+// giving what a straight texel gives, clamped as the blend clamps it: exactly when the additive alpha is 0 or
+// the texel is clear or opaque, and close otherwise, since the straight color is not kept to be multiplied
+const gl_FRAGMENT_TINT_SOURCE =
+    'c=t*d+e;'+                      // modulate by color plus additive
+    'if(premultipliedTexture){'+     // a render target
+    'c.a=min(c.a,1.);'+              // the alpha the blend uses
+    'c.rgb=min(t.rgb*d.rgb*min(d.a+e.a,1.)+e.rgb*c.a,c.a);}';
 
 function glInit(rootElement)
 {
@@ -129,6 +139,7 @@ function glInit(rootElement)
         // reinit WebGL and restore textures
         glMipmappedTextures = new WeakSet;
         glMipmapsStale.clear();
+        glPremultipliedTextures = new WeakSet; // the tile layers draw into their new textures again below
         initWebGL();
         for (const info of glTextureInfos)
             info.glTexture = glCreateTexture(info.image, info.wrap);
@@ -146,13 +157,16 @@ function glInit(rootElement)
             '#version 300 es\n' +     // specify GLSL ES version
             'precision highp float;'+ // use highp for accuracy
             'uniform sampler2D s;'+   // texture
+            'uniform bool premultipliedTexture;'+ // is the texture a render target
             'in vec2 v;'+             // in: uv
             'in vec4 d,e;'+           // in: color, additiveColor
             'out vec4 c;'+            // out: color
             'void main(){'+           // shader entry point
-            'c=texture(s,v)*d+e;'+    // modulate texture by color plus additive
+            'vec4 t=texture(s,v);'+   // sample the texture
+            gl_FRAGMENT_TINT_SOURCE + // apply color and additive
             '}'                       // end of shader
         );
+        glShaderPremultiplied = false; // a new program starts with its uniforms at 0
 
         // setup poly rendering shaders
         glPolyShader = glCreateProgram(
@@ -320,15 +334,15 @@ function glPreRender(clear=true)
     glSetInstancedMode(true);
 }
 
-/** Clear the canvas and setup the viewport
+/** Clear the canvas or render target to canvasClearColor
  *  @memberof WebGL */
 function glClearCanvas()
 {
     if (!glContext) return;
 
-    // clear using the canvasClearColor
+    // clear using the canvasClearColor, premultiplied like everything the blend writes
     const color = canvasClearColor;
-    glContext.clearColor(color.r, color.g, color.b, color.a);
+    glContext.clearColor(color.r*color.a, color.g*color.a, color.b*color.a, color.a);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
@@ -440,10 +454,11 @@ function glShaderProgram(shader)
         'uniform sampler2D iChannel0;' + // the texture
         'uniform vec3 iResolution;' +    // canvas size in pixels
         'uniform float iTime;' +         // engine time
+        'uniform bool premultipliedTexture;' + // is the texture a render target
         'in vec2 v,l;in vec4 d,e;out vec4 c;\n' + // a define needs its own line
         '#define localUV l\n' +
         shader.fragmentCode + '\n' +
-        'void main(){vec4 t;mainImage(t,v);c=t*d+e;}');
+        'void main(){vec4 t;mainImage(t,v);' + gl_FRAGMENT_TINT_SOURCE + '}');
 }
 
 /** Create WebGL texture from an image and init the texture settings
@@ -514,6 +529,7 @@ function glSetTextureData(texture, image)
     ASSERT(image?.width > 0, 'Invalid image data.');
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
+    glPremultipliedTextures.delete(texture); // an image uploads straight color, even into a used render target
 
     // keep mipmaps in sync with new level 0 data, for any texture that has them
     if (glMipmappedTextures.has(texture))
@@ -552,9 +568,16 @@ function glUnregisterTextureInfo(textureInfo)
     // delete texture info from tracking list even if gl is not enabled
     glTextureInfos.delete(textureInfo);
 
-    // unset and destroy the texture
+    // unset and destroy the texture, drawing what is batched with it first, since deleting unbinds it
     const glTexture = textureInfo.glTexture;
     textureInfo.glTexture = undefined;
+    if (glTexture && glTexture === glActiveTexture)
+    {
+        glFlush();
+        glActiveTexture = undefined; // so nothing binds the deleted texture again
+    }
+    glMipmapsStale.delete(glTexture);
+    glPremultipliedTextures.delete(glTexture);
     glDeleteTexture(glTexture);
 }
 
@@ -564,9 +587,14 @@ function glFlush()
 {
     if (glEnable && glContext && glBatchCount)
     {
+        // a render target holds premultiplied color, a batch drawing one takes its color as it is
+        // glSetTexture flushes on every change, so the whole batch drew with the bound texture
+        const premultiplied = !glPolyMode && glPremultipliedTextures.has(glActiveTexture);
+
         // set blend mode
+        const sourceBlend = premultiplied ? glContext.ONE : glContext.SRC_ALPHA;
         const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
-        glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
+        glContext.blendFuncSeparate(sourceBlend, destBlend, glContext.ONE, destBlend);
         glContext.enable(glContext.BLEND);
 
         // a Shader's program for this batch, or the engine's own again after one
@@ -583,9 +611,16 @@ function glFlush()
                 // a render target is the size glPreRender gave its viewport
                 const resolution = glRenderTarget ? mainCanvasSize : glCanvas;
                 glContext.uniform3f(uniform('iResolution'), resolution.x ?? resolution.width, resolution.y ?? resolution.height, 1);
+                glContext.uniform1i(uniform('premultipliedTexture'), +premultiplied);
             }
         }
-        
+        if (!glPolyMode && !glBatchShader && glShaderPremultiplied !== premultiplied)
+        {
+            // the engine's program is the one in use, and it keeps the flag until it changes
+            glContext.uniform1i(glUniformLocation(glShader, 'premultipliedTexture'), +premultiplied);
+            glShaderPremultiplied = premultiplied;
+        }
+
         const byteLength = glBatchCount * 
             (glPolyMode ? gl_INDICES_PER_POLY_VERTEX : gl_INDICES_PER_INSTANCE);
         glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, glPositionData, 0, byteLength);
@@ -779,8 +814,9 @@ function glDrawColoredPoints(points, pointColors)
 }
 
 /** Set the WebGL render target to the given texture or back to the canvas
+ *  - What is drawn into a texture is stored premultiplied, and draws of that texture blend it as such
  *  @param {WebGLTexture} [texture] - a texture or undefined to use normal glCanvas
- *  @param {boolean} [clear] - should the render target be cleared
+ *  @param {boolean} [clear] - should the render target be cleared, to canvasClearColor, CLEAR_BLACK for a transparent one
  *  @memberof WebGL */
 function glSetRenderTarget(texture, clear=false)
 {
@@ -789,6 +825,7 @@ function glSetRenderTarget(texture, clear=false)
     const previousTarget = glRenderTarget;
     if (texture)
     {
+        glPremultipliedTextures.add(texture); // the blend writes premultiplied color into it
         // coming from the canvas, keep its transform and blend mode to put back after
         glRenderTarget || (glRenderTargetSaved = [glTransform, glAdditive]);
         glRenderTarget = texture;
@@ -828,6 +865,8 @@ function glSetRenderTarget(texture, clear=false)
 }
 
 /** Clear out a rectangle area of the WebGL canvas or render target
+ *  - In framebuffer pixels from the bottom left: backing store pixels on the canvas, texture pixels in a
+ *    render target
  *  @param {number} x
  *  @param {number} y
  *  @param {number} width

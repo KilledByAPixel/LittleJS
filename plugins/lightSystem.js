@@ -40,7 +40,7 @@ let lightSystem;
 class LightSystemPlugin
 {
     /** Create the global light system plugin.
-     *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to mainCanvasSize, which is css pixels, so the lightmap is not scaled by canvasPixelRatio; pass mainCanvasSize.scale(getCanvasPixelRatio()) for a full resolution lightmap)
+     *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to following mainCanvasSize, which is css pixels, so the lightmap is not scaled by canvasPixelRatio; pass mainCanvasSize.scale(getCanvasPixelRatio()) for a full resolution lightmap)
      *  @param {Color}   [ambientColor] - Color applied to unlit areas of the scene (defaults to BLACK = pitch dark). Set a small RGB like rgb(0.1,0.1,0.15) for a faint "moonlight" baseline so unlit areas aren't fully black.
      *  @example
      *  // simplest usage
@@ -48,6 +48,7 @@ class LightSystemPlugin
      */
     constructor(textureSize, ambientColor)
     {
+        ASSERT(engineInitialized || headlessMode, 'create the plugin after engineInit, e.g. in gameInit');
         ASSERT(!lightSystem, 'LightSystemPlugin already initialized');
         ASSERT(!postProcess, 'LightSystemPlugin must be created before PostProcessPlugin');
         lightSystem = this;
@@ -56,8 +57,10 @@ class LightSystemPlugin
         this.enabled = true;
         /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
         this.ambientColor = (ambientColor || BLACK).copy();
-        /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize in css pixels at init time, so it is not scaled by canvasPixelRatio) */
+        /** @property {Vector2} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
+        /** @property {boolean} - True when no size was passed, so the lightmap follows mainCanvasSize */
+        this.textureSizeAuto = !textureSize;
 
         /** @property {WebGLTexture|undefined} - The lightmap texture
          *  @type {WebGLTexture|undefined} */
@@ -89,8 +92,9 @@ class LightSystemPlugin
             }
 
             // resolve texture size default at init time (mainCanvasSize may
-            // not be set yet at the moment the constructor first ran)
-            if (!lightSystem.textureSize)
+            // not be set yet at the moment the constructor first ran), and
+            // again on a context restore, the canvas may have changed since
+            if (lightSystem.textureSizeAuto)
                 lightSystem.textureSize = mainCanvasSize.copy();
 
             // allocate the lightmap texture with null data at textureSize
@@ -179,6 +183,22 @@ class LightSystemPlugin
             // 1. flush any in-flight sprite batch from earlier render passes
             glFlush();
             const prevAdditive = glAdditive;
+
+            // an automatic size follows the canvas, so reallocate the lightmap when
+            // the canvas changed size, after the flush so the batch keeps its texture
+            const size = lightSystem.textureSize;
+            if (lightSystem.textureSizeAuto &&
+                (size.x !== mainCanvasSize.x || size.y !== mainCanvasSize.y))
+            {
+                lightSystem.textureSize = mainCanvasSize.copy();
+                glContext.bindTexture(glContext.TEXTURE_2D, lightSystem.texture);
+                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA,
+                    mainCanvasSize.x, mainCanvasSize.y, 0,
+                    glContext.RGBA, glContext.UNSIGNED_BYTE, null);
+                // put back the texture the engine tracks, a draw in renderLight must not sample the lightmap
+                if (glActiveTexture)
+                    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+            }
 
             // 2. bind lightmap as render target, clear to ambientColor
             const ac = lightSystem.ambientColor;

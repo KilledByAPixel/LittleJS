@@ -86,21 +86,22 @@ class EngineObject
         // physical properties
         /** @property {number} - How heavy the object is, static if 0 */
         this.mass = objectDefaultMass;
-        /** @property {number} - How much to slow down velocity each frame (0-1) */
+        /** @property {number} - Fraction of velocity kept each frame, 1 keeps all of it, 0 stops at once */
         this.damping = objectDefaultDamping;
-        /** @property {number} - How much to slow down rotation each frame (0-1) */
+        /** @property {number} - Fraction of angular velocity kept each frame, 1 keeps all of it, 0 stops at once */
         this.angleDamping = objectDefaultAngleDamping;
         /** @property {number} - How bouncy the object is when colliding (0-1) */
         this.restitution = objectDefaultRestitution;
-        /** @property {number} - How much friction to apply when sliding (0-1) */
+        /** @property {number} - Fraction of sliding speed kept each frame on the ground, 1 is no friction, 0 stops at
+         *  once, the more slippery of the object and its ground is used */
         this.friction  = objectDefaultFriction;
         /** @property {number} - How much to scale gravity by for this object */
         this.gravityScale = 1;
         /** @property {number} - Objects are sorted by render order */
         this.renderOrder = renderOrder;
-        /** @property {Vector2} - Velocity of the object */
+        /** @property {Vector2} - Velocity of the object, in world units per frame */
         this.velocity = vec2();
-        /** @property {number} - Angular velocity of the object */
+        /** @property {number} - Angular velocity of the object, in radians per frame */
         this.angleVelocity = 0;
         /** @property {number} - Track when object was created  */
         this.spawnTime = time;
@@ -141,8 +142,9 @@ class EngineObject
         engineObjects.push(this);
     }
 
-    /** Update the object transform, called automatically by engine even when paused */
-    updateTransforms()
+    /** Update the object transform, called automatically by engine even when paused
+     *  @param {boolean} [updateChildren] - Also update the children's transforms */
+    updateTransforms(updateChildren=true)
     {
         const parent = this.parent;
         if (parent)
@@ -162,8 +164,9 @@ class EngineObject
         }
 
         // update children
-        for (const child of this.children)
-            child.updateTransforms();
+        if (updateChildren)
+            for (const child of this.children)
+                child.updateTransforms();
     }
 
     /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object. */
@@ -239,7 +242,7 @@ class EngineObject
                 const collide2 = o.collideWithObject(this);
                 if (!collide1 || !collide2)
                 {
-                    engineObjectsCollidePairs.push(this, o);
+                    engineObjectsCollidePairAdd(this, o);
                     continue;
                 }
 
@@ -253,7 +256,7 @@ class EngineObject
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away other object if not fixed
                         o.velocity = o.velocity.subtract(velocity);
-                    engineObjectsCollidePairs.push(this, o);
+                    engineObjectsCollidePairAdd(this, o);
 
                     debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
@@ -402,7 +405,7 @@ class EngineObject
     renderLight() {}
 
     /** Destroy this object, destroy its children, detach its parent, and mark it for removal
-     *  @param {boolean} [immediate] - should attached effects be allowed to die off? */
+     *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
     destroy(immediate=false)
     {
         if (this.destroyed) return;

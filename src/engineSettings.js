@@ -76,7 +76,6 @@ let canvasMinAspect = 0;
 let canvasMaxAspect = 0;
 
 /** Fixed size of the canvas in css pixels, if enabled canvas size never changes
- * - you may also need to set mainCanvasSize if using screen space coords in startup
  * - canvasPixelRatio still applies, it only scales the backing store
  *  @type {Vector2}
  *  @default Vector2()
@@ -186,13 +185,13 @@ let enablePhysicsSolver = true;
  *  @memberof Settings */
 let objectDefaultMass = 1;
 
-/** How much to slow velocity by each frame (0-1)
+/** Fraction of velocity objects keep each frame, 1 keeps all of it, 0 stops at once
  *  @type {number}
  *  @default
  *  @memberof Settings */
 let objectDefaultDamping = 1;
 
-/** How much to slow angular velocity each frame (0-1)
+/** Fraction of angular velocity objects keep each frame, 1 keeps all of it, 0 stops at once
  *  @type {number}
  *  @default
  *  @memberof Settings */
@@ -204,19 +203,20 @@ let objectDefaultAngleDamping = 1;
  *  @memberof Settings */
 let objectDefaultRestitution = 0;
 
-/** How much to slow when touching (0-1)
+/** Fraction of sliding speed objects keep each frame on the ground, 1 is no friction, 0 stops at once
+ *  - The more slippery of an object and its ground is used
  *  @type {number}
  *  @default
  *  @memberof Settings */
 let objectDefaultFriction = .8;
 
-/** Clamp max speed to avoid fast objects missing collisions
+/** Clamp max speed to avoid fast objects missing collisions, in world units per frame on each axis
  *  @type {number}
  *  @default
  *  @memberof Settings */
 let objectMaxSpeed = 1;
 
-/** How much gravity to apply to objects, negative Y is down
+/** How much gravity to apply to objects, negative Y is down, in world units per frame per frame
  *  @type {Vector2}
  *  @default
  *  @memberof Settings */
@@ -266,7 +266,7 @@ let touchInputEnable = true;
 
 /** True if touch gamepad should appear on mobile devices
  *  - Supports left analog stick, 4 face buttons and start button (button 9)
- *  - setTouchGamepadButtonCount(1) to use face buttons as right analog stick
+ *  - setTouchGamepadRightStick(true) for a right analog stick in place of the face buttons
  *  - Analog stick buttons 10 and 11 are also activated when virtual sticks are touched
  *  - Rendered as a full-viewport HTML/SVG overlay, so controls may sit outside the game canvas
  *  - It is gamepad 0 once touched; a real gamepad being used takes over and hides it until the screen is touched again

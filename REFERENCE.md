@@ -23,7 +23,7 @@ frame                 // Current update frame
 time                  // Game time since start in seconds (stops when paused)
 timeReal              // Real time since start in seconds (keeps running when paused; the debug speed keys scale it)
 timeDelta             // Time between updates (1/60)
-timeScale = 1         // Scales deltaTime applied to the game
+timeScale = 1         // Game speed, more or fewer fixed updates per second; timeDelta stays 1/60
 paused                // Is the game paused? (set with setPaused)
 headlessMode = false  // Run without rendering for testing/servers (set before engineInit)
 engineManualStep      // Advance only via engineStep, default false (set before engineInit)
@@ -168,7 +168,7 @@ Vector2.cross(v)                          // Cross product with vector
 Vector2.reflect(normal, restitution=1)    // Reflect off a surface normal
 Vector2.floor()                           // Floor this vector
 Vector2.abs()                             // Get copy with absolute value components
-Vector2.snap(grid)                        // Snap to the nearest grid increment
+Vector2.snap(grid)                        // Snap down to the grid, grid is steps per unit
 Vector2.mod(divisor=1)                    // Get modulo of each component
 Vector2.area()                            // Get area covered by this vector as a rectangle
 Vector2.lerp(v, percent)                  // Interpolate between vectors
@@ -210,6 +210,12 @@ RandomGenerator(seed)                     // Create a random number generator
 RandomGenerator.float(valueA=1, valueB=0) // Random float between values
 RandomGenerator.int(valueA, valueB=0)     // Random integer between values
 RandomGenerator.sign()                    // Randomly either -1 or 1
+RandomGenerator.bool(chance=.5)           // Random boolean with given chance (0 to 1)
+RandomGenerator.floatSign(valueA=1, valueB=0) // Random float between values with a random sign
+RandomGenerator.angle()                   // Random angle between -PI and PI
+RandomGenerator.vec2(valueA=1, valueB=0)  // Random Vector2, each component between values
+RandomGenerator.randColor(colorA=WHITE, colorB=BLACK, linear=false) // Random color between values
+RandomGenerator.mutateColor(color, amount=.05, alphaAmount=0) // Copy of a color randomly diverged
 
 // Time tracking system
 Timer(timeLeft, useRealTime=false)    // Create a timer object
@@ -221,6 +227,7 @@ Timer.active()                        // Returns true if set and has not elapsed
 Timer.elapsed()                       // Returns true if set and elapsed
 Timer.get()                           // Get how long since elapsed, 0 if not set
 Timer.getPercent()                    // Get percent elapsed, 0 if not set
+Timer.getSetTime()                    // Get the time it was set to, 0 if not set
 Timer.toString()                      // Get this timer expressed as a string
 Timer.valueOf()                       // Get how long since elapsed, 0 if not set
 ```
@@ -293,7 +300,8 @@ TextureInfo.size        // Size of the image
 TextureInfo.glTexture   // WebGL texture
 TextureInfo.wrap        // Whether texture is set to REPEAT (true) or CLAMP_TO_EDGE
 TextureInfo.setWrap(wrap=true) // Enable or disable wrapping for this texture
-await loadTexture(textureIndex, src) // Load an image after engineInit into textureInfos[textureIndex], for tile(i, size, textureIndex)
+await loadTexture(textureIndex, src) // Load an image after engineInit into textureInfos[textureIndex], for tile(i, size, textureIndex);
+                                     // resolves to the TextureInfo, and an image that fails to load logs a warning
 
 // Image Font Object draws text using characters in an image
 ImageFont(tileInfo)     // Create a font from a tile sheet
@@ -468,7 +476,7 @@ usingGamepadInput()                   // Is a gamepad the most recently used dev
 
 // Gamepad
 isUsingGamepad                        // Is a gamepad the most recently used device? (= usingGamepadInput())
-gamepadPrimary                        // Index of the primary gamepad (most recently used)
+gamepadPrimary                        // Index of the primary gamepad (first one with input, until it disconnects)
 // every gamepad function below defaults to gamepad=gamepadPrimary, not pad 0
 gamepadIsDown(button, gamepad=gamepadPrimary)      // Is gamepad button down?
 gamepadWasPressed(button, gamepad=gamepadPrimary)  // Was gamepad button pressed this frame?
@@ -516,7 +524,7 @@ touchInputEnable = true               // Should touch input route to mouse event
 - Automatically adds self to object list
 - Will be updated and rendered each frame
 - Renders as a sprite from a tile sheet by default
-- Can have color and addtive color applied
+- Can have color and additive color applied
 - 2D Physics and collision system
 - Sorted by renderOrder before drawing
 - Objects can have children in local space
@@ -532,9 +540,16 @@ EngineObject.destroy()                             // Destroy this object and ch
 EngineObject.collideWithTile(tileData, pos)        // Tile collision resolve check
 EngineObject.collideWithObject(object, push)       // Object collision resolve check, push is 3D only
 EngineObject.getAliveTime()                        // How long since object was created
+EngineObject.getSpeed()                            // Length of the velocity
 EngineObject.applyAcceleration(acceleration)       // Apply acceleration
 EngineObject.applyForce(force)                     // Apply force
 EngineObject.getMirrorSign()                       // Get mirror direction (1 or -1)
+EngineObject.localToWorld(pos)                     // Convert a point from this object's space to world space
+EngineObject.worldToLocal(pos)                     // Convert a world space point to this object's space
+EngineObject.localToWorldVector(vec)               // Convert a direction, rotation only, and back with
+                                                   // worldToLocalVector(vec)
+EngineObject.isOverlappingObject(object)           // Do the two boxes overlap?
+EngineObject.isOverlapping(pos, size=(0,0))        // Does its box overlap a box, or a point with no size?
 EngineObject.addChild(child, localPos, localAngle) // Attach a child at an offset; localPos only exists on a child
 EngineObject.attach(child)                         // Attach a child where it is, the offset worked out for it
 EngineObject.removeChild(child)                    // Remove a child, it stays where it was in the world
@@ -555,29 +570,32 @@ EngineObject.color         // Color to apply when rendered
 EngineObject.additiveColor // Additive color to apply when rendered
 EngineObject.mirror        // Should it flip along y axis when rendered
 EngineObject.mass          // Weight of object, static if 0
-EngineObject.damping       // How much to slow velocity each frame (0-1)
-EngineObject.angleDamping  // How much to slow rotation each frame (0-1)
+EngineObject.damping       // Fraction of velocity kept each frame, 1 keeps all, 0 stops at once
+EngineObject.angleDamping  // Fraction of angular velocity kept each frame, 1 keeps all, 0 stops at once
 EngineObject.restitution   // How bouncy is it when colliding (0-1)
-EngineObject.friction      // How much friction when sliding (0-1)
+EngineObject.friction      // Fraction of sliding speed kept each frame on the ground, 1 is no friction; the
+                           // more slippery of the object and the ground is used
 EngineObject.gravityScale  // How much to scale gravity by
 EngineObject.renderOrder   // Objects are sorted by render order
-EngineObject.velocity      // Velocity of the object
-EngineObject.angleVelocity // Angular velocity of the object
+EngineObject.velocity      // Velocity of the object, world units per frame
+EngineObject.angleVelocity // Angular velocity of the object, radians per frame
 
 // Engine Object settings
 enablePhysicsSolver = true    // Enable collisions between objects?
 objectDefaultMass = 1         // Default object mass for collisions
-objectDefaultDamping = 1      // How much to slow velocity by each frame (0-1)
-objectDefaultAngleDamping = 1 // How much to slow angular velocity each frame (0-1)
+objectDefaultDamping = 1      // Fraction of velocity kept each frame (1 keeps all)
+objectDefaultAngleDamping = 1 // Fraction of angular velocity kept each frame (1 keeps all)
 objectDefaultRestitution = 0  // How much to bounce when a collision occurs (0-1)
-objectDefaultFriction = .8    // How much to slow when touching (0-1)
-objectMaxSpeed = 1            // Clamp max speed to avoid fast objects missing collisions
-gravity = (0,0)               // How much gravity to apply to objects
+objectDefaultFriction = .8    // Fraction of sliding speed kept each frame on the ground (1 is no friction)
+objectMaxSpeed = 1            // Clamp each axis of velocity, world units per frame, so fast objects don't miss
+                              // collisions
+gravity = (0,0)               // How much gravity to apply to objects, added to velocity each frame
 
 // Engine Object functions
-engineObjectsCollect(pos, size, objects=engineObjects)     // size is a circle's diameter or a box's full size,
+engineObjectsCollect(pos, size, objects=engineObjects)     // size is a circle's diameter or a box's full size
 engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects) // destroyed objects are left out
-engineObjectsRaycast(start, end, objects=engineObjects)
+engineObjectsRaycast(start, end, objects=engineObjects)    // only objects with collideRaycast set, which
+                                                           // setCollision turns on
 engineObjectsDestroy()          // destroy every object except the persistent ones
 ```
 
@@ -587,8 +605,8 @@ engineObjectsDestroy()          // destroy every object except the persistent on
 - Interfaces with EngineObject for collision
 - Collision layer is separate from visible layers
 - It is recommended to have a visible layer that matches the collision
-- Tile layers can be drawn to using their context with Canvas2d
-- Drawn directly to the main canvas without using WebGL
+- Tile layers made without WebGL can be drawn to using their context with Canvas2D
+- Drawn with WebGL by default, or straight to the main canvas when made with useWebGL=false
 
 ```javascript
 
@@ -615,8 +633,10 @@ TileLayer.drawLayerTile(pos, size=(1,1), tileInfo, color=WHITE, angle=0, mirror,
 TileLayer.drawLayerRect(pos, size, color, angle=0) // Draw a rectangle in layer pixels, inside redrawStart/End
 TileLayer.drawRect(pos, size, color, angle)    // Draw a rectangle onto the layer canvas in world space
 TileLayer.drawTile(pos, size=(1,1), tileInfo, color, angle, mirror) // Draw a tile onto the layer in world space
-// to draw on a layer with Canvas2D, pass its context to drawCanvas2D:
+TileLayer.clearLayerRect(pos, size)            // Clear a rectangle in layer pixels, inside redrawStart/End
+// to draw on a layer made with useWebGL=false (or with WebGL off), pass its context to drawCanvas2D:
 // drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, layer.context)
+// on a WebGL layer use drawLayerTile/drawLayerRect inside redrawStart/End, its canvas is not shown
 
 // Tile Layer Data Object
 TileLayerData(tile, direction=0, mirror=false, color=WHITE) // Create tile data object, tile from 0 like tile(),
@@ -625,7 +645,13 @@ TileLayerData.clear()                                       // Clear this tile d
 
 // Tile Collision Layer
 TileCollisionLayer(pos, size, tileInfo=tile())      // Create a tile collision layer object
-TileCollisionLayer.setCollisionData(pos, data=1)    // Set tile collision data at pos
+TileCollisionLayer.setCollisionData(layerPos, data=1) // Set tile collision data at a cell in the layer
+TileCollisionLayer.getCollisionData(layerPos)       // Get tile collision data at a cell, 0 outside the layer
+TileCollisionLayer.clearCollisionData(layerPos)     // Clear tile collision data at a cell
+TileCollisionLayer.collisionTest(pos, size=(0,0), object) // Like tileCollisionTest for this layer only
+TileCollisionLayer.collisionRaycast(posStart, posEnd, object, normal) // Like tileCollisionRaycast for this layer only
+TileCollisionLayer.isSolid = true                   // Solid layers block objects and particles, the solidOnly tests
+                                                    // skip the others
 tileCollisionGetData(pos)                           // Get tile collision data at pos
 tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
 tileCollisionRaycast(posStart, posEnd, object, normal, solidOnly=true) // Where the ray meets the first tile hit,
@@ -716,7 +742,7 @@ pf.debugTime = 2           // seconds debug visuals persist
 // Main API
 pf.findPath(startPos, endPos, rebuild=true) // Returns array of world positions, or empty if no path;
                                      // rebuild false reuses the grid read from the layer last time
-pf.isLineClear(startPos, endPos)     // True if a straight line passes through walkable tiles
+pf.buildNodeData()                   // Read the grid from the layer again, what findPath does when rebuild is true
 pf.getNearestClearNode(worldPos, searchRange=10) // Snap an obstructed point to the nearest open tile
 pf.isWalkable(x, y)                  // Override for custom walkability
 pf.getCost(x, y)                     // Override for weighted tiles (0 = clear)
@@ -764,6 +790,7 @@ UIObject.destroy()
 UIObject.isHoverObject()               // True if mouse is over this object
 UIObject.isInteractive()
 UIObject.onClick / onPress / onRelease / onChange / onEnter / onLeave / onUpdate / onRender // Hooks
+UIObject.onKeyDown(e)                  // Each key while this object is uiSystem.keyInputObject
 
 // Widgets
 new UIText(pos, size, text='', align='center', font)
@@ -773,6 +800,8 @@ new UICheckbox(pos, size, checked=false, text='', color)  // .checked toggles on
 new UISlider(pos, size, value=.5, text='', color, handleColor)  // .value in [0, 1]
 new UITextInput(pos, size, text='')   // .text holds current value
 new UIVideo(pos, size, src, autoplay=false, loop=false, volume=1)
+UIVideo.play() .pause() .stop() .setTime(time) .setVolume(volume) .setPlaybackRate(rate)
+UIVideo.isPlaying() .isPaused() .isLoading() .hasEnded() .getCurrentTime() .getDuration()
 
 // Auto-layout container — arranges children into a grid
 new UILayout(pos, columns=1, gap=10, padding=10, transparent=false)
@@ -790,7 +819,7 @@ UILayout.relayout()                    // Call manually if you mutate a child's 
 - See `examples/shorts/lightSystem.js` for a demo
 
 ```javascript
-// Setup
+// Setup (call in gameInit, after engineInit has made the WebGL context)
 new LightSystemPlugin()                       // Defaults: full-canvas lightmap, BLACK ambient
 new LightSystemPlugin(vec2(512, 512))         // Lower-res lightmap (perf knob)
 new LightSystemPlugin(undefined, rgb(.1,.1,.15)) // Faint moonlight ambient
@@ -822,7 +851,8 @@ class LavaTile extends EngineObject {
 - See `examples/shorts/postProcess.js` for a demo
 
 ```javascript
-new PostProcessPlugin(shaderCode, includeMainCanvas=false, feedbackTexture=false)
+new PostProcessPlugin(shaderCode, includeMainCanvas=false, feedbackTexture=false) // call in gameInit; with no
+                               // shaderCode the image passes through unchanged
 postProcess                    // Global instance created by the plugin
 postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=false) // set up a ready made bloom effect, so
                                // bright colors and lights glow; threshold is where the glow starts, and the 2D canvas
@@ -995,7 +1025,7 @@ new DirectionalLight3D(pos3D, color, intensity=1) // a Light3D that shines from 
                                   // its parent swings the light, so parent it to a sun mesh and it follows
 // 8 lights reach the shader each frame: every directional light first, then the point lights nearest the camera;
 // a light switched off by its alpha, intensity or radius is left out so it cannot take a slot from one that is on;
-// none of them cast shadows or make highlights, only the sun does
+// none of them cast shadows, only the sun does; each makes its own highlight when specular is set
 
 // Shadows - one shadow map from the sun; lit opaque objects and draws on the default side of the 2D scene
 // cast and receive
@@ -1237,7 +1267,7 @@ buildLathe(profile, sides=16, smooth, capped=true) // spins an outline around th
                                                    // an uncapped end makes it doubleSided, so its inside shows
 buildRibbon(points, width=1, color, closed, up) // lit quads along a path, for roads and tracks; width and color one or
                                                 // per point; doubleSided, so it shows from below too
-buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth) // XZ plane; segments a number or vec2,
+buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth) // XZ plane; size and segments a number or vec2,
                                                                     // height is (x, z)=> y; doubleSided, turn it
                                                                     // off for ground only seen from above
 // color is a Color or (x, z)=> Color, where x and z are positions on the mesh itself with (0, 0) at its center; it is
@@ -1408,6 +1438,7 @@ threeJS.scene                  // three.js scene, add lights and meshes here
 threeJS.camera                 // three.js perspective camera
 threeJS.cameraAlign2D = true   // lock camera to the LittleJS 2D camera (default)
 threeJS.alignCamera2D()        // align manually, called automatically when locked
+threeJS.cameraNear / cameraFar // near and far planes while aligned, set these rather than camera.near/far
 
 // Objects - littlejs physics drives a three.js mesh
 new ThreeJSObject(pos, size, mesh, z=0) // adds mesh to the scene, syncs transform
@@ -1440,7 +1471,8 @@ new Box2dTileLayer(tileLayer)                                  // Static collisi
 // Common fixture setup (call from constructor or after creation)
 obj.addBox(size, offset, angle, density, friction, restitution, isSensor)
 obj.addCircle(diameter, offset, density, friction, restitution, isSensor)
-obj.addPoly(points, density, friction, restitution, isSensor)      // points are local to the body
+obj.addPoly(points, density, friction, restitution, isSensor)      // points are local to the body, 3 to 8 of
+                                                                   // them, not all in a line
 obj.addEdgeList(points, density, friction, restitution, isSensor)
 obj.setFilterData(categoryBits=1, ignoreCategoryBits=0, groupIndex=0) // collides with every category not ignored,
                                                                     // applies to the fixtures the body has now
@@ -1455,7 +1487,14 @@ obj.applyAngularImpulse(impulse)       // Δangular velocity = impulse / inertia
 obj.setLinearVelocity(vel)
 obj.setAngularVelocity(av)
 obj.setAwake(awake=true)
-obj.setMassData(localCenter, mass, momentOfInertia) // undefined leaves that one as it is
+obj.setFixedRotation(isFixed=true)     // Stop the body from rotating
+obj.setBullet(isBullet=true)           // Continuous collision for fast bodies, so they don't pass through thin ones
+obj.setSensor(isSensor=true)           // The fixtures it has now detect contacts without colliding
+obj.setLinearDamping(damping)          // Box2D's damping, 0 is none, larger slows it faster
+obj.setAngularDamping(damping)
+obj.setGravityScale(scale=1)
+obj.setMassData(localCenter, mass, momentOfInertia) // undefined leaves that one as it is, inertia is about the
+                                                    // center of mass
 obj.getMass() / getCenterOfMass() / getInertia()
 
 // Raycasting
