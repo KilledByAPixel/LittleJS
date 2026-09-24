@@ -9600,8 +9600,9 @@ function glSetTextureData(texture, image)
 {
     if (!glContext) return;
 
-    // build the texture
+    // build the texture, after drawing what was queued with the old image
     false&&ASSERT(image?.width > 0, 'Invalid image data.');
+    texture === glActiveTexture && glFlush();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
     glPremultipliedTextures.delete(texture); // an image uploads straight color, even into a used render target
@@ -17064,12 +17065,14 @@ function setTextureSheetPadding(padding) { textureSheetPadding = padding; }
 // Module-private list of tweens currently running, each with its active flag set while it is in it.
 const tweenActive = [];
 const tweenUpdateList = []; // the tweens an update moves, the ones active when it began
+let tweenUpdatePass = 0; // counts the updates, a tween started during one waits for the next
 
 // put a tween in the active list, or take it out, keeping its flag in step so a check costs nothing
 function tweenActivate(tween)
 {
     if (tween.active) return;
     tween.active = true;
+    tween.activePass = tweenUpdatePass;
     tweenActive.push(tween);
 }
 function tweenDeactivate(tween)
@@ -17152,6 +17155,9 @@ class Tween
         /** Whether it is in the active list, see isActive
          *  @private */
         this.active = false;
+        /** The update it was started in, it first moves on the one after
+         *  @private */
+        this.activePass = 0;
         /** Engine time and real time of its last engine update, it moves by what passed since
          *  @private */
         this.lastTime = time;
@@ -17291,7 +17297,7 @@ class Tween
         const y = 1 - x;
         if (s instanceof Vector2)
             return vec2(e.x * x + s.x * y, e.y * x + s.y * y);
-        if (s instanceof Vector3)
+        if (typeof Vector3 !== 'undefined' && s instanceof Vector3) // a build may leave out the 3D math
             return vec3(e.x * x + s.x * y, e.y * x + s.y * y, e.z * x + s.z * y);
         if (tweenIsLerpable(s))
             return s.lerp(e, x);
@@ -17615,13 +17621,13 @@ function tweenUpdate(gameDelta, realDelta)
     // may stop any tween, even all of them, and one that is stopped is skipped; a tween
     // made or started again during the update, like the next turn of a loop, moves on
     // from the next update. Newest first, as the list has always been walked.
-    const list = tweenUpdateList;
+    const list = tweenUpdateList, pass = ++tweenUpdatePass;
     for (const t of tweenActive)
         list.push(t);
     for (let i = list.length; i--;)
     {
         const t = list[i];
-        if (!t.active) continue;
+        if (!t.active || t.activePass === pass) continue; // stopped, or started again by a callback this update
         let dt;
         if (enginePath)
         {
@@ -22432,6 +22438,10 @@ class EngineObject3D extends EngineObject
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         this.renderAfter2D = undefined;
+        /** @property {Matrix4|undefined} - The transform from its parent, used in place of pos3D, rotation3D and
+         *  scale3D when set, for one they cannot hold like a glTF pose with shear; read every frame it is set
+         *  @type {Matrix4|undefined} */
+        this.localMatrix = undefined;
         this.worldMatrix = new Matrix4;  // the world transform, kept up to date by render3DObjectMatrix; getMatrix returns a copy
         this.matrixBuilt = new Float64Array(9).fill(NaN); // the position, rotation and scale it was built from
         this.matrixVersion = 0;          // counts the rebuilds, so a child knows when its parent's changed
@@ -22472,10 +22482,15 @@ class EngineObject3D extends EngineObject
                 this.movePass = engineObjectsUpdateCount;
                 render3DMove(this);
             }
-            if (this.sync2D)
-                this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
         }
-        super.updateTransforms(updateChildren);
+
+        // placed from its parent first, so a sync2D object copies where it is now, then its children from it
+        super.updateTransforms(false);
+        if (!paused && this.sync2D)
+            this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
+        if (updateChildren)
+            for (const child of this.children)
+                child.updateTransforms();
     }
 
     /** Set how this object collides, the same flags as in 2D
@@ -22619,8 +22634,23 @@ function render3DObjectMatrix(o)
 {
     const parent = o.parent instanceof EngineObject3D ? o.parent : undefined;
     const parentMatrix = parent && render3DObjectMatrix(parent); // the parent first, so its version is current
-    const p = o.pos3D, r = o.rotation3D, s = o.scale3D, k = o.matrixBuilt;
-    if (k[0] !== p.x || k[1] !== p.y || k[2] !== p.z || k[3] !== r.x || k[4] !== r.y || k[5] !== r.z
+    const p = o.pos3D, r = o.rotation3D, s = o.scale3D, k = o.matrixBuilt, local = o.localMatrix;
+    if (local)
+    {
+        // a matrix given whole is taken as it is each time, it can change in place
+        if (parent)
+        {
+            o.worldMatrix.m.set(parentMatrix.m);
+            o.worldMatrix.multiply(local);
+            o.matrixParentVersion = parent.matrixVersion;
+        }
+        else
+            o.worldMatrix.m.set(local.m);
+        k[0] = NaN; // built from the matrix, so going back to pos3D builds again
+        o.matrixParent = parent;
+        ++o.matrixVersion;
+    }
+    else if (k[0] !== p.x || k[1] !== p.y || k[2] !== p.z || k[3] !== r.x || k[4] !== r.y || k[5] !== r.z
         || k[6] !== s.x || k[7] !== s.y || k[8] !== s.z || o.matrixParent !== parent
         || parent && o.matrixParentVersion !== parent.matrixVersion)
     {
@@ -24549,6 +24579,7 @@ class GLTFObject extends EngineObject3D
             {
                 // baked at scale 1 from a node resting at 0, it starts as it rests, where a pose would put it
                 const modelMatrix = model.modelMatrix, m = modelMatrix.copy().multiply(rest).multiply(modelMatrix.copy().invert());
+                o.localMatrix = m; // whole, as a pose is
                 o.pos3D = m.getTranslation();
                 o.rotation3D = m.getRotation();
                 o.scale3D = m.getScale();
@@ -24589,6 +24620,8 @@ class GLTFObject extends EngineObject3D
         {
             const o = parts[i], m = pose[i];
             if (o.destroyed || o.parent !== this) continue;
+            // drawn with the whole pose, which a parent's uneven scale can shear, the parts kept for what reads them
+            o.localMatrix = m;
             o.pos3D = m.getTranslation();
             o.rotation3D = m.getRotation();
             o.scale3D = m.getScale();
@@ -24877,8 +24910,11 @@ function gltfFetch(uri, baseUrl)
             data[i] = bytes.charCodeAt(i);
         return Promise.resolve(new Response(data.buffer, {headers: {'Content-Type': uri.slice(5, uri.indexOf(';'))}}));
     }
-    // a uri with a scheme is a whole address, the rest are beside the model
-    const url = /^[a-z][a-z0-9+.-]*:/i.test(uri) ? uri : baseUrl + uri;
+    // resolved as a link in the model is, from the model's folder: a leading slash from the site root, a leading
+    // // from the page's scheme, ../ up a folder; with no page to start from, a relative folder is only prefixed
+    const page = typeof location !== 'undefined' && location.href;
+    const base = page ? new URL(baseUrl, page) : /^[a-z][a-z0-9+.-]*:/i.test(baseUrl) ? baseUrl : undefined;
+    const url = base ? new URL(uri, base).href : baseUrl + uri;
     return fetch(url).then(r=>
     {
         if (!r.ok) throw new Error('glTF file not found: ' + url);

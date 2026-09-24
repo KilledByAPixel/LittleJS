@@ -246,6 +246,7 @@ class GLTFObject extends EngineObject3D
             {
                 // baked at scale 1 from a node resting at 0, it starts as it rests, where a pose would put it
                 const modelMatrix = model.modelMatrix, m = modelMatrix.copy().multiply(rest).multiply(modelMatrix.copy().invert());
+                o.localMatrix = m; // whole, as a pose is
                 o.pos3D = m.getTranslation();
                 o.rotation3D = m.getRotation();
                 o.scale3D = m.getScale();
@@ -286,6 +287,8 @@ class GLTFObject extends EngineObject3D
         {
             const o = parts[i], m = pose[i];
             if (o.destroyed || o.parent !== this) continue;
+            // drawn with the whole pose, which a parent's uneven scale can shear, the parts kept for what reads them
+            o.localMatrix = m;
             o.pos3D = m.getTranslation();
             o.rotation3D = m.getRotation();
             o.scale3D = m.getScale();
@@ -574,8 +577,11 @@ function gltfFetch(uri, baseUrl)
             data[i] = bytes.charCodeAt(i);
         return Promise.resolve(new Response(data.buffer, {headers: {'Content-Type': uri.slice(5, uri.indexOf(';'))}}));
     }
-    // a uri with a scheme is a whole address, the rest are beside the model
-    const url = /^[a-z][a-z0-9+.-]*:/i.test(uri) ? uri : baseUrl + uri;
+    // resolved as a link in the model is, from the model's folder: a leading slash from the site root, a leading
+    // // from the page's scheme, ../ up a folder; with no page to start from, a relative folder is only prefixed
+    const page = typeof location !== 'undefined' && location.href;
+    const base = page ? new URL(baseUrl, page) : /^[a-z][a-z0-9+.-]*:/i.test(baseUrl) ? baseUrl : undefined;
+    const url = base ? new URL(uri, base).href : baseUrl + uri;
     return fetch(url).then(r=>
     {
         if (!r.ok) throw new Error('glTF file not found: ' + url);

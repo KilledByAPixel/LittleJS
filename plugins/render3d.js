@@ -3077,6 +3077,10 @@ class EngineObject3D extends EngineObject
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         this.renderAfter2D = undefined;
+        /** @property {Matrix4|undefined} - The transform from its parent, used in place of pos3D, rotation3D and
+         *  scale3D when set, for one they cannot hold like a glTF pose with shear; read every frame it is set
+         *  @type {Matrix4|undefined} */
+        this.localMatrix = undefined;
         this.worldMatrix = new Matrix4;  // the world transform, kept up to date by render3DObjectMatrix; getMatrix returns a copy
         this.matrixBuilt = new Float64Array(9).fill(NaN); // the position, rotation and scale it was built from
         this.matrixVersion = 0;          // counts the rebuilds, so a child knows when its parent's changed
@@ -3117,10 +3121,15 @@ class EngineObject3D extends EngineObject
                 this.movePass = engineObjectsUpdateCount;
                 render3DMove(this);
             }
-            if (this.sync2D)
-                this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
         }
-        super.updateTransforms(updateChildren);
+
+        // placed from its parent first, so a sync2D object copies where it is now, then its children from it
+        super.updateTransforms(false);
+        if (!paused && this.sync2D)
+            this.pos3D.x = this.pos.x, this.pos3D.y = this.pos.y, this.rotation3D.z = -this.angle;
+        if (updateChildren)
+            for (const child of this.children)
+                child.updateTransforms();
     }
 
     /** Set how this object collides, the same flags as in 2D
@@ -3264,8 +3273,23 @@ function render3DObjectMatrix(o)
 {
     const parent = o.parent instanceof EngineObject3D ? o.parent : undefined;
     const parentMatrix = parent && render3DObjectMatrix(parent); // the parent first, so its version is current
-    const p = o.pos3D, r = o.rotation3D, s = o.scale3D, k = o.matrixBuilt;
-    if (k[0] !== p.x || k[1] !== p.y || k[2] !== p.z || k[3] !== r.x || k[4] !== r.y || k[5] !== r.z
+    const p = o.pos3D, r = o.rotation3D, s = o.scale3D, k = o.matrixBuilt, local = o.localMatrix;
+    if (local)
+    {
+        // a matrix given whole is taken as it is each time, it can change in place
+        if (parent)
+        {
+            o.worldMatrix.m.set(parentMatrix.m);
+            o.worldMatrix.multiply(local);
+            o.matrixParentVersion = parent.matrixVersion;
+        }
+        else
+            o.worldMatrix.m.set(local.m);
+        k[0] = NaN; // built from the matrix, so going back to pos3D builds again
+        o.matrixParent = parent;
+        ++o.matrixVersion;
+    }
+    else if (k[0] !== p.x || k[1] !== p.y || k[2] !== p.z || k[3] !== r.x || k[4] !== r.y || k[5] !== r.z
         || k[6] !== s.x || k[7] !== s.y || k[8] !== s.z || o.matrixParent !== parent
         || parent && o.matrixParentVersion !== parent.matrixVersion)
     {

@@ -6170,6 +6170,9 @@ declare module "littlejsengine" {
         /** Whether it is in the active list, see isActive
          *  @private */
         private active;
+        /** The update it was started in, it first moves on the one after
+         *  @private */
+        private activePass;
         /** Engine time and real time of its last engine update, it moves by what passed since
          *  @private */
         private lastTime;
@@ -7478,6 +7481,10 @@ declare module "littlejsengine" {
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         renderAfter2D: boolean | undefined;
+        /** @property {Matrix4|undefined} - The transform from its parent, used in place of pos3D, rotation3D and
+         *  scale3D when set, for one they cannot hold like a glTF pose with shear; read every frame it is set
+         *  @type {Matrix4|undefined} */
+        localMatrix: Matrix4 | undefined;
         worldMatrix: Matrix4;
         matrixBuilt: Float64Array;
         matrixVersion: number;

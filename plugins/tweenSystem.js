@@ -14,12 +14,14 @@
 // Module-private list of tweens currently running, each with its active flag set while it is in it.
 const tweenActive = [];
 const tweenUpdateList = []; // the tweens an update moves, the ones active when it began
+let tweenUpdatePass = 0; // counts the updates, a tween started during one waits for the next
 
 // put a tween in the active list, or take it out, keeping its flag in step so a check costs nothing
 function tweenActivate(tween)
 {
     if (tween.active) return;
     tween.active = true;
+    tween.activePass = tweenUpdatePass;
     tweenActive.push(tween);
 }
 function tweenDeactivate(tween)
@@ -102,6 +104,9 @@ class Tween
         /** Whether it is in the active list, see isActive
          *  @private */
         this.active = false;
+        /** The update it was started in, it first moves on the one after
+         *  @private */
+        this.activePass = 0;
         /** Engine time and real time of its last engine update, it moves by what passed since
          *  @private */
         this.lastTime = time;
@@ -241,7 +246,7 @@ class Tween
         const y = 1 - x;
         if (s instanceof Vector2)
             return vec2(e.x * x + s.x * y, e.y * x + s.y * y);
-        if (s instanceof Vector3)
+        if (typeof Vector3 !== 'undefined' && s instanceof Vector3) // a build may leave out the 3D math
             return vec3(e.x * x + s.x * y, e.y * x + s.y * y, e.z * x + s.z * y);
         if (tweenIsLerpable(s))
             return s.lerp(e, x);
@@ -565,13 +570,13 @@ function tweenUpdate(gameDelta, realDelta)
     // may stop any tween, even all of them, and one that is stopped is skipped; a tween
     // made or started again during the update, like the next turn of a loop, moves on
     // from the next update. Newest first, as the list has always been walked.
-    const list = tweenUpdateList;
+    const list = tweenUpdateList, pass = ++tweenUpdatePass;
     for (const t of tweenActive)
         list.push(t);
     for (let i = list.length; i--;)
     {
         const t = list[i];
-        if (!t.active) continue;
+        if (!t.active || t.activePass === pass) continue; // stopped, or started again by a callback this update
         let dt;
         if (enginePath)
         {

@@ -525,8 +525,9 @@ function glSetTextureData(texture, image)
 {
     if (!glContext) return;
 
-    // build the texture
+    // build the texture, after drawing what was queued with the old image
     ASSERT(image?.width > 0, 'Invalid image data.');
+    texture === glActiveTexture && glFlush();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
     glPremultipliedTextures.delete(texture); // an image uploads straight color, even into a used render target
