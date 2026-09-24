@@ -231,14 +231,18 @@ exact-match regexes: **−263**. Promise and DOM-property code compresses
 badly, which is why this beats its estimate.
 
 Where the cut can be made in the engine source instead, do that and delete
-the regex.
+the regex. This engine now does it for the fixed canvas size and the
+plugin hooks, and the same way for camera rotation and the parent/child
+system: each ships only if the game calls `setCanvasFixedSize`,
+`setCameraAngle` or `addChild`, so those regexes are no longer needed.
 
 ### 2.5 Replace engine subsystems you use a sliver of
 
 - the engine's `Sound` (panner, range, loop, stop, master gain) replaced
-  by a 20-line zzfx player: **−235**. The panner and master gain are now
-  off by default in the engine (`soundPanEnable`, `soundMasterGainEnable`),
-  which took 41 of those bytes for free, so expect less from this today
+  by a 20-line zzfx player: **−235**. The panner, range and master gain
+  are now off by default in the engine (`soundPanEnable`,
+  `soundRangeEnable`, `soundMasterGainEnable`), which took about 90 of
+  those bytes for free, so expect less from this today
 - its zzfx generator replaced by one with the same parameter positions and
   only the wave shapes actually used: **−51 and −45**, verified
   bit-identical by rendering every sound both ways

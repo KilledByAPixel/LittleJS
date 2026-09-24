@@ -13,7 +13,7 @@ const sound_click = new Sound([1,.5]);
 // game variables
 let particleEmitter;
 
-// WebGL can be removed to save ~963 bytes - see "Disabling WebGL" in README.md
+// engine features you do not use can be turned off in build.mjs - see "Saving space" in README.md
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
