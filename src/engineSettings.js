@@ -38,10 +38,12 @@ let canvasMaxSize = vec2(1920, 1080);
 
 /** Fixed size of the canvas, if enabled canvas size never changes
  * - you may also need to set mainCanvasSize if using screen space coords in startup
+ * - unset by default in this branch, where main uses vec2(), so the fixed
+ *   size code costs nothing unless a game calls setCanvasFixedSize
  *  @type {Vector2}
- *  @default Vector2()
+ *  @default undefined
  *  @memberof Settings */
-let canvasFixedSize = vec2();
+let canvasFixedSize;
 
 /** Use nearest neighbor scaling algorithm for canvas for more pixelated look
  *  @type {Boolean}

@@ -232,7 +232,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         if (headlessMode) return;
         
         let w, h;
-        if (canvasFixedSize.x)
+        if (canvasFixedSize && canvasFixedSize.x)
         {
             // use fixed size
             w = canvasFixedSize.x;
