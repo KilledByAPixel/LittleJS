@@ -5045,7 +5045,8 @@ declare module "littlejsengine" {
         /** converts a box2d vec2 pointer to a Vector2
          *  @param {Object} vp */
         vec2FromPointer(vp: any): Vector2;
-        /** converts a Vector2 to a box2 vec2
+        /** converts a Vector2 to a new box2d vec2, which stays until destroyed with box2d.instance.destroy;
+         *  the plugin itself passes Box2D reused ones, since Box2D copies every vector it is given
          *  @param {Vector2} v */
         vec2dTo(v: Vector2): any;
         /** checks if a box2d object is null
@@ -5084,6 +5085,7 @@ declare module "littlejsengine" {
         edgeLists: any[];
         /** @property {Array<Object>} - List of all edge loops for default box2d drawing */
         edgeLoops: any[];
+        edgeListFixtures: Set<any>;
         /** Destroy this object and its physics body */
         destroy(): void;
         /** Draws all this object's fixtures
@@ -6057,6 +6059,9 @@ declare module "littlejsengine" {
         /** Remaining iterations including the current run (loop/pingPong only).
          *  @private */
         private loopRemaining;
+        /** Whether it is in the active list, see isActive
+         *  @private */
+        private active;
         /** Set the easing curve and return this for chaining.
          *  @param {function(number):number} easeFn
          *  @returns {Tween}
@@ -6071,8 +6076,9 @@ declare module "littlejsengine" {
          *  @returns {Tween}
          *  @memberof TweenSystem */
         then(callback: () => void): Tween;
-        /** Repeat this tween `n` total times. After each iteration finishes, a
-         *  fresh tween with the same parameters takes over via the `then` slot.
+        /** Repeat this tween `n` total times. After each iteration finishes, the
+         *  same tween starts over, so the handle returned stays good for the whole
+         *  loop: pause or stop it to pause or stop every iteration left.
          *  `loop()` with no argument loops forever.
          *
          *  Mutually exclusive with `pingPong`; calling either replaces the other,
@@ -6118,10 +6124,13 @@ declare module "littlejsengine" {
         getValue(): number | Vector2 | Color;
         /** Compute the interpolated value at the given remaining `life`.
          *  At life === duration the result is `start`; at life === 0 it is `end`.
+         *  - At life 0 it is the end value exactly
+         *  - A vector goes past its ends as far as the easing does, as a number does; a Color stays between them,
+         *    so its channels stay in range, and any other type goes as far as its own lerp takes it
          *  @param {number} life
-         *  @returns {number}
+         *  @returns {number|Vector2|Vector3|Color}
          *  @memberof TweenSystem */
-        interp(life: number): number;
+        interp(life: number): number | Vector2 | Vector3 | Color;
         /** Remove this tween from the active list and prevent any pending then-callback.
          *  @memberof TweenSystem */
         stop(): void;
@@ -6154,7 +6163,9 @@ declare module "littlejsengine" {
      *  @memberof TweenSystem */
     export function tweenStopAll(): void;
     /** Engine plugin hook: advance every active tween by the appropriate delta.
-     *  Called once per render frame by the engine (no arguments). May also be
+     *  The engine calls it with no arguments on every fixed update, so it can run
+     *  more than once in a rendered frame, and on paused updates too, where only
+     *  real time tweens move. May also be
      *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
      *  — useful for headless tests or custom replay/scrubbing systems.
      *  @param {number} [gameDelta] - Game-time delta in seconds; default: time - lastTime

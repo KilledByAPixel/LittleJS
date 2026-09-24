@@ -11,8 +11,23 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Module-private list of tweens currently running.
+// Module-private list of tweens currently running, each with its active flag set while it is in it.
 const tweenActive = [];
+const tweenUpdateList = []; // the tweens an update moves, the ones active when it began
+
+// put a tween in the active list, or take it out, keeping its flag in step so a check costs nothing
+function tweenActivate(tween)
+{
+    if (tween.active) return;
+    tween.active = true;
+    tweenActive.push(tween);
+}
+function tweenDeactivate(tween)
+{
+    if (!tween.active) return;
+    tween.active = false;
+    tweenActive.splice(tweenActive.indexOf(tween), 1);
+}
 
 // Time tracking for delta computation between engine plugin calls.
 let lastTime = 0;
@@ -86,8 +101,11 @@ class Tween
         /** Remaining iterations including the current run (loop/pingPong only).
          *  @private */
         this.loopRemaining = 0;
+        /** Whether it is in the active list, see isActive
+         *  @private */
+        this.active = false;
 
-        tweenActive.push(this);
+        tweenActivate(this);
         // Snap target to start immediately.
         callback(this.interp(duration));
     }
@@ -117,8 +135,9 @@ class Tween
         return this;
     }
 
-    /** Repeat this tween `n` total times. After each iteration finishes, a
-     *  fresh tween with the same parameters takes over via the `then` slot.
+    /** Repeat this tween `n` total times. After each iteration finishes, the
+     *  same tween starts over, so the handle returned stays good for the whole
+     *  loop: pause or stop it to pause or stop every iteration left.
      *  `loop()` with no argument loops forever.
      *
      *  Mutually exclusive with `pingPong`; calling either replaces the other,
@@ -164,7 +183,7 @@ class Tween
     {
         this.life = this.duration;
         this.paused = false;
-        if (tweenActive.indexOf(this) < 0) tweenActive.push(this);
+        tweenActivate(this);
         this.callback(this.interp(this.duration));
     }
 
@@ -173,7 +192,7 @@ class Tween
      *  @memberof TweenSystem */
     isActive()
     {
-        return !this.paused && tweenActive.indexOf(this) >= 0;
+        return !this.paused && this.active;
     }
 
     /** Get how far this tween has progressed, from 0 (just started) to 1
@@ -197,23 +216,34 @@ class Tween
 
     /** Compute the interpolated value at the given remaining `life`.
      *  At life === duration the result is `start`; at life === 0 it is `end`.
+     *  - At life 0 it is the end value exactly
+     *  - A vector goes past its ends as far as the easing does, as a number does; a Color stays between them,
+     *    so its channels stay in range, and any other type goes as far as its own lerp takes it
      *  @param {number} life
-     *  @returns {number}
+     *  @returns {number|Vector2|Vector3|Color}
      *  @memberof TweenSystem */
     interp(life)
     {
+        const s = this.start, e = this.end;
+        if (life <= 0) // the end exactly, an easing curve may land a rounding error short of it
+            return typeof e.copy === 'function' ? e.copy() : e;
         const x = this.ease((this.duration - life) / this.duration);
-        if (isLerpable(this.start))
-            return this.start.lerp(this.end, x);
-        return this.start + (this.end - this.start) * x;
+        // the vectors as their lerp does it, which lands on the end exactly, but without its clamp
+        const y = 1 - x;
+        if (s instanceof Vector2)
+            return vec2(e.x * x + s.x * y, e.y * x + s.y * y);
+        if (s instanceof Vector3)
+            return vec3(e.x * x + s.x * y, e.y * x + s.y * y, e.z * x + s.z * y);
+        if (isLerpable(s))
+            return s.lerp(e, x);
+        return s + (e - s) * x;
     }
 
     /** Remove this tween from the active list and prevent any pending then-callback.
      *  @memberof TweenSystem */
     stop()
     {
-        const i = tweenActive.indexOf(this);
-        if (i >= 0) tweenActive.splice(i, 1);
+        tweenDeactivate(this);
         this.thenCallback = undefined;
     }
 }
@@ -448,7 +478,7 @@ function loopContinuation(tween)
     if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
     tween.life = tween.duration;
     tween.thenCallback = () => loopContinuation(tween);
-    tweenActive.push(tween);
+    tweenActivate(tween);
     // snap to start for the new iteration (matches Tween constructor behavior)
     tween.callback(tween.interp(tween.duration));
 }
@@ -463,12 +493,14 @@ function pingPongContinuation(tween)
     tween.end = tmp;
     tween.life = tween.duration;
     tween.thenCallback = () => pingPongContinuation(tween);
-    tweenActive.push(tween);
+    tweenActivate(tween);
     tween.callback(tween.interp(tween.duration));
 }
 
 /** Engine plugin hook: advance every active tween by the appropriate delta.
- *  Called once per render frame by the engine (no arguments). May also be
+ *  The engine calls it with no arguments on every fixed update, so it can run
+ *  more than once in a rendered frame, and on paused updates too, where only
+ *  real time tweens move. May also be
  *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
  *  — useful for headless tests or custom replay/scrubbing systems.
  *  @param {number} [gameDelta] - Game-time delta in seconds; default: time - lastTime
@@ -490,17 +522,17 @@ function tweenUpdate(gameDelta, realDelta)
         realDelta = gameDelta;
     }
 
-    // Iterate in reverse so removals don't disturb iteration; a callback may stop
-    // any tween, even all of them, so the index is checked against the list after it.
-    for (let i = tweenActive.length; i--;)
+    // Move the tweens that were active when this update began, each once: a callback
+    // may stop any tween, even all of them, and one that is stopped is skipped; a tween
+    // made or started again during the update, like the next turn of a loop, moves on
+    // from the next update. Newest first, as the list has always been walked.
+    const list = tweenUpdateList;
+    for (const t of tweenActive)
+        list.push(t);
+    for (let i = list.length; i--;)
     {
-        if (i >= tweenActive.length)
-        {
-            i = tweenActive.length; // a callback shortened the list, carry on from its end
-            continue;
-        }
-        const t = tweenActive[i];
-        if (t.paused) continue;
+        const t = list[i];
+        if (!t.active || t.paused) continue;
         const dt = t.useRealTime ? realDelta : gameDelta;
         if (dt <= 0) continue;
 
@@ -513,19 +545,13 @@ function tweenUpdate(gameDelta, realDelta)
         {
             // Completion: fire end value, remove from active, fire then-callback.
             t.callback(t.interp(0));
-            const j = tweenActive.indexOf(t); // this one, wherever the callback left it
-            if (j >= 0) tweenActive.splice(j, 1);
+            tweenDeactivate(t);
             const cb = t.thenCallback;
             t.thenCallback = undefined;
             if (cb) cb();
         }
-        // carry on from where this tween is now, when a callback moved it
-        if (tweenActive[i] !== t)
-        {
-            const j = tweenActive.indexOf(t);
-            i = j < 0 ? min(i, tweenActive.length) : j;
-        }
     }
+    list.length = 0;
 }
 
 /** Stop every active tween and clear their then-callbacks. Useful for resets
@@ -533,7 +559,8 @@ function tweenUpdate(gameDelta, realDelta)
  *  @memberof TweenSystem */
 function tweenStopAll()
 {
-    for (const t of tweenActive) t.thenCallback = undefined;
+    for (const t of tweenActive)
+        t.thenCallback = undefined, t.active = false;
     tweenActive.length = 0;
 }
 

@@ -1130,7 +1130,8 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
     let fileNormals = false, face = 0;
 
     // OBJ indices count from 1, and a negative one counts back from the end of the list so far
-    const lookup = (s, list)=> { const i = parseInt(s); return list[i < 0 ? list.length + i : i - 1]; };
+    const index = (s, list)=> { const i = parseInt(s); return i < 0 ? list.length + i : i - 1; };
+    const lookup = (s, list)=> list[index(s, list)];
     for (const line of text.split('\n'))
     {
         const parts = line.trim().split(/\s+/);
@@ -1152,7 +1153,9 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
                 // normal keeps its corners apart, unless they will be smoothed, when the position and uv are enough
                 const ids = corners.map((c, i)=>
                 {
-                    const key = c[0] + '/' + (c[1] || '') + '/' + (hasNormals ? c[2] : smooth ? '' : 'f' + face);
+                    // by the vertices they are, a negative index means another vertex as the lists grow
+                    const key = index(c[0], positions) + '/' + (c[1] ? index(c[1], uvs) : '') + '/' +
+                        (hasNormals ? index(c[2], normals) : smooth ? '' : 'f' + face);
                     let id = seen.get(key);
                     if (id === undefined)
                     {

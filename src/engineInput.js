@@ -117,6 +117,7 @@ function inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearRe
 const inputWASDToArrow = {KeyW:'ArrowUp', KeyS:'ArrowDown', KeyA:'ArrowLeft', KeyD:'ArrowRight'};
 const inputArrowToWASD = {ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', ArrowRight:'KeyD'};
 const inputKeysHeld = new Set; // the keys physically down, since an arrow's slot is shared with its alias
+let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, cleared with the input so a new touch presses
 
 /** Clears all input
  *  @memberof Input */
@@ -125,6 +126,7 @@ function inputClear()
     inputData.length = 0;
     inputData[0] = [];
     inputKeysHeld.clear();
+    inputWasTouching = 0;
     touchGamepadButtons.length = 0;
     touchGamepadSticks.length = 0;
     touchGamepadStickPointerId.length = 0; // release floating sticks so they re-anchor
@@ -311,7 +313,7 @@ function gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1,
 {
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
     if (!vibrateEnable || headlessMode) return;
-    const pad = navigator?.getGamepads?.()[gamepad];
+    const pad = inputGetGamepads()[gamepad];
     pad?.vibrationActuator?.playEffect?.('dual-rumble', {duration, strongMagnitude, weakMagnitude, startDelay});
 }
 
@@ -321,8 +323,16 @@ function gamepadVibrateStop(gamepad=gamepadPrimary)
 {
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
     if (!vibrateEnable || headlessMode) return;
-    const pad = navigator?.getGamepads?.()[gamepad];
+    const pad = inputGetGamepads()[gamepad];
     pad?.vibrationActuator?.reset?.();
+}
+
+// the gamepads the browser reports, none when it has no gamepad support or refuses the page them, which it
+// does by throwing a SecurityError from the call, as the spec says, for a page not allowed gamepads
+function inputGetGamepads()
+{
+    try { return navigator?.getGamepads?.() || []; }
+    catch (e) { return []; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -526,9 +536,9 @@ function inputInit()
         document.addEventListener('touchstart', (e)=> handleTouch(e), { passive: false });
         document.addEventListener('touchmove',  (e)=> handleTouch(e), { passive: false });
         document.addEventListener('touchend',   (e)=> handleTouch(e), { passive: false });
+        document.addEventListener('touchcancel', (e)=> handleTouch(e), { passive: false }); // the browser ended it
 
         // handle all touch events the same way
-        let wasTouching, touchIdentifier;
         function handleTouch(e)
         {
             if (!touchInputEnable) return;
@@ -559,17 +569,17 @@ function inputInit()
                     const pos = vec2(gameTouches[0].clientX, gameTouches[0].clientY);
                     const mousePosScreenLast = mousePosScreen;
                     mousePosScreen = mouseEventToScreen(pos);
-                    if (wasTouching && gameTouches[0].identifier === touchIdentifier)
+                    if (inputWasTouching && gameTouches[0].identifier === inputTouchIdentifier)
                         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
-                    else if (!wasTouching)
+                    else if (!inputWasTouching)
                         inputData[0][button] = 3;
-                    touchIdentifier = gameTouches[0].identifier;
+                    inputTouchIdentifier = gameTouches[0].identifier;
                 }
-                else if (wasTouching)
+                else if (inputWasTouching)
                     inputData[0][button] = inputData[0][button] & 2 | 4;
 
                 // set was touching
-                wasTouching = touching;
+                inputWasTouching = touching;
             }
 
             // prevent default handling like copy, magnifier lens, and scrolling
@@ -711,22 +721,18 @@ function inputUpdate()
             return;
         }
 
-        // return if gamepads are disabled or not supported
-        try {
-            // protect against getGamepads disallowed security error 
-            if (!gamepadsEnable || !navigator?.getGamepads)
-                return;
-        } catch(e) {
+        // return if gamepads are disabled
+        if (!gamepadsEnable)
             return;
-        }
 
         // only poll gamepads when focused or in debug mode
         if (!debug && !document.hasFocus()) return;
 
-        // poll gamepads
+        // poll gamepads; with none to read, every slot that had one is cleared, so a
+        // refused or vanished gamepad does not leave its buttons held
         const maxGamepads = 8;
-        const gamepads = navigator.getGamepads();
-        const gamepadCount = min(maxGamepads, gamepads.length);
+        const gamepads = inputGetGamepads();
+        const gamepadCount = gamepads.length ? min(maxGamepads, gamepads.length) : maxGamepads;
         for (let i=0; i<gamepadCount; ++i)
         {
             // get or create gamepad data
@@ -772,8 +778,9 @@ function inputUpdate()
             for (let j = 0; j < gamepad.axes.length-1; j+=2)
                 sticks[j>>1] = applyDeadZones(vec2(readAxis(j), readAxis(j+1)));
 
-            // read buttons
-            let hadInput = false;
+            // read buttons; a stick pushed past halfway counts as input too, after the dead zone and the
+            // axis filter, so a controller can become the primary one by moving and a noisy axis cannot
+            let hadInput = sticks.some(stick=> stick.lengthSquared() > .25);
             for (let j = gamepad.buttons.length; j--;)
             {
                 const button = gamepad.buttons[j];

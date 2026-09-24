@@ -3401,3 +3401,17 @@ test('picking sees a mesh edit right away, and a direct instance edit grows the 
     set.destroy();
     engineObjectsUpdate();
 });
+
+test('parseOBJ keeps faces with negative indices apart once more vertices are declared', () =>
+{
+    const text = ['v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'f -3 -2 -1', 'v 10 0 0', 'v 11 0 0', 'v 10 1 0', 'f -3 -2 -1'].join('\n');
+    for (const smooth of [true, false])
+    {
+        const mesh = parseOBJ(text, smooth);
+        assert.equal(mesh.vertexCount, 6, 'six vertices, smooth ' + smooth);
+        assert.equal(mesh.getBounds().max.x, 11, 'the second triangle is where it was declared');
+    }
+    // the same vertex spelled by position and relatively is still one vertex
+    const same = parseOBJ(['v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'v 1 1 0', 'f 1 2 3', 'f -3 -1 -2'].join('\n'), true);
+    assert.equal(same.vertexCount, 4, 'shared corners stay shared');
+});

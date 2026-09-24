@@ -28,6 +28,22 @@ let box2d;
  *  @memberof Box2D */
 let box2dDebug = false;
 
+// Box2D copies every vector it is given, so the plugin hands it these two instead of making a new one each call,
+// which the binding would keep; a call that takes two vectors uses both
+let box2dTempVectors;
+function box2dTemp(v, slot=0)
+{
+    ASSERT(isVector2(v));
+    const temp = (box2dTempVectors ||= [new box2d.instance.b2Vec2(), new box2d.instance.b2Vec2()])[slot];
+    temp.Set(v.x, v.y);
+    return temp;
+}
+
+// what cannot happen while the world steps, like losing a body from a contact callback: done now, or queued until
+// the step is done
+const box2dPending = [];
+function box2dWhenUnlocked(f) { box2d.world.IsLocked() ? box2dPending.push(f) : f(); }
+
 /** Enable Box2D debug drawing
  *  @param {boolean} enable
  *  @memberof Box2D */
@@ -59,7 +75,7 @@ class Box2dObject extends EngineObject
         // create physics body
         const bodyDef = new box2d.instance.b2BodyDef();
         bodyDef.set_type(bodyType);
-        bodyDef.set_position(box2d.vec2dTo(pos));
+        bodyDef.set_position(box2dTemp(pos));
         bodyDef.set_angle(-angle);
         
         /** @property {Object} - The Box2d body */
@@ -70,6 +86,7 @@ class Box2dObject extends EngineObject
         this.edgeLists = [];
         /** @property {Array<Object>} - List of all edge loops for default box2d drawing */
         this.edgeLoops = [];
+        this.edgeListFixtures = new Set; // the fixtures of the edge lists and loops, by pointer, drawn with them
 
         this.body.object = this; // link body to this object
         box2d.objects.push(this); // keep track of all box2d objects
@@ -80,9 +97,11 @@ class Box2dObject extends EngineObject
     {
         if (this.destroyed) return;
 
-        // destroy physics body, fixtures, and joints
+        // destroy physics body, fixtures, and joints; from a contact callback the world is still
+        // stepping and cannot lose a body, so it goes as soon as the step is done
         ASSERT(this.body, 'Box2dObject has no body to destroy');
-        box2d.world.DestroyBody(this.body);
+        const body = this.body;
+        box2dWhenUnlocked(()=> box2d.world.DestroyBody(body));
 
         // remove from tracked list so paused / headless sessions don't leak
         const i = box2d.objects.indexOf(this);
@@ -121,21 +140,19 @@ class Box2dObject extends EngineObject
      *  @param {CanvasRenderingContext2D} [context] */
     drawFixtures(color=WHITE, lineColor=BLACK, lineWidth=.1, useWebGL, context)
     {
-        // draw non-edge fixtures
+        // draw each fixture, but the edges of an edge list or loop, which draw below as one line
+        const edgeFixtures = this.edgeListFixtures;
         this.getFixtureList().forEach((fixture)=>
         {
-            const shape = box2d.castShapeObject(fixture.GetShape());
-            if (shape.GetType() !== box2d.instance.b2Shape.e_edge)
-            {
+            if (!edgeFixtures.has(box2d.instance.getPointer(fixture)))
                 box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, useWebGL, context);
-            }
         });
 
         // draw edges using a single draw line for better connections
         this.edgeLists.forEach(points=>
-            drawLineList(points, lineWidth, lineColor, false, this.pos, this.angle));
+            drawLineList(points, lineWidth, lineColor, false, this.pos, this.angle, useWebGL, false, context));
         this.edgeLoops.forEach(points=>
-            drawLineList(points, lineWidth, lineColor, true, this.pos, this.angle));
+            drawLineList(points, lineWidth, lineColor, true, this.pos, this.angle, useWebGL, false, context));
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -191,7 +208,7 @@ class Box2dObject extends EngineObject
         ASSERT(isNumber(angle), 'angle must be a number');
 
         const shape = new box2d.instance.b2PolygonShape();
-        shape.SetAsBox(size.x/2, size.y/2, box2d.vec2dTo(offset), -angle);
+        shape.SetAsBox(size.x/2, size.y/2, box2dTemp(offset), -angle);
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
 
@@ -277,7 +294,7 @@ class Box2dObject extends EngineObject
         ASSERT(isVector2(offset), 'offset must be a Vector2');
         
         const shape = new box2d.instance.b2CircleShape();
-        shape.set_m_p(box2d.vec2dTo(offset));
+        shape.set_m_p(box2dTemp(offset));
         shape.set_m_radius(diameter/2);
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
@@ -295,7 +312,7 @@ class Box2dObject extends EngineObject
         ASSERT(isVector2(point2), 'point2 must be a Vector2');
 
         const shape = new box2d.instance.b2EdgeShape();
-        shape.Set(box2d.vec2dTo(point1), box2d.vec2dTo(point2));
+        shape.Set(box2dTemp(point1), box2dTemp(point2, 1));
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
 
@@ -312,16 +329,17 @@ class Box2dObject extends EngineObject
         for (let i=0; i<points.length-1; ++i)
         {
             const shape = new box2d.instance.b2EdgeShape();
-            points[i-1] && shape.set_m_vertex0(box2d.vec2dTo(points[i-1]));
-            points[i+0] && shape.set_m_vertex1(box2d.vec2dTo(points[i+0]));
-            points[i+1] && shape.set_m_vertex2(box2d.vec2dTo(points[i+1]));
-            points[i+2] && shape.set_m_vertex3(box2d.vec2dTo(points[i+2]));
+            points[i-1] && shape.set_m_vertex0(box2dTemp(points[i-1]));
+            points[i+0] && shape.set_m_vertex1(box2dTemp(points[i+0]));
+            points[i+1] && shape.set_m_vertex2(box2dTemp(points[i+1]));
+            points[i+2] && shape.set_m_vertex3(box2dTemp(points[i+2]));
             const f = this.addShape(shape, density, friction, restitution, isSensor);
             fixtures.push(f);
             edgePoints.push(points[i].copy());
         }
         edgePoints.push(points[points.length-1].copy());
         this.edgeLists.push(edgePoints);
+        fixtures.forEach(f=> this.edgeListFixtures.add(box2d.instance.getPointer(f)));
         return fixtures;
     }
 
@@ -339,21 +357,22 @@ class Box2dObject extends EngineObject
         for (let i=0; i<points.length; ++i)
         {
             const shape = new box2d.instance.b2EdgeShape();
-            shape.set_m_vertex0(box2d.vec2dTo(getPoint(i-1)));
-            shape.set_m_vertex1(box2d.vec2dTo(getPoint(i+0)));
-            shape.set_m_vertex2(box2d.vec2dTo(getPoint(i+1)));
-            shape.set_m_vertex3(box2d.vec2dTo(getPoint(i+2)));
+            shape.set_m_vertex0(box2dTemp(getPoint(i-1)));
+            shape.set_m_vertex1(box2dTemp(getPoint(i+0)));
+            shape.set_m_vertex2(box2dTemp(getPoint(i+1)));
+            shape.set_m_vertex3(box2dTemp(getPoint(i+2)));
             const f = this.addShape(shape, density, friction, restitution, isSensor);
             fixtures.push(f);
             edgePoints.push(points[i].copy());
         }
         this.edgeLoops.push(edgePoints);
+        fixtures.forEach(f=> this.edgeListFixtures.add(box2d.instance.getPointer(f)));
         return fixtures;
     }
 
     /** Destroy a fixture from the body
      *  @param {Object} [fixture] */
-    destroyFixture(fixture) { this.body.DestroyFixture(fixture); }
+    destroyFixture(fixture) { const body = this.body; box2dWhenUnlocked(()=> body.DestroyFixture(fixture)); }
 
     /** Destroy all fixture from the body */
     destroyAllFixtures()
@@ -405,7 +424,7 @@ class Box2dObject extends EngineObject
         this.pos = pos;
         this.angle = angle;
         // box2d uses reverse angle
-        this.body.SetTransform(box2d.vec2dTo(pos), -angle);
+        this.body.SetTransform(box2dTemp(pos), -angle);
     }
     
     /** Sets the position
@@ -421,7 +440,7 @@ class Box2dObject extends EngineObject
     /** Sets the linear velocity
      *  @param {Vector2} velocity */
     setLinearVelocity(velocity)
-    { this.body.SetLinearVelocity(box2d.vec2dTo(velocity)); }
+    { this.body.SetLinearVelocity(box2dTemp(velocity)); }
 
     /** Sets the angular velocity
      *  @param {number} angularVelocity */
@@ -490,7 +509,7 @@ class Box2dObject extends EngineObject
         const data = new box2d.instance.b2MassData();
         this.body.GetMassData(data);
         // use !== undefined so setMass(0) (static-equivalent) isn't silently ignored
-        if (localCenter !== undefined) data.set_center(box2d.vec2dTo(localCenter));
+        if (localCenter !== undefined) data.set_center(box2dTemp(localCenter));
         if (mass !== undefined) data.set_mass(mass);
         if (momentOfInertia !== undefined) data.set_I(momentOfInertia);
         this.body.SetMassData(data);
@@ -527,7 +546,7 @@ class Box2dObject extends EngineObject
     {
         pos ||= this.getCenterOfMass();
         this.setAwake();
-        this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
+        this.body.ApplyForce(box2dTemp(force), box2dTemp(pos, 1));
     }
 
     /** Apply acceleration to this object (changes velocity by acceleration,
@@ -541,7 +560,7 @@ class Box2dObject extends EngineObject
         pos ||= this.getCenterOfMass();
         this.setAwake();
         const impulse = acceleration.scale(this.getMass());
-        this.body.ApplyLinearImpulse(box2d.vec2dTo(impulse), box2d.vec2dTo(pos));
+        this.body.ApplyLinearImpulse(box2dTemp(impulse), box2dTemp(pos, 1));
     }
 
     /** Apply an instantaneous linear impulse. Changes velocity immediately by
@@ -552,7 +571,7 @@ class Box2dObject extends EngineObject
     {
         pos ||= this.getCenterOfMass();
         this.setAwake();
-        this.body.ApplyLinearImpulse(box2d.vec2dTo(impulse), box2d.vec2dTo(pos));
+        this.body.ApplyLinearImpulse(box2dTemp(impulse), box2dTemp(pos, 1));
     }
 
     /** Apply torque to this object
@@ -794,7 +813,7 @@ class Box2dJoint
     }
 
     /** Destroy this joint */
-    destroy() { box2d.world.DestroyJoint(this.box2dJoint); this.box2dJoint = 0; }
+    destroy() { const joint = this.box2dJoint; box2dWhenUnlocked(()=> box2d.world.DestroyJoint(joint)); this.box2dJoint = 0; }
 
     /** Get the first object attached to this joint
      *  @return {Box2dObject} */
@@ -852,14 +871,14 @@ class Box2dTargetJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2MouseJointDef();
         jointDef.set_bodyA(fixedObject.body);
         jointDef.set_bodyB(object.body);
-        jointDef.set_target(box2d.vec2dTo(worldPos));
+        jointDef.set_target(box2dTemp(worldPos));
         jointDef.set_maxForce(2e3 * object.getMass());
         super(jointDef);
     }
 
     /** Set the target point in world coordinates
      *  @param {Vector2} pos */
-    setTarget(pos) { this.box2dJoint.SetTarget(box2d.vec2dTo(pos)); }
+    setTarget(pos) { this.box2dJoint.SetTarget(box2dTemp(pos)); }
     
     /** Get the target point in world coordinates
      *  @return {Vector2} */
@@ -907,8 +926,8 @@ class Box2dDistanceJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2DistanceJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_length(anchorA.distance(anchorB));
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -992,8 +1011,8 @@ class Box2dRopeJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2RopeJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_maxLength(anchorA.distance(anchorB)+extraLength);
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -1042,8 +1061,8 @@ class Box2dRevoluteJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2RevoluteJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -1195,9 +1214,9 @@ class Box2dPrismaticJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2PrismaticJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
-        jointDef.set_localAxisA(box2d.vec2dTo(localAxisA));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
+        jointDef.set_localAxisA(box2dTemp(localAxisA));
         jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -1305,9 +1324,9 @@ class Box2dWheelJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2WheelJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
-        jointDef.set_localAxisA(box2d.vec2dTo(localAxisA));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
+        jointDef.set_localAxisA(box2dTemp(localAxisA));
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }
@@ -1399,8 +1418,8 @@ class Box2dWeldJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2WeldJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -1428,15 +1447,15 @@ class Box2dWeldJoint extends Box2dJoint
 
     /** Set the damping ratio
      *  @param {number} ratio */
-    setSpringDampingRatio(ratio) { return this.box2dJoint.SetSpringDampingRatio(ratio); }
+    setSpringDampingRatio(ratio) { return this.box2dJoint.SetDampingRatio(ratio); } // the weld joint's own name for it
 
     /** Get the damping ratio
      *  @return {number} */
-    getSpringDampingRatio() { return this.box2dJoint.GetSpringDampingRatio(); }
+    getSpringDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** 
+/**
  * Box2D Friction Joint
  * - Used to apply top-down friction
  * - Provides 2D translational friction and angular friction
@@ -1458,8 +1477,8 @@ class Box2dFrictionJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2FrictionJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }
@@ -1518,10 +1537,10 @@ class Box2dPulleyJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2PulleyJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_groundAnchorA(box2d.vec2dTo(groundAnchorA));
-        jointDef.set_groundAnchorB(box2d.vec2dTo(groundAnchorB));
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_groundAnchorA(box2dTemp(groundAnchorA));
+        jointDef.set_groundAnchorB(box2dTemp(groundAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_ratio(ratio);
         jointDef.set_lengthA(groundAnchorA.distance(anchorA));
         jointDef.set_lengthB(groundAnchorB.distance(anchorB));
@@ -1578,14 +1597,14 @@ class Box2dMotorJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2MotorJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_linearOffset(box2d.vec2dTo(linearOffset));
+        jointDef.set_linearOffset(box2dTemp(linearOffset));
         jointDef.set_angularOffset(angularOffset);
         super(jointDef);
     }
 
     /** Set the target linear offset, in frame A, in meters.
      *  @param {Vector2} offset */
-    setLinearOffset(offset) { this.box2dJoint.SetLinearOffset(box2d.vec2dTo(offset)); }
+    setLinearOffset(offset) { this.box2dJoint.SetLinearOffset(box2dTemp(offset)); }
 
     /** Get the target linear offset, in frame A, in meters.
      *  @return {Vector2} */
@@ -1690,9 +1709,15 @@ class Box2dPlugin
      *  @param {number} [frames] */
     step(frames=1)
     {
-        box2d.world.SetGravity(box2d.vec2dTo(gravity));
+        box2d.world.SetGravity(box2dTemp(gravity));
         for (let i=frames; i--;)
+        {
             box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
+
+            // what a contact callback destroyed, now the world can lose it
+            const pending = box2dPending.splice(0);
+            pending.forEach(f=> f());
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -1714,7 +1739,7 @@ class Box2dPlugin
         };
 
         const raycastResults = [];
-        box2d.world.RayCast(raycastCallback, box2d.vec2dTo(start), box2d.vec2dTo(end));
+        box2d.world.RayCast(raycastCallback, box2dTemp(start), box2dTemp(end, 1));
         debugRaycast && debugLine(start, end, raycastResults.length ? '#f00' : '#00f', .02);
         return raycastResults;
     }
@@ -1746,8 +1771,8 @@ class Box2dPlugin
         };
 
         const aabb = new box2d.instance.b2AABB();
-        aabb.set_lowerBound(box2d.vec2dTo(pos.subtract(size.scale(.5))));
-        aabb.set_upperBound(box2d.vec2dTo(pos.add(size.scale(.5))));
+        aabb.set_lowerBound(box2dTemp(pos.subtract(size.scale(.5))));
+        aabb.set_upperBound(box2dTemp(pos.add(size.scale(.5))));
 
         let queryObjects = [];
         box2d.world.QueryAABB(queryCallback, aabb);
@@ -1769,8 +1794,8 @@ class Box2dPlugin
         };
 
         const aabb = new box2d.instance.b2AABB();
-        aabb.set_lowerBound(box2d.vec2dTo(pos.subtract(size.scale(.5))));
-        aabb.set_upperBound(box2d.vec2dTo(pos.add(size.scale(.5))));
+        aabb.set_lowerBound(box2dTemp(pos.subtract(size.scale(.5))));
+        aabb.set_upperBound(box2dTemp(pos.add(size.scale(.5))));
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
@@ -1820,15 +1845,15 @@ class Box2dPlugin
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
             if (dynamicOnly && fixture.GetBody().GetType() !== box2d.instance.b2_dynamicBody)
                 return true; // continue getting results
-            if (!fixture.TestPoint(box2d.vec2dTo(pos)))
+            if (!fixture.TestPoint(box2dTemp(pos)))
                 return true; // continue getting results
             queryObject = fixture.GetBody().object;
             return false; // stop getting results
         };
 
         const aabb = new box2d.instance.b2AABB();
-        aabb.set_lowerBound(box2d.vec2dTo(pos));
-        aabb.set_upperBound(box2d.vec2dTo(pos));
+        aabb.set_lowerBound(box2dTemp(pos));
+        aabb.set_upperBound(box2dTemp(pos));
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
@@ -1863,8 +1888,8 @@ class Box2dPlugin
             }
             case box2d.instance.b2Shape.e_circle:
             {
-                const radius = shape.get_m_radius();
-                drawCircle(pos, radius*2, color, lineWidth, lineColor, useWebGL, false, context);
+                const radius = shape.get_m_radius(), offset = box2d.vec2From(shape.get_m_p());
+                drawCircle(pos.add(offset.rotate(angle)), radius*2, color, lineWidth, lineColor, useWebGL, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
@@ -1896,7 +1921,8 @@ class Box2dPlugin
         return box2d.vec2From(v);
     }
 
-    /** converts a Vector2 to a box2 vec2
+    /** converts a Vector2 to a new box2d vec2, which stays until destroyed with box2d.instance.destroy;
+     *  the plugin itself passes Box2D reused ones, since Box2D copies every vector it is given
      *  @param {Vector2} v */
     vec2dTo(v)
     {

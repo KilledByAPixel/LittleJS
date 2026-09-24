@@ -5373,6 +5373,7 @@ function inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearRe
 const inputWASDToArrow = {KeyW:'ArrowUp', KeyS:'ArrowDown', KeyA:'ArrowLeft', KeyD:'ArrowRight'};
 const inputArrowToWASD = {ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', ArrowRight:'KeyD'};
 const inputKeysHeld = new Set; // the keys physically down, since an arrow's slot is shared with its alias
+let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, cleared with the input so a new touch presses
 
 /** Clears all input
  *  @memberof Input */
@@ -5381,6 +5382,7 @@ function inputClear()
     inputData.length = 0;
     inputData[0] = [];
     inputKeysHeld.clear();
+    inputWasTouching = 0;
     touchGamepadButtons.length = 0;
     touchGamepadSticks.length = 0;
     touchGamepadStickPointerId.length = 0; // release floating sticks so they re-anchor
@@ -5567,7 +5569,7 @@ function gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1,
 {
     false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
     if (!vibrateEnable || headlessMode) return;
-    const pad = navigator?.getGamepads?.()[gamepad];
+    const pad = inputGetGamepads()[gamepad];
     pad?.vibrationActuator?.playEffect?.('dual-rumble', {duration, strongMagnitude, weakMagnitude, startDelay});
 }
 
@@ -5577,8 +5579,16 @@ function gamepadVibrateStop(gamepad=gamepadPrimary)
 {
     false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
     if (!vibrateEnable || headlessMode) return;
-    const pad = navigator?.getGamepads?.()[gamepad];
+    const pad = inputGetGamepads()[gamepad];
     pad?.vibrationActuator?.reset?.();
+}
+
+// the gamepads the browser reports, none when it has no gamepad support or refuses the page them, which it
+// does by throwing a SecurityError from the call, as the spec says, for a page not allowed gamepads
+function inputGetGamepads()
+{
+    try { return navigator?.getGamepads?.() || []; }
+    catch (e) { return []; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -5782,9 +5792,9 @@ function inputInit()
         document.addEventListener('touchstart', (e)=> handleTouch(e), { passive: false });
         document.addEventListener('touchmove',  (e)=> handleTouch(e), { passive: false });
         document.addEventListener('touchend',   (e)=> handleTouch(e), { passive: false });
+        document.addEventListener('touchcancel', (e)=> handleTouch(e), { passive: false }); // the browser ended it
 
         // handle all touch events the same way
-        let wasTouching, touchIdentifier;
         function handleTouch(e)
         {
             if (!touchInputEnable) return;
@@ -5815,17 +5825,17 @@ function inputInit()
                     const pos = vec2(gameTouches[0].clientX, gameTouches[0].clientY);
                     const mousePosScreenLast = mousePosScreen;
                     mousePosScreen = mouseEventToScreen(pos);
-                    if (wasTouching && gameTouches[0].identifier === touchIdentifier)
+                    if (inputWasTouching && gameTouches[0].identifier === inputTouchIdentifier)
                         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
-                    else if (!wasTouching)
+                    else if (!inputWasTouching)
                         inputData[0][button] = 3;
-                    touchIdentifier = gameTouches[0].identifier;
+                    inputTouchIdentifier = gameTouches[0].identifier;
                 }
-                else if (wasTouching)
+                else if (inputWasTouching)
                     inputData[0][button] = inputData[0][button] & 2 | 4;
 
                 // set was touching
-                wasTouching = touching;
+                inputWasTouching = touching;
             }
 
             // prevent default handling like copy, magnifier lens, and scrolling
@@ -5967,22 +5977,18 @@ function inputUpdate()
             return;
         }
 
-        // return if gamepads are disabled or not supported
-        try {
-            // protect against getGamepads disallowed security error 
-            if (!gamepadsEnable || !navigator?.getGamepads)
-                return;
-        } catch(e) {
+        // return if gamepads are disabled
+        if (!gamepadsEnable)
             return;
-        }
 
         // only poll gamepads when focused or in debug mode
         if (!debug && !document.hasFocus()) return;
 
-        // poll gamepads
+        // poll gamepads; with none to read, every slot that had one is cleared, so a
+        // refused or vanished gamepad does not leave its buttons held
         const maxGamepads = 8;
-        const gamepads = navigator.getGamepads();
-        const gamepadCount = min(maxGamepads, gamepads.length);
+        const gamepads = inputGetGamepads();
+        const gamepadCount = gamepads.length ? min(maxGamepads, gamepads.length) : maxGamepads;
         for (let i=0; i<gamepadCount; ++i)
         {
             // get or create gamepad data
@@ -6028,8 +6034,9 @@ function inputUpdate()
             for (let j = 0; j < gamepad.axes.length-1; j+=2)
                 sticks[j>>1] = applyDeadZones(vec2(readAxis(j), readAxis(j+1)));
 
-            // read buttons
-            let hadInput = false;
+            // read buttons; a stick pushed past halfway counts as input too, after the dead zone and the
+            // axis filter, so a controller can become the primary one by moving and a noisy axis cannot
+            let hadInput = sticks.some(stick=> stick.lengthSquared() > .25);
             for (let j = gamepad.buttons.length; j--;)
             {
                 const button = gamepad.buttons[j];
@@ -13529,6 +13536,22 @@ let box2d;
  *  @memberof Box2D */
 let box2dDebug = false;
 
+// Box2D copies every vector it is given, so the plugin hands it these two instead of making a new one each call,
+// which the binding would keep; a call that takes two vectors uses both
+let box2dTempVectors;
+function box2dTemp(v, slot=0)
+{
+    false&&ASSERT(isVector2(v));
+    const temp = (box2dTempVectors ||= [new box2d.instance.b2Vec2(), new box2d.instance.b2Vec2()])[slot];
+    temp.Set(v.x, v.y);
+    return temp;
+}
+
+// what cannot happen while the world steps, like losing a body from a contact callback: done now, or queued until
+// the step is done
+const box2dPending = [];
+function box2dWhenUnlocked(f) { box2d.world.IsLocked() ? box2dPending.push(f) : f(); }
+
 /** Enable Box2D debug drawing
  *  @param {boolean} enable
  *  @memberof Box2D */
@@ -13560,7 +13583,7 @@ class Box2dObject extends EngineObject
         // create physics body
         const bodyDef = new box2d.instance.b2BodyDef();
         bodyDef.set_type(bodyType);
-        bodyDef.set_position(box2d.vec2dTo(pos));
+        bodyDef.set_position(box2dTemp(pos));
         bodyDef.set_angle(-angle);
         
         /** @property {Object} - The Box2d body */
@@ -13571,6 +13594,7 @@ class Box2dObject extends EngineObject
         this.edgeLists = [];
         /** @property {Array<Object>} - List of all edge loops for default box2d drawing */
         this.edgeLoops = [];
+        this.edgeListFixtures = new Set; // the fixtures of the edge lists and loops, by pointer, drawn with them
 
         this.body.object = this; // link body to this object
         box2d.objects.push(this); // keep track of all box2d objects
@@ -13581,9 +13605,11 @@ class Box2dObject extends EngineObject
     {
         if (this.destroyed) return;
 
-        // destroy physics body, fixtures, and joints
+        // destroy physics body, fixtures, and joints; from a contact callback the world is still
+        // stepping and cannot lose a body, so it goes as soon as the step is done
         false&&ASSERT(this.body, 'Box2dObject has no body to destroy');
-        box2d.world.DestroyBody(this.body);
+        const body = this.body;
+        box2dWhenUnlocked(()=> box2d.world.DestroyBody(body));
 
         // remove from tracked list so paused / headless sessions don't leak
         const i = box2d.objects.indexOf(this);
@@ -13622,21 +13648,19 @@ class Box2dObject extends EngineObject
      *  @param {CanvasRenderingContext2D} [context] */
     drawFixtures(color=WHITE, lineColor=BLACK, lineWidth=.1, useWebGL, context)
     {
-        // draw non-edge fixtures
+        // draw each fixture, but the edges of an edge list or loop, which draw below as one line
+        const edgeFixtures = this.edgeListFixtures;
         this.getFixtureList().forEach((fixture)=>
         {
-            const shape = box2d.castShapeObject(fixture.GetShape());
-            if (shape.GetType() !== box2d.instance.b2Shape.e_edge)
-            {
+            if (!edgeFixtures.has(box2d.instance.getPointer(fixture)))
                 box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, useWebGL, context);
-            }
         });
 
         // draw edges using a single draw line for better connections
         this.edgeLists.forEach(points=>
-            drawLineList(points, lineWidth, lineColor, false, this.pos, this.angle));
+            drawLineList(points, lineWidth, lineColor, false, this.pos, this.angle, useWebGL, false, context));
         this.edgeLoops.forEach(points=>
-            drawLineList(points, lineWidth, lineColor, true, this.pos, this.angle));
+            drawLineList(points, lineWidth, lineColor, true, this.pos, this.angle, useWebGL, false, context));
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -13692,7 +13716,7 @@ class Box2dObject extends EngineObject
         false&&ASSERT(isNumber(angle), 'angle must be a number');
 
         const shape = new box2d.instance.b2PolygonShape();
-        shape.SetAsBox(size.x/2, size.y/2, box2d.vec2dTo(offset), -angle);
+        shape.SetAsBox(size.x/2, size.y/2, box2dTemp(offset), -angle);
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
 
@@ -13778,7 +13802,7 @@ class Box2dObject extends EngineObject
         false&&ASSERT(isVector2(offset), 'offset must be a Vector2');
         
         const shape = new box2d.instance.b2CircleShape();
-        shape.set_m_p(box2d.vec2dTo(offset));
+        shape.set_m_p(box2dTemp(offset));
         shape.set_m_radius(diameter/2);
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
@@ -13796,7 +13820,7 @@ class Box2dObject extends EngineObject
         false&&ASSERT(isVector2(point2), 'point2 must be a Vector2');
 
         const shape = new box2d.instance.b2EdgeShape();
-        shape.Set(box2d.vec2dTo(point1), box2d.vec2dTo(point2));
+        shape.Set(box2dTemp(point1), box2dTemp(point2, 1));
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
 
@@ -13813,16 +13837,17 @@ class Box2dObject extends EngineObject
         for (let i=0; i<points.length-1; ++i)
         {
             const shape = new box2d.instance.b2EdgeShape();
-            points[i-1] && shape.set_m_vertex0(box2d.vec2dTo(points[i-1]));
-            points[i+0] && shape.set_m_vertex1(box2d.vec2dTo(points[i+0]));
-            points[i+1] && shape.set_m_vertex2(box2d.vec2dTo(points[i+1]));
-            points[i+2] && shape.set_m_vertex3(box2d.vec2dTo(points[i+2]));
+            points[i-1] && shape.set_m_vertex0(box2dTemp(points[i-1]));
+            points[i+0] && shape.set_m_vertex1(box2dTemp(points[i+0]));
+            points[i+1] && shape.set_m_vertex2(box2dTemp(points[i+1]));
+            points[i+2] && shape.set_m_vertex3(box2dTemp(points[i+2]));
             const f = this.addShape(shape, density, friction, restitution, isSensor);
             fixtures.push(f);
             edgePoints.push(points[i].copy());
         }
         edgePoints.push(points[points.length-1].copy());
         this.edgeLists.push(edgePoints);
+        fixtures.forEach(f=> this.edgeListFixtures.add(box2d.instance.getPointer(f)));
         return fixtures;
     }
 
@@ -13840,21 +13865,22 @@ class Box2dObject extends EngineObject
         for (let i=0; i<points.length; ++i)
         {
             const shape = new box2d.instance.b2EdgeShape();
-            shape.set_m_vertex0(box2d.vec2dTo(getPoint(i-1)));
-            shape.set_m_vertex1(box2d.vec2dTo(getPoint(i+0)));
-            shape.set_m_vertex2(box2d.vec2dTo(getPoint(i+1)));
-            shape.set_m_vertex3(box2d.vec2dTo(getPoint(i+2)));
+            shape.set_m_vertex0(box2dTemp(getPoint(i-1)));
+            shape.set_m_vertex1(box2dTemp(getPoint(i+0)));
+            shape.set_m_vertex2(box2dTemp(getPoint(i+1)));
+            shape.set_m_vertex3(box2dTemp(getPoint(i+2)));
             const f = this.addShape(shape, density, friction, restitution, isSensor);
             fixtures.push(f);
             edgePoints.push(points[i].copy());
         }
         this.edgeLoops.push(edgePoints);
+        fixtures.forEach(f=> this.edgeListFixtures.add(box2d.instance.getPointer(f)));
         return fixtures;
     }
 
     /** Destroy a fixture from the body
      *  @param {Object} [fixture] */
-    destroyFixture(fixture) { this.body.DestroyFixture(fixture); }
+    destroyFixture(fixture) { const body = this.body; box2dWhenUnlocked(()=> body.DestroyFixture(fixture)); }
 
     /** Destroy all fixture from the body */
     destroyAllFixtures()
@@ -13906,7 +13932,7 @@ class Box2dObject extends EngineObject
         this.pos = pos;
         this.angle = angle;
         // box2d uses reverse angle
-        this.body.SetTransform(box2d.vec2dTo(pos), -angle);
+        this.body.SetTransform(box2dTemp(pos), -angle);
     }
     
     /** Sets the position
@@ -13922,7 +13948,7 @@ class Box2dObject extends EngineObject
     /** Sets the linear velocity
      *  @param {Vector2} velocity */
     setLinearVelocity(velocity)
-    { this.body.SetLinearVelocity(box2d.vec2dTo(velocity)); }
+    { this.body.SetLinearVelocity(box2dTemp(velocity)); }
 
     /** Sets the angular velocity
      *  @param {number} angularVelocity */
@@ -13991,7 +14017,7 @@ class Box2dObject extends EngineObject
         const data = new box2d.instance.b2MassData();
         this.body.GetMassData(data);
         // use !== undefined so setMass(0) (static-equivalent) isn't silently ignored
-        if (localCenter !== undefined) data.set_center(box2d.vec2dTo(localCenter));
+        if (localCenter !== undefined) data.set_center(box2dTemp(localCenter));
         if (mass !== undefined) data.set_mass(mass);
         if (momentOfInertia !== undefined) data.set_I(momentOfInertia);
         this.body.SetMassData(data);
@@ -14028,7 +14054,7 @@ class Box2dObject extends EngineObject
     {
         pos ||= this.getCenterOfMass();
         this.setAwake();
-        this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
+        this.body.ApplyForce(box2dTemp(force), box2dTemp(pos, 1));
     }
 
     /** Apply acceleration to this object (changes velocity by acceleration,
@@ -14042,7 +14068,7 @@ class Box2dObject extends EngineObject
         pos ||= this.getCenterOfMass();
         this.setAwake();
         const impulse = acceleration.scale(this.getMass());
-        this.body.ApplyLinearImpulse(box2d.vec2dTo(impulse), box2d.vec2dTo(pos));
+        this.body.ApplyLinearImpulse(box2dTemp(impulse), box2dTemp(pos, 1));
     }
 
     /** Apply an instantaneous linear impulse. Changes velocity immediately by
@@ -14053,7 +14079,7 @@ class Box2dObject extends EngineObject
     {
         pos ||= this.getCenterOfMass();
         this.setAwake();
-        this.body.ApplyLinearImpulse(box2d.vec2dTo(impulse), box2d.vec2dTo(pos));
+        this.body.ApplyLinearImpulse(box2dTemp(impulse), box2dTemp(pos, 1));
     }
 
     /** Apply torque to this object
@@ -14295,7 +14321,7 @@ class Box2dJoint
     }
 
     /** Destroy this joint */
-    destroy() { box2d.world.DestroyJoint(this.box2dJoint); this.box2dJoint = 0; }
+    destroy() { const joint = this.box2dJoint; box2dWhenUnlocked(()=> box2d.world.DestroyJoint(joint)); this.box2dJoint = 0; }
 
     /** Get the first object attached to this joint
      *  @return {Box2dObject} */
@@ -14353,14 +14379,14 @@ class Box2dTargetJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2MouseJointDef();
         jointDef.set_bodyA(fixedObject.body);
         jointDef.set_bodyB(object.body);
-        jointDef.set_target(box2d.vec2dTo(worldPos));
+        jointDef.set_target(box2dTemp(worldPos));
         jointDef.set_maxForce(2e3 * object.getMass());
         super(jointDef);
     }
 
     /** Set the target point in world coordinates
      *  @param {Vector2} pos */
-    setTarget(pos) { this.box2dJoint.SetTarget(box2d.vec2dTo(pos)); }
+    setTarget(pos) { this.box2dJoint.SetTarget(box2dTemp(pos)); }
     
     /** Get the target point in world coordinates
      *  @return {Vector2} */
@@ -14408,8 +14434,8 @@ class Box2dDistanceJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2DistanceJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_length(anchorA.distance(anchorB));
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -14493,8 +14519,8 @@ class Box2dRopeJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2RopeJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_maxLength(anchorA.distance(anchorB)+extraLength);
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -14543,8 +14569,8 @@ class Box2dRevoluteJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2RevoluteJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -14696,9 +14722,9 @@ class Box2dPrismaticJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2PrismaticJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
-        jointDef.set_localAxisA(box2d.vec2dTo(localAxisA));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
+        jointDef.set_localAxisA(box2dTemp(localAxisA));
         jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -14806,9 +14832,9 @@ class Box2dWheelJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2WheelJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
-        jointDef.set_localAxisA(box2d.vec2dTo(localAxisA));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
+        jointDef.set_localAxisA(box2dTemp(localAxisA));
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }
@@ -14900,8 +14926,8 @@ class Box2dWeldJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2WeldJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -14929,15 +14955,15 @@ class Box2dWeldJoint extends Box2dJoint
 
     /** Set the damping ratio
      *  @param {number} ratio */
-    setSpringDampingRatio(ratio) { return this.box2dJoint.SetSpringDampingRatio(ratio); }
+    setSpringDampingRatio(ratio) { return this.box2dJoint.SetDampingRatio(ratio); } // the weld joint's own name for it
 
     /** Get the damping ratio
      *  @return {number} */
-    getSpringDampingRatio() { return this.box2dJoint.GetSpringDampingRatio(); }
+    getSpringDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** 
+/**
  * Box2D Friction Joint
  * - Used to apply top-down friction
  * - Provides 2D translational friction and angular friction
@@ -14959,8 +14985,8 @@ class Box2dFrictionJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2FrictionJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }
@@ -15019,10 +15045,10 @@ class Box2dPulleyJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2PulleyJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_groundAnchorA(box2d.vec2dTo(groundAnchorA));
-        jointDef.set_groundAnchorB(box2d.vec2dTo(groundAnchorB));
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_groundAnchorA(box2dTemp(groundAnchorA));
+        jointDef.set_groundAnchorB(box2dTemp(groundAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_ratio(ratio);
         jointDef.set_lengthA(groundAnchorA.distance(anchorA));
         jointDef.set_lengthB(groundAnchorB.distance(anchorB));
@@ -15079,14 +15105,14 @@ class Box2dMotorJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2MotorJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_linearOffset(box2d.vec2dTo(linearOffset));
+        jointDef.set_linearOffset(box2dTemp(linearOffset));
         jointDef.set_angularOffset(angularOffset);
         super(jointDef);
     }
 
     /** Set the target linear offset, in frame A, in meters.
      *  @param {Vector2} offset */
-    setLinearOffset(offset) { this.box2dJoint.SetLinearOffset(box2d.vec2dTo(offset)); }
+    setLinearOffset(offset) { this.box2dJoint.SetLinearOffset(box2dTemp(offset)); }
 
     /** Get the target linear offset, in frame A, in meters.
      *  @return {Vector2} */
@@ -15191,9 +15217,15 @@ class Box2dPlugin
      *  @param {number} [frames] */
     step(frames=1)
     {
-        box2d.world.SetGravity(box2d.vec2dTo(gravity));
+        box2d.world.SetGravity(box2dTemp(gravity));
         for (let i=frames; i--;)
+        {
             box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
+
+            // what a contact callback destroyed, now the world can lose it
+            const pending = box2dPending.splice(0);
+            pending.forEach(f=> f());
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -15215,7 +15247,7 @@ class Box2dPlugin
         };
 
         const raycastResults = [];
-        box2d.world.RayCast(raycastCallback, box2d.vec2dTo(start), box2d.vec2dTo(end));
+        box2d.world.RayCast(raycastCallback, box2dTemp(start), box2dTemp(end, 1));
         debugRaycast && debugLine(start, end, raycastResults.length ? '#f00' : '#00f', .02);
         return raycastResults;
     }
@@ -15247,8 +15279,8 @@ class Box2dPlugin
         };
 
         const aabb = new box2d.instance.b2AABB();
-        aabb.set_lowerBound(box2d.vec2dTo(pos.subtract(size.scale(.5))));
-        aabb.set_upperBound(box2d.vec2dTo(pos.add(size.scale(.5))));
+        aabb.set_lowerBound(box2dTemp(pos.subtract(size.scale(.5))));
+        aabb.set_upperBound(box2dTemp(pos.add(size.scale(.5))));
 
         let queryObjects = [];
         box2d.world.QueryAABB(queryCallback, aabb);
@@ -15270,8 +15302,8 @@ class Box2dPlugin
         };
 
         const aabb = new box2d.instance.b2AABB();
-        aabb.set_lowerBound(box2d.vec2dTo(pos.subtract(size.scale(.5))));
-        aabb.set_upperBound(box2d.vec2dTo(pos.add(size.scale(.5))));
+        aabb.set_lowerBound(box2dTemp(pos.subtract(size.scale(.5))));
+        aabb.set_upperBound(box2dTemp(pos.add(size.scale(.5))));
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
@@ -15321,15 +15353,15 @@ class Box2dPlugin
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
             if (dynamicOnly && fixture.GetBody().GetType() !== box2d.instance.b2_dynamicBody)
                 return true; // continue getting results
-            if (!fixture.TestPoint(box2d.vec2dTo(pos)))
+            if (!fixture.TestPoint(box2dTemp(pos)))
                 return true; // continue getting results
             queryObject = fixture.GetBody().object;
             return false; // stop getting results
         };
 
         const aabb = new box2d.instance.b2AABB();
-        aabb.set_lowerBound(box2d.vec2dTo(pos));
-        aabb.set_upperBound(box2d.vec2dTo(pos));
+        aabb.set_lowerBound(box2dTemp(pos));
+        aabb.set_upperBound(box2dTemp(pos));
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
@@ -15364,8 +15396,8 @@ class Box2dPlugin
             }
             case box2d.instance.b2Shape.e_circle:
             {
-                const radius = shape.get_m_radius();
-                drawCircle(pos, radius*2, color, lineWidth, lineColor, useWebGL, false, context);
+                const radius = shape.get_m_radius(), offset = box2d.vec2From(shape.get_m_p());
+                drawCircle(pos.add(offset.rotate(angle)), radius*2, color, lineWidth, lineColor, useWebGL, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
@@ -15397,7 +15429,8 @@ class Box2dPlugin
         return box2d.vec2From(v);
     }
 
-    /** converts a Vector2 to a box2 vec2
+    /** converts a Vector2 to a new box2d vec2, which stays until destroyed with box2d.instance.destroy;
+     *  the plugin itself passes Box2D reused ones, since Box2D copies every vector it is given
      *  @param {Vector2} v */
     vec2dTo(v)
     {
@@ -16256,8 +16289,23 @@ function setTextureSheetPadding(padding) { textureSheetPadding = padding; }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Module-private list of tweens currently running.
+// Module-private list of tweens currently running, each with its active flag set while it is in it.
 const tweenActive = [];
+const tweenUpdateList = []; // the tweens an update moves, the ones active when it began
+
+// put a tween in the active list, or take it out, keeping its flag in step so a check costs nothing
+function tweenActivate(tween)
+{
+    if (tween.active) return;
+    tween.active = true;
+    tweenActive.push(tween);
+}
+function tweenDeactivate(tween)
+{
+    if (!tween.active) return;
+    tween.active = false;
+    tweenActive.splice(tweenActive.indexOf(tween), 1);
+}
 
 // Time tracking for delta computation between engine plugin calls.
 let lastTime = 0;
@@ -16331,8 +16379,11 @@ class Tween
         /** Remaining iterations including the current run (loop/pingPong only).
          *  @private */
         this.loopRemaining = 0;
+        /** Whether it is in the active list, see isActive
+         *  @private */
+        this.active = false;
 
-        tweenActive.push(this);
+        tweenActivate(this);
         // Snap target to start immediately.
         callback(this.interp(duration));
     }
@@ -16362,8 +16413,9 @@ class Tween
         return this;
     }
 
-    /** Repeat this tween `n` total times. After each iteration finishes, a
-     *  fresh tween with the same parameters takes over via the `then` slot.
+    /** Repeat this tween `n` total times. After each iteration finishes, the
+     *  same tween starts over, so the handle returned stays good for the whole
+     *  loop: pause or stop it to pause or stop every iteration left.
      *  `loop()` with no argument loops forever.
      *
      *  Mutually exclusive with `pingPong`; calling either replaces the other,
@@ -16409,7 +16461,7 @@ class Tween
     {
         this.life = this.duration;
         this.paused = false;
-        if (tweenActive.indexOf(this) < 0) tweenActive.push(this);
+        tweenActivate(this);
         this.callback(this.interp(this.duration));
     }
 
@@ -16418,7 +16470,7 @@ class Tween
      *  @memberof TweenSystem */
     isActive()
     {
-        return !this.paused && tweenActive.indexOf(this) >= 0;
+        return !this.paused && this.active;
     }
 
     /** Get how far this tween has progressed, from 0 (just started) to 1
@@ -16442,23 +16494,34 @@ class Tween
 
     /** Compute the interpolated value at the given remaining `life`.
      *  At life === duration the result is `start`; at life === 0 it is `end`.
+     *  - At life 0 it is the end value exactly
+     *  - A vector goes past its ends as far as the easing does, as a number does; a Color stays between them,
+     *    so its channels stay in range, and any other type goes as far as its own lerp takes it
      *  @param {number} life
-     *  @returns {number}
+     *  @returns {number|Vector2|Vector3|Color}
      *  @memberof TweenSystem */
     interp(life)
     {
+        const s = this.start, e = this.end;
+        if (life <= 0) // the end exactly, an easing curve may land a rounding error short of it
+            return typeof e.copy === 'function' ? e.copy() : e;
         const x = this.ease((this.duration - life) / this.duration);
-        if (isLerpable(this.start))
-            return this.start.lerp(this.end, x);
-        return this.start + (this.end - this.start) * x;
+        // the vectors as their lerp does it, which lands on the end exactly, but without its clamp
+        const y = 1 - x;
+        if (s instanceof Vector2)
+            return vec2(e.x * x + s.x * y, e.y * x + s.y * y);
+        if (s instanceof Vector3)
+            return vec3(e.x * x + s.x * y, e.y * x + s.y * y, e.z * x + s.z * y);
+        if (isLerpable(s))
+            return s.lerp(e, x);
+        return s + (e - s) * x;
     }
 
     /** Remove this tween from the active list and prevent any pending then-callback.
      *  @memberof TweenSystem */
     stop()
     {
-        const i = tweenActive.indexOf(this);
-        if (i >= 0) tweenActive.splice(i, 1);
+        tweenDeactivate(this);
         this.thenCallback = undefined;
     }
 }
@@ -16693,7 +16756,7 @@ function loopContinuation(tween)
     if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
     tween.life = tween.duration;
     tween.thenCallback = () => loopContinuation(tween);
-    tweenActive.push(tween);
+    tweenActivate(tween);
     // snap to start for the new iteration (matches Tween constructor behavior)
     tween.callback(tween.interp(tween.duration));
 }
@@ -16708,12 +16771,14 @@ function pingPongContinuation(tween)
     tween.end = tmp;
     tween.life = tween.duration;
     tween.thenCallback = () => pingPongContinuation(tween);
-    tweenActive.push(tween);
+    tweenActivate(tween);
     tween.callback(tween.interp(tween.duration));
 }
 
 /** Engine plugin hook: advance every active tween by the appropriate delta.
- *  Called once per render frame by the engine (no arguments). May also be
+ *  The engine calls it with no arguments on every fixed update, so it can run
+ *  more than once in a rendered frame, and on paused updates too, where only
+ *  real time tweens move. May also be
  *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
  *  — useful for headless tests or custom replay/scrubbing systems.
  *  @param {number} [gameDelta] - Game-time delta in seconds; default: time - lastTime
@@ -16735,17 +16800,17 @@ function tweenUpdate(gameDelta, realDelta)
         realDelta = gameDelta;
     }
 
-    // Iterate in reverse so removals don't disturb iteration; a callback may stop
-    // any tween, even all of them, so the index is checked against the list after it.
-    for (let i = tweenActive.length; i--;)
+    // Move the tweens that were active when this update began, each once: a callback
+    // may stop any tween, even all of them, and one that is stopped is skipped; a tween
+    // made or started again during the update, like the next turn of a loop, moves on
+    // from the next update. Newest first, as the list has always been walked.
+    const list = tweenUpdateList;
+    for (const t of tweenActive)
+        list.push(t);
+    for (let i = list.length; i--;)
     {
-        if (i >= tweenActive.length)
-        {
-            i = tweenActive.length; // a callback shortened the list, carry on from its end
-            continue;
-        }
-        const t = tweenActive[i];
-        if (t.paused) continue;
+        const t = list[i];
+        if (!t.active || t.paused) continue;
         const dt = t.useRealTime ? realDelta : gameDelta;
         if (dt <= 0) continue;
 
@@ -16758,19 +16823,13 @@ function tweenUpdate(gameDelta, realDelta)
         {
             // Completion: fire end value, remove from active, fire then-callback.
             t.callback(t.interp(0));
-            const j = tweenActive.indexOf(t); // this one, wherever the callback left it
-            if (j >= 0) tweenActive.splice(j, 1);
+            tweenDeactivate(t);
             const cb = t.thenCallback;
             t.thenCallback = undefined;
             if (cb) cb();
         }
-        // carry on from where this tween is now, when a callback moved it
-        if (tweenActive[i] !== t)
-        {
-            const j = tweenActive.indexOf(t);
-            i = j < 0 ? min(i, tweenActive.length) : j;
-        }
     }
+    list.length = 0;
 }
 
 /** Stop every active tween and clear their then-callbacks. Useful for resets
@@ -16778,7 +16837,8 @@ function tweenUpdate(gameDelta, realDelta)
  *  @memberof TweenSystem */
 function tweenStopAll()
 {
-    for (const t of tweenActive) t.thenCallback = undefined;
+    for (const t of tweenActive)
+        t.thenCallback = undefined, t.active = false;
     tweenActive.length = 0;
 }
 
@@ -23202,7 +23262,8 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
     let fileNormals = false, face = 0;
 
     // OBJ indices count from 1, and a negative one counts back from the end of the list so far
-    const lookup = (s, list)=> { const i = parseInt(s); return list[i < 0 ? list.length + i : i - 1]; };
+    const index = (s, list)=> { const i = parseInt(s); return i < 0 ? list.length + i : i - 1; };
+    const lookup = (s, list)=> list[index(s, list)];
     for (const line of text.split('\n'))
     {
         const parts = line.trim().split(/\s+/);
@@ -23224,7 +23285,9 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
                 // normal keeps its corners apart, unless they will be smoothed, when the position and uv are enough
                 const ids = corners.map((c, i)=>
                 {
-                    const key = c[0] + '/' + (c[1] || '') + '/' + (hasNormals ? c[2] : smooth ? '' : 'f' + face);
+                    // by the vertices they are, a negative index means another vertex as the lists grow
+                    const key = index(c[0], positions) + '/' + (c[1] ? index(c[1], uvs) : '') + '/' +
+                        (hasNormals ? index(c[2], normals) : smooth ? '' : 'f' + face);
                     let id = seen.get(key);
                     if (id === undefined)
                     {

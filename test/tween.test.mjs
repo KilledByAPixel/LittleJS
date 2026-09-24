@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Tween, tweenProperty, tweenStopAll, tweenUpdate, Ease, vec2, rgb, Vector2, Color } from '../dist/littlejs.esm.js';
+import { Tween, tweenProperty, tweenStopAll, tweenUpdate, Ease, vec2, rgb, Vector2, Color, vec3 } from '../dist/littlejs.esm.js';
 
 test('Tween, tweenProperty, tweenStopAll, tweenUpdate, Ease are exported from the bundle', () =>
 {
@@ -597,5 +597,53 @@ test('a callback that stops every tween, or another one, does not break the upda
     tweenUpdate(10);
     assert.equal(moved, 1, 'the tween that was not stopped finished later');
     assert.equal(done.thenCallback, undefined);
+    tweenStopAll();
+});
+
+test('looping tweens that finish together each move once per update', () =>
+{
+    tweenStopAll();
+    const counts = [0, 0, 0];
+    const tweens = [0, 1, 2].map(i=> new Tween(()=> ++counts[i], 0, 1, 1));
+    // finite loops, so a regression runs too many turns and fails instead of never returning
+    tweens[0].loop(9); tweens[1].loop(4); tweens[2].pingPong(9);
+    counts.fill(0);
+    tweenUpdate(1); // each finishes its first second and starts its second
+    assert.deepEqual(counts, [2, 2, 2], 'the end value, then the start of the next iteration, once each');
+    for (const t of tweens) assert.ok(Math.abs(t.life - 1) < 1e-9, 'a whole second left of the new iteration');
+    counts.fill(0);
+    tweenUpdate(.5);
+    assert.deepEqual(counts, [1, 1, 1]);
+    tweenStopAll();
+
+    // a looping tween and a plain one, and a loop that stops the other from its callback
+    let plain = 0;
+    const other = new Tween(()=> ++plain, 0, 1, 1);
+    const stopper = new Tween((v)=> v >= 1 && other.stop(), 0, 1, 1).loop();
+    plain = 0;
+    tweenUpdate(1);
+    assert.ok(plain <= 1, 'the stopped one moved at most once');
+    tweenUpdate(1);
+    assert.ok(plain <= 1, 'and not again');
+    stopper.stop();
+    tweenStopAll();
+});
+
+test('a vector tween overshoots with its easing like a number tween does, a color stays in range', () =>
+{
+    tweenStopAll();
+    let n, v, v3, c;
+    const tn = new Tween((x)=> n = x, 0, 10, 1).setEase(Ease.BACK);
+    const tv = new Tween((x)=> v = x, vec2(), vec2(10), 1).setEase(Ease.BACK);
+    const t3 = new Tween((x)=> v3 = x, vec3(), vec3(10), 1).setEase(Ease.BACK);
+    const tc = new Tween((x)=> c = x, rgb(0, 0, 0), rgb(1, 1, 1), 1).setEase(Ease.BACK);
+    tweenUpdate(.1);
+    assert.ok(n < 0, 'the number goes back past its start, ' + n);
+    assert.ok(Math.abs(v.x - n) < 1e-9 && Math.abs(v.y - n) < 1e-9, 'the vector follows it, ' + v.x);
+    assert.ok(Math.abs(v3.z - n) < 1e-9, 'so does a Vector3');
+    assert.ok(c.r >= 0, 'a color does not go below black');
+    tweenUpdate(.9);
+    assert.equal(n, 10, 'a finished tween is on its end exactly, the easing may round short of it');
+    assert.equal(v.x, 10); assert.equal(v3.x, 10);
     tweenStopAll();
 });
