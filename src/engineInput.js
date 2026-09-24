@@ -119,6 +119,15 @@ const inputArrowToWASD = {ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', Ar
 const inputKeysHeld = new Set; // the keys physically down, since an arrow's slot is shared with its alias
 let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, cleared with the input so a new touch presses
 
+// let go of every keyboard key, for when something else takes the keyboard, like a text field
+function inputClearKeyboard()
+{
+    const keys = inputData[0];
+    for (const key in keys)
+        isNaN(+key) && (keys[key] = 0); // mouse buttons are numbers, keys are codes
+    inputKeysHeld.clear();
+}
+
 /** Clears all input
  *  @memberof Input */
 function inputClear()

@@ -136,7 +136,13 @@ class UISystemPlugin
             const o = this._keyInputObject;
             if (o && !uiObjectIsUsable(o))
                 return void (this.keyInputObject = undefined);
-            o?.onKeyDown(e);
+            if (!o) return;
+
+            // the field has the key, the game's input never sees it; browser shortcuts still work
+            e.stopPropagation();
+            if (!e.ctrlKey && !e.metaKey && !e.altKey)
+                e.preventDefault(); // no scrolling, find as you type or going back
+            e.type === 'keydown' && o.onKeyDown(e);
         };
 
         engineAddPlugin(uiUpdate, uiRender);
@@ -513,8 +519,8 @@ class UISystemPlugin
         return p;
     }
 
-    /** Object to send keyboard input to (typically a UITextInput).
-     *  The document keydown listener is only attached while this is set,
+    /** Object to send keyboard input to (typically a UITextInput), which keeps the keys from the game while set.
+     *  The keyboard listeners are only attached while this is set,
      *  so games that never use text input pay no event-handling cost.
      *  @type {UIObject} */
     get keyInputObject() { return this._keyInputObject; }
@@ -522,10 +528,18 @@ class UISystemPlugin
     {
         const had = !!this._keyInputObject;
         this._keyInputObject = obj;
+        // listen on the window as the event comes down, before the engine's input on the document can see it
         if (!had && obj)
-            document.addEventListener('keydown', this._onKeyDown);
+        {
+            addEventListener('keydown', this._onKeyDown, true);
+            addEventListener('keyup', this._onKeyDown, true);
+            inputClearKeyboard(); // keys held when editing starts let go, or they would stay down
+        }
         else if (had && !obj)
-            document.removeEventListener('keydown', this._onKeyDown);
+        {
+            removeEventListener('keydown', this._onKeyDown, true);
+            removeEventListener('keyup', this._onKeyDown, true);
+        }
     }
 
     /** Destroy and remove all objects

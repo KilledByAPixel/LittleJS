@@ -89,7 +89,7 @@ export function explosion(pos, radius=3)
     }
 
     // kill/push objects
-    LJS.engineObjectsCallback(pos, radius*3, (o)=> 
+    LJS.engineObjectsCallback(pos, radius*6, (o)=> 
     {
         const damage = radius*2;
         const d = o.pos.distance(pos);

@@ -599,8 +599,9 @@ function engineObjectsDestroy(immediate=true)
 }
 
 /** Collects all object within a given area
+ *  - Objects destroyed this frame are left out, they are only in the list until the frame ends
  *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
- *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
+ *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @return {Array<EngineObject>} - List of collected objects
  *  @memberof Engine */
@@ -611,20 +612,20 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
     {
         // all objects
         for (const o of objects)
-            collectedObjects.push(o);
+            o.destroyed || collectedObjects.push(o);
     }
     else if (size instanceof Vector2)
     {
         // bounding box test
         for (const o of objects)
-            o.isOverlapping(pos, size) && collectedObjects.push(o);
+            o.destroyed || o.isOverlapping(pos, size) && collectedObjects.push(o);
     }
     else
     {
-        // circle test
-        const sizeSquared = size*size;
+        // circle test, a diameter like every other size
+        const radiusSquared = (size/2)**2;
         for (const o of objects)
-            pos.distanceSquared(o.pos) < sizeSquared && collectedObjects.push(o);
+            o.destroyed || pos.distanceSquared(o.pos) < radiusSquared && collectedObjects.push(o);
     }
     return collectedObjects;
 }
@@ -635,16 +636,16 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
  *  @memberof Engine
  */
 
-/** Triggers a callback for each object within a given area
+/** Triggers a callback for each object within a given area, objects destroyed this frame left out
  *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
- *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
+ *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2
  *  @param {ObjectCallbackFunction} [callbackFunction] - Calls this function on every object that passes the test
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @memberof Engine */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 { engineObjectsCollect(pos, size, objects).forEach(o => callbackFunction(o)); }
 
-/** Return a list of objects intersecting a ray
+/** Return a list of objects intersecting a ray, objects destroyed this frame left out
  *  @param {Vector2} start
  *  @param {Vector2} end
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
@@ -655,7 +656,7 @@ function engineObjectsRaycast(start, end, objects=engineObjects)
     const hitObjects = [];
     for (const o of objects)
     {
-        if (o.collideRaycast && isIntersecting(start, end, o.pos, o.size))
+        if (o.collideRaycast && !o.destroyed && isIntersecting(start, end, o.pos, o.size))
         {
             debugRaycast && debugRect(o.pos, o.size, '#f00');
             hitObjects.push(o);
@@ -5375,6 +5376,15 @@ const inputArrowToWASD = {ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', Ar
 const inputKeysHeld = new Set; // the keys physically down, since an arrow's slot is shared with its alias
 let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, cleared with the input so a new touch presses
 
+// let go of every keyboard key, for when something else takes the keyboard, like a text field
+function inputClearKeyboard()
+{
+    const keys = inputData[0];
+    for (const key in keys)
+        isNaN(+key) && (keys[key] = 0); // mouse buttons are numbers, keys are codes
+    inputKeysHeld.clear();
+}
+
 /** Clears all input
  *  @memberof Input */
 function inputClear()
@@ -7518,6 +7528,10 @@ const tileCollisionLayers = [];
 *  @param {boolean} [solidOnly] - Only check solid layers?
 *  @return {number}
 *  @memberof TileLayers */
+// a tile collision layer's position is whole numbers, so its cells are the world grid the physics lands objects on
+function tileCollisionAssertWhole(layer)
+{ false&&ASSERT(layer.pos.x % 1 === 0 && layer.pos.y % 1 === 0, 'a tile collision layer must sit at a whole number position', layer.pos); }
+
 function tileCollisionGetData(pos, solidOnly=true)
 {
     // check all tile collision layers
@@ -8091,6 +8105,7 @@ class TileLayer extends CanvasLayer
  * Tile Collision Layer - a tile layer with collision
  * - adds collision data and functions to TileLayer
  * - there can be multiple tile collision layers
+ * - its pos must be whole numbers, so its cells line up with the world grid objects land on
  * @extends TileLayer
  * @memberof TileLayers
  */
@@ -8174,6 +8189,7 @@ class TileCollisionLayer extends TileLayer
     collisionTest(pos, size=new Vector2, callbackObject)
     {
         false&&ASSERT(isVector2(pos) && isVector2(size), 'pos and size must be Vector2s');
+        tileCollisionAssertWhole(this);
         false&&ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
 
         // make function to check for collision
@@ -8218,6 +8234,7 @@ class TileCollisionLayer extends TileLayer
     collisionRaycast(posStart, posEnd, callbackObject, normal)
     {
         false&&ASSERT(isVector2(posStart) && isVector2(posEnd), 'positions must be Vector2s');
+        tileCollisionAssertWhole(this);
         false&&ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
 
         // make function to check for collision
@@ -11929,7 +11946,13 @@ class UISystemPlugin
             const o = this._keyInputObject;
             if (o && !uiObjectIsUsable(o))
                 return void (this.keyInputObject = undefined);
-            o?.onKeyDown(e);
+            if (!o) return;
+
+            // the field has the key, the game's input never sees it; browser shortcuts still work
+            e.stopPropagation();
+            if (!e.ctrlKey && !e.metaKey && !e.altKey)
+                e.preventDefault(); // no scrolling, find as you type or going back
+            e.type === 'keydown' && o.onKeyDown(e);
         };
 
         engineAddPlugin(uiUpdate, uiRender);
@@ -12306,8 +12329,8 @@ class UISystemPlugin
         return p;
     }
 
-    /** Object to send keyboard input to (typically a UITextInput).
-     *  The document keydown listener is only attached while this is set,
+    /** Object to send keyboard input to (typically a UITextInput), which keeps the keys from the game while set.
+     *  The keyboard listeners are only attached while this is set,
      *  so games that never use text input pay no event-handling cost.
      *  @type {UIObject} */
     get keyInputObject() { return this._keyInputObject; }
@@ -12315,10 +12338,18 @@ class UISystemPlugin
     {
         const had = !!this._keyInputObject;
         this._keyInputObject = obj;
+        // listen on the window as the event comes down, before the engine's input on the document can see it
         if (!had && obj)
-            document.addEventListener('keydown', this._onKeyDown);
+        {
+            addEventListener('keydown', this._onKeyDown, true);
+            addEventListener('keyup', this._onKeyDown, true);
+            inputClearKeyboard(); // keys held when editing starts let go, or they would stay down
+        }
         else if (had && !obj)
-            document.removeEventListener('keydown', this._onKeyDown);
+        {
+            removeEventListener('keydown', this._onKeyDown, true);
+            removeEventListener('keyup', this._onKeyDown, true);
+        }
     }
 
     /** Destroy and remove all objects
@@ -14032,7 +14063,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [momentOfInertia] */
     setMassData(localCenter, mass, momentOfInertia)
     {
-        const data = new box2d.instance.b2MassData();
+        const data = box2dQueryObject('massData', 'b2MassData'); // reused, GetMassData fills it in
         this.body.GetMassData(data);
         // use !== undefined so setMass(0) (static-equivalent) isn't silently ignored
         if (localCenter !== undefined) data.set_center(box2dTemp(localCenter));
@@ -24035,10 +24066,10 @@ class ThreeJSObject extends EngineObject
         }
     }
 
-    /** Update the object and sync the mesh to its transform */
-    update()
+    /** Update the transform and sync the mesh to it, after the parent has placed a child, and while paused too */
+    updateTransforms()
     {
-        super.update();
+        super.updateTransforms();
         this.syncMesh();
     }
 

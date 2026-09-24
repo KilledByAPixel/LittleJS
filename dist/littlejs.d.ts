@@ -176,8 +176,9 @@ declare module "littlejsengine" {
      *  @memberof Engine */
     export function engineObjectsDestroy(immediate?: boolean): void;
     /** Collects all object within a given area
+     *  - Objects destroyed this frame are left out, they are only in the list until the frame ends
      *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
-     *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
+     *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2
      *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
      *  @return {Array<EngineObject>} - List of collected objects
      *  @memberof Engine */
@@ -187,14 +188,14 @@ declare module "littlejsengine" {
      * @param {EngineObject} object
      *  @memberof Engine
      */
-    /** Triggers a callback for each object within a given area
+    /** Triggers a callback for each object within a given area, objects destroyed this frame left out
      *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
-     *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
+     *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2
      *  @param {ObjectCallbackFunction} [callbackFunction] - Calls this function on every object that passes the test
      *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
      *  @memberof Engine */
     export function engineObjectsCallback(pos?: Vector2, size?: Vector2 | number, callbackFunction?: ObjectCallbackFunction, objects?: Array<EngineObject>): void;
-    /** Return a list of objects intersecting a ray
+    /** Return a list of objects intersecting a ray, objects destroyed this frame left out
      *  @param {Vector2} start
      *  @param {Vector2} end
      *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
@@ -3288,12 +3289,7 @@ declare module "littlejsengine" {
      *  @type {Array<TileCollisionLayer>}
      *  @memberof TileLayers */
     export const tileCollisionLayers: Array<TileCollisionLayer>;
-    /** Get tile collision data for a given cell in the grid
-    *  @param {Vector2} pos
-    *  @param {boolean} [solidOnly] - Only check solid layers?
-    *  @return {number}
-    *  @memberof TileLayers */
-    export function tileCollisionGetData(pos: Vector2, solidOnly?: boolean): number;
+    export function tileCollisionGetData(pos: any, solidOnly?: boolean): number;
     /** Check if a tile layer collides with another object
      *  @param {Vector2} pos
      *  @param {Vector2} [size=vec2()]
@@ -3512,6 +3508,7 @@ declare module "littlejsengine" {
      * Tile Collision Layer - a tile layer with collision
      * - adds collision data and functions to TileLayer
      * - there can be multiple tile collision layers
+     * - its pos must be whole numbers, so its cells line up with the world grid objects land on
      * @extends TileLayer
      * @memberof TileLayers
      */
@@ -4475,8 +4472,8 @@ declare module "littlejsengine" {
         /** @private */
         private _onKeyDown;
         set keyInputObject(arg: UIObject);
-        /** Object to send keyboard input to (typically a UITextInput).
-         *  The document keydown listener is only attached while this is set,
+        /** Object to send keyboard input to (typically a UITextInput), which keeps the keys from the game while set.
+         *  The keyboard listeners are only attached while this is set,
          *  so games that never use text input pay no event-handling cost.
          *  @type {UIObject} */
         get keyInputObject(): UIObject;

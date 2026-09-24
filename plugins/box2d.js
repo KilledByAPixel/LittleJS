@@ -511,7 +511,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [momentOfInertia] */
     setMassData(localCenter, mass, momentOfInertia)
     {
-        const data = new box2d.instance.b2MassData();
+        const data = box2dQueryObject('massData', 'b2MassData'); // reused, GetMassData fills it in
         this.body.GetMassData(data);
         // use !== undefined so setMass(0) (static-equivalent) isn't silently ignored
         if (localCenter !== undefined) data.set_center(box2dTemp(localCenter));

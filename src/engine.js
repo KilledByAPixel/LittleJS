@@ -596,8 +596,9 @@ function engineObjectsDestroy(immediate=true)
 }
 
 /** Collects all object within a given area
+ *  - Objects destroyed this frame are left out, they are only in the list until the frame ends
  *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
- *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
+ *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @return {Array<EngineObject>} - List of collected objects
  *  @memberof Engine */
@@ -608,20 +609,20 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
     {
         // all objects
         for (const o of objects)
-            collectedObjects.push(o);
+            o.destroyed || collectedObjects.push(o);
     }
     else if (size instanceof Vector2)
     {
         // bounding box test
         for (const o of objects)
-            o.isOverlapping(pos, size) && collectedObjects.push(o);
+            o.destroyed || o.isOverlapping(pos, size) && collectedObjects.push(o);
     }
     else
     {
-        // circle test
-        const sizeSquared = size*size;
+        // circle test, a diameter like every other size
+        const radiusSquared = (size/2)**2;
         for (const o of objects)
-            pos.distanceSquared(o.pos) < sizeSquared && collectedObjects.push(o);
+            o.destroyed || pos.distanceSquared(o.pos) < radiusSquared && collectedObjects.push(o);
     }
     return collectedObjects;
 }
@@ -632,16 +633,16 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
  *  @memberof Engine
  */
 
-/** Triggers a callback for each object within a given area
+/** Triggers a callback for each object within a given area, objects destroyed this frame left out
  *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
- *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
+ *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2
  *  @param {ObjectCallbackFunction} [callbackFunction] - Calls this function on every object that passes the test
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @memberof Engine */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 { engineObjectsCollect(pos, size, objects).forEach(o => callbackFunction(o)); }
 
-/** Return a list of objects intersecting a ray
+/** Return a list of objects intersecting a ray, objects destroyed this frame left out
  *  @param {Vector2} start
  *  @param {Vector2} end
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
@@ -652,7 +653,7 @@ function engineObjectsRaycast(start, end, objects=engineObjects)
     const hitObjects = [];
     for (const o of objects)
     {
-        if (o.collideRaycast && isIntersecting(start, end, o.pos, o.size))
+        if (o.collideRaycast && !o.destroyed && isIntersecting(start, end, o.pos, o.size))
         {
             debugRaycast && debugRect(o.pos, o.size, '#f00');
             hitObjects.push(o);

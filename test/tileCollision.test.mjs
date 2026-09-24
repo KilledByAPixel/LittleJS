@@ -81,22 +81,30 @@ test('tileCollisionGetData: no collision at the unoffset position', () =>
     layer.destroy();
 });
 
-test('collisionRaycast on a layer at a fractional position hits the tile edge where the tile really is', () =>
+test('collisionRaycast on a moved layer hits the tile edge where the tile really is', () =>
 {
-    // the layer sits half a unit over, so its first tile spans x from .5 to 1.5
-    const layer = new TileCollisionLayer(vec2(.5, 0), vec2(4, 4), tile(0, 16), 0, false);
+    // the layer sits two units over, so its first tile spans x from 2 to 3
+    const layer = new TileCollisionLayer(vec2(2, 0), vec2(4, 4), tile(0, 16), 0, false);
     layer.setCollisionData(vec2(0, 0), 1);
     const normal = vec2();
-    const hit = layer.collisionRaycast(vec2(0, .5), vec2(2, .5), undefined, normal);
+    const hit = layer.collisionRaycast(vec2(0, .5), vec2(4, .5), undefined, normal);
     assert.ok(hit, 'hit');
-    assert.ok(Math.abs(hit.x - .5) < 1e-6, 'hit at the edge of the tile, x ' + hit.x);
+    assert.ok(Math.abs(hit.x - 2) < 1e-6, 'hit at the edge of the tile, x ' + hit.x);
     assert.equal(normal.x, -1);
-    assert.ok(layer.collisionRaycast(vec2(0, .5), vec2(.75, .5)), 'a short ray that reaches the tile hits it');
-    assert.equal(layer.collisionRaycast(vec2(0, .5), vec2(.4, .5)), undefined, 'one that stops short misses');
-    // and from the other side, the far edge at 1.5
-    const back = layer.collisionRaycast(vec2(3, .5), vec2(0, .5), undefined, normal);
-    assert.ok(Math.abs(back.x - 1.5) < 1e-6, 'far edge, x ' + back.x);
+    assert.equal(layer.collisionRaycast(vec2(0, .5), vec2(1.9, .5)), undefined, 'a ray that stops short misses');
+    // and from the other side, the far edge at 3
+    const back = layer.collisionRaycast(vec2(3.5, .5), vec2(0, .5), undefined, normal);
+    assert.ok(Math.abs(back.x - 3) < 1e-6, 'far edge, x ' + back.x);
     assert.equal(normal.x, 1);
+    layer.destroy();
+});
+
+test('a tile collision layer sits on whole numbers, a collision test asserts otherwise', () =>
+{
+    const layer = new TileCollisionLayer(vec2(.5, 0), vec2(4, 4), tile(0, 16), 0, false);
+    assert.throws(()=> layer.collisionTest(vec2(1, 1), vec2(1)), /Assert/);
+    assert.throws(()=> layer.collisionRaycast(vec2(0, .5), vec2(2, .5)), /Assert/);
+    layer.destroy();
 });
 
 test('tileLayersLoad reads the flip flags Tiled stores in the top bits of a tile', async () =>

@@ -133,10 +133,10 @@ class ThreeJSObject extends EngineObject
         }
     }
 
-    /** Update the object and sync the mesh to its transform */
-    update()
+    /** Update the transform and sync the mesh to it, after the parent has placed a child, and while paused too */
+    updateTransforms()
     {
-        super.update();
+        super.updateTransforms();
         this.syncMesh();
     }
 

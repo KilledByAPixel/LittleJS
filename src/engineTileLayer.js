@@ -26,6 +26,10 @@ const tileCollisionLayers = [];
 *  @param {boolean} [solidOnly] - Only check solid layers?
 *  @return {number}
 *  @memberof TileLayers */
+// a tile collision layer's position is whole numbers, so its cells are the world grid the physics lands objects on
+function tileCollisionAssertWhole(layer)
+{ ASSERT(layer.pos.x % 1 === 0 && layer.pos.y % 1 === 0, 'a tile collision layer must sit at a whole number position', layer.pos); }
+
 function tileCollisionGetData(pos, solidOnly=true)
 {
     // check all tile collision layers
@@ -599,6 +603,7 @@ class TileLayer extends CanvasLayer
  * Tile Collision Layer - a tile layer with collision
  * - adds collision data and functions to TileLayer
  * - there can be multiple tile collision layers
+ * - its pos must be whole numbers, so its cells line up with the world grid objects land on
  * @extends TileLayer
  * @memberof TileLayers
  */
@@ -682,6 +687,7 @@ class TileCollisionLayer extends TileLayer
     collisionTest(pos, size=new Vector2, callbackObject)
     {
         ASSERT(isVector2(pos) && isVector2(size), 'pos and size must be Vector2s');
+        tileCollisionAssertWhole(this);
         ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
 
         // make function to check for collision
@@ -726,6 +732,7 @@ class TileCollisionLayer extends TileLayer
     collisionRaycast(posStart, posEnd, callbackObject, normal)
     {
         ASSERT(isVector2(posStart) && isVector2(posEnd), 'positions must be Vector2s');
+        tileCollisionAssertWhole(this);
         ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
 
         // make function to check for collision

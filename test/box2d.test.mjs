@@ -95,6 +95,19 @@ test('getJointList returns the joints, and the queries reuse their native object
     joint.destroy(); a.destroy(); b.destroy();
 });
 
+test('setting mass data reuses one native object', () =>
+{
+    const o = new Box2dObject(vec2(40, 0));
+    o.addBox();
+    o.setMass(2);
+    const count = ()=> Object.keys(instance.getCache(instance.b2MassData)).length, before = count();
+    for (let i = 0; i < 50; ++i)
+        o.setMass(1 + i), o.setCenterOfMass(vec2(.1, 0)), o.setMomentOfInertia(3);
+    assert.equal(count(), before);
+    assert.ok(Math.abs(o.getMass() - 50) < 1e-4, 'the last mass set');
+    o.destroy();
+});
+
 // last in the file: before the fix this aborted the Box2D instance
 test('an object destroyed in its contact callback goes after the step, and the world steps on', () =>
 {

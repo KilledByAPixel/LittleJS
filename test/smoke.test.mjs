@@ -529,3 +529,24 @@ test('an object that detaches from its parent in update is not updated again as 
     parent.destroy(); child.destroy();
     engineObjectsUpdate();
 });
+
+test('the object queries skip objects destroyed this frame, and a circle is given by its diameter', async () =>
+{
+    const { engineObjectsCollect, engineObjectsCallback, engineObjectsRaycast } = await import('../dist/littlejs.esm.js');
+    const near = new EngineObject(vec2(1, 0), vec2(1)), far = new EngineObject(vec2(3, 0), vec2(1));
+    const gone = new EngineObject(vec2(0, 0), vec2(1));
+    for (const o of [near, far, gone]) o.setCollision(false, false, false, true);
+    gone.destroy(); // still in the list until the frame ends
+    const objects = [near, far, gone];
+
+    assert.deepEqual(engineObjectsCollect(vec2(), 4, objects), [near], 'a circle 4 across reaches 2 out, so not 3');
+    assert.deepEqual(engineObjectsCollect(vec2(), 7, objects), [near, far]);
+    assert.deepEqual(engineObjectsCollect(vec2(), vec2(3), objects), [near], 'a box, its full size');
+    assert.deepEqual(engineObjectsCollect(undefined, undefined, objects), [near, far], 'everything but the destroyed');
+    const called = [];
+    engineObjectsCallback(vec2(), 7, (o)=> called.push(o), objects);
+    assert.deepEqual(called, [near, far]);
+    assert.deepEqual(engineObjectsRaycast(vec2(-5, 0), vec2(5, 0), objects), [near, far]);
+    near.destroy(); far.destroy();
+    engineObjectsUpdate();
+});

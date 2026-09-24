@@ -568,8 +568,8 @@ objectMaxSpeed = 1            // Clamp max speed to avoid fast objects missing c
 gravity = (0,0)               // How much gravity to apply to objects
 
 // Engine Object functions
-engineObjectsCollect(pos, size, objects=engineObjects)
-engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
+engineObjectsCollect(pos, size, objects=engineObjects)     // size is a circle's diameter or a box's full size,
+engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects) // destroyed objects are left out
 engineObjectsRaycast(start, end, objects=engineObjects)
 engineObjectsDestroy()          // destroy every object except the persistent ones
 ```
