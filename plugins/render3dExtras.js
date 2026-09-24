@@ -189,6 +189,7 @@ function buildLoft(stations)
     ASSERT(stations[0][0] > stations[stations.length-1][0], 'loft stations go nose first, from the largest z to the smallest');
     const mesh = new Mesh;
     // section points: left, top, right, bottom, wound clockwise seen from +z
+    /** @type {function(Array<number>): Array<Vector3>} */
     const section = ([z, w, t, b, m=.5])=>
         [vec3(-w / 2, lerp(b, t, m), z), vec3(0, t, z), vec3(w / 2, lerp(b, t, m), z), vec3(0, b, z)];
     for (let i = 0; i + 1 < stations.length; ++i)
@@ -221,7 +222,7 @@ function buildLoft(stations)
  */
 function buildExtrude(pixels, size=vec2(1), depth=1)
 {
-    let rows = pixels, width, height;
+    let rows = /** @type {Array<Array<Color|number|boolean>>} */ (pixels), width, height;
     if (pixels instanceof TileInfo)
     {
         // colors for the tile's pixels only, undefined where alpha is half or less
@@ -249,7 +250,7 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
     const solid = (x, y)=>
     {
         if (x < 0 || y < 0 || x >= width || y >= height) return;
-        const c = rows[y] && rows[y][x];
+        const c = /** @type {Color} */ (rows[y] && rows[y][x]); // or a truthy value for white
         if (!c) return;
         return isColor(c) ? (c.a > .5 ? c : undefined) : WHITE; // a see through Color is empty too
     };
@@ -383,7 +384,7 @@ class HeightMap
         this.heights = heights;
         /** @property {Array<Array<Color>>|undefined} - Vertex colors as [row][column], undefined for white
          *  @type {Array<Array<Color>>|undefined} */
-        this.colors = colors;
+        this.colors = /** @type {Array<Array<Color>>|undefined} */ (colors);
         /** @property {Vector2} - World size along X and Z */
         this.size = size.copy();
         /** @property {number} - World height of a full value */
@@ -920,9 +921,9 @@ class ParticleEmitter3D extends EngineObject3D
         const scale = render3DMaxScale(matrix.m);
 
         // spawn offset: inside a box or a sphere
-        const size = this.emitSize;
-        const offset = isVector3(size) ? vec3(rand(-.5, .5) * size.x, rand(-.5, .5) * size.y, rand(-.5, .5) * size.z)
-            : randInSphere(size / 2);
+        const size = this.emitSize, box = /** @type {Vector3} */ (size);
+        const offset = isVector3(size) ? vec3(rand(-.5, .5) * box.x, rand(-.5, .5) * box.y, rand(-.5, .5) * box.z)
+            : randInSphere(/** @type {number} */ (size) / 2);
 
         // direction inside the cone around local +Y
         const direction = matrix.transformDirection(randVector3(1, this.emitConeAngle)).normalize();

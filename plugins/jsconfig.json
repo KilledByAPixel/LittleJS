@@ -1,17 +1,19 @@
 {
   "compilerOptions": {
     "checkJs": true,
-    "target": "ES2020",
+    "target": "ES2022",
     "module": "esnext",
     "noImplicitAny": false,
     "strict": false
   },
   "include": [
     "*.js",
-    "../plugins/math3d.js"
+    "../src/*.js"
   ],
   "exclude": [
-    "engineRelease.js",
-    "engineExport.js"
+    "pluginExport.js",
+    "box2d.wasm.js",
+    "../src/engineRelease.js",
+    "../src/engineExport.js"
   ]
 }

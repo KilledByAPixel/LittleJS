@@ -75,10 +75,11 @@ test('isPowerOfTwo is false for fractions', () =>
     assert.equal(isPowerOfTwo(4), true);
 });
 
-test('a RandomGenerator seed that xorshift turns into 0 asserts', () =>
+test('a RandomGenerator seed that xorshift turns into 0 uses the default seed instead of sticking', () =>
 {
-    assert.throws(()=> new RandomGenerator(.37), /Assert/);
-    assert.throws(()=> new RandomGenerator(2**32), /Assert/);
+    const first = new RandomGenerator(.37).float();
+    assert.ok(first > 0, 'not stuck at 0');
+    assert.equal(new RandomGenerator(2**32).float(), first, 'every seed that is 0 as an int is the same default');
     assert.ok(new RandomGenerator(1.5).float() > 0, 'a fraction above 1 still has bits');
 });
 

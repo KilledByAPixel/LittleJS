@@ -82,7 +82,8 @@ let gamepadPrimary = 0;
 const isTouchDevice = !headlessMode && typeof window != 'undefined' && window.ontouchstart !== undefined;
 
 /** Prevents input continuing to the default browser handling
- *  This is useful to disable for html menus so the browser can handle input normally
+ *  This is useful to disable for html menus so the browser can handle input normally,
+ *  the right click menu included; over an html text field that menu always shows
  *  @param {boolean} [preventDefault]
  *  @memberof Input */
 function setInputPreventDefault(preventDefault=true) { inputPreventDefault = preventDefault; }
@@ -396,7 +397,7 @@ function pointerLockRequest()
 {
     // newer browsers return a promise that rejects when the lock is refused, like just after Esc left it,
     // or on a phone; a touchscreen laptop's mouse can still lock
-    try { mainCanvas.requestPointerLock?.()?.catch?.(()=>{}); }
+    try { /** @type {any} */ (mainCanvas.requestPointerLock?.())?.catch?.(()=>{}); }
     catch { }
 }
 
@@ -470,7 +471,10 @@ function inputInit()
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
             audioContext.resume();
 
-        if (!e.repeat)
+        // keys typed into an html text field are the player's typing, not game input;
+        // a key already down still releases on keyup, which only lets go of keys that are down
+        const typing = isTextInput(e.target) || isTextInput(document.activeElement);
+        if (!e.repeat && !typing)
         {
             inputKeysHeld.add(e.code);
             inputData[0][e.code] = 3;
@@ -487,7 +491,7 @@ function inputInit()
         if (e.ctrlKey || e.metaKey || e.altKey) return;
 
         // don't interfere with user typing into UI fields
-        if (isTextInput(e.target) || isTextInput(document.activeElement)) return;
+        if (typing) return;
 
         // fix browser setting "Search for text when you start typing"
         const printable = typeof e.key === 'string' && e.key.length === 1;
@@ -502,13 +506,15 @@ function inputInit()
         ];
         if (preventDefaultKeys.includes(e.code) || printable)
             e.preventDefault();
-                    
-        function isTextInput(element)
-        {
-            const tag = element?.tagName;
-            const editable = element?.isContentEditable;
-            return editable || ['INPUT','TEXTAREA','SELECT'].includes(tag);
-        }
+    }
+    function isTextInput(element)
+    {
+        // a field that takes typing or arrow keys, not an input that is really a button, checkbox or slider,
+        // which would otherwise keep every key from the game after it was clicked
+        const tag = element?.tagName;
+        if (tag === 'INPUT')
+            return !['button','checkbox','color','file','image','radio','range','reset','submit'].includes(element.type);
+        return !!element?.isContentEditable || tag === 'TEXTAREA' || tag === 'SELECT';
     }
     function onKeyUp(e)
     {
@@ -543,7 +549,12 @@ function inputInit()
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
 
         if (inputPreventDefault && e.cancelable && document.hasFocus())
+        {
+            // this keeps focus where it is, so a click outside a text field lets it go, or it keeps the keys
+            const active = /** @type {HTMLElement} */ (document.activeElement);
+            isTextInput(active) && !active.contains(/** @type {Node} */ (e.target)) && active.blur();
             e.preventDefault();
+        }
     }
     function onMouseUp(e)
     {
@@ -580,7 +591,12 @@ function inputInit()
         if (inputPreventDefault && e.cancelable && document.hasFocus())
             e.preventDefault(); // prevent page scrolling
     }
-    function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
+    function onContextMenu(e)
+    {
+        // prevent right click menu, but a text field keeps its copy and paste menu
+        if (inputPreventDefault && !isTextInput(e.target))
+            e.preventDefault();
+    }
     function onBlur()
     {
         // inputClear also releases any held virtual gamepad controls so they don't stick

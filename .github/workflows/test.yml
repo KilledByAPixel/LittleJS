@@ -18,4 +18,8 @@ jobs:
           # so skip its large binary download to avoid flaky CDN timeouts.
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       - run: npm run build
+      # dist is committed, so fail a push whose bundles were not rebuilt from src;
+      # only the concatenated bundles, which no floating tool version can change
+      - name: Check the committed bundles match the source
+        run: git diff --exit-code -- dist/littlejs.js dist/littlejs.esm.js
       - run: npm test

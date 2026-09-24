@@ -32,7 +32,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glMipmappedTextures = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
+let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -138,6 +138,7 @@ function glInit(rootElement)
 
         // reinit WebGL and restore textures
         glMipmappedTextures = new WeakSet;
+        glMipmapsUntilTarget = new WeakSet;
         glMipmapsStale.clear();
         glPremultipliedTextures = new WeakSet; // the tile layers draw into their new textures again below
         initWebGL();
@@ -478,7 +479,10 @@ function glCreateTexture(image, wrap=false)
     {
         glSetTextureData(texture, image);
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
-        mipMap = !tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height);
+        // WebGL2 makes mipmaps at any size, a texture that becomes a render target keeps them only at powers of two
+        mipMap = !tilesPixelated;
+        if (mipMap && !(isPowerOfTwo(image.width) && isPowerOfTwo(image.height)))
+            glMipmapsUntilTarget.add(texture);
     }
     else
     {
@@ -610,8 +614,9 @@ function glFlush()
                 glContext.uniformMatrix4fv(uniform('m'), false, glTransform);
                 glContext.uniform1f(uniform('iTime'), time);
                 // a render target is the size glPreRender gave its viewport
-                const resolution = glRenderTarget ? mainCanvasSize : glCanvas;
-                glContext.uniform3f(uniform('iResolution'), resolution.x ?? resolution.width, resolution.y ?? resolution.height, 1);
+                const width = glRenderTarget ? mainCanvasSize.x : glCanvas.width;
+                const height = glRenderTarget ? mainCanvasSize.y : glCanvas.height;
+                glContext.uniform3f(uniform('iResolution'), width, height, 1);
                 glContext.uniform1i(uniform('premultipliedTexture'), +premultiplied);
             }
         }
@@ -826,6 +831,16 @@ function glSetRenderTarget(texture, clear=false)
     const previousTarget = glRenderTarget;
     if (texture)
     {
+        if (glMipmapsUntilTarget.has(texture))
+        {
+            // a layer at a size other than a power of two draws without mipmaps as it always has,
+            // so they are not made again after every redraw, the 3D renderer still makes its own
+            glMipmapsUntilTarget.delete(texture);
+            glMipmappedTextures.delete(texture);
+            glContext.bindTexture(glContext.TEXTURE_2D, texture);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
+            glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+        }
         glPremultipliedTextures.add(texture); // the blend writes premultiplied color into it
         // coming from the canvas, keep its transform and blend mode to put back after
         glRenderTarget || (glRenderTargetSaved = [glTransform, glAdditive]);

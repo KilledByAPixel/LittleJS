@@ -118,6 +118,12 @@ const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [
 /**
  * Load tile layers from exported data
  * - Tiled maps come in as they are, flipped and turned tiles included
+ * - Group layers are flattened in order, each replaced by the layers inside it, so the layer indices
+ *   (collisionLayer and the returned array) count that flattened list; a group's tint, opacity and
+ *   visibility carry to the layers inside it
+ * - An object or image layer keeps its index, with its slot in the returned array left empty
+ * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
+ *   is a no-op, delete that and call redraw() to show it
  *  @param {Object}   tileMapData - Level data from exported data
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
  *  @param {number}   [renderOrder] - Render order of the top layer
@@ -141,29 +147,53 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
     ASSERT(tileMapData.width && tileMapData.height);
     ASSERT(tileMapData.layers && tileMapData.layers.length);
 
+    // flatten group layers in order, a group's color and visibility carry to the layers inside it
+    /** @type {Array<{dataLayer: Object, color?: Color, visible?: boolean}>} */
+    const layers = [];
+    const addLayers = (dataLayers, groupColor, groupVisible)=>
+    {
+        for (const dataLayer of dataLayers)
+        {
+            const type = dataLayer.type;
+            if (type && type !== 'tilelayer' && type !== 'group')
+            {
+                layers.push({dataLayer}); // an object or image layer has no tiles, its slot is left empty
+                continue;
+            }
+
+            // apply layer color, Tiled writes a tint with alpha as #AARRGGBB
+            const tint = dataLayer.tintcolor;
+            const color = tint ?
+                new Color().setHex(tint.length === 9 ? '#' + tint.slice(3) + tint.slice(1, 3) : tint) :
+                (dataLayer.color || WHITE).copy();
+            ASSERT(isColor(color), 'layer color is not a color');
+            color.a *= dataLayer.opacity ?? 1;
+            const visible = groupVisible && dataLayer.visible !== false;
+            if (type === 'group')
+                addLayers(dataLayer.layers || [], groupColor.multiply(color), visible);
+            else
+                layers.push({dataLayer, color: groupColor.multiply(color), visible});
+        }
+    };
+    addLayers(tileMapData.layers, WHITE, true);
+
     // create tile layers and fill with data
     const tileLayers = [];
     const levelSize = vec2(tileMapData.width, tileMapData.height);
-    const layerCount = tileMapData.layers.length;
+    const layerCount = layers.length;
     for (let layerIndex=layerCount; layerIndex--;)
     {
-        const dataLayer = tileMapData.layers[layerIndex];
-        if (dataLayer.type && dataLayer.type !== 'tilelayer')
-            continue; // an object or image layer has no tiles, its slot is left empty
+        const {dataLayer, color: layerColor, visible} = layers[layerIndex];
+        if (!layerColor)
+            continue;
         ASSERT(dataLayer.data && dataLayer.data.length);
         ASSERT(levelSize.area() === dataLayer.data.length);
 
         const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
         tileLayers[layerIndex] = tileLayer;
-
-        // apply layer color, Tiled writes a tint with alpha as #AARRGGBB
-        const tint = dataLayer.tintcolor;
-        const layerColor = tint ?
-            new Color().setHex(tint.length === 9 ? '#' + tint.slice(3) + tint.slice(1, 3) : tint) :
-            (dataLayer.color || WHITE).copy();
-        ASSERT(isColor(layerColor), 'layer color is not a color');
-        layerColor.a *= dataLayer.opacity ?? 1;
+        if (!visible)
+            tileLayer.render = ()=> {}; // a hidden layer keeps its tiles and collision but is not drawn
 
         for (let x=levelSize.x; x--;)
         for (let y=levelSize.y; y--;)
@@ -184,7 +214,7 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
                     tileLayer.setCollisionData(pos, 1);
             }
         }
-        if (draw)
+        if (draw && visible)
             tileLayer.redraw();
     }
     return tileLayers;

@@ -28,6 +28,7 @@ if (audioMasterGain)
 {
     audioMasterGain.connect(audioContext.destination);
     audioMasterGain.gain.value = soundVolume; // set starting value
+    audioContext.addEventListener?.('statechange', audioStateChange);
 }
 
 // the current master effect, kept so setAudioMasterEffect can undo the route it made,
@@ -68,6 +69,29 @@ function audioVisibilityChange()
         audioSuspendedWhenHidden = false;
         audioContext.resume();
     }
+}
+
+// sound instances whose start failed only because the context was not running, like music started in gameInit
+// before the first input, each with the time it tried; they start once the context runs unless paused or stopped
+// first, and a one shot drops out once it would have ended anyway, so a backlog of sounds can't all play at once
+const audioWaitingInstances = new Map;
+function audioWaitingPrune(now=performance.now())
+{
+    for (const [instance, startTime] of audioWaitingInstances)
+    {
+        const remaining = (instance.getDuration() - instance.pausedTime) / instance.rate;
+        if (!instance.loop && now - startTime > remaining * 1e3)
+            audioWaitingInstances.delete(instance);
+    }
+}
+function audioStateChange()
+{
+    if (!audioIsRunning()) return;
+    audioWaitingPrune();
+    const instances = [...audioWaitingInstances.keys()];
+    audioWaitingInstances.clear();
+    for (const instance of instances)
+        instance.resume();
 }
 
 /** Anything with input and output audio nodes, like an effect from the audio effects plugin
@@ -160,7 +184,7 @@ class Sound
     
     /** Create a sound object and cache the audio for later use
      *  @param {string|Array} [asset] - Filename of audio file or zzfx array
-     *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds the zzfx default is used if undefined
+     *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
      *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
@@ -207,10 +231,9 @@ class Sound
             // generate zzfx sound — copy so we don't mutate the caller's array
             const zzfxSound = asset.slice();
 
-            // remove randomness so it can be applied on playback
-            const defaultRandomness = randomness ?? .05;
+            // remove randomness so it can be applied on playback, a value passed in wins over the array's
             const randomnessIndex = 1;
-            this.randomness = zzfxSound[randomnessIndex] ?? defaultRandomness;
+            this.randomness = randomness ?? zzfxSound[randomnessIndex] ?? .05;
             zzfxSound[randomnessIndex] = 0;
 
             // generate the zzfx samples, then hand them to an audio buffer so
@@ -270,7 +293,9 @@ class Sound
     }
 
     /** Play the sound
-     *  Sounds may not play until a user interaction occurs
+     *  - Browsers hold audio until the first user input, a sound played before it returns a paused instance
+     *    that starts on its own once audio runs, unless paused or stopped first; a one shot that would have
+     *    ended by then is dropped
      *  @param {Vector2} [pos] - World space position to play the sound if any
      *  @param {number}  [volume] - How much to scale volume by
      *  @param {number}  [pitch] - How much to scale pitch by
@@ -449,6 +474,9 @@ class SoundInstance
         /** @property {GainNode|undefined} - Gain node for the sound, undefined once it is stopped or paused
          *  @type {GainNode|undefined} */
         this.gainNode = undefined;
+        /** @property {StereoPannerNode|undefined} - Stereo panner for the sound, undefined once it is stopped or paused
+         *  @type {StereoPannerNode|undefined} */
+        this.pannerNode = undefined;
         /** @property {AudioBufferSourceNode|undefined} - Source node of the audio, undefined while not playing
          *  @type {AudioBufferSourceNode|undefined} */
         this.source = undefined;
@@ -481,12 +509,14 @@ class SoundInstance
         if (this.isPlaying())
             this.stop();
         this.gainNode = audioContext.createGain();
+        this.pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(this.pan, -1, 1)});
 
         // build the shared buffer if it was not made at load time, then play it
         this.sound.buildSampleBuffer();
         this.source = this.sound.sampleBuffer ?
-            playAudioBuffer(this.sound.sampleBuffer, this.volume, this.rate, this.pan, this.loop, this.gainNode, offset, this.onendedCallback, this.output) :
-            playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback, this.output);
+            playAudioBuffer(this.sound.sampleBuffer, this.volume, this.rate, this.pan, this.loop, this.gainNode, offset, this.onendedCallback, this.output, this.pannerNode) :
+            playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback, this.output, this.pannerNode);
+        audioWaitingInstances.delete(this);
         if (this.source)
         {
             this.startTime = audioContext.currentTime;
@@ -495,9 +525,18 @@ class SoundInstance
         }
         else
         {
-            // the sound could not start, keep the place so a later resume picks it up
+            // the sound could not start, keep the place so a later resume picks it up,
+            // which happens on its own when it failed only because audio is not running yet
             this.startTime = undefined;
             this.pausedTime = offset;
+            if (!audioIsRunning())
+            {
+                // only the newest of each sound waits, a loop a game plays again each frame is one loop
+                audioWaitingPrune();
+                for (const other of audioWaitingInstances.keys())
+                    other.sound === this.sound && audioWaitingInstances.delete(other);
+                audioWaitingInstances.set(this, performance.now());
+            }
         }
     }
 
@@ -526,6 +565,17 @@ class SoundInstance
             gain.value = volume;
     }
 
+    /** Set the stereo pan of this sound instance, while it plays too
+     *  - A looping sound can follow its source across the screen this way
+     *  @param {number} pan - -1 is left, 0 is center, 1 is right, clamped to that range */
+    setPan(pan)
+    {
+        ASSERT(isNumber(pan), 'Sound pan must be a number');
+        this.pan = pan;
+        if (this.pannerNode)
+            this.pannerNode.pan.value = clamp(pan, -1, 1);
+    }
+
     /** Set the playback rate of this sound instance, its speed and pitch, while it plays
      *  - A looping sound can follow something smoothly this way, like an engine with the speed
      *  - A rate of 0 freezes the sound in place, and it carries on from there when the rate comes back
@@ -549,6 +599,7 @@ class SoundInstance
     stop(fadeTime=0)
     {
         ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
+        audioWaitingInstances.delete(this); // a sound waiting for audio to run no longer starts
         if (this.isPlaying())
         {
             if (fadeTime)
@@ -575,11 +626,13 @@ class SoundInstance
         // let go of the gain node so a later setVolume can't cancel the fade out, the ended listener disconnects
         // it, and start makes a new one
         this.gainNode = undefined;
+        this.pannerNode = undefined;
     }
 
     /** Pause this sound instance */
     pause()
     {
+        audioWaitingInstances.delete(this); // a sound waiting for audio to run no longer starts
         if (this.isPaused()) return;
 
         // save current time and stop sound
@@ -588,6 +641,7 @@ class SoundInstance
         this.source = undefined;
         this.startTime = undefined;
         this.gainNode = undefined; // resume starts with a new one at the volume set meanwhile
+        this.pannerNode = undefined;
     }
 
     /** Resume this sound instance */
@@ -697,9 +751,10 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
+ *  @param {StereoPannerNode} [pannerNode] - Optional stereo panner for panning while playing, its pan already set (disconnected when the sound ends)
  *  @return {AudioBufferSourceNode|undefined} - The source node of the sound played, undefined if play fails
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended, output)
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended, output, pannerNode)
 {
     if (!soundEnable || headlessMode) return;
 
@@ -713,7 +768,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     }
 
     const buffer = createAudioBuffer(sampleChannels, sampleRate);
-    return playAudioBuffer(buffer, volume, rate, pan, loop, gainNode, offset, onended, output);
+    return playAudioBuffer(buffer, volume, rate, pan, loop, gainNode, offset, onended, output, pannerNode);
 }
 
 /** Copy arrays of samples into a new audio buffer
@@ -741,9 +796,10 @@ function createAudioBuffer(sampleChannels, sampleRate=audioDefaultSampleRate)
  *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
+ *  @param {StereoPannerNode} [pannerNode] - Optional stereo panner for panning while playing, its pan already set (disconnected when the sound ends)
  *  @return {AudioBufferSourceNode|undefined} - The source node of the sound played, undefined if play fails
  *  @memberof Audio */
-function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended, output)
+function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended, output, pannerNode)
 {
     if (!soundEnable || headlessMode) return;
 
@@ -770,15 +826,15 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
     gainNode.connect(outputNode);
 
     // connect source to stereo panner and gain
-    const pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});
-    source.connect(pannerNode).connect(gainNode);
+    const panner = pannerNode || new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});
+    source.connect(panner).connect(gainNode);
 
     // disconnect nodes when the sound ends so the audio graph doesn't grow
     // unbounded across many play() calls (source.stop() also fires 'ended')
     source.addEventListener('ended', ()=>
     {
         gainNode.disconnect();
-        pannerNode.disconnect();
+        panner.disconnect();
         if (onended) onended(source);
     });
 

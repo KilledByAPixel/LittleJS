@@ -174,6 +174,8 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
  *  @param {GameCallback} [gameRenderPost] - Called after objects are rendered, use for drawing UI/overlays
  *  @param {Array<string>} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png'])
  *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
+ *    It keeps its own inline styles and the canvas centers inside it, but the canvas is still sized from the window,
+ *    so set canvasFixedSize or canvasMaxSize to fit a smaller element
  *  @example
  *  // Basic engine startup
  *  engineInit(
@@ -365,15 +367,19 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     glInit(rootElement);
 
     // setup html
-    const styleRoot =
+    let styleRoot =
         'margin:0;' +                 // fill the window
         'overflow:hidden;' +          // no scroll bars
         'background:#000;' +          // set background color
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
         'touch-action:none;' +        // prevent mobile pinch to resize
-        '-webkit-touch-callout:none'; // compatibility for ios
-    rootElement.style.cssText = styleRoot;
+        '-webkit-touch-callout:none;'; // compatibility for ios
+    // the canvases center on a root element with a height of its own, not the page; one sized only by its
+    // children has none, since the canvases are placed apart from it, and would clip them all away
+    if (rootElement !== document.body && rootElement.clientHeight && getComputedStyle(rootElement).position === 'static')
+        styleRoot += 'position:relative;';
+    rootElement.style.cssText = styleRoot + rootElement.style.cssText; // its own inline styles come after and win
     mainCanvas = rootElement.appendChild(document.createElement('canvas'));
     drawContext = mainContext = mainCanvas.getContext('2d');
 
@@ -400,6 +406,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     workReadCanvas = workReadContext.canvas;
 
     // create promises for loading images
+    /** @type {Array<Promise<any>>} */
     const promises = imageSources.map((src, i)=> loadTexture(i, src));
 
     // no images to load
@@ -412,7 +419,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     if (showSplashScreen)
     {
         // draw splash screen
-        promises.push(new Promise(resolve =>
+        /** @type {Promise<void>} */
+        const splash = new Promise(resolve =>
         {
             let t = 0;
             updateSplash();
@@ -422,7 +430,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 drawEngineLogo(t+=.01);
                 t>1 ? resolve() : setTimeout(updateSplash, 16);
             }
-        }));
+        });
+        promises.push(splash);
     }
 
     // wait for all the promises to finish
@@ -651,9 +660,9 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
     else if (size === undefined || size instanceof Vector2)
     {
         // bounding box test, a point when there is no size
-        size ??= vec2();
+        const boxSize = size instanceof Vector2 ? size : vec2();
         for (const o of objects)
-            o.destroyed || o.isOverlapping(pos, size) && collectedObjects.push(o);
+            o.destroyed || o.isOverlapping(pos, boxSize) && collectedObjects.push(o);
     }
     else
     {
@@ -761,7 +770,7 @@ const debugTextShadowColor = '#000', debugTextShadowBlur = 9;
 function debugTextShadow(context) { context.shadowColor = debugTextShadowColor; context.shadowBlur = debugTextShadowBlur; }
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugSound = false, debugTiles = 0, debugTakeScreenshot;
+let debugPrimitives = [], debugClearCount = 0, debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugSound = false, debugTiles = 0, debugTakeScreenshot;
 // debugTiles is 0 for off, 1 for every layer, and 2 on for one layer at a time, see debugTileLayersSelected
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -945,7 +954,7 @@ function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monosp
 
 /** Clear all debug primitives in the list
  *  @memberof Debug */
-function debugClear() { debugPrimitives = []; }
+function debugClear() { debugPrimitives = []; ++debugClearCount; } // the count lets plugins clear their own
 
 /** Trigger debug system to take a screenshot
  *  @memberof Debug */
@@ -960,7 +969,7 @@ function debugShowErrors()
     const showError = (message)=>
     {
         // replace entire page with error message
-        document.body.style = 'background-color:#111;margin:8px';
+        document.body.style.cssText = 'background-color:#111;margin:8px';
         document.body.innerHTML = `<pre style=color:#f00;font-size:28px;white-space:pre-wrap>` + message;
     }
     
@@ -1779,11 +1788,15 @@ function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*P
  *  @memberof Math */
 function lerpAngle(angleA, angleB, percent) { return lerpWrap(angleA, angleB, percent, 2*PI); }
 
-/** Applies smoothstep function to the percentage value
+/** Applies smoothstep function to the percentage value, clamped between 0 and 1
  *  @param {number} percent
  *  @return {number}
  *  @memberof Math */
-function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
+function smoothStep(percent)
+{
+    percent = clamp(percent);
+    return percent * percent * (3 - 2 * percent);
+}
 
 /** Checks if the value passed in is a power of two
  *  @param {number} value
@@ -2132,6 +2145,8 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 /**
  * Seeded random number generator
  * - Can be used to create a deterministic random number sequence
+ * - The seed works as a 32 bit integer, and one that is 0 as an integer
+ *   (0, a fraction between -1 and 1, or a multiple of 2**32) uses the default seed
  * @memberof Engine
  * @example
  * let r = new RandomGenerator(123); // random number generator with seed 123
@@ -2143,12 +2158,10 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 class RandomGenerator
 {
     /** Create a random number generator with the seed passed in
-     *  @param {number} [seed] - Starting seed or engine default seed */
+     *  @param {number} [seed] - Starting seed, 0 as an integer uses the default seed */
     constructor(seed = 123456789)
     {
-        // xorshift works on the seed as a 32 bit integer and stays at 0 once there, so rand() or 2**32 would stick too
-        ASSERT((seed|0) !== 0, 'RandomGenerator seed must be a non-zero integer (xorshift is fixed at 0)');
-        /** @property {number} - random seed */
+        /** @property {number} - random seed, set it to reseed */
         this.seed = seed;
     }
 
@@ -2158,6 +2171,9 @@ class RandomGenerator
     *  @return {number} */
     float(valueA=1, valueB=0)
     {
+        // xorshift stays at 0 once there, so a seed that is 0 as an integer uses the default seed
+        this.seed = this.seed|0 || 123456789;
+
         // xorshift algorithm
         this.seed ^= this.seed << 13;
         this.seed ^= this.seed >>> 17;
@@ -2448,6 +2464,10 @@ class Vector2
     /** Returns a copy of this vector with each axis floored
      * @return {Vector2} */
     floor() { return new Vector2(floor(this.x), floor(this.y)); }
+
+    /** Returns a copy of this vector with each axis rounded
+     * @return {Vector2} */
+    round() { return new Vector2(round(this.x), round(this.y)); }
 
     /** Returns a copy of this vector snapped down to a grid. Note that `grid` is
      *  the number of snap steps per unit (so `grid=2` snaps to halves and
@@ -3052,9 +3072,11 @@ function shareURL(title, url, callback)
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Read save data from local storage
+ *  - The result has the type of defaultSaveData, or any when there is none
+ *  @template {Object<string, any>} [T=any]
  *  @param {string} saveName - unique name for the game/save
- *  @param {Object} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
- *  @return {Object}
+ *  @param {T} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
+ *  @return {T}
  *  @memberof Utilities */
 function readSaveData(saveName, defaultSaveData)
 {
@@ -3078,12 +3100,12 @@ function readSaveData(saveName, defaultSaveData)
         }
     }
     catch { LOG('readSaveData: localStorage unavailable — using defaults'); }
-    return { ...defaultSaveData, ...loadedData };
+    return { .../** @type {object} */ (defaultSaveData), ...loadedData };
 }
 
 /** Write save data to local storage
  *  @param {string} saveName - unique name for the game/save
- *  @param {Object} saveData - object containing data to be saved
+ *  @param {object} saveData - object containing data to be saved
  *  @memberof Utilities */
 function writeSaveData(saveName, saveData)
 {
@@ -4400,7 +4422,7 @@ class EngineObject
         ASSERT(!child.parent && !this.children.includes(child));
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         ASSERT(!child.destroyed, 'cannot add a destroyed child');
-        for (let p = this; p; p = p.parent)
+        for (let p = /** @type {EngineObject} */ (this); p; p = p.parent)
             ASSERT(p !== child, 'cannot add an object as a child of itself or of its own child');
         this.children.push(child);
         child.parent = this;
@@ -6138,10 +6160,11 @@ class ImageFont
     }
 
     /** Draw text in world space using the image font
+     *  - The text stays upright and ignores cameraAngle, each glyph is snapped to whole screen pixels to keep it crisp
      *  @param {string|number} text
      *  @param {Vector2} pos
      *  @param {Vector2|number} [size]
-     *  @param {boolean} [center=true]
+     *  @param {boolean} [center=true] - center each line on pos, and the lines of multi-line text around it
      *  @param {Color} [color=WHITE]
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] 
@@ -6166,7 +6189,7 @@ class ImageFont
      *  @param {string|number} text
      *  @param {Vector2} pos
      *  @param {Vector2|number} size
-     *  @param {boolean} [center]
+     *  @param {boolean} [center] - center each line on pos, and the lines of multi-line text around it
      *  @param {Color} [color=WHITE]
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -6179,7 +6202,7 @@ class ImageFont
         ASSERT(isColor(color), 'color must be a color');
 
         // if size is a number, make it a vector
-        size = typeof size === 'number' ? new Vector2(size, size) : size;
+        const glyphSize = typeof size === 'number' ? new Vector2(size, size) : size;
 
         // precache objects for drawing, a copy of the tile info each glyph moves, the font's own stays put
         const drawPos = new Vector2;
@@ -6190,10 +6213,12 @@ class ImageFont
         const cols = tileInfo.textureInfo.size.x / sizePaddedX |0;
         const firstIndex = ((fontTile.pos.y - padding) / sizePaddedY |0) * cols + ((fontTile.pos.x - padding) / sizePaddedX |0);
 
-        // draw each line of text
-        (text+'').split('\n').forEach((line, j)=>
+        // draw each line of text, centered vertically like drawTextScreen when center is set
+        const lines = (text+'').split('\n');
+        const centerOffsetY = center ? (lines.length-1) * glyphSize.y / 2 : 0;
+        lines.forEach((line, j)=>
         {
-            const centerOffset = center ? (line.length-1) * size.x / 2 : 0;
+            const centerOffset = center ? (line.length-1) * glyphSize.x / 2 : 0;
             for (let i=line.length; i--;)
             {
                 // get the character index
@@ -6214,9 +6239,9 @@ class ImageFont
                 // no pixel center inside it and is not rasterized at all
                 // ceil picks the nearest aligned position, breaking ties
                 // downward to match how this used to truncate
-                drawPos.x = ceil(pos.x + i * size.x - centerOffset - size.x/2) + size.x/2 - .5;
-                drawPos.y = ceil(pos.y + j * size.y - size.y/2) + size.y/2 - .5;
-                drawTile(drawPos, size, tileInfo, color, 0, false, undefined, useWebGL, true, context);
+                drawPos.x = ceil(pos.x + i * glyphSize.x - centerOffset - glyphSize.x/2) + glyphSize.x/2 - .5;
+                drawPos.y = ceil(pos.y + j * glyphSize.y - centerOffsetY - glyphSize.y/2) + glyphSize.y/2 - .5;
+                drawTile(drawPos, glyphSize, tileInfo, color, 0, false, undefined, useWebGL, true, context);
             }
         });
     }
@@ -6320,7 +6345,8 @@ let gamepadPrimary = 0;
 const isTouchDevice = !headlessMode && typeof window != 'undefined' && window.ontouchstart !== undefined;
 
 /** Prevents input continuing to the default browser handling
- *  This is useful to disable for html menus so the browser can handle input normally
+ *  This is useful to disable for html menus so the browser can handle input normally,
+ *  the right click menu included; over an html text field that menu always shows
  *  @param {boolean} [preventDefault]
  *  @memberof Input */
 function setInputPreventDefault(preventDefault=true) { inputPreventDefault = preventDefault; }
@@ -6634,7 +6660,7 @@ function pointerLockRequest()
 {
     // newer browsers return a promise that rejects when the lock is refused, like just after Esc left it,
     // or on a phone; a touchscreen laptop's mouse can still lock
-    try { mainCanvas.requestPointerLock?.()?.catch?.(()=>{}); }
+    try { /** @type {any} */ (mainCanvas.requestPointerLock?.())?.catch?.(()=>{}); }
     catch { }
 }
 
@@ -6708,7 +6734,10 @@ function inputInit()
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
             audioContext.resume();
 
-        if (!e.repeat)
+        // keys typed into an html text field are the player's typing, not game input;
+        // a key already down still releases on keyup, which only lets go of keys that are down
+        const typing = isTextInput(e.target) || isTextInput(document.activeElement);
+        if (!e.repeat && !typing)
         {
             inputKeysHeld.add(e.code);
             inputData[0][e.code] = 3;
@@ -6725,7 +6754,7 @@ function inputInit()
         if (e.ctrlKey || e.metaKey || e.altKey) return;
 
         // don't interfere with user typing into UI fields
-        if (isTextInput(e.target) || isTextInput(document.activeElement)) return;
+        if (typing) return;
 
         // fix browser setting "Search for text when you start typing"
         const printable = typeof e.key === 'string' && e.key.length === 1;
@@ -6740,13 +6769,15 @@ function inputInit()
         ];
         if (preventDefaultKeys.includes(e.code) || printable)
             e.preventDefault();
-                    
-        function isTextInput(element)
-        {
-            const tag = element?.tagName;
-            const editable = element?.isContentEditable;
-            return editable || ['INPUT','TEXTAREA','SELECT'].includes(tag);
-        }
+    }
+    function isTextInput(element)
+    {
+        // a field that takes typing or arrow keys, not an input that is really a button, checkbox or slider,
+        // which would otherwise keep every key from the game after it was clicked
+        const tag = element?.tagName;
+        if (tag === 'INPUT')
+            return !['button','checkbox','color','file','image','radio','range','reset','submit'].includes(element.type);
+        return !!element?.isContentEditable || tag === 'TEXTAREA' || tag === 'SELECT';
     }
     function onKeyUp(e)
     {
@@ -6781,7 +6812,12 @@ function inputInit()
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
 
         if (inputPreventDefault && e.cancelable && document.hasFocus())
+        {
+            // this keeps focus where it is, so a click outside a text field lets it go, or it keeps the keys
+            const active = /** @type {HTMLElement} */ (document.activeElement);
+            isTextInput(active) && !active.contains(/** @type {Node} */ (e.target)) && active.blur();
             e.preventDefault();
+        }
     }
     function onMouseUp(e)
     {
@@ -6818,7 +6854,12 @@ function inputInit()
         if (inputPreventDefault && e.cancelable && document.hasFocus())
             e.preventDefault(); // prevent page scrolling
     }
-    function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
+    function onContextMenu(e)
+    {
+        // prevent right click menu, but a text field keeps its copy and paste menu
+        if (inputPreventDefault && !isTextInput(e.target))
+            e.preventDefault();
+    }
     function onBlur()
     {
         // inputClear also releases any held virtual gamepad controls so they don't stick
@@ -7646,6 +7687,7 @@ if (audioMasterGain)
 {
     audioMasterGain.connect(audioContext.destination);
     audioMasterGain.gain.value = soundVolume; // set starting value
+    audioContext.addEventListener?.('statechange', audioStateChange);
 }
 
 // the current master effect, kept so setAudioMasterEffect can undo the route it made,
@@ -7686,6 +7728,29 @@ function audioVisibilityChange()
         audioSuspendedWhenHidden = false;
         audioContext.resume();
     }
+}
+
+// sound instances whose start failed only because the context was not running, like music started in gameInit
+// before the first input, each with the time it tried; they start once the context runs unless paused or stopped
+// first, and a one shot drops out once it would have ended anyway, so a backlog of sounds can't all play at once
+const audioWaitingInstances = new Map;
+function audioWaitingPrune(now=performance.now())
+{
+    for (const [instance, startTime] of audioWaitingInstances)
+    {
+        const remaining = (instance.getDuration() - instance.pausedTime) / instance.rate;
+        if (!instance.loop && now - startTime > remaining * 1e3)
+            audioWaitingInstances.delete(instance);
+    }
+}
+function audioStateChange()
+{
+    if (!audioIsRunning()) return;
+    audioWaitingPrune();
+    const instances = [...audioWaitingInstances.keys()];
+    audioWaitingInstances.clear();
+    for (const instance of instances)
+        instance.resume();
 }
 
 /** Anything with input and output audio nodes, like an effect from the audio effects plugin
@@ -7778,7 +7843,7 @@ class Sound
     
     /** Create a sound object and cache the audio for later use
      *  @param {string|Array} [asset] - Filename of audio file or zzfx array
-     *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds the zzfx default is used if undefined
+     *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
      *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
@@ -7825,10 +7890,9 @@ class Sound
             // generate zzfx sound — copy so we don't mutate the caller's array
             const zzfxSound = asset.slice();
 
-            // remove randomness so it can be applied on playback
-            const defaultRandomness = randomness ?? .05;
+            // remove randomness so it can be applied on playback, a value passed in wins over the array's
             const randomnessIndex = 1;
-            this.randomness = zzfxSound[randomnessIndex] ?? defaultRandomness;
+            this.randomness = randomness ?? zzfxSound[randomnessIndex] ?? .05;
             zzfxSound[randomnessIndex] = 0;
 
             // generate the zzfx samples, then hand them to an audio buffer so
@@ -7888,7 +7952,9 @@ class Sound
     }
 
     /** Play the sound
-     *  Sounds may not play until a user interaction occurs
+     *  - Browsers hold audio until the first user input, a sound played before it returns a paused instance
+     *    that starts on its own once audio runs, unless paused or stopped first; a one shot that would have
+     *    ended by then is dropped
      *  @param {Vector2} [pos] - World space position to play the sound if any
      *  @param {number}  [volume] - How much to scale volume by
      *  @param {number}  [pitch] - How much to scale pitch by
@@ -8067,6 +8133,9 @@ class SoundInstance
         /** @property {GainNode|undefined} - Gain node for the sound, undefined once it is stopped or paused
          *  @type {GainNode|undefined} */
         this.gainNode = undefined;
+        /** @property {StereoPannerNode|undefined} - Stereo panner for the sound, undefined once it is stopped or paused
+         *  @type {StereoPannerNode|undefined} */
+        this.pannerNode = undefined;
         /** @property {AudioBufferSourceNode|undefined} - Source node of the audio, undefined while not playing
          *  @type {AudioBufferSourceNode|undefined} */
         this.source = undefined;
@@ -8099,12 +8168,14 @@ class SoundInstance
         if (this.isPlaying())
             this.stop();
         this.gainNode = audioContext.createGain();
+        this.pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(this.pan, -1, 1)});
 
         // build the shared buffer if it was not made at load time, then play it
         this.sound.buildSampleBuffer();
         this.source = this.sound.sampleBuffer ?
-            playAudioBuffer(this.sound.sampleBuffer, this.volume, this.rate, this.pan, this.loop, this.gainNode, offset, this.onendedCallback, this.output) :
-            playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback, this.output);
+            playAudioBuffer(this.sound.sampleBuffer, this.volume, this.rate, this.pan, this.loop, this.gainNode, offset, this.onendedCallback, this.output, this.pannerNode) :
+            playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback, this.output, this.pannerNode);
+        audioWaitingInstances.delete(this);
         if (this.source)
         {
             this.startTime = audioContext.currentTime;
@@ -8113,9 +8184,18 @@ class SoundInstance
         }
         else
         {
-            // the sound could not start, keep the place so a later resume picks it up
+            // the sound could not start, keep the place so a later resume picks it up,
+            // which happens on its own when it failed only because audio is not running yet
             this.startTime = undefined;
             this.pausedTime = offset;
+            if (!audioIsRunning())
+            {
+                // only the newest of each sound waits, a loop a game plays again each frame is one loop
+                audioWaitingPrune();
+                for (const other of audioWaitingInstances.keys())
+                    other.sound === this.sound && audioWaitingInstances.delete(other);
+                audioWaitingInstances.set(this, performance.now());
+            }
         }
     }
 
@@ -8144,6 +8224,17 @@ class SoundInstance
             gain.value = volume;
     }
 
+    /** Set the stereo pan of this sound instance, while it plays too
+     *  - A looping sound can follow its source across the screen this way
+     *  @param {number} pan - -1 is left, 0 is center, 1 is right, clamped to that range */
+    setPan(pan)
+    {
+        ASSERT(isNumber(pan), 'Sound pan must be a number');
+        this.pan = pan;
+        if (this.pannerNode)
+            this.pannerNode.pan.value = clamp(pan, -1, 1);
+    }
+
     /** Set the playback rate of this sound instance, its speed and pitch, while it plays
      *  - A looping sound can follow something smoothly this way, like an engine with the speed
      *  - A rate of 0 freezes the sound in place, and it carries on from there when the rate comes back
@@ -8167,6 +8258,7 @@ class SoundInstance
     stop(fadeTime=0)
     {
         ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
+        audioWaitingInstances.delete(this); // a sound waiting for audio to run no longer starts
         if (this.isPlaying())
         {
             if (fadeTime)
@@ -8193,11 +8285,13 @@ class SoundInstance
         // let go of the gain node so a later setVolume can't cancel the fade out, the ended listener disconnects
         // it, and start makes a new one
         this.gainNode = undefined;
+        this.pannerNode = undefined;
     }
 
     /** Pause this sound instance */
     pause()
     {
+        audioWaitingInstances.delete(this); // a sound waiting for audio to run no longer starts
         if (this.isPaused()) return;
 
         // save current time and stop sound
@@ -8206,6 +8300,7 @@ class SoundInstance
         this.source = undefined;
         this.startTime = undefined;
         this.gainNode = undefined; // resume starts with a new one at the volume set meanwhile
+        this.pannerNode = undefined;
     }
 
     /** Resume this sound instance */
@@ -8315,9 +8410,10 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
+ *  @param {StereoPannerNode} [pannerNode] - Optional stereo panner for panning while playing, its pan already set (disconnected when the sound ends)
  *  @return {AudioBufferSourceNode|undefined} - The source node of the sound played, undefined if play fails
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended, output)
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended, output, pannerNode)
 {
     if (!soundEnable || headlessMode) return;
 
@@ -8331,7 +8427,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     }
 
     const buffer = createAudioBuffer(sampleChannels, sampleRate);
-    return playAudioBuffer(buffer, volume, rate, pan, loop, gainNode, offset, onended, output);
+    return playAudioBuffer(buffer, volume, rate, pan, loop, gainNode, offset, onended, output, pannerNode);
 }
 
 /** Copy arrays of samples into a new audio buffer
@@ -8359,9 +8455,10 @@ function createAudioBuffer(sampleChannels, sampleRate=audioDefaultSampleRate)
  *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
+ *  @param {StereoPannerNode} [pannerNode] - Optional stereo panner for panning while playing, its pan already set (disconnected when the sound ends)
  *  @return {AudioBufferSourceNode|undefined} - The source node of the sound played, undefined if play fails
  *  @memberof Audio */
-function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended, output)
+function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended, output, pannerNode)
 {
     if (!soundEnable || headlessMode) return;
 
@@ -8388,15 +8485,15 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
     gainNode.connect(outputNode);
 
     // connect source to stereo panner and gain
-    const pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});
-    source.connect(pannerNode).connect(gainNode);
+    const panner = pannerNode || new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});
+    source.connect(panner).connect(gainNode);
 
     // disconnect nodes when the sound ends so the audio graph doesn't grow
     // unbounded across many play() calls (source.stop() also fires 'ended')
     source.addEventListener('ended', ()=>
     {
         gainNode.disconnect();
-        pannerNode.disconnect();
+        panner.disconnect();
         if (onended) onended(source);
     });
 
@@ -8682,6 +8779,12 @@ const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [
 /**
  * Load tile layers from exported data
  * - Tiled maps come in as they are, flipped and turned tiles included
+ * - Group layers are flattened in order, each replaced by the layers inside it, so the layer indices
+ *   (collisionLayer and the returned array) count that flattened list; a group's tint, opacity and
+ *   visibility carry to the layers inside it
+ * - An object or image layer keeps its index, with its slot in the returned array left empty
+ * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
+ *   is a no-op, delete that and call redraw() to show it
  *  @param {Object}   tileMapData - Level data from exported data
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
  *  @param {number}   [renderOrder] - Render order of the top layer
@@ -8705,29 +8808,53 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
     ASSERT(tileMapData.width && tileMapData.height);
     ASSERT(tileMapData.layers && tileMapData.layers.length);
 
+    // flatten group layers in order, a group's color and visibility carry to the layers inside it
+    /** @type {Array<{dataLayer: Object, color?: Color, visible?: boolean}>} */
+    const layers = [];
+    const addLayers = (dataLayers, groupColor, groupVisible)=>
+    {
+        for (const dataLayer of dataLayers)
+        {
+            const type = dataLayer.type;
+            if (type && type !== 'tilelayer' && type !== 'group')
+            {
+                layers.push({dataLayer}); // an object or image layer has no tiles, its slot is left empty
+                continue;
+            }
+
+            // apply layer color, Tiled writes a tint with alpha as #AARRGGBB
+            const tint = dataLayer.tintcolor;
+            const color = tint ?
+                new Color().setHex(tint.length === 9 ? '#' + tint.slice(3) + tint.slice(1, 3) : tint) :
+                (dataLayer.color || WHITE).copy();
+            ASSERT(isColor(color), 'layer color is not a color');
+            color.a *= dataLayer.opacity ?? 1;
+            const visible = groupVisible && dataLayer.visible !== false;
+            if (type === 'group')
+                addLayers(dataLayer.layers || [], groupColor.multiply(color), visible);
+            else
+                layers.push({dataLayer, color: groupColor.multiply(color), visible});
+        }
+    };
+    addLayers(tileMapData.layers, WHITE, true);
+
     // create tile layers and fill with data
     const tileLayers = [];
     const levelSize = vec2(tileMapData.width, tileMapData.height);
-    const layerCount = tileMapData.layers.length;
+    const layerCount = layers.length;
     for (let layerIndex=layerCount; layerIndex--;)
     {
-        const dataLayer = tileMapData.layers[layerIndex];
-        if (dataLayer.type && dataLayer.type !== 'tilelayer')
-            continue; // an object or image layer has no tiles, its slot is left empty
+        const {dataLayer, color: layerColor, visible} = layers[layerIndex];
+        if (!layerColor)
+            continue;
         ASSERT(dataLayer.data && dataLayer.data.length);
         ASSERT(levelSize.area() === dataLayer.data.length);
 
         const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
         tileLayers[layerIndex] = tileLayer;
-
-        // apply layer color, Tiled writes a tint with alpha as #AARRGGBB
-        const tint = dataLayer.tintcolor;
-        const layerColor = tint ?
-            new Color().setHex(tint.length === 9 ? '#' + tint.slice(3) + tint.slice(1, 3) : tint) :
-            (dataLayer.color || WHITE).copy();
-        ASSERT(isColor(layerColor), 'layer color is not a color');
-        layerColor.a *= dataLayer.opacity ?? 1;
+        if (!visible)
+            tileLayer.render = ()=> {}; // a hidden layer keeps its tiles and collision but is not drawn
 
         for (let x=levelSize.x; x--;)
         for (let y=levelSize.y; y--;)
@@ -8748,7 +8875,7 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
                     tileLayer.setCollisionData(pos, 1);
             }
         }
-        if (draw)
+        if (draw && visible)
             tileLayer.redraw();
     }
     return tileLayers;
@@ -9951,7 +10078,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glMipmappedTextures = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
+let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -10057,6 +10184,7 @@ function glInit(rootElement)
 
         // reinit WebGL and restore textures
         glMipmappedTextures = new WeakSet;
+        glMipmapsUntilTarget = new WeakSet;
         glMipmapsStale.clear();
         glPremultipliedTextures = new WeakSet; // the tile layers draw into their new textures again below
         initWebGL();
@@ -10397,7 +10525,10 @@ function glCreateTexture(image, wrap=false)
     {
         glSetTextureData(texture, image);
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
-        mipMap = !tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height);
+        // WebGL2 makes mipmaps at any size, a texture that becomes a render target keeps them only at powers of two
+        mipMap = !tilesPixelated;
+        if (mipMap && !(isPowerOfTwo(image.width) && isPowerOfTwo(image.height)))
+            glMipmapsUntilTarget.add(texture);
     }
     else
     {
@@ -10529,8 +10660,9 @@ function glFlush()
                 glContext.uniformMatrix4fv(uniform('m'), false, glTransform);
                 glContext.uniform1f(uniform('iTime'), time);
                 // a render target is the size glPreRender gave its viewport
-                const resolution = glRenderTarget ? mainCanvasSize : glCanvas;
-                glContext.uniform3f(uniform('iResolution'), resolution.x ?? resolution.width, resolution.y ?? resolution.height, 1);
+                const width = glRenderTarget ? mainCanvasSize.x : glCanvas.width;
+                const height = glRenderTarget ? mainCanvasSize.y : glCanvas.height;
+                glContext.uniform3f(uniform('iResolution'), width, height, 1);
                 glContext.uniform1i(uniform('premultipliedTexture'), +premultiplied);
             }
         }
@@ -10745,6 +10877,16 @@ function glSetRenderTarget(texture, clear=false)
     const previousTarget = glRenderTarget;
     if (texture)
     {
+        if (glMipmapsUntilTarget.has(texture))
+        {
+            // a layer at a size other than a power of two draws without mipmaps as it always has,
+            // so they are not made again after every redraw, the 3D renderer still makes its own
+            glMipmapsUntilTarget.delete(texture);
+            glMipmappedTextures.delete(texture);
+            glContext.bindTexture(glContext.TEXTURE_2D, texture);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
+            glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+        }
         glPremultipliedTextures.add(texture); // the blend writes premultiplied color into it
         // coming from the canvas, keep its transform and blend mode to put back after
         glRenderTarget || (glRenderTargetSaved = [glTransform, glAdditive]);
@@ -11846,6 +11988,7 @@ class NewgroundsPlugin
         const url = 'https://www.newgrounds.io/gateway_v3.php';
         try
         {
+            /** @type {Object} */
             let execute = {'component':component, 'parameters':parameters};
             if (this.cipher && newgroundsSecureComponents.includes(component))
             {
@@ -12534,7 +12677,8 @@ class ZzFXMusic extends Sound
 
         if (!soundEnable || headlessMode) return;
         this.randomness = 0;
-        super.sampleChannels = zzfxM(...zzfxMusic); // the setter, without declaring a field that hides it in the typings
+        const [instruments, patterns, sequence, BPM] = zzfxMusic;
+        super.sampleChannels = zzfxM(instruments, patterns, sequence, BPM); // the setter, without declaring a field that hides it in the typings
         this.buildSampleBuffer(); // hand the samples to an audio buffer now, like a zzfx sound, so the arrays are released
         this.loadedPercent = 1; // generated in place, so it is loaded like a zzfx sound
         this.onloadCallback?.(this);
@@ -13317,10 +13461,19 @@ class UISystemPlugin
                     }
                 }
 
-                // activate the navigation object when pressed
+                // activate the navigation object when pressed, the press is used up as a mouse click is
                 if (uiSystem.navigationObject)
                 if (uiSystem.getNavigationWasPressed())
+                {
                     uiSystem.navigationObject.navigatePressed();
+                    if (isUsingGamepad)
+                        inputClearKey(0, gamepadPrimary+1, false, true, false);
+                    else
+                    {
+                        inputClearKey('Space', 0, false, true, false);
+                        inputClearKey('Enter', 0, false, true, false);
+                    }
+                }
             }
 
             // update in reverse order so topmost objects get priority, from the list as it was
@@ -13648,6 +13801,32 @@ class UISystemPlugin
         return objects;
     }
 
+    /** Check if the mouse is over a visible UI object that can be hovered, or anywhere while the
+     *  confirm dialog is open, so a game can leave world clicks on the UI alone, on touch too.
+     *  The UI uses up a click before objects update and gameUpdatePost, so read world clicks there,
+     *  or check this in gameUpdate, which runs first. Positions are from the last UI update.
+     *  @return {boolean} */
+    isMouseOverUI()
+    {
+        function isOverRecursive(o)
+        {
+            if (o.destroyed || !o.visible)
+                return false; // a hidden parent hides its children
+            if (o.canBeHover && o.isMouseOverlapping())
+                return true;
+            return o.children.some(isOverRecursive);
+        }
+
+        // a click while a text field is being edited ends the edit, the UI takes it
+        if (uiSystem.keyInputObject)
+            return true;
+
+        // while the confirm dialog is open it blocks everything else
+        if (uiSystem.confirmDialog)
+            return isOverRecursive(uiSystem.confirmDialog);
+        return uiSystem.uiObjects.some(o=> !o.parent && isOverRecursive(o));
+    }
+
     /** Get navigation direction from gamepad or keyboard
      *  @return {number} */
     getNavigationDirection()
@@ -13705,9 +13884,9 @@ class UISystemPlugin
      *  Centers the dialog on the screen with darkened background
      *  @param {string} [text] - The message to display
      *  @param {Function} [yesCallback] - Called when Yes is clicked
-     *  @param {Function} [noCallback] - Called when No is clicked, or the exit key closes it
-     *  @param {Vector2} [size] - Size of the confirmation dialog
-     *  @param {string} [exitKey] - Key that closes the menu as No
+     *  @param {Function} [noCallback] - Called when No is clicked, or the exit key or gamepad B closes it
+     *  @param {Vector2} [size] - Size of the confirmation dialog, the title and buttons are placed by it
+     *  @param {string} [exitKey] - Key that closes the menu as No, gamepad B (button 1) does too
      *  @return {UIObject} The confirmation menu object
      */
     showConfirmDialog(text='Are you sure?', yesCallback, noCallback, size=vec2(500,250), exitKey='Escape')
@@ -13727,23 +13906,25 @@ class UISystemPlugin
             const backgroundColor = hsl(0,0,0,.7);
             uiSystem.drawRect(vec2(), vec2(1e9), backgroundColor);
         }
+        const openFrame = frame;
         confirmMenu.onUpdate = ()=>
         {
-            if (keyWasPressed(exitKey))
+            // not the press that opened it, a game may open it on the same back button
+            if (frame !== openFrame && (keyWasPressed(exitKey) || gamepadWasPressed(1)))
             {
-                closeMenu(); // the exit key answers no
+                closeMenu(); // the exit key or gamepad B answers no
                 noCallback && noCallback();
             }
         }
         confirmMenu.isMouseOverlapping = ()=> true; // always hover
         
-        // title text
-        const gap = 50;
-        const textTitle = new UIText(vec2(0,-50), vec2(size.x-gap,70), text);
+        // title text, placed by the dialog's size (at +-50 for the default 250 high)
+        const gap = 50, y = size.y/5;
+        const textTitle = new UIText(vec2(0,-y), vec2(size.x-gap,70), text);
         confirmMenu.addChild(textTitle);
-        
+
         // yes button
-        const buttonYes = new UIButton(vec2(-80,50), vec2(120,70), 'Yes');
+        const buttonYes = new UIButton(vec2(-80,y), vec2(120,70), 'Yes');
         buttonYes.textHeight = 40;
         buttonYes.navigationIndex = 1;
         buttonYes.hoverColor = hsl(0,1,.5);
@@ -13751,7 +13932,7 @@ class UISystemPlugin
         confirmMenu.addChild(buttonYes);
         
         // no button
-        const buttonNo = new UIButton(vec2(80,50), vec2(120,70), 'No');
+        const buttonNo = new UIButton(vec2(80,y), vec2(120,70), 'No');
         buttonNo.textHeight = 40;
         buttonNo.navigationIndex = 2;
         buttonNo.navigationAutoSelect = true;
@@ -14044,7 +14225,7 @@ class UIObject
                         {
                             this.onPress();
                             if (this.destroyed) // the press took it away, and the press is used up
-                                return void inputClearKey(0,0,0,1,0);
+                                return void inputClearKey(0, 0, false, true, false);
                             this.soundPress && this.soundPress.play();
                             if (uiSystem.activeObject && !isActive)
                                 uiSystem.activeObject.onRelease();
@@ -14054,7 +14235,7 @@ class UIObject
                         if (newPress && uiSystem.activateOnPress)
                             this.click(!this.soundPress);
                         if (this.destroyed)
-                            return void inputClearKey(0,0,0,1,0);
+                            return void inputClearKey(0, 0, false, true, false);
                     }
                 }
                 if (!uiSystem.activateOnPress)
@@ -14064,7 +14245,7 @@ class UIObject
             }
 
             // clear mouse was pressed state even when disabled
-            mousePress && inputClearKey(0,0,0,1,0);
+            mousePress && inputClearKey(0, 0, false, true, false);
         }
         if (isActive)
         if (!mouseDown || (this.dragActivate && !this.isHoverObject()))
@@ -14286,7 +14467,7 @@ class UITextInput extends UIObject
     {
         // start editing the text, the gamepad press that started it is used up so it does not stop it too
         uiSystem.keyInputObject = this;
-        inputClearKey(0, gamepadPrimary+1, 0, 1, 0);
+        inputClearKey(0, gamepadPrimary+1, false, true, false);
         this.onClick();
         playSound && this.soundClick && this.soundClick.play();
     }
@@ -14340,7 +14521,7 @@ class UITextInput extends UIObject
             // the press that stopped it is used up, by the mouse or the gamepad
             this.stopEditing();
             inputClearKey(0,0);
-            inputClearKey(0, gamepadPrimary+1, 0, 1, 0);
+            inputClearKey(0, gamepadPrimary+1, false, true, false);
         }
     }
 
@@ -15647,14 +15828,20 @@ class Box2dObject extends EngineObject
      *  @return {boolean} */
     hasJoints() { return !box2d.isNull(this.body.GetJointList()); }
     
-    /** Get list of joints for this object, the Box2D joints
-     *  @return {Array<Object>} */
+    /** Get list of joints for this object, the Box2dJoint for each one made through LittleJS,
+     *  and the Box2D joint, cast to its type, for any made on the world directly
+     *  @return {Array<Box2dJoint|Object>} */
     getJointList()
     {
         // the body keeps a list of edges, each holding a joint and the next edge
         const joints = [];
         for (let edge=this.body.GetJointList(); !box2d.isNull(edge); edge = edge.get_next())
-            joints.push(edge.get_joint());
+        {
+            const joint = edge.get_joint(), wrapper = box2dJoints.get(box2d.instance.getPointer(joint));
+            if (wrapper && !wrapper.box2dJoint)
+                continue; // destroyed in a contact callback, Box2D lets go of it once the step is done
+            joints.push(wrapper || box2d.castJointObject(joint));
+        }
         return joints;
     }
 }
@@ -16500,11 +16687,11 @@ class Box2dWeldJoint extends Box2dJoint
 
     /** Set the damping ratio
      *  @param {number} ratio */
-    setSpringDampingRatio(ratio) { return this.box2dJoint.SetDampingRatio(ratio); } // the weld joint's own name for it
+    setDampingRatio(ratio) { return this.box2dJoint.SetDampingRatio(ratio); }
 
     /** Get the damping ratio
      *  @return {number} */
-    getSpringDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
+    getDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -16799,7 +16986,7 @@ class Box2dPlugin
     ///////////////////////////////////////////////////////////////////////////////
     // raycasting and querying
 
-    /** raycast and return a list of all the results
+    /** raycast and return a list of all the results, nearest first
      *  @param {Vector2} start
      *  @param {Vector2} end
      *  @return {Array<Box2dRaycastResult>} */
@@ -16827,6 +17014,7 @@ class Box2dPlugin
 
         const raycastResults = [];
         box2d.world.RayCast(raycastCallback, box2dTemp(start), box2dTemp(end, 1));
+        raycastResults.sort((a,b)=> a.fraction - b.fraction); // Box2D reports them in its tree's order
         debugRaycast && debugLine(start, end, raycastResults.length ? '#f00' : '#00f', .02);
         return raycastResults;
     }
@@ -16837,10 +17025,7 @@ class Box2dPlugin
      *  @return {Box2dRaycastResult|undefined} */
     raycast(start, end)
     {
-        const raycastResults = box2d.raycastAll(start, end);
-        if (!raycastResults.length)
-            return undefined;
-        return raycastResults.reduce((a,b)=>a.fraction < b.fraction ? a : b);
+        return box2d.raycastAll(start, end)[0];
     }
 
     /** box aabb cast and return all the objects
@@ -17095,6 +17280,7 @@ class Box2dPlugin
 async function box2dInit()
 {
     // load box2d
+    // @ts-ignore - Box2D is the global that box2d.wasm.js defines
     new Box2dPlugin(await Box2D());
     setupDebugDraw();
     engineAddPlugin(box2dUpdate, box2dRender);
@@ -17485,14 +17671,15 @@ class TextureSheet
         ASSERT(isVector2(imageSize) && isVector2(frameSize), 'sizes must be vec2');
         ASSERT(frameSize.x > 0 && frameSize.y > 0, 'frame size must be positive');
 
-        if (isNumber(sourcePadding))
-            sourcePadding = vec2(sourcePadding);
-        ASSERT(isVector2(sourcePadding) && sourcePadding.x >= 0 && sourcePadding.y >= 0,
+        // a number pads both axes the same
+        const sourcePad = isNumber(sourcePadding) ?
+            vec2(/** @type {number} */ (sourcePadding)) : /** @type {Vector2} */ (sourcePadding);
+        ASSERT(isVector2(sourcePad) && sourcePad.x >= 0 && sourcePad.y >= 0,
             'sourcePadding must be a number or vec2 >= 0');
 
         // the source may have its own padding baked in around each frame
-        const sourceCellWidth = frameSize.x + sourcePadding.x*2;
-        const sourceCellHeight = frameSize.y + sourcePadding.y*2;
+        const sourceCellWidth = frameSize.x + sourcePad.x*2;
+        const sourceCellHeight = frameSize.y + sourcePad.y*2;
         ASSERT(imageSize.x % sourceCellWidth === 0 && imageSize.y % sourceCellHeight === 0,
             'image size must be a multiple of the padded frame size');
 
@@ -17542,14 +17729,15 @@ class TextureSheet
     {
         ASSERT(!!this.context, 'texture sheet has no canvas');
 
-        if (isNumber(sourcePadding))
-            sourcePadding = vec2(sourcePadding);
+        // a number pads both axes the same
+        const sourcePad = isNumber(sourcePadding) ?
+            vec2(/** @type {number} */ (sourcePadding)) : /** @type {Vector2} */ (sourcePadding);
 
         // copy frames in order, reading the source left to right, top to bottom
         // the destination wraps at tileInfo.columns which may be narrower than the source
         const frameSize = tileInfo.size;
-        const sourceCellWidth = frameSize.x + sourcePadding.x*2;
-        const sourceCellHeight = frameSize.y + sourcePadding.y*2;
+        const sourceCellWidth = frameSize.x + sourcePad.x*2;
+        const sourceCellHeight = frameSize.y + sourcePad.y*2;
         // whole frames only as tryAdd packed them, a fractional count would never end the loop
         const sourceColumns = image.width / sourceCellWidth | 0;
         const frameCount = sourceColumns * (image.height / sourceCellHeight | 0);
@@ -17558,8 +17746,8 @@ class TextureSheet
         const cellHeight = frameSize.y + tileInfo.padding*2;
         for (let i = frameCount; i--;)
         {
-            const sourceX = (i % sourceColumns) * sourceCellWidth + sourcePadding.x;
-            const sourceY = (i / sourceColumns | 0) * sourceCellHeight + sourcePadding.y;
+            const sourceX = (i % sourceColumns) * sourceCellWidth + sourcePad.x;
+            const sourceY = (i / sourceColumns | 0) * sourceCellHeight + sourcePad.y;
             this.context.drawImage(image,
                 sourceX, sourceY, frameSize.x, frameSize.y,
                 tileInfo.pos.x + (i % columns) * cellWidth,
@@ -17608,7 +17796,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
     ASSERT(engineInitialized || headlessMode, 'call loadSprite after engineInit, e.g. in gameInit');
 
     if (isNumber(frameSize))
-        frameSize = vec2(frameSize);
+        frameSize = vec2(/** @type {number} */ (frameSize));
 
     // start with an empty tile that gets filled in when the image loads
     const tileInfo = new TileInfo(vec2(), vec2(), undefined, padding, 0);
@@ -17679,6 +17867,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
     ASSERT(isNumber(padding), 'padding must be a number');
     ASSERT(engineInitialized || headlessMode, 'call loadAtlas after engineInit, e.g. in gameInit');
 
+    /** @type {Object<string, TileInfo>} */
     const atlas = {};
     if (headlessMode) return atlas;
 
@@ -17934,6 +18123,9 @@ function tweenIsLerpable(v) { return v && typeof v.lerp === 'function'; }
 
 /** A numeric tween: drives a callback with a value interpolated between
  *  `start` and `end` over `duration` seconds. Pauses with the game by default.
+ *  - In TypeScript it is a `Tween<T>` of the type it tweens, which comes from `start` and `end` or
+ *    the callback's parameter, so `(v: number)=> ...` takes a number
+ *  @template [T=any]
  *  @memberof TweenSystem
  *  @example
  *  // Animate a fade-out over 2 seconds with an ease-out sine curve.
@@ -17948,15 +18140,15 @@ class Tween
      *  any object exposing a `lerp(other, percent) => sameType` method. The
      *  callback receives the interpolated value (a number, or a fresh instance
      *  for lerp-able types). Both endpoints must be the same type.
-     *  @param {function(any):void} callback - Called with the interpolated value each frame
-     *  @param {number|Vector2|Vector3|Color|object} [start=0] - Starting value
-     *  @param {number|Vector2|Vector3|Color|object} [end=1] - Ending value
+     *  @param {function(NonNullable<T>):void} callback - Called with the interpolated value each frame
+     *  @param {T} [start=0] - Starting value
+     *  @param {T} [end=1] - Ending value
      *  @param {number} [duration=1] - Duration in seconds
      *  @param {Object} [options]
      *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
      *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused (matches Timer's useRealTime)
      *  @param {boolean} [options.paused=false] - Start in paused state */
-    constructor(callback, start = 0, end = 1, duration = 1, options = {})
+    constructor(callback, start = /** @type {T} */ (0), end = /** @type {T} */ (1), duration = 1, options = {})
     {
         ASSERT(typeof callback === 'function', 'Tween callback must be a function');
         if (tweenIsLerpable(start))
@@ -17971,13 +18163,16 @@ class Tween
         }
         ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
 
-        /** @property {function(any):void} - Called with the interpolated value each frame */
+        // the callback's type is NonNullable<T>, which is T, so that TypeScript takes the type from start and end
+        // first: a typed callback like (v: number)=> with start 10 then makes a Tween<number>, not a Tween<0|10>
+        /** @property {function(T):void} - Called with the interpolated value each frame
+         *  @type {function(T):void} */
         this.callback = callback;
-        /** @property {number|Vector2|Vector3|Color|object} - Starting value
-         *  @type {number|Vector2|Vector3|Color|object} */
+        /** @property {T} - Starting value
+         *  @type {T} */
         this.start = start;
-        /** @property {number|Vector2|Vector3|Color|object} - Ending value
-         *  @type {number|Vector2|Vector3|Color|object} */
+        /** @property {T} - Ending value
+         *  @type {T} */
         this.end = end;
         /** @property {number} - Total duration in seconds */
         this.duration = duration;
@@ -17989,8 +18184,12 @@ class Tween
         this.useRealTime = !!options.useRealTime;
         /** @property {boolean} - If true, stop advancing until cleared */
         this.paused = !!options.paused;
+        /** @property {undefined|function():void} - Called once the tween completes: when its last pass ends,
+         *  the last iteration of a loop or pingPong, and again each time a restart plays through; then() sets it
+         *  @type {undefined|function():void} */
+        this.onComplete = undefined;
 
-        /** Completion callback set by then(), loop(), pingPong().
+        /** Continuation when a pass ends, set by loop() and pingPong() to start the next iteration.
          *  @private */
         this.thenCallback = undefined;
         /** Remaining iterations including the current run (loop/pingPong only).
@@ -18015,7 +18214,7 @@ class Tween
 
     /** Set the easing curve and return this for chaining.
      *  @param {function(number):number} easeFn
-     *  @returns {Tween}
+     *  @returns {Tween<T>}
      *  @memberof TweenSystem */
     setEase(easeFn)
     {
@@ -18023,18 +18222,19 @@ class Tween
         return this;
     }
 
-    /** Set a single completion callback. Calling `then` again replaces the
-     *  previous callback. Returns this for chaining.
-     *
-     *  Calling `then` after `loop` or `pingPong` overrides the loop chain
-     *  (last call wins).
+    /** Set the completion callback, `onComplete`, and return this for chaining.
+     *  It is called once the tween completes: when its pass ends, or for a
+     *  `loop` or `pingPong` when its last iteration ends, so an endless one
+     *  never calls it. Calling `then` again replaces the previous callback.
+     *  - It works with `loop` and `pingPong` in either order, neither replaces the other
+     *  - It is kept by `restart`, so a restarted tween calls it again when it completes
+     *  - `stop` and `tweenStopAll` end a tween without calling it
      *  @param {function():void} callback
-     *  @returns {Tween}
+     *  @returns {Tween<T>}
      *  @memberof TweenSystem */
     then(callback)
     {
-        this.thenCallback = callback;
-        this.loopRemaining = 0;
+        this.onComplete = callback;
         return this;
     }
 
@@ -18043,10 +18243,11 @@ class Tween
      *  loop: pause or stop it to pause or stop every iteration left.
      *  `loop()` with no argument loops forever.
      *
-     *  Mutually exclusive with `pingPong`; calling either replaces the other,
-     *  and calling `then` after either clears the loop (last call wins).
+     *  Mutually exclusive with `pingPong`; calling either replaces the other.
+     *  A `then` callback, set before or after, is called when the last
+     *  iteration ends.
      *  @param {number} [count=Infinity]
-     *  @returns {Tween}
+     *  @returns {Tween<T>}
      *  @memberof TweenSystem */
     loop(count = Infinity)
     {
@@ -18058,10 +18259,11 @@ class Tween
     /** Like `loop`, but swap `start` and `end` between iterations so the value
      *  bounces back and forth. `pingPong()` with no argument bounces forever.
      *
-     *  Mutually exclusive with `loop`; calling either replaces the other, and
-     *  calling `then` after either clears the loop (last call wins).
+     *  Mutually exclusive with `loop`; calling either replaces the other.
+     *  A `then` callback, set before or after, is called when the last
+     *  iteration ends.
      *  @param {number} [count=Infinity]
-     *  @returns {Tween}
+     *  @returns {Tween<T>}
      *  @memberof TweenSystem */
     pingPong(count = Infinity)
     {
@@ -18084,7 +18286,8 @@ class Tween
      *  It replays one pass: a loop or pingPong that has finished is not started
      *  over, a pingPong that ended on its way back plays that way again, and a
      *  restart mid loop keeps the iterations left. Call loop or pingPong again
-     *  after restart to repeat it.
+     *  after restart to repeat it. The `then` callback is kept and is called
+     *  again when it completes.
      *  @memberof TweenSystem */
     restart()
     {
@@ -18116,7 +18319,7 @@ class Tween
     /** Get the current interpolated value (the value most recently passed to
      *  the callback). Returns a number, Vector2, Vector3 or Color depending on the
      *  tween's start/end types.
-     *  @returns {number|Vector2|Vector3|Color}
+     *  @returns {T}
      *  @memberof TweenSystem */
     getValue()
     {
@@ -18129,26 +18332,28 @@ class Tween
      *  - A vector goes past its ends as far as the easing does, as a number does; a Color stays between them,
      *    so its channels stay in range, and any other type goes as far as its own lerp takes it
      *  @param {number} life
-     *  @returns {number|Vector2|Vector3|Color}
+     *  @returns {T}
      *  @memberof TweenSystem */
     interp(life)
     {
-        const s = this.start, e = this.end;
+        // the ends of whatever type it tweens, each kind is handled below
+        const s = /** @type {any} */ (this.start), e = /** @type {any} */ (this.end);
         if (life <= 0) // the end exactly, an easing curve may land a rounding error short of it
             return typeof e.copy === 'function' ? e.copy() : e;
         const x = this.ease((this.duration - life) / this.duration);
         // the vectors as their lerp does it, which lands on the end exactly, but without its clamp
         const y = 1 - x;
         if (s instanceof Vector2)
-            return vec2(e.x * x + s.x * y, e.y * x + s.y * y);
+            return /** @type {T} */ (vec2(e.x * x + s.x * y, e.y * x + s.y * y));
         if (typeof Vector3 !== 'undefined' && s instanceof Vector3) // a build may leave out the 3D math
-            return vec3(e.x * x + s.x * y, e.y * x + s.y * y, e.z * x + s.z * y);
+            return /** @type {T} */ (vec3(e.x * x + s.x * y, e.y * x + s.y * y, e.z * x + s.z * y));
         if (tweenIsLerpable(s))
             return s.lerp(e, x);
         return s + (e - s) * x;
     }
 
-    /** Remove this tween from the active list and prevent any pending then-callback.
+    /** Remove this tween from the active list, ending a loop or pingPong too, without calling
+     *  the then-callback. It keeps the then-callback, so a restart calls it when it completes.
      *  @memberof TweenSystem */
     stop()
     {
@@ -18342,16 +18547,17 @@ const Ease =
  *
  *  `start` and `end` may be numbers, Vector2, Vector3 or Color instances, or
  *  any object with a `lerp(other, percent) => sameType` method.
+ *  @template [T=any]
  *  @param {Object} target - The object whose property is being animated
  *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'` or `'color'`
- *  @param {number|Vector2|Vector3|Color|object} start - Starting value
- *  @param {number|Vector2|Vector3|Color|object} end - Ending value
+ *  @param {T} start - Starting value
+ *  @param {T} end - Ending value
  *  @param {number} [duration=1] - Duration in seconds
  *  @param {Object} [options] - Same options as the Tween constructor
  *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
  *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused
  *  @param {boolean} [options.paused=false] - Start in paused state
- *  @returns {Tween}
+ *  @returns {Tween<T>}
  *  @memberof TweenSystem
  *  @example
  *  // Numeric: slide an object's x with an ease-out sine curve
@@ -18396,7 +18602,7 @@ function tweenPassed(tween)
     return duration ? 1 + floor(-min(tween.life, 0) / duration) : 1;
 }
 
-// Continuation that schedules the next loop iteration when one finishes.
+// Continuation that schedules the next loop iteration when one finishes, true if it did.
 // Reuses the same Tween object across iterations so the user's handle
 // from `.loop()` keeps working — calling `.stop()` mid-loop now cancels
 // the entire chain instead of just the current iteration.
@@ -18404,16 +18610,17 @@ function tweenLoopContinuation(tween)
 {
     // count every iteration that went by, a finite loop ends once they run out
     const passed = tweenPassed(tween);
-    if (tween.loopRemaining <= passed) return; // Infinity never runs out
+    if (tween.loopRemaining <= passed) return false; // Infinity never runs out
     tween.loopRemaining -= passed;
     tweenCarryOvershoot(tween);
     tween.thenCallback = () => tweenLoopContinuation(tween);
     tweenActivate(tween);
     // snap to where the new iteration is, its start less the time the last one ran over
     tween.callback(tween.interp(tween.life));
+    return true;
 }
 
-// Continuation for pingPong: swaps start and end on the same tween each iteration.
+// Continuation for pingPong: swaps start and end on the same tween each iteration, true if it started another.
 function tweenPingPongContinuation(tween)
 {
     // swap the ends once for each iteration that went by, but when they run out the last one keeps its
@@ -18432,13 +18639,14 @@ function tweenPingPongContinuation(tween)
         // the completion gave the other end, give the one it finished on
         if (swaps & 1)
             tween.callback(tween.interp(0));
-        return;
+        return false;
     }
     tween.loopRemaining -= passed;
     tweenCarryOvershoot(tween);
     tween.thenCallback = () => tweenPingPongContinuation(tween);
     tweenActivate(tween);
     tween.callback(tween.interp(tween.life));
+    return true;
 }
 
 /** Engine plugin hook: advance every active tween by the appropriate delta.
@@ -18491,19 +18699,22 @@ function tweenUpdate(gameDelta, realDelta)
         }
         else
         {
-            // Completion: fire end value, remove from active, fire then-callback.
+            // Completion: fire end value, remove from active, start the next iteration
+            // of a loop or pingPong, or when there is none it has completed, fire onComplete
             t.callback(t.interp(0));
+            if (!t.active) continue; // stopped by its own callback, it ends without completing
             tweenDeactivate(t);
-            const cb = t.thenCallback;
+            const next = t.thenCallback;
             t.thenCallback = undefined;
-            if (cb) cb();
+            if (!(next && next()) && t.onComplete)
+                t.onComplete();
         }
     }
     list.length = 0;
 }
 
-/** Stop every active tween and clear their then-callbacks. Useful for resets
- *  on level transitions or when changing scenes.
+/** Stop every active tween, ending loops too, without calling their then-callbacks.
+ *  Useful for resets on level transitions or when changing scenes.
  *  @memberof TweenSystem */
 function tweenStopAll()
 {
@@ -18615,17 +18826,18 @@ class PathFinder
         {
             /** @property {Vector2} - Grid dimensions in tiles
              *  @type {Vector2} */
-            this.size = source.floor();
+            this.size = /** @type {Vector2} */ (source).floor();
             /** @property {TileCollisionLayer|undefined} - Tile layer driving walkability, if any
              *  @type {TileCollisionLayer|undefined} */
             this.tileLayer = undefined;
         }
         else
         {
-            ASSERT(source && isVector2(source.size) && typeof source.getCollisionData === 'function',
+            const layer = /** @type {TileCollisionLayer} */ (source);
+            ASSERT(layer && isVector2(layer.size) && typeof layer.getCollisionData === 'function',
                 'PathFinder requires a Vector2 size or a TileCollisionLayer');
-            this.size = source.size;
-            this.tileLayer = source;
+            this.size = layer.size;
+            this.tileLayer = layer;
         }
 
         // Tunables (public, freely re-assignable).
@@ -19017,9 +19229,9 @@ class PathFinder
      *  isLineClear permits, so the result can leave grid centers and cut
      *  cleanly across open spaces.
      *
-     *  Bails (leaves the path unchanged) if any node has nonzero cost — a
-     *  straight geometric shortcut can't be trusted to be the lowest-cost
-     *  route when cost-weighted terrain is in play.
+     *  A node with a cost is kept, and a shortcut only runs between clear
+     *  nodes: isLineClear passes only through clear cells, so a straight line
+     *  it accepts costs no more than the grid path it replaces.
      *
      *  Replaces the port of ShortenPath2() in pathFinding.cpp, which could
      *  add a segment it had not checked.
@@ -19028,10 +19240,6 @@ class PathFinder
     smoothPathStringPull(path)
     {
         if (path.length <= 2) return;
-        for (const n of path)
-        {
-            if (!n.isClear()) return;
-        }
 
         // Greedy: from each kept node, jump to the furthest node with a clear
         // line to it, or else the next node. Every segment is one isLineClear
@@ -19042,8 +19250,11 @@ class PathFinder
         for (let k = 0; k < original.length - 1;)
         {
             let j = original.length - 1;
-            while (j > k + 1 && !this.isLineClear(original[k].pos, original[j].pos))
-                --j;
+            if (original[k].isClear()) // isLineClear needs both ends clear
+                while (j > k + 1 && !(original[j].isClear() && this.isLineClear(original[k].pos, original[j].pos)))
+                    --j;
+            else
+                j = k + 1;
             path.push(original[j]);
             k = j;
         }
@@ -20241,7 +20452,8 @@ const RENDER3D_VERTEX_INPUTS =
     'layout(location=11) in vec4 tint;layout(location=12) in vec4 uvRect;';
 const RENDER3D_MAX_STREAM_VERTS = 32768;
 const RENDER3D_MAX_LIGHTS = 8; // Light3D objects per frame, the shader loops over this many
-const RENDER3D_QUAD_UVS = Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv))); // strip order
+// strip order, frozen, and typed as the plain array the uv parameters take
+const RENDER3D_QUAD_UVS = /** @type {Array<Vector2>} */ (Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv))));
 const RENDER3D_FULL_UV_RECT = Object.freeze({x:0, y:0, w:1, h:1});
 const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
 const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
@@ -20333,9 +20545,20 @@ function render3DWithState(fields, fn)
 function render3DIsAfter2D(o) { return !!(o.renderAfter2D ?? render3D.renderAfter2D); }
 
 // a size given as a number or a vec3
-function render3DSize3(size) { return isNumber(size) ? vec3(size) : size; }
+/** @param {Vector3|number} size
+ *  @return {Vector3} */
+function render3DSize3(size)
+{ return isNumber(size) ? vec3(/** @type {number} */ (size)) : /** @type {Vector3} */ (size); }
+
+// a size given as a number or a vec2
+/** @param {Vector2|number} size
+ *  @return {Vector2} */
+function render3DSize2(size)
+{ return isNumber(size) ? vec2(/** @type {number} */ (size)) : /** @type {Vector2} */ (size); }
 
 // a transform given as a matrix, or as a vec3 for one that only moves there
+/** @param {Matrix4|Vector3} matrix
+ *  @return {Matrix4} */
 function render3DMatrix(matrix)
 {
     if (matrix instanceof Vector3)
@@ -20494,15 +20717,15 @@ function render3DClearInstances()
 
 // the live objects drawn on one side of the 2D scene
 function render3DLayerObjects(after2D)
-{ return engineObjects.filter(o=> !o.destroyed && o instanceof EngineObject3D && render3DIsAfter2D(o) === after2D); }
+{ return /** @type {Array<EngineObject3D>} */ (engineObjects.filter(o=> !o.destroyed && o instanceof EngineObject3D && render3DIsAfter2D(o) === after2D)); }
 
 // the Light3D objects the shader gets this frame: directional lights light the whole scene so they come first,
 // then the point lights nearest the camera
 function render3DCollectLights()
 {
     // a light switched off by its radius or its alpha is left out, so it cannot take one of the few slots
-    const lights = engineObjects.filter(o=> !o.destroyed && o instanceof Light3D &&
-        o.color.a > 0 && o.intensity > 0 && (o.directional || o.radius > 0));
+    const lights = /** @type {Array<Light3D>} */ (engineObjects.filter(o=> !o.destroyed && o instanceof Light3D &&
+        o.color.a > 0 && o.intensity > 0 && (o.directional || o.radius > 0)));
     if (lights.length > RENDER3D_MAX_LIGHTS)
     {
         // distances cached once, getWorldPos3D walks the parent chain and the sort asks many times
@@ -20865,7 +21088,7 @@ class Render3DPlugin
         {
             const distance = render3DRaycastObject(ray, o);
             if (distance !== undefined && (!nearest || distance < nearest.distance))
-                nearest = {object: o, distance};
+                nearest = {object: /** @type {EngineObject3D} */ (o), distance}; // only a 3D object has a distance
         }
         return nearest;
     }
@@ -21122,7 +21345,10 @@ class Render3DPlugin
             draw();
             return;
         }
-        this.transparentQueue.push({distance: pos.distanceSquared(this.camera.pos), state: render3DCaptureBatchState(), draw});
+        // sort by depth along the view, not distance, so an orthographic camera orders them right too
+        const f = this.cameraForward, c = this.camera.pos;
+        const distance = (pos.x - c.x)*f.x + (pos.y - c.y)*f.y + (pos.z - c.z)*f.z;
+        this.transparentQueue.push({distance, state: render3DCaptureBatchState(), draw});
     }
 
     /** Draw the queued transparent draws far to near with the state each was drawn under, called automatically at the end of the transparent stage */
@@ -21373,8 +21599,9 @@ class Render3DPlugin
     {
         render3DAssertBlending();
         // a HeightMap is in the extras plugin, so it is known by its getHeight rather than its class
-        const height = isNumber(floorHeight) ? ()=> floorHeight
-            : floorHeight.getHeight ? (x, z)=> floorHeight.getHeight(x, z) : floorHeight;
+        const heightMap = /** @type {HeightMap} */ (floorHeight);
+        const height = /** @type {function(number, number): number} */ (isNumber(floorHeight) ? ()=> floorHeight
+            : heightMap.getHeight ? (x, z)=> heightMap.getHeight(x, z) : floorHeight);
         if (this.transparentQueue && !this.capture) // sort from the floor, under whatever casts it
         {
             const p = pos.copy(), c = color.copy(); // copies, the queue replays later
@@ -21416,12 +21643,13 @@ function render3DDrawSoftDisc(radius, color, sides, normal, pointAt)
 ///////////////////////////////////////////////////////////////////////////////
 // Debug primitives, drawn on top of the 3D scene like the 2D debug functions, only in debug builds
 
-let render3DDebugPrimitives = [];
+let render3DDebugPrimitives = []; // each keeps the debugClear count it was made under, a debugClear since drops it
 
 // draw the live debug primitives with depth test off so they show through walls, drop the expired ones
 function render3DRenderDebug()
 {
     if (!render3DDebugPrimitives.length) return;
+    render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.clearCount === debugClearCount);
     if (!debugVideoCaptureIsActive()) // hidden from a video capture like the 2D ones, but they still expire
     {
         render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
@@ -21437,7 +21665,8 @@ function render3DRenderDebug()
 function render3DDebugPush(duration, draw)
 {
     ASSERT(isNumber(duration), 'duration must be a number');
-    debug && glEnable && render3D?.program && render3DDebugPrimitives.push({timer: new Timer(duration), draw});
+    debug && glEnable && render3D?.program &&
+        render3DDebugPrimitives.push({timer: new Timer(duration), draw, clearCount: debugClearCount});
 }
 
 /** Draw a debug wireframe box
@@ -21613,6 +21842,7 @@ class Camera3D
 // GL setup, shaders and the frame hooks
 
 // the four attributes of a 36 byte vertex at the locations the shaders declare: location, size, type, normalize, byte offset
+/** @type {Array<[number, number, number, boolean, number]>} */
 const RENDER3D_ATTRIBS = [[0, 3, 5126, false, 0], [1, 3, 5126, false, 12], [2, 2, 5126, false, 24], [3, 4, 5121, true, 32]];
 
 // the vertex shader, shared by the plugin's program and every Shader's
@@ -22581,7 +22811,7 @@ class Mesh
      *  @return {Mesh} */
     scaleUVs(scale)
     {
-        const s = isNumber(scale) ? vec2(scale) : scale;
+        const s = render3DSize2(scale);
         this.uvs = this.uvs.map(uv=> vec2(uv.x * s.x, uv.y * s.y)); // new vectors, builders share uv objects between faces
         this.dirty = true;
         return this;
@@ -22902,6 +23132,8 @@ class Mesh
  * - profile is [[radius, y], ...] from bottom to top
  * - A profile that ends where it starts makes a closed ring like a donut
  * - An end left open, with a radius and no cap, makes the mesh doubleSided so its inside shows
+ * - An end on the axis smooth shades as a round pole like a sphere's when its segment is within 45 degrees of
+ *   level, and as a point like a cone's tip when it is steeper
  * @param {Array<Array<number>>} profile
  * @param {number} [sides] - Around the axis
  * @param {boolean} [smooth] - Defaults to render3D.smoothShading
@@ -22933,9 +23165,14 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
     const segmentLength = (i)=> hypot(profile[i+1][0] - profile[i][0], profile[i+1][1] - profile[i][1]);
     const vertexNormal = (i)=>
     {
-        // an open end on the axis is a pole and points along it
+        // an open end on the axis is a pole and points along it, like a sphere's, when the surface there is
+        // within 45 degrees of level; a steeper one is a point like a cone's tip and takes its side's normal
         if (!closed && (!i || i == rings - 1) && abs(profile[i][0]) < 1e-9)
-            return vec2(0, i ? 1 : -1);
+        {
+            const up = i ? 1 : -1;
+            if (segmentNormal(i ? i - 1 : 0).y * up > Math.SQRT1_2 - 1e-9)
+                return vec2(0, up);
+        }
         // otherwise the neighbors weighted by their length, so a short band does not tilt a long wall
         let n = vec2();
         const add = (s)=> n = n.add(segmentNormal(s).scale(segmentLength(s)));
@@ -22961,11 +23198,14 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
             // one ribbon around the ring pair, top point then bottom point per column
             const points = [], normals = [], uvs = [];
             const n0 = vertexNormal(i), n1 = vertexNormal(i + 1);
+            // a point on the axis is one per column, each drawn by the face beside it, so its normal turns half
+            // a side toward the middle of that face; a pole's points along the axis and does not turn
+            const half = PI / sides, turn1 = abs(profile[i + 1][0]) < 1e-9 ? -half : 0, turn0 = abs(profile[i][0]) < 1e-9 ? half : 0;
             for (let j = 0; j <= sides; ++j)
             {
                 const a = j / sides * 2 * PI, u = j / sides;
                 points.push(point(i + 1, a), point(i, a));
-                normals.push(normal3D(n1, a), normal3D(n0, a));
+                normals.push(normal3D(n1, a + turn1), normal3D(n0, a + turn0));
                 uvs.push(vec2(u, v(i + 1)), vec2(u, v(i)));
             }
             mesh.addStrip(points, normals, uvs);
@@ -22988,7 +23228,7 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
 
     // flat discs close the ends that have a radius, a hard edge even when the sides are smooth
     if (capped && !closed)
-        for (const [i, up] of [[0, false], [rings - 1, true]])
+        for (const [i, up] of /** @type {Array<[number, boolean]>} */ ([[0, false], [rings - 1, true]]))
         {
             if (abs(profile[i][0]) < 1e-9) continue; // a pole has no cap
             const points = [], uvs = [];
@@ -23073,17 +23313,16 @@ function buildBox(size=1)
  */
 function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth=render3D?.smoothShading)
 {
-    if (isNumber(size))
-        size = vec2(size);
-    if (isNumber(segments))
-        segments = vec2(segments);
+    size = render3DSize2(size);
+    segments = render3DSize2(segments);
     ASSERT(segments.x > 0 && segments.y > 0 && segments.x % 1 === 0 && segments.y % 1 === 0, 'grid segments must be whole numbers above zero');
     const mesh = new Mesh;
     const segmentsX = segments.x, segmentsZ = segments.y;
     const cellX = size.x / segmentsX, cellZ = size.y / segmentsZ;
     const halfX = size.x / 2, halfZ = size.y / 2, ex = cellX / 2, ez = cellZ / 2;
     const px = (i)=> i * cellX - halfX, pz = (j)=> j * cellZ - halfZ;
-    const cellColor = (i, j)=> !color ? WHITE : isColor(color) ? color : color(px(i), pz(j));
+    const colorAt = /** @type {function(number, number): Color} */ (color);
+    const cellColor = (i, j)=> !color ? WHITE : isColor(color) ? /** @type {Color} */ (color) : colorAt(px(i), pz(j));
     // a big terrain has millions of vertices, so each one is made once, shared by the rows above and below it,
     // and its slope normal is worked out in numbers, the same normal render3DSlopeNormal gives
     const row = (j)=>
@@ -23440,7 +23679,7 @@ class EngineObject3D extends EngineObject
         const old = this.mesh;
         this.mesh = mesh;
         // nothing to free and nothing to look for when it was never uploaded
-        if (old && old !== mesh && old.buffer && !engineObjects.some(o=> o.mesh === old))
+        if (old && old !== mesh && old.buffer && !engineObjects.some(o=> /** @type {EngineObject3D} */ (o).mesh === old))
             old.dispose();
         return mesh;
     }
@@ -23584,7 +23823,7 @@ function render3DCollideSolid(a)
     for (const b of engineObjectsCollide)
     {
         if (b === a) break;
-        if (b.destroyed || b.parent || b.sync2D || !(b instanceof EngineObject3D)) continue; // a child is part of its parent
+        if (b.destroyed || !(b instanceof EngineObject3D) || b.parent || b.sync2D) continue; // a child is part of its parent
         if (!a.isSolid && !b.isSolid) continue; // neither one blocks, so they pass through each other
 
         // the pairs nowhere near each other are almost all of them in a scene of any size, so
@@ -23610,7 +23849,9 @@ function render3DCollideSolid(a)
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
         if (weightA)
             shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
-        const normal = push.normalize(); // mass 0 keeps its velocity too, so a moving platform keeps moving
+        // mass 0 keeps its velocity too, so a moving platform keeps moving, and what hits it bounces by its own
+        // restitution as it would off a static wall
+        const normal = push.normalize();
         if (weightA && a.velocity3D.dot(normal) < 0)
             a.velocity3D = a.velocity3D.reflect(normal, a.restitution);
         if (weightB && b.velocity3D.dot(normal) > 0)
@@ -23671,8 +23912,8 @@ function engineObjectsRaycast3D(ray, objects=engineObjects)
     for (const o of objects)
     {
         const distance = render3DRaycastObject(ray, o);
-        if (distance !== undefined)
-            hits.push({o, distance});
+        if (distance !== undefined) // only a 3D object has a distance
+            hits.push({o: /** @type {EngineObject3D} */ (o), distance});
     }
     return hits.sort((a, b)=> a.distance - b.distance).map(hit=> hit.o);
 }
@@ -24122,6 +24363,7 @@ function buildLoft(stations)
     ASSERT(stations[0][0] > stations[stations.length-1][0], 'loft stations go nose first, from the largest z to the smallest');
     const mesh = new Mesh;
     // section points: left, top, right, bottom, wound clockwise seen from +z
+    /** @type {function(Array<number>): Array<Vector3>} */
     const section = ([z, w, t, b, m=.5])=>
         [vec3(-w / 2, lerp(b, t, m), z), vec3(0, t, z), vec3(w / 2, lerp(b, t, m), z), vec3(0, b, z)];
     for (let i = 0; i + 1 < stations.length; ++i)
@@ -24154,7 +24396,7 @@ function buildLoft(stations)
  */
 function buildExtrude(pixels, size=vec2(1), depth=1)
 {
-    let rows = pixels, width, height;
+    let rows = /** @type {Array<Array<Color|number|boolean>>} */ (pixels), width, height;
     if (pixels instanceof TileInfo)
     {
         // colors for the tile's pixels only, undefined where alpha is half or less
@@ -24182,7 +24424,7 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
     const solid = (x, y)=>
     {
         if (x < 0 || y < 0 || x >= width || y >= height) return;
-        const c = rows[y] && rows[y][x];
+        const c = /** @type {Color} */ (rows[y] && rows[y][x]); // or a truthy value for white
         if (!c) return;
         return isColor(c) ? (c.a > .5 ? c : undefined) : WHITE; // a see through Color is empty too
     };
@@ -24316,7 +24558,7 @@ class HeightMap
         this.heights = heights;
         /** @property {Array<Array<Color>>|undefined} - Vertex colors as [row][column], undefined for white
          *  @type {Array<Array<Color>>|undefined} */
-        this.colors = colors;
+        this.colors = /** @type {Array<Array<Color>>|undefined} */ (colors);
         /** @property {Vector2} - World size along X and Z */
         this.size = size.copy();
         /** @property {number} - World height of a full value */
@@ -24853,9 +25095,9 @@ class ParticleEmitter3D extends EngineObject3D
         const scale = render3DMaxScale(matrix.m);
 
         // spawn offset: inside a box or a sphere
-        const size = this.emitSize;
-        const offset = isVector3(size) ? vec3(rand(-.5, .5) * size.x, rand(-.5, .5) * size.y, rand(-.5, .5) * size.z)
-            : randInSphere(size / 2);
+        const size = this.emitSize, box = /** @type {Vector3} */ (size);
+        const offset = isVector3(size) ? vec3(rand(-.5, .5) * box.x, rand(-.5, .5) * box.y, rand(-.5, .5) * box.z)
+            : randInSphere(/** @type {number} */ (size) / 2);
 
         // direction inside the cone around local +Y
         const direction = matrix.transformDirection(randVector3(1, this.emitConeAngle)).normalize();
@@ -25185,7 +25427,10 @@ async function loadOBJ(url, smooth=render3D?.smoothShading)
  * - Geometry: positions, normals, uvs, vertex colors and indices; skins and morph targets are not read
  * - Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
  *   GLTFObject that createObject makes; a skinned character's walk is not read
- * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too
+ * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too,
+ *   and a KHR_materials_unlit material comes in emissive, its own color with no shading
+ * - The base color texture reads the uv set its texCoord names, moved by KHR_texture_transform as gltfpack and
+ *   Blender write it
  * - An OPAQUE material, the default, ignores its texture's alpha as the format says: a texture only such materials
  *   use loads with its alpha set to 1, so the 3D pass cuts no holes in it; MASK always cuts at half, alphaCutoff
  *   is not read
@@ -25227,6 +25472,9 @@ class GLTFPart
         this.pixelated = false;
         /** @property {number} - The node it came from, which an animation moves it with */
         this.node = 0;
+        /** @property {boolean} - The material is unlit (KHR_materials_unlit), its own color with no shading; the object
+         *  createObject makes draws it with emissive 1 */
+        this.unlit = false;
     }
 }
 
@@ -25268,7 +25516,8 @@ class GLTFModel
         this.animations = animations;
         this.nodeTree = nodeTree;             // each node's parent and resting place, for animation
         this.modelMatrix = new Matrix4;       // what center, fit and transform did to the parts, animation works through it
-        /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo */
+        /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo,
+         *  and blending and unlit stay with the parts, which createObject draws */
         this.mesh = new Mesh;
         for (const part of parts) // a part baked at scale 1 from a node resting at 0 goes in as it rests
             this.mesh.combine(part.mesh, nodeTree?.restPose?.[part.node] || RENDER3D_IDENTITY, part.color);
@@ -25418,6 +25667,7 @@ class GLTFObject extends EngineObject3D
             const o = new EngineObject3D(vec3(), part.mesh, part.textureInfo, part.color);
             o.transparent = part.transparent;
             o.pixelated = part.pixelated;
+            o.emissive = part.unlit ? 1 : 0;
             const rest = model.nodeTree?.restPose?.[part.node];
             if (rest)
             {
@@ -25790,7 +26040,8 @@ function gltfAccessor(json, buffers, index)
     if (!components || !Type) // a file problem, so it throws in every build
         throw new Error(`glTF accessor of ${a.type} ${a.componentType} is not read`);
     const size = Type.BYTES_PER_ELEMENT;
-    const scale = a.normalized ? new Map([[Int8Array, 127], [Uint8Array, 255], [Int16Array, 32767], [Uint16Array, 65535]]).get(Type) || 1 : 1;
+    const scales = /** @type {Array<[Object, number]>} */ ([[Int8Array, 127], [Uint8Array, 255], [Int16Array, 32767], [Uint16Array, 65535]]);
+    const scale = a.normalized ? new Map(scales).get(Type) || 1 : 1;
     const out = new Float32Array(a.count * components);
     if (view)
     {
@@ -25841,7 +26092,14 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     };
     const points = read(attributes.POSITION, (d, k)=> vec3(d[k], d[k+1], d[k+2]));
     const normals = attributes.NORMAL !== undefined ? read(attributes.NORMAL, (d, k)=> vec3(d[k], d[k+1], d[k+2])) : undefined;
-    const uvs = attributes.TEXCOORD_0 !== undefined ? read(attributes.TEXCOORD_0, (d, k)=> vec2(d[k], d[k+1])) : undefined;
+    // the uv set the base color texture names, moved by its KHR_texture_transform once here, offset + rotation * scale
+    const material = json.materials?.[primitive.material] || {}, pbr = material.pbrMetallicRoughness || {};
+    const textureRef = pbr.baseColorTexture, uvTransform = textureRef?.extensions?.KHR_texture_transform;
+    const uvAccessor = attributes['TEXCOORD_' + (uvTransform?.texCoord ?? textureRef?.texCoord ?? 0)];
+    const [ox, oy] = uvTransform?.offset || [0, 0], [sx, sy] = uvTransform?.scale || [1, 1], r = uvTransform?.rotation || 0;
+    const c = cos(r), s = sin(r);
+    const uvs = uvAccessor !== undefined ? read(uvAccessor, (d, k)=>
+        vec2(c*sx*d[k] + s*sy*d[k+1] + ox, c*sy*d[k+1] - s*sx*d[k] + oy)) : undefined;
     const colors = attributes.COLOR_0 !== undefined ? read(attributes.COLOR_0, (d, k, n)=>
         rgb(gltfSRGB(d[k]), gltfSRGB(d[k+1]), gltfSRGB(d[k+2]), n > 3 ? d[k+3] : 1)) : undefined;
     let indices = primitive.indices !== undefined ? Array.from(gltfAccessor(json, buffers, primitive.indices).data) : points.map((_, i)=> i);
@@ -25852,7 +26110,6 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     const mesh = new Mesh().addTriangles(points, indices, normals, uvs, colors);
     normals || mesh.computeNormals(false); // flat when the file gives none, as the format says
     mesh.transform(matrix);
-    const material = json.materials?.[primitive.material] || {}, pbr = material.pbrMetallicRoughness || {};
     const factor = pbr.baseColorFactor || [1, 1, 1, 1];
     mesh.doubleSided = !!material.doubleSided;
     // glass is usually made with transmission, an opaque white material the light passes through, which would
@@ -25860,10 +26117,11 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     // only a blending material reads its alpha, an opaque or masked one is solid whatever the factor says
     const transmission = material.extensions?.KHR_materials_transmission?.transmissionFactor || 0;
     const blend = material.alphaMode === 'BLEND', alpha = (blend ? factor[3] : 1) * (1 - .8 * transmission);
-    const texture = pbr.baseColorTexture && json.textures?.[pbr.baseColorTexture.index];
+    const texture = textureRef && json.textures?.[textureRef.index];
     const part = new GLTFPart(name, mesh, rgb(gltfSRGB(factor[0]), gltfSRGB(factor[1]), gltfSRGB(factor[2]), alpha),
-        pbr.baseColorTexture ? textures[pbr.baseColorTexture.index] : undefined, blend || transmission > 0);
+        textureRef ? textures[textureRef.index] : undefined, blend || transmission > 0);
     part.pixelated = json.samplers?.[texture?.sampler]?.magFilter === 9728; // NEAREST
+    part.unlit = !!material.extensions?.KHR_materials_unlit;
     return part;
 }
 

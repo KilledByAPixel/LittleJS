@@ -871,11 +871,11 @@ test('transparent stage queues every draw by distance and replays far to near wi
     render3D.drawBillboard(vec3(0, 0, 0), vec2(1));                    // 10 away, unlit
     const queue = render3D.transparentQueue;
     assert.equal(queue.length, 3);
-    near(queue[0].distance, 400);
+    near(queue[0].distance, 20); // depth along the view
     assert.equal(queue[0].state.additive, true);
-    near(queue[1].distance, 1/9 + 25);
+    near(queue[1].distance, 5);
     assert.equal(queue[1].state.additive, false);
-    near(queue[2].distance, 100);
+    near(queue[2].distance, 10);
     assert.equal(queue[2].state.lighting, true); // the billboard turns lighting off itself when it draws
 
     // replay runs the farthest first and applies each item's captured state as it runs
@@ -885,7 +885,7 @@ test('transparent stage queues every draw by distance and replays far to near wi
     render3D.specular = .3; // not captured by any item, must survive the replay
     render3D.flushTransparentQueue();
     assert.equal(render3D.transparentQueue, undefined);
-    assert.deepEqual(order.map(o => o[0] > 399 ? 'mesh' : o[0] > 99 ? 'billboard' : 'strip'), ['mesh', 'billboard', 'strip']);
+    assert.deepEqual(order.map(o => o[0] > 19 ? 'mesh' : o[0] > 9 ? 'billboard' : 'strip'), ['mesh', 'billboard', 'strip']);
     assert.deepEqual(order.map(o => o[1]), [true, false, false]);   // additive only for the mesh
     assert.deepEqual(order.map(o => o[2]), [true, true, true]);     // the billboard queues with the stage's lighting state
     // the replay leaves the state as it found it, so the last item cannot unlight the next frame

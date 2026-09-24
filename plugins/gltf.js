@@ -6,7 +6,10 @@
  * - Geometry: positions, normals, uvs, vertex colors and indices; skins and morph targets are not read
  * - Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
  *   GLTFObject that createObject makes; a skinned character's walk is not read
- * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too
+ * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too,
+ *   and a KHR_materials_unlit material comes in emissive, its own color with no shading
+ * - The base color texture reads the uv set its texCoord names, moved by KHR_texture_transform as gltfpack and
+ *   Blender write it
  * - An OPAQUE material, the default, ignores its texture's alpha as the format says: a texture only such materials
  *   use loads with its alpha set to 1, so the 3D pass cuts no holes in it; MASK always cuts at half, alphaCutoff
  *   is not read
@@ -50,6 +53,9 @@ class GLTFPart
         this.pixelated = false;
         /** @property {number} - The node it came from, which an animation moves it with */
         this.node = 0;
+        /** @property {boolean} - The material is unlit (KHR_materials_unlit), its own color with no shading; the object
+         *  createObject makes draws it with emissive 1 */
+        this.unlit = false;
     }
 }
 
@@ -91,7 +97,8 @@ class GLTFModel
         this.animations = animations;
         this.nodeTree = nodeTree;             // each node's parent and resting place, for animation
         this.modelMatrix = new Matrix4;       // what center, fit and transform did to the parts, animation works through it
-        /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo */
+        /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo,
+         *  and blending and unlit stay with the parts, which createObject draws */
         this.mesh = new Mesh;
         for (const part of parts) // a part baked at scale 1 from a node resting at 0 goes in as it rests
             this.mesh.combine(part.mesh, nodeTree?.restPose?.[part.node] || RENDER3D_IDENTITY, part.color);
@@ -241,6 +248,7 @@ class GLTFObject extends EngineObject3D
             const o = new EngineObject3D(vec3(), part.mesh, part.textureInfo, part.color);
             o.transparent = part.transparent;
             o.pixelated = part.pixelated;
+            o.emissive = part.unlit ? 1 : 0;
             const rest = model.nodeTree?.restPose?.[part.node];
             if (rest)
             {
@@ -613,7 +621,8 @@ function gltfAccessor(json, buffers, index)
     if (!components || !Type) // a file problem, so it throws in every build
         throw new Error(`glTF accessor of ${a.type} ${a.componentType} is not read`);
     const size = Type.BYTES_PER_ELEMENT;
-    const scale = a.normalized ? new Map([[Int8Array, 127], [Uint8Array, 255], [Int16Array, 32767], [Uint16Array, 65535]]).get(Type) || 1 : 1;
+    const scales = /** @type {Array<[Object, number]>} */ ([[Int8Array, 127], [Uint8Array, 255], [Int16Array, 32767], [Uint16Array, 65535]]);
+    const scale = a.normalized ? new Map(scales).get(Type) || 1 : 1;
     const out = new Float32Array(a.count * components);
     if (view)
     {
@@ -664,7 +673,14 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     };
     const points = read(attributes.POSITION, (d, k)=> vec3(d[k], d[k+1], d[k+2]));
     const normals = attributes.NORMAL !== undefined ? read(attributes.NORMAL, (d, k)=> vec3(d[k], d[k+1], d[k+2])) : undefined;
-    const uvs = attributes.TEXCOORD_0 !== undefined ? read(attributes.TEXCOORD_0, (d, k)=> vec2(d[k], d[k+1])) : undefined;
+    // the uv set the base color texture names, moved by its KHR_texture_transform once here, offset + rotation * scale
+    const material = json.materials?.[primitive.material] || {}, pbr = material.pbrMetallicRoughness || {};
+    const textureRef = pbr.baseColorTexture, uvTransform = textureRef?.extensions?.KHR_texture_transform;
+    const uvAccessor = attributes['TEXCOORD_' + (uvTransform?.texCoord ?? textureRef?.texCoord ?? 0)];
+    const [ox, oy] = uvTransform?.offset || [0, 0], [sx, sy] = uvTransform?.scale || [1, 1], r = uvTransform?.rotation || 0;
+    const c = cos(r), s = sin(r);
+    const uvs = uvAccessor !== undefined ? read(uvAccessor, (d, k)=>
+        vec2(c*sx*d[k] + s*sy*d[k+1] + ox, c*sy*d[k+1] - s*sx*d[k] + oy)) : undefined;
     const colors = attributes.COLOR_0 !== undefined ? read(attributes.COLOR_0, (d, k, n)=>
         rgb(gltfSRGB(d[k]), gltfSRGB(d[k+1]), gltfSRGB(d[k+2]), n > 3 ? d[k+3] : 1)) : undefined;
     let indices = primitive.indices !== undefined ? Array.from(gltfAccessor(json, buffers, primitive.indices).data) : points.map((_, i)=> i);
@@ -675,7 +691,6 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     const mesh = new Mesh().addTriangles(points, indices, normals, uvs, colors);
     normals || mesh.computeNormals(false); // flat when the file gives none, as the format says
     mesh.transform(matrix);
-    const material = json.materials?.[primitive.material] || {}, pbr = material.pbrMetallicRoughness || {};
     const factor = pbr.baseColorFactor || [1, 1, 1, 1];
     mesh.doubleSided = !!material.doubleSided;
     // glass is usually made with transmission, an opaque white material the light passes through, which would
@@ -683,10 +698,11 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     // only a blending material reads its alpha, an opaque or masked one is solid whatever the factor says
     const transmission = material.extensions?.KHR_materials_transmission?.transmissionFactor || 0;
     const blend = material.alphaMode === 'BLEND', alpha = (blend ? factor[3] : 1) * (1 - .8 * transmission);
-    const texture = pbr.baseColorTexture && json.textures?.[pbr.baseColorTexture.index];
+    const texture = textureRef && json.textures?.[textureRef.index];
     const part = new GLTFPart(name, mesh, rgb(gltfSRGB(factor[0]), gltfSRGB(factor[1]), gltfSRGB(factor[2]), alpha),
-        pbr.baseColorTexture ? textures[pbr.baseColorTexture.index] : undefined, blend || transmission > 0);
+        textureRef ? textures[textureRef.index] : undefined, blend || transmission > 0);
     part.pixelated = json.samplers?.[texture?.sampler]?.magFilter === 9728; // NEAREST
+    part.unlit = !!material.extensions?.KHR_materials_unlit;
     return part;
 }
 

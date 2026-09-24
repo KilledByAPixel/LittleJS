@@ -368,17 +368,16 @@ test('Tween.loop returns this for chaining', () =>
     t.stop();
 });
 
-test('Calling Tween.then after Tween.loop overrides the loop (last call wins)', () =>
+test('Calling Tween.then after Tween.loop fires once the loop is done', () =>
 {
     let thenCalls = 0;
-    const calls = [];
-    new Tween((v) => { calls.push(v); }, 0, 10, 1)
-        .loop(5)
+    new Tween(() => {}, 0, 10, 1)
+        .loop(2)
         .then(() => thenCalls++);
-    tweenUpdate(1.0); // iteration 1 ends; then() fires its callback; loop chain is replaced
+    tweenUpdate(1.0); // iteration 1 ends, the loop goes on
+    assert.equal(thenCalls, 0);
+    tweenUpdate(1.0); // iteration 2 ends, the whole tween is done
     assert.equal(thenCalls, 1);
-    tweenUpdate(1.0); // no further iterations
-    assert.deepEqual(calls, [0, 10]);
 });
 
 test('Tween.pingPong(3) swaps start/end between iterations', () =>

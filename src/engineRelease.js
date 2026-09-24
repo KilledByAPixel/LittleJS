@@ -12,6 +12,7 @@
 
 let debugWatermark = 0;
 let debugKey = '';
+let debugClearCount = 0;
 const debug = 0;
 const debugOverlay = 0;
 const debugPhysics = 0;

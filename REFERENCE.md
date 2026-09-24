@@ -14,6 +14,7 @@ To start LittleJS, you need to create a few functions and pass them to engineIni
 ```javascript
 // Start up LittleJS engine with your callback functions
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
+// a rootElement keeps its inline styles and holds the canvas, which is still sized from the window
 
 // Engine globals
 engineName            // Name of the engine: 'LittleJS'
@@ -106,7 +107,7 @@ distanceWrap(valueA, valueB, wrapSize=1)      // Signed wrapped distance between
 lerpWrap(valueA, valueB, percent, wrapSize=1) // Linearly interpolates with wrapping
 distanceAngle(angleA, angleB)                 // Signed wrapped distance between angles
 lerpAngle(angleA, angleB, percent)            // Linearly interpolates with wrapping
-smoothStep(percent)                           // Applies smoothstep function
+smoothStep(percent)                           // Applies smoothstep function, percent clamped to 0-1
 isPowerOfTwo(value)                           // Checks if the value is a power of two
 nearestPowerOfTwo(value)                      // Returns the nearest power of two
 isOverlapping(pointA, sizeA, pointB, sizeB)   // Checks if bounding boxes overlap
@@ -136,6 +137,7 @@ noise2D(x, y)                         // Smooth 2D value noise (0 to 1)
 fetchJSON(url)                        // Fetch and parse a JSON file (async)
 shareURL(title, url, callback)        // Share a URL via the navigator share API
 readSaveData(saveName, defaultSaveData) // Read game save data from localStorage, default must be an object
+                                      // the result has the default's type in TypeScript
 writeSaveData(saveName, saveData)     // Write game save data to localStorage
 
 // Random functions
@@ -167,6 +169,7 @@ Vector2.dot(v)                            // Dot product with vector
 Vector2.cross(v)                          // Cross product with vector
 Vector2.reflect(normal, restitution=1)    // Reflect off a surface normal
 Vector2.floor()                           // Floor this vector
+Vector2.round()                           // Round this vector
 Vector2.abs()                             // Get copy with absolute value components
 Vector2.snap(grid)                        // Snap down to the grid, grid is steps per unit
 Vector2.mod(divisor=1)                    // Get modulo of each component
@@ -206,7 +209,8 @@ WHITE, BLACK, GRAY, CLEAR_WHITE, CLEAR_BLACK
 RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE, MAGENTA
 
 // Seeded random number generator
-RandomGenerator(seed)                     // Create a random number generator
+RandomGenerator(seed)                     // Create a random number generator, reseed by setting r.seed;
+                                          // a seed that is 0 as an integer uses the default seed
 RandomGenerator.float(valueA=1, valueB=0) // Random float between values
 RandomGenerator.int(valueA, valueB=0)     // Random integer between values
 RandomGenerator.sign()                    // Randomly either -1 or 1
@@ -307,8 +311,10 @@ await loadTexture(textureIndex, src) // Load an image after engineInit into text
 ImageFont(tileInfo)     // Create a font from a tile sheet
 ImageFont.drawText(text, pos, size=1, center=true, color=WHITE, useWebGL=glEnable, context)
                         // Draw text in world space, size is a character's size in world units, a number or vec2
+                        // stays upright when the camera turns, glyphs snap to whole pixels
 ImageFont.drawTextScreen(text, pos, size, center=true, color=WHITE, useWebGL=glEnable, context)
                         // Draw text in screen space, size in pixels is required
+                        // for both, center also centers the lines of multi-line text on pos, like the engine's drawText
 
 // Camera settings
 cameraPos = (0,0)        // Position of camera in world space
@@ -333,7 +339,7 @@ canvasClearColor = BLACK      // Color used to clear the canvas at start of fram
 canvasColorTiles = true       // Allow tiles to be tinted when drawn
 fontDefault = 'arial'         // Default font used for text rendering
 canvasPixelated = false       // Use nearest neighbor canvas scaling for more pixelated look
-tilesPixelated = true         // Disable filtering for crisper pixel art
+tilesPixelated = true         // Disable filtering for crisper pixel art, when false textures get mipmaps at any size
 showSplashScreen = false      // Show the LittleJS splash screen on startup
 glEnable = true               // Enable fast WebGL rendering
 
@@ -370,6 +376,7 @@ Sound(filename, randomness, range, taper, onloadCallback)  // Load a wave, mp3, 
 Sound.play(pos, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false) // Play a sound, returns SoundInstance
 Sound.playLoop(pos, volume=1, pitch=1, randomnessScale=1, paused=false) // Play on a loop, like play with loop on
 Sound.playMusic(volume=1, loop=true, paused=false)     // Play as music with looping
+                                    // (played before the first input, a sound waits and starts once audio runs)
 Sound.playNote(semitoneOffset, pos, volume=1)          // Play as note with a semitone offset
 Sound.getDuration()                                    // Get length of sound in seconds (0 if loading)
 Sound.isLoaded()                                       // Check if sound is fully loaded
@@ -380,6 +387,7 @@ Sound.output                                           // Optional node or effec
 SoundInstance.start(offset=0)     // Start or restart from a time in seconds, to seek
 SoundInstance.setVolume(volume, fadeTime=0) // Change volume during playback, fading to it if given a time
 SoundInstance.setRate(rate)       // Change speed and pitch during playback, like an engine loop following speed
+SoundInstance.setPan(pan)         // Change stereo pan during playback (-1 left to 1 right), to follow its source
 SoundInstance.stop(fadeTime=0)    // Stop with optional fade out
 SoundInstance.pause()             // Pause the sound
 SoundInstance.resume()            // Resume paused sound
@@ -411,9 +419,9 @@ audioContext            // The shared Web Audio context
 audioMasterGain         // Master gain node all sound routes through
 setAudioMasterEffect(input, output) // Route all sound through a node or effect, or a chain's first and last; no args to remove it
 audioIsRunning()        // Is the audio context running? (requires user interaction)
-playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate, gainNode, offset=0, onended, output) // Low level sample playback
+playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate, gainNode, offset=0, onended, output, pannerNode) // Low level sample playback
 createAudioBuffer(sampleChannels, sampleRate) // Copy arrays of samples into an audio buffer
-playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended, output) // Play an audio buffer, shareable between sounds
+playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended, output, pannerNode) // Play an audio buffer, shareable between sounds
 ```
 
 ## LittleJS Audio Effects
@@ -657,7 +665,9 @@ tileCollisionTest(pos, size=(0,0), object)          // Check if collision should
 tileCollisionRaycast(posStart, posEnd, object, normal, solidOnly=true) // Where the ray meets the first tile hit,
                                                     // or undefined; a normal vec2 passed in is set to the surface's
 tileCollisionLayers                                 // List of all tile collision layers
-tileLayersLoad(tileMapData, tileInfo)               // Load tile layers from exported data, Tiled flips and turns included
+tileLayersLoad(tileMapData, tileInfo)               // Load tile layers from exported data, Tiled flips and turns included;
+                                                    // groups are flattened and layer indices count that flat list,
+                                                    // hidden layers load with collision but are not drawn
 
 ```
 
@@ -688,7 +698,8 @@ tweenProperty(target, propertyPath, start, end, duration=1, options)
 // Tween via custom callback
 new Tween(callback, start=0, end=1, duration=1, options)
 Tween.setEase(easeFn)          // Set easing curve, returns this
-Tween.then(callback)           // Completion callback, returns this
+Tween.then(callback)           // Set onComplete, called after the last pass or loop, returns this
+Tween.onComplete               // Completion callback, kept by restart, not called by stop
 Tween.loop(count=Infinity)     // Repeat n times, returns this
 Tween.pingPong(count=Infinity) // Bounce between endpoints, returns this
 Tween.pause()                  // Pause this tween
@@ -757,6 +768,7 @@ pf.getNode(x, y)                     // Get PathFinderNode at tile coords
 - Standalone UI plugin with buttons, text, sliders, checkboxes, text input, video, and auto-layout
 - Auto-registers via `engineAddPlugin` — `new UISystemPlugin()` is all you need
 - Keyboard listener only attached while a UITextInput is being edited
+- A click on the UI, or a navigation press (Space, Enter, gamepad A) that activates it, is used up before objects update and `gameUpdatePost`, so read world clicks there; `gameUpdate` runs first and still sees it, so check `uiSystem.isMouseOverUI()` there
 - See `examples/uiSystem/` and `examples/shorts/uiSystem.js` for demos
 
 ```javascript
@@ -770,10 +782,11 @@ uiSystem.defaultHoverColor
 uiSystem.defaultFont
 uiSystem.nativeHeight                  // If set, UI coords are normalized to this height
 uiSystem.destroyObjects()              // Remove all UI elements
+uiSystem.isMouseOverUI()               // True if the mouse is over a visible hoverable UI object, or a confirm dialog is open
 uiSetDebug(enable)                     // Toggle uiDebug rendering of widget bounds
 
 // Confirm dialog
-uiSystem.showConfirmDialog(text='Are you sure?', yes, no, size, exitKey='Escape') // the exit key answers no
+uiSystem.showConfirmDialog(text='Are you sure?', yes, no, size, exitKey='Escape') // the exit key or gamepad B answers no, the layout follows size
 
 // Drawing helpers (use these instead of the engine's draw* during UI rendering)
 uiSystem.drawRect(pos, size, color, lineWidth, lineColor, cornerRadius, gradientColor, shadowColor, shadowBlur, shadowOffset)
@@ -1073,8 +1086,8 @@ render3D.onRenderTransparent = ()=> {} // after the transparent objects: billboa
                                        // outside of objects
 render3D.queueTransparent(pos, draw)   // sort your own transparent draw in with the rest, draws now when sorting is off
 render3D.isRendering render3D.shadowPass // read only: inside the 3D pass, and inside the shadow map part of it
-render3D.sortTransparent = true // transparent draws sort far to near so alpha and additive mix, false keeps object
-                                // order
+render3D.sortTransparent = true // transparent draws sort far to near by depth along the view, right for an
+                                // orthographic camera too, so alpha and additive mix; false keeps object order
 render3D.frustumCulling = true // drawMesh skips meshes whose bounding sphere is outside the frustum, the wedge of
                                // space the camera can see
 render3D.mipmaps = true        // textures sample through mipmaps so they do not shimmer far away, false keeps each
@@ -1115,8 +1128,9 @@ obj.setCollision(solids, isSolid)       // the same flags as in 2D, but the coll
                                         // a 3D object has no 2D size, so it is never an obstacle in a 2D scene;
                                         // both objects of a pair need solids, and a pair where neither one blocks
                                         // passes through, so movers hit the level without shoving each other;
-                                        // heavier objects move less, mass 0 stays put, velocities bounce by
-                                        // restitution; the tile and raycast halves are 2D only and default off here;
+                                        // heavier objects move less and each bounces by its own restitution; mass 0
+                                        // stays put and keeps its velocity, a wall the other bounces off;
+                                        // the tile and raycast halves are 2D only and default off here;
                                         // a sync2D object collides in 2D instead, against the 2D size, so set that
                                         // as well as size3D; a child rides with its parent so it sits solid collision
                                         // out, the same rule as in 2D
@@ -1203,7 +1217,7 @@ render3D.drawStripUnlit(points, normals, uvs, colors, tileInfo) // same with lig
 render3D.flush()                                          // draw what is pending, automatic when needed
 render3D.bake(()=> { ...draws... })                       // returns the strips drawn inside as a Mesh
 
-// Debug primitives - like debugRect and friends, drawn on top of the scene in debug builds
+// Debug primitives - like debugRect and friends, drawn on top of the scene in debug builds; debugClear clears them too
 debugBox3D(pos, size, color, time, rotation)
 debugSphere3D(pos, size, color, time)
 debugLine3D(posA, posB, color, width, time)
@@ -1264,7 +1278,9 @@ buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth) // size is the di
                                                                // coin on a table, so rotation3D.x = PI/2 stands it up
 buildLathe(profile, sides=16, smooth, capped=true) // spins an outline around the Y axis like a vase on a wheel; profile
                                                    // is [[radius, y], ...] bottom to top, a closed profile is a ring;
-                                                   // an uncapped end makes it doubleSided, so its inside shows
+                                                   // an uncapped end makes it doubleSided, so its inside shows;
+                                                   // smooth, an end on the axis within 45 degrees of level is a
+                                                   // round pole like a sphere's, a steeper one a point like a cone's
 buildRibbon(points, width=1, color, closed, up) // lit quads along a path, for roads and tracks; width and color one or
                                                 // per point; doubleSided, so it shows from below too
 buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth) // XZ plane; size and segments a number or vec2,
@@ -1310,13 +1326,14 @@ const model = await loadGLTF(url)   // a GLTFModel, in an async gameInit; or awa
 model.parts                          // one GLTFPart per primitive of every node: name, mesh in model space, color,
                                      // textureInfo when the material has one and WebGL is on, transparent for a
                                      // blending material or glass (KHR_materials_transmission), which comes in
-                                     // as a faint tint of its color
+                                     // as a faint tint of its color, and unlit for KHR_materials_unlit; the uvs
+                                     // are the set the texture's texCoord names, moved by KHR_texture_transform
 model.mesh, model.textureInfo        // everything as one Mesh tinted by its materials, and its texture when every
                                      // part uses the same one; a model mixing plain and textured parts, or using
-                                     // several textures, draws right through createObject
+                                     // several textures or unlit parts, draws right through createObject
 model.createObject(pos3D)            // a GLTFObject, an EngineObject3D with a child per part, each with its own
-                                     // texture and blending, so windows and other see through parts show; move
-                                     // and turn the root and the parts follow
+                                     // texture and blending, so windows and other see through parts show, and
+                                     // emissive 1 for an unlit one; move and turn the root and the parts follow
 model.animations                     // one GLTFAnimation each: name, duration in seconds, and the channels that
                                      // move, turn and scale nodes; model.getAnimation(nameOrNumber) finds one
 object.play(animation=0, loop=true, speed=1) // play one on a GLTFObject by name or number, its parts move with it;
@@ -1499,6 +1516,7 @@ obj.getMass() / getCenterOfMass() / getInertia()
 
 // Raycasting
 box2d.raycast(start, end)      // Returns the closest Box2dRaycastResult or undefined
+box2d.raycastAll(start, end)   // Every Box2dRaycastResult along the ray, nearest first
 
 // Joints — all extend Box2dJoint
 new Box2dTargetJoint(object, fixedObject, worldPos) // Drag toward a point (mouse-follow)

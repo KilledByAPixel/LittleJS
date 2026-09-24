@@ -112,7 +112,7 @@ test('debugShowErrors shows a promise rejected with nothing instead of throwing 
 {
     // debugShowErrors replaces console.assert and sets the window's error handlers, all put back after
     const savedAssert = console.assert, savedDocument = globalThis.document;
-    globalThis.document = { body: {} };
+    globalThis.document = { body: { style: {} } };
     globalThis.onunhandledrejection = globalThis.onerror = null;
     try
     {

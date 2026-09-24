@@ -100,17 +100,18 @@ class PathFinder
         {
             /** @property {Vector2} - Grid dimensions in tiles
              *  @type {Vector2} */
-            this.size = source.floor();
+            this.size = /** @type {Vector2} */ (source).floor();
             /** @property {TileCollisionLayer|undefined} - Tile layer driving walkability, if any
              *  @type {TileCollisionLayer|undefined} */
             this.tileLayer = undefined;
         }
         else
         {
-            ASSERT(source && isVector2(source.size) && typeof source.getCollisionData === 'function',
+            const layer = /** @type {TileCollisionLayer} */ (source);
+            ASSERT(layer && isVector2(layer.size) && typeof layer.getCollisionData === 'function',
                 'PathFinder requires a Vector2 size or a TileCollisionLayer');
-            this.size = source.size;
-            this.tileLayer = source;
+            this.size = layer.size;
+            this.tileLayer = layer;
         }
 
         // Tunables (public, freely re-assignable).
@@ -502,9 +503,9 @@ class PathFinder
      *  isLineClear permits, so the result can leave grid centers and cut
      *  cleanly across open spaces.
      *
-     *  Bails (leaves the path unchanged) if any node has nonzero cost — a
-     *  straight geometric shortcut can't be trusted to be the lowest-cost
-     *  route when cost-weighted terrain is in play.
+     *  A node with a cost is kept, and a shortcut only runs between clear
+     *  nodes: isLineClear passes only through clear cells, so a straight line
+     *  it accepts costs no more than the grid path it replaces.
      *
      *  Replaces the port of ShortenPath2() in pathFinding.cpp, which could
      *  add a segment it had not checked.
@@ -513,10 +514,6 @@ class PathFinder
     smoothPathStringPull(path)
     {
         if (path.length <= 2) return;
-        for (const n of path)
-        {
-            if (!n.isClear()) return;
-        }
 
         // Greedy: from each kept node, jump to the furthest node with a clear
         // line to it, or else the next node. Every segment is one isLineClear
@@ -527,8 +524,11 @@ class PathFinder
         for (let k = 0; k < original.length - 1;)
         {
             let j = original.length - 1;
-            while (j > k + 1 && !this.isLineClear(original[k].pos, original[j].pos))
-                --j;
+            if (original[k].isClear()) // isLineClear needs both ends clear
+                while (j > k + 1 && !(original[j].isClear() && this.isLineClear(original[k].pos, original[j].pos)))
+                    --j;
+            else
+                j = k + 1;
             path.push(original[j]);
             k = j;
         }

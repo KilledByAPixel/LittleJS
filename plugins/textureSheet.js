@@ -80,14 +80,15 @@ class TextureSheet
         ASSERT(isVector2(imageSize) && isVector2(frameSize), 'sizes must be vec2');
         ASSERT(frameSize.x > 0 && frameSize.y > 0, 'frame size must be positive');
 
-        if (isNumber(sourcePadding))
-            sourcePadding = vec2(sourcePadding);
-        ASSERT(isVector2(sourcePadding) && sourcePadding.x >= 0 && sourcePadding.y >= 0,
+        // a number pads both axes the same
+        const sourcePad = isNumber(sourcePadding) ?
+            vec2(/** @type {number} */ (sourcePadding)) : /** @type {Vector2} */ (sourcePadding);
+        ASSERT(isVector2(sourcePad) && sourcePad.x >= 0 && sourcePad.y >= 0,
             'sourcePadding must be a number or vec2 >= 0');
 
         // the source may have its own padding baked in around each frame
-        const sourceCellWidth = frameSize.x + sourcePadding.x*2;
-        const sourceCellHeight = frameSize.y + sourcePadding.y*2;
+        const sourceCellWidth = frameSize.x + sourcePad.x*2;
+        const sourceCellHeight = frameSize.y + sourcePad.y*2;
         ASSERT(imageSize.x % sourceCellWidth === 0 && imageSize.y % sourceCellHeight === 0,
             'image size must be a multiple of the padded frame size');
 
@@ -137,14 +138,15 @@ class TextureSheet
     {
         ASSERT(!!this.context, 'texture sheet has no canvas');
 
-        if (isNumber(sourcePadding))
-            sourcePadding = vec2(sourcePadding);
+        // a number pads both axes the same
+        const sourcePad = isNumber(sourcePadding) ?
+            vec2(/** @type {number} */ (sourcePadding)) : /** @type {Vector2} */ (sourcePadding);
 
         // copy frames in order, reading the source left to right, top to bottom
         // the destination wraps at tileInfo.columns which may be narrower than the source
         const frameSize = tileInfo.size;
-        const sourceCellWidth = frameSize.x + sourcePadding.x*2;
-        const sourceCellHeight = frameSize.y + sourcePadding.y*2;
+        const sourceCellWidth = frameSize.x + sourcePad.x*2;
+        const sourceCellHeight = frameSize.y + sourcePad.y*2;
         // whole frames only as tryAdd packed them, a fractional count would never end the loop
         const sourceColumns = image.width / sourceCellWidth | 0;
         const frameCount = sourceColumns * (image.height / sourceCellHeight | 0);
@@ -153,8 +155,8 @@ class TextureSheet
         const cellHeight = frameSize.y + tileInfo.padding*2;
         for (let i = frameCount; i--;)
         {
-            const sourceX = (i % sourceColumns) * sourceCellWidth + sourcePadding.x;
-            const sourceY = (i / sourceColumns | 0) * sourceCellHeight + sourcePadding.y;
+            const sourceX = (i % sourceColumns) * sourceCellWidth + sourcePad.x;
+            const sourceY = (i / sourceColumns | 0) * sourceCellHeight + sourcePad.y;
             this.context.drawImage(image,
                 sourceX, sourceY, frameSize.x, frameSize.y,
                 tileInfo.pos.x + (i % columns) * cellWidth,
@@ -203,7 +205,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
     ASSERT(engineInitialized || headlessMode, 'call loadSprite after engineInit, e.g. in gameInit');
 
     if (isNumber(frameSize))
-        frameSize = vec2(frameSize);
+        frameSize = vec2(/** @type {number} */ (frameSize));
 
     // start with an empty tile that gets filled in when the image loads
     const tileInfo = new TileInfo(vec2(), vec2(), undefined, padding, 0);
@@ -274,6 +276,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
     ASSERT(isNumber(padding), 'padding must be a number');
     ASSERT(engineInitialized || headlessMode, 'call loadAtlas after engineInit, e.g. in gameInit');
 
+    /** @type {Object<string, TileInfo>} */
     const atlas = {};
     if (headlessMode) return atlas;
 

@@ -184,11 +184,15 @@ function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*P
  *  @memberof Math */
 function lerpAngle(angleA, angleB, percent) { return lerpWrap(angleA, angleB, percent, 2*PI); }
 
-/** Applies smoothstep function to the percentage value
+/** Applies smoothstep function to the percentage value, clamped between 0 and 1
  *  @param {number} percent
  *  @return {number}
  *  @memberof Math */
-function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
+function smoothStep(percent)
+{
+    percent = clamp(percent);
+    return percent * percent * (3 - 2 * percent);
+}
 
 /** Checks if the value passed in is a power of two
  *  @param {number} value
@@ -537,6 +541,8 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 /**
  * Seeded random number generator
  * - Can be used to create a deterministic random number sequence
+ * - The seed works as a 32 bit integer, and one that is 0 as an integer
+ *   (0, a fraction between -1 and 1, or a multiple of 2**32) uses the default seed
  * @memberof Engine
  * @example
  * let r = new RandomGenerator(123); // random number generator with seed 123
@@ -548,12 +554,10 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 class RandomGenerator
 {
     /** Create a random number generator with the seed passed in
-     *  @param {number} [seed] - Starting seed or engine default seed */
+     *  @param {number} [seed] - Starting seed, 0 as an integer uses the default seed */
     constructor(seed = 123456789)
     {
-        // xorshift works on the seed as a 32 bit integer and stays at 0 once there, so rand() or 2**32 would stick too
-        ASSERT((seed|0) !== 0, 'RandomGenerator seed must be a non-zero integer (xorshift is fixed at 0)');
-        /** @property {number} - random seed */
+        /** @property {number} - random seed, set it to reseed */
         this.seed = seed;
     }
 
@@ -563,6 +567,9 @@ class RandomGenerator
     *  @return {number} */
     float(valueA=1, valueB=0)
     {
+        // xorshift stays at 0 once there, so a seed that is 0 as an integer uses the default seed
+        this.seed = this.seed|0 || 123456789;
+
         // xorshift algorithm
         this.seed ^= this.seed << 13;
         this.seed ^= this.seed >>> 17;
@@ -853,6 +860,10 @@ class Vector2
     /** Returns a copy of this vector with each axis floored
      * @return {Vector2} */
     floor() { return new Vector2(floor(this.x), floor(this.y)); }
+
+    /** Returns a copy of this vector with each axis rounded
+     * @return {Vector2} */
+    round() { return new Vector2(round(this.x), round(this.y)); }
 
     /** Returns a copy of this vector snapped down to a grid. Note that `grid` is
      *  the number of snap steps per unit (so `grid=2` snaps to halves and

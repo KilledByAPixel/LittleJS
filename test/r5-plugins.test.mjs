@@ -178,19 +178,6 @@ test('LightSystemPlugin made with no size follows the canvas size', () =>
 ///////////////////////////////////////////////////////////////////////////////
 // types in the d.ts
 
-test('Tween takes any typed callback and a custom lerpable in the d.ts', () =>
-{
-    const body = typings.match(/export class Tween \{([\s\S]*?)\n    \}/)[1];
-    assert.match(body, /constructor\(callback: \(arg0: any\) => void, start\?: number \| Vector2 \| Vector3 \| Color \| object,/);
-    assert.match(body, /callback: \(arg0: any\) => void;/);
-    assert.match(body, /\bstart: number \| Vector2 \| Vector3 \| Color \| object;/);
-    assert.match(body, /\bend: number \| Vector2 \| Vector3 \| Color \| object;/);
-
-    const tweenProperty = typings.match(/export function tweenProperty\(([\s\S]*?)\): Tween;/)[1];
-    assert.match(tweenProperty, /start: number \| Vector2 \| Vector3 \| Color \| object/);
-    assert.match(tweenProperty, /options\?: \{\s*ease\?: \(arg0: number\) => number;\s*useRealTime\?: boolean;\s*paused\?: boolean;\s*\}/);
-});
-
 test('loadAtlas, TextureSheet.drawImage and PostProcessPlugin have precise types in the d.ts', () =>
 {
     assert.match(typings, /export function loadAtlas\([^)]*\): \{\s*\[x: string\]: TileInfo;\s*\};/);

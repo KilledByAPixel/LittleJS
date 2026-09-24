@@ -171,6 +171,8 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
  *  @param {GameCallback} [gameRenderPost] - Called after objects are rendered, use for drawing UI/overlays
  *  @param {Array<string>} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png'])
  *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
+ *    It keeps its own inline styles and the canvas centers inside it, but the canvas is still sized from the window,
+ *    so set canvasFixedSize or canvasMaxSize to fit a smaller element
  *  @example
  *  // Basic engine startup
  *  engineInit(
@@ -362,15 +364,19 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     glInit(rootElement);
 
     // setup html
-    const styleRoot =
+    let styleRoot =
         'margin:0;' +                 // fill the window
         'overflow:hidden;' +          // no scroll bars
         'background:#000;' +          // set background color
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
         'touch-action:none;' +        // prevent mobile pinch to resize
-        '-webkit-touch-callout:none'; // compatibility for ios
-    rootElement.style.cssText = styleRoot;
+        '-webkit-touch-callout:none;'; // compatibility for ios
+    // the canvases center on a root element with a height of its own, not the page; one sized only by its
+    // children has none, since the canvases are placed apart from it, and would clip them all away
+    if (rootElement !== document.body && rootElement.clientHeight && getComputedStyle(rootElement).position === 'static')
+        styleRoot += 'position:relative;';
+    rootElement.style.cssText = styleRoot + rootElement.style.cssText; // its own inline styles come after and win
     mainCanvas = rootElement.appendChild(document.createElement('canvas'));
     drawContext = mainContext = mainCanvas.getContext('2d');
 
@@ -397,6 +403,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     workReadCanvas = workReadContext.canvas;
 
     // create promises for loading images
+    /** @type {Array<Promise<any>>} */
     const promises = imageSources.map((src, i)=> loadTexture(i, src));
 
     // no images to load
@@ -409,7 +416,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     if (showSplashScreen)
     {
         // draw splash screen
-        promises.push(new Promise(resolve =>
+        /** @type {Promise<void>} */
+        const splash = new Promise(resolve =>
         {
             let t = 0;
             updateSplash();
@@ -419,7 +427,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 drawEngineLogo(t+=.01);
                 t>1 ? resolve() : setTimeout(updateSplash, 16);
             }
-        }));
+        });
+        promises.push(splash);
     }
 
     // wait for all the promises to finish
@@ -648,9 +657,9 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
     else if (size === undefined || size instanceof Vector2)
     {
         // bounding box test, a point when there is no size
-        size ??= vec2();
+        const boxSize = size instanceof Vector2 ? size : vec2();
         for (const o of objects)
-            o.destroyed || o.isOverlapping(pos, size) && collectedObjects.push(o);
+            o.destroyed || o.isOverlapping(pos, boxSize) && collectedObjects.push(o);
     }
     else
     {

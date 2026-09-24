@@ -57,7 +57,7 @@ test('a transparent InstancedMesh3D is queued with the other transparent draws, 
     {
         set.render3D();
         assert.equal(render3D.transparentQueue.length, 1, 'queued for sorting');
-        near(render3D.transparentQueue[0].distance, vec3(3, 0, 0).distanceSquared(render3D.camera.pos), 'sorted by the object position');
+        near(render3D.transparentQueue[0].distance, vec3(3, 0, 0).subtract(render3D.camera.pos).dot(render3D.cameraForward), 'sorted by the object position');
     }
     finally
     {

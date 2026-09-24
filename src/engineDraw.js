@@ -1637,10 +1637,11 @@ class ImageFont
     }
 
     /** Draw text in world space using the image font
+     *  - The text stays upright and ignores cameraAngle, each glyph is snapped to whole screen pixels to keep it crisp
      *  @param {string|number} text
      *  @param {Vector2} pos
      *  @param {Vector2|number} [size]
-     *  @param {boolean} [center=true]
+     *  @param {boolean} [center=true] - center each line on pos, and the lines of multi-line text around it
      *  @param {Color} [color=WHITE]
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] 
@@ -1665,7 +1666,7 @@ class ImageFont
      *  @param {string|number} text
      *  @param {Vector2} pos
      *  @param {Vector2|number} size
-     *  @param {boolean} [center]
+     *  @param {boolean} [center] - center each line on pos, and the lines of multi-line text around it
      *  @param {Color} [color=WHITE]
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -1678,7 +1679,7 @@ class ImageFont
         ASSERT(isColor(color), 'color must be a color');
 
         // if size is a number, make it a vector
-        size = typeof size === 'number' ? new Vector2(size, size) : size;
+        const glyphSize = typeof size === 'number' ? new Vector2(size, size) : size;
 
         // precache objects for drawing, a copy of the tile info each glyph moves, the font's own stays put
         const drawPos = new Vector2;
@@ -1689,10 +1690,12 @@ class ImageFont
         const cols = tileInfo.textureInfo.size.x / sizePaddedX |0;
         const firstIndex = ((fontTile.pos.y - padding) / sizePaddedY |0) * cols + ((fontTile.pos.x - padding) / sizePaddedX |0);
 
-        // draw each line of text
-        (text+'').split('\n').forEach((line, j)=>
+        // draw each line of text, centered vertically like drawTextScreen when center is set
+        const lines = (text+'').split('\n');
+        const centerOffsetY = center ? (lines.length-1) * glyphSize.y / 2 : 0;
+        lines.forEach((line, j)=>
         {
-            const centerOffset = center ? (line.length-1) * size.x / 2 : 0;
+            const centerOffset = center ? (line.length-1) * glyphSize.x / 2 : 0;
             for (let i=line.length; i--;)
             {
                 // get the character index
@@ -1713,9 +1716,9 @@ class ImageFont
                 // no pixel center inside it and is not rasterized at all
                 // ceil picks the nearest aligned position, breaking ties
                 // downward to match how this used to truncate
-                drawPos.x = ceil(pos.x + i * size.x - centerOffset - size.x/2) + size.x/2 - .5;
-                drawPos.y = ceil(pos.y + j * size.y - size.y/2) + size.y/2 - .5;
-                drawTile(drawPos, size, tileInfo, color, 0, false, undefined, useWebGL, true, context);
+                drawPos.x = ceil(pos.x + i * glyphSize.x - centerOffset - glyphSize.x/2) + glyphSize.x/2 - .5;
+                drawPos.y = ceil(pos.y + j * glyphSize.y - centerOffsetY - glyphSize.y/2) + glyphSize.y/2 - .5;
+                drawTile(drawPos, glyphSize, tileInfo, color, 0, false, undefined, useWebGL, true, context);
             }
         });
     }

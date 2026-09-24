@@ -54,7 +54,7 @@ const debugTextShadowColor = '#000', debugTextShadowBlur = 9;
 function debugTextShadow(context) { context.shadowColor = debugTextShadowColor; context.shadowBlur = debugTextShadowBlur; }
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugSound = false, debugTiles = 0, debugTakeScreenshot;
+let debugPrimitives = [], debugClearCount = 0, debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugSound = false, debugTiles = 0, debugTakeScreenshot;
 // debugTiles is 0 for off, 1 for every layer, and 2 on for one layer at a time, see debugTileLayersSelected
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -238,7 +238,7 @@ function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monosp
 
 /** Clear all debug primitives in the list
  *  @memberof Debug */
-function debugClear() { debugPrimitives = []; }
+function debugClear() { debugPrimitives = []; ++debugClearCount; } // the count lets plugins clear their own
 
 /** Trigger debug system to take a screenshot
  *  @memberof Debug */
@@ -253,7 +253,7 @@ function debugShowErrors()
     const showError = (message)=>
     {
         // replace entire page with error message
-        document.body.style = 'background-color:#111;margin:8px';
+        document.body.style.cssText = 'background-color:#111;margin:8px';
         document.body.innerHTML = `<pre style=color:#f00;font-size:28px;white-space:pre-wrap>` + message;
     }
     

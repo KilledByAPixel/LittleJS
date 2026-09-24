@@ -22,8 +22,8 @@ test('the weld joint sets and reads its damping, and the wheel joint its spring 
     const a = new Box2dStaticObject(vec2()), b = new Box2dObject(vec2(0, 1));
     a.addBox(); b.addBox();
     const weld = new Box2dWeldJoint(a, b, vec2(0, .5));
-    weld.setSpringDampingRatio(.5);
-    assert.ok(Math.abs(weld.getSpringDampingRatio() - .5) < 1e-6);
+    weld.setDampingRatio(.5);
+    assert.ok(Math.abs(weld.getDampingRatio() - .5) < 1e-6);
     const wheel = new Box2dWheelJoint(a, b, vec2(0, .5));
     wheel.setSpringDampingRatio(.25);
     assert.ok(Math.abs(wheel.getSpringDampingRatio() - .25) < 1e-6);
@@ -76,8 +76,7 @@ test('getJointList returns the joints, and the queries reuse their native object
     const joint = new Box2dRevoluteJoint(a, b, vec2(20, .5));
     const joints = b.getJointList();
     assert.equal(joints.length, 1);
-    assert.equal(typeof joints[0].GetType, 'function', 'a joint, not a joint edge');
-    assert.equal(instance.getPointer(joints[0]), instance.getPointer(joint.box2dJoint));
+    assert.equal(joints[0], joint, 'the Box2dJoint, not a joint edge or the raw joint');
 
     const count = (type)=> Object.keys(instance.getCache(type)).length;
     const types = [instance.JSQueryCallback, instance.JSRayCastCallback, instance.b2AABB];

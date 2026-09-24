@@ -204,9 +204,11 @@ function shareURL(title, url, callback)
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Read save data from local storage
+ *  - The result has the type of defaultSaveData, or any when there is none
+ *  @template {Object<string, any>} [T=any]
  *  @param {string} saveName - unique name for the game/save
- *  @param {Object} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
- *  @return {Object}
+ *  @param {T} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
+ *  @return {T}
  *  @memberof Utilities */
 function readSaveData(saveName, defaultSaveData)
 {
@@ -230,12 +232,12 @@ function readSaveData(saveName, defaultSaveData)
         }
     }
     catch { LOG('readSaveData: localStorage unavailable — using defaults'); }
-    return { ...defaultSaveData, ...loadedData };
+    return { .../** @type {object} */ (defaultSaveData), ...loadedData };
 }
 
 /** Write save data to local storage
  *  @param {string} saveName - unique name for the game/save
- *  @param {Object} saveData - object containing data to be saved
+ *  @param {object} saveData - object containing data to be saved
  *  @memberof Utilities */
 function writeSaveData(saveName, saveData)
 {

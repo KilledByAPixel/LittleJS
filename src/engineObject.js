@@ -501,7 +501,7 @@ class EngineObject
         ASSERT(!child.parent && !this.children.includes(child));
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         ASSERT(!child.destroyed, 'cannot add a destroyed child');
-        for (let p = this; p; p = p.parent)
+        for (let p = /** @type {EngineObject} */ (this); p; p = p.parent)
             ASSERT(p !== child, 'cannot add an object as a child of itself or of its own child');
         this.children.push(child);
         child.parent = this;

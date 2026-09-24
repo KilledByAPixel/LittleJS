@@ -120,6 +120,7 @@ function gameInit()
     render3D.shadows = true;
     render3D.shadowRange = levelSize + 4;
     render3D.shadowCenter = vec3();
+    render3D.onRenderTransparent = drawHover;
 
     // angled orthographic camera looking down at the board
     render3D.camera.pos = vec3(7,8,7);
@@ -165,12 +166,15 @@ function gameUpdate()
     }
 }
 
-function gameRender()
+function drawHover()
 {
-    // outline the hovered cell with a debug primitive
-    if (hoverCell)
-        debugBox3D(cellPos(hoverCell.x, hoverCell.y, .03),
-            vec3(.95,.05,.95), WHITE);
+    // outline the hovered cell, a path that ends where it starts is a loop
+    if (!hoverCell)
+        return;
+    const p = cellPos(hoverCell.x, hoverCell.y, .08);
+    const corner = (x, z)=> p.add(vec3(x*.47, 0, z*.47));
+    const loop = [corner(-1,-1), corner(1,-1), corner(1,1), corner(-1,1)];
+    render3D.drawRibbon([...loop, loop[0]], .05);
 }
 
 function gameRenderPost()

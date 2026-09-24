@@ -745,14 +745,20 @@ class Box2dObject extends EngineObject
      *  @return {boolean} */
     hasJoints() { return !box2d.isNull(this.body.GetJointList()); }
     
-    /** Get list of joints for this object, the Box2D joints
-     *  @return {Array<Object>} */
+    /** Get list of joints for this object, the Box2dJoint for each one made through LittleJS,
+     *  and the Box2D joint, cast to its type, for any made on the world directly
+     *  @return {Array<Box2dJoint|Object>} */
     getJointList()
     {
         // the body keeps a list of edges, each holding a joint and the next edge
         const joints = [];
         for (let edge=this.body.GetJointList(); !box2d.isNull(edge); edge = edge.get_next())
-            joints.push(edge.get_joint());
+        {
+            const joint = edge.get_joint(), wrapper = box2dJoints.get(box2d.instance.getPointer(joint));
+            if (wrapper && !wrapper.box2dJoint)
+                continue; // destroyed in a contact callback, Box2D lets go of it once the step is done
+            joints.push(wrapper || box2d.castJointObject(joint));
+        }
         return joints;
     }
 }
@@ -1598,11 +1604,11 @@ class Box2dWeldJoint extends Box2dJoint
 
     /** Set the damping ratio
      *  @param {number} ratio */
-    setSpringDampingRatio(ratio) { return this.box2dJoint.SetDampingRatio(ratio); } // the weld joint's own name for it
+    setDampingRatio(ratio) { return this.box2dJoint.SetDampingRatio(ratio); }
 
     /** Get the damping ratio
      *  @return {number} */
-    getSpringDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
+    getDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1897,7 +1903,7 @@ class Box2dPlugin
     ///////////////////////////////////////////////////////////////////////////////
     // raycasting and querying
 
-    /** raycast and return a list of all the results
+    /** raycast and return a list of all the results, nearest first
      *  @param {Vector2} start
      *  @param {Vector2} end
      *  @return {Array<Box2dRaycastResult>} */
@@ -1925,6 +1931,7 @@ class Box2dPlugin
 
         const raycastResults = [];
         box2d.world.RayCast(raycastCallback, box2dTemp(start), box2dTemp(end, 1));
+        raycastResults.sort((a,b)=> a.fraction - b.fraction); // Box2D reports them in its tree's order
         debugRaycast && debugLine(start, end, raycastResults.length ? '#f00' : '#00f', .02);
         return raycastResults;
     }
@@ -1935,10 +1942,7 @@ class Box2dPlugin
      *  @return {Box2dRaycastResult|undefined} */
     raycast(start, end)
     {
-        const raycastResults = box2d.raycastAll(start, end);
-        if (!raycastResults.length)
-            return undefined;
-        return raycastResults.reduce((a,b)=>a.fraction < b.fraction ? a : b);
+        return box2d.raycastAll(start, end)[0];
     }
 
     /** box aabb cast and return all the objects
@@ -2193,6 +2197,7 @@ class Box2dPlugin
 async function box2dInit()
 {
     // load box2d
+    // @ts-ignore - Box2D is the global that box2d.wasm.js defines
     new Box2dPlugin(await Box2D());
     setupDebugDraw();
     engineAddPlugin(box2dUpdate, box2dRender);

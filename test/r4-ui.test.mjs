@@ -345,5 +345,5 @@ test('UI and tween types come out typed in the d.ts', () =>
     assert.match(object, /update\(\): void;/);
     assert.match(object, /align: ['"]left['"] \| ['"]center['"] \| ['"]right['"];/);
     assert.doesNotMatch(text, /gradientColor: any/);
-    assert.match(body('Tween'), /start: [^;]*Vector3[^;]*;/);
+    assert.match(dts.match(/export class Tween<T = any> \{([\s\S]*?)\n    \}/)[1], /\bstart: T;/);
 });

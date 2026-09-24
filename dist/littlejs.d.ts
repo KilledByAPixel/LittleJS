@@ -141,6 +141,8 @@ declare module "littlejsengine" {
      *  @param {GameCallback} [gameRenderPost] - Called after objects are rendered, use for drawing UI/overlays
      *  @param {Array<string>} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png'])
      *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
+     *    It keeps its own inline styles and the canvas centers inside it, but the canvas is still sized from the window,
+     *    so set canvasFixedSize or canvasMaxSize to fit a smaller element
      *  @example
      *  // Basic engine startup
      *  engineInit(
@@ -1086,7 +1088,7 @@ declare module "littlejsengine" {
      *  @return {number}
      *  @memberof Math */
     export function percentLerp(value: number, percentA: number, percentB: number, lerpA: number, lerpB: number): number;
-    /** Applies smoothstep function to the percentage value
+    /** Applies smoothstep function to the percentage value, clamped between 0 and 1
      *  @param {number} percent
      *  @return {number}
      *  @memberof Math */
@@ -1209,16 +1211,20 @@ declare module "littlejsengine" {
      *  @memberof Utilities */
     export function shareURL(title: string, url: string, callback?: Function): void;
     /** Read save data from local storage
+     *  - The result has the type of defaultSaveData, or any when there is none
+     *  @template {Object<string, any>} [T=any]
      *  @param {string} saveName - unique name for the game/save
-     *  @param {Object} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
-     *  @return {Object}
+     *  @param {T} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
+     *  @return {T}
      *  @memberof Utilities */
-    export function readSaveData(saveName: string, defaultSaveData?: any): any;
+    export function readSaveData<T extends {
+        [x: string]: any;
+    } = any>(saveName: string, defaultSaveData?: T): T;
     /** Write save data to local storage
      *  @param {string} saveName - unique name for the game/save
-     *  @param {Object} saveData - object containing data to be saved
+     *  @param {object} saveData - object containing data to be saved
      *  @memberof Utilities */
-    export function writeSaveData(saveName: string, saveData: any): void;
+    export function writeSaveData(saveName: string, saveData: object): void;
     /** 1D value noise — returns a smooth value in [0, 1] for any real x.
      *  Integer inputs land on deterministic lattice values; non-integer inputs
      *  are interpolated with smoothStep for C1 continuity.
@@ -1277,6 +1283,8 @@ declare module "littlejsengine" {
     /**
      * Seeded random number generator
      * - Can be used to create a deterministic random number sequence
+     * - The seed works as a 32 bit integer, and one that is 0 as an integer
+     *   (0, a fraction between -1 and 1, or a multiple of 2**32) uses the default seed
      * @memberof Engine
      * @example
      * let r = new RandomGenerator(123); // random number generator with seed 123
@@ -1287,9 +1295,9 @@ declare module "littlejsengine" {
      */
     export class RandomGenerator {
         /** Create a random number generator with the seed passed in
-         *  @param {number} [seed] - Starting seed or engine default seed */
+         *  @param {number} [seed] - Starting seed, 0 as an integer uses the default seed */
         constructor(seed?: number);
-        /** @property {number} - random seed */
+        /** @property {number} - random seed, set it to reseed */
         seed: number;
         /** Returns a seeded random value between the two values passed in
         *  @param {number} [valueA]
@@ -1447,6 +1455,9 @@ declare module "littlejsengine" {
         /** Returns a copy of this vector with each axis floored
          * @return {Vector2} */
         floor(): Vector2;
+        /** Returns a copy of this vector with each axis rounded
+         * @return {Vector2} */
+        round(): Vector2;
         /** Returns a copy of this vector snapped down to a grid. Note that `grid` is
          *  the number of snap steps per unit (so `grid=2` snaps to halves and
          *  `grid=0.5` snaps to twos), not the cell size.
@@ -2329,10 +2340,11 @@ declare module "littlejsengine" {
         /** @property {TileInfo} - Tile info for the font */
         tileInfo: TileInfo;
         /** Draw text in world space using the image font
+         *  - The text stays upright and ignores cameraAngle, each glyph is snapped to whole screen pixels to keep it crisp
          *  @param {string|number} text
          *  @param {Vector2} pos
          *  @param {Vector2|number} [size]
-         *  @param {boolean} [center=true]
+         *  @param {boolean} [center=true] - center each line on pos, and the lines of multi-line text around it
          *  @param {Color} [color=WHITE]
          *  @param {boolean} [useWebGL=glEnable]
          *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -2342,7 +2354,7 @@ declare module "littlejsengine" {
          *  @param {string|number} text
          *  @param {Vector2} pos
          *  @param {Vector2|number} size
-         *  @param {boolean} [center]
+         *  @param {boolean} [center] - center each line on pos, and the lines of multi-line text around it
          *  @param {Color} [color=WHITE]
          *  @param {boolean} [useWebGL=glEnable]
          *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -2664,7 +2676,8 @@ declare module "littlejsengine" {
      *  @memberof Input */
     export const isTouchDevice: boolean;
     /** Prevents input continuing to the default browser handling
-     *  This is useful to disable for html menus so the browser can handle input normally
+     *  This is useful to disable for html menus so the browser can handle input normally,
+     *  the right click menu included; over an html text field that menu always shows
      *  @param {boolean} [preventDefault]
      *  @memberof Input */
     export function setInputPreventDefault(preventDefault?: boolean): void;
@@ -2818,7 +2831,7 @@ declare module "littlejsengine" {
          */
         /** Create a sound object and cache the audio for later use
          *  @param {string|Array} [asset] - Filename of audio file or zzfx array
-         *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds the zzfx default is used if undefined
+         *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
          *  @param {number} [range=soundDefaultRange] - World space max range of sound
          *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
          *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
@@ -2862,7 +2875,9 @@ declare module "littlejsengine" {
          *  Does nothing if there is already a buffer or no samples to build one from */
         buildSampleBuffer(): void;
         /** Play the sound
-         *  Sounds may not play until a user interaction occurs
+         *  - Browsers hold audio until the first user input, a sound played before it returns a paused instance
+         *    that starts on its own once audio runs, unless paused or stopped first; a one shot that would have
+         *    ended by then is dropped
          *  @param {Vector2} [pos] - World space position to play the sound if any
          *  @param {number}  [volume] - How much to scale volume by
          *  @param {number}  [pitch] - How much to scale pitch by
@@ -2953,6 +2968,9 @@ declare module "littlejsengine" {
         /** @property {GainNode|undefined} - Gain node for the sound, undefined once it is stopped or paused
          *  @type {GainNode|undefined} */
         gainNode: GainNode | undefined;
+        /** @property {StereoPannerNode|undefined} - Stereo panner for the sound, undefined once it is stopped or paused
+         *  @type {StereoPannerNode|undefined} */
+        pannerNode: StereoPannerNode | undefined;
         /** @property {AudioBufferSourceNode|undefined} - Source node of the audio, undefined while not playing
          *  @type {AudioBufferSourceNode|undefined} */
         source: AudioBufferSourceNode | undefined;
@@ -2971,6 +2989,10 @@ declare module "littlejsengine" {
          *  @param {number} volume
          *  @param {number} [fadeTime] - Seconds to fade to the new volume over */
         setVolume(volume: number, fadeTime?: number): void;
+        /** Set the stereo pan of this sound instance, while it plays too
+         *  - A looping sound can follow its source across the screen this way
+         *  @param {number} pan - -1 is left, 0 is center, 1 is right, clamped to that range */
+        setPan(pan: number): void;
         /** Set the playback rate of this sound instance, its speed and pitch, while it plays
          *  - A looping sound can follow something smoothly this way, like an engine with the speed
          *  - A rate of 0 freezes the sound in place, and it carries on from there when the rate comes back
@@ -3039,9 +3061,10 @@ declare module "littlejsengine" {
      *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
      *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
      *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
+     *  @param {StereoPannerNode} [pannerNode] - Optional stereo panner for panning while playing, its pan already set (disconnected when the sound ends)
      *  @return {AudioBufferSourceNode|undefined} - The source node of the sound played, undefined if play fails
      *  @memberof Audio */
-    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback, output?: AudioNode | AudioEffectNodes): AudioBufferSourceNode | undefined;
+    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback, output?: AudioNode | AudioEffectNodes, pannerNode?: StereoPannerNode): AudioBufferSourceNode | undefined;
     /** Play an audio buffer with given settings
      *  The buffer can be shared by any number of sounds playing at once
      *  @param {AudioBuffer} buffer - The audio buffer to play
@@ -3053,9 +3076,10 @@ declare module "littlejsengine" {
      *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
      *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
      *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
+     *  @param {StereoPannerNode} [pannerNode] - Optional stereo panner for panning while playing, its pan already set (disconnected when the sound ends)
      *  @return {AudioBufferSourceNode|undefined} - The source node of the sound played, undefined if play fails
      *  @memberof Audio */
-    export function playAudioBuffer(buffer: AudioBuffer, volume?: number, rate?: number, pan?: number, loop?: boolean, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback, output?: AudioNode | AudioEffectNodes): AudioBufferSourceNode | undefined;
+    export function playAudioBuffer(buffer: AudioBuffer, volume?: number, rate?: number, pan?: number, loop?: boolean, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback, output?: AudioNode | AudioEffectNodes, pannerNode?: StereoPannerNode): AudioBufferSourceNode | undefined;
     /** Copy arrays of samples into a new audio buffer
      *  @param {Array}  sampleChannels - Array of arrays of samples (for stereo playback)
      *  @param {number} [sampleRate=44100] - Sample rate for the sound
@@ -3365,6 +3389,12 @@ declare module "littlejsengine" {
     /**
      * Load tile layers from exported data
      * - Tiled maps come in as they are, flipped and turned tiles included
+     * - Group layers are flattened in order, each replaced by the layers inside it, so the layer indices
+     *   (collisionLayer and the returned array) count that flattened list; a group's tint, opacity and
+     *   visibility carry to the layers inside it
+     * - An object or image layer keeps its index, with its slot in the returned array left empty
+     * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
+     *   is a no-op, delete that and call redraw() to show it
      *  @param {Object}   tileMapData - Level data from exported data
      *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
      *  @param {number}   [renderOrder] - Render order of the top layer
@@ -4613,6 +4643,12 @@ declare module "littlejsengine" {
         /** Get all navigable UI objects sorted by navigationIndex
          *  @return {Array<UIObject>} */
         getNavigableObjects(): Array<UIObject>;
+        /** Check if the mouse is over a visible UI object that can be hovered, or anywhere while the
+         *  confirm dialog is open, so a game can leave world clicks on the UI alone, on touch too.
+         *  The UI uses up a click before objects update and gameUpdatePost, so read world clicks there,
+         *  or check this in gameUpdate, which runs first. Positions are from the last UI update.
+         *  @return {boolean} */
+        isMouseOverUI(): boolean;
         /** Get navigation direction from gamepad or keyboard
          *  @return {number} */
         getNavigationDirection(): number;
@@ -4626,9 +4662,9 @@ declare module "littlejsengine" {
          *  Centers the dialog on the screen with darkened background
          *  @param {string} [text] - The message to display
          *  @param {Function} [yesCallback] - Called when Yes is clicked
-         *  @param {Function} [noCallback] - Called when No is clicked, or the exit key closes it
-         *  @param {Vector2} [size] - Size of the confirmation dialog
-         *  @param {string} [exitKey] - Key that closes the menu as No
+         *  @param {Function} [noCallback] - Called when No is clicked, or the exit key or gamepad B closes it
+         *  @param {Vector2} [size] - Size of the confirmation dialog, the title and buttons are placed by it
+         *  @param {string} [exitKey] - Key that closes the menu as No, gamepad B (button 1) does too
          *  @return {UIObject} The confirmation menu object
          */
         showConfirmDialog(text?: string, yesCallback?: Function, noCallback?: Function, size?: Vector2, exitKey?: string): UIObject;
@@ -5083,7 +5119,7 @@ declare module "littlejsengine" {
         /** Step the physics world simulation
          *  @param {number} [frames] */
         step(frames?: number): void;
-        /** raycast and return a list of all the results
+        /** raycast and return a list of all the results, nearest first
          *  @param {Vector2} start
          *  @param {Vector2} end
          *  @return {Array<Box2dRaycastResult>} */
@@ -5392,9 +5428,10 @@ declare module "littlejsengine" {
         /** Check if this object has any joints
          *  @return {boolean} */
         hasJoints(): boolean;
-        /** Get list of joints for this object, the Box2D joints
-         *  @return {Array<Object>} */
-        getJointList(): Array<any>;
+        /** Get list of joints for this object, the Box2dJoint for each one made through LittleJS,
+         *  and the Box2D joint, cast to its type, for any made on the world directly
+         *  @return {Array<Box2dJoint|Object>} */
+        getJointList(): Array<Box2dJoint | any>;
     }
     /**
      * Box2D Static Object - Box2d with a static physics body
@@ -5902,10 +5939,10 @@ declare module "littlejsengine" {
         getFrequency(): number;
         /** Set the damping ratio
          *  @param {number} ratio */
-        setSpringDampingRatio(ratio: number): any;
+        setDampingRatio(ratio: number): any;
         /** Get the damping ratio
          *  @return {number} */
-        getSpringDampingRatio(): number;
+        getDampingRatio(): number;
     }
     /**
      * Box2D Friction Joint
@@ -6117,12 +6154,15 @@ declare module "littlejsengine" {
     export function getCrescentPoints(pos: Vector2, size?: number, percent?: number, angle?: number, invert?: boolean, sides?: number): Array<Vector2>;
     /** A numeric tween: drives a callback with a value interpolated between
      *  `start` and `end` over `duration` seconds. Pauses with the game by default.
+     *  - In TypeScript it is a `Tween<T>` of the type it tweens, which comes from `start` and `end` or
+     *    the callback's parameter, so `(v: number)=> ...` takes a number
+     *  @template [T=any]
      *  @memberof TweenSystem
      *  @example
      *  // Animate a fade-out over 2 seconds with an ease-out sine curve.
      *  new Tween((v) => obj.alpha = v, 1, 0, 2, { ease: Ease.OUT(Ease.SINE) });
      */
-    export class Tween {
+    export class Tween<T = any> {
         /** Create a new tween. The callback fires immediately with `start` so the
          *  target snaps to the start value on the same frame the tween is created.
          *
@@ -6130,27 +6170,28 @@ declare module "littlejsengine" {
          *  any object exposing a `lerp(other, percent) => sameType` method. The
          *  callback receives the interpolated value (a number, or a fresh instance
          *  for lerp-able types). Both endpoints must be the same type.
-         *  @param {function(any):void} callback - Called with the interpolated value each frame
-         *  @param {number|Vector2|Vector3|Color|object} [start=0] - Starting value
-         *  @param {number|Vector2|Vector3|Color|object} [end=1] - Ending value
+         *  @param {function(NonNullable<T>):void} callback - Called with the interpolated value each frame
+         *  @param {T} [start=0] - Starting value
+         *  @param {T} [end=1] - Ending value
          *  @param {number} [duration=1] - Duration in seconds
          *  @param {Object} [options]
          *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
          *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused (matches Timer's useRealTime)
          *  @param {boolean} [options.paused=false] - Start in paused state */
-        constructor(callback: (arg0: any) => void, start?: number | Vector2 | Vector3 | Color | object, end?: number | Vector2 | Vector3 | Color | object, duration?: number, options?: {
+        constructor(callback: (arg0: NonNullable<T>) => void, start?: T, end?: T, duration?: number, options?: {
             ease?: (arg0: number) => number;
             useRealTime?: boolean;
             paused?: boolean;
         });
-        /** @property {function(any):void} - Called with the interpolated value each frame */
-        callback: (arg0: any) => void;
-        /** @property {number|Vector2|Vector3|Color|object} - Starting value
-         *  @type {number|Vector2|Vector3|Color|object} */
-        start: number | Vector2 | Vector3 | Color | object;
-        /** @property {number|Vector2|Vector3|Color|object} - Ending value
-         *  @type {number|Vector2|Vector3|Color|object} */
-        end: number | Vector2 | Vector3 | Color | object;
+        /** @property {function(T):void} - Called with the interpolated value each frame
+         *  @type {function(T):void} */
+        callback: (arg0: T) => void;
+        /** @property {T} - Starting value
+         *  @type {T} */
+        start: T;
+        /** @property {T} - Ending value
+         *  @type {T} */
+        end: T;
         /** @property {number} - Total duration in seconds */
         duration: number;
         /** @property {number} - Remaining time in seconds (counts down from duration to 0) */
@@ -6161,7 +6202,11 @@ declare module "littlejsengine" {
         useRealTime: boolean;
         /** @property {boolean} - If true, stop advancing until cleared */
         paused: boolean;
-        /** Completion callback set by then(), loop(), pingPong().
+        /** @property {undefined|function():void} - Called once the tween completes: when its last pass ends,
+         *  the last iteration of a loop or pingPong, and again each time a restart plays through; then() sets it
+         *  @type {undefined|function():void} */
+        onComplete: undefined | (() => void);
+        /** Continuation when a pass ends, set by loop() and pingPong() to start the next iteration.
          *  @private */
         private thenCallback;
         /** Remaining iterations including the current run (loop/pingPong only).
@@ -6180,38 +6225,42 @@ declare module "littlejsengine" {
         private lastTimeReal;
         /** Set the easing curve and return this for chaining.
          *  @param {function(number):number} easeFn
-         *  @returns {Tween}
+         *  @returns {Tween<T>}
          *  @memberof TweenSystem */
-        setEase(easeFn: (arg0: number) => number): Tween;
-        /** Set a single completion callback. Calling `then` again replaces the
-         *  previous callback. Returns this for chaining.
-         *
-         *  Calling `then` after `loop` or `pingPong` overrides the loop chain
-         *  (last call wins).
+        setEase(easeFn: (arg0: number) => number): Tween<T>;
+        /** Set the completion callback, `onComplete`, and return this for chaining.
+         *  It is called once the tween completes: when its pass ends, or for a
+         *  `loop` or `pingPong` when its last iteration ends, so an endless one
+         *  never calls it. Calling `then` again replaces the previous callback.
+         *  - It works with `loop` and `pingPong` in either order, neither replaces the other
+         *  - It is kept by `restart`, so a restarted tween calls it again when it completes
+         *  - `stop` and `tweenStopAll` end a tween without calling it
          *  @param {function():void} callback
-         *  @returns {Tween}
+         *  @returns {Tween<T>}
          *  @memberof TweenSystem */
-        then(callback: () => void): Tween;
+        then(callback: () => void): Tween<T>;
         /** Repeat this tween `n` total times. After each iteration finishes, the
          *  same tween starts over, so the handle returned stays good for the whole
          *  loop: pause or stop it to pause or stop every iteration left.
          *  `loop()` with no argument loops forever.
          *
-         *  Mutually exclusive with `pingPong`; calling either replaces the other,
-         *  and calling `then` after either clears the loop (last call wins).
+         *  Mutually exclusive with `pingPong`; calling either replaces the other.
+         *  A `then` callback, set before or after, is called when the last
+         *  iteration ends.
          *  @param {number} [count=Infinity]
-         *  @returns {Tween}
+         *  @returns {Tween<T>}
          *  @memberof TweenSystem */
-        loop(count?: number): Tween;
+        loop(count?: number): Tween<T>;
         /** Like `loop`, but swap `start` and `end` between iterations so the value
          *  bounces back and forth. `pingPong()` with no argument bounces forever.
          *
-         *  Mutually exclusive with `loop`; calling either replaces the other, and
-         *  calling `then` after either clears the loop (last call wins).
+         *  Mutually exclusive with `loop`; calling either replaces the other.
+         *  A `then` callback, set before or after, is called when the last
+         *  iteration ends.
          *  @param {number} [count=Infinity]
-         *  @returns {Tween}
+         *  @returns {Tween<T>}
          *  @memberof TweenSystem */
-        pingPong(count?: number): Tween;
+        pingPong(count?: number): Tween<T>;
         /** Pause this tween. While paused, tweenUpdate skips it.
          *  @memberof TweenSystem */
         pause(): void;
@@ -6224,7 +6273,8 @@ declare module "littlejsengine" {
          *  It replays one pass: a loop or pingPong that has finished is not started
          *  over, a pingPong that ended on its way back plays that way again, and a
          *  restart mid loop keeps the iterations left. Call loop or pingPong again
-         *  after restart to repeat it.
+         *  after restart to repeat it. The `then` callback is kept and is called
+         *  again when it completes.
          *  @memberof TweenSystem */
         restart(): void;
         /** True if this tween is in the active list and not paused.
@@ -6239,19 +6289,20 @@ declare module "littlejsengine" {
         /** Get the current interpolated value (the value most recently passed to
          *  the callback). Returns a number, Vector2, Vector3 or Color depending on the
          *  tween's start/end types.
-         *  @returns {number|Vector2|Vector3|Color}
+         *  @returns {T}
          *  @memberof TweenSystem */
-        getValue(): number | Vector2 | Vector3 | Color;
+        getValue(): T;
         /** Compute the interpolated value at the given remaining `life`.
          *  At life === duration the result is `start`; at life === 0 it is `end`.
          *  - At life 0 it is the end value exactly
          *  - A vector goes past its ends as far as the easing does, as a number does; a Color stays between them,
          *    so its channels stay in range, and any other type goes as far as its own lerp takes it
          *  @param {number} life
-         *  @returns {number|Vector2|Vector3|Color}
+         *  @returns {T}
          *  @memberof TweenSystem */
-        interp(life: number): number | Vector2 | Vector3 | Color;
-        /** Remove this tween from the active list and prevent any pending then-callback.
+        interp(life: number): T;
+        /** Remove this tween from the active list, ending a loop or pingPong too, without calling
+         *  the then-callback. It keeps the then-callback, so a restart calls it when it completes.
          *  @memberof TweenSystem */
         stop(): void;
     }
@@ -6261,16 +6312,17 @@ declare module "littlejsengine" {
      *
      *  `start` and `end` may be numbers, Vector2, Vector3 or Color instances, or
      *  any object with a `lerp(other, percent) => sameType` method.
+     *  @template [T=any]
      *  @param {Object} target - The object whose property is being animated
      *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'` or `'color'`
-     *  @param {number|Vector2|Vector3|Color|object} start - Starting value
-     *  @param {number|Vector2|Vector3|Color|object} end - Ending value
+     *  @param {T} start - Starting value
+     *  @param {T} end - Ending value
      *  @param {number} [duration=1] - Duration in seconds
      *  @param {Object} [options] - Same options as the Tween constructor
      *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
      *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused
      *  @param {boolean} [options.paused=false] - Start in paused state
-     *  @returns {Tween}
+     *  @returns {Tween<T>}
      *  @memberof TweenSystem
      *  @example
      *  // Numeric: slide an object's x with an ease-out sine curve
@@ -6280,13 +6332,13 @@ declare module "littlejsengine" {
      *  // Color: pulse between two colors
      *  tweenProperty(sprite, 'color', RED, BLUE, 1).pingPong();
      */
-    export function tweenProperty(target: any, propertyPath: string, start: number | Vector2 | Vector3 | Color | object, end: number | Vector2 | Vector3 | Color | object, duration?: number, options?: {
+    export function tweenProperty<T = any>(target: any, propertyPath: string, start: T, end: T, duration?: number, options?: {
         ease?: (arg0: number) => number;
         useRealTime?: boolean;
         paused?: boolean;
-    }): Tween;
-    /** Stop every active tween and clear their then-callbacks. Useful for resets
-     *  on level transitions or when changing scenes.
+    }): Tween<T>;
+    /** Stop every active tween, ending loops too, without calling their then-callbacks.
+     *  Useful for resets on level transitions or when changing scenes.
      *  @memberof TweenSystem */
     export function tweenStopAll(): void;
     /** Engine plugin hook: advance every active tween by the appropriate delta.
@@ -6422,9 +6474,9 @@ declare module "littlejsengine" {
          *  isLineClear permits, so the result can leave grid centers and cut
          *  cleanly across open spaces.
          *
-         *  Bails (leaves the path unchanged) if any node has nonzero cost — a
-         *  straight geometric shortcut can't be trusted to be the lowest-cost
-         *  route when cost-weighted terrain is in play.
+         *  A node with a cost is kept, and a shortcut only runs between clear
+         *  nodes: isLineClear passes only through clear cells, so a straight line
+         *  it accepts costs no more than the grid path it replaces.
          *
          *  Replaces the port of ShortenPath2() in pathFinding.cpp, which could
          *  add a segment it had not checked.
@@ -7760,6 +7812,8 @@ declare module "littlejsengine" {
      * - profile is [[radius, y], ...] from bottom to top
      * - A profile that ends where it starts makes a closed ring like a donut
      * - An end left open, with a radius and no cap, makes the mesh doubleSided so its inside shows
+     * - An end on the axis smooth shades as a round pole like a sphere's when its segment is within 45 degrees of
+     *   level, and as a point like a cone's tip when it is steeper
      * @param {Array<Array<number>>} profile
      * @param {number} [sides] - Around the axis
      * @param {boolean} [smooth] - Defaults to render3D.smoothShading
@@ -8306,7 +8360,8 @@ declare module "littlejsengine" {
         animations: Array<GLTFAnimation>;
         nodeTree: any;
         modelMatrix: Matrix4;
-        /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo */
+        /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo,
+         *  and blending and unlit stay with the parts, which createObject draws */
         mesh: Mesh;
         /** @property {TextureInfo|undefined} - The texture to draw mesh with, when every part uses the same one
          *  @type {TextureInfo|undefined} */
@@ -8358,7 +8413,10 @@ declare module "littlejsengine" {
      * - Geometry: positions, normals, uvs, vertex colors and indices; skins and morph targets are not read
      * - Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
      *   GLTFObject that createObject makes; a skinned character's walk is not read
-     * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too
+     * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too,
+     *   and a KHR_materials_unlit material comes in emissive, its own color with no shading
+     * - The base color texture reads the uv set its texCoord names, moved by KHR_texture_transform as gltfpack and
+     *   Blender write it
      * - An OPAQUE material, the default, ignores its texture's alpha as the format says: a texture only such materials
      *   use loads with its alpha set to 1, so the 3D pass cuts no holes in it; MASK always cuts at half, alphaCutoff
      *   is not read
@@ -8396,6 +8454,9 @@ declare module "littlejsengine" {
         pixelated: boolean;
         /** @property {number} - The node it came from, which an animation moves it with */
         node: number;
+        /** @property {boolean} - The material is unlit (KHR_materials_unlit), its own color with no shading; the object
+         *  createObject makes draws it with emissive 1 */
+        unlit: boolean;
     }
     /**
      * GLTFObject - A model as an object with a child per part, which plays the model's animations

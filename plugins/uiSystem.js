@@ -282,10 +282,19 @@ class UISystemPlugin
                     }
                 }
 
-                // activate the navigation object when pressed
+                // activate the navigation object when pressed, the press is used up as a mouse click is
                 if (uiSystem.navigationObject)
                 if (uiSystem.getNavigationWasPressed())
+                {
                     uiSystem.navigationObject.navigatePressed();
+                    if (isUsingGamepad)
+                        inputClearKey(0, gamepadPrimary+1, false, true, false);
+                    else
+                    {
+                        inputClearKey('Space', 0, false, true, false);
+                        inputClearKey('Enter', 0, false, true, false);
+                    }
+                }
             }
 
             // update in reverse order so topmost objects get priority, from the list as it was
@@ -613,6 +622,32 @@ class UISystemPlugin
         return objects;
     }
 
+    /** Check if the mouse is over a visible UI object that can be hovered, or anywhere while the
+     *  confirm dialog is open, so a game can leave world clicks on the UI alone, on touch too.
+     *  The UI uses up a click before objects update and gameUpdatePost, so read world clicks there,
+     *  or check this in gameUpdate, which runs first. Positions are from the last UI update.
+     *  @return {boolean} */
+    isMouseOverUI()
+    {
+        function isOverRecursive(o)
+        {
+            if (o.destroyed || !o.visible)
+                return false; // a hidden parent hides its children
+            if (o.canBeHover && o.isMouseOverlapping())
+                return true;
+            return o.children.some(isOverRecursive);
+        }
+
+        // a click while a text field is being edited ends the edit, the UI takes it
+        if (uiSystem.keyInputObject)
+            return true;
+
+        // while the confirm dialog is open it blocks everything else
+        if (uiSystem.confirmDialog)
+            return isOverRecursive(uiSystem.confirmDialog);
+        return uiSystem.uiObjects.some(o=> !o.parent && isOverRecursive(o));
+    }
+
     /** Get navigation direction from gamepad or keyboard
      *  @return {number} */
     getNavigationDirection()
@@ -670,9 +705,9 @@ class UISystemPlugin
      *  Centers the dialog on the screen with darkened background
      *  @param {string} [text] - The message to display
      *  @param {Function} [yesCallback] - Called when Yes is clicked
-     *  @param {Function} [noCallback] - Called when No is clicked, or the exit key closes it
-     *  @param {Vector2} [size] - Size of the confirmation dialog
-     *  @param {string} [exitKey] - Key that closes the menu as No
+     *  @param {Function} [noCallback] - Called when No is clicked, or the exit key or gamepad B closes it
+     *  @param {Vector2} [size] - Size of the confirmation dialog, the title and buttons are placed by it
+     *  @param {string} [exitKey] - Key that closes the menu as No, gamepad B (button 1) does too
      *  @return {UIObject} The confirmation menu object
      */
     showConfirmDialog(text='Are you sure?', yesCallback, noCallback, size=vec2(500,250), exitKey='Escape')
@@ -692,23 +727,25 @@ class UISystemPlugin
             const backgroundColor = hsl(0,0,0,.7);
             uiSystem.drawRect(vec2(), vec2(1e9), backgroundColor);
         }
+        const openFrame = frame;
         confirmMenu.onUpdate = ()=>
         {
-            if (keyWasPressed(exitKey))
+            // not the press that opened it, a game may open it on the same back button
+            if (frame !== openFrame && (keyWasPressed(exitKey) || gamepadWasPressed(1)))
             {
-                closeMenu(); // the exit key answers no
+                closeMenu(); // the exit key or gamepad B answers no
                 noCallback && noCallback();
             }
         }
         confirmMenu.isMouseOverlapping = ()=> true; // always hover
         
-        // title text
-        const gap = 50;
-        const textTitle = new UIText(vec2(0,-50), vec2(size.x-gap,70), text);
+        // title text, placed by the dialog's size (at +-50 for the default 250 high)
+        const gap = 50, y = size.y/5;
+        const textTitle = new UIText(vec2(0,-y), vec2(size.x-gap,70), text);
         confirmMenu.addChild(textTitle);
-        
+
         // yes button
-        const buttonYes = new UIButton(vec2(-80,50), vec2(120,70), 'Yes');
+        const buttonYes = new UIButton(vec2(-80,y), vec2(120,70), 'Yes');
         buttonYes.textHeight = 40;
         buttonYes.navigationIndex = 1;
         buttonYes.hoverColor = hsl(0,1,.5);
@@ -716,7 +753,7 @@ class UISystemPlugin
         confirmMenu.addChild(buttonYes);
         
         // no button
-        const buttonNo = new UIButton(vec2(80,50), vec2(120,70), 'No');
+        const buttonNo = new UIButton(vec2(80,y), vec2(120,70), 'No');
         buttonNo.textHeight = 40;
         buttonNo.navigationIndex = 2;
         buttonNo.navigationAutoSelect = true;
@@ -1009,7 +1046,7 @@ class UIObject
                         {
                             this.onPress();
                             if (this.destroyed) // the press took it away, and the press is used up
-                                return void inputClearKey(0,0,0,1,0);
+                                return void inputClearKey(0, 0, false, true, false);
                             this.soundPress && this.soundPress.play();
                             if (uiSystem.activeObject && !isActive)
                                 uiSystem.activeObject.onRelease();
@@ -1019,7 +1056,7 @@ class UIObject
                         if (newPress && uiSystem.activateOnPress)
                             this.click(!this.soundPress);
                         if (this.destroyed)
-                            return void inputClearKey(0,0,0,1,0);
+                            return void inputClearKey(0, 0, false, true, false);
                     }
                 }
                 if (!uiSystem.activateOnPress)
@@ -1029,7 +1066,7 @@ class UIObject
             }
 
             // clear mouse was pressed state even when disabled
-            mousePress && inputClearKey(0,0,0,1,0);
+            mousePress && inputClearKey(0, 0, false, true, false);
         }
         if (isActive)
         if (!mouseDown || (this.dragActivate && !this.isHoverObject()))
@@ -1251,7 +1288,7 @@ class UITextInput extends UIObject
     {
         // start editing the text, the gamepad press that started it is used up so it does not stop it too
         uiSystem.keyInputObject = this;
-        inputClearKey(0, gamepadPrimary+1, 0, 1, 0);
+        inputClearKey(0, gamepadPrimary+1, false, true, false);
         this.onClick();
         playSound && this.soundClick && this.soundClick.play();
     }
@@ -1305,7 +1342,7 @@ class UITextInput extends UIObject
             // the press that stopped it is used up, by the mouse or the gamepad
             this.stopEditing();
             inputClearKey(0,0);
-            inputClearKey(0, gamepadPrimary+1, 0, 1, 0);
+            inputClearKey(0, gamepadPrimary+1, false, true, false);
         }
     }
 

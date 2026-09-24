@@ -36,7 +36,8 @@ const RENDER3D_VERTEX_INPUTS =
     'layout(location=11) in vec4 tint;layout(location=12) in vec4 uvRect;';
 const RENDER3D_MAX_STREAM_VERTS = 32768;
 const RENDER3D_MAX_LIGHTS = 8; // Light3D objects per frame, the shader loops over this many
-const RENDER3D_QUAD_UVS = Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv))); // strip order
+// strip order, frozen, and typed as the plain array the uv parameters take
+const RENDER3D_QUAD_UVS = /** @type {Array<Vector2>} */ (Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv))));
 const RENDER3D_FULL_UV_RECT = Object.freeze({x:0, y:0, w:1, h:1});
 const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
 const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
@@ -128,9 +129,20 @@ function render3DWithState(fields, fn)
 function render3DIsAfter2D(o) { return !!(o.renderAfter2D ?? render3D.renderAfter2D); }
 
 // a size given as a number or a vec3
-function render3DSize3(size) { return isNumber(size) ? vec3(size) : size; }
+/** @param {Vector3|number} size
+ *  @return {Vector3} */
+function render3DSize3(size)
+{ return isNumber(size) ? vec3(/** @type {number} */ (size)) : /** @type {Vector3} */ (size); }
+
+// a size given as a number or a vec2
+/** @param {Vector2|number} size
+ *  @return {Vector2} */
+function render3DSize2(size)
+{ return isNumber(size) ? vec2(/** @type {number} */ (size)) : /** @type {Vector2} */ (size); }
 
 // a transform given as a matrix, or as a vec3 for one that only moves there
+/** @param {Matrix4|Vector3} matrix
+ *  @return {Matrix4} */
 function render3DMatrix(matrix)
 {
     if (matrix instanceof Vector3)
@@ -289,15 +301,15 @@ function render3DClearInstances()
 
 // the live objects drawn on one side of the 2D scene
 function render3DLayerObjects(after2D)
-{ return engineObjects.filter(o=> !o.destroyed && o instanceof EngineObject3D && render3DIsAfter2D(o) === after2D); }
+{ return /** @type {Array<EngineObject3D>} */ (engineObjects.filter(o=> !o.destroyed && o instanceof EngineObject3D && render3DIsAfter2D(o) === after2D)); }
 
 // the Light3D objects the shader gets this frame: directional lights light the whole scene so they come first,
 // then the point lights nearest the camera
 function render3DCollectLights()
 {
     // a light switched off by its radius or its alpha is left out, so it cannot take one of the few slots
-    const lights = engineObjects.filter(o=> !o.destroyed && o instanceof Light3D &&
-        o.color.a > 0 && o.intensity > 0 && (o.directional || o.radius > 0));
+    const lights = /** @type {Array<Light3D>} */ (engineObjects.filter(o=> !o.destroyed && o instanceof Light3D &&
+        o.color.a > 0 && o.intensity > 0 && (o.directional || o.radius > 0)));
     if (lights.length > RENDER3D_MAX_LIGHTS)
     {
         // distances cached once, getWorldPos3D walks the parent chain and the sort asks many times
@@ -660,7 +672,7 @@ class Render3DPlugin
         {
             const distance = render3DRaycastObject(ray, o);
             if (distance !== undefined && (!nearest || distance < nearest.distance))
-                nearest = {object: o, distance};
+                nearest = {object: /** @type {EngineObject3D} */ (o), distance}; // only a 3D object has a distance
         }
         return nearest;
     }
@@ -917,7 +929,10 @@ class Render3DPlugin
             draw();
             return;
         }
-        this.transparentQueue.push({distance: pos.distanceSquared(this.camera.pos), state: render3DCaptureBatchState(), draw});
+        // sort by depth along the view, not distance, so an orthographic camera orders them right too
+        const f = this.cameraForward, c = this.camera.pos;
+        const distance = (pos.x - c.x)*f.x + (pos.y - c.y)*f.y + (pos.z - c.z)*f.z;
+        this.transparentQueue.push({distance, state: render3DCaptureBatchState(), draw});
     }
 
     /** Draw the queued transparent draws far to near with the state each was drawn under, called automatically at the end of the transparent stage */
@@ -1168,8 +1183,9 @@ class Render3DPlugin
     {
         render3DAssertBlending();
         // a HeightMap is in the extras plugin, so it is known by its getHeight rather than its class
-        const height = isNumber(floorHeight) ? ()=> floorHeight
-            : floorHeight.getHeight ? (x, z)=> floorHeight.getHeight(x, z) : floorHeight;
+        const heightMap = /** @type {HeightMap} */ (floorHeight);
+        const height = /** @type {function(number, number): number} */ (isNumber(floorHeight) ? ()=> floorHeight
+            : heightMap.getHeight ? (x, z)=> heightMap.getHeight(x, z) : floorHeight);
         if (this.transparentQueue && !this.capture) // sort from the floor, under whatever casts it
         {
             const p = pos.copy(), c = color.copy(); // copies, the queue replays later
@@ -1211,12 +1227,13 @@ function render3DDrawSoftDisc(radius, color, sides, normal, pointAt)
 ///////////////////////////////////////////////////////////////////////////////
 // Debug primitives, drawn on top of the 3D scene like the 2D debug functions, only in debug builds
 
-let render3DDebugPrimitives = [];
+let render3DDebugPrimitives = []; // each keeps the debugClear count it was made under, a debugClear since drops it
 
 // draw the live debug primitives with depth test off so they show through walls, drop the expired ones
 function render3DRenderDebug()
 {
     if (!render3DDebugPrimitives.length) return;
+    render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.clearCount === debugClearCount);
     if (!debugVideoCaptureIsActive()) // hidden from a video capture like the 2D ones, but they still expire
     {
         render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
@@ -1232,7 +1249,8 @@ function render3DRenderDebug()
 function render3DDebugPush(duration, draw)
 {
     ASSERT(isNumber(duration), 'duration must be a number');
-    debug && glEnable && render3D?.program && render3DDebugPrimitives.push({timer: new Timer(duration), draw});
+    debug && glEnable && render3D?.program &&
+        render3DDebugPrimitives.push({timer: new Timer(duration), draw, clearCount: debugClearCount});
 }
 
 /** Draw a debug wireframe box
@@ -1408,6 +1426,7 @@ class Camera3D
 // GL setup, shaders and the frame hooks
 
 // the four attributes of a 36 byte vertex at the locations the shaders declare: location, size, type, normalize, byte offset
+/** @type {Array<[number, number, number, boolean, number]>} */
 const RENDER3D_ATTRIBS = [[0, 3, 5126, false, 0], [1, 3, 5126, false, 12], [2, 2, 5126, false, 24], [3, 4, 5121, true, 32]];
 
 // the vertex shader, shared by the plugin's program and every Shader's
@@ -2376,7 +2395,7 @@ class Mesh
      *  @return {Mesh} */
     scaleUVs(scale)
     {
-        const s = isNumber(scale) ? vec2(scale) : scale;
+        const s = render3DSize2(scale);
         this.uvs = this.uvs.map(uv=> vec2(uv.x * s.x, uv.y * s.y)); // new vectors, builders share uv objects between faces
         this.dirty = true;
         return this;
@@ -2697,6 +2716,8 @@ class Mesh
  * - profile is [[radius, y], ...] from bottom to top
  * - A profile that ends where it starts makes a closed ring like a donut
  * - An end left open, with a radius and no cap, makes the mesh doubleSided so its inside shows
+ * - An end on the axis smooth shades as a round pole like a sphere's when its segment is within 45 degrees of
+ *   level, and as a point like a cone's tip when it is steeper
  * @param {Array<Array<number>>} profile
  * @param {number} [sides] - Around the axis
  * @param {boolean} [smooth] - Defaults to render3D.smoothShading
@@ -2728,9 +2749,14 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
     const segmentLength = (i)=> hypot(profile[i+1][0] - profile[i][0], profile[i+1][1] - profile[i][1]);
     const vertexNormal = (i)=>
     {
-        // an open end on the axis is a pole and points along it
+        // an open end on the axis is a pole and points along it, like a sphere's, when the surface there is
+        // within 45 degrees of level; a steeper one is a point like a cone's tip and takes its side's normal
         if (!closed && (!i || i == rings - 1) && abs(profile[i][0]) < 1e-9)
-            return vec2(0, i ? 1 : -1);
+        {
+            const up = i ? 1 : -1;
+            if (segmentNormal(i ? i - 1 : 0).y * up > Math.SQRT1_2 - 1e-9)
+                return vec2(0, up);
+        }
         // otherwise the neighbors weighted by their length, so a short band does not tilt a long wall
         let n = vec2();
         const add = (s)=> n = n.add(segmentNormal(s).scale(segmentLength(s)));
@@ -2756,11 +2782,14 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
             // one ribbon around the ring pair, top point then bottom point per column
             const points = [], normals = [], uvs = [];
             const n0 = vertexNormal(i), n1 = vertexNormal(i + 1);
+            // a point on the axis is one per column, each drawn by the face beside it, so its normal turns half
+            // a side toward the middle of that face; a pole's points along the axis and does not turn
+            const half = PI / sides, turn1 = abs(profile[i + 1][0]) < 1e-9 ? -half : 0, turn0 = abs(profile[i][0]) < 1e-9 ? half : 0;
             for (let j = 0; j <= sides; ++j)
             {
                 const a = j / sides * 2 * PI, u = j / sides;
                 points.push(point(i + 1, a), point(i, a));
-                normals.push(normal3D(n1, a), normal3D(n0, a));
+                normals.push(normal3D(n1, a + turn1), normal3D(n0, a + turn0));
                 uvs.push(vec2(u, v(i + 1)), vec2(u, v(i)));
             }
             mesh.addStrip(points, normals, uvs);
@@ -2783,7 +2812,7 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
 
     // flat discs close the ends that have a radius, a hard edge even when the sides are smooth
     if (capped && !closed)
-        for (const [i, up] of [[0, false], [rings - 1, true]])
+        for (const [i, up] of /** @type {Array<[number, boolean]>} */ ([[0, false], [rings - 1, true]]))
         {
             if (abs(profile[i][0]) < 1e-9) continue; // a pole has no cap
             const points = [], uvs = [];
@@ -2868,17 +2897,16 @@ function buildBox(size=1)
  */
 function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth=render3D?.smoothShading)
 {
-    if (isNumber(size))
-        size = vec2(size);
-    if (isNumber(segments))
-        segments = vec2(segments);
+    size = render3DSize2(size);
+    segments = render3DSize2(segments);
     ASSERT(segments.x > 0 && segments.y > 0 && segments.x % 1 === 0 && segments.y % 1 === 0, 'grid segments must be whole numbers above zero');
     const mesh = new Mesh;
     const segmentsX = segments.x, segmentsZ = segments.y;
     const cellX = size.x / segmentsX, cellZ = size.y / segmentsZ;
     const halfX = size.x / 2, halfZ = size.y / 2, ex = cellX / 2, ez = cellZ / 2;
     const px = (i)=> i * cellX - halfX, pz = (j)=> j * cellZ - halfZ;
-    const cellColor = (i, j)=> !color ? WHITE : isColor(color) ? color : color(px(i), pz(j));
+    const colorAt = /** @type {function(number, number): Color} */ (color);
+    const cellColor = (i, j)=> !color ? WHITE : isColor(color) ? /** @type {Color} */ (color) : colorAt(px(i), pz(j));
     // a big terrain has millions of vertices, so each one is made once, shared by the rows above and below it,
     // and its slope normal is worked out in numbers, the same normal render3DSlopeNormal gives
     const row = (j)=>
@@ -3235,7 +3263,7 @@ class EngineObject3D extends EngineObject
         const old = this.mesh;
         this.mesh = mesh;
         // nothing to free and nothing to look for when it was never uploaded
-        if (old && old !== mesh && old.buffer && !engineObjects.some(o=> o.mesh === old))
+        if (old && old !== mesh && old.buffer && !engineObjects.some(o=> /** @type {EngineObject3D} */ (o).mesh === old))
             old.dispose();
         return mesh;
     }
@@ -3379,7 +3407,7 @@ function render3DCollideSolid(a)
     for (const b of engineObjectsCollide)
     {
         if (b === a) break;
-        if (b.destroyed || b.parent || b.sync2D || !(b instanceof EngineObject3D)) continue; // a child is part of its parent
+        if (b.destroyed || !(b instanceof EngineObject3D) || b.parent || b.sync2D) continue; // a child is part of its parent
         if (!a.isSolid && !b.isSolid) continue; // neither one blocks, so they pass through each other
 
         // the pairs nowhere near each other are almost all of them in a scene of any size, so
@@ -3405,7 +3433,9 @@ function render3DCollideSolid(a)
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
         if (weightA)
             shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
-        const normal = push.normalize(); // mass 0 keeps its velocity too, so a moving platform keeps moving
+        // mass 0 keeps its velocity too, so a moving platform keeps moving, and what hits it bounces by its own
+        // restitution as it would off a static wall
+        const normal = push.normalize();
         if (weightA && a.velocity3D.dot(normal) < 0)
             a.velocity3D = a.velocity3D.reflect(normal, a.restitution);
         if (weightB && b.velocity3D.dot(normal) > 0)
@@ -3466,8 +3496,8 @@ function engineObjectsRaycast3D(ray, objects=engineObjects)
     for (const o of objects)
     {
         const distance = render3DRaycastObject(ray, o);
-        if (distance !== undefined)
-            hits.push({o, distance});
+        if (distance !== undefined) // only a 3D object has a distance
+            hits.push({o: /** @type {EngineObject3D} */ (o), distance});
     }
     return hits.sort((a, b)=> a.distance - b.distance).map(hit=> hit.o);
 }

@@ -363,6 +363,7 @@ class NewgroundsPlugin
         const url = 'https://www.newgrounds.io/gateway_v3.php';
         try
         {
+            /** @type {Object} */
             let execute = {'component':component, 'parameters':parameters};
             if (this.cipher && newgroundsSecureComponents.includes(component))
             {
