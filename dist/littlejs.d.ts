@@ -3423,6 +3423,9 @@ declare module "littlejsengine" {
         data: TileLayerData[];
         /** @property {boolean} - Is this layer using a webgl texture? */
         isUsingWebGL: boolean;
+        /** @property {boolean} - Show this layer's bounds and values when the debug overlay's Debug Tiles is on,
+         *  turn it off for layers that only add noise */
+        debugShow: boolean;
         /** Draw all the tile data to an offscreen canvas
          *  - This may be slow if not using webgl but only needs to be done once */
         redraw(): void;

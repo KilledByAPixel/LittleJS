@@ -7793,6 +7793,9 @@ class TileLayer extends CanvasLayer
         this.data = [];
         /** @property {boolean} - Is this layer using a webgl texture? */
         this.isUsingWebGL = false;
+        /** @property {boolean} - Show this layer's bounds and values when the debug overlay's Debug Tiles is on,
+         *  turn it off for layers that only add noise */
+        this.debugShow = true;
 
         if (headlessMode)
         {

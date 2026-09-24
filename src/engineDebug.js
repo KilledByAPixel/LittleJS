@@ -44,7 +44,7 @@ let debugKey = 'Escape';
 let debugOverlay = false;
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugSound = false, debugTakeScreenshot;
+let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugSound = false, debugTiles = false, debugTakeScreenshot;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
@@ -286,6 +286,8 @@ function debugUpdate()
             debugScreenshot();
         if (keyWasPressed('Digit7'))
             debugSound = !debugSound;
+        if (keyWasPressed('Digit8'))
+            debugTiles = !debugTiles;
     }
     if (debugVideoCaptureIsActive())
     {
@@ -295,6 +297,67 @@ function debugUpdate()
     }
     else if (debugOverlay && keyWasPressed('Digit6'))
         debugVideoCaptureStart();
+}
+
+// the center of the tile under a world position, on the grid of the collision layer that has a tile there
+function debugTileCellCenter(pos)
+{
+    for (const layer of tileCollisionLayers)
+    {
+        const local = pos.subtract(layer.pos);
+        if (local.arrayCheck(layer.size) && layer.getCollisionData(local))
+            return local.floor().add(layer.pos).add(vec2(.5));
+    }
+    return pos.floor().add(vec2(.5));
+}
+
+// the tile layers shown by Debug Tiles, the ones not switched off with debugShow
+function debugTileLayersShown()
+{ return engineObjects.filter(o=> o instanceof TileLayer && !o.destroyed && o.debugShow); }
+
+// Debug Tiles: each layer's bounds, then the collision value of every cell on screen, tinted by value, with the
+// number when a tile is big enough on screen to read it
+function debugTileLayers()
+{
+    // everything the camera can see, turned or not
+    const reach = getCameraSize().length() / 2;
+    const showValues = cameraScale >= 24;
+    for (const layer of debugTileLayersShown())
+    {
+        const isCollision = layer instanceof TileCollisionLayer, size = layer.size, pos = layer.pos;
+        const color = isCollision ? '#f80' : '#0cf';
+        debugRect(pos.add(size.scale(.5)), size, color);
+        const label = size.x + 'x' + size.y + ' order ' + layer.renderOrder + (isCollision ? ' collision' : '');
+        debugText(label, pos.add(vec2(size.x / 2, size.y + .4)), .6, color);
+        if (!isCollision) continue;
+
+        const x0 = max(0, floor(cameraPos.x - reach - pos.x)), x1 = min(size.x, ceil(cameraPos.x + reach - pos.x));
+        const y0 = max(0, floor(cameraPos.y - reach - pos.y)), y1 = min(size.y, ceil(cameraPos.y + reach - pos.y));
+        for (let y = y0; y < y1; ++y)
+        for (let x = x0; x < x1; ++x)
+        {
+            const data = layer.collisionData[y * size.x + x];
+            if (!data) continue;
+            const center = vec2(pos.x + x + .5, pos.y + y + .5), tint = hsl(data * .17 % 1, 1, .6, .8);
+            debugRect(center, vec2(.9), tint);
+            showValues && debugText(data, center, .5, tint);
+        }
+    }
+}
+
+// the tile and collision value under the mouse of each layer shown by Debug Tiles, as lines of the mouse text
+function debugTileText()
+{
+    if (!debugTiles) return '';
+    let text = '';
+    for (const layer of debugTileLayersShown())
+    {
+        const local = mousePos.subtract(layer.pos);
+        if (!local.arrayCheck(layer.size)) continue;
+        const data = layer.getData(local), collision = layer.getCollisionData(local);
+        text += '\nlayer ' + layer.renderOrder + ': tile ' + (data?.tile ?? 'empty') + (collision ? ', collision ' + collision : '');
+    }
+    return text;
 }
 
 function debugRender()
@@ -394,9 +457,10 @@ function debugRender()
 
         if (tileCollisionTest(mousePos))
         {
-            // show floored tile pick for tile collision
-            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), rgb(1,1,0,.5), 0, false);
+            // show the collision tile under the mouse, on its layer's own grid
+            drawRect(debugTileCellCenter(mousePos), vec2(1), rgb(1,1,0,.5), 0, false);
         }
+        debugTiles && debugTileLayers();
     }
 
     {
@@ -474,15 +538,22 @@ function debugRender()
     if (debugObject)
     {
         const raycastHitPos = tileCollisionRaycast(debugObject.pos, mousePos);
-        raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), rgb(0,1,1,.3), 0, false);
+        raycastHitPos && drawRect(debugTileCellCenter(raycastHitPos), vec2(1), rgb(0,1,1,.3), 0, false);
         drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5), undefined, undefined, false);
 
         let debugText = 'mouse pos = ' + mousePos;
         if (tileCollisionLayers.length)
             debugText += '\nmouse collision = ' + tileCollisionGetData(mousePos);
+        debugText += debugTileText();
         debugText += '\n\n--- object info ---\n';
         debugText += debugObject.toString();
         drawTextScreen(debugText, mousePosScreen, 24, rgb(), .05, undefined, 'center', 'monospace');
+    }
+    else if (debugOverlay && debugTiles)
+    {
+        // no object to pick, the tiles under the mouse on their own
+        const text = debugTileText();
+        text && drawTextScreen('mouse pos = ' + mousePos + text, mousePosScreen, 24, rgb(), .05, undefined, 'center', 'monospace');
     }
 
     {
@@ -523,6 +594,8 @@ function debugRender()
             debugContext.fillText('6: Toggle Video Capture', x, y += h);
             debugContext.fillStyle = debugSound ? '#f00' : '#fff';
             debugContext.fillText('7: Debug Sound', x, y += h);
+            debugContext.fillStyle = debugTiles ? '#f00' : '#fff';
+            debugContext.fillText('8: Debug Tiles', x, y += h);
 
             let keysPressed = '';
             let mousePressed = '';
@@ -557,6 +630,7 @@ function debugRender()
             debugContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
             debugContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
             debugContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
+            debugContext.fillText(debugTiles ? 'Debug Tiles' : '', x, y += h);
             debugContext.fillText(debugSound ? 'Debug Sound' : '', x, y += h);
         }
 
