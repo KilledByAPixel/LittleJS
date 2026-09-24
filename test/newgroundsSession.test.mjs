@@ -150,18 +150,17 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     assert.equal(m2.unlocked, true);
     assert.equal(plugin.pendingUnlocks.size, 0);
 
-    // a server refusal stays pending and is not sent again, a later unlock gets the same answer
+    // a server refusal is not sent again: asking again this visit answers no without a request
     replies['Medal.unlock'] = { data: { success: false, error: { message: 'Invalid Medal ID', code: 202 } } };
     const m4 = new NewgroundsMedal(4, 'Four');
-    const refused = m4.unlock();
-    assert.equal(await refused, false, 'refused');
+    assert.equal(await m4.unlock(), false, 'refused');
     assert.equal(m4.unlocked, false);
-    assert.equal(m4.unlock(), refused, 'the same answer, nothing sent');
     before = unlockCalls();
+    assert.equal(await m4.unlock(), false, 'the same answer');
     await keepAlive();
     await flush();
-    assert.equal(unlockCalls(), before, 'not resent');
-    assert.deepEqual([...plugin.pendingUnlocks.keys()], [m4], 'still pending');
+    assert.equal(unlockCalls(), before, 'nothing sent again');
+    assert.equal(plugin.pendingUnlocks.has(m4), false, 'not pending, it will not succeed');
 
     // a posted score tells the page, one the server refused does not
     toPage.length = 0;

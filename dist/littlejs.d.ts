@@ -3914,7 +3914,7 @@ declare module "littlejsengine" {
             url: string;
             supporter: boolean;
         } | null;
-        /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock and not yet confirmed, with their request's promise
+        /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals whose unlock is in flight or waiting to be resent, with their request's promise; one the server refused leaves it
          *  @type {Map<NewgroundsMedal, Promise<boolean>>} */
         pendingUnlocks: Map<NewgroundsMedal, Promise<boolean>>;
         /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the session is lost
@@ -3926,7 +3926,7 @@ declare module "littlejsengine" {
          *  @private */
         private init;
         /** Play as not logged in from now on: the NewgroundsMedals come back from the local save, keeping the unlocks the
-         *  server confirmed meanwhile, and the unlocks still out unlock locally
+         *  server confirmed meanwhile, and the unlocks still pending unlock locally; a refused one only if it is earned again
          *  @private */
         private dropSession;
         /** Send the unlocks whose request did not reach the server again, which the session check does every minute

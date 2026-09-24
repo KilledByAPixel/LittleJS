@@ -33,11 +33,16 @@ test('a session lost after startup plays as not logged in, and a failed request 
     const m1 = new NewgroundsMedal(1, 'One');
     const m2 = new NewgroundsMedal(2, 'Two');
     const m3 = new NewgroundsMedal(3, 'Three');
+    const m4 = new NewgroundsMedal(4, 'Four');
     medalsInit(SAVE);
     const plugin = new NewgroundsPlugin('an app');
     await plugin.ready;
     assert.equal(plugin.user.name, 'Frank');
     assert.equal(await m1.unlock(), true, 'confirmed while logged in');
+
+    // a medal the server refuses stays locked
+    replies['Medal.unlock'] = { data: { success: false, error: { message: 'Invalid Medal ID', code: 202 } } };
+    assert.equal(await m4.unlock(), false, 'refused');
 
     // a request that fails on the way, or a server that is busy, keeps the session and resends
     replies['Medal.unlock'] = new Error('offline');
@@ -62,6 +67,8 @@ test('a session lost after startup plays as not logged in, and a failed request 
     assert.equal(plugin.pendingUnlocks.size, 0);
     const saved = JSON.parse(globalThis.localStorage[SAVE]);
     assert.deepEqual([saved[1].unlocked, saved[2].unlocked, saved[3].unlocked], [true, true, true], 'all saved');
+    assert.equal(m4.unlocked, false, 'the refused medal does not pop up when the session drops');
+    assert.equal(await m4.unlock(), true, 'earned again while not logged in, it unlocks then');
 
     // the next tick stops the keep alive, and nothing more is sent
     const sent = calls.length;

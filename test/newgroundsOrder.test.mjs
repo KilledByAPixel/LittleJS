@@ -49,7 +49,7 @@ test('a plugin made before the medals and medalsInit still holds them on the ser
     await flush();
     assert.equal(await m2.unlock(), true, 'confirmed before the list');
     assert.equal(await m4.unlock(), false, 'refused before the list');
-    assert.deepEqual([...plugin.pendingUnlocks.keys()], [m4], 'waiting to be resent');
+    assert.equal(plugin.pendingUnlocks.size, 0, 'refused, not pending');
 
     await plugin.ready;
     assert.equal(plugin.user.name, 'Frank');
@@ -59,6 +59,6 @@ test('a plugin made before the medals and medalsInit still holds them on the ser
     assert.equal(plugin.medals.find(m => m.id == 2).unlocked, true, 'and the list says so too');
     assert.equal(m3.unlocked, false, 'a medal the server does not list stays locked');
     assert.equal(m4.unlocked, true, 'the list has it unlocked after all');
-    assert.equal(plugin.pendingUnlocks.size, 0, 'so it is not waiting any more');
+    assert.equal(plugin.pendingUnlocks.size, 0);
     assert.deepEqual(plugin.scoreboards, [{ id: 3, name: 'High Scores' }]);
 });

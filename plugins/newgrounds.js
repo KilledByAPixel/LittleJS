@@ -23,6 +23,7 @@ let newgrounds;
 
 // Engine internal variables not exposed to documentation
 const newgroundsUnlocksToResend = new Set; // pending medals whose request did not reach the server
+const newgroundsUnlocksRefused = new Set; // medals the server refused this visit, asked again they answer no unsent
 const newgroundsSecureComponents = ['Medal.unlock', 'ScoreBoard.postScore']; // the calls encrypted with a cipher
 const newgroundsSessionErrors = [104, 110, 111]; // expired session, login required, session cancelled
 const newgroundsTimeoutMS = 15e3; // how long a request may take before it fails
@@ -69,10 +70,11 @@ class NewgroundsMedal extends Medal
 
     /** Unlocks a medal if not already unlocked, once Newgrounds confirms it when logged in
      *  - The promise is optional, for when a game wants to know the outcome
-     *  - A request that did not reach the server is sent again after the session check every minute, one the server
-     *    refused is not; calling unlock again while the medal is pending returns the same promise
-     *  - An answer that the session is gone makes the game play as not logged in, and this medal unlocks locally
-     *    unless unlocks are prevented
+     *  - A request that did not reach the server is sent again after the session check every minute, and calling
+     *    unlock again while the medal is pending returns the same promise
+     *  - One the server refused is not sent again this visit, calling unlock again resolves false without a request
+     *  - An answer that the session is gone makes the game play as not logged in, and the pending medals, this one too,
+     *    unlock locally unless unlocks are prevented; a refused one only unlocks if it is earned again
      *  @return {Promise<boolean>} - Whether the medal is unlocked, once the server has answered when logged in */
     unlock()
     {
@@ -81,6 +83,8 @@ class NewgroundsMedal extends Medal
 
         // logged in, Newgrounds holds the medal: it unlocks once the server confirms, one request at a time
         ASSERT(medalsSaveName, 'save name must be set');
+        if (newgroundsUnlocksRefused.has(this))
+            return Promise.resolve(false); // refused this visit, asking again will not change that
         const pending = newgrounds.pendingUnlocks;
         if (pending.has(this))
             return pending.get(this);
@@ -91,12 +95,18 @@ class NewgroundsMedal extends Medal
             const serverMedal = response?.result?.data?.medal;
             if (!serverMedal?.unlocked || medalsPreventUnlock)
             {
-                // still pending: a request that did not reach the server, or a confirm while unlocks are prevented,
-                // waits for the session check every minute, unless the session dropped and the medal is local now
                 debugMedals && LOG('Newgrounds did not unlock medal', this.id, response?.result?.data?.error || response?.error);
-                if (!this.isLocal() && (!response || serverMedal?.unlocked))
-                    newgroundsUnlocksToResend.add(this);
-                return this.unlocked;
+                if (this.isLocal())
+                    return this.unlocked; // the session dropped, the medal is local now
+                if (!response || serverMedal?.unlocked)
+                    newgroundsUnlocksToResend.add(this); // did not reach the server, or confirmed while prevented: pending
+                else
+                {
+                    // refused, which will not change: no longer pending, so a session drop does not unlock it
+                    pending.delete(this);
+                    newgroundsUnlocksRefused.add(this);
+                }
+                return false;
             }
             const listed = newgrounds.medals.find(m=> m['id'] == this.id);
             listed && Object.assign(listed, serverMedal); // keep the fetched list in step
@@ -155,7 +165,7 @@ class NewgroundsPlugin
          *  @type {{id: number, name: string, url: string, supporter: boolean}|null} */
         this.user = null;
 
-        /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock and not yet confirmed, with their request's promise
+        /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals whose unlock is in flight or waiting to be resent, with their request's promise; one the server refused leaves it
          *  @type {Map<NewgroundsMedal, Promise<boolean>>} */
         this.pendingUnlocks = new Map;
 
@@ -217,8 +227,9 @@ class NewgroundsPlugin
                 if (this.session_id && medal.unlocked)
                 {
                     newgroundsMedal['unlocked'] = true; // the list says so too
-                    this.pendingUnlocks.delete(medal); // and a request waiting to be resent is done
+                    this.pendingUnlocks.delete(medal); // and a request waiting to be resent, or refused, is done
                     newgroundsUnlocksToResend.delete(medal);
+                    newgroundsUnlocksRefused.delete(medal);
                 }
             }
         }
@@ -244,7 +255,7 @@ class NewgroundsPlugin
     }
 
     /** Play as not logged in from now on: the NewgroundsMedals come back from the local save, keeping the unlocks the
-     *  server confirmed meanwhile, and the unlocks still out unlock locally
+     *  server confirmed meanwhile, and the unlocks still pending unlock locally; a refused one only if it is earned again
      *  @private */
     dropSession()
     {
@@ -261,6 +272,7 @@ class NewgroundsPlugin
         const pending = [...this.pendingUnlocks.keys()];
         this.pendingUnlocks.clear();
         newgroundsUnlocksToResend.clear();
+        newgroundsUnlocksRefused.clear();
         for (const medal of pending)
             medal.unlock();
     }

@@ -37,6 +37,7 @@ test('a cipher that is not a key is asserted, and an unlock it cannot encrypt is
     assert.equal(encrypts, 1, 'tried once, not again on each check');
     assert.equal(calls.includes('secure'), false, 'nothing encrypted was ever sent');
     assert.equal(calls.filter(c => c == 'App.checkSession').length, 3, 'the load and two checks');
-    assert.equal(medal.unlock(), plugin.pendingUnlocks.get(medal), 'the refusal stands, nothing is sent again');
+    assert.equal(await medal.unlock(), false, 'the refusal stands');
+    assert.equal(encrypts, 1, 'and nothing is tried again');
     assert.equal(plugin.session_id, 'abc123', 'and the session is kept');
 });

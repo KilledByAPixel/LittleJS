@@ -1510,7 +1510,7 @@ await newgrounds.getScores(id, user, social, skip, limit, period) // the scores 
                                      // 'D' today (the server default), 'W', 'M', 'Y', 'A' all time; a user or social
                                      // narrows it down, and without either it is the whole board even when logged in
 newgrounds.unlockMedal(id)           // low level request only, the medal is not changed; games call medal.unlock()
-newgrounds.pendingUnlocks            // advanced: the medals sent to unlock and not yet confirmed, with their promises
+newgrounds.pendingUnlocks            // advanced: the unlocks in flight or waiting to be resent, with their promises
 newgrounds.resendUnlocks()           // advanced: send the ones whose request did not reach the server again now, as
                                      // the minute's session check does; one the server refused is not resent
 ```
