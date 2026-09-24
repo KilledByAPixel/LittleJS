@@ -1008,7 +1008,7 @@ function debugTilesLabel()
 {
     if (!debugTiles) return '';
     const layers = debugTileLayersShown(), layer = layers[debugTiles - 2];
-    return layer ? ` (${debugTiles - 1} of ${layers.length}, order ${layer.renderOrder}${layer instanceof TileCollisionLayer ? ', collision' : ''})` : ' (all)';
+    return layer ? ` (layer ${debugTiles - 1} of ${layers.length}, renderOrder ${layer.renderOrder}${layer instanceof TileCollisionLayer ? ', collision' : ''})` : ' (all)';
 }
 
 // Debug Tiles: each layer's bounds, then the collision value of every cell on screen, tinted by value, with the
@@ -1017,13 +1017,13 @@ function debugTileLayers()
 {
     // everything the camera can see, turned or not
     const reach = getCameraSize().length() / 2;
-    const showValues = cameraScale >= 24;
+    const showValues = cameraScale >= 24, layers = debugTileLayersShown();
     for (const layer of debugTileLayersSelected())
     {
         const isCollision = layer instanceof TileCollisionLayer, size = layer.size, pos = layer.pos;
         const color = isCollision ? '#f80' : '#0cf';
         debugRect(pos.add(size.scale(.5)), size, color);
-        const label = size.x + 'x' + size.y + ' order ' + layer.renderOrder + (isCollision ? ' collision' : '');
+        const label = 'layer ' + (layers.indexOf(layer) + 1) + ', ' + size.x + 'x' + size.y + ', renderOrder ' + layer.renderOrder + (isCollision ? ', collision' : '');
         debugText(label, pos.add(vec2(size.x / 2, size.y + .4)), .6, color);
         if (!isCollision) continue;
 
@@ -1045,13 +1045,15 @@ function debugTileLayers()
 function debugTileText()
 {
     if (!debugTiles) return '';
+    // each layer by its number in the 8 key's cycle, the one the menu shows
     let text = '';
+    const layers = debugTileLayersShown();
     for (const layer of debugTileLayersSelected())
     {
         const local = mousePos.subtract(layer.pos);
         if (!local.arrayCheck(layer.size)) continue;
         const data = layer.getData(local), collision = layer.getCollisionData(local);
-        text += '\nlayer ' + layer.renderOrder + ': tile ' + (data?.tile ?? 'empty') + (collision ? ', collision ' + collision : '');
+        text += '\nlayer ' + (layers.indexOf(layer) + 1) + ': tile ' + (data?.tile ?? 'empty') + (collision ? ', collision ' + collision : '');
     }
     return text;
 }
