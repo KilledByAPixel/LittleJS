@@ -128,11 +128,11 @@ function glPreRender()
     initVertexAttribArray('r', gl_FLOAT, 4, 1); // rotation
 
     // build the transform matrix
-    // the rotated form is kept in its own branch so builds with camera
-    // rotation disabled fold it away instead of paying for the trig
+    // the rotated form is kept in its own branch so games that never rotate
+    // the camera fold it away instead of paying for the trig
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
     let transform;
-    if (cameraAngle)
+    if (cameraAngle && !tileLayerRedrawing)
     {
         const p = vec2(-1).subtract(cameraPos.rotate(-cameraAngle).multiply(s));
         const ca = Math.cos(cameraAngle), sa = Math.sin(cameraAngle);

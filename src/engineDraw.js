@@ -55,6 +55,13 @@ let textureInfos = [];
 // Keep track of how many draw calls there were each frame for debugging
 let drawCount;
 
+// Set while a tile layer draws into its cache, which is axis aligned, so
+// camera rotation must be ignored for that draw
+// - every rotation branch tests this next to cameraAngle instead of the
+//   tile layer zeroing cameraAngle, because any write to cameraAngle besides
+//   setCameraAngle keeps all the rotation code in games that never rotate
+let tileLayerRedrawing;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -171,7 +178,7 @@ function screenToWorld(screenPos)
 {
     let x = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
     let y = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
-    if (cameraAngle)
+    if (cameraAngle && !tileLayerRedrawing)
     {
         // apply camera rotation
         const c = Math.cos(-cameraAngle), s = Math.sin(-cameraAngle);
@@ -189,7 +196,7 @@ function worldToScreen(worldPos)
 {
     let x = worldPos.x - cameraPos.x;
     let y = worldPos.y - cameraPos.y;
-    if (cameraAngle)
+    if (cameraAngle && !tileLayerRedrawing)
     {
         // apply inverse camera rotation
         const c = Math.cos(cameraAngle), s = Math.sin(cameraAngle);
@@ -213,7 +220,7 @@ function screenToWorldDelta(screenDelta)
 
     let x = screenDelta.x /  cameraScale;
     let y = screenDelta.y / -cameraScale;
-    if (cameraAngle)
+    if (cameraAngle && !tileLayerRedrawing)
     {
         // apply camera rotation
         const c = Math.cos(-cameraAngle), s = Math.sin(-cameraAngle);
@@ -233,7 +240,7 @@ function worldToScreenDelta(worldDelta)
 
     let x = worldDelta.x;
     let y = worldDelta.y;
-    if (cameraAngle)
+    if (cameraAngle && !tileLayerRedrawing)
     {
         // apply inverse camera rotation
         const c = Math.cos(cameraAngle), s = Math.sin(cameraAngle);
@@ -259,7 +266,7 @@ function isOnScreen(pos, size=0)
     // optimized circle on screen test
     let x = pos.x - cameraPos.x;
     let y = pos.y - cameraPos.y;
-    if (cameraAngle)
+    if (cameraAngle && !tileLayerRedrawing)
     {
         // apply inverse camera rotation
         const c = Math.cos(cameraAngle), s = Math.sin(cameraAngle);
@@ -484,7 +491,8 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
         // transform from world space to screen space
         pos = worldToScreen(pos);
         size = size.scale(cameraScale);
-        angle -= cameraAngle;
+        if (cameraAngle && !tileLayerRedrawing)
+            angle -= cameraAngle;
     }
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
