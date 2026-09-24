@@ -141,6 +141,12 @@ function gameInit()
     const font2 = new ImageFont(ti);
     if (font2.tileInfo !== ti) throw 'ImageFont tileInfo not stored';
 
+    // medals draw through a hook that only medalsInit sets, so they cost
+    // nothing in a game that never uses them
+    if (medalsRender) throw 'medalsRender should be unset until medalsInit';
+    medalsInit('smoke');
+    if (typeof medalsRender != 'function') throw 'medalsInit should set medalsRender';
+
     // blend mode uses main's name
     if (typeof setAdditiveBlendMode != 'function') throw 'setAdditiveBlendMode missing';
 

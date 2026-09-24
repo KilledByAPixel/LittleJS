@@ -31,8 +31,7 @@ function medalsInit(saveName)
         medalsForEach(medal=> medal.unlocked = !!localStorage[medal.storageKey()]);
 
     // engine automatically renders medals
-    engineAddPlugin(undefined, medalsRender);
-    function medalsRender()
+    medalsRender = ()=>
     {
         if (!medalsDisplayQueue.length)
             return;
@@ -56,7 +55,7 @@ function medalsInit(saveName)
                 time > slideOffTime ? (time - slideOffTime) / medalDisplaySlideTime : 0;
             medal.render(hidePercent);
         }
-    }
+    };
 }
 
 /** Calls a function for each medal

@@ -87,21 +87,11 @@ function setPaused(isPaused=true) { paused = isPaused; }
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
-// plugin hooks
+// medal display
 
-const pluginUpdateList = [], pluginRenderList = [];
-
-/** Add a new update function for a plugin
- *  @param {Function} [updateFunction]
- *  @param {Function} [renderFunction]
- *  @memberof Engine */
-function engineAddPlugin(updateFunction, renderFunction)
-{
-    ASSERT(!pluginUpdateList.includes(updateFunction));
-    ASSERT(!pluginRenderList.includes(renderFunction));
-    updateFunction && pluginUpdateList.push(updateFunction);
-    renderFunction && pluginRenderList.push(renderFunction);
-}
+// only medalsInit sets this, so a game that never uses medals pays nothing to draw them
+// - declared here rather than in engineMedals.js so that file can be left out of a build
+let medalsRender;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Main engine functions
@@ -178,10 +168,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (paused)
             {
                 // everything except time, the game, and object updates
-                // - transforms come last, like engineObjectsUpdate does when
-                //   running, so a plugin that moved something is picked up
+                // - transforms still update, so children follow a parent moved while paused
                 inputUpdate();
-                pluginUpdateList.forEach(f=>f());
                 for (const o of engineObjects)
                     o.parent || o.updateTransforms();
             }
@@ -193,7 +181,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 // update game and objects
                 inputUpdate();
                 gameUpdate();
-                pluginUpdateList.forEach(f=>f());
                 engineObjectsUpdate();
             }
 
@@ -215,7 +202,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             for (const o of engineObjects)
                 o.destroyed || o.render();
             gameRenderPost();
-            pluginRenderList.forEach(f=>f());
+            medalsRender && medalsRender();
             touchGamepadRender();
             debugRender();
             glCopyToContext(mainContext);
