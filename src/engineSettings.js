@@ -150,6 +150,20 @@ let gravity = vec2();
  *  @memberof Settings */
 let particleEmitRateScale = 1;
 
+/** Call an emitter's particleCreateCallback and particleDestroyCallback
+ *  - Off by default in this branch to save space, main LittleJS always calls them
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let particleCallbacksEnable = false;
+
+/** Let emitters made with localSpace keep their particles in the emitter's space
+ *  - Off by default in this branch to save space, main LittleJS always allows it
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let particleLocalSpaceEnable = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Input settings
 
@@ -398,6 +412,16 @@ function setGravity(newGravity) { gravity = newGravity; }
  *  @param {Number} scale
  *  @memberof Settings */
 function setParticleEmitRateScale(scale) { particleEmitRateScale = scale; }
+
+/** Set if emitters call their particle create and destroy callbacks
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setParticleCallbacksEnable(enable) { particleCallbacksEnable = enable; }
+
+/** Set if emitters made with localSpace keep their particles in the emitter's space
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setParticleLocalSpaceEnable(enable) { particleLocalSpaceEnable = enable; }
 
 /** Set if gamepads are enabled
  *  @param {Boolean} enable

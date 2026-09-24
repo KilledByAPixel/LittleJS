@@ -135,6 +135,37 @@ function gameInit()
     emitter.destroy();
     if (!emitter.destroyed) throw 'emitter destroy failed';
 
+    // particle callbacks and local space are off until a game turns them on,
+    // and setting one while it is off asserts with the setter to call
+    let asserts = 0;
+    const realAssert = console.assert;
+    const emitCounting = (e)=> { console.assert = ok=> ok || ++asserts; const p = e.emitParticle(); console.assert = realAssert; return p; };
+    let created = 0;
+    const onDestroy = ()=>{};
+    const cbEmitter = new ParticleEmitter(vec2(5, 5), 0, 0, 0, 0, PI, ti);
+    cbEmitter.particleCreateCallback = ()=> ++created;
+    cbEmitter.particleDestroyCallback = onDestroy;
+    let cbParticle = emitCounting(cbEmitter);
+    if (created || cbParticle.destroyCallback) throw 'particle callbacks should be off by default';
+    if (asserts != 1) throw 'a particle callback set while off should assert';
+    setParticleCallbacksEnable(true);
+    cbParticle = emitCounting(cbEmitter);
+    if (created != 1 || cbParticle.destroyCallback !== onDestroy) throw 'setParticleCallbacksEnable should call them';
+    setParticleCallbacksEnable(false);
+    cbEmitter.destroy();
+
+    asserts = 0;
+    const localEmitter = new ParticleEmitter(vec2(50, 50), 0, 0, 0, 0, PI, ti);
+    localEmitter.localSpace = true;
+    let localParticle = emitCounting(localEmitter);
+    if (localParticle.localSpaceEmitter || localParticle.pos.distance(vec2(50, 50)) > 1) throw 'local space should be off by default';
+    if (asserts != 1) throw 'localSpace set while off should assert';
+    setParticleLocalSpaceEnable(true);
+    localParticle = emitCounting(localEmitter);
+    if (localParticle.localSpaceEmitter !== localEmitter || localParticle.pos.length() > 1) throw 'setParticleLocalSpaceEnable should emit in local space';
+    setParticleLocalSpaceEnable(false);
+    localEmitter.destroy();
+
     // image font matches main's constructor, with a js13k-only default font
     const font = new ImageFont;
     if (font.tileInfo !== undefined) throw 'default ImageFont should have no tileInfo';

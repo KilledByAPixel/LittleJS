@@ -182,8 +182,12 @@ class ParticleEmitter extends EngineObject
             randInCircle(this.emitSize/2)              // circle emitter
             : vec2(rand(-.5,.5), rand(-.5,.5))         // box emitter
                 .multiply(this.emitSize).rotate(this.angle)
+        ASSERT(particleLocalSpaceEnable || !this.localSpace, 'localSpace needs setParticleLocalSpaceEnable(true)');
+        ASSERT(particleCallbacksEnable || !this.particleCreateCallback && !this.particleDestroyCallback,
+            'particle callbacks need setParticleCallbacksEnable(true)');
+        const localSpace = particleLocalSpaceEnable && this.localSpace;
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
-        if (!this.localSpace)
+        if (!localSpace)
         {
             pos = this.pos.add(pos);
             angle += this.angle;
@@ -202,10 +206,10 @@ class ParticleEmitter extends EngineObject
         const coneAngle     = rand(this.emitConeAngle, -this.emitConeAngle);
         const colorStart    = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
         const colorEnd      = randColor(this.colorEndA,   this.colorEndB, this.randomColorLinear);
-        const velocityAngle = this.localSpace ? coneAngle : this.angle + coneAngle;
+        const velocityAngle = localSpace ? coneAngle : this.angle + coneAngle;
         
         // build particle
-        const particle = new Particle(pos, this.tileInfo, angle, colorStart, colorEnd, particleTime, sizeStart, sizeEnd, this.fadeRate, this.additive,  this.trailScale, this.localSpace && this, this.particleDestroyCallback);
+        const particle = new Particle(pos, this.tileInfo, angle, colorStart, colorEnd, particleTime, sizeStart, sizeEnd, this.fadeRate, this.additive,  this.trailScale, localSpace && this, particleCallbacksEnable && this.particleDestroyCallback);
         particle.velocity      = vec2().setAngle(velocityAngle, speed);
         particle.angleVelocity = angleSpeed;
         particle.fadeRate      = this.fadeRate;
@@ -219,7 +223,7 @@ class ParticleEmitter extends EngineObject
         particle.mirror        = !!randInt(2);
 
         // call particle create callback
-        this.particleCreateCallback && this.particleCreateCallback(particle);
+        particleCallbacksEnable && this.particleCreateCallback && this.particleCreateCallback(particle);
 
         // return the newly created particle
         return particle;
@@ -320,7 +324,7 @@ class Particle extends EngineObject
         this.additive && setAdditiveBlendMode();
 
         let pos = this.pos, angle = this.angle;
-        if (this.localSpaceEmitter)
+        if (particleLocalSpaceEnable && this.localSpaceEmitter)
         {
             // in local space of emitter
             pos = this.localSpaceEmitter.pos.add(pos.rotate(-this.localSpaceEmitter.angle)); 
@@ -330,7 +334,7 @@ class Particle extends EngineObject
         {
             // trail style particles
             let velocity = this.velocity;
-            if (this.localSpaceEmitter)
+            if (particleLocalSpaceEnable && this.localSpaceEmitter)
                 velocity = velocity.rotate(-this.localSpaceEmitter.angle);
             const speed = velocity.length();
             if (speed)
@@ -352,7 +356,7 @@ class Particle extends EngineObject
             // destroy particle when it's time runs out
             this.color = color;
             this.size = size;
-            this.destroyCallback && this.destroyCallback(this);
+            particleCallbacksEnable && this.destroyCallback && this.destroyCallback(this);
             this.destroyed = 1;
         }
     }
