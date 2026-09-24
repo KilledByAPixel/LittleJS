@@ -31,7 +31,7 @@ test('when the server does not answer at load the newgrounds medals are local ag
 
     assert.equal(await plugin.ready, plugin, 'ready still resolves');
     assert.equal(plugin.session_id, null, 'the session is dropped');
-    assert.equal(fetches, 2, 'the session check, and the early unlock');
+    assert.equal(fetches, 5, 'the view, the session check, the early unlock, and the two lists as a guest');
     assert.equal(intervals, 0, 'no keep alive without a session');
     assert.deepEqual(plugin.medals, []);
     assert.equal(m1.isLocal(), true);
@@ -43,6 +43,6 @@ test('when the server does not answer at load the newgrounds medals are local ag
 
     // a later unlock is local, saved and not sent
     assert.equal(await m3.unlock(), true);
-    assert.equal(fetches, 2, 'nothing sent');
+    assert.equal(fetches, 5, 'nothing sent');
     assert.equal(JSON.parse(globalThis.localStorage[SAVE])['3'].unlocked, true, 'saved');
 });

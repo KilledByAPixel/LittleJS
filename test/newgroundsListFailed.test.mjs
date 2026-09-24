@@ -39,7 +39,8 @@ test('a failed medal list after a good session plays as logged out and keeps a c
     assert.equal(plugin.session_id, 'abc123', 'still logged in at this point');
 
     await plugin.ready;
-    assert.deepEqual(calls, ['App.checkSession', 'Medal.unlock', 'Medal.getList']);
+    assert.deepEqual(calls, ['App.logView', 'App.checkSession', 'Medal.unlock', 'Medal.getList', 'Medal.getList', 'ScoreBoard.getBoards'],
+        'the list is asked for again as a guest');
     assert.equal(plugin.session_id, null, 'dropped');
     assert.equal(plugin.user, null);
     assert.equal(intervals, 0, 'no keep alive');

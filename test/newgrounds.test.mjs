@@ -44,7 +44,8 @@ test('a guest gets the medal and scoreboard lists, keeps the local unlocks and s
     assert.equal(m7.isLocal(), true);
     assert.equal(m7.unlocked, true, 'a guest medal is not locked');
     assert.equal(await plugin.ready, plugin);
-    assert.deepEqual(calls, ['Medal.getList', 'ScoreBoard.getBoards'], 'no session check without a session');
+    assert.ok(calls.includes('App.logView'), 'the view is logged');
+    assert.deepEqual(calls.filter(c => c != 'App.logView'), ['Medal.getList', 'ScoreBoard.getBoards'], 'no session check without a session');
     assert.equal(plugin.user, null);
     assert.equal(intervals, 0, 'no keep alive');
     assert.equal(plugin.medals.length, 2);

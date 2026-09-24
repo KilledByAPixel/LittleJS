@@ -25,7 +25,7 @@ test('a session with no user signed in plays as logged out', async () =>
     const plugin = new NewgroundsPlugin('an app');
     assert.equal(m1.unlocked, false, 'held until the server answers');
     await plugin.ready;
-    assert.deepEqual(calls, ['App.checkSession'], 'nothing else is asked for');
+    assert.deepEqual(calls, ['App.logView', 'App.checkSession', 'Medal.getList', 'ScoreBoard.getBoards'], 'the lists as a guest');
     assert.equal(plugin.session_id, null);
     assert.equal(plugin.user, null);
     assert.equal(intervals, 0, 'no keep alive for a session that is gone');

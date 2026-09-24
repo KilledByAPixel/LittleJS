@@ -12,7 +12,7 @@ globalThis.fetch = async (url, options) =>
 {
     const { call } = JSON.parse(options.body.get('input'));
     calls.push(call.component);
-    const reply = replies[call.component];
+    const reply = await replies[call.component];
     if (reply instanceof Error) throw reply;
     return { text: async ()=> JSON.stringify({ success: true, result: { component: call.component, success: true, ...reply } }) };
 };
@@ -53,7 +53,7 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     assert.equal(m1.isLocal(), false);
     assert.equal(plain.isLocal(), true);
     await plugin.ready;
-    assert.deepEqual(calls, ['App.checkSession', 'Medal.getList', 'ScoreBoard.getBoards']);
+    assert.deepEqual(calls, ['App.logView', 'App.checkSession', 'Medal.getList', 'ScoreBoard.getBoards']);
     assert.equal(plugin.user.name, 'Frank');
     assert.ok(keepAlive, 'the keep alive is set up once the session is good');
     assert.equal(m1.unlocked, false);
@@ -100,6 +100,21 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     assert.equal(await resent, true, 'resent and confirmed');
     assert.deepEqual(calls.slice(before), ['Gateway.ping', 'Medal.unlock']);
     assert.equal(m3.unlocked, true);
+    assert.equal(plugin.pendingUnlocks.size, 0);
+
+    // a request still out when the ping comes is left to answer, not sent twice
+    let answer;
+    replies['Medal.unlock'] = new Promise(resolve => answer = resolve);
+    const m5 = new NewgroundsMedal(5, 'Five');
+    const out = m5.unlock();
+    before = unlockCalls();
+    keepAlive();
+    await flush();
+    assert.equal(unlockCalls(), before, 'not resent while out');
+    assert.equal(plugin.pendingUnlocks.get(m5), out);
+    answer({ data: { medal: { id: 5, unlocked: true }, medal_score: 5 } });
+    assert.equal(await out, true);
+    assert.equal(m5.unlocked, true);
     assert.equal(plugin.pendingUnlocks.size, 0);
 
     // a confirm that lands after unlocks were prevented waits too, and is resent once they are allowed

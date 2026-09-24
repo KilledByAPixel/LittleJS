@@ -1469,7 +1469,7 @@ medalDisplaySlideTime / setMedalDisplaySlideTime(seconds)
 medalDisplaySize / setMedalDisplaySize(vec2)
 
 // Newgrounds integration (a session only comes from the Newgrounds host, the lists come from anywhere)
-new NewgroundsPlugin(app_id, cipher) // sets the newgrounds global and fetches the medals and scoreboards; with the
+new NewgroundsPlugin(app_id, cipher) // sets the newgrounds global, logs a view and fetches the medals and scoreboards; with the
                                      // app's cipher, calls are encrypted by the browser's own WebCrypto, so the page
                                      // has to be https or localhost and no library is needed
 await newgrounds.ready               // resolves once the session is checked and the medals and scoreboards are in
@@ -1481,10 +1481,9 @@ newgrounds.scoreboards               // the server's scoreboard list once ready,
 newgrounds.unlockMedal(id)           // Server-side unlock; every call is a fetch and returns a promise of the response
 newgrounds.postScore(id, value)      // Submit to a scoreboard
 await newgrounds.getScores(id, user, social, skip, limit, period) // period 'D' today (the server default), 'W', 'M', 'Y', 'A' all time
-newgrounds.logView()                 // Track a page view
 newgrounds.pendingUnlocks            // Map of the medals sent to unlock that the server has not confirmed yet to the promise of
-                                     // each request; they are resent on the keep alive ping
-newgrounds.resendUnlocks()           // send those again now, as the keep alive ping does every minute
+                                     // each request; one that came back unconfirmed is resent on the keep alive ping
+newgrounds.resendUnlocks()           // send the ones that came back unconfirmed again now, as the keep alive ping does every minute
 new NewgroundsMedal(id, name, description, icon, src) // when logged in, unlock() asks the server and the medal only unlocks
                                      // and shows once it confirms, so unlocked is still false on return; await the promise for the outcome
 ```

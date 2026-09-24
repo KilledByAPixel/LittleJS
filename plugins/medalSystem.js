@@ -5,7 +5,7 @@
  * - Automatic saving to local storage, unless a service like Newgrounds holds the medal (see Medal.isLocal)
  * - Visual display queue with slide-in notifications
  * - The Newgrounds plugin extends it with NewgroundsMedal, held on the server while logged in
- * - Setting debugMedals in the console of a script tag build, before medalsInit, skips the load and logs the Newgrounds traffic
+ * - Setting debugMedals in the console of a script tag build, before medalsInit, skips the load and the save and logs the Newgrounds traffic
  * @namespace Medals
  */
 
@@ -129,7 +129,7 @@ function medalsReset()
 
 function medalsSave()
 {
-    if (!medalsSaveName) return;
+    if (debugMedals || !medalsSaveName) return;
     const saved = readSaveData(medalsSaveName);
     const data = {};
     medalsForEach(medal => {

@@ -3855,7 +3855,7 @@ declare module "littlejsengine" {
      * - A guest with no session gets the medal and scoreboard lists too, so names, icons and leaderboards show; only unlocking needs a login
      * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
      * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
-     * - Provides functions to unlock medals, post and read scoreboards and log views
+     * - Logs a view when it starts, and provides functions to unlock medals and to post and read scoreboards
      * - Keeps the session alive with a ping every minute when logged in
      * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
      * @namespace Newgrounds
@@ -3887,7 +3887,7 @@ declare module "littlejsengine" {
         cipher: string | undefined;
         /** @type {CryptoKey|undefined} */
         cryptoKey: CryptoKey | undefined;
-        /** @property {string} - Hostname used when logging views */
+        /** @property {string} - Hostname sent with the view the plugin logs when it starts */
         host: string;
         /** @property {Array} - Medals fetched from Newgrounds, empty until ready, with the unlocks only when logged in */
         medals: any[];
@@ -3901,7 +3901,7 @@ declare module "littlejsengine" {
             url: string;
             supporter: boolean;
         } | null;
-        /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping, each with the promise of its request
+        /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock that the server has not confirmed yet, each with the promise of its request; one that came back unconfirmed is resent on the keep alive ping
          *  @type {Map<NewgroundsMedal, Promise<boolean>>} */
         pendingUnlocks: Map<NewgroundsMedal, Promise<boolean>>;
         /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the server refused it
@@ -3909,8 +3909,11 @@ declare module "littlejsengine" {
         session_id: string | null;
         /** @property {Promise<NewgroundsPlugin>} - Resolves once the session is checked and the medals and scoreboards have been fetched */
         ready: Promise<this>;
-        init(): Promise<this>;
-        /** Send the unlocks the server has not confirmed again, which the keep alive ping does every minute */
+        /** Log the view, check the session, fetch the medals and scoreboards, then keep the session alive; the constructor runs it once
+         *  @private */
+        private init;
+        /** Send the unlocks that came back unconfirmed again, which the keep alive ping does every minute
+         *  - A request still out is left to answer, and while unlocks are prevented they wait */
         resendUnlocks(): void;
         /** Send message to unlock a medal by id, the medal itself waits for the response
          * @param {number} id - The medal id
@@ -3931,9 +3934,6 @@ declare module "littlejsengine" {
          * @return {Promise<Object>} - The response JSON object, undefined when the call failed
          */
         getScores(id: number, user?: string | number, social?: boolean, skip?: number, limit?: number, period?: string): Promise<any>;
-        /** Send message to log a view
-         * @return {Promise<Object>} - The response JSON object, undefined when the call failed */
-        logView(): Promise<any>;
         /** Encrypt text the way the Newgrounds gateway expects, AES-128 CBC with a random iv in front, as Base64
          * @param {string} text
          * @return {Promise<string>} */
