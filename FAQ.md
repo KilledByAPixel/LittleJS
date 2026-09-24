@@ -256,7 +256,7 @@ Plugins are self-contained features that live alongside the engine but aren't pa
 | `tweenSystem.js` | Tween any property over time with easing curves |
 | `pathFinder.js` | Grid-based A* pathfinding with optional path smoothing |
 | `medalSystem.js` | Achievement / medal tracking with toast notifications |
-| `newgrounds.js` | Newgrounds.io integration (scoreboards, cloud saves) |
+| `newgrounds.js` | Newgrounds.io integration (medals held on the server, scoreboards) |
 | `zzfxm.js` | Procedural chiptune music via the `ZzFXMusic` class |
 | `drawUtilities.js` | Higher-level drawing helpers like nine-slice and three-slice |
 
@@ -783,7 +783,7 @@ medal_firstWin.unlock();
 
 You can pass an image URL as the fifth argument to `Medal` instead of an emoji icon. The `saveName` you pass to `medalsInit` is used to track which medals have been unlocked in localStorage, so unlocks persist across sessions.
 
-The plugin also supports [Newgrounds](https://www.newgrounds.com) integration via `newgrounds.io` for hosted leaderboards and cloud-synced achievements. See [plugins/medalSystem.js](plugins/medalSystem.js) for details.
+The plugin also supports [Newgrounds](https://www.newgrounds.com) integration via `newgrounds.io` for hosted leaderboards and medals held on the server. See [plugins/medalSystem.js](plugins/medalSystem.js) for details.
 
 ---
 

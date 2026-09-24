@@ -1468,7 +1468,7 @@ medalDisplayTime / setMedalDisplayTime(seconds)
 medalDisplaySlideTime / setMedalDisplaySlideTime(seconds)
 medalDisplaySize / setMedalDisplaySize(vec2)
 
-// Newgrounds integration (only used when hosted on Newgrounds)
+// Newgrounds integration (a session only comes from the Newgrounds host, the lists come from anywhere)
 new NewgroundsPlugin(app_id, cipher) // sets the newgrounds global and fetches the medals and scoreboards; with the
                                      // app's cipher, calls are encrypted by the browser's own WebCrypto, so the page
                                      // has to be https or localhost and no library is needed

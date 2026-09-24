@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NewgroundsPlugin, NewgroundsMedal, medalsInit } from '../dist/littlejs.esm.js';
 
-// A session id the server reports as expired, or one with no user signed in: the game plays as logged out.
+// A session id the server knows but nobody has signed in to yet, the passport case: the game plays as logged out.
 // One plugin per process, so this lives in its own file.
 globalThis.location = { href: 'https://uploads.ungrounded.net/game/?ngio_session_id=old', hostname: 'uploads.ungrounded.net' };
 const calls = [];
@@ -10,13 +10,13 @@ globalThis.fetch = async (url, options) =>
 {
     const { call } = JSON.parse(options.body.get('input'));
     calls.push(call.component);
-    const data = { success: true, session: { id: 'old', user: null, expired: true, passport_url: 'https://www.newgrounds.com/passport/' } };
+    const data = { success: true, session: { id: 'old', user: null, expired: false, passport_url: 'https://www.newgrounds.com/passport/' } };
     return { text: async ()=> JSON.stringify({ success: true, result: { component: call.component, success: true, data } }) };
 };
 let intervals = 0;
 globalThis.setInterval = ()=> ++intervals;
 
-test('an expired session plays as logged out', async () =>
+test('a session with no user signed in plays as logged out', async () =>
 {
     const SAVE = 'NG Expired';
     globalThis.localStorage[SAVE] = JSON.stringify({ '1': { name: 'One', unlocked: true } });

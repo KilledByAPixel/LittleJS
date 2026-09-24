@@ -3856,7 +3856,7 @@ declare module "littlejsengine" {
      * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
      * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
      * - Provides functions to unlock medals, post and read scoreboards and log views
-     * - Keeps the session alive with a ping every minute
+     * - Keeps the session alive with a ping every minute when logged in
      * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
      * @namespace Newgrounds
      */
@@ -3870,8 +3870,8 @@ declare module "littlejsengine" {
      */
     export class NewgroundsPlugin {
         /** Create the global newgrounds object
-         *  - Create the medals first: when logged in they are locked here and take their state from the server once it answers
-         *  @param {string} app_id   - The newgrounds App ID
+         *  - Create the medals first: they take their name and icon from the server once it answers, and when logged in they are locked here until it does
+         *  @param {string} app_id   - The Newgrounds App ID
          *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; calls are encrypted with
          *    the browser's WebCrypto, which needs a secure page, https or localhost
          *  @example
@@ -3893,9 +3893,14 @@ declare module "littlejsengine" {
         medals: any[];
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         scoreboards: any[];
-        /** @property {Object|null} - The logged in player once ready, with id, name, url and supporter, null when not logged in
-         *  @type {Object|null} */
-        user: any | null;
+        /** @property {{id: number, name: string, url: string, supporter: boolean}|null} - The logged in player once ready, null when not logged in
+         *  @type {{id: number, name: string, url: string, supporter: boolean}|null} */
+        user: {
+            id: number;
+            name: string;
+            url: string;
+            supporter: boolean;
+        } | null;
         /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping, each with the promise of its request
          *  @type {Map<NewgroundsMedal, Promise<boolean>>} */
         pendingUnlocks: Map<NewgroundsMedal, Promise<boolean>>;
@@ -3914,20 +3919,20 @@ declare module "littlejsengine" {
         /** Send message to post score
          * @param {number} id    - The scoreboard id
          * @param {number} value - The score value
-         * @return {Promise<Object>} - The response JSON object */
+         * @return {Promise<Object>} - The response JSON object, undefined when the call failed */
         postScore(id: number, value: number): Promise<any>;
         /** Get scores from a scoreboard
          * @param {number} id        - The scoreboard id
-         * @param {string} [user]    - A user's id or name
+         * @param {string|number} [user] - A user's id or name
          * @param {boolean} [social] - If true, only social scores will be loaded
          * @param {number} [skip]    - Number of scores to skip over
          * @param {number} [limit]   - Number of scores to include in the list
          * @param {string} [period]  - 'D' today, which the server assumes when left out, 'W' this week, 'M' this month, 'Y' this year or 'A' all time
-         * @return {Promise<Object>} - The response JSON object
+         * @return {Promise<Object>} - The response JSON object, undefined when the call failed
          */
-        getScores(id: number, user?: string, social?: boolean, skip?: number, limit?: number, period?: string): Promise<any>;
+        getScores(id: number, user?: string | number, social?: boolean, skip?: number, limit?: number, period?: string): Promise<any>;
         /** Send message to log a view
-         * @return {Promise<Object>} - The response JSON object */
+         * @return {Promise<Object>} - The response JSON object, undefined when the call failed */
         logView(): Promise<any>;
         /** Encrypt text the way the Newgrounds gateway expects, AES-128 CBC with a random iv in front, as Base64
          * @param {string} text
@@ -3946,10 +3951,10 @@ declare module "littlejsengine" {
      * @memberof Newgrounds
      */
     export class NewgroundsMedal extends Medal {
-        /** @property {number|undefined} - Difficulty from the server, 1 easy to 5 brutal, once ready when logged in
+        /** @property {number|undefined} - Difficulty from the server once ready, 1 easy to 5 brutal
          *  @type {number|undefined} */
         difficulty: number | undefined;
-        /** @property {number|undefined} - Point value from the server, once ready when logged in
+        /** @property {number|undefined} - Point value from the server once ready
          *  @type {number|undefined} */
         value: number | undefined;
     }

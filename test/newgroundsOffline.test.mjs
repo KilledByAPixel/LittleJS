@@ -36,8 +36,8 @@ test('when the server does not answer at load the newgrounds medals are local ag
     assert.deepEqual(plugin.medals, []);
     assert.equal(m1.isLocal(), true);
     assert.equal(m1.unlocked, true, 'back from the local save');
-    assert.equal(await early, false, 'the early request did fail');
-    assert.equal(m2.unlocked, true, 'but the medal is local now and unlocked with it');
+    assert.equal(m2.unlocked, true, 'the medal is local now and unlocked with it');
+    assert.equal(await early, true, 'which the early request reports');
     assert.equal(plugin.pendingUnlocks.size, 0);
     assert.equal(JSON.parse(globalThis.localStorage[SAVE])['2'].unlocked, true, 'saved');
 

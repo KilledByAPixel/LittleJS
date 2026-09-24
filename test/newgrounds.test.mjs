@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NewgroundsPlugin, NewgroundsMedal, Medal, newgrounds, medalsInit } from '../dist/littlejs.esm.js';
+import { NewgroundsPlugin, NewgroundsMedal, Medal, newgrounds, medals, medalsInit } from '../dist/littlejs.esm.js';
 
 // A guest: no session in the url (none headless), so the lists come in but nothing is unlocked on the server.
 // The fetch is stubbed per component with the gateway's result object.
@@ -105,4 +105,13 @@ test('a call whose body is not JSON, or whose cipher is bad, gives undefined ins
     newgrounds.cryptoKey = undefined;
     assert.equal(await newgrounds.call('Gateway.ping', 0), undefined, 'a bad cipher is a failed call');
     newgrounds.cipher = cipher;
+});
+
+test('a guest running medalsInit after ready keeps the server names and loads the local unlocks', () =>
+{
+    globalThis.localStorage['NG Guest Again'] = JSON.stringify({ '8': { name: 'Eight', unlocked: true } });
+    medalsInit('NG Guest Again');
+    assert.equal(medals[7].name, 'Server Seven', 'the server name survives the load');
+    assert.equal(medals[7].unlocked, false, 'not in this save');
+    assert.equal(medals[8].unlocked, true, 'from this save');
 });

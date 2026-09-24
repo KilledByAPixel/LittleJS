@@ -7,7 +7,7 @@
  * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
  * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
  * - Provides functions to unlock medals, post and read scoreboards and log views
- * - Keeps the session alive with a ping every minute
+ * - Keeps the session alive with a ping every minute when logged in
  * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
  * @namespace Newgrounds
  */
@@ -38,18 +38,18 @@ class NewgroundsMedal extends Medal
     {
         super(id, name, description, icon, src);
 
-        /** @property {number|undefined} - Difficulty from the server, 1 easy to 5 brutal, once ready when logged in
+        /** @property {number|undefined} - Difficulty from the server once ready, 1 easy to 5 brutal
          *  @type {number|undefined} */
         this.difficulty = undefined;
 
-        /** @property {number|undefined} - Point value from the server, once ready when logged in
+        /** @property {number|undefined} - Point value from the server once ready
          *  @type {number|undefined} */
         this.value = undefined;
     }
 
     /** Whether the local save holds this medal, false while logged in when Newgrounds holds it
      *  @return {boolean} */
-    isLocal() { return !newgrounds || !newgrounds.session_id; }
+    isLocal() { return !newgrounds?.session_id; }
 
     /** Unlocks a medal if not already unlocked, once Newgrounds confirms it when logged in
      *  - The promise is optional, for when a game wants to know the outcome
@@ -69,9 +69,9 @@ class NewgroundsMedal extends Medal
             const serverMedal = response?.result?.data?.medal;
             if (!serverMedal?.unlocked || medalsPreventUnlock)
             {
-                // still pending, the keep alive ping resends it once unlocks are allowed
+                // still pending, the keep alive ping resends it once unlocks are allowed; unless the session went and it is local now
                 debugMedals && LOG('Newgrounds did not unlock medal', this.id, response?.result?.error || response?.error);
-                return false;
+                return this.unlocked;
             }
             const listed = newgrounds.medals.find(m=> m['id'] == this.id);
             listed && Object.assign(listed, serverMedal); // keep the fetched list in step
@@ -91,8 +91,8 @@ class NewgroundsMedal extends Medal
 class NewgroundsPlugin
 {
     /** Create the global newgrounds object
-     *  - Create the medals first: when logged in they are locked here and take their state from the server once it answers
-     *  @param {string} app_id   - The newgrounds App ID
+     *  - Create the medals first: they take their name and icon from the server once it answers, and when logged in they are locked here until it does
+     *  @param {string} app_id   - The Newgrounds App ID
      *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; calls are encrypted with
      *    the browser's WebCrypto, which needs a secure page, https or localhost
      *  @example
@@ -120,8 +120,8 @@ class NewgroundsPlugin
         this.medals = [];
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         this.scoreboards = [];
-        /** @property {Object|null} - The logged in player once ready, with id, name, url and supporter, null when not logged in
-         *  @type {Object|null} */
+        /** @property {{id: number, name: string, url: string, supporter: boolean}|null} - The logged in player once ready, null when not logged in
+         *  @type {{id: number, name: string, url: string, supporter: boolean}|null} */
         this.user = null;
 
         /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping, each with the promise of its request
@@ -155,9 +155,13 @@ class NewgroundsPlugin
             {
                 // without the server (offline / bad session / server error) the game plays as logged out
                 debugMedals && LOG('Newgrounds session unavailable; medals are local');
+                const unlocked = Object.values(medals).filter(medal=> medal.unlocked); // confirmed meanwhile
                 this.session_id = null;
                 medalsLoad(); // the Newgrounds medals are local again, back from the save
-                this.resendUnlocks(); // and so are the unlocks sent meanwhile, they unlock now
+                for (const medal of unlocked)
+                    medal.unlocked = true;
+                medalsSave();
+                this.resendUnlocks(); // the unlocks still out are local too, they unlock now
                 return this;
             }
             this.user = user;
@@ -177,7 +181,7 @@ class NewgroundsPlugin
                 medal.image.src =   newgroundsMedal['icon'];
                 medal.name =        newgroundsMedal['name'];
                 medal.description = newgroundsMedal['description'];
-                medal.unlocked =    medal.unlocked || !!newgroundsMedal['unlocked']; // an unlock may have landed first
+                medal.unlocked =    medal.unlocked || !!newgroundsMedal['unlocked']; // keeps a local unlock, or one that landed first
                 medal.difficulty =  newgroundsMedal['difficulty'];
                 medal.value =       newgroundsMedal['value'];
 
@@ -219,23 +223,23 @@ class NewgroundsPlugin
     /** Send message to post score
      * @param {number} id    - The scoreboard id
      * @param {number} value - The score value
-     * @return {Promise<Object>} - The response JSON object */
+     * @return {Promise<Object>} - The response JSON object, undefined when the call failed */
     postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}); }
 
     /** Get scores from a scoreboard
      * @param {number} id        - The scoreboard id
-     * @param {string} [user]    - A user's id or name
+     * @param {string|number} [user] - A user's id or name
      * @param {boolean} [social] - If true, only social scores will be loaded
      * @param {number} [skip]    - Number of scores to skip over
      * @param {number} [limit]   - Number of scores to include in the list
      * @param {string} [period]  - 'D' today, which the server assumes when left out, 'W' this week, 'M' this month, 'Y' this year or 'A' all time
-     * @return {Promise<Object>} - The response JSON object
+     * @return {Promise<Object>} - The response JSON object, undefined when the call failed
      */
     getScores(id, user, social=false, skip=0, limit=10, period)
     { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit, 'period':period}); }
 
     /** Send message to log a view
-     * @return {Promise<Object>} - The response JSON object */
+     * @return {Promise<Object>} - The response JSON object, undefined when the call failed */
     logView() { return this.call('App.logView', {'host':this.host}); }
 
     /** Encrypt text the way the Newgrounds gateway expects, AES-128 CBC with a random iv in front, as Base64
