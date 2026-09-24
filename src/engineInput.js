@@ -113,12 +113,18 @@ function inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearRe
     inputData[device][key] &= ~((clearDown?1:0)|(clearPressed?2:0)|(clearReleased?4:0));
 }
 
+// the WASD keys and the arrows they stand in for when inputWASDEmulateDirection is on, and the arrows' aliases
+const inputWASDToArrow = {KeyW:'ArrowUp', KeyS:'ArrowDown', KeyA:'ArrowLeft', KeyD:'ArrowRight'};
+const inputArrowToWASD = {ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', ArrowRight:'KeyD'};
+const inputKeysHeld = new Set; // the keys physically down, since an arrow's slot is shared with its alias
+
 /** Clears all input
  *  @memberof Input */
 function inputClear()
 {
     inputData.length = 0;
     inputData[0] = [];
+    inputKeysHeld.clear();
     touchGamepadButtons.length = 0;
     touchGamepadSticks.length = 0;
     touchGamepadStickPointerId.length = 0; // release floating sticks so they re-anchor
@@ -405,9 +411,12 @@ function inputInit()
     {
         if (!e.repeat)
         {
+            inputKeysHeld.add(e.code);
             inputData[0][e.code] = 3;
-            if (inputWASDEmulateDirection)
-                inputData[0][remapKey(e.code)] = 3;
+            // an alias presses its arrow's slot too, unless the arrow itself already holds it down
+            const remap = remapKey(e.code);
+            if (remap !== e.code && !(inputData[0][remap] & 1))
+                inputData[0][remap] = 3;
         }
 
         // try to prevent default browser handling of input
@@ -442,21 +451,18 @@ function inputInit()
     }
     function onKeyUp(e)
     {
-        inputData[0][e.code] = (inputData[0][e.code]&2) | 4;
-        if (inputWASDEmulateDirection)
-        {
-            const remap = remapKey(e.code);
-            inputData[0][remap] = (inputData[0][remap]&2) | 4;
-        }
+        inputKeysHeld.delete(e.code);
+        // the key's own slot and the arrow slot an alias shares, each released only once nothing holds it:
+        // an arrow held with its alias stays down until both are let go
+        const remap = remapKey(e.code);
+        for (const key of remap === e.code ? [e.code] : [e.code, remap])
+            if (!inputKeysHeld.has(key) && !(inputWASDEmulateDirection && inputKeysHeld.has(inputArrowToWASD[key])))
+                inputData[0][key] = (inputData[0][key]&2) | 4;
     }
     function remapKey(k)
     {
         // handle remapping wasd keys to directions
-        return inputWASDEmulateDirection ?
-            k === 'KeyW' ? 'ArrowUp' :
-            k === 'KeyS' ? 'ArrowDown' :
-            k === 'KeyA' ? 'ArrowLeft' :
-            k === 'KeyD' ? 'ArrowRight' : k : k;
+        return inputWASDEmulateDirection && inputWASDToArrow[k] || k;
     }
     function onMouseDown(e)
     {
@@ -1224,10 +1230,11 @@ function touchGamepadPointerDown(e, zone)
     if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
         audioContext.resume();
 
-    // while paused, any touch is the start button
+    // while paused, any touch is the start button; a control belongs to the first finger on it until that
+    // finger lifts, so a second finger landing on the same one neither takes it over nor lets it go
     if (paused)
     {
-        if (touchGamepadCenterButtonSize)
+        if (touchGamepadCenterButtonSize && !touchGamepadButtons[9])
         {
             touchGamepadButtons[9] = 1;
             touchGamepadPointerRole.set(e.pointerId, 'start');
@@ -1245,6 +1252,7 @@ function touchGamepadPointerDown(e, zone)
     if (hit.role === 'stick')
     {
         const side = hit.side;
+        if (touchGamepadStickPointerId[side] !== undefined) return; // another finger has the stick
         touchGamepadStickAnchors[side] = touchGamepadFloating ? p : touchGamepadSideCenter(side, W, H);
         touchGamepadStickPointerId[side] = e.pointerId;
         touchGamepadPointerRole.set(e.pointerId, 'stick'+side);
@@ -1253,11 +1261,13 @@ function touchGamepadPointerDown(e, zone)
     }
     else if (hit.role === 'face')
     {
+        if (touchGamepadButtons[hit.btn]) return; // another finger holds the button
         touchGamepadButtons[hit.btn] = 1;
         touchGamepadPointerRole.set(e.pointerId, 'face'+hit.btn);
     }
     else // 'start'
     {
+        if (touchGamepadButtons[9]) return;
         touchGamepadButtons[9] = 1;
         touchGamepadPointerRole.set(e.pointerId, 'start');
     }

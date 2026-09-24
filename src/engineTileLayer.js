@@ -186,13 +186,14 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {number}  [tile] - The tile to use, untextured if undefined
+     *  @param {number}  [tile] - The tile to use, from 0 like tile(); undefined is an empty cell that draws nothing
      *  @param {number}  [direction] - Integer direction of tile, in 90 degree increments
      *  @param {boolean} [mirror] - If the tile should be mirrored along the x axis
      *  @param {Color}   [color] - Color of the tile */
     constructor(tile, direction=0, mirror=false, color=new Color)
     {
-        /** @property {number} - The tile to use, untextured if undefined */
+        /** @property {number|undefined} - The tile to use, from 0 like tile(); undefined is an empty cell that draws nothing
+         *  @type {number|undefined} */
         this.tile = tile;
         /** @property {number} - Integer direction of tile, in 90 degree increments */
         this.direction = direction;
@@ -203,7 +204,7 @@ class TileLayerData
     }
 
     /** Set this tile to clear, it will not be rendered */
-    clear() { this.tile = this.direction = 0; this.mirror = false; this.color = new Color; }
+    clear() { this.tile = undefined; this.direction = 0; this.mirror = false; this.color = new Color; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -485,9 +486,9 @@ class TileLayer extends CanvasLayer
         const drawPos = layerPos.multiply(drawSize);
         clear && this.clearLayerRect(drawPos, drawSize);
 
-        // draw the tile if it has layer data
+        // draw the tile if it has layer data, an empty cell has no tile and tile 0 is a tile like any other
         const d = this.getData(layerPos);
-        if (!d || !d.tile) return;
+        if (!d || d.tile === undefined) return;
 
         const tileInfo = this.tileInfo && this.tileInfo.index(d.tile);
         this.drawLayerTile(drawPos, drawSize, tileInfo, d.color, d.direction*PI/2, d.mirror);

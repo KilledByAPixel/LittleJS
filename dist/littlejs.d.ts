@@ -3197,6 +3197,9 @@ declare module "littlejsengine" {
          *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
         collideWithTile(tileData: number, pos: Vector2): boolean;
         /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
+         *  - Both objects of a touching pair are asked once a frame, whichever order they update in; an object that destroys
+         *    itself here is gone at the end of the frame and is still asked about the pairs left this frame, so a bullet that
+         *    should hit one thing checks its own destroyed flag first
          *  @param {EngineObject} object - the object to test against
          *  @param {Vector3} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
          *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity
@@ -3334,13 +3337,14 @@ declare module "littlejsengine" {
      */
     export class TileLayerData {
         /** Create a tile layer data object, one for each tile in a TileLayer
-         *  @param {number}  [tile] - The tile to use, untextured if undefined
+         *  @param {number}  [tile] - The tile to use, from 0 like tile(); undefined is an empty cell that draws nothing
          *  @param {number}  [direction] - Integer direction of tile, in 90 degree increments
          *  @param {boolean} [mirror] - If the tile should be mirrored along the x axis
          *  @param {Color}   [color] - Color of the tile */
         constructor(tile?: number, direction?: number, mirror?: boolean, color?: Color);
-        /** @property {number} - The tile to use, untextured if undefined */
-        tile: number;
+        /** @property {number|undefined} - The tile to use, from 0 like tile(); undefined is an empty cell that draws nothing
+         *  @type {number|undefined} */
+        tile: number | undefined;
         /** @property {number} - Integer direction of tile, in 90 degree increments */
         direction: number;
         /** @property {boolean} - If the tile should be mirrored along the x axis */

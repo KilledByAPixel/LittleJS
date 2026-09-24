@@ -604,8 +604,9 @@ TileLayer.drawTile(pos, size=(1,1), tileInfo, color, angle, mirror) // Draw tile
 TileLayer.drawCanvas2D(pos, size, angle, mirror, drawFunction)      // Draw to 2D canvas
 
 // Tile Layer Data Object
-TileLayerData(tile, direction=0, mirror=false, color=WHITE) // Create tile data object
-TileLayerData.clear()                                       // Clear this tile data
+TileLayerData(tile, direction=0, mirror=false, color=WHITE) // Create tile data object, tile from 0 like tile(),
+                                                            // undefined for an empty cell
+TileLayerData.clear()                                       // Clear this tile data, it draws nothing
 
 // Tile Collision Layer
 TileCollisionLayer(pos, size, tileInfo=tile())      // Create a tile collision layer object

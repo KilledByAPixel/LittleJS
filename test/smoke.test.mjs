@@ -60,8 +60,11 @@ test('ParticleEmitter constructs with defaults', () =>
 
 test('TileLayerData constructs', () =>
 {
-    // TileLayerData(tile, direction, mirror, color) — minimal form
-    assert.doesNotThrow(() => new TileLayerData(0));
+    // TileLayerData(tile, direction, mirror, color) — minimal form; tile 0 is a tile, an empty cell is undefined
+    const first = new TileLayerData(0);
+    assert.equal(first.tile, 0);
+    first.clear();
+    assert.equal(first.tile, undefined);
     assert.doesNotThrow(() => new TileLayerData(5, 1, false));
 });
 
