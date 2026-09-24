@@ -3,7 +3,7 @@
  * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
  * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
  * - Caches sounds and music for fast playback
- * - Can attenuate and apply stereo panning to sounds
+ * - Can attenuate sounds by distance, and stereo pan them if soundPanEnable is set
  * - Ability to play mp3, ogg, and wave files
  * - Speech synthesis functions
  * @namespace Audio
@@ -16,14 +16,14 @@
  *  @memberof Audio */
 let audioContext = new AudioContext;
 
-/** Master gain node for all audio to pass through
+/** Master gain node for all audio to pass through, only exists if soundMasterGainEnable is set
  *  @type {GainNode}
  *  @memberof Audio */
 let audioMasterGain;
 
 function audioInit()
 {
-    if (!soundEnable || headlessMode) return;
+    if (!soundEnable || headlessMode || !soundMasterGainEnable) return;
 
     // (createGain is more widely supported then GainNode constructor)
     audioMasterGain = audioContext.createGain();
@@ -104,7 +104,8 @@ class Sound
             }
 
             // get pan from screen space coords
-            pan = worldToScreen(pos).x * 2/mainCanvas.width - 1;
+            if (soundPanEnable)
+                pan = worldToScreen(pos).x * 2/mainCanvas.width - 1;
         }
 
         // play the sound
@@ -120,7 +121,7 @@ class Sound
     setVolume(volume=1)
     {
         if (this.gainNode)
-            this.gainNode.gain.value = volume;
+            this.gainNode.gain.value = soundMasterGainEnable ? volume : volume*soundVolume;
     }
 
     /** Stop the last instance of this sound that was played */
@@ -309,7 +310,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {Array}    sampleChannels - Array of arrays of samples to play (for stereo playback)
  *  @param {Number}   [volume] - How much to scale volume by
  *  @param {Number}   [rate] - The playback rate to use
- *  @param {Number}   [pan] - How much to apply stereo panning
+ *  @param {Number}   [pan] - How much to apply stereo panning, ignored unless soundPanEnable is set
  *  @param {Boolean}  [loop] - True if the sound should loop when it reaches the end
  *  @param {Number}   [sampleRate=44100] - Sample rate for the sound
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
@@ -332,13 +333,16 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     source.loop = loop;
 
     // create and connect gain node
+    // - without a master gain node, the master volume is applied here instead
     gainNode = gainNode || audioContext.createGain();
-    gainNode.gain.value = volume;
-    gainNode.connect(audioMasterGain);
+    gainNode.gain.value = soundMasterGainEnable ? volume : volume*soundVolume;
+    gainNode.connect(soundMasterGainEnable ? audioMasterGain : audioContext.destination);
 
-    // connect source to stereo panner and gain
-    const pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});
-    source.connect(pannerNode).connect(gainNode);
+    // connect source to gain, through a stereo panner if enabled
+    if (soundPanEnable)
+        source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)})).connect(gainNode);
+    else
+        source.connect(gainNode);
 
     // play the sound
     if (audioContext.state != 'running')

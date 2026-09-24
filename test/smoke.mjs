@@ -27,7 +27,25 @@ const stubs = `
 const window = { ontouchstart: undefined };
 const document = { createElement: () => ({ getContext: () => ({}), style: {} }) };
 class Image { }
-class AudioContext { }
+// audio nodes that only record how they are wired, so the audio graph can be
+// checked without a browser
+class FakeNode
+{
+    constructor() { this.gain = { value: 1 }; this.playbackRate = { value: 1 }; }
+    connect(node) { this.output = node; return node; }
+    start() { }
+}
+class AudioContext
+{
+    constructor() { this.destination = new FakeNode; this.state = 'running'; }
+    createGain() { return new FakeNode; }
+    createBufferSource() { return new FakeNode; }
+    createBuffer() { return { getChannelData: ()=> ({ set() { } }) }; }
+}
+class StereoPannerNode extends FakeNode
+{
+    constructor(context, options) { super(); this.pan = options.pan; }
+}
 // capture the loop instead of dropping it, so the pause check below can
 // drive the engine by hand at a chosen refresh rate
 let rafCallback;
@@ -175,6 +193,36 @@ if (frame != frameAtPause) throw 'frame advanced while paused';
 if (abs(postUpdates - frameRate) > frameRate/5)
     throw 'paused ticked ' + postUpdates + ' times, expected near ' + frameRate;
 setPaused(false);
+
+// audio graph: no panner and no master gain unless a game turns them on
+// - soundVolume is then applied to each sound as it starts instead
+setHeadlessMode(false);
+const sound = new Sound([1, 0]);
+let source = sound.play();
+if (source.output !== sound.gainNode) throw 'default sound should go straight to its gain';
+if (sound.gainNode.output !== audioContext.destination) throw 'default gain should go straight to the speakers';
+if (sound.gainNode.gain.value != soundVolume) throw 'soundVolume not applied to the sound';
+sound.setVolume(.5);
+if (sound.gainNode.gain.value != .5*soundVolume) throw 'setVolume should include soundVolume';
+if (zzfx(1, 0).output.output !== audioContext.destination) throw 'zzfx should play without a master gain';
+
+setSoundPanEnable(true);
+source = sound.play();
+if (!(source.output instanceof StereoPannerNode) || source.output.output !== sound.gainNode)
+    throw 'soundPanEnable should put a panner between source and gain';
+setSoundPanEnable(false);
+
+setSoundMasterGainEnable(true);
+audioInit(); // the master gain is made at startup
+source = sound.play();
+if (sound.gainNode.output !== audioMasterGain || audioMasterGain.output !== audioContext.destination)
+    throw 'soundMasterGainEnable should route sound through the master gain';
+if (sound.gainNode.gain.value != 1 || audioMasterGain.gain.value != soundVolume)
+    throw 'with a master gain, soundVolume belongs on the master only';
+setSoundVolume(.2);
+if (audioMasterGain.gain.value != .2) throw 'setSoundVolume should update the master gain';
+setSoundMasterGainEnable(false);
+setHeadlessMode(true);
 
 console.log('SMOKE TEST PASSED');
 `;

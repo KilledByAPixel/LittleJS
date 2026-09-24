@@ -10,7 +10,7 @@
 
 [LittleJS](https://github.com/KilledByAPixel/LittleJS) is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance. This branch is a size-optimized fork for size coding competitions like [JS13K](https://js13kgames.com/). It exists so the main line engine can keep growing while this version stays small enough to keep minifying. Many JS13K games have been made with LittleJS, including several top 10 finishers. See [the list below](#-js13k-games-made-with-littlejs).
 
-**The starter builds to a ~7700 byte zip against the 13312 byte limit.** That is 58% of the budget with the whole engine included: WebGL rendering, physics, particles, tile layers, sound, medals and input, plus the `tiles.png` sprite sheet in the zip. Turning off features you do not use frees up about 2.5KB more. Thanks to the way compression works, the remaining 40% goes a long way!
+**The starter builds to a ~7650 byte zip against the 13312 byte limit.** That is 57% of the budget with the whole engine included: WebGL rendering, physics, particles, tile layers, sound, medals and input, plus the `tiles.png` sprite sheet in the zip. Turning off features you do not use frees up about 2.5KB more. Thanks to the way compression works, the remaining 43% goes a long way!
 
 Games written here are meant to port back to regular LittleJS after the compo. See [Migrating to main LittleJS](#-migrating-to-main-littlejs).
 
@@ -98,7 +98,7 @@ const FEATURES =
 | `touch` | 140 | Touch input and the on-screen touch gamepad |
 | `gamepad` | 237 | Gamepad input with multiple controller support |
 | `webgl` | **778** | WebGL sprite batching, rendering falls back to canvas 2D |
-| `sound` | **786** | All audio: ZzFX sounds, music, and speech |
+| `sound` | **752** | All audio: ZzFX sounds, music, and speech |
 | `physics` | **477** | All collision response, object vs object and object vs tile |
 | all five | **~2500** | A silent keyboard-and-mouse game drawn with canvas 2D |
 
@@ -108,6 +108,8 @@ Two things worth knowing:
 
 - **Setting `glEnable = false` in your own code costs 50 bytes instead of saving any.** The flag is still mutable, and you have added an assignment. Use `FEATURES`.
 - **`FEATURES` only affects the built zip.** `npm start` loads `src/` directly, so the dev page always has everything on. To develop against what you ship, call the setter in `gameInit`. `setGLEnable(false)` compiles to nothing in the build.
+
+**Stereo panning and the master gain node are off by default.** A 13k game rarely misses either, and together they were 41 bytes the starter no longer pays. With panning off, `sound.play(pos)` still fades with distance, and the pan argument is accepted and ignored. With no master gain node, `soundVolume` is applied to each sound as it starts, so changing it does not reach a looping sound or music that is already playing. Turn them back on when you want them, for example in a post-compo release with a volume slider: `setSoundPanEnable(true)` costs 38 bytes, and `setSoundMasterGainEnable(true)` before `engineInit` costs 7. These are ordinary engine settings, not `FEATURES`, so the dev page behaves exactly like the zip.
 
 Beyond that you can delete an unused engine file from `sourceFiles`, but the saving comes from your game not using the feature, not from deleting the file: once Closure sees `ParticleEmitter` is unreachable it removes all of it, and dropping the file afterwards gains nothing. The exception is `engineTileLayer.js`, which leaves a 72 byte residue because `engineObject.js` calls `tileCollisionTest` inside `if (this.collideTiles)`. Disabling `physics` compiles that reference out too, so the residue disappears with it. Nothing warns you if you remove a file something still references, you just get a `ReferenceError` at runtime instead of a build error.
 
@@ -170,6 +172,7 @@ instance.stop(fadeTime); // optional fade out
 - **`inputPreventDefault` covers less here.** It only suppresses middle/right mouse clicks, while `main` also uses it to prevent arrow keys, space, and tab from scrolling or refocusing the page, and to guard touch `preventDefault` (always on here).
 - **`Vector2.toString()` and `Timer.toString()` are debug-only here.** They format on the dev page but return `undefined` in the built zip, since `toString` is the one method name Closure cannot delete, so the body is stripped instead. `Color.toString()` works everywhere. In `main` they always format.
 - **`ImageFont` draws untinted canvas 2d here.** The `color` and `useWebGL` arguments are accepted but ignored, so a color passed here silently starts applying after the port. The no-argument built-in 8x8 font is also js13k-only; `main` requires a `tileInfo`. Fonts passed as a `tileInfo` work the same in both.
+- **Stereo panning and the master gain node are off by default here** and always on in `main`. After the port, positional sounds start panning and `setSoundVolume` starts changing sounds that are already playing. `soundPanEnable`, `soundMasterGainEnable` and their setters are js13k-only, so delete any calls to them when porting.
 - **The 2D context is not reset for you here.** `main` restores the transform and blend mode every frame; this branch does not, to save the bytes, and asserts in the dev build instead. A game written here therefore already puts back what it sets, so it ports to `main` unchanged. Going the other way, code that relied on `main` cleaning up after it needs the matching reset added.
 
 ### Version

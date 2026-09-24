@@ -235,6 +235,24 @@ let soundDefaultRange = 40;
  *  @memberof Settings */
 let soundDefaultTaper = .7;
 
+/** Pan sounds played at a world position by where they are on screen
+ *  - Off by default in this branch to save space, main LittleJS always pans
+ *  - While off, the pan argument is still accepted and ignored
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let soundPanEnable = false;
+
+/** Route all audio through a master gain node, so setSoundVolume also changes sounds already playing
+ *  - Off by default in this branch to save space, main LittleJS always has it
+ *  - While off, soundVolume is applied to each sound as it starts, so a
+ *    looping sound or music keeps the volume it started with
+ *  - Must be set before engineInit
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let soundMasterGainEnable = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Medals settings
 
@@ -426,7 +444,7 @@ function setSoundEnable(enable) { soundEnable = enable; }
 function setSoundVolume(volume)
 {
     soundVolume = volume;
-    if (soundEnable && !headlessMode && audioMasterGain)
+    if (soundMasterGainEnable && audioMasterGain)
         audioMasterGain.gain.value = volume; // update gain immediately
 }
 
@@ -439,6 +457,16 @@ function setSoundDefaultRange(range) { soundDefaultRange = range; }
  *  @param {Number} taper
  *  @memberof Settings */
 function setSoundDefaultTaper(taper) { soundDefaultTaper = taper; }
+
+/** Set if sounds played at a world position are stereo panned
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setSoundPanEnable(enable) { soundPanEnable = enable; }
+
+/** Set if all audio goes through a master gain node, must be set before engineInit
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setSoundMasterGainEnable(enable) { soundMasterGainEnable = enable; }
 
 /** Set how long to show medals for in seconds
  *  @param {Number} time

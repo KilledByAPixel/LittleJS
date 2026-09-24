@@ -236,7 +236,9 @@ the regex.
 ### 2.5 Replace engine subsystems you use a sliver of
 
 - the engine's `Sound` (panner, range, loop, stop, master gain) replaced
-  by a 20-line zzfx player: **−235**
+  by a 20-line zzfx player: **−235**. The panner and master gain are now
+  off by default in the engine (`soundPanEnable`, `soundMasterGainEnable`),
+  which took 41 of those bytes for free, so expect less from this today
 - its zzfx generator replaced by one with the same parameter positions and
   only the wave shapes actually used: **−51 and −45**, verified
   bit-identical by rendering every sound both ways
