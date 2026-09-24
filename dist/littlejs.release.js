@@ -5090,7 +5090,7 @@ function bakeTintedImage(image, color, additiveColor)
  *  This is slower then normal drawImage when color is applied
     *  @ignore
     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
-    *  @param {HTMLImageElement|OffscreenCanvas} image
+    *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
     *  @param {number} sx
     *  @param {number} sy
     *  @param {number} sWidth
@@ -9411,7 +9411,7 @@ function glShaderProgram(shader)
 
 /** Create WebGL texture from an image and init the texture settings
  *  Restores the active texture when done
- *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} [image]
+ *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} [image]
  *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
  *  @return {WebGLTexture}
  *  @memberof WebGL */
@@ -9467,7 +9467,7 @@ function glDeleteTexture(texture)
 
 /** Set WebGL texture data from an image, restores the active texture when done
  *  @param {WebGLTexture} texture
- *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} image
+ *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
  *  @memberof WebGL */
 function glSetTextureData(texture, image)
 {

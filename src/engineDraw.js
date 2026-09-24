@@ -1456,7 +1456,7 @@ function bakeTintedImage(image, color, additiveColor)
  *  This is slower then normal drawImage when color is applied
     *  @ignore
     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
-    *  @param {HTMLImageElement|OffscreenCanvas} image
+    *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
     *  @param {number} sx
     *  @param {number} sy
     *  @param {number} sWidth

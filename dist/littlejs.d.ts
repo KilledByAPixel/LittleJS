@@ -2433,20 +2433,20 @@ declare module "littlejsengine" {
     export function glCreateProgram(vsSource: string, fsSource: string): WebGLProgram;
     /** Create WebGL texture from an image and init the texture settings
      *  Restores the active texture when done
-     *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} [image]
+     *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} [image]
      *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
      *  @return {WebGLTexture}
      *  @memberof WebGL */
-    export function glCreateTexture(image?: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas, wrap?: boolean): WebGLTexture;
+    export function glCreateTexture(image?: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, wrap?: boolean): WebGLTexture;
     /** Deletes a WebGL texture
      *  @param {WebGLTexture} [texture]
      *  @memberof WebGL */
     export function glDeleteTexture(texture?: WebGLTexture): void;
     /** Set WebGL texture data from an image, restores the active texture when done
      *  @param {WebGLTexture} texture
-     *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} image
+     *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
      *  @memberof WebGL */
-    export function glSetTextureData(texture: WebGLTexture, image: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas): void;
+    export function glSetTextureData(texture: WebGLTexture, image: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap): void;
     /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
      *  @memberof WebGL */
     export function glFlush(): void;
