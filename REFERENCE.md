@@ -597,7 +597,7 @@ TileLayer(pos, size, tileInfo, renderOrder=0, useWebGL=true) // Create a tile la
 TileLayer.setData(layerPos, data, redraw)      // Set data at position
 TileLayer.clearData(layerPos, redraw)          // Clear data at position
 TileLayer.getData(layerPos)                    // Get data at position
-TileLayer.debugShow = true                     // Shown by the debug overlay's 8: Debug Tiles, off for noisy layers
+TileLayer.debugShow = true                     // Shown by the debug overlay's 8: Debug Tiles, off to leave a layer out
 TileLayer.redraw()                             // Draw to an offscreen canvas
 TileLayer.drawTileData(layerPos, clear=true)   // Draw the tile
 TileLayer.drawRect(pos, size, color, angle)    // Draw a rectangle to 2D canvas
@@ -1567,7 +1567,8 @@ async function gameInit()
 ## LittleJS Debugging System
 - Press Escape key to toggle debug overlay
 - Number keys toggle debug functions: 1 physics, 2 particles, 3 gamepads, 4 raycasts, 5 screenshot, 6 video capture,
-  7 sound, 8 tiles (each tile layer's bounds, the collision values on screen, and the tiles under the mouse)
+  7 sound, 8 tiles (each tile layer's bounds, the collision values on screen, and the tiles under the mouse; pressing
+  8 again steps through the layers one at a time, then off)
 - +/- keys apply time scale to update
 - Debug primitive rendering system
 - Debug functions are only active in debug builds

@@ -49,7 +49,8 @@ const debugTextShadowColor = '#000', debugTextShadowBlur = 9;
 function debugTextShadow(context) { context.shadowColor = debugTextShadowColor; context.shadowBlur = debugTextShadowBlur; }
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugSound = false, debugTiles = false, debugTakeScreenshot;
+let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugSound = false, debugTiles = 0, debugTakeScreenshot;
+// debugTiles is 0 for off, 1 for every layer, and 2 on for one layer at a time, see debugTileLayersSelected
 
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
@@ -292,7 +293,7 @@ function debugUpdate()
         if (keyWasPressed('Digit7'))
             debugSound = !debugSound;
         if (keyWasPressed('Digit8'))
-            debugTiles = !debugTiles;
+            debugTiles = (debugTiles + 1) % (debugTileLayersShown().length + 2); // off, all, then each layer
     }
     if (debugVideoCaptureIsActive())
     {
@@ -325,9 +326,28 @@ function debugTileCellCenter(pos)
     return pos.floor().add(vec2(.5));
 }
 
-// the tile layers shown by Debug Tiles, the ones not switched off with debugShow
+// the tile layers Debug Tiles can show, the ones not switched off with debugShow, in render order
 function debugTileLayersShown()
-{ return engineObjects.filter(o=> o instanceof TileLayer && !o.destroyed && o.debugShow); }
+{
+    return engineObjects.filter(o=> o instanceof TileLayer && !o.destroyed && o.debugShow)
+        .sort((a, b)=> a.renderOrder - b.renderOrder); // a stable sort, so equal orders keep the order they were made in
+}
+
+// the layers Debug Tiles shows right now: every one, or the one the 8 key has stepped to, every one again if
+// layers went away since
+function debugTileLayersSelected()
+{
+    const layers = debugTileLayersShown(), layer = layers[debugTiles - 2];
+    return layer ? [layer] : layers;
+}
+
+// what the overlay menu says Debug Tiles is showing
+function debugTilesLabel()
+{
+    if (!debugTiles) return '';
+    const layers = debugTileLayersShown(), layer = layers[debugTiles - 2];
+    return layer ? ` (${debugTiles - 1} of ${layers.length}, order ${layer.renderOrder}${layer instanceof TileCollisionLayer ? ', collision' : ''})` : ' (all)';
+}
 
 // Debug Tiles: each layer's bounds, then the collision value of every cell on screen, tinted by value, with the
 // number when a tile is big enough on screen to read it
@@ -336,7 +356,7 @@ function debugTileLayers()
     // everything the camera can see, turned or not
     const reach = getCameraSize().length() / 2;
     const showValues = cameraScale >= 24;
-    for (const layer of debugTileLayersShown())
+    for (const layer of debugTileLayersSelected())
     {
         const isCollision = layer instanceof TileCollisionLayer, size = layer.size, pos = layer.pos;
         const color = isCollision ? '#f80' : '#0cf';
@@ -364,7 +384,7 @@ function debugTileText()
 {
     if (!debugTiles) return '';
     let text = '';
-    for (const layer of debugTileLayersShown())
+    for (const layer of debugTileLayersSelected())
     {
         const local = mousePos.subtract(layer.pos);
         if (!local.arrayCheck(layer.size)) continue;
@@ -608,7 +628,7 @@ function debugRender()
             debugContext.fillStyle = debugSound ? '#f00' : '#fff';
             debugContext.fillText('7: Debug Sound', x, y += h);
             debugContext.fillStyle = debugTiles ? '#f00' : '#fff';
-            debugContext.fillText('8: Debug Tiles', x, y += h);
+            debugContext.fillText('8: Debug Tiles' + debugTilesLabel(), x, y += h);
 
             let keysPressed = '';
             let mousePressed = '';
@@ -643,7 +663,7 @@ function debugRender()
             debugContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
             debugContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
             debugContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
-            debugContext.fillText(debugTiles ? 'Debug Tiles' : '', x, y += h);
+            debugContext.fillText(debugTiles ? 'Debug Tiles' + debugTilesLabel() : '', x, y += h);
             debugContext.fillText(debugSound ? 'Debug Sound' : '', x, y += h);
         }
 
