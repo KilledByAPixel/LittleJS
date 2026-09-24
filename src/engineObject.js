@@ -27,8 +27,15 @@
  * @example
  * // create an engine object, normally you would first extend the class with your own
  * const pos = vec2(2,3);
- * const object = new EngineObject(pos); 
+ * const object = new EngineObject(pos);
  */
+
+// Set by the first addChild, so a game that never attaches objects pays
+// nothing for the parent child system
+// - without addChild no object has a parent or children, so every path
+//   this guards was a no-op anyway, the guard only lets Closure delete it
+let objectChildrenUsed;
+
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
@@ -119,6 +126,9 @@ class EngineObject
     /** Update the object transform, called automatically by engine even when paused */
     updateTransforms()
     {
+        if (!objectChildrenUsed)
+            return;
+
         const parent = this.parent;
         if (parent)
         {
@@ -137,7 +147,7 @@ class EngineObject
     update()
     {
         // child objects do not have physics
-        if (this.parent)
+        if (objectChildrenUsed && this.parent)
             return;
 
         if (this.clampSpeed)
@@ -188,7 +198,7 @@ class EngineObject
             for (const o of engineObjectsCollide)
             {
                 // non solid objects don't collide with each other
-                if (!this.isSolid && !o.isSolid || o.destroyed || o.parent || o == this)
+                if (!this.isSolid && !o.isSolid || o.destroyed || objectChildrenUsed && o.parent || o == this)
                     continue;
 
                 // check collision
@@ -335,9 +345,12 @@ class EngineObject
         
         // disconnect from parent and destroy children
         this.destroyed = 1;
-        this.parent && this.parent.removeChild(this);
-        for (const child of this.children)
-            child.destroy(child.parent = 0);
+        if (objectChildrenUsed)
+        {
+            this.parent && this.parent.removeChild(this);
+            for (const child of this.children)
+                child.destroy(child.parent = 0);
+        }
     }
 
     /** Convert from local space to world space
@@ -395,6 +408,7 @@ class EngineObject
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent && !this.children.includes(child));
+        objectChildrenUsed = 1;
         this.children.push(child);
         child.parent = this;
         child.localPos = localPos.copy();
@@ -405,9 +419,14 @@ class EngineObject
      *  @param {EngineObject} child */
     removeChild(child)
     {
+        // removeChild is also a DOM method name, so Closure keeps it even when
+        // unused, but without addChild there is nothing to remove
         ASSERT(child.parent == this && this.children.includes(child));
-        this.children.splice(this.children.indexOf(child), 1);
-        child.parent = 0;
+        if (objectChildrenUsed)
+        {
+            this.children.splice(this.children.indexOf(child), 1);
+            child.parent = 0;
+        }
     }
 
     /** Set how this object collides

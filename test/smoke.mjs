@@ -171,6 +171,17 @@ function gameInit()
     parent.updateTransforms();
     if (abs(child.pos.x - 10) > 1e-9 || abs(child.pos.y - 8) > 1e-9) throw 'child should follow its parent, got ' + child.pos;
 
+    // the child system turns itself on with the first addChild, and until
+    // then games pay nothing for it
+    if (!objectChildrenUsed) throw 'addChild should turn on the child system';
+    const other = new EngineObject;
+    parent.addChild(other);
+    parent.removeChild(other);
+    if (other.parent || parent.children.includes(other)) throw 'removeChild should detach';
+    parent.destroy();
+    if (!child.destroyed) throw 'destroying a parent should destroy its children';
+    if (other.destroyed) throw 'a removed child should outlive its old parent';
+
     console.log('ENGINE CHECKS PASSED');
 }
 

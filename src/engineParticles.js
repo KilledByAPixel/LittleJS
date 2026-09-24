@@ -150,7 +150,7 @@ class ParticleEmitter extends EngineObject
     update()
     {
         // only do default update to apply parent transforms
-        this.parent && super.update();
+        objectChildrenUsed && this.parent && super.update();
 
         // update emitter
         if (!this.emitTime || this.getAliveTime() <= this.emitTime)

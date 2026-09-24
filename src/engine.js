@@ -170,8 +170,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 // everything except time, the game, and object updates
                 // - transforms still update, so children follow a parent moved while paused
                 inputUpdate();
-                for (const o of engineObjects)
-                    o.parent || o.updateTransforms();
+                if (objectChildrenUsed)
+                    for (const o of engineObjects)
+                        o.parent || o.updateTransforms();
             }
             else
             {
@@ -371,14 +372,15 @@ function engineObjectsUpdate()
         if (!o.destroyed)
         {
             o.update();
-            for (const child of o.children)
-                updateObject(child);
+            if (objectChildrenUsed)
+                for (const child of o.children)
+                    updateObject(child);
         }
     }
     for (const o of engineObjects)
     {
         // update top level objects
-        if (!o.parent)
+        if (!objectChildrenUsed || !o.parent)
         {
             updateObject(o);
             o.updateTransforms();
@@ -394,7 +396,7 @@ function engineObjectsUpdate()
 function engineObjectsDestroy()
 {
     for (const o of engineObjects)
-        o.parent || o.destroy();
+        objectChildrenUsed && o.parent || o.destroy();
     engineObjects = engineObjects.filter(o=>!o.destroyed);
 }
 
