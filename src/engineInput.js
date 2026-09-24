@@ -83,7 +83,7 @@ const isTouchDevice = !headlessMode && typeof window != 'undefined' && window.on
 
 /** Prevents input continuing to the default browser handling
  *  This is useful to disable for html menus so the browser can handle input normally
- *  @param {boolean} preventDefault
+ *  @param {boolean} [preventDefault]
  *  @memberof Input */
 function setInputPreventDefault(preventDefault=true) { inputPreventDefault = preventDefault; }
 
@@ -411,7 +411,7 @@ function inputInit()
     document.addEventListener('mouseleave', onMouseLeave);
     document.addEventListener('wheel', onMouseWheel, { passive: false });
     document.addEventListener('contextmenu', onContextMenu);
-    document.addEventListener('blur', onBlur);
+    addEventListener('blur', onBlur); // the window's, the browser fires blur there and it does not bubble to the document
 
     // init touch input
     if (isTouchDevice && touchInputEnable)

@@ -730,8 +730,8 @@ function setSoundEnable(enable) { soundEnable = enable; }
 function setSoundVolume(volume)
 {
     soundVolume = volume;
-    if (soundEnable && !headlessMode && audioMasterGain)
-        audioMasterGain.gain.value = volume; // update gain immediately
+    if (!headlessMode && audioMasterGain)
+        audioMasterGain.gain.value = volume; // update gain immediately, sound off or not
 }
 
 /** Set default range where sound no longer plays

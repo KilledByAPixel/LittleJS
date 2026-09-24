@@ -238,7 +238,7 @@ class ParticleEmitter extends EngineObject
         {
             // show emitter bounds
             if (this.emitCircle)
-                debugCircle(this.pos, this.emitSize.x/2, '#0f0');
+                debugCircle(this.pos, this.emitSize.x, '#0f0');
             else
                 debugRect(this.pos, this.emitSize, '#0f0', 0, this.angle);
         }

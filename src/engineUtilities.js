@@ -6,7 +6,7 @@
  * - File saving (text, canvas, data URLs)
  * - Native share dialog support
  * - Local storage save data management
- * - Gradient noise (1D and 2D)
+ * - Value noise (1D and 2D)
  * @namespace Utilities
  */
 
@@ -133,7 +133,7 @@ async function fetchJSON(url)
  *  @param {string} [type]
  *  @memberof Utilities */
 function saveText(text, filename='text', type='text/plain')
-{ saveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
+{ saveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename, 1e3); } // freed once the download has it
 
 /** Create an offscreen canvas to draw into, and return its 2D context
  *  - The canvas is context.canvas, which is what TextureInfo and the like take
@@ -196,7 +196,7 @@ function shareURL(title, url, callback)
 {
     ASSERT(isStringLike(title), 'shareURL requires title string');
     ASSERT(isStringLike(url), 'shareURL requires url string');
-    navigator.share?.({title, url}).then(()=>callback?.());
+    navigator.share?.({title, url}).then(()=>callback?.(), ()=>{}); // a player who cancels is not an error
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -256,7 +256,7 @@ function noiseHash(i)
     return (h >>> 0) / 2**32;
 }
 
-/** 1D gradient noise — returns a smooth value in [0, 1] for any real x.
+/** 1D value noise — returns a smooth value in [0, 1] for any real x.
  *  Integer inputs land on deterministic lattice values; non-integer inputs
  *  are interpolated with smoothStep for C1 continuity.
  *  @param {number} x
@@ -268,7 +268,7 @@ function noise1D(x)
     return lerp(noiseHash(i), noiseHash(i + 1), smoothStep(x - i));
 }
 
-/** 2D gradient noise — returns a smooth value in [0, 1] for any real (x, y).
+/** 2D value noise — returns a smooth value in [0, 1] for any real (x, y).
  *  @param {number} x
  *  @param {number} y
  *  @return {number}

@@ -173,6 +173,10 @@ class PostProcessPlugin
             // restore default so subsequent dynamic texture uploads aren't flipped
             glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, false);
 
+            // bind back the texture the 2D batch thinks is bound, a plugin drawing after this one uses it
+            if (glActiveTexture)
+                glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+
             // force it to set instanced mode
             glSetInstancedMode(true);
         }

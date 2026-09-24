@@ -1129,7 +1129,7 @@ declare module "littlejsengine" {
     /**
      * @callback LineTestFunction - Checks if a position is colliding
      * @param {Vector2} pos
-     * @memberof Draw
+     * @memberof Math
      */
     /**
      * Casts a ray and returns position of the first collision found, or undefined if none are found
@@ -1202,14 +1202,14 @@ declare module "littlejsengine" {
      *  @param {Object} saveData - object containing data to be saved
      *  @memberof Utilities */
     export function writeSaveData(saveName: string, saveData: any): void;
-    /** 1D gradient noise — returns a smooth value in [0, 1] for any real x.
+    /** 1D value noise — returns a smooth value in [0, 1] for any real x.
      *  Integer inputs land on deterministic lattice values; non-integer inputs
      *  are interpolated with smoothStep for C1 continuity.
      *  @param {number} x
      *  @return {number}
      *  @memberof Utilities */
     export function noise1D(x: number): number;
-    /** 2D gradient noise — returns a smooth value in [0, 1] for any real (x, y).
+    /** 2D value noise — returns a smooth value in [0, 1] for any real (x, y).
      *  @param {number} x
      *  @param {number} y
      *  @return {number}
@@ -1300,7 +1300,7 @@ declare module "littlejsengine" {
         *  @return {number} */
         angle(): number;
         /** Returns a seeded vec2 with size between the two values passed in
-        *  @param {number} valueA
+        *  @param {number} [valueA]
         *  @param {number} [valueB]
         *  @return {Vector2} */
         vec2(valueA?: number, valueB?: number): Vector2;
@@ -1401,7 +1401,7 @@ declare module "littlejsengine" {
         cross(v: Vector2): number;
         /** Returns a copy this vector reflected by the surface normal
          * @param {Vector2} normal - surface normal (should be normalized)
-         * @param {number} restitution - how much to bounce, 1 is perfect bounce, 0 is no bounce
+         * @param {number} [restitution] - how much to bounce, 1 is perfect bounce, 0 is no bounce
          * @return {Vector2} */
         reflect(normal: Vector2, restitution?: number): Vector2;
         /** Returns the clockwise angle of this vector, up is angle 0
@@ -1453,7 +1453,7 @@ declare module "littlejsengine" {
          * @return {boolean} */
         arrayCheck(arraySize: Vector2): boolean;
         /** Returns this vector expressed as a string
-         * @param {number} digits - precision to display
+         * @param {number} [digits] - precision to display
          * @return {string} */
         toString(digits?: number): string;
         /** Checks if this is a valid vector
@@ -1574,7 +1574,7 @@ declare module "littlejsengine" {
      * - File saving (text, canvas, data URLs)
      * - Native share dialog support
      * - Local storage save data management
-     * - Gradient noise (1D and 2D)
+     * - Value noise (1D and 2D)
      * @namespace Utilities
      */
     /**
@@ -1821,7 +1821,7 @@ declare module "littlejsengine" {
         setFullImage(textureInfo?: TextureInfo): TileInfo;
     }
     /**
-     * Tile Info - Stores info about each texture
+     * Texture Info - Stores info about each texture
      * @memberof Draw
      */
     export class TextureInfo {
@@ -2215,7 +2215,7 @@ declare module "littlejsengine" {
      *  (e.g. linear gradients) should flip their own Y endpoints accordingly.
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
-     *  @param {number}   angle
+     *  @param {number}   [angle]
      *  @param {boolean}  [mirror]
      *  @param {Canvas2DDrawFunction} [drawFunction]
      *  @param {boolean}  [screenSpace=false]
@@ -2352,7 +2352,7 @@ declare module "littlejsengine" {
      *  If size is a Vector2, uses the length as diameter
      *  This can be used to cull offscreen objects from render or update
      *  @param {Vector2} pos - world space position
-     *  @param {Vector2|number} size - world space size or diameter
+     *  @param {Vector2|number} [size] - world space size or diameter
      *  @return {boolean}
      *  @memberof Draw */
     export function isOnScreen(pos: Vector2, size?: Vector2 | number): boolean;
@@ -2633,7 +2633,7 @@ declare module "littlejsengine" {
     export const isTouchDevice: boolean;
     /** Prevents input continuing to the default browser handling
      *  This is useful to disable for html menus so the browser can handle input normally
-     *  @param {boolean} preventDefault
+     *  @param {boolean} [preventDefault]
      *  @memberof Input */
     export function setInputPreventDefault(preventDefault?: boolean): void;
     /** Set the screen-pixel mouse movement per frame that counts as using the mouse
@@ -4703,7 +4703,7 @@ declare module "littlejsengine" {
          *  @return {string} */
         toString(): string;
         /** Called if uiDebug is enabled
-         *  @param {boolean} visible */
+         *  @param {boolean} [visible] */
         renderDebug(visible?: boolean): void;
         /** Internal function called when object is clicked
          *  @param {boolean} [playSound] */
@@ -4820,7 +4820,6 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, checked?: boolean, text?: string, color?: Color);
         /** @property {boolean} - Is the checkbox currently checked? */
         checked: boolean;
-        click(): void;
     }
     /**
      * UISlider - A UI object that acts as a slider or scrollbar
@@ -4846,11 +4845,11 @@ declare module "littlejsengine" {
         update(): void;
     }
     /**
-     * VideoPlayerUIObject - A UI object that plays video
+     * UIVideo - A UI object that plays video
      * @extends UIObject
      * @example
      * // Create a video player UI object
-     * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
+     * const video = new UIVideo(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
      * video.play();
      * @memberof UISystem
      */
@@ -5027,7 +5026,7 @@ declare module "littlejsengine" {
         circleCast(pos: Vector2, diameter: number): any;
         /** point cast and return the first object
          *  @param {Vector2} pos
-         *  @param {boolean} dynamicOnly */
+         *  @param {boolean} [dynamicOnly] */
         pointCast(pos: Vector2, dynamicOnly?: boolean): undefined;
         /** draws a fixture
          *  @param {Object} fixture
@@ -5293,7 +5292,7 @@ declare module "littlejsengine" {
         /** Check if this object has any joints
          *  @return {boolean} */
         hasJoints(): boolean;
-        /** Get list of joints for this object
+        /** Get list of joints for this object, the Box2D joints
          *  @return {Array<Object>} */
         getJointList(): Array<any>;
     }
@@ -5508,7 +5507,7 @@ declare module "littlejsengine" {
          *  @param {Box2dObject} objectB
          *  @param {Vector2} anchorA
          *  @param {Vector2} anchorB
-         *  @param {number} extraLength
+         *  @param {number} [extraLength]
          *  @param {boolean} [collide] */
         constructor(objectA: Box2dObject, objectB: Box2dObject, anchorA: Vector2, anchorB: Vector2, extraLength?: number, collide?: boolean);
         /** Get the local anchor point relative to objectA's origin
@@ -5640,7 +5639,7 @@ declare module "littlejsengine" {
          *  @param {Box2dObject} objectA
          *  @param {Box2dObject} objectB
          *  @param {Vector2} anchor
-         *  @param {Vector2} worldAxis
+         *  @param {Vector2} [worldAxis]
          *  @param {boolean} [collide] */
         constructor(objectA: Box2dObject, objectB: Box2dObject, anchor: Vector2, worldAxis?: Vector2, collide?: boolean);
         /** Get the local anchor point relative to objectA's origin
@@ -5714,7 +5713,7 @@ declare module "littlejsengine" {
          *  @param {Box2dObject} objectA
          *  @param {Box2dObject} objectB
          *  @param {Vector2} anchor
-         *  @param {Vector2} worldAxis
+         *  @param {Vector2} [worldAxis]
          *  @param {boolean} [collide] */
         constructor(objectA: Box2dObject, objectB: Box2dObject, anchor: Vector2, worldAxis?: Vector2, collide?: boolean);
         /** Get the local anchor point relative to objectA's origin

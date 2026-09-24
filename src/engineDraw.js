@@ -243,7 +243,7 @@ class TileInfo
 }
 
 /**
- * Tile Info - Stores info about each texture
+ * Texture Info - Stores info about each texture
  * @memberof Draw
  */
 class TextureInfo
@@ -1013,7 +1013,7 @@ function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHIT
  *  (e.g. linear gradients) should flip their own Y endpoints accordingly.
  *  @param {Vector2}  pos
  *  @param {Vector2}  size
- *  @param {number}   angle
+ *  @param {number}   [angle]
  *  @param {boolean}  [mirror]
  *  @param {Canvas2DDrawFunction} [drawFunction]
  *  @param {boolean}  [screenSpace=false]
@@ -1316,7 +1316,7 @@ function cameraFit(center, size, worldMargin, screenInset)
  *  If size is a Vector2, uses the length as diameter
  *  This can be used to cull offscreen objects from render or update
  *  @param {Vector2} pos - world space position
- *  @param {Vector2|number} size - world space size or diameter
+ *  @param {Vector2|number} [size] - world space size or diameter
  *  @return {boolean}
  *  @memberof Draw */
 function isOnScreen(pos, size=0)

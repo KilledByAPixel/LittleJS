@@ -381,7 +381,7 @@ function isArray(a) { return Array.isArray(a); }
 /**
  * @callback LineTestFunction - Checks if a position is colliding
  * @param {Vector2} pos
- * @memberof Draw
+ * @memberof Math
  */
 
 /**
@@ -602,7 +602,7 @@ class RandomGenerator
     angle() { return this.float(-PI, PI); }
 
     /** Returns a seeded vec2 with size between the two values passed in
-    *  @param {number} valueA
+    *  @param {number} [valueA]
     *  @param {number} [valueB]
     *  @return {Vector2} */
     vec2(valueA=1, valueB=0)
@@ -791,7 +791,7 @@ class Vector2
 
     /** Returns a copy this vector reflected by the surface normal
      * @param {Vector2} normal - surface normal (should be normalized)
-     * @param {number} restitution - how much to bounce, 1 is perfect bounce, 0 is no bounce
+     * @param {number} [restitution] - how much to bounce, 1 is perfect bounce, 0 is no bounce
      * @return {Vector2} */
     reflect(normal, restitution=1)
     { return this.subtract(normal.scale((1+restitution)*this.dot(normal))); }
@@ -893,7 +893,7 @@ class Vector2
     { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; }
 
     /** Returns this vector expressed as a string
-     * @param {number} digits - precision to display
+     * @param {number} [digits] - precision to display
      * @return {string} */
     toString(digits=3)
     {

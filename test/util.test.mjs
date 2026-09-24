@@ -104,3 +104,25 @@ test('createCanvasContext makes a canvas and hands back its 2D context', () =>
     }
     finally { globalThis.OffscreenCanvas = had; }
 });
+
+test('shareURL does not leave an unhandled rejection when the share is cancelled', async () =>
+{
+    const { shareURL } = await import('../dist/littlejs.esm.js');
+    let unhandled = 0;
+    const onUnhandled = ()=> ++unhandled;
+    process.on('unhandledRejection', onUnhandled);
+    Object.defineProperty(navigator, 'share', { value: ()=> Promise.reject(new DOMException('cancelled', 'AbortError')), configurable: true });
+    try
+    {
+        let called = false;
+        shareURL('title', 'https://example.com', ()=> called = true);
+        await new Promise(r=> setTimeout(r, 20));
+        assert.equal(unhandled, 0);
+        assert.equal(called, false, 'the callback is for a share that went through');
+    }
+    finally
+    {
+        process.off('unhandledRejection', onUnhandled);
+        delete navigator.share;
+    }
+});

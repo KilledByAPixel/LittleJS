@@ -754,6 +754,7 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, s
     ASSERT(isNumber(time), 'time must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');
 
+    if (headlessMode) return; // nothing draws them, they would pile up
     if (isColor(color))
         color = color.toString();
     const timer = new Timer(time);
@@ -777,6 +778,7 @@ function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screen
     ASSERT(isNumber(time), 'time must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');
 
+    if (headlessMode) return;
     if (isColor(color))
         color = color.toString();
     pos = pos.copy();
@@ -800,6 +802,7 @@ function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=f
     ASSERT(isStringLike(color) || isColor(color), 'color is invalid');
     ASSERT(isNumber(time), 'time must be a number');
 
+    if (headlessMode) return;
     if (isColor(color))
         color = color.toString();
     pos = pos.copy();
@@ -883,6 +886,7 @@ function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monosp
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(isStringLike(font), 'font must be a string');
 
+    if (headlessMode) return;
     if (isColor(color))
         color = color.toString();
     pos = pos.copy();
@@ -1896,7 +1900,7 @@ function isArray(a) { return Array.isArray(a); }
 /**
  * @callback LineTestFunction - Checks if a position is colliding
  * @param {Vector2} pos
- * @memberof Draw
+ * @memberof Math
  */
 
 /**
@@ -2117,7 +2121,7 @@ class RandomGenerator
     angle() { return this.float(-PI, PI); }
 
     /** Returns a seeded vec2 with size between the two values passed in
-    *  @param {number} valueA
+    *  @param {number} [valueA]
     *  @param {number} [valueB]
     *  @return {Vector2} */
     vec2(valueA=1, valueB=0)
@@ -2306,7 +2310,7 @@ class Vector2
 
     /** Returns a copy this vector reflected by the surface normal
      * @param {Vector2} normal - surface normal (should be normalized)
-     * @param {number} restitution - how much to bounce, 1 is perfect bounce, 0 is no bounce
+     * @param {number} [restitution] - how much to bounce, 1 is perfect bounce, 0 is no bounce
      * @return {Vector2} */
     reflect(normal, restitution=1)
     { return this.subtract(normal.scale((1+restitution)*this.dot(normal))); }
@@ -2408,7 +2412,7 @@ class Vector2
     { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; }
 
     /** Returns this vector expressed as a string
-     * @param {number} digits - precision to display
+     * @param {number} [digits] - precision to display
      * @return {string} */
     toString(digits=3)
     {
@@ -2774,7 +2778,7 @@ const MAGENTA = debugProtectConstant(rgb(1,0,1));
  * - File saving (text, canvas, data URLs)
  * - Native share dialog support
  * - Local storage save data management
- * - Gradient noise (1D and 2D)
+ * - Value noise (1D and 2D)
  * @namespace Utilities
  */
 
@@ -2899,7 +2903,7 @@ async function fetchJSON(url)
  *  @param {string} [type]
  *  @memberof Utilities */
 function saveText(text, filename='text', type='text/plain')
-{ saveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
+{ saveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename, 1e3); } // freed once the download has it
 
 /** Create an offscreen canvas to draw into, and return its 2D context
  *  - The canvas is context.canvas, which is what TextureInfo and the like take
@@ -2962,7 +2966,7 @@ function shareURL(title, url, callback)
 {
     ASSERT(isStringLike(title), 'shareURL requires title string');
     ASSERT(isStringLike(url), 'shareURL requires url string');
-    navigator.share?.({title, url}).then(()=>callback?.());
+    navigator.share?.({title, url}).then(()=>callback?.(), ()=>{}); // a player who cancels is not an error
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3022,7 +3026,7 @@ function noiseHash(i)
     return (h >>> 0) / 2**32;
 }
 
-/** 1D gradient noise — returns a smooth value in [0, 1] for any real x.
+/** 1D value noise — returns a smooth value in [0, 1] for any real x.
  *  Integer inputs land on deterministic lattice values; non-integer inputs
  *  are interpolated with smoothStep for C1 continuity.
  *  @param {number} x
@@ -3034,7 +3038,7 @@ function noise1D(x)
     return lerp(noiseHash(i), noiseHash(i + 1), smoothStep(x - i));
 }
 
-/** 2D gradient noise — returns a smooth value in [0, 1] for any real (x, y).
+/** 2D value noise — returns a smooth value in [0, 1] for any real (x, y).
  *  @param {number} x
  *  @param {number} y
  *  @return {number}
@@ -3780,8 +3784,8 @@ function setSoundEnable(enable) { soundEnable = enable; }
 function setSoundVolume(volume)
 {
     soundVolume = volume;
-    if (soundEnable && !headlessMode && audioMasterGain)
-        audioMasterGain.gain.value = volume; // update gain immediately
+    if (!headlessMode && audioMasterGain)
+        audioMasterGain.gain.value = volume; // update gain immediately, sound off or not
 }
 
 /** Set default range where sound no longer plays
@@ -4635,7 +4639,7 @@ class TileInfo
 }
 
 /**
- * Tile Info - Stores info about each texture
+ * Texture Info - Stores info about each texture
  * @memberof Draw
  */
 class TextureInfo
@@ -5405,7 +5409,7 @@ function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHIT
  *  (e.g. linear gradients) should flip their own Y endpoints accordingly.
  *  @param {Vector2}  pos
  *  @param {Vector2}  size
- *  @param {number}   angle
+ *  @param {number}   [angle]
  *  @param {boolean}  [mirror]
  *  @param {Canvas2DDrawFunction} [drawFunction]
  *  @param {boolean}  [screenSpace=false]
@@ -5708,7 +5712,7 @@ function cameraFit(center, size, worldMargin, screenInset)
  *  If size is a Vector2, uses the length as diameter
  *  This can be used to cull offscreen objects from render or update
  *  @param {Vector2} pos - world space position
- *  @param {Vector2|number} size - world space size or diameter
+ *  @param {Vector2|number} [size] - world space size or diameter
  *  @return {boolean}
  *  @memberof Draw */
 function isOnScreen(pos, size=0)
@@ -6146,7 +6150,7 @@ const isTouchDevice = !headlessMode && typeof window != 'undefined' && window.on
 
 /** Prevents input continuing to the default browser handling
  *  This is useful to disable for html menus so the browser can handle input normally
- *  @param {boolean} preventDefault
+ *  @param {boolean} [preventDefault]
  *  @memberof Input */
 function setInputPreventDefault(preventDefault=true) { inputPreventDefault = preventDefault; }
 
@@ -6474,7 +6478,7 @@ function inputInit()
     document.addEventListener('mouseleave', onMouseLeave);
     document.addEventListener('wheel', onMouseWheel, { passive: false });
     document.addEventListener('contextmenu', onContextMenu);
-    document.addEventListener('blur', onBlur);
+    addEventListener('blur', onBlur); // the window's, the browser fires blur there and it does not bubble to the document
 
     // init touch input
     if (isTouchDevice && touchInputEnable)
@@ -9284,7 +9288,7 @@ class ParticleEmitter extends EngineObject
         {
             // show emitter bounds
             if (this.emitCircle)
-                debugCircle(this.pos, this.emitSize.x/2, '#0f0');
+                debugCircle(this.pos, this.emitSize.x, '#0f0');
             else
                 debugRect(this.pos, this.emitSize, '#0f0', 0, this.angle);
         }
@@ -11656,6 +11660,10 @@ class PostProcessPlugin
             // restore default so subsequent dynamic texture uploads aren't flipped
             glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, false);
 
+            // bind back the texture the 2D batch thinks is bound, a plugin drawing after this one uses it
+            if (glActiveTexture)
+                glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+
             // force it to set instanced mode
             glSetInstancedMode(true);
         }
@@ -12036,6 +12044,7 @@ class Light extends EngineObject
     constructor(pos, radius, color, fadeRange)
     {
         super(pos, vec2(1), undefined, 0, color);
+        this.mass = 0; // static, a light stays where it is put in a game with gravity
         ASSERT(isNumber(radius) && radius >= 0, 'Light radius must be a non-negative number');
         ASSERT(fadeRange === undefined || (isNumber(fadeRange) && fadeRange >= 0),
             'Light fadeRange must be a non-negative number when provided');
@@ -12860,14 +12869,12 @@ class UISystemPlugin
             {
                 if (o.destroyed || !o.visible) return;
 
-                // update in reverse order to detect mouse enter/leave
+                // update in reverse order to detect mouse enter/leave, from a copy since a child may destroy
+                // siblings mid-update (e.g. dialog close) and the ones after it would shift under the loop
                 updateTransforms(o);
-                for (let i=o.children.length; i--;)
-                {
-                    // a child may destroy siblings mid-update (e.g. dialog close)
-                    const child = o.children[i];
-                    child && updateObject(child);
-                }
+                const children = o.children.slice();
+                for (let i=children.length; i--;)
+                    updateObject(children[i]);
                 if (!o.destroyed)
                     o.update();
             }
@@ -13599,7 +13606,7 @@ class UIObject
     }
 
     /** Called if uiDebug is enabled
-     *  @param {boolean} visible */
+     *  @param {boolean} [visible] */
     renderDebug(visible=true)
     {
         // apply color based on state
@@ -13902,10 +13909,12 @@ class UICheckbox extends UIObject
         this.color = color.copy();
         this.interactive = true;
     }
-    click()
+    /** Toggle the checkbox, called when it is clicked
+     *  @param {boolean} [playSound] */
+    click(playSound=true)
     {
         this.checked = !this.checked;
-        this.onClick();
+        super.click(playSound); // the click callback and sound, as every UI object has
         this.onChange();
     }
     render()
@@ -14045,12 +14054,12 @@ class UISlider extends UIObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** 
- * VideoPlayerUIObject - A UI object that plays video
+/**
+ * UIVideo - A UI object that plays video
  * @extends UIObject
  * @example
  * // Create a video player UI object
- * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
+ * const video = new UIVideo(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
  * video.play();
  * @memberof UISystem
  */
@@ -14353,6 +14362,11 @@ function box2dTemp(v, slot=0)
     temp.Set(v.x, v.y);
     return temp;
 }
+
+// the native objects a query needs, one of each kind made once and reused, since the binding keeps every one made;
+// a query sets the callback's ReportFixture before each use, so the one callback serves every query of its kind
+const box2dQueryObjects = {};
+function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
 
 // what cannot happen while the world steps, like losing a body from a contact callback: done now, or queued until
 // the step is done
@@ -14939,16 +14953,14 @@ class Box2dObject extends EngineObject
      *  @return {boolean} */
     hasJoints() { return !box2d.isNull(this.body.GetJointList()); }
     
-    /** Get list of joints for this object
+    /** Get list of joints for this object, the Box2D joints
      *  @return {Array<Object>} */
     getJointList()
     {
+        // the body keeps a list of edges, each holding a joint and the next edge
         const joints = [];
-        for (let joint=this.body.GetJointList(); !box2d.isNull(joint); )
-        {
-            joints.push(joint);
-            joint = joint.get_next();
-        }
+        for (let edge=this.body.GetJointList(); !box2d.isNull(edge); edge = edge.get_next())
+            joints.push(edge.get_joint());
         return joints;
     }
 }
@@ -15315,7 +15327,7 @@ class Box2dRopeJoint extends Box2dJoint
      *  @param {Box2dObject} objectB
      *  @param {Vector2} anchorA
      *  @param {Vector2} anchorB
-     *  @param {number} extraLength
+     *  @param {number} [extraLength]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, extraLength=0, collide=false)
     {
@@ -15518,7 +15530,7 @@ class Box2dPrismaticJoint extends Box2dJoint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
      *  @param {Vector2} anchor
-     *  @param {Vector2} worldAxis
+     *  @param {Vector2} [worldAxis]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
@@ -15628,7 +15640,7 @@ class Box2dWheelJoint extends Box2dJoint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
      *  @param {Vector2} anchor
-     *  @param {Vector2} worldAxis
+     *  @param {Vector2} [worldAxis]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
@@ -16043,7 +16055,7 @@ class Box2dPlugin
      *  @param {Vector2} end */
     raycastAll(start, end)
     {
-        const raycastCallback = new box2d.instance.JSRayCastCallback();
+        const raycastCallback = box2dQueryObject('rayCast', 'JSRayCastCallback');
         raycastCallback.ReportFixture = function(fixturePointer, point, normal, fraction)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
@@ -16075,7 +16087,7 @@ class Box2dPlugin
      *  @param {Vector2} size */
     boxCastAll(pos, size)
     {
-        const queryCallback = new box2d.instance.JSQueryCallback();
+        const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
@@ -16085,7 +16097,7 @@ class Box2dPlugin
             return true; // continue getting results
         };
 
-        const aabb = new box2d.instance.b2AABB();
+        const aabb = box2dQueryObject('aabb', 'b2AABB');
         aabb.set_lowerBound(box2dTemp(pos.subtract(size.scale(.5))));
         aabb.set_upperBound(box2dTemp(pos.add(size.scale(.5))));
 
@@ -16100,7 +16112,7 @@ class Box2dPlugin
      *  @param {Vector2} size */
     boxCast(pos, size)
     {
-        const queryCallback = new box2d.instance.JSQueryCallback();
+        const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
@@ -16108,7 +16120,7 @@ class Box2dPlugin
             return false; // stop getting results
         };
 
-        const aabb = new box2d.instance.b2AABB();
+        const aabb = box2dQueryObject('aabb', 'b2AABB');
         aabb.set_lowerBound(box2dTemp(pos.subtract(size.scale(.5))));
         aabb.set_upperBound(box2dTemp(pos.add(size.scale(.5))));
 
@@ -16151,10 +16163,10 @@ class Box2dPlugin
 
     /** point cast and return the first object
      *  @param {Vector2} pos 
-     *  @param {boolean} dynamicOnly */
+     *  @param {boolean} [dynamicOnly] */
     pointCast(pos, dynamicOnly=true)
     {
-        const queryCallback = new box2d.instance.JSQueryCallback();
+        const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
@@ -16166,7 +16178,7 @@ class Box2dPlugin
             return false; // stop getting results
         };
 
-        const aabb = new box2d.instance.b2AABB();
+        const aabb = box2dQueryObject('aabb', 'b2AABB');
         aabb.set_lowerBound(box2dTemp(pos));
         aabb.set_upperBound(box2dTemp(pos));
 

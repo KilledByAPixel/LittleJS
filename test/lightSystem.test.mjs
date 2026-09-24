@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EngineObject, vec2 } from '../dist/littlejs.esm.js';
+import { EngineObject, vec2, setGravity } from '../dist/littlejs.esm.js';
 import { Light } from '../dist/littlejs.esm.js';
 
 test('EngineObject.renderLight exists and is a no-op', () =>
@@ -124,4 +124,18 @@ test('destroyed objects are skipped by the lightmap pass (by contract)', () =>
     const l = new Light(vec2(0, 0), 1, undefined);
     l.destroy();
     assert.equal(l.destroyed, true);
+});
+
+test('a Light stays where it is put in a game with gravity', () =>
+{
+    setGravity(vec2(0, -.02));
+    try
+    {
+        const light = new Light(vec2(3, 4), 5);
+        assert.equal(light.mass, 0, 'static');
+        for (let i = 0; i < 10; ++i) light.updatePhysics();
+        assert.equal(light.pos.y, 4);
+        light.destroy();
+    }
+    finally { setGravity(vec2()); }
 });

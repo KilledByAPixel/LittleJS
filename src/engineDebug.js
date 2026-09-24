@@ -89,6 +89,7 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, s
     ASSERT(isNumber(time), 'time must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');
 
+    if (headlessMode) return; // nothing draws them, they would pile up
     if (isColor(color))
         color = color.toString();
     const timer = new Timer(time);
@@ -112,6 +113,7 @@ function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screen
     ASSERT(isNumber(time), 'time must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');
 
+    if (headlessMode) return;
     if (isColor(color))
         color = color.toString();
     pos = pos.copy();
@@ -135,6 +137,7 @@ function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=f
     ASSERT(isStringLike(color) || isColor(color), 'color is invalid');
     ASSERT(isNumber(time), 'time must be a number');
 
+    if (headlessMode) return;
     if (isColor(color))
         color = color.toString();
     pos = pos.copy();
@@ -218,6 +221,7 @@ function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monosp
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(isStringLike(font), 'font must be a string');
 
+    if (headlessMode) return;
     if (isColor(color))
         color = color.toString();
     pos = pos.copy();

@@ -421,3 +421,13 @@ test('a sound keeps its place in the sound through pause, resume and rate change
     near(offsetSent(), .4, 'start sends its offset as it is');
     later.stop();
 });
+
+test('setSoundVolume sets the master gain even while sound is off', () =>
+{
+    const before = LJS.audioMasterGain.gain.value;
+    LJS.setSoundEnable(false);
+    LJS.setSoundVolume(.7);
+    LJS.setSoundEnable(true);
+    assert.equal(LJS.audioMasterGain.gain.value, .7);
+    LJS.setSoundVolume(before);
+});

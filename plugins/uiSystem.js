@@ -273,14 +273,12 @@ class UISystemPlugin
             {
                 if (o.destroyed || !o.visible) return;
 
-                // update in reverse order to detect mouse enter/leave
+                // update in reverse order to detect mouse enter/leave, from a copy since a child may destroy
+                // siblings mid-update (e.g. dialog close) and the ones after it would shift under the loop
                 updateTransforms(o);
-                for (let i=o.children.length; i--;)
-                {
-                    // a child may destroy siblings mid-update (e.g. dialog close)
-                    const child = o.children[i];
-                    child && updateObject(child);
-                }
+                const children = o.children.slice();
+                for (let i=children.length; i--;)
+                    updateObject(children[i]);
                 if (!o.destroyed)
                     o.update();
             }
@@ -1012,7 +1010,7 @@ class UIObject
     }
 
     /** Called if uiDebug is enabled
-     *  @param {boolean} visible */
+     *  @param {boolean} [visible] */
     renderDebug(visible=true)
     {
         // apply color based on state
@@ -1315,10 +1313,12 @@ class UICheckbox extends UIObject
         this.color = color.copy();
         this.interactive = true;
     }
-    click()
+    /** Toggle the checkbox, called when it is clicked
+     *  @param {boolean} [playSound] */
+    click(playSound=true)
     {
         this.checked = !this.checked;
-        this.onClick();
+        super.click(playSound); // the click callback and sound, as every UI object has
         this.onChange();
     }
     render()
@@ -1458,12 +1458,12 @@ class UISlider extends UIObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** 
- * VideoPlayerUIObject - A UI object that plays video
+/**
+ * UIVideo - A UI object that plays video
  * @extends UIObject
  * @example
  * // Create a video player UI object
- * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
+ * const video = new UIVideo(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
  * video.play();
  * @memberof UISystem
  */

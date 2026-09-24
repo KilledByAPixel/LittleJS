@@ -313,6 +313,7 @@ class Light extends EngineObject
     constructor(pos, radius, color, fadeRange)
     {
         super(pos, vec2(1), undefined, 0, color);
+        this.mass = 0; // static, a light stays where it is put in a game with gravity
         ASSERT(isNumber(radius) && radius >= 0, 'Light radius must be a non-negative number');
         ASSERT(fadeRange === undefined || (isNumber(fadeRange) && fadeRange >= 0),
             'Light fadeRange must be a non-negative number when provided');

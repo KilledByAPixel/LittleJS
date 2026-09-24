@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { Box2dPlugin, Box2dObject, Box2dStaticObject, Box2dWeldJoint, Box2dWheelJoint, box2d, vec2, worldToScreen, PI } from '../dist/littlejs.esm.js';
+import { Box2dPlugin, Box2dObject, Box2dStaticObject, Box2dWeldJoint, Box2dWheelJoint, Box2dRevoluteJoint, box2d, vec2, worldToScreen, PI } from '../dist/littlejs.esm.js';
 
 // the Box2D the engine ships, the same wasm a game loads, so mocks cannot hide a wrong native method or a world lock
 const Box2D = createRequire(import.meta.url)('../dist/box2d.wasm.js');
@@ -67,6 +67,32 @@ test('an offset circle draws where it is on the body, and a lone edge draws', ()
     assert.ok(fills >= 1, 'the lone edge draws, as a line');
     assert.ok(strokes >= 1, 'the edge list draws through the context it was given');
     o.destroy();
+});
+
+test('getJointList returns the joints, and the queries reuse their native objects', () =>
+{
+    const a = new Box2dStaticObject(vec2(20, 0)), b = new Box2dObject(vec2(20, 1));
+    a.addBox(); b.addBox();
+    const joint = new Box2dRevoluteJoint(a, b, vec2(20, .5));
+    const joints = b.getJointList();
+    assert.equal(joints.length, 1);
+    assert.equal(typeof joints[0].GetType, 'function', 'a joint, not a joint edge');
+    assert.equal(instance.getPointer(joints[0]), instance.getPointer(joint.box2dJoint));
+
+    const count = (type)=> Object.keys(instance.getCache(type)).length;
+    const types = [instance.JSQueryCallback, instance.JSRayCastCallback, instance.b2AABB];
+    for (let i = 0; i < 3; ++i) // the first calls may make the ones that are kept
+        box2d.raycastAll(vec2(20, 5), vec2(20, -5)), box2d.boxCastAll(vec2(20, 0), vec2(2)), box2d.boxCast(vec2(20, 0), vec2(2)), box2d.pointCast(vec2(20, 1));
+    const before = types.map(count);
+    for (let i = 0; i < 100; ++i)
+    {
+        assert.ok(box2d.raycastAll(vec2(20, 5), vec2(20, -5)).length >= 1);
+        assert.ok(box2d.boxCastAll(vec2(20, 0), vec2(2)).length >= 1);
+        box2d.boxCast(vec2(20, 0), vec2(2));
+        box2d.pointCast(vec2(20, 1));
+    }
+    assert.deepEqual(types.map(count), before, 'no native objects made per query');
+    joint.destroy(); a.destroy(); b.destroy();
 });
 
 // last in the file: before the fix this aborted the Box2D instance

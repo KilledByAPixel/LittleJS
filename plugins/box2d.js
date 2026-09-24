@@ -39,6 +39,11 @@ function box2dTemp(v, slot=0)
     return temp;
 }
 
+// the native objects a query needs, one of each kind made once and reused, since the binding keeps every one made;
+// a query sets the callback's ReportFixture before each use, so the one callback serves every query of its kind
+const box2dQueryObjects = {};
+function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
+
 // what cannot happen while the world steps, like losing a body from a contact callback: done now, or queued until
 // the step is done
 const box2dPending = [];
@@ -624,16 +629,14 @@ class Box2dObject extends EngineObject
      *  @return {boolean} */
     hasJoints() { return !box2d.isNull(this.body.GetJointList()); }
     
-    /** Get list of joints for this object
+    /** Get list of joints for this object, the Box2D joints
      *  @return {Array<Object>} */
     getJointList()
     {
+        // the body keeps a list of edges, each holding a joint and the next edge
         const joints = [];
-        for (let joint=this.body.GetJointList(); !box2d.isNull(joint); )
-        {
-            joints.push(joint);
-            joint = joint.get_next();
-        }
+        for (let edge=this.body.GetJointList(); !box2d.isNull(edge); edge = edge.get_next())
+            joints.push(edge.get_joint());
         return joints;
     }
 }
@@ -1000,7 +1003,7 @@ class Box2dRopeJoint extends Box2dJoint
      *  @param {Box2dObject} objectB
      *  @param {Vector2} anchorA
      *  @param {Vector2} anchorB
-     *  @param {number} extraLength
+     *  @param {number} [extraLength]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, extraLength=0, collide=false)
     {
@@ -1203,7 +1206,7 @@ class Box2dPrismaticJoint extends Box2dJoint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
      *  @param {Vector2} anchor
-     *  @param {Vector2} worldAxis
+     *  @param {Vector2} [worldAxis]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
@@ -1313,7 +1316,7 @@ class Box2dWheelJoint extends Box2dJoint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
      *  @param {Vector2} anchor
-     *  @param {Vector2} worldAxis
+     *  @param {Vector2} [worldAxis]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
@@ -1728,7 +1731,7 @@ class Box2dPlugin
      *  @param {Vector2} end */
     raycastAll(start, end)
     {
-        const raycastCallback = new box2d.instance.JSRayCastCallback();
+        const raycastCallback = box2dQueryObject('rayCast', 'JSRayCastCallback');
         raycastCallback.ReportFixture = function(fixturePointer, point, normal, fraction)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
@@ -1760,7 +1763,7 @@ class Box2dPlugin
      *  @param {Vector2} size */
     boxCastAll(pos, size)
     {
-        const queryCallback = new box2d.instance.JSQueryCallback();
+        const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
@@ -1770,7 +1773,7 @@ class Box2dPlugin
             return true; // continue getting results
         };
 
-        const aabb = new box2d.instance.b2AABB();
+        const aabb = box2dQueryObject('aabb', 'b2AABB');
         aabb.set_lowerBound(box2dTemp(pos.subtract(size.scale(.5))));
         aabb.set_upperBound(box2dTemp(pos.add(size.scale(.5))));
 
@@ -1785,7 +1788,7 @@ class Box2dPlugin
      *  @param {Vector2} size */
     boxCast(pos, size)
     {
-        const queryCallback = new box2d.instance.JSQueryCallback();
+        const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
@@ -1793,7 +1796,7 @@ class Box2dPlugin
             return false; // stop getting results
         };
 
-        const aabb = new box2d.instance.b2AABB();
+        const aabb = box2dQueryObject('aabb', 'b2AABB');
         aabb.set_lowerBound(box2dTemp(pos.subtract(size.scale(.5))));
         aabb.set_upperBound(box2dTemp(pos.add(size.scale(.5))));
 
@@ -1836,10 +1839,10 @@ class Box2dPlugin
 
     /** point cast and return the first object
      *  @param {Vector2} pos 
-     *  @param {boolean} dynamicOnly */
+     *  @param {boolean} [dynamicOnly] */
     pointCast(pos, dynamicOnly=true)
     {
-        const queryCallback = new box2d.instance.JSQueryCallback();
+        const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
@@ -1851,7 +1854,7 @@ class Box2dPlugin
             return false; // stop getting results
         };
 
-        const aabb = new box2d.instance.b2AABB();
+        const aabb = box2dQueryObject('aabb', 'b2AABB');
         aabb.set_lowerBound(box2dTemp(pos));
         aabb.set_upperBound(box2dTemp(pos));
 
