@@ -3317,7 +3317,8 @@ function render3DRaycastObject(ray, o)
     if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) return;
     if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
     const matrix = render3DObjectMatrix(o), mesh = o.mesh; // a sprite is picked by its size3D
-    const radius = (mesh ? mesh.radius || mesh.computeRadius() : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxScale(matrix.m);
+    // a mesh that changed since it was measured is measured again, an upload may not have come yet
+    const radius = (mesh ? mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxScale(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
     return raycastSphere(ray, matrix.getTranslation(), radius);
 }
@@ -3393,8 +3394,11 @@ class InstancedMesh3D extends EngineObject3D
         /** @property {Float32Array} - The per instance values the shader reads, 24 floats each: the matrix, the color
          *  and the uv rect; edit it directly and call markDirty for the instances changed */
         this.instanceData = new Float32Array(count * RENDER3D_INSTANCE_FLOATS);
-        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for culling */
+        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for culling;
+         *  from the farthest instance and the largest scale, and the mesh's size when it draws */
         this.radius = 0;
+        this.reach = 0;    // the farthest any instance's position has been from the origin
+        this.maxScale = 0; // and the largest scale any instance has had
         /** @property {number} - First instance to upload before the next draw */
         this.dirtyStart = 0;
         /** @property {number} - One past the last instance to upload, so nothing uploads when it is not past dirtyStart */
@@ -3420,8 +3424,6 @@ class InstancedMesh3D extends EngineObject3D
         ASSERT(i >= 0 && i < this.maxCount, 'instance index out of range');
         const data = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS, m = matrix.m;
         data.set(m, k);
-        const meshRadius = this.mesh.radius || this.mesh.computeRadius(); // the builders leave it to upload
-        this.radius = max(this.radius, (m[12]*m[12] + m[13]*m[13] + m[14]*m[14]) ** .5 + meshRadius * render3DMaxScale(m));
         this.markDirty(i);
     }
 
@@ -3448,12 +3450,20 @@ class InstancedMesh3D extends EngineObject3D
         this.markDirty(i);
     }
 
-    /** Note that an instance changed, so it uploads before the next draw; setMatrixAt and setColorAt call this
+    /** Note that an instance changed, so it uploads before the next draw and the bounds hold it; setMatrixAt and
+     *  setColorAt call this, and so must an edit made straight to instanceData
      *  @param {number} i */
     markDirty(i)
     {
         this.dirtyStart = min(this.dirtyStart, i);
         this.dirtyEnd = max(this.dirtyEnd, i + 1);
+
+        // the bounds grow to hold where it is now and how big, read back from the matrix it has
+        const d = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS;
+        this.reach = max(this.reach, hypot(d[k+12], d[k+13], d[k+14]));
+        this.maxScale = max(this.maxScale, hypot(d[k], d[k+1], d[k+2]), hypot(d[k+4], d[k+5], d[k+6]), hypot(d[k+8], d[k+9], d[k+10]));
+        const meshRadius = this.mesh.radius || this.mesh.computeRadius(); // measured once, the draw takes a new size up
+        this.radius = this.reach + meshRadius * this.maxScale;
     }
 
     /** Draws every instance as one call, uploading the ones that changed first */
@@ -3466,6 +3476,7 @@ class InstancedMesh3D extends EngineObject3D
         if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== r.contextGeneration)
             mesh.upload();
         if (!mesh.bufferCount) return;
+        this.radius = this.reach + mesh.radius * this.maxScale; // the mesh may have grown since
         if (r.frustumCulling && !render3DSphereVisible(0, 0, 0, this.radius)) return;
 
         // the uv rect is the object's tile for every instance, rewritten when the tile changes

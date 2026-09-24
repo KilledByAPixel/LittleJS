@@ -374,8 +374,8 @@ SoundInstance.pause()             // Pause the sound
 SoundInstance.resume()            // Resume paused sound
 SoundInstance.isPlaying()         // Check if currently playing
 SoundInstance.isPaused()          // Check if paused or stopped, not playing
-SoundInstance.getCurrentTime()    // Get current playback position
-SoundInstance.getDuration()       // Get total duration
+SoundInstance.getCurrentTime()    // Where it is in the sound, in the sound's own seconds whatever the rate
+SoundInstance.getDuration()       // Length of the sound, the same at any rate; divide by rate for time to play
 SoundInstance.getSource()         // Get AudioBufferSourceNode
 
 // ZzFXM - Tiny music playing system
@@ -626,7 +626,7 @@ tileLayersLoad(tileMapData, tileInfo)               // Load tile layers from exp
 
 ```javascript
 // Particle Emitter Object
-ParticleEmitter(pos, angle, ...settings) // Create a particle system
+ParticleEmitter(pos, angle, ...settings) // Create a particle system; collideTiles is for world space emitters only
 ParticleEmitter.emitParticle()           // Spawn one particle
 
 // Particle Settings

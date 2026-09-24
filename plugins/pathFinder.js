@@ -325,41 +325,7 @@ class PathFinder
     {
         ASSERT(isVector2(worldPos), 'worldPos must be a Vector2');
         if (rebuild) this.buildNodeData();
-
-        // Inline worldToTile to avoid a Vector2 allocation per call.
-        const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
-        const oy = this.tileLayer ? this.tileLayer.pos.y : 0;
-        const centerX = floor(worldPos.x - ox);
-        const centerY = floor(worldPos.y - oy);
-
-        for (let offset = 0; offset <= searchRange; ++offset)
-        {
-            let nearest = null;
-            let nearestDistSq = 0;
-
-            for (let dy = -offset; dy <= offset; ++dy)
-            for (let dx = -offset; dx <= offset; ++dx)
-            {
-                // Only scan the perimeter of the current ring (skip the
-                // interior we've already searched in earlier iterations).
-                if (offset > 0 && abs(dx) !== offset && abs(dy) !== offset)
-                    continue;
-
-                const node = this.getNode(centerX + dx, centerY + dy);
-                if (!node || !node.isClear()) continue;
-
-                const ddx = node.posWorld.x - worldPos.x;
-                const ddy = node.posWorld.y - worldPos.y;
-                const distSq = ddx * ddx + ddy * ddy;
-                if (!nearest || distSq < nearestDistSq)
-                {
-                    nearest = node;
-                    nearestDistSq = distSq;
-                }
-            }
-            if (nearest) return nearest;
-        }
-        return null;
+        return pathFinderNearestNode(this, worldPos, searchRange, (node)=> node.isClear());
     }
 
     /** Smooth a node path by removing redundant turns and tightening corners
@@ -747,8 +713,10 @@ class PathFinder
         this.buildNodeData();
 
         // rebuild=false because we just built — avoid redundant work per snap.
-        const startNode = this.getNearestClearNode(startPos, 10, false);
-        const endNode = this.getNearestClearNode(endPos, 10, false);
+        // the ends go to the nearest cell that can be walked, whatever it costs to cross
+        const walkable = (node)=> node.walkable;
+        const startNode = pathFinderNearestNode(this, startPos, 10, walkable);
+        const endNode = pathFinderNearestNode(this, endPos, 10, walkable);
         if (!startNode || !endNode) return [];
 
         // Trivial case: start and end snapped to the same tile.
@@ -786,4 +754,44 @@ class PathFinder
 
         return result;
     }
+}
+
+// the node nearest a world position that passes a test, within a range of tiles, or null: the rings of cells around
+// the position are searched outward until the next ring cannot hold anything nearer than the best found, since the
+// best of one ring is not always the nearest, a cell one ring out can be closer
+function pathFinderNearestNode(finder, worldPos, searchRange, test)
+{
+    const ox = finder.tileLayer ? finder.tileLayer.pos.x : 0;
+    const oy = finder.tileLayer ? finder.tileLayer.pos.y : 0;
+    const centerX = floor(worldPos.x - ox);
+    const centerY = floor(worldPos.y - oy);
+
+    let nearest = null, nearestDistSq = 0;
+    for (let offset = 0; offset <= searchRange; ++offset)
+    {
+        // every cell of this ring is more than offset - .5 away along one axis
+        const bound = max(0, offset - .5);
+        if (nearest && bound * bound >= nearestDistSq) break;
+
+        for (let dy = -offset; dy <= offset; ++dy)
+        for (let dx = -offset; dx <= offset; ++dx)
+        {
+            // only the ring itself, the inside was searched already
+            if (offset > 0 && abs(dx) !== offset && abs(dy) !== offset)
+                continue;
+
+            const node = finder.getNode(centerX + dx, centerY + dy);
+            if (!node || !test(node)) continue;
+
+            const ddx = node.posWorld.x - worldPos.x;
+            const ddy = node.posWorld.y - worldPos.y;
+            const distSq = ddx * ddx + ddy * ddy;
+            if (!nearest || distSq < nearestDistSq)
+            {
+                nearest = node;
+                nearestDistSq = distSq;
+            }
+        }
+    }
+    return nearest;
 }

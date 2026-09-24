@@ -490,3 +490,42 @@ test('a particle emitter in local space spawns its box unrotated, and a fast par
     assert.ok(p.pos.x <= objectMaxSpeed + 1e-9, 'moved ' + p.pos.x + ', no further than the speed limit');
     e.destroy();
 });
+
+test('a particle reports its death once however it dies, and a local space emitter cannot collide with tiles', () =>
+{
+    let deaths = 0;
+    const e = new ParticleEmitter(vec2(), 0, 0, 0, 0);
+    e.particleDestroyCallback = ()=> ++deaths;
+    const p = e.emitParticle();
+    p.destroy();
+    p.destroy();
+    p.update(); // its time may be up as well
+    assert.equal(deaths, 1, 'destroyed once');
+    const q = e.emitParticle();
+    e.particleDestroyCallback = ()=> { ++deaths; q.destroy(); }; // and from its own callback
+    q.destroy();
+    assert.equal(deaths, 2);
+    e.destroy();
+
+    // local space particles are relative to the emitter, the tile collision is in the world
+    const local = new ParticleEmitter(vec2(), 0, 0, 0, 0);
+    local.localSpace = true;
+    local.collideTiles = true;
+    assert.throws(()=> local.update(), /Assert/);
+    local.destroy();
+});
+
+test('an object that detaches from its parent in update is not updated again as a root in the same pass', () =>
+{
+    const parent = new EngineObject(vec2(), vec2(1));
+    const child = new EngineObject(vec2(), vec2(1));
+    let updates = 0;
+    child.update = ()=> { ++updates; child.parent && child.parent.removeChild(child); };
+    parent.addChild(child);
+    engineObjectsUpdate();
+    assert.equal(updates, 1, 'once in the pass it detached in');
+    engineObjectsUpdate();
+    assert.equal(updates, 2, 'and once in the next, as a root');
+    parent.destroy(); child.destroy();
+    engineObjectsUpdate();
+});

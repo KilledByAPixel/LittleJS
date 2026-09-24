@@ -2908,10 +2908,13 @@ declare module "littlejsengine" {
         pan: number;
         /** @property {boolean} - Should the sound loop */
         loop: boolean;
-        /** @property {number} - Timestamp for audio context when paused */
+        /** @property {number} - Where it is in the sound while not playing, in the sound's own seconds */
         pausedTime: number;
-        /** @property {number} - Timestamp for audio context when started */
-        startTime: number;
+        /** @property {number} - Audio context time its place was last taken at, while playing
+         *  @type {number|undefined} */
+        startTime: number | undefined;
+        /** @property {number} - Where it was in the sound at startTime, in the sound's own seconds */
+        startOffset: number;
         /** @property {GainNode} - Gain node for the sound */
         gainNode: GainNode;
         /** @property {AudioBufferSourceNode} - Source node of the audio */
@@ -2920,8 +2923,8 @@ declare module "littlejsengine" {
          *  @type {AudioNode|AudioEffectNodes} */
         output: AudioNode | AudioEffectNodes;
         onendedCallback: (source: any) => void;
-        /** Start playing the sound instance from the offset time
-         *  @param {number} [offset] - Offset in seconds to start playback from
+        /** Start playing the sound instance from a place in the sound
+         *  @param {number} [offset] - Where to start in the sound, in its own seconds whatever the rate
          */
         start(offset?: number): void;
         /** Set the volume of this sound instance, with an optional fade to it
@@ -2931,7 +2934,7 @@ declare module "littlejsengine" {
         setVolume(volume: number, fadeTime?: number): void;
         /** Set the playback rate of this sound instance, its speed and pitch, while it plays
          *  - A looping sound can follow something smoothly this way, like an engine with the speed
-         *  - A rate of 0 freezes the sound in place, its current time is not tracked until it moves again
+         *  - A rate of 0 freezes the sound in place, and it carries on from there when the rate comes back
          *  @param {number} rate - 1 is normal, 2 is twice as fast and an octave up */
         setRate(rate: number): void;
         /** Stop this sound instance and reset position to the start
@@ -2949,12 +2952,13 @@ declare module "littlejsengine" {
          *  @return {boolean} - True if not playing
          */
         isPaused(): boolean;
-        /** Get the current playback time in seconds
-         *  @return {number} - Current playback time
+        /** Get where it is in the sound, in the sound's own seconds: at a rate of 2 it moves two seconds for each one
+         *  that passes, and at 0 it stays put
+         *  @return {number} - Seconds into the sound
          */
         getCurrentTime(): number;
-        /** Get the total duration of this sound
-         *  @return {number} - Total duration in seconds (0 if loading)
+        /** Get the length of the sound in its own seconds, the same at any rate; divide by the rate for how long it takes to play
+         *  @return {number} - Length in seconds (0 if loading)
          */
         getDuration(): number;
         /** Get source of this sound instance
@@ -2993,7 +2997,7 @@ declare module "littlejsengine" {
      *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
      *  @param {number}   [sampleRate=44100] - Sample rate for the sound
      *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
-     *  @param {number}   [offset] - Offset in seconds to start playback from
+     *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
      *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
      *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
      *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
@@ -3007,7 +3011,7 @@ declare module "littlejsengine" {
      *  @param {number}   [pan] - How much to apply stereo panning
      *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
      *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
-     *  @param {number}   [offset] - Offset in seconds to start playback from
+     *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
      *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
      *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
      *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
@@ -3120,6 +3124,7 @@ declare module "littlejsengine" {
         mirror: boolean;
         /** @property {boolean} - Has object been destroyed? */
         destroyed: boolean;
+        updatePass: number;
         /** @property {number} - How heavy the object is, static if 0 */
         mass: number;
         /** @property {number} - How much to slow down velocity each frame (0-1) */
@@ -3608,7 +3613,7 @@ declare module "littlejsengine" {
          *  @param {number} [particleConeAngle] - Cone for start particle angle
          *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
          *  @param {number} [randomness]    - Apply extra randomness percent
-         *  @param {boolean} [collideTiles] - Do particles collide against tiles
+         *  @param {boolean} [collideTiles] - Do particles collide against tiles, world space emitters only
          *  @param {boolean} [additive]     - Should particles use additive blend
          *  @param {boolean} [randomColorLinear] - Should color be randomized linearly or across each component
          *  @param {number} [renderOrder] - Render order for particles (additive is above other stuff by default)
@@ -3737,7 +3742,8 @@ declare module "littlejsengine" {
         tileInfo: TileInfo;
         /** Update the particle */
         update(): void;
-        /** Destroy this particle */
+        /** Destroy this particle, once: a second call does nothing
+         */
         destroy(): void;
         /** Render the particle, automatically called each frame */
         render(): void;
@@ -4467,6 +4473,12 @@ declare module "littlejsengine" {
         private _keyInputObject;
         /** @private */
         private _onKeyDown;
+        set keyInputObject(arg: UIObject);
+        /** Object to send keyboard input to (typically a UITextInput).
+         *  The document keydown listener is only attached while this is set,
+         *  so games that never use text input pay no event-handling cost.
+         *  @type {UIObject} */
+        get keyInputObject(): UIObject;
         /** Draw a rectangle to the UI context
         *  @param {Vector2} pos
         *  @param {Vector2} size
@@ -4477,8 +4489,8 @@ declare module "littlejsengine" {
         *  @param {Color}   [gradientColor]
         *  @param {Color}   [shadowColor]
         *  @param {number}  [shadowBlur]
-        *  @param {Color}   [shadowOffset] */
-        drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, cornerRadius?: number, gradientColor?: Color, shadowColor?: Color, shadowBlur?: number, shadowOffset?: Color): void;
+        *  @param {Vector2} [shadowOffset] */
+        drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, cornerRadius?: number, gradientColor?: Color, shadowColor?: Color, shadowBlur?: number, shadowOffset?: Vector2): void;
         /** Draw a line to the UI context
         *  @param {Vector2} posA
         *  @param {Vector2} posB
@@ -4494,8 +4506,8 @@ declare module "littlejsengine" {
         *  @param {boolean}  [mirror]
         *  @param {Color}    [shadowColor]
         *  @param {number}   [shadowBlur]
-        *  @param {Color}    [shadowOffset] */
-        drawTile(pos: Vector2, size: Vector2, tileInfo: TileInfo, color?: Color, angle?: number, mirror?: boolean, shadowColor?: Color, shadowBlur?: number, shadowOffset?: Color): void;
+        *  @param {Vector2}  [shadowOffset] */
+        drawTile(pos: Vector2, size: Vector2, tileInfo: TileInfo, color?: Color, angle?: number, mirror?: boolean, shadowColor?: Color, shadowBlur?: number, shadowOffset?: Vector2): void;
         /** Draw text to the UI context
         *  @param {string}  text
         *  @param {Vector2} pos
@@ -4510,8 +4522,8 @@ declare module "littlejsengine" {
         *  @param {Vector2} [textShadow]
         *  @param {Color}   [shadowColor]
         *  @param {number}  [shadowBlur]
-        *  @param {Color}   [shadowOffset] */
-        drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, fontStyle?: string, applyMaxWidth?: boolean, textShadow?: Vector2, shadowColor?: Color, shadowBlur?: number, shadowOffset?: Color): void;
+        *  @param {Vector2} [shadowOffset] */
+        drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, fontStyle?: string, applyMaxWidth?: boolean, textShadow?: Vector2, shadowColor?: Color, shadowBlur?: number, shadowOffset?: Vector2): void;
         /**
          * @callback DragAndDropCallback - Callback for drag and drop events
          * @param {DragEvent} event - The drag event
@@ -4529,12 +4541,6 @@ declare module "littlejsengine" {
          *  @param {Vector2} pos
          *  @return {Vector2} */
         screenToNative(pos: Vector2): Vector2;
-        set keyInputObject(arg: UIObject);
-        /** Object to send keyboard input to (typically a UITextInput).
-         *  The document keydown listener is only attached while this is set,
-         *  so games that never use text input pay no event-handling cost.
-         *  @type {UIObject} */
-        get keyInputObject(): UIObject;
         /** Destroy and remove all objects
         *  @memberof UISystem */
         destroyObjects(): void;
@@ -4675,7 +4681,7 @@ declare module "littlejsengine" {
          *  @return {boolean} - True if overlapping */
         isMouseOverlapping(): boolean;
         /** Update the object, called automatically by plugin once each frame */
-        update(): void;
+        update(): any;
         /** Render the object, called automatically by plugin once each frame */
         render(): void;
         /** Get the size for text with overrides and scale
@@ -4758,6 +4764,7 @@ declare module "littlejsengine" {
         /** Key down event handler if this object is being edited
          *  @param {KeyboardEvent} [e] */
         onKeyDown(e?: KeyboardEvent): void;
+        update(): void;
     }
     /**
      * UITile - A UI object that displays a tile image
@@ -4836,6 +4843,7 @@ declare module "littlejsengine" {
         handleColor: Color;
         /** @property {boolean} - Should it fill up like a progress bar? */
         fillMode: boolean;
+        update(): void;
     }
     /**
      * VideoPlayerUIObject - A UI object that plays video
@@ -4897,6 +4905,7 @@ declare module "littlejsengine" {
         /** Seek to time in seconds
          *  @param {number} time - Time in seconds to seek to */
         setTime(time: number): void;
+        update(): void;
     }
     /**
      * UILayout - A container that auto-arranges children in a vertical list, horizontal list, or grid
@@ -7514,8 +7523,11 @@ declare module "littlejsengine" {
         /** @property {Float32Array} - The per instance values the shader reads, 24 floats each: the matrix, the color
          *  and the uv rect; edit it directly and call markDirty for the instances changed */
         instanceData: Float32Array;
-        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for culling */
+        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for culling;
+         *  from the farthest instance and the largest scale, and the mesh's size when it draws */
         radius: number;
+        reach: number;
+        maxScale: number;
         /** @property {number} - First instance to upload before the next draw */
         dirtyStart: number;
         /** @property {number} - One past the last instance to upload, so nothing uploads when it is not past dirtyStart */
@@ -7535,7 +7547,8 @@ declare module "littlejsengine" {
          *  @param {number} i
          *  @param {Color} color */
         setColorAt(i: number, color: Color): void;
-        /** Note that an instance changed, so it uploads before the next draw; setMatrixAt and setColorAt call this
+        /** Note that an instance changed, so it uploads before the next draw and the bounds hold it; setMatrixAt and
+         *  setColorAt call this, and so must an edit made straight to instanceData
          *  @param {number} i */
         markDirty(i: number): void;
     }

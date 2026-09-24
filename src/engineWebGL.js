@@ -32,7 +32,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glUniformLocations = new Map, glCanBeEnabled = true;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -762,8 +762,12 @@ function glDrawColoredPoints(points, pointColors)
  *  @memberof WebGL */
 function glSetRenderTarget(texture, clear=false)
 {
+    // what was batched so far draws where it was meant to, before the target changes
+    glFlush();
     if (texture)
     {
+        // coming from the canvas, keep its transform and blend mode to put back after
+        glRenderTarget || (glRenderTargetSaved = [glTransform, glAdditive]);
         glRenderTarget = texture;
         glContext.bindFramebuffer(glContext.FRAMEBUFFER, glFramebuffer);
         glContext.framebufferTexture2D(glContext.FRAMEBUFFER, 
@@ -772,13 +776,26 @@ function glSetRenderTarget(texture, clear=false)
     }
     else
     {
-        glFlush();
         glRenderTarget = undefined;
         glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
 
         // use the backing store size, mainCanvasSize is css pixels and may
         // still be the render target's size when unwinding a layer redraw
         glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
+
+        // the canvas's own transform and blend mode again, the target set its own
+        if (glRenderTargetSaved)
+        {
+            [glTransform, glAdditive] = glRenderTargetSaved;
+            glRenderTargetSaved = undefined;
+            for (const program of [glPolyShader, glShader])
+            {
+                glContext.useProgram(program);
+                glContext.uniformMatrix4fv(glUniformLocation(program, 'm'), false, glTransform);
+            }
+            glBatchAdditive = glAdditive;
+            glSetInstancedMode(true);
+        }
     }
 }
 

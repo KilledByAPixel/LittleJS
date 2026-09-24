@@ -71,7 +71,7 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [particleConeAngle] - Cone for start particle angle
      *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
      *  @param {number} [randomness]    - Apply extra randomness percent
-     *  @param {boolean} [collideTiles] - Do particles collide against tiles
+     *  @param {boolean} [collideTiles] - Do particles collide against tiles, world space emitters only
      *  @param {boolean} [additive]     - Should particles use additive blend
      *  @param {boolean} [randomColorLinear] - Should color be randomized linearly or across each component
      *  @param {number} [renderOrder] - Render order for particles (additive is above other stuff by default)
@@ -220,6 +220,9 @@ class ParticleEmitter extends EngineObject
         else if (this.particles.length === 0)
             this.destroy(true);
             
+        // a local space particle is placed relative to the emitter, but the tile collision is in the world
+        ASSERT(!this.localSpace || !this.collideTiles, 'local space particles cannot collide with tiles, turn one of them off');
+
         // update and remove destroyed particles in place to avoid per-frame array allocation
         const particles = this.particles;
         let alive = 0;
@@ -390,6 +393,8 @@ class Particle
     /** Update the particle */
     update()
     {
+        if (this.destroyed) return; // gone already, destroyed by the game this frame
+
         // emitter properties
         const emitter = this.emitter;
         const damping = emitter.damping;
@@ -473,9 +478,11 @@ class Particle
         }
     }
 
-    /** Destroy this particle */
+    /** Destroy this particle, once: a second call does nothing
+     */
     destroy()
     {
+        if (this.destroyed) return;
         const destroyCallback = this.emitter.particleDestroyCallback;
         const c = this.colorEnd;
         this.color.set(c.r, c.g, c.b, c.a);

@@ -217,8 +217,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
     });
 
     // pack through a queue so sheets fill in call order, not decode order
-    ++textureSheetPendingCount;
-    textureSheetQueue = textureSheetQueue.then(async ()=>
+    textureSheetQueueJob('loadSprite ' + src, async ()=>
     {
         await imagePromise;
         if (image.width)
@@ -235,10 +234,6 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
             // leave the tile empty if the image failed to load
             LOG('loadSprite failed to load image:', src);
         }
-
-        // upload to webgl once per batch, when the last pending load finishes
-        if (!--textureSheetPendingCount)
-            textureSheets.forEach(s=> s.updateTexture());
     });
 
     return tileInfo;
@@ -282,8 +277,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
     });
 
     // pack through a queue so sheets fill in call order, not decode order
-    ++textureSheetPendingCount;
-    textureSheetQueue = textureSheetQueue.then(async ()=>
+    textureSheetQueueJob('loadAtlas ' + imageSrc, async ()=>
     {
         const data = await jsonPromise;
         await imagePromise;
@@ -327,13 +321,30 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
             // leave the atlas empty if either file failed to load
             LOG('loadAtlas failed to load:', imageSrc, jsonSrc);
         }
-
-        // upload to webgl once per batch, when the last pending load finishes
-        if (!--textureSheetPendingCount)
-            textureSheets.forEach(s=> s.updateTexture());
     });
 
     return atlas;
+}
+
+// run a load in the queue: a load that throws is reported and the loads after it carry on, the pending count
+// always comes back down, and the sheets upload to webgl once per batch, when the last pending load finishes
+function textureSheetQueueJob(name, job)
+{
+    ++textureSheetPendingCount;
+    textureSheetQueue = textureSheetQueue.then(async ()=>
+    {
+        try { await job(); }
+        catch (e) { console.error(name + ' failed:', e); }
+        finally
+        {
+            if (!--textureSheetPendingCount)
+                for (const sheet of textureSheets)
+                {
+                    try { sheet.updateTexture(); }
+                    catch (e) { console.error('texture sheet upload failed:', e); }
+                }
+        }
+    });
 }
 
 /** Parse atlas json into a list of named frame groups, used by loadAtlas

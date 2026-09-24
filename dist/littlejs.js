@@ -561,18 +561,21 @@ function engineObjectsUpdate()
             updateChildObject(engineChildStack[i]);
         engineChildStack.length = start;
     }
+    const pass = engineObjectsUpdateCount;
     function updateChildObject(o)
     {
-        if (o.destroyed) return;
+        if (o.destroyed || o.updatePass === pass) return;
 
+        o.updatePass = pass;
         o.update();
         updateChildObjects(o.children);
     }
     for (const o of engineObjects)
     {
-        if (o.parent || o.destroyed) continue;
+        if (o.parent || o.destroyed || o.updatePass === pass) continue; // a child that let go is not updated twice
 
         // update top level objects
+        o.updatePass = pass;
         o.update();
         updateChildObjects(o.children);
         o.updateTransforms();
@@ -3885,6 +3888,7 @@ class EngineObject
         this.mirror = false;
         /** @property {boolean} - Has object been destroyed? */
         this.destroyed = false;
+        this.updatePass = 0; // the engine update pass it was last updated in, so nothing updates twice in one
 
         // physical properties
         /** @property {number} - How heavy the object is, static if 0 */
@@ -7794,10 +7798,13 @@ class SoundInstance
         this.pan = pan;
         /** @property {boolean} - Should the sound loop */
         this.loop = loop;
-        /** @property {number} - Timestamp for audio context when paused */
+        /** @property {number} - Where it is in the sound while not playing, in the sound's own seconds */
         this.pausedTime = 0;
-        /** @property {number} - Timestamp for audio context when started */
+        /** @property {number} - Audio context time its place was last taken at, while playing
+         *  @type {number|undefined} */
         this.startTime = undefined;
+        /** @property {number} - Where it was in the sound at startTime, in the sound's own seconds */
+        this.startOffset = 0;
         /** @property {GainNode} - Gain node for the sound */
         this.gainNode = undefined;
         /** @property {AudioBufferSourceNode} - Source node of the audio */
@@ -7819,8 +7826,8 @@ class SoundInstance
             this.start();
     }
 
-    /** Start playing the sound instance from the offset time
-     *  @param {number} [offset] - Offset in seconds to start playback from 
+    /** Start playing the sound instance from a place in the sound
+     *  @param {number} [offset] - Where to start in the sound, in its own seconds whatever the rate
      */
     start(offset=0)
     {
@@ -7836,7 +7843,8 @@ class SoundInstance
             playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback, this.output);
         if (this.source)
         {
-            this.startTime = audioContext.currentTime - offset;
+            this.startTime = audioContext.currentTime;
+            this.startOffset = offset;
             this.pausedTime = undefined;
         }
         else
@@ -7874,14 +7882,17 @@ class SoundInstance
 
     /** Set the playback rate of this sound instance, its speed and pitch, while it plays
      *  - A looping sound can follow something smoothly this way, like an engine with the speed
-     *  - A rate of 0 freezes the sound in place, its current time is not tracked until it moves again
+     *  - A rate of 0 freezes the sound in place, and it carries on from there when the rate comes back
      *  @param {number} rate - 1 is normal, 2 is twice as fast and an octave up */
     setRate(rate)
     {
         ASSERT(rate >= 0, 'Sound rate must be positive or zero');
-        // keep the place in the sound, only the speed changes from here, so the current time stays true
-        if (this.isPlaying() && rate)
-            this.startTime = audioContext.currentTime - this.getCurrentTime() * this.rate / rate;
+        // keep the place in the sound, only the speed changes from here
+        if (this.isPlaying())
+        {
+            this.startOffset = this.getCurrentTime();
+            this.startTime = audioContext.currentTime;
+        }
         this.rate = rate;
         if (this.source)
             this.source.playbackRate.value = rate;
@@ -7948,21 +7959,22 @@ class SoundInstance
      */
     isPaused() { return !this.isPlaying(); }
 
-    /** Get the current playback time in seconds
-     *  @return {number} - Current playback time
+    /** Get where it is in the sound, in the sound's own seconds: at a rate of 2 it moves two seconds for each one
+     *  that passes, and at 0 it stays put
+     *  @return {number} - Seconds into the sound
      */
     getCurrentTime()
     {
         if (!this.isPlaying()) return this.pausedTime;
         const duration = this.getDuration();
-        // guard mod against 0 duration (rate=0 or sound not loaded)
-        return duration ? mod(audioContext.currentTime - this.startTime, duration) : 0;
+        const place = this.startOffset + (audioContext.currentTime - this.startTime) * this.rate;
+        return duration ? mod(place, duration) : 0; // a sound still loading has no length yet
     }
 
-    /** Get the total duration of this sound
-     *  @return {number} - Total duration in seconds (0 if loading)
+    /** Get the length of the sound in its own seconds, the same at any rate; divide by the rate for how long it takes to play
+     *  @return {number} - Length in seconds (0 if loading)
      */
-    getDuration() { return this.rate ? this.sound.getDuration() / this.rate : 0; }
+    getDuration() { return this.sound.getDuration(); }
 
     /** Get source of this sound instance
      *  @return {AudioBufferSourceNode}
@@ -8032,7 +8044,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
  *  @param {number}   [sampleRate=44100] - Sample rate for the sound
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
- *  @param {number}   [offset] - Offset in seconds to start playback from
+ *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
  *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
@@ -8074,7 +8086,7 @@ function createAudioBuffer(sampleChannels, sampleRate=audioDefaultSampleRate)
  *  @param {number}   [pan] - How much to apply stereo panning
  *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
- *  @param {number}   [offset] - Offset in seconds to start playback from
+ *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
  *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
@@ -8116,9 +8128,8 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
         if (onended) onended(source);
     });
 
-    // play and return sound
-    const startOffset = offset * rate;
-    source.start(0, startOffset);
+    // play and return sound, the offset is a place in the buffer whatever the rate
+    source.start(0, offset);
 
     if (debug && debugSound)
         LOG('sound', 'vol', volume.toFixed(2), 'rate', rate.toFixed(2), 'pan', pan.toFixed(2), loop ? 'loop' : '');
@@ -9099,7 +9110,7 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [particleConeAngle] - Cone for start particle angle
      *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
      *  @param {number} [randomness]    - Apply extra randomness percent
-     *  @param {boolean} [collideTiles] - Do particles collide against tiles
+     *  @param {boolean} [collideTiles] - Do particles collide against tiles, world space emitters only
      *  @param {boolean} [additive]     - Should particles use additive blend
      *  @param {boolean} [randomColorLinear] - Should color be randomized linearly or across each component
      *  @param {number} [renderOrder] - Render order for particles (additive is above other stuff by default)
@@ -9248,6 +9259,9 @@ class ParticleEmitter extends EngineObject
         else if (this.particles.length === 0)
             this.destroy(true);
             
+        // a local space particle is placed relative to the emitter, but the tile collision is in the world
+        ASSERT(!this.localSpace || !this.collideTiles, 'local space particles cannot collide with tiles, turn one of them off');
+
         // update and remove destroyed particles in place to avoid per-frame array allocation
         const particles = this.particles;
         let alive = 0;
@@ -9418,6 +9432,8 @@ class Particle
     /** Update the particle */
     update()
     {
+        if (this.destroyed) return; // gone already, destroyed by the game this frame
+
         // emitter properties
         const emitter = this.emitter;
         const damping = emitter.damping;
@@ -9501,9 +9517,11 @@ class Particle
         }
     }
 
-    /** Destroy this particle */
+    /** Destroy this particle, once: a second call does nothing
+     */
     destroy()
     {
+        if (this.destroyed) return;
         const destroyCallback = this.emitter.particleDestroyCallback;
         const c = this.colorEnd;
         this.color.set(c.r, c.g, c.b, c.a);
@@ -9601,7 +9619,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glUniformLocations = new Map, glCanBeEnabled = true;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -10331,8 +10349,12 @@ function glDrawColoredPoints(points, pointColors)
  *  @memberof WebGL */
 function glSetRenderTarget(texture, clear=false)
 {
+    // what was batched so far draws where it was meant to, before the target changes
+    glFlush();
     if (texture)
     {
+        // coming from the canvas, keep its transform and blend mode to put back after
+        glRenderTarget || (glRenderTargetSaved = [glTransform, glAdditive]);
         glRenderTarget = texture;
         glContext.bindFramebuffer(glContext.FRAMEBUFFER, glFramebuffer);
         glContext.framebufferTexture2D(glContext.FRAMEBUFFER, 
@@ -10341,13 +10363,26 @@ function glSetRenderTarget(texture, clear=false)
     }
     else
     {
-        glFlush();
         glRenderTarget = undefined;
         glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
 
         // use the backing store size, mainCanvasSize is css pixels and may
         // still be the render target's size when unwinding a layer redraw
         glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
+
+        // the canvas's own transform and blend mode again, the target set its own
+        if (glRenderTargetSaved)
+        {
+            [glTransform, glAdditive] = glRenderTargetSaved;
+            glRenderTargetSaved = undefined;
+            for (const program of [glPolyShader, glShader])
+            {
+                glContext.useProgram(program);
+                glContext.uniformMatrix4fv(glUniformLocation(program, 'm'), false, glTransform);
+            }
+            glBatchAdditive = glAdditive;
+            glSetInstancedMode(true);
+        }
     }
 }
 
@@ -12675,7 +12710,14 @@ class UISystemPlugin
         /** @private */
         this._keyInputObject = undefined;
         /** @private */
-        this._onKeyDown = (e) => this._keyInputObject?.onKeyDown(e);
+        this._onKeyDown = (e) =>
+        {
+            // a field that was hidden, disabled or destroyed since it took focus lets it go instead
+            const o = this._keyInputObject;
+            if (o && !uiObjectIsUsable(o))
+                return void (this.keyInputObject = undefined);
+            o?.onKeyDown(e);
+        };
 
         engineAddPlugin(uiUpdate, uiRender);
 
@@ -12710,8 +12752,11 @@ class UISystemPlugin
         // update in reverse order to detect mouse enter/leave
         function uiUpdate()
         {
-            if (uiSystem.activeObject && !uiSystem.activeObject.visible)
+            // a held or focused object that can no longer be used, itself or through a parent, lets go
+            if (uiSystem.activeObject && !uiObjectIsUsable(uiSystem.activeObject))
                 uiSystem.activeObject = undefined;
+            if (uiSystem.keyInputObject && !uiObjectIsUsable(uiSystem.keyInputObject))
+                uiSystem.keyInputObject = undefined;
 
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
@@ -12872,7 +12917,7 @@ class UISystemPlugin
     *  @param {Color}   [gradientColor]
     *  @param {Color}   [shadowColor]
     *  @param {number}  [shadowBlur]
-    *  @param {Color}   [shadowOffset] */
+    *  @param {Vector2} [shadowOffset] */
     drawRect(pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, cornerRadius=0, gradientColor, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -12949,7 +12994,7 @@ class UISystemPlugin
     *  @param {boolean}  [mirror]
     *  @param {Color}    [shadowColor]
     *  @param {number}   [shadowBlur]
-    *  @param {Color}    [shadowOffset] */
+    *  @param {Vector2}  [shadowOffset] */
     drawTile(pos, size, tileInfo, color=uiSystem.defaultColor, angle=0, mirror=false, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         const context = uiSystem.uiContext;
@@ -12980,7 +13025,7 @@ class UISystemPlugin
     *  @param {Vector2} [textShadow]
     *  @param {Color}   [shadowColor]
     *  @param {number}  [shadowBlur]
-    *  @param {Color}   [shadowOffset] */
+    *  @param {Vector2} [shadowOffset] */
     drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true, textShadow=undefined, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         const context = uiSystem.uiContext;
@@ -13227,8 +13272,17 @@ class UISystemPlugin
     }
 }
 
+// whether a UI object can still be used: it and every parent visible, enabled and not destroyed
+function uiObjectIsUsable(o)
+{
+    for (; o; o = o.parent)
+        if (o.destroyed || !o.visible || o.disabled)
+            return false;
+    return true;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-/** 
+/**
  * UI Object - Base level object for all UI elements
  * @memberof UISystem */
 class UIObject
@@ -13399,8 +13453,9 @@ class UIObject
     /** Update the object, called automatically by plugin once each frame */
     update()
     {
-        // call the custom update callback
+        // call the custom update callback, which may destroy this object
         this.onUpdate();
+        if (this.destroyed) return;
 
         // unset active if disabled
         if (this.disabled)
@@ -13433,6 +13488,8 @@ class UIObject
                     {
                         if (!this.dragActivate || (!wasHover || mouseWasPressed(0)))
                             this.onPress();
+                        if (this.destroyed) // the press took it away, and the press is used up
+                            return void inputClearKey(0,0,0,1,0);
                         this.soundPress && this.soundPress.play();
                         if (uiSystem.activeObject && !isActive)
                             uiSystem.activeObject.onRelease();
@@ -13440,11 +13497,14 @@ class UIObject
 
                         if (uiSystem.activateOnPress)
                             this.click(!this.soundPress);
+                        if (this.destroyed)
+                            return void inputClearKey(0,0,0,1,0);
                     }
                 }
                 if (!uiSystem.activateOnPress)
                 if (!mouseDown && this.isActiveObject() && this.interactive)
                     this.click();
+                if (this.destroyed) return;
             }
 
             // clear mouse was pressed state even when disabled
@@ -16741,8 +16801,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
     });
 
     // pack through a queue so sheets fill in call order, not decode order
-    ++textureSheetPendingCount;
-    textureSheetQueue = textureSheetQueue.then(async ()=>
+    textureSheetQueueJob('loadSprite ' + src, async ()=>
     {
         await imagePromise;
         if (image.width)
@@ -16759,10 +16818,6 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
             // leave the tile empty if the image failed to load
             LOG('loadSprite failed to load image:', src);
         }
-
-        // upload to webgl once per batch, when the last pending load finishes
-        if (!--textureSheetPendingCount)
-            textureSheets.forEach(s=> s.updateTexture());
     });
 
     return tileInfo;
@@ -16806,8 +16861,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
     });
 
     // pack through a queue so sheets fill in call order, not decode order
-    ++textureSheetPendingCount;
-    textureSheetQueue = textureSheetQueue.then(async ()=>
+    textureSheetQueueJob('loadAtlas ' + imageSrc, async ()=>
     {
         const data = await jsonPromise;
         await imagePromise;
@@ -16851,13 +16905,30 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
             // leave the atlas empty if either file failed to load
             LOG('loadAtlas failed to load:', imageSrc, jsonSrc);
         }
-
-        // upload to webgl once per batch, when the last pending load finishes
-        if (!--textureSheetPendingCount)
-            textureSheets.forEach(s=> s.updateTexture());
     });
 
     return atlas;
+}
+
+// run a load in the queue: a load that throws is reported and the loads after it carry on, the pending count
+// always comes back down, and the sheets upload to webgl once per batch, when the last pending load finishes
+function textureSheetQueueJob(name, job)
+{
+    ++textureSheetPendingCount;
+    textureSheetQueue = textureSheetQueue.then(async ()=>
+    {
+        try { await job(); }
+        catch (e) { console.error(name + ' failed:', e); }
+        finally
+        {
+            if (!--textureSheetPendingCount)
+                for (const sheet of textureSheets)
+                {
+                    try { sheet.updateTexture(); }
+                    catch (e) { console.error('texture sheet upload failed:', e); }
+                }
+        }
+    });
 }
 
 /** Parse atlas json into a list of named frame groups, used by loadAtlas
@@ -17846,41 +17917,7 @@ class PathFinder
     {
         ASSERT(isVector2(worldPos), 'worldPos must be a Vector2');
         if (rebuild) this.buildNodeData();
-
-        // Inline worldToTile to avoid a Vector2 allocation per call.
-        const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
-        const oy = this.tileLayer ? this.tileLayer.pos.y : 0;
-        const centerX = floor(worldPos.x - ox);
-        const centerY = floor(worldPos.y - oy);
-
-        for (let offset = 0; offset <= searchRange; ++offset)
-        {
-            let nearest = null;
-            let nearestDistSq = 0;
-
-            for (let dy = -offset; dy <= offset; ++dy)
-            for (let dx = -offset; dx <= offset; ++dx)
-            {
-                // Only scan the perimeter of the current ring (skip the
-                // interior we've already searched in earlier iterations).
-                if (offset > 0 && abs(dx) !== offset && abs(dy) !== offset)
-                    continue;
-
-                const node = this.getNode(centerX + dx, centerY + dy);
-                if (!node || !node.isClear()) continue;
-
-                const ddx = node.posWorld.x - worldPos.x;
-                const ddy = node.posWorld.y - worldPos.y;
-                const distSq = ddx * ddx + ddy * ddy;
-                if (!nearest || distSq < nearestDistSq)
-                {
-                    nearest = node;
-                    nearestDistSq = distSq;
-                }
-            }
-            if (nearest) return nearest;
-        }
-        return null;
+        return pathFinderNearestNode(this, worldPos, searchRange, (node)=> node.isClear());
     }
 
     /** Smooth a node path by removing redundant turns and tightening corners
@@ -18268,8 +18305,10 @@ class PathFinder
         this.buildNodeData();
 
         // rebuild=false because we just built — avoid redundant work per snap.
-        const startNode = this.getNearestClearNode(startPos, 10, false);
-        const endNode = this.getNearestClearNode(endPos, 10, false);
+        // the ends go to the nearest cell that can be walked, whatever it costs to cross
+        const walkable = (node)=> node.walkable;
+        const startNode = pathFinderNearestNode(this, startPos, 10, walkable);
+        const endNode = pathFinderNearestNode(this, endPos, 10, walkable);
         if (!startNode || !endNode) return [];
 
         // Trivial case: start and end snapped to the same tile.
@@ -18307,6 +18346,46 @@ class PathFinder
 
         return result;
     }
+}
+
+// the node nearest a world position that passes a test, within a range of tiles, or null: the rings of cells around
+// the position are searched outward until the next ring cannot hold anything nearer than the best found, since the
+// best of one ring is not always the nearest, a cell one ring out can be closer
+function pathFinderNearestNode(finder, worldPos, searchRange, test)
+{
+    const ox = finder.tileLayer ? finder.tileLayer.pos.x : 0;
+    const oy = finder.tileLayer ? finder.tileLayer.pos.y : 0;
+    const centerX = floor(worldPos.x - ox);
+    const centerY = floor(worldPos.y - oy);
+
+    let nearest = null, nearestDistSq = 0;
+    for (let offset = 0; offset <= searchRange; ++offset)
+    {
+        // every cell of this ring is more than offset - .5 away along one axis
+        const bound = max(0, offset - .5);
+        if (nearest && bound * bound >= nearestDistSq) break;
+
+        for (let dy = -offset; dy <= offset; ++dy)
+        for (let dx = -offset; dx <= offset; ++dx)
+        {
+            // only the ring itself, the inside was searched already
+            if (offset > 0 && abs(dx) !== offset && abs(dy) !== offset)
+                continue;
+
+            const node = finder.getNode(centerX + dx, centerY + dy);
+            if (!node || !test(node)) continue;
+
+            const ddx = node.posWorld.x - worldPos.x;
+            const ddy = node.posWorld.y - worldPos.y;
+            const distSq = ddx * ddx + ddy * ddy;
+            if (!nearest || distSq < nearestDistSq)
+            {
+                nearest = node;
+                nearestDistSq = distSq;
+            }
+        }
+    }
+    return nearest;
 }
 
 /**
@@ -22526,7 +22605,8 @@ function render3DRaycastObject(ray, o)
     if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) return;
     if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
     const matrix = render3DObjectMatrix(o), mesh = o.mesh; // a sprite is picked by its size3D
-    const radius = (mesh ? mesh.radius || mesh.computeRadius() : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxScale(matrix.m);
+    // a mesh that changed since it was measured is measured again, an upload may not have come yet
+    const radius = (mesh ? mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxScale(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
     return raycastSphere(ray, matrix.getTranslation(), radius);
 }
@@ -22602,8 +22682,11 @@ class InstancedMesh3D extends EngineObject3D
         /** @property {Float32Array} - The per instance values the shader reads, 24 floats each: the matrix, the color
          *  and the uv rect; edit it directly and call markDirty for the instances changed */
         this.instanceData = new Float32Array(count * RENDER3D_INSTANCE_FLOATS);
-        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for culling */
+        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for culling;
+         *  from the farthest instance and the largest scale, and the mesh's size when it draws */
         this.radius = 0;
+        this.reach = 0;    // the farthest any instance's position has been from the origin
+        this.maxScale = 0; // and the largest scale any instance has had
         /** @property {number} - First instance to upload before the next draw */
         this.dirtyStart = 0;
         /** @property {number} - One past the last instance to upload, so nothing uploads when it is not past dirtyStart */
@@ -22629,8 +22712,6 @@ class InstancedMesh3D extends EngineObject3D
         ASSERT(i >= 0 && i < this.maxCount, 'instance index out of range');
         const data = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS, m = matrix.m;
         data.set(m, k);
-        const meshRadius = this.mesh.radius || this.mesh.computeRadius(); // the builders leave it to upload
-        this.radius = max(this.radius, (m[12]*m[12] + m[13]*m[13] + m[14]*m[14]) ** .5 + meshRadius * render3DMaxScale(m));
         this.markDirty(i);
     }
 
@@ -22657,12 +22738,20 @@ class InstancedMesh3D extends EngineObject3D
         this.markDirty(i);
     }
 
-    /** Note that an instance changed, so it uploads before the next draw; setMatrixAt and setColorAt call this
+    /** Note that an instance changed, so it uploads before the next draw and the bounds hold it; setMatrixAt and
+     *  setColorAt call this, and so must an edit made straight to instanceData
      *  @param {number} i */
     markDirty(i)
     {
         this.dirtyStart = min(this.dirtyStart, i);
         this.dirtyEnd = max(this.dirtyEnd, i + 1);
+
+        // the bounds grow to hold where it is now and how big, read back from the matrix it has
+        const d = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS;
+        this.reach = max(this.reach, hypot(d[k+12], d[k+13], d[k+14]));
+        this.maxScale = max(this.maxScale, hypot(d[k], d[k+1], d[k+2]), hypot(d[k+4], d[k+5], d[k+6]), hypot(d[k+8], d[k+9], d[k+10]));
+        const meshRadius = this.mesh.radius || this.mesh.computeRadius(); // measured once, the draw takes a new size up
+        this.radius = this.reach + meshRadius * this.maxScale;
     }
 
     /** Draws every instance as one call, uploading the ones that changed first */
@@ -22675,6 +22764,7 @@ class InstancedMesh3D extends EngineObject3D
         if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== r.contextGeneration)
             mesh.upload();
         if (!mesh.bufferCount) return;
+        this.radius = this.reach + mesh.radius * this.maxScale; // the mesh may have grown since
         if (r.frustumCulling && !render3DSphereVisible(0, 0, 0, this.radius)) return;
 
         // the uv rect is the object's tile for every instance, rewritten when the tile changes

@@ -412,3 +412,29 @@ test('findPath single-element path is also a copy, not a live reference', () =>
     const node = pf.getNode(1, 1);
     assert.notEqual(node.posWorld.x, 999);
 });
+
+test('a path finds its way over terrain that costs something, and its ends stay where they were asked', () =>
+{
+    const pf = new PathFinder(vec2(3, 3));
+    pf.getCost = () => 1;
+    const path = pf.findPath(vec2(.5, .5), vec2(2.5, 2.5));
+    assert.ok(path.length >= 2, 'a path over costly but walkable ground');
+    assert.deepEqual([path[0].x, path[0].y], [.5, .5]);
+    assert.deepEqual([path[path.length - 1].x, path[path.length - 1].y], [2.5, 2.5]);
+
+    // a costly end cell among cheap ones is still where the path ends
+    const mixed = new PathFinder(vec2(5, 5));
+    mixed.getCost = (x, y) => x === 4 && y === 4 ? 5 : 0;
+    const end = mixed.findPath(vec2(.5, .5), vec2(4.5, 4.5)).pop();
+    assert.deepEqual([end.x, end.y], [4.5, 4.5]);
+});
+
+test('getNearestClearNode returns the nearest clear cell, even one in the next ring out', () =>
+{
+    const pf = new PathFinder(vec2(10, 10));
+    pf.isWalkable = (x, y) => x === 4 && y === 4 || x === 7 && y === 6;
+    pf.buildNodeData();
+    // (5.99, 5.99) is in cell (5, 5): (4, 4) is in its first ring but (7, 6), in the second, is closer
+    const node = pf.getNearestClearNode(vec2(5.99, 5.99));
+    assert.deepEqual([node.pos.x, node.pos.y], [7, 6]);
+});

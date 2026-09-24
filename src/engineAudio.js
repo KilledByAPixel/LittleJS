@@ -433,10 +433,13 @@ class SoundInstance
         this.pan = pan;
         /** @property {boolean} - Should the sound loop */
         this.loop = loop;
-        /** @property {number} - Timestamp for audio context when paused */
+        /** @property {number} - Where it is in the sound while not playing, in the sound's own seconds */
         this.pausedTime = 0;
-        /** @property {number} - Timestamp for audio context when started */
+        /** @property {number} - Audio context time its place was last taken at, while playing
+         *  @type {number|undefined} */
         this.startTime = undefined;
+        /** @property {number} - Where it was in the sound at startTime, in the sound's own seconds */
+        this.startOffset = 0;
         /** @property {GainNode} - Gain node for the sound */
         this.gainNode = undefined;
         /** @property {AudioBufferSourceNode} - Source node of the audio */
@@ -458,8 +461,8 @@ class SoundInstance
             this.start();
     }
 
-    /** Start playing the sound instance from the offset time
-     *  @param {number} [offset] - Offset in seconds to start playback from 
+    /** Start playing the sound instance from a place in the sound
+     *  @param {number} [offset] - Where to start in the sound, in its own seconds whatever the rate
      */
     start(offset=0)
     {
@@ -475,7 +478,8 @@ class SoundInstance
             playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback, this.output);
         if (this.source)
         {
-            this.startTime = audioContext.currentTime - offset;
+            this.startTime = audioContext.currentTime;
+            this.startOffset = offset;
             this.pausedTime = undefined;
         }
         else
@@ -513,14 +517,17 @@ class SoundInstance
 
     /** Set the playback rate of this sound instance, its speed and pitch, while it plays
      *  - A looping sound can follow something smoothly this way, like an engine with the speed
-     *  - A rate of 0 freezes the sound in place, its current time is not tracked until it moves again
+     *  - A rate of 0 freezes the sound in place, and it carries on from there when the rate comes back
      *  @param {number} rate - 1 is normal, 2 is twice as fast and an octave up */
     setRate(rate)
     {
         ASSERT(rate >= 0, 'Sound rate must be positive or zero');
-        // keep the place in the sound, only the speed changes from here, so the current time stays true
-        if (this.isPlaying() && rate)
-            this.startTime = audioContext.currentTime - this.getCurrentTime() * this.rate / rate;
+        // keep the place in the sound, only the speed changes from here
+        if (this.isPlaying())
+        {
+            this.startOffset = this.getCurrentTime();
+            this.startTime = audioContext.currentTime;
+        }
         this.rate = rate;
         if (this.source)
             this.source.playbackRate.value = rate;
@@ -587,21 +594,22 @@ class SoundInstance
      */
     isPaused() { return !this.isPlaying(); }
 
-    /** Get the current playback time in seconds
-     *  @return {number} - Current playback time
+    /** Get where it is in the sound, in the sound's own seconds: at a rate of 2 it moves two seconds for each one
+     *  that passes, and at 0 it stays put
+     *  @return {number} - Seconds into the sound
      */
     getCurrentTime()
     {
         if (!this.isPlaying()) return this.pausedTime;
         const duration = this.getDuration();
-        // guard mod against 0 duration (rate=0 or sound not loaded)
-        return duration ? mod(audioContext.currentTime - this.startTime, duration) : 0;
+        const place = this.startOffset + (audioContext.currentTime - this.startTime) * this.rate;
+        return duration ? mod(place, duration) : 0; // a sound still loading has no length yet
     }
 
-    /** Get the total duration of this sound
-     *  @return {number} - Total duration in seconds (0 if loading)
+    /** Get the length of the sound in its own seconds, the same at any rate; divide by the rate for how long it takes to play
+     *  @return {number} - Length in seconds (0 if loading)
      */
-    getDuration() { return this.rate ? this.sound.getDuration() / this.rate : 0; }
+    getDuration() { return this.sound.getDuration(); }
 
     /** Get source of this sound instance
      *  @return {AudioBufferSourceNode}
@@ -671,7 +679,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
  *  @param {number}   [sampleRate=44100] - Sample rate for the sound
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
- *  @param {number}   [offset] - Offset in seconds to start playback from
+ *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
  *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
@@ -713,7 +721,7 @@ function createAudioBuffer(sampleChannels, sampleRate=audioDefaultSampleRate)
  *  @param {number}   [pan] - How much to apply stereo panning
  *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
- *  @param {number}   [offset] - Offset in seconds to start playback from
+ *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
  *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
@@ -755,9 +763,8 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
         if (onended) onended(source);
     });
 
-    // play and return sound
-    const startOffset = offset * rate;
-    source.start(0, startOffset);
+    // play and return sound, the offset is a place in the buffer whatever the rate
+    source.start(0, offset);
 
     if (debug && debugSound)
         LOG('sound', 'vol', volume.toFixed(2), 'rate', rate.toFixed(2), 'pan', pan.toFixed(2), loop ? 'loop' : '');

@@ -80,6 +80,7 @@ class EngineObject
         this.mirror = false;
         /** @property {boolean} - Has object been destroyed? */
         this.destroyed = false;
+        this.updatePass = 0; // the engine update pass it was last updated in, so nothing updates twice in one
 
         // physical properties
         /** @property {number} - How heavy the object is, static if 0 */

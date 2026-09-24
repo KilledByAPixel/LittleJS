@@ -130,7 +130,14 @@ class UISystemPlugin
         /** @private */
         this._keyInputObject = undefined;
         /** @private */
-        this._onKeyDown = (e) => this._keyInputObject?.onKeyDown(e);
+        this._onKeyDown = (e) =>
+        {
+            // a field that was hidden, disabled or destroyed since it took focus lets it go instead
+            const o = this._keyInputObject;
+            if (o && !uiObjectIsUsable(o))
+                return void (this.keyInputObject = undefined);
+            o?.onKeyDown(e);
+        };
 
         engineAddPlugin(uiUpdate, uiRender);
 
@@ -165,8 +172,11 @@ class UISystemPlugin
         // update in reverse order to detect mouse enter/leave
         function uiUpdate()
         {
-            if (uiSystem.activeObject && !uiSystem.activeObject.visible)
+            // a held or focused object that can no longer be used, itself or through a parent, lets go
+            if (uiSystem.activeObject && !uiObjectIsUsable(uiSystem.activeObject))
                 uiSystem.activeObject = undefined;
+            if (uiSystem.keyInputObject && !uiObjectIsUsable(uiSystem.keyInputObject))
+                uiSystem.keyInputObject = undefined;
 
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
@@ -327,7 +337,7 @@ class UISystemPlugin
     *  @param {Color}   [gradientColor]
     *  @param {Color}   [shadowColor]
     *  @param {number}  [shadowBlur]
-    *  @param {Color}   [shadowOffset] */
+    *  @param {Vector2} [shadowOffset] */
     drawRect(pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, cornerRadius=0, gradientColor, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -404,7 +414,7 @@ class UISystemPlugin
     *  @param {boolean}  [mirror]
     *  @param {Color}    [shadowColor]
     *  @param {number}   [shadowBlur]
-    *  @param {Color}    [shadowOffset] */
+    *  @param {Vector2}  [shadowOffset] */
     drawTile(pos, size, tileInfo, color=uiSystem.defaultColor, angle=0, mirror=false, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         const context = uiSystem.uiContext;
@@ -435,7 +445,7 @@ class UISystemPlugin
     *  @param {Vector2} [textShadow]
     *  @param {Color}   [shadowColor]
     *  @param {number}  [shadowBlur]
-    *  @param {Color}   [shadowOffset] */
+    *  @param {Vector2} [shadowOffset] */
     drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true, textShadow=undefined, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         const context = uiSystem.uiContext;
@@ -682,8 +692,17 @@ class UISystemPlugin
     }
 }
 
+// whether a UI object can still be used: it and every parent visible, enabled and not destroyed
+function uiObjectIsUsable(o)
+{
+    for (; o; o = o.parent)
+        if (o.destroyed || !o.visible || o.disabled)
+            return false;
+    return true;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-/** 
+/**
  * UI Object - Base level object for all UI elements
  * @memberof UISystem */
 class UIObject
@@ -854,8 +873,9 @@ class UIObject
     /** Update the object, called automatically by plugin once each frame */
     update()
     {
-        // call the custom update callback
+        // call the custom update callback, which may destroy this object
         this.onUpdate();
+        if (this.destroyed) return;
 
         // unset active if disabled
         if (this.disabled)
@@ -888,6 +908,8 @@ class UIObject
                     {
                         if (!this.dragActivate || (!wasHover || mouseWasPressed(0)))
                             this.onPress();
+                        if (this.destroyed) // the press took it away, and the press is used up
+                            return void inputClearKey(0,0,0,1,0);
                         this.soundPress && this.soundPress.play();
                         if (uiSystem.activeObject && !isActive)
                             uiSystem.activeObject.onRelease();
@@ -895,11 +917,14 @@ class UIObject
 
                         if (uiSystem.activateOnPress)
                             this.click(!this.soundPress);
+                        if (this.destroyed)
+                            return void inputClearKey(0,0,0,1,0);
                     }
                 }
                 if (!uiSystem.activateOnPress)
                 if (!mouseDown && this.isActiveObject() && this.interactive)
                     this.click();
+                if (this.destroyed) return;
             }
 
             // clear mouse was pressed state even when disabled

@@ -558,18 +558,21 @@ function engineObjectsUpdate()
             updateChildObject(engineChildStack[i]);
         engineChildStack.length = start;
     }
+    const pass = engineObjectsUpdateCount;
     function updateChildObject(o)
     {
-        if (o.destroyed) return;
+        if (o.destroyed || o.updatePass === pass) return;
 
+        o.updatePass = pass;
         o.update();
         updateChildObjects(o.children);
     }
     for (const o of engineObjects)
     {
-        if (o.parent || o.destroyed) continue;
+        if (o.parent || o.destroyed || o.updatePass === pass) continue; // a child that let go is not updated twice
 
         // update top level objects
+        o.updatePass = pass;
         o.update();
         updateChildObjects(o.children);
         o.updateTransforms();

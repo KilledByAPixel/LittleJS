@@ -227,13 +227,13 @@ test('setRate changes the speed while playing and keeps the place in the sound',
     audioContext.currentTime = 50.2;
     near(instance.getCurrentTime(), .2);
 
-    // twice as fast from here: the place stays at .2 seconds of sound, which is .1 at the new rate
+    // twice as fast from here: the place stays at .2 seconds into the sound
     instance.setRate(2);
     assert.equal(instance.rate, 2);
     assert.equal(lastSource.playbackRate.value, 2);
-    near(instance.getCurrentTime(), .1);
-    audioContext.currentTime = 50.25; // another .05 seconds, which plays .1 of sound
-    near(instance.getCurrentTime(), .15);
+    near(instance.getCurrentTime(), .2);
+    audioContext.currentTime = 50.25; // another .05 seconds of clock, which plays .1 of sound
+    near(instance.getCurrentTime(), .3);
     instance.stop();
 
     // a stopped instance just keeps the rate for when it starts
@@ -370,4 +370,54 @@ test('setAudioMasterEffect reroutes the master gain through an effect and back',
     LJS.setAudioMasterEffect();
     assert.deepEqual(master.connections, [destination]);
     assert.deepEqual(effect.output.connections, [master]);
+});
+
+test('a sound keeps its place in the sound through pause, resume and rate changes, zero included', () =>
+{
+    const length = sound.getDuration();
+    const offsetSent = ()=> lastSource.startCalls[lastSource.startCalls.length - 1][1];
+
+    // at twice the speed, a tenth of a second of clock is a fifth of a second of sound
+    audioContext.currentTime = 100;
+    const fast = sound.play(undefined, 1, 2);
+    near(offsetSent(), 0);
+    audioContext.currentTime = 100.1;
+    near(fast.getCurrentTime(), .2);
+    near(fast.getDuration(), length, 'the duration is the sound\'s own length');
+    fast.pause();
+    near(fast.getCurrentTime(), .2);
+    fast.resume();
+    near(offsetSent(), .2, 'resumed where it was in the sound');
+
+    // a rate change while paused does not move the place
+    fast.pause();
+    fast.setRate(.5);
+    fast.resume();
+    near(offsetSent(), .2, 'still the same place after a rate change while paused');
+    audioContext.currentTime = 100.3;
+    near(fast.getCurrentTime(), .3, 'and moves at the new rate from there');
+    fast.stop();
+
+    // rate zero freezes the place, and it moves on from there when the rate comes back
+    audioContext.currentTime = 200;
+    const frozen = sound.play();
+    audioContext.currentTime = 200.2;
+    frozen.setRate(0);
+    near(frozen.getCurrentTime(), .2);
+    audioContext.currentTime = 205;
+    near(frozen.getCurrentTime(), .2, 'frozen while the rate is zero');
+    frozen.setRate(1);
+    near(frozen.getCurrentTime(), .2, 'the place kept when it moves again');
+    audioContext.currentTime = 205.1;
+    near(frozen.getCurrentTime(), .3);
+    frozen.pause();
+    frozen.resume();
+    near(offsetSent(), .3);
+    frozen.stop();
+
+    // start takes a place in the sound too
+    const later = sound.play(undefined, 1, 2, 1, false, true);
+    later.start(.4);
+    near(offsetSent(), .4, 'start sends its offset as it is');
+    later.stop();
 });

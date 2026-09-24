@@ -3380,3 +3380,24 @@ test('attaching a moving 3D child does not step it, and a child moves once a fra
     for (const o of [parent, child, loose]) o.destroy();
     engineObjectsUpdate();
 });
+
+test('picking sees a mesh edit right away, and a direct instance edit grows the culling bounds', () =>
+{
+    const mesh = buildBox();
+    const o = new EngineObject3D(vec3(), mesh);
+    mesh.computeRadius();
+    mesh.transform(Matrix4.scaling(vec3(10)));
+    const ray = new Ray3D(vec3(4, 0, 20), vec3(0, 0, -1));
+    assert.equal(engineObjectsRaycast3D(ray, [o]).length, 1, 'the scaled mesh is hit without an upload in between');
+    o.destroy();
+
+    const set = new InstancedMesh3D(buildBox(), 1);
+    set.instanceData[12] = 100; // move the one instance directly, as the docs allow
+    set.markDirty(0);
+    assert.ok(set.radius >= 100, 'the bounds reach the moved instance, radius ' + set.radius);
+    set.instanceData[0] = set.instanceData[5] = set.instanceData[10] = 3; // and scale it
+    set.markDirty(0);
+    assert.ok(set.radius >= 100 + 3 * .8, 'and grow with its scale, radius ' + set.radius);
+    set.destroy();
+    engineObjectsUpdate();
+});
