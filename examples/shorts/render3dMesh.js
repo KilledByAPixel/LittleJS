@@ -27,7 +27,9 @@ let model, modelName = 'house';
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky();
+    // a gray sky and ground, so the lighting adds no hue of its own
+    // and the model's colors show as they are
+    render3D.setSky(hsl(0, 0, .6), hsl(0, 0, .85), hsl(0, 0, .4));
     render3D.shadows = true;
     // the shadow map covers just the model, so it is sharp at this distance
     render3D.shadowMapSize = 2048;
