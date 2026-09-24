@@ -8,6 +8,9 @@
  *   areas go to the ambient color and lit areas show the scene tinted by the
  *   accumulated light color
  * - Draw the world at full brightness — the lightmap does the darkening
+ * - The pass runs after gameRenderPost, so a HUD drawn there with WebGL is
+ *   darkened too; draw the HUD with useWebGL=false (the main canvas) or from
+ *   a plugin created after this one
  * - Any EngineObject may override renderLight() to additively contribute to the
  *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
  * - Must be constructed BEFORE PostProcessPlugin so post-process sees lit pixels
@@ -192,6 +195,18 @@ class LightSystemPlugin
             glContext.enable(glContext.BLEND);
             glContext.blendFunc(glContext.ONE, glContext.ONE);
 
+            // the camera transform is the same for every light, and a uniform
+            // keeps its value per program, so set it once for the whole pass.
+            // It is the canvas transform glPreRender built: world→NDC over
+            // mainCanvasSize (not textureSize), the viewport handles the
+            // lightmap's actual resolution. No y-flip: the composite samples
+            // this FBO with gl_FragCoord/iResolution (origin bottom-left), so
+            // storing world +Y at the top of the texture lines up with the canvas.
+            const ls = lightSystem.lightShader;
+            glContext.useProgram(ls);
+            glContext.uniformMatrix4fv(glUniformLocation(ls, 'm'), false, glTransform);
+            glSetInstancedMode(true);
+
             for (const o of engineObjects)
                 o.destroyed || o.renderLight();
 
@@ -212,8 +227,8 @@ class LightSystemPlugin
             glContext.activeTexture(glContext.TEXTURE0);
             glContext.bindTexture(glContext.TEXTURE_2D, lightSystem.texture);
             const cs = lightSystem.compositeShader;
-            glContext.uniform1i(glContext.getUniformLocation(cs, 's'), 0);
-            glContext.uniform3f(glContext.getUniformLocation(cs, 'iResolution'),
+            glContext.uniform1i(glUniformLocation(cs, 's'), 0);
+            glContext.uniform3f(glUniformLocation(cs, 'iResolution'),
                 mainCanvas.width, mainCanvas.height, 1);
             glContext.blendFunc(glContext.DST_COLOR, glContext.ZERO);
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
@@ -250,6 +265,10 @@ class LightSystemPlugin
     {
         if (headlessMode || !glEnable || !this.lightShader) return;
 
+        // skip a light that can not touch the screen, its quad is the full
+        // radius out from its center on every side
+        if (!isOnScreen(light.pos, light.radius*2)) return;
+
         // drain any sprite-batched draws queued by a previous custom
         // renderLight() override (e.g. drawRect inside a LavaTile). They were
         // queued in the engine's instanced-vertex format and must flush with
@@ -259,30 +278,13 @@ class LightSystemPlugin
         glContext.useProgram(this.lightShader);
         glContext.bindVertexArray(this.lightVAO);
 
-        // re-apply the engine camera transform onto this shader. Divide by
-        // mainCanvasSize (not textureSize) so world→NDC matches the main
-        // pass; the viewport handles the lightmap's actual resolution.
-        // No y-flip here: the composite samples this FBO with
-        // gl_FragCoord/iResolution (origin bottom-left), so storing world
-        // +Y at the top of the texture lines up with the canvas convention.
-        const s = vec2(2*cameraScale).divide(mainCanvasSize);
-        const rotatedCam = cameraPos.rotate(-cameraAngle);
-        const p = vec2(-1).subtract(rotatedCam.multiply(s));
-        const ca = cos(cameraAngle);
-        const sa = sin(cameraAngle);
-        const transform = [
-            s.x  * ca,  s.y * sa, 0, 0,
-            -s.x * sa,  s.y * ca, 0, 0,
-            1,          1,        1, 0,
-            p.x,        p.y,      0, 1];
-
+        // the camera transform 'm' was set once for the pass by the plugin
         const ls = this.lightShader;
-        glContext.uniformMatrix4fv(glContext.getUniformLocation(ls, 'm'), false, transform);
-        glContext.uniform2f(glContext.getUniformLocation(ls, 'lightPos'), light.pos.x, light.pos.y);
-        glContext.uniform1f(glContext.getUniformLocation(ls, 'radius'), light.radius);
-        glContext.uniform1f(glContext.getUniformLocation(ls, 'fadeRange'), light.fadeRange);
+        glContext.uniform2f(glUniformLocation(ls, 'lightPos'), light.pos.x, light.pos.y);
+        glContext.uniform1f(glUniformLocation(ls, 'radius'), light.radius);
+        glContext.uniform1f(glUniformLocation(ls, 'fadeRange'), light.fadeRange);
         const c = light.color;
-        glContext.uniform4f(glContext.getUniformLocation(ls, 'color'), c.r, c.g, c.b, c.a);
+        glContext.uniform4f(glUniformLocation(ls, 'color'), c.r, c.g, c.b, c.a);
 
         glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
 

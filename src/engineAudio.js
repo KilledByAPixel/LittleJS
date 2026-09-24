@@ -178,7 +178,8 @@ class Sound
         this.range = range;
         /** @property {number} - At what percentage of range should it start tapering */
         this.taper = taper;
-        /** @property {number} - How much to randomize frequency each time sound plays */
+        /** @property {number} - How much to randomize frequency each time sound plays
+         *  @type {number} */
         this.randomness = randomness ?? 0;
         /** @property {number} - Sample rate for this sound */
         this.sampleRate = audioDefaultSampleRate;
@@ -187,8 +188,8 @@ class Sound
         /** @property {AudioBuffer} - Decoded audio shared by every play of this sound
          *  @type {AudioBuffer} */
         this.sampleBuffer = undefined;
-        /** @private
-         *  @type {Array<Array<number>|Float32Array>} */
+        /** @ignore internal, the 3D plugin reads it to know the sound has loaded
+         *  @type {Array<Array<number>|Float32Array>|undefined} */
         this._sampleChannels = undefined;
         /** @property {number} - Percentage of this sound currently loaded, sounds
          *  fetched from a url stay at 0 until decoding completes */
@@ -275,7 +276,7 @@ class Sound
      *  @param {number}  [randomnessScale] - How much to scale pitch randomness
      *  @param {boolean} [loop] - Should the sound loop?
      *  @param {boolean} [paused] - Should the sound start paused
-     *  @return {SoundInstance} - The sound instance, or undefined if sound is disabled, not loaded, or running in headless mode
+     *  @return {SoundInstance|undefined} - The sound instance, or undefined if sound is disabled, not loaded, out of range, or running in headless mode
      */
     play(pos, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false)
     {
@@ -298,8 +299,11 @@ class Sound
                 if (lengthSquared > range*range)
                     return; // out of range
 
-                // attenuate volume by distance
-                volume *= percent(lengthSquared**.5, range, range*this.taper);
+                // attenuate volume by distance, full volume out to the taper and a fade past it,
+                // so a taper of 1 plays at full volume right up to the range
+                const distance = lengthSquared**.5, taperRange = range*this.taper;
+                if (distance > taperRange)
+                    volume *= percent(distance, range, taperRange);
             }
 
             // get pan from screen space coords
@@ -331,7 +335,7 @@ class Sound
      *  @param {number}  [pitch] - How much to scale pitch by
      *  @param {number}  [randomnessScale] - How much to scale pitch randomness
      *  @param {boolean} [paused] - Should the sound start paused
-     *  @return {SoundInstance} - The sound instance, or undefined if sound is disabled, not loaded, or running in headless mode */
+     *  @return {SoundInstance|undefined} - The sound instance, or undefined if sound is disabled, not loaded, out of range, or running in headless mode */
     playLoop(pos, volume=1, pitch=1, randomnessScale=1, paused=false)
     { return this.play(pos, volume, pitch, randomnessScale, true, paused); }
 
@@ -339,7 +343,7 @@ class Sound
      *  @param {number} [volume] - Volume to play the music at
      *  @param {boolean} [loop] - Should the music loop?
      *  @param {boolean} [paused] - Should the music start paused
-     *  @return {SoundInstance} - The sound instance
+     *  @return {SoundInstance|undefined} - The sound instance, or undefined if sound is disabled, not loaded, or running in headless mode
      */
     playMusic(volume=1, loop=true, paused=false)
     { return this.play(undefined, volume, 1, 0, loop, paused); }
@@ -349,7 +353,7 @@ class Sound
      *  @param {number}  [semitoneOffset] - How many semitones to offset pitch
      *  @param {Vector2} [pos] - World space position to play the sound if any
      *  @param {number}  [volume=1] - How much to scale volume by
-     *  @return {SoundInstance} - The sound instance
+     *  @return {SoundInstance|undefined} - The sound instance, or undefined if sound is disabled, not loaded, out of range, or running in headless mode
      */
     playNote(semitoneOffset=0, pos, volume)
     {
@@ -433,21 +437,25 @@ class SoundInstance
         this.pan = pan;
         /** @property {boolean} - Should the sound loop */
         this.loop = loop;
-        /** @property {number} - Where it is in the sound while not playing, in the sound's own seconds */
+        /** @property {number|undefined} - Where it is in the sound while not playing, in the sound's own seconds, undefined while playing
+         *  @type {number|undefined} */
         this.pausedTime = 0;
         /** @property {number} - Audio context time its place was last taken at, while playing
          *  @type {number|undefined} */
         this.startTime = undefined;
         /** @property {number} - Where it was in the sound at startTime, in the sound's own seconds */
         this.startOffset = 0;
-        /** @property {GainNode} - Gain node for the sound */
+        /** @property {GainNode|undefined} - Gain node for the sound, undefined once it is stopped or paused
+         *  @type {GainNode|undefined} */
         this.gainNode = undefined;
-        /** @property {AudioBufferSourceNode} - Source node of the audio */
+        /** @property {AudioBufferSourceNode|undefined} - Source node of the audio, undefined while not playing
+         *  @type {AudioBufferSourceNode|undefined} */
         this.source = undefined;
         /** @property {AudioNode|AudioEffectNodes} - Node or effect to route this instance through, copied from the sound
          *  @type {AudioNode|AudioEffectNodes} */
         this.output = sound.output;
-        // setup end callback and start sound, a sound that ends is stopped, its time back at 0
+        /** @property {AudioEndedCallback} - Called when a source this instance played ends, a sound that ends is stopped, its time back at 0
+         *  @type {AudioEndedCallback} */
         this.onendedCallback = (source)=>
         {
             if (source === this.source)
@@ -457,6 +465,8 @@ class SoundInstance
                 this.pausedTime = 0;
             }
         };
+
+        // start sound
         if (!paused)
             this.start();
     }
@@ -561,6 +571,9 @@ class SoundInstance
         this.pausedTime = 0;
         this.source = undefined;
         this.startTime = undefined;
+        // let go of the gain node so a later setVolume can't cancel the fade out, the ended listener disconnects
+        // it, and start makes a new one
+        this.gainNode = undefined;
     }
 
     /** Pause this sound instance */
@@ -573,6 +586,7 @@ class SoundInstance
         this.source.stop();
         this.source = undefined;
         this.startTime = undefined;
+        this.gainNode = undefined; // resume starts with a new one at the volume set meanwhile
     }
 
     /** Resume this sound instance */
@@ -612,7 +626,7 @@ class SoundInstance
     getDuration() { return this.sound.getDuration(); }
 
     /** Get source of this sound instance
-     *  @return {AudioBufferSourceNode}
+     *  @return {AudioBufferSourceNode|undefined} - The source, or undefined while not playing
      */
     getSource() { return this.source; }
 }
@@ -682,7 +696,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
- *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
+ *  @return {AudioBufferSourceNode|undefined} - The source node of the sound played, undefined if play fails
  *  @memberof Audio */
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended, output)
 {
@@ -724,7 +738,7 @@ function createAudioBuffer(sampleChannels, sampleRate=audioDefaultSampleRate)
  *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect to connect the gain to instead of the master gain
- *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
+ *  @return {AudioBufferSourceNode|undefined} - The source node of the sound played, undefined if play fails
  *  @memberof Audio */
 function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, offset=0, onended, output)
 {
@@ -779,7 +793,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
  *
  *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
- *  @return {AudioBufferSourceNode} - The audio node of the sound played
+ *  @return {AudioBufferSourceNode|undefined} - The audio node of the sound played, undefined if play fails
  *  @memberof Audio */
 function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
 

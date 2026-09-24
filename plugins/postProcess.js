@@ -24,6 +24,8 @@ let postProcess;
  * Post Process Plugin - Applies a full screen shader to the rendered output
  * - Create it after any plugin that draws, since plugins render in the order they are made
  *   and this one shades what is on the canvas when its turn comes
+ * - It runs after gameRenderPost, so a HUD drawn there with WebGL is shaded (and bloomed) too;
+ *   draw the HUD with useWebGL=false (the main canvas) or from a plugin created after this one
  * @memberof PostProcess
  */
 class PostProcessPlugin
@@ -141,12 +143,13 @@ class PostProcessPlugin
                 workCanvas.height = mainCanvas.height;
                 glCopyToContext(workContext);
                 workContext.drawImage(mainCanvas, 0, 0);
-                mainCanvas.width |= 0; // setting size clears the main canvas
-
-                // that also reset the transform, restore it so anything drawn
-                // later this frame is still in css pixels
-                const dpr = getCanvasPixelRatio();
-                mainContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+                // clear the main canvas with clearRect, resizing it would also
+                // reset the context state (smoothing, line caps) for anything
+                // drawn after this and reallocate the canvas every frame
+                mainContext.save();
+                mainContext.setTransform(1, 0, 0, 1, 0, 0);
+                mainContext.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+                mainContext.restore();
 
                 // copy work canvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, workCanvas);
@@ -158,7 +161,7 @@ class PostProcessPlugin
             }
 
             // set uniforms and draw
-            const uniformLocation = (name)=>glContext.getUniformLocation(postProcess.shader, name);
+            const uniformLocation = (name)=>glUniformLocation(postProcess.shader, name);
             glContext.uniform1i(uniformLocation('iChannel0'), 0);
             glContext.uniform1f(uniformLocation('iTime'), time);
             glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
@@ -236,6 +239,7 @@ function postProcessBloomShader(threshold=.6, strength=1, size=6)
  * @param {number} [strength] - How much glow to add
  * @param {number} [size] - How far the glow spreads in pixels
  * @param {boolean} [includeMainCanvas] - Glow the 2D canvas too, off by default so HUD text stays crisp
+ *   (a HUD drawn with WebGL in gameRenderPost glows either way, draw it with useWebGL=false)
  * @return {PostProcessPlugin}
  * @memberof PostProcess
  * @example

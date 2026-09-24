@@ -64,7 +64,8 @@ class EngineObject
         /** @property {Vector2|undefined} - Size of object used for drawing, uses size if not set
          *  @type {Vector2|undefined} */
         this.drawSize = undefined;
-        /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
+        /** @property {TileInfo|undefined} - Tile info to render object (undefined is untextured)
+         *  @type {TileInfo|undefined} */
         this.tileInfo = tileInfo;
         /** @property {number} - Angle to rotate the object */
         this.angle = angle;
@@ -108,7 +109,8 @@ class EngineObject
         this.children = [];
         /** @property {boolean} - Limit object speed along x and y axis */
         this.clampSpeed = true;
-        /** @property {EngineObject} - Object we are standing on, if any  */
+        /** @property {EngineObject|undefined} - Object we are standing on, if any
+         *  @type {EngineObject|undefined} */
         this.groundObject = undefined;
 
         // parent child system
@@ -239,7 +241,7 @@ class EngineObject
                     const deltaPos = oldPos.subtract(o.pos);
                     const length = deltaPos.length();
                     const pushAwayAccel = .001;
-                    const velocity = length < .001 ? vec2(0,1) : deltaPos.scale(pushAwayAccel/length);
+                    const velocity = length < .001 ? vec2(0, pushAwayAccel) : deltaPos.scale(pushAwayAccel/length);
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away other object if not fixed
                         o.velocity = o.velocity.subtract(velocity);
@@ -429,9 +431,10 @@ class EngineObject
     collideWithTile(tileData, pos) { return tileData > 0; }
 
     /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
-     *  - Both objects of a touching pair are asked once a frame, whichever order they update in; an object that destroys
-     *    itself here is gone at the end of the frame and is still asked about the pairs left this frame, so a bullet that
-     *    should hit one thing checks its own destroyed flag first
+     *  - In 2D each moving object tests its own contacts, so a pair of two moving objects that stays overlapping is
+     *    asked twice a frame, once from each side; in 3D a pair is asked once. An object that destroys itself here is
+     *    gone at the end of the frame and is still asked about the pairs left this frame, so a bullet that should hit
+     *    one thing, or a pickup that adds to a score, checks its own destroyed flag first
      *  @param {EngineObject} object - the object to test against
      *  @param {Vector3} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity
@@ -486,7 +489,9 @@ class EngineObject
         if (this.destroyed) return child;
         ASSERT(!child.parent && !this.children.includes(child));
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
-        ASSERT(child !== this, 'cannot add self as child');
+        ASSERT(!child.destroyed, 'cannot add a destroyed child');
+        for (let p = this; p; p = p.parent)
+            ASSERT(p !== child, 'cannot add an object as a child of itself or of its own child');
         this.children.push(child);
         child.parent = this;
         child.localPos = localPos.copy();
@@ -515,8 +520,10 @@ class EngineObject
     removeChild(child)
     {
         ASSERT(child.parent === this && this.children.includes(child));
-        this.children.splice(this.children.indexOf(child), 1);
-        child.parent = undefined;
+        const i = this.children.indexOf(child);
+        if (i < 0) return; // not a child of this one, release has no assert
+        this.children.splice(i, 1);
+        child.parent = child.localPos = undefined;
     }
 
     /** Check if overlapping another engine object

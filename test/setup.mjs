@@ -47,11 +47,13 @@ globalThis.ConstantSourceNode = class ConstantSourceNode
     stop(time) { this.stopTime = time; }
 };
 
-// Minimal in-memory localStorage stub. The bundle reads/writes via
-// bracket-notation (e.g. localStorage[key] = value), which proxies through
-// to plain own-property assignment on this object — no Storage prototype
-// methods required.
-globalThis.localStorage = {};
+// Minimal in-memory localStorage stub. The bundle reads and writes through getItem
+// and setItem, which live on the prototype like Storage's, so the stored items are
+// the object's own properties and a test can read, set or clear them directly.
+globalThis.localStorage = Object.create({
+    getItem(key) { return Object.hasOwn(this, key) ? this[key] : null; },
+    setItem(key, value) { this[key] = String(value); },
+});
 
 // Minimal Image stub. The Medal constructor does `new Image; img.src = url`
 // which only requires a settable `src` property in the headless test path.

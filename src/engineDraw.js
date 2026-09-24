@@ -81,13 +81,13 @@ let textureInfos = [];
 /** Keeps track of how many draw calls there were each frame for debugging
  *  @type {number}
  *  @memberof Draw */
-let drawCount;
+let drawCount = 0;
 
 /** Keeps track of how many primitives were drawn each frame for debugging
  *  A single draw call can render many primitives (e.g. a WebGL sprite batch).
  *  @type {number}
  *  @memberof Draw */
-let primitiveCount;
+let primitiveCount = 0;
 
 // internal predicates for tint short-circuiting in canvas2D draw paths
 // isWhite ignores alpha because alpha is applied via globalAlpha, not multiply
@@ -120,8 +120,6 @@ function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPaddi
     ASSERT(isNumber(texture) || texture instanceof TextureInfo, 'texture must be a number or TextureInfo');
     ASSERT(isNumber(padding), 'padding must be a number');
 
-    if (headlessMode) return new TileInfo;
-
     if (typeof size === 'number')
     {
         // if size is a number, make it a vector
@@ -132,6 +130,8 @@ function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPaddi
     // create tile info object
     const textureInfo = typeof texture === 'number' ?
         textureInfos[texture] : texture;
+    if (headlessMode && !textureInfo?.size.x)
+        return new TileInfo(new Vector2, size.copy(), textureInfo, padding, bleed); // no image loaded, no place in it
     ASSERT(textureInfo instanceof TextureInfo, 'tile texture is not loaded');
     ASSERT(textureInfo.size.x > 0, 'tile texture is not loaded');
 
@@ -203,8 +203,8 @@ class TileInfo
         const h = this.size.y + this.padding*2;
         const x = (this.columns ? frame % this.columns : frame) * w;
         const y = (this.columns ? frame / this.columns | 0 : 0) * h;
-        ASSERT(this.pos.x + x + this.size.x <= this.textureInfo.size.x, 'frame extends beyond texture width!');
-        ASSERT(this.pos.y + y + this.size.y <= this.textureInfo.size.y, 'frame extends beyond texture height!');
+        ASSERT(!this.textureInfo || this.pos.x + x + this.size.x <= this.textureInfo.size.x, 'frame extends beyond texture width!');
+        ASSERT(!this.textureInfo || this.pos.y + y + this.size.y <= this.textureInfo.size.y, 'frame extends beyond texture height!');
         return this.offset(new Vector2(x, y));
     }
 
@@ -220,7 +220,8 @@ class TileInfo
     }
 
     /**
-     * Returns a tile info for an index using this tile as reference
+     * Returns a tile info for an index using this tile's size, texture and padding as reference
+     * - the index counts from the texture's origin like tile(), for a sprite packed in a texture sheet use frame()
      * @param {Vector2|number} [index=0]
      * @return {TileInfo}
      */
@@ -250,13 +251,13 @@ class TextureInfo
 {
     /**
      * Create a TextureInfo, called automatically by the engine
-     * @param {HTMLImageElement|OffscreenCanvas} image
+     * @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
      * @param {boolean} [useWebGL] - Should use WebGL if available?
      * @param {boolean} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)?
      */
     constructor(image, useWebGL=true, wrap=false)
     {
-        /** @property {HTMLImageElement|OffscreenCanvas} - image source */
+        /** @property {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} - image source */
         this.image = image;
         /** @property {Vector2} - size of the image */
         this.size = image ? vec2(image.width, image.height) : vec2();
@@ -271,7 +272,16 @@ class TextureInfo
     }
 
     /** Creates the WebGL texture, updates if already created */
-    createWebGLTexture() { glRegisterTextureInfo(this); }
+    createWebGLTexture()
+    {
+        const image = this.image;
+        if (image?.width) // the image may have been resized since
+        {
+            this.size = vec2(image.width, image.height);
+            this.sizeInverse = vec2(1/image.width, 1/image.height);
+        }
+        glRegisterTextureInfo(this);
+    }
 
     /** Destroys the WebGL texture */
     destroyWebGLTexture() { glUnregisterTextureInfo(this); }
@@ -368,10 +378,10 @@ class SpriteAnimation
             return this.heldFrame;
         const n = this.frameCount, f = floor(this.elapsedFrames);
         if (this.mode == 'once')
-            return min(f, n - 1);
+            return clamp(f, 0, n - 1);
         if (this.mode == 'loop')
-            return f % n;
-        const period = max(2 * n - 2, 1), k = f % period; // there and back, the ends once each
+            return mod(f, n);
+        const period = max(2 * n - 2, 1), k = mod(f, period); // there and back, the ends once each
         return k < n ? k : period - k;
     }
 
@@ -660,9 +670,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     // pick image source: raw, or tinted bake. Match drawImageColor's
     // "no tint needed" predicate so behavior stays consistent.
     const noTint = !canvasColorTiles ||
-        (additiveColor
-            ? isWhite(color.add(additiveColor)) && additiveColor.a <= 0
-            : isWhite(color));
+        isWhite(color) && (!additiveColor || isBlack(additiveColor));
     // alpha is baked into pixels by bakeTintedImage's additive branch;
     // in that case globalAlpha must NOT also apply color.a
     const alphaBaked = !noTint && additiveColor && !isBlack(additiveColor);
@@ -754,7 +762,8 @@ function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWeb
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
-    pos = pos.add(posA.add(halfDelta));
+    const middle = posA.add(halfDelta);
+    pos = pos.add(angle ? middle.rotate(screenSpace ? -angle : angle) : middle); // screen y is down, so it turns back
     if (screenSpace)
         halfDelta.y *= -1;  // flip angle Y if screen space
     angle += halfDelta.angle();
@@ -821,6 +830,8 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
     }
     else
     {
+        ++drawCount;
+        ++primitiveCount;
         drawCanvas2D(pos, vec2(1), angle, false, context=>
         {
             context.fillStyle = color.toString();
@@ -871,6 +882,8 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
     }
     else
     {
+        ++drawCount;
+        ++primitiveCount;
         drawCanvas2D(pos, vec2(1), angle, false, context=>
         {
             context.fillStyle = color.toString();
@@ -1064,6 +1077,8 @@ function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, 
     pos = worldToScreen(pos);
     size *= cameraScale;
     lineWidth *= cameraScale;
+    if (maxWidth !== undefined)
+        maxWidth *= cameraScale;
     angle -= cameraAngle;
     angle *= -1;
 
@@ -1099,7 +1114,6 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     ASSERT(isNumber(angle), 'angle must be a number');
     
     const lines = (text+'').split('\n');
-    const posY = pos.y - (lines.length-1) * size/2; // center vertically
     // save before style mutations so caller's context state is preserved
     context.save();
     context.fillStyle = color.toString();
@@ -1108,9 +1122,9 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     context.textAlign = textAlign;
     context.font = fontStyle + ' ' + size + 'px '+ font;
     context.textBaseline = 'middle';
-    context.translate(pos.x, posY);
+    context.translate(pos.x, pos.y);
     context.rotate(-angle);
-    let yOffset = 0;
+    let yOffset = -(lines.length-1) * size/2; // center vertically
     lines.forEach(line=>
     {
         lineWidth && context.strokeText(line, 0, yOffset, maxWidth);
@@ -1463,9 +1477,9 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
     sHeight = max(1,sHeight|0);
     const sWidth2  = sWidth  - 2*bleed;
     const sHeight2 = sHeight - 2*bleed;
-    if (!canvasColorTiles || (additiveColor ? isWhite(color.add(additiveColor)) && additiveColor.a <= 0 : isWhite(color)))
+    if (!canvasColorTiles || isWhite(color) && (!additiveColor || isBlack(additiveColor)))
     {
-        // white texture with no additive alpha, no need to tint
+        // white tint and nothing added, the texels are drawn as they are
         context.globalAlpha = color.a;
         context.drawImage(image, sx+sx2, sy+sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
         context.globalAlpha = 1;
@@ -1556,7 +1570,7 @@ let engineImageFont;
  * const font = engineImageFont;
  *
  * // draw text
- * font.drawTextScreen('LittleJS\nHello World!', vec2(200, 50));
+ * font.drawTextScreen('LittleJS\nHello World!', vec2(200, 50), 16);
  */
 class ImageFont
 {
@@ -1615,13 +1629,14 @@ class ImageFont
         // if size is a number, make it a vector
         size = typeof size === 'number' ? new Vector2(size, size) : size;
 
-        // precache objects for drawing
+        // precache objects for drawing, a copy of the tile info each glyph moves, the font's own stays put
         const drawPos = new Vector2;
-        const tileInfo = this.tileInfo;
+        const fontTile = this.tileInfo, tileInfo = fontTile.frame(0);
         const padding = tileInfo.padding;
         const sizePaddedX = tileInfo.size.x + padding*2;
         const sizePaddedY = tileInfo.size.y + padding*2;
         const cols = tileInfo.textureInfo.size.x / sizePaddedX |0;
+        const firstIndex = ((fontTile.pos.y - padding) / sizePaddedY |0) * cols + ((fontTile.pos.x - padding) / sizePaddedX |0);
 
         // draw each line of text
         (text+'').split('\n').forEach((line, j)=>
@@ -1631,8 +1646,8 @@ class ImageFont
             {
                 // get the character index
                 const charCode = line.charCodeAt(i);
-                const index = charCode < 32 || charCode > 127 ?
-                    95 : charCode - 32; // handle out of range characters
+                const index = firstIndex + (charCode < 32 || charCode > 127 ?
+                    95 : charCode - 32); // handle out of range characters
 
                 // get the position of the tile
                 const x = index % cols;

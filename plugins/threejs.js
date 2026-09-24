@@ -70,6 +70,15 @@ class ThreeJSPlugin
     {
         const halfHeight = mainCanvasSize.y / 2 / cameraScale; // half visible height in world units
         const distance = halfHeight / tan(this.camera.fov/2 * PI/180);
+        if (distance * 2 > this.camera.far)
+        {
+            // zoomed out far enough that the z=0 plane would be past the far plane, push both planes out together
+            // so the depth precision stays what it was
+            const scale = distance * 2 / this.camera.far;
+            this.camera.near *= scale;
+            this.camera.far *= scale;
+            this.camera.updateProjectionMatrix();
+        }
         this.camera.position.set(cameraPos.x, cameraPos.y, distance);
         // reset all axes in case a free camera was used, littlejs angles are clockwise
         this.camera.rotation.set(0, 0, -cameraAngle);
@@ -128,7 +137,7 @@ class ThreeJSObject extends EngineObject
         this.z = z;
         if (mesh)
         {
-            threeJS.scene.add(mesh);
+            threeJS.scene?.add(mesh); // no scene in headless mode
             this.syncMesh();
         }
     }
@@ -157,7 +166,7 @@ class ThreeJSObject extends EngineObject
     {
         if (this.destroyed) return;
         // note: frequently destroyed objects should also dispose geometry and material
-        this.mesh && threeJS.scene.remove(this.mesh);
+        this.mesh && threeJS.scene?.remove(this.mesh);
         super.destroy(immediate);
     }
 }

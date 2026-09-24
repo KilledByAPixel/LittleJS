@@ -40,7 +40,7 @@
 class ZzFXMusic extends Sound
 {
     /** Create a music object and cache the zzfx music samples for later use
-     *  @param {[Array, Array, Array, number]} zzfxMusic - Array of zzfx music parameters
+     *  @param {[Array, Array, Array, number?, ...any[]]} zzfxMusic - Array of zzfx music parameters: instruments, patterns, sequence, and an optional BPM; anything after it, like the tracker's metadata, is ignored
      */
     constructor(zzfxMusic)
     {

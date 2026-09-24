@@ -31,6 +31,7 @@ export
     debug,
     debugOverlay,
     debugWatermark,
+    debugKey,
 
     // Debug
     ASSERT,

@@ -416,7 +416,9 @@ class Render3DPlugin
         this.emissive = 0;
         /** @property {boolean} - Additive blending instead of alpha, in the transparent stage */
         this.additive = false;
-        /** @property {boolean} - Test against the depth buffer, reset to true before each object and callback */
+        /** @property {boolean} - Test against the depth buffer, reset to true before each object and callback; a draw
+         *  with it off goes over what was drawn before it and under what is drawn after, by render order, which
+         *  ends the batch of meshes before it, so one per object costs a draw per object */
         this.depthTest = true;
         /** @property {boolean} - Write to the depth buffer, owned by the stages: on for opaque, off for transparent */
         this.depthWrite = true;
@@ -497,18 +499,26 @@ class Render3DPlugin
 
         // internal state
         this.blend = false;          // blending on, set by the stages
+        /** @type {Array<Array<number>>} */
         this.frustumPlanes = [];     // the view as six inward planes [x, y, z, w]
+        /** @type {Array<Array<number>>} */
         this.shadowPlanes = [];      // the shadow map's box as six planes
+        /** @type {WebGLProgram|undefined} */
         this.program = undefined;    // the main program, undefined when not available
+        /** @type {WebGLProgram|undefined} */
         this.currentProgram = undefined; // the program in use during a pass, a Shader's or the main one
         this.lightCount = 0;         // Light3D objects sent this pass
+        /** @type {WebGLProgram|undefined} */
         this.shadowShader = undefined;
+        /** @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
+        /** @type {WebGLTexture|undefined} */
         this.whiteTexture = undefined; // 1x1 white for untextured draws
         this.samplers = [];            // how textures are filtered in 3D, clamped and wrapping, see render3DInitGL
         this.samplerKey = undefined;   // the settings the samplers were made for, they are rebuilt when it changes
-        this.mipmapped = new WeakSet;  // textures given mipmaps for the 3D pass
+        /** @type {WebGLTexture|undefined} */
         this.shadowTexture = undefined;
+        /** @type {WebGLFramebuffer|undefined} */
         this.shadowFramebuffer = undefined;
         this.shadowTextureSize = 0;
         this.contextGeneration = 0;  // counts context losses, a mesh uploaded under an older one uploads again
@@ -520,6 +530,7 @@ class Render3DPlugin
         this.lightColors = new Float32Array(RENDER3D_MAX_LIGHTS * 4);
 
         // the stream of immediate mode draws
+        /** @type {WebGLBuffer|undefined} */
         this.streamBuffer = undefined;
         this.instanceBuffers = [];       // the per instance values of the batches being drawn, used in turn
         this.instanceBufferIndex = 0;
@@ -531,7 +542,9 @@ class Render3DPlugin
         this.streamCount = 0;
         this.streamTileInfo = undefined;
         this.streamState = undefined; // captured state the pending batch was drawn under
+        /** @type {Mesh|undefined} */
         this.capture = undefined;     // the mesh a bake is filling
+        /** @type {Array<{distance: number, state: Object, draw: Function}>|undefined} */
         this.transparentQueue = undefined; // draws queued during the transparent stage, replayed far to near
 
         render3DInitGL();
@@ -650,8 +663,9 @@ class Render3DPlugin
      *  @param {number} [pitch]
      *  @param {number} [randomnessScale] - How much to scale pitch randomness
      *  @param {boolean} [loop]
+     *  @param {boolean} [paused] - Start it paused
      *  @return {SoundInstance|undefined} - undefined when out of range or sound is off */
-    playSound(sound, pos3D, volume=1, pitch=1, randomnessScale=1, loop=false)
+    playSound(sound, pos3D, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false)
     {
         // keep in step with Sound.play, only the pan differs
         ASSERT(sound instanceof Sound, 'sound must be a Sound');
@@ -668,7 +682,7 @@ class Render3DPlugin
         }
         const pan = offset.normalize().dot(this.cameraRight);
         const rate = pitch + pitch * sound.randomness * randomnessScale * rand(-1, 1);
-        return new SoundInstance(sound, volume, rate, pan, loop);
+        return new SoundInstance(sound, volume, rate, pan, loop, paused);
     }
 
     /** Play a sound on a loop at a 3D position, the same as playSound with loop on
@@ -723,7 +737,10 @@ class Render3DPlugin
             render3DInstance(mesh, matrix, tileInfo, color);
         else
         {
+            // a draw that is not depth tested goes over what is already drawn, so the batches drawn before it go
+            // first, or they would draw at the end of the stage and cover it whatever its render order
             this.flush();
+            this.depthTest || this.shadowPass || render3DFlushInstances();
             render3DSetDrawUniforms(matrix, tileInfo, color);
             render3DBindMesh(mesh);
             glContext.drawElements(glContext.TRIANGLES, mesh.bufferCount, mesh.indexType, 0);
@@ -1499,6 +1516,7 @@ function render3DInitGL()
         return;
     }
     const gl = glContext, r = render3D;
+    glFlush(); // a pending 2D batch draws now, while the engine's own buffer, vertex array and program are bound
     r.uniforms = new Map;
     r.uniformValues = {};
     r.attribValues = []; // a fresh context has its own attribute defaults, so nothing sent before it counts
@@ -1539,13 +1557,12 @@ function render3DInitGL()
 
     // white texture for untextured draws, and a one texel shadow map that keeps the shadow sampler valid until shadows are on
     r.whiteTexture = glCreateTexture();
-    r.mipmapped = new WeakSet;
 
     r.samplers = [];
     r.samplerKey = undefined;
     render3DUpdateShadowMap(1);
 
-    // hand the engine back its own buffer and vertex array, in that order so a pending 2D batch flushes right
+    // hand the engine back its own buffer, vertex array and program, the 2D batch was flushed before they changed
     gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer);
     glSetInstancedMode(true);
 }
@@ -1645,9 +1662,10 @@ function render3DBindTexture(tileInfo, state=render3D)
         return gl.bindSampler(0, null); // the texture's own filtering, as in 2D; the white texel needs no mipmaps
                                         // or anisotropy, and filtering it that way costs every untextured fragment
     gl.bindSampler(0, r.samplers[(textureInfo?.wrap ? 1 : 0) + (state.pixelated ? 2 : 0)]);
-    if (!state.pixelated && !r.mipmapped.has(texture)) // a hard edged draw never reads them
+    glUpdateMipmaps(texture); // drawn into since its mipmaps were made
+    if (!state.pixelated && !glMipmappedTextures.has(texture)) // a hard edged draw never reads them
     {
-        r.mipmapped.add(texture);
+        glMipmappedTextures.add(texture); // the core makes them again when the texture changes
         gl.generateMipmap(gl.TEXTURE_2D);
     }
 }
@@ -1785,7 +1803,9 @@ function render3DRenderPass(after2D)
     const isDefault = after2D === !!r.renderAfter2D, objects = render3DLayerObjects(after2D);
     if (!isDefault && !objects.length) return;
     r.passIsDefault = isDefault;
-    after2D && glFlush(); // the 2D sprites drawn so far go under this layer
+    // the 2D sprites drawn so far go under this layer, and a batch a plugin left pending before the layer under
+    // the 2D scene draws now, with the engine's own gl state, not after the pass with its own
+    glFlush();
 
     // a previous frame that threw must not leave anything pending
     r.streamCount = 0;
@@ -1941,6 +1961,13 @@ function render3DBeginStrip(count, tileInfo)
     if (r.streamCount && (textureInfo !== r.streamTileInfo || render3DStateChanged(r.streamState)
         || r.streamCount + count > RENDER3D_MAX_STREAM_VERTS))
         r.flush();
+    if (!r.depthTest && !r.shadowPass && r.instanceMeshes.length)
+    {
+        // as in drawMesh, what was drawn before goes under it, a stream open with the same state included,
+        // so each such strip splits the batches: one draw per object for meshes each with an overlay
+        r.flush();
+        render3DFlushInstances();
+    }
     if (!r.streamCount)
         r.streamState = render3DCaptureBatchState();
     r.streamTileInfo = textureInfo;
@@ -2034,10 +2061,11 @@ function render3DStripTriangles(count, remap, place)
     return indices;
 }
 
-// a mesh's packed vertex data for the GPU, one vertex per entry of a layout, which is the strip index of each
-function render3DMeshVertexData(mesh, vertices)
+// a mesh's packed vertex data for the GPU, one vertex per entry of a layout, which is the strip index of each,
+// written into data when given, the buffer an earlier call returned for the same layout
+function render3DMeshVertexData(mesh, vertices, data=new ArrayBuffer(vertices.length * RENDER3D_VERTEX_BYTES))
 {
-    const count = vertices.length, data = new ArrayBuffer(count * RENDER3D_VERTEX_BYTES);
+    const count = vertices.length;
     const floats = new Float32Array(data), ints = new Uint32Array(data);
     for (let j = 0; j < count; ++j)
     {
@@ -2138,7 +2166,9 @@ class Mesh
         this.doubleSided = false;
         /** @property {boolean} - The values change often but the shape never does, for a water surface or a cloth: set once,
          *  the mesh keeps its GPU layout and a dirty upload only rewrites the vertices into the buffer it has; the strip
-         *  must keep the same points in the same order, a new point count asserts */
+         *  must keep the same points in the same order, a new point count asserts; the layout is decided by the first
+         *  upload, so strip entries equal then stay one vertex and triangles with no area then stay dropped, set
+         *  vertexKeys or give it distinct values at the start, not a flat grid of one color or points all in one place */
         this.dynamicDraw = false;
         /** @property {Array<number>|undefined} - The mesh as an indexed triangle list instead of a strip: the arrays hold each vertex
          *  once and this says how they join, three vertex numbers per triangle, counter clockwise seen from the front like a
@@ -2150,8 +2180,9 @@ class Mesh
          *  an edit after that may tell the entries apart; adding geometry or recomputing normals drops them too
          *  @type {Int32Array|undefined} */
         this.vertexKeys = undefined;
-        this.vertexLayout = undefined; // the strip index of each GPU vertex and the point count of the last upload, for a dynamicDraw mesh
+        this.vertexLayout = undefined; // the strip index of each GPU vertex, the point count and packed data of the last upload, for a dynamicDraw mesh
         this.instanceCount = 0; // draws waiting in this mesh's batch, with their values, texture and draw state
+        /** @type {Float32Array|undefined} */
         this.instanceData = undefined;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
         this.radius = 0;
@@ -2267,7 +2298,8 @@ class Mesh
             this.toIndexed();
             part = mesh.indices ? mesh : new Mesh().combine(mesh).toIndexed();
             const offset = this.points.length, indices = part.indices;
-            for (let t = 0; t < indices.length; t += 3) // a mirror turns every triangle the other way round
+            // the count read once, a mesh combined with itself grows as it is read; a mirror turns every triangle the other way round
+            for (let t = 0, n = indices.length; t < n; t += 3)
                 this.indices.push(indices[t] + offset, indices[t + (mirrors ? 2 : 1)] + offset, indices[t + (mirrors ? 1 : 2)] + offset);
         }
         else if (mirrors && part.points.length)
@@ -2476,14 +2508,16 @@ class Mesh
         this.computeRadius();
         if (!render3D?.program || !glContext) return this;
         const gl = glContext, layout = this.vertexLayout;
-        if (this.dynamicDraw && this.buffer && this.contextGeneration === render3D.contextGeneration)
+        // no layout when dynamicDraw was turned on after an upload, the next upload makes one
+        if (this.dynamicDraw && layout && this.buffer && this.contextGeneration === render3D.contextGeneration)
         {
-            // the layout of the last upload stands, only the values are written again into the buffer it has
+            // the layout of the last upload stands, only the values are written again into the buffer it has,
+            // packed into the same memory each time so a mesh uploaded every frame makes no garbage
             ASSERT(layout.pointCount === this.points.length, 'a dynamicDraw mesh keeps its shape, the same points in the same order; for a new shape make a new mesh or turn dynamicDraw off', this.points.length);
             if (layout.pointCount === this.points.length)
             {
                 gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-                gl.bufferSubData(gl.ARRAY_BUFFER, 0, render3DMeshVertexData(this, layout.vertices));
+                gl.bufferSubData(gl.ARRAY_BUFFER, 0, render3DMeshVertexData(this, layout.vertices, layout.data));
                 gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer);
                 this.dirty = false;
                 return this;
@@ -2491,7 +2525,8 @@ class Mesh
         }
         this.dispose();
         const {vertices, indices} = this.getTriangles(), count = vertices.length, wide = count > 65535;
-        this.vertexLayout = this.dynamicDraw ? {vertices, pointCount: this.points.length} : undefined;
+        const data = render3DMeshVertexData(this, vertices);
+        this.vertexLayout = this.dynamicDraw ? {vertices, pointCount: this.points.length, data} : undefined;
         this.vertexKeys = undefined; // used once: an edit after this may tell entries apart
         this.buffer = gl.createBuffer();
         this.indexBuffer = gl.createBuffer();
@@ -2499,7 +2534,7 @@ class Mesh
         this.indexType = wide ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
         this.dirty = false;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, render3DMeshVertexData(this, vertices), this.dynamicDraw ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, data, this.dynamicDraw ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, wide ? new Uint32Array(indices) : new Uint16Array(indices), gl.STATIC_DRAW);
         this.contextGeneration = render3D.contextGeneration;
@@ -3077,6 +3112,21 @@ class EngineObject3D extends EngineObject
         this.rotation3D = render3DLookRotation(local.subtract(this.pos3D), this.rotation3D);
     }
 
+    /** Attaches a child, its pos3D, rotation3D and scale3D taken as the offset from this one; returns child for chaining
+     *  - The 2D offset arguments do nothing for an EngineObject3D child, set its pos3D
+     *  @param {EngineObject} child
+     *  @param {Vector2} [localPos]
+     *  @param {number} [localAngle]
+     *  @return {EngineObject} The child object attached */
+    addChild(child, localPos, localAngle)
+    {
+        // addChild brings the child's transform up to date, which is not a step: it already moved this pass as
+        // a root, or moves in the next one, so it must not move by its velocity again here
+        if (child instanceof EngineObject3D)
+            child.movePass = engineObjectsUpdateCount;
+        return super.addChild(child, localPos, localAngle);
+    }
+
     /** Attaches a child without moving it: its pos3D, rotation3D and scale3D become what they have to be under this
      *  parent to keep its world transform, where addChild takes them as the offset; returns child for chaining
      *  - A parent scaled unevenly and a child turned under it make a shear, which those three values cannot hold,
@@ -3365,7 +3415,8 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
  * - The whole set is culled by one bounding sphere around the origin, and casts and receives shadows like any object
  * - The object's flags cover the whole set, one emissive, one tileInfo, one shader; only the colors are per instance
  * - A mirrored instance, one with a negative scale, shows its inside unless the mesh is doubleSided
- * - A transparent set draws in one go in the transparent stage, its instances are not sorted against each other
+ * - A transparent set draws in one go in the transparent stage, its instances are not sorted against each other;
+ *   the set sorts against other transparent draws by the object's position, so put pos3D at its middle
  * - pick, the raycast and the collect helpers do not see the instances, test them yourself from instanceData
  * @extends EngineObject3D
  * @memberof Render3D
@@ -3471,6 +3522,8 @@ class InstancedMesh3D extends EngineObject3D
     {
         const r = render3D, gl = glContext, mesh = this.mesh;
         ASSERT(this.count >= 0 && this.count <= this.maxCount, 'count must be within the count it was made with');
+        if (r.transparentQueue) // sorted as one thing with the other transparent draws
+            return r.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
         if (!mesh || !this.count || !render3DCanDraw()) return;
         if (r.shadowPass && !r.lighting) return; // unlit things cast no shadow
         if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== r.contextGeneration)
@@ -3507,6 +3560,7 @@ class InstancedMesh3D extends EngineObject3D
 
         // one draw under the object's state, the mesh setting the culling as drawMesh does
         r.flush();
+        r.depthTest || r.shadowPass || render3DFlushInstances(); // as in drawMesh, what was drawn before goes under it
         const cullBackFaces = r.cullBackFaces, tileInfo = this.tileInfo;
         r.cullBackFaces = !mesh.doubleSided;
         render3DDrawInstanced(mesh, this.buffer, this.count, tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo, r);

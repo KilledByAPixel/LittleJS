@@ -236,7 +236,7 @@ Timer.valueOf()                       // Get how long since elapsed, 0 if not se
 // Most also accept optional trailing params: useWebGL=glEnable, screenSpace=false, context
 drawTile(pos, size, tileInfo, color=WHITE, angle=0, mirror, additiveColor)
 drawRect(pos, size, color=WHITE, angle=0)
-drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0)
+drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0)
 drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE, angle=0, additiveColor)
 drawLine(posA, posB, width=.1, color=WHITE, pos=(0,0), angle=0)
 drawLineList(points, width=.1, color=WHITE, wrap=false, pos=(0,0), angle=0)
@@ -250,7 +250,7 @@ drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, 
 
 // Text functions
 drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font, fontStyle, maxWidth, angle=0)
-drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font, fontStyle, maxWidth, angle=0)
+drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font, fontStyle, maxWidth, angle=0)
 
 // Utility drawing functions
 setAdditiveBlendMode(additive)
@@ -295,9 +295,11 @@ TextureInfo.wrap        // Whether texture is set to REPEAT (true) or CLAMP_TO_E
 TextureInfo.setWrap(wrap=true) // Enable or disable wrapping for this texture
 
 // Image Font Object draws text using characters in an image
-ImageFont(tileInfo)                                 // Create a font from a tile sheet
-ImageFont.drawText(text, pos, scale, center)        // Draw text in world space
-ImageFont.drawTextScreen(text, pos, scale, center)  // Draw text in screen space
+ImageFont(tileInfo)     // Create a font from a tile sheet
+ImageFont.drawText(text, pos, size=1, center=true, color=WHITE, useWebGL=glEnable, context)
+                        // Draw text in world space, size is a character's size in world units, a number or vec2
+ImageFont.drawTextScreen(text, pos, size, center=true, color=WHITE, useWebGL=glEnable, context)
+                        // Draw text in screen space, size in pixels is required
 
 // Camera settings
 cameraPos = (0,0)        // Position of camera in world space
@@ -466,15 +468,17 @@ usingGamepadInput()                   // Is a gamepad the most recently used dev
 // Gamepad
 isUsingGamepad                        // Is a gamepad the most recently used device? (= usingGamepadInput())
 gamepadPrimary                        // Index of the primary gamepad (most recently used)
-gamepadIsDown(button, gamepad=0)      // Is gamepad button down?
-gamepadWasPressed(button, gamepad=0)  // Was gamepad button pressed this frame?
-gamepadWasReleased(button, gamepad=0) // Was gamepad button released this frame?
-gamepadStick(stickIndex, gamepad=0)   // Get gamepad analog stick value
-gamepadDpad(gamepad=0)                // Get gamepad dpad as a direction vector
-gamepadStickCount(gamepad=0)          // Get number of analog sticks
-gamepadConnected(gamepad=0)           // Is the gamepad connected?
-gamepadVibrate(gamepad=0, duration=200, strongMagnitude=1, weakMagnitude=1) // Rumble
-gamepadVibrateStop(gamepad=0)         // Stop gamepad vibration
+// every gamepad function below defaults to gamepad=gamepadPrimary, not pad 0
+gamepadIsDown(button, gamepad=gamepadPrimary)      // Is gamepad button down?
+gamepadWasPressed(button, gamepad=gamepadPrimary)  // Was gamepad button pressed this frame?
+gamepadWasReleased(button, gamepad=gamepadPrimary) // Was gamepad button released this frame?
+gamepadStick(stick, gamepad=gamepadPrimary)        // Get gamepad analog stick value
+gamepadDpad(gamepad=gamepadPrimary)                // Get gamepad dpad as a direction vector
+gamepadStickCount(gamepad=gamepadPrimary)          // Get number of analog sticks
+gamepadConnected(gamepad=gamepadPrimary)           // Is the gamepad connected?
+gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1, weakMagnitude=1, startDelay=0) // Rumble,
+                                                   // durations in ms
+gamepadVibrateStop(gamepad=gamepadPrimary)         // Stop gamepad vibration
 
 // Touch Gamepad
 touchGamepadEnable = false            // Is on screen touch gamepad enabled?
@@ -533,8 +537,10 @@ EngineObject.getMirrorSign()                       // Get mirror direction (1 or
 EngineObject.addChild(child, localPos, localAngle) // Attach a child at an offset; localPos only exists on a child
 EngineObject.attach(child)                         // Attach a child where it is, the offset worked out for it
 EngineObject.removeChild(child)                    // Remove a child, it stays where it was in the world
-EngineObject.setCollision(solids, isSolid, tiles)  // Set collision; an object with no width or height is not a
-                                                   // solid obstacle, so it blocks nothing and nothing blocks it
+EngineObject.setCollision(solids=true, isSolid=true, tiles=true, raycast=true) // Set collision; raycast=false
+                                                   // leaves it out of engineObjectsRaycast; an object with no width
+                                                   // or height is not a solid obstacle, so it blocks nothing and
+                                                   // nothing blocks it
 EngineObject.persistent = true                     // skipped by engineObjectsDestroy, for things that outlive a
                                                    // level like a camera; destroy() still destroys it
 
@@ -586,11 +592,12 @@ engineObjectsDestroy()          // destroy every object except the persistent on
 ```javascript
 
 // Canvas Layer
-CanvasLayer(pos, size)      // Create a canvas layer object
+CanvasLayer(pos, size, angle=0, renderOrder=0, canvasSize=(512,512), useWebGL=true) // Create a canvas layer object
 CanvasLayer.canvas          // The canvas used by this layer
-CanvasLayer.context         // The 2D context of the canvas
-CanvasLayer.getImageData()  // Get image data from canvas
+CanvasLayer.context         // The 2D context of the canvas, read it back with context.getImageData(...)
 CanvasLayer.updateWebGL()   // Creates or updates WebGL texture
+CanvasLayer.draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=false, context)
+                            // Draw the layer centered at pos
 
 // LittleJS Layer System
 TileLayer(pos, size, tileInfo, renderOrder=0, useWebGL=true) // Create a tile layer object
@@ -599,10 +606,16 @@ TileLayer.clearData(layerPos, redraw)          // Clear data at position
 TileLayer.getData(layerPos)                    // Get data at position
 TileLayer.debugShow = true                     // Shown by the debug overlay's 8: Debug Tiles, off to leave a layer out
 TileLayer.redraw()                             // Draw to an offscreen canvas
-TileLayer.drawTileData(layerPos, clear=true)   // Draw the tile
-TileLayer.drawRect(pos, size, color, angle)    // Draw a rectangle to 2D canvas
-TileLayer.drawTile(pos, size=(1,1), tileInfo, color, angle, mirror) // Draw tile
-TileLayer.drawCanvas2D(pos, size, angle, mirror, drawFunction)      // Draw to 2D canvas
+TileLayer.redrawStart(clear=false)             // Start drawing to the layer, for updating parts of it
+TileLayer.redrawEnd()                          // Finish drawing to the layer
+TileLayer.drawTileData(layerPos, clear=true)   // Draw the tile, inside redrawStart/End
+TileLayer.drawLayerTile(pos, size=(1,1), tileInfo, color=WHITE, angle=0, mirror, additiveColor) // Draw a tile in
+                                               // layer pixels, inside redrawStart/End
+TileLayer.drawLayerRect(pos, size, color, angle=0) // Draw a rectangle in layer pixels, inside redrawStart/End
+TileLayer.drawRect(pos, size, color, angle)    // Draw a rectangle onto the layer canvas in world space
+TileLayer.drawTile(pos, size=(1,1), tileInfo, color, angle, mirror) // Draw a tile onto the layer in world space
+// to draw on a layer with Canvas2D, pass its context to drawCanvas2D:
+// drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, layer.context)
 
 // Tile Layer Data Object
 TileLayerData(tile, direction=0, mirror=false, color=WHITE) // Create tile data object, tile from 0 like tile(),
@@ -614,7 +627,8 @@ TileCollisionLayer(pos, size, tileInfo=tile())      // Create a tile collision l
 TileCollisionLayer.setCollisionData(pos, data=1)    // Set tile collision data at pos
 tileCollisionGetData(pos)                           // Get tile collision data at pos
 tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
-tileCollisionRaycast(posStart, posEnd, object)      // Where the ray meets the first tile hit, or undefined
+tileCollisionRaycast(posStart, posEnd, object, normal, solidOnly=true) // Where the ray meets the first tile hit,
+                                                    // or undefined; a normal vec2 passed in is set to the surface's
 tileCollisionLayers                                 // List of all tile collision layers
 tileLayersLoad(tileMapData, tileInfo)               // Load tile layers from exported data, Tiled flips and turns included
 
@@ -699,7 +713,8 @@ pf.debug = false           // draw search visualization
 pf.debugTime = 2           // seconds debug visuals persist
 
 // Main API
-pf.findPath(startPos, endPos)        // Returns array of world positions, or empty if no path
+pf.findPath(startPos, endPos, rebuild=true) // Returns array of world positions, or empty if no path;
+                                     // rebuild false reuses the grid read from the layer last time
 pf.isLineClear(startPos, endPos)     // True if a straight line passes through walkable tiles
 pf.getNearestClearNode(worldPos, searchRange=10) // Snap an obstructed point to the nearest open tile
 pf.isWalkable(x, y)                  // Override for custom walkability
@@ -950,7 +965,7 @@ render3D.screenToGround(screenPos, groundHeight=0, canvasSize) // where that ray
                                                    // undefined; terrain has HeightMap.raycast
 render3D.pick(screenPos or ray, objects)           // {object, distance} of the nearest object hit, around its mesh
                                                    // or a sprite's size3D; a screen position goes through screenToRay
-render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop) // like sound.play(pos): quieter with
+render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop, paused) // like sound.play(pos): quieter with
                                                 // distance from the camera, panned by side
 render3D.playSoundLoop(sound, pos3D, volume, pitch, randomnessScale) // the same on a loop; its volume and pan
                                                 // are set when it starts
@@ -1278,6 +1293,10 @@ object.play(animation=0, loop=true, speed=1) // play one on a GLTFObject by name
 object.stop()                        // hold the pose where it is; object.setAnimationTime(t) poses it at a time
 object.animation .animationTime .animationSpeed .animationLoop .animationPlaying
 model.getPose(animation, time)       // one Matrix4 per part, how far it moved from its resting place
+model.dispose()                      // free the part meshes, the combined mesh and the textures of a model that
+                                     // is done with; destroy the objects createObject made first
+// colors come in converted from glTF's linear values, a NEAREST sampler makes a part pixelated, sparse accessors
+// are read, and object.parts is what an animation poses
 model.center().fit(size)             // move the model's bounds onto the origin and scale its largest extent to
                                      // size, every part together, like Mesh.center and fit; getBounds and
                                      // transform(matrix) as well
@@ -1403,23 +1422,26 @@ obj.syncMesh()                 // copy the 2D transform to the mesh
 - See `examples/box2d/` for a full demo
 
 ```javascript
-// Setup (call once before engineInit)
+// Setup (call once, awaited in gameInit)
 await box2dInit()              // Loads the WASM and creates global box2d / Box2dPlugin
 box2dSetDebug(true)            // Toggle debug rendering of physics shapes (box2dDebug)
-box2d.setGravity(vec2(0,-20))  // World gravity
+setGravity(vec2(0,-20))        // World gravity is the engine's gravity, copied into the world every step
 
 // Bodies — extend EngineObject, integrate with physics
-new Box2dObject(pos, size, tileInfo, angle, color, bodyType)   // Dynamic by default
-new Box2dStaticObject(pos, size, tileInfo, angle, color)       // Immovable
-new Box2dKinematicObject(pos, size, tileInfo, angle, color)    // Moves but ignores forces
-new Box2dTileLayer(pos, tileLayer)                             // Static collision from a TileLayer
+new Box2dObject(pos, size, tileInfo, angle, color, bodyType, renderOrder) // Dynamic by default
+new Box2dStaticObject(pos, size, tileInfo, angle, color, renderOrder)     // Immovable
+new Box2dKinematicObject(pos, size, tileInfo, angle, color, renderOrder)  // Moves but ignores forces
+new Box2dTileLayer(tileLayer)                                  // Static collision from a TileCollisionLayer
+// In beginContact/endContact the world is stepping: destroys and setTransform, setBodyType and setMassData
+// wait until after the step, and creating objects, fixtures or joints there is not allowed
 
 // Common fixture setup (call from constructor or after creation)
 obj.addBox(size, offset, angle, density, friction, restitution, isSensor)
 obj.addCircle(diameter, offset, density, friction, restitution, isSensor)
-obj.addPoly(points, offset, angle, density, friction, restitution, isSensor)
-obj.addEdgeList(points, offset, angle, density, friction, restitution, isSensor)
-obj.setFilterData(categoryBits, maskBits, groupIndex)
+obj.addPoly(points, density, friction, restitution, isSensor)      // points are local to the body
+obj.addEdgeList(points, density, friction, restitution, isSensor)
+obj.setFilterData(categoryBits=1, ignoreCategoryBits=0, groupIndex=0) // collides with every category not ignored,
+                                                                    // applies to the fixtures the body has now
 
 // Forces and motion
 obj.applyForce(force, pos)             // Force in Newtons at world pos (sustained)
@@ -1431,17 +1453,18 @@ obj.applyAngularImpulse(impulse)       // Δangular velocity = impulse / inertia
 obj.setLinearVelocity(vel)
 obj.setAngularVelocity(av)
 obj.setAwake(awake=true)
-obj.setMassData(mass, localCenter, I)
+obj.setMassData(localCenter, mass, momentOfInertia) // undefined leaves that one as it is
 obj.getMass() / getCenterOfMass() / getInertia()
 
 // Raycasting
-box2d.raycast(startPos, endPos, filterCallback?) // Returns Box2dRaycastResult or undefined
+box2d.raycast(start, end)      // Returns the closest Box2dRaycastResult or undefined
 
 // Joints — all extend Box2dJoint
-new Box2dTargetJoint(object, targetPos)        // Drag toward a point (mouse-follow)
+new Box2dTargetJoint(object, fixedObject, worldPos) // Drag toward a point (mouse-follow)
 new Box2dDistanceJoint(objectA, objectB, anchorA, anchorB)
-new Box2dPinJoint(objectA, objectB, anchor)
-new Box2dRopeJoint(objectA, objectB, anchorA, anchorB, maxLength)
+new Box2dPinJoint(objectA, objectB, pos=objectA.pos) // pins the two together at pos
+new Box2dRopeJoint(objectA, objectB, anchorA, anchorB, extraLength=0) // max length is the anchors' distance
+                                                                    // plus extraLength
 new Box2dRevoluteJoint(objectA, objectB, anchor)
 new Box2dPrismaticJoint(objectA, objectB, anchor, axis)
 new Box2dWheelJoint(objectA, objectB, anchor, axis)
@@ -1449,7 +1472,7 @@ new Box2dWeldJoint(objectA, objectB, anchor)
 new Box2dFrictionJoint(objectA, objectB, anchor)
 new Box2dPulleyJoint(objectA, objectB, groundA, groundB, anchorA, anchorB, ratio)
 new Box2dMotorJoint(objectA, objectB)
-new Box2dGearJoint(jointA, jointB, ratio)
+new Box2dGearJoint(objectA, objectB, joint1, joint2, ratio=1)
 ```
 
 ## LittleJS Medals & Newgrounds
@@ -1585,12 +1608,12 @@ async function gameInit()
 ```javascript
 ASSERT(assert, output) // Asserts if the expression is false
 LOG(...output)         // Logs output to the console (stripped from release builds)
-debugRect(pos, size, color='#fff', time=0, angle=0, fill) // Draw debug rectangle
-debugCircle(pos, size, color='#fff', time=0, fill)        // Draw debug circle
+debugRect(pos, size, color=WHITE, time=0, angle=0, fill)    // Draw debug rectangle
+debugCircle(pos, size, color=WHITE, time=0, fill)           // Draw debug circle
 debugPoint(pos, color, time, angle)                         // Draw debug point
 debugLine(posA, posB, color, width=.1, time)                // Draw debug line
 debugPoly(pos, points, color=WHITE, time=0, angle=0, fill)  // Draw debug polygon
-debugText(text, pos, size=1, color='#fff', time=0, angle=0) // Draw debug text
+debugText(text, pos, size=1, color=WHITE, time=0, angle=0)  // Draw debug text
 debugOverlap(pA, sA, pB, sB, color) // Draw a debug overlap between two boxes
 debugClear()                     // Clear all debug primitives
 debugScreenshot()                // Save a screenshot at the end of this frame
@@ -1602,7 +1625,8 @@ createCanvasContext(width, height=width, willReadFrequently=false) // Offscreen 
                                                     // 2D context; the canvas is context.canvas
 saveCanvas(canvas, filename='screenshot', type='image/png') // Save canvas to a file
 saveText(text, filename='text', type='text/plain')          // Save text to a file
-saveDataURL(dataURL, filename='download')                   // Save url to a file
+saveDataURL(url, filename='download', revokeTime)           // Save url to a file, revokeTime is ms before
+                                                            // URL.revokeObjectURL frees an object url
 
 // Debug settings
 debug                // Is debug enabled?

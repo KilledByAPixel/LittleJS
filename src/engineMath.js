@@ -194,7 +194,7 @@ function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
  *  @param {number} value
  *  @return {boolean}
  *  @memberof Math */
-function isPowerOfTwo(value) { return value > 0 && !(value & (value - 1)); }
+function isPowerOfTwo(value) { return value > 0 && value % 1 === 0 && !(value & (value - 1)); }
 
 /** Returns the nearest power of two not less than the value
  *  @param {number} value
@@ -551,7 +551,8 @@ class RandomGenerator
      *  @param {number} [seed] - Starting seed or engine default seed */
     constructor(seed = 123456789)
     {
-        ASSERT(seed !== 0, 'RandomGenerator seed must be non-zero (xorshift is fixed at 0)');
+        // xorshift works on the seed as a 32 bit integer and stays at 0 once there, so rand() or 2**32 would stick too
+        ASSERT((seed|0) !== 0, 'RandomGenerator seed must be a non-zero integer (xorshift is fixed at 0)');
         /** @property {number} - random seed */
         this.seed = seed;
     }
@@ -1133,7 +1134,7 @@ class Color
     {
         if (debug && !this.isValid())
             return '#000';
-        const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
+        const toHex = (c)=> ((c=round(clamp(c)*255))<16 ? '0' : '') + c.toString(16);
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
 

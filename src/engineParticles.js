@@ -113,7 +113,7 @@ class ParticleEmitter extends EngineObject
         // emitter settings
         /** @property {boolean} - Should particles be emitted in a circle */
         this.emitCircle = typeof emitSize === 'number';
-        /** @property {number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
+        /** @property {Vector2} - World space size of the emitter, x is the diameter when emitCircle is set */
         this.emitSize = typeof emitSize === 'number' ? vec2(emitSize) : emitSize.copy();
         /** @property {number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
@@ -176,8 +176,8 @@ class ParticleEmitter extends EngineObject
         this.particleCollideCallback = undefined;
         /** @property {number} - Percentage of velocity to pass to particles (0-1) */
         this.velocityInheritance = 0;
-        /** @property {number} - Track particle emit time */
-        this.emitTimeBuffer = 0;
+        /** @property {number} - Particles owed to the emit rate, starts at one so the first comes out at once */
+        this.emitTimeBuffer = 1;
         /** @property {Array<Particle>} - Array of particles for this emitter
          *  @type {Array<Particle>} */
         this.particles = [];
@@ -210,10 +210,12 @@ class ParticleEmitter extends EngineObject
         if (this.isActive())
         {
             // emit particles
-            if (this.emitRate && particleEmitRateScale)
+            const rate = this.emitRate * particleEmitRateScale;
+            if (rate > 0 && rate < Infinity)
             {
-                const rate = 1/this.emitRate/particleEmitRateScale;
-                for (this.emitTimeBuffer += timeDelta; this.emitTimeBuffer > 0; this.emitTimeBuffer -= rate)
+                // counted in particles, so a new rate applies at once
+                this.emitTimeBuffer += rate * timeDelta;
+                for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
                     this.emitParticle();
             }
         }
@@ -330,7 +332,7 @@ class ParticleEmitter extends EngineObject
 
 ///////////////////////////////////////////////////////////////////////////////
 // scratch vector reused by Particle.render to avoid per-frame allocations
-const particleDrawPos = new Vector2;
+const particleDrawPos = new Vector2, particleDrawSize = new Vector2;
 
 /**
  * Particle Object - Created automatically by Particle Emitters
@@ -382,7 +384,8 @@ class Particle
         this.spawnTime = time;
         /** @property {boolean} */
         this.mirror = randBool();
-        /** @property {EngineObject} */
+        /** @property {EngineObject|undefined}
+         *  @type {EngineObject|undefined} */
         this.groundObject = undefined;
         /** @property {boolean} */
         this.destroyed = false;
@@ -406,7 +409,7 @@ class Particle
         const collideCallback = emitter.particleCollideCallback;
 
         // destroy particle when its time runs out
-        if (this.lifeTime > 0 && time - this.spawnTime > this.lifeTime)
+        if (this.lifeTime <= 0 || time - this.spawnTime > this.lifeTime) // no lifetime is gone at once, not never
         {
             this.destroy();
             return;
@@ -504,7 +507,7 @@ class Particle
         // lerp color and size
         const p1 = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1, p2 = 1-p1;
         const radius = p2 * this.sizeStart + p1 * this.sizeEnd;
-        const size = vec2(radius);
+        const size = particleDrawSize.set(radius, radius);
         const alphaFade = p1 < fadeRate ? p1/fadeRate : 
             p1 > 1-fadeRate ? (1-p1)/fadeRate : 1;
         this.color.r = p2 * this.colorStart.r + p1 * this.colorEnd.r;

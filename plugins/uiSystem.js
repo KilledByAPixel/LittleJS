@@ -111,7 +111,8 @@ class UISystemPlugin
         this.navigationMode = false;
 
         // system state
-        /** @property {Array<UIObject>} - List of all UI elements */
+        /** @property {Array<UIObject>} - List of all UI elements
+         *  @type {Array<UIObject>} */
         this.uiObjects = [];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
         this.uiContext = context;
@@ -129,6 +130,9 @@ class UISystemPlugin
         this.confirmDialog = undefined;
         /** @private */
         this._keyInputObject = undefined;
+        /** @private
+         *  @type {Array<Array<any>>|undefined} */
+        this._dragListeners = undefined;
         /** @private */
         this._onKeyDown = (e) =>
         {
@@ -138,9 +142,13 @@ class UISystemPlugin
                 return void (this.keyInputObject = undefined);
             if (!o) return;
 
-            // the field has the key, the game's input never sees it; browser shortcuts still work
+            // the field has the key, the game's input never sees it; browser shortcuts still work,
+            // and only the keys a field uses lose their default, so F5, F11, F12 and the like still work
             e.stopPropagation();
+            const key = e.key || '';
             if (!e.ctrlKey && !e.metaKey && !e.altKey)
+            if (key.length === 1 ||
+                /^(Backspace|Delete|Tab|Arrow(Up|Down|Left|Right)|Home|End|Enter|Escape)$/.test(key))
                 e.preventDefault(); // no scrolling, find as you type or going back
             e.type === 'keydown' && o.onKeyDown(e);
         };
@@ -178,9 +186,15 @@ class UISystemPlugin
         // update in reverse order to detect mouse enter/leave
         function uiUpdate()
         {
-            // a held or focused object that can no longer be used, itself or through a parent, lets go
-            if (uiSystem.activeObject && !uiObjectIsUsable(uiSystem.activeObject))
+            // a held or focused object that can no longer be used, itself or through a parent, lets go,
+            // and one that was hidden or disabled is still released, a destroyed one stays silent
+            const activeObject = uiSystem.activeObject;
+            if (activeObject && !uiObjectIsUsable(activeObject))
+            {
+                // a text field being edited is active without being held, it was released when the press ended
                 uiSystem.activeObject = undefined;
+                activeObject.destroyed || activeObject === uiSystem.keyInputObject || activeObject.onRelease();
+            }
             if (uiSystem.keyInputObject && !uiObjectIsUsable(uiSystem.keyInputObject))
                 uiSystem.keyInputObject = undefined;
 
@@ -265,10 +279,12 @@ class UISystemPlugin
                     uiSystem.navigationObject.navigatePressed();
             }
 
-            // update in reverse order so topmost objects get priority
-            for (let i = uiSystem.uiObjects.length; i--;)
+            // update in reverse order so topmost objects get priority, from the list as it was
+            // since a callback may call destroyObjects, which swaps in a shorter one
+            const uiObjects = uiSystem.uiObjects;
+            for (let i = uiObjects.length; i--;)
             {
-                const o = uiSystem.uiObjects[i];
+                const o = uiObjects[i];
                 o.parent || updateObject(o);
             }
 
@@ -304,7 +320,8 @@ class UISystemPlugin
 
             function renderObject(o)
             {
-                if (!o.visible) return;
+                // a destroyed object stays in the list until the next update, but is gone now
+                if (o.destroyed || !o.visible) return;
 
                 // render object and children
                 updateTransforms(o);
@@ -320,6 +337,8 @@ class UISystemPlugin
                 function renderDebug(o, visible=true)
                 {
                     visible &&= !!o.visible;
+                    if (o.destroyed || !visible && uiDebug < 2)
+                        return; // only mode 2 shows the invisible ones
                     updateTransforms(o);
                     o.renderDebug(visible);
                     for (const c of o.children)
@@ -553,6 +572,7 @@ class UISystemPlugin
         this.hoverObject = undefined;
         this.lastHoverObject = undefined;
         this.keyInputObject = undefined;
+        this.confirmDialog = undefined;
     }
 
     /** Get all navigable UI objects sorted by navigationIndex
@@ -561,8 +581,8 @@ class UISystemPlugin
     {
         function getNavigableRecursive(o)
         {
-            if (!o.visible || o.disabled)
-                return; // skip children if parent is invisible or disabled
+            if (o.destroyed || !o.visible || o.disabled)
+                return; // skip children if parent is destroyed, invisible or disabled
 
             if (o.isInteractive() && o.navigationIndex !== undefined)
                 objects.push(o);
@@ -624,9 +644,10 @@ class UISystemPlugin
             const dpad = gamepadDpad(gamepadPrimary);
             return !vertical ? (stick.y || dpad.y) : (stick.x || dpad.x);
         }
-        const back = !vertical ? 'ArrowUp' : 'ArrowLeft';
-        const forward = !vertical ? 'ArrowDown' : 'ArrowRight';
-        return keyIsDown(back) ? -1 : keyIsDown(forward) ? 1 : 0;
+        // up is positive, as it is on the gamepad
+        if (!vertical)
+            return keyIsDown('ArrowUp') ? 1 : keyIsDown('ArrowDown') ? -1 : 0;
+        return keyIsDown('ArrowLeft') ? -1 : keyIsDown('ArrowRight') ? 1 : 0;
     }
 
     /** Get if navigation button was pressed from gamepad or keyboard
@@ -691,13 +712,24 @@ class UISystemPlugin
         buttonNo.onClick = ()=> { closeMenu(); noCallback && noCallback(); };
         confirmMenu.addChild(buttonNo);
 
-        // close menu and return to normal navigation
+        // return to normal navigation however the menu goes, by its buttons,
+        // destroyObjects or a call to its destroy
+        const destroy = confirmMenu.destroy.bind(confirmMenu);
+        confirmMenu.destroy = ()=>
+        {
+            if (uiSystem.confirmDialog === confirmMenu)
+            {
+                uiSystem.confirmDialog = undefined;
+                uiSystem.navigationDirection = savedNavigationDirection;
+            }
+            destroy();
+        };
+
+        // close menu and clear the input that closed it
         function closeMenu()
         {
             ASSERT(uiSystem.confirmDialog === confirmMenu);
             confirmMenu.destroy();
-            uiSystem.confirmDialog = undefined;
-            uiSystem.navigationDirection = savedNavigationDirection;
             inputClear();
         }
         return confirmMenu;
@@ -713,6 +745,15 @@ function uiObjectIsUsable(o)
     return true;
 }
 
+// whether a UI object is disabled, itself or through a parent
+function uiObjectIsDisabled(o)
+{
+    for (; o; o = o.parent)
+        if (o.disabled)
+            return true;
+    return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * UI Object - Base level object for all UI elements
@@ -721,7 +762,7 @@ class UIObject
 {
     /** Create a UIObject
      *  @param {Vector2}  [pos=vec2()]
-     *  @param {Vector2}  [size=vec2(1)]
+     *  @param {Vector2}  [size=vec2()]
      */
     constructor(pos=vec2(), size=vec2())
     {
@@ -757,7 +798,8 @@ class UIObject
         this.hoverColor = uiSystem.defaultHoverColor.copy();
         /** @property {Color} - Color for line drawing */
         this.lineColor = uiSystem.defaultLineColor.copy();
-        /** @property {Color} - Uses a gradient fill combined with color */
+        /** @property {Color|undefined} - Uses a gradient fill combined with color
+         *  @type {Color|undefined} */
         this.gradientColor = uiSystem.defaultGradientColor ? uiSystem.defaultGradientColor.copy() : undefined;
         /** @property {number} - Width for line drawing */
         this.lineWidth = uiSystem.defaultLineWidth;
@@ -776,16 +818,19 @@ class UIObject
         this.textHeight = undefined;
         /** @property {number} - Scale text to fit in the object */
         this.textFitScale = uiSystem.defaultTextFitScale;
-        /** @property {Vector2|undefined} - How much to offset the text shadow or undefined
+        /** @property {Vector2|undefined} - How much to offset the text shadow or undefined.
+         *  UIText draws it in its shadowColor, which is clear by default, so set that too;
+         *  the blurred shadow then shows as well unless shadowBlur and shadowOffset are zero
          *  @type {Vector2|undefined} */
         this.textShadow = undefined;
-        /** @property {number} - Color for text line drawing  */
+        /** @property {Color} - Color for text line drawing  */
         this.textLineColor = uiSystem.defaultLineColor.copy();
         /** @property {number} - Width for text line drawing */
         this.textLineWidth = 0;
         /** @property {boolean} - Should this object be drawn */
         this.visible  = true;
-        /** @property {Array<UIObject>} - A list of this object's children */
+        /** @property {Array<UIObject>} - A list of this object's children
+         *  @type {Array<UIObject>} */
         this.children = [];
         /** @property {UIObject|undefined} - This object's parent, position is in parent space
          *  @type {UIObject|undefined} */
@@ -819,6 +864,10 @@ class UIObject
          *  Components in [-1, 1]: (0,0)=center, (-1,-1)=top-left, (1,1)=bottom-right.
          *  Also acts as self-pivot — e.g. (1,-1) puts your top-right corner at the anchor point. */
         this.anchor = vec2();
+        /** @property {string} - Horizontal text alignment: left, center, or right */
+        this.align = 'center';
+        /** @property {boolean} - Has this object been destroyed? */
+        this.destroyed = false;
 
         uiSystem.uiObjects.push(this);
     }
@@ -859,7 +908,7 @@ class UIObject
         if (uiSystem.keyInputObject   === this) uiSystem.keyInputObject   = undefined;
 
         // disconnect from parent and destroy children
-        this.destroyed = 1;
+        this.destroyed = true;
         this.parent?.removeChild(this);
         for (const child of this.children)
         {
@@ -882,18 +931,27 @@ class UIObject
         return isOverlapping(this.nativePos, size, pos);
     }
 
-    /** Update the object, called automatically by plugin once each frame */
+    /** Update the object, called automatically by plugin once each frame
+     *  @return {void} */
     update()
     {
         // call the custom update callback, which may destroy this object
         this.onUpdate();
         if (this.destroyed) return;
 
-        // unset active if disabled
-        if (this.disabled)
+        // unset active if disabled, itself or through a parent, and let go of it
+        const disabled = uiObjectIsDisabled(this);
+        if (disabled)
         {
             if (this === uiSystem.activeObject)
+            {
                 uiSystem.activeObject = undefined;
+                if (this !== uiSystem.keyInputObject) // a field being edited was released when its press ended
+                {
+                    this.onRelease();
+                    if (this.destroyed) return;
+                }
+            }
             if (this === uiSystem.keyInputObject)
                 uiSystem.keyInputObject = undefined;
         }
@@ -912,22 +970,26 @@ class UIObject
             uiSystem.hoverObject = this;
         if (this.isHoverObject())
         {
-            if (!this.disabled)
+            if (!disabled)
             {
                 if (mousePress)
                 {
                     if (this.interactive)
                     {
-                        if (!this.dragActivate || (!wasHover || mouseWasPressed(0)))
+                        // drag activate sees the held mouse as a press every frame, only a new one counts
+                        const newPress = !this.dragActivate || !wasHover || mouseWasPressed(0);
+                        if (newPress)
+                        {
                             this.onPress();
-                        if (this.destroyed) // the press took it away, and the press is used up
-                            return void inputClearKey(0,0,0,1,0);
-                        this.soundPress && this.soundPress.play();
-                        if (uiSystem.activeObject && !isActive)
-                            uiSystem.activeObject.onRelease();
+                            if (this.destroyed) // the press took it away, and the press is used up
+                                return void inputClearKey(0,0,0,1,0);
+                            this.soundPress && this.soundPress.play();
+                            if (uiSystem.activeObject && !isActive)
+                                uiSystem.activeObject.onRelease();
+                        }
                         uiSystem.activeObject = this;
 
-                        if (uiSystem.activateOnPress)
+                        if (newPress && uiSystem.activateOnPress)
                             this.click(!this.soundPress);
                         if (this.destroyed)
                             return void inputClearKey(0,0,0,1,0);
@@ -964,18 +1026,19 @@ class UIObject
         if (!this.size.x || !this.size.y) return;
 
         const isNavigationObject = this.isNavigationObject();
+        const disabled = this.interactive ? uiObjectIsDisabled(this) : this.disabled;
         const lineColor = isNavigationObject ? this.color :
-            this.interactive && this.isActiveObject() && !this.disabled ?
+            this.interactive && this.isActiveObject() && !disabled ?
             this.color : this.lineColor;
         const color = isNavigationObject ? this.hoverColor :
-            this.disabled ? this.disabledColor :
+            disabled ? this.disabledColor :
             this.interactive ?
                 this.isActiveObject() ? this.activeColor || this.hoverColor :
                 this.isHoverObject() ? this.hoverColor :
                 this.color : this.color;
         const lineWidth = this.lineWidth * (isNavigationObject ? 1.5 : 1);
         
-        uiSystem.drawRect(this.nativePos, this.size, color, lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor, this.shadowBlur, this.shadowOffset);
+        uiSystem.drawRect(this.nativePos, this.size, color, lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
     }
 
     /** Get the size for text with overrides and scale
@@ -1031,7 +1094,7 @@ class UIObject
         const color =
             !visible ? GREEN :
             this.isHoverObject() ? YELLOW :
-            this.disabled ? PURPLE :
+            uiObjectIsDisabled(this) ? PURPLE :
             this.interactive ? RED : BLUE;
         uiSystem.drawRect(this.nativePos, this.size, CLEAR_BLACK, 4, color);
     }
@@ -1104,6 +1167,7 @@ class UIText extends UIObject
         // no background by default
         this.color = CLEAR_BLACK;
         this.shadowColor = CLEAR_BLACK;
+        /** @type {Color|undefined} */
         this.gradientColor = undefined;
         this.lineWidth = 0;
 
@@ -1116,7 +1180,7 @@ class UIText extends UIObject
 
         // render the text
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.nativePos, textSize, this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor, this.shadowBlur, this.shadowOffset);
+        uiSystem.drawText(this.text, this.nativePos, textSize, this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
     }
 }
 
@@ -1152,8 +1216,9 @@ class UITextInput extends UIObject
 
     click()
     {
-        // start editing the text
+        // start editing the text, the gamepad press that started it is used up so it does not stop it too
         uiSystem.keyInputObject = this;
+        inputClearKey(0, gamepadPrimary+1, 0, 1, 0);
         this.onClick();
     }
 
@@ -1175,12 +1240,17 @@ class UITextInput extends UIObject
     onKeyDown(e)
     {
         const code = e.code, key = e.key
+        if (e.repeat && (code === 'Enter' || code === 'Space'))
+            return; // a key held when editing began repeats, it should not type or stop editing
         if (code === 'Backspace')
             this.text = this.text.slice(0, -1);
         else if (code === 'Enter' || code === 'Escape')
             this.stopEditing();
         else if (key.length === 1) // printable characters
         {
+            // ctrl and cmd shortcuts do not type, but AltGr reports ctrl and alt and types characters like @
+            if ((e.ctrlKey || e.metaKey) && !e.getModifierState?.('AltGraph'))
+                return;
             if (!this.maxLength || this.text.length < this.maxLength)
                 this.text += key;
         }
@@ -1254,7 +1324,10 @@ class UITile extends UIObject
     }
     render()
     {
-        uiSystem.drawTile(this.nativePos, this.size, this.tileInfo, this.color, this.angle, this.mirror, this.shadowColor, this.shadowBlur, this.shadowOffset);
+        // call the custom render callback
+        this.onRender();
+
+        uiSystem.drawTile(this.nativePos, this.size, this.tileInfo, this.color, this.angle, this.mirror, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
     }
 }
 
@@ -1440,7 +1513,7 @@ class UISlider extends UIObject
             const progressWidth = lerp(minWidth, barWidth, this.value);
             const p = (progressWidth - barWidth) * (isHorizontal ? .5 : -.5);
             const pos = this.nativePos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
-            const color = this.disabled ? this.disabledColor : this.handleColor;
+            const color = uiObjectIsDisabled(this) ? this.disabledColor : this.handleColor;
             const drawSize = isHorizontal ? 
                 vec2(progressWidth, this.size.y) : vec2(this.size.x, progressWidth);
             uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
@@ -1451,7 +1524,7 @@ class UISlider extends UIObject
             const value = clamp(isHorizontal ? this.value : 1 - this.value);
             const p = (barWidth - handleWidth) * (value - .5);
             const pos = this.nativePos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
-            const color = this.disabled ? this.disabledColor : this.handleColor;
+            const color = uiObjectIsDisabled(this) ? this.disabledColor : this.handleColor;
             const drawSize = vec2(handleWidth);
             uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
         }
@@ -1510,6 +1583,7 @@ class UIVideo extends UIObject
         this.video.loop = loop;
         this.video.volume = clamp(volume * soundVolume);
         this.video.muted = !soundEnable;
+        this.soundEnabled = soundEnable; // the sound setting the mute last followed
         this.video.style.display = 'none';
         this.video.src = src;
         document.body.appendChild(this.video);
@@ -1583,8 +1657,11 @@ class UIVideo extends UIObject
     {
         super.update();
 
-        // update volume based on global sound volume
+        // update volume based on global sound volume, and the mute when sound is turned on or off,
+        // so a game's own mute stays until then
         this.video.volume = clamp(this.volume * soundVolume);
+        if (this.soundEnabled !== soundEnable)
+            this.video.muted = !(this.soundEnabled = soundEnable);
     }
     
     /** Render video to UI canvas */
@@ -1691,7 +1768,7 @@ class UILayout extends UIObject
             return;
         }
 
-        const cols = this.columns;
+        const cols = min(this.columns, n); // no empty columns, they would push it off center
         const rows = ceil(n / cols);
         const colWidths = new Array(cols).fill(0);
         const rowHeights = new Array(rows).fill(0);

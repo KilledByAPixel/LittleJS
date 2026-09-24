@@ -256,7 +256,8 @@ class NewgroundsPlugin
 
     /** Play as not logged in from now on: the NewgroundsMedals come back from the local save, keeping the unlocks the
      *  server confirmed meanwhile, and the unlocks still pending unlock locally; a refused one only if it is earned again
-     *  @private */
+     *  - internal, the medals call it too when the server says the session is gone
+     *  @ignore */
     dropSession()
     {
         if (!this.session_id) return;

@@ -45,9 +45,25 @@ const box2dQueryObjects = {};
 function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
 
 // what cannot happen while the world steps, like losing a body from a contact callback: done now, or queued until
-// the step is done
+// the step is done; a body going calls endContact for what it touched, and a destroy from there waits in the queue
+// too, since the contact it would free is still in use, so the queue runs one at a time in the order things came
 const box2dPending = [];
-function box2dWhenUnlocked(f) { box2d.world.IsLocked() ? box2dPending.push(f) : f(); }
+let box2dPendingBusy = 0;
+function box2dWhenUnlocked(f)
+{
+    box2dPending.push(f);
+    if (!box2d.world.IsLocked() && !box2dPendingBusy)
+        box2dRunPending();
+}
+function box2dRunPending()
+{
+    ++box2dPendingBusy;
+    try { while (box2dPending.length) box2dPending.shift()(); }
+    finally { --box2dPendingBusy; }
+}
+
+// each Box2dJoint by its native pointer, so a joint Box2D destroys along with a body can let go of its wrapper
+const box2dJoints = new Map;
 
 /** Enable Box2D debug drawing
  *  @param {boolean} enable
@@ -75,23 +91,30 @@ class Box2dObject extends EngineObject
      *  @param {number}   [renderOrder] */
     constructor(pos=vec2(), size=vec2(), tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
     {
+        ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D bodies during a contact callback');
         super(pos, size, tileInfo, angle, color, renderOrder);
 
-        // create physics body
+        // create physics body, Box2D copies the def
         const bodyDef = new box2d.instance.b2BodyDef();
         bodyDef.set_type(bodyType);
         bodyDef.set_position(box2dTemp(pos));
         bodyDef.set_angle(-angle);
         
-        /** @property {Object} - The Box2d body */
+        /** @property {Object} - The Box2d body, undefined once it is destroyed */
         this.body = box2d.world.CreateBody(bodyDef);
+        box2d.instance.destroy(bodyDef);
         /** @property {Color} - Line color used for default box2d drawing */
         this.lineColor = BLACK;
-        /** @property {Array<Object>} - List of all edges for default box2d drawing */
+        /** @property {number} - Line width used for default box2d drawing */
+        this.lineWidth = .1;
+        /** @property {Array<Array<Vector2>>} - List of all edges for default box2d drawing
+         *  @type {Array<Array<Vector2>>} */
         this.edgeLists = [];
-        /** @property {Array<Object>} - List of all edge loops for default box2d drawing */
+        /** @property {Array<Array<Vector2>>} - List of all edge loops for default box2d drawing
+         *  @type {Array<Array<Vector2>>} */
         this.edgeLoops = [];
-        this.edgeListFixtures = new Set; // the fixtures of the edge lists and loops, by pointer, drawn with them
+        // the fixtures of the edge lists and loops, by pointer, each to the points it is drawn with
+        this.edgeListFixtures = new Map;
 
         this.body.object = this; // link body to this object
         box2d.objects.push(this); // keep track of all box2d objects
@@ -103,15 +126,11 @@ class Box2dObject extends EngineObject
         if (this.destroyed) return;
 
         // destroy physics body, fixtures, and joints; from a contact callback the world is still
-        // stepping and cannot lose a body, so it goes as soon as the step is done
+        // stepping and cannot lose a body, so it goes as soon as the step is done; the object
+        // leaves box2d.objects at the next step, or the next frame while paused
         ASSERT(this.body, 'Box2dObject has no body to destroy');
         const body = this.body;
-        box2dWhenUnlocked(()=> box2d.world.DestroyBody(body));
-
-        // remove from tracked list so paused / headless sessions don't leak
-        const i = box2d.objects.indexOf(this);
-        if (i >= 0)
-            box2d.objects.splice(i, 1);
+        box2dWhenUnlocked(()=> { box2d.world.DestroyBody(body); this.body = undefined; });
         super.destroy();
     }
 
@@ -163,11 +182,13 @@ class Box2dObject extends EngineObject
     ///////////////////////////////////////////////////////////////////////////////
     // physics contact callbacks
 
-    /** Called when a contact begins
+    /** Called when a contact begins, while the world steps: a destroy or a setter waits until the step is done,
+     *  and creating objects, fixtures or joints must wait until after the step
      *  @param {Box2dObject} otherObject */
     beginContact(otherObject) {}
 
-    /** Called when a contact ends
+    /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
+     *  until the step is done, and creating objects, fixtures or joints must wait until after the step
      *  @param {Box2dObject} otherObject */
     endContact(otherObject) {}
 
@@ -185,14 +206,18 @@ class Box2dObject extends EngineObject
         ASSERT(isNumber(density), 'density must be a number');
         ASSERT(isNumber(friction), 'friction must be a number');
         ASSERT(isNumber(restitution), 'restitution must be a number');
+        ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D fixtures during a contact callback');
 
+        // Box2D copies the def and the shape
         const fd = new box2d.instance.b2FixtureDef();
         fd.set_shape(shape);
         fd.set_density(density);
         fd.set_friction(friction);
         fd.set_restitution(restitution);
         fd.set_isSensor(isSensor);
-        return this.body.CreateFixture(fd);
+        const fixture = this.body.CreateFixture(fd);
+        box2d.instance.destroy(fd);
+        return fixture;
     }
 
     /** Add a box shape to the body
@@ -214,7 +239,9 @@ class Box2dObject extends EngineObject
 
         const shape = new box2d.instance.b2PolygonShape();
         shape.SetAsBox(size.x/2, size.y/2, box2dTemp(offset), -angle);
-        return this.addShape(shape, density, friction, restitution, isSensor);
+        const fixture = this.addShape(shape, density, friction, restitution, isSensor);
+        box2d.instance.destroy(shape); // the fixture has its own copy
+        return fixture;
     }
 
     /** Add a polygon shape to the body
@@ -246,7 +273,9 @@ class Box2dObject extends EngineObject
         }
 
         const shape = box2dCreatePolygonShape(points);
-        return this.addShape(shape, density, friction, restitution, isSensor);
+        const fixture = this.addShape(shape, density, friction, restitution, isSensor);
+        box2d.instance.destroy(shape); // the fixture has its own copy
+        return fixture;
     }
 
     /** Add a regular polygon shape to the body
@@ -301,7 +330,9 @@ class Box2dObject extends EngineObject
         const shape = new box2d.instance.b2CircleShape();
         shape.set_m_p(box2dTemp(offset));
         shape.set_m_radius(diameter/2);
-        return this.addShape(shape, density, friction, restitution, isSensor);
+        const fixture = this.addShape(shape, density, friction, restitution, isSensor);
+        box2d.instance.destroy(shape); // the fixture has its own copy
+        return fixture;
     }
 
     /** Add an edge shape to the body
@@ -318,7 +349,9 @@ class Box2dObject extends EngineObject
 
         const shape = new box2d.instance.b2EdgeShape();
         shape.Set(box2dTemp(point1), box2dTemp(point2, 1));
-        return this.addShape(shape, density, friction, restitution, isSensor);
+        const fixture = this.addShape(shape, density, friction, restitution, isSensor);
+        box2d.instance.destroy(shape); // the fixture has its own copy
+        return fixture;
     }
 
     /** Add an edge list to the body
@@ -333,18 +366,22 @@ class Box2dObject extends EngineObject
         const fixtures = [], edgePoints = [];
         for (let i=0; i<points.length-1; ++i)
         {
+            // the ghost vertices, where there is a neighbor, make the edges one smooth surface
             const shape = new box2d.instance.b2EdgeShape();
             points[i-1] && shape.set_m_vertex0(box2dTemp(points[i-1]));
             points[i+0] && shape.set_m_vertex1(box2dTemp(points[i+0]));
             points[i+1] && shape.set_m_vertex2(box2dTemp(points[i+1]));
             points[i+2] && shape.set_m_vertex3(box2dTemp(points[i+2]));
+            shape.set_m_hasVertex0(!!points[i-1]);
+            shape.set_m_hasVertex3(!!points[i+2]);
             const f = this.addShape(shape, density, friction, restitution, isSensor);
+            box2d.instance.destroy(shape); // the fixture has its own copy
             fixtures.push(f);
             edgePoints.push(points[i].copy());
         }
         edgePoints.push(points[points.length-1].copy());
         this.edgeLists.push(edgePoints);
-        fixtures.forEach(f=> this.edgeListFixtures.add(box2d.instance.getPointer(f)));
+        fixtures.forEach(f=> this.edgeListFixtures.set(box2d.instance.getPointer(f), edgePoints));
         return fixtures;
     }
 
@@ -366,18 +403,34 @@ class Box2dObject extends EngineObject
             shape.set_m_vertex1(box2dTemp(getPoint(i+0)));
             shape.set_m_vertex2(box2dTemp(getPoint(i+1)));
             shape.set_m_vertex3(box2dTemp(getPoint(i+2)));
+            shape.set_m_hasVertex0(true);
+            shape.set_m_hasVertex3(true);
             const f = this.addShape(shape, density, friction, restitution, isSensor);
+            box2d.instance.destroy(shape); // the fixture has its own copy
             fixtures.push(f);
             edgePoints.push(points[i].copy());
         }
         this.edgeLoops.push(edgePoints);
-        fixtures.forEach(f=> this.edgeListFixtures.add(box2d.instance.getPointer(f)));
+        fixtures.forEach(f=> this.edgeListFixtures.set(box2d.instance.getPointer(f), edgePoints));
         return fixtures;
     }
 
     /** Destroy a fixture from the body
      *  @param {Object} [fixture] */
-    destroyFixture(fixture) { const body = this.body; box2dWhenUnlocked(()=> body.DestroyFixture(fixture)); }
+    destroyFixture(fixture)
+    {
+        // an edge list or loop that loses a fixture is no longer one line, what is left of it draws edge by edge
+        const edgeFixtures = this.edgeListFixtures, points = edgeFixtures.get(box2d.instance.getPointer(fixture));
+        if (points)
+        {
+            this.edgeLists = this.edgeLists.filter(p=> p !== points);
+            this.edgeLoops = this.edgeLoops.filter(p=> p !== points);
+            edgeFixtures.forEach((p, pointer)=> p === points && edgeFixtures.delete(pointer));
+        }
+
+        // not once the body is gone, which takes its fixtures with it
+        box2dWhenUnlocked(()=> this.body && this.body.DestroyFixture(fixture));
+    }
 
     /** Destroy all fixture from the body */
     destroyAllFixtures()
@@ -395,7 +448,7 @@ class Box2dObject extends EngineObject
     getLinearVelocity() { return box2d.vec2From(this.body.GetLinearVelocity()); }
 
     /** Gets the angular velocity
-     *  @return {Vector2} */
+     *  @return {number} */
     getAngularVelocity() { return this.body.GetAngularVelocity(); }
 
     /** Gets the mass
@@ -421,26 +474,27 @@ class Box2dObject extends EngineObject
     ///////////////////////////////////////////////////////////////////////////////
     // physics set functions
 
-    /** Sets the position and angle
+    /** Sets the position and angle, from a contact callback the body moves once the step is done
      *  @param {Vector2} pos
      *  @param {number} angle */
     setTransform(pos, angle)
     {
-        this.pos = pos;
+        this.pos = pos.copy();
         this.angle = angle;
         // box2d uses reverse angle
-        this.body.SetTransform(box2dTemp(pos), -angle);
+        const x = pos.x, y = pos.y;
+        box2dWhenUnlocked(()=> this.body && this.body.SetTransform(box2dTemp(vec2(x, y)), -angle));
     }
     
     /** Sets the position
      *  @param {Vector2} pos */
     setPosition(pos)
-    { this.setTransform(pos, -this.body.GetAngle()); }
+    { this.setTransform(pos, this.angle); }
 
     /** Sets the angle
      *  @param {number} angle */
     setAngle(angle)
-    { this.setTransform(box2d.vec2From(this.body.GetPosition()), angle); }
+    { this.setTransform(this.pos, angle); }
 
     /** Sets the linear velocity
      *  @param {Vector2} velocity */
@@ -475,9 +529,9 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isAwake] */
     setAwake(isAwake=true) { this.body.SetAwake(isAwake); }
     
-    /** Set the physics body type
+    /** Set the physics body type, from a contact callback it changes once the step is done
      *  @param {number} type */
-    setBodyType(type) { this.body.SetType(type); }
+    setBodyType(type) { box2dWhenUnlocked(()=> this.body && this.body.SetType(type)); }
 
     /** Set whether the body is allowed to sleep
      *  @param {boolean} [isAllowed] */
@@ -502,29 +556,35 @@ class Box2dObject extends EngineObject
     setMomentOfInertia(momentOfInertia)
     { this.setMassData(undefined, undefined, momentOfInertia) }
     
-    /** Reset the mass, center of mass, and moment */
-    resetMassData() { this.body.ResetMassData(); }
+    /** Reset the mass, center of mass, and moment, from a contact callback once the step is done */
+    resetMassData() { box2dWhenUnlocked(()=> this.body && this.body.ResetMassData()); }
     
-    /** Set the mass data of the body
+    /** Set the mass data of the body, from a contact callback once the step is done
      *  @param {Vector2} [localCenter]
      *  @param {number}  [mass]
      *  @param {number}  [momentOfInertia] */
     setMassData(localCenter, mass, momentOfInertia)
     {
-        const data = box2dQueryObject('massData', 'b2MassData'); // reused, GetMassData fills it in
-        this.body.GetMassData(data);
-        // use !== undefined so setMass(0) (static-equivalent) isn't silently ignored
-        if (localCenter !== undefined) data.set_center(box2dTemp(localCenter));
-        if (mass !== undefined) data.set_mass(mass);
-        if (momentOfInertia !== undefined) data.set_I(momentOfInertia);
-        this.body.SetMassData(data);
+        localCenter = localCenter && localCenter.copy(); // as it is now, even if it waits for the step
+        box2dWhenUnlocked(()=>
+        {
+            if (!this.body) return;
+            const data = box2dQueryObject('massData', 'b2MassData'); // reused, GetMassData fills it in
+            this.body.GetMassData(data);
+            // use !== undefined so setMass(0) (static-equivalent) isn't silently ignored
+            if (localCenter !== undefined) data.set_center(box2dTemp(localCenter));
+            if (mass !== undefined) data.set_mass(mass);
+            if (momentOfInertia !== undefined) data.set_I(momentOfInertia);
+            this.body.SetMassData(data);
+        });
     }
 
-    /** Set the collision filter data for this body
+    /** Set the collision filter data for the fixtures this body has now, a fixture added later has the default
+     *  filter, category 1 colliding with everything
      *  @param {number} [categoryBits]
      *  @param {number} [ignoreCategoryBits]
      *  @param {number} [groupIndex] */
-    setFilterData(categoryBits=0, ignoreCategoryBits=0, groupIndex=0)
+    setFilterData(categoryBits=1, ignoreCategoryBits=0, groupIndex=0)
     {
         this.getFixtureList().forEach(fixture=>
         {
@@ -592,8 +652,11 @@ class Box2dObject extends EngineObject
      *  @param {number} acceleration */
     applyAngularAcceleration(acceleration)
     {
+        // the velocity itself, since the inertia Box2D gives is about the origin, not the center of mass;
+        // like the impulse this was, only a dynamic body turns
+        if (this.getBodyType() !== box2d.bodyTypeDynamic || this.body.IsFixedRotation()) return;
         this.setAwake();
-        this.body.ApplyAngularImpulse(acceleration * this.getInertia());
+        this.setAngularVelocity(this.getAngularVelocity() + acceleration);
     }
 
     /** Apply an instantaneous angular impulse. Changes angular velocity by
@@ -690,7 +753,7 @@ class Box2dKinematicObject extends Box2dObject
  * Box2d Tile Layer
  * - adds Box2d support to tile layers
  * - creates static box2d fixtures for solid tiles
- * @extends Box2dObject
+ * @extends Box2dStaticObject
  * @memberof Box2D
  */
 class Box2dTileLayer extends Box2dStaticObject
@@ -785,7 +848,8 @@ class Box2dRaycastResult
      *  @param {number}  fraction */
     constructor(fixture, point, normal, fraction)
     {
-        /** @property {Box2dObject} - The box2d object */
+        /** @property {Box2dObject} - The box2d object
+         *  @type {Box2dObject} */
         this.object   = fixture.GetBody().object;
         /** @property {Object} - The fixture that was hit */
         this.fixture  = fixture;
@@ -808,15 +872,33 @@ class Box2dRaycastResult
 class Box2dJoint
 {
     /** Create a box2d joint, the base class is not intended to be used directly
-     *  @param {Object} jointDef */
+     *  @param {Object} jointDef - Freed once the joint is made, Box2D copies it */
     constructor(jointDef)
     {
-        /** @property {Object} - The Box2d joint */
+        ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D joints during a contact callback');
+
+        /** @property {Object} - The Box2d joint, 0 once it is destroyed, as it is when either object is */
         this.box2dJoint = box2d.castJointObject(box2d.world.CreateJoint(jointDef));
+        box2d.instance.destroy(jointDef);
+        box2dJoints.set(box2d.instance.getPointer(this.box2dJoint), this);
     }
 
     /** Destroy this joint */
-    destroy() { const joint = this.box2dJoint; box2dWhenUnlocked(()=> box2d.world.DestroyJoint(joint)); this.box2dJoint = 0; }
+    destroy()
+    {
+        const joint = this.box2dJoint;
+        if (!joint) return; // destroyed already, or with one of its objects
+        this.box2dJoint = 0;
+
+        // a body destroyed before it, in the same step, takes the joint with it and lets go of it here
+        const pointer = box2d.instance.getPointer(joint);
+        box2dWhenUnlocked(()=>
+        {
+            if (box2dJoints.get(pointer) !== this) return;
+            box2dJoints.delete(pointer);
+            box2d.world.DestroyJoint(joint);
+        });
+    }
 
     /** Get the first object attached to this joint
      *  @return {Box2dObject} */
@@ -985,7 +1067,7 @@ class Box2dPinJoint extends Box2dDistanceJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, pos=objectA.pos, collide=false)
     {
-        super(objectA, objectB, undefined, pos, collide);
+        super(objectA, objectB, pos, pos, collide);
     }
 }
 
@@ -1304,7 +1386,6 @@ class Box2dPrismaticJoint extends Box2dJoint
 /** 
  * Box2D Wheel Joint
  * - Provides two degrees of freedom: translation along an axis fixed in objectA and rotation
- * - You can use a joint limit to restrict the range of motion
  * - You can use a joint motor to drive the motion or to model joint friction
  * - This joint is designed for vehicle suspensions
  * @extends Box2dJoint
@@ -1379,6 +1460,7 @@ class Box2dWheelJoint extends Box2dJoint
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
     /** Get the motor torque for a time step
+     *  @param {number} time
      *  @return {number} */
     getMotorTorque(time) { return this.box2dJoint.GetMotorTorque(1/time); }
 
@@ -1665,18 +1747,35 @@ class Box2dPlugin
         this.instance = instance;
         /** @property {Object} - The Box2d world */
         this.world = new box2d.instance.b2World();
-        /** @property {Array<Box2dObject>} - List of all Box2d objects */
+        /** @property {Array<Box2dObject>} - List of all Box2d objects, a destroyed one stays until the next step
+         *  with its body undefined
+         *  @type {Array<Box2dObject>} */
         this.objects = [];
         /** @property {number} - Velocity iterations per update*/
         this.velocityIterations = 8;
         /** @property {number} - Position iterations per update*/
         this.positionIterations = 3;
-        /** @property {number} - Static, zero mass, zero velocity, may be manually moved */
+        /** @property {number} - Static, zero mass, zero velocity, may be manually moved
+         *  @type {number} */
         this.bodyTypeStatic = instance.b2_staticBody;
-        /** @property {number} - Kinematic, zero mass, non-zero velocity set by user, moved by solver */
+        /** @property {number} - Kinematic, zero mass, non-zero velocity set by user, moved by solver
+         *  @type {number} */
         this.bodyTypeKinematic = instance.b2_kinematicBody;
-        /** @property {number} - Dynamic, positive mass, non-zero velocity determined by forces, moved by solver */
+        /** @property {number} - Dynamic, positive mass, non-zero velocity determined by forces, moved by solver
+         *  @type {number} */
         this.bodyTypeDynamic = instance.b2_dynamicBody;
+
+        // a body that goes takes its joints with it, their wrappers let go of them
+        const destructionListener = new box2d.instance.JSDestructionListener();
+        destructionListener.SayGoodbyeJoint = function(jointPointer)
+        {
+            const joint = box2dJoints.get(jointPointer);
+            if (joint)
+                joint.box2dJoint = 0;
+            box2dJoints.delete(jointPointer);
+        };
+        destructionListener.SayGoodbyeFixture = function() {};
+        box2d.world.SetDestructionListener(destructionListener);
 
         // setup contact listener
         const listener = new box2d.instance.JSContactListener();
@@ -1717,10 +1816,12 @@ class Box2dPlugin
         {
             box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
 
-            // what a contact callback destroyed, now the world can lose it
-            const pending = box2dPending.splice(0);
-            pending.forEach(f=> f());
+            // what a contact callback destroyed or changed, now the world can take it
+            box2dRunPending();
         }
+
+        // remove destroyed objects, once for all of them
+        this.objects = this.objects.filter(o=>!o.destroyed);
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -1731,10 +1832,19 @@ class Box2dPlugin
      *  @param {Vector2} end */
     raycastAll(start, end)
     {
+        // a ray with no length fails an assert that stops Box2D for good, measured as Box2D does in 32 bit floats,
+        // where two ends a float apart are one point; one that is not a number has no length either
+        const f = Math.fround, dx = f(f(end.x) - f(start.x)), dy = f(f(end.y) - f(start.y));
+        const lengthSquared = f(f(dx*dx) + f(dy*dy));
+        if (!(lengthSquared > 0 && lengthSquared < Infinity))
+            return [];
+
         const raycastCallback = box2dQueryObject('rayCast', 'JSRayCastCallback');
         raycastCallback.ReportFixture = function(fixturePointer, point, normal, fraction)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            if (!fixture.GetBody().object)
+                return 1; // a raw body with no Box2dObject, continue getting results
             point  = box2d.vec2FromPointer(point);
             normal = box2d.vec2FromPointer(normal);
             raycastResults.push(new Box2dRaycastResult(fixture, point, normal, fraction));
@@ -1768,7 +1878,7 @@ class Box2dPlugin
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
             const o = fixture.GetBody().object;
-            if (!queryObjects.includes(o))
+            if (o && !queryObjects.includes(o)) // skip raw bodies with no Box2dObject
                 queryObjects.push(o); // add if not already in list
             return true; // continue getting results
         };
@@ -1793,7 +1903,7 @@ class Box2dPlugin
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
             queryObject = fixture.GetBody().object;
-            return false; // stop getting results
+            return !queryObject; // stop getting results, unless a raw body with no Box2dObject
         };
 
         const aabb = box2dQueryObject('aabb', 'b2AABB');
@@ -1851,7 +1961,7 @@ class Box2dPlugin
             if (!fixture.TestPoint(box2dTemp(pos)))
                 return true; // continue getting results
             queryObject = fixture.GetBody().object;
-            return false; // stop getting results
+            return !queryObject; // stop getting results, unless a raw body with no Box2dObject
         };
 
         const aabb = box2dQueryObject('aabb', 'b2AABB');
@@ -2008,13 +2118,14 @@ async function box2dInit()
     function box2dUpdate()
     {
         if (paused)
+        {
+            // what was destroyed while paused leaves the list, the step does it otherwise
+            box2d.objects = box2d.objects.filter(o=>!o.destroyed);
             return;
+        }
 
         box2d.step();
 
-        // remove destroyed objects
-        box2d.objects = box2d.objects.filter(o=>!o.destroyed);
-        
         // copy box2d physics results to engine objects
         for (const o of box2d.objects)
         {

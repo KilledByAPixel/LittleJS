@@ -23,12 +23,12 @@ function render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ)
     return vec3(-dx, 1, -dz).normalize();
 }
 
-// let go of the parent but stay where the object was in the world; a destroyed parent has already let go, so the
-// position remembered by the last update stands in
+// let go of the parent but stay where the object was in the world, which removeChild keeps by itself; a destroyed
+// parent has already let go, so the position remembered by the last update stands in
 function render3DDetach(o)
 {
     if (o.parent)
-        o.pos3D = o.getWorldPos3D(), o.parent.removeChild(o);
+        o.parent.removeChild(o);
     else if (o.worldPos3D)
         o.pos3D = o.worldPos3D;
 }
@@ -460,11 +460,19 @@ class HeightMap
         const step = cell / 2 / length, end = t + hypot(size.x, size.y, height) / length;
         if (!(step > 0)) return; // a zero size
 
-        // is the ray below the ground this far along, or undefined where it is off the map
+        // where the ray leaves the map's footprint, so the last step stops at the edge instead of past it
+        let exit = Infinity;
+        if (direction.x)
+            exit = min(exit, (sign(direction.x) * size.x / 2 - origin.x) / direction.x);
+        if (direction.z)
+            exit = min(exit, (sign(direction.z) * size.y / 2 - origin.z) / direction.z);
+
+        // is the ray below the ground this far along, or undefined where it is off the map; a point on an edge
+        // can round a hair outside it, so the edges have a little give, and getHeight clamps there
         const under = (at)=>
         {
-            const p = origin.add(direction.scale(at));
-            if (abs(p.x) > size.x / 2 || abs(p.z) > size.y / 2) return;
+            const p = origin.add(direction.scale(at)), give = 1 + 1e-9;
+            if (abs(p.x) > size.x / 2 * give || abs(p.z) > size.y / 2 * give) return;
             return p.y <= this.getHeight(p.x, p.z);
         };
 
@@ -474,12 +482,17 @@ class HeightMap
         if (startUnder === undefined) return; // it meets the box outside the map itself
         for (; t < end; t += step)
         {
-            const u = under(t + step);
+            const next = min(t + step, exit);
+            const u = under(next);
             if (u === undefined) return; // it left the map before crossing
-            if (u === startUnder) continue;
+            if (u === startUnder)
+            {
+                if (next >= exit) return; // it reached the edge without crossing
+                continue;
+            }
 
             // it crossed between the last two samples, halve the gap until it is exact
-            let a = t, b = t + step;
+            let a = t, b = next;
             for (let i = 0; i < 16; ++i)
             {
                 const mid = (a + b) / 2;
@@ -494,8 +507,12 @@ class HeightMap
      *  @return {Mesh} */
     buildMesh(smooth=render3D?.smoothShading)
     {
+        // flat shading colors each cell from its center, halfway between two samples where rounding could pick
+        // either, so it is nudged a thousandth of a cell back to make it the cell's first corner every time
+        const nudgeX = smooth ? 0 : this.size.x / (this.columns - 1) / 1e3;
+        const nudgeZ = smooth ? 0 : this.size.y / (this.rows - 1) / 1e3;
         return buildGrid(this.size, vec2(this.columns - 1, this.rows - 1),
-            this.colors && ((x, z)=> this.getColor(x, z)), (x, z)=> this.getHeight(x, z), smooth);
+            this.colors && ((x, z)=> this.getColor(x - nudgeX, z - nudgeZ)), (x, z)=> this.getHeight(x, z), smooth);
     }
 }
 
@@ -647,6 +664,18 @@ class FirstPersonCamera3D extends EngineObject3D
         this.fly = false;
         /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
         this.lockPointer = true;
+    }
+
+    /** Move by velocity3D, and fall by render3D.gravity unless flying, called automatically each frame */
+    updatePhysics()
+    {
+        // flying moves the way it looks and nothing else, so gravity does not pull while fly is on; the scale set
+        // on it is put back, for walking
+        const gravityScale = this.gravityScale;
+        if (this.fly)
+            this.gravityScale = 0;
+        super.updatePhysics();
+        this.gravityScale = gravityScale;
     }
 
     /** Read the mouse and keys and put the camera at the eye, called automatically each frame */
@@ -1117,7 +1146,7 @@ class Trail3D extends EngineObject3D
  * - Use mesh.center() and mesh.fit(size) to bring a model of unknown units to the origin
  * - Back faces are skipped like any mesh, set doubleSided for a model with open walls or single sided parts
  * @param {string} text
- * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3D.smoothShading
+ * @param {boolean} [smooth] - Compute smooth normals for the faces the file gives none, defaults to render3D.smoothShading
  * @return {Mesh}
  * @memberof Render3D
  * @example
@@ -1127,7 +1156,8 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
 {
     const positions = [], normals = [], uvs = [];
     const points = [], vertexNormals = [], vertexUVs = [], indices = [], seen = new Map;
-    let fileNormals = false, face = 0;
+    const fromFile = []; // which vertices have a normal from the file, the rest are smoothed when smooth is on
+    let missingNormals = false, face = 0;
 
     // OBJ indices count from 1, and a negative one counts back from the end of the list so far
     const index = (s, list)=> { const i = parseInt(s); return i < 0 ? list.length + i : i - 1; };
@@ -1147,7 +1177,7 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
                 const facePoints = corners.map(c=> lookup(c[0], positions));
                 ASSERT(facePoints.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
                 const hasNormals = corners.every(c=> c[2]);
-                fileNormals ||= hasNormals;
+                missingNormals ||= !hasNormals;
                 const faceNormal = hasNormals ? undefined : render3DFaceNormal(facePoints[0], facePoints[1], facePoints[2], facePoints[3]);
                 // a corner is one vertex with the same position, uv and normal; without file normals the face's own
                 // normal keeps its corners apart, unless they will be smoothed, when the position and uv are enough
@@ -1163,6 +1193,7 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
                         points.push(facePoints[i]);
                         vertexUVs.push(c[1] ? lookup(c[1], uvs) : RENDER3D_DEFAULT_UV);
                         vertexNormals.push(hasNormals ? lookup(c[2], normals) : faceNormal);
+                        fromFile.push(hasNormals);
                     }
                     return id;
                 });
@@ -1175,8 +1206,13 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
         }
     }
     const mesh = new Mesh().addTriangles(points, indices, vertexNormals, vertexUVs);
-    if (!fileNormals && smooth)
+    if (missingNormals && smooth)
+    {
+        // smooth the faces the file gave no normals, and keep the normals it did give
+        const given = mesh.normals;
         mesh.computeNormals(true);
+        fromFile.forEach((f, i)=> f && (mesh.normals[i] = given[i]));
+    }
     return mesh;
 }
 

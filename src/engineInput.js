@@ -56,7 +56,7 @@ let isUsingGamepad = false;
  *  mouse to aim) it tracks whichever was touched last each frame, so it may
  *  alternate — that's intended; use it to pick which control drives a shared
  *  action. Updated every frame by inputUpdate().
- *  @type {string}
+ *  @type {'mouse'|'keyboard'|'gamepad'}
  *  @memberof Input */
 let lastInputDevice = 'mouse';
 
@@ -117,7 +117,7 @@ function inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearRe
 const inputWASDToArrow = {KeyW:'ArrowUp', KeyS:'ArrowDown', KeyA:'ArrowLeft', KeyD:'ArrowRight'};
 const inputArrowToWASD = {ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', ArrowRight:'KeyD'};
 const inputKeysHeld = new Set; // the keys physically down, since an arrow's slot is shared with its alias
-let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, cleared with the input so a new touch presses
+let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, cleared with the input so only a new touch presses
 
 // let go of every keyboard key, for when something else takes the keyboard, like a text field
 function inputClearKeyboard()
@@ -136,12 +136,16 @@ function inputClear()
     inputData[0] = [];
     inputKeysHeld.clear();
     inputWasTouching = 0;
+    // release the touch gamepad, a finger still on it has to lift before it can take a control again
+    touchGamepadPointerRole.clear();
     touchGamepadButtons.length = 0;
+    touchGamepadButtonsPressed.length = 0;
     touchGamepadSticks.length = 0;
     touchGamepadStickPointerId.length = 0; // release floating sticks so they re-anchor
     gamepadStickData.length = 0;
     gamepadDpadData.length = 0;
-    gamepadAxisCentered.length = 0;
+    // gamepadButtonsLast and gamepadAxisCentered describe the pads, not input, so they are kept:
+    // a button held through the clear reads as down, not newly pressed, and axes stay trusted
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -287,7 +291,7 @@ function gamepadStick(stick, gamepad=gamepadPrimary)
 function gamepadDpad(gamepad=gamepadPrimary)
 {
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
-    return gamepadDpadData[gamepad] ?? vec2();
+    return gamepadDpadData[gamepad]?.copy() ?? vec2(); // a copy, the poller keeps its own
 }
 
 /** Returns true if passed in gamepad is connected
@@ -365,7 +369,10 @@ function vibrateStop() { vibrate(0); }
 /** Request to lock the pointer, does not work on touch devices
  *  @memberof Input */
 function pointerLockRequest()
-{ !isTouchDevice && mainCanvas.requestPointerLock?.(); }
+{
+    // newer browsers return a promise that rejects when the lock is refused, like just after Esc left it
+    !isTouchDevice && mainCanvas.requestPointerLock?.()?.catch?.(()=>{});
+}
 
 /** Request to unlock the pointer
  *  @memberof Input */
@@ -387,6 +394,9 @@ const inputData = [[]];
 
 // gamepad internal variables
 const gamepadStickData = [], gamepadDpadData = [], gamepadHadInput = [];
+// per gamepad, each button's raw pressed state from the last poll, kept through inputClear and cleared on
+// disconnect, so a button held through a clear reads as down and not newly pressed
+const gamepadButtonsLast = [];
 // per gamepad, how many consecutive frames each axis has rested inside the
 // dead zone, used to tell stick axes from axes that rest at full deflection
 const gamepadAxisCentered = [];
@@ -395,6 +405,8 @@ const gamepadAxisCenteredFrames = 15;
 
 // touch gamepad internal variables
 const touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadSticks = [];
+// buttons pressed since the last poll, so a tap that lifts before the poll still counts
+const touchGamepadButtonsPressed = [];
 // floating stick anchors (stage-local CSS pixels) and owning pointer ids, indexed by stick (0=left, 1=right)
 const touchGamepadStickAnchors = [], touchGamepadStickPointerId = [];
 // pointerId -> control role ('stick0', 'stick1', 'face<n>', or 'start')
@@ -428,6 +440,10 @@ function inputInit()
 
     function onKeyDown(e)
     {
+        // fix stalled audio requiring user interaction, a keyboard only game has no other gesture
+        if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
+            audioContext.resume();
+
         if (!e.repeat)
         {
             inputKeysHeld.add(e.code);
@@ -472,11 +488,13 @@ function inputInit()
     {
         inputKeysHeld.delete(e.code);
         // the key's own slot and the arrow slot an alias shares, each released only once nothing holds it:
-        // an arrow held with its alias stays down until both are let go
+        // an arrow held with its alias stays down until both are let go; a slot not down was never pressed as far
+        // as the game knows (held since before focus or through a clear), so it is not released either
         const remap = remapKey(e.code);
         for (const key of remap === e.code ? [e.code] : [e.code, remap])
             if (!inputKeysHeld.has(key) && !(inputWASDEmulateDirection && inputKeysHeld.has(inputArrowToWASD[key])))
-                inputData[0][key] = (inputData[0][key]&2) | 4;
+                if (inputData[0][key] & 1)
+                    inputData[0][key] = (inputData[0][key]&2) | 4;
     }
     function remapKey(k)
     {
@@ -512,10 +530,16 @@ function inputInit()
         const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
 
-        // when pointer is locked use movementX/Y for delta
-        const movement = pointerLockIsActive() ?
-            vec2(e.movementX, e.movementY) :
-            mousePosScreen.subtract(mousePosScreenLast);
+        // when pointer is locked use movementX/Y for delta, css pixels scaled to canvas units the way
+        // mouseEventToScreen maps positions, so the delta matches the unlocked one with canvasFixedSize
+        let movement;
+        if (pointerLockIsActive())
+        {
+            const rect = mainCanvas.getBoundingClientRect();
+            movement = vec2(e.movementX * mainCanvasSize.x / rect.width, e.movementY * mainCanvasSize.y / rect.height);
+        }
+        else
+            movement = mousePosScreen.subtract(mousePosScreenLast);
         mouseDeltaScreen = mouseDeltaScreen.add(movement);
     }
     function onMouseLeave() { mouseInWindow = false; } // mouse moved off window
@@ -530,12 +554,8 @@ function inputInit()
     function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
     function onBlur()
     {
+        // inputClear also releases any held virtual gamepad controls so they don't stick
         inputClear();
-        // release any held virtual gamepad controls so they don't stick
-        touchGamepadPointerRole.clear();
-        touchGamepadButtons.length = 0;
-        touchGamepadSticks.length = 0;
-        touchGamepadStickPointerId.length = 0;
     }
 
     // enable touch input mouse passthrough
@@ -574,18 +594,23 @@ function inputInit()
                 const button = 0; // all touches are left mouse button
                 if (touching)
                 {
+                    // only a game finger coming down presses, not one held through a clear, and it drives the mouse
+                    const pressTouch = !inputWasTouching && e.type == 'touchstart' &&
+                        [...e.changedTouches].find(t=> !isGamepadTouch(t));
+                    const touch = pressTouch || gameTouches[0];
+
                     // set event pos and pass it along
-                    const pos = vec2(gameTouches[0].clientX, gameTouches[0].clientY);
+                    const pos = vec2(touch.clientX, touch.clientY);
                     const mousePosScreenLast = mousePosScreen;
                     mousePosScreen = mouseEventToScreen(pos);
-                    if (inputWasTouching && gameTouches[0].identifier === inputTouchIdentifier)
+                    if (inputWasTouching && touch.identifier === inputTouchIdentifier)
                         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
-                    else if (!inputWasTouching)
+                    else if (pressTouch)
                         inputData[0][button] = 3;
-                    inputTouchIdentifier = gameTouches[0].identifier;
+                    inputTouchIdentifier = touch.identifier;
                 }
-                else if (inputWasTouching)
-                    inputData[0][button] = inputData[0][button] & 2 | 4;
+                else if (inputWasTouching && (inputData[0][button] & 1))
+                    inputData[0][button] = inputData[0][button] & 2 | 4; // released only if it was pressed
 
                 // set was touching
                 inputWasTouching = touching;
@@ -713,29 +738,31 @@ function inputUpdate()
             }
 
             // read virtual gamepad buttons
+            // a press latched since the last poll counts even when the finger already lifted,
+            // then it reads pressed and released at once, like a quick key tap
             const data = inputData[1] ?? (inputData[1] = []);
             for (let i=12; i--;)
             {
-                const wasDown = gamepadIsDown(i,0);
-                data[i] = touchGamepadButtons[i] ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
+                const wasDown = gamepadIsDown(i,0), isDown = touchGamepadButtons[i];
+                const pressed = touchGamepadButtonsPressed[i] || isDown && !wasDown;
+                data[i] = isDown ? pressed ? 3 : 1 : pressed ? 6 : wasDown ? 4 : 0;
 
-                // haptic tap when a face button or start button is first pressed (3 = newly down)
+                // haptic tap when a face button or start button is first pressed
                 // skip stick touches (10, 11) so movement doesn't buzz
-                if (touchGamepadVibration && data[i] === 3 &&
+                if (touchGamepadVibration && (data[i] & 2) &&
                     (i === 9 || touchGamepadIsFaceButton(i)))
                     vibrate(touchGamepadVibration);
             }
+            touchGamepadButtonsPressed.length = 0;
 
             // disable normal gamepads when touch gamepad is active
             return;
         }
 
-        // return if gamepads are disabled
-        if (!gamepadsEnable)
-            return;
-
-        // only poll gamepads when focused or in debug mode
-        if (!debug && !document.hasFocus()) return;
+        // return if gamepads are disabled, or only poll them when focused or in debug mode;
+        // what the last poll saw is forgotten meanwhile, a button let go while away is not released on return
+        if (!gamepadsEnable || !debug && !document.hasFocus())
+            return void (gamepadButtonsLast.length = 0);
 
         // poll gamepads; with none to read, every slot that had one is cleared, so a
         // refused or vanished gamepad does not leave its buttons held
@@ -754,10 +781,12 @@ function inputUpdate()
                 gamepadDpadData[i] = undefined;
                 gamepadHadInput[i] = undefined;
                 gamepadAxisCentered[i] = undefined;
+                gamepadButtonsLast[i] = undefined;
                 continue;
             }
 
             const data = inputData[i+1] ?? (inputData[i+1] = []);
+            const buttonsLast = gamepadButtonsLast[i] ?? (gamepadButtonsLast[i] = []);
             const sticks = gamepadStickData[i] ?? (gamepadStickData[i] = []);
             const dpad = gamepadDpadData[i] ?? (gamepadDpadData[i] = vec2());
 
@@ -792,8 +821,10 @@ function inputUpdate()
             let hadInput = sticks.some(stick=> stick.lengthSquared() > .25);
             for (let j = gamepad.buttons.length; j--;)
             {
+                // compare with the raw state of the last poll, not the input data an inputClear may have emptied
                 const button = gamepad.buttons[j];
-                const wasDown = gamepadIsDown(j,i);
+                const wasDown = buttonsLast[j];
+                buttonsLast[j] = button.pressed;
                 data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
 
                 // check for any input on this gamepad, analog must be full press
@@ -1112,12 +1143,16 @@ function touchGamepadRender()
     {
         if (touchGamepadOverlay.style.display !== 'none')
         {
-            // just disabled: hide the overlay and release any held controls
+            // just disabled: hide the overlay and release any held controls, and the gamepad slot they
+            // fed, which nothing else rewrites while real gamepads are off
             touchGamepadOverlay.style.display = 'none';
             touchGamepadPointerRole.clear();
             touchGamepadButtons.length = 0;
+            touchGamepadButtonsPressed.length = 0;
             touchGamepadSticks.length = 0;
             touchGamepadStickPointerId.length = 0;
+            inputData[1] = undefined;
+            gamepadStickData[0] = gamepadDpadData[0] = undefined;
         }
         return;
     }
@@ -1252,7 +1287,7 @@ function touchGamepadPointerDown(e, zone)
     {
         if (touchGamepadCenterButtonSize && !touchGamepadButtons[9])
         {
-            touchGamepadButtons[9] = 1;
+            touchGamepadButtons[9] = touchGamepadButtonsPressed[9] = 1;
             touchGamepadPointerRole.set(e.pointerId, 'start');
         }
         return;
@@ -1274,17 +1309,18 @@ function touchGamepadPointerDown(e, zone)
         touchGamepadPointerRole.set(e.pointerId, 'stick'+side);
         touchGamepadNeedRelayout = true; // base may have re-anchored
         touchGamepadApplyStick(side, p);
+        touchGamepadButtonsPressed[touchGamepadStickOut(side) ? 11 : 10] = 1; // the stick's own press, latched
     }
     else if (hit.role === 'face')
     {
         if (touchGamepadButtons[hit.btn]) return; // another finger holds the button
-        touchGamepadButtons[hit.btn] = 1;
+        touchGamepadButtons[hit.btn] = touchGamepadButtonsPressed[hit.btn] = 1;
         touchGamepadPointerRole.set(e.pointerId, 'face'+hit.btn);
     }
     else // 'start'
     {
         if (touchGamepadButtons[9]) return;
-        touchGamepadButtons[9] = 1;
+        touchGamepadButtons[9] = touchGamepadButtonsPressed[9] = 1;
         touchGamepadPointerRole.set(e.pointerId, 'start');
     }
 }

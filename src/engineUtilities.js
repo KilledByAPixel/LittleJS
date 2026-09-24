@@ -220,7 +220,7 @@ function readSaveData(saveName, defaultSaveData)
     let loadedData = {};
     try
     {
-        const data = localStorage[saveName];
+        const data = localStorage.getItem(saveName); // not the brackets, a name like 'key' or 'length' is a Storage member
         if (data)
         {
             try { loadedData = JSON.parse(data); }
@@ -239,7 +239,7 @@ function writeSaveData(saveName, saveData)
 {
     ASSERT(isStringLike(saveName), 'writeSaveData requires saveName string');
     // tolerate localStorage being unavailable or quota exceeded
-    try { localStorage[saveName] = JSON.stringify(saveData); }
+    try { localStorage.setItem(saveName, JSON.stringify(saveData)); }
     catch { LOG('writeSaveData: failed to write', saveName); }
 }
 

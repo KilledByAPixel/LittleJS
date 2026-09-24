@@ -30,12 +30,12 @@ function tweenDeactivate(tween)
 }
 
 // Time tracking for delta computation between engine plugin calls.
-let lastTime = 0;
-let lastTimeReal = 0;
+let tweenLastTime = 0;
+let tweenLastTimeReal = 0;
 
 // True if the value is an instance of a class that exposes a numeric-percent
 // `lerp(other, percent)` method (Vector2, Color, or any future class).
-function isLerpable(v) { return v && typeof v.lerp === 'function'; }
+function tweenIsLerpable(v) { return v && typeof v.lerp === 'function'; }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -51,13 +51,13 @@ class Tween
     /** Create a new tween. The callback fires immediately with `start` so the
      *  target snaps to the start value on the same frame the tween is created.
      *
-     *  `start` and `end` may be numbers, Vector2 instances, Color instances, or
+     *  `start` and `end` may be numbers, Vector2, Vector3 or Color instances, or
      *  any object exposing a `lerp(other, percent) => sameType` method. The
      *  callback receives the interpolated value (a number, or a fresh instance
      *  for lerp-able types). Both endpoints must be the same type.
-     *  @param {function((number|Vector2|Color)):void} callback - Called with the interpolated value each frame
-     *  @param {number|Vector2|Color} [start=0] - Starting value
-     *  @param {number|Vector2|Color} [end=1] - Ending value
+     *  @param {function((number|Vector2|Vector3|Color)):void} callback - Called with the interpolated value each frame
+     *  @param {number|Vector2|Vector3|Color} [start=0] - Starting value
+     *  @param {number|Vector2|Vector3|Color} [end=1] - Ending value
      *  @param {number} [duration=1] - Duration in seconds
      *  @param {Object} [options]
      *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
@@ -66,7 +66,7 @@ class Tween
     constructor(callback, start = 0, end = 1, duration = 1, options = {})
     {
         ASSERT(typeof callback === 'function', 'Tween callback must be a function');
-        if (isLerpable(start))
+        if (tweenIsLerpable(start))
         {
             ASSERT(start.constructor === end.constructor,
                 'Tween start and end must be the same type');
@@ -78,11 +78,11 @@ class Tween
         }
         ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
 
-        /** @property {function((number|Vector2|Color)):void} - Called with the interpolated value each frame */
+        /** @property {function((number|Vector2|Vector3|Color)):void} - Called with the interpolated value each frame */
         this.callback = callback;
-        /** @property {number|Vector2|Color} - Starting value */
+        /** @property {number|Vector2|Vector3|Color} - Starting value */
         this.start = start;
-        /** @property {number|Vector2|Color} - Ending value */
+        /** @property {number|Vector2|Vector3|Color} - Ending value */
         this.end = end;
         /** @property {number} - Total duration in seconds */
         this.duration = duration;
@@ -148,7 +148,7 @@ class Tween
     loop(count = Infinity)
     {
         this.loopRemaining = count;
-        this.thenCallback = () => loopContinuation(this);
+        this.thenCallback = () => tweenLoopContinuation(this);
         return this;
     }
 
@@ -163,7 +163,7 @@ class Tween
     pingPong(count = Infinity)
     {
         this.loopRemaining = count;
-        this.thenCallback = () => pingPongContinuation(this);
+        this.thenCallback = () => tweenPingPongContinuation(this);
         return this;
     }
 
@@ -178,6 +178,10 @@ class Tween
     /** Reset this tween to the start: life back to duration, pause cleared,
      *  re-added to the active list if previously stopped, and the callback
      *  re-fired with the start value.
+     *  It replays one pass: a loop or pingPong that has finished is not started
+     *  over, a pingPong that ended on its way back plays that way again, and a
+     *  restart mid loop keeps the iterations left. Call loop or pingPong again
+     *  after restart to repeat it.
      *  @memberof TweenSystem */
     restart()
     {
@@ -205,9 +209,9 @@ class Tween
     }
 
     /** Get the current interpolated value (the value most recently passed to
-     *  the callback). Returns a number, Vector2, or Color depending on the
+     *  the callback). Returns a number, Vector2, Vector3 or Color depending on the
      *  tween's start/end types.
-     *  @returns {number|Vector2|Color}
+     *  @returns {number|Vector2|Vector3|Color}
      *  @memberof TweenSystem */
     getValue()
     {
@@ -234,7 +238,7 @@ class Tween
             return vec2(e.x * x + s.x * y, e.y * x + s.y * y);
         if (s instanceof Vector3)
             return vec3(e.x * x + s.x * y, e.y * x + s.y * y, e.z * x + s.z * y);
-        if (isLerpable(s))
+        if (tweenIsLerpable(s))
             return s.lerp(e, x);
         return s + (e - s) * x;
     }
@@ -430,12 +434,12 @@ const Ease =
  *  so all chaining methods (`setEase`, `then`, `loop`, `pingPong`, etc.)
  *  remain available.
  *
- *  `start` and `end` may be numbers, Vector2 instances, Color instances, or
+ *  `start` and `end` may be numbers, Vector2, Vector3 or Color instances, or
  *  any object with a `lerp(other, percent) => sameType` method.
  *  @param {Object} target - The object whose property is being animated
  *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'` or `'color'`
- *  @param {number|Vector2|Color} start - Starting value
- *  @param {number|Vector2|Color} end - Ending value
+ *  @param {number|Vector2|Vector3|Color} start - Starting value
+ *  @param {number|Vector2|Vector3|Color} end - Ending value
  *  @param {number} [duration=1] - Duration in seconds
  *  @param {Object} [options] - Same options as the Tween constructor
  *  @returns {Tween}
@@ -468,33 +472,41 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
     return new Tween(callback, start, end, duration, options);
 }
 
+// Start the next iteration with the time the last one ran over already spent, so a loop keeps its
+// pace; an update that ran over by more than a whole iteration lands where the cycle is, not owing it
+function tweenCarryOvershoot(tween)
+{
+    const duration = tween.duration;
+    tween.life = duration ? min(tween.life, 0) % duration + duration : 1e-9;
+}
+
 // Continuation that schedules the next loop iteration when one finishes.
 // Reuses the same Tween object across iterations so the user's handle
 // from `.loop()` keeps working — calling `.stop()` mid-loop now cancels
 // the entire chain instead of just the current iteration.
-function loopContinuation(tween)
+function tweenLoopContinuation(tween)
 {
     if (tween.loopRemaining !== Infinity && tween.loopRemaining <= 1) return;
     if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
-    tween.life = tween.duration;
-    tween.thenCallback = () => loopContinuation(tween);
+    tweenCarryOvershoot(tween);
+    tween.thenCallback = () => tweenLoopContinuation(tween);
     tweenActivate(tween);
-    // snap to start for the new iteration (matches Tween constructor behavior)
-    tween.callback(tween.interp(tween.duration));
+    // snap to where the new iteration is, its start less the time the last one ran over
+    tween.callback(tween.interp(tween.life));
 }
 
 // Continuation for pingPong: swaps start and end on the same tween each iteration.
-function pingPongContinuation(tween)
+function tweenPingPongContinuation(tween)
 {
     if (tween.loopRemaining !== Infinity && tween.loopRemaining <= 1) return;
     if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
     const tmp = tween.start;
     tween.start = tween.end;
     tween.end = tmp;
-    tween.life = tween.duration;
-    tween.thenCallback = () => pingPongContinuation(tween);
+    tweenCarryOvershoot(tween);
+    tween.thenCallback = () => tweenPingPongContinuation(tween);
     tweenActivate(tween);
-    tween.callback(tween.interp(tween.duration));
+    tween.callback(tween.interp(tween.life));
 }
 
 /** Engine plugin hook: advance every active tween by the appropriate delta.
@@ -503,18 +515,18 @@ function pingPongContinuation(tween)
  *  real time tweens move. May also be
  *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
  *  — useful for headless tests or custom replay/scrubbing systems.
- *  @param {number} [gameDelta] - Game-time delta in seconds; default: time - lastTime
- *  @param {number} [realDelta] - Real-time delta in seconds; default: timeReal - lastTimeReal
+ *  @param {number} [gameDelta] - Game-time delta in seconds; default: game time since the last engine update
+ *  @param {number} [realDelta] - Real-time delta in seconds; default: real time since the last engine update
  *  @memberof TweenSystem */
 function tweenUpdate(gameDelta, realDelta)
 {
     if (gameDelta === undefined)
     {
         // Engine path: compute deltas from engine time globals.
-        gameDelta = time - lastTime;
-        realDelta = timeReal - lastTimeReal;
-        lastTime = time;
-        lastTimeReal = timeReal;
+        gameDelta = time - tweenLastTime;
+        realDelta = timeReal - tweenLastTimeReal;
+        tweenLastTime = time;
+        tweenLastTimeReal = timeReal;
     }
     else if (realDelta === undefined)
     {

@@ -7,6 +7,10 @@
  * - Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
  *   GLTFObject that createObject makes; a skinned character's walk is not read
  * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too
+ * - An OPAQUE material still gets holes where its texture's alpha is under half, since the 3D pass cuts those texels
+ *   out of every solid draw, and MASK always cuts at half, alphaCutoff is not read; export a solid texture without
+ *   alpha, or with alpha 1 all over
+ * - Material and vertex colors are linear in glTF and are converted to sRGB at load, the space textures are in
  * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
  * - Requires the Render3D plugin
  * @namespace GLTF
@@ -40,6 +44,9 @@ class GLTFPart
         this.textureInfo = textureInfo;
         /** @property {boolean} - The material blends or is glass, so the part belongs in the transparent stage */
         this.transparent = transparent;
+        /** @property {boolean} - Its texture's sampler asks for nearest filtering, hard edged pixels, as pixel art
+         *  and voxel tools export; the object createObject makes draws it pixelated */
+        this.pixelated = false;
         /** @property {number} - The node it came from, which an animation moves it with */
         this.node = 0;
     }
@@ -61,7 +68,8 @@ class GLTFAnimation
          *  the key times and values, and how to go between keys, LINEAR, STEP or CUBICSPLINE
          *  @type {Array<Object>} */
         this.channels = channels;
-        /** @property {number} - Length in seconds, the time of its last key */
+        /** @property {number} - Length in seconds, the time of its last key
+         *  @type {number} */
         this.duration = channels.reduce((d, c)=> max(d, c.times[c.times.length - 1] || 0), 0);
     }
 }
@@ -169,6 +177,19 @@ class GLTFModel
         return this.parts.map(part=> model.copy().multiply(worldOf(part.node)).multiply(tree.restInverse[part.node]).multiply(modelInverse));
     }
 
+    /** Free the GPU buffers of every part's mesh and of the combined mesh, and the textures, for a model that is
+     *  done with, like a level's models when the next level loads
+     *  - Destroy the objects createObject made from it first; a mesh drawn again only uploads again, but a freed
+     *    texture is gone */
+    dispose()
+    {
+        for (const part of this.parts)
+            part.mesh.dispose();
+        this.mesh.dispose();
+        for (const textureInfo of new Set(this.parts.map(p=> p.textureInfo)))
+            textureInfo?.destroyWebGLTexture();
+    }
+
     /** Make an object at a position with a child per part, so each keeps its own texture, color and blending, and
      *  the model's animations can play on it; the way to show a model with windows or other see through parts,
      *  which the combined mesh draws solid, or one that moves
@@ -210,11 +231,17 @@ class GLTFObject extends EngineObject3D
         this.animationLoop = true;
         /** @property {boolean} - Whether it is moving through the animation now */
         this.animationPlaying = false;
+        /** @property {Array<EngineObject3D>} - The child that draws each of the model's parts, in the order of
+         *  model.parts, which an animation poses; one destroyed or taken off the object is left alone
+         *  @type {Array<EngineObject3D>} */
+        this.parts = [];
         for (const part of model.parts)
         {
             const o = new EngineObject3D(vec3(), part.mesh, part.textureInfo, part.color);
             o.transparent = part.transparent;
+            o.pixelated = part.pixelated;
             this.addChild(o);
+            this.parts.push(o);
         }
     }
 
@@ -243,10 +270,12 @@ class GLTFObject extends EngineObject3D
     {
         this.animationTime = time;
         if (!this.animation) return;
-        const pose = this.model.getPose(this.animation, time), parts = this.children;
+        // its own list of the part objects, so a child removed or added does not hand a part another's pose
+        const pose = this.model.getPose(this.animation, time), parts = this.parts;
         for (let i = 0; i < pose.length && i < parts.length; ++i)
         {
             const o = parts[i], m = pose[i];
+            if (o.destroyed || o.parent !== this) continue;
             o.pos3D = m.getTranslation();
             o.rotation3D = m.getRotation();
             o.scale3D = m.getScale();
@@ -276,6 +305,7 @@ class GLTFObject extends EngineObject3D
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Load a glTF or GLB model, the .bin and images of a .gltf from beside it
+ *  - An OPAQUE material's texture still cuts holes where its alpha is under half, give a solid one alpha 1
  *  @param {string} url
  *  @return {Promise<GLTFModel>}
  *  @memberof GLTF */
@@ -334,10 +364,12 @@ async function parseGLTF(data, baseUrl='')
         return gltfFetch(buffer.uri, baseUrl).then(r=> r.arrayBuffer());
     }));
 
-    // the textures, decoded together first; none without WebGL, and a failed image only logs
-    const textures = await Promise.all((json.textures || []).map(async (texture)=>
+    // the textures, decoded together first; none without WebGL, and a failed image only logs; only the base color
+    // textures are drawn with, so the normal, roughness and other maps are not loaded at all
+    const baseColorTextures = new Set((json.materials || []).map(m=> m.pbrMetallicRoughness?.baseColorTexture?.index));
+    const textures = await Promise.all((json.textures || []).map(async (texture, index)=>
     {
-        if (!glContext || typeof createImageBitmap == 'undefined') return;
+        if (!glContext || typeof createImageBitmap == 'undefined' || !baseColorTextures.has(index)) return;
         try
         {
             // a WebP or AVIF image is named by its extension, the browser decodes those like any other
@@ -416,8 +448,13 @@ function gltfSample(channel, time, out)
 {
     const {times, values, components: n, interpolation} = channel, last = times.length - 1;
     const cubic = interpolation === 'CUBICSPLINE', stride = cubic ? 3 * n : n, at = cubic ? n : 0; // a cubic key is in, value, out
-    let k = 0;
-    while (k < last && times[k + 1] <= time) ++k;
+    // the last key at or before the time, found by halving, since a baked animation has thousands of keys
+    let k = 0, high = last;
+    while (k < high)
+    {
+        const mid = k + high + 1 >> 1;
+        times[mid] <= time ? k = mid : high = mid - 1;
+    }
     if (k >= last || time <= times[0] || interpolation === 'STEP')
     {
         for (let j = 0; j < n; ++j)
@@ -493,22 +530,42 @@ function gltfNodeMatrix(node)
         t[0], t[1], t[2], 1]);
 }
 
-// an accessor's values as floats, one row per element, normalized integer types brought to 0 to 1
+// an accessor's values as floats, one row per element, normalized integer types brought to 0 to 1; a sparse one
+// starts from its bufferView, or from zeros without one, and then has the listed elements replaced
 function gltfAccessor(json, buffers, index)
 {
-    const a = json.accessors[index], view = json.bufferViews[a.bufferView];
-    ASSERT(!a.sparse, 'sparse accessors are not read');
+    const a = json.accessors[index], view = json.bufferViews?.[a.bufferView];
     const components = {SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16}[a.type];
-    const Type = {5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array}[a.componentType];
-    const buffer = buffers[view.buffer], offset = (view.byteOffset || 0) + (a.byteOffset || 0), size = Type.BYTES_PER_ELEMENT;
-    const stride = view.byteStride || components * size;
+    const types = {5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array};
+    const Type = types[a.componentType];
+    if (!components || !Type) // a file problem, so it throws in every build
+        throw new Error(`glTF accessor of ${a.type} ${a.componentType} is not read`);
+    const size = Type.BYTES_PER_ELEMENT;
     const scale = a.normalized ? new Map([[Int8Array, 127], [Uint8Array, 255], [Int16Array, 32767], [Uint16Array, 65535]]).get(Type) || 1 : 1;
     const out = new Float32Array(a.count * components);
-    if (stride === components * size)
-        out.set(new Type(buffer, offset, a.count * components)); // packed, one view over all of it
-    else
-        for (let i = 0; i < a.count; ++i) // interleaved with other attributes, an element at each stride
-            out.set(new Type(buffer, offset + i * stride, components), i * components);
+    if (view)
+    {
+        const buffer = buffers[view.buffer], offset = (view.byteOffset || 0) + (a.byteOffset || 0);
+        const stride = view.byteStride || components * size;
+        if (stride === components * size)
+            out.set(new Type(buffer, offset, a.count * components)); // packed, one view over all of it
+        else
+            for (let i = 0; i < a.count; ++i) // interleaved with other attributes, an element at each stride
+                out.set(new Type(buffer, offset + i * stride, components), i * components);
+    }
+    const sparse = a.sparse;
+    if (sparse)
+    {
+        // which elements change, and their new values packed in the accessor's own type
+        const {indices, values} = sparse, IndexType = types[indices.componentType];
+        const indexView = json.bufferViews?.[indices.bufferView], valueView = json.bufferViews?.[values.bufferView];
+        if (!IndexType || !indexView || !valueView)
+            throw new Error('glTF sparse accessor is missing its indices or values');
+        const at = new IndexType(buffers[indexView.buffer], (indexView.byteOffset || 0) + (indices.byteOffset || 0), sparse.count);
+        const data = new Type(buffers[valueView.buffer], (valueView.byteOffset || 0) + (values.byteOffset || 0), sparse.count * components);
+        for (let i = 0; i < sparse.count; ++i)
+            out.set(data.subarray(i * components, (i + 1) * components), at[i] * components);
+    }
     if (scale !== 1)
         for (let i = 0; i < out.length; ++i)
             out[i] /= scale;
@@ -536,7 +593,8 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     const points = read(attributes.POSITION, (d, k)=> vec3(d[k], d[k+1], d[k+2]));
     const normals = attributes.NORMAL !== undefined ? read(attributes.NORMAL, (d, k)=> vec3(d[k], d[k+1], d[k+2])) : undefined;
     const uvs = attributes.TEXCOORD_0 !== undefined ? read(attributes.TEXCOORD_0, (d, k)=> vec2(d[k], d[k+1])) : undefined;
-    const colors = attributes.COLOR_0 !== undefined ? read(attributes.COLOR_0, (d, k, n)=> rgb(d[k], d[k+1], d[k+2], n > 3 ? d[k+3] : 1)) : undefined;
+    const colors = attributes.COLOR_0 !== undefined ? read(attributes.COLOR_0, (d, k, n)=>
+        rgb(gltfSRGB(d[k]), gltfSRGB(d[k+1]), gltfSRGB(d[k+2]), n > 3 ? d[k+3] : 1)) : undefined;
     let indices = primitive.indices !== undefined ? Array.from(gltfAccessor(json, buffers, primitive.indices).data) : points.map((_, i)=> i);
     if (mode === 5) // a strip: triangle i is the three entries up to i, the odd ones read the other way
         indices = indices.flatMap((_, i, s)=> i < 2 ? [] : i & 1 ? [s[i-1], s[i-2], s[i]] : [s[i-2], s[i-1], s[i]]);
@@ -553,6 +611,14 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     // only a blending material reads its alpha, an opaque or masked one is solid whatever the factor says
     const transmission = material.extensions?.KHR_materials_transmission?.transmissionFactor || 0;
     const blend = material.alphaMode === 'BLEND', alpha = (blend ? factor[3] : 1) * (1 - .8 * transmission);
-    return new GLTFPart(name, mesh, rgb(factor[0], factor[1], factor[2], alpha),
+    const texture = pbr.baseColorTexture && json.textures?.[pbr.baseColorTexture.index];
+    const part = new GLTFPart(name, mesh, rgb(gltfSRGB(factor[0]), gltfSRGB(factor[1]), gltfSRGB(factor[2]), alpha),
         pbr.baseColorTexture ? textures[pbr.baseColorTexture.index] : undefined, blend || transmission > 0);
+    part.pixelated = json.samplers?.[texture?.sampler]?.magFilter === 9728; // NEAREST
+    return part;
 }
+
+// a glTF color factor or vertex color is linear, where the renderer works in sRGB like the textures, so it is
+// brought across at load or a mid gray material would come out nearly black; 0 and 1 stay exact
+function gltfSRGB(c)
+{ return c <= .0031308 ? c * 12.92 : c >= 1 ? c : 1.055 * c ** (1 / 2.4) - .055; }

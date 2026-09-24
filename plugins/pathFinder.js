@@ -42,7 +42,8 @@ class PathFinderNode
         this.g = 0;
         /** @property {number} - A* F-score: G + heuristic */
         this.f = 0;
-        /** @property {PathFinderNode|null} - Parent for path reconstruction */
+        /** @property {PathFinderNode|null} - Parent for path reconstruction
+         *  @type {PathFinderNode|null} */
         this.parent = null;
         /** @property {boolean} - In the A* open list */
         this.isOpen = false;
@@ -94,9 +95,11 @@ class PathFinder
         // .size + .getCollisionData.
         if (isVector2(source))
         {
-            /** @property {Vector2} - Grid dimensions in tiles */
+            /** @property {Vector2} - Grid dimensions in tiles
+             *  @type {Vector2} */
             this.size = source.floor();
-            /** @property {TileCollisionLayer|undefined} - Tile layer driving walkability, if any */
+            /** @property {TileCollisionLayer|undefined} - Tile layer driving walkability, if any
+             *  @type {TileCollisionLayer|undefined} */
             this.tileLayer = undefined;
         }
         else
@@ -119,7 +122,8 @@ class PathFinder
         /** @property {number} - Debug primitive lifetime in seconds (0 disables drawing) */
         this.debugTime = 1;
 
-        /** @property {Array<PathFinderNode>} - Flat row-major array of size.x*size.y nodes */
+        /** @property {Array<PathFinderNode>} - Flat row-major array of size.x*size.y nodes
+         *  @type {Array<PathFinderNode>} */
         this.nodes = new Array(this.size.x * this.size.y);
         for (let y = 0; y < this.size.y; ++y)
         for (let x = 0; x < this.size.x; ++x)
@@ -127,6 +131,11 @@ class PathFinder
 
         // Scratch Vector2 reused to avoid allocations in the isWalkable hot path.
         this.collisionScratch = vec2();
+
+        // The nodes the last search changed, reset before the next one so a
+        // search without a rebuild starts as fresh as one after it.
+        /** @type {Array<PathFinderNode>} */
+        this.searchNodes = [];
     }
 
     /** Default walkability: if a tile layer was provided, returns true when the
@@ -228,6 +237,18 @@ class PathFinder
         ASSERT(startNode !== endNode, 'aStarSearch: start and end must differ — caller should handle trivial case');
         ASSERT(startNode.walkable && endNode.walkable, 'aStarSearch: endpoints must be walkable');
 
+        // Undo what the last search changed, so one without a rebuild starts
+        // from the same state; after buildNodeData these are fresh already.
+        const searchNodes = this.searchNodes;
+        for (const n of searchNodes)
+        {
+            n.g = n.f = 0;
+            n.parent = null;
+            n.isOpen = n.isClosed = false;
+        }
+        searchNodes.length = 0;
+        searchNodes.push(startNode);
+
         const openList = [startNode];
         startNode.isOpen = true;
         let loopCount = 0;
@@ -286,6 +307,7 @@ class PathFinder
                 {
                     neighbor.isOpen = true;
                     openList.push(neighbor);
+                    searchNodes.push(neighbor);
                 }
                 else if (tentativeG >= neighbor.g)
                 {
@@ -474,7 +496,8 @@ class PathFinder
      *  straight geometric shortcut can't be trusted to be the lowest-cost
      *  route when cost-weighted terrain is in play.
      *
-     *  Port of ShortenPath2() in pathFinding.cpp.
+     *  Replaces the port of ShortenPath2() in pathFinding.cpp, which could
+     *  add a segment it had not checked.
      *  @param {PathFinderNode[]} path
      *  @private */
     smoothPathStringPull(path)
@@ -485,74 +508,27 @@ class PathFinder
             if (!n.isClear()) return;
         }
 
+        // Greedy: from each kept node, jump to the furthest node with a clear
+        // line to it, or else the next node. Every segment is one isLineClear
+        // accepted or one the path already had, so none can cross a wall.
         const original = path.slice();
         path.length = 0;
         path.push(original[0]);
-        let searchIndex = 0;
-
-        for (let i = 1; i < original.length; ++i)
+        for (let k = 0; k < original.length - 1;)
         {
-            const node = original[i];
-
-            // Skip if node is collinear with the search-window start and the
-            // previous node — it adds no information. Note: a == b is the
-            // degenerate i=1, searchIndex=0 case; skip the test then.
-            {
-                const a = original[searchIndex];
-                const b = original[i - 1];
-                if (a !== b)
-                {
-                    const cross =
-                        (b.pos.x - a.pos.x) * (node.pos.y - a.pos.y) -
-                        (b.pos.y - a.pos.y) * (node.pos.x - a.pos.x);
-                    if (cross === 0) continue;
-                }
-            }
-
-            if (!this.isLineClear(node.pos, path[path.length - 1].pos))
-            {
-                // Look ahead — if any later node has a clear shot to the
-                // back of our new path, skip this node and try later.
-                let foundClearAfter = false;
-                for (let j = i + 1; j < original.length; ++j)
-                {
-                    if (this.isLineClear(original[j].pos, path[path.length - 1].pos))
-                    {
-                        foundClearAfter = true;
-                        break;
-                    }
-                }
-                if (foundClearAfter)
-                {
-                    if (this.debug && this.debugTime > 0)
-                        debugLine(node.posWorld, path[path.length - 1].posWorld, rgb(0, 0, 1, 0.3), 0.02, this.debugTime);
-                    continue;
-                }
-
-                // No clear line ahead — fall back to the last waypoint we did
-                // have a clear line to. searchIndex tracks our scan position.
-                for (; searchIndex < original.length; ++searchIndex)
-                {
-                    const cand = original[searchIndex];
-                    if (this.isLineClear(node.pos, cand.pos))
-                    {
-                        path.push(cand);
-                        i = searchIndex;
-                        break;
-                    }
-                }
-                ASSERT(searchIndex < original.length, 'smoothPathStringPull: ran out of candidates');
-            }
+            let j = original.length - 1;
+            while (j > k + 1 && !this.isLineClear(original[k].pos, original[j].pos))
+                --j;
+            path.push(original[j]);
+            k = j;
         }
-
-        path.push(original[original.length - 1]);
     }
 
     /** Drop any middle node that lies exactly on the line through its two
      *  neighbors. Backstop for the smoothing passes — the corners pass
      *  intentionally keeps truly-straight runs, and the string-pulling pass
-     *  checks collinearity against the original path, not the in-progress
-     *  result, so it can leave 3+ collinear nodes in some edge cases.
+     *  falls back to the next node where no longer line is clear, so it can
+     *  leave 3+ collinear nodes in some edge cases.
      *  @param {PathFinderNode[]} path
      *  @private */
     dropCollinearNodes(path)
@@ -702,15 +678,21 @@ class PathFinder
      *  Start and end are snapped to the nearest walkable tile via
      *  getNearestClearNode. Intermediate points are tile centers unless the
      *  string-pulling smoothing pass moves them off-grid.
+     *
+     *  By default, calls `buildNodeData()` first, which asks isWalkable and
+     *  getCost about every cell. When finding many paths with unchanged
+     *  walkability, pass `rebuild=false` and call `buildNodeData()` once
+     *  externally; the paths found are the same.
      *  @param {Vector2} startPos - World-space start
      *  @param {Vector2} endPos - World-space end
+     *  @param {boolean} [rebuild] - Whether to call buildNodeData first
      *  @returns {Vector2[]}
      *  @memberof PathFinding */
-    findPath(startPos, endPos)
+    findPath(startPos, endPos, rebuild = true)
     {
         ASSERT(isVector2(startPos) && isVector2(endPos), 'findPath needs Vector2 endpoints');
 
-        this.buildNodeData();
+        if (rebuild) this.buildNodeData();
 
         // rebuild=false because we just built — avoid redundant work per snap.
         // the ends go to the nearest cell that can be walked, whatever it costs to cross

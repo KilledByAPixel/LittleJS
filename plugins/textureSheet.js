@@ -98,8 +98,11 @@ class TextureSheet
 
         // keep the layout of the source image, but narrow it if a row is too wide
         // frames wrap down to the next row, which TileInfo.frame handles via columns
-        const sourceColumns = imageSize.x / sourceCellWidth;
-        const frameCount = sourceColumns * (imageSize.y / sourceCellHeight);
+        // whole frames only, a partial one left over at an edge is ignored
+        const sourceColumns = imageSize.x / sourceCellWidth | 0;
+        const frameCount = sourceColumns * (imageSize.y / sourceCellHeight | 0);
+        if (!frameCount)
+            return undefined; // smaller than a frame, there is nothing to pack
         const columns = min(sourceColumns, maxColumns);
         const blockWidth = columns * cellWidth;
         const blockHeight = ceil(frameCount / columns) * cellHeight;
@@ -142,8 +145,9 @@ class TextureSheet
         const frameSize = tileInfo.size;
         const sourceCellWidth = frameSize.x + sourcePadding.x*2;
         const sourceCellHeight = frameSize.y + sourcePadding.y*2;
-        const sourceColumns = image.width / sourceCellWidth;
-        const frameCount = sourceColumns * (image.height / sourceCellHeight);
+        // whole frames only as tryAdd packed them, a fractional count would never end the loop
+        const sourceColumns = image.width / sourceCellWidth | 0;
+        const frameCount = sourceColumns * (image.height / sourceCellHeight | 0);
         const columns = tileInfo.columns || frameCount;
         const cellWidth = frameSize.x + tileInfo.padding*2;
         const cellHeight = frameSize.y + tileInfo.padding*2;
@@ -196,6 +200,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
     ASSERT(!frameSize || isVector2(frameSize) || isNumber(frameSize), 'frameSize must be a vec2 or number');
     ASSERT(isNumber(padding), 'padding must be a number');
     ASSERT(isNumber(sourcePadding) || isVector2(sourcePadding), 'sourcePadding must be a number or vec2');
+    ASSERT(engineInitialized || headlessMode, 'call loadSprite after engineInit, e.g. in gameInit');
 
     if (isNumber(frameSize))
         frameSize = vec2(frameSize);
@@ -225,9 +230,15 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
             // pack onto a sheet, then fill in the tile that was already handed out,
             // copying every field so nothing is missed if TileInfo gains more of them
             const imageSize = vec2(image.width, image.height);
-            const {sheet, tile} = textureSheetAdd(imageSize, frameSize, padding, sourcePadding);
-            Object.assign(tileInfo, tile);
-            sheet.drawImage(image, tileInfo, false, sourcePadding); // upload once per batch below
+            const added = textureSheetAdd(imageSize, frameSize, padding, sourcePadding);
+            if (!added)
+            {
+                // leave the tile empty, no sheet can hold it
+                LOG('loadSprite image is too large to fit on a texture sheet:', src);
+                return;
+            }
+            Object.assign(tileInfo, added.tile);
+            added.sheet.drawImage(image, tileInfo, false, sourcePadding); // upload once per batch below
         }
         else
         {
@@ -261,6 +272,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
     ASSERT(isStringLike(imageSrc), 'atlas image src must be a string');
     ASSERT(isStringLike(jsonSrc) || typeof jsonSrc === 'object', 'atlas json must be a path or object');
     ASSERT(isNumber(padding), 'padding must be a number');
+    ASSERT(engineInitialized || headlessMode, 'call loadAtlas after engineInit, e.g. in gameInit');
 
     const atlas = {};
     if (headlessMode) return atlas;
@@ -288,7 +300,13 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                 // reserve a block of full size cells, one per frame
                 const sourceSize = group.frames[0].sourceSize;
                 const blockSize = vec2(sourceSize.x*group.frames.length, sourceSize.y);
-                const {sheet, tile} = textureSheetAdd(blockSize, sourceSize, padding);
+                const added = textureSheetAdd(blockSize, sourceSize, padding);
+                if (!added)
+                {
+                    LOG('loadAtlas frames are too large to fit on a texture sheet:', group.name);
+                    continue;
+                }
+                const {sheet, tile} = added;
 
                 // draw each frame untrimmed into its cell
                 const context = sheet.context;
@@ -439,7 +457,8 @@ function textureSheetCreate()
     return sheet;
 }
 
-// use the first sheet with enough space, or make a new one
+// use the first sheet with enough space, or make a new one,
+// returns undefined if it would not fit even on an empty sheet
 function textureSheetAdd(imageSize, frameSize, padding, sourcePadding)
 {
     let sheet, tile;
@@ -448,9 +467,12 @@ function textureSheetAdd(imageSize, frameSize, padding, sourcePadding)
             break;
     if (!tile)
     {
+        // probe an empty sheet first, a new one is a canvas and a texture kept for good
+        const emptySheet = {size: textureSheetSize, cursor: vec2(), rowHeight: 0};
+        if (!TextureSheet.prototype.tryAdd.call(emptySheet, imageSize, frameSize, padding, sourcePadding))
+            return;
         sheet = textureSheetCreate();
         tile = sheet.tryAdd(imageSize, frameSize, padding, sourcePadding);
-        ASSERT(!!tile, 'image is too large to fit on a texture sheet');
     }
     return {sheet, tile};
 }

@@ -171,7 +171,9 @@ function debugLine(posA, posB, color, width=.1, time=0, screenSpace=false)
 
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
-    debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true, screenSpace);
+    // screen space y points down, so its angle is measured the other way, as drawLine does
+    const angle = vec2(halfDelta.x, screenSpace ? -halfDelta.y : halfDelta.y).angle();
+    debugRect(posA.add(halfDelta), size, color, time, angle, true, screenSpace);
 }
 
 /** Draw a debug combined axis aligned bounding box in world space
@@ -301,12 +303,17 @@ function debugUpdate()
     }
     if (debugVideoCaptureIsActive())
     {
-        // control to stop video capture
-        if (!debugOverlay || keyWasPressed('Digit6'))
+        // control to stop video capture, a capture the overlay started also stops when the overlay closes,
+        // one the game started from code runs until it calls debugVideoCaptureStop
+        if (debugOverlay ? keyWasPressed('Digit6') : debugVideoCapture.fromOverlay)
             debugVideoCaptureStop();
     }
     else if (debugOverlay && keyWasPressed('Digit6'))
+    {
         debugVideoCaptureStart();
+        if (debugVideoCapture)
+            debugVideoCapture.fromOverlay = true;
+    }
 }
 
 // the text beside the mouse, with the same shadow as the overlay
@@ -337,30 +344,30 @@ function debugTileLayersShown()
         .sort((a, b)=> a.renderOrder - b.renderOrder); // a stable sort, so equal orders keep the order they were made in
 }
 
-// the layers Debug Tiles shows right now: every one, or the one the 8 key has stepped to, every one again if
-// layers went away since
-function debugTileLayersSelected()
+// the layers Debug Tiles shows right now, from the ones shown: every one, or the one the 8 key has stepped to,
+// every one again if layers went away since
+function debugTileLayersSelected(layers)
 {
-    const layers = debugTileLayersShown(), layer = layers[debugTiles - 2];
+    const layer = layers[debugTiles - 2];
     return layer ? [layer] : layers;
 }
 
 // what the overlay menu says Debug Tiles is showing
-function debugTilesLabel()
+function debugTilesLabel(layers)
 {
     if (!debugTiles) return '';
-    const layers = debugTileLayersShown(), layer = layers[debugTiles - 2];
+    const layer = layers[debugTiles - 2];
     return layer ? ` (layer ${debugTiles - 1} of ${layers.length}, renderOrder ${layer.renderOrder}${layer instanceof TileCollisionLayer ? ', collision' : ''})` : ' (all)';
 }
 
 // Debug Tiles: each layer's bounds, then the collision value of every cell on screen, tinted by value, with the
 // number when a tile is big enough on screen to read it
-function debugTileLayers()
+function debugTileLayers(layers)
 {
     // everything the camera can see, turned or not
     const reach = getCameraSize().length() / 2;
-    const showValues = cameraScale >= 24, layers = debugTileLayersShown();
-    for (const layer of debugTileLayersSelected())
+    const showValues = cameraScale >= 24;
+    for (const layer of debugTileLayersSelected(layers))
     {
         const isCollision = layer instanceof TileCollisionLayer, size = layer.size, pos = layer.pos;
         const color = isCollision ? '#f80' : '#0cf';
@@ -384,17 +391,18 @@ function debugTileLayers()
 }
 
 // the tile and collision value under the mouse of each layer shown by Debug Tiles, as lines of the mouse text
-function debugTileText()
+function debugTileText(layers)
 {
     if (!debugTiles) return '';
     // each layer by its number in the 8 key's cycle, the one the menu shows
     let text = '';
-    const layers = debugTileLayersShown();
-    for (const layer of debugTileLayersSelected())
+    for (const layer of debugTileLayersSelected(layers))
     {
         const local = mousePos.subtract(layer.pos);
         if (!local.arrayCheck(layer.size)) continue;
-        const data = layer.getData(local), collision = layer.getCollisionData(local);
+        // only a collision layer has collision data, the others are just drawn
+        const data = layer.getData(local);
+        const collision = layer instanceof TileCollisionLayer && layer.getCollisionData(local);
         text += '\nlayer ' + (layers.indexOf(layer) + 1) + ': tile ' + (data?.tile ?? 'empty') + (collision ? ', collision ' + collision : '');
     }
     return text;
@@ -403,10 +411,17 @@ function debugTileText()
 function debugRender()
 {
     if (debugVideoCaptureIsActive())
-        return; // don't show debug info when capturing video
+    {
+        // don't show debug info when capturing video, but still drop the expired primitives so they don't pile up
+        debugPrimitives = debugPrimitives.filter(r=>r.timer<0);
+        return;
+    }
 
     // flush any gl sprites before drawing debug info
     glFlush();
+
+    // the tile layers Debug Tiles can show, found once for everything below
+    const tileLayers = debugTiles ? debugTileLayersShown() : [];
 
     const savedDrawCount = drawCount;
     const savedPrimitiveCount = primitiveCount;
@@ -500,8 +515,10 @@ function debugRender()
             // show the collision tile under the mouse, on its layer's own grid
             drawRect(debugTileCellCenter(mousePos), vec2(1), rgb(1,1,0,.5), 0, false);
         }
-        debugTiles && debugTileLayers();
     }
+
+    // Debug Tiles draws with the overlay closed too, like the other modes listed in the corner
+    debugTiles && debugTileLayers(tileLayers);
 
     {
         // draw debug primitives
@@ -521,7 +538,7 @@ function debugRender()
             }
             debugContext.translate(pos.x|0, pos.y|0);
             debugContext.rotate(angle);
-            debugContext.scale(1, p.text ? 1 : -1);
+            debugContext.scale(1, p.text !== undefined ? 1 : -1);
             debugContext.fillStyle = p.color;
             debugContext.strokeStyle = p.color;
             if (p.text !== undefined)
@@ -584,7 +601,7 @@ function debugRender()
         let debugText = 'mouse pos = ' + mousePos;
         if (tileCollisionLayers.length)
             debugText += '\nmouse collision = ' + tileCollisionGetData(mousePos);
-        debugText += debugTileText();
+        debugText += debugTileText(tileLayers);
         debugText += '\n\n--- object info ---\n';
         debugText += debugObject.toString();
         debugMouseText(debugText);
@@ -592,7 +609,7 @@ function debugRender()
     else if (debugOverlay && debugTiles)
     {
         // no object to pick, the tiles under the mouse on their own
-        const text = debugTileText();
+        const text = debugTileText(tileLayers);
         text && debugMouseText('mouse pos = ' + mousePos + text);
     }
 
@@ -634,7 +651,7 @@ function debugRender()
             debugContext.fillStyle = debugSound ? '#f00' : '#fff';
             debugContext.fillText('7: Debug Sound', x, y += h);
             debugContext.fillStyle = debugTiles ? '#f00' : '#fff';
-            debugContext.fillText('8: Debug Tiles' + debugTilesLabel(), x, y += h);
+            debugContext.fillText('8: Debug Tiles' + debugTilesLabel(tileLayers), x, y += h);
 
             let keysPressed = '';
             let mousePressed = '';
@@ -669,7 +686,7 @@ function debugRender()
             debugContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
             debugContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
             debugContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
-            debugContext.fillText(debugTiles ? 'Debug Tiles' + debugTilesLabel() : '', x, y += h);
+            debugContext.fillText(debugTiles ? 'Debug Tiles' + debugTilesLabel(tileLayers) : '', x, y += h);
             debugContext.fillText(debugSound ? 'Debug Sound' : '', x, y += h);
         }
 
@@ -718,6 +735,63 @@ function debugVideoCaptureStart()
 {
     ASSERT(!debugVideoCaptureIsActive(), 'Already capturing video!');
 
+    // everything that can fail where recording is unsupported is in the try, a missing captureStream
+    // or a MediaRecorder that refuses webm throws here and is cleaned up rather than stopping the game
+    const captureTimer = new Timer(0, true);
+    const chunks = [];
+    let videoTrack, mediaRecorder, audioStreamDestination, silentAudioSource, audioTapNode;
+    try
+    {
+        // setup captureStream to capture manually by passing 0
+        const stream = mainCanvas.captureStream(0);
+        videoTrack = stream.getVideoTracks()[0];
+        videoTrack.applyConstraints({frameRate:frameRate});
+
+        // set up the media recorder
+        mediaRecorder = new MediaRecorder(stream,
+            {mimeType:'video/webm;codecs=vp8'});
+        mediaRecorder.ondataavailable = (e)=> chunks.push(e.data);
+        mediaRecorder.onstop = ()=>
+        {
+            const blob = new Blob(chunks, {type: 'video/webm'});
+            const url = URL.createObjectURL(blob);
+            saveDataURL(url, 'capture.webm', 1e3);
+        };
+
+        if (soundEnable)
+        {
+            // create silent audio source
+            // fixes issue where video can not start recording without audio
+            silentAudioSource = new ConstantSourceNode(audioContext, { offset: 0 });
+            silentAudioSource.connect(audioMasterGain);
+            silentAudioSource.start();
+
+            // tap the end of the master chain so a master effect is in the recording
+            // (a master effect swapped mid-capture drops the tap, the rest records silent)
+            audioTapNode = audioMasterEffectOutput || audioMasterGain;
+            audioStreamDestination = audioContext.createMediaStreamDestination();
+            audioTapNode.connect(audioStreamDestination);
+            for (const track of audioStreamDestination.stream.getAudioTracks())
+                stream.addTrack(track); // add audio tracks to capture stream
+        }
+
+        // start recording
+        mediaRecorder.start();
+    }
+    catch(e)
+    {
+        LOG('Video capture not supported in this browser!');
+        videoTrack?.stop();
+        silentAudioSource?.stop();
+        if (audioStreamDestination)
+        {
+            // the tap may not have been made before the failure
+            try { audioTapNode.disconnect(audioStreamDestination); }
+            catch { }
+        }
+        return;
+    }
+
     if (!debugVideoCaptureIcon)
     {
         // create recording icon to show it is capturing video
@@ -728,55 +802,9 @@ function debugVideoCaptureStart()
         debugVideoCaptureIcon.style.font = '50px monospace';
         document.body.appendChild(debugVideoCaptureIcon);
     }
-    // show recording icon
+    // show recording icon, only once recording has started
     debugVideoCaptureIcon.textContent = '';
     debugVideoCaptureIcon.style.display = '';
-
-    // setup captureStream to capture manually by passing 0
-    const stream = mainCanvas.captureStream(0);
-    const videoTrack = stream.getVideoTracks()[0];
-    const captureTimer = new Timer(0, true);
-    const chunks = [];
-    videoTrack.applyConstraints({frameRate:frameRate});
-
-    // set up the media recorder
-    const mediaRecorder = new MediaRecorder(stream, 
-        {mimeType:'video/webm;codecs=vp8'});
-    mediaRecorder.ondataavailable = (e)=> chunks.push(e.data);
-    mediaRecorder.onstop = ()=>
-    {
-        const blob = new Blob(chunks, {type: 'video/webm'});
-        const url = URL.createObjectURL(blob);
-        saveDataURL(url, 'capture.webm', 1e3);
-    };
-
-    let audioStreamDestination, silentAudioSource, audioTapNode;
-    if (soundEnable)
-    {
-        // create silent audio source
-        // fixes issue where video can not start recording without audio
-        silentAudioSource = new ConstantSourceNode(audioContext, { offset: 0 });
-        silentAudioSource.connect(audioMasterGain);
-        silentAudioSource.start();
-
-        // tap the end of the master chain so a master effect is in the recording
-        // (a master effect swapped mid-capture drops the tap, the rest records silent)
-        audioStreamDestination = audioContext.createMediaStreamDestination();
-        audioTapNode = audioMasterEffectOutput || audioMasterGain;
-        audioTapNode.connect(audioStreamDestination);
-        for (const track of audioStreamDestination.stream.getAudioTracks())
-            stream.addTrack(track); // add audio tracks to capture stream
-    }
-
-    // start recording
-    try { mediaRecorder.start(); }
-    catch(e)
-    {
-        LOG('Video capture not supported in this browser!');
-        silentAudioSource?.stop();
-        audioStreamDestination && audioTapNode.disconnect(audioStreamDestination);
-        return;
-    }
 
     LOG('Video capture started.');
 

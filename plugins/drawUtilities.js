@@ -45,8 +45,10 @@ function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, 
 function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 {
     // setup nine slice tiles - startTile is the top-left of a 3x3 tile block,
-    // so the center tile is one tile down and right from it
-    const centerTile = startTile.offset(startTile.size);
+    // so the center tile is one tile down and right from it, stepping over
+    // the padding around each tile the way tile() lays out the grid
+    const step = startTile.size.add(vec2(startTile.padding*2));
+    const centerTile = startTile.offset(step);
     const centerSize = size.add(vec2(extraSpace-borderSize*2));
     const cornerSize = vec2(borderSize);
     const cornerOffset = size.scale(.5).subtract(cornerSize.scale(.5));
@@ -61,7 +63,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
         const horizontal = i%2;
         const sidePos = cornerOffset.multiply(vec2(horizontal?i===1?1:-1:0, horizontal?0:i?-1:1));
         const sideSize = vec2(horizontal ? borderSize : centerSize.x, horizontal ? centerSize.y : borderSize);
-        const sideTile = centerTile.offset(startTile.size.multiply(vec2(i===1?1:i===3?-1:0,i===0?-flip:i===2?flip:0)))
+        const sideTile = centerTile.offset(step.multiply(vec2(i===1?1:i===3?-1:0,i===0?-flip:i===2?flip:0)))
         drawTile(pos.add(sidePos.rotate(rotateAngle)), sideSize, sideTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
     }
     for (let i=4; i--;)
@@ -70,7 +72,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
         const flipX = i>1;
         const flipY = i && i<3;
         const cornerPos = cornerOffset.multiply(vec2(flipX?-1:1, flipY?-1:1));
-        const cornerTile = centerTile.offset(startTile.size.multiply(vec2(flipX?-1:1,flipY?flip:-flip)));
+        const cornerTile = centerTile.offset(step.multiply(vec2(flipX?-1:1,flipY?flip:-flip)));
         drawTile(pos.add(cornerPos.rotate(rotateAngle)), cornerSize, cornerTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
     }
 }

@@ -179,11 +179,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     engineInitialized = true;
     ASSERT(isArray(imageSources), 'pass in images as array');
 
-    // ensure body exists for minimal HTML where the script runs before <body> is parsed
-    if (!document.body)
-        document.documentElement.appendChild(document.createElement('body'));
-    rootElement ||= document.body;
-
     // allow passing in empty functions
     gameInit       ||= ()=>{};
     gameUpdate     ||= ()=>{};
@@ -230,8 +225,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // when paused tick on unscaled time so the pause update rate stays
         // fixed instead of following however fast the display refreshes
         frameTimeBufferMS += paused ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
-        if (paused || combinedScale <= 1)
-            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
+        frameTimeBufferMS = min(frameTimeBufferMS, 50 * (paused ? 1 : max(1, combinedScale))); // clamp min framerate
 
         // apply time delta smoothing, improves smoothness of framerate in some browsers
         let wasUpdated = false, deltaSmooth = 0;
@@ -261,6 +255,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 // update object transforms even when paused
                 for (const o of engineObjects)
                     o.parent || o.updateTransforms();
+
+                // objects made and destroyed while paused, like a menu's effects, still leave the list
+                engineObjects = engineObjects.filter(o=>!o.destroyed);
             }
             else
                 engineObjectsUpdate();
@@ -294,7 +291,12 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         if (!debugVideoCaptureIsActive() && (wasUpdated || windowChanged))
             renderFrame();
         if (!engineManualStep)
-            requestAnimationFrame(engineUpdate);
+        {
+            if (typeof requestAnimationFrame === 'function')
+                requestAnimationFrame(engineUpdate);
+            else // a headless server in Node has no display to wait for, a timer keeps the pace
+                setTimeout(()=> engineUpdate(performance.now()), 1e3 / frameRate);
+        }
 
         function renderFrame()
         {
@@ -327,10 +329,14 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             primitiveCount = 0;
         }
     }
-    engineUpdateInternal = engineUpdate;
 
     // skip setup if headless
     if (headlessMode) return startEngine();
+
+    // ensure body exists for minimal HTML where the script runs before <body> is parsed
+    if (!document.body)
+        document.documentElement.appendChild(document.createElement('body'));
+    rootElement ||= document.body;
 
     // setup webgl
     glInit(rootElement);
@@ -404,6 +410,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     {
         // wait for gameInit to load
         await gameInit();
+        engineUpdateInternal = engineUpdate; // engineStep only runs once the game is set up
         engineManualStep || engineUpdate();
     }
 }
@@ -598,7 +605,8 @@ function engineObjectsDestroy(immediate=true)
 /** Collects all object within a given area
  *  - Objects destroyed this frame are left out, they are only in the list until the frame ends
  *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
- *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2
+ *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2,
+ *                                   left out the objects that overlap the point at pos
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @return {Array<EngineObject>} - List of collected objects
  *  @memberof Engine */
@@ -611,9 +619,10 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
         for (const o of objects)
             o.destroyed || collectedObjects.push(o);
     }
-    else if (size instanceof Vector2)
+    else if (size === undefined || size instanceof Vector2)
     {
-        // bounding box test
+        // bounding box test, a point when there is no size
+        size ??= vec2();
         for (const o of objects)
             o.destroyed || o.isOverlapping(pos, size) && collectedObjects.push(o);
     }
@@ -636,7 +645,8 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
 /** Triggers a callback for each object within a given area, objects destroyed this frame left out
  *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
  *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2
- *  @param {ObjectCallbackFunction} [callbackFunction] - Calls this function on every object that passes the test
+ *  @param {ObjectCallbackFunction} [callbackFunction] - Calls this function on every object that passes the test, needed
+ *                                                     (marked optional only because the area before it is)
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @memberof Engine */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)

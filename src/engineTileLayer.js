@@ -21,26 +21,26 @@
  *  @memberof TileLayers */
 const tileCollisionLayers = [];
 
+// a tile collision layer's position is whole numbers, so its cells are the world grid the physics lands objects on
+function tileCollisionAssertWhole(layer)
+{ ASSERT(layer.pos.x % 1 === 0 && layer.pos.y % 1 === 0, 'a tile collision layer must sit at a whole number position', layer.pos); }
+
 /** Get tile collision data for a given cell in the grid
 *  @param {Vector2} pos
 *  @param {boolean} [solidOnly] - Only check solid layers?
 *  @return {number}
 *  @memberof TileLayers */
-// a tile collision layer's position is whole numbers, so its cells are the world grid the physics lands objects on
-function tileCollisionAssertWhole(layer)
-{ ASSERT(layer.pos.x % 1 === 0 && layer.pos.y % 1 === 0, 'a tile collision layer must sit at a whole number position', layer.pos); }
-
 function tileCollisionGetData(pos, solidOnly=true)
 {
-    // check all tile collision layers
+    // check all tile collision layers, in scalars since particles ask this every frame
     for (const layer of tileCollisionLayers)
         if (!solidOnly || layer.isSolid)
         {
-            // convert world pos to layer local space
-            const layerPos = pos.subtract(layer.pos);
-            if (layerPos.arrayCheck(layer.size))
+            // world pos to the layer's cell
+            const x = pos.x - layer.pos.x, y = pos.y - layer.pos.y, size = layer.size;
+            if (x >= 0 && y >= 0 && x < size.x && y < size.y)
             {
-                const data = layer.getCollisionData(layerPos);
+                const data = layer.collisionData[(y|0)*size.x + (x|0)];
                 if (data) return data;
             }
         }
@@ -52,7 +52,7 @@ function tileCollisionGetData(pos, solidOnly=true)
  *  @param {Vector2} [size=vec2()]
  *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
  *  @param {boolean} [solidOnly] - Only check solid layers?
- *  @return {TileCollisionLayer}
+ *  @return {TileCollisionLayer|undefined}
  *  @memberof TileLayers */
 function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
 {
@@ -145,6 +145,8 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
     for (let layerIndex=layerCount; layerIndex--;)
     {
         const dataLayer = tileMapData.layers[layerIndex];
+        if (dataLayer.type && dataLayer.type !== 'tilelayer')
+            continue; // an object or image layer has no tiles, its slot is left empty
         ASSERT(dataLayer.data && dataLayer.data.length);
         ASSERT(levelSize.area() === dataLayer.data.length);
 
@@ -152,11 +154,13 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
         tileLayers[layerIndex] = tileLayer;
 
-        // apply layer color
-        const layerColor = dataLayer.tintcolor ?
-            new Color().setHex(dataLayer.tintcolor) :
-            dataLayer.color || WHITE;
+        // apply layer color, Tiled writes a tint with alpha as #AARRGGBB
+        const tint = dataLayer.tintcolor;
+        const layerColor = tint ?
+            new Color().setHex(tint.length === 9 ? '#' + tint.slice(3) + tint.slice(1, 3) : tint) :
+            (dataLayer.color || WHITE).copy();
         ASSERT(isColor(layerColor), 'layer color is not a color');
+        layerColor.a *= dataLayer.opacity ?? 1;
 
         for (let x=levelSize.x; x--;)
         for (let y=levelSize.y; y--;)
@@ -325,7 +329,8 @@ class TileLayer extends CanvasLayer
         const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
         super(pos, size, 0, renderOrder, canvasSize, useWebGL);
         
-        /** @property {TileInfo} - Default tile info for layer */
+        /** @property {TileInfo|undefined} - Default tile info for layer
+         *  @type {TileInfo|undefined} */
         this.tileInfo = undefined;
         /** @property {Array<TileLayerData>} - Array of tile data for the layer */
         this.data = [];
@@ -334,6 +339,17 @@ class TileLayer extends CanvasLayer
         /** @property {boolean} - Show this layer's bounds and values when the debug overlay's Debug Tiles is on,
          *  turn it off for layers that only add noise */
         this.debugShow = true;
+
+        if (tileInfo)
+        {
+            // set tile info
+            this.tileInfo = tileInfo.frame(0);
+            this.tileInfo.bleed = 0; // disable bleed for tile layers
+        }
+
+        // init tile data
+        for (let j = this.size.area(); j--;)
+            this.data.push(new TileLayerData);
 
         if (headlessMode)
         {
@@ -349,19 +365,7 @@ class TileLayer extends CanvasLayer
             this.drawTile       = ()=> {};
             this.drawRect       = ()=> {};
             this.clearLayerRect = ()=> {};
-            return;
         }
-        
-        if (tileInfo)
-        {
-            // set tile info
-            this.tileInfo = tileInfo.frame(0);
-            this.tileInfo.bleed = 0; // disable bleed for tile layers
-        }
-
-        // init tile data
-        for (let j = this.size.area(); j--;)
-            this.data.push(new TileLayerData);
     }
 
     /** Set data at a given position in the array
@@ -462,14 +466,14 @@ class TileLayer extends CanvasLayer
             glSetRenderTarget(this.textureInfo.glTexture, clear);
         else
         {
-            // disable smoothing for pixel art
-            this.context.imageSmoothingEnabled = !tilesPixelated;
             if (clear)
             {
                 // clear and set size
                 this.canvas.width  = mainCanvasSize.x;
                 this.canvas.height = mainCanvasSize.y;
             }
+            // disable smoothing for pixel art, after the resize which resets it
+            this.context.imageSmoothingEnabled = !tilesPixelated;
         }
     }
 
@@ -540,7 +544,7 @@ class TileLayer extends CanvasLayer
         drawTile(drawPos, size, tileInfo, color, angle, mirror, additiveColor, this.isUsingWebGL);
     }
 
-    /** Clear a rectangle in layer space
+    /** Draw a rectangle in layer space
      *  @param {Vector2} pos
      *  @param {Vector2} size
      *  @param {Color} [color=WHITE] - Color to modulate with
@@ -558,8 +562,9 @@ class TileLayer extends CanvasLayer
      *  @param {boolean}  [mirror] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle=0, mirror=false)
     {
-        pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
-        size = size.multiply(this.tileInfo.size);
+        const tileSize = this.tileInfo?.size ?? vec2(1); // a layer made without a tile info draws a pixel a cell
+        pos = pos.subtract(this.pos).multiply(tileSize);
+        size = size.multiply(tileSize);
         pos.y = this.canvas.height - pos.y;
 
         // draw the tile onto the layer canvas
@@ -620,7 +625,8 @@ class TileCollisionLayer extends TileLayer
     {
         super(pos, size.floor(), tileInfo, renderOrder, useWebGL);
 
-        /** @property {Array<number>} - The tile collision grid */
+        /** @property {Array<number>} - The tile collision grid
+         *  @type {Array<number>} */
         this.collisionData = [];
         this.initCollision(this.size);
 
@@ -643,15 +649,14 @@ class TileCollisionLayer extends TileLayer
         super.destroy();
     }
 
-    /** Clear and initialize tile collision to new size
+    /** Clear and initialize tile collision, the size is the layer's own, the tile data and canvas keep it
     *  @param {Vector2} size - width and height of tile collision 2d grid */
     initCollision(size)
     {
         ASSERT(isVector2(size), 'size must be a Vector2');
+        ASSERT(!this.collisionData.length || (size.x|0) === this.size.x && (size.y|0) === this.size.y, 'initCollision cannot resize a layer');
         this.size = size.floor();
-        this.collisionData = [];
-        this.collisionData.length = size.area();
-        this.collisionData.fill(0);
+        this.collisionData = new Array(this.size.area()).fill(0);
     }
 
     /** Set tile collision data for a given cell in the layer
@@ -694,7 +699,7 @@ class TileCollisionLayer extends TileLayer
         const collisionTest = callbackObject ? typeof callbackObject === 'function' ?
             (tileData, pos)=> callbackObject(tileData, pos) :
             (tileData, pos)=> callbackObject.collideWithTile(tileData, pos) :
-            ()=> true;
+            (tileData)=> tileData > 0;
 
         // check any tiles in the area for collision
         const posX = pos.x - this.pos.x;
@@ -706,10 +711,9 @@ class TileCollisionLayer extends TileLayer
         if (posY + size.y/2 < 0 || posY - size.y/2 > this.size.y) return false;
         const minX = max(posX - size.x/2|0, 0);
         const minY = max(posY - size.y/2|0, 0);
-        // ensure at least one cell is visited even when size is 0 and pos
-        // lands exactly on an integer boundary (documented point-test mode)
-        const maxX = min(max(posX + size.x/2, minX + 1), this.size.x);
-        const maxY = min(max(posY + size.y/2, minY + 1), this.size.y);
+        // a zero size is a point test, one cell even when pos lands exactly on an integer boundary
+        const maxX = min(size.x ? posX + size.x/2 : minX + 1, this.size.x);
+        const maxY = min(size.y ? posY + size.y/2 : minY + 1, this.size.y);
         const hitPos = new Vector2;
         for (let y = minY; y < maxY; ++y)
         for (let x = minX; x < maxX; ++x)

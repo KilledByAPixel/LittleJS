@@ -418,8 +418,10 @@ class Matrix4
         if (!z.lengthSquared())
             z = vec3(0, 0, 1); // eye is on the target, face -Z
         let x = up.cross(z).normalize();
-        if (!x.lengthSquared()) // up is along the view direction, pick another
-            x = (abs(z.y) > .99 ? vec3(0, 0, 1) : vec3(0, 1, 0)).cross(z).normalize();
+        // up is along the view direction, pick another; looking straight down or up keeps +X as the right axis,
+        // as three.js does and as a view tilting there from the +Z side ends up
+        if (!x.lengthSquared())
+            x = (abs(z.y) > .99 ? vec3(0, 0, z.y > 0 ? -1 : 1) : vec3(0, 1, 0)).cross(z).normalize();
         const y = z.cross(x);
         return new Matrix4([x.x, x.y, x.z, 0,  y.x, y.y, y.z, 0,  z.x, z.y, z.z, 0,  eye.x, eye.y, eye.z, 1]);
     }

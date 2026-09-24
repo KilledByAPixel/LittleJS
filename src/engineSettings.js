@@ -32,7 +32,7 @@ let cameraScale = 32;
 
 /** Scale applied to engine time, can be used for slow motion or fast forward
  *  - 1 is normal speed, 2 is double speed, 0.5 is half speed
- *  - 0 freezes the simulation without setting the paused flag
+ *  - 0 freezes everything, gameUpdatePost and input included, use setPaused for a pause the game can leave
  *  - Should be >= 0; stacks multiplicatively with the debug +/- shortcut
  *  @type {number}
  *  @default
@@ -116,13 +116,13 @@ let canvasPixelRatio = 1;
  *  @memberof Settings */
 let fontDefault = 'arial';
 
-/** Enable to show the LittleJS splash screen on startup
+/** Enable to show the LittleJS splash screen on startup, must be set before engineInit
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
 let showSplashScreen = false;
 
-/** Disables all rendering, audio, and input for servers
+/** Disables all rendering, audio, and input for servers, must be set before engineInit
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -425,9 +425,14 @@ function setCameraAngle(angle) { cameraAngle = angle; }
 function setCameraScale(scale) { cameraScale = scale; }
 
 /** Set scale applied to engine time
- *  @param {number} scale
+ *  - 0 stops the whole update, gameUpdatePost and input too, use setPaused for a pause the game can come back from
+ *  @param {number} scale - 0 or more
  *  @memberof Settings */
-function setTimeScale(scale) { timeScale = scale; }
+function setTimeScale(scale)
+{
+    ASSERT(scale >= 0, 'time scale must be 0 or more');
+    timeScale = max(0, scale); // a negative scale would build a debt of time the game then waits out
+}
 
 /** Set if tiles should be colorized when using canvas2d
  *  This can be slower but results should look nearly identical to WebGL rendering
@@ -476,6 +481,7 @@ function setCanvasPixelated(pixelated)
 
 /** Disables texture filtering for crisper pixel art
  *  - Leave true for pixel art; set false for smooth/high-resolution art
+ *  - Set it before engineInit, a texture already loaded keeps the filtering it was made with
  *  @param {boolean} pixelated
  *  @memberof Settings */
 function setTilesPixelated(pixelated) { tilesPixelated = pixelated; }
@@ -505,12 +511,12 @@ function getCanvasPixelRatio() { return canvasPixelRatio ?? (devicePixelRatio ||
  *  @memberof Settings */
 function setFontDefault(font) { fontDefault = font; }
 
-/** Set if the LittleJS splash screen should be shown on startup
+/** Set if the LittleJS splash screen should be shown on startup, must be set before engineInit
  *  @param {boolean} show
  *  @memberof Settings */
 function setShowSplashScreen(show) { showSplashScreen = show; }
 
-/** Set to disable rendering, audio, and input for servers
+/** Set to disable rendering, audio, and input for servers, must be set before engineInit
  *  @param {boolean} headless
  *  @memberof Settings */
 function setHeadlessMode(headless) { headlessMode = headless; }

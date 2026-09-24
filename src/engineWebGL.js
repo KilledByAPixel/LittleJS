@@ -32,7 +32,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
+let glMipmappedTextures = new WeakSet, glMipmapsStale = new Set, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -68,9 +68,6 @@ const gl_VERTEX_SOURCE =
 
 function glInit(rootElement)
 {
-    // keep set of texture infos so they can be restored if context is lost
-    glTextureInfos = new Set;
-
     if (!glEnable || headlessMode)
     {
         glCanBeEnabled = false;
@@ -93,12 +90,15 @@ function glInit(rootElement)
     // attach the WebGL canvas;
     rootElement.appendChild(glCanvas);
     
-    // startup webgl
+    // startup webgl, and make the textures of any texture infos made before it
     initWebGL();
+    for (const info of glTextureInfos)
+        info.glTexture ||= glCreateTexture(info.image, info.wrap);
 
     // setup context lost and restore handlers
     glCanvas.addEventListener('webglcontextlost', (e)=>
     {
+        glEnableBeforeLoss = glEnable;
         glEnable = false; // disable WebGL rendering
         glCanvas.style.display = 'none'; // hide the gl canvas
         e.preventDefault(); // prevent default to allow restoration
@@ -122,15 +122,21 @@ function glInit(rootElement)
     });
     glCanvas.addEventListener('webglcontextrestored', ()=>
     {
-        glEnable = true; // re-enable WebGL rendering
+        glEnable = glEnableBeforeLoss; // WebGL rendering as it was before the loss
         glCanvas.style.display = ''; // show the gl canvas
         LOG('WebGL context restored, reinitializing...');
 
         // reinit WebGL and restore textures
+        glMipmappedTextures = new WeakSet;
+        glMipmapsStale.clear();
         initWebGL();
         for (const info of glTextureInfos)
             info.glTexture = glCreateTexture(info.image, info.wrap);
         pluginList.forEach(plugin=>plugin.glContextRestored?.());
+
+        // a tile layer drawn on the GPU only had its tiles in the lost texture, it draws them again
+        for (const o of engineObjects)
+            o instanceof TileLayer && o.isUsingWebGL && !o.destroyed && o.redraw();
     });
 
     function initWebGL()
@@ -232,6 +238,7 @@ function glSetInstancedMode(force=false)
     glPolyMode = false;
     glContext.useProgram(glShader);
     glContext.bindVertexArray(glInstancedVAO);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer); // a VAO does not keep this binding
 }
 
 function glSetPolyMode()
@@ -290,8 +297,7 @@ function glPreRender(clear=true)
     const initUniform = (program, uniform, value)=>
     {
         glContext.useProgram(program);
-        const location = glContext.getUniformLocation(program, uniform);
-        glContext.uniformMatrix4fv(location, false, value);
+        glContext.uniformMatrix4fv(glUniformLocation(program, uniform), false, value);
     }
     initUniform(glPolyShader, 'm', transform);
     initUniform(glShader, 'm', transform);
@@ -332,12 +338,23 @@ function glClearCanvas()
  *  @memberof WebGL */
 function glSetTexture(texture)
 {
-    // must flush cache with the old texture to set a new one
-    if (!glContext || texture === glActiveTexture) return;
+    if (!glContext) return;
+    if (texture !== glActiveTexture)
+    {
+        // must flush cache with the old texture to set a new one
+        glFlush();
+        glActiveTexture = texture;
+        glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+    }
+    glMipmapsStale.size && glUpdateMipmaps(texture); // bound already or not, drawn into since
+}
 
-    glFlush();
-    glActiveTexture = texture;
-    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+// make the smaller levels of a texture again if it was drawn into since, it must be the bound texture
+function glUpdateMipmaps(texture)
+{
+    if (!glMipmapsStale.has(texture)) return;
+    glMipmapsStale.delete(texture);
+    glContext.generateMipmap(glContext.TEXTURE_2D);
 }
 
 /** Set the wrap mode (REPEAT or CLAMP_TO_EDGE) on an existing WebGL texture
@@ -465,7 +482,10 @@ function glCreateTexture(image, wrap=false)
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapMode);
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapMode);
     if (mipMap)
+    {
         glContext.generateMipmap(glContext.TEXTURE_2D);
+        glMipmappedTextures.add(texture);
+    }
 
     // rebind active texture
     glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
@@ -495,8 +515,8 @@ function glSetTextureData(texture, image)
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
 
-    // keep mipmaps in sync with new level 0 data (same condition as glCreateTexture)
-    if (!tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height))
+    // keep mipmaps in sync with new level 0 data, for any texture that has them
+    if (glMipmappedTextures.has(texture))
         glContext.generateMipmap(glContext.TEXTURE_2D);
 
     // rebind active texture
@@ -560,7 +580,9 @@ function glFlush()
                 const uniform = (name)=> glUniformLocation(program, name);
                 glContext.uniformMatrix4fv(uniform('m'), false, glTransform);
                 glContext.uniform1f(uniform('iTime'), time);
-                glContext.uniform3f(uniform('iResolution'), glCanvas.width, glCanvas.height, 1);
+                // a render target is the size glPreRender gave its viewport
+                const resolution = glRenderTarget ? mainCanvasSize : glCanvas;
+                glContext.uniform3f(uniform('iResolution'), resolution.x ?? resolution.width, resolution.y ?? resolution.height, 1);
             }
         }
         
@@ -764,6 +786,7 @@ function glSetRenderTarget(texture, clear=false)
 {
     // what was batched so far draws where it was meant to, before the target changes
     glFlush();
+    const previousTarget = glRenderTarget;
     if (texture)
     {
         // coming from the canvas, keep its transform and blend mode to put back after
@@ -797,6 +820,11 @@ function glSetRenderTarget(texture, clear=false)
             glSetInstancedMode(true);
         }
     }
+
+    // a target with mipmaps drawn into has only its top level new, the smaller levels are made again from it
+    // the next time it is drawn from
+    if (previousTarget && previousTarget !== texture && glMipmappedTextures.has(previousTarget))
+        glMipmapsStale.add(previousTarget);
 }
 
 /** Clear out a rectangle area of the WebGL canvas or render target
@@ -808,6 +836,7 @@ function glSetRenderTarget(texture, clear=false)
 function glClearRect(x, y, width, height)
 {
     if (!glEnable) return;
+    glFlush(); // tiles batched before the clear go down before it, not over what replaces them
 
     // Enable scissor test to clear only the specified area
     glContext.enable(glContext.SCISSOR_TEST);
