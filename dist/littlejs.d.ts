@@ -3761,7 +3761,7 @@ declare module "littlejsengine" {
     export let medalDisplaySize: Vector2;
     /** Initialize medals with a save name used for storage
      *  - Call this after creating all medals
-     *  - Checks if medals are unlocked
+     *  - Loads which medals are unlocked from the save, and writes the catalog back
      *  - A medal a service like Newgrounds holds is left as it is, see Medal.isLocal
      *  @param {string} saveName
      *  @memberof Medals */
@@ -3852,6 +3852,7 @@ declare module "littlejsengine" {
      * - NewgroundsMedal extends Medal with Newgrounds API functionality
      * - When logged in, Newgrounds holds the player's NewgroundsMedals: they unlock once the server confirms and the local save leaves them alone
      * - A plain Medal is never touched, so a game can use the plugin for scoreboards alone
+     * - A guest with no session gets nothing fetched, though getScores and logView still work for them
      * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
      * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
      * - Provides functions to unlock medals, post and read scoreboards and log views
@@ -3879,27 +3880,33 @@ declare module "littlejsengine" {
          *  new NewgroundsPlugin(app_id);
          */
         constructor(app_id: string, cipher?: string);
-        /** @property {string} - The newgrounds App ID */
+        /** @property {string} - The Newgrounds App ID */
         app_id: string;
         /** @property {string|undefined} - AES-128/Base64 encryption key, if any
          *  @type {string|undefined} */
         cipher: string | undefined;
-        cryptoKey: CryptoKey;
+        /** @type {CryptoKey|undefined} */
+        cryptoKey: CryptoKey | undefined;
         /** @property {string} - Hostname used when logging views */
         host: string;
         /** @property {Array} - Medals fetched from Newgrounds, empty until ready */
         medals: any[];
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         scoreboards: any[];
+        /** @property {Object|null} - The logged in player once ready, with id, name, url and supporter, null when not logged in
+         *  @type {Object|null} */
+        user: any | null;
         /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping, each with the promise of its request
          *  @type {Map<NewgroundsMedal, Promise<boolean>>} */
         pendingUnlocks: Map<NewgroundsMedal, Promise<boolean>>;
         /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the server refused it
          *  @type {string|null} */
         session_id: string | null;
-        /** @property {Promise<NewgroundsPlugin>} - Resolves once the medals and scoreboards have been fetched, or right away when not logged in */
+        /** @property {Promise<NewgroundsPlugin>} - Resolves once the session is checked and the medals and scoreboards have been fetched, or right away when not logged in */
         ready: Promise<this>;
         init(): Promise<this>;
+        /** Send the unlocks the server has not confirmed again, which the keep alive ping does every minute */
+        resendUnlocks(): void;
         /** Send message to unlock a medal by id, the medal itself waits for the response
          * @param {number} id - The medal id
          * @return {Promise<Object>} - The response JSON object, undefined when the call failed */

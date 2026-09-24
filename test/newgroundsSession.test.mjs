@@ -45,13 +45,17 @@ test('when logged in the server holds the newgrounds medals, the local save keep
         { id: 9, name: 'Server Nine', description: '', icon: 'nine.png', unlocked: true },
     ]}};
     replies['ScoreBoard.getBoards'] = { data: { scoreboards: [] } };
+    replies['App.checkSession'] = { data: { success: true, session: { id: 'abc123', user: { id: 5, name: 'Frank' }, expired: false } } };
     const plugin = new NewgroundsPlugin('an app');
     assert.equal(plugin.session_id, 'abc123');
+    assert.equal(plugin.user, null, 'not yet');
     assert.equal(m1.unlocked, false, 'locked as soon as the session is known');
     assert.equal(m1.isLocal(), false);
     assert.equal(plain.isLocal(), true);
-    assert.ok(keepAlive, 'the keep alive is set up before the first server call');
     await plugin.ready;
+    assert.deepEqual(calls, ['App.checkSession', 'Medal.getList', 'ScoreBoard.getBoards']);
+    assert.equal(plugin.user.name, 'Frank');
+    assert.ok(keepAlive, 'the keep alive is set up once the session is good');
     assert.equal(m1.unlocked, false);
     assert.equal(m2.unlocked, true, 'the server list is the state');
     assert.equal(m1.description, 'from the server (5)');

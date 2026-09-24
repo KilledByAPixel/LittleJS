@@ -9899,10 +9899,10 @@ function drawEngineLogo(t)
  * LittleJS Medal System
  * - Achievement/trophy system for games
  * - Medal class with name, description, icon, and unlock tracking
- * - Automatic saving to local storage, a medal can say a service like Newgrounds holds it instead
+ * - Automatic saving to local storage, unless a service like Newgrounds holds the medal (see Medal.isLocal)
  * - Visual display queue with slide-in notifications
  * - The Newgrounds plugin extends it with NewgroundsMedal, held on the server while logged in
- * - Setting debugMedals in the console skips the load and logs the Newgrounds traffic, for development
+ * - Setting debugMedals in the console of a script tag build, before medalsInit, skips the load and logs the Newgrounds traffic
  * @namespace Medals
  */
 
@@ -9947,7 +9947,7 @@ let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast, medalsRender
 
 /** Initialize medals with a save name used for storage
  *  - Call this after creating all medals
- *  - Checks if medals are unlocked
+ *  - Loads which medals are unlocked from the save, and writes the catalog back
  *  - A medal a service like Newgrounds holds is left as it is, see Medal.isLocal
  *  @param {string} saveName
  *  @memberof Medals */
@@ -10135,8 +10135,8 @@ class Medal
         context.beginPath();
         context.fillStyle = backgroundColor.toString();
         context.strokeStyle = BLACK.toString();
-        context.lineWidth = 3;
-        context.rect(x, y, width, height);
+        const lineWidth = context.lineWidth = 3;
+        context.rect(x + lineWidth/2, y + lineWidth/2, width - lineWidth, height - lineWidth); // the whole border shows
         context.fill();
         context.stroke();
         context.clip();
@@ -10203,6 +10203,7 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
  * - NewgroundsMedal extends Medal with Newgrounds API functionality
  * - When logged in, Newgrounds holds the player's NewgroundsMedals: they unlock once the server confirms and the local save leaves them alone
  * - A plain Medal is never touched, so a game can use the plugin for scoreboards alone
+ * - A guest with no session gets nothing fetched, though getScores and logView still work for them
  * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
  * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
  * - Provides functions to unlock medals, post and read scoreboards and log views
@@ -10224,7 +10225,7 @@ let newgrounds;
  */
 class NewgroundsMedal extends Medal
 {
-    /** Create a newgrounds medal object and adds it to the list of medals
+    /** Create a Newgrounds medal object and adds it to the list of medals
      *  @param {number} id            - The unique identifier of the medal
      *  @param {string} name          - Name of the medal
      *  @param {string} [description] - Description of the medal
@@ -10244,11 +10245,11 @@ class NewgroundsMedal extends Medal
         this.value = undefined;
     }
 
-    /** Whether the local save holds this medal, not while logged in when newgrounds does
+    /** Whether the local save holds this medal, false while logged in when Newgrounds holds it
      *  @return {boolean} */
     isLocal() { return !newgrounds || !newgrounds.session_id; }
 
-    /** Unlocks a medal if not already unlocked, once newgrounds confirms it when logged in
+    /** Unlocks a medal if not already unlocked, once Newgrounds confirms it when logged in
      *  - The promise is optional, for when a game wants to know the outcome
      *  - A request that failed or was refused is sent again every minute until the server confirms
      *  @return {Promise<boolean>} - Whether the medal is unlocked, once the server has answered when logged in */
@@ -10257,7 +10258,7 @@ class NewgroundsMedal extends Medal
         if (medalsPreventUnlock || this.unlocked || this.isLocal())
             return super.unlock(); // nothing to send, or logged out and the local save holds the medal
 
-        // logged in, newgrounds holds the medal: it unlocks once the server confirms, one request at a time
+        // logged in, Newgrounds holds the medal: it unlocks once the server confirms, one request at a time
         const pending = newgrounds.pendingUnlocks;
         if (pending.has(this))
             return pending.get(this);
@@ -10267,7 +10268,7 @@ class NewgroundsMedal extends Medal
             if (!serverMedal?.unlocked || medalsPreventUnlock)
             {
                 // still pending, the keep alive ping resends it once unlocks are allowed
-                debugMedals && false&&LOG('newgrounds did not unlock medal', this.id, response?.result?.error || response?.error);
+                debugMedals && false&&LOG('Newgrounds did not unlock medal', this.id, response?.result?.error || response?.error);
                 return false;
             }
             const listed = newgrounds.medals.find(m=> m['id'] == this.id);
@@ -10303,11 +10304,12 @@ class NewgroundsPlugin
         false&&ASSERT(!cipher || typeof crypto != 'undefined' && crypto.subtle, 'a cipher needs WebCrypto, which the browser only has on a secure page');
 
         newgrounds = this; // set global newgrounds object
-        /** @property {string} - The newgrounds App ID */
+        /** @property {string} - The Newgrounds App ID */
         this.app_id = app_id;
         /** @property {string|undefined} - AES-128/Base64 encryption key, if any
          *  @type {string|undefined} */
         this.cipher = cipher;
+        /** @type {CryptoKey|undefined} */
         this.cryptoKey = undefined; // the cipher imported for WebCrypto, on the first encrypted call
         const hasLocation = typeof location != 'undefined';
         /** @property {string} - Hostname used when logging views */
@@ -10316,6 +10318,9 @@ class NewgroundsPlugin
         this.medals = [];
         /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
         this.scoreboards = [];
+        /** @property {Object|null} - The logged in player once ready, with id, name, url and supporter, null when not logged in
+         *  @type {Object|null} */
+        this.user = null;
 
         /** @property {Map<NewgroundsMedal, Promise<boolean>>} - Medals sent to unlock that the server has not confirmed yet, resent on the keep alive ping, each with the promise of its request
          *  @type {Map<NewgroundsMedal, Promise<boolean>>} */
@@ -10325,39 +10330,33 @@ class NewgroundsPlugin
         /** @property {string|null} - Newgrounds session id from the URL, null when not logged in or once the server refused it
          *  @type {string|null} */
         this.session_id = hasLocation ? new URL(location.href).searchParams.get('ngio_session_id') : null;
-        // newgrounds holds this player's newgrounds medals: locked until the server says otherwise, the local save leaves them alone
+        // Newgrounds holds this player's Newgrounds medals: locked until the server says otherwise, the local save leaves them alone
         if (this.session_id)
             medalsForEach(medal=> medal instanceof NewgroundsMedal && (medal.unlocked = false));
 
-        /** @property {Promise<NewgroundsPlugin>} - Resolves once the medals and scoreboards have been fetched, or right away when not logged in */
+        /** @property {Promise<NewgroundsPlugin>} - Resolves once the session is checked and the medals and scoreboards have been fetched, or right away when not logged in */
         this.ready = this.session_id ? this.init() : Promise.resolve(this); // only use newgrounds when logged in
     }
 
-    // keep the session alive, then fetch the medals and scoreboards
+    // check the session, fetch the medals and scoreboards, then keep the session alive
     async init()
     {
-        // ping every minute, and resend the unlocks the server has not confirmed
-        const keepAliveMS = 60 * 1e3;
-        setInterval(()=>
-        {
-            this.call('Gateway.ping', 0);
-            if (medalsPreventUnlock) return; // they stay pending until unlocks are allowed again
-            const pending = [...this.pendingUnlocks.keys()];
-            this.pendingUnlocks.clear();
-            for (const medal of pending)
-                medal.unlock();
-        }, keepAliveMS);
-
-        const medalsResult = await this.call('Medal.getList');
+        // the player is logged in when the server knows the session and it has a user
+        const sessionResult = await this.call('App.checkSession');
+        const session = sessionResult?.result?.data?.['session'];
+        const user = session && !session['expired'] && session['user'];
+        const medalsResult = user && await this.call('Medal.getList');
 
         // without the server (offline / bad session / server error) the game plays as logged out
         if (!medalsResult || !medalsResult.result || medalsResult.result.error)
         {
             debugMedals && false&&LOG('Newgrounds session unavailable; medals are local');
             this.session_id = null;
-            medalsLoad(); // the newgrounds medals are local again, back from the save
+            medalsLoad(); // the Newgrounds medals are local again, back from the save
+            this.resendUnlocks(); // and so are the unlocks sent meanwhile, they unlock now
             return this;
         }
+        this.user = user;
 
         this.medals = medalsResult.result.data?.['medals'] || [];
         debugMedals && false&&LOG(this.medals);
@@ -10383,7 +10382,24 @@ class NewgroundsPlugin
         const scoreboardResult = await this.call('ScoreBoard.getBoards');
         this.scoreboards = scoreboardResult?.result?.data?.scoreboards || [];
         debugMedals && false&&LOG(this.scoreboards);
+
+        // ping every minute, and resend the unlocks the server has not confirmed
+        const keepAliveMS = 60 * 1e3;
+        setInterval(()=>
+        {
+            this.call('Gateway.ping', 0);
+            medalsPreventUnlock || this.resendUnlocks(); // they stay pending until unlocks are allowed again
+        }, keepAliveMS);
         return this;
+    }
+
+    /** Send the unlocks the server has not confirmed again, which the keep alive ping does every minute */
+    resendUnlocks()
+    {
+        const pending = [...this.pendingUnlocks.keys()];
+        this.pendingUnlocks.clear();
+        for (const medal of pending)
+            medal.unlock();
     }
 
     /** Send message to unlock a medal by id, the medal itself waits for the response
@@ -10466,7 +10482,7 @@ class NewgroundsPlugin
             const response = await fetch(url, {'method':'POST', 'body':formData});
             const text = await response.text();
             debugMedals && false&&LOG(text);
-            return text && JSON.parse(text);
+            return text ? JSON.parse(text) : undefined;
         }
         catch(e) { debugMedals && false&&LOG('newgrounds call failed', e); }
     }

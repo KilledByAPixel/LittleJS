@@ -2,10 +2,10 @@
  * LittleJS Medal System
  * - Achievement/trophy system for games
  * - Medal class with name, description, icon, and unlock tracking
- * - Automatic saving to local storage, a medal can say a service like Newgrounds holds it instead
+ * - Automatic saving to local storage, unless a service like Newgrounds holds the medal (see Medal.isLocal)
  * - Visual display queue with slide-in notifications
  * - The Newgrounds plugin extends it with NewgroundsMedal, held on the server while logged in
- * - Setting debugMedals in the console skips the load and logs the Newgrounds traffic, for development
+ * - Setting debugMedals in the console of a script tag build, before medalsInit, skips the load and logs the Newgrounds traffic
  * @namespace Medals
  */
 
@@ -52,7 +52,7 @@ let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast, medalsRender
 
 /** Initialize medals with a save name used for storage
  *  - Call this after creating all medals
- *  - Checks if medals are unlocked
+ *  - Loads which medals are unlocked from the save, and writes the catalog back
  *  - A medal a service like Newgrounds holds is left as it is, see Medal.isLocal
  *  @param {string} saveName
  *  @memberof Medals */
@@ -240,8 +240,8 @@ class Medal
         context.beginPath();
         context.fillStyle = backgroundColor.toString();
         context.strokeStyle = BLACK.toString();
-        context.lineWidth = 3;
-        context.rect(x, y, width, height);
+        const lineWidth = context.lineWidth = 3;
+        context.rect(x + lineWidth/2, y + lineWidth/2, width - lineWidth, height - lineWidth); // the whole border shows
         context.fill();
         context.stroke();
         context.clip();

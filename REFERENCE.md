@@ -1445,7 +1445,8 @@ new Box2dGearJoint(jointA, jointB, ratio)
 - Achievement/medal system with on-screen popup, save/restore via localStorage
 - Optional Newgrounds integration: syncs medals and scoreboards when hosted on Newgrounds
 - A logged in Newgrounds player's NewgroundsMedals live on the server: they unlock once it confirms and the local save leaves
-  them alone, while a plain Medal is never touched; if the server does not answer at load the game plays as logged out
+  them alone, while a plain Medal is never touched; if the server does not know the session at load the game plays as logged out
+- Nothing is fetched for a guest with no session, though `getScores` and `logView` still work for them
 - See `examples/shorts/medals.js` for a demo
 
 ```javascript
@@ -1471,8 +1472,10 @@ medalDisplaySize / setMedalDisplaySize(vec2)
 new NewgroundsPlugin(app_id, cipher) // sets the newgrounds global and fetches the medals and scoreboards; with the
                                      // app's cipher, calls are encrypted by the browser's own WebCrypto, so the page
                                      // has to be https or localhost and no library is needed
-await newgrounds.ready               // resolves once the medals and scoreboards are in, right away when not logged in
+await newgrounds.ready               // resolves once the session is checked and the medals and scoreboards are in, right away
+                                     // when not logged in
 newgrounds.session_id                // the player's session id, null when not logged in or once the server refused it
+newgrounds.user                      // the logged in player once ready, with id, name, url and supporter; null when not logged in
 newgrounds.medals                    // the server's medal list once ready; its name, description, icon, value and difficulty
                                      // replace what the game gave each NewgroundsMedal
 newgrounds.scoreboards               // the server's scoreboard list once ready, with the ids to post and read
@@ -1482,6 +1485,7 @@ await newgrounds.getScores(id, user, social, skip, limit, period) // period 'D' 
 newgrounds.logView()                 // Track a page view
 newgrounds.pendingUnlocks            // Map of the medals sent to unlock that the server has not confirmed yet to the promise of
                                      // each request; they are resent on the keep alive ping
+newgrounds.resendUnlocks()           // send those again now, as the keep alive ping does every minute
 new NewgroundsMedal(id, name, description, icon, src) // when logged in, unlock() asks the server and the medal only unlocks
                                      // and shows once it confirms, so unlocked is still false on return; await the promise for the outcome
 ```

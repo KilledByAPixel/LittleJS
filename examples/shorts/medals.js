@@ -11,7 +11,7 @@ function gameInit()
     medalsInit(saveName);
 
     // clear unlocked medals for testing
-    medalsForEach(medal=> medal.unlocked = false);
+    medalsReset();
 
     // unlock the example medal
     medal_openedExample.unlock();
