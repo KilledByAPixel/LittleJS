@@ -2,15 +2,20 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NewgroundsPlugin, NewgroundsMedal, medalsInit } from '../dist/littlejs.esm.js';
 
-// A good session whose medal list then fails: the game plays as logged out, keeping a medal the server
-// confirmed in between. One plugin per process, so this lives in its own file.
+// A good session whose medal list then fails with a component error, which the gateway puts in result.data:
+// the game plays as not logged in, keeping a medal the server confirmed in between.
+// One plugin per process, so this lives in its own file.
 globalThis.location = { href: 'https://uploads.ungrounded.net/game/?ngio_session_id=abc123', hostname: 'uploads.ungrounded.net' };
 const flush = ()=> new Promise(resolve => setImmediate(resolve));
 const replies =
 {
     'App.checkSession': ()=> ({ data: { success: true, session: { id: 'abc123', user: { id: 5, name: 'Frank' }, expired: false } } }),
     'Medal.unlock': ()=> ({ data: { medal: { id: 2, unlocked: true }, medal_score: 5 } }),
-    'Medal.getList': async ()=> { await flush(); await flush(); throw new Error('server error'); }, // after the unlock lands
+    'Medal.getList': async ()=> // after the unlock lands
+    {
+        await flush(); await flush();
+        return { data: { success: false, error: { message: 'server error', code: 500 } } };
+    },
 };
 const calls = [];
 globalThis.fetch = async (url, options) =>

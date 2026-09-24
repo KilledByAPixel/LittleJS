@@ -5,7 +5,7 @@
  * - Automatic saving to local storage, unless a service like Newgrounds holds the medal (see Medal.isLocal)
  * - Visual display queue with slide-in notifications
  * - The Newgrounds plugin extends it with NewgroundsMedal, held on the server while logged in
- * - Setting debugMedals = true in the game code before medalsInit, script tag builds only, skips the load and the save and logs the Newgrounds traffic
+ * - Setting debugMedals = true in the game code before medalsInit skips the load and the save, and in the debug build logs the Newgrounds traffic; it is not exported, so only a script tag build can set it
  * @namespace Medals
  */
 
@@ -169,7 +169,7 @@ function medalsSave()
  */
 class Medal
 {
-    /** Create a medal object and adds it to the list of medals
+    /** Create a medal and add it to the list of medals
      *  @param {number} id            - The unique identifier of the medal
      *  @param {string} name          - Name of the medal
      *  @param {string} [description] - Description of the medal

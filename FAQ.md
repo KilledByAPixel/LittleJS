@@ -255,7 +255,7 @@ Plugins are self-contained features that live alongside the engine but aren't pa
 | `uiSystem.js` | Lightweight in-engine UI widgets (buttons, text, tabs) |
 | `tweenSystem.js` | Tween any property over time with easing curves |
 | `pathFinder.js` | Grid-based A* pathfinding with optional path smoothing |
-| `medalSystem.js` | Achievement / medal tracking with toast notifications |
+| `medalSystem.js` | Achievement / medal tracking with popup notifications |
 | `newgrounds.js` | Newgrounds.io integration (medals held on the server, scoreboards) |
 | `zzfxm.js` | Procedural chiptune music via the `ZzFXMusic` class |
 | `drawUtilities.js` | Higher-level drawing helpers like nine-slice and three-slice |
@@ -767,7 +767,7 @@ The `saveName` should be unique per game so multiple LittleJS games on the same 
 
 ### How do I use the medals (achievements) system?
 
-LittleJS includes a medals plugin for tracking unlockable achievements with toast notifications:
+LittleJS includes a medals plugin for tracking unlockable achievements with popup notifications:
 
 ```javascript
 // Create medals — each needs a unique id, optional emoji icon
@@ -777,11 +777,11 @@ const medal_perfect  = new Medal(1, 'Perfect Score', 'Score 100%', '⭐');
 // Initialize medals — saveName persists unlocks to localStorage
 medalsInit('MyGame');
 
-// Unlock a medal (shows notification, persists across sessions)
+// Unlock a medal (shows a popup, persists across visits)
 medal_firstWin.unlock();
 ```
 
-You can pass an image URL as the fifth argument to `Medal` instead of an emoji icon. The `saveName` you pass to `medalsInit` is used to track which medals have been unlocked in localStorage, so unlocks persist across sessions.
+You can pass an image URL as the fifth argument to `Medal` instead of an emoji icon. The `saveName` you pass to `medalsInit` is used to track which medals have been unlocked in localStorage, so unlocks persist across visits.
 
 The plugin also supports [Newgrounds](https://www.newgrounds.com) scoreboards and medals held on the server through [plugins/newgrounds.js](plugins/newgrounds.js): create each medal as a `NewgroundsMedal` with the id Newgrounds gave it, call `medalsInit` as usual, then `new NewgroundsPlugin(app_id, cipher)`. The "LittleJS Medals & Newgrounds" section of REFERENCE.md has a short example.
 
