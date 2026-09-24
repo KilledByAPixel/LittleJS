@@ -7597,8 +7597,12 @@ function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnl
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Tiled's flip flags, horizontal, vertical and diagonal as bits 2, 1 and 0, as [direction, mirror]
+const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [1,1]];
+
 /**
  * Load tile layers from exported data
+ * - Tiled maps come in as they are, flipped and turned tiles included
  *  @param {Object}   tileMapData - Level data from exported data
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
  *  @param {number}   [renderOrder] - Render order of the top layer
@@ -7649,7 +7653,11 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
             const data = dataLayer.data[x + y*levelSize.x];
             if (data)
             {
-                const layerData = new TileLayerData(data-1, 0, false, layerColor);
+                // Tiled keeps a tile's flips in its top bits, horizontal, vertical and diagonal, the diagonal
+                // applied first; each of the 8 is a quarter turn direction with or without a mirror
+                const [direction, mirror] = tileLayersTiledFlips[data >>> 29];
+                const tileIndex = (data & 0x1fffffff) - 1; // bit 28, a hexagonal turn, is not read
+                const layerData = new TileLayerData(tileIndex, direction, !!mirror, layerColor);
                 tileLayer.setData(pos, layerData);
 
                 // set collision for top layer

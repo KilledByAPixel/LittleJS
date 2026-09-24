@@ -616,7 +616,7 @@ tileCollisionGetData(pos)                           // Get tile collision data a
 tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
 tileCollisionRaycast(posStart, posEnd, object)      // Where the ray meets the first tile hit, or undefined
 tileCollisionLayers                                 // List of all tile collision layers
-tileLayersLoad(tileMapData, tileInfo)               // Load tile layers from exported data
+tileLayersLoad(tileMapData, tileInfo)               // Load tile layers from exported data, Tiled flips and turns included
 
 ```
 

@@ -98,3 +98,21 @@ test('collisionRaycast on a layer at a fractional position hits the tile edge wh
     assert.ok(Math.abs(back.x - 1.5) < 1e-6, 'far edge, x ' + back.x);
     assert.equal(normal.x, 1);
 });
+
+test('tileLayersLoad reads the flip flags Tiled stores in the top bits of a tile', async () =>
+{
+    const { tileLayersLoad } = await import('../dist/littlejs.esm.js');
+    const H = 0x80000000, V = 0x40000000, D = 0x20000000;
+    // tile 7 (gid 8) with each flip, and a plain one; a direction is a quarter turn, the mirror flips across
+    const flips = [0, D, V, V|D, H, H|D, H|V, H|V|D];
+    const expected = [[0, false], [3, true], [2, true], [3, false], [0, true], [1, false], [2, false], [1, true]];
+    const layer = tileLayersLoad({ width: 8, height: 1, layers: [{ data: flips.map(f=> (8 | f) >>> 0) }] }, undefined, 0, 0, false)[0];
+    flips.forEach((f, i)=>
+    {
+        const d = layer.getData(vec2(i, 0));
+        assert.equal(d.tile, 7, 'the tile without its flags');
+        assert.deepEqual([d.direction, d.mirror], expected[i], 'flags ' + i);
+    });
+    assert.equal(layer.getCollisionData(vec2(3, 0)), 1, 'a flipped tile still collides');
+    layer.destroy();
+});

@@ -3321,6 +3321,7 @@ declare module "littlejsengine" {
     export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, callbackObject?: EngineObject | TileCollisionCallback, normal?: Vector2, solidOnly?: boolean): Vector2 | undefined;
     /**
      * Load tile layers from exported data
+     * - Tiled maps come in as they are, flipped and turned tiles included
      *  @param {Object}   tileMapData - Level data from exported data
      *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
      *  @param {number}   [renderOrder] - Render order of the top layer
