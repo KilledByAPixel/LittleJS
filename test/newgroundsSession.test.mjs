@@ -8,10 +8,13 @@ import { NewgroundsPlugin, NewgroundsMedal, Medal, medalsInit, medalsReset, setM
 globalThis.location = { href: 'https://uploads.ungrounded.net/game/?ngio_session_id=abc123', hostname: 'uploads.ungrounded.net' };
 const replies = {};
 const calls = [];
+const inputs = {};
 globalThis.fetch = async (url, options) =>
 {
-    const { call } = JSON.parse(options.body.get('input'));
+    const input = JSON.parse(options.body.get('input'));
+    const { call } = input;
     calls.push(call.component);
+    inputs[call.component] = input;
     const reply = await replies[call.component];
     if (reply instanceof Error) throw reply;
     return { text: async ()=> JSON.stringify({ success: true, result: { component: call.component, success: true, ...reply } }) };
@@ -54,6 +57,9 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     assert.equal(plain.isLocal(), true);
     await plugin.ready;
     assert.deepEqual(calls, ['App.logView', 'App.checkSession', 'Medal.getList', 'ScoreBoard.getBoards']);
+    assert.deepEqual(inputs['App.logView'], { app_id: 'an app', session_id: 'abc123',
+        call: { component: 'App.logView', parameters: { host: 'uploads.ungrounded.net' } } }, 'the view names the host');
+    assert.equal('logView' in plugin, false, 'the plugin logs it, a game does not');
     assert.equal(plugin.user.name, 'Frank');
     assert.ok(keepAlive, 'the keep alive is set up once the session is good');
     assert.equal(m1.unlocked, false);
@@ -160,4 +166,5 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     assert.deepEqual(other['4'], { name: 'Four', unlocked: true }, 'kept as it was');
     assert.equal(other['9'].unlocked, false, 'the plain medal is reset');
     assert.deepEqual(storedNewgrounds(), savedBefore);
+    assert.equal(calls.filter(c => c == 'App.logView').length, 1, 'one view for the whole session');
 });

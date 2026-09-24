@@ -11,7 +11,7 @@
 
 'use strict';
 
-let debugMedals = false;
+let debugMedals = false; // see the header
 
 ///////////////////////////////////////////////////////////////////////////////
 // Medals settings
@@ -61,7 +61,7 @@ function medalsInit(saveName)
     medalsSaveName = saveName;
     medalsLoad();
 
-    // engine automatically renders medals, once however often this is called
+    // add the medal display once, however often this is called
     if (!medalsRenderAdded)
         engineAddPlugin(undefined, medalsRender);
     medalsRenderAdded = true;
@@ -72,9 +72,9 @@ function medalsLoad()
 {
     if (debugMedals || !medalsSaveName) return;
     const saved = readSaveData(medalsSaveName);
-    medalsForEach(medal => {
+    medalsForEach(medal=> {
         if (medal.isLocal())
-            medal.unlocked = !!(saved[medal.id] && saved[medal.id].unlocked);
+            medal.unlocked = !!saved[medal.id]?.unlocked;
     });
     medalsSave();
 }
@@ -116,23 +116,24 @@ function medalsRender()
  *  @param {MedalCallbackFunction} callback
  *  @memberof Medals */
 function medalsForEach(callback)
-{ Object.values(medals).forEach(medal=>callback(medal)); }
+{ Object.values(medals).forEach(medal=> callback(medal)); }
 
 /** Reset all medals to locked and persist the cleared catalog
  *  - A medal a service like Newgrounds holds is left alone, the service has it
  *  @memberof Medals */
 function medalsReset()
 {
-    medalsForEach(medal => medal.isLocal() && (medal.unlocked = false));
+    medalsForEach(medal=> medal.isLocal() && (medal.unlocked = false));
     medalsSave();
 }
 
+// write the local medals to the save, keeping the entries of medals a service holds
 function medalsSave()
 {
     if (debugMedals || !medalsSaveName) return;
     const saved = readSaveData(medalsSaveName);
     const data = {};
-    medalsForEach(medal => {
+    medalsForEach(medal=> {
         if (!medal.isLocal())
         {
             // a service holds this medal, its entry stays as it was for when it is local again
@@ -248,14 +249,14 @@ class Medal
 
         // draw the icon
         const gap = vec2(.1, .05).scale(height);
-        const medalDisplayIconSize = height - 2*gap.x;
-        this.renderIcon(vec2(x + gap.x + medalDisplayIconSize/2, y + height/2), medalDisplayIconSize);
+        const iconSize = height - 2*gap.x;
+        this.renderIcon(vec2(x + gap.x + iconSize/2, y + height/2), iconSize);
 
         // draw the name
         const nameSize = height*.5;
         const descriptionSize = height*.3;
-        const pos = vec2(x + medalDisplayIconSize + 2*gap.x, y + gap.y*2 + nameSize/2);
-        const textWidth = width - medalDisplayIconSize - 3*gap.x;
+        const pos = vec2(x + iconSize + 2*gap.x, y + gap.y*2 + nameSize/2);
+        const textWidth = width - iconSize - 3*gap.x;
         drawTextScreen(this.name, pos, nameSize, BLACK, 0, undefined, 'left', undefined, undefined, textWidth);
 
         // draw the description
