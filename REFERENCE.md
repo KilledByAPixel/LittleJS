@@ -1503,7 +1503,7 @@ newgrounds.medals                    // the server's medal list once ready; each
                                      // value, difficulty and description with " (value)" added
 newgrounds.scoreboards               // the server's scoreboard list once ready, each with its id and name
 newgrounds.postScore(id, value)      // needs a logged in player and a whole number; result.data.success says if it
-                                     // posted
+                                     // posted; an answer that the session is gone drops it, like a failed session check
 await newgrounds.getScores(id, user, social, skip, limit, period) // the scores are in result.data.scores; period
                                      // 'D' today (the server default), 'W', 'M', 'Y', 'A' all time; a user or social
                                      // narrows it down, and without either it is the whole board even when logged in

@@ -3858,7 +3858,7 @@ declare module "littlejsengine" {
      * - Logs a view when it starts, and provides functions to unlock medals and to post and read scoreboards
      * - Tells the Newgrounds page around the game when a medal unlocks or a score posts, as the official client does
      * - Checks the session every minute when logged in, which keeps it alive, and plays as not logged in once it is lost
-     * - A request that takes longer than 15 seconds fails like one that could not reach the server
+     * - Where the browser has AbortSignal.timeout, a request that takes longer than 15 seconds fails like one that could not reach the server
      * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
      * @namespace Newgrounds
      */
@@ -3920,7 +3920,7 @@ declare module "littlejsengine" {
          *  server confirmed meanwhile, and the unlocks still out unlock locally
          *  @private */
         private dropSession;
-        /** Send the unlocks whose request did not reach the server again, which the keep alive ping does every minute
+        /** Send the unlocks whose request did not reach the server again, which the session check does every minute
          *  - A request still out is left to answer, and while unlocks are prevented they wait */
         resendUnlocks(): void;
         /** Send a request to unlock a medal by id, the local medal is not changed; NewgroundsMedal.unlock sends this and waits for the answer
@@ -3931,7 +3931,8 @@ declare module "littlejsengine" {
          *  @param {number} id    - The scoreboard id
          *  @param {number} value - The score value, a whole number
          *  @return {Promise<Object>} - The response JSON object, undefined when the call failed; result.data.success says whether
-         *    it posted, which needs a logged in player */
+         *    it posted, which needs a logged in player; an answer that the session is gone makes the game play as not logged
+         *    in, and one that timed out may still have posted */
         postScore(id: number, value: number): Promise<any>;
         /** Get scores from a scoreboard
          *  @param {number} id        - The scoreboard id

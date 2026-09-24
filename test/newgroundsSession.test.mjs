@@ -118,7 +118,7 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     assert.equal(m3.image.src, 'https://img.ngfiles.com/three.png', 'the icon the server sends with the unlock, a secret medal\'s real one');
     assert.equal(plugin.pendingUnlocks.size, 0);
 
-    // a request still out when the ping comes is left to answer, not sent twice
+    // a request still out when the session check comes is left to answer, not sent twice
     let answer;
     replies['Medal.unlock'] = new Promise(resolve => answer = resolve);
     const m5 = new NewgroundsMedal(5, 'Five');

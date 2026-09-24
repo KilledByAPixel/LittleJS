@@ -10908,7 +10908,7 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
  * - Logs a view when it starts, and provides functions to unlock medals and to post and read scoreboards
  * - Tells the Newgrounds page around the game when a medal unlocks or a score posts, as the official client does
  * - Checks the session every minute when logged in, which keeps it alive, and plays as not logged in once it is lost
- * - A request that takes longer than 15 seconds fails like one that could not reach the server
+ * - Where the browser has AbortSignal.timeout, a request that takes longer than 15 seconds fails like one that could not reach the server
  * - Every call is a fetch, so the functions return promises; await newgrounds.ready for the medals and scoreboards
  * @namespace Newgrounds
  */
@@ -10966,9 +10966,10 @@ class NewgroundsMedal extends Medal
 
     /** Unlocks a medal if not already unlocked, once Newgrounds confirms it when logged in
      *  - The promise is optional, for when a game wants to know the outcome
-     *  - A request that did not reach the server is sent again with the keep alive ping every minute, one the server
+     *  - A request that did not reach the server is sent again after the session check every minute, one the server
      *    refused is not; calling unlock again while the medal is pending returns the same promise
      *  - An answer that the session is gone makes the game play as not logged in, and this medal unlocks locally
+     *    unless unlocks are prevented
      *  @return {Promise<boolean>} - Whether the medal is unlocked, once the server has answered when logged in */
     unlock()
     {
@@ -10988,7 +10989,7 @@ class NewgroundsMedal extends Medal
             if (!serverMedal?.unlocked || medalsPreventUnlock)
             {
                 // still pending: a request that did not reach the server, or a confirm while unlocks are prevented,
-                // waits for the keep alive ping, unless the session dropped and the medal is local now
+                // waits for the session check every minute, unless the session dropped and the medal is local now
                 debugMedals && LOG('Newgrounds did not unlock medal', this.id, response?.result?.data?.error || response?.error);
                 if (!this.isLocal() && (!response || serverMedal?.unlocked))
                     newgroundsUnlocksToResend.add(this);
@@ -11080,10 +11081,13 @@ class NewgroundsPlugin
             const session = sessionResult?.result?.data?.['session'];
             const user = session && !session['expired'] && session['user'];
             medalList = user && (await this.call('Medal.getList'))?.result?.data?.['medals'];
-            if (medalList)
+            if (medalList && this.session_id)
                 this.user = user;
             else
-                this.dropSession(); // without the server (offline / bad session / server error)
+            {
+                this.dropSession(); // without the server (offline / bad session / server error), or lost meanwhile
+                medalList = undefined; // its unlocks belong to the lost session
+            }
         }
 
         // not logged in, the list comes too, without the unlocks
@@ -11149,7 +11153,7 @@ class NewgroundsPlugin
         confirmed.forEach(medal=> medal.unlocked = true);
         medalsSave();
 
-        // the unlocks still out are local too, they unlock now
+        // the unlocks still out are local too, they unlock now, or are dropped like any local unlock while prevented
         const pending = [...this.pendingUnlocks.keys()];
         this.pendingUnlocks.clear();
         newgroundsUnlocksToResend.clear();
@@ -11157,7 +11161,7 @@ class NewgroundsPlugin
             medal.unlock();
     }
 
-    /** Send the unlocks whose request did not reach the server again, which the keep alive ping does every minute
+    /** Send the unlocks whose request did not reach the server again, which the session check does every minute
      *  - A request still out is left to answer, and while unlocks are prevented they wait */
     resendUnlocks()
     {
@@ -11179,7 +11183,8 @@ class NewgroundsPlugin
      *  @param {number} id    - The scoreboard id
      *  @param {number} value - The score value, a whole number
      *  @return {Promise<Object>} - The response JSON object, undefined when the call failed; result.data.success says whether
-     *    it posted, which needs a logged in player */
+     *    it posted, which needs a logged in player; an answer that the session is gone makes the game play as not logged
+     *    in, and one that timed out may still have posted */
     postScore(id, value)
     {
         return this.call('ScoreBoard.postScore', {'id':id, 'value':value}).then(response=>

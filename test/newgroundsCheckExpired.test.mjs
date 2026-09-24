@@ -12,11 +12,13 @@ const replies =
     'Medal.unlock': new Error('offline'),
 };
 const calls = [];
+const signals = [];
 let stall = false;
 globalThis.fetch = (url, options) =>
 {
     const { call } = JSON.parse(options.body.get('input'));
     calls.push(call.component);
+    signals.push(options.signal);
     if (stall && call.component == 'ScoreBoard.getBoards') // never answers, until the deadline aborts it
         return new Promise((resolve, reject)=> options.signal.addEventListener('abort', ()=> reject(options.signal.reason)));
     const reply = replies[call.component];
@@ -42,6 +44,7 @@ test('a stalled request fails at its deadline, and an expired session found by t
     const plugin = new NewgroundsPlugin('an app');
     assert.equal(await plugin.ready, plugin, 'ready despite the stalled scoreboard list');
     assert.equal(deadline, 15e3, 'every request gets a 15 second deadline');
+    assert.ok(signals.length && signals.every(signal => signal instanceof AbortSignal), 'and fetch is given it');
     assert.deepEqual(plugin.scoreboards, [], 'the stalled list is empty');
     assert.equal(plugin.user.name, 'Frank');
     assert.equal(m1.unlocked, true, 'from the server');
