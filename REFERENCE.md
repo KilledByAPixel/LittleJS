@@ -1256,9 +1256,9 @@ parseOBJ(text, smooth)                        // Mesh from OBJ text, smooth norm
 await loadOBJ(url, smooth) // fetch then parse, in an async gameInit; chain .center().fit(size) for models of unknown
                            // units
 
-// glTF models - the glTF plugin, .gltf with its files beside it or .glb in one file; static meshes with their node
-// placement, vertex colors, material colors and base color textures; no skins, animations or morph targets, and
-// no Draco or meshopt compressed geometry, which throws saying so
+// glTF models - the glTF plugin, .gltf with its files beside it or .glb in one file; meshes with their node placement,
+// vertex colors, material colors and base color textures, and node animations; no skins or morph targets, and no
+// Draco or meshopt compressed geometry, which throws saying so
 const model = await loadGLTF(url)   // a GLTFModel, in an async gameInit; or await parseGLTF(data, baseUrl) on bytes or
                                      // JSON you already have
 model.parts                          // one GLTFPart per primitive of every node: name, mesh in model space, color,
@@ -1268,9 +1268,16 @@ model.parts                          // one GLTFPart per primitive of every node
 model.mesh, model.textureInfo        // everything as one Mesh tinted by its materials, and its texture when every
                                      // part uses the same one; a model mixing plain and textured parts, or using
                                      // several textures, draws right through createObject
-model.createObject(pos3D)            // an EngineObject3D with a child per part, each with its own texture and
-                                     // blending, so windows and other see through parts show; move and turn
-                                     // the root and the parts follow
+model.createObject(pos3D)            // a GLTFObject, an EngineObject3D with a child per part, each with its own
+                                     // texture and blending, so windows and other see through parts show; move
+                                     // and turn the root and the parts follow
+model.animations                     // one GLTFAnimation each: name, duration in seconds, and the channels that
+                                     // move, turn and scale nodes; model.getAnimation(nameOrNumber) finds one
+object.play(animation=0, loop=true, speed=1) // play one on a GLTFObject by name or number, its parts move with it;
+                                     // speed below 0 plays it backward, and one that does not loop holds its end
+object.stop()                        // hold the pose where it is; object.setAnimationTime(t) poses it at a time
+object.animation .animationTime .animationSpeed .animationLoop .animationPlaying
+model.getPose(animation, time)       // one Matrix4 per part, how far it moved from its resting place
 model.center().fit(size)             // move the model's bounds onto the origin and scale its largest extent to
                                      // size, every part together, like Mesh.center and fit; getBounds and
                                      // transform(matrix) as well
@@ -1355,6 +1362,8 @@ new THREE.Raycaster()                     // render3D.screenToRay, pick and engi
 OBJLoader                                 // loadOBJ(url) or parseOBJ(text)
 GLTFLoader                                // loadGLTF(url): model.createObject(pos) is the scene as objects, model.mesh
                                           // is everything as one Mesh
+mixer.clipAction(clip).play()             // object.play(name) on the object createObject made, node animation only,
+                                          // no skinned characters
 EffectComposer and UnrealBloomPass        // postProcessBloom()
 renderer.render(scene, camera)            // nothing to do, the engine draws every frame and handles resizing
 position.setUsage(THREE.DynamicDrawUsage) // mesh.dynamicDraw = true once, then mesh.dirty = true when the points

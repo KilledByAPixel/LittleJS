@@ -8091,10 +8091,15 @@ declare module "littlejsengine" {
      * @memberof GLTF
      */
     export class GLTFModel {
-        /** @param {Array<GLTFPart>} parts */
-        constructor(parts: Array<GLTFPart>);
+        /** @param {Array<GLTFPart>} parts @param {Array<GLTFAnimation>} [animations] @param {Object} [nodeTree] */
+        constructor(parts: Array<GLTFPart>, animations?: Array<GLTFAnimation>, nodeTree?: any);
         /** @property {Array<GLTFPart>} - One per primitive of every node that has a mesh */
         parts: GLTFPart[];
+        /** @property {Array<GLTFAnimation>} - The animations, play one through createObject's GLTFObject
+         *  @type {Array<GLTFAnimation>} */
+        animations: Array<GLTFAnimation>;
+        nodeTree: any;
+        modelMatrix: Matrix4;
         /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo */
         mesh: Mesh;
         /** @property {TextureInfo|undefined} - The texture to draw mesh with, when every part uses the same one
@@ -8117,26 +8122,40 @@ declare module "littlejsengine" {
          *  @param {Matrix4|Vector3} matrix - Transform, or just an offset to move by
          *  @return {GLTFModel} */
         transform(matrix: Matrix4 | Vector3): GLTFModel;
-        /** Make an object at a position with a child per part, so each keeps its own texture, color and blending;
-         *  the way to show a model with windows or other see through parts, which the combined mesh draws solid
+        /** Find an animation by name or number
+         *  @param {string|number|GLTFAnimation} animation
+         *  @return {GLTFAnimation|undefined} */
+        getAnimation(animation: string | number | GLTFAnimation): GLTFAnimation | undefined;
+        /** How far each part has moved from its resting place at a time in an animation, one matrix per part
+         *  - createObject's GLTFObject calls this as it plays, a game only needs it to pose something by hand
+         *  @param {GLTFAnimation} animation
+         *  @param {number} time - Seconds into it
+         *  @return {Array<Matrix4>} */
+        getPose(animation: GLTFAnimation, time: number): Array<Matrix4>;
+        /** Make an object at a position with a child per part, so each keeps its own texture, color and blending, and
+         *  the model's animations can play on it; the way to show a model with windows or other see through parts,
+         *  which the combined mesh draws solid, or one that moves
          *  @param {Vector3} [pos3D]
-         *  @return {EngineObject3D} - The root, move and turn it and the parts follow */
-        createObject(pos3D?: Vector3): EngineObject3D;
+         *  @return {GLTFObject} - The root, move and turn it and the parts follow */
+        createObject(pos3D?: Vector3): GLTFObject;
     }
     /**
      * LittleJS glTF Plugin
      * - Loads glTF 2.0 models: a .gltf with its .bin and images beside it, or a .glb with everything in one file
      * - A model comes back as parts, one Mesh per primitive of every node placed by the node tree, each with its
      *   material's color and base color texture, plus everything combined into one Mesh
-     * - Static geometry only: positions, normals, uvs, vertex colors and indices; skins, animations and morph targets are not read
+     * - Geometry: positions, normals, uvs, vertex colors and indices; skins and morph targets are not read
+     * - Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
+     *   GLTFObject that createObject makes; a skinned character's walk is not read
      * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too
      * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
      * - Requires the Render3D plugin
      * @namespace GLTF
      * @example
      * const model = await loadGLTF('ship.glb');   // in an async gameInit
-     * model.createObject(vec3(0, 1, 0));           // an object with a child per part, textures and all
-     * new EngineObject3D(vec3(), model.mesh);      // or the whole thing as one mesh
+     * const ship = model.createObject(vec3(0, 1, 0)); // an object with a child per part, textures and all
+     * ship.play('fly');                            // and its animation, by name or number
+     * new EngineObject3D(vec3(), model.mesh);      // or the whole thing as one mesh, still
      */
     /**
      * GLTFPart - One primitive of a model, placed where its node put it
@@ -8156,6 +8175,65 @@ declare module "littlejsengine" {
         textureInfo: TextureInfo | undefined;
         /** @property {boolean} - The material blends or is glass, so the part belongs in the transparent stage */
         transparent: boolean;
+        /** @property {number} - The node it came from, which an animation moves it with */
+        node: number;
+    }
+    /**
+     * GLTFObject - A model as an object with a child per part, which plays the model's animations
+     * - model.createObject makes one; move, turn and scale it like any EngineObject3D and the parts follow
+     * - play starts an animation by name or number, and the object moves its parts each frame as it runs
+     * - The parts' meshes stay where they rest, an animation moves the child objects that draw them
+     * @extends EngineObject3D
+     * @memberof GLTF
+     * @example
+     * const door = model.createObject(vec3(0, 0, 5));
+     * door.play('open', false); // once, holding the last pose
+     */
+    export class GLTFObject extends EngineObject3D {
+        /** Make the object and its parts, model.createObject is the usual way
+         *  @param {GLTFModel} model
+         *  @param {Vector3} [pos3D] */
+        constructor(model: GLTFModel, pos3D?: Vector3);
+        /** @property {GLTFModel} - The model it shows */
+        model: GLTFModel;
+        /** @property {GLTFAnimation|undefined} - The animation playing, or the last one, undefined for none
+         *  @type {GLTFAnimation|undefined} */
+        animation: GLTFAnimation | undefined;
+        /** @property {number} - Seconds into the animation */
+        animationTime: number;
+        /** @property {number} - How fast it plays, 1 is as made, negative plays it backward */
+        animationSpeed: number;
+        /** @property {boolean} - Start again at the end, or stop there and hold the last pose */
+        animationLoop: boolean;
+        /** @property {boolean} - Whether it is moving through the animation now */
+        animationPlaying: boolean;
+        /** Play an animation from its start
+         *  @param {string|number|GLTFAnimation} [animation] - Its name, its number in model.animations, or itself
+         *  @param {boolean} [loop] - Start again at the end, or stop there
+         *  @param {number} [speed] - 1 is as made, negative plays it backward from its end */
+        play(animation?: string | number | GLTFAnimation, loop?: boolean, speed?: number): void;
+        /** Stop the animation where it is, the parts hold that pose */
+        stop(): void;
+        /** Put the parts where the animation has them at a time, playing or not
+         *  @param {number} time - Seconds into the animation */
+        setAnimationTime(time: number): void;
+    }
+    /**
+     * GLTFAnimation - One animation of a model: keys that move, turn and scale its nodes over time
+     * - Play it through the GLTFObject that model.createObject makes
+     * @memberof GLTF
+     */
+    export class GLTFAnimation {
+        /** @param {string} name @param {Array<Object>} channels */
+        constructor(name: string, channels: Array<any>);
+        /** @property {string} - Its name in the file, or 'animation' and its number when it has none */
+        name: string;
+        /** @property {Array<Object>} - What it moves: for each, a node, which of its translation, rotation or scale,
+         *  the key times and values, and how to go between keys, LINEAR, STEP or CUBICSPLINE
+         *  @type {Array<Object>} */
+        channels: Array<any>;
+        /** @property {number} - Length in seconds, the time of its last key */
+        duration: any;
     }
     /** Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to
      *  @param {ArrayBuffer|Object|string} data - GLB bytes, or the glTF JSON as bytes, text or an object

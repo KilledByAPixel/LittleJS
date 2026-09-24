@@ -23271,15 +23271,18 @@ async function loadOBJ(url, smooth=render3D?.smoothShading)
  * - Loads glTF 2.0 models: a .gltf with its .bin and images beside it, or a .glb with everything in one file
  * - A model comes back as parts, one Mesh per primitive of every node placed by the node tree, each with its
  *   material's color and base color texture, plus everything combined into one Mesh
- * - Static geometry only: positions, normals, uvs, vertex colors and indices; skins, animations and morph targets are not read
+ * - Geometry: positions, normals, uvs, vertex colors and indices; skins and morph targets are not read
+ * - Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
+ *   GLTFObject that createObject makes; a skinned character's walk is not read
  * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too
  * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
  * - Requires the Render3D plugin
  * @namespace GLTF
  * @example
  * const model = await loadGLTF('ship.glb');   // in an async gameInit
- * model.createObject(vec3(0, 1, 0));           // an object with a child per part, textures and all
- * new EngineObject3D(vec3(), model.mesh);      // or the whole thing as one mesh
+ * const ship = model.createObject(vec3(0, 1, 0)); // an object with a child per part, textures and all
+ * ship.play('fly');                            // and its animation, by name or number
+ * new EngineObject3D(vec3(), model.mesh);      // or the whole thing as one mesh, still
  */
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -23303,6 +23306,29 @@ class GLTFPart
         this.textureInfo = textureInfo;
         /** @property {boolean} - The material blends or is glass, so the part belongs in the transparent stage */
         this.transparent = transparent;
+        /** @property {number} - The node it came from, which an animation moves it with */
+        this.node = 0;
+    }
+}
+
+/**
+ * GLTFAnimation - One animation of a model: keys that move, turn and scale its nodes over time
+ * - Play it through the GLTFObject that model.createObject makes
+ * @memberof GLTF
+ */
+class GLTFAnimation
+{
+    /** @param {string} name @param {Array<Object>} channels */
+    constructor(name, channels)
+    {
+        /** @property {string} - Its name in the file, or 'animation' and its number when it has none */
+        this.name = name;
+        /** @property {Array<Object>} - What it moves: for each, a node, which of its translation, rotation or scale,
+         *  the key times and values, and how to go between keys, LINEAR, STEP or CUBICSPLINE
+         *  @type {Array<Object>} */
+        this.channels = channels;
+        /** @property {number} - Length in seconds, the time of its last key */
+        this.duration = channels.reduce((d, c)=> max(d, c.times[c.times.length - 1] || 0), 0);
     }
 }
 
@@ -23312,11 +23338,16 @@ class GLTFPart
  */
 class GLTFModel
 {
-    /** @param {Array<GLTFPart>} parts */
-    constructor(parts)
+    /** @param {Array<GLTFPart>} parts @param {Array<GLTFAnimation>} [animations] @param {Object} [nodeTree] */
+    constructor(parts, animations=[], nodeTree)
     {
         /** @property {Array<GLTFPart>} - One per primitive of every node that has a mesh */
         this.parts = parts;
+        /** @property {Array<GLTFAnimation>} - The animations, play one through createObject's GLTFObject
+         *  @type {Array<GLTFAnimation>} */
+        this.animations = animations;
+        this.nodeTree = nodeTree;             // each node's parent and resting place, for animation
+        this.modelMatrix = new Matrix4;       // what center, fit and transform did to the parts, animation works through it
         /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo */
         this.mesh = new Mesh;
         for (const part of parts)
@@ -23355,26 +23386,156 @@ class GLTFModel
      *  @return {GLTFModel} */
     transform(matrix)
     {
+        matrix = render3DMatrix(matrix);
         for (const part of this.parts)
             part.mesh.transform(matrix);
         this.mesh.transform(matrix);
+        this.modelMatrix = matrix.copy().multiply(this.modelMatrix);
         return this;
     }
 
-    /** Make an object at a position with a child per part, so each keeps its own texture, color and blending;
-     *  the way to show a model with windows or other see through parts, which the combined mesh draws solid
-     *  @param {Vector3} [pos3D]
-     *  @return {EngineObject3D} - The root, move and turn it and the parts follow */
-    createObject(pos3D=vec3())
+    /** Find an animation by name or number
+     *  @param {string|number|GLTFAnimation} animation
+     *  @return {GLTFAnimation|undefined} */
+    getAnimation(animation)
     {
-        const root = new EngineObject3D(pos3D);
-        for (const part of this.parts)
+        return animation instanceof GLTFAnimation ? animation : isNumber(animation) ? this.animations[animation]
+            : this.animations.find(a=> a.name === animation);
+    }
+
+    /** How far each part has moved from its resting place at a time in an animation, one matrix per part
+     *  - createObject's GLTFObject calls this as it plays, a game only needs it to pose something by hand
+     *  @param {GLTFAnimation} animation
+     *  @param {number} time - Seconds into it
+     *  @return {Array<Matrix4>} */
+    getPose(animation, time)
+    {
+        const tree = this.nodeTree;
+        if (!tree) return this.parts.map(()=> new Matrix4);
+
+        // the nodes the animation moves get its values at this time, every other node keeps its own
+        const moved = new Map;
+        for (const channel of animation.channels)
+        {
+            let node = moved.get(channel.node);
+            node || moved.set(channel.node, node = gltfNodeTRS(tree.nodes[channel.node]));
+            gltfSample(channel, time, node[channel.path]);
+        }
+
+        // then each node's place in the model through its parents, and each part's move from where it rests,
+        // through what center and fit did: modelMatrix * now * rest inverse * modelMatrix inverse
+        const world = [];
+        const worldOf = (i)=>
+        {
+            if (world[i]) return world[i];
+            const local = gltfNodeMatrix(moved.get(i) || tree.nodes[i]), parent = tree.parents[i];
+            return world[i] = parent === undefined ? local : worldOf(parent).copy().multiply(local);
+        };
+        const model = this.modelMatrix, modelInverse = model.copy().invert();
+        return this.parts.map(part=> model.copy().multiply(worldOf(part.node)).multiply(tree.restInverse[part.node]).multiply(modelInverse));
+    }
+
+    /** Make an object at a position with a child per part, so each keeps its own texture, color and blending, and
+     *  the model's animations can play on it; the way to show a model with windows or other see through parts,
+     *  which the combined mesh draws solid, or one that moves
+     *  @param {Vector3} [pos3D]
+     *  @return {GLTFObject} - The root, move and turn it and the parts follow */
+    createObject(pos3D=vec3()) { return new GLTFObject(this, pos3D); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * GLTFObject - A model as an object with a child per part, which plays the model's animations
+ * - model.createObject makes one; move, turn and scale it like any EngineObject3D and the parts follow
+ * - play starts an animation by name or number, and the object moves its parts each frame as it runs
+ * - The parts' meshes stay where they rest, an animation moves the child objects that draw them
+ * @extends EngineObject3D
+ * @memberof GLTF
+ * @example
+ * const door = model.createObject(vec3(0, 0, 5));
+ * door.play('open', false); // once, holding the last pose
+ */
+class GLTFObject extends EngineObject3D
+{
+    /** Make the object and its parts, model.createObject is the usual way
+     *  @param {GLTFModel} model
+     *  @param {Vector3} [pos3D] */
+    constructor(model, pos3D=vec3())
+    {
+        super(pos3D);
+        /** @property {GLTFModel} - The model it shows */
+        this.model = model;
+        /** @property {GLTFAnimation|undefined} - The animation playing, or the last one, undefined for none
+         *  @type {GLTFAnimation|undefined} */
+        this.animation = undefined;
+        /** @property {number} - Seconds into the animation */
+        this.animationTime = 0;
+        /** @property {number} - How fast it plays, 1 is as made, negative plays it backward */
+        this.animationSpeed = 1;
+        /** @property {boolean} - Start again at the end, or stop there and hold the last pose */
+        this.animationLoop = true;
+        /** @property {boolean} - Whether it is moving through the animation now */
+        this.animationPlaying = false;
+        for (const part of model.parts)
         {
             const o = new EngineObject3D(vec3(), part.mesh, part.textureInfo, part.color);
             o.transparent = part.transparent;
-            root.addChild(o);
+            this.addChild(o);
         }
-        return root;
+    }
+
+    /** Play an animation from its start
+     *  @param {string|number|GLTFAnimation} [animation] - Its name, its number in model.animations, or itself
+     *  @param {boolean} [loop] - Start again at the end, or stop there
+     *  @param {number} [speed] - 1 is as made, negative plays it backward from its end */
+    play(animation=0, loop=true, speed=1)
+    {
+        const found = this.model.getAnimation(animation);
+        false&&ASSERT(found, 'the model has no animation ' + animation, this.model.animations.map(a=> a.name));
+        if (!found) return;
+        this.animation = found;
+        this.animationLoop = loop;
+        this.animationSpeed = speed;
+        this.animationPlaying = true;
+        this.setAnimationTime(speed < 0 ? found.duration : 0);
+    }
+
+    /** Stop the animation where it is, the parts hold that pose */
+    stop() { this.animationPlaying = false; }
+
+    /** Put the parts where the animation has them at a time, playing or not
+     *  @param {number} time - Seconds into the animation */
+    setAnimationTime(time)
+    {
+        this.animationTime = time;
+        if (!this.animation) return;
+        const pose = this.model.getPose(this.animation, time), parts = this.children;
+        for (let i = 0; i < pose.length && i < parts.length; ++i)
+        {
+            const o = parts[i], m = pose[i];
+            o.pos3D = m.getTranslation();
+            o.rotation3D = m.getRotation();
+            o.scale3D = m.getScale();
+        }
+    }
+
+    /** Move through the animation, called automatically each frame */
+    update()
+    {
+        super.update();
+        const animation = this.animation;
+        if (!this.animationPlaying || !animation) return;
+        const duration = animation.duration;
+        let t = this.animationTime + timeDelta * this.animationSpeed;
+        if (this.animationLoop)
+            t = duration ? mod(t, duration) : 0;
+        else if (t >= duration || t <= 0)
+        {
+            // the end, or the start when playing backward: hold the last pose there
+            t = clamp(t, 0, duration);
+            this.animationPlaying = false;
+        }
+        this.setAnimationTime(t);
     }
 }
 
@@ -23461,23 +23622,28 @@ async function parseGLTF(data, baseUrl='')
         catch (e) { false&&LOG('glTF image not loaded', e); }
     }));
 
-    // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it
-    const parts = [];
-    const visit = (index, parentMatrix)=>
+    // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it;
+    // each node's parent and resting place are kept, so an animation can move a part from where it rests
+    const parts = [], parents = [], restInverse = [];
+    const visit = (index, parentMatrix, parentIndex)=>
     {
         const node = json.nodes[index], local = gltfNodeMatrix(node);
         const matrix = parentMatrix ? parentMatrix.copy().multiply(local) : local;
+        parents[index] = parentIndex;
+        restInverse[index] = matrix.copy().invert();
         if (node.mesh !== undefined)
         {
             const mesh = json.meshes[node.mesh];
             for (const primitive of mesh.primitives)
             {
                 const part = gltfPart(json, buffers, textures, primitive, matrix, node.name || mesh.name || 'part ' + parts.length);
-                part && parts.push(part);
+                if (!part) continue;
+                part.node = index;
+                parts.push(part);
             }
         }
         for (const child of node.children || [])
-            visit(child, matrix);
+            visit(child, matrix, index);
     };
     const scene = json.scenes?.[json.scene ?? 0];
     if (scene)
@@ -23488,7 +23654,77 @@ async function parseGLTF(data, baseUrl='')
         const children = new Set(json.nodes.flatMap(n=> n.children || []));
         json.nodes.forEach((n, i)=> children.has(i) || visit(i));
     }
-    return new GLTFModel(parts);
+
+    // the animations: each channel that moves a node's translation, rotation or scale, with its keys; morph
+    // weights are not read, and a node given as a matrix cannot be animated, the format says
+    const animations = (json.animations || []).map((animation, i)=> new GLTFAnimation(animation.name || 'animation ' + i,
+        animation.channels.filter(c=> c.target.node !== undefined && ['translation', 'rotation', 'scale'].includes(c.target.path)
+            && !json.nodes[c.target.node].matrix).map(c=>
+        {
+            const sampler = animation.samplers[c.sampler];
+            return {node: c.target.node, path: c.target.path, interpolation: sampler.interpolation || 'LINEAR',
+                times: gltfAccessor(json, buffers, sampler.input).data, values: gltfAccessor(json, buffers, sampler.output).data,
+                components: c.target.path === 'rotation' ? 4 : 3};
+        })));
+    return new GLTFModel(parts, animations, {nodes: json.nodes, parents, restInverse});
+}
+
+// a node's translation, rotation and scale as arrays to animate, copies so the file's stay as they rest
+function gltfNodeTRS(node)
+{
+    return {translation: [...(node.translation || [0, 0, 0])], rotation: [...(node.rotation || [0, 0, 0, 1])],
+        scale: [...(node.scale || [1, 1, 1])]};
+}
+
+// write a channel's value at a time into out: its keys held before the first and after the last, stepped, straight
+// between, or on the curve their tangents make; a rotation goes the short way round and stays a unit quaternion
+function gltfSample(channel, time, out)
+{
+    const {times, values, components: n, interpolation} = channel, last = times.length - 1;
+    const cubic = interpolation === 'CUBICSPLINE', stride = cubic ? 3 * n : n, at = cubic ? n : 0; // a cubic key is in, value, out
+    let k = 0;
+    while (k < last && times[k + 1] <= time) ++k;
+    if (k >= last || time <= times[0] || interpolation === 'STEP')
+    {
+        for (let j = 0; j < n; ++j)
+            out[j] = values[k * stride + at + j];
+        return;
+    }
+    const dt = times[k + 1] - times[k], t = (time - times[k]) / dt, a = k * stride, b = a + stride;
+    if (cubic)
+    {
+        // hermite between the two values, with the out tangent of the first and the in tangent of the second
+        const t2 = t * t, t3 = t2 * t;
+        const h00 = 2*t3 - 3*t2 + 1, h10 = t3 - 2*t2 + t, h01 = -2*t3 + 3*t2, h11 = t3 - t2;
+        for (let j = 0; j < n; ++j)
+            out[j] = h00 * values[a + n + j] + h10 * dt * values[a + 2*n + j] + h01 * values[b + n + j] + h11 * dt * values[b + j];
+    }
+    else if (n === 4)
+    {
+        // a rotation turns along the arc between the two, the shorter way round
+        let dot = 0;
+        for (let j = 0; j < 4; ++j)
+            dot += values[a + j] * values[b + j];
+        const flip = dot < 0 ? -1 : 1;
+        dot *= flip;
+        let wa = 1 - t, wb = t * flip;
+        if (dot < .9995) // close together the straight line is as good and does not divide by nothing
+        {
+            const angle = Math.acos(dot), s = sin(angle);
+            wa = sin((1 - t) * angle) / s, wb = sin(t * angle) / s * flip;
+        }
+        for (let j = 0; j < 4; ++j)
+            out[j] = wa * values[a + j] + wb * values[b + j];
+    }
+    else
+        for (let j = 0; j < n; ++j)
+            out[j] = values[a + j] + (values[b + j] - values[a + j]) * t;
+    if (n === 4)
+    {
+        const l = hypot(out[0], out[1], out[2], out[3]) || 1;
+        for (let j = 0; j < 4; ++j)
+            out[j] /= l;
+    }
 }
 
 // fetch a uri beside the model, or decode a data uri without going out

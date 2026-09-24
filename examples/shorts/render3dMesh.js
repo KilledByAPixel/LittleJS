@@ -73,7 +73,10 @@ function setModel(loaded)
     loaded.center().fit(modelSize);
     const pos = vec3(0, -loaded.getBounds().min.y, 0);
     if (loaded instanceof GLTFModel)
+    {
         model = loaded.createObject(pos); // a child per part, windows and all
+        loaded.animations.length && model.play(); // its first animation
+    }
     else
         model = new EngineObject3D(pos, loaded, undefined, hsl(.1,.6,.7));
     model.angleVelocity3D = vec3(0, .005);

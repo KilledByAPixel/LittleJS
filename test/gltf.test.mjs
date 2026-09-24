@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseGLTF, GLTFModel, GLTFPart, vec3, EngineObject3D, engineObjects } from '../dist/littlejs.esm.js';
+import { parseGLTF, GLTFModel, GLTFPart, GLTFObject, GLTFAnimation, vec3, buildMatrix, Matrix4, EngineObject3D, engineObjects } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-4, `${msg || ''} ${a} vs ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x, 'x'); near(v.y, y, 'y'); near(v.z, z, 'z'); };
@@ -200,3 +200,158 @@ test('an empty scene loads as an empty model, and an absolute uri is fetched as 
     finally { globalThis.fetch = realFetch; }
     assert.deepEqual(urls, ['https://cdn.test/model.bin', 'https://host.test/assets/model.bin']);
 });
+
+// an arm and a hand: node 0 is the quad moved up one, node 1 its child, the triangle moved right two; three animations
+// that key the arm's rotation linearly and its position in steps, and the hand's position on a cubic spline
+function animatedModel()
+{
+    const keys = new Float32Array([
+        0, 1,                                   // times, at 0 bytes
+        0, 0, 0, 1,  0, Math.SQRT1_2, 0, Math.SQRT1_2, // two rotations, none then a quarter turn about y, at 8
+        0, .5,                                  // times, at 40
+        0, 1, 0,  0, 3, 0,                      // two positions, at 48
+        0, 1,                                   // times, at 72
+        // cubic spline keys: in tangent, value, out tangent for each, at 80
+        0, 0, 0,  2, 0, 0,  0, 4, 0,
+        0, 4, 0,  2, 2, 0,  0, 0, 0,
+    ]);
+    const bytes = new Uint8Array(160 + keys.byteLength);
+    bytes.set(new Uint8Array(buffer), 0);
+    bytes.set(new Uint8Array(keys.buffer), 160);
+    const view = (offset, length)=> ({ buffer: 0, byteOffset: 160 + offset, byteLength: length });
+    return parseGLTF({
+        ...json,
+        buffers: [{ byteLength: bytes.length, uri: 'data:application/octet-stream;base64,' + Buffer.from(bytes).toString('base64') }],
+        bufferViews: [...json.bufferViews, view(0, 8), view(8, 32), view(40, 8), view(48, 24), view(72, 8), view(80, 72)],
+        accessors: [...json.accessors,
+            { bufferView: 4, componentType: 5126, count: 2, type: 'SCALAR' },  // 5
+            { bufferView: 5, componentType: 5126, count: 2, type: 'VEC4' },    // 6
+            { bufferView: 6, componentType: 5126, count: 2, type: 'SCALAR' },  // 7
+            { bufferView: 7, componentType: 5126, count: 2, type: 'VEC3' },    // 8
+            { bufferView: 8, componentType: 5126, count: 2, type: 'SCALAR' },  // 9
+            { bufferView: 9, componentType: 5126, count: 6, type: 'VEC3' },    // 10
+        ],
+        nodes: [
+            { name: 'arm', mesh: 0, translation: [0, 1, 0], children: [1] },
+            { name: 'hand', mesh: 1, translation: [2, 0, 0] },
+        ],
+        scenes: [{ nodes: [0] }],
+        animations: [
+            { name: 'spin', samplers: [{ input: 5, output: 6 }], channels: [{ sampler: 0, target: { node: 0, path: 'rotation' } }] },
+            { name: 'hop', samplers: [{ input: 7, output: 8, interpolation: 'STEP' }], channels: [{ sampler: 0, target: { node: 0, path: 'translation' } }] },
+            { samplers: [{ input: 9, output: 10, interpolation: 'CUBICSPLINE' }], channels: [{ sampler: 0, target: { node: 1, path: 'translation' } },
+                { sampler: 0, target: { node: 1, path: 'weights' } }] }, // morph weights are not read, the channel is left out
+        ],
+    });
+}
+
+// where a part's rest point is in the world now: the part's object matrix is the world one, the mesh is at rest
+const worldPoint = (o, p)=> o.getMatrix().transformPoint(p);
+
+test('a glTF model reads its node animations, names, lengths and the channels it can play', async () =>
+{
+    const model = await animatedModel();
+    assert.equal(model.animations.length, 3);
+    const [spin, hop, bob] = model.animations;
+    assert.ok(spin instanceof GLTFAnimation);
+    assert.equal(spin.name, 'spin');
+    assert.equal(hop.name, 'hop');
+    assert.equal(bob.name, 'animation 2', 'an unnamed one is named by its place');
+    near(spin.duration, 1); near(hop.duration, .5); near(bob.duration, 1);
+    assert.equal(bob.channels.length, 1, 'the weights channel is left out');
+    assert.equal((await parseGLTF(withDataUri)).animations.length, 0);
+});
+
+test('a GLTFObject plays an animation: a rotation turns its part and the child node with it', async () =>
+{
+    const model = await animatedModel(), o = model.createObject(vec3(10, 0, 0));
+    try
+    {
+        assert.ok(o instanceof GLTFObject && o instanceof EngineObject3D);
+        const [arm, hand] = o.children;
+        const armPoint = model.parts[0].mesh.points[1], handPoint = model.parts[1].mesh.points[0];
+        // at rest, nothing moved
+        nearVec(worldPoint(arm, armPoint), armPoint.x + 10, armPoint.y, armPoint.z);
+
+        // half way through the spin, an eighth turn about y: the arm turns about its node, the hand goes around with it
+        o.play('spin');
+        o.setAnimationTime(.5);
+        const eighth = buildMatrix(vec3(10, 1, 0), vec3(0, Math.PI / 4, 0));
+        const armRest = armPoint.subtract(vec3(0, 1, 0)); // the point in the arm node's own space
+        const a = eighth.transformPoint(armRest);
+        nearVec(worldPoint(arm, armPoint), a.x, a.y, a.z);
+        const handRest = handPoint.subtract(vec3(2, 1, 0)); // in the hand node's space
+        const h = eighth.multiply(buildMatrix(vec3(2, 0, 0))).transformPoint(handRest);
+        nearVec(worldPoint(hand, handPoint), h.x, h.y, h.z);
+        assert.equal(hand.mesh, model.parts[1].mesh, 'each child draws its part');
+    }
+    finally { o.destroy(true); engineObjects.length = 0; }
+});
+
+test('step keys jump, cubic spline keys follow their tangents, and time loops or stops at the end', async () =>
+{
+    const model = await animatedModel(), o = model.createObject();
+    try
+    {
+        const [arm, hand] = o.children;
+        const armPoint = model.parts[0].mesh.points[0], handPoint = model.parts[1].mesh.points[0];
+
+        // step: the arm holds its first position until the second key, then jumps to it
+        o.play('hop', false);
+        o.setAnimationTime(.49);
+        nearVec(worldPoint(arm, armPoint), armPoint.x, armPoint.y, armPoint.z);
+        o.setAnimationTime(.5);
+        nearVec(worldPoint(arm, armPoint), armPoint.x, armPoint.y + 2, armPoint.z);
+
+        // cubic spline half way: the hand's node goes from (2, 0, 0) to (2, 2, 0) leaving along +y at 4 a second
+        // and arriving along +y at 4, so the hermite curve puts it at y = 1 + (4 - 4) / 8 = 1
+        o.play(2);
+        o.setAnimationTime(.5);
+        nearVec(worldPoint(hand, handPoint), handPoint.x, handPoint.y + 1, handPoint.z);
+        o.setAnimationTime(.25); // h00 * 0 + h10 * 4 + h01 * 2 + h11 * 4 at a quarter: .84375 * 0 + .140625 * 4 + .15625 * 2 - .046875 * 4
+        nearVec(worldPoint(hand, handPoint), handPoint.x, handPoint.y + .6875, handPoint.z);
+
+        // a looping animation wraps: a second and a half of a one second spin is half way
+        o.play('spin', true);
+        for (let i = 0; i < 90; ++i) o.update();
+        near(o.animationTime, .5, 'wrapped');
+        assert.equal(o.animationPlaying, true);
+
+        // one that does not loop stops at its end and holds the last pose
+        o.play('spin', false, 2);
+        for (let i = 0; i < 60; ++i) o.update();
+        near(o.animationTime, 1);
+        assert.equal(o.animationPlaying, false);
+        const quarter = buildMatrix(vec3(0, 1, 0), vec3(0, Math.PI / 2, 0)).transformPoint(armPoint.subtract(vec3(0, 1, 0)));
+        nearVec(worldPoint(arm, armPoint), quarter.x, quarter.y, quarter.z);
+
+        // stop holds where it is
+        o.play('spin');
+        o.setAnimationTime(.25);
+        o.stop();
+        o.update();
+        near(o.animationTime, .25);
+    }
+    finally { o.destroy(true); engineObjects.length = 0; }
+});
+
+test('an animation plays the same after the model is centered and fitted', async () =>
+{
+    const plain = await animatedModel(), fitted = await animatedModel();
+    const before = plain.parts[1].mesh.points[2];
+    fitted.center().fit(4);
+    // the fit is a move and an even scale, found from where one point went
+    const a = plain.parts[0].mesh.points[0], b = plain.parts[0].mesh.points[1];
+    const fa = fitted.parts[0].mesh.points[0], fb = fitted.parts[0].mesh.points[1];
+    const scale = fa.distance(fb) / a.distance(b), shift = fa.subtract(a.scale(scale));
+    const p = plain.createObject(), f = fitted.createObject();
+    try
+    {
+        p.play('spin'); p.setAnimationTime(.7);
+        f.play('spin'); f.setAnimationTime(.7);
+        const moved = worldPoint(p.children[1], before), fittedMoved = worldPoint(f.children[1], fitted.parts[1].mesh.points[2]);
+        nearVec(fittedMoved, moved.x * scale + shift.x, moved.y * scale + shift.y, moved.z * scale + shift.z);
+    }
+    finally { p.destroy(true); f.destroy(true); engineObjects.length = 0; }
+});
+

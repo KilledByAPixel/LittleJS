@@ -160,6 +160,8 @@ export
     loadOBJ,
     GLTFModel,
     GLTFPart,
+    GLTFObject,
+    GLTFAnimation,
     parseGLTF,
     loadGLTF,
     debugBox3D,
