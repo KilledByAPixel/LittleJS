@@ -783,7 +783,7 @@ medal_firstWin.unlock();
 
 You can pass an image URL as the fifth argument to `Medal` instead of an emoji icon. The `saveName` you pass to `medalsInit` is used to track which medals have been unlocked in localStorage, so unlocks persist across sessions.
 
-The plugin also supports [Newgrounds](https://www.newgrounds.com) integration via `newgrounds.io` for hosted leaderboards and medals held on the server. See [plugins/medalSystem.js](plugins/medalSystem.js) for details.
+The plugin also supports [Newgrounds](https://www.newgrounds.com) scoreboards and medals held on the server through [plugins/newgrounds.js](plugins/newgrounds.js): create each medal as a `NewgroundsMedal` with the id Newgrounds gave it, call `medalsInit` as usual, then `new NewgroundsPlugin(app_id, cipher)`. The "LittleJS Medals & Newgrounds" section of REFERENCE.md has a short example.
 
 ---
 

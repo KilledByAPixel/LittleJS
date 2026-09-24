@@ -3853,7 +3853,7 @@ declare module "littlejsengine" {
      * - When logged in, Newgrounds holds the player's NewgroundsMedals: they unlock once the server confirms and the local save leaves them alone
      * - A plain Medal is never touched, so a game can use the plugin for scoreboards alone
      * - A guest with no session gets the medal and scoreboard lists too, so names, icons and leaderboards show; only unlocking needs a login
-     * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
+     * - Create the medals as NewgroundsMedals with their Newgrounds ids, call medalsInit, then new NewgroundsPlugin(app_id, cipher)
      * - Encrypts calls with the browser's own WebCrypto when the app has a cipher, no library needed
      * - Logs a view when it starts, and provides functions to unlock medals and to post and read scoreboards
      * - Keeps the session alive with a ping every minute when logged in
@@ -3872,6 +3872,7 @@ declare module "littlejsengine" {
         /** Create the global newgrounds object
          *  - Logs a view right away, for a guest and a logged in player alike, so a game does not have to
          *  - Create the medals first: they take their name and icon from the server once it answers, and when logged in they are locked here until it does
+         *  - Call medalsInit too, before or after, it keeps the medals while not logged in
          *  @param {string} app_id   - The Newgrounds App ID
          *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; calls are encrypted with
          *    the browser's WebCrypto, which needs a secure page, https or localhost
@@ -3922,8 +3923,9 @@ declare module "littlejsengine" {
         unlockMedal(id: number): Promise<any>;
         /** Send message to post score
          *  @param {number} id    - The scoreboard id
-         *  @param {number} value - The score value
-         *  @return {Promise<Object>} - The response JSON object, undefined when the call failed */
+         *  @param {number} value - The score value, a whole number
+         *  @return {Promise<Object>} - The response JSON object, undefined when the call failed; result.success says whether it
+         *    posted, which needs a logged in player */
         postScore(id: number, value: number): Promise<any>;
         /** Get scores from a scoreboard
          *  @param {number} id        - The scoreboard id
@@ -3932,7 +3934,8 @@ declare module "littlejsengine" {
          *  @param {number} [skip]    - Number of scores to skip over
          *  @param {number} [limit]   - Number of scores to include in the list
          *  @param {string} [period]  - 'D' today, which the server assumes when left out, 'W' this week, 'M' this month, 'Y' this year or 'A' all time
-         *  @return {Promise<Object>} - The response JSON object, undefined when the call failed
+         *  @return {Promise<Object>} - The response JSON object, undefined when the call failed; the scores are in
+         *    result.data.scores, each with user.name, value and formatted_value
          */
         getScores(id: number, user?: string | number, social?: boolean, skip?: number, limit?: number, period?: string): Promise<any>;
         /** Encrypt text the way the Newgrounds gateway expects, AES-128 CBC with a random iv in front, as Base64
@@ -3947,7 +3950,7 @@ declare module "littlejsengine" {
         call(component: string, parameters?: any): Promise<any>;
     }
     /**
-     * Newgrounds medal, unlocks on Newgrounds as well; when logged in it only unlocks once the server confirms
+     * Newgrounds medal: its id is the medal's id on the Newgrounds API Tools page; when logged in it only unlocks once the server confirms
      * @extends Medal
      * @memberof Newgrounds
      */

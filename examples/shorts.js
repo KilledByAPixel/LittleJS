@@ -66,7 +66,7 @@ const exampleList =
     new ExampleInfo('Path Finder', 'pathFinder.js', 'A* pathfinding with path smoothing', false, 'ai, navigation, astar, search'),
     new ExampleInfo('--- PLUGINS & UTILITIES ---'),
     new ExampleInfo('Save / Load', 'save.js', 'Persist data to local storage', false, 'localstorage, persistence, readSaveData, writeSaveData'),
-    new ExampleInfo('Medals', 'medals.js', 'Achievement system', false, 'unlock, progress, newgrounds'),
+    new ExampleInfo('Medals', 'medals.js', 'Achievement system', false, 'unlock, achievements, newgrounds'),
     new ExampleInfo('Tween', 'tween.js', 'Number, Vector2 and Color tweens with easing', false, 'animation, easing, lerp, pingpong, interpolation'),
     new ExampleInfo('Nine Slice', 'nineSlice.js', 'Scalable UI panels', false, 'three slice, stretch, corners, text, tiles'),
     new ExampleInfo('Crescent', 'crescent.js', 'Moon phase crescent shapes', false, 'moon, phase, polygon, draw, circle, lunar'),

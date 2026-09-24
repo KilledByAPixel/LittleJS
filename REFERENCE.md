@@ -1455,12 +1455,14 @@ new Medal(id, name, description='', icon='🏆', src)  // src is optional image 
 medal.unlock()                       // Mark unlocked, save, and queue the popup; the promise it returns is optional
                                      // and resolves with whether the medal is unlocked, right away unless a server has to confirm
 medal.unlocked                       // True after unlock
-medal.isLocal()                      // Whether the local save holds the medal, false for a NewgroundsMedal while logged in
+medal.isLocal()                      // true while this browser's save keeps the medal; false for a NewgroundsMedal while
+                                     // a player is logged in to Newgrounds, whose server keeps it
 
 medals                               // Global { [id]: Medal } map
-medalsInit(saveName)                 // Restore unlocked state from localStorage under saveName, skipping medals a service holds
+medalsInit(saveName)                 // Restore unlocked state from localStorage under saveName, skipping NewgroundsMedals while
+                                     // logged in; still needed with Newgrounds, before or after the plugin
 medalsForEach(callback)              // Iterate all registered medals
-medalsReset()                        // Lock all medals and persist the cleared catalog, medals a service holds are left alone
+medalsReset()                        // Lock all medals and persist the cleared catalog, NewgroundsMedals while logged in are left alone
 medalsPreventUnlock                  // Block unlocks (testing / debug)
 
 // Display tuning
@@ -1468,24 +1470,35 @@ medalDisplayTime / setMedalDisplayTime(seconds)
 medalDisplaySlideTime / setMedalDisplaySlideTime(seconds)
 medalDisplaySize / setMedalDisplaySize(vec2)
 
+// Newgrounds in a game: the app id, the cipher and every medal and scoreboard id come from the project's API Tools page
+const medal_win = new NewgroundsMedal(81234, 'Win', 'Beat the game') // its id is the Newgrounds medal id
+medalsInit('My Game')                // still needed, it keeps the medals while not logged in
+new NewgroundsPlugin(app_id, cipher) // pass the cipher when the app has encryption on
+medal_win.unlock()
+newgrounds.postScore(boardId, score) // needs a logged in player and a whole number
+const response = await newgrounds.getScores(boardId, undefined, false, 0, 10, 'A') // top 10 of all time
+const scores = response?.result?.data?.scores || [] // each with user.name, value and formatted_value
+
 // Newgrounds integration (a session only comes from the Newgrounds host, the lists come from anywhere)
+new NewgroundsMedal(id, name, description, icon, src) // id is the medal's id on Newgrounds; when logged in, unlock() asks the
+                                     // server and the medal only unlocks and shows once it confirms, so unlocked is still false
+                                     // on return; await the promise for the outcome
 new NewgroundsPlugin(app_id, cipher) // sets the newgrounds global, logs a view and fetches the medals and scoreboards; with the
                                      // app's cipher, calls are encrypted by the browser's own WebCrypto, so the page
                                      // has to be https or localhost and no library is needed
-await newgrounds.ready               // resolves once the session is checked and the medals and scoreboards are in
+await newgrounds.ready               // resolves once the session is checked and the medals and scoreboards are in; only needed
+                                     // before reading medals, scoreboards or user
 newgrounds.session_id                // the player's session id, null when not logged in or once the server refused it
 newgrounds.user                      // the logged in player once ready, with id, name, url and supporter; null when not logged in
-newgrounds.medals                    // the server's medal list once ready; its name, description, icon, value and difficulty
-                                     // replace what the game gave each NewgroundsMedal, and the unlocks come only when logged in
-newgrounds.scoreboards               // the server's scoreboard list once ready, with the ids to post and read
-newgrounds.unlockMedal(id)           // Server-side unlock; every call is a fetch and returns a promise of the response
-newgrounds.postScore(id, value)      // Submit to a scoreboard
-await newgrounds.getScores(id, user, social, skip, limit, period) // period 'D' today (the server default), 'W', 'M', 'Y', 'A' all time
-newgrounds.pendingUnlocks            // Map of the medals sent to unlock that the server has not confirmed yet to the promise of
-                                     // each request; one that came back unconfirmed is resent on the keep alive ping
-newgrounds.resendUnlocks()           // send the ones that came back unconfirmed again now, as the keep alive ping does every minute
-new NewgroundsMedal(id, name, description, icon, src) // when logged in, unlock() asks the server and the medal only unlocks
-                                     // and shows once it confirms, so unlocked is still false on return; await the promise for the outcome
+newgrounds.medals                    // the server's medal list once ready; each NewgroundsMedal takes its name, description with
+                                     // " (value)" added, image, value and difficulty, and the unlocks come only when logged in
+newgrounds.scoreboards               // the server's scoreboard list once ready, each with the id and name to post and read
+newgrounds.postScore(id, value)      // needs a logged in player and a whole number; result.success says whether it posted
+await newgrounds.getScores(id, user, social, skip, limit, period) // the scores are in result.data.scores; period 'D' today
+                                     // (the server default), 'W', 'M', 'Y', 'A' all time; a user or social narrows it down
+newgrounds.unlockMedal(id)           // low level request only, the medal is not changed; games call medal.unlock()
+newgrounds.pendingUnlocks            // advanced: the medals sent to unlock and not yet confirmed, each with its request's promise
+newgrounds.resendUnlocks()           // advanced: send the ones that came back unconfirmed again now, as the ping does every minute
 ```
 
 ## LittleJS Drawing Utilities
