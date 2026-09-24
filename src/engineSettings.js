@@ -160,10 +160,11 @@ let particleEmitRateScale = 1;
 let gamepadsEnable = true;
 
 /** If true, the dpad input is also routed to the left analog stick (for better accessability)
+ *  - Off by default in this branch to save space, main LittleJS defaults to true
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let gamepadDirectionEmulateStick = true;
+let gamepadDirectionEmulateStick = false;
 
 /** If true the WASD keys are also routed to the direction keys (for better accessability)
  *  @type {Boolean}
