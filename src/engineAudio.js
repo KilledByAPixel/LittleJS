@@ -3,7 +3,7 @@
  * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
  * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
  * - Caches sounds and music for fast playback
- * - Can attenuate sounds by distance, and stereo pan them if soundPanEnable is set
+ * - Can attenuate sounds by distance and stereo pan them, if soundRangeEnable and soundPanEnable are set
  * - Ability to play mp3, ogg, and wave files
  * - Speech synthesis functions
  * @namespace Audio
@@ -92,7 +92,7 @@ class Sound
         if (pos)
         {
             const range = this.range;
-            if (range)
+            if (soundRangeEnable && range)
             {
                 // apply range based fade
                 const lengthSquared = cameraPos.distanceSquared(pos);

@@ -223,6 +223,15 @@ sound.setVolume(.5);
 if (sound.gainNode.gain.value != .5*soundVolume) throw 'setVolume should include soundVolume';
 if (zzfx(1, 0).output.output !== audioContext.destination) throw 'zzfx should play without a master gain';
 
+// without soundRangeEnable a position neither fades nor skips the sound
+if (!sound.play(vec2(1e3, 0))) throw 'a far sound should still play by default';
+if (sound.gainNode.gain.value != soundVolume) throw 'a position should not fade the sound by default';
+setSoundRangeEnable(true);
+if (sound.play(vec2(1e3, 0))) throw 'soundRangeEnable should skip a sound out of range';
+sound.play(vec2(35, 0)); // past the taper start at 28, inside the range of 40
+if (!(sound.gainNode.gain.value > 0 && sound.gainNode.gain.value < soundVolume)) throw 'soundRangeEnable should fade a distant sound';
+setSoundRangeEnable(false);
+
 setSoundPanEnable(true);
 source = sound.play();
 if (!(source.output instanceof StereoPannerNode) || source.output.output !== sound.gainNode)

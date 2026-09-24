@@ -238,6 +238,14 @@ let soundDefaultRange = 40;
  *  @memberof Settings */
 let soundDefaultTaper = .7;
 
+/** Fade sounds played at a world position by distance from the camera, and skip ones out of range
+ *  - Off by default in this branch to save space, main LittleJS always does it
+ *  - While off, a sound's range and taper are accepted and ignored
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let soundRangeEnable = false;
+
 /** Pan sounds played at a world position by where they are on screen
  *  - Off by default in this branch to save space, main LittleJS always pans
  *  - While off, the pan argument is still accepted and ignored
@@ -460,6 +468,11 @@ function setSoundDefaultRange(range) { soundDefaultRange = range; }
  *  @param {Number} taper
  *  @memberof Settings */
 function setSoundDefaultTaper(taper) { soundDefaultTaper = taper; }
+
+/** Set if sounds played at a world position fade with distance and are skipped out of range
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setSoundRangeEnable(enable) { soundRangeEnable = enable; }
 
 /** Set if sounds played at a world position are stereo panned
  *  @param {Boolean} enable
