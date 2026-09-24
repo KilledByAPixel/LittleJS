@@ -134,6 +134,7 @@ class NewgroundsPlugin
     {
         ASSERT(!newgrounds, 'there can only be one newgrounds object');
         ASSERT(!cipher || typeof crypto != 'undefined' && crypto.subtle, 'a cipher needs WebCrypto, which the browser only has on a secure page');
+        ASSERT(!cipher || /^[A-Za-z0-9+/]{22}==$/.test(cipher), 'the cipher must be the Base64 AES-128 key from the app settings');
 
         newgrounds = this; // set global newgrounds object
         /** @property {string} - The Newgrounds App ID */
@@ -342,7 +343,7 @@ class NewgroundsPlugin
      *  @param {Object}  [parameters] - Parameters to use for call
      *  @param {string|null} [session_id] - The session to send, the player's by default
      *  @return {Promise<Object>}     - The response JSON object, undefined when the call failed or took over 15 seconds;
-     *    a component's own success and error are in result.data
+     *    a component's own success and error are in result.data, and a cipher that is not a key gives error 201
      */
     async call(component, parameters, session_id=this.session_id)
     {
@@ -351,7 +352,14 @@ class NewgroundsPlugin
         {
             let execute = {'component':component, 'parameters':parameters};
             if (this.cipher && newgroundsSecureComponents.includes(component))
-                execute = {'secure': await this.encrypt(JSON.stringify(execute))}; // only the encrypted call goes
+            {
+                // only the encrypted call goes; a key that will not even import is refused here the way the server
+                // refuses a wrong one, since sending again cannot fix it
+                const secure = await this.encrypt(JSON.stringify(execute)).catch(e=> debugMedals && LOG('Newgrounds cipher failed', e));
+                if (!secure)
+                    return {'success':false, 'error':{'code':201, 'message':'Invalid Encryption: the cipher is not a Base64 AES-128 key'}};
+                execute = {'secure': secure};
+            }
 
             // build the request object, in the form the Newgrounds.io docs give
             const request =

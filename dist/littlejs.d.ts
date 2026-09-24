@@ -3956,7 +3956,7 @@ declare module "littlejsengine" {
          *  @param {Object}  [parameters] - Parameters to use for call
          *  @param {string|null} [session_id] - The session to send, the player's by default
          *  @return {Promise<Object>}     - The response JSON object, undefined when the call failed or took over 15 seconds;
-         *    a component's own success and error are in result.data
+         *    a component's own success and error are in result.data, and a cipher that is not a key gives error 201
          */
         call(component: string, parameters?: any, session_id?: string | null): Promise<any>;
     }

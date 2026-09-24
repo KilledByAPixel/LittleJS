@@ -112,7 +112,8 @@ test('a call whose body is not JSON, or whose cipher is bad, gives undefined ins
 
     newgrounds.cipher = 'not base64!';
     newgrounds.cryptoKey = undefined;
-    assert.equal(await newgrounds.call('Medal.unlock', { id: 7 }), undefined, 'a bad cipher fails a secured call');
+    const refused = await newgrounds.call('Medal.unlock', { id: 7 });
+    assert.equal(refused.error.code, 201, 'a cipher that is not a key refuses a secured call, as the server would');
     assert.equal((await newgrounds.call('Gateway.ping', 0)).success, true, 'and nothing else');
     newgrounds.cipher = cipher;
 });
