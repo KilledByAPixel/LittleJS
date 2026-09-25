@@ -181,10 +181,18 @@ class Box2dObject extends EngineObject
         // destroy physics body, fixtures, and joints; from a contact callback the world is still
         // stepping and cannot lose a body, so it goes as soon as the step is done; the object
         // leaves box2d.objects at the next step, or the next frame while paused or time is stopped;
-        // the body lets go of it after, since destroying it calls endContact, which finds it there
+        // the body lets go of it after, since destroying it calls endContact, which finds it there;
+        // that endContact can destroy this same object again, before it is marked destroyed, so the body is
+        // destroyed only by the call that still finds it, Box2D would lose count of its bodies on a second
         ASSERT(this.body, 'Box2dObject has no body to destroy');
         const body = this.body;
-        box2dWhenUnlocked(()=> { box2d.world.DestroyBody(body); body.object = undefined; this.body = undefined; });
+        box2dWhenUnlocked(()=>
+        {
+            if (this.body !== body) return; // destroyed already
+            box2d.world.DestroyBody(body);
+            body.object = undefined;
+            this.body = undefined;
+        });
         super.destroy(immediate);
     }
 
@@ -2108,15 +2116,17 @@ class Box2dPlugin
         return queryObject;
     }
 
-    /** circle cast and return all the objects whose position is within the circle
+    /** circle cast and return all the objects whose position is within the circle, wherever their shapes are
      *  @param {Vector2} pos
      *  @param {number} diameter
      *  @return {Array<Box2dObject>} */
     circleCastAll(pos, diameter)
     {
+        // by each object's position, so an object whose shapes are offset from it is still found
         const radius2 = (diameter/2)**2;
-        const results = box2d.boxCastAll(pos, vec2(diameter));
-        return results.filter(o=>o.pos.distanceSquared(pos) < radius2);
+        const results = box2d.objects.filter(o=> !o.destroyed && o.body && o.pos.distanceSquared(pos) < radius2);
+        debugRaycast && debugCircle(pos, diameter, results.length ? '#f00' : '#00f');
+        return results;
     }
 
     /** circle cast and return the object whose position is nearest, of those within the circle
@@ -2125,14 +2135,11 @@ class Box2dPlugin
      *  @return {Box2dObject|undefined} */
     circleCast(pos, diameter)
     {
-        const radius2 = (diameter/2)**2;
-        let results = box2d.boxCastAll(pos, vec2(diameter));
-
         let bestResult, bestDistance2;
-        for (const result of results)
+        for (const result of box2d.circleCastAll(pos, diameter))
         {
             const distance2 = result.pos.distanceSquared(pos);
-            if (distance2 < radius2 && (!bestResult || distance2 < bestDistance2))
+            if (!bestResult || distance2 < bestDistance2)
             {
                 bestResult = result;
                 bestDistance2 = distance2;

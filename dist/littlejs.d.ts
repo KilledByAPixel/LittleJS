@@ -5178,7 +5178,7 @@ declare module "littlejsengine" {
          *  @param {Vector2} size
          *  @return {Box2dObject|undefined} */
         boxCast(pos: Vector2, size: Vector2): Box2dObject | undefined;
-        /** circle cast and return all the objects whose position is within the circle
+        /** circle cast and return all the objects whose position is within the circle, wherever their shapes are
          *  @param {Vector2} pos
          *  @param {number} diameter
          *  @return {Array<Box2dObject>} */

@@ -135,3 +135,45 @@ test('a Box2dObject can not be made a child, its body would stay behind', () =>
     try { assert.throws(()=> parent.addChild(child), /Assert failed/); }
     finally { parent.destroy(); child.destroy(); box2d.step(); }
 });
+
+test('a body that destroys itself from its own endContact while being destroyed is destroyed once', () =>
+{
+    const old = gravity.copy();
+    setGravity(vec2());
+    const count = ()=> box2d.world.GetBodyCount();
+    const start = count();
+    const ground = new Box2dStaticObject(vec2(0, 400));
+    ground.addBox(vec2(10, 1));
+    const box = new Box2dObject(vec2(0, 400.9));
+    box.addBox();
+    const other = new Box2dObject(vec2(3, 400.9));
+    other.addBox();
+    try
+    {
+        box2d.step(); // they touch
+        box.endContact = ()=> { box.destroy(); other.destroy(); }; // leaving the ground removes it, and another
+        box.destroy();
+        box2d.step();
+        assert.equal(count(), start + 1, 'only the ground is left');
+        assert.equal(box.body, undefined);
+        assert.equal(other.body, undefined);
+    }
+    finally { setGravity(old); ground.destroy(); box2d.step(); }
+});
+
+test('circle casts find object centers inside the circle whatever their fixtures cover', () =>
+{
+    const nearest = new Box2dObject(vec2(0, 500));
+    nearest.addCircle(1, vec2(10, 0)); // its shape is far from its center
+    const farther = new Box2dObject(vec2(.5, 500));
+    farther.addCircle(.2);
+    try
+    {
+        box2d.step();
+        const all = box2d.circleCastAll(vec2(0, 500), 2);
+        assert.ok(all.includes(nearest) && all.includes(farther), 'both centers are inside');
+        assert.equal(box2d.circleCast(vec2(0, 500), 2), nearest, 'the nearest center');
+        assert.equal(box2d.circleCast(vec2(0, 500), .5), nearest, 'and only it in a smaller circle');
+    }
+    finally { nearest.destroy(); farther.destroy(); box2d.step(); }
+});

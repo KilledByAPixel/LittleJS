@@ -1536,9 +1536,13 @@ obj.setMassData(localCenter, mass, momentOfInertia) // undefined leaves that one
                                                     // center of mass
 obj.getMass() / getCenterOfMass() / getInertia() // the center of mass in world space, setMassData takes a local one
 
-// Raycasting
+// Raycasting and queries
 box2d.raycast(start, end)      // Returns the closest Box2dRaycastResult or undefined
 box2d.raycastAll(start, end)   // Every Box2dRaycastResult along the ray, nearest first
+box2d.boxCast(pos, size) / boxCastAll(pos, size) // An object, or all of them, whose shapes overlap the box
+box2d.circleCast(pos, diameter) / circleCastAll(pos, diameter) // The nearest object, or all of them, whose
+                               // position is in the circle, wherever its shapes are
+box2d.pointCast(pos, dynamicOnly=true) // The object with a shape under the point
 
 // Joints — all extend Box2dJoint
 new Box2dTargetJoint(object, fixedObject, worldPos) // Drag toward a point (mouse-follow)

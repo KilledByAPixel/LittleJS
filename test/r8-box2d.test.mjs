@@ -76,11 +76,16 @@ test('a Box2dTileLayer builds its collision when made, and rebuilds a big layer 
     {
         const count = tiles.getFixtureList().length;
         assert.equal(count, size * size / 2, 'one fixture per solid tile, built by the constructor');
-        const start = performance.now();
+
+        // a rebuild walks the fixture list a fixed number of times, not once per fixture, which made it quadratic;
+        // counted rather than timed, so a busy machine can not fail it
+        let walks = 0;
+        const getFixtureList = tiles.getFixtureList;
+        tiles.getFixtureList = function() { ++walks; return getFixtureList.call(this); };
         tiles.buildCollision();
-        const time = performance.now() - start;
+        tiles.getFixtureList = getFixtureList;
         assert.equal(tiles.getFixtureList().length, count, 'rebuilt, the old ones gone');
-        assert.ok(time < 150, 'a single pass, not one walk of the list per fixture: ' + time.toFixed(0) + 'ms');
+        assert.ok(walks <= 3, 'a single pass, not one walk of the list per fixture: ' + walks + ' walks');
     }
     finally { tiles.destroy(); box2d.step(); }
 });
