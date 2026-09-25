@@ -1765,9 +1765,12 @@ function render3DBindMesh(mesh)
 // where a tile sits in its texture, pulled in slightly at the edges so neighbors do not bleed in
 // this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
+// the tiles of objects made from a whole TextureInfo, they cover all of it even after the texture is resized
+const render3DWholeTiles = new WeakSet;
 function render3DGetTileUVs(tileInfo)
 {
-    if (!(tileInfo instanceof TileInfo) || !tileInfo.textureInfo) // a headless tile has no texture
+    // a headless tile has no texture, and a whole texture's tile covers it at any size
+    if (!(tileInfo instanceof TileInfo) || !tileInfo.textureInfo || render3DWholeTiles.has(tileInfo))
         return RENDER3D_FULL_UV_RECT;
     const inv = tileInfo.textureInfo.sizeInverse, rect = render3DTileUVRect;
     const bleedX = inv.x * tileInfo.bleed, bleedY = inv.y * tileInfo.bleed;
@@ -3056,7 +3059,7 @@ class EngineObject3D extends EngineObject
         // a whole texture is stored as the tile that covers it, with no padding or bleed to trim
         // the edges, so this is always a TileInfo like the 2D one and the object stays an EngineObject
         if (tileInfo instanceof TextureInfo)
-            tileInfo = new TileInfo(vec2(), tileInfo.size, tileInfo, 0, 0);
+            render3DWholeTiles.add(tileInfo = new TileInfo(vec2(), tileInfo.size, tileInfo, 0, 0));
         super(vec2(), vec2(), tileInfo, 0, color);
         ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
         ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');

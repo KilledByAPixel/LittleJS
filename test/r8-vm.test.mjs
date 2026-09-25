@@ -171,3 +171,19 @@ test('a text edit started from navigation ends without an onLeave that had no on
         [editing, enters, leaves];`);
     assert.deepEqual([...result], [true, 0, 0]);
 });
+
+test('a 3D object made from a whole texture still covers all of it after the texture is resized', () =>
+{
+    const { run } = loadEngine();
+    const result = run(`
+        setHeadlessMode(true);
+        new Render3DPlugin;
+        const canvas = { width: 64, height: 64 };
+        const texture = new TextureInfo(canvas, false);
+        const o = new EngineObject3D(vec3(), buildBox(), texture);
+        canvas.width = 128; canvas.height = 32;
+        texture.createWebGLTexture(); // what a canvas texture does after a redraw at a new size
+        const uv = render3DGetTileUVs(o.tileInfo);
+        [uv.x, uv.y, uv.w, uv.h];`);
+    assert.deepEqual([...result], [0, 0, 1, 1]);
+});
