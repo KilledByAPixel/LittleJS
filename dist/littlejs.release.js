@@ -11633,6 +11633,9 @@ function postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=fa
  *   a plugin created after this one
  * - Any EngineObject may override renderLight() to additively contribute to the
  *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
+ * - Set lightSystem.shadows for objects to block light: each frame every object draws black into a
+ *   shadow map through renderShadow(), which calls render() by default; obj.castShadow = false keeps it
+ *   out (a floor TileLayer, a background), and setShadowTransparent lets a draw's color tint the light
  * - Must be constructed BEFORE PostProcessPlugin so post-process sees lit pixels
  * @namespace LightSystem
  */
@@ -11695,6 +11698,51 @@ class LightSystemPlugin
         /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the composite shader
          *  @type {WebGLVertexArrayObject|undefined} */
         this.compositeVAO = undefined;
+
+        /** @property {boolean} - Cast shadows: every object draws black into a shadow map once a frame and each light's rays stop at them; off by default and free when off */
+        this.shadows = false;
+        /** @property {number} - Pixels across the square shadow map, made again when changed */
+        this.shadowMapSize = 1024;
+        /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it for a camera that turns */
+        this.shadowMapScale = 2;
+        /** @property {number} - Pixels across each light's own shadow texture, made again when changed */
+        this.shadowTextureSize = 256;
+        /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
+        this.shadowPassCount = 11;
+        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for most */
+        this.shadowSoftness = .5;
+        /** @property {boolean} - True while the shadow pass runs, read only, so a render() can skip parts that should not cast */
+        this.shadowPass = false;
+        /** @property {WebGLTexture|undefined} - The shadow map, casters drawn black on white around the camera, read only
+         *  @type {WebGLTexture|undefined} */
+        this.shadowMap = undefined;
+        /** @property {WebGLTexture|undefined} - One of the two textures each light's shadow is built in
+         *  @type {WebGLTexture|undefined} */
+        this.shadowTextureA = undefined;
+        /** @property {WebGLTexture|undefined} - The other
+         *  @type {WebGLTexture|undefined} */
+        this.shadowTextureB = undefined;
+        /** @property {WebGLProgram|undefined} - Copies the shadow map around a light into its texture
+         *  @type {WebGLProgram|undefined} */
+        this.shadowCopyShader = undefined;
+        /** @property {WebGLProgram|undefined} - One stretch pass of a light's shadow texture
+         *  @type {WebGLProgram|undefined} */
+        this.shadowStretchShader = undefined;
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the copy shader
+         *  @type {WebGLVertexArrayObject|undefined} */
+        this.shadowCopyVAO = undefined;
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the stretch shader
+         *  @type {WebGLVertexArrayObject|undefined} */
+        this.shadowStretchVAO = undefined;
+        /** @property {OffscreenCanvasRenderingContext2D|undefined} - Where Canvas2D draws go during the shadow pass, a 1x1 canvas, so text in a render() is not drawn twice
+         *  @type {OffscreenCanvasRenderingContext2D|undefined} */
+        this.shadowContext = undefined;
+        /** @property {Vector2} - World position of the shadow map's bottom left corner, set each shadow pass */
+        this.shadowMapOrigin = vec2();
+        /** @property {number} - World size the shadow map covers, set each shadow pass */
+        this.shadowMapWorldSize = 0;
+        this.shadowMapSizeAllocated = 0;     // sizes the textures were made at, to remake them on a change
+        this.shadowTextureSizeAllocated = 0;
 
         initLightSystem();
         engineAddPlugin(undefined, lightSystemRender,
@@ -11776,21 +11824,156 @@ class LightSystemPlugin
                 '}'
             );
 
-            // VAO for the per-Light quad — reuses the engine unit triangle-strip
-            lightSystem.lightVAO = glContext.createVertexArray();
-            glContext.bindVertexArray(lightSystem.lightVAO);
-            glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
-            const gLight = glContext.getAttribLocation(lightSystem.lightShader, 'g');
-            glContext.enableVertexAttribArray(gLight);
-            glContext.vertexAttribPointer(gLight, 2, glContext.FLOAT, false, 8, 0);
+            // one quad VAO per program, the engine's unit triangle strip through the named attribute
+            lightSystem.lightVAO = createQuadVAO(lightSystem.lightShader, 'g');
+            lightSystem.compositeVAO = createQuadVAO(lightSystem.compositeShader, 'p');
+        }
+        function createQuadVAO(program, attribute)
+        {
+            const gl = glContext, vao = gl.createVertexArray();
+            gl.bindVertexArray(vao);
+            gl.bindBuffer(gl.ARRAY_BUFFER, glGeometryBuffer);
+            const location = gl.getAttribLocation(program, attribute);
+            gl.enableVertexAttribArray(location);
+            gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 8, 0);
+            return vao;
+        }
+        function createTexture(size)
+        {
+            const gl = glContext, texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            return texture;
+        }
+        function initShadows()
+        {
+            const gl = glContext, ls = lightSystem;
+            ls.shadowMap = createTexture(ls.shadowMapSize);
+            ls.shadowTextureA = createTexture(ls.shadowTextureSize);
+            ls.shadowTextureB = createTexture(ls.shadowTextureSize);
+            ls.shadowMapSizeAllocated = ls.shadowMapSize;
+            ls.shadowTextureSizeAllocated = ls.shadowTextureSize;
+            ls.shadowContext ||= new OffscreenCanvas(1, 1).getContext('2d');
+            // put back the texture the engine tracks
+            if (glActiveTexture)
+                gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
 
-            // VAO for the composite fullscreen quad — same buffer, attribute named 'p'
-            lightSystem.compositeVAO = glContext.createVertexArray();
-            glContext.bindVertexArray(lightSystem.compositeVAO);
-            glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
-            const pComp = glContext.getAttribLocation(lightSystem.compositeShader, 'p');
-            glContext.enableVertexAttribArray(pComp);
-            glContext.vertexAttribPointer(pComp, 2, glContext.FLOAT, false, 8, 0);
+            const quadVertex =
+                '#version 300 es\n' +
+                'precision highp float;'+
+                'in vec2 p;'+                   // unit quad [0..1]
+                'out vec2 uv;'+
+                'void main(){gl_Position=vec4(p+p-1.,1,1);uv=p;}';
+
+            // copy: the shadow map around the light into the light's texture, light at the center
+            ls.shadowCopyShader = glCreateProgram(quadVertex,
+                '#version 300 es\n' +
+                'precision highp float;'+
+                'uniform sampler2D s;'+         // the shadow map
+                'uniform vec2 lightPos;'+
+                'uniform float radius;'+
+                'uniform vec2 mapOrigin;'+      // world bottom left of the map
+                'uniform float mapInvSize;'+    // 1 over the world size it covers
+                'in vec2 uv;'+
+                'out vec4 c;'+
+                'void main(){'+
+                'vec2 w=lightPos+(uv-.5)*2.*radius;'+  // world position of this texel
+                'vec2 m=(w-mapOrigin)*mapInvSize;'+     // in the map, which holds world up at v=0 like an image
+                'c=vec4(texture(s,vec2(m.x,1.-m.y)).rgb,1);'+
+                '}');
+
+            // stretch: soften, then multiply by the same texture stretched out from the center
+            ls.shadowStretchShader = glCreateProgram(quadVertex,
+                '#version 300 es\n' +
+                'precision highp float;'+
+                'uniform sampler2D s;'+         // the previous pass
+                'uniform float scale;'+         // how much further out this pass pushes the casters
+                'uniform float brightness;'+    // light bled into the near side of casters this pass
+                'in vec2 uv;'+
+                'out vec4 c;'+
+                'void main(){'+
+                'float mask=clamp(1.-2.*length(uv-.5),0.,1.);'+  // brightest at the light
+                'vec3 a=texture(s,uv).rgb+brightness*mask;'+
+                'vec3 b=texture(s,(uv-.5)/scale+.5).rgb;'+
+                'c=vec4(a*b,1);'+
+                '}');
+
+            ls.shadowCopyVAO = createQuadVAO(ls.shadowCopyShader, 'p');
+            ls.shadowStretchVAO = createQuadVAO(ls.shadowStretchShader, 'p');
+
+            // the plugin samples on unit 1 so the engine's tracked texture on unit 0 is untouched
+            gl.useProgram(ls.shadowCopyShader);
+            gl.uniform1i(glUniformLocation(ls.shadowCopyShader, 's'), 1);
+            gl.useProgram(ls.shadowStretchShader);
+            gl.uniform1i(glUniformLocation(ls.shadowStretchShader, 's'), 1);
+        }
+        function freeShadows()
+        {
+            const gl = glContext, ls = lightSystem;
+            gl.deleteTexture(ls.shadowMap);
+            gl.deleteTexture(ls.shadowTextureA);
+            gl.deleteTexture(ls.shadowTextureB);
+            gl.deleteProgram(ls.shadowCopyShader);
+            gl.deleteProgram(ls.shadowStretchShader);
+            gl.deleteVertexArray(ls.shadowCopyVAO);
+            gl.deleteVertexArray(ls.shadowStretchVAO);
+            clearShadows();
+        }
+        function clearShadows()
+        {
+            const ls = lightSystem;
+            ls.shadowMap = ls.shadowTextureA = ls.shadowTextureB = undefined;
+            ls.shadowCopyShader = ls.shadowStretchShader = undefined;
+            ls.shadowCopyVAO = ls.shadowStretchVAO = undefined;
+        }
+        function lightSystemShadowPass()
+        {
+            const ls = lightSystem;
+
+            // make the resources the first time, and again when a size changed
+            if (!ls.shadowMap || ls.shadowMapSize !== ls.shadowMapSizeAllocated
+                || ls.shadowTextureSize !== ls.shadowTextureSizeAllocated)
+            {
+                ls.shadowMap && freeShadows();
+                initShadows();
+            }
+
+            // a square of world space around the camera, rounded to its own texels so the
+            // grid stays put in the world as the camera moves, or the shadows would shimmer
+            const size = ls.shadowMapSize;
+            const view = mainCanvasSize.scale(1/cameraScale);
+            const worldSize = ls.shadowMapScale * max(view.x, view.y);
+            const texel = worldSize / size;
+            const center = vec2(floor(cameraPos.x/texel)*texel, floor(cameraPos.y/texel)*texel);
+            ls.shadowMapOrigin = center.subtract(vec2(worldSize/2));
+            ls.shadowMapWorldSize = worldSize;
+
+            // draw with the map's camera, the way a tile layer redraw does; Canvas2D draws
+            // go to a 1x1 canvas so text in a render() does not reach the screen twice
+            const saved = [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader];
+            drawContext = ls.shadowContext;
+            mainCanvasSize = vec2(size);
+            cameraPos = center;
+            cameraScale = size / worldSize;
+            cameraAngle = 0;
+            canvasClearColor = WHITE;
+            glSetRenderTarget(ls.shadowMap, true);
+            glColorMask = 0xff000000; // every color black, its alpha kept
+            ls.shadowPass = true;
+            for (const o of engineObjects)
+            {
+                if (o.destroyed || !o.castShadow) continue;
+                setShader(o.shader); // its own Shader as in the main pass, so a snippet that cuts holes casts the same shape
+                o.renderShadow();
+            }
+            ls.shadowPass = false;
+            glColorMask = -1;
+            glSetRenderTarget();
+            [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = saved;
         }
         function lightSystemRender()
         {
@@ -11807,6 +11990,10 @@ class LightSystemPlugin
             // 1. flush any in-flight sprite batch from earlier render passes
             glFlush();
             const prevAdditive = glAdditive;
+
+            // 1b. the shadow pass draws every caster black into the shadow map
+            if (lightSystem.shadows)
+                lightSystemShadowPass();
 
             // an automatic size follows the canvas, so reallocate the lightmap when
             // the canvas changed size, after the flush so the batch keeps its texture
@@ -11893,6 +12080,7 @@ class LightSystemPlugin
             lightSystem.compositeShader = undefined;
             lightSystem.lightVAO = undefined;
             lightSystem.compositeVAO = undefined;
+            clearShadows();
             false&&LOG('LightSystemPlugin: WebGL context lost');
         }
         function lightSystemContextRestored()
@@ -11936,6 +12124,17 @@ class LightSystemPlugin
         // overrides that batch through drawRect/drawTile work correctly
         glSetInstancedMode(true);
     }
+
+    /** In the shadow pass, let the draws that follow keep their color in the shadow map, so light passing
+     *  through them is tinted instead of blocked: a stained glass window, colored smoke. Does nothing outside
+     *  the pass, so a render() can call it around those draws unconditionally; set it back to false after them.
+     *  @param {boolean} [transparent] */
+    setShadowTransparent(transparent=true)
+    {
+        // the mask applies as each draw is queued, so nothing needs flushing
+        if (this.shadowPass)
+            glColorMask = transparent ? -1 : 0xff000000;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -11943,6 +12142,8 @@ class LightSystemPlugin
 /**
  * A Light is an EngineObject that contributes a soft additive blob of color
  * to the LightSystem plugin's lightmap.
+ * - castShadow on a Light means its rays stop at casters when lightSystem.shadows is on, three.js's meaning
+ *   for a light; a Light's own render() draws nothing so the object meaning never applies to it
  * @extends EngineObject
  * @memberof LightSystem
  * @example

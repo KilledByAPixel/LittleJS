@@ -153,3 +153,33 @@ test('Light.castShadow defaults to true', () =>
     const l = new Light(vec2(0, 0), 1);
     assert.equal(l.castShadow, true);
 });
+
+test('shadows are off by default and the shadow settings have their defaults', async () =>
+{
+    const { lightSystem } = await import('../dist/littlejs.esm.js');
+    assert.equal(lightSystem.shadows, false);
+    assert.equal(lightSystem.shadowMapSize, 1024);
+    assert.equal(lightSystem.shadowMapScale, 2);
+    assert.equal(lightSystem.shadowTextureSize, 256);
+    assert.equal(lightSystem.shadowPassCount, 11);
+    assert.equal(lightSystem.shadowSoftness, .5);
+    assert.equal(lightSystem.shadowPass, false);
+    assert.equal(lightSystem.shadowMap, undefined);
+});
+
+test('setShadowTransparent outside the shadow pass does nothing and does not throw', async () =>
+{
+    const { lightSystem } = await import('../dist/littlejs.esm.js');
+    assert.doesNotThrow(() => lightSystem.setShadowTransparent(true));
+    assert.doesNotThrow(() => lightSystem.setShadowTransparent(false));
+    assert.equal(lightSystem.shadowPass, false);
+});
+
+test('a Light renders its light without a throw in headless mode with shadows on', async () =>
+{
+    const { lightSystem } = await import('../dist/littlejs.esm.js');
+    lightSystem.shadows = true;
+    const l = new Light(vec2(0, 0), 4);
+    assert.doesNotThrow(() => l.renderLight());
+    lightSystem.shadows = false;
+});

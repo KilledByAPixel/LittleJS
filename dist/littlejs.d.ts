@@ -4203,6 +4203,9 @@ declare module "littlejsengine" {
      *   a plugin created after this one
      * - Any EngineObject may override renderLight() to additively contribute to the
      *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
+     * - Set lightSystem.shadows for objects to block light: each frame every object draws black into a
+     *   shadow map through renderShadow(), which calls render() by default; obj.castShadow = false keeps it
+     *   out (a floor TileLayer, a background), and setShadowTransparent lets a draw's color tint the light
      * - Must be constructed BEFORE PostProcessPlugin so post-process sees lit pixels
      * @namespace LightSystem
      */
@@ -4251,14 +4254,65 @@ declare module "littlejsengine" {
         /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the composite shader
          *  @type {WebGLVertexArrayObject|undefined} */
         compositeVAO: WebGLVertexArrayObject | undefined;
+        /** @property {boolean} - Cast shadows: every object draws black into a shadow map once a frame and each light's rays stop at them; off by default and free when off */
+        shadows: boolean;
+        /** @property {number} - Pixels across the square shadow map, made again when changed */
+        shadowMapSize: number;
+        /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it for a camera that turns */
+        shadowMapScale: number;
+        /** @property {number} - Pixels across each light's own shadow texture, made again when changed */
+        shadowTextureSize: number;
+        /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
+        shadowPassCount: number;
+        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for most */
+        shadowSoftness: number;
+        /** @property {boolean} - True while the shadow pass runs, read only, so a render() can skip parts that should not cast */
+        shadowPass: boolean;
+        /** @property {WebGLTexture|undefined} - The shadow map, casters drawn black on white around the camera, read only
+         *  @type {WebGLTexture|undefined} */
+        shadowMap: WebGLTexture | undefined;
+        /** @property {WebGLTexture|undefined} - One of the two textures each light's shadow is built in
+         *  @type {WebGLTexture|undefined} */
+        shadowTextureA: WebGLTexture | undefined;
+        /** @property {WebGLTexture|undefined} - The other
+         *  @type {WebGLTexture|undefined} */
+        shadowTextureB: WebGLTexture | undefined;
+        /** @property {WebGLProgram|undefined} - Copies the shadow map around a light into its texture
+         *  @type {WebGLProgram|undefined} */
+        shadowCopyShader: WebGLProgram | undefined;
+        /** @property {WebGLProgram|undefined} - One stretch pass of a light's shadow texture
+         *  @type {WebGLProgram|undefined} */
+        shadowStretchShader: WebGLProgram | undefined;
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the copy shader
+         *  @type {WebGLVertexArrayObject|undefined} */
+        shadowCopyVAO: WebGLVertexArrayObject | undefined;
+        /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the stretch shader
+         *  @type {WebGLVertexArrayObject|undefined} */
+        shadowStretchVAO: WebGLVertexArrayObject | undefined;
+        /** @property {OffscreenCanvasRenderingContext2D|undefined} - Where Canvas2D draws go during the shadow pass, a 1x1 canvas, so text in a render() is not drawn twice
+         *  @type {OffscreenCanvasRenderingContext2D|undefined} */
+        shadowContext: OffscreenCanvasRenderingContext2D | undefined;
+        /** @property {Vector2} - World position of the shadow map's bottom left corner, set each shadow pass */
+        shadowMapOrigin: Vector2;
+        /** @property {number} - World size the shadow map covers, set each shadow pass */
+        shadowMapWorldSize: number;
+        shadowMapSizeAllocated: number;
+        shadowTextureSizeAllocated: number;
         /** Draw a single Light's falloff blob into the currently bound lightmap.
          *  Called by Light.renderLight() during the plugin's render pass.
          *  @param {Light} light */
         drawLight(light: Light): void;
+        /** In the shadow pass, let the draws that follow keep their color in the shadow map, so light passing
+         *  through them is tinted instead of blocked: a stained glass window, colored smoke. Does nothing outside
+         *  the pass, so a render() can call it around those draws unconditionally; set it back to false after them.
+         *  @param {boolean} [transparent] */
+        setShadowTransparent(transparent?: boolean): void;
     }
     /**
      * A Light is an EngineObject that contributes a soft additive blob of color
      * to the LightSystem plugin's lightmap.
+     * - castShadow on a Light means its rays stop at casters when lightSystem.shadows is on, three.js's meaning
+     *   for a light; a Light's own render() draws nothing so the object meaning never applies to it
      * @extends EngineObject
      * @memberof LightSystem
      * @example
