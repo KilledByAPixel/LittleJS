@@ -56,6 +56,10 @@ let engineObjects = [];
  *  @memberof Engine */
 let engineObjectsCollide = [];
 
+// the same objects with the static ones last, the order 2D physics checks them in
+/** @type {Array<EngineObject>} */
+let engineObjectsCollideStaticLast = [];
+
 /** Current update frame, used to calculate time
  *  @type {number}
  *  @memberof Engine */
@@ -577,8 +581,12 @@ function engineObjectsUpdate()
 {
     ++engineObjectsUpdateCount;
     engineObjectsCollidePairs.clear();
-    // get list of solid objects for physics optimization
+    // get list of solid objects for physics optimization, in the order they were made, which 3D collision pairs by;
+    // 2D checks the static ones last, so a contact with a moving object can not leave something back inside a static
+    // solid it was already pushed out of
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
+    engineObjectsCollideStaticLast = engineObjectsCollide.filter(o=>o.mass)
+        .concat(engineObjectsCollide.filter(o=>!o.mass));
 
     // update physics before object update
     for (const o of engineObjects)
@@ -589,6 +597,7 @@ function engineObjectsUpdate()
     // destroys itself leaves its parent's list on the spot and the next child would slide past the loop
     function updateChildObjects(children)
     {
+        if (!children.length) return; // most objects have none, and this runs for every one
         const start = engineChildStack.length;
         for (const child of children)
             engineChildStack.push(child);

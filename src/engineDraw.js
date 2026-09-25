@@ -410,8 +410,10 @@ class SpriteAnimation
  * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, premultipliedTexture, and localUV, 0 to 1
  *   across the sprite or the mesh's own uv
- * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, lightCount,
- *   lights[i], lightColors[i] and shadow()
+ * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
+ *   lightCount, lights[i], lightColors[i] and shadow()
+ * - In 3D the shadow map is drawn without the Shader, cut only by the texture's alpha, so a snippet that removes
+ *   parts of a surface still shadows with the whole of it
  * @example
  * const fade = new Shader(`
  * void mainImage(out vec4 c, vec2 uv)
@@ -1167,7 +1169,7 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     context.textAlign = textAlign;
     context.font = fontStyle + ' ' + size + 'px '+ font;
     context.textBaseline = 'middle';
-    context.translate(pos.x, pos.y);
+    context.translate(pos.x + .5, pos.y + .5); // a screen position is the center of a pixel, as for every other draw
     context.rotate(angle);
     let yOffset = -(lines.length-1) * size/2; // center vertically
     lines.forEach(line=>
@@ -1676,6 +1678,7 @@ class ImageFont
         ASSERT(isStringLike(text), 'text must be a string');
         ASSERT(isVector2(pos), 'pos must be a vec2');
         ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
+        ASSERT(typeof center === 'boolean', 'center must be a boolean, the color comes after it, unlike drawText');
         ASSERT(isColor(color), 'color must be a color');
 
         // if size is a number, make it a vector
@@ -1683,12 +1686,7 @@ class ImageFont
 
         // precache objects for drawing, a copy of the tile info each glyph moves, the font's own stays put
         const drawPos = new Vector2;
-        const fontTile = this.tileInfo, tileInfo = fontTile.frame(0);
-        const padding = tileInfo.padding;
-        const sizePaddedX = tileInfo.size.x + padding*2;
-        const sizePaddedY = tileInfo.size.y + padding*2;
-        const cols = tileInfo.textureInfo.size.x / sizePaddedX |0;
-        const firstIndex = ((fontTile.pos.y - padding) / sizePaddedY |0) * cols + ((fontTile.pos.x - padding) / sizePaddedX |0);
+        const tileInfo = this.tileInfo.frame(0);
 
         // draw each line of text, centered vertically like drawTextScreen when center is set
         const lines = (text+'').split('\n');
@@ -1698,16 +1696,9 @@ class ImageFont
             const centerOffset = center ? (line.length-1) * glyphSize.x / 2 : 0;
             for (let i=line.length; i--;)
             {
-                // get the character index
+                // get the glyph, out of range characters use the last one
                 const charCode = line.charCodeAt(i);
-                const index = firstIndex + (charCode < 32 || charCode > 127 ?
-                    95 : charCode - 32); // handle out of range characters
-
-                // get the position of the tile
-                const x = index % cols;
-                const y = index / cols |0;
-                tileInfo.pos.x = x*sizePaddedX + padding;
-                tileInfo.pos.y = y*sizePaddedY + padding;
+                this.getGlyphPos(charCode < 32 || charCode > 127 ? 95 : charCode - 32, tileInfo.pos);
 
                 // snap the glyph edges to whole pixels
                 // tiles are drawn from their center, so snapping the center
@@ -1721,6 +1712,22 @@ class ImageFont
                 drawTile(drawPos, glyphSize, tileInfo, color, 0, false, undefined, useWebGL, true, context);
             }
         });
+    }
+
+    /** Get where a glyph sits in the texture: counted in the font's own columns when its tile has them, like a font
+     *  packed by loadSprite, otherwise along the texture's grid from the font's first tile, the way tile() lays it out
+     *  @param {number} index - Glyph number, 0 is the space and the characters follow in ASCII order
+     *  @param {Vector2} [pos] - Written into and returned, for a loop that places many
+     *  @return {Vector2} */
+    getGlyphPos(index, pos=new Vector2)
+    {
+        const t = this.tileInfo, padding = t.padding;
+        const w = t.size.x + padding*2, h = t.size.y + padding*2;
+        if (t.columns)
+            return pos.set(t.pos.x + index % t.columns * w, t.pos.y + (index / t.columns |0) * h);
+        const columns = t.textureInfo.size.x / w |0;
+        const glyph = ((t.pos.y - padding) / h |0) * columns + ((t.pos.x - padding) / w |0) + index;
+        return pos.set(glyph % columns * w + padding, (glyph / columns |0) * h + padding);
     }
 }
 

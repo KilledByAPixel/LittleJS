@@ -44,6 +44,7 @@ function box2dTemp(v, slot=0)
 // the native objects a query needs, one of each kind made once and reused, since the binding keeps every one made;
 // a query sets the callback's ReportFixture before each use, so the one callback serves every query of its kind
 const box2dQueryObjects = {};
+const box2dGravity = {x:NaN, y:NaN}; // the gravity the world was last given
 function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
 
 // Box2D finds fixtures by boxes it pads and stretches ahead along the velocity, so a query checks the shape's own box
@@ -171,8 +172,9 @@ class Box2dObject extends EngineObject
         box2d.objects.push(this); // keep track of all box2d objects
     }
 
-    /** Destroy this object and its physics body */
-    destroy()
+    /** Destroy this object and its physics body
+     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+    destroy(immediate=false)
     {
         if (this.destroyed) return;
 
@@ -183,7 +185,7 @@ class Box2dObject extends EngineObject
         ASSERT(this.body, 'Box2dObject has no body to destroy');
         const body = this.body;
         box2dWhenUnlocked(()=> { box2d.world.DestroyBody(body); body.object = undefined; this.body = undefined; });
-        super.destroy();
+        super.destroy(immediate);
     }
 
     /** Box2d objects updated with Box2d world step */
@@ -666,7 +668,8 @@ class Box2dObject extends EngineObject
     resetMassData() { box2dWhenUnlocked(()=> this.body && this.body.ResetMassData()); }
 
     /** Set the mass data of the body, from a contact callback once the step is done;
-     *  a mass of 0 or less becomes 1, use setBodyType for a static body
+     *  a mass of 0 or less becomes 1, use setBodyType for a static body; call it after adding fixtures and after
+     *  setFixedRotation, both of which put the mass back to what the fixtures give
      *  @param {Vector2} [localCenter]
      *  @param {number}  [mass]
      *  @param {number}  [momentOfInertia] - About the center of mass */
@@ -694,6 +697,7 @@ class Box2dObject extends EngineObject
             data.set_center(box2dTemp(vec2(cx, cy)));
             data.set_I(inertia > 0 && f(I - offset) > 0 ? I : 0);
             this.body.SetMassData(data);
+            this.body.SetAwake(true); // a sleeping body would not tip over a new center of mass
         });
     }
 
@@ -1073,6 +1077,7 @@ class Box2dJoint
  * - Used to make a point on a object track a specific world point target
  * - This a soft constraint with a max force
  * - This allows the constraint to stretch and without applying huge forces
+ * - The object must be dynamic, and stay dynamic while the joint holds it, Box2D stops for good on one with no mass
  * @extends Box2dJoint
  * @memberof Box2D
  */
@@ -1084,6 +1089,7 @@ class Box2dTargetJoint extends Box2dJoint
      *  @param {Vector2} worldPos */
     constructor(object, fixedObject, worldPos)
     {
+        ASSERT(object.getBodyType() === box2d.bodyTypeDynamic, 'a target joint needs a dynamic object');
         object.setAwake();
         const jointDef = new box2d.instance.b2MouseJointDef();
         jointDef.set_bodyA(fixedObject.body);
@@ -1109,9 +1115,9 @@ class Box2dTargetJoint extends Box2dJoint
      *  @return {number} */
     getMaxForce() { return this.box2dJoint.GetMaxForce(); }
     
-    /** Sets the joint frequency in Hertz
+    /** Sets the joint frequency in Hertz, above 0, Box2D stops for good on 0
      *  @param {number} hz */
-    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(max(hz, 1e-3)); }
     
     /** Gets the joint frequency in Hertz
      *  @return {number} */
@@ -1168,7 +1174,7 @@ class Box2dDistanceJoint extends Box2dJoint
     
     /** Set the frequency in Hertz
      *  @param {number} hz */
-    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); box2dWakeJoint(this.box2dJoint); }
     
     /** Get the frequency in Hertz
      *  @return {number} */
@@ -1176,7 +1182,7 @@ class Box2dDistanceJoint extends Box2dJoint
     
     /** Set the damping ratio
      *  @param {number} ratio */
-    setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); }
+    setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
     
     /** Get the damping ratio
      *  @return {number} */
@@ -1324,7 +1330,12 @@ class Box2dRevoluteJoint extends Box2dJoint
     /** Set the joint limits, clockwise like angle
      *  @param {number} min
      *  @param {number} max */
-    setLimits(min, max) { return this.box2dJoint.SetLimits(-max, -min); }
+    setLimits(min, max)
+    {
+        ASSERT(min <= max, 'the lower limit must not be above the upper one');
+        if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
+        return this.box2dJoint.SetLimits(-max, -min);
+    }
 
     /** Is the joint motor enabled?
      *  @return {boolean} */
@@ -1379,6 +1390,8 @@ class Box2dGearJoint extends Box2dJoint
     {
         // Box2D's angles are reversed and its translations are not, so a revolute joint geared to a prismatic one
         // needs the ratio reversed too, two of a kind keep it
+        const isGearable = (j)=> (j instanceof Box2dRevoluteJoint || j instanceof Box2dPrismaticJoint) && !!j.box2dJoint;
+        ASSERT(isGearable(joint1) && isGearable(joint2), 'a gear joint needs two revolute or prismatic joints that exist');
         const ratioSign = (joint1 instanceof Box2dRevoluteJoint) === (joint2 instanceof Box2dRevoluteJoint) ? 1 : -1;
         const jointDef = new box2d.instance.b2GearJointDef();
         jointDef.set_bodyA(objectA.body);
@@ -1403,7 +1416,7 @@ class Box2dGearJoint extends Box2dJoint
 
     /** Set the gear ratio
      *  @param {number} ratio */
-    setRatio(ratio) { return this.box2dJoint.SetRatio(ratio * this.ratioSign); }
+    setRatio(ratio) { this.box2dJoint.SetRatio(ratio * this.ratioSign); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the gear ratio
      *  @return {number} */
@@ -1488,7 +1501,12 @@ class Box2dPrismaticJoint extends Box2dJoint
     /** Set the joint limits
      *  @param {number} min
      *  @param {number} max */
-    setLimits(min, max) { return this.box2dJoint.SetLimits(min, max); }
+    setLimits(min, max)
+    {
+        ASSERT(min <= max, 'the lower limit must not be above the upper one');
+        if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
+        return this.box2dJoint.SetLimits(min, max);
+    }
     
     /** Is the motor enabled?
      *  @return {boolean} */
@@ -1605,7 +1623,7 @@ class Box2dWheelJoint extends Box2dJoint
 
     /** Set the spring frequency in Hertz
      *  @param {number} hz */
-    setSpringFrequencyHz(hz) { return this.box2dJoint.SetSpringFrequencyHz(hz); }
+    setSpringFrequencyHz(hz) { this.box2dJoint.SetSpringFrequencyHz(hz); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the spring frequency in Hertz
      *  @return {number} */
@@ -1613,7 +1631,7 @@ class Box2dWheelJoint extends Box2dJoint
 
     /** Set the spring damping ratio
      *  @param {number} ratio */
-    setSpringDampingRatio(ratio) { return this.box2dJoint.SetSpringDampingRatio(ratio); }
+    setSpringDampingRatio(ratio) { this.box2dJoint.SetSpringDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the spring damping ratio
      *  @return {number} */
@@ -1667,7 +1685,7 @@ class Box2dWeldJoint extends Box2dJoint
 
     /** Set the frequency in Hertz
      *  @param {number} hz */
-    setFrequency(hz) { return this.box2dJoint.SetFrequency(hz); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the frequency in Hertz
      *  @return {number} */
@@ -1675,7 +1693,7 @@ class Box2dWeldJoint extends Box2dJoint
 
     /** Set the damping ratio
      *  @param {number} ratio */
-    setDampingRatio(ratio) { return this.box2dJoint.SetDampingRatio(ratio); }
+    setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the damping ratio
      *  @return {number} */
@@ -1721,7 +1739,7 @@ class Box2dFrictionJoint extends Box2dJoint
 
     /** Set the maximum friction force
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); } // Box2D stops on a negative one
 
     /** Get the maximum friction force
      *  @return {number} */
@@ -1729,7 +1747,7 @@ class Box2dFrictionJoint extends Box2dJoint
 
     /** Set the maximum friction torque
      *  @param {number} torque */
-    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(torque); }
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); } // Box2D stops on a negative one
 
     /** Get the maximum friction torque
      *  @return {number} */
@@ -1769,6 +1787,7 @@ class Box2dPulleyJoint extends Box2dJoint
         jointDef.set_groundAnchorB(box2dTemp(groundAnchorB));
         jointDef.set_localAnchorA(box2dTemp(localAnchorA));
         jointDef.set_localAnchorB(box2dTemp(localAnchorB));
+        ASSERT(ratio, 'a pulley ratio can not be 0');
         jointDef.set_ratio(ratio);
         jointDef.set_lengthA(groundAnchorA.distance(anchorA));
         jointDef.set_lengthB(groundAnchorB.distance(anchorB));
@@ -1848,7 +1867,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the maximum force
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); } // Box2D stops on a negative one
 
     /** Get the maximum force
      *  @return {number} */
@@ -1856,7 +1875,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the maximum torque
      *  @param {number} torque */
-    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(torque); }
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); } // Box2D stops on a negative one
 
     /** Get the maximum torque
      *  @return {number} */
@@ -1864,7 +1883,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the position correction factor in the range [0,1]
      *  @param {number} factor */
-    setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(factor); }
+    setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(clamp(factor)); }
 
     /** Get the position correction factor in the range [0,1]
      *  @return {number} */
@@ -1958,7 +1977,14 @@ class Box2dPlugin
      *  @param {number} [frames] */
     step(frames=1)
     {
-        box2d.world.SetGravity(box2dTemp(gravity));
+        // the engine's gravity, Box2D does not wake a sleeping body for a new one, so a change wakes them all
+        if (gravity.x !== box2dGravity.x || gravity.y !== box2dGravity.y)
+        {
+            box2dGravity.x = gravity.x, box2dGravity.y = gravity.y;
+            box2d.world.SetGravity(box2dTemp(gravity));
+            for (let b = box2d.world.GetBodyList(); !box2d.isNull(b); b = b.GetNext())
+                b.SetAwake(true);
+        }
         for (let i=frames; i--;)
         {
             box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
@@ -2039,7 +2065,7 @@ class Box2dPlugin
 
         let queryObjects = [];
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, size, queryObjects.length ? '#f00' : '#00f', .02);
+        debugRaycast && debugRect(pos, size, queryObjects.length ? '#f00' : '#00f');
         return queryObjects;
     }
 
@@ -2068,7 +2094,7 @@ class Box2dPlugin
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, size, queryObject ? '#f00' : '#00f', .02);
+        debugRaycast && debugRect(pos, size, queryObject ? '#f00' : '#00f');
         return queryObject;
     }
 
@@ -2132,7 +2158,7 @@ class Box2dPlugin
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f', .02);
+        debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f');
         return queryObject;
     }
 

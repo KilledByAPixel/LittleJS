@@ -673,7 +673,8 @@ class Render3DPlugin
     }
 
     /** Find the nearest object under a screen position or along a ray, for clicking on things
-     *  - Each object is tested as a sphere around its mesh, or around a sprite's size3D, not triangle by triangle
+     *  - Each object is tested as the box around its mesh in its own space, or a sphere around a sprite's size3D,
+     *    not triangle by triangle
      *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
      *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
      *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
@@ -1264,7 +1265,7 @@ function render3DDebugPush(duration, draw)
 {
     ASSERT(isNumber(duration), 'duration must be a number');
     debug && glEnable && render3D?.program &&
-        render3DDebugPrimitives.push({timer: new Timer(duration), draw, clearCount: debugClearCount});
+        render3DDebugPrimitives.push({timer: new Timer(duration, true), draw, clearCount: debugClearCount}); // real time, like 2D
 }
 
 /** Draw a debug wireframe box
@@ -2287,6 +2288,9 @@ class Mesh
         this.instanceData = undefined;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
         this.radius = 0;
+        /** @property {{min: Vector3, max: Vector3}|undefined} - Bounding box, for picking, measured with the radius
+         *  @type {{min: Vector3, max: Vector3}|undefined} */
+        this.bounds = undefined;
         this.contextGeneration = 0; // the context the buffer belongs to, see render3D.contextGeneration
     }
 
@@ -2515,6 +2519,7 @@ class Mesh
         let r = 0;
         for (const p of this.points)
             r = max(r, p.lengthSquared());
+        this.bounds = this.getBounds(); // measured with it, a pick tests a mesh's box after its sphere
         return this.radius = r ** .5;
     }
 
@@ -3523,8 +3528,8 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
     return collected;
 }
 
-// how far along a ray an object is hit, or undefined for a miss; each one is tested as a sphere
-// around its mesh, or around a sprite's size3D, not triangle by triangle
+// how far along a ray an object is hit, or undefined for a miss; each one is tested as the box around its mesh in
+// its own space, or a sphere around a sprite's size3D, not triangle by triangle
 function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) return;
@@ -3533,7 +3538,14 @@ function render3DRaycastObject(ray, o)
     // a mesh that changed since it was measured is measured again, an upload may not have come yet
     const radius = (mesh ? mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxStretch(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
-    return raycastSphere(ray, matrix.getTranslation(), radius);
+    const distance = raycastSphere(ray, matrix.getTranslation(), radius);
+    if (distance === undefined || !mesh) return distance;
+
+    // the sphere is a quick reject, a mesh is hit where the ray meets its box in its own space, since a wide floor's
+    // sphere reaches far above it; the direction is not made unit length, so the distance holds in the world
+    const inverse = matrix.copy().invert(), bounds = mesh.bounds || mesh.getBounds();
+    const local = new Ray3D(inverse.transformPoint(ray.origin), inverse.transformDirection(ray.direction));
+    return raycastBox(local, bounds.min.add(bounds.max).scale(.5), bounds.max.subtract(bounds.min));
 }
 
 /**

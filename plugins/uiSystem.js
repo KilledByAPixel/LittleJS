@@ -138,11 +138,10 @@ class UISystemPlugin
         /** @private */
         this._onKeyDown = (e) =>
         {
-            // a field that was hidden, disabled or destroyed since it took focus lets it go instead
+            // a field that was hidden, disabled or destroyed since it took focus does not take the key, the game gets
+            // it, and the next UI update ends the edit, so it ends one way whichever comes first
             const o = this._keyInputObject;
-            if (o && !uiObjectIsUsable(o))
-                return void (this.keyInputObject = undefined);
-            if (!o) return;
+            if (!o || !uiObjectIsUsable(o)) return;
 
             // the field has the key, the game's input never sees it; browser shortcuts still work,
             // and only the keys a field uses lose their default, so F5, F11, F12 and the like still work
@@ -197,8 +196,15 @@ class UISystemPlugin
                 uiSystem.activeObject = undefined;
                 activeObject.destroyed || activeObject === uiSystem.keyInputObject || activeObject.onRelease();
             }
-            if (uiSystem.keyInputObject && !uiObjectIsUsable(uiSystem.keyInputObject))
-                uiSystem.keyInputObject = undefined;
+            // an edit whose field can no longer be used ends as if it were finished, so onChange keeps the text
+            const keyInputObject = uiSystem.keyInputObject;
+            if (keyInputObject && !uiObjectIsUsable(keyInputObject))
+            {
+                if (keyInputObject instanceof UITextInput && !keyInputObject.destroyed)
+                    keyInputObject.stopEditing();
+                else
+                    uiSystem.keyInputObject = undefined;
+            }
 
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
@@ -1117,6 +1123,15 @@ class UIObject
             this.textHeight || this.textFitScale * this.size.y);
     }
 
+    /** Get where the text is drawn, the center, or the edge of the text area its align puts it against
+     *  @param {Vector2} textSize - From getTextSize
+     *  @return {Vector2} */
+    getTextPos(textSize)
+    {
+        const side = this.align === 'left' ? -1 : this.align === 'right' ? 1 : 0;
+        return this.nativePos.add(vec2(side * textSize.x / 2, 0));
+    }
+
     /** Called when the navigation button is pressed on this object */
     navigatePressed() { this.click(); }
 
@@ -1251,7 +1266,7 @@ class UIText extends UIObject
 
         // render the text
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.nativePos, textSize, this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
+        uiSystem.drawText(this.text, this.getTextPos(textSize), textSize, this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
     }
 }
 
@@ -1260,6 +1275,8 @@ class UIText extends UIObject
  * UITextInput - An editable text input field
  * - A simple text entry field that supports basic editing
  * - Suitable for short text input like names or numbers
+ * - Reads a physical keyboard: no on-screen keyboard opens on touch devices, and IME composition and paste do not type,
+ *   use an HTML input element for those
  * @extends UIObject
  * @memberof UISystem
  */
@@ -1279,8 +1296,8 @@ class UITextInput extends UIObject
         /** @property {number} - Max length of input (0 = no limit) */
         this.maxLength = 0;
 
-        // set properties
-        this.text = text;
+        // set properties, as a string, which typing adds to
+        this.text = text + '';
         this.interactive = true;
         this.canBeHover = true;
     }
@@ -1317,8 +1334,9 @@ class UITextInput extends UIObject
         const code = e.code, key = e.key
         if (e.repeat && (key === 'Enter' || code === 'Space'))
             return; // a key held when editing began repeats, it should not type or stop editing
+        this.text += ''; // a game may have set a number
         if (key === 'Backspace')
-            this.text = this.text.slice(0, -1);
+            this.text = [...this.text].slice(0, -1).join(''); // a whole character, an emoji is two code units
         else if (key === 'Enter' || key === 'Escape')
             this.stopEditing();
         else if (key.length === 1) // printable characters
@@ -1360,7 +1378,7 @@ class UITextInput extends UIObject
         let text = this.text;
         if (this.isKeyInputObject()) // add a cursor to end of text
             text += timeReal%1 < .5 ?  '█' : '░';
-        uiSystem.drawText(text, this.nativePos, textSize, 
+        uiSystem.drawText(text, this.getTextPos(textSize), textSize, 
             this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
@@ -1445,7 +1463,7 @@ class UIButton extends UIObject
         
         // draw the text scaled to fit
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.nativePos.add(this.textOffset), textSize, 
+        uiSystem.drawText(this.text, this.getTextPos(textSize).add(this.textOffset), textSize, 
             this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
@@ -1610,7 +1628,7 @@ class UISlider extends UIObject
 
         // draw the text scaled to fit on the slider
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.nativePos, textSize, 
+        uiSystem.drawText(this.text, this.getTextPos(textSize), textSize, 
             this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
     navigatePressed()

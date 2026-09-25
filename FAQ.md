@@ -676,7 +676,7 @@ class Player extends EngineObject {
 
 `setCollision(collideSolidObjects, isSolid, collideTiles, collideRaycast)` — all default to `true`. Pass `false` to opt out of any of them (e.g. a ghost that passes through walls: `setCollision(false, false, false)`).
 
-For custom collision logic, override `collideWithObject(other)` and `collideWithTile(tileData, pos)` on your subclass. Return `true` to actually block the collision, `false` to pass through. Both fire during the physics step:
+For custom collision logic, override `collideWithObject(other)` and `collideWithTile(tileData, pos)` on your subclass. Return `true` to actually block the collision, `false` to pass through. Both fire during the physics step, and `collideWithTile` can fire several times a frame for the same tile, including for positions the object only tries, so guard side effects like damage to once a frame:
 
 ```javascript
 class Bullet extends EngineObject {

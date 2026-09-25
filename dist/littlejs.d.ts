@@ -43,6 +43,10 @@ declare module "littlejsengine" {
      */
     export type MedalCallbackFunction = (medal: Medal) => any;
     /**
+     * - Function called when sound is loaded
+     */
+    export type SoundLoadCallback = (sound: Sound) => any;
+    /**
      * - Function that processes a particle
      */
     export type ParticleCallback = (particle: Particle) => any;
@@ -1327,7 +1331,8 @@ declare module "littlejsengine" {
         /** Returns a random angle between -PI and PI
         *  @return {number} */
         angle(): number;
-        /** Returns a seeded vec2 with size between the two values passed in
+        /** Returns a seeded vec2 with each component between the two values passed in
+        *  - A point in a square, not a random direction like randVec2
         *  @param {number} [valueA]
         *  @param {number} [valueB]
         *  @return {Vector2} */
@@ -1971,8 +1976,10 @@ declare module "littlejsengine" {
      * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
      * - Names in both renderers: iChannel0 the texture, iTime, iResolution, premultipliedTexture, and localUV, 0 to 1
      *   across the sprite or the mesh's own uv
-     * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, lightCount,
-     *   lights[i], lightColors[i] and shadow()
+     * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
+     *   lightCount, lights[i], lightColors[i] and shadow()
+     * - In 3D the shadow map is drawn without the Shader, cut only by the texture's alpha, so a snippet that removes
+     *   parts of a surface still shadows with the whole of it
      * @example
      * const fade = new Shader(`
      * void mainImage(out vec4 c, vec2 uv)
@@ -2363,6 +2370,12 @@ declare module "littlejsengine" {
          *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
          */
         drawTextScreen(text: string | number, pos: Vector2, size: Vector2 | number, center?: boolean, color?: Color, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+        /** Get where a glyph sits in the texture: counted in the font's own columns when its tile has them, like a font
+         *  packed by loadSprite, otherwise along the texture's grid from the font's first tile, the way tile() lays it out
+         *  @param {number} index - Glyph number, 0 is the space and the characters follow in ASCII order
+         *  @param {Vector2} [pos] - Written into and returned, for a loop that places many
+         *  @return {Vector2} */
+        getGlyphPos(index: number, pos?: Vector2): Vector2;
     }
     /** Returns true if fullscreen mode is active
      *  @return {boolean}
@@ -2809,6 +2822,11 @@ declare module "littlejsengine" {
      *  @memberof Audio */
     export function audioIsRunning(): boolean;
     /**
+     * @callback SoundLoadCallback - Function called when sound is loaded
+     * @param {Sound} sound
+     * @memberof Audio
+     */
+    /**
      * Sound Object - Stores a sound for later
      * - this can be used to load and play wave, mp3, and ogg files
      * - it can also create sounds using the ZzFX sound generator
@@ -2828,11 +2846,6 @@ declare module "littlejsengine" {
      * sound_example.play();
      */
     export class Sound {
-        /**
-         * @callback SoundLoadCallback - Function called when sound is loaded
-         * @param {Sound} sound
-         * @memberof Audio
-         */
         /** Create a sound object and cache the audio for later use
          *  @param {string|Array} [asset] - Filename of audio file or zzfx array
          *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
@@ -2840,7 +2853,7 @@ declare module "littlejsengine" {
          *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
          *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
          */
-        constructor(asset?: string | any[], randomness?: number, range?: number, taper?: number, onloadCallback?: (sound: Sound) => Sound);
+        constructor(asset?: string | any[], randomness?: number, range?: number, taper?: number, onloadCallback?: SoundLoadCallback);
         /** @property {number} - World space max range of sound */
         range: number;
         /** @property {number} - At what percentage of range should it start tapering */
@@ -2861,8 +2874,9 @@ declare module "littlejsengine" {
         /** @property {number} - Percentage of this sound currently loaded, sounds
          *  fetched from a url stay at 0 until decoding completes */
         loadedPercent: number;
-        /** @property {SoundLoadCallback} - function to call when sound is loaded */
-        onloadCallback: (sound: Sound) => Sound;
+        /** @property {SoundLoadCallback|undefined} - function to call when sound is loaded
+         *  @type {SoundLoadCallback|undefined} */
+        onloadCallback: SoundLoadCallback | undefined;
         /** @property {AudioNode|AudioEffectNodes} - Node or effect to route every play of this sound through instead of the master gain
          *  - Where this sound's audio goes, unlike AudioEffect.output which is an effect's own node, effects chain with connect()
          *  @type {AudioNode|AudioEffectNodes} */
@@ -2881,7 +2895,8 @@ declare module "littlejsengine" {
         /** Play the sound
          *  - Browsers hold audio until the first user input, a sound played before it returns a paused instance
          *    that starts on its own once audio runs, unless paused or stopped first; a one shot that would have
-         *    ended by then is dropped
+         *    ended by then is dropped, and only the newest play of each sound waits, so a sound played every frame
+         *    starts once
          *  @param {Vector2} [pos] - World space position to play the sound if any
          *  @param {number}  [volume] - How much to scale volume by
          *  @param {number}  [pitch] - How much to scale pitch by
@@ -3274,6 +3289,8 @@ declare module "littlejsengine" {
          *  @param {Vector2} vec - world space vector */
         worldToLocalVector(vec: Vector2): Vector2;
         /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
+         *  - Called for each solid tile the physics tests, which can be several times a frame for the same tile, and for
+         *    positions it only tries, so keep it free of side effects or guard them to once a frame
          *  @param {number}  tileData - the value of the tile at the position
          *  @param {Vector2} pos - tile where the collision occurred
          *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
@@ -3471,8 +3488,6 @@ declare module "littlejsengine" {
         canvas: OffscreenCanvas;
         /** @property {TextureInfo} - Texture info to use for this object rendering */
         textureInfo: TextureInfo;
-        /** Destroy this canvas layer */
-        destroy(): void;
         /** Draw this canvas layer centered in world space, with color applied if using WebGL
         *  @param {Vector2} pos - Center in world space
         *  @param {Vector2} [size] - Size in world space
@@ -3515,7 +3530,7 @@ declare module "littlejsengine" {
         data: TileLayerData[];
         /** @property {boolean} - Is this layer using a webgl texture? */
         isUsingWebGL: boolean;
-        redrawOnGLEnable: boolean;
+        tilesInWebGL: boolean;
         /** @property {boolean} - Show this layer's bounds and values when the debug overlay's Debug Tiles is on,
          *  turn it off for layers that only add noise */
         debugShow: boolean;
@@ -3592,8 +3607,9 @@ declare module "littlejsengine" {
         getData(layerPos: Vector2): TileLayerData | undefined;
         /** Called after this layer is redrawn, does nothing by default */
         onRedraw(): void;
-        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color]} */
-        savedRenderSettings: [CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color];
+        redrawIfSwitched(): void;
+        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color, Shader|undefined]} */
+        savedRenderSettings: [CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color, Shader | undefined];
     }
     /**
      * Tile Collision Layer - a tile layer with collision
@@ -3686,7 +3702,7 @@ declare module "littlejsengine" {
          *  @param {number|Vector2}  [emitSize] - World space size of the emitter (float for circle diameter, vec2 for rect)
          *  @param {number} [emitTime] - How long to stay alive (0 is forever)
          *  @param {number} [emitRate] - How many particles per second to spawn, does not emit if 0
-         *  @param {number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
+         *  @param {number} [emitConeAngle=PI] - Half angle of the cone around the emitter's angle that particles move along, PI is every direction
          *  @param {TileInfo} [tileInfo] - Tile info to render particles (undefined is untextured)
          *  @param {Color} [colorStartA=WHITE] - Color at start of life 1, randomized between start colors
          *  @param {Color} [colorStartB=WHITE] - Color at start of life 2, randomized between start colors
@@ -3700,7 +3716,7 @@ declare module "littlejsengine" {
          *  @param {number} [damping]           - How much to dampen particle speed, per-frame velocity multiplier (1 = no damping, .9 = lose 10% speed each frame)
          *  @param {number} [angleDamping]      - How much to dampen particle angular speed, per-frame multiplier (1 = no damping)
          *  @param {number} [gravityScale]      - How much gravity effect particles
-         *  @param {number} [particleConeAngle] - Cone for start particle angle
+         *  @param {number} [particleConeAngle] - Half angle each side of the emitter's angle for a particle's start angle, PI is any angle
          *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
          *  @param {number} [randomness]    - Apply extra randomness percent
          *  @param {boolean} [collideTiles] - Do particles collide against tiles, world space emitters only
@@ -3718,7 +3734,7 @@ declare module "littlejsengine" {
         emitTime: number;
         /** @property {number} - How many particles per second to spawn, does not emit if 0 */
         emitRate: number;
-        /** @property {number} - Local angle to apply velocity to particles from emitter */
+        /** @property {number} - Half angle of the cone around the emitter's angle that particles move along, PI is every direction */
         emitConeAngle: number;
         /** @property {Color} - Color at start of life 1, randomized between start colors */
         colorStartA: Color;
@@ -3740,7 +3756,7 @@ declare module "littlejsengine" {
         speed: number;
         /** @property {number} - Particle angular speed when spawned, in radians per frame (at 60fps) */
         angleSpeed: number;
-        /** @property {number} - Cone for start particle angle */
+        /** @property {number} - Half angle each side of the emitter's angle for a particle's start angle, PI is any angle */
         particleConeAngle: number;
         /** @property {number} - Fraction of life spent fading, split half at start and half at end (e.g. .2 = 10% fade-in + 10% fade-out) */
         fadeRate: number;
@@ -4580,12 +4596,6 @@ declare module "littlejsengine" {
         private _dragListeners;
         /** @private */
         private _onKeyDown;
-        set keyInputObject(arg: UIObject);
-        /** Object to send keyboard input to (typically a UITextInput), which keeps the keys from the game while set.
-         *  The keyboard listeners are only attached while this is set,
-         *  so games that never use text input pay no event-handling cost.
-         *  @type {UIObject|undefined} */
-        get keyInputObject(): UIObject;
         /** Draw a rectangle to the UI context
         *  @param {Vector2} pos
         *  @param {Vector2} size
@@ -4647,6 +4657,12 @@ declare module "littlejsengine" {
          *  @param {Vector2} pos
          *  @return {Vector2} */
         screenToNative(pos: Vector2): Vector2;
+        set keyInputObject(arg: UIObject);
+        /** Object to send keyboard input to (typically a UITextInput), which keeps the keys from the game while set.
+         *  The keyboard listeners are only attached while this is set,
+         *  so games that never use text input pay no event-handling cost.
+         *  @type {UIObject|undefined} */
+        get keyInputObject(): UIObject;
         /** Destroy and remove all objects
         *  @memberof UISystem */
         destroyObjects(): void;
@@ -4812,6 +4828,10 @@ declare module "littlejsengine" {
         /** Get the size for text with overrides and scale
          *  @return {Vector2} */
         getTextSize(): Vector2;
+        /** Get where the text is drawn, the center, or the edge of the text area its align puts it against
+         *  @param {Vector2} textSize - From getTextSize
+         *  @return {Vector2} */
+        getTextPos(textSize: Vector2): Vector2;
         /** Called when the navigation button is pressed on this object */
         navigatePressed(): void;
         /** @return {boolean} - Is the mouse hovering over this element */
@@ -4872,6 +4892,8 @@ declare module "littlejsengine" {
      * UITextInput - An editable text input field
      * - A simple text entry field that supports basic editing
      * - Suitable for short text input like names or numbers
+     * - Reads a physical keyboard: no on-screen keyboard opens on touch devices, and IME composition and paste do not type,
+     *   use an HTML input element for those
      * @extends UIObject
      * @memberof UISystem
      */
@@ -5228,8 +5250,6 @@ declare module "littlejsengine" {
          *  @type {Array<Array<Vector2>>} */
         edgeLoops: Array<Array<Vector2>>;
         edgeListFixtures: Map<any, any>;
-        /** Destroy this object and its physics body */
-        destroy(): void;
         /** Draws all this object's fixtures
          *  @param {Color}   [color]
          *  @param {Color}   [lineColor]
@@ -5400,7 +5420,8 @@ declare module "littlejsengine" {
         /** Reset the mass, center of mass, and moment, from a contact callback once the step is done */
         resetMassData(): void;
         /** Set the mass data of the body, from a contact callback once the step is done;
-         *  a mass of 0 or less becomes 1, use setBodyType for a static body
+         *  a mass of 0 or less becomes 1, use setBodyType for a static body; call it after adding fixtures and after
+         *  setFixedRotation, both of which put the mass back to what the fixtures give
          *  @param {Vector2} [localCenter]
          *  @param {number}  [mass]
          *  @param {number}  [momentOfInertia] - About the center of mass */
@@ -5571,6 +5592,7 @@ declare module "littlejsengine" {
      * - Used to make a point on a object track a specific world point target
      * - This a soft constraint with a max force
      * - This allows the constraint to stretch and without applying huge forces
+     * - The object must be dynamic, and stay dynamic while the joint holds it, Box2D stops for good on one with no mass
      * @extends Box2dJoint
      * @memberof Box2D
      */
@@ -5592,7 +5614,7 @@ declare module "littlejsengine" {
         /** Gets the maximum force in Newtons
          *  @return {number} */
         getMaxForce(): number;
-        /** Sets the joint frequency in Hertz
+        /** Sets the joint frequency in Hertz, above 0, Box2D stops for good on 0
          *  @param {number} hz */
         setFrequency(hz: number): void;
         /** Gets the joint frequency in Hertz
@@ -5781,7 +5803,7 @@ declare module "littlejsengine" {
         getJoint2(): Box2dJoint;
         /** Set the gear ratio
          *  @param {number} ratio */
-        setRatio(ratio: number): any;
+        setRatio(ratio: number): void;
         /** Get the gear ratio
          *  @return {number} */
         getRatio(): number;
@@ -5916,13 +5938,13 @@ declare module "littlejsengine" {
         getMotorTorque(time: number): number;
         /** Set the spring frequency in Hertz
          *  @param {number} hz */
-        setSpringFrequencyHz(hz: number): any;
+        setSpringFrequencyHz(hz: number): void;
         /** Get the spring frequency in Hertz
          *  @return {number} */
         getSpringFrequencyHz(): number;
         /** Set the spring damping ratio
          *  @param {number} ratio */
-        setSpringDampingRatio(ratio: number): any;
+        setSpringDampingRatio(ratio: number): void;
         /** Get the spring damping ratio
          *  @return {number} */
         getSpringDampingRatio(): number;
@@ -5952,13 +5974,13 @@ declare module "littlejsengine" {
         getReferenceAngle(): number;
         /** Set the frequency in Hertz
          *  @param {number} hz */
-        setFrequency(hz: number): any;
+        setFrequency(hz: number): void;
         /** Get the frequency in Hertz
          *  @return {number} */
         getFrequency(): number;
         /** Set the damping ratio
          *  @param {number} ratio */
-        setDampingRatio(ratio: number): any;
+        setDampingRatio(ratio: number): void;
         /** Get the damping ratio
          *  @return {number} */
         getDampingRatio(): number;
@@ -6581,6 +6603,8 @@ declare module "littlejsengine" {
         isOpen: boolean;
         /** @property {boolean} - In the A* closed list */
         isClosed: boolean;
+        /** @property {number} - Where it is in the A* open list's heap, while open */
+        heapIndex: number;
         /** Reset per-search state (called at the start of buildNodeData). */
         reset(): void;
         /** True if walkable and not blocked by cost. */
@@ -7251,7 +7275,8 @@ declare module "littlejsengine" {
          *  @return {Vector3|undefined} - undefined when the ray misses the plane */
         screenToGround(screenPos: Vector2, groundHeight?: number, canvasSize?: Vector2): Vector3 | undefined;
         /** Find the nearest object under a screen position or along a ray, for clicking on things
-         *  - Each object is tested as a sphere around its mesh, or around a sprite's size3D, not triangle by triangle
+         *  - Each object is tested as the box around its mesh in its own space, or a sphere around a sprite's size3D,
+         *    not triangle by triangle
          *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
          *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
          *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
@@ -7671,6 +7696,12 @@ declare module "littlejsengine" {
         instanceData: Float32Array | undefined;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
         radius: number;
+        /** @property {{min: Vector3, max: Vector3}|undefined} - Bounding box, for picking, measured with the radius
+         *  @type {{min: Vector3, max: Vector3}|undefined} */
+        bounds: {
+            min: Vector3;
+            max: Vector3;
+        } | undefined;
         contextGeneration: number;
         /** Number of vertices in the mesh
          *  @return {number} */

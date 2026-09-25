@@ -1635,7 +1635,7 @@ test('drawBox and drawSphere draw, pick finds the nearest object', () =>
     const miss = new EngineObject3D(vec3(5, 0, -5), buildBox());
     const hit = render3D.pick(new Ray3D(vec3(), vec3(0, 0, -1)));
     assert.equal(hit.object, nearObject);
-    near(hit.distance, 5 - Math.sqrt(.75)); // to the bounding sphere
+    near(hit.distance, 4.5); // to the near face of its box
     assert.equal(render3D.pick(new Ray3D(vec3(), vec3(0, 0, -1)), [farObject]).object, farObject);
     assert.equal(render3D.pick(new Ray3D(vec3(), vec3(0, 1, 0))), undefined);
     nearObject.destroy(); farObject.destroy(); miss.destroy();

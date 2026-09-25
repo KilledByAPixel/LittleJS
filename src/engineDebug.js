@@ -97,7 +97,7 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, s
     if (headlessMode) return; // nothing draws them, they would pile up
     if (isColor(color))
         color = color.toString();
-    const timer = new Timer(time);
+    const timer = new Timer(time, true); // real time, so they still expire while the game is paused
     debugPrimitives.push({pos:pos.copy(), size:size.copy(), color, timer, angle, fill, screenSpace});
 }
 
@@ -123,7 +123,7 @@ function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screen
         color = color.toString();
     pos = pos.copy();
     points = points.map(p=>p.copy());
-    const timer = new Timer(time);
+    const timer = new Timer(time, true); // real time, so they still expire while the game is paused
     debugPrimitives.push({pos, points, color, timer, angle, fill, screenSpace});
 }
 
@@ -146,7 +146,7 @@ function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=f
     if (isColor(color))
         color = color.toString();
     pos = pos.copy();
-    const timer = new Timer(time);
+    const timer = new Timer(time, true); // real time, so they still expire while the game is paused
     debugPrimitives.push({pos, size, color, timer, angle:0, fill, screenSpace});
 }
 
@@ -232,7 +232,7 @@ function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monosp
     if (isColor(color))
         color = color.toString();
     pos = pos.copy();
-    const timer = new Timer(time);
+    const timer = new Timer(time, true); // real time, so they still expire while the game is paused
     debugPrimitives.push({text, pos, size, color, timer, angle, font, screenSpace});
 }
 
@@ -527,7 +527,8 @@ function debugRender()
     debugTiles && debugTileLayers(tileLayers);
 
     {
-        // draw debug primitives
+        // draw debug primitives, the line width put back after so the game's next frame starts as it would in release
+        debugContext.save();
         debugContext.lineWidth = 2;
         debugPrimitives.forEach(p=>
         {
@@ -593,6 +594,7 @@ function debugRender()
 
             debugContext.restore();
         });
+        debugContext.restore();
 
         // remove expired primitives
         debugPrimitives = debugPrimitives.filter(r=>r.timer<0);
@@ -701,7 +703,8 @@ function debugRender()
     
     if (debugWatermark || debugOverlay)
     {
-        // show fps stats display
+        // show fps stats display, the text state put back after for the game's next frame
+        mainContext.save();
         mainContext.textAlign = 'right';
         mainContext.textBaseline = 'top';
         mainContext.font = '1em monospace';
@@ -713,6 +716,7 @@ function debugRender()
         mainContext.fillText(text, mainCanvasSize.x-3, 3);
         mainContext.fillStyle = '#fff';
         mainContext.fillText(text, mainCanvasSize.x-2, 2);
+        mainContext.restore();
     }
 }
 

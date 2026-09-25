@@ -612,7 +612,8 @@ class RandomGenerator
     *  @return {number} */
     angle() { return this.float(-PI, PI); }
 
-    /** Returns a seeded vec2 with size between the two values passed in
+    /** Returns a seeded vec2 with each component between the two values passed in
+    *  - A point in a square, not a random direction like randVec2
     *  @param {number} [valueA]
     *  @param {number} [valueB]
     *  @return {Vector2} */

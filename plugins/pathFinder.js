@@ -51,6 +51,8 @@ class PathFinderNode
         this.isOpen = false;
         /** @property {boolean} - In the A* closed list */
         this.isClosed = false;
+        /** @property {number} - Where it is in the A* open list's heap, while open */
+        this.heapIndex = 0;
     }
 
     /** Reset per-search state (called at the start of buildNodeData). */
@@ -258,34 +260,56 @@ class PathFinder
         searchNodes.length = 0;
         searchNodes.push(startNode);
 
-        const openList = [startNode];
+        // The open list is a binary heap with the smallest f score on top, so a big map searches quickly.
+        // Equal scores go to the node nearer the goal, so open ground is
+        // crossed nearly straight instead of widening in a band of ties;
+        // the path is just as short, only which of equal paths can change.
+        // Scores are sums of diagonals, so equal is within a hair.
+        const openList = [];
+        const isBetter = (a, b)=> a.f < b.f - 1e-9 || a.f < b.f + 1e-9 && a.h < b.h;
+        const siftUp = (node)=>
+        {
+            // a new node, or one whose score went down, moves up past the ones it now beats
+            let i = node.heapIndex;
+            while (i)
+            {
+                const parent = (i - 1) >> 1;
+                if (!isBetter(node, openList[parent])) break;
+                (openList[i] = openList[parent]).heapIndex = i;
+                i = parent;
+            }
+            (openList[i] = node).heapIndex = i;
+        };
+        const popBest = ()=>
+        {
+            // take the top, then the last node sinks down from the top to where it belongs
+            const best = openList[0], last = openList.pop();
+            if (last !== best)
+            {
+                let i = 0;
+                for (;;)
+                {
+                    const left = 2*i + 1, right = left + 1;
+                    if (left >= openList.length) break;
+                    const child = right < openList.length && isBetter(openList[right], openList[left]) ? right : left;
+                    if (!isBetter(openList[child], last)) break;
+                    (openList[i] = openList[child]).heapIndex = i;
+                    i = child;
+                }
+                (openList[i] = last).heapIndex = i;
+            }
+            return best;
+        };
         startNode.isOpen = true;
+        startNode.heapIndex = openList.length;
+        siftUp(startNode);
         const maxLoop = this.maxLoop ?? this.size.x * this.size.y;
         let loopCount = 0;
         this.searchGaveUp = false;
 
         while (openList.length > 0)
         {
-            // Find the open node with the smallest f score (linear scan).
-            // Same as the C++ — fine up to a few thousand nodes.
-            // Equal scores go to the node nearer the goal, so open ground is
-            // crossed nearly straight instead of widening in a band of ties;
-            // the path is just as short, only which of equal paths can change.
-            // Scores are sums of diagonals, so equal is within a hair.
-            let bestIndex = 0;
-            let bestF = openList[0].f, bestH = openList[0].h;
-            for (let i = 1; i < openList.length; ++i)
-            {
-                const node = openList[i];
-                if (node.f < bestF - 1e-9 || node.f < bestF + 1e-9 && node.h < bestH)
-                {
-                    bestF = node.f;
-                    bestH = node.h;
-                    bestIndex = i;
-                }
-            }
-            const current = openList[bestIndex];
-
+            const current = openList[0];
             if (current === endNode) break;
             if (++loopCount > maxLoop)
             {
@@ -294,8 +318,8 @@ class PathFinder
             }
 
             // Move current from open to closed.
+            popBest();
             current.isOpen = false;
-            openList.splice(bestIndex, 1);
             current.isClosed = true;
 
             if (this.debug && this.debugTime > 0)
@@ -324,9 +348,11 @@ class PathFinder
                 }
 
                 const tentativeG = current.g + stepCost + neighbor.cost;
-                if (!neighbor.isOpen)
+                const wasOpen = neighbor.isOpen;
+                if (!wasOpen)
                 {
                     neighbor.isOpen = true;
+                    neighbor.heapIndex = openList.length;
                     openList.push(neighbor);
                     searchNodes.push(neighbor);
                 }
@@ -345,6 +371,7 @@ class PathFinder
                 const h = max(adx, ady) + (Math.SQRT2 - 1) * min(adx, ady);
                 neighbor.h = h;
                 neighbor.f = neighbor.g + h * this.heuristicWeight;
+                siftUp(neighbor); // its place in the heap, new or with a lower score now
             }
         }
 

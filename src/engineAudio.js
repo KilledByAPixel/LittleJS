@@ -161,6 +161,12 @@ function audioEffectNode(effectOrNode, key)
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
+ * @callback SoundLoadCallback - Function called when sound is loaded
+ * @param {Sound} sound
+ * @memberof Audio
+ */
+
+/**
  * Sound Object - Stores a sound for later
  * - this can be used to load and play wave, mp3, and ogg files
  * - it can also create sounds using the ZzFX sound generator
@@ -181,12 +187,6 @@ function audioEffectNode(effectOrNode, key)
  */
 class Sound
 {
-    /**
-     * @callback SoundLoadCallback - Function called when sound is loaded
-     * @param {Sound} sound
-     * @memberof Audio
-     */
-    
     /** Create a sound object and cache the audio for later use
      *  @param {string|Array} [asset] - Filename of audio file or zzfx array
      *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
@@ -224,7 +224,8 @@ class Sound
         /** @property {number} - Percentage of this sound currently loaded, sounds
          *  fetched from a url stay at 0 until decoding completes */
         this.loadedPercent = 0;
-        /** @property {SoundLoadCallback} - function to call when sound is loaded */
+        /** @property {SoundLoadCallback|undefined} - function to call when sound is loaded
+         *  @type {SoundLoadCallback|undefined} */
         this.onloadCallback = onloadCallback;
         /** @property {AudioNode|AudioEffectNodes} - Node or effect to route every play of this sound through instead of the master gain
          *  - Where this sound's audio goes, unlike AudioEffect.output which is an effect's own node, effects chain with connect()
@@ -248,11 +249,11 @@ class Sound
             this.loadedPercent = 1;
             onloadCallback?.(this);
         }
-        else if (typeof asset === 'string')
+        else if (asset)
         {
-            // load the audio file, report failures rather than leaving an
-            // unhandled rejection, the sound just stays unloaded and silent
-            const filename = asset;
+            // load the audio file, a URL object as bundlers give works like its string;
+            // report failures rather than leaving an unhandled rejection, the sound just stays unloaded and silent
+            const filename = asset + '';
             this.loadSound(filename).catch(e=>
                 LOG('Sound load failed for', filename, '-', e.message));
         }
@@ -300,7 +301,8 @@ class Sound
     /** Play the sound
      *  - Browsers hold audio until the first user input, a sound played before it returns a paused instance
      *    that starts on its own once audio runs, unless paused or stopped first; a one shot that would have
-     *    ended by then is dropped
+     *    ended by then is dropped, and only the newest play of each sound waits, so a sound played every frame
+     *    starts once
      *  @param {Vector2} [pos] - World space position to play the sound if any
      *  @param {number}  [volume] - How much to scale volume by
      *  @param {number}  [pitch] - How much to scale pitch by

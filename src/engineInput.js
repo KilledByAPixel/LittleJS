@@ -462,8 +462,8 @@ function inputInit()
     document.addEventListener('contextmenu', onContextMenu);
     addEventListener('blur', onBlur); // the window's, the browser fires blur there and it does not bubble to the document
 
-    // init touch input
-    if (isTouchDevice && touchInputEnable)
+    // init touch input, its handler checks touchInputEnable itself, so turning it on later works too
+    if (isTouchDevice)
         touchInputInit();
 
     function onKeyDown(e)
@@ -525,7 +525,9 @@ function inputInit()
         // the key's own slot and the arrow slot an alias shares, each released only once nothing holds it:
         // an arrow held with its alias stays down until both are let go; a slot not down was never pressed as far
         // as the game knows (held since before focus or through a clear), so it is not released either
-        const remap = remapKey(e.code);
+        // the alias is released whatever the setting is now, emulation turned off while W is held still lets go of
+        // the ArrowUp it pressed
+        const remap = inputWASDToArrow[e.code] || e.code;
         for (const key of remap === e.code ? [e.code] : [e.code, remap])
             if (!inputKeysHeld.has(key) && !(inputWASDEmulateDirection && inputKeysHeld.has(inputArrowToWASD[key])))
                 if (inputData[0][key] & 1)
@@ -1227,8 +1229,9 @@ function touchGamepadRender()
     // relayout before the visibility bail-out so the paused full-screen start zone applies
     if (touchGamepadNeedRelayout) touchGamepadRelayout();
 
-    // fade out when idle (always show when displayTime is 0, or while debugging)
-    const fade = touchGamepadDisplayTime ?
+    // fade out when idle (always show when displayTime is 0, or while debugging), a control held is in use,
+    // its release sets the timer the fade counts from
+    const fade = touchGamepadDisplayTime && !touchGamepadPointerRole.size ?
         percent(touchGamepadTimer.get(), touchGamepadDisplayTime+1, touchGamepadDisplayTime) : 1;
     const visible = dbg || (touchGamepadTimer.isSet() && fade > 0 && !paused);
     touchGamepadOverlay.style.opacity = !visible ? 0 : dbg ? 1 : fade*touchGamepadAlpha;

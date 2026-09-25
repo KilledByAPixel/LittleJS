@@ -213,7 +213,8 @@ test('turned multi-line text is centered on its position', () =>
 {
     const context = textContext();
     drawTextScreen('a\nb', vec2(100, 100), 20, WHITE, 0, WHITE, 'center', 'arial', '', undefined, Math.PI/2, context);
-    assert.deepEqual(context.calls.find(c=> c[0] === 'translate'), ['translate', 100, 100]);
+    // a screen position is the center of a pixel, as for every other screen space draw
+    assert.deepEqual(context.calls.find(c=> c[0] === 'translate'), ['translate', 100.5, 100.5]);
     const ys = context.calls.filter(c=> c[0] === 'fillText').map(c=> c[3]);
     assert.deepEqual(ys, [-10, 10]);
 });

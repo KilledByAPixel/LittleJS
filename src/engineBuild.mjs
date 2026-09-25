@@ -154,7 +154,7 @@ async function buildAll()
                 `${SOURCE_FOLDER}/engineExport.js`,
                 `${PLUGIN_FOLDER}/pluginExport.js`
             ],
-            [uglifyBuildStep, addLicenseStep]
+            [uglifyModuleBuildStep, addLicenseStep]
         )
     ]);
 }
@@ -216,6 +216,17 @@ function uglifyBuildStep(filename)
     try
     {
         execSync(`npx uglifyjs "${filename}" -o "${filename}"`);
+    }
+    catch (e) { handleError(e,'Failed to run Uglify minification step!'); }
+};
+
+// Process an ES module with Uglify, compressed so the guarded debug calls are dropped, Closure does that for the
+// script build before its Uglify step
+function uglifyModuleBuildStep(filename)
+{
+    try
+    {
+        execSync(`npx uglifyjs "${filename}" -c --module -o "${filename}"`);
     }
     catch (e) { handleError(e,'Failed to run Uglify minification step!'); }
 };

@@ -295,13 +295,14 @@ class CanvasLayer extends EngineObject
         this.mass = 0;
     }
 
-    /** Destroy this canvas layer */
-    destroy()
+    /** Destroy this canvas layer
+     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+    destroy(immediate=false)
     {
         if (this.destroyed) return;
 
         this.textureInfo.destroyWebGLTexture();
-        super.destroy();
+        super.destroy(immediate);
     }
 
     // Render the layer, called automatically by the engine
@@ -381,8 +382,9 @@ class TileLayer extends CanvasLayer
         this.data = [];
         /** @property {boolean} - Is this layer using a webgl texture? */
         this.isUsingWebGL = false;
-        // set when WebGL is turned off under this layer, so it redraws when WebGL comes back
-        this.redrawOnGLEnable = false;
+        // which side holds the whole layer, set by a full redraw, undefined before the first one; a partial redraw
+        // or a render that finds WebGL turned on or off since then draws it all again on the side now in use
+        this.tilesInWebGL = undefined;
         /** @property {boolean} - Show this layer's bounds and values when the debug overlay's Debug Tiles is on,
          *  turn it off for layers that only add noise */
         this.debugShow = true;
@@ -456,20 +458,8 @@ class TileLayer extends CanvasLayer
     {
         ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
 
-        // refresh the texture here, not in update, which does not run while paused, where losing WebGL left it blank
-        if (!glEnable && this.isUsingWebGL)
-        {
-            // redraw the layer if webgl was disabled or context lost
-            this.isUsingWebGL = false;
-            this.redrawOnGLEnable = true;
-            this.redraw();
-        }
-        else if (glEnable && this.redrawOnGLEnable)
-        {
-            // webgl is back, its texture still holds the tiles from before it was turned off
-            this.redrawOnGLEnable = false;
-            this.redraw();
-        }
+        // redraw here, not in update, which does not run while paused, if WebGL was turned off or lost, or came back
+        this.redrawIfSwitched();
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
@@ -490,6 +480,14 @@ class TileLayer extends CanvasLayer
         this.isUsingWebGL && glFlush();
         this.onRedraw();
         this.redrawEnd();
+        this.tilesInWebGL = this.isUsingWebGL;
+    }
+
+    // draw the whole layer again if the side that holds it is not the one in use now
+    redrawIfSwitched()
+    {
+        if (this.tilesInWebGL !== undefined && this.hasWebGL() !== this.tilesInWebGL)
+            this.redraw();
     }
 
     /** Call to start the redraw process
@@ -499,10 +497,12 @@ class TileLayer extends CanvasLayer
     {
         if (!this.context) return;
         ASSERT(drawContext !== this.context);
+        clear || this.redrawIfSwitched(); // a partial redraw goes on top of the whole layer on the side in use
         
         // save current render settings
-        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color]} */
-        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor];
+        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color, Shader|undefined]} */
+        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader];
+        setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
@@ -540,7 +540,7 @@ class TileLayer extends CanvasLayer
         // set stuff back to normal
         if (this.isUsingWebGL)
             glSetRenderTarget();
-        [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor] = this.savedRenderSettings;
+        [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position in the tile layer
@@ -619,7 +619,9 @@ class TileLayer extends CanvasLayer
         const tileSize = this.tileInfo?.size ?? vec2(1); // a layer made without a tile info draws a pixel a cell
         pos = pos.subtract(this.pos).multiply(tileSize);
         size = size.multiply(tileSize);
-        pos.y = this.canvas.height - pos.y;
+        // a screen position is the center of a pixel, so the layer pixel coordinate moves back half a pixel
+        pos.x -= .5;
+        pos.y = this.canvas.height - pos.y - .5;
 
         // draw the tile onto the layer canvas
         const oldMainCanvasSize = mainCanvasSize;
@@ -691,8 +693,9 @@ class TileCollisionLayer extends TileLayer
         this.isSolid = true;
     }
 
-    /** Destroy this tile layer */
-    destroy()
+    /** Destroy this tile layer
+     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+    destroy(immediate=false)
     {
         if (this.destroyed) return;
 
@@ -700,7 +703,7 @@ class TileCollisionLayer extends TileLayer
         const index = tileCollisionLayers.indexOf(this);
         ASSERT(index >= 0, 'tile collision layer not found in array');
         index >= 0 && tileCollisionLayers.splice(index, 1);
-        super.destroy();
+        super.destroy(immediate);
     }
 
     /** Clear and initialize tile collision, the size is the layer's own, the tile data and canvas keep it
@@ -768,13 +771,12 @@ class TileCollisionLayer extends TileLayer
         // a zero size is a point test, one cell even when pos lands exactly on an integer boundary
         const maxX = min(size.x ? posX + size.x/2 : minX + 1, this.size.x);
         const maxY = min(size.y ? posY + size.y/2 : minY + 1, this.size.y);
-        const hitPos = new Vector2;
         for (let y = minY; y < maxY; ++y)
         for (let x = minX; x < maxX; ++x)
         {
-            // check if the object should collide with this tile
+            // check if the object should collide with this tile, the callback gets its own vector, one it can keep
             const tileData = this.collisionData[y*this.size.x+x];
-            if (tileData && collisionTest(tileData, hitPos.set(x+this.pos.x, y+this.pos.y)))
+            if (tileData && collisionTest(tileData, vec2(x+this.pos.x, y+this.pos.y)))
                 return true;
         }
         return false;
@@ -799,11 +801,11 @@ class TileCollisionLayer extends TileLayer
             (tileData, pos)=> callbackObject.collideWithTile(tileData, pos) :
             (tileData)=> tileData > 0;
         // the line is walked in the layer's own space, so its cells are the tiles wherever the layer sits
-        const offset = this.pos, worldPos = new Vector2;
+        const offset = this.pos;
         const testFunction = (pos)=>
         {
             const tileData = this.getCollisionData(pos);
-            return tileData && collisionTest(tileData, worldPos.set(pos.x + offset.x, pos.y + offset.y));
+            return tileData && collisionTest(tileData, vec2(pos.x + offset.x, pos.y + offset.y));
         }
         const hitPos = lineTest(posStart.subtract(offset), posEnd.subtract(offset), testFunction, normal);
         if (hitPos)

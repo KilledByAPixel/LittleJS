@@ -59,6 +59,10 @@ let engineObjects = [];
  *  @memberof Engine */
 let engineObjectsCollide = [];
 
+// the same objects with the static ones last, the order 2D physics checks them in
+/** @type {Array<EngineObject>} */
+let engineObjectsCollideStaticLast = [];
+
 /** Current update frame, used to calculate time
  *  @type {number}
  *  @memberof Engine */
@@ -580,8 +584,12 @@ function engineObjectsUpdate()
 {
     ++engineObjectsUpdateCount;
     engineObjectsCollidePairs.clear();
-    // get list of solid objects for physics optimization
+    // get list of solid objects for physics optimization, in the order they were made, which 3D collision pairs by;
+    // 2D checks the static ones last, so a contact with a moving object can not leave something back inside a static
+    // solid it was already pushed out of
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
+    engineObjectsCollideStaticLast = engineObjectsCollide.filter(o=>o.mass)
+        .concat(engineObjectsCollide.filter(o=>!o.mass));
 
     // update physics before object update
     for (const o of engineObjects)
@@ -592,6 +600,7 @@ function engineObjectsUpdate()
     // destroys itself leaves its parent's list on the spot and the next child would slide past the loop
     function updateChildObjects(children)
     {
+        if (!children.length) return; // most objects have none, and this runs for every one
         const start = engineChildStack.length;
         for (const child of children)
             engineChildStack.push(child);
@@ -1382,7 +1391,8 @@ class RandomGenerator
     *  @return {number} */
     angle() { return this.float(-PI, PI); }
 
-    /** Returns a seeded vec2 with size between the two values passed in
+    /** Returns a seeded vec2 with each component between the two values passed in
+    *  - A point in a square, not a random direction like randVec2
     *  @param {number} [valueA]
     *  @param {number} [valueB]
     *  @return {Vector2} */
@@ -3298,7 +3308,9 @@ class EngineObject
         // don't do collision for static objects or if solver disabled
         if (!solve) return;
 
-        const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
+        // which way is down for this object, a negative gravityScale falls up and lands on ceilings
+        const gravityY = this.gravityScale < 0 ? -gravity.y : gravity.y;
+        const wasFalling = this.velocity.y < 0 && gravityY < 0 || this.velocity.y > 0 && gravityY > 0;
         if (this.groundObject)
         {
             // apply friction in local space of ground object
@@ -3313,7 +3325,7 @@ class EngineObject
         {
             // check collisions against solid objects
             const epsilon = .001; // necessary to push slightly outside of the collision
-            for (const o of engineObjectsCollide)
+            for (const o of engineObjectsCollideStaticLast)
             {
                 // skip destroyed, child objects, self collision, or objects with no box
                 if (o.destroyed || o.parent || o === this || !o.size.x || !o.size.y) continue;
@@ -3337,21 +3349,30 @@ class EngineObject
                     continue;
                 }
 
-                if (isOverlapping(oldPos, this.size, o.pos, o.size) && !o.mass)
+                if (isOverlapping(oldPos, this.size, o.pos, o.size) && (!o.mass || o.groundObject))
                 {
                     // a static solid that moved into it, like a door or an elevator, pushes it out the shortest way
-                    // at once and carries it along, it would only drift out slowly and the solid would pass through
+                    // at once and carries it along, it would only drift out slowly and the solid would pass through;
+                    // an object standing on something counts as fixed too, so a stack on an elevator rides together;
+                    // it bounces off relative to the mover, a paddle moved by setting pos bounces a ball as a wall does
                     const push = collideBoxBox(this.pos, this.size, o.pos, o.size);
                     if (push)
                     {
                         this.pos.x += push.x + sign(push.x) * epsilon;
                         this.pos.y += push.y + sign(push.y) * epsilon;
+                        const restitution = max(this.restitution, o.restitution);
                         if (push.x)
-                            this.velocity.x = o.velocity.x;
+                        {
+                            const v = this.velocity.x - o.velocity.x;
+                            if (v * push.x < 0) // moving into it
+                                this.velocity.x = o.velocity.x - v * restitution;
+                        }
                         else
                         {
-                            this.velocity.y = o.velocity.y;
-                            if (push.y * gravity.y < 0) // pushed up against gravity, it stands on it
+                            const v = this.velocity.y - o.velocity.y;
+                            if (v * push.y < 0) // moving into it
+                                this.velocity.y = o.velocity.y - v * restitution;
+                            if (push.y * gravityY < 0) // pushed up against gravity, it stands on it
                                 this.groundObject = o;
                         }
                     }
@@ -3393,8 +3414,9 @@ class EngineObject
                         if (wasFalling)
                             this.groundObject = o;
 
-                        // bounce if other object is fixed or grounded
-                        this.velocity.y *= -restitution;
+                        // bounce if other object is fixed or grounded, relative to it so a rider keeps up with a
+                        // platform moving down instead of landing on it again every few frames
+                        this.velocity.y = o.velocity.y - (this.velocity.y - o.velocity.y) * restitution;
                     }
                     else if (o.mass)
                     {
@@ -3458,7 +3480,7 @@ class EngineObject
                         // zero gravity defaults to the normal-gravity step-up direction)
                         const epsilon = 1e-3;
                         const maxMove = .1;
-                        const gravitySign = gravity.y > 0 ? -1 : 1;
+                        const gravitySign = gravityY > 0 ? -1 : 1;
                         const y = gravitySign > 0 ?
                             floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon :
                             ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon;
@@ -3483,7 +3505,7 @@ class EngineObject
                             // this prevents gap between object and ground
                             const epsilon = .0001;
                             const offset = this.size.y/2 + epsilon;
-                            this.pos.y = gravity.y < 0 ?
+                            this.pos.y = gravityY < 0 ?
                                 floor(oldPos.y-this.size.y/2) + offset :
                                 ceil( oldPos.y+this.size.y/2) - offset;
 
@@ -3551,6 +3573,8 @@ class EngineObject
     worldToLocalVector(vec) { return vec.rotate(-this.angle); }
 
     /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
+     *  - Called for each solid tile the physics tests, which can be several times a frame for the same tile, and for
+     *    positions it only tries, so keep it free of side effects or guard them to once a frame
      *  @param {number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos - tile where the collision occurred
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
@@ -4126,8 +4150,10 @@ class SpriteAnimation
  * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, premultipliedTexture, and localUV, 0 to 1
  *   across the sprite or the mesh's own uv
- * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, lightCount,
- *   lights[i], lightColors[i] and shadow()
+ * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
+ *   lightCount, lights[i], lightColors[i] and shadow()
+ * - In 3D the shadow map is drawn without the Shader, cut only by the texture's alpha, so a snippet that removes
+ *   parts of a surface still shadows with the whole of it
  * @example
  * const fade = new Shader(`
  * void mainImage(out vec4 c, vec2 uv)
@@ -4883,7 +4909,7 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     context.textAlign = textAlign;
     context.font = fontStyle + ' ' + size + 'px '+ font;
     context.textBaseline = 'middle';
-    context.translate(pos.x, pos.y);
+    context.translate(pos.x + .5, pos.y + .5); // a screen position is the center of a pixel, as for every other draw
     context.rotate(angle);
     let yOffset = -(lines.length-1) * size/2; // center vertically
     lines.forEach(line=>
@@ -5392,6 +5418,7 @@ class ImageFont
         false&&ASSERT(isStringLike(text), 'text must be a string');
         false&&ASSERT(isVector2(pos), 'pos must be a vec2');
         false&&ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
+        false&&ASSERT(typeof center === 'boolean', 'center must be a boolean, the color comes after it, unlike drawText');
         false&&ASSERT(isColor(color), 'color must be a color');
 
         // if size is a number, make it a vector
@@ -5399,12 +5426,7 @@ class ImageFont
 
         // precache objects for drawing, a copy of the tile info each glyph moves, the font's own stays put
         const drawPos = new Vector2;
-        const fontTile = this.tileInfo, tileInfo = fontTile.frame(0);
-        const padding = tileInfo.padding;
-        const sizePaddedX = tileInfo.size.x + padding*2;
-        const sizePaddedY = tileInfo.size.y + padding*2;
-        const cols = tileInfo.textureInfo.size.x / sizePaddedX |0;
-        const firstIndex = ((fontTile.pos.y - padding) / sizePaddedY |0) * cols + ((fontTile.pos.x - padding) / sizePaddedX |0);
+        const tileInfo = this.tileInfo.frame(0);
 
         // draw each line of text, centered vertically like drawTextScreen when center is set
         const lines = (text+'').split('\n');
@@ -5414,16 +5436,9 @@ class ImageFont
             const centerOffset = center ? (line.length-1) * glyphSize.x / 2 : 0;
             for (let i=line.length; i--;)
             {
-                // get the character index
+                // get the glyph, out of range characters use the last one
                 const charCode = line.charCodeAt(i);
-                const index = firstIndex + (charCode < 32 || charCode > 127 ?
-                    95 : charCode - 32); // handle out of range characters
-
-                // get the position of the tile
-                const x = index % cols;
-                const y = index / cols |0;
-                tileInfo.pos.x = x*sizePaddedX + padding;
-                tileInfo.pos.y = y*sizePaddedY + padding;
+                this.getGlyphPos(charCode < 32 || charCode > 127 ? 95 : charCode - 32, tileInfo.pos);
 
                 // snap the glyph edges to whole pixels
                 // tiles are drawn from their center, so snapping the center
@@ -5437,6 +5452,22 @@ class ImageFont
                 drawTile(drawPos, glyphSize, tileInfo, color, 0, false, undefined, useWebGL, true, context);
             }
         });
+    }
+
+    /** Get where a glyph sits in the texture: counted in the font's own columns when its tile has them, like a font
+     *  packed by loadSprite, otherwise along the texture's grid from the font's first tile, the way tile() lays it out
+     *  @param {number} index - Glyph number, 0 is the space and the characters follow in ASCII order
+     *  @param {Vector2} [pos] - Written into and returned, for a loop that places many
+     *  @return {Vector2} */
+    getGlyphPos(index, pos=new Vector2)
+    {
+        const t = this.tileInfo, padding = t.padding;
+        const w = t.size.x + padding*2, h = t.size.y + padding*2;
+        if (t.columns)
+            return pos.set(t.pos.x + index % t.columns * w, t.pos.y + (index / t.columns |0) * h);
+        const columns = t.textureInfo.size.x / w |0;
+        const glyph = ((t.pos.y - padding) / h |0) * columns + ((t.pos.x - padding) / w |0) + index;
+        return pos.set(glyph % columns * w + padding, (glyph / columns |0) * h + padding);
     }
 }
 
@@ -5918,8 +5949,8 @@ function inputInit()
     document.addEventListener('contextmenu', onContextMenu);
     addEventListener('blur', onBlur); // the window's, the browser fires blur there and it does not bubble to the document
 
-    // init touch input
-    if (isTouchDevice && touchInputEnable)
+    // init touch input, its handler checks touchInputEnable itself, so turning it on later works too
+    if (isTouchDevice)
         touchInputInit();
 
     function onKeyDown(e)
@@ -5981,7 +6012,9 @@ function inputInit()
         // the key's own slot and the arrow slot an alias shares, each released only once nothing holds it:
         // an arrow held with its alias stays down until both are let go; a slot not down was never pressed as far
         // as the game knows (held since before focus or through a clear), so it is not released either
-        const remap = remapKey(e.code);
+        // the alias is released whatever the setting is now, emulation turned off while W is held still lets go of
+        // the ArrowUp it pressed
+        const remap = inputWASDToArrow[e.code] || e.code;
         for (const key of remap === e.code ? [e.code] : [e.code, remap])
             if (!inputKeysHeld.has(key) && !(inputWASDEmulateDirection && inputKeysHeld.has(inputArrowToWASD[key])))
                 if (inputData[0][key] & 1)
@@ -6683,8 +6716,9 @@ function touchGamepadRender()
     // relayout before the visibility bail-out so the paused full-screen start zone applies
     if (touchGamepadNeedRelayout) touchGamepadRelayout();
 
-    // fade out when idle (always show when displayTime is 0, or while debugging)
-    const fade = touchGamepadDisplayTime ?
+    // fade out when idle (always show when displayTime is 0, or while debugging), a control held is in use,
+    // its release sets the timer the fade counts from
+    const fade = touchGamepadDisplayTime && !touchGamepadPointerRole.size ?
         percent(touchGamepadTimer.get(), touchGamepadDisplayTime+1, touchGamepadDisplayTime) : 1;
     const visible = dbg || (touchGamepadTimer.isSet() && fade > 0 && !paused);
     touchGamepadOverlay.style.opacity = !visible ? 0 : dbg ? 1 : fade*touchGamepadAlpha;
@@ -7027,6 +7061,12 @@ function audioEffectNode(effectOrNode, key)
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
+ * @callback SoundLoadCallback - Function called when sound is loaded
+ * @param {Sound} sound
+ * @memberof Audio
+ */
+
+/**
  * Sound Object - Stores a sound for later
  * - this can be used to load and play wave, mp3, and ogg files
  * - it can also create sounds using the ZzFX sound generator
@@ -7047,12 +7087,6 @@ function audioEffectNode(effectOrNode, key)
  */
 class Sound
 {
-    /**
-     * @callback SoundLoadCallback - Function called when sound is loaded
-     * @param {Sound} sound
-     * @memberof Audio
-     */
-    
     /** Create a sound object and cache the audio for later use
      *  @param {string|Array} [asset] - Filename of audio file or zzfx array
      *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
@@ -7090,7 +7124,8 @@ class Sound
         /** @property {number} - Percentage of this sound currently loaded, sounds
          *  fetched from a url stay at 0 until decoding completes */
         this.loadedPercent = 0;
-        /** @property {SoundLoadCallback} - function to call when sound is loaded */
+        /** @property {SoundLoadCallback|undefined} - function to call when sound is loaded
+         *  @type {SoundLoadCallback|undefined} */
         this.onloadCallback = onloadCallback;
         /** @property {AudioNode|AudioEffectNodes} - Node or effect to route every play of this sound through instead of the master gain
          *  - Where this sound's audio goes, unlike AudioEffect.output which is an effect's own node, effects chain with connect()
@@ -7114,11 +7149,11 @@ class Sound
             this.loadedPercent = 1;
             onloadCallback?.(this);
         }
-        else if (typeof asset === 'string')
+        else if (asset)
         {
-            // load the audio file, report failures rather than leaving an
-            // unhandled rejection, the sound just stays unloaded and silent
-            const filename = asset;
+            // load the audio file, a URL object as bundlers give works like its string;
+            // report failures rather than leaving an unhandled rejection, the sound just stays unloaded and silent
+            const filename = asset + '';
             this.loadSound(filename).catch(e=>
                 false&&LOG('Sound load failed for', filename, '-', e.message));
         }
@@ -7166,7 +7201,8 @@ class Sound
     /** Play the sound
      *  - Browsers hold audio until the first user input, a sound played before it returns a paused instance
      *    that starts on its own once audio runs, unless paused or stopped first; a one shot that would have
-     *    ended by then is dropped
+     *    ended by then is dropped, and only the newest play of each sound waits, so a sound played every frame
+     *    starts once
      *  @param {Vector2} [pos] - World space position to play the sound if any
      *  @param {number}  [volume] - How much to scale volume by
      *  @param {number}  [pitch] - How much to scale pitch by
@@ -8172,13 +8208,14 @@ class CanvasLayer extends EngineObject
         this.mass = 0;
     }
 
-    /** Destroy this canvas layer */
-    destroy()
+    /** Destroy this canvas layer
+     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+    destroy(immediate=false)
     {
         if (this.destroyed) return;
 
         this.textureInfo.destroyWebGLTexture();
-        super.destroy();
+        super.destroy(immediate);
     }
 
     // Render the layer, called automatically by the engine
@@ -8258,8 +8295,9 @@ class TileLayer extends CanvasLayer
         this.data = [];
         /** @property {boolean} - Is this layer using a webgl texture? */
         this.isUsingWebGL = false;
-        // set when WebGL is turned off under this layer, so it redraws when WebGL comes back
-        this.redrawOnGLEnable = false;
+        // which side holds the whole layer, set by a full redraw, undefined before the first one; a partial redraw
+        // or a render that finds WebGL turned on or off since then draws it all again on the side now in use
+        this.tilesInWebGL = undefined;
         /** @property {boolean} - Show this layer's bounds and values when the debug overlay's Debug Tiles is on,
          *  turn it off for layers that only add noise */
         this.debugShow = true;
@@ -8333,20 +8371,8 @@ class TileLayer extends CanvasLayer
     {
         false&&ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
 
-        // refresh the texture here, not in update, which does not run while paused, where losing WebGL left it blank
-        if (!glEnable && this.isUsingWebGL)
-        {
-            // redraw the layer if webgl was disabled or context lost
-            this.isUsingWebGL = false;
-            this.redrawOnGLEnable = true;
-            this.redraw();
-        }
-        else if (glEnable && this.redrawOnGLEnable)
-        {
-            // webgl is back, its texture still holds the tiles from before it was turned off
-            this.redrawOnGLEnable = false;
-            this.redraw();
-        }
+        // redraw here, not in update, which does not run while paused, if WebGL was turned off or lost, or came back
+        this.redrawIfSwitched();
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
@@ -8367,6 +8393,14 @@ class TileLayer extends CanvasLayer
         this.isUsingWebGL && glFlush();
         this.onRedraw();
         this.redrawEnd();
+        this.tilesInWebGL = this.isUsingWebGL;
+    }
+
+    // draw the whole layer again if the side that holds it is not the one in use now
+    redrawIfSwitched()
+    {
+        if (this.tilesInWebGL !== undefined && this.hasWebGL() !== this.tilesInWebGL)
+            this.redraw();
     }
 
     /** Call to start the redraw process
@@ -8376,10 +8410,12 @@ class TileLayer extends CanvasLayer
     {
         if (!this.context) return;
         false&&ASSERT(drawContext !== this.context);
+        clear || this.redrawIfSwitched(); // a partial redraw goes on top of the whole layer on the side in use
         
         // save current render settings
-        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color]} */
-        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor];
+        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color, Shader|undefined]} */
+        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader];
+        setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
@@ -8417,7 +8453,7 @@ class TileLayer extends CanvasLayer
         // set stuff back to normal
         if (this.isUsingWebGL)
             glSetRenderTarget();
-        [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor] = this.savedRenderSettings;
+        [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position in the tile layer
@@ -8496,7 +8532,9 @@ class TileLayer extends CanvasLayer
         const tileSize = this.tileInfo?.size ?? vec2(1); // a layer made without a tile info draws a pixel a cell
         pos = pos.subtract(this.pos).multiply(tileSize);
         size = size.multiply(tileSize);
-        pos.y = this.canvas.height - pos.y;
+        // a screen position is the center of a pixel, so the layer pixel coordinate moves back half a pixel
+        pos.x -= .5;
+        pos.y = this.canvas.height - pos.y - .5;
 
         // draw the tile onto the layer canvas
         const oldMainCanvasSize = mainCanvasSize;
@@ -8568,8 +8606,9 @@ class TileCollisionLayer extends TileLayer
         this.isSolid = true;
     }
 
-    /** Destroy this tile layer */
-    destroy()
+    /** Destroy this tile layer
+     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+    destroy(immediate=false)
     {
         if (this.destroyed) return;
 
@@ -8577,7 +8616,7 @@ class TileCollisionLayer extends TileLayer
         const index = tileCollisionLayers.indexOf(this);
         false&&ASSERT(index >= 0, 'tile collision layer not found in array');
         index >= 0 && tileCollisionLayers.splice(index, 1);
-        super.destroy();
+        super.destroy(immediate);
     }
 
     /** Clear and initialize tile collision, the size is the layer's own, the tile data and canvas keep it
@@ -8645,13 +8684,12 @@ class TileCollisionLayer extends TileLayer
         // a zero size is a point test, one cell even when pos lands exactly on an integer boundary
         const maxX = min(size.x ? posX + size.x/2 : minX + 1, this.size.x);
         const maxY = min(size.y ? posY + size.y/2 : minY + 1, this.size.y);
-        const hitPos = new Vector2;
         for (let y = minY; y < maxY; ++y)
         for (let x = minX; x < maxX; ++x)
         {
-            // check if the object should collide with this tile
+            // check if the object should collide with this tile, the callback gets its own vector, one it can keep
             const tileData = this.collisionData[y*this.size.x+x];
-            if (tileData && collisionTest(tileData, hitPos.set(x+this.pos.x, y+this.pos.y)))
+            if (tileData && collisionTest(tileData, vec2(x+this.pos.x, y+this.pos.y)))
                 return true;
         }
         return false;
@@ -8676,11 +8714,11 @@ class TileCollisionLayer extends TileLayer
             (tileData, pos)=> callbackObject.collideWithTile(tileData, pos) :
             (tileData)=> tileData > 0;
         // the line is walked in the layer's own space, so its cells are the tiles wherever the layer sits
-        const offset = this.pos, worldPos = new Vector2;
+        const offset = this.pos;
         const testFunction = (pos)=>
         {
             const tileData = this.getCollisionData(pos);
-            return tileData && collisionTest(tileData, worldPos.set(pos.x + offset.x, pos.y + offset.y));
+            return tileData && collisionTest(tileData, vec2(pos.x + offset.x, pos.y + offset.y));
         }
         const hitPos = lineTest(posStart.subtract(offset), posEnd.subtract(offset), testFunction, normal);
         if (hitPos)
@@ -8751,7 +8789,7 @@ class ParticleEmitter extends EngineObject
      *  @param {number|Vector2}  [emitSize] - World space size of the emitter (float for circle diameter, vec2 for rect)
      *  @param {number} [emitTime] - How long to stay alive (0 is forever)
      *  @param {number} [emitRate] - How many particles per second to spawn, does not emit if 0
-     *  @param {number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
+     *  @param {number} [emitConeAngle=PI] - Half angle of the cone around the emitter's angle that particles move along, PI is every direction
      *  @param {TileInfo} [tileInfo] - Tile info to render particles (undefined is untextured)
      *  @param {Color} [colorStartA=WHITE] - Color at start of life 1, randomized between start colors
      *  @param {Color} [colorStartB=WHITE] - Color at start of life 2, randomized between start colors
@@ -8765,7 +8803,7 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [damping]           - How much to dampen particle speed, per-frame velocity multiplier (1 = no damping, .9 = lose 10% speed each frame)
      *  @param {number} [angleDamping]      - How much to dampen particle angular speed, per-frame multiplier (1 = no damping)
      *  @param {number} [gravityScale]      - How much gravity effect particles
-     *  @param {number} [particleConeAngle] - Cone for start particle angle
+     *  @param {number} [particleConeAngle] - Half angle each side of the emitter's angle for a particle's start angle, PI is any angle
      *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
      *  @param {number} [randomness]    - Apply extra randomness percent
      *  @param {boolean} [collideTiles] - Do particles collide against tiles, world space emitters only
@@ -8816,7 +8854,7 @@ class ParticleEmitter extends EngineObject
         this.emitTime = emitTime;
         /** @property {number} - How many particles per second to spawn, does not emit if 0 */
         this.emitRate = emitRate;
-        /** @property {number} - Local angle to apply velocity to particles from emitter */
+        /** @property {number} - Half angle of the cone around the emitter's angle that particles move along, PI is every direction */
         this.emitConeAngle = emitConeAngle;
 
         // color settings
@@ -8848,7 +8886,7 @@ class ParticleEmitter extends EngineObject
         this.angleDamping      = angleDamping;
         /** @property {number} - How much gravity affects particles */
         this.gravityScale      = gravityScale;
-        /** @property {number} - Cone for start particle angle */
+        /** @property {number} - Half angle each side of the emitter's angle for a particle's start angle, PI is any angle */
         this.particleConeAngle = particleConeAngle;
         /** @property {number} - Fraction of life spent fading, split half at start and half at end (e.g. .2 = 10% fade-in + 10% fade-out) */
         this.fadeRate          = fadeRate;
@@ -9011,9 +9049,11 @@ class ParticleEmitter extends EngineObject
     /** Render all particles for this emitter */
     render()
     {
-        // render all particles
+        // render all particles, the blend switched once for them all, not around each one
+        this.additive && setAdditiveBlendMode();
         for (const particle of this.particles)
             particle.render();
+        this.additive && setAdditiveBlendMode(false);
     }
 
     /** is emitter actively spawning */
@@ -9210,7 +9250,7 @@ class Particle
         // emitter properties
         const emitter = this.emitter;
         const localSpace = emitter.localSpace;
-        const additive = emitter.additive;
+        const additive = emitter.additive && !glAdditive; // switched here only for a particle drawn on its own
         const trailScale = emitter.trailScale;
         const fadeRate = emitter.fadeRate / 2;
 
@@ -12544,11 +12584,10 @@ class UISystemPlugin
         /** @private */
         this._onKeyDown = (e) =>
         {
-            // a field that was hidden, disabled or destroyed since it took focus lets it go instead
+            // a field that was hidden, disabled or destroyed since it took focus does not take the key, the game gets
+            // it, and the next UI update ends the edit, so it ends one way whichever comes first
             const o = this._keyInputObject;
-            if (o && !uiObjectIsUsable(o))
-                return void (this.keyInputObject = undefined);
-            if (!o) return;
+            if (!o || !uiObjectIsUsable(o)) return;
 
             // the field has the key, the game's input never sees it; browser shortcuts still work,
             // and only the keys a field uses lose their default, so F5, F11, F12 and the like still work
@@ -12603,8 +12642,15 @@ class UISystemPlugin
                 uiSystem.activeObject = undefined;
                 activeObject.destroyed || activeObject === uiSystem.keyInputObject || activeObject.onRelease();
             }
-            if (uiSystem.keyInputObject && !uiObjectIsUsable(uiSystem.keyInputObject))
-                uiSystem.keyInputObject = undefined;
+            // an edit whose field can no longer be used ends as if it were finished, so onChange keeps the text
+            const keyInputObject = uiSystem.keyInputObject;
+            if (keyInputObject && !uiObjectIsUsable(keyInputObject))
+            {
+                if (keyInputObject instanceof UITextInput && !keyInputObject.destroyed)
+                    keyInputObject.stopEditing();
+                else
+                    uiSystem.keyInputObject = undefined;
+            }
 
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
@@ -13523,6 +13569,15 @@ class UIObject
             this.textHeight || this.textFitScale * this.size.y);
     }
 
+    /** Get where the text is drawn, the center, or the edge of the text area its align puts it against
+     *  @param {Vector2} textSize - From getTextSize
+     *  @return {Vector2} */
+    getTextPos(textSize)
+    {
+        const side = this.align === 'left' ? -1 : this.align === 'right' ? 1 : 0;
+        return this.nativePos.add(vec2(side * textSize.x / 2, 0));
+    }
+
     /** Called when the navigation button is pressed on this object */
     navigatePressed() { this.click(); }
 
@@ -13657,7 +13712,7 @@ class UIText extends UIObject
 
         // render the text
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.nativePos, textSize, this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
+        uiSystem.drawText(this.text, this.getTextPos(textSize), textSize, this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
     }
 }
 
@@ -13666,6 +13721,8 @@ class UIText extends UIObject
  * UITextInput - An editable text input field
  * - A simple text entry field that supports basic editing
  * - Suitable for short text input like names or numbers
+ * - Reads a physical keyboard: no on-screen keyboard opens on touch devices, and IME composition and paste do not type,
+ *   use an HTML input element for those
  * @extends UIObject
  * @memberof UISystem
  */
@@ -13685,8 +13742,8 @@ class UITextInput extends UIObject
         /** @property {number} - Max length of input (0 = no limit) */
         this.maxLength = 0;
 
-        // set properties
-        this.text = text;
+        // set properties, as a string, which typing adds to
+        this.text = text + '';
         this.interactive = true;
         this.canBeHover = true;
     }
@@ -13723,8 +13780,9 @@ class UITextInput extends UIObject
         const code = e.code, key = e.key
         if (e.repeat && (key === 'Enter' || code === 'Space'))
             return; // a key held when editing began repeats, it should not type or stop editing
+        this.text += ''; // a game may have set a number
         if (key === 'Backspace')
-            this.text = this.text.slice(0, -1);
+            this.text = [...this.text].slice(0, -1).join(''); // a whole character, an emoji is two code units
         else if (key === 'Enter' || key === 'Escape')
             this.stopEditing();
         else if (key.length === 1) // printable characters
@@ -13766,7 +13824,7 @@ class UITextInput extends UIObject
         let text = this.text;
         if (this.isKeyInputObject()) // add a cursor to end of text
             text += timeReal%1 < .5 ?  '█' : '░';
-        uiSystem.drawText(text, this.nativePos, textSize, 
+        uiSystem.drawText(text, this.getTextPos(textSize), textSize, 
             this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
@@ -13851,7 +13909,7 @@ class UIButton extends UIObject
         
         // draw the text scaled to fit
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.nativePos.add(this.textOffset), textSize, 
+        uiSystem.drawText(this.text, this.getTextPos(textSize).add(this.textOffset), textSize, 
             this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
@@ -14016,7 +14074,7 @@ class UISlider extends UIObject
 
         // draw the text scaled to fit on the slider
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.nativePos, textSize, 
+        uiSystem.drawText(this.text, this.getTextPos(textSize), textSize, 
             this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
     navigatePressed()
@@ -14359,6 +14417,7 @@ function box2dTemp(v, slot=0)
 // the native objects a query needs, one of each kind made once and reused, since the binding keeps every one made;
 // a query sets the callback's ReportFixture before each use, so the one callback serves every query of its kind
 const box2dQueryObjects = {};
+const box2dGravity = {x:NaN, y:NaN}; // the gravity the world was last given
 function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
 
 // Box2D finds fixtures by boxes it pads and stretches ahead along the velocity, so a query checks the shape's own box
@@ -14486,8 +14545,9 @@ class Box2dObject extends EngineObject
         box2d.objects.push(this); // keep track of all box2d objects
     }
 
-    /** Destroy this object and its physics body */
-    destroy()
+    /** Destroy this object and its physics body
+     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+    destroy(immediate=false)
     {
         if (this.destroyed) return;
 
@@ -14498,7 +14558,7 @@ class Box2dObject extends EngineObject
         false&&ASSERT(this.body, 'Box2dObject has no body to destroy');
         const body = this.body;
         box2dWhenUnlocked(()=> { box2d.world.DestroyBody(body); body.object = undefined; this.body = undefined; });
-        super.destroy();
+        super.destroy(immediate);
     }
 
     /** Box2d objects updated with Box2d world step */
@@ -14981,7 +15041,8 @@ class Box2dObject extends EngineObject
     resetMassData() { box2dWhenUnlocked(()=> this.body && this.body.ResetMassData()); }
 
     /** Set the mass data of the body, from a contact callback once the step is done;
-     *  a mass of 0 or less becomes 1, use setBodyType for a static body
+     *  a mass of 0 or less becomes 1, use setBodyType for a static body; call it after adding fixtures and after
+     *  setFixedRotation, both of which put the mass back to what the fixtures give
      *  @param {Vector2} [localCenter]
      *  @param {number}  [mass]
      *  @param {number}  [momentOfInertia] - About the center of mass */
@@ -15009,6 +15070,7 @@ class Box2dObject extends EngineObject
             data.set_center(box2dTemp(vec2(cx, cy)));
             data.set_I(inertia > 0 && f(I - offset) > 0 ? I : 0);
             this.body.SetMassData(data);
+            this.body.SetAwake(true); // a sleeping body would not tip over a new center of mass
         });
     }
 
@@ -15388,6 +15450,7 @@ class Box2dJoint
  * - Used to make a point on a object track a specific world point target
  * - This a soft constraint with a max force
  * - This allows the constraint to stretch and without applying huge forces
+ * - The object must be dynamic, and stay dynamic while the joint holds it, Box2D stops for good on one with no mass
  * @extends Box2dJoint
  * @memberof Box2D
  */
@@ -15399,6 +15462,7 @@ class Box2dTargetJoint extends Box2dJoint
      *  @param {Vector2} worldPos */
     constructor(object, fixedObject, worldPos)
     {
+        false&&ASSERT(object.getBodyType() === box2d.bodyTypeDynamic, 'a target joint needs a dynamic object');
         object.setAwake();
         const jointDef = new box2d.instance.b2MouseJointDef();
         jointDef.set_bodyA(fixedObject.body);
@@ -15424,9 +15488,9 @@ class Box2dTargetJoint extends Box2dJoint
      *  @return {number} */
     getMaxForce() { return this.box2dJoint.GetMaxForce(); }
     
-    /** Sets the joint frequency in Hertz
+    /** Sets the joint frequency in Hertz, above 0, Box2D stops for good on 0
      *  @param {number} hz */
-    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(max(hz, 1e-3)); }
     
     /** Gets the joint frequency in Hertz
      *  @return {number} */
@@ -15483,7 +15547,7 @@ class Box2dDistanceJoint extends Box2dJoint
     
     /** Set the frequency in Hertz
      *  @param {number} hz */
-    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); box2dWakeJoint(this.box2dJoint); }
     
     /** Get the frequency in Hertz
      *  @return {number} */
@@ -15491,7 +15555,7 @@ class Box2dDistanceJoint extends Box2dJoint
     
     /** Set the damping ratio
      *  @param {number} ratio */
-    setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); }
+    setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
     
     /** Get the damping ratio
      *  @return {number} */
@@ -15639,7 +15703,12 @@ class Box2dRevoluteJoint extends Box2dJoint
     /** Set the joint limits, clockwise like angle
      *  @param {number} min
      *  @param {number} max */
-    setLimits(min, max) { return this.box2dJoint.SetLimits(-max, -min); }
+    setLimits(min, max)
+    {
+        false&&ASSERT(min <= max, 'the lower limit must not be above the upper one');
+        if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
+        return this.box2dJoint.SetLimits(-max, -min);
+    }
 
     /** Is the joint motor enabled?
      *  @return {boolean} */
@@ -15694,6 +15763,8 @@ class Box2dGearJoint extends Box2dJoint
     {
         // Box2D's angles are reversed and its translations are not, so a revolute joint geared to a prismatic one
         // needs the ratio reversed too, two of a kind keep it
+        const isGearable = (j)=> (j instanceof Box2dRevoluteJoint || j instanceof Box2dPrismaticJoint) && !!j.box2dJoint;
+        false&&ASSERT(isGearable(joint1) && isGearable(joint2), 'a gear joint needs two revolute or prismatic joints that exist');
         const ratioSign = (joint1 instanceof Box2dRevoluteJoint) === (joint2 instanceof Box2dRevoluteJoint) ? 1 : -1;
         const jointDef = new box2d.instance.b2GearJointDef();
         jointDef.set_bodyA(objectA.body);
@@ -15718,7 +15789,7 @@ class Box2dGearJoint extends Box2dJoint
 
     /** Set the gear ratio
      *  @param {number} ratio */
-    setRatio(ratio) { return this.box2dJoint.SetRatio(ratio * this.ratioSign); }
+    setRatio(ratio) { this.box2dJoint.SetRatio(ratio * this.ratioSign); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the gear ratio
      *  @return {number} */
@@ -15803,7 +15874,12 @@ class Box2dPrismaticJoint extends Box2dJoint
     /** Set the joint limits
      *  @param {number} min
      *  @param {number} max */
-    setLimits(min, max) { return this.box2dJoint.SetLimits(min, max); }
+    setLimits(min, max)
+    {
+        false&&ASSERT(min <= max, 'the lower limit must not be above the upper one');
+        if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
+        return this.box2dJoint.SetLimits(min, max);
+    }
     
     /** Is the motor enabled?
      *  @return {boolean} */
@@ -15920,7 +15996,7 @@ class Box2dWheelJoint extends Box2dJoint
 
     /** Set the spring frequency in Hertz
      *  @param {number} hz */
-    setSpringFrequencyHz(hz) { return this.box2dJoint.SetSpringFrequencyHz(hz); }
+    setSpringFrequencyHz(hz) { this.box2dJoint.SetSpringFrequencyHz(hz); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the spring frequency in Hertz
      *  @return {number} */
@@ -15928,7 +16004,7 @@ class Box2dWheelJoint extends Box2dJoint
 
     /** Set the spring damping ratio
      *  @param {number} ratio */
-    setSpringDampingRatio(ratio) { return this.box2dJoint.SetSpringDampingRatio(ratio); }
+    setSpringDampingRatio(ratio) { this.box2dJoint.SetSpringDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the spring damping ratio
      *  @return {number} */
@@ -15982,7 +16058,7 @@ class Box2dWeldJoint extends Box2dJoint
 
     /** Set the frequency in Hertz
      *  @param {number} hz */
-    setFrequency(hz) { return this.box2dJoint.SetFrequency(hz); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the frequency in Hertz
      *  @return {number} */
@@ -15990,7 +16066,7 @@ class Box2dWeldJoint extends Box2dJoint
 
     /** Set the damping ratio
      *  @param {number} ratio */
-    setDampingRatio(ratio) { return this.box2dJoint.SetDampingRatio(ratio); }
+    setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the damping ratio
      *  @return {number} */
@@ -16036,7 +16112,7 @@ class Box2dFrictionJoint extends Box2dJoint
 
     /** Set the maximum friction force
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); } // Box2D stops on a negative one
 
     /** Get the maximum friction force
      *  @return {number} */
@@ -16044,7 +16120,7 @@ class Box2dFrictionJoint extends Box2dJoint
 
     /** Set the maximum friction torque
      *  @param {number} torque */
-    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(torque); }
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); } // Box2D stops on a negative one
 
     /** Get the maximum friction torque
      *  @return {number} */
@@ -16084,6 +16160,7 @@ class Box2dPulleyJoint extends Box2dJoint
         jointDef.set_groundAnchorB(box2dTemp(groundAnchorB));
         jointDef.set_localAnchorA(box2dTemp(localAnchorA));
         jointDef.set_localAnchorB(box2dTemp(localAnchorB));
+        false&&ASSERT(ratio, 'a pulley ratio can not be 0');
         jointDef.set_ratio(ratio);
         jointDef.set_lengthA(groundAnchorA.distance(anchorA));
         jointDef.set_lengthB(groundAnchorB.distance(anchorB));
@@ -16163,7 +16240,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the maximum force
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); } // Box2D stops on a negative one
 
     /** Get the maximum force
      *  @return {number} */
@@ -16171,7 +16248,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the maximum torque
      *  @param {number} torque */
-    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(torque); }
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); } // Box2D stops on a negative one
 
     /** Get the maximum torque
      *  @return {number} */
@@ -16179,7 +16256,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the position correction factor in the range [0,1]
      *  @param {number} factor */
-    setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(factor); }
+    setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(clamp(factor)); }
 
     /** Get the position correction factor in the range [0,1]
      *  @return {number} */
@@ -16273,7 +16350,14 @@ class Box2dPlugin
      *  @param {number} [frames] */
     step(frames=1)
     {
-        box2d.world.SetGravity(box2dTemp(gravity));
+        // the engine's gravity, Box2D does not wake a sleeping body for a new one, so a change wakes them all
+        if (gravity.x !== box2dGravity.x || gravity.y !== box2dGravity.y)
+        {
+            box2dGravity.x = gravity.x, box2dGravity.y = gravity.y;
+            box2d.world.SetGravity(box2dTemp(gravity));
+            for (let b = box2d.world.GetBodyList(); !box2d.isNull(b); b = b.GetNext())
+                b.SetAwake(true);
+        }
         for (let i=frames; i--;)
         {
             box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
@@ -16354,7 +16438,7 @@ class Box2dPlugin
 
         let queryObjects = [];
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, size, queryObjects.length ? '#f00' : '#00f', .02);
+        debugRaycast && debugRect(pos, size, queryObjects.length ? '#f00' : '#00f');
         return queryObjects;
     }
 
@@ -16383,7 +16467,7 @@ class Box2dPlugin
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, size, queryObject ? '#f00' : '#00f', .02);
+        debugRaycast && debugRect(pos, size, queryObject ? '#f00' : '#00f');
         return queryObject;
     }
 
@@ -16447,7 +16531,7 @@ class Box2dPlugin
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f', .02);
+        debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f');
         return queryObject;
     }
 
@@ -18087,6 +18171,8 @@ class PathFinderNode
         this.isOpen = false;
         /** @property {boolean} - In the A* closed list */
         this.isClosed = false;
+        /** @property {number} - Where it is in the A* open list's heap, while open */
+        this.heapIndex = 0;
     }
 
     /** Reset per-search state (called at the start of buildNodeData). */
@@ -18294,34 +18380,56 @@ class PathFinder
         searchNodes.length = 0;
         searchNodes.push(startNode);
 
-        const openList = [startNode];
+        // The open list is a binary heap with the smallest f score on top, so a big map searches quickly.
+        // Equal scores go to the node nearer the goal, so open ground is
+        // crossed nearly straight instead of widening in a band of ties;
+        // the path is just as short, only which of equal paths can change.
+        // Scores are sums of diagonals, so equal is within a hair.
+        const openList = [];
+        const isBetter = (a, b)=> a.f < b.f - 1e-9 || a.f < b.f + 1e-9 && a.h < b.h;
+        const siftUp = (node)=>
+        {
+            // a new node, or one whose score went down, moves up past the ones it now beats
+            let i = node.heapIndex;
+            while (i)
+            {
+                const parent = (i - 1) >> 1;
+                if (!isBetter(node, openList[parent])) break;
+                (openList[i] = openList[parent]).heapIndex = i;
+                i = parent;
+            }
+            (openList[i] = node).heapIndex = i;
+        };
+        const popBest = ()=>
+        {
+            // take the top, then the last node sinks down from the top to where it belongs
+            const best = openList[0], last = openList.pop();
+            if (last !== best)
+            {
+                let i = 0;
+                for (;;)
+                {
+                    const left = 2*i + 1, right = left + 1;
+                    if (left >= openList.length) break;
+                    const child = right < openList.length && isBetter(openList[right], openList[left]) ? right : left;
+                    if (!isBetter(openList[child], last)) break;
+                    (openList[i] = openList[child]).heapIndex = i;
+                    i = child;
+                }
+                (openList[i] = last).heapIndex = i;
+            }
+            return best;
+        };
         startNode.isOpen = true;
+        startNode.heapIndex = openList.length;
+        siftUp(startNode);
         const maxLoop = this.maxLoop ?? this.size.x * this.size.y;
         let loopCount = 0;
         this.searchGaveUp = false;
 
         while (openList.length > 0)
         {
-            // Find the open node with the smallest f score (linear scan).
-            // Same as the C++ — fine up to a few thousand nodes.
-            // Equal scores go to the node nearer the goal, so open ground is
-            // crossed nearly straight instead of widening in a band of ties;
-            // the path is just as short, only which of equal paths can change.
-            // Scores are sums of diagonals, so equal is within a hair.
-            let bestIndex = 0;
-            let bestF = openList[0].f, bestH = openList[0].h;
-            for (let i = 1; i < openList.length; ++i)
-            {
-                const node = openList[i];
-                if (node.f < bestF - 1e-9 || node.f < bestF + 1e-9 && node.h < bestH)
-                {
-                    bestF = node.f;
-                    bestH = node.h;
-                    bestIndex = i;
-                }
-            }
-            const current = openList[bestIndex];
-
+            const current = openList[0];
             if (current === endNode) break;
             if (++loopCount > maxLoop)
             {
@@ -18330,8 +18438,8 @@ class PathFinder
             }
 
             // Move current from open to closed.
+            popBest();
             current.isOpen = false;
-            openList.splice(bestIndex, 1);
             current.isClosed = true;
 
             if (this.debug && this.debugTime > 0)
@@ -18360,9 +18468,11 @@ class PathFinder
                 }
 
                 const tentativeG = current.g + stepCost + neighbor.cost;
-                if (!neighbor.isOpen)
+                const wasOpen = neighbor.isOpen;
+                if (!wasOpen)
                 {
                     neighbor.isOpen = true;
+                    neighbor.heapIndex = openList.length;
                     openList.push(neighbor);
                     searchNodes.push(neighbor);
                 }
@@ -18381,6 +18491,7 @@ class PathFinder
                 const h = max(adx, ady) + (Math.SQRT2 - 1) * min(adx, ady);
                 neighbor.h = h;
                 neighbor.f = neighbor.g + h * this.heuristicWeight;
+                siftUp(neighbor); // its place in the heap, new or with a lower score now
             }
         }
 
@@ -20411,7 +20522,8 @@ class Render3DPlugin
     }
 
     /** Find the nearest object under a screen position or along a ray, for clicking on things
-     *  - Each object is tested as a sphere around its mesh, or around a sprite's size3D, not triangle by triangle
+     *  - Each object is tested as the box around its mesh in its own space, or a sphere around a sprite's size3D,
+     *    not triangle by triangle
      *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
      *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
      *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
@@ -21002,7 +21114,7 @@ function render3DDebugPush(duration, draw)
 {
     false&&ASSERT(isNumber(duration), 'duration must be a number');
     debug && glEnable && render3D?.program &&
-        render3DDebugPrimitives.push({timer: new Timer(duration), draw, clearCount: debugClearCount});
+        render3DDebugPrimitives.push({timer: new Timer(duration, true), draw, clearCount: debugClearCount}); // real time, like 2D
 }
 
 /** Draw a debug wireframe box
@@ -22025,6 +22137,9 @@ class Mesh
         this.instanceData = undefined;
         /** @property {number} - Bounding sphere radius around the origin, for culling and picking, computed by upload */
         this.radius = 0;
+        /** @property {{min: Vector3, max: Vector3}|undefined} - Bounding box, for picking, measured with the radius
+         *  @type {{min: Vector3, max: Vector3}|undefined} */
+        this.bounds = undefined;
         this.contextGeneration = 0; // the context the buffer belongs to, see render3D.contextGeneration
     }
 
@@ -22253,6 +22368,7 @@ class Mesh
         let r = 0;
         for (const p of this.points)
             r = max(r, p.lengthSquared());
+        this.bounds = this.getBounds(); // measured with it, a pick tests a mesh's box after its sphere
         return this.radius = r ** .5;
     }
 
@@ -23261,8 +23377,8 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
     return collected;
 }
 
-// how far along a ray an object is hit, or undefined for a miss; each one is tested as a sphere
-// around its mesh, or around a sprite's size3D, not triangle by triangle
+// how far along a ray an object is hit, or undefined for a miss; each one is tested as the box around its mesh in
+// its own space, or a sphere around a sprite's size3D, not triangle by triangle
 function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) return;
@@ -23271,7 +23387,14 @@ function render3DRaycastObject(ray, o)
     // a mesh that changed since it was measured is measured again, an upload may not have come yet
     const radius = (mesh ? mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxStretch(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
-    return raycastSphere(ray, matrix.getTranslation(), radius);
+    const distance = raycastSphere(ray, matrix.getTranslation(), radius);
+    if (distance === undefined || !mesh) return distance;
+
+    // the sphere is a quick reject, a mesh is hit where the ray meets its box in its own space, since a wide floor's
+    // sphere reaches far above it; the direction is not made unit length, so the distance holds in the world
+    const inverse = matrix.copy().invert(), bounds = mesh.bounds || mesh.getBounds();
+    const local = new Ray3D(inverse.transformPoint(ray.origin), inverse.transformDirection(ray.direction));
+    return raycastBox(local, bounds.min.add(bounds.max).scale(.5), bounds.max.subtract(bounds.min));
 }
 
 /**
@@ -23871,11 +23994,7 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
 function buildText3D(text, size=1, depth=.2, font=engineImageFont)
 {
     false&&ASSERT(font instanceof ImageFont, 'font must be an ImageFont, the engine font loads before gameInit');
-    const tileInfo = font.tileInfo, padding = tileInfo.padding;
-    const paddedX = tileInfo.size.x + padding * 2, paddedY = tileInfo.size.y + padding * 2;
-    const columns = tileInfo.textureInfo.size.x / paddedX | 0;
-    // where the font starts in its texture, like ImageFont, the glyph indices count from there
-    const firstIndex = ((tileInfo.pos.y - padding) / paddedY | 0) * columns + ((tileInfo.pos.x - padding) / paddedX | 0);
+    const tileInfo = font.tileInfo;
     let glyphs = render3DGlyphCache.get(font); // unit sized, scaled when combined
     glyphs || render3DGlyphCache.set(font, glyphs = new Map);
     const charSize = vec2(size * tileInfo.size.x / tileInfo.size.y, size);
@@ -23891,8 +24010,7 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
             let glyph = glyphs.get(index);
             if (!glyph)
             {
-                const g = firstIndex + index;
-                const pos = vec2(g % columns * paddedX + padding, (g / columns | 0) * paddedY + padding);
+                const pos = font.getGlyphPos(index); // where ImageFont finds it
                 glyphs.set(index, glyph = buildExtrude(new TileInfo(pos, tileInfo.size, tileInfo.textureInfo)));
             }
             const x = (i - (line.length - 1) / 2) * charSize.x;

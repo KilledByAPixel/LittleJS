@@ -275,8 +275,10 @@ new Shader(fragmentCode)          // fragmentCode defines void mainImage(out vec
                                   // style; it gives the surface color, then the object's color and additive color
                                   // apply in 2D, and the lighting, shadows and fog in 3D
 obj.shader = shader               // any EngineObject or EngineObject3D; draws that share a Shader share a batch
-// names in the snippet: iChannel0 the texture, iTime, iResolution, localUV 0 to 1 across the sprite or the mesh uv;
-// in 2D untextured draws like drawRect are not shaded; a bad snippet throws with the GLSL log in debug builds
+// names in the snippet: iChannel0 the texture, iTime, iResolution, localUV 0 to 1 across the sprite or the mesh uv,
+// premultipliedTexture true for a render target, whose rgb and alpha change together;
+// in 2D untextured draws like drawRect are not shaded; a bad snippet throws with the GLSL log in debug builds;
+// in 3D the shadow map is drawn without the Shader, so a snippet that cuts holes still casts the whole shadow
 
 // Tile Info Object
 TileInfo(pos, size, textureInfo, padding=0, bleed=0) // Create a tile info object
@@ -376,7 +378,8 @@ Sound(filename, randomness, range, taper, onloadCallback)  // Load a wave, mp3, 
 Sound.play(pos, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false) // Play a sound, returns SoundInstance
 Sound.playLoop(pos, volume=1, pitch=1, randomnessScale=1, paused=false) // Play on a loop, like play with loop on
 Sound.playMusic(volume=1, loop=true, paused=false)     // Play as music with looping
-                                    // (played before the first input, a sound waits and starts once audio runs)
+                                    // (played before the first input, a sound waits and starts once audio runs;
+                                    // only the newest play of each sound waits)
 Sound.playNote(semitoneOffset, pos, volume=1)          // Play as note with a semitone offset
 Sound.getDuration()                                    // Get length of sound in seconds (0 if loading)
 Sound.isLoaded()                                       // Check if sound is fully loaded
@@ -817,7 +820,8 @@ new UITile(pos, size, tileInfo, color, angle=0, mirror=false)
 new UIButton(pos, size, text='', color)
 new UICheckbox(pos, size, checked=false, text='', color)  // .checked toggles on click
 new UISlider(pos, size, value=.5, text='', color, handleColor)  // .value in [0, 1]
-new UITextInput(pos, size, text='')   // .text holds current value
+new UITextInput(pos, size, text='')   // .text holds current value; reads a physical keyboard, no on-screen keyboard,
+                                      // IME or paste, use an HTML input for those
 new UIVideo(pos, size, src, autoplay=false, loop=false, volume=1)
 UIVideo.play() .pause() .stop() .setTime(time) .setVolume(volume) .setPlaybackRate(rate)
 UIVideo.isPlaying() .isPaused() .isLoading() .hasEnded() .getCurrentTime() .getDuration()
@@ -1013,7 +1017,7 @@ render3D.screenToRay(screenPos, canvasSize)  // Ray3D under a screen point, alwa
                                      // date for it, so worldToScreen keeps agreeing with them
 render3D.screenToGround(screenPos, groundHeight=0, canvasSize) // where that ray meets a flat ground plane, or
                                                    // undefined; terrain has HeightMap.raycast
-render3D.pick(screenPos or ray, objects)           // {object, distance} of the nearest object hit, around its mesh
+render3D.pick(screenPos or ray, objects)           // {object, distance} of the nearest object hit, the box of its mesh
                                                    // or a sprite's size3D; a screen position goes through screenToRay
 render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop, paused) // like sound.play(pos): quieter with
                                                 // distance from the camera, panned by side
@@ -1077,9 +1081,9 @@ render3D.receiveShadow = true         // false keeps the next draws out of the s
 render3D.shader = undefined           // a Shader for the next draws, set from each object's shader; with emissive 1
                                       // the snippet's color is final, so it can light itself from these 3D names:
                                       // worldPos, worldNormal, cameraPos, sunDirection (toward the sun), sunColor,
-                                      // ambientColor, lightCount, lights[i] (xyz position, or direction toward a
-                                      // directional one, w radius, negative when directional), lightColors[i]
-                                      // (rgb, a strength) and shadow(), the sun shadow 0 to 1 at this fragment
+                                      // ambientColor, ambientGroundColor, lightCount, lights[i] (xyz position, or
+                                      // direction toward a directional one, w radius, negative when directional),
+                                      // lightColors[i] (rgb, a strength) and shadow(), the sun shadow 0 to 1 here
 render3D.cullBackFaces render3D.mirrored // set from each mesh as it draws: its doubleSided, and whether its
                                // transform mirrors it; strips leave both off
 render3D.depthTest = true; render3D.depthWrite = true // the transparent stage turns depth writes off, so see-through
@@ -1275,7 +1279,7 @@ mesh.dirty = true; mesh.upload() // re-upload edited arrays on the next draw, or
 mesh.dynamicDraw = true          // set once for a mesh whose values change every frame, a water surface or a
                                  // cloth: it keeps its GPU layout, so a dirty upload only rewrites the vertices;
                                  // the strip must keep the same points in the same order, a new point count asserts
-mesh.vertexCount mesh.radius                  // vertices, and the bounding sphere for culling and picking
+mesh.vertexCount mesh.radius mesh.bounds      // vertices, the bounding sphere for culling, and the box for picking
 mesh.computeRadius()                          // measure mesh.radius now, without uploading
 mesh.getTriangles()                           // {vertices, indices}: the strip as the indexed triangle list upload sends,
                                               // its distinct vertices and real triangles, for an exporter or a check; an

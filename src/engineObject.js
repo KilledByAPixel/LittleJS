@@ -208,7 +208,9 @@ class EngineObject
         // don't do collision for static objects or if solver disabled
         if (!solve) return;
 
-        const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
+        // which way is down for this object, a negative gravityScale falls up and lands on ceilings
+        const gravityY = this.gravityScale < 0 ? -gravity.y : gravity.y;
+        const wasFalling = this.velocity.y < 0 && gravityY < 0 || this.velocity.y > 0 && gravityY > 0;
         if (this.groundObject)
         {
             // apply friction in local space of ground object
@@ -223,7 +225,7 @@ class EngineObject
         {
             // check collisions against solid objects
             const epsilon = .001; // necessary to push slightly outside of the collision
-            for (const o of engineObjectsCollide)
+            for (const o of engineObjectsCollideStaticLast)
             {
                 // skip destroyed, child objects, self collision, or objects with no box
                 if (o.destroyed || o.parent || o === this || !o.size.x || !o.size.y) continue;
@@ -247,21 +249,30 @@ class EngineObject
                     continue;
                 }
 
-                if (isOverlapping(oldPos, this.size, o.pos, o.size) && !o.mass)
+                if (isOverlapping(oldPos, this.size, o.pos, o.size) && (!o.mass || o.groundObject))
                 {
                     // a static solid that moved into it, like a door or an elevator, pushes it out the shortest way
-                    // at once and carries it along, it would only drift out slowly and the solid would pass through
+                    // at once and carries it along, it would only drift out slowly and the solid would pass through;
+                    // an object standing on something counts as fixed too, so a stack on an elevator rides together;
+                    // it bounces off relative to the mover, a paddle moved by setting pos bounces a ball as a wall does
                     const push = collideBoxBox(this.pos, this.size, o.pos, o.size);
                     if (push)
                     {
                         this.pos.x += push.x + sign(push.x) * epsilon;
                         this.pos.y += push.y + sign(push.y) * epsilon;
+                        const restitution = max(this.restitution, o.restitution);
                         if (push.x)
-                            this.velocity.x = o.velocity.x;
+                        {
+                            const v = this.velocity.x - o.velocity.x;
+                            if (v * push.x < 0) // moving into it
+                                this.velocity.x = o.velocity.x - v * restitution;
+                        }
                         else
                         {
-                            this.velocity.y = o.velocity.y;
-                            if (push.y * gravity.y < 0) // pushed up against gravity, it stands on it
+                            const v = this.velocity.y - o.velocity.y;
+                            if (v * push.y < 0) // moving into it
+                                this.velocity.y = o.velocity.y - v * restitution;
+                            if (push.y * gravityY < 0) // pushed up against gravity, it stands on it
                                 this.groundObject = o;
                         }
                     }
@@ -303,8 +314,9 @@ class EngineObject
                         if (wasFalling)
                             this.groundObject = o;
 
-                        // bounce if other object is fixed or grounded
-                        this.velocity.y *= -restitution;
+                        // bounce if other object is fixed or grounded, relative to it so a rider keeps up with a
+                        // platform moving down instead of landing on it again every few frames
+                        this.velocity.y = o.velocity.y - (this.velocity.y - o.velocity.y) * restitution;
                     }
                     else if (o.mass)
                     {
@@ -368,7 +380,7 @@ class EngineObject
                         // zero gravity defaults to the normal-gravity step-up direction)
                         const epsilon = 1e-3;
                         const maxMove = .1;
-                        const gravitySign = gravity.y > 0 ? -1 : 1;
+                        const gravitySign = gravityY > 0 ? -1 : 1;
                         const y = gravitySign > 0 ?
                             floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon :
                             ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon;
@@ -393,7 +405,7 @@ class EngineObject
                             // this prevents gap between object and ground
                             const epsilon = .0001;
                             const offset = this.size.y/2 + epsilon;
-                            this.pos.y = gravity.y < 0 ?
+                            this.pos.y = gravityY < 0 ?
                                 floor(oldPos.y-this.size.y/2) + offset :
                                 ceil( oldPos.y+this.size.y/2) - offset;
 
@@ -461,6 +473,8 @@ class EngineObject
     worldToLocalVector(vec) { return vec.rotate(-this.angle); }
 
     /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
+     *  - Called for each solid tile the physics tests, which can be several times a frame for the same tile, and for
+     *    positions it only tries, so keep it free of side effects or guard them to once a frame
      *  @param {number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos - tile where the collision occurred
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */

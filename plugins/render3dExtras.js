@@ -319,11 +319,7 @@ function buildExtrude(pixels, size=vec2(1), depth=1)
 function buildText3D(text, size=1, depth=.2, font=engineImageFont)
 {
     ASSERT(font instanceof ImageFont, 'font must be an ImageFont, the engine font loads before gameInit');
-    const tileInfo = font.tileInfo, padding = tileInfo.padding;
-    const paddedX = tileInfo.size.x + padding * 2, paddedY = tileInfo.size.y + padding * 2;
-    const columns = tileInfo.textureInfo.size.x / paddedX | 0;
-    // where the font starts in its texture, like ImageFont, the glyph indices count from there
-    const firstIndex = ((tileInfo.pos.y - padding) / paddedY | 0) * columns + ((tileInfo.pos.x - padding) / paddedX | 0);
+    const tileInfo = font.tileInfo;
     let glyphs = render3DGlyphCache.get(font); // unit sized, scaled when combined
     glyphs || render3DGlyphCache.set(font, glyphs = new Map);
     const charSize = vec2(size * tileInfo.size.x / tileInfo.size.y, size);
@@ -339,8 +335,7 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
             let glyph = glyphs.get(index);
             if (!glyph)
             {
-                const g = firstIndex + index;
-                const pos = vec2(g % columns * paddedX + padding, (g / columns | 0) * paddedY + padding);
+                const pos = font.getGlyphPos(index); // where ImageFont finds it
                 glyphs.set(index, glyph = buildExtrude(new TileInfo(pos, tileInfo.size, tileInfo.textureInfo)));
             }
             const x = (i - (line.length - 1) / 2) * charSize.x;

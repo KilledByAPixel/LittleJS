@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
     EngineObject, ParticleEmitter, Particle, CanvasLayer, TileLayer, TileCollisionLayer, Vector2,
-    engineObjectsUpdate, tileLayersLoad, tileCollisionGetData, setGLEnable,
+    engineObjectsUpdate, tileLayersLoad, tileCollisionGetData, setGLEnable, glEnable,
     tile, vec2, rgb, WHITE,
 } from '../dist/littlejs.esm.js';
 
@@ -77,8 +77,9 @@ test('turning WebGL off and back on redraws a tile layer when it renders, paused
 {
     const layer = new TileLayer(vec2(), vec2(2), tile(0, 8));
     let redraws = 0;
-    layer.redraw = ()=> ++redraws; // headless stubs it, count the calls instead
-    layer.isUsingWebGL = true; // as if it had been drawn into its WebGL texture
+    layer.hasWebGL = ()=> glEnable; // headless has no texture, the layer follows the setting
+    layer.redraw = ()=> { ++redraws; layer.tilesInWebGL = layer.hasWebGL(); }; // headless stubs it, count the calls
+    layer.tilesInWebGL = true; // as if it had been drawn into its WebGL texture
     layer.draw = ()=> {};
     layer.context = {}; // not the draw context, which render checks
     const render = ()=> TileLayer.prototype.render.call(layer); // headless stubs render on the layer

@@ -2,7 +2,7 @@
 // it is only type checked, never run, so nothing here needs an engine, a canvas or Box2D
 import { vec2, vec3, hsl, Vector2, EngineObject, engineObjectsCallback, engineObjectsCallback3D,
     Tween, Ease, buildGrid, Mesh, Box2dObject, Box2dWheelJoint, Box2dRevoluteJoint, Box2dWeldJoint,
-    Box2dDistanceJoint, AudioFilter, AudioReverb, AudioDelay } from 'littlejsengine';
+    Box2dDistanceJoint, AudioFilter, AudioReverb, AudioDelay, Sound } from 'littlejsengine';
 
 // Box2D joints default their anchors to the objects' positions
 const box2dA = new Box2dObject(vec2(), vec2(1));
@@ -32,3 +32,11 @@ engineObjectsCallback3D(vec3(), 4, o => o.destroy());
 const filter = new AudioFilter('lowpass', 800);
 const reverb: AudioReverb = filter.connect(new AudioReverb);
 reverb.connect(new AudioDelay).connect(new AudioFilter);
+
+// a sound's load callback returns nothing
+let soundLoaded = false;
+const loadedSound = new Sound('a.mp3', 0, 30, .7, () => { soundLoaded = true; });
+loadedSound.onloadCallback = () => { soundLoaded = !soundLoaded; };
+
+// Box2D objects destroy like any object, immediate included
+new Box2dObject().destroy(true);

@@ -54,7 +54,7 @@ class ParticleEmitter extends EngineObject
      *  @param {number|Vector2}  [emitSize] - World space size of the emitter (float for circle diameter, vec2 for rect)
      *  @param {number} [emitTime] - How long to stay alive (0 is forever)
      *  @param {number} [emitRate] - How many particles per second to spawn, does not emit if 0
-     *  @param {number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
+     *  @param {number} [emitConeAngle=PI] - Half angle of the cone around the emitter's angle that particles move along, PI is every direction
      *  @param {TileInfo} [tileInfo] - Tile info to render particles (undefined is untextured)
      *  @param {Color} [colorStartA=WHITE] - Color at start of life 1, randomized between start colors
      *  @param {Color} [colorStartB=WHITE] - Color at start of life 2, randomized between start colors
@@ -68,7 +68,7 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [damping]           - How much to dampen particle speed, per-frame velocity multiplier (1 = no damping, .9 = lose 10% speed each frame)
      *  @param {number} [angleDamping]      - How much to dampen particle angular speed, per-frame multiplier (1 = no damping)
      *  @param {number} [gravityScale]      - How much gravity effect particles
-     *  @param {number} [particleConeAngle] - Cone for start particle angle
+     *  @param {number} [particleConeAngle] - Half angle each side of the emitter's angle for a particle's start angle, PI is any angle
      *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
      *  @param {number} [randomness]    - Apply extra randomness percent
      *  @param {boolean} [collideTiles] - Do particles collide against tiles, world space emitters only
@@ -119,7 +119,7 @@ class ParticleEmitter extends EngineObject
         this.emitTime = emitTime;
         /** @property {number} - How many particles per second to spawn, does not emit if 0 */
         this.emitRate = emitRate;
-        /** @property {number} - Local angle to apply velocity to particles from emitter */
+        /** @property {number} - Half angle of the cone around the emitter's angle that particles move along, PI is every direction */
         this.emitConeAngle = emitConeAngle;
 
         // color settings
@@ -151,7 +151,7 @@ class ParticleEmitter extends EngineObject
         this.angleDamping      = angleDamping;
         /** @property {number} - How much gravity affects particles */
         this.gravityScale      = gravityScale;
-        /** @property {number} - Cone for start particle angle */
+        /** @property {number} - Half angle each side of the emitter's angle for a particle's start angle, PI is any angle */
         this.particleConeAngle = particleConeAngle;
         /** @property {number} - Fraction of life spent fading, split half at start and half at end (e.g. .2 = 10% fade-in + 10% fade-out) */
         this.fadeRate          = fadeRate;
@@ -314,9 +314,11 @@ class ParticleEmitter extends EngineObject
     /** Render all particles for this emitter */
     render()
     {
-        // render all particles
+        // render all particles, the blend switched once for them all, not around each one
+        this.additive && setAdditiveBlendMode();
         for (const particle of this.particles)
             particle.render();
+        this.additive && setAdditiveBlendMode(false);
     }
 
     /** is emitter actively spawning */
@@ -513,7 +515,7 @@ class Particle
         // emitter properties
         const emitter = this.emitter;
         const localSpace = emitter.localSpace;
-        const additive = emitter.additive;
+        const additive = emitter.additive && !glAdditive; // switched here only for a particle drawn on its own
         const trailScale = emitter.trailScale;
         const fadeRate = emitter.fadeRate / 2;
 
