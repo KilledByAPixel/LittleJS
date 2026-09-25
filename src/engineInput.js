@@ -478,7 +478,9 @@ function inputInit()
         if (!e.repeat && !typing)
         {
             inputKeysHeld.add(e.code);
-            inputData[0][e.code] = 3;
+            // an arrow its alias already holds down is not pressed again, like its release waits for both
+            if (!(inputWASDEmulateDirection && inputKeysHeld.has(inputArrowToWASD[e.code]) && inputData[0][e.code] & 1))
+                inputData[0][e.code] = 3;
             // an alias presses its arrow's slot too, unless the arrow itself already holds it down
             const remap = remapKey(e.code);
             if (remap !== e.code && !(inputData[0][remap] & 1))
@@ -620,7 +622,14 @@ function inputInit()
         // handle all touch events the same way
         function handleTouch(e)
         {
-            if (!touchInputEnable) return;
+            if (!touchInputEnable)
+            {
+                // turned off mid touch, the finger that drove the mouse lets go of it
+                if (inputWasTouching && (inputData[0][0] & 1))
+                    inputData[0][0] = inputData[0][0] & 2 | 4;
+                inputWasTouching = 0;
+                return;
+            }
             inputLastTouchTime = performance.now();
 
             // fix stalled audio requiring user interaction
@@ -806,16 +815,16 @@ function inputUpdate()
             return;
         }
 
-        // return if gamepads are disabled, or only poll them when focused or in debug mode;
+        // only poll gamepads when focused or in debug mode;
         // what the last poll saw is forgotten meanwhile, a button let go while away is not released on return
-        if (!gamepadsEnable || !debug && !document.hasFocus())
+        if (gamepadsEnable && !debug && !document.hasFocus())
             return void (gamepadButtonsLast.length = 0);
 
         // poll gamepads; every slot is visited and a slot with no gamepad is cleared, so a refused or
         // vanished gamepad does not leave its buttons held, even past the end of a shorter array
         // like the one Firefox returns after the highest numbered gamepad disconnects
         const maxGamepads = 8;
-        const gamepads = inputGetGamepads();
+        const gamepads = gamepadsEnable ? inputGetGamepads() : []; // disabled lets go of them like unplugged
         for (let i=0; i<maxGamepads; ++i)
         {
             // get or create gamepad data

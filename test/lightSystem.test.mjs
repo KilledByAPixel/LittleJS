@@ -107,7 +107,7 @@ test('Light with fadeRange=0 does not throw (hard disc)', () =>
     assert.doesNotThrow(() => l.renderLight());
 });
 
-test('lightSystem.enabled=false short-circuits the render callback safely', async () =>
+test('a Light renders its light without a throw while lightSystem.enabled is off', async () =>
 {
     const { lightSystem } = await import('../dist/littlejs.esm.js');
     const prev = lightSystem.enabled;
@@ -117,13 +117,6 @@ test('lightSystem.enabled=false short-circuits the render callback safely', asyn
     const l = new Light(vec2(0, 0), 1, undefined);
     assert.doesNotThrow(() => l.renderLight());
     lightSystem.enabled = prev;
-});
-
-test('destroyed objects are skipped by the lightmap pass (by contract)', () =>
-{
-    const l = new Light(vec2(0, 0), 1, undefined);
-    l.destroy();
-    assert.equal(l.destroyed, true);
 });
 
 test('a Light stays where it is put in a game with gravity', () =>

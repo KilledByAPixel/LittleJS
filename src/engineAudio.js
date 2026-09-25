@@ -120,13 +120,18 @@ function setAudioMasterEffect(input, output)
     ASSERT(!output || typeof output.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
     if (!audioMasterGain) return; // no audio outside a browser, where the engine runs headless
 
-    // undo the current route, the master gain selectively so other taps on it survive,
-    // but the output node from everything since it only ever fed the speakers;
-    // an effect's output then goes back to the master gain, its default, so it still works for sounds
+    // undo the current route selectively so other taps survive; an effect's output that still feeds the speakers
+    // goes back to the master gain, its default, so it still works for sounds, but one that connect() already moved
+    // on, like the head of a longer chain being set now, stays where it was sent
     audioMasterGain.disconnect(audioMasterEffectInput || audioContext.destination);
-    audioMasterEffectOutput?.disconnect();
-    if (audioMasterEffectOutputIsEffect)
-        audioMasterEffectOutput.connect(audioMasterGain);
+    if (audioMasterEffectOutput)
+    {
+        let fedSpeakers = true;
+        try { audioMasterEffectOutput.disconnect(audioContext.destination); }
+        catch { fedSpeakers = false; }
+        if (audioMasterEffectOutputIsEffect && fedSpeakers)
+            audioMasterEffectOutput.connect(audioMasterGain);
+    }
     audioMasterEffectInput = input;
     audioMasterEffectOutput = output;
     audioMasterEffectOutputIsEffect = outputIsEffect;
@@ -493,7 +498,7 @@ class SoundInstance
         this.sourceEnded = (source)=>
         {
             if (source !== this.source) return;
-            this.source = undefined;
+            this.source = this.gainNode = this.pannerNode = undefined;
             this.startTime = undefined;
             this.pausedTime = 0;
             this.onendedCallback?.(source);
@@ -531,7 +536,7 @@ class SoundInstance
         {
             // the sound could not start, keep the place so a later resume picks it up,
             // which happens on its own when it failed only because audio is not running yet
-            this.startTime = undefined;
+            this.startTime = this.gainNode = this.pannerNode = undefined;
             this.pausedTime = offset;
             if (!audioIsRunning())
             {

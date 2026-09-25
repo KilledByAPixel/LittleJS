@@ -634,6 +634,8 @@ class CameraControl3D extends EngineObject3D
  * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
  *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
  * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
+ * - As the child of an EngineObject3D, like a player on a ship, its yaw, pitch and walking are relative to the parent,
+ *   so it turns and moves with it
  * - Destroy it to hand the camera back
  * @extends EngineObject3D
  * @memberof Render3D
@@ -704,9 +706,12 @@ class FirstPersonCamera3D extends EngineObject3D
             .rotateX(this.fly ? this.pitch : 0).rotateY(this.yaw);
         this.velocity3D = this.fly ? move : vec3(move.x, this.velocity3D.y, move.z);
 
-        // the camera sits at the eye, where this frame's physics left it
+        // the camera sits at the eye, where this frame's physics left it, looking the way it does in its parent's
+        // space, since a child's velocity3D moves it in that space too
+        const rotation = vec3(this.pitch, this.yaw, 0);
         render3D.camera.pos = this.getWorldPos3D();
-        render3D.camera.rotation = vec3(this.pitch, this.yaw, 0);
+        render3D.camera.rotation = this.parent instanceof EngineObject3D ?
+            this.parent.getMatrix().multiply(Matrix4.rotation(rotation)).getRotation() : rotation;
     }
 
     /** Let go of the mouse and stop driving the camera

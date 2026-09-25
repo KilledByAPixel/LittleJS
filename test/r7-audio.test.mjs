@@ -81,3 +81,17 @@ test('a stopped sound does not call onendedCallback, and a late ended event leav
     endLast();
     assert.equal(calls, 1);
 });
+
+test('a sound that plays to its end lets go of its gain and panner nodes, as a stopped one does', () =>
+{
+    const instance = sound.play();
+    assert.ok(instance.gainNode && instance.pannerNode);
+    endLast();
+    assert.equal(instance.gainNode, undefined);
+    assert.equal(instance.pannerNode, undefined);
+    instance.setVolume(.5); // kept for the next start
+    instance.start();
+    assert.ok(instance.gainNode, 'a new start makes new ones');
+    assert.equal(instance.gainNode.gain.value, .5);
+    instance.stop();
+});

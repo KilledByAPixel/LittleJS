@@ -187,9 +187,7 @@ drawEllipse(pos, size, color)           // filled ellipse
 - **WebGL is enabled by default** - Set `glEnable = false` before `engineInit()` for Canvas2D only
 - **Tile coordinates are bottom-left origin** - Y increases upward in world space
 - **Every export must appear in REFERENCE.md** - [test/reference.test.mjs](test/reference.test.mjs) fails on a name that is exported but not mentioned, so a new API comes with its REFERENCE line
-- **Files are stored with LF endings** - with `core.autocrlf` on, a working copy may be CRLF, so an edit script normalizes `
-` to `
-` before matching and writes LF back, or the whole file shows as changed
+- **Files are stored with LF endings** - with `core.autocrlf` on, a working copy may be CRLF, so an edit script normalizes `\r\n` to `\n` before matching and writes LF back, or the whole file shows as changed
 - **An instance divisor stays on a slot only while its array is enabled** - in Firefox, a plain draw that reads a constant attribute through a slot whose divisor is set makes the next instanced draw on that slot read garbage; Chrome does not care, so test the 3D plugin in Firefox too. `render3DDrawInstanced` sets the divisors with the arrays and clears both after
 - **Canvas2D and WebGL line ends differ on purpose** - the main canvas strokes with round caps and joins (set in `engineUpdateCanvas`), which look better, suit text, and stop sharp corners spiking far out; WebGL outlines use square ends and mitered joins for speed. Don't "fix" either to match the other
 - **A Shader on a 2D untextured draw does nothing** - `drawRect` carries its color in the additive slot with a zero tint, so the snippet's output multiplies away; draw a white tile instead

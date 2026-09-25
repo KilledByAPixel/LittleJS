@@ -696,8 +696,8 @@ class PathFinder
     /** Find a path from startPos to endPos in world space. Returns an array
      *  of world-space Vector2 points; empty array if no path exists.
      *
-     *  Start and end are snapped to the nearest walkable tile via
-     *  getNearestClearNode. Intermediate points are tile centers unless the
+     *  Start and end are snapped to the nearest walkable tile (a costed one
+     *  counts), within 10 tiles. Intermediate points are tile centers unless the
      *  string-pulling smoothing pass moves them off-grid.
      *
      *  By default, calls `buildNodeData()` first, which asks isWalkable and

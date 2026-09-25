@@ -73,21 +73,24 @@ test('a TileLayer with a fractional size floors it instead of running out of mem
     assert.match(out, /cells 2 size 2,1/);
 });
 
-test('turning WebGL back on redraws a tile layer that was redrawn for Canvas2D', () =>
+test('turning WebGL off and back on redraws a tile layer when it renders, paused or not', () =>
 {
     const layer = new TileLayer(vec2(), vec2(2), tile(0, 8));
     let redraws = 0;
     layer.redraw = ()=> ++redraws; // headless stubs it, count the calls instead
     layer.isUsingWebGL = true; // as if it had been drawn into its WebGL texture
+    layer.draw = ()=> {};
+    layer.context = {}; // not the draw context, which render checks
+    const render = ()=> TileLayer.prototype.render.call(layer); // headless stubs render on the layer
     try
     {
         setGLEnable(false);
-        layer.update();
+        render(); // render, which runs while paused too, not update
         assert.equal(redraws, 1, 'redrawn for Canvas2D');
         setGLEnable(true);
-        layer.update();
+        render();
         assert.equal(redraws, 2, 'redrawn again when WebGL comes back');
-        layer.update();
+        render();
         assert.equal(redraws, 2, 'only once');
     }
     finally

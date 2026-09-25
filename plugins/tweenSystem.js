@@ -443,14 +443,17 @@ const Ease =
         };
         return (x) =>
         {
-            // Binary search for t such that curve(t).x ≈ x, then return curve(t).y.
+            // the ends are exact, a tween starts and ends on its values
+            if (x <= 0) return 0;
+            if (x >= 1) return 1;
+
+            // binary search for t such that curve(t).x = x, then return curve(t).y; a fixed count, since stopping
+            // once x is close can leave y far off where the curve is steep, 32 halvings put t within 1e-9
             let t0 = 0, t1 = 1;
-            for (let i = 0; i < 128; i++)
+            for (let i = 32; i--;)
             {
                 const tMid = (t0 + t1) / 2;
-                const [bx, by] = curve(tMid);
-                if (abs(bx - x) < 1e-5) return by;
-                if (bx < x) t0 = tMid; else t1 = tMid;
+                if (curve(tMid)[0] < x) t0 = tMid; else t1 = tMid;
             }
             return curve((t0 + t1) / 2)[1];
         };

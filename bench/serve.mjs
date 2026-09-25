@@ -3,7 +3,7 @@
 // the system pick a free port, so they run beside a server already up
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { extname, join, normalize, dirname } from 'node:path';
+import { extname, join, normalize, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -12,7 +12,9 @@ export function serve(port = 0)
 {
     const server = createServer(async (req, res) =>
     {
+        // an encoded slash decodes after the URL resolved its dots, so check the path stays in the repo
         const path = normalize(join(root, decodeURIComponent(new URL(req.url, 'http://x').pathname)));
+        if (!path.startsWith(root + sep)) { res.writeHead(404); return res.end(); }
         try
         {
             const data = await readFile(path);
@@ -21,7 +23,7 @@ export function serve(port = 0)
         }
         catch { res.writeHead(404); res.end(); }
     });
-    server.listen(port);
+    server.listen(port, 'localhost'); // this machine only
     return new Promise(resolve => server.once('listening', ()=> resolve(server)));
 }
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1])

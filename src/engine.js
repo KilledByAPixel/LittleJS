@@ -642,7 +642,7 @@ function engineObjectsDestroy(immediate=true)
  *  - Objects destroyed this frame are left out, they are only in the list until the frame ends
  *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
  *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2,
- *                                   left out the objects that overlap the point at pos
+ *                                   left out or 0 the objects that overlap the point at pos
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
  *  @return {Array<EngineObject>} - List of collected objects
@@ -656,9 +656,9 @@ function engineObjectsCollect(pos, size, objects=engineObjects, testCenters=fals
         for (const o of objects)
             o.destroyed || collectedObjects.push(o);
     }
-    else if (size === undefined || size instanceof Vector2)
+    else if (!size || size instanceof Vector2)
     {
-        // bounding box test, a point when there is no size
+        // bounding box test, a point when there is no size or a size of 0
         const boxSize = size instanceof Vector2 ? size : vec2();
         for (const o of objects)
             o.destroyed || (testCenters ? isOverlapping(pos, boxSize, o.pos) : o.isOverlapping(pos, boxSize))

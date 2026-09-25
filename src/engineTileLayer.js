@@ -332,7 +332,7 @@ class CanvasLayer extends EngineObject
 
         // draw the canvas layer as a single tile that uses the whole texture
         const tileInfo = new TileInfo().setFullImage(t);
-        const useWebGL = this.hasWebGL();
+        const useWebGL = !context && this.hasWebGL(); // a context given is drawn to with Canvas2D
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
 
@@ -448,9 +448,15 @@ class TileLayer extends CanvasLayer
         return layerPos.arrayCheck(this.size) ? this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)] : undefined;
     }
 
-    // Update the tile layer, refresh texture if needed
-    update()
+    // Update the tile layer, a layer has no physics
+    update() {}
+
+    // Render the tile layer, called automatically by the engine
+    render()
     {
+        ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
+
+        // refresh the texture here, not in update, which does not run while paused, where losing WebGL left it blank
         if (!glEnable && this.isUsingWebGL)
         {
             // redraw the layer if webgl was disabled or context lost
@@ -464,12 +470,6 @@ class TileLayer extends CanvasLayer
             this.redrawOnGLEnable = false;
             this.redraw();
         }
-    }
-
-    // Render the tile layer, called automatically by the engine
-    render()
-    {
-        ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));

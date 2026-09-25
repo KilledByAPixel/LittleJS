@@ -645,7 +645,7 @@ function engineObjectsDestroy(immediate=true)
  *  - Objects destroyed this frame are left out, they are only in the list until the frame ends
  *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
  *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2,
- *                                   left out the objects that overlap the point at pos
+ *                                   left out or 0 the objects that overlap the point at pos
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
  *  @return {Array<EngineObject>} - List of collected objects
@@ -659,9 +659,9 @@ function engineObjectsCollect(pos, size, objects=engineObjects, testCenters=fals
         for (const o of objects)
             o.destroyed || collectedObjects.push(o);
     }
-    else if (size === undefined || size instanceof Vector2)
+    else if (!size || size instanceof Vector2)
     {
-        // bounding box test, a point when there is no size
+        // bounding box test, a point when there is no size or a size of 0
         const boxSize = size instanceof Vector2 ? size : vec2();
         for (const o of objects)
             o.destroyed || (testCenters ? isOverlapping(pos, boxSize, o.pos) : o.isOverlapping(pos, boxSize))
@@ -1390,7 +1390,7 @@ function debugRender()
             {
                 if (!keyIsDown(i, 0))
                     continue;
-                if (parseInt(i) < 3)
+                if (!isNaN(+i)) // mouse buttons are numbered, keys are named
                     mousePressed += i + ' ' ;
                 else
                     keysPressed += i + ' ' ;
@@ -1986,7 +1986,7 @@ function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
  * @param {any} s
  * @return {boolean}
  * @memberof Math */
-function isStringLike(s) { return s != null && typeof s?.toString() === 'string'; }
+function isStringLike(s) { return s != null && typeof s.toString === 'function' && typeof s.toString() === 'string'; }
 
 /**
  * Check if object is an array
@@ -3338,7 +3338,7 @@ let tileDefaultBleed = 0;
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
 
-/** Enable physics solver for collisions between objects
+/** Enable physics solver for collisions, between objects and with tiles
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -3728,7 +3728,7 @@ function setTileDefaultPadding(padding) { tileDefaultPadding = padding; }
  *  @memberof Settings */
 function setTileDefaultBleed(bleed) { tileDefaultBleed = bleed; }
 
-/** Set if collisions between objects are enabled
+/** Set if collisions are enabled, between objects and with tiles
  *  @param {boolean} enable
  *  @memberof Settings */
 function setEnablePhysicsSolver(enable) { enablePhysicsSolver = enable; }
@@ -3960,6 +3960,7 @@ function setDebugKey(key) { debugKey = key; }
  * - If an object starts or is moved inside tile collision, it will not collide with that tile
  * - Collision for objects can be set to be solid to block other objects
  * - Objects may get pushed into overlapping other solid objects, if so they will push away
+ * - A static solid (mass 0) moved by its velocity, like a door or an elevator, pushes objects out of its way
  * - Solid objects are more performance intensive and should be used sparingly
  * @memberof Engine
  * @example
@@ -4176,6 +4177,29 @@ class EngineObject
                     continue;
                 }
 
+                if (isOverlapping(oldPos, this.size, o.pos, o.size) && !o.mass)
+                {
+                    // a static solid that moved into it, like a door or an elevator, pushes it out the shortest way
+                    // at once and carries it along, it would only drift out slowly and the solid would pass through
+                    const push = collideBoxBox(this.pos, this.size, o.pos, o.size);
+                    if (push)
+                    {
+                        this.pos.x += push.x + sign(push.x) * epsilon;
+                        this.pos.y += push.y + sign(push.y) * epsilon;
+                        if (push.x)
+                            this.velocity.x = o.velocity.x;
+                        else
+                        {
+                            this.velocity.y = o.velocity.y;
+                            if (push.y * gravity.y < 0) // pushed up against gravity, it stands on it
+                                this.groundObject = o;
+                        }
+                    }
+                    engineObjectsCollidePairAdd(this, o);
+
+                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
+                    continue;
+                }
                 if (isOverlapping(oldPos, this.size, o.pos, o.size))
                 {
                     // if already was touching, try to push away
@@ -6751,7 +6775,9 @@ function inputInit()
         if (!e.repeat && !typing)
         {
             inputKeysHeld.add(e.code);
-            inputData[0][e.code] = 3;
+            // an arrow its alias already holds down is not pressed again, like its release waits for both
+            if (!(inputWASDEmulateDirection && inputKeysHeld.has(inputArrowToWASD[e.code]) && inputData[0][e.code] & 1))
+                inputData[0][e.code] = 3;
             // an alias presses its arrow's slot too, unless the arrow itself already holds it down
             const remap = remapKey(e.code);
             if (remap !== e.code && !(inputData[0][remap] & 1))
@@ -6893,7 +6919,14 @@ function inputInit()
         // handle all touch events the same way
         function handleTouch(e)
         {
-            if (!touchInputEnable) return;
+            if (!touchInputEnable)
+            {
+                // turned off mid touch, the finger that drove the mouse lets go of it
+                if (inputWasTouching && (inputData[0][0] & 1))
+                    inputData[0][0] = inputData[0][0] & 2 | 4;
+                inputWasTouching = 0;
+                return;
+            }
             inputLastTouchTime = performance.now();
 
             // fix stalled audio requiring user interaction
@@ -7079,16 +7112,16 @@ function inputUpdate()
             return;
         }
 
-        // return if gamepads are disabled, or only poll them when focused or in debug mode;
+        // only poll gamepads when focused or in debug mode;
         // what the last poll saw is forgotten meanwhile, a button let go while away is not released on return
-        if (!gamepadsEnable || !debug && !document.hasFocus())
+        if (gamepadsEnable && !debug && !document.hasFocus())
             return void (gamepadButtonsLast.length = 0);
 
         // poll gamepads; every slot is visited and a slot with no gamepad is cleared, so a refused or
         // vanished gamepad does not leave its buttons held, even past the end of a shorter array
         // like the one Firefox returns after the highest numbered gamepad disconnects
         const maxGamepads = 8;
-        const gamepads = inputGetGamepads();
+        const gamepads = gamepadsEnable ? inputGetGamepads() : []; // disabled lets go of them like unplugged
         for (let i=0; i<maxGamepads; ++i)
         {
             // get or create gamepad data
@@ -7794,13 +7827,18 @@ function setAudioMasterEffect(input, output)
     ASSERT(!output || typeof output.connect === 'function', 'output must be an AudioNode or an effect with input and output nodes');
     if (!audioMasterGain) return; // no audio outside a browser, where the engine runs headless
 
-    // undo the current route, the master gain selectively so other taps on it survive,
-    // but the output node from everything since it only ever fed the speakers;
-    // an effect's output then goes back to the master gain, its default, so it still works for sounds
+    // undo the current route selectively so other taps survive; an effect's output that still feeds the speakers
+    // goes back to the master gain, its default, so it still works for sounds, but one that connect() already moved
+    // on, like the head of a longer chain being set now, stays where it was sent
     audioMasterGain.disconnect(audioMasterEffectInput || audioContext.destination);
-    audioMasterEffectOutput?.disconnect();
-    if (audioMasterEffectOutputIsEffect)
-        audioMasterEffectOutput.connect(audioMasterGain);
+    if (audioMasterEffectOutput)
+    {
+        let fedSpeakers = true;
+        try { audioMasterEffectOutput.disconnect(audioContext.destination); }
+        catch { fedSpeakers = false; }
+        if (audioMasterEffectOutputIsEffect && fedSpeakers)
+            audioMasterEffectOutput.connect(audioMasterGain);
+    }
     audioMasterEffectInput = input;
     audioMasterEffectOutput = output;
     audioMasterEffectOutputIsEffect = outputIsEffect;
@@ -8167,7 +8205,7 @@ class SoundInstance
         this.sourceEnded = (source)=>
         {
             if (source !== this.source) return;
-            this.source = undefined;
+            this.source = this.gainNode = this.pannerNode = undefined;
             this.startTime = undefined;
             this.pausedTime = 0;
             this.onendedCallback?.(source);
@@ -8205,7 +8243,7 @@ class SoundInstance
         {
             // the sound could not start, keep the place so a later resume picks it up,
             // which happens on its own when it failed only because audio is not running yet
-            this.startTime = undefined;
+            this.startTime = this.gainNode = this.pannerNode = undefined;
             this.pausedTime = offset;
             if (!audioIsRunning())
             {
@@ -9012,7 +9050,7 @@ class CanvasLayer extends EngineObject
 
         // draw the canvas layer as a single tile that uses the whole texture
         const tileInfo = new TileInfo().setFullImage(t);
-        const useWebGL = this.hasWebGL();
+        const useWebGL = !context && this.hasWebGL(); // a context given is drawn to with Canvas2D
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
 
@@ -9128,9 +9166,15 @@ class TileLayer extends CanvasLayer
         return layerPos.arrayCheck(this.size) ? this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)] : undefined;
     }
 
-    // Update the tile layer, refresh texture if needed
-    update()
+    // Update the tile layer, a layer has no physics
+    update() {}
+
+    // Render the tile layer, called automatically by the engine
+    render()
     {
+        ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
+
+        // refresh the texture here, not in update, which does not run while paused, where losing WebGL left it blank
         if (!glEnable && this.isUsingWebGL)
         {
             // redraw the layer if webgl was disabled or context lost
@@ -9144,12 +9188,6 @@ class TileLayer extends CanvasLayer
             this.redrawOnGLEnable = false;
             this.redraw();
         }
-    }
-
-    // Render the tile layer, called automatically by the engine
-    render()
-    {
-        ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
@@ -12171,6 +12209,9 @@ class PostProcessPlugin
             glContext.useProgram(postProcess.shader);
             glContext.bindVertexArray(postProcess.vao);
             glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, true);
+            // upload the canvas the way it shows, premultiplied, since the shader writes full alpha; unpremultiplied
+            // a see-through pixel would come out at its full brightness instead of faded over the background
+            glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
             glContext.disable(glContext.BLEND);
 
             // setup texture
@@ -12214,8 +12255,9 @@ class PostProcessPlugin
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
             }
 
-            // restore default so subsequent dynamic texture uploads aren't flipped
+            // restore defaults so subsequent dynamic texture uploads aren't flipped or premultiplied
             glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, false);
+            glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
 
             // bind back the texture the 2D batch thinks is bound, a plugin drawing after this one uses it
             if (glActiveTexture)
@@ -13419,9 +13461,10 @@ class UISystemPlugin
             }
             if (uiSystem.keyInputObject)
             {
-                // handle text input, navigation keeps its place for when the edit ends
+                // handle text input, navigation keeps its place for when the edit ends, and the hover stays where it
+                // was, so an edit started by navigation does not end with an onLeave that had no onEnter
                 uiSystem.activeObject = uiSystem.keyInputObject;
-                uiSystem.hoverObject = uiSystem.keyInputObject;
+                uiSystem.hoverObject = uiSystem.lastHoverObject;
             }
 
             // navigation with gamepad/keyboard
@@ -13925,15 +13968,17 @@ class UISystemPlugin
             const backgroundColor = hsl(0,0,0,.7);
             uiSystem.drawRect(vec2(), vec2(1e9), backgroundColor);
         }
-        const openFrame = frame;
+        let opened = false;
         confirmMenu.onUpdate = ()=>
         {
-            // not the press that opened it, a game may open it on the same back button
-            if (frame !== openFrame && (keyWasPressed(exitKey) || gamepadWasPressed(1)))
+            // not the press that opened it, a game may open it on the same back button, so its first update is skipped
+            // (not by frame number, which does not advance while paused, where a confirm is usually shown)
+            if (opened && (keyWasPressed(exitKey) || gamepadWasPressed(1)))
             {
                 closeMenu(); // the exit key or gamepad B answers no
                 noCallback && noCallback();
             }
+            opened = true;
         }
         confirmMenu.isMouseOverlapping = ()=> true; // always hover
         
@@ -14542,6 +14587,8 @@ class UITextInput extends UIObject
             inputClearKey(0,0);
             inputClearKey(0, gamepadPrimary+1, false, true, false);
         }
+        else if (mouseWasPressed(0))
+            inputClearKey(0, 0, false, true, false); // a click inside is used up like any click on the UI
     }
 
     render()
@@ -15116,6 +15163,8 @@ class UILayout extends UIObject
  * - Box2dTileLayer for grid based collision
  * - Every type of joint
  * - Debug physics drawing
+ * - Box2D works per second: its velocities and accelerations are in units per second, and it reads the engine's
+ *   gravity as units per second squared, where an EngineObject's are per frame
  * @namespace Box2D
  */
 
@@ -15145,6 +15194,38 @@ function box2dTemp(v, slot=0)
 // a query sets the callback's ReportFixture before each use, so the one callback serves every query of its kind
 const box2dQueryObjects = {};
 function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
+
+// Box2D finds fixtures by boxes it pads and stretches ahead along the velocity, so a query checks the shape's own box
+function box2dFixtureOverlaps(fixture, aabb)
+{
+    const shape = fixture.GetShape(), transform = fixture.GetBody().GetTransform();
+    const shapeBox = box2dQueryObject('shapeAABB', 'b2AABB');
+    const lower = aabb.get_lowerBound(), upper = aabb.get_upperBound();
+    for (let i = shape.GetChildCount(); i--;)
+    {
+        shape.ComputeAABB(shapeBox, transform, i);
+        const a = shapeBox.get_lowerBound(), b = shapeBox.get_upperBound();
+        if (a.get_x() <= upper.get_x() && b.get_x() >= lower.get_x() &&
+            a.get_y() <= upper.get_y() && b.get_y() >= lower.get_y())
+            return true;
+    }
+    return false;
+}
+
+// wake a body and whatever touches it, Box2D does not when a body is moved, and a sleeping pair never updates
+function box2dWakeWithContacts(body)
+{
+    body.SetAwake(true);
+    for (let edge = body.GetContactList(); !box2d.isNull(edge); edge = edge.get_next())
+        edge.get_other().SetAwake(true);
+}
+
+// wake both bodies of a joint whose length changed, a sleeping body would stay where it was
+function box2dWakeJoint(joint)
+{
+    joint.GetBodyA().SetAwake(true);
+    joint.GetBodyB().SetAwake(true);
+}
 
 // what Box2D adds to the inertia for a center of mass away from the origin, in float32 as it does it, so taking it
 // off again gives exactly what Box2D keeps: an inertia of 0, a locked rotation, stays 0 and not a speck either side
@@ -15223,7 +15304,7 @@ class Box2dObject extends EngineObject
         this.body = box2d.world.CreateBody(bodyDef);
         box2d.instance.destroy(bodyDef);
         /** @property {Color} - Line color used for default box2d drawing */
-        this.lineColor = BLACK;
+        this.lineColor = BLACK.copy();
         /** @property {number} - Line width used for default box2d drawing */
         this.lineWidth = .1;
         /** @property {Array<Array<Vector2>>} - List of all edges for default box2d drawing
@@ -15362,6 +15443,10 @@ class Box2dObject extends EngineObject
         ASSERT(size.x > 0 && size.y > 0, 'size must be positive');
         ASSERT(isVector2(offset), 'offset must be a Vector2');
         ASSERT(isNumber(angle), 'angle must be a number');
+
+        // Box2D stops for good on a box with almost no area, like addPoly no fixture is made from one
+        ASSERT(size.x * size.y > 1e-6, 'box is too small for Box2D');
+        if (!(size.x * size.y > 1e-6)) return;
 
         const shape = new box2d.instance.b2PolygonShape();
         shape.SetAsBox(size.x/2, size.y/2, box2dTemp(offset), -angle);
@@ -15576,14 +15661,27 @@ class Box2dObject extends EngineObject
             && this.body.DestroyFixture(fixture));
     }
 
-    /** Destroy all fixture from the body */
+    /** Destroy all fixtures from the body, from a contact callback once the step is done */
     destroyAllFixtures()
-    { this.getFixtureList().forEach(fixture=>this.destroyFixture(fixture)); }
+    {
+        // the fixtures it has now, each destroyed if still there, in one pass so a big tile layer rebuilds quickly
+        this.edgeLists = [];
+        this.edgeLoops = [];
+        this.edgeListFixtures.clear();
+        const fixtures = this.getFixtureList(), getPointer = box2d.instance.getPointer;
+        box2dWhenUnlocked(()=>
+        {
+            if (!this.body) return;
+            const alive = new Set(this.getFixtureList().map(getPointer));
+            for (const fixture of fixtures)
+                alive.has(getPointer(fixture)) && this.body.DestroyFixture(fixture);
+        });
+    }
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics get functions
 
-    /** Gets the center of mass
+    /** Gets the center of mass in world space
      *  @return {Vector2} */
     getCenterOfMass() { return box2d.vec2From(this.body.GetWorldCenter()); }
 
@@ -15632,7 +15730,12 @@ class Box2dObject extends EngineObject
         this.angle = angle;
         // box2d uses reverse angle
         const x = pos.x, y = pos.y;
-        box2dWhenUnlocked(()=> this.body && this.body.SetTransform(box2dTemp(vec2(x, y)), -angle));
+        box2dWhenUnlocked(()=>
+        {
+            if (!this.body) return;
+            this.body.SetTransform(box2dTemp(vec2(x, y)), -angle);
+            box2dWakeWithContacts(this.body); // Box2D leaves a sleeping body, and what rests on it, in the air
+        });
     }
     
     /** Sets the position
@@ -15668,7 +15771,10 @@ class Box2dObject extends EngineObject
     /** Sets the gravity scale
      *  @param {number} [scale] */
     setGravityScale(scale=1)
-    { this.body.SetGravityScale(this.gravityScale = scale); }
+    {
+        this.body.SetGravityScale(this.gravityScale = scale);
+        this.body.SetAwake(true); // a sleeping body would not feel it
+    }
 
     /** Should be like a bullet for continuous collision detection?
      *  @param {boolean} [isBullet] */
@@ -15692,7 +15798,7 @@ class Box2dObject extends EngineObject
     setFixedRotation(isFixed=true)
     { this.body.SetFixedRotation(isFixed); }
 
-    /** Set the center of mass of the body
+    /** Set the center of mass of the body, local to it
      *  @param {Vector2} center */
     setCenterOfMass(center) { this.setMassData(center) }
 
@@ -15776,7 +15882,7 @@ class Box2dObject extends EngineObject
     }
 
     /** Apply acceleration to this object (changes velocity by acceleration,
-     *  mass-independent — matches EngineObject.applyAcceleration semantics).
+     *  mass-independent like EngineObject.applyAcceleration, but in units per second).
      *  Use applyImpulse if you want the mass-dependent velocity change
      *  Δv = impulse / mass, or applyForce for a Newton-style sustained force.
      *  @param {Vector2} acceleration
@@ -15919,7 +16025,7 @@ class Box2dKinematicObject extends Box2dObject
 /**
  * Box2d Tile Layer
  * - adds Box2d support to tile layers
- * - creates static box2d fixtures for solid tiles
+ * - creates static box2d fixtures for solid tiles, call buildCollision to rebuild them after the tiles change
  * @extends Box2dStaticObject
  * @memberof Box2D
  */
@@ -15932,9 +16038,12 @@ class Box2dTileLayer extends Box2dStaticObject
         ASSERT(tileLayer instanceof TileCollisionLayer, 'tileLayer must be a TileCollisionLayer');
         super(tileLayer.pos, tileLayer.size);
 
-        /** @property {TileLayer} - The tile layer */
+        /** @property {TileCollisionLayer} - The tile layer */
         this.tileLayer = tileLayer;
         this.addChild(tileLayer);
+
+        // collision for the solid tiles it has now, call buildCollision again after changing them
+        this.buildCollision();
     }
 
     render()
@@ -16005,6 +16114,7 @@ class Box2dTileLayer extends Box2dStaticObject
  * Box2D Raycast Result
  * - Holds results from a box2d raycast queries
  * - Automatically created by box2d raycast functions
+ * @memberof Box2D
  */
 class Box2dRaycastResult
 {
@@ -16044,6 +16154,8 @@ class Box2dJoint
     constructor(jointDef)
     {
         ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D joints during a contact callback');
+        ASSERT(box2d.instance.getPointer(jointDef.get_bodyA()) !== box2d.instance.getPointer(jointDef.get_bodyB()),
+            'a joint needs two different objects');
 
         /** @property {Object} - The Box2d joint, 0 once it is destroyed, as it is when either object is */
         this.box2dJoint = box2d.castJointObject(box2d.world.CreateJoint(jointDef));
@@ -16197,7 +16309,7 @@ class Box2dDistanceJoint extends Box2dJoint
     
     /** Set the length of the joint
      *  @param {number} length */
-    setLength(length) { this.box2dJoint.SetLength(length); }
+    setLength(length) { this.box2dJoint.SetLength(length); box2dWakeJoint(this.box2dJoint); }
     
     /** Get the length of the joint
      *  @return {number} */
@@ -16282,7 +16394,7 @@ class Box2dRopeJoint extends Box2dJoint
     
     /** Set the max length of the joint
      *  @param {number} length */
-    setMaxLength(length) { this.box2dJoint.SetMaxLength(length); }
+    setMaxLength(length) { this.box2dJoint.SetMaxLength(length); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the max length of the joint
      *  @return {number} */
@@ -16579,7 +16691,7 @@ class Box2dWheelJoint extends Box2dJoint
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
-        const localAxisA = objectA.worldToLocalVector(worldAxis);
+        const localAxisA = objectA.worldToLocalVector(worldAxis).normalize(); // Box2D uses the wheel axis as given
         const jointDef = new box2d.instance.b2WheelJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
@@ -16916,7 +17028,7 @@ class Box2dMotorJoint extends Box2dJoint
  */
 class Box2dPlugin
 {
-    /** Create the global UI system object
+    /** Create the global Box2D plugin object, box2dInit does this
      *  @param {Object} instance */
     constructor(instance)
     {
@@ -17064,7 +17176,8 @@ class Box2dPlugin
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
             const o = fixture.GetBody().object;
-            if (o && !o.destroyed && !queryObjects.includes(o)) // skip raw bodies and ones destroyed this step
+            if (o && !o.destroyed && !queryObjects.includes(o) // skip raw bodies and ones destroyed this step
+                && box2dFixtureOverlaps(fixture, aabb))
                 queryObjects.push(o); // add if not already in list
             return true; // continue getting results
         };
@@ -17092,6 +17205,8 @@ class Box2dPlugin
             const o = fixture.GetBody().object;
             if (!o || o.destroyed)
                 return true; // a raw body with no Box2dObject or one destroyed this step, continue getting results
+            if (!box2dFixtureOverlaps(fixture, aabb))
+                return true; // only near the box, continue getting results
             queryObject = o;
             return false; // stop getting results
         };
@@ -17420,7 +17535,7 @@ async function box2dInit()
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Draw a scalable nine-slice UI element to the main canvas in screen space
- *  This function can not apply color because it draws using the 2d context
+ *  Draws with the 2D context, not WebGL
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
@@ -17430,7 +17545,7 @@ async function box2dInit()
  *  @memberof DrawUtilities */
 function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 {
-    drawNineSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true);
+    drawNineSlice(pos, size, startTile, WHITE, borderSize, undefined, extraSpace, angle, false, true);
 }
 
 /** Draw a scalable nine-slice UI element in world space
@@ -17450,7 +17565,7 @@ function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, 
  *  @param {number} [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
  *  @param {boolean} [screenSpace] - Use screen space coordinates
- *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
 function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 {
@@ -17488,7 +17603,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
 }
 
 /** Draw a scalable three-slice UI element to the main canvas in screen space
- *  This function can not apply color because it draws using the 2d context
+ *  Draws with the 2D context, not WebGL
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
@@ -17498,7 +17613,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
  *  @memberof DrawUtilities */
 function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 {
-    drawThreeSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true);
+    drawThreeSlice(pos, size, startTile, WHITE, borderSize, undefined, extraSpace, angle, false, true);
 }
 
 /** Draw a scalable three-slice UI element in world space
@@ -17517,7 +17632,7 @@ function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2,
  *  @param {number} [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
  *  @param {boolean} [screenSpace] - Use screen space coordinates
- *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
 function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 {
@@ -17565,7 +17680,7 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
  *  @param {Color}   [lineColor] - Outline color
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
  *  @param {boolean} [screenSpace] - Use screen space coordinates
- *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
 function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
@@ -18552,14 +18667,17 @@ const Ease =
         };
         return (x) =>
         {
-            // Binary search for t such that curve(t).x ≈ x, then return curve(t).y.
+            // the ends are exact, a tween starts and ends on its values
+            if (x <= 0) return 0;
+            if (x >= 1) return 1;
+
+            // binary search for t such that curve(t).x = x, then return curve(t).y; a fixed count, since stopping
+            // once x is close can leave y far off where the curve is steep, 32 halvings put t within 1e-9
             let t0 = 0, t1 = 1;
-            for (let i = 0; i < 128; i++)
+            for (let i = 32; i--;)
             {
                 const tMid = (t0 + t1) / 2;
-                const [bx, by] = curve(tMid);
-                if (abs(bx - x) < 1e-5) return by;
-                if (bx < x) t0 = tMid; else t1 = tMid;
+                if (curve(tMid)[0] < x) t0 = tMid; else t1 = tMid;
             }
             return curve((t0 + t1) / 2)[1];
         };
@@ -19448,8 +19566,8 @@ class PathFinder
     /** Find a path from startPos to endPos in world space. Returns an array
      *  of world-space Vector2 points; empty array if no path exists.
      *
-     *  Start and end are snapped to the nearest walkable tile via
-     *  getNearestClearNode. Intermediate points are tile centers unless the
+     *  Start and end are snapped to the nearest walkable tile (a costed one
+     *  counts), within 10 tiles. Intermediate points are tile centers unless the
      *  string-pulling smoothing pass moves them off-grid.
      *
      *  By default, calls `buildNodeData()` first, which asks isWalkable and
@@ -20383,12 +20501,12 @@ function raycastSphere(ray, pos, radius)
 {
     const {origin, direction} = ray;
     const oc = origin.subtract(pos);
+    const c = oc.dot(oc) - radius*radius;
+    if (c < 0)
+        return 0; // origin is inside the sphere, even for a ray of no length, as raycastBox gives
     const a = direction.dot(direction);
     if (!a)
         return undefined;
-    const c = oc.dot(oc) - radius*radius;
-    if (c < 0)
-        return 0; // origin is inside the sphere
     const b = 2*oc.dot(direction);
     const discriminant = b*b - 4*a*c;
     if (discriminant < 0)
@@ -23480,6 +23598,8 @@ function buildSky(topColor=hsl(.6, .8, .55), horizonColor=hsl(.6, 1, .9), bottom
  * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D,
  *   which is the one way those 2D fields reach a 3D object
  * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D
+ * - The solid box is axis aligned in the world, rotation3D is ignored like angle is in 2D, so give a turned wall a
+ *   size3D along the world axes
  * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
  * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
  * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
@@ -23616,6 +23736,7 @@ class EngineObject3D extends EngineObject
 
     /** Set how this object collides, the same flags as in 2D
      *  - Solid collision happens in 3D here, against size3D boxes or spheres; a child sits it out
+     *  - The boxes are axis aligned in the world, rotation3D is ignored
      *  - A sync2D object collides in 2D instead, against the 2D size, so set that as well as size3D
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
@@ -23906,7 +24027,7 @@ function render3DCollideSolid(a)
  * - Boxes are axis aligned around the world position, rotation3D is ignored; lights, emitters and trails have no size
  *   and are never collected
  * @param {Vector3} pos - Center of the area
- * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
+ * @param {Vector3|number} size - Diameter of a sphere if a number, 0 for a point, full size of a box if a Vector3
  * @param {Array<EngineObject>} [objects] - Defaults to every object
  * @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
  * @return {Array<EngineObject3D>}
@@ -23914,7 +24035,9 @@ function render3DCollideSolid(a)
  */
 function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=false)
 {
-    const radiusSquared = typeof size === 'number' ? (size/2)**2 : undefined, box = typeof size === 'number' ? undefined : render3DSize3(size);
+    // a size of 0 is a point, tested against each box, since a sphere of no size could never hit
+    const radiusSquared = typeof size === 'number' && size > 0 ? (size/2)**2 : undefined;
+    const box = radiusSquared ? undefined : typeof size === 'number' ? vec3() : render3DSize3(size);
     const collected = [];
     for (const o of objects)
     {
@@ -23977,7 +24100,7 @@ function engineObjectsRaycast3D(ray, objects=engineObjects)
  * Call a function for each EngineObject3D whose box overlaps a sphere or a box
  * - An object destroyed by an earlier callback is skipped
  * @param {Vector3} pos - Center of the area
- * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
+ * @param {Vector3|number} size - Diameter of a sphere if a number, 0 for a point, full size of a box if a Vector3
  * @param {function(EngineObject3D): void} callback
  * @param {Array<EngineObject>} [objects] - Defaults to every object
  * @param {boolean} [testCenters] - Test only each object's center, see engineObjectsCollect3D
@@ -24864,6 +24987,8 @@ class CameraControl3D extends EngineObject3D
  * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
  *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
  * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
+ * - As the child of an EngineObject3D, like a player on a ship, its yaw, pitch and walking are relative to the parent,
+ *   so it turns and moves with it
  * - Destroy it to hand the camera back
  * @extends EngineObject3D
  * @memberof Render3D
@@ -24934,9 +25059,12 @@ class FirstPersonCamera3D extends EngineObject3D
             .rotateX(this.fly ? this.pitch : 0).rotateY(this.yaw);
         this.velocity3D = this.fly ? move : vec3(move.x, this.velocity3D.y, move.z);
 
-        // the camera sits at the eye, where this frame's physics left it
+        // the camera sits at the eye, where this frame's physics left it, looking the way it does in its parent's
+        // space, since a child's velocity3D moves it in that space too
+        const rotation = vec3(this.pitch, this.yaw, 0);
         render3D.camera.pos = this.getWorldPos3D();
-        render3D.camera.rotation = vec3(this.pitch, this.yaw, 0);
+        render3D.camera.rotation = this.parent instanceof EngineObject3D ?
+            this.parent.getMatrix().multiply(Matrix4.rotation(rotation)).getRotation() : rotation;
     }
 
     /** Let go of the mouse and stop driving the camera

@@ -3026,6 +3026,8 @@ function buildSky(topColor=hsl(.6, .8, .55), horizonColor=hsl(.6, 1, .9), bottom
  * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D,
  *   which is the one way those 2D fields reach a 3D object
  * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D
+ * - The solid box is axis aligned in the world, rotation3D is ignored like angle is in 2D, so give a turned wall a
+ *   size3D along the world axes
  * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
  * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
  * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
@@ -3162,6 +3164,7 @@ class EngineObject3D extends EngineObject
 
     /** Set how this object collides, the same flags as in 2D
      *  - Solid collision happens in 3D here, against size3D boxes or spheres; a child sits it out
+     *  - The boxes are axis aligned in the world, rotation3D is ignored
      *  - A sync2D object collides in 2D instead, against the 2D size, so set that as well as size3D
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
@@ -3452,7 +3455,7 @@ function render3DCollideSolid(a)
  * - Boxes are axis aligned around the world position, rotation3D is ignored; lights, emitters and trails have no size
  *   and are never collected
  * @param {Vector3} pos - Center of the area
- * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
+ * @param {Vector3|number} size - Diameter of a sphere if a number, 0 for a point, full size of a box if a Vector3
  * @param {Array<EngineObject>} [objects] - Defaults to every object
  * @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
  * @return {Array<EngineObject3D>}
@@ -3460,7 +3463,9 @@ function render3DCollideSolid(a)
  */
 function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=false)
 {
-    const radiusSquared = typeof size === 'number' ? (size/2)**2 : undefined, box = typeof size === 'number' ? undefined : render3DSize3(size);
+    // a size of 0 is a point, tested against each box, since a sphere of no size could never hit
+    const radiusSquared = typeof size === 'number' && size > 0 ? (size/2)**2 : undefined;
+    const box = radiusSquared ? undefined : typeof size === 'number' ? vec3() : render3DSize3(size);
     const collected = [];
     for (const o of objects)
     {
@@ -3523,7 +3528,7 @@ function engineObjectsRaycast3D(ray, objects=engineObjects)
  * Call a function for each EngineObject3D whose box overlaps a sphere or a box
  * - An object destroyed by an earlier callback is skipped
  * @param {Vector3} pos - Center of the area
- * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
+ * @param {Vector3|number} size - Diameter of a sphere if a number, 0 for a point, full size of a box if a Vector3
  * @param {function(EngineObject3D): void} callback
  * @param {Array<EngineObject>} [objects] - Defaults to every object
  * @param {boolean} [testCenters] - Test only each object's center, see engineObjectsCollect3D

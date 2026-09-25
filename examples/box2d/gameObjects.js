@@ -9,7 +9,7 @@
 // import LittleJS module
 import * as LJS from '../../dist/littlejs.esm.js';
 import * as Game from './game.js';
-const {vec2, hsl} = LJS;
+const {vec2, hsl, PI} = LJS;
 
 ///////////////////////////////////////////////////////////////////////////////
 // spawn object functions

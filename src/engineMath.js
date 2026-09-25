@@ -373,7 +373,7 @@ function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
  * @param {any} s
  * @return {boolean}
  * @memberof Math */
-function isStringLike(s) { return s != null && typeof s?.toString() === 'string'; }
+function isStringLike(s) { return s != null && typeof s.toString === 'function' && typeof s.toString() === 'string'; }
 
 /**
  * Check if object is an array

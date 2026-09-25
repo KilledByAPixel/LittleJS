@@ -109,7 +109,7 @@ distanceAngle(angleA, angleB)                 // Signed wrapped distance between
 lerpAngle(angleA, angleB, percent)            // Linearly interpolates with wrapping
 smoothStep(percent)                           // Applies smoothstep function, percent clamped to 0-1
 isPowerOfTwo(value)                           // Checks if the value is a power of two
-nearestPowerOfTwo(value)                      // Returns the nearest power of two
+nearestPowerOfTwo(value)                      // Smallest power of two not less than the value
 isOverlapping(pointA, sizeA, pointB, sizeB)   // Checks if bounding boxes overlap
 isIntersecting(start, end, pos, size)         // Checks if ray intersects box
 // the collide helpers answer how far out, where isOverlapping answers whether; boxes are axis aligned and centered
@@ -335,7 +335,7 @@ canvasMinAspect = 0           // Min aspect ratio, fits to height (0 = disabled)
 canvasMaxAspect = 0           // Max aspect ratio, fits to width (0 = disabled)
 canvasPixelRatio = 1          // Scales render resolution only (undefined tracks devicePixelRatio)
 getCanvasPixelRatio()         // Get the pixel ratio currently applied to the backing store
-canvasClearColor = BLACK      // Color used to clear the canvas at start of frame
+canvasClearColor = CLEAR_BLACK // Color to clear the canvas to each frame, alpha 0 does not clear
 canvasColorTiles = true       // Allow tiles to be tinted when drawn
 fontDefault = 'arial'         // Default font used for text rendering
 canvasPixelated = false       // Use nearest neighbor canvas scaling for more pixelated look
@@ -396,6 +396,7 @@ SoundInstance.isPaused()          // Check if paused or stopped, not playing
 SoundInstance.getCurrentTime()    // Where it is in the sound, in the sound's own seconds whatever the rate
 SoundInstance.getDuration()       // Length of the sound, the same at any rate; divide by rate for time to play
 SoundInstance.getSource()         // Get AudioBufferSourceNode
+SoundInstance.onendedCallback     // Called when it plays to its end, not on stop or pause; set it any time
 
 // ZzFXM - Tiny music playing system
 ZzFXMusic(zzfxMusic)                                 // Create a zzfx music object
@@ -544,7 +545,8 @@ touchInputEnable = true               // Should touch input route to mouse event
 EngineObject(pos, size=(1,1), tileInfo, angle=0, color, renderOrder=0)
 EngineObject.update()                              // Update object, called automatically
 EngineObject.render()                              // Render object, called automatically
-EngineObject.destroy()                             // Destroy this object and children
+EngineObject.destroy(immediate=false)              // Destroy this object and children, removed at the end of the frame
+                                                   // unless immediate
 EngineObject.collideWithTile(tileData, pos)        // Tile collision resolve check
 EngineObject.collideWithObject(object, push)       // Object collision resolve check, push is 3D only
 EngineObject.getAliveTime()                        // How long since object was created
@@ -589,7 +591,7 @@ EngineObject.velocity      // Velocity of the object, world units per frame
 EngineObject.angleVelocity // Angular velocity of the object, radians per frame
 
 // Engine Object settings
-enablePhysicsSolver = true    // Enable collisions between objects?
+enablePhysicsSolver = true    // Enable collisions, between objects and with tiles?
 objectDefaultMass = 1         // Default object mass for collisions
 objectDefaultDamping = 1      // Fraction of velocity kept each frame (1 keeps all)
 objectDefaultAngleDamping = 1 // Fraction of angular velocity kept each frame (1 keeps all)
@@ -607,7 +609,7 @@ engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects, testCe
                                                            // left out
 engineObjectsRaycast(start, end, objects=engineObjects)    // only objects with collideRaycast set, which
                                                            // setCollision turns on
-engineObjectsDestroy()          // destroy every object except the persistent ones
+engineObjectsDestroy(immediate=true) // destroy every object except the persistent ones
 ```
 
 ## LittleJS Tile Layer System
@@ -752,13 +754,13 @@ pf.maxLoop = undefined     // max A* steps per search, undefined for the cell co
 pf.searchGaveUp            // true when the last search stopped at maxLoop, an empty path then means it gave up
 pf.smoothPath = true       // run smoothing pass on result
 pf.debug = false           // draw search visualization
-pf.debugTime = 2           // seconds debug visuals persist
+pf.debugTime = 1           // seconds debug visuals persist
 
 // Main API
 pf.findPath(startPos, endPos, rebuild=true) // Returns array of world positions, or empty if no path;
                                      // rebuild false reuses the grid read from the layer last time
 pf.buildNodeData()                   // Read the grid from the layer again, what findPath does when rebuild is true
-pf.getNearestClearNode(worldPos, searchRange=10) // Snap an obstructed point to the nearest open tile
+pf.getNearestClearNode(worldPos, searchRange=10, rebuild=true) // Snap an obstructed point to the nearest open tile
 pf.isWalkable(x, y)                  // Override for custom walkability
 pf.getCost(x, y)                     // Override for weighted tiles (0 = clear)
 
@@ -1137,7 +1139,9 @@ obj.setCollision(solids, isSolid)       // the same flags as in 2D, but the coll
                                         // the tile and raycast halves are 2D only and default off here;
                                         // a sync2D object collides in 2D instead, against the 2D size, so set that
                                         // as well as size3D; a child rides with its parent so it sits solid collision
-                                        // out, the same rule as in 2D
+                                        // out, the same rule as in 2D; the solid box is axis aligned in the world,
+                                        // rotation3D is ignored as angle is in 2D, so give a turned wall a size3D
+                                        // along the world axes
 obj.collideAsSphere3D = true              // collide as the sphere that fits size3D instead of as the size3D box
 obj.collideWithObject(object, push)     // called when it touches a solid object, both objects are asked and either
                                         // returning false leaves the push and the bounce to you; push is what it
@@ -1168,11 +1172,16 @@ obj.renderAfter2D = true // this object on top of the 2D scene, or false for und
                          // render3D.renderAfter2D
 // the layer under the 2D scene and the layer over it are drawn separately with their own depth, so neither hides the
 // other; the sky, callbacks and debug primitives draw with the default side
-obj.getMatrix() // buildMatrix(pos3D, rotation3D, scale3D), composed with an EngineObject3D parent's
+obj.getMatrix() // buildMatrix(pos3D, rotation3D, scale3D), or localMatrix when set, composed with an EngineObject3D
+                // parent's
+obj.localMatrix // a Matrix4 from the parent used in place of pos3D, rotation3D and scale3D, for a pose they cannot
+                // hold; glTF animations pose parts with it and it stays after they stop, set it to undefined to move a
+                // part by pos3D again; undefined by default
 obj.getWorldPos3D()                     // world position, pos3D is local when parented
 obj.getForward3D() .getRight3D() .getUp3D() // the object's axes in the world, forward is -Z
 engineObjectsCollect3D(pos, size, objects, testCenters) // the EngineObject3D objects whose boxes overlap a sphere,
-                                           // size a number (diameter), or a box, size a vec3; testCenters as in 2D
+                                           // size a number (diameter, 0 for a point), or a box, size a vec3;
+                                           // testCenters as in 2D
 engineObjectsCallback3D(pos, size, callback, objects, testCenters)
 engineObjectsRaycast3D(ray, objects)       // every object along the ray, nearest first, like engineObjectsRaycast in
                                            // 2D; the ray has no end, use render3D.pick for just the nearest one
@@ -1181,7 +1190,8 @@ obj.lookAt(target)                      // turn -Z toward a world space point: s
 obj.render3D() // override for custom drawing, the draw state is already set from the flags; render() is empty
 // children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local; addChild's 2D
 // offset arguments do nothing in 3D; attach keeps a child where it is and works its pos3D, rotation3D and scale3D out,
-// and removeChild leaves it where it was in the world, both as close as those three values can get under a shear
+// and removeChild leaves it where it was in the world, both as close as those three values can get under a shear,
+// and exactly for a child with a localMatrix
 
 // Draw right now, no object needed - only inside render3D() or a pass callback, drawing elsewhere asserts; strips batch
 // into one draw per texture and state
@@ -1479,13 +1489,15 @@ obj.syncMesh()                 // copy the 2D transform to the mesh
 // Setup (call once, awaited in gameInit)
 await box2dInit()              // Loads the WASM and creates global box2d / Box2dPlugin
 box2dSetDebug(true)            // Toggle debug rendering of physics shapes (box2dDebug)
-setGravity(vec2(0,-20))        // World gravity is the engine's gravity, copied into the world every step
+setGravity(vec2(0,-20))        // World gravity is the engine's gravity, copied into the world every step; Box2D
+                               // reads it as units per second squared, its velocities are per second, not per frame
 
 // Bodies — extend EngineObject, integrate with physics
 new Box2dObject(pos, size, tileInfo, angle, color, bodyType, renderOrder) // Dynamic by default
 new Box2dStaticObject(pos, size, tileInfo, angle, color, renderOrder)     // Immovable
 new Box2dKinematicObject(pos, size, tileInfo, angle, color, renderOrder)  // Moves but ignores forces
-new Box2dTileLayer(tileLayer)                                  // Static collision from a TileCollisionLayer
+new Box2dTileLayer(tileLayer)                                  // Static collision from a TileCollisionLayer, built now
+b.buildCollision(friction=.2, restitution=0)                   // Build it again after changing the collision data
 obj.beginContact(otherObject, fixture, otherFixture) // override; fixture is which of this object's shapes touched,
 obj.endContact(otherObject, fixture, otherFixture)   // as addBox and the others returned it, like a foot sensor
 // In beginContact/endContact the world is stepping: destroys and setTransform, setBodyType and setMassData
@@ -1502,7 +1514,7 @@ obj.setFilterData(categoryBits=1, ignoreCategoryBits=0, groupIndex=0) // collide
 
 // Forces and motion
 obj.applyForce(force, pos)             // Force in Newtons at world pos (sustained)
-obj.applyAcceleration(accel, pos)      // Δvelocity = accel per call (mass-independent, matches EngineObject)
+obj.applyAcceleration(accel, pos)      // Δvelocity = accel per call (mass-independent like EngineObject, per second)
 obj.applyImpulse(impulse, pos)         // Δvelocity = impulse / mass (instantaneous; use for one-shot hits)
 obj.applyTorque(torque)
 obj.applyAngularAcceleration(accel)    // Δangular velocity = accel per call (mass-independent)
@@ -1518,7 +1530,7 @@ obj.setAngularDamping(damping)
 obj.setGravityScale(scale=1)
 obj.setMassData(localCenter, mass, momentOfInertia) // undefined leaves that one as it is, inertia is about the
                                                     // center of mass
-obj.getMass() / getCenterOfMass() / getInertia()
+obj.getMass() / getCenterOfMass() / getInertia() // the center of mass in world space, setMassData takes a local one
 
 // Raycasting
 box2d.raycast(start, end)      // Returns the closest Box2dRaycastResult or undefined

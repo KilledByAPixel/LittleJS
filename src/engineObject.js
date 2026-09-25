@@ -30,6 +30,7 @@
  * - If an object starts or is moved inside tile collision, it will not collide with that tile
  * - Collision for objects can be set to be solid to block other objects
  * - Objects may get pushed into overlapping other solid objects, if so they will push away
+ * - A static solid (mass 0) moved by its velocity, like a door or an elevator, pushes objects out of its way
  * - Solid objects are more performance intensive and should be used sparingly
  * @memberof Engine
  * @example
@@ -246,6 +247,29 @@ class EngineObject
                     continue;
                 }
 
+                if (isOverlapping(oldPos, this.size, o.pos, o.size) && !o.mass)
+                {
+                    // a static solid that moved into it, like a door or an elevator, pushes it out the shortest way
+                    // at once and carries it along, it would only drift out slowly and the solid would pass through
+                    const push = collideBoxBox(this.pos, this.size, o.pos, o.size);
+                    if (push)
+                    {
+                        this.pos.x += push.x + sign(push.x) * epsilon;
+                        this.pos.y += push.y + sign(push.y) * epsilon;
+                        if (push.x)
+                            this.velocity.x = o.velocity.x;
+                        else
+                        {
+                            this.velocity.y = o.velocity.y;
+                            if (push.y * gravity.y < 0) // pushed up against gravity, it stands on it
+                                this.groundObject = o;
+                        }
+                    }
+                    engineObjectsCollidePairAdd(this, o);
+
+                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
+                    continue;
+                }
                 if (isOverlapping(oldPos, this.size, o.pos, o.size))
                 {
                     // if already was touching, try to push away

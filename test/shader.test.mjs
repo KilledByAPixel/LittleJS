@@ -27,7 +27,7 @@ test('setShader takes a Shader or nothing, not the snippet itself', () =>
     assert.throws(()=> setShader({}));
 });
 
-test('setShader with null is no shader, like undefined, so the two batch together', () =>
+test('setShader takes null as no shader, like undefined, with no assert', () =>
 {
     setShader(null);
     setShader(); // and no assert on the way

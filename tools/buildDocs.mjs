@@ -26,6 +26,7 @@ const docsImageFiles =
     `${EXAMPLE_FOLDER}/favicon.png`,
     `${EXAMPLE_FOLDER}/logo.png`,
     `${EXAMPLE_FOLDER}/screenshot.jpg`,
+    `${EXAMPLE_FOLDER}/screenshot2.jpg`,
     `${EXAMPLE_FOLDER}/games.jpg`,
 ];
 

@@ -182,7 +182,7 @@ declare module "littlejsengine" {
      *  - Objects destroyed this frame are left out, they are only in the list until the frame ends
      *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
      *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2,
-     *                                   left out the objects that overlap the point at pos
+     *                                   left out or 0 the objects that overlap the point at pos
      *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
      *  @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
      *  @return {Array<EngineObject>} - List of collected objects
@@ -479,7 +479,7 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let tileDefaultBleed: number;
-    /** Enable physics solver for collisions between objects
+    /** Enable physics solver for collisions, between objects and with tiles
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -789,7 +789,7 @@ declare module "littlejsengine" {
      *  @param {number} bleed
      *  @memberof Settings */
     export function setTileDefaultBleed(bleed: number): void;
-    /** Set if collisions between objects are enabled
+    /** Set if collisions are enabled, between objects and with tiles
      *  @param {boolean} enable
      *  @memberof Settings */
     export function setEnablePhysicsSolver(enable: boolean): void;
@@ -3157,6 +3157,7 @@ declare module "littlejsengine" {
      * - If an object starts or is moved inside tile collision, it will not collide with that tile
      * - Collision for objects can be set to be solid to block other objects
      * - Objects may get pushed into overlapping other solid objects, if so they will push away
+     * - A static solid (mass 0) moved by its velocity, like a door or an elevator, pushes objects out of its way
      * - Solid objects are more performance intensive and should be used sparingly
      * @memberof Engine
      * @example
@@ -5075,6 +5076,8 @@ declare module "littlejsengine" {
      * - Box2dTileLayer for grid based collision
      * - Every type of joint
      * - Debug physics drawing
+     * - Box2D works per second: its velocities and accelerations are in units per second, and it reads the engine's
+     *   gravity as units per second squared, where an EngineObject's are per frame
      * @namespace Box2D
      */
     /** Global Box2d Plugin object
@@ -5102,7 +5105,7 @@ declare module "littlejsengine" {
      * @memberof Box2D
      */
     export class Box2dPlugin {
-        /** Create the global UI system object
+        /** Create the global Box2D plugin object, box2dInit does this
          *  @param {Object} instance */
         constructor(instance: any);
         /** @property {Object} - The Box2d instance */
@@ -5323,9 +5326,9 @@ declare module "littlejsengine" {
         /** Destroy a fixture from the body, from a contact callback once the step is done
          *  @param {Object} fixture */
         destroyFixture(fixture: any): void;
-        /** Destroy all fixture from the body */
+        /** Destroy all fixtures from the body, from a contact callback once the step is done */
         destroyAllFixtures(): void;
-        /** Gets the center of mass
+        /** Gets the center of mass in world space
          *  @return {Vector2} */
         getCenterOfMass(): Vector2;
         /** Gets the linear velocity
@@ -5386,7 +5389,7 @@ declare module "littlejsengine" {
         /** Set whether the body can rotate
          *  @param {boolean} [isFixed] */
         setFixedRotation(isFixed?: boolean): void;
-        /** Set the center of mass of the body
+        /** Set the center of mass of the body, local to it
          *  @param {Vector2} center */
         setCenterOfMass(center: Vector2): void;
         /** Set the mass of the body
@@ -5417,7 +5420,7 @@ declare module "littlejsengine" {
          *  @param {Vector2} [pos] */
         applyForce(force: Vector2, pos?: Vector2): void;
         /** Apply acceleration to this object (changes velocity by acceleration,
-         *  mass-independent — matches EngineObject.applyAcceleration semantics).
+         *  mass-independent like EngineObject.applyAcceleration, but in units per second).
          *  Use applyImpulse if you want the mass-dependent velocity change
          *  Δv = impulse / mass, or applyForce for a Newton-style sustained force.
          *  @param {Vector2} acceleration
@@ -5482,7 +5485,7 @@ declare module "littlejsengine" {
     /**
      * Box2d Tile Layer
      * - adds Box2d support to tile layers
-     * - creates static box2d fixtures for solid tiles
+     * - creates static box2d fixtures for solid tiles, call buildCollision to rebuild them after the tiles change
      * @extends Box2dStaticObject
      * @memberof Box2D
      */
@@ -5490,7 +5493,7 @@ declare module "littlejsengine" {
         /** Create a Box2d tile layer object
         *  @param {TileCollisionLayer} tileLayer - Tile layer for this object */
         constructor(tileLayer: TileCollisionLayer);
-        /** @property {TileLayer} - The tile layer */
+        /** @property {TileCollisionLayer} - The tile layer */
         tileLayer: TileCollisionLayer;
         /** Create box2d collision fixtures for solid tiles
         *  @param {number} [friction]
@@ -5501,6 +5504,7 @@ declare module "littlejsengine" {
      * Box2D Raycast Result
      * - Holds results from a box2d raycast queries
      * - Automatically created by box2d raycast functions
+     * @memberof Box2D
      */
     export class Box2dRaycastResult {
         /** Create a raycast result
@@ -6094,9 +6098,9 @@ declare module "littlejsengine" {
      *  @param {number} [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
      *  @param {boolean} [screenSpace] - Use screen space coordinates
-     *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
-    export function drawNineSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawNineSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /**
      * LittleJS Drawing Utilities Plugin
      * - Extra drawing functions for LittleJS
@@ -6104,7 +6108,7 @@ declare module "littlejsengine" {
      * @namespace DrawUtilities
      */
     /** Draw a scalable nine-slice UI element to the main canvas in screen space
-     *  This function can not apply color because it draws using the 2d context
+     *  Draws with the 2D context, not WebGL
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
@@ -6129,11 +6133,11 @@ declare module "littlejsengine" {
      *  @param {number} [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
      *  @param {boolean} [screenSpace] - Use screen space coordinates
-     *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
-    export function drawThreeSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawThreeSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw a scalable three-slice UI element to the main canvas in screen space
-     *  This function can not apply color because it draws using the 2d context
+     *  Draws with the 2D context, not WebGL
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
@@ -6154,9 +6158,9 @@ declare module "littlejsengine" {
      *  @param {Color}   [lineColor] - Outline color
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
      *  @param {boolean} [screenSpace] - Use screen space coordinates
-     *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
-    export function drawCrescent(pos: Vector2, size?: number, percent?: number, color?: Color, angle?: number, invert?: boolean, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawCrescent(pos: Vector2, size?: number, percent?: number, color?: Color, angle?: number, invert?: boolean, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Get the list of points that make up a crescent / moon-phase shape
      *  Returns world-space points with pos and angle baked in, ready for drawPoly or other use
      *  @param {Vector2} pos - Center position
@@ -6534,8 +6538,8 @@ declare module "littlejsengine" {
         /** Find a path from startPos to endPos in world space. Returns an array
          *  of world-space Vector2 points; empty array if no path exists.
          *
-         *  Start and end are snapped to the nearest walkable tile via
-         *  getNearestClearNode. Intermediate points are tile centers unless the
+         *  Start and end are snapped to the nearest walkable tile (a costed one
+         *  counts), within 10 tiles. Intermediate points are tile centers unless the
          *  string-pulling smoothing pass moves them off-grid.
          *
          *  By default, calls `buildNodeData()` first, which asks isWalkable and
@@ -7487,6 +7491,8 @@ declare module "littlejsengine" {
      * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D,
      *   which is the one way those 2D fields reach a 3D object
      * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D
+     * - The solid box is axis aligned in the world, rotation3D is ignored like angle is in 2D, so give a turned wall a
+     *   size3D along the world axes
      * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
      * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
      * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
@@ -8148,6 +8154,8 @@ declare module "littlejsengine" {
      * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
      *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
      * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
+     * - As the child of an EngineObject3D, like a player on a ship, its yaw, pitch and walking are relative to the parent,
+     *   so it turns and moves with it
      * - Destroy it to hand the camera back
      * @extends EngineObject3D
      * @memberof Render3D
@@ -8318,7 +8326,7 @@ declare module "littlejsengine" {
      * - Boxes are axis aligned around the world position, rotation3D is ignored; lights, emitters and trails have no size
      *   and are never collected
      * @param {Vector3} pos - Center of the area
-     * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
+     * @param {Vector3|number} size - Diameter of a sphere if a number, 0 for a point, full size of a box if a Vector3
      * @param {Array<EngineObject>} [objects] - Defaults to every object
      * @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
      * @return {Array<EngineObject3D>}
@@ -8329,7 +8337,7 @@ declare module "littlejsengine" {
      * Call a function for each EngineObject3D whose box overlaps a sphere or a box
      * - An object destroyed by an earlier callback is skipped
      * @param {Vector3} pos - Center of the area
-     * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
+     * @param {Vector3|number} size - Diameter of a sphere if a number, 0 for a point, full size of a box if a Vector3
      * @param {function(EngineObject3D): void} callback
      * @param {Array<EngineObject>} [objects] - Defaults to every object
      * @param {boolean} [testCenters] - Test only each object's center, see engineObjectsCollect3D

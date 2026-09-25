@@ -665,7 +665,7 @@ function debugRender()
             {
                 if (!keyIsDown(i, 0))
                     continue;
-                if (parseInt(i) < 3)
+                if (!isNaN(+i)) // mouse buttons are numbered, keys are named
                     mousePressed += i + ' ' ;
                 else
                     keysPressed += i + ' ' ;

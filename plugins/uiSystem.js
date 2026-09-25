@@ -221,9 +221,10 @@ class UISystemPlugin
             }
             if (uiSystem.keyInputObject)
             {
-                // handle text input, navigation keeps its place for when the edit ends
+                // handle text input, navigation keeps its place for when the edit ends, and the hover stays where it
+                // was, so an edit started by navigation does not end with an onLeave that had no onEnter
                 uiSystem.activeObject = uiSystem.keyInputObject;
-                uiSystem.hoverObject = uiSystem.keyInputObject;
+                uiSystem.hoverObject = uiSystem.lastHoverObject;
             }
 
             // navigation with gamepad/keyboard
@@ -727,15 +728,17 @@ class UISystemPlugin
             const backgroundColor = hsl(0,0,0,.7);
             uiSystem.drawRect(vec2(), vec2(1e9), backgroundColor);
         }
-        const openFrame = frame;
+        let opened = false;
         confirmMenu.onUpdate = ()=>
         {
-            // not the press that opened it, a game may open it on the same back button
-            if (frame !== openFrame && (keyWasPressed(exitKey) || gamepadWasPressed(1)))
+            // not the press that opened it, a game may open it on the same back button, so its first update is skipped
+            // (not by frame number, which does not advance while paused, where a confirm is usually shown)
+            if (opened && (keyWasPressed(exitKey) || gamepadWasPressed(1)))
             {
                 closeMenu(); // the exit key or gamepad B answers no
                 noCallback && noCallback();
             }
+            opened = true;
         }
         confirmMenu.isMouseOverlapping = ()=> true; // always hover
         
@@ -1344,6 +1347,8 @@ class UITextInput extends UIObject
             inputClearKey(0,0);
             inputClearKey(0, gamepadPrimary+1, false, true, false);
         }
+        else if (mouseWasPressed(0))
+            inputClearKey(0, 0, false, true, false); // a click inside is used up like any click on the UI
     }
 
     render()

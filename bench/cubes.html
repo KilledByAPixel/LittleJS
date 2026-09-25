@@ -71,7 +71,7 @@ function gameInit()
     ground.castShadow = false;
     if (retained)
     {
-        // an InstancedMesh3D: each matrix is set once a frame in gameUpdate like setMatrixAt on an InstancedMesh
+        // an InstancedMesh3D: each matrix is set once a frame in the pre render hook like setMatrixAt on an InstancedMesh
         const set = new InstancedMesh3D(render3D.boxMesh, n), positions = [], spins = [];
         const angles = new Float32Array(n), scale = vec3(size), rotation = vec3(), scratch = new Matrix4;
         for (let i = 0; i < n; ++i)
@@ -93,7 +93,7 @@ function gameInit()
             new Cube(vec3(rand(-60, 60), rand(.5, 8), rand(-60, 60)), hsl(rand(), .7, .6), rand(.01, .05));
         return;
     }
-    // no objects: the cubes live in arrays, each matrix is rebuilt once a frame in gameUpdate like an
+    // no objects: the cubes live in arrays, each matrix is rebuilt once a frame in the pre render hook like an
     // InstancedMesh's setMatrixAt, and the draws each frame batch into one instanced call per pass
     const positions = [], colors = [], spins = [], angles = new Float32Array(n), scale = vec3(size);
     for (let i = 0; i < n; ++i)

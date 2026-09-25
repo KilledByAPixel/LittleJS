@@ -10,7 +10,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Draw a scalable nine-slice UI element to the main canvas in screen space
- *  This function can not apply color because it draws using the 2d context
+ *  Draws with the 2D context, not WebGL
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
@@ -20,7 +20,7 @@
  *  @memberof DrawUtilities */
 function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 {
-    drawNineSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true);
+    drawNineSlice(pos, size, startTile, WHITE, borderSize, undefined, extraSpace, angle, false, true);
 }
 
 /** Draw a scalable nine-slice UI element in world space
@@ -40,7 +40,7 @@ function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, 
  *  @param {number} [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
  *  @param {boolean} [screenSpace] - Use screen space coordinates
- *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
 function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 {
@@ -78,7 +78,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
 }
 
 /** Draw a scalable three-slice UI element to the main canvas in screen space
- *  This function can not apply color because it draws using the 2d context
+ *  Draws with the 2D context, not WebGL
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
@@ -88,7 +88,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
  *  @memberof DrawUtilities */
 function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 {
-    drawThreeSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true);
+    drawThreeSlice(pos, size, startTile, WHITE, borderSize, undefined, extraSpace, angle, false, true);
 }
 
 /** Draw a scalable three-slice UI element in world space
@@ -107,7 +107,7 @@ function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2,
  *  @param {number} [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
  *  @param {boolean} [screenSpace] - Use screen space coordinates
- *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
 function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 {
@@ -155,7 +155,7 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
  *  @param {Color}   [lineColor] - Outline color
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
  *  @param {boolean} [screenSpace] - Use screen space coordinates
- *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
 function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {

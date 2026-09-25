@@ -131,6 +131,9 @@ class PostProcessPlugin
             glContext.useProgram(postProcess.shader);
             glContext.bindVertexArray(postProcess.vao);
             glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, true);
+            // upload the canvas the way it shows, premultiplied, since the shader writes full alpha; unpremultiplied
+            // a see-through pixel would come out at its full brightness instead of faded over the background
+            glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
             glContext.disable(glContext.BLEND);
 
             // setup texture
@@ -174,8 +177,9 @@ class PostProcessPlugin
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
             }
 
-            // restore default so subsequent dynamic texture uploads aren't flipped
+            // restore defaults so subsequent dynamic texture uploads aren't flipped or premultiplied
             glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, false);
+            glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
 
             // bind back the texture the 2D batch thinks is bound, a plugin drawing after this one uses it
             if (glActiveTexture)

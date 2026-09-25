@@ -173,7 +173,7 @@ let tileDefaultBleed = 0;
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
 
-/** Enable physics solver for collisions between objects
+/** Enable physics solver for collisions, between objects and with tiles
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -563,7 +563,7 @@ function setTileDefaultPadding(padding) { tileDefaultPadding = padding; }
  *  @memberof Settings */
 function setTileDefaultBleed(bleed) { tileDefaultBleed = bleed; }
 
-/** Set if collisions between objects are enabled
+/** Set if collisions are enabled, between objects and with tiles
  *  @param {boolean} enable
  *  @memberof Settings */
 function setEnablePhysicsSolver(enable) { enablePhysicsSolver = enable; }

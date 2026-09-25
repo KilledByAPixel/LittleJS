@@ -372,6 +372,34 @@ test('setAudioMasterEffect reroutes the master gain through an effect and back',
     assert.deepEqual(effect.output.connections, [master]);
 });
 
+test('setAudioMasterEffect can add an effect after the master one, the documented way, and keeps the chain', () =>
+{
+    const master = LJS.audioMasterGain;
+    const destination = audioContext.destination;
+    const effect = (name)=>
+    {
+        const e = { name, input: audioContext.createGain(), output: audioContext.createGain() };
+        e.output.connect(master); // the way a plugin effect starts
+        e.connect = (next)=> { e.output.disconnect(); e.output.connect(next.input); }; // as AudioEffect.connect does
+        return e;
+    };
+    const compressor = effect('compressor'), reverb = effect('reverb');
+    LJS.setAudioMasterEffect(compressor);
+
+    // chain another effect after it, then make the chain the master effect
+    compressor.connect(reverb);
+    LJS.setAudioMasterEffect(compressor, reverb);
+    assert.deepEqual(master.connections, [compressor.input]);
+    assert.deepEqual(compressor.output.connections, [reverb.input], 'the link it was told to make is kept, not looped back');
+    assert.deepEqual(reverb.output.connections, [destination]);
+
+    // clearing it sends the chain's end back to the master gain, and the chain stays together
+    LJS.setAudioMasterEffect();
+    assert.deepEqual(master.connections, [destination]);
+    assert.deepEqual(compressor.output.connections, [reverb.input]);
+    assert.deepEqual(reverb.output.connections, [master]);
+});
+
 test('a sound keeps its place in the sound through pause, resume and rate changes, zero included', () =>
 {
     const length = sound.getDuration();
