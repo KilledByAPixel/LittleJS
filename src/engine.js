@@ -638,14 +638,16 @@ function engineObjectsDestroy(immediate=true)
 }
 
 /** Collects all object within a given area
+ *  - An object is collected when its box overlaps the area, or with testCenters when its center is inside it
  *  - Objects destroyed this frame are left out, they are only in the list until the frame ends
  *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
  *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2,
  *                                   left out the objects that overlap the point at pos
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
+ *  @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
  *  @return {Array<EngineObject>} - List of collected objects
  *  @memberof Engine */
-function engineObjectsCollect(pos, size, objects=engineObjects)
+function engineObjectsCollect(pos, size, objects=engineObjects, testCenters=false)
 {
     const collectedObjects = [];
     if (!pos)
@@ -659,14 +661,20 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
         // bounding box test, a point when there is no size
         const boxSize = size instanceof Vector2 ? size : vec2();
         for (const o of objects)
-            o.destroyed || o.isOverlapping(pos, boxSize) && collectedObjects.push(o);
+            o.destroyed || (testCenters ? isOverlapping(pos, boxSize, o.pos) : o.isOverlapping(pos, boxSize))
+                && collectedObjects.push(o);
     }
     else
     {
-        // circle test, a diameter like every other size
+        // circle test, a diameter like every other size, against the nearest point of each box
         const radiusSquared = (size/2)**2;
         for (const o of objects)
-            o.destroyed || pos.distanceSquared(o.pos) < radiusSquared && collectedObjects.push(o);
+        {
+            if (o.destroyed) continue;
+            const dx = testCenters ? pos.x - o.pos.x : max(abs(pos.x - o.pos.x) - o.size.x/2, 0);
+            const dy = testCenters ? pos.y - o.pos.y : max(abs(pos.y - o.pos.y) - o.size.y/2, 0);
+            dx*dx + dy*dy < radiusSquared && collectedObjects.push(o);
+        }
     }
     return collectedObjects;
 }
@@ -683,11 +691,12 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
  *  @param {ObjectCallbackFunction} [callbackFunction] - Calls this function on every object that passes the test, needed
  *                                                     (marked optional only because the area before it is)
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
+ *  @param {boolean} [testCenters] - Test only each object's center, see engineObjectsCollect
  *  @memberof Engine */
-function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
+function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects, testCenters=false)
 {
     // an object an earlier callback destroyed is skipped
-    for (const o of engineObjectsCollect(pos, size, objects))
+    for (const o of engineObjectsCollect(pos, size, objects, testCenters))
         o.destroyed || callbackFunction(o);
 }
 

@@ -5,9 +5,13 @@
   "main": "dist/littlejs.esm.js",
   "types": "dist/littlejs.d.ts",
   "exports": {
-    "types": "./dist/littlejs.d.ts",
-    "production": "./dist/littlejs.esm.min.js",
-    "default": "./dist/littlejs.esm.js"
+    ".": {
+      "types": "./dist/littlejs.d.ts",
+      "production": "./dist/littlejs.esm.min.js",
+      "default": "./dist/littlejs.esm.js"
+    },
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
   },
   "repository": {
     "type": "git",
@@ -33,6 +37,7 @@
     "dist/",
     "src/",
     "plugins/",
+    "!plugins/box2d.wasm.*",
     "COPYRIGHT.txt",
     "FAQ.md"
   ],

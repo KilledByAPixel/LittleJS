@@ -178,14 +178,16 @@ declare module "littlejsengine" {
      *  @memberof Engine */
     export function engineObjectsDestroy(immediate?: boolean): void;
     /** Collects all object within a given area
+     *  - An object is collected when its box overlaps the area, or with testCenters when its center is inside it
      *  - Objects destroyed this frame are left out, they are only in the list until the frame ends
      *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
      *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2,
      *                                   left out the objects that overlap the point at pos
      *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
+     *  @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
      *  @return {Array<EngineObject>} - List of collected objects
      *  @memberof Engine */
-    export function engineObjectsCollect(pos?: Vector2, size?: Vector2 | number, objects?: Array<EngineObject>): Array<EngineObject>;
+    export function engineObjectsCollect(pos?: Vector2, size?: Vector2 | number, objects?: Array<EngineObject>, testCenters?: boolean): Array<EngineObject>;
     /**
      * @callback ObjectCallbackFunction - Function that processes an object
      * @param {EngineObject} object
@@ -197,8 +199,9 @@ declare module "littlejsengine" {
      *  @param {ObjectCallbackFunction} [callbackFunction] - Calls this function on every object that passes the test, needed
      *                                                     (marked optional only because the area before it is)
      *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
+     *  @param {boolean} [testCenters] - Test only each object's center, see engineObjectsCollect
      *  @memberof Engine */
-    export function engineObjectsCallback(pos?: Vector2, size?: Vector2 | number, callbackFunction?: ObjectCallbackFunction, objects?: Array<EngineObject>): void;
+    export function engineObjectsCallback(pos?: Vector2, size?: Vector2 | number, callbackFunction?: ObjectCallbackFunction, objects?: Array<EngineObject>, testCenters?: boolean): void;
     /** Return a list of objects intersecting a ray, objects destroyed this frame left out
      *  - Only objects with collideRaycast set are hit, which setCollision turns on
      *  @param {Vector2} start
@@ -2678,6 +2681,7 @@ declare module "littlejsengine" {
     /** Prevents input continuing to the default browser handling
      *  This is useful to disable for html menus so the browser can handle input normally,
      *  the right click menu included; over an html text field that menu always shows
+     *  - While on, the mouse's back and forward buttons don't leave the page, a game can read them as mouse 3 and 4
      *  @param {boolean} [preventDefault]
      *  @memberof Input */
     export function setInputPreventDefault(preventDefault?: boolean): void;
@@ -5227,12 +5231,18 @@ declare module "littlejsengine" {
         drawFixtures(color?: Color, lineColor?: Color, lineWidth?: number, useWebGL?: boolean, context?: CanvasRenderingContext2D): void;
         /** Called when a contact begins, while the world steps: a destroy or a setter waits until the step is done,
          *  and creating objects, fixtures or joints must wait until after the step
-         *  @param {Box2dObject} otherObject */
-        beginContact(otherObject: Box2dObject): void;
+         *  - The fixtures say which shapes touched, the same objects addBox and the others returned, so a small sensor
+         *    under a player's feet can tell standing on the ground from touching a wall
+         *  @param {Box2dObject} otherObject
+         *  @param {Object} [fixture] - This object's fixture that touched
+         *  @param {Object} [otherFixture] - The other object's fixture that touched */
+        beginContact(otherObject: Box2dObject, fixture?: any, otherFixture?: any): void;
         /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
          *  until the step is done, and creating objects, fixtures or joints must wait until after the step
-         *  @param {Box2dObject} otherObject */
-        endContact(otherObject: Box2dObject): void;
+         *  @param {Box2dObject} otherObject
+         *  @param {Object} [fixture] - This object's fixture that touched
+         *  @param {Object} [otherFixture] - The other object's fixture that touched */
+        endContact(otherObject: Box2dObject, fixture?: any, otherFixture?: any): void;
         /** Add a shape fixture to the body
          *  @param {Object} shape
          *  @param {number}  [density]
@@ -6391,8 +6401,13 @@ declare module "littlejsengine" {
         tileLayer: TileCollisionLayer | undefined;
         /** @property {number} - A* heuristic multiplier (1 = admissible, higher = greedier) */
         heuristicWeight: number;
-        /** @property {number} - Maximum A* expansions before giving up */
-        maxLoop: number;
+        /** @property {number|undefined} - Most A* expansions before giving up, undefined for the number of cells,
+         *  so a search always finishes; a lower one caps the time a search takes, see searchGaveUp
+         *  @type {number|undefined} */
+        maxLoop: number | undefined;
+        /** @property {boolean} - True when the last search stopped at maxLoop, so an empty path means it gave up
+         *  rather than that there is no way through */
+        searchGaveUp: boolean;
         /** @property {boolean} - If true, post-process paths with two-pass smoothing */
         smoothPath: boolean;
         /** @property {boolean} - If true, draw debug visualization during findPath */
@@ -6441,7 +6456,7 @@ declare module "littlejsengine" {
         buildNodeData(): void;
         /** Core A* search loop. Expects buildNodeData() to have been called first.
          *  Marks node.parent for path reconstruction. Returns true if endNode was
-         *  reached; false on disconnected goal or maxLoop exhaustion.
+         *  reached; false on disconnected goal or maxLoop exhaustion, which sets searchGaveUp.
          *  @param {PathFinderNode} startNode
          *  @param {PathFinderNode} endNode
          *  @returns {boolean}
@@ -8293,25 +8308,28 @@ declare module "littlejsengine" {
         worldPos3D: Vector3;
     }
     /**
-     * Collect the EngineObject3D objects whose boxes overlap a box, sizes are full sizes
+     * Collect the EngineObject3D objects whose boxes overlap a sphere or a box, the 3D twin of engineObjectsCollect
      * - Boxes are axis aligned around the world position, rotation3D is ignored; lights, emitters and trails have no size
-     * @param {Vector3} pos - Center of the box
-     * @param {Vector3|number} size - Full size of the box, a number for a cube
+     *   and are never collected
+     * @param {Vector3} pos - Center of the area
+     * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
      * @param {Array<EngineObject>} [objects] - Defaults to every object
+     * @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
      * @return {Array<EngineObject3D>}
      * @memberof Render3D
      */
-    export function engineObjectsCollect3D(pos: Vector3, size: Vector3 | number, objects?: Array<EngineObject>): Array<EngineObject3D>;
+    export function engineObjectsCollect3D(pos: Vector3, size: Vector3 | number, objects?: Array<EngineObject>, testCenters?: boolean): Array<EngineObject3D>;
     /**
-     * Call a function for each EngineObject3D whose box overlaps a box
+     * Call a function for each EngineObject3D whose box overlaps a sphere or a box
      * - An object destroyed by an earlier callback is skipped
-     * @param {Vector3} pos - Center of the box
-     * @param {Vector3|number} size - Full size of the box, a number for a cube
+     * @param {Vector3} pos - Center of the area
+     * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
      * @param {function(EngineObject3D): void} callback
      * @param {Array<EngineObject>} [objects] - Defaults to every object
+     * @param {boolean} [testCenters] - Test only each object's center, see engineObjectsCollect3D
      * @memberof Render3D
      */
-    export function engineObjectsCallback3D(pos: Vector3, size: Vector3 | number, callback: (arg0: EngineObject3D) => void, objects?: Array<EngineObject>): void;
+    export function engineObjectsCallback3D(pos: Vector3, size: Vector3 | number, callback: (arg0: EngineObject3D) => void, objects?: Array<EngineObject>, testCenters?: boolean): void;
     /**
      * Collect every EngineObject3D a ray passes through, nearest first, the 3D twin of engineObjectsRaycast
      * - The ray has no end, so everything along it counts however far away it is

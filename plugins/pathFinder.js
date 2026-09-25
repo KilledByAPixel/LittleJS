@@ -117,8 +117,13 @@ class PathFinder
         // Tunables (public, freely re-assignable).
         /** @property {number} - A* heuristic multiplier (1 = admissible, higher = greedier) */
         this.heuristicWeight = 1;
-        /** @property {number} - Maximum A* expansions before giving up */
-        this.maxLoop = 1e3;
+        /** @property {number|undefined} - Most A* expansions before giving up, undefined for the number of cells,
+         *  so a search always finishes; a lower one caps the time a search takes, see searchGaveUp
+         *  @type {number|undefined} */
+        this.maxLoop = undefined;
+        /** @property {boolean} - True when the last search stopped at maxLoop, so an empty path means it gave up
+         *  rather than that there is no way through */
+        this.searchGaveUp = false;
         /** @property {boolean} - If true, post-process paths with two-pass smoothing */
         this.smoothPath = true;
         /** @property {boolean} - If true, draw debug visualization during findPath */
@@ -230,7 +235,7 @@ class PathFinder
 
     /** Core A* search loop. Expects buildNodeData() to have been called first.
      *  Marks node.parent for path reconstruction. Returns true if endNode was
-     *  reached; false on disconnected goal or maxLoop exhaustion.
+     *  reached; false on disconnected goal or maxLoop exhaustion, which sets searchGaveUp.
      *  @param {PathFinderNode} startNode
      *  @param {PathFinderNode} endNode
      *  @returns {boolean}
@@ -255,7 +260,9 @@ class PathFinder
 
         const openList = [startNode];
         startNode.isOpen = true;
+        const maxLoop = this.maxLoop ?? this.size.x * this.size.y;
         let loopCount = 0;
+        this.searchGaveUp = false;
 
         while (openList.length > 0)
         {
@@ -280,7 +287,11 @@ class PathFinder
             const current = openList[bestIndex];
 
             if (current === endNode) break;
-            if (++loopCount > this.maxLoop) break;
+            if (++loopCount > maxLoop)
+            {
+                this.searchGaveUp = true;
+                break;
+            }
 
             // Move current from open to closed.
             current.isOpen = false;
@@ -702,6 +713,7 @@ class PathFinder
     {
         ASSERT(isVector2(startPos) && isVector2(endPos), 'findPath needs Vector2 endpoints');
 
+        this.searchGaveUp = false;
         if (rebuild) this.buildNodeData();
 
         // rebuild=false because we just built — avoid redundant work per snap.

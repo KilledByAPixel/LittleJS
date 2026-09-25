@@ -84,6 +84,7 @@ const isTouchDevice = !headlessMode && typeof window != 'undefined' && window.on
 /** Prevents input continuing to the default browser handling
  *  This is useful to disable for html menus so the browser can handle input normally,
  *  the right click menu included; over an html text field that menu always shows
+ *  - While on, the mouse's back and forward buttons don't leave the page, a game can read them as mouse 3 and 4
  *  @param {boolean} [preventDefault]
  *  @memberof Input */
 function setInputPreventDefault(preventDefault=true) { inputPreventDefault = preventDefault; }
@@ -563,6 +564,10 @@ function inputInit()
         // released only if it was pressed, like a key or a touch
         if (inputData[0][e.button] & 1)
             inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
+
+        // the mouse's back and forward buttons would leave the page, like Backspace would
+        if (inputPreventDefault && e.cancelable && (e.button === 3 || e.button === 4))
+            e.preventDefault();
     }
     function onMouseMove(e)
     {

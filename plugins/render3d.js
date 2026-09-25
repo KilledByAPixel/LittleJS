@@ -3444,26 +3444,39 @@ function render3DCollideSolid(a)
 }
 
 /**
- * Collect the EngineObject3D objects whose boxes overlap a box, sizes are full sizes
+ * Collect the EngineObject3D objects whose boxes overlap a sphere or a box, the 3D twin of engineObjectsCollect
  * - Boxes are axis aligned around the world position, rotation3D is ignored; lights, emitters and trails have no size
- * @param {Vector3} pos - Center of the box
- * @param {Vector3|number} size - Full size of the box, a number for a cube
+ *   and are never collected
+ * @param {Vector3} pos - Center of the area
+ * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
  * @param {Array<EngineObject>} [objects] - Defaults to every object
+ * @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
  * @return {Array<EngineObject3D>}
  * @memberof Render3D
  */
-function engineObjectsCollect3D(pos, size, objects=engineObjects)
+function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=false)
 {
-    size = render3DSize3(size);
+    const radiusSquared = typeof size === 'number' ? (size/2)**2 : undefined, box = typeof size === 'number' ? undefined : render3DSize3(size);
     const collected = [];
     for (const o of objects)
     {
         if (!(o instanceof EngineObject3D) || o.destroyed) continue;
         const m = render3DObjectMatrix(o).m, s = o.size3D; // the box in world space, scaled by the object and its parents
         if (!(s.x || s.y || s.z)) continue;
-        const worldSize = vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
-        if (isOverlapping3D(pos, size, vec3(m[12], m[13], m[14]), worldSize))
-            collected.push(o);
+        const center = vec3(m[12], m[13], m[14]);
+        const worldSize = testCenters ? vec3() : vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
+        let hit;
+        if (box)
+            hit = isOverlapping3D(pos, box, center, worldSize);
+        else
+        {
+            // a sphere against the nearest point of the box
+            const dx = max(abs(pos.x - center.x) - worldSize.x/2, 0);
+            const dy = max(abs(pos.y - center.y) - worldSize.y/2, 0);
+            const dz = max(abs(pos.z - center.z) - worldSize.z/2, 0);
+            hit = dx*dx + dy*dy + dz*dz < radiusSquared;
+        }
+        hit && collected.push(o);
     }
     return collected;
 }
@@ -3503,17 +3516,18 @@ function engineObjectsRaycast3D(ray, objects=engineObjects)
 }
 
 /**
- * Call a function for each EngineObject3D whose box overlaps a box
+ * Call a function for each EngineObject3D whose box overlaps a sphere or a box
  * - An object destroyed by an earlier callback is skipped
- * @param {Vector3} pos - Center of the box
- * @param {Vector3|number} size - Full size of the box, a number for a cube
+ * @param {Vector3} pos - Center of the area
+ * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
  * @param {function(EngineObject3D): void} callback
  * @param {Array<EngineObject>} [objects] - Defaults to every object
+ * @param {boolean} [testCenters] - Test only each object's center, see engineObjectsCollect3D
  * @memberof Render3D
  */
-function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
+function engineObjectsCallback3D(pos, size, callback, objects=engineObjects, testCenters=false)
 {
-    for (const o of engineObjectsCollect3D(pos, size, objects))
+    for (const o of engineObjectsCollect3D(pos, size, objects, testCenters))
         o.destroyed || callback(o);
 }
 

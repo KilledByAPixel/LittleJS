@@ -600,8 +600,11 @@ objectMaxSpeed = 1            // Clamp each axis of velocity, world units per fr
 gravity = (0,0)               // How much gravity to apply to objects, added to velocity each frame
 
 // Engine Object functions
-engineObjectsCollect(pos, size, objects=engineObjects)     // size is a circle's diameter or a box's full size
-engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects) // destroyed objects are left out
+engineObjectsCollect(pos, size, objects=engineObjects, testCenters=false) // size is a circle's diameter or a box's
+                                                           // full size, objects whose box overlaps it; testCenters
+                                                           // only those whose center is inside, a little faster
+engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects, testCenters=false) // destroyed objects are
+                                                           // left out
 engineObjectsRaycast(start, end, objects=engineObjects)    // only objects with collideRaycast set, which
                                                            // setCollision turns on
 engineObjectsDestroy()          // destroy every object except the persistent ones
@@ -745,7 +748,8 @@ pf.isWalkable = (x, y) => myGrid[y*50 + x] === 0; // bare grid: provide your own
 
 // Tunables (set freely)
 pf.heuristicWeight = 1     // > 1 = greedier search, faster but less optimal
-pf.maxLoop = 500           // max A* iterations per findPath
+pf.maxLoop = undefined     // max A* steps per search, undefined for the cell count so a search always finishes
+pf.searchGaveUp            // true when the last search stopped at maxLoop, an empty path then means it gave up
 pf.smoothPath = true       // run smoothing pass on result
 pf.debug = false           // draw search visualization
 pf.debugTime = 2           // seconds debug visuals persist
@@ -1167,9 +1171,9 @@ obj.renderAfter2D = true // this object on top of the 2D scene, or false for und
 obj.getMatrix() // buildMatrix(pos3D, rotation3D, scale3D), composed with an EngineObject3D parent's
 obj.getWorldPos3D()                     // world position, pos3D is local when parented
 obj.getForward3D() .getRight3D() .getUp3D() // the object's axes in the world, forward is -Z
-engineObjectsCollect3D(pos, size, objects) // the EngineObject3D objects whose boxes overlap a box, size a vec3 or a
-                                           // number
-engineObjectsCallback3D(pos, size, callback, objects)
+engineObjectsCollect3D(pos, size, objects, testCenters) // the EngineObject3D objects whose boxes overlap a sphere,
+                                           // size a number (diameter), or a box, size a vec3; testCenters as in 2D
+engineObjectsCallback3D(pos, size, callback, objects, testCenters)
 engineObjectsRaycast3D(ray, objects)       // every object along the ray, nearest first, like engineObjectsRaycast in
                                            // 2D; the ray has no end, use render3D.pick for just the nearest one
 obj.lookAt(target)                      // turn -Z toward a world space point: sets pitch and yaw, clears roll;
@@ -1482,6 +1486,8 @@ new Box2dObject(pos, size, tileInfo, angle, color, bodyType, renderOrder) // Dyn
 new Box2dStaticObject(pos, size, tileInfo, angle, color, renderOrder)     // Immovable
 new Box2dKinematicObject(pos, size, tileInfo, angle, color, renderOrder)  // Moves but ignores forces
 new Box2dTileLayer(tileLayer)                                  // Static collision from a TileCollisionLayer
+obj.beginContact(otherObject, fixture, otherFixture) // override; fixture is which of this object's shapes touched,
+obj.endContact(otherObject, fixture, otherFixture)   // as addBox and the others returned it, like a foot sensor
 // In beginContact/endContact the world is stepping: destroys and setTransform, setBodyType and setMassData
 // wait until after the step, and creating objects, fixtures or joints there is not allowed
 

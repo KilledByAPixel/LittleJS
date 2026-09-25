@@ -641,14 +641,16 @@ function engineObjectsDestroy(immediate=true)
 }
 
 /** Collects all object within a given area
+ *  - An object is collected when its box overlaps the area, or with testCenters when its center is inside it
  *  - Objects destroyed this frame are left out, they are only in the list until the frame ends
  *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
  *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2,
  *                                   left out the objects that overlap the point at pos
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
+ *  @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
  *  @return {Array<EngineObject>} - List of collected objects
  *  @memberof Engine */
-function engineObjectsCollect(pos, size, objects=engineObjects)
+function engineObjectsCollect(pos, size, objects=engineObjects, testCenters=false)
 {
     const collectedObjects = [];
     if (!pos)
@@ -662,14 +664,20 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
         // bounding box test, a point when there is no size
         const boxSize = size instanceof Vector2 ? size : vec2();
         for (const o of objects)
-            o.destroyed || o.isOverlapping(pos, boxSize) && collectedObjects.push(o);
+            o.destroyed || (testCenters ? isOverlapping(pos, boxSize, o.pos) : o.isOverlapping(pos, boxSize))
+                && collectedObjects.push(o);
     }
     else
     {
-        // circle test, a diameter like every other size
+        // circle test, a diameter like every other size, against the nearest point of each box
         const radiusSquared = (size/2)**2;
         for (const o of objects)
-            o.destroyed || pos.distanceSquared(o.pos) < radiusSquared && collectedObjects.push(o);
+        {
+            if (o.destroyed) continue;
+            const dx = testCenters ? pos.x - o.pos.x : max(abs(pos.x - o.pos.x) - o.size.x/2, 0);
+            const dy = testCenters ? pos.y - o.pos.y : max(abs(pos.y - o.pos.y) - o.size.y/2, 0);
+            dx*dx + dy*dy < radiusSquared && collectedObjects.push(o);
+        }
     }
     return collectedObjects;
 }
@@ -686,11 +694,12 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
  *  @param {ObjectCallbackFunction} [callbackFunction] - Calls this function on every object that passes the test, needed
  *                                                     (marked optional only because the area before it is)
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
+ *  @param {boolean} [testCenters] - Test only each object's center, see engineObjectsCollect
  *  @memberof Engine */
-function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
+function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects, testCenters=false)
 {
     // an object an earlier callback destroyed is skipped
-    for (const o of engineObjectsCollect(pos, size, objects))
+    for (const o of engineObjectsCollect(pos, size, objects, testCenters))
         o.destroyed || callbackFunction(o);
 }
 
@@ -6347,6 +6356,7 @@ const isTouchDevice = !headlessMode && typeof window != 'undefined' && window.on
 /** Prevents input continuing to the default browser handling
  *  This is useful to disable for html menus so the browser can handle input normally,
  *  the right click menu included; over an html text field that menu always shows
+ *  - While on, the mouse's back and forward buttons don't leave the page, a game can read them as mouse 3 and 4
  *  @param {boolean} [preventDefault]
  *  @memberof Input */
 function setInputPreventDefault(preventDefault=true) { inputPreventDefault = preventDefault; }
@@ -6826,6 +6836,10 @@ function inputInit()
         // released only if it was pressed, like a key or a touch
         if (inputData[0][e.button] & 1)
             inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
+
+        // the mouse's back and forward buttons would leave the page, like Backspace would
+        if (inputPreventDefault && e.cancelable && (e.button === 3 || e.button === 4))
+            e.preventDefault();
     }
     function onMouseMove(e)
     {
@@ -15285,13 +15299,19 @@ class Box2dObject extends EngineObject
 
     /** Called when a contact begins, while the world steps: a destroy or a setter waits until the step is done,
      *  and creating objects, fixtures or joints must wait until after the step
-     *  @param {Box2dObject} otherObject */
-    beginContact(otherObject) {}
+     *  - The fixtures say which shapes touched, the same objects addBox and the others returned, so a small sensor
+     *    under a player's feet can tell standing on the ground from touching a wall
+     *  @param {Box2dObject} otherObject
+     *  @param {Object} [fixture] - This object's fixture that touched
+     *  @param {Object} [otherFixture] - The other object's fixture that touched */
+    beginContact(otherObject, fixture, otherFixture) {}
 
     /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
      *  until the step is done, and creating objects, fixtures or joints must wait until after the step
-     *  @param {Box2dObject} otherObject */
-    endContact(otherObject) {}
+     *  @param {Box2dObject} otherObject
+     *  @param {Object} [fixture] - This object's fixture that touched
+     *  @param {Object} [otherFixture] - The other object's fixture that touched */
+    endContact(otherObject, fixture, otherFixture) {}
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics fixtures and shapes
@@ -16947,8 +16967,8 @@ class Box2dPlugin
             const objectB  = fixtureB.GetBody().object;
             // raw user-created b2Bodies may have no .object — skip those
             if (!objectA || !objectB) return;
-            objectA.beginContact(objectB);
-            objectB.beginContact(objectA);
+            objectA.beginContact(objectB, fixtureA, fixtureB);
+            objectB.beginContact(objectA, fixtureB, fixtureA);
         }
         listener.EndContact = function(contactPtr)
         {
@@ -16958,8 +16978,8 @@ class Box2dPlugin
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
             if (!objectA || !objectB) return;
-            objectA.endContact(objectB);
-            objectB.endContact(objectA);
+            objectA.endContact(objectB, fixtureA, fixtureB);
+            objectB.endContact(objectA, fixtureB, fixtureA);
         };
         listener.PreSolve  = function() {};
         listener.PostSolve = function() {};
@@ -18843,8 +18863,13 @@ class PathFinder
         // Tunables (public, freely re-assignable).
         /** @property {number} - A* heuristic multiplier (1 = admissible, higher = greedier) */
         this.heuristicWeight = 1;
-        /** @property {number} - Maximum A* expansions before giving up */
-        this.maxLoop = 1e3;
+        /** @property {number|undefined} - Most A* expansions before giving up, undefined for the number of cells,
+         *  so a search always finishes; a lower one caps the time a search takes, see searchGaveUp
+         *  @type {number|undefined} */
+        this.maxLoop = undefined;
+        /** @property {boolean} - True when the last search stopped at maxLoop, so an empty path means it gave up
+         *  rather than that there is no way through */
+        this.searchGaveUp = false;
         /** @property {boolean} - If true, post-process paths with two-pass smoothing */
         this.smoothPath = true;
         /** @property {boolean} - If true, draw debug visualization during findPath */
@@ -18956,7 +18981,7 @@ class PathFinder
 
     /** Core A* search loop. Expects buildNodeData() to have been called first.
      *  Marks node.parent for path reconstruction. Returns true if endNode was
-     *  reached; false on disconnected goal or maxLoop exhaustion.
+     *  reached; false on disconnected goal or maxLoop exhaustion, which sets searchGaveUp.
      *  @param {PathFinderNode} startNode
      *  @param {PathFinderNode} endNode
      *  @returns {boolean}
@@ -18981,7 +19006,9 @@ class PathFinder
 
         const openList = [startNode];
         startNode.isOpen = true;
+        const maxLoop = this.maxLoop ?? this.size.x * this.size.y;
         let loopCount = 0;
+        this.searchGaveUp = false;
 
         while (openList.length > 0)
         {
@@ -19006,7 +19033,11 @@ class PathFinder
             const current = openList[bestIndex];
 
             if (current === endNode) break;
-            if (++loopCount > this.maxLoop) break;
+            if (++loopCount > maxLoop)
+            {
+                this.searchGaveUp = true;
+                break;
+            }
 
             // Move current from open to closed.
             current.isOpen = false;
@@ -19428,6 +19459,7 @@ class PathFinder
     {
         ASSERT(isVector2(startPos) && isVector2(endPos), 'findPath needs Vector2 endpoints');
 
+        this.searchGaveUp = false;
         if (rebuild) this.buildNodeData();
 
         // rebuild=false because we just built — avoid redundant work per snap.
@@ -23860,26 +23892,39 @@ function render3DCollideSolid(a)
 }
 
 /**
- * Collect the EngineObject3D objects whose boxes overlap a box, sizes are full sizes
+ * Collect the EngineObject3D objects whose boxes overlap a sphere or a box, the 3D twin of engineObjectsCollect
  * - Boxes are axis aligned around the world position, rotation3D is ignored; lights, emitters and trails have no size
- * @param {Vector3} pos - Center of the box
- * @param {Vector3|number} size - Full size of the box, a number for a cube
+ *   and are never collected
+ * @param {Vector3} pos - Center of the area
+ * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
  * @param {Array<EngineObject>} [objects] - Defaults to every object
+ * @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
  * @return {Array<EngineObject3D>}
  * @memberof Render3D
  */
-function engineObjectsCollect3D(pos, size, objects=engineObjects)
+function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=false)
 {
-    size = render3DSize3(size);
+    const radiusSquared = typeof size === 'number' ? (size/2)**2 : undefined, box = typeof size === 'number' ? undefined : render3DSize3(size);
     const collected = [];
     for (const o of objects)
     {
         if (!(o instanceof EngineObject3D) || o.destroyed) continue;
         const m = render3DObjectMatrix(o).m, s = o.size3D; // the box in world space, scaled by the object and its parents
         if (!(s.x || s.y || s.z)) continue;
-        const worldSize = vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
-        if (isOverlapping3D(pos, size, vec3(m[12], m[13], m[14]), worldSize))
-            collected.push(o);
+        const center = vec3(m[12], m[13], m[14]);
+        const worldSize = testCenters ? vec3() : vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
+        let hit;
+        if (box)
+            hit = isOverlapping3D(pos, box, center, worldSize);
+        else
+        {
+            // a sphere against the nearest point of the box
+            const dx = max(abs(pos.x - center.x) - worldSize.x/2, 0);
+            const dy = max(abs(pos.y - center.y) - worldSize.y/2, 0);
+            const dz = max(abs(pos.z - center.z) - worldSize.z/2, 0);
+            hit = dx*dx + dy*dy + dz*dz < radiusSquared;
+        }
+        hit && collected.push(o);
     }
     return collected;
 }
@@ -23919,17 +23964,18 @@ function engineObjectsRaycast3D(ray, objects=engineObjects)
 }
 
 /**
- * Call a function for each EngineObject3D whose box overlaps a box
+ * Call a function for each EngineObject3D whose box overlaps a sphere or a box
  * - An object destroyed by an earlier callback is skipped
- * @param {Vector3} pos - Center of the box
- * @param {Vector3|number} size - Full size of the box, a number for a cube
+ * @param {Vector3} pos - Center of the area
+ * @param {Vector3|number} size - Diameter of a sphere if a number, full size of a box if a Vector3
  * @param {function(EngineObject3D): void} callback
  * @param {Array<EngineObject>} [objects] - Defaults to every object
+ * @param {boolean} [testCenters] - Test only each object's center, see engineObjectsCollect3D
  * @memberof Render3D
  */
-function engineObjectsCallback3D(pos, size, callback, objects=engineObjects)
+function engineObjectsCallback3D(pos, size, callback, objects=engineObjects, testCenters=false)
 {
-    for (const o of engineObjectsCollect3D(pos, size, objects))
+    for (const o of engineObjectsCollect3D(pos, size, objects, testCenters))
         o.destroyed || callback(o);
 }
 

@@ -202,13 +202,19 @@ class Box2dObject extends EngineObject
 
     /** Called when a contact begins, while the world steps: a destroy or a setter waits until the step is done,
      *  and creating objects, fixtures or joints must wait until after the step
-     *  @param {Box2dObject} otherObject */
-    beginContact(otherObject) {}
+     *  - The fixtures say which shapes touched, the same objects addBox and the others returned, so a small sensor
+     *    under a player's feet can tell standing on the ground from touching a wall
+     *  @param {Box2dObject} otherObject
+     *  @param {Object} [fixture] - This object's fixture that touched
+     *  @param {Object} [otherFixture] - The other object's fixture that touched */
+    beginContact(otherObject, fixture, otherFixture) {}
 
     /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
      *  until the step is done, and creating objects, fixtures or joints must wait until after the step
-     *  @param {Box2dObject} otherObject */
-    endContact(otherObject) {}
+     *  @param {Box2dObject} otherObject
+     *  @param {Object} [fixture] - This object's fixture that touched
+     *  @param {Object} [otherFixture] - The other object's fixture that touched */
+    endContact(otherObject, fixture, otherFixture) {}
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics fixtures and shapes
@@ -1864,8 +1870,8 @@ class Box2dPlugin
             const objectB  = fixtureB.GetBody().object;
             // raw user-created b2Bodies may have no .object — skip those
             if (!objectA || !objectB) return;
-            objectA.beginContact(objectB);
-            objectB.beginContact(objectA);
+            objectA.beginContact(objectB, fixtureA, fixtureB);
+            objectB.beginContact(objectA, fixtureB, fixtureA);
         }
         listener.EndContact = function(contactPtr)
         {
@@ -1875,8 +1881,8 @@ class Box2dPlugin
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
             if (!objectA || !objectB) return;
-            objectA.endContact(objectB);
-            objectB.endContact(objectA);
+            objectA.endContact(objectB, fixtureA, fixtureB);
+            objectB.endContact(objectA, fixtureB, fixtureA);
         };
         listener.PreSolve  = function() {};
         listener.PostSolve = function() {};
