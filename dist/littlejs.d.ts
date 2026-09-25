@@ -3292,7 +3292,7 @@ declare module "littlejsengine" {
         renderLight(): void;
         /** Draw this object into the light system's shadow map, called during its shadow pass when castShadow is set.
          *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit;
-         *  screen space draws in render() land in the shadow map's space, so skip them while lightSystem.shadowPass is set */
+         *  screen space WebGL draws in render() are skipped during the pass */
         renderShadow(): void;
         /** Destroy this object, destroy its children, detach its parent, and mark it for removal
          *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
@@ -4207,7 +4207,8 @@ declare module "littlejsengine" {
      *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
      * - Set lightSystem.shadows for objects to block light: each frame every object draws black into a
      *   shadow map through renderShadow(), which calls render() by default; obj.castShadow = false keeps it
-     *   out (a floor TileLayer, a background), and setShadowTransparent lets a draw's color tint the light
+     *   out (a floor TileLayer, a background), a draw's alpha sets how much light it blocks, and
+     *   setShadowTransparent lets its color tint the light
      * - Must be constructed BEFORE PostProcessPlugin so post-process sees lit pixels
      * @namespace LightSystem
      */
@@ -4262,11 +4263,11 @@ declare module "littlejsengine" {
         shadowMapSize: number;
         /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it when lights reach further than a view past the screen */
         shadowMapScale: number;
-        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper, and a caster thinner than about 2*radius/shadowTextureSize world units lets light leak under the bleed */
+        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper */
         shadowTextureSize: number;
         /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
         shadowPassCount: number;
-        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for most */
+        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for most; the bleed reaches further in under a bigger light, so a thin wall under a big one lets some through, lower it for those */
         shadowSoftness: number;
         /** @property {boolean} - True while the shadow pass runs, read only, so a render() can skip parts that should not cast */
         shadowPass: boolean;
@@ -4310,7 +4311,8 @@ declare module "littlejsengine" {
          *  @param {Light} light */
         renderLightShadow(light: Light): void;
         /** In the shadow pass, let the draws that follow keep their color in the shadow map, so light passing
-         *  through them is tinted instead of blocked: a stained glass window, colored smoke. Does nothing outside
+         *  through them is tinted instead of blocked: a stained glass window, colored smoke. Any draw blocks light
+         *  by its alpha, so a fading sprite casts a fading shadow; this keeps the color as well. Does nothing outside
          *  the pass, so a render() can call it around those draws unconditionally; set it back to false after them.
          *  @param {boolean} [transparent] */
         setShadowTransparent(transparent?: boolean): void;
@@ -4321,7 +4323,8 @@ declare module "littlejsengine" {
      * - castShadow on a Light means its rays stop at casters when lightSystem.shadows is on, three.js's meaning
      *   for a light; a Light's own render() draws nothing so the object meaning never applies to it
      * - A light inside a caster is blocked entirely, so the object that holds it, its lamp, a torch, the player
-     *   carrying it, needs castShadow = false or a renderShadow that leaves the light's spot out
+     *   carrying it, needs a shadowCore that reaches past it, castShadow = false, or a renderShadow that leaves
+     *   the light's spot out
      * @extends EngineObject
      * @memberof LightSystem
      * @example
@@ -4339,6 +4342,9 @@ declare module "littlejsengine" {
         radius: number;
         /** @property {number} - Width of the soft edge in world units */
         fadeRange: number;
+        /** @property {number} - Radius around the light where casters are left out of its shadow, so the lamp
+         *  or torch that holds it, or the player carrying it, does not block it */
+        shadowCore: number;
     }
     /**
      * LittleJS ZzFXM Plugin

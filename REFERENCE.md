@@ -852,7 +852,7 @@ UILayout.relayout()                    // Call manually if you mutate a child's 
 - Lights accumulate ADDITIVELY in the lightmap (red + blue = magenta)
 - The lightmap is MULTIPLIED with the scene during composite — draw your world at full brightness and the lightmap handles the darkening
 - Any EngineObject can override `renderLight()` to additively contribute to the lightmap (lava tiles, weapon flashes, glowing crystals, etc.)
-- Shadows: set `lightSystem.shadows` and every object draws black into a shadow map that blocks the lights; a floor `TileLayer` needs `castShadow = false` or it blacks out the map
+- Shadows: set `lightSystem.shadows` and every object draws black into a shadow map that blocks the lights by its alpha, so smoke or a fading sprite casts a partial shadow; a floor `TileLayer` needs `castShadow = false` or it blacks out the map
 - See `examples/shorts/lightShadows.js` for shadows, glass and a figure with a foot blob
 - Must be constructed BEFORE `PostProcessPlugin` so post-process sees lit pixels
 - See `examples/shorts/lightSystem.js` for a demo
@@ -872,17 +872,19 @@ lightSystem.shadows          = false  // on for shadows; off costs nothing
 lightSystem.shadowMapSize    = 1024   // pixels across the shadow map, a square of world around the camera
 lightSystem.shadowMapScale   = 2      // how many views the map spans, so casters just off screen still cast in;
                                       // raise it when lights reach further than a view past the screen
-lightSystem.shadowTextureSize = 256   // pixels across each light's own shadow texture, larger is sharper; a caster
-                                      // thinner than about 2*radius/shadowTextureSize leaks light
+lightSystem.shadowTextureSize = 256   // pixels across each light's own shadow texture, larger is sharper
 lightSystem.shadowPassCount  = 11     // stretch passes per light, fewer is cheaper and shorter shadows
-lightSystem.shadowSoftness   = .5     // light bled into a caster's near side, 0 hard, 1 most
+lightSystem.shadowSoftness   = .5     // light bled into a caster's near side, 0 hard, 1 most; it reaches further
+                                      // in under a big light, so lower it if thin walls let light through
 lightSystem.shadowPass                // read only: true inside the shadow pass, so a render() can skip its text or glow
 lightSystem.setShadowTransparent(on)  // in the shadow pass the draws that follow keep their color, tinting the light
-                                      // through them; nothing outside it, so call it around the draws and set it back
-light.castShadow = true               // this light's rays stop at casters; a light inside a caster is blocked, so
-                                      // its lamp or the player carrying it needs castShadow = false
+                                      // through them (glass, colored smoke); nothing outside it, so call it around
+                                      // the draws and set it back
+light.castShadow = true               // this light's rays stop at casters; a light inside a caster is blocked
+light.shadowCore = 0                  // radius around the light where casters are left out, so its lamp, torch
+                                      // or the player carrying it does not block it
 obj.castShadow = true                 // draws into the shadow map; false for a floor TileLayer, a background, a pickup
-obj.renderShadow()                    // draws the shadow shape, render() by default, skip screen space draws in it;
+obj.renderShadow()                    // draws the shadow shape, render() by default, screen space draws skipped;
                                       // a figure draws a blob at its feet
                                       // to stay lit; additive draws add black so glows cast nothing; WebGL draws only
 

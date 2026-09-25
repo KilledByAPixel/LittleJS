@@ -183,3 +183,9 @@ test('a Light renders its light without a throw in headless mode with shadows on
     assert.doesNotThrow(() => l.renderLight());
     lightSystem.shadows = false;
 });
+
+test('Light.shadowCore defaults to 0, so a caster over the light still blocks it', () =>
+{
+    const l = new Light(vec2(0, 0), 1);
+    assert.equal(l.shadowCore, 0);
+});

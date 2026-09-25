@@ -15,7 +15,8 @@
  *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
  * - Set lightSystem.shadows for objects to block light: each frame every object draws black into a
  *   shadow map through renderShadow(), which calls render() by default; obj.castShadow = false keeps it
- *   out (a floor TileLayer, a background), and setShadowTransparent lets a draw's color tint the light
+ *   out (a floor TileLayer, a background), a draw's alpha sets how much light it blocks, and
+ *   setShadowTransparent lets its color tint the light
  * - Must be constructed BEFORE PostProcessPlugin so post-process sees lit pixels
  * @namespace LightSystem
  */
@@ -87,11 +88,11 @@ class LightSystemPlugin
         this.shadowMapSize = 1024;
         /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it when lights reach further than a view past the screen */
         this.shadowMapScale = 2;
-        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper, and a caster thinner than about 2*radius/shadowTextureSize world units lets light leak under the bleed */
+        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper */
         this.shadowTextureSize = 256;
         /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
         this.shadowPassCount = 11;
-        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for most */
+        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for most; the bleed reaches further in under a bigger light, so a thin wall under a big one lets some through, lower it for those */
         this.shadowSoftness = .5;
         /** @property {boolean} - True while the shadow pass runs, read only, so a render() can skip parts that should not cast */
         this.shadowPass = false;
@@ -269,16 +270,26 @@ class LightSystemPlugin
                 'uniform float radius;'+
                 'uniform vec2 mapOrigin;'+      // world bottom left of the map
                 'uniform float mapInvSize;'+    // 1 over the world size it covers
+                'uniform float tap;'+           // half a texel of the light's texture, in world units
+                'uniform float core;'+          // radius around the light where casters are left out
                 'in vec2 uv;'+
                 'out vec4 c;'+
                 'void main(){'+
                 'vec2 w=lightPos+(uv-.5)*2.*radius;'+  // world position of this texel
-                'vec2 m=(w-mapOrigin)*mapInvSize;'+     // in the map, which holds world up at v=0 like an image
+                'vec3 o=vec3(1);'+
+                // the darkest of four taps a half texel out, so a caster a texel thin still covers two whole
+                // texels, the stretch's filtering between two would leak through one
+                'for(int i=0;i<4;i++){'+
+                'vec2 m=(w+tap*(vec2(i%2,i/2)*2.-1.)-mapOrigin)*mapInvSize;'+ // in the map, world up at v=0
                 // past the map's edge is open, clamping would stretch its edge texels across the light
-                'c=vec4(m==clamp(m,0.,1.)?texture(s,vec2(m.x,1.-m.y)).rgb:vec3(1),1);'+
+                'o=min(o,m==clamp(m,0.,1.)?texture(s,vec2(m.x,1.-m.y)).rgb:vec3(1));'+
+                '}'+
+                'c=vec4(length(w-lightPos)<core?vec3(1):o,1);'+
                 '}');
 
-            // stretch: soften, then multiply by the same texture stretched out from the center
+            // stretch: each texel keeps the darkest of itself and the texel toward the light, so a caster's
+            // alpha and color carry through as they are; the bleed lights a caster's near side only where
+            // the ray from the light still reaches, so it never lifts a texel already in shadow
             ls.shadowStretchShader = glCreateProgram(quadVertex,
                 '#version 300 es\n' +
                 'precision highp float;'+
@@ -289,9 +300,8 @@ class LightSystemPlugin
                 'out vec4 c;'+
                 'void main(){'+
                 'float mask=clamp(1.-2.*length(uv-.5),0.,1.);'+  // brightest at the light
-                'vec3 a=texture(s,uv).rgb+brightness*mask;'+
                 'vec3 b=texture(s,(uv-.5)/scale+.5).rgb;'+
-                'c=vec4(a*b,1);'+
+                'c=vec4(min(texture(s,uv).rgb+brightness*mask*b,b),1);'+
                 '}');
 
             ls.shadowCopyVAO = createQuadVAO(ls.shadowCopyShader, 'p');
@@ -355,6 +365,7 @@ class LightSystemPlugin
             canvasClearColor = WHITE;
             glSetRenderTarget(ls.shadowMap, true);
             glColorMask = 0xff000000; // every color black, its alpha kept
+            glSkipScreenSpace = true; // the map's camera would put them anywhere
             ls.shadowPass = true;
             try
             {
@@ -371,6 +382,7 @@ class LightSystemPlugin
                 // hand everything back even when a render threw, or every frame after it draws black with no text
                 ls.shadowPass = false;
                 glColorMask = -1;
+                glSkipScreenSpace = false;
                 glSetRenderTarget();
                 [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = saved;
             }
@@ -551,6 +563,8 @@ class LightSystemPlugin
         gl.uniform1f(glUniformLocation(cs, 'radius'), light.radius);
         gl.uniform2f(glUniformLocation(cs, 'mapOrigin'), this.shadowMapOrigin.x, this.shadowMapOrigin.y);
         gl.uniform1f(glUniformLocation(cs, 'mapInvSize'), 1/this.shadowMapWorldSize);
+        gl.uniform1f(glUniformLocation(cs, 'tap'), light.radius/size);
+        gl.uniform1f(glUniformLocation(cs, 'core'), light.shadowCore);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
         // stretch the casters out from the light, starting a 128th of the texture and growing 1.8x a pass, which
@@ -581,7 +595,8 @@ class LightSystemPlugin
     }
 
     /** In the shadow pass, let the draws that follow keep their color in the shadow map, so light passing
-     *  through them is tinted instead of blocked: a stained glass window, colored smoke. Does nothing outside
+     *  through them is tinted instead of blocked: a stained glass window, colored smoke. Any draw blocks light
+     *  by its alpha, so a fading sprite casts a fading shadow; this keeps the color as well. Does nothing outside
      *  the pass, so a render() can call it around those draws unconditionally; set it back to false after them.
      *  @param {boolean} [transparent] */
     setShadowTransparent(transparent=true)
@@ -600,7 +615,8 @@ class LightSystemPlugin
  * - castShadow on a Light means its rays stop at casters when lightSystem.shadows is on, three.js's meaning
  *   for a light; a Light's own render() draws nothing so the object meaning never applies to it
  * - A light inside a caster is blocked entirely, so the object that holds it, its lamp, a torch, the player
- *   carrying it, needs castShadow = false or a renderShadow that leaves the light's spot out
+ *   carrying it, needs a shadowCore that reaches past it, castShadow = false, or a renderShadow that leaves
+ *   the light's spot out
  * @extends EngineObject
  * @memberof LightSystem
  * @example
@@ -626,6 +642,9 @@ class Light extends EngineObject
         this.radius = radius;
         /** @property {number} - Width of the soft edge in world units */
         this.fadeRange = fadeRange === undefined ? radius : fadeRange;
+        /** @property {number} - Radius around the light where casters are left out of its shadow, so the lamp
+         *  or torch that holds it, or the player carrying it, does not block it */
+        this.shadowCore = 0;
     }
 
     /** Lights are invisible in the main render pass — they only contribute

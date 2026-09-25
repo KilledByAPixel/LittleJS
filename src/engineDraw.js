@@ -478,7 +478,10 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
+        {
+            if (glSkipScreenSpace) return;
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+        }
         if (textureInfo)
         {
             ASSERT(!!textureInfo.glTexture, 'texture has no WebGL texture, draw it with useWebGL false');
@@ -579,6 +582,7 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, an
         ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
         {
+            if (glSkipScreenSpace) return;
             // convert to world space
             pos = screenToWorld(pos);
             size = size.scale(1/cameraScale);
@@ -660,7 +664,10 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
+        {
+            if (glSkipScreenSpace) return;
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+        }
         glSetTexture(textureInfo.glTexture);
         glDraw(pos.x, pos.y, size.x, size.y, angle,
             0, 0, wrapCount.x, wrapCount.y,
@@ -737,7 +744,10 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
         ASSERT(!!glContext, 'WebGL is not enabled!');
         let size = vec2(1);
         if (screenSpace)
+        {
+            if (glSkipScreenSpace) return;
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+        }
         glDrawOutlineTransform(points, color.rgbaInt(), width, pos.x, pos.y, size.x, size.y, angle, wrap);
     }
     else
@@ -842,7 +852,10 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
         ASSERT(!!glContext, 'WebGL is not enabled!');
         let size = vec2(1);
         if (screenSpace)
+        {
+            if (glSkipScreenSpace) return;
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+        }
         glDrawPointsTransform(points, color.rgbaInt(), pos.x, pos.y, size.x, size.y, angle);
         if (lineWidth > 0)
             glDrawOutlineTransform(points, lineColor.rgbaInt(), lineWidth, pos.x, pos.y, size.x, size.y, angle);
@@ -921,7 +934,10 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
             drawEllipseRings.set(sides, ring = glPolyStrip(points));
         }
         if (screenSpace)
+        {
+            if (glSkipScreenSpace) return;
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+        }
         glDrawPointsTransform(ring, color.rgbaInt(), pos.x, pos.y, size.x/2, size.y/2, angle, false);
     }
     else
@@ -989,6 +1005,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
         ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
         {
+            if (glSkipScreenSpace) return;
             // convert to world space
             pos = screenToWorld(pos);
             size = size.scale(1/cameraScale);

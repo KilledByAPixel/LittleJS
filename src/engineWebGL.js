@@ -36,6 +36,9 @@ let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMip
 // ANDed onto every packed color as a draw is queued; the light system's shadow pass sets 0xff000000
 // to draw everything black with its alpha kept (rgbaInt packs alpha in the top byte)
 let glColorMask = -1;
+// set by the light system's shadow pass, which draws the world with its own camera, so a screen space
+// WebGL draw in a render() is skipped instead of landing somewhere in the world
+let glSkipScreenSpace = false;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
