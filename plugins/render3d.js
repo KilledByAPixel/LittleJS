@@ -167,6 +167,20 @@ function render3DMaxScale(m)
     return max(m[0]*m[0] + m[1]*m[1] + m[2]*m[2], m[4]*m[4] + m[5]*m[5] + m[6]*m[6], m[8]*m[8] + m[9]*m[9] + m[10]*m[10]) ** .5;
 }
 
+// how far a matrix at offset k can move a point that is one unit from its origin, for a bounding sphere: the
+// longest axis when the axes are square to each other, more when they are not, as a turned child under a parent
+// scaled on one axis leaves them; the axes' dot products bound the largest stretch by their largest row sum
+function render3DMaxStretch(m, k=0)
+{
+    const xx = m[k]*m[k] + m[k+1]*m[k+1] + m[k+2]*m[k+2];
+    const yy = m[k+4]*m[k+4] + m[k+5]*m[k+5] + m[k+6]*m[k+6];
+    const zz = m[k+8]*m[k+8] + m[k+9]*m[k+9] + m[k+10]*m[k+10];
+    const xy = abs(m[k]*m[k+4] + m[k+1]*m[k+5] + m[k+2]*m[k+6]);
+    const xz = abs(m[k]*m[k+8] + m[k+1]*m[k+9] + m[k+2]*m[k+10]);
+    const yz = abs(m[k+4]*m[k+8] + m[k+5]*m[k+9] + m[k+6]*m[k+10]);
+    return max(xx + xy + xz, yy + xy + yz, zz + xz + yz) ** .5;
+}
+
 // a quad as a strip from its center and half axes, the same corner order as render3DQuadStrip
 function render3DQuadAxes(center, right, up)
 {
@@ -754,7 +768,7 @@ class Render3DPlugin
             mesh.upload();
         if (!mesh.bufferCount) return;
         const m = matrix.m;
-        if (this.frustumCulling && !render3DSphereVisible(m[12], m[13], m[14], mesh.radius * render3DMaxScale(m)))
+        if (this.frustumCulling && !render3DSphereVisible(m[12], m[13], m[14], mesh.radius * render3DMaxStretch(m)))
             return;
         // the mesh says whether its back faces can be skipped, and a mirroring transform, one with a negative
         // determinant, turns the winding around so the other one is its front
@@ -1483,6 +1497,7 @@ function render3DFragmentSource(fragmentCode)
         'uniform int extraLightCount;' +
         'uniform vec3 cameraPos;' +
         'uniform sampler2D tex;' +
+        'uniform bool premultipliedTexture;' + // is the texture a render target, which holds premultiplied color
         'uniform highp sampler2DShadow shadowMap;' +
         'in vec3 P,N;in vec2 T,L;in vec4 C,S;' +
         'out vec4 o;' +
@@ -1499,6 +1514,7 @@ function render3DFragmentSource(fragmentCode)
         (fragmentCode ? RENDER3D_SNIPPET_NAMES + fragmentCode + '\n' : '') +
         'void main(){' +
         (fragmentCode ? 'vec4 t;mainImage(t,T);' : 'vec4 t=texture(tex,T);') +
+        'if(premultipliedTexture&&t.a>0.)t.rgb/=t.a;' + // back to straight color, what the lighting and blend expect
         'if(shadowParams.w>0.&&t.a<.5)discard;' + // an opaque draw drops see through texels, as the shadow map does
         'vec4 c=C*t;' +
         'float e=lightDir.w;' +
@@ -1746,6 +1762,16 @@ function render3DUniform4f(name, x, y, z, w)
     glContext.uniform4f(render3DUniform(name), x, y, z, w);
 }
 
+// send an int uniform of the main shader only when its value changed since the last send
+function render3DUniform1i(name, x)
+{
+    const values = render3D.uniformValues;
+    if (values[name] === x)
+        return;
+    values[name] = x;
+    glContext.uniform1i(render3DUniform(name), x);
+}
+
 // bind a vertex buffer and point the attributes at it
 function render3DBindVertexBuffer(buffer)
 {
@@ -1828,6 +1854,10 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     // 0 blends them away instead, and -1 is additive, which has to fade into fog differently
     const blendMode = state.blend ? (state.additive ? -1 : 0) : 1;
     render3DUniform4f('shadowParams', r.shadows && r.passIsDefault && state.receiveShadow ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, blendMode);
+
+    // a render target's texture holds premultiplied color, the blend writes it that way, so the shader undoes it
+    const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
+    render3DUniform1i('premultipliedTexture', +!!(textureInfo?.glTexture && glPremultipliedTextures.has(textureInfo.glTexture)));
 }
 
 // the six flat sides of the camera's visible box, each as [x, y, z, w] facing inward
@@ -3501,7 +3531,7 @@ function render3DRaycastObject(ray, o)
     if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
     const matrix = render3DObjectMatrix(o), mesh = o.mesh; // a sprite is picked by its size3D
     // a mesh that changed since it was measured is measured again, an upload may not have come yet
-    const radius = (mesh ? mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxScale(matrix.m);
+    const radius = (mesh ? mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxStretch(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
     return raycastSphere(ray, matrix.getTranslation(), radius);
 }
@@ -3650,7 +3680,7 @@ class InstancedMesh3D extends EngineObject3D
         // the bounds grow to hold where it is now and how big, read back from the matrix it has
         const d = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS;
         this.reach = max(this.reach, hypot(d[k+12], d[k+13], d[k+14]));
-        this.maxScale = max(this.maxScale, hypot(d[k], d[k+1], d[k+2]), hypot(d[k+4], d[k+5], d[k+6]), hypot(d[k+8], d[k+9], d[k+10]));
+        this.maxScale = max(this.maxScale, render3DMaxStretch(d, k));
         const meshRadius = this.mesh.radius || this.mesh.computeRadius(); // measured once, the draw takes a new size up
         this.radius = this.reach + meshRadius * this.maxScale;
     }

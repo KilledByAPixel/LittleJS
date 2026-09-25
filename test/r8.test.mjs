@@ -117,3 +117,29 @@ test('a first person camera on a turned parent looks and walks the parent\'s way
     }
     finally { ship.destroy(); LJS.engineObjectsUpdate(); }
 });
+
+test('a mesh under a sheared transform is picked across all of it, and its instances are bounded around it', () =>
+{
+    // a turned child under a parent scaled on one axis stretches the sphere more than any one axis does
+    const parent = new EngineObject3D(vec3(7.5, 0, 0));
+    parent.scale3D = vec3(3, 1, 1);
+    const child = new EngineObject3D(vec3(), LJS.buildSphere(2, 32, 16));
+    child.rotation3D = vec3(0, 0, PI/4);
+    parent.addChild(child);
+    try
+    {
+        // (4.8, 0, 0) is inside the stretched sphere, but outside the sphere the longest axis gave
+        const hits = LJS.engineObjectsRaycast3D(new Ray3D(vec3(4.8, 0, 10), vec3(0, 0, -1)));
+        assert.ok(hits.includes(child), 'picked');
+    }
+    finally { parent.destroy(); LJS.engineObjectsUpdate(); }
+
+    // the same stretch as one instance's matrix, its bounds reach 3 from the center, not the longest axis's 2.24
+    const matrix = LJS.buildMatrix(vec3(), vec3(), vec3(3, 1, 1)).multiply(LJS.buildMatrix(vec3(), vec3(0, 0, PI/4)));
+    const set = new LJS.InstancedMesh3D(LJS.buildSphere(2, 32, 16), 1);
+    set.setMatrixAt(0, matrix);
+    assert.ok(set.radius >= 3 - 1e-6, 'bounds hold the stretched sphere: ' + set.radius);
+    assert.ok(set.radius < 3.01, 'and no more than that for this one: ' + set.radius);
+    set.destroy();
+    LJS.engineObjectsUpdate();
+});

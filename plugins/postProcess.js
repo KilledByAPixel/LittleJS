@@ -120,6 +120,13 @@ class PostProcessPlugin
         {
             if (headlessMode || !glEnable) return;
 
+            // made now if WebGL was off when the plugin was made, or when a lost context came back
+            if (!postProcess.shader)
+            {
+                if (glContext.isContextLost()) return;
+                initPostProcess();
+            }
+
             // clear out the buffer
             glFlush();
 
