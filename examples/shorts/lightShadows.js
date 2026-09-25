@@ -3,9 +3,9 @@ let mouseLight;
 // walls cast shadows by default; the floor is drawn in gameRender and does not
 class Wall extends EngineObject
 {
-    constructor(pos, size)
+    constructor(pos, size, tileInfo)
     {
-        super(pos, size, undefined, 0, hsl(.6,.1,.7));
+        super(pos, size, tileInfo, 0, hsl(.6,.1,.7));
     }
 }
 
@@ -25,19 +25,6 @@ class Glass extends Wall
     }
 }
 
-// a figure that stays lit: its shadow is a blob at its feet, not its body
-class Figure extends EngineObject
-{
-    constructor(pos)
-    {
-        super(pos, vec2(1, 2), undefined, 0, hsl(.1,.7,.6));
-    }
-    renderShadow()
-    {
-        drawEllipse(this.pos.add(vec2(0,-.9)), vec2(1,.4), BLACK);
-    }
-}
-
 function gameInit()
 {
     new LightSystemPlugin(undefined, hsl(0,0,.05));
@@ -49,14 +36,14 @@ function gameInit()
         new Wall(vec2(-10 + i*4, 0), vec2(1, 3));
     new Wall(vec2(0, 8), vec2(24, 1));
     new Wall(vec2(0, -8), vec2(24, 1));
-    new Glass(vec2(-4, 5), vec2(3, .5), hsl(0, 1, .5));
-    new Glass(vec2(4, 5), vec2(3, .5), hsl(.6, 1, .5));
-    new Figure(vec2(6, -4));
-    const coin = new EngineObject(vec2(-6, -4), vec2(1), undefined, 0, YELLOW);
+    new Glass(vec2(-4, 4), vec2(3, .5), hsl(0, 1, .5));
+    new Glass(vec2(4, 4), vec2(3, .5), hsl(.6, 1, .5));
+    new Wall(vec2(4, -5), vec2(3), tile(3));
+    const coin = new EngineObject(vec2(-4, -5), vec2(1), undefined, 0, YELLOW);
     coin.castShadow = false; // small things can stay out of the shadow map
 
-    new Light(vec2(-8, 4), 8, hsl(.1,.8,.6));
-    new Light(vec2(8, -4), 8, hsl(.55,.8,.6));
+    new Light(vec2(-8, 4), 8, hsl(.1,.8,.9));
+    new Light(vec2(0, -4), 8, hsl(.55,.8,.9));
     mouseLight = new Light(vec2(), 10, WHITE);
 }
 
