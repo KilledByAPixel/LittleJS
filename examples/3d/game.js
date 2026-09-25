@@ -16,6 +16,7 @@ const terrainSize = 600, terrainHeight = 24, orbCount = 40;
 const soundCollect = new Sound([,,,.02,,.5,,3,,-50,40,,.05]);
 const soundEngine = new Sound([,0,80,.01,,.1,2,5,,,,,,.5,,,,,,,-100]);
 const soundJump = new Sound([.5,,140,,,,,.5,12]);
+const worldRandom = new RandomGenerator(1234); // the same world every time
 let terrain, player, title, freeCamera;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -83,7 +84,7 @@ class Orb extends EngineObject3D
     {
         super(pos, render3D.sphereMesh);
         this.scale3D = vec3(1.4);
-        this.color = hsl(rand(),1,.6);
+        this.color = hsl(worldRandom.float(),1,.6);
         this.emissive = 1; // make it appear bright
         this.angleVelocity3D = vec3(.01,.02,0);
         this.addChild(new Light3D(vec3(), 12, this.color));
@@ -114,7 +115,8 @@ class Orb extends EngineObject3D
 // a random spot on the island, clear of the middle where the player starts
 function randomGroundPos()
 {
-    return vec3(rand(30, terrainSize/2 - 6), 0, 0).rotateY(rand(2*PI));
+    const distance = worldRandom.float(30, terrainSize/2 - 6);
+    return vec3(distance, 0, 0).rotateY(worldRandom.float(2*PI));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -168,7 +170,7 @@ function gameInit()
         if (pos.y < 2)
             continue;
         const treeObject = new EngineObject3D(pos, tree);
-        treeObject.scale3D = vec3(rand(.5,1.5));
+        treeObject.scale3D = vec3(worldRandom.float(.5,1.5));
     }
 
     // sprites from the tile sheet
@@ -188,7 +190,7 @@ function gameInit()
     // title text, extruded from the engine font
     const titleMesh = buildText3D('LITTLEJS 3D', 5, 2);
     title = new EngineObject3D(vec3(0,0,-40), titleMesh);
-    title.pos3D.y = terrain.getHeight(title.pos3D) + 6; // just above the ground
+    title.pos3D.y = terrain.getHeight(title.pos3D) + 9; // just above the ground
     title.color = hsl(.1,1,.6);
     title.specular = 1;
 
