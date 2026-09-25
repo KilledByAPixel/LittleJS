@@ -198,7 +198,7 @@ function smoothStep(percent)
  *  @param {number} value
  *  @return {boolean}
  *  @memberof Math */
-function isPowerOfTwo(value) { return value > 0 && value % 1 === 0 && !(value & (value - 1)); }
+function isPowerOfTwo(value) { return value > 0 && value % 1 === 0 && 2**round(log2(value)) === value; } // any size, not only 32 bits
 
 /** Returns the nearest power of two not less than the value
  *  @param {number} value

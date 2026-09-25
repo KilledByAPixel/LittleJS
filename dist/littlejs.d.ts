@@ -1966,11 +1966,12 @@ declare module "littlejsengine" {
      * - In 2D it shades textured draws, untextured ones like drawRect draw as they are
      * - A tile layer drawn in WebGL holds premultiplied color, so there iChannel0 reads premultiplied texels and the
      *   snippet's color is taken as premultiplied too; premultipliedTexture is true there, so a snippet that changes
-     *   the alpha scales the rgb with it: `if (premultipliedTexture) c.rgb *= k;`
+     *   the alpha scales the rgb with it: `if (premultipliedTexture) c.rgb *= k;`, a 2D name only
      * - Compiled once per renderer by the first draw that needs it; a bad snippet throws with the GLSL log in debug
      * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
      * - Names in both renderers: iChannel0 the texture, iTime, iResolution, and localUV, 0 to 1 across the sprite
      *   or the mesh's own uv
+     * - Names in 2D only: premultipliedTexture
      * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, lightCount,
      *   lights[i], lightColors[i] and shadow()
      * @example
@@ -1978,7 +1979,7 @@ declare module "littlejsengine" {
      * void mainImage(out vec4 c, vec2 uv)
      * {
      *     c = texture(iChannel0, uv);
-     *     c.a *= .5 + .5*sin(iTime);
+     *     c.a *= .5 + .5*sin(iTime); // on an image; for a 2D tile layer scale the rgb too, see above
      * }`);
      * obj.shader = fade;
      * @memberof Draw
@@ -2981,9 +2982,14 @@ declare module "littlejsengine" {
         /** @property {AudioNode|AudioEffectNodes} - Node or effect to route this instance through, copied from the sound
          *  @type {AudioNode|AudioEffectNodes} */
         output: AudioNode | AudioEffectNodes;
-        /** @property {AudioEndedCallback} - Called when a source this instance played ends, a sound that ends is stopped, its time back at 0
-         *  @type {AudioEndedCallback} */
-        onendedCallback: AudioEndedCallback;
+        /** @property {AudioEndedCallback|undefined} - Called when this instance plays to its end, not when it is stopped
+         *  or paused; it is read when the sound ends, so it can be set at any time
+         *  @type {AudioEndedCallback|undefined} */
+        onendedCallback: AudioEndedCallback | undefined;
+        /** A playback that ends on its own leaves the instance stopped, its time back at 0; the ended event of one
+         *  stopped or replaced since is too late to change anything
+         *  @private */
+        private sourceEnded;
         /** Start playing the sound instance from a place in the sound
          *  @param {number} [offset] - Where to start in the sound, in its own seconds whatever the rate
          */

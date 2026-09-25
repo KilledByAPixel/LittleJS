@@ -145,7 +145,7 @@ test('types: sound play results, SoundInstance fields and lastInputDevice includ
     assert.match(instance, /\n\s+pausedTime: number \| undefined;/);
     assert.match(instance, /\n\s+gainNode: GainNode \| undefined;/);
     assert.match(instance, /\n\s+source: AudioBufferSourceNode \| undefined;/);
-    assert.match(instance, /\n\s+onendedCallback: AudioEndedCallback;/);
+    assert.match(instance, /\n\s+onendedCallback: AudioEndedCallback \| undefined;/);
 
     assert.match(dts, /export let lastInputDevice: (["'])mouse\1 \| \1keyboard\1 \| \1gamepad\1;/);
 });

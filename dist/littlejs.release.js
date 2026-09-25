@@ -968,7 +968,7 @@ function smoothStep(percent)
  *  @param {number} value
  *  @return {boolean}
  *  @memberof Math */
-function isPowerOfTwo(value) { return value > 0 && value % 1 === 0 && !(value & (value - 1)); }
+function isPowerOfTwo(value) { return value > 0 && value % 1 === 0 && 2**round(log2(value)) === value; } // any size, not only 32 bits
 
 /** Returns the nearest power of two not less than the value
  *  @param {number} value
@@ -4094,11 +4094,12 @@ class SpriteAnimation
  * - In 2D it shades textured draws, untextured ones like drawRect draw as they are
  * - A tile layer drawn in WebGL holds premultiplied color, so there iChannel0 reads premultiplied texels and the
  *   snippet's color is taken as premultiplied too; premultipliedTexture is true there, so a snippet that changes
- *   the alpha scales the rgb with it: `if (premultipliedTexture) c.rgb *= k;`
+ *   the alpha scales the rgb with it: `if (premultipliedTexture) c.rgb *= k;`, a 2D name only
  * - Compiled once per renderer by the first draw that needs it; a bad snippet throws with the GLSL log in debug
  * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, and localUV, 0 to 1 across the sprite
  *   or the mesh's own uv
+ * - Names in 2D only: premultipliedTexture
  * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, lightCount,
  *   lights[i], lightColors[i] and shadow()
  * @example
@@ -4106,7 +4107,7 @@ class SpriteAnimation
  * void mainImage(out vec4 c, vec2 uv)
  * {
  *     c = texture(iChannel0, uv);
- *     c.a *= .5 + .5*sin(iTime);
+ *     c.a *= .5 + .5*sin(iTime); // on an image; for a 2D tile layer scale the rgb too, see above
  * }`);
  * obj.shader = fade;
  * @memberof Draw
@@ -7313,16 +7314,20 @@ class SoundInstance
         /** @property {AudioNode|AudioEffectNodes} - Node or effect to route this instance through, copied from the sound
          *  @type {AudioNode|AudioEffectNodes} */
         this.output = sound.output;
-        /** @property {AudioEndedCallback} - Called when a source this instance played ends, a sound that ends is stopped, its time back at 0
-         *  @type {AudioEndedCallback} */
-        this.onendedCallback = (source)=>
+        /** @property {AudioEndedCallback|undefined} - Called when this instance plays to its end, not when it is stopped
+         *  or paused; it is read when the sound ends, so it can be set at any time
+         *  @type {AudioEndedCallback|undefined} */
+        this.onendedCallback = undefined;
+        /** A playback that ends on its own leaves the instance stopped, its time back at 0; the ended event of one
+         *  stopped or replaced since is too late to change anything
+         *  @private */
+        this.sourceEnded = (source)=>
         {
-            if (source === this.source)
-            {
-                this.source = undefined;
-                this.startTime = undefined;
-                this.pausedTime = 0;
-            }
+            if (source !== this.source) return;
+            this.source = undefined;
+            this.startTime = undefined;
+            this.pausedTime = 0;
+            this.onendedCallback?.(source);
         };
 
         // start sound
@@ -7344,8 +7349,8 @@ class SoundInstance
         // build the shared buffer if it was not made at load time, then play it
         this.sound.buildSampleBuffer();
         this.source = this.sound.sampleBuffer ?
-            playAudioBuffer(this.sound.sampleBuffer, this.volume, this.rate, this.pan, this.loop, this.gainNode, offset, this.onendedCallback, this.output, this.pannerNode) :
-            playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback, this.output, this.pannerNode);
+            playAudioBuffer(this.sound.sampleBuffer, this.volume, this.rate, this.pan, this.loop, this.gainNode, offset, this.sourceEnded, this.output, this.pannerNode) :
+            playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.sourceEnded, this.output, this.pannerNode);
         audioWaitingInstances.delete(this);
         if (this.source)
         {
@@ -17280,9 +17285,9 @@ let tweenUpdatePass = 0; // counts the updates, a tween started during one waits
 // put a tween in the active list, or take it out, keeping its flag in step so a check costs nothing
 function tweenActivate(tween)
 {
+    tween.activePass = tweenUpdatePass; // started again, even while active, so this update leaves it alone
     if (tween.active) return;
     tween.active = true;
-    tween.activePass = tweenUpdatePass;
     tweenActive.push(tween);
 }
 function tweenDeactivate(tween)
@@ -17879,7 +17884,8 @@ function tweenUpdate(gameDelta, realDelta)
             // Completion: fire end value, remove from active, start the next iteration
             // of a loop or pingPong, or when there is none it has completed, fire onComplete
             t.callback(t.interp(0));
-            if (!t.active) continue; // stopped by its own callback, it ends without completing
+            if (!t.active || t.activePass === pass)
+                continue; // stopped or restarted by its own callback, the run it was on ends without completing
             tweenDeactivate(t);
             const next = t.thenCallback;
             t.thenCallback = undefined;
@@ -22838,6 +22844,8 @@ class EngineObject3D extends EngineObject
         child.pos3D = local.getTranslation();
         child.rotation3D = local.getRotation();
         child.scale3D = local.getScale();
+        if (child.localMatrix)
+            child.localMatrix = local; // a matrix given whole stays whole, shear and all
         return child;
     }
 
@@ -22852,6 +22860,8 @@ class EngineObject3D extends EngineObject
             child.pos3D = world.getTranslation();
             child.rotation3D = world.getRotation();
             child.scale3D = world.getScale();
+            if (child.localMatrix)
+                child.localMatrix = world.copy(); // a matrix given whole stays whole, shear and all
         }
         super.removeChild(child);
     }

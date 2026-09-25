@@ -3233,6 +3233,8 @@ class EngineObject3D extends EngineObject
         child.pos3D = local.getTranslation();
         child.rotation3D = local.getRotation();
         child.scale3D = local.getScale();
+        if (child.localMatrix)
+            child.localMatrix = local; // a matrix given whole stays whole, shear and all
         return child;
     }
 
@@ -3247,6 +3249,8 @@ class EngineObject3D extends EngineObject
             child.pos3D = world.getTranslation();
             child.rotation3D = world.getRotation();
             child.scale3D = world.getScale();
+            if (child.localMatrix)
+                child.localMatrix = world.copy(); // a matrix given whole stays whole, shear and all
         }
         super.removeChild(child);
     }

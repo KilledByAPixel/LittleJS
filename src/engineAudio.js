@@ -483,16 +483,20 @@ class SoundInstance
         /** @property {AudioNode|AudioEffectNodes} - Node or effect to route this instance through, copied from the sound
          *  @type {AudioNode|AudioEffectNodes} */
         this.output = sound.output;
-        /** @property {AudioEndedCallback} - Called when a source this instance played ends, a sound that ends is stopped, its time back at 0
-         *  @type {AudioEndedCallback} */
-        this.onendedCallback = (source)=>
+        /** @property {AudioEndedCallback|undefined} - Called when this instance plays to its end, not when it is stopped
+         *  or paused; it is read when the sound ends, so it can be set at any time
+         *  @type {AudioEndedCallback|undefined} */
+        this.onendedCallback = undefined;
+        /** A playback that ends on its own leaves the instance stopped, its time back at 0; the ended event of one
+         *  stopped or replaced since is too late to change anything
+         *  @private */
+        this.sourceEnded = (source)=>
         {
-            if (source === this.source)
-            {
-                this.source = undefined;
-                this.startTime = undefined;
-                this.pausedTime = 0;
-            }
+            if (source !== this.source) return;
+            this.source = undefined;
+            this.startTime = undefined;
+            this.pausedTime = 0;
+            this.onendedCallback?.(source);
         };
 
         // start sound
@@ -514,8 +518,8 @@ class SoundInstance
         // build the shared buffer if it was not made at load time, then play it
         this.sound.buildSampleBuffer();
         this.source = this.sound.sampleBuffer ?
-            playAudioBuffer(this.sound.sampleBuffer, this.volume, this.rate, this.pan, this.loop, this.gainNode, offset, this.onendedCallback, this.output, this.pannerNode) :
-            playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback, this.output, this.pannerNode);
+            playAudioBuffer(this.sound.sampleBuffer, this.volume, this.rate, this.pan, this.loop, this.gainNode, offset, this.sourceEnded, this.output, this.pannerNode) :
+            playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.sourceEnded, this.output, this.pannerNode);
         audioWaitingInstances.delete(this);
         if (this.source)
         {

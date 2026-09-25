@@ -19,9 +19,9 @@ let tweenUpdatePass = 0; // counts the updates, a tween started during one waits
 // put a tween in the active list, or take it out, keeping its flag in step so a check costs nothing
 function tweenActivate(tween)
 {
+    tween.activePass = tweenUpdatePass; // started again, even while active, so this update leaves it alone
     if (tween.active) return;
     tween.active = true;
-    tween.activePass = tweenUpdatePass;
     tweenActive.push(tween);
 }
 function tweenDeactivate(tween)
@@ -618,7 +618,8 @@ function tweenUpdate(gameDelta, realDelta)
             // Completion: fire end value, remove from active, start the next iteration
             // of a loop or pingPong, or when there is none it has completed, fire onComplete
             t.callback(t.interp(0));
-            if (!t.active) continue; // stopped by its own callback, it ends without completing
+            if (!t.active || t.activePass === pass)
+                continue; // stopped or restarted by its own callback, the run it was on ends without completing
             tweenDeactivate(t);
             const next = t.thenCallback;
             t.thenCallback = undefined;
