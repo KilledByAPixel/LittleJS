@@ -1392,12 +1392,17 @@ class RandomGenerator
     angle() { return this.float(-PI, PI); }
 
     /** Returns a seeded vec2 with each component between the two values passed in
-    *  - A point in a square, not a random direction like randVec2
+    *  - A point in a square, not a random direction like randVec2, see direction for that
     *  @param {number} [valueA]
     *  @param {number} [valueB]
     *  @return {Vector2} */
     vec2(valueA=1, valueB=0)
     { return vec2(this.float(valueA, valueB), this.float(valueA, valueB)); }
+
+    /** Returns a seeded Vector2 pointing a random way with the length passed in, the twin of randVec2
+    *  @param {number} [length]
+    *  @return {Vector2} */
+    direction(length=1) { return new Vector2().setAngle(this.float(2*PI), length); }
 
     /** Returns a random color between the two passed in colors, combine components if linear
     *  @param {Color}   [colorA=WHITE]
@@ -14249,6 +14254,7 @@ class UIVideo extends UIObject
  * - Per-child sizing: each row's height = max child.size.y in that row, each column's width = max child.size.x in that column
  * - Children are positioned centered in their cell
  * - Container auto-sizes to fit children plus padding
+ * - Hidden children take no cell, call relayout after showing or hiding one
  * @extends UIObject
  * @memberof UISystem
  */
@@ -14309,10 +14315,12 @@ class UILayout extends UIObject
 
     /** Recompute child positions and container size based on per-child sizes.
      *  Called automatically by addChild and removeChild. Call manually if you
-     *  mutate a child's size or change columns, gap, or padding. */
+     *  mutate a child's size, show or hide one, or change columns, gap, or padding. */
     relayout()
     {
-        const n = this.children.length;
+        // a hidden child leaves no gap, like a Continue button hidden when there is nothing to continue
+        const children = this.children.filter(child=> child.visible);
+        const n = children.length;
         if (!n)
         {
             this.size = vec2(this.padding * 2);
@@ -14331,7 +14339,7 @@ class UILayout extends UIObject
         {
             const col = i % cols;
             const row = floor(i / cols);
-            const child = this.children[i];
+            const child = children[i];
             colWidths[col] = max(colWidths[col], child.size.x);
             rowHeights[row] = max(rowHeights[row], child.size.y);
         }
@@ -14365,7 +14373,7 @@ class UILayout extends UIObject
             const row = floor(i / cols);
             const x = -contentWidth/2 + colOffsets[col] + this.gap * col + colWidths[col] / 2;
             const y = -contentHeight/2 + rowOffsets[row] + this.gap * row + rowHeights[row] / 2;
-            this.children[i].localPos = vec2(x, y);
+            children[i].localPos = vec2(x, y);
         }
 
         // container size = content + padding on all sides
@@ -14563,6 +14571,15 @@ class Box2dObject extends EngineObject
 
     /** Box2d objects updated with Box2d world step */
     updatePhysics() {}
+
+    /** Update the object transform, called automatically by engine even when paused;
+     *  its body places it, so it can be a parent but not a child, connect it to another with a joint
+     *  @param {boolean} [updateChildren] - Also update the children's transforms */
+    updateTransforms(updateChildren=true)
+    {
+        false&&ASSERT(!this.parent, 'a Box2dObject cannot be a child, its body would stay behind, connect it with a joint');
+        super.updateTransforms(updateChildren);
+    }
 
     /** Render the object, uses box2d drawing if no tile info exists */
     render()
@@ -15564,26 +15581,6 @@ class Box2dDistanceJoint extends Box2dJoint
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
- * Box2D Pin Joint
- * - Pins two objects together at a point
- * @extends Box2dDistanceJoint
- * @memberof Box2D
- */
-class Box2dPinJoint extends Box2dDistanceJoint
-{
-    /** Create a pin joint
-     *  @param {Box2dObject} objectA
-     *  @param {Box2dObject} objectB
-     *  @param {Vector2} [pos]
-     *  @param {boolean} [collide] */
-    constructor(objectA, objectB, pos=objectA.pos, collide=false)
-    {
-        super(objectA, objectB, pos, pos, collide);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/** 
  * Box2D Rope Joint
  * - Enforces a maximum distance between two points on two objects
  * @extends Box2dJoint
@@ -15738,6 +15735,27 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @param {number} time
      *  @return {number} */
     getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Pin Joint
+ * - Pins two objects together at a point, where they still turn freely, like a nail through two boards
+ * - A revolute joint at that point, so it holds exactly and its limits and motor work too
+ * @extends Box2dRevoluteJoint
+ * @memberof Box2D
+ */
+class Box2dPinJoint extends Box2dRevoluteJoint
+{
+    /** Create a pin joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} [pos] - World position, objectA's position if not given
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, pos=objectA.pos, collide=false)
+    {
+        super(objectA, objectB, pos, collide);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -16784,18 +16802,22 @@ async function box2dInit()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Draw a scalable nine-slice UI element to the main canvas in screen space
- *  Draws with the 2D context, not WebGL
+/** Draw a scalable nine-slice UI element in screen space, drawNineSlice with screenSpace set
+ *  - Draws with the 2D context by default, on top of what WebGL drew, like drawTextScreen
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
+ *  @param {Color} [color=WHITE] - Color to modulate with
  *  @param {number} [borderSize] - Rendered thickness of the border sections
+ *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @param {number} [angle] - Angle to rotate by
+ *  @param {boolean} [useWebGL] - Use WebGL for rendering
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
-function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
+function drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 {
-    drawNineSlice(pos, size, startTile, WHITE, borderSize, undefined, extraSpace, angle, false, true);
+    drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
 }
 
 /** Draw a scalable nine-slice UI element in world space
@@ -16852,18 +16874,22 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
     }
 }
 
-/** Draw a scalable three-slice UI element to the main canvas in screen space
- *  Draws with the 2D context, not WebGL
+/** Draw a scalable three-slice UI element in screen space, drawThreeSlice with screenSpace set
+ *  - Draws with the 2D context by default, on top of what WebGL drew, like drawTextScreen
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
+ *  @param {Color} [color=WHITE] - Color to modulate with
  *  @param {number} [borderSize] - Rendered thickness of the border sections
+ *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @param {number} [angle] - Angle to rotate by
+ *  @param {boolean} [useWebGL] - Use WebGL for rendering
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
-function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
+function drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 {
-    drawThreeSlice(pos, size, startTile, WHITE, borderSize, undefined, extraSpace, angle, false, true);
+    drawThreeSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
 }
 
 /** Draw a scalable three-slice UI element in world space
@@ -24117,7 +24143,8 @@ class HeightMap
     }
 
     /** Distance along a ray to where it crosses the terrain surface, or undefined for a miss
-     *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
+     *  - Exact: the ground is flat inside each triangle, so the ray is checked between each grid line and
+     *    cell diagonal it crosses, and a hill it only grazes is still hit
      *  - A ray that starts under the ground crosses on its way out, so the hit is still on the surface
      *  @param {Ray3D} ray - From screenToRay, or any ray
      *  @return {number|undefined} */
@@ -24127,52 +24154,46 @@ class HeightMap
         const size = this.size, height = this.height, length = direction.length();
         if (!length) return;
 
-        // clip to the box around the terrain, and walk it in half cell steps from there
-        let t = raycastBox(ray, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
-        if (t === undefined) return;
-        const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
-        const step = cell / 2 / length, end = t + hypot(size.x, size.y, height) / length;
-        if (!(step > 0)) return; // a zero size
-
-        // where the ray leaves the map's footprint, so the last step stops at the edge instead of past it
-        let exit = Infinity;
+        // clip to the box around the terrain, from where the ray enters it to where it leaves the map's footprint
+        const start = raycastBox(ray, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
+        if (start === undefined || !(size.x > 0 && size.y > 0)) return;
+        let end = start + hypot(size.x, size.y, height) / length;
         if (direction.x)
-            exit = min(exit, (sign(direction.x) * size.x / 2 - origin.x) / direction.x);
+            end = min(end, (sign(direction.x) * size.x / 2 - origin.x) / direction.x);
         if (direction.z)
-            exit = min(exit, (sign(direction.z) * size.y / 2 - origin.z) / direction.z);
+            end = min(end, (sign(direction.z) * size.y / 2 - origin.z) / direction.z);
 
-        // is the ray below the ground this far along, or undefined where it is off the map; a point on an edge
-        // can round a hair outside it, so the edges have a little give, and getHeight clamps there
-        const under = (at)=>
+        // the grid lines and cell diagonals it crosses, in grid units u across the columns and v across the rows,
+        // each linear along the ray; between two of them the ground under it is one flat triangle
+        const scaleU = (this.columns - 1) / size.x, scaleV = (this.rows - 1) / size.y;
+        const u0 = (origin.x / size.x + .5) * (this.columns - 1), u1 = direction.x * scaleU;
+        const v0 = (origin.z / size.y + .5) * (this.rows - 1), v1 = direction.z * scaleV;
+        const breaks = [start, end];
+        for (const [f0, f1] of [[u0, u1], [v0, v1], [u0 + v0, u1 + v1]])
         {
-            const p = origin.add(direction.scale(at)), give = 1 + 1e-9;
-            if (abs(p.x) > size.x / 2 * give || abs(p.z) > size.y / 2 * give) return;
-            return p.y <= this.getHeight(p.x, p.z);
+            if (!f1) continue;
+            const a = f0 + f1 * start, b = f0 + f1 * end;
+            for (let k = ceil(min(a, b)); k <= max(a, b); ++k)
+                breaks.push((k - f0) / f1);
+        }
+        breaks.sort((a, b)=> a - b);
+
+        // how far above the ground the ray is, straight along each piece, so a crossing is solved exactly;
+        // one that starts under the ground finds where it comes out, the surface it breaks through
+        const above = (at)=>
+        {
+            const p = origin.add(direction.scale(at));
+            return p.y - this.getHeight(p.x, p.z);
         };
-
-        // look for where the ray changes sides, so one coming up from under the ground
-        // lands on the surface it breaks through instead of wherever it entered the box
-        const startUnder = under(t);
-        if (startUnder === undefined) return; // it meets the box outside the map itself
-        for (; t < end; t += step)
+        let a = start, da = above(a);
+        const startUnder = da <= 0;
+        for (const b of breaks)
         {
-            const next = min(t + step, exit);
-            const u = under(next);
-            if (u === undefined) return; // it left the map before crossing
-            if (u === startUnder)
-            {
-                if (next >= exit) return; // it reached the edge without crossing
-                continue;
-            }
-
-            // it crossed between the last two samples, halve the gap until it is exact
-            let a = t, b = next;
-            for (let i = 0; i < 16; ++i)
-            {
-                const mid = (a + b) / 2;
-                under(mid) === startUnder ? a = mid : b = mid;
-            }
-            return b;
+            if (b <= a || b > end) continue;
+            const db = above(b);
+            if (db <= 0 !== startUnder)
+                return da === db ? b : a + (b - a) * da / (da - db);
+            a = b, da = db;
         }
     }
 

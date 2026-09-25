@@ -13,12 +13,14 @@ function gameRender()
         drawText('Nine Slice\nThin Border', pos, 1, BLACK);
     }
     {
-        // draw nine slice in screen space with thick border and rotation
+        // draw nine slice in screen space with color, thick border and rotation
         const pos = vec2(700,150);
         const size = vec2(250);
+        const color = hsl(.55,.5,.9);
         const border = 32;
         const angle = time/2;
-        drawNineSliceScreen(pos, size, nineSliceTile, border, 2, angle);
+        drawNineSliceScreen(pos, size, nineSliceTile, color, border, undefined,
+            2, angle);
         drawTextScreen('Nine Slice\nScreen Space', pos, 30, BLACK);
     } 
     {

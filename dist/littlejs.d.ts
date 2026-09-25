@@ -1332,11 +1332,15 @@ declare module "littlejsengine" {
         *  @return {number} */
         angle(): number;
         /** Returns a seeded vec2 with each component between the two values passed in
-        *  - A point in a square, not a random direction like randVec2
+        *  - A point in a square, not a random direction like randVec2, see direction for that
         *  @param {number} [valueA]
         *  @param {number} [valueB]
         *  @return {Vector2} */
         vec2(valueA?: number, valueB?: number): Vector2;
+        /** Returns a seeded Vector2 pointing a random way with the length passed in, the twin of randVec2
+        *  @param {number} [length]
+        *  @return {Vector2} */
+        direction(length?: number): Vector2;
         /** Returns a random color between the two passed in colors, combine components if linear
         *  @param {Color}   [colorA=WHITE]
         *  @param {Color}   [colorB=BLACK]
@@ -5060,6 +5064,7 @@ declare module "littlejsengine" {
      * - Per-child sizing: each row's height = max child.size.y in that row, each column's width = max child.size.x in that column
      * - Children are positioned centered in their cell
      * - Container auto-sizes to fit children plus padding
+     * - Hidden children take no cell, call relayout after showing or hiding one
      * @extends UIObject
      * @memberof UISystem
      */
@@ -5080,7 +5085,7 @@ declare module "littlejsengine" {
         padding: number;
         /** Recompute child positions and container size based on per-child sizes.
          *  Called automatically by addChild and removeChild. Call manually if you
-         *  mutate a child's size or change columns, gap, or padding. */
+         *  mutate a child's size, show or hide one, or change columns, gap, or padding. */
         relayout(): void;
     }
     /**
@@ -5663,17 +5668,12 @@ declare module "littlejsengine" {
     }
     /**
      * Box2D Pin Joint
-     * - Pins two objects together at a point
-     * @extends Box2dDistanceJoint
+     * - Pins two objects together at a point, where they still turn freely, like a nail through two boards
+     * - A revolute joint at that point, so it holds exactly and its limits and motor work too
+     * @extends Box2dRevoluteJoint
      * @memberof Box2D
      */
-    export class Box2dPinJoint extends Box2dDistanceJoint {
-        /** Create a pin joint
-         *  @param {Box2dObject} objectA
-         *  @param {Box2dObject} objectB
-         *  @param {Vector2} [pos]
-         *  @param {boolean} [collide] */
-        constructor(objectA: Box2dObject, objectB: Box2dObject, pos?: Vector2, collide?: boolean);
+    export class Box2dPinJoint extends Box2dRevoluteJoint {
     }
     /**
      * Box2D Rope Joint
@@ -6128,16 +6128,20 @@ declare module "littlejsengine" {
      * - Nine slice and three slice drawing
      * @namespace DrawUtilities
      */
-    /** Draw a scalable nine-slice UI element to the main canvas in screen space
-     *  Draws with the 2D context, not WebGL
+    /** Draw a scalable nine-slice UI element in screen space, drawNineSlice with screenSpace set
+     *  - Draws with the 2D context by default, on top of what WebGL drew, like drawTextScreen
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
+     *  @param {Color} [color=WHITE] - Color to modulate with
      *  @param {number} [borderSize] - Rendered thickness of the border sections
+     *  @param {Color} [additiveColor] - Additive color
      *  @param {number} [extraSpace] - Extra spacing adjustment
      *  @param {number} [angle] - Angle to rotate by
+     *  @param {boolean} [useWebGL] - Use WebGL for rendering
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
-    export function drawNineSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number, angle?: number): void;
+    export function drawNineSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw a scalable three-slice UI element in world space
      *  This function can apply color and additive color if WebGL is enabled
      *  The three-slice samples 3 consecutive tiles from the tilesheet, it does not
@@ -6157,16 +6161,20 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
     export function drawThreeSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-    /** Draw a scalable three-slice UI element to the main canvas in screen space
-     *  Draws with the 2D context, not WebGL
+    /** Draw a scalable three-slice UI element in screen space, drawThreeSlice with screenSpace set
+     *  - Draws with the 2D context by default, on top of what WebGL drew, like drawTextScreen
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
+     *  @param {Color} [color=WHITE] - Color to modulate with
      *  @param {number} [borderSize] - Rendered thickness of the border sections
+     *  @param {Color} [additiveColor] - Additive color
      *  @param {number} [extraSpace] - Extra spacing adjustment
      *  @param {number} [angle] - Angle to rotate by
+     *  @param {boolean} [useWebGL] - Use WebGL for rendering
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
-    export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number, angle?: number): void;
+    export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw a crescent / moon-phase shape built from a polygon
      *  Routes through drawPoly, so it supports WebGL, screen space, color, and outlines
      *  @param {Vector2} pos - Center position
@@ -8082,7 +8090,8 @@ declare module "littlejsengine" {
          *  @return {Color} */
         getColor(x: number | Vector3, z?: number): Color;
         /** Distance along a ray to where it crosses the terrain surface, or undefined for a miss
-         *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
+         *  - Exact: the ground is flat inside each triangle, so the ray is checked between each grid line and
+         *    cell diagonal it crosses, and a hill it only grazes is still hit
          *  - A ray that starts under the ground crosses on its way out, so the hit is still on the surface
          *  @param {Ray3D} ray - From screenToRay, or any ray
          *  @return {number|undefined} */

@@ -161,12 +161,11 @@ test('a pin joint pins both objects at its point', () =>
     const pin = new Box2dPinJoint(a, b, vec2(200.5, 0));
     near(pin.getAnchorA().x, 200.5, 'anchor A');
     near(pin.getAnchorB().x, 200.5, 'anchor B');
-    near(pin.getLength(), 0, 'length');
     pin.destroy();
 
     // by default, at objectA, as it was
     const pinA = new Box2dPinJoint(a, b);
-    near(pinA.getAnchorA().x, 200); near(pinA.getAnchorB().x, 200); near(pinA.getLength(), 0);
+    near(pinA.getAnchorA().x, 200); near(pinA.getAnchorB().x, 200);
     a.destroy(); b.destroy();
 });
 

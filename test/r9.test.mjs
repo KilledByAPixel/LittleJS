@@ -141,3 +141,49 @@ test('3D picking hits the box of a mesh, so a big floor does not win over what s
     }
     finally { clearObjects(); }
 });
+
+test('RandomGenerator.direction is a seeded randVec2: that length, any way', () =>
+{
+    const r = new LJS.RandomGenerator(7), again = new LJS.RandomGenerator(7);
+    const quadrants = new Set;
+    for (let i = 200; i--;)
+    {
+        const v = r.direction(3);
+        assert.ok(Math.abs(v.length() - 3) < 1e-9);
+        assert.deepEqual(v, again.direction(3), 'the same for the same seed');
+        quadrants.add((v.x < 0) + 2*(v.y < 0));
+    }
+    assert.equal(quadrants.size, 4, 'every way, not only up and right');
+});
+
+test('HeightMap.raycast hits a hill the ray only grazes, and matches a fine search', () =>
+{
+    const peak = new LJS.HeightMap([[0,0,0],[0,1,0],[0,0,0]], vec2(2, 2), 1);
+    const t = peak.raycast(new Ray3D(vec3(-.8, 1.2, 0), vec3(1, -.35, 0)));
+    assert.ok(t !== undefined && Math.abs(t - .74) < .01, 'grazes the peak: ' + t);
+
+    // random rays against a random map, checked by a search a hundred times finer than a cell
+    const rng = new LJS.RandomGenerator(5);
+    const heights = [...Array(9)].map(()=> [...Array(11)].map(()=> rng.float()));
+    const terrain = new LJS.HeightMap(heights, vec2(10, 8), 2);
+    const fine = (ray)=>
+    {
+        let last;
+        for (let s = 0; s < 40; s += .001)
+        {
+            const p = ray.getPosition(s);
+            if (Math.abs(p.x) > 5 || Math.abs(p.z) > 4) { if (last !== undefined) break; continue; }
+            const below = p.y <= terrain.getHeight(p.x, p.z);
+            if (last !== undefined && below !== last) return s;
+            last ??= below;
+        }
+    };
+    for (let i = 60; i--;)
+    {
+        const ray = new Ray3D(vec3(rng.float(-6, 6), rng.float(1, 4), rng.float(-5, 5)),
+            vec3(rng.float(-1, 1), rng.float(-.6, -.05), rng.float(-1, 1)));
+        const exact = terrain.raycast(ray), found = fine(ray);
+        assert.equal(exact === undefined, found === undefined, 'hit or miss agree for ray ' + i);
+        exact !== undefined && assert.ok(Math.abs(exact - found) < .003, 'at the same place ' + exact + ' ' + found);
+    }
+});

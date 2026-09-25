@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { Box2dPlugin, Box2dObject, Box2dStaticObject, Box2dTargetJoint, Box2dRevoluteJoint, Box2dWeldJoint,
-    Box2dGearJoint, Box2dWheelJoint, Box2dFrictionJoint, ParticleEmitter, box2d, vec2, gravity, setGravity,
+    Box2dGearJoint, Box2dWheelJoint, Box2dFrictionJoint, Box2dPinJoint, ParticleEmitter, box2d, vec2, gravity, setGravity,
     engineObjectsUpdate } from '../dist/littlejs.esm.js';
 
 // review round 9: a target joint refuses what would lock the world, a gravity change and the spring and mass setters
@@ -108,4 +108,30 @@ test('joint setters refuse values Box2D would stop on', () =>
         box2d.step();
     }
     finally { friction.destroy(); weld.destroy(); hinge.destroy(); a.destroy(); b.destroy(); box2d.step(); }
+});
+
+test('a pin joint holds its point exactly while the objects swing on it', () =>
+{
+    const post = new Box2dStaticObject(vec2(0, 200));
+    const arm = new Box2dObject(vec2(2, 200), vec2(4, .3));
+    arm.addBox(vec2(4, .3), undefined, 0, 5);
+    const pin = new Box2dPinJoint(post, arm, vec2(0, 200));
+    try
+    {
+        let gap = 0;
+        for (let i = 300; i--;)
+        {
+            box2d.step();
+            gap = Math.max(gap, pin.getAnchorA().distance(pin.getAnchorB()));
+        }
+        assert.ok(gap < .01, 'the anchors stay together: ' + gap);
+    }
+    finally { pin.destroy(); post.destroy(); arm.destroy(); box2d.step(); }
+});
+
+test('a Box2dObject can not be made a child, its body would stay behind', () =>
+{
+    const parent = new Box2dObject(vec2(0, 300)), child = new Box2dObject(vec2(1, 300));
+    try { assert.throws(()=> parent.addChild(child), /Assert failed/); }
+    finally { parent.destroy(); child.destroy(); box2d.step(); }
 });

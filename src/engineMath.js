@@ -613,12 +613,17 @@ class RandomGenerator
     angle() { return this.float(-PI, PI); }
 
     /** Returns a seeded vec2 with each component between the two values passed in
-    *  - A point in a square, not a random direction like randVec2
+    *  - A point in a square, not a random direction like randVec2, see direction for that
     *  @param {number} [valueA]
     *  @param {number} [valueB]
     *  @return {Vector2} */
     vec2(valueA=1, valueB=0)
     { return vec2(this.float(valueA, valueB), this.float(valueA, valueB)); }
+
+    /** Returns a seeded Vector2 pointing a random way with the length passed in, the twin of randVec2
+    *  @param {number} [length]
+    *  @return {Vector2} */
+    direction(length=1) { return new Vector2().setAngle(this.float(2*PI), length); }
 
     /** Returns a random color between the two passed in colors, combine components if linear
     *  @param {Color}   [colorA=WHITE]

@@ -9,18 +9,22 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Draw a scalable nine-slice UI element to the main canvas in screen space
- *  Draws with the 2D context, not WebGL
+/** Draw a scalable nine-slice UI element in screen space, drawNineSlice with screenSpace set
+ *  - Draws with the 2D context by default, on top of what WebGL drew, like drawTextScreen
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
+ *  @param {Color} [color=WHITE] - Color to modulate with
  *  @param {number} [borderSize] - Rendered thickness of the border sections
+ *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @param {number} [angle] - Angle to rotate by
+ *  @param {boolean} [useWebGL] - Use WebGL for rendering
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
-function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
+function drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 {
-    drawNineSlice(pos, size, startTile, WHITE, borderSize, undefined, extraSpace, angle, false, true);
+    drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
 }
 
 /** Draw a scalable nine-slice UI element in world space
@@ -77,18 +81,22 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
     }
 }
 
-/** Draw a scalable three-slice UI element to the main canvas in screen space
- *  Draws with the 2D context, not WebGL
+/** Draw a scalable three-slice UI element in screen space, drawThreeSlice with screenSpace set
+ *  - Draws with the 2D context by default, on top of what WebGL drew, like drawTextScreen
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
+ *  @param {Color} [color=WHITE] - Color to modulate with
  *  @param {number} [borderSize] - Rendered thickness of the border sections
+ *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @param {number} [angle] - Angle to rotate by
+ *  @param {boolean} [useWebGL] - Use WebGL for rendering
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
-function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
+function drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 {
-    drawThreeSlice(pos, size, startTile, WHITE, borderSize, undefined, extraSpace, angle, false, true);
+    drawThreeSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
 }
 
 /** Draw a scalable three-slice UI element in world space

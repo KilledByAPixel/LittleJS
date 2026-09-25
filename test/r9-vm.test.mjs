@@ -137,3 +137,35 @@ test('Backspace in a text field removes a whole character, and works on a number
         [emoji.text, number.text];`);
     assert.deepEqual([...result], ['hi', '12']);
 });
+
+test('a UILayout leaves no gap for a hidden child', async () =>
+{
+    const { run } = await loadUI();
+    const result = run(`
+        const menu = new UILayout(vec2(0), 1, 10, 10);
+        const [a, b, c] = ['a', 'b', 'c'].map(t=> menu.addChild(new UIButton(vec2(), vec2(100, 40), t)));
+        const full = menu.size.y;
+        b.visible = false;
+        menu.relayout();
+        [full, menu.size.y, c.localPos.y - a.localPos.y];`);
+    const [full, shown, spacing] = [...result];
+    assert.equal(full, 3*40 + 2*10 + 2*10);
+    assert.equal(shown, 2*40 + 10 + 2*10, 'two rows now');
+    assert.equal(spacing, 50, 'c right after a');
+});
+
+test('the screen slice draws take a color and additive color like the world ones', () =>
+{
+    const { run, context } = loadEngine();
+    const calls = [];
+    context.drawNineSlice = (...args)=> calls.push(args);
+    context.drawThreeSlice = (...args)=> calls.push(args);
+    run(`const t = new TileInfo(vec2(), vec2(16));
+        drawNineSliceScreen(vec2(), vec2(64), t, RED, 8, BLUE);
+        drawThreeSliceScreen(vec2(), vec2(64), t, GREEN)`);
+    assert.equal(calls[0][3], run('RED'));
+    assert.equal(calls[0][4], 8);
+    assert.equal(calls[0][5], run('BLUE'));
+    assert.equal(calls[1][3], run('GREEN'));
+    assert.equal(calls[1][9], true, 'screen space');
+});

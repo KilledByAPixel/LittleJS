@@ -1803,6 +1803,7 @@ class UIVideo extends UIObject
  * - Per-child sizing: each row's height = max child.size.y in that row, each column's width = max child.size.x in that column
  * - Children are positioned centered in their cell
  * - Container auto-sizes to fit children plus padding
+ * - Hidden children take no cell, call relayout after showing or hiding one
  * @extends UIObject
  * @memberof UISystem
  */
@@ -1863,10 +1864,12 @@ class UILayout extends UIObject
 
     /** Recompute child positions and container size based on per-child sizes.
      *  Called automatically by addChild and removeChild. Call manually if you
-     *  mutate a child's size or change columns, gap, or padding. */
+     *  mutate a child's size, show or hide one, or change columns, gap, or padding. */
     relayout()
     {
-        const n = this.children.length;
+        // a hidden child leaves no gap, like a Continue button hidden when there is nothing to continue
+        const children = this.children.filter(child=> child.visible);
+        const n = children.length;
         if (!n)
         {
             this.size = vec2(this.padding * 2);
@@ -1885,7 +1888,7 @@ class UILayout extends UIObject
         {
             const col = i % cols;
             const row = floor(i / cols);
-            const child = this.children[i];
+            const child = children[i];
             colWidths[col] = max(colWidths[col], child.size.x);
             rowHeights[row] = max(rowHeights[row], child.size.y);
         }
@@ -1919,7 +1922,7 @@ class UILayout extends UIObject
             const row = floor(i / cols);
             const x = -contentWidth/2 + colOffsets[col] + this.gap * col + colWidths[col] / 2;
             const y = -contentHeight/2 + rowOffsets[row] + this.gap * row + rowHeights[row] / 2;
-            this.children[i].localPos = vec2(x, y);
+            children[i].localPos = vec2(x, y);
         }
 
         // container size = content + padding on all sides

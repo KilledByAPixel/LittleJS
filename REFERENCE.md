@@ -218,6 +218,7 @@ RandomGenerator.bool(chance=.5)           // Random boolean with given chance (0
 RandomGenerator.floatSign(valueA=1, valueB=0) // Random float between values with a random sign
 RandomGenerator.angle()                   // Random angle between -PI and PI
 RandomGenerator.vec2(valueA=1, valueB=0)  // Random Vector2, each component between values
+RandomGenerator.direction(length=1)       // Random Vector2 with the passed in length, like randVec2
 RandomGenerator.randColor(colorA=WHITE, colorB=BLACK, linear=false) // Random color between values
 RandomGenerator.mutateColor(color, amount=.05, alphaAmount=0) // Copy of a color randomly diverged
 
@@ -1325,9 +1326,8 @@ terrain.buildMesh(smooth)                     // one vertex per sample, centered
 terrain.getHeight(pos3D) or (x, z)            // world height of the drawn mesh there, to stand things on it
 terrain.getNormal(pos3D) or (x, z)            // surface normal there, to tilt things to the slope
 terrain.raycast(ray)                          // distance along a ray to where it crosses the ground, or undefined,
-                                              // for clicking; a ray starting underneath crosses on its way out, and
-                                              // the search steps half a cell at a time so a very thin ridge can slip
-                                              // between samples
+                                              // for clicking; exact, a hill the ray only grazes is still hit, and a
+                                              // ray starting underneath crosses on its way out
 terrain.getColor(pos3D) or (x, z)             // nearest sample color
 terrain.rows terrain.columns                  // samples along Z and X
 
@@ -1543,7 +1543,7 @@ box2d.raycastAll(start, end)   // Every Box2dRaycastResult along the ray, neares
 // Joints — all extend Box2dJoint
 new Box2dTargetJoint(object, fixedObject, worldPos) // Drag toward a point (mouse-follow)
 new Box2dDistanceJoint(objectA, objectB, anchorA, anchorB)
-new Box2dPinJoint(objectA, objectB, pos=objectA.pos) // pins the two together at pos
+new Box2dPinJoint(objectA, objectB, pos=objectA.pos) // pins the two together at pos, turning freely; a revolute joint
 new Box2dRopeJoint(objectA, objectB, anchorA, anchorB, extraLength=0) // max length is the anchors' distance
                                                                     // plus extraLength
 new Box2dRevoluteJoint(objectA, objectB, anchor)
@@ -1636,11 +1636,11 @@ newgrounds.resendUnlocks()           // advanced: send the ones whose request di
 ```javascript
 // Nine-slice — 3x3 tile grid scaled to fit
 drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
-drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
+drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0)
 
 // Three-slice — 1x3 tile strip (corner / side / center) rotated around the box
 drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
-drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
+drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0)
 
 // Crescent — moon-phase shape (percent: 0=new, .25=first quarter, .5=full, .75=last quarter)
 drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace, context)

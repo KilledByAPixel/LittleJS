@@ -442,7 +442,8 @@ class HeightMap
     }
 
     /** Distance along a ray to where it crosses the terrain surface, or undefined for a miss
-     *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
+     *  - Exact: the ground is flat inside each triangle, so the ray is checked between each grid line and
+     *    cell diagonal it crosses, and a hill it only grazes is still hit
      *  - A ray that starts under the ground crosses on its way out, so the hit is still on the surface
      *  @param {Ray3D} ray - From screenToRay, or any ray
      *  @return {number|undefined} */
@@ -452,52 +453,46 @@ class HeightMap
         const size = this.size, height = this.height, length = direction.length();
         if (!length) return;
 
-        // clip to the box around the terrain, and walk it in half cell steps from there
-        let t = raycastBox(ray, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
-        if (t === undefined) return;
-        const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
-        const step = cell / 2 / length, end = t + hypot(size.x, size.y, height) / length;
-        if (!(step > 0)) return; // a zero size
-
-        // where the ray leaves the map's footprint, so the last step stops at the edge instead of past it
-        let exit = Infinity;
+        // clip to the box around the terrain, from where the ray enters it to where it leaves the map's footprint
+        const start = raycastBox(ray, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
+        if (start === undefined || !(size.x > 0 && size.y > 0)) return;
+        let end = start + hypot(size.x, size.y, height) / length;
         if (direction.x)
-            exit = min(exit, (sign(direction.x) * size.x / 2 - origin.x) / direction.x);
+            end = min(end, (sign(direction.x) * size.x / 2 - origin.x) / direction.x);
         if (direction.z)
-            exit = min(exit, (sign(direction.z) * size.y / 2 - origin.z) / direction.z);
+            end = min(end, (sign(direction.z) * size.y / 2 - origin.z) / direction.z);
 
-        // is the ray below the ground this far along, or undefined where it is off the map; a point on an edge
-        // can round a hair outside it, so the edges have a little give, and getHeight clamps there
-        const under = (at)=>
+        // the grid lines and cell diagonals it crosses, in grid units u across the columns and v across the rows,
+        // each linear along the ray; between two of them the ground under it is one flat triangle
+        const scaleU = (this.columns - 1) / size.x, scaleV = (this.rows - 1) / size.y;
+        const u0 = (origin.x / size.x + .5) * (this.columns - 1), u1 = direction.x * scaleU;
+        const v0 = (origin.z / size.y + .5) * (this.rows - 1), v1 = direction.z * scaleV;
+        const breaks = [start, end];
+        for (const [f0, f1] of [[u0, u1], [v0, v1], [u0 + v0, u1 + v1]])
         {
-            const p = origin.add(direction.scale(at)), give = 1 + 1e-9;
-            if (abs(p.x) > size.x / 2 * give || abs(p.z) > size.y / 2 * give) return;
-            return p.y <= this.getHeight(p.x, p.z);
+            if (!f1) continue;
+            const a = f0 + f1 * start, b = f0 + f1 * end;
+            for (let k = ceil(min(a, b)); k <= max(a, b); ++k)
+                breaks.push((k - f0) / f1);
+        }
+        breaks.sort((a, b)=> a - b);
+
+        // how far above the ground the ray is, straight along each piece, so a crossing is solved exactly;
+        // one that starts under the ground finds where it comes out, the surface it breaks through
+        const above = (at)=>
+        {
+            const p = origin.add(direction.scale(at));
+            return p.y - this.getHeight(p.x, p.z);
         };
-
-        // look for where the ray changes sides, so one coming up from under the ground
-        // lands on the surface it breaks through instead of wherever it entered the box
-        const startUnder = under(t);
-        if (startUnder === undefined) return; // it meets the box outside the map itself
-        for (; t < end; t += step)
+        let a = start, da = above(a);
+        const startUnder = da <= 0;
+        for (const b of breaks)
         {
-            const next = min(t + step, exit);
-            const u = under(next);
-            if (u === undefined) return; // it left the map before crossing
-            if (u === startUnder)
-            {
-                if (next >= exit) return; // it reached the edge without crossing
-                continue;
-            }
-
-            // it crossed between the last two samples, halve the gap until it is exact
-            let a = t, b = next;
-            for (let i = 0; i < 16; ++i)
-            {
-                const mid = (a + b) / 2;
-                under(mid) === startUnder ? a = mid : b = mid;
-            }
-            return b;
+            if (b <= a || b > end) continue;
+            const db = above(b);
+            if (db <= 0 !== startUnder)
+                return da === db ? b : a + (b - a) * da / (da - db);
+            a = b, da = db;
         }
     }
 

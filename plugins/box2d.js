@@ -191,6 +191,15 @@ class Box2dObject extends EngineObject
     /** Box2d objects updated with Box2d world step */
     updatePhysics() {}
 
+    /** Update the object transform, called automatically by engine even when paused;
+     *  its body places it, so it can be a parent but not a child, connect it to another with a joint
+     *  @param {boolean} [updateChildren] - Also update the children's transforms */
+    updateTransforms(updateChildren=true)
+    {
+        ASSERT(!this.parent, 'a Box2dObject cannot be a child, its body would stay behind, connect it with a joint');
+        super.updateTransforms(updateChildren);
+    }
+
     /** Render the object, uses box2d drawing if no tile info exists */
     render()
     {
@@ -1191,26 +1200,6 @@ class Box2dDistanceJoint extends Box2dJoint
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
- * Box2D Pin Joint
- * - Pins two objects together at a point
- * @extends Box2dDistanceJoint
- * @memberof Box2D
- */
-class Box2dPinJoint extends Box2dDistanceJoint
-{
-    /** Create a pin joint
-     *  @param {Box2dObject} objectA
-     *  @param {Box2dObject} objectB
-     *  @param {Vector2} [pos]
-     *  @param {boolean} [collide] */
-    constructor(objectA, objectB, pos=objectA.pos, collide=false)
-    {
-        super(objectA, objectB, pos, pos, collide);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/** 
  * Box2D Rope Joint
  * - Enforces a maximum distance between two points on two objects
  * @extends Box2dJoint
@@ -1365,6 +1354,27 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @param {number} time
      *  @return {number} */
     getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Pin Joint
+ * - Pins two objects together at a point, where they still turn freely, like a nail through two boards
+ * - A revolute joint at that point, so it holds exactly and its limits and motor work too
+ * @extends Box2dRevoluteJoint
+ * @memberof Box2D
+ */
+class Box2dPinJoint extends Box2dRevoluteJoint
+{
+    /** Create a pin joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} [pos] - World position, objectA's position if not given
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, pos=objectA.pos, collide=false)
+    {
+        super(objectA, objectB, pos, collide);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
