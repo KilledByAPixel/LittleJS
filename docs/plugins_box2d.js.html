@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><meta name="description" content="LittleJS is a lightweight HTML5 game engine with fast WebGL rendering, physics, particles, sound, and more!"><meta name="keywords" content="javascript, game engine, html5, webgl, 2d, game development, indie games"><meta name="author" content="Frank Force"><meta property="og:title" content="LittleJS - The Tiny JavaScript Game Engine"><meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound"><meta property="og:type" content="website"><title>Source: plugins/box2d.js</title><!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_box2d.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_box2d.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
  * LittleJS Box2D Physics Plugin
  * - Box2dObject extends EngineObject with Box2D physics
  * - Call box2dInit() to enable
@@ -14,6 +14,8 @@
  * - Box2dTileLayer for grid based collision
  * - Every type of joint
  * - Debug physics drawing
+ * - Box2D works per second: its velocities and accelerations are in units per second, and it reads the engine's
+ *   gravity as units per second squared, where an EngineObject's are per frame
  * @namespace Box2D
  */
 
@@ -30,6 +32,92 @@ let box2d;
  *  @memberof Box2D */
 let box2dDebug = false;
 
+// Box2D copies every vector it is given, so the plugin hands it these two instead of making a new one each call,
+// which the binding would keep; a call that takes two vectors uses both
+let box2dTempVectors;
+function box2dTemp(v, slot=0)
+{
+    ASSERT(isVector2(v));
+    const temp = (box2dTempVectors ||= [new box2d.instance.b2Vec2(), new box2d.instance.b2Vec2()])[slot];
+    temp.Set(v.x, v.y);
+    return temp;
+}
+
+// the native objects a query needs, one of each kind made once and reused, since the binding keeps every one made;
+// a query sets the callback's ReportFixture before each use, so the one callback serves every query of its kind
+const box2dQueryObjects = {};
+const box2dGravity = {x:NaN, y:NaN}; // the gravity the world was last given
+function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
+
+// Box2D finds fixtures by boxes it pads and stretches ahead along the velocity, so a query checks the shape's own box
+function box2dFixtureOverlaps(fixture, aabb)
+{
+    const shape = fixture.GetShape(), transform = fixture.GetBody().GetTransform();
+    const shapeBox = box2dQueryObject('shapeAABB', 'b2AABB');
+    const lower = aabb.get_lowerBound(), upper = aabb.get_upperBound();
+    for (let i = shape.GetChildCount(); i--;)
+    {
+        shape.ComputeAABB(shapeBox, transform, i);
+        const a = shapeBox.get_lowerBound(), b = shapeBox.get_upperBound();
+        if (a.get_x() &lt;= upper.get_x() &amp;&amp; b.get_x() >= lower.get_x() &amp;&amp;
+            a.get_y() &lt;= upper.get_y() &amp;&amp; b.get_y() >= lower.get_y())
+            return true;
+    }
+    return false;
+}
+
+// wake a body and whatever touches it, Box2D does not when a body is moved, and a sleeping pair never updates
+function box2dWakeWithContacts(body)
+{
+    body.SetAwake(true);
+    for (let edge = body.GetContactList(); !box2d.isNull(edge); edge = edge.get_next())
+        edge.get_other().SetAwake(true);
+}
+
+// wake both bodies of a joint whose length changed, a sleeping body would stay where it was
+function box2dWakeJoint(joint)
+{
+    joint.GetBodyA().SetAwake(true);
+    joint.GetBodyB().SetAwake(true);
+}
+
+// what Box2D adds to the inertia for a center of mass away from the origin, in float32 as it does it, so taking it
+// off again gives exactly what Box2D keeps: an inertia of 0, a locked rotation, stays 0 and not a speck either side
+function box2dCenterInertia(mass, x, y)
+{
+    const f = Math.fround;
+    return f(f(mass)*f(f(f(x)*f(x)) + f(f(y)*f(y))));
+}
+
+// what cannot happen while the world steps, like losing a body from a contact callback: done now, or queued until
+// the step is done; a body going calls endContact for what it touched, and a destroy from there waits in the queue
+// too, since the contact it would free is still in use, so the queue runs one at a time in the order things came
+const box2dPending = [];
+let box2dPendingBusy = 0;
+function box2dWhenUnlocked(f)
+{
+    box2dPending.push(f);
+    if (!box2d.world.IsLocked() &amp;&amp; !box2dPendingBusy)
+        box2dRunPending();
+}
+function box2dRunPending()
+{
+    ++box2dPendingBusy;
+    try { while (box2dPending.length) box2dPending.shift()(); }
+    finally { --box2dPendingBusy; }
+}
+
+// each Box2dJoint by its native pointer, so a joint Box2D destroys along with a body can let go of its wrapper
+const box2dJoints = new Map;
+
+// a gear joint keeps pointers to the joints it gears and to their bodies, so it goes before either joint does
+function box2dDestroyGears(joint)
+{
+    for (const gear of box2dJoints.values())
+        if (gear instanceof Box2dGearJoint &amp;&amp; (gear.joint1 === joint || gear.joint2 === joint))
+            gear.destroy();
+}
+
 /** Enable Box2D debug drawing
  *  @param {boolean} enable
  *  @memberof Box2D */
@@ -41,6 +129,7 @@ function box2dSetDebug(enable) { box2dDebug = enable; }
  * - A LittleJS object with Box2D physics, dynamic by default
  * - Provides interface for Box2D body and fixture functions
  * - Each object can have multiple fixtures and joints
+ * - Angular values are clockwise like angle: angular velocity, torque, joint angles, limits and motor speeds
  * @extends EngineObject
  * @memberof Box2D
  */
@@ -56,41 +145,49 @@ class Box2dObject extends EngineObject
      *  @param {number}   [renderOrder] */
     constructor(pos=vec2(), size=vec2(), tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
     {
+        ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D bodies during a contact callback');
         super(pos, size, tileInfo, angle, color, renderOrder);
 
-        // create physics body
+        // create physics body, Box2D copies the def
         const bodyDef = new box2d.instance.b2BodyDef();
         bodyDef.set_type(bodyType);
-        bodyDef.set_position(box2d.vec2dTo(pos));
+        bodyDef.set_position(box2dTemp(pos));
         bodyDef.set_angle(-angle);
         
-        /** @property {Object} - The Box2d body */
+        /** @property {Object} - The Box2d body, undefined once it is destroyed */
         this.body = box2d.world.CreateBody(bodyDef);
+        box2d.instance.destroy(bodyDef);
         /** @property {Color} - Line color used for default box2d drawing */
-        this.lineColor = BLACK;
-        /** @property {Array&lt;Object>} - List of all edges for default box2d drawing */
+        this.lineColor = BLACK.copy();
+        /** @property {number} - Line width used for default box2d drawing */
+        this.lineWidth = .1;
+        /** @property {Array&lt;Array&lt;Vector2>>} - List of all edges for default box2d drawing
+         *  @type {Array&lt;Array&lt;Vector2>>} */
         this.edgeLists = [];
-        /** @property {Array&lt;Object>} - List of all edge loops for default box2d drawing */
+        /** @property {Array&lt;Array&lt;Vector2>>} - List of all edge loops for default box2d drawing
+         *  @type {Array&lt;Array&lt;Vector2>>} */
         this.edgeLoops = [];
+        // the fixtures of the edge lists and loops, by pointer, each to the points it is drawn with
+        this.edgeListFixtures = new Map;
 
         this.body.object = this; // link body to this object
         box2d.objects.push(this); // keep track of all box2d objects
     }
 
-    /** Destroy this object and its physics body */
-    destroy()
+    /** Destroy this object and its physics body
+     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+    destroy(immediate=false)
     {
         if (this.destroyed) return;
 
-        // destroy physics body, fixtures, and joints
+        // destroy physics body, fixtures, and joints; from a contact callback the world is still
+        // stepping and cannot lose a body, so it goes as soon as the step is done; the object
+        // leaves box2d.objects at the next step, or the next frame while paused or time is stopped;
+        // the body lets go of it after, since destroying it calls endContact, which finds it there
         ASSERT(this.body, 'Box2dObject has no body to destroy');
-        box2d.world.DestroyBody(this.body);
-
-        // remove from tracked list so paused / headless sessions don't leak
-        const i = box2d.objects.indexOf(this);
-        if (i >= 0)
-            box2d.objects.splice(i, 1);
-        super.destroy();
+        const body = this.body;
+        box2dWhenUnlocked(()=> { box2d.world.DestroyBody(body); body.object = undefined; this.body = undefined; });
+        super.destroy(immediate);
     }
 
     /** Box2d objects updated with Box2d world step */
@@ -123,33 +220,39 @@ class Box2dObject extends EngineObject
      *  @param {CanvasRenderingContext2D} [context] */
     drawFixtures(color=WHITE, lineColor=BLACK, lineWidth=.1, useWebGL, context)
     {
-        // draw non-edge fixtures
+        // draw each fixture, but the edges of an edge list or loop, which draw below as one line
+        const edgeFixtures = this.edgeListFixtures;
         this.getFixtureList().forEach((fixture)=>
         {
-            const shape = box2d.castShapeObject(fixture.GetShape());
-            if (shape.GetType() !== box2d.instance.b2Shape.e_edge)
-            {
+            if (!edgeFixtures.has(box2d.instance.getPointer(fixture)))
                 box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, useWebGL, context);
-            }
         });
 
         // draw edges using a single draw line for better connections
         this.edgeLists.forEach(points=>
-            drawLineList(points, lineWidth, lineColor, false, this.pos, this.angle));
+            drawLineList(points, lineWidth, lineColor, false, this.pos, this.angle, useWebGL, false, context));
         this.edgeLoops.forEach(points=>
-            drawLineList(points, lineWidth, lineColor, true, this.pos, this.angle));
+            drawLineList(points, lineWidth, lineColor, true, this.pos, this.angle, useWebGL, false, context));
     }
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics contact callbacks
 
-    /** Called when a contact begins
-     *  @param {Box2dObject} otherObject */
-    beginContact(otherObject) {}
+    /** Called when a contact begins, while the world steps: a destroy or a setter waits until the step is done,
+     *  and creating objects, fixtures or joints must wait until after the step
+     *  - The fixtures say which shapes touched, the same objects addBox and the others returned, so a small sensor
+     *    under a player's feet can tell standing on the ground from touching a wall
+     *  @param {Box2dObject} otherObject
+     *  @param {Object} [fixture] - This object's fixture that touched
+     *  @param {Object} [otherFixture] - The other object's fixture that touched */
+    beginContact(otherObject, fixture, otherFixture) {}
 
-    /** Called when a contact ends
-     *  @param {Box2dObject} otherObject */
-    endContact(otherObject) {}
+    /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
+     *  until the step is done, and creating objects, fixtures or joints must wait until after the step
+     *  @param {Box2dObject} otherObject
+     *  @param {Object} [fixture] - This object's fixture that touched
+     *  @param {Object} [otherFixture] - The other object's fixture that touched */
+    endContact(otherObject, fixture, otherFixture) {}
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics fixtures and shapes
@@ -165,14 +268,18 @@ class Box2dObject extends EngineObject
         ASSERT(isNumber(density), 'density must be a number');
         ASSERT(isNumber(friction), 'friction must be a number');
         ASSERT(isNumber(restitution), 'restitution must be a number');
+        ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D fixtures during a contact callback');
 
+        // Box2D copies the def and the shape
         const fd = new box2d.instance.b2FixtureDef();
         fd.set_shape(shape);
         fd.set_density(density);
         fd.set_friction(friction);
         fd.set_restitution(restitution);
         fd.set_isSensor(isSensor);
-        return this.body.CreateFixture(fd);
+        const fixture = this.body.CreateFixture(fd);
+        box2d.instance.destroy(fd);
+        return fixture;
     }
 
     /** Add a box shape to the body
@@ -192,12 +299,19 @@ class Box2dObject extends EngineObject
         ASSERT(isVector2(offset), 'offset must be a Vector2');
         ASSERT(isNumber(angle), 'angle must be a number');
 
+        // Box2D stops for good on a box with almost no area, like addPoly no fixture is made from one
+        ASSERT(size.x * size.y > 1e-6, 'box is too small for Box2D');
+        if (!(size.x * size.y > 1e-6)) return;
+
         const shape = new box2d.instance.b2PolygonShape();
-        shape.SetAsBox(size.x/2, size.y/2, box2d.vec2dTo(offset), -angle);
-        return this.addShape(shape, density, friction, restitution, isSensor);
+        shape.SetAsBox(size.x/2, size.y/2, box2dTemp(offset), -angle);
+        const fixture = this.addShape(shape, density, friction, restitution, isSensor);
+        box2d.instance.destroy(shape); // the fixture has its own copy
+        return fixture;
     }
 
-    /** Add a polygon shape to the body
+    /** Add a polygon shape to the body, the convex hull of its points; Box2D takes 3 to 8 points,
+     *  not all in a line, and no fixture is made from any other; points closer than .001 count as one
      *  @param {Array&lt;Vector2>} points
      *  @param {number}  [density]
      *  @param {number}  [friction]
@@ -209,7 +323,18 @@ class Box2dObject extends EngineObject
 
         function box2dCreatePolygonShape(points)
         {
-            ASSERT(3 &lt;= points.length &amp;&amp; points.length &lt;= 8);
+            // Box2D stops for good on two hull points that nearly meet, like a loop whose last point is its first
+            points = points.filter((p, i)=> points.slice(0, i).every(q=> p.distanceSquared(q) > 1e-6));
+
+            // Box2D stops for good on a polygon it cannot take, so one with too many points or no area makes none;
+            // it takes the convex hull, which is at least as big as the biggest triangle of the points
+            let area = 0; // twice the biggest triangle's
+            if (3 &lt;= points.length &amp;&amp; points.length &lt;= 8)
+                for (const a of points) for (const b of points) for (const c of points)
+                    area = max(area, abs(b.subtract(a).cross(c.subtract(a))));
+            ASSERT(area >= 1e-6, 'Box2D polygons need 3 to 8 points, not all in a line');
+            if (!(area >= 1e-6)) return;
+
             const buffer = box2d.instance._malloc(points.length * 8);
             for (let i=0, offset=0; i&lt;points.length; ++i)
             {
@@ -226,12 +351,15 @@ class Box2dObject extends EngineObject
         }
 
         const shape = box2dCreatePolygonShape(points);
-        return this.addShape(shape, density, friction, restitution, isSensor);
+        if (!shape) return;
+        const fixture = this.addShape(shape, density, friction, restitution, isSensor);
+        box2d.instance.destroy(shape); // the fixture has its own copy
+        return fixture;
     }
 
     /** Add a regular polygon shape to the body
      *  @param {number}  [diameter]
-     *  @param {number}  [sides]
+     *  @param {number}  [sides] - 3 to 8, the most Box2D polygons have
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
@@ -240,6 +368,8 @@ class Box2dObject extends EngineObject
     {
         ASSERT(isNumber(diameter) &amp;&amp; diameter>0, 'diameter must be a positive number');
         ASSERT(isNumber(sides) &amp;&amp; sides>2, 'sides must be a positive number greater than 2');
+        ASSERT(sides &lt;= 8, 'Box2D polygons have at most 8 sides');
+        sides = min(sides, 8); // more would stop Box2D for good
 
         const points = [];
         const radius = diameter/2;
@@ -279,9 +409,11 @@ class Box2dObject extends EngineObject
         ASSERT(isVector2(offset), 'offset must be a Vector2');
         
         const shape = new box2d.instance.b2CircleShape();
-        shape.set_m_p(box2d.vec2dTo(offset));
+        shape.set_m_p(box2dTemp(offset));
         shape.set_m_radius(diameter/2);
-        return this.addShape(shape, density, friction, restitution, isSensor);
+        const fixture = this.addShape(shape, density, friction, restitution, isSensor);
+        box2d.instance.destroy(shape); // the fixture has its own copy
+        return fixture;
     }
 
     /** Add an edge shape to the body
@@ -297,8 +429,10 @@ class Box2dObject extends EngineObject
         ASSERT(isVector2(point2), 'point2 must be a Vector2');
 
         const shape = new box2d.instance.b2EdgeShape();
-        shape.Set(box2d.vec2dTo(point1), box2d.vec2dTo(point2));
-        return this.addShape(shape, density, friction, restitution, isSensor);
+        shape.Set(box2dTemp(point1), box2dTemp(point2, 1));
+        const fixture = this.addShape(shape, density, friction, restitution, isSensor);
+        box2d.instance.destroy(shape); // the fixture has its own copy
+        return fixture;
     }
 
     /** Add an edge list to the body
@@ -313,17 +447,22 @@ class Box2dObject extends EngineObject
         const fixtures = [], edgePoints = [];
         for (let i=0; i&lt;points.length-1; ++i)
         {
+            // the ghost vertices, where there is a neighbor, make the edges one smooth surface
             const shape = new box2d.instance.b2EdgeShape();
-            points[i-1] &amp;&amp; shape.set_m_vertex0(box2d.vec2dTo(points[i-1]));
-            points[i+0] &amp;&amp; shape.set_m_vertex1(box2d.vec2dTo(points[i+0]));
-            points[i+1] &amp;&amp; shape.set_m_vertex2(box2d.vec2dTo(points[i+1]));
-            points[i+2] &amp;&amp; shape.set_m_vertex3(box2d.vec2dTo(points[i+2]));
+            points[i-1] &amp;&amp; shape.set_m_vertex0(box2dTemp(points[i-1]));
+            points[i+0] &amp;&amp; shape.set_m_vertex1(box2dTemp(points[i+0]));
+            points[i+1] &amp;&amp; shape.set_m_vertex2(box2dTemp(points[i+1]));
+            points[i+2] &amp;&amp; shape.set_m_vertex3(box2dTemp(points[i+2]));
+            shape.set_m_hasVertex0(!!points[i-1]);
+            shape.set_m_hasVertex3(!!points[i+2]);
             const f = this.addShape(shape, density, friction, restitution, isSensor);
+            box2d.instance.destroy(shape); // the fixture has its own copy
             fixtures.push(f);
             edgePoints.push(points[i].copy());
         }
         edgePoints.push(points[points.length-1].copy());
         this.edgeLists.push(edgePoints);
+        fixtures.forEach(f=> this.edgeListFixtures.set(box2d.instance.getPointer(f), edgePoints));
         return fixtures;
     }
 
@@ -341,30 +480,63 @@ class Box2dObject extends EngineObject
         for (let i=0; i&lt;points.length; ++i)
         {
             const shape = new box2d.instance.b2EdgeShape();
-            shape.set_m_vertex0(box2d.vec2dTo(getPoint(i-1)));
-            shape.set_m_vertex1(box2d.vec2dTo(getPoint(i+0)));
-            shape.set_m_vertex2(box2d.vec2dTo(getPoint(i+1)));
-            shape.set_m_vertex3(box2d.vec2dTo(getPoint(i+2)));
+            shape.set_m_vertex0(box2dTemp(getPoint(i-1)));
+            shape.set_m_vertex1(box2dTemp(getPoint(i+0)));
+            shape.set_m_vertex2(box2dTemp(getPoint(i+1)));
+            shape.set_m_vertex3(box2dTemp(getPoint(i+2)));
+            shape.set_m_hasVertex0(true);
+            shape.set_m_hasVertex3(true);
             const f = this.addShape(shape, density, friction, restitution, isSensor);
+            box2d.instance.destroy(shape); // the fixture has its own copy
             fixtures.push(f);
             edgePoints.push(points[i].copy());
         }
         this.edgeLoops.push(edgePoints);
+        fixtures.forEach(f=> this.edgeListFixtures.set(box2d.instance.getPointer(f), edgePoints));
         return fixtures;
     }
 
-    /** Destroy a fixture from the body
-     *  @param {Object} [fixture] */
-    destroyFixture(fixture) { this.body.DestroyFixture(fixture); }
+    /** Destroy a fixture from the body, from a contact callback once the step is done
+     *  @param {Object} fixture */
+    destroyFixture(fixture)
+    {
+        // an edge list or loop that loses a fixture is no longer one line, what is left of it draws edge by edge
+        const edgeFixtures = this.edgeListFixtures, points = edgeFixtures.get(box2d.instance.getPointer(fixture));
+        if (points)
+        {
+            this.edgeLists = this.edgeLists.filter(p=> p !== points);
+            this.edgeLoops = this.edgeLoops.filter(p=> p !== points);
+            edgeFixtures.forEach((p, pointer)=> p === points &amp;&amp; edgeFixtures.delete(pointer));
+        }
 
-    /** Destroy all fixture from the body */
+        // not once the body is gone, which takes its fixtures with it, or once the fixture is,
+        // since a second destroy of it, like one from each of two contacts in a step, stops Box2D for good
+        const pointer = box2d.instance.getPointer(fixture);
+        box2dWhenUnlocked(()=> this.body &amp;&amp; this.getFixtureList().some(f=> box2d.instance.getPointer(f) === pointer)
+            &amp;&amp; this.body.DestroyFixture(fixture));
+    }
+
+    /** Destroy all fixtures from the body, from a contact callback once the step is done */
     destroyAllFixtures()
-    { this.getFixtureList().forEach(fixture=>this.destroyFixture(fixture)); }
+    {
+        // the fixtures it has now, each destroyed if still there, in one pass so a big tile layer rebuilds quickly
+        this.edgeLists = [];
+        this.edgeLoops = [];
+        this.edgeListFixtures.clear();
+        const fixtures = this.getFixtureList(), getPointer = box2d.instance.getPointer;
+        box2dWhenUnlocked(()=>
+        {
+            if (!this.body) return;
+            const alive = new Set(this.getFixtureList().map(getPointer));
+            for (const fixture of fixtures)
+                alive.has(getPointer(fixture)) &amp;&amp; this.body.DestroyFixture(fixture);
+        });
+    }
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics get functions
 
-    /** Gets the center of mass
+    /** Gets the center of mass in world space
      *  @return {Vector2} */
     getCenterOfMass() { return box2d.vec2From(this.body.GetWorldCenter()); }
 
@@ -372,17 +544,22 @@ class Box2dObject extends EngineObject
      *  @return {Vector2} */
     getLinearVelocity() { return box2d.vec2From(this.body.GetLinearVelocity()); }
 
-    /** Gets the angular velocity
-     *  @return {Vector2} */
-    getAngularVelocity() { return this.body.GetAngularVelocity(); }
+    /** Gets the angular velocity, clockwise like angle
+     *  @return {number} */
+    getAngularVelocity() { return -this.body.GetAngularVelocity(); } // box2d uses reverse angle
 
     /** Gets the mass
      *  @return {number} */
     getMass() { return this.body.GetMass(); }
 
-    /** Gets the rotational inertia
+    /** Gets the rotational inertia about the center of mass
      *  @return {number} */
-    getInertia() { return this.body.GetInertia(); }
+    getInertia()
+    {
+        // Box2D gives it about the body origin
+        const center = this.body.GetLocalCenter();
+        return max(0, Math.fround(this.body.GetInertia() - box2dCenterInertia(this.getMass(), center.get_x(), center.get_y())));
+    }
 
     /** Check if this object is awake
      *  @return {boolean} */
@@ -399,36 +576,42 @@ class Box2dObject extends EngineObject
     ///////////////////////////////////////////////////////////////////////////////
     // physics set functions
 
-    /** Sets the position and angle
+    /** Sets the position and angle, from a contact callback the body moves once the step is done
      *  @param {Vector2} pos
      *  @param {number} angle */
     setTransform(pos, angle)
     {
-        this.pos = pos;
+        this.pos = pos.copy();
         this.angle = angle;
         // box2d uses reverse angle
-        this.body.SetTransform(box2d.vec2dTo(pos), -angle);
+        const x = pos.x, y = pos.y;
+        box2dWhenUnlocked(()=>
+        {
+            if (!this.body) return;
+            this.body.SetTransform(box2dTemp(vec2(x, y)), -angle);
+            box2dWakeWithContacts(this.body); // Box2D leaves a sleeping body, and what rests on it, in the air
+        });
     }
     
     /** Sets the position
      *  @param {Vector2} pos */
     setPosition(pos)
-    { this.setTransform(pos, -this.body.GetAngle()); }
+    { this.setTransform(pos, this.angle); }
 
     /** Sets the angle
      *  @param {number} angle */
     setAngle(angle)
-    { this.setTransform(box2d.vec2From(this.body.GetPosition()), angle); }
+    { this.setTransform(this.pos, angle); }
 
     /** Sets the linear velocity
      *  @param {Vector2} velocity */
     setLinearVelocity(velocity)
-    { this.body.SetLinearVelocity(box2d.vec2dTo(velocity)); }
+    { this.body.SetLinearVelocity(box2dTemp(velocity)); }
 
-    /** Sets the angular velocity
+    /** Sets the angular velocity, clockwise like angle
      *  @param {number} angularVelocity */
     setAngularVelocity(angularVelocity)
-    { this.body.SetAngularVelocity(angularVelocity); }
+    { this.body.SetAngularVelocity(-angularVelocity); }
 
     /** Sets the linear damping
      *  @param {number} damping */
@@ -443,7 +626,10 @@ class Box2dObject extends EngineObject
     /** Sets the gravity scale
      *  @param {number} [scale] */
     setGravityScale(scale=1)
-    { this.body.SetGravityScale(this.gravityScale = scale); }
+    {
+        this.body.SetGravityScale(this.gravityScale = scale);
+        this.body.SetAwake(true); // a sleeping body would not feel it
+    }
 
     /** Should be like a bullet for continuous collision detection?
      *  @param {boolean} [isBullet] */
@@ -453,9 +639,9 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isAwake] */
     setAwake(isAwake=true) { this.body.SetAwake(isAwake); }
     
-    /** Set the physics body type
+    /** Set the physics body type, from a contact callback it changes once the step is done
      *  @param {number} type */
-    setBodyType(type) { this.body.SetType(type); }
+    setBodyType(type) { box2dWhenUnlocked(()=> this.body &amp;&amp; this.body.SetType(type)); }
 
     /** Set whether the body is allowed to sleep
      *  @param {boolean} [isAllowed] */
@@ -467,7 +653,7 @@ class Box2dObject extends EngineObject
     setFixedRotation(isFixed=true)
     { this.body.SetFixedRotation(isFixed); }
 
-    /** Set the center of mass of the body
+    /** Set the center of mass of the body, local to it
      *  @param {Vector2} center */
     setCenterOfMass(center) { this.setMassData(center) }
 
@@ -475,34 +661,54 @@ class Box2dObject extends EngineObject
      *  @param {number} mass */
     setMass(mass) { this.setMassData(undefined, mass) }
     
-    /** Set the moment of inertia of the body
+    /** Set the moment of inertia of the body, about its center of mass
      *  @param {number} momentOfInertia */
     setMomentOfInertia(momentOfInertia)
     { this.setMassData(undefined, undefined, momentOfInertia) }
-    
-    /** Reset the mass, center of mass, and moment */
-    resetMassData() { this.body.ResetMassData(); }
-    
-    /** Set the mass data of the body
+
+    /** Reset the mass, center of mass, and moment, from a contact callback once the step is done */
+    resetMassData() { box2dWhenUnlocked(()=> this.body &amp;&amp; this.body.ResetMassData()); }
+
+    /** Set the mass data of the body, from a contact callback once the step is done;
+     *  a mass of 0 or less becomes 1, use setBodyType for a static body; call it after adding fixtures and after
+     *  setFixedRotation, both of which put the mass back to what the fixtures give
      *  @param {Vector2} [localCenter]
      *  @param {number}  [mass]
-     *  @param {number}  [momentOfInertia] */
+     *  @param {number}  [momentOfInertia] - About the center of mass */
     setMassData(localCenter, mass, momentOfInertia)
     {
-        const data = new box2d.instance.b2MassData();
-        this.body.GetMassData(data);
-        // use !== undefined so setMass(0) (static-equivalent) isn't silently ignored
-        if (localCenter !== undefined) data.set_center(box2d.vec2dTo(localCenter));
-        if (mass !== undefined) data.set_mass(mass);
-        if (momentOfInertia !== undefined) data.set_I(momentOfInertia);
-        this.body.SetMassData(data);
+        localCenter = localCenter &amp;&amp; localCenter.copy(); // as it is now, even if it waits for the step
+        box2dWhenUnlocked(()=>
+        {
+            if (!this.body) return;
+            const data = box2dQueryObject('massData', 'b2MassData'); // reused, GetMassData fills it in
+            this.body.GetMassData(data);
+
+            // Box2D's inertia is about the body origin, so it is turned to the center of mass and back; kept as
+            // it was, one for the old mass and center goes below 0 about the new ones, which stops Box2D for good
+            const center = data.get_center(), oldMass = data.get_mass();
+            const cx = localCenter ? localCenter.x : center.get_x(), cy = localCenter ? localCenter.y : center.get_y();
+            // it is worked out in float32 as Box2D does it, which must come out above 0 or the rotation is locked
+            const f = Math.fround;
+            const oldInertia = f(data.get_I() - box2dCenterInertia(oldMass, center.get_x(), center.get_y()));
+            const inertia = momentOfInertia ?? oldInertia;
+            mass ??= oldMass;
+            const offset = box2dCenterInertia(mass > 0 ? mass : 1, cx, cy); // a mass of 0 or less is 1 to Box2D
+            const I = f(inertia + offset);
+            data.set_mass(mass);
+            data.set_center(box2dTemp(vec2(cx, cy)));
+            data.set_I(inertia > 0 &amp;&amp; f(I - offset) > 0 ? I : 0);
+            this.body.SetMassData(data);
+            this.body.SetAwake(true); // a sleeping body would not tip over a new center of mass
+        });
     }
 
-    /** Set the collision filter data for this body
+    /** Set the collision filter data for the fixtures this body has now, a fixture added later has the default
+     *  filter, category 1 colliding with everything
      *  @param {number} [categoryBits]
      *  @param {number} [ignoreCategoryBits]
      *  @param {number} [groupIndex] */
-    setFilterData(categoryBits=0, ignoreCategoryBits=0, groupIndex=0)
+    setFilterData(categoryBits=1, ignoreCategoryBits=0, groupIndex=0)
     {
         this.getFixtureList().forEach(fixture=>
         {
@@ -529,11 +735,11 @@ class Box2dObject extends EngineObject
     {
         pos ||= this.getCenterOfMass();
         this.setAwake();
-        this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
+        this.body.ApplyForce(box2dTemp(force), box2dTemp(pos, 1));
     }
 
     /** Apply acceleration to this object (changes velocity by acceleration,
-     *  mass-independent — matches EngineObject.applyAcceleration semantics).
+     *  mass-independent like EngineObject.applyAcceleration, but in units per second).
      *  Use applyImpulse if you want the mass-dependent velocity change
      *  Δv = impulse / mass, or applyForce for a Newton-style sustained force.
      *  @param {Vector2} acceleration
@@ -543,7 +749,7 @@ class Box2dObject extends EngineObject
         pos ||= this.getCenterOfMass();
         this.setAwake();
         const impulse = acceleration.scale(this.getMass());
-        this.body.ApplyLinearImpulse(box2d.vec2dTo(impulse), box2d.vec2dTo(pos));
+        this.body.ApplyLinearImpulse(box2dTemp(impulse), box2dTemp(pos, 1));
     }
 
     /** Apply an instantaneous linear impulse. Changes velocity immediately by
@@ -554,33 +760,36 @@ class Box2dObject extends EngineObject
     {
         pos ||= this.getCenterOfMass();
         this.setAwake();
-        this.body.ApplyLinearImpulse(box2d.vec2dTo(impulse), box2d.vec2dTo(pos));
+        this.body.ApplyLinearImpulse(box2dTemp(impulse), box2dTemp(pos, 1));
     }
 
-    /** Apply torque to this object
+    /** Apply torque to this object, clockwise like angle
      *  @param {number} torque */
     applyTorque(torque)
     {
         this.setAwake();
-        this.body.ApplyTorque(torque);
+        this.body.ApplyTorque(-torque);
     }
 
     /** Apply angular acceleration to this object (changes angular velocity by
-     *  acceleration, mass-independent — matches EngineObject semantics).
+     *  acceleration, mass-independent, clockwise — matches EngineObject.applyAngularAcceleration).
      *  @param {number} acceleration */
     applyAngularAcceleration(acceleration)
     {
+        // the velocity itself, since the inertia Box2D gives is about the origin, not the center of mass;
+        // like the impulse this was, only a dynamic body turns
+        if (this.getBodyType() !== box2d.bodyTypeDynamic || this.body.IsFixedRotation()) return;
         this.setAwake();
-        this.body.ApplyAngularImpulse(acceleration * this.getInertia());
+        this.setAngularVelocity(this.getAngularVelocity() + acceleration);
     }
 
     /** Apply an instantaneous angular impulse. Changes angular velocity by
-     *  impulse / inertia immediately.
+     *  impulse / inertia immediately, clockwise like angle.
      *  @param {number} impulse */
     applyAngularImpulse(impulse)
     {
         this.setAwake();
-        this.body.ApplyAngularImpulse(impulse);
+        this.body.ApplyAngularImpulse(-impulse);
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -607,15 +816,19 @@ class Box2dObject extends EngineObject
      *  @return {boolean} */
     hasJoints() { return !box2d.isNull(this.body.GetJointList()); }
     
-    /** Get list of joints for this object
-     *  @return {Array&lt;Object>} */
+    /** Get list of joints for this object, the Box2dJoint for each one made through LittleJS,
+     *  and the Box2D joint, cast to its type, for any made on the world directly
+     *  @return {Array&lt;Box2dJoint|Object>} */
     getJointList()
     {
+        // the body keeps a list of edges, each holding a joint and the next edge
         const joints = [];
-        for (let joint=this.body.GetJointList(); !box2d.isNull(joint); )
+        for (let edge=this.body.GetJointList(); !box2d.isNull(edge); edge = edge.get_next())
         {
-            joints.push(joint);
-            joint = joint.get_next();
+            const joint = edge.get_joint(), wrapper = box2dJoints.get(box2d.instance.getPointer(joint));
+            if (wrapper &amp;&amp; !wrapper.box2dJoint)
+                continue; // destroyed in a contact callback, Box2D lets go of it once the step is done
+            joints.push(wrapper || box2d.castJointObject(joint));
         }
         return joints;
     }
@@ -669,8 +882,8 @@ class Box2dKinematicObject extends Box2dObject
 /**
  * Box2d Tile Layer
  * - adds Box2d support to tile layers
- * - creates static box2d fixtures for solid tiles
- * @extends Box2dObject
+ * - creates static box2d fixtures for solid tiles, call buildCollision to rebuild them after the tiles change
+ * @extends Box2dStaticObject
  * @memberof Box2D
  */
 class Box2dTileLayer extends Box2dStaticObject
@@ -682,9 +895,12 @@ class Box2dTileLayer extends Box2dStaticObject
         ASSERT(tileLayer instanceof TileCollisionLayer, 'tileLayer must be a TileCollisionLayer');
         super(tileLayer.pos, tileLayer.size);
 
-        /** @property {TileLayer} - The tile layer */
+        /** @property {TileCollisionLayer} - The tile layer */
         this.tileLayer = tileLayer;
         this.addChild(tileLayer);
+
+        // collision for the solid tiles it has now, call buildCollision again after changing them
+        this.buildCollision();
     }
 
     render()
@@ -755,6 +971,7 @@ class Box2dTileLayer extends Box2dStaticObject
  * Box2D Raycast Result
  * - Holds results from a box2d raycast queries
  * - Automatically created by box2d raycast functions
+ * @memberof Box2D
  */
 class Box2dRaycastResult
 {
@@ -765,7 +982,8 @@ class Box2dRaycastResult
      *  @param {number}  fraction */
     constructor(fixture, point, normal, fraction)
     {
-        /** @property {Box2dObject} - The box2d object */
+        /** @property {Box2dObject} - The box2d object
+         *  @type {Box2dObject} */
         this.object   = fixture.GetBody().object;
         /** @property {Object} - The fixture that was hit */
         this.fixture  = fixture;
@@ -783,20 +1001,42 @@ class Box2dRaycastResult
  * Box2D Joint
  * - Base class for Box2D joints 
  * - A joint is used to connect objects together
+ * - Angular values are clockwise like angle: joint angles and speeds, limits, motor speeds and torques
  * @memberof Box2D
  */
 class Box2dJoint
 {
     /** Create a box2d joint, the base class is not intended to be used directly
-     *  @param {Object} jointDef */
+     *  @param {Object} jointDef - Freed once the joint is made, Box2D copies it */
     constructor(jointDef)
     {
-        /** @property {Object} - The Box2d joint */
+        ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D joints during a contact callback');
+        ASSERT(box2d.instance.getPointer(jointDef.get_bodyA()) !== box2d.instance.getPointer(jointDef.get_bodyB()),
+            'a joint needs two different objects');
+
+        /** @property {Object} - The Box2d joint, 0 once it is destroyed, as it is when either object is */
         this.box2dJoint = box2d.castJointObject(box2d.world.CreateJoint(jointDef));
+        box2d.instance.destroy(jointDef);
+        box2dJoints.set(box2d.instance.getPointer(this.box2dJoint), this);
     }
 
     /** Destroy this joint */
-    destroy() { box2d.world.DestroyJoint(this.box2dJoint); this.box2dJoint = 0; }
+    destroy()
+    {
+        const joint = this.box2dJoint;
+        if (!joint) return; // destroyed already, or with one of its objects
+        this.box2dJoint = 0;
+        box2dDestroyGears(this);
+
+        // a body destroyed before it, in the same step, takes the joint with it and lets go of it here
+        const pointer = box2d.instance.getPointer(joint);
+        box2dWhenUnlocked(()=>
+        {
+            if (box2dJoints.get(pointer) !== this) return;
+            box2dJoints.delete(pointer);
+            box2d.world.DestroyJoint(joint);
+        });
+    }
 
     /** Get the first object attached to this joint
      *  @return {Box2dObject} */
@@ -819,10 +1059,10 @@ class Box2dJoint
      *  @return {Vector2} */
     getReactionForce(time)  { return box2d.vec2From(this.box2dJoint.GetReactionForce(1/time));}
 
-    /** Get the reaction torque on bodyB in N*m given a time step
+    /** Get the reaction torque on bodyB in N*m given a time step, clockwise like angle
      *  @param {number} time
      *  @return {number} */
-    getReactionTorque(time) { return this.box2dJoint.GetReactionTorque(1/time);}
+    getReactionTorque(time) { return -this.box2dJoint.GetReactionTorque(1/time);} // box2d uses reverse angle
     
     /** Check if the connected bodies should collide
      *  @return {boolean} */
@@ -839,6 +1079,7 @@ class Box2dJoint
  * - Used to make a point on a object track a specific world point target
  * - This a soft constraint with a max force
  * - This allows the constraint to stretch and without applying huge forces
+ * - The object must be dynamic, and stay dynamic while the joint holds it, Box2D stops for good on one with no mass
  * @extends Box2dJoint
  * @memberof Box2D
  */
@@ -850,18 +1091,19 @@ class Box2dTargetJoint extends Box2dJoint
      *  @param {Vector2} worldPos */
     constructor(object, fixedObject, worldPos)
     {
+        ASSERT(object.getBodyType() === box2d.bodyTypeDynamic, 'a target joint needs a dynamic object');
         object.setAwake();
         const jointDef = new box2d.instance.b2MouseJointDef();
         jointDef.set_bodyA(fixedObject.body);
         jointDef.set_bodyB(object.body);
-        jointDef.set_target(box2d.vec2dTo(worldPos));
+        jointDef.set_target(box2dTemp(worldPos));
         jointDef.set_maxForce(2e3 * object.getMass());
         super(jointDef);
     }
 
     /** Set the target point in world coordinates
      *  @param {Vector2} pos */
-    setTarget(pos) { this.box2dJoint.SetTarget(box2d.vec2dTo(pos)); }
+    setTarget(pos) { this.box2dJoint.SetTarget(box2dTemp(pos)); }
     
     /** Get the target point in world coordinates
      *  @return {Vector2} */
@@ -875,9 +1117,9 @@ class Box2dTargetJoint extends Box2dJoint
      *  @return {number} */
     getMaxForce() { return this.box2dJoint.GetMaxForce(); }
     
-    /** Sets the joint frequency in Hertz
+    /** Sets the joint frequency in Hertz, above 0, Box2D stops for good on 0
      *  @param {number} hz */
-    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(max(hz, 1e-3)); }
     
     /** Gets the joint frequency in Hertz
      *  @return {number} */
@@ -897,8 +1139,8 @@ class Box2dDistanceJoint extends Box2dJoint
     /** Create a distance joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchorA
-     *  @param {Vector2} anchorB
+     *  @param {Vector2} [anchorA] - World position, objectA's position if not given
+     *  @param {Vector2} [anchorB] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, collide=false)
     {
@@ -909,8 +1151,8 @@ class Box2dDistanceJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2DistanceJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_length(anchorA.distance(anchorB));
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -926,7 +1168,7 @@ class Box2dDistanceJoint extends Box2dJoint
     
     /** Set the length of the joint
      *  @param {number} length */
-    setLength(length) { this.box2dJoint.SetLength(length); }
+    setLength(length) { this.box2dJoint.SetLength(length); box2dWakeJoint(this.box2dJoint); }
     
     /** Get the length of the joint
      *  @return {number} */
@@ -934,7 +1176,7 @@ class Box2dDistanceJoint extends Box2dJoint
     
     /** Set the frequency in Hertz
      *  @param {number} hz */
-    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); box2dWakeJoint(this.box2dJoint); }
     
     /** Get the frequency in Hertz
      *  @return {number} */
@@ -942,7 +1184,7 @@ class Box2dDistanceJoint extends Box2dJoint
     
     /** Set the damping ratio
      *  @param {number} ratio */
-    setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); }
+    setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
     
     /** Get the damping ratio
      *  @return {number} */
@@ -965,7 +1207,7 @@ class Box2dPinJoint extends Box2dDistanceJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, pos=objectA.pos, collide=false)
     {
-        super(objectA, objectB, undefined, pos, collide);
+        super(objectA, objectB, pos, pos, collide);
     }
 }
 
@@ -981,9 +1223,9 @@ class Box2dRopeJoint extends Box2dJoint
     /** Create a rope joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchorA
-     *  @param {Vector2} anchorB
-     *  @param {number} extraLength
+     *  @param {Vector2} [anchorA] - World position, objectA's position if not given
+     *  @param {Vector2} [anchorB] - World position, objectB's position if not given
+     *  @param {number} [extraLength]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, extraLength=0, collide=false)
     {
@@ -994,8 +1236,8 @@ class Box2dRopeJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2RopeJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_maxLength(anchorA.distance(anchorB)+extraLength);
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -1011,7 +1253,7 @@ class Box2dRopeJoint extends Box2dJoint
     
     /** Set the max length of the joint
      *  @param {number} length */
-    setMaxLength(length) { this.box2dJoint.SetMaxLength(length); }
+    setMaxLength(length) { this.box2dJoint.SetMaxLength(length); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the max length of the joint
      *  @return {number} */
@@ -1034,7 +1276,7 @@ class Box2dRevoluteJoint extends Box2dJoint
     /** Create a revolute joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
@@ -1044,8 +1286,8 @@ class Box2dRevoluteJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2RevoluteJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -1059,17 +1301,17 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @return {Vector2} */
     getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
 
-    /** Get the reference angle, objectB angle minus objectA angle in the reference state 
+    /** Get the reference angle, objectB angle minus objectA angle in the reference state
      *  @return {number} */
-    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+    getReferenceAngle() { return -this.box2dJoint.GetReferenceAngle(); } // box2d uses reverse angle
 
-    /** Get the current joint angle
+    /** Get the current joint angle, clockwise like angle
      *  @return {number} */
-    getJointAngle() { return this.box2dJoint.GetJointAngle(); }
+    getJointAngle() { return -this.box2dJoint.GetJointAngle(); }
 
-    /** Get the current joint angle speed in radians per second
+    /** Get the current joint angle speed in radians per second, clockwise like angle
      *  @return {number} */
-    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+    getJointSpeed() { return -this.box2dJoint.GetJointSpeed(); }
 
     /** Is the joint limit enabled?
      *  @return {boolean} */
@@ -1079,18 +1321,23 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @param {boolean} [enable] */
     enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
 
-    /** Get the lower joint limit
+    /** Get the lower joint limit, clockwise like angle
      *  @return {number} */
-    getLowerLimit() { return this.box2dJoint.GetLowerLimit(); }
+    getLowerLimit() { return -this.box2dJoint.GetUpperLimit(); } // reversed, so Box2D's upper is the lower
 
-    /** Get the upper joint limit
+    /** Get the upper joint limit, clockwise like angle
      *  @return {number} */
-    getUpperLimit() { return this.box2dJoint.GetUpperLimit(); }
+    getUpperLimit() { return -this.box2dJoint.GetLowerLimit(); }
 
-    /** Set the joint limits
+    /** Set the joint limits, clockwise like angle
      *  @param {number} min
      *  @param {number} max */
-    setLimits(min, max) { return this.box2dJoint.SetLimits(min, max); }
+    setLimits(min, max)
+    {
+        ASSERT(min &lt;= max, 'the lower limit must not be above the upper one');
+        if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
+        return this.box2dJoint.SetLimits(-max, -min);
+    }
 
     /** Is the joint motor enabled?
      *  @return {boolean} */
@@ -1100,15 +1347,15 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @param {boolean} [enable] */
     enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
 
-    /** Set the motor speed
+    /** Set the motor speed, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
 
-    /** Get the motor speed
+    /** Get the motor speed, clockwise like angle
      *  @return {number} */
-    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+    getMotorSpeed() { return -this.box2dJoint.GetMotorSpeed(); }
 
-    /** Set the motor torque
+    /** Set the max motor torque, a magnitude
      *  @param {number} torque */
     setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
 
@@ -1116,10 +1363,10 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
-    /** Get the motor torque given a time step
-     *  @param {number} time 
+    /** Get the motor torque given a time step, clockwise like angle
+     *  @param {number} time
      *  @return {number} */
-    getMotorTorque(time) { return this.box2dJoint.GetMotorTorque(1/time); }
+    getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1128,6 +1375,8 @@ class Box2dRevoluteJoint extends Box2dJoint
  * - A gear joint is used to connect two joints together
  * - Either joint can be a revolute or prismatic joint
  * - You specify a gear ratio to bind the motions together
+ * - joint1's angle or translation plus ratio times joint2's stays constant, angles clockwise like angle
+ * - It is destroyed along with either joint, or an object either joint is on
  * @extends Box2dJoint
  * @memberof Box2D
  */
@@ -1141,16 +1390,22 @@ class Box2dGearJoint extends Box2dJoint
      *  @param {number} [ratio] */
     constructor(objectA, objectB, joint1, joint2, ratio=1)
     {
+        // Box2D's angles are reversed and its translations are not, so a revolute joint geared to a prismatic one
+        // needs the ratio reversed too, two of a kind keep it
+        const isGearable = (j)=> (j instanceof Box2dRevoluteJoint || j instanceof Box2dPrismaticJoint) &amp;&amp; !!j.box2dJoint;
+        ASSERT(isGearable(joint1) &amp;&amp; isGearable(joint2), 'a gear joint needs two revolute or prismatic joints that exist');
+        const ratioSign = (joint1 instanceof Box2dRevoluteJoint) === (joint2 instanceof Box2dRevoluteJoint) ? 1 : -1;
         const jointDef = new box2d.instance.b2GearJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
         jointDef.set_joint1(joint1.box2dJoint);
         jointDef.set_joint2(joint2.box2dJoint);
-        jointDef.set_ratio(ratio);
+        jointDef.set_ratio(ratio * ratioSign);
         super(jointDef);
 
         this.joint1 = joint1;
         this.joint2 = joint2;
+        this.ratioSign = ratioSign;
     }
 
     /** Get the first joint
@@ -1163,11 +1418,11 @@ class Box2dGearJoint extends Box2dJoint
 
     /** Set the gear ratio
      *  @param {number} ratio */
-    setRatio(ratio) { return this.box2dJoint.SetRatio(ratio); }
+    setRatio(ratio) { this.box2dJoint.SetRatio(ratio * this.ratioSign); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the gear ratio
      *  @return {number} */
-    getRatio() { return this.box2dJoint.GetRatio(); }
+    getRatio() { return this.box2dJoint.GetRatio() * this.ratioSign; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1185,8 +1440,8 @@ class Box2dPrismaticJoint extends Box2dJoint
     /** Create a prismatic joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
-     *  @param {Vector2} worldAxis
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
+     *  @param {Vector2} [worldAxis]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
@@ -1197,9 +1452,9 @@ class Box2dPrismaticJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2PrismaticJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
-        jointDef.set_localAxisA(box2d.vec2dTo(localAxisA));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
+        jointDef.set_localAxisA(box2dTemp(localAxisA));
         jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
@@ -1217,14 +1472,14 @@ class Box2dPrismaticJoint extends Box2dJoint
      *  @return {Vector2} */
     getLocalAxisA() { return box2d.vec2From(this.box2dJoint.GetLocalAxisA()); }
     
-    /** Get the reference angle
+    /** Get the reference angle, objectB angle minus objectA angle in the reference state
      *  @return {number} */
-    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+    getReferenceAngle() { return -this.box2dJoint.GetReferenceAngle(); } // box2d uses reverse angle
 
     /** Get the current joint translation
      *  @return {number} */
     getJointTranslation() { return this.box2dJoint.GetJointTranslation(); }
-    
+
     /** Get the current joint translation speed
      *  @return {number} */
     getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
@@ -1248,7 +1503,12 @@ class Box2dPrismaticJoint extends Box2dJoint
     /** Set the joint limits
      *  @param {number} min
      *  @param {number} max */
-    setLimits(min, max) { return this.box2dJoint.SetLimits(min, max); }
+    setLimits(min, max)
+    {
+        ASSERT(min &lt;= max, 'the lower limit must not be above the upper one');
+        if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
+        return this.box2dJoint.SetLimits(min, max);
+    }
     
     /** Is the motor enabled?
      *  @return {boolean} */
@@ -1284,7 +1544,6 @@ class Box2dPrismaticJoint extends Box2dJoint
 /** 
  * Box2D Wheel Joint
  * - Provides two degrees of freedom: translation along an axis fixed in objectA and rotation
- * - You can use a joint limit to restrict the range of motion
  * - You can use a joint motor to drive the motion or to model joint friction
  * - This joint is designed for vehicle suspensions
  * @extends Box2dJoint
@@ -1295,21 +1554,21 @@ class Box2dWheelJoint extends Box2dJoint
     /** Create a wheel joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
-     *  @param {Vector2} worldAxis
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
+     *  @param {Vector2} [worldAxis]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
-        const localAxisA = objectA.worldToLocalVector(worldAxis);
+        const localAxisA = objectA.worldToLocalVector(worldAxis).normalize(); // Box2D uses the wheel axis as given
         const jointDef = new box2d.instance.b2WheelJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
-        jointDef.set_localAxisA(box2d.vec2dTo(localAxisA));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
+        jointDef.set_localAxisA(box2dTemp(localAxisA));
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }
@@ -1330,9 +1589,10 @@ class Box2dWheelJoint extends Box2dJoint
      *  @return {number} */
     getJointTranslation() { return this.box2dJoint.GetJointTranslation(); }
 
-    /** Get the current joint translation speed
+    /** Get the current joint rotation speed in radians per second, clockwise like angle,
+     *  which is what this version of Box2D measures for a wheel joint
      *  @return {number} */
-    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+    getJointSpeed() { return -this.box2dJoint.GetJointSpeed(); } // box2d uses reverse angle
 
     /** Is the joint motor enabled?
      *  @return {boolean} */
@@ -1342,15 +1602,15 @@ class Box2dWheelJoint extends Box2dJoint
      *  @param {boolean} [enable] */
     enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
 
-    /** Set the motor speed
+    /** Set the motor speed, the wheel's turn in radians per second, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
 
-    /** Get the motor speed
+    /** Get the motor speed, clockwise like angle
      *  @return {number} */
-    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+    getMotorSpeed() { return -this.box2dJoint.GetMotorSpeed(); }
 
-    /** Set the maximum motor torque
+    /** Set the maximum motor torque, a magnitude
      *  @param {number} torque */
     setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
 
@@ -1358,13 +1618,14 @@ class Box2dWheelJoint extends Box2dJoint
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
-    /** Get the motor torque for a time step
+    /** Get the motor torque for a time step, clockwise like angle
+     *  @param {number} time
      *  @return {number} */
-    getMotorTorque(time) { return this.box2dJoint.GetMotorTorque(1/time); }
+    getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
 
     /** Set the spring frequency in Hertz
      *  @param {number} hz */
-    setSpringFrequencyHz(hz) { return this.box2dJoint.SetSpringFrequencyHz(hz); }
+    setSpringFrequencyHz(hz) { this.box2dJoint.SetSpringFrequencyHz(hz); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the spring frequency in Hertz
      *  @return {number} */
@@ -1372,7 +1633,7 @@ class Box2dWheelJoint extends Box2dJoint
 
     /** Set the spring damping ratio
      *  @param {number} ratio */
-    setSpringDampingRatio(ratio) { return this.box2dJoint.SetSpringDampingRatio(ratio); }
+    setSpringDampingRatio(ratio) { this.box2dJoint.SetSpringDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the spring damping ratio
      *  @return {number} */
@@ -1391,21 +1652,25 @@ class Box2dWeldJoint extends Box2dJoint
     /** Create a weld joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
+        const referenceAngle = objectB.body.GetAngle() - objectA.body.GetAngle();
         const jointDef = new box2d.instance.b2WeldJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
-        jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
+        jointDef.set_referenceAngle(referenceAngle);
         jointDef.set_collideConnected(collide);
         super(jointDef);
+
+        // kept here, since the binding cannot read it back from a weld joint; box2d uses reverse angle
+        this.referenceAngle = -referenceAngle;
     }
 
     /** Get the local anchor point relative to objectA's origin
@@ -1416,13 +1681,13 @@ class Box2dWeldJoint extends Box2dJoint
      *  @return {Vector2} */
     getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
 
-    /** Get the reference angle
+    /** Get the reference angle, objectB angle minus objectA angle in the reference state
      *  @return {number} */
-    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+    getReferenceAngle() { return this.referenceAngle; }
 
     /** Set the frequency in Hertz
      *  @param {number} hz */
-    setFrequency(hz) { return this.box2dJoint.SetFrequency(hz); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the frequency in Hertz
      *  @return {number} */
@@ -1430,15 +1695,15 @@ class Box2dWeldJoint extends Box2dJoint
 
     /** Set the damping ratio
      *  @param {number} ratio */
-    setSpringDampingRatio(ratio) { return this.box2dJoint.SetSpringDampingRatio(ratio); }
+    setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the damping ratio
      *  @return {number} */
-    getSpringDampingRatio() { return this.box2dJoint.GetSpringDampingRatio(); }
+    getDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** 
+/**
  * Box2D Friction Joint
  * - Used to apply top-down friction
  * - Provides 2D translational friction and angular friction
@@ -1450,7 +1715,7 @@ class Box2dFrictionJoint extends Box2dJoint
     /** Create a friction joint
      *  @param {Box2dObject} objectA
      *  @param {Box2dObject} objectB
-     *  @param {Vector2} anchor
+     *  @param {Vector2} [anchor] - World position, objectB's position if not given
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
@@ -1460,8 +1725,8 @@ class Box2dFrictionJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2FrictionJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }
@@ -1476,7 +1741,7 @@ class Box2dFrictionJoint extends Box2dJoint
 
     /** Set the maximum friction force
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); } // Box2D stops on a negative one
 
     /** Get the maximum friction force
      *  @return {number} */
@@ -1484,7 +1749,7 @@ class Box2dFrictionJoint extends Box2dJoint
 
     /** Set the maximum friction torque
      *  @param {number} torque */
-    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(torque); }
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); } // Box2D stops on a negative one
 
     /** Get the maximum friction torque
      *  @return {number} */
@@ -1507,8 +1772,8 @@ class Box2dPulleyJoint extends Box2dJoint
      *  @param {Box2dObject} objectB
      *  @param {Vector2} groundAnchorA
      *  @param {Vector2} groundAnchorB
-     *  @param {Vector2} anchorA
-     *  @param {Vector2} anchorB
+     *  @param {Vector2} [anchorA] - World position, objectA's position if not given
+     *  @param {Vector2} [anchorB] - World position, objectB's position if not given
      *  @param {number}  [ratio]
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio=1, collide=false)
@@ -1520,10 +1785,11 @@ class Box2dPulleyJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2PulleyJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_groundAnchorA(box2d.vec2dTo(groundAnchorA));
-        jointDef.set_groundAnchorB(box2d.vec2dTo(groundAnchorB));
-        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
-        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_groundAnchorA(box2dTemp(groundAnchorA));
+        jointDef.set_groundAnchorB(box2dTemp(groundAnchorB));
+        jointDef.set_localAnchorA(box2dTemp(localAnchorA));
+        jointDef.set_localAnchorB(box2dTemp(localAnchorB));
+        ASSERT(ratio, 'a pulley ratio can not be 0');
         jointDef.set_ratio(ratio);
         jointDef.set_lengthA(groundAnchorA.distance(anchorA));
         jointDef.set_lengthB(groundAnchorB.distance(anchorB));
@@ -1539,11 +1805,11 @@ class Box2dPulleyJoint extends Box2dJoint
      *  @return {Vector2} */
     getGroundAnchorB() { return box2d.vec2From(this.box2dJoint.GetGroundAnchorB()); }
 
-    /** Get the current length of the segment attached to objectA
+    /** Get the rest length of the segment attached to objectA, set at creation
      *  @return {number} */
     getLengthA() { return this.box2dJoint.GetLengthA(); }
 
-    /** Get the current length of the segment attached to objectB
+    /** Get the rest length of the segment attached to objectB, set at creation
      *  @return {number} */
     getLengthB(){ return this.box2dJoint.GetLengthB(); }
 
@@ -1580,38 +1846,38 @@ class Box2dMotorJoint extends Box2dJoint
         const jointDef = new box2d.instance.b2MotorJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
-        jointDef.set_linearOffset(box2d.vec2dTo(linearOffset));
+        jointDef.set_linearOffset(box2dTemp(linearOffset));
         jointDef.set_angularOffset(angularOffset);
         super(jointDef);
     }
 
     /** Set the target linear offset, in frame A, in meters.
      *  @param {Vector2} offset */
-    setLinearOffset(offset) { this.box2dJoint.SetLinearOffset(box2d.vec2dTo(offset)); }
+    setLinearOffset(offset) { this.box2dJoint.SetLinearOffset(box2dTemp(offset)); }
 
     /** Get the target linear offset, in frame A, in meters.
      *  @return {Vector2} */
     getLinearOffset() { return box2d.vec2From(this.box2dJoint.GetLinearOffset()); }
 
-    /** Set the target angular offset
+    /** Set the target angular offset, objectB angle minus objectA angle, clockwise like angle
      *  @param {number} offset */
-    setAngularOffset(offset) { this.box2dJoint.SetAngularOffset(offset); }
+    setAngularOffset(offset) { this.box2dJoint.SetAngularOffset(-offset); } // box2d uses reverse angle
 
-    /** Get the target angular offset
+    /** Get the target angular offset, objectB angle minus objectA angle, clockwise like angle
      *  @return {number} */
-    getAngularOffset() { return this.box2dJoint.GetAngularOffset(); }
+    getAngularOffset() { return -this.box2dJoint.GetAngularOffset(); }
 
-    /** Set the maximum friction force
+    /** Set the maximum force
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); } // Box2D stops on a negative one
 
-    /** Get the maximum friction force
+    /** Get the maximum force
      *  @return {number} */
     getMaxForce() { return this.box2dJoint.GetMaxForce(); }
 
     /** Set the maximum torque
      *  @param {number} torque */
-    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(torque); }
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); } // Box2D stops on a negative one
 
     /** Get the maximum torque
      *  @return {number} */
@@ -1619,7 +1885,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the position correction factor in the range [0,1]
      *  @param {number} factor */
-    setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(factor); }
+    setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(clamp(factor)); }
 
     /** Get the position correction factor in the range [0,1]
      *  @return {number} */
@@ -1634,7 +1900,7 @@ class Box2dMotorJoint extends Box2dJoint
  */
 class Box2dPlugin
 {
-    /** Create the global UI system object
+    /** Create the global Box2D plugin object, box2dInit does this
      *  @param {Object} instance */
     constructor(instance)
     {
@@ -1645,18 +1911,39 @@ class Box2dPlugin
         this.instance = instance;
         /** @property {Object} - The Box2d world */
         this.world = new box2d.instance.b2World();
-        /** @property {Array&lt;Box2dObject>} - List of all Box2d objects */
+        /** @property {Array&lt;Box2dObject>} - List of all Box2d objects, a destroyed one stays until the next step
+         *  with its body undefined
+         *  @type {Array&lt;Box2dObject>} */
         this.objects = [];
         /** @property {number} - Velocity iterations per update*/
         this.velocityIterations = 8;
         /** @property {number} - Position iterations per update*/
         this.positionIterations = 3;
-        /** @property {number} - Static, zero mass, zero velocity, may be manually moved */
+        /** @property {number} - Static, zero mass, zero velocity, may be manually moved
+         *  @type {number} */
         this.bodyTypeStatic = instance.b2_staticBody;
-        /** @property {number} - Kinematic, zero mass, non-zero velocity set by user, moved by solver */
+        /** @property {number} - Kinematic, zero mass, non-zero velocity set by user, moved by solver
+         *  @type {number} */
         this.bodyTypeKinematic = instance.b2_kinematicBody;
-        /** @property {number} - Dynamic, positive mass, non-zero velocity determined by forces, moved by solver */
+        /** @property {number} - Dynamic, positive mass, non-zero velocity determined by forces, moved by solver
+         *  @type {number} */
         this.bodyTypeDynamic = instance.b2_dynamicBody;
+
+        // a body that goes takes its joints with it, their wrappers let go of them, and a gear joint on one of them
+        // goes too, since it would keep pointers to what was freed; it hangs off other bodies, so it goes after
+        const destructionListener = new box2d.instance.JSDestructionListener();
+        destructionListener.SayGoodbyeJoint = function(jointPointer)
+        {
+            const joint = box2dJoints.get(jointPointer);
+            if (joint)
+            {
+                box2dDestroyGears(joint);
+                joint.box2dJoint = 0;
+            }
+            box2dJoints.delete(jointPointer);
+        };
+        destructionListener.SayGoodbyeFixture = function() {};
+        box2d.world.SetDestructionListener(destructionListener);
 
         // setup contact listener
         const listener = new box2d.instance.JSContactListener();
@@ -1669,8 +1956,8 @@ class Box2dPlugin
             const objectB  = fixtureB.GetBody().object;
             // raw user-created b2Bodies may have no .object — skip those
             if (!objectA || !objectB) return;
-            objectA.beginContact(objectB);
-            objectB.beginContact(objectA);
+            objectA.beginContact(objectB, fixtureA, fixtureB);
+            objectB.beginContact(objectA, fixtureB, fixtureA);
         }
         listener.EndContact = function(contactPtr)
         {
@@ -1680,8 +1967,8 @@ class Box2dPlugin
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
             if (!objectA || !objectB) return;
-            objectA.endContact(objectB);
-            objectB.endContact(objectA);
+            objectA.endContact(objectB, fixtureA, fixtureB);
+            objectB.endContact(objectA, fixtureB, fixtureA);
         };
         listener.PreSolve  = function() {};
         listener.PostSolve = function() {};
@@ -1692,23 +1979,49 @@ class Box2dPlugin
      *  @param {number} [frames] */
     step(frames=1)
     {
-        box2d.world.SetGravity(box2d.vec2dTo(gravity));
+        // the engine's gravity, Box2D does not wake a sleeping body for a new one, so a change wakes them all
+        if (gravity.x !== box2dGravity.x || gravity.y !== box2dGravity.y)
+        {
+            box2dGravity.x = gravity.x, box2dGravity.y = gravity.y;
+            box2d.world.SetGravity(box2dTemp(gravity));
+            for (let b = box2d.world.GetBodyList(); !box2d.isNull(b); b = b.GetNext())
+                b.SetAwake(true);
+        }
         for (let i=frames; i--;)
+        {
             box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
+
+            // what a contact callback destroyed or changed, now the world can take it
+            box2dRunPending();
+        }
+
+        // remove destroyed objects, once for all of them
+        this.objects = this.objects.filter(o=>!o.destroyed);
     }
 
     ///////////////////////////////////////////////////////////////////////////////
     // raycasting and querying
 
-    /** raycast and return a list of all the results
-     *  @param {Vector2} start 
-     *  @param {Vector2} end */
+    /** raycast and return a list of all the results, nearest first
+     *  @param {Vector2} start
+     *  @param {Vector2} end
+     *  @return {Array&lt;Box2dRaycastResult>} */
     raycastAll(start, end)
     {
-        const raycastCallback = new box2d.instance.JSRayCastCallback();
+        // a ray with no length fails an assert that stops Box2D for good, measured as Box2D does in 32 bit floats,
+        // where two ends a float apart are one point; one that is not a number has no length either
+        const f = Math.fround, dx = f(f(end.x) - f(start.x)), dy = f(f(end.y) - f(start.y));
+        const lengthSquared = f(f(dx*dx) + f(dy*dy));
+        if (!(lengthSquared > 0 &amp;&amp; lengthSquared &lt; Infinity))
+            return [];
+
+        const raycastCallback = box2dQueryObject('rayCast', 'JSRayCastCallback');
         raycastCallback.ReportFixture = function(fixturePointer, point, normal, fraction)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            const o = fixture.GetBody().object;
+            if (!o || o.destroyed)
+                return 1; // a raw body with no Box2dObject or one destroyed this step, continue getting results
             point  = box2d.vec2FromPointer(point);
             normal = box2d.vec2FromPointer(normal);
             raycastResults.push(new Box2dRaycastResult(fixture, point, normal, fraction));
@@ -1716,73 +2029,81 @@ class Box2dPlugin
         };
 
         const raycastResults = [];
-        box2d.world.RayCast(raycastCallback, box2d.vec2dTo(start), box2d.vec2dTo(end));
+        box2d.world.RayCast(raycastCallback, box2dTemp(start), box2dTemp(end, 1));
+        raycastResults.sort((a,b)=> a.fraction - b.fraction); // Box2D reports them in its tree's order
         debugRaycast &amp;&amp; debugLine(start, end, raycastResults.length ? '#f00' : '#00f', .02);
         return raycastResults;
     }
 
     /** raycast and return the first result
-     *  @param {Vector2} start 
-     *  @param {Vector2} end */
+     *  @param {Vector2} start
+     *  @param {Vector2} end
+     *  @return {Box2dRaycastResult|undefined} */
     raycast(start, end)
     {
-        const raycastResults = box2d.raycastAll(start, end);
-        if (!raycastResults.length)
-            return undefined;
-        return raycastResults.reduce((a,b)=>a.fraction &lt; b.fraction ? a : b);
+        return box2d.raycastAll(start, end)[0];
     }
 
     /** box aabb cast and return all the objects
-     *  @param {Vector2} pos 
-     *  @param {Vector2} size */
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
+     *  @return {Array&lt;Box2dObject>} */
     boxCastAll(pos, size)
     {
-        const queryCallback = new box2d.instance.JSQueryCallback();
+        const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
             const o = fixture.GetBody().object;
-            if (!queryObjects.includes(o))
+            if (o &amp;&amp; !o.destroyed &amp;&amp; !queryObjects.includes(o) // skip raw bodies and ones destroyed this step
+                &amp;&amp; box2dFixtureOverlaps(fixture, aabb))
                 queryObjects.push(o); // add if not already in list
             return true; // continue getting results
         };
 
-        const aabb = new box2d.instance.b2AABB();
-        aabb.set_lowerBound(box2d.vec2dTo(pos.subtract(size.scale(.5))));
-        aabb.set_upperBound(box2d.vec2dTo(pos.add(size.scale(.5))));
+        const aabb = box2dQueryObject('aabb', 'b2AABB');
+        aabb.set_lowerBound(box2dTemp(pos.subtract(size.scale(.5))));
+        aabb.set_upperBound(box2dTemp(pos.add(size.scale(.5))));
 
         let queryObjects = [];
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast &amp;&amp; debugRect(pos, size, queryObjects.length ? '#f00' : '#00f', .02);
+        debugRaycast &amp;&amp; debugRect(pos, size, queryObjects.length ? '#f00' : '#00f');
         return queryObjects;
     }
 
     /** box aabb cast and return the first object
-     *  @param {Vector2} pos 
-     *  @param {Vector2} size */
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
+     *  @return {Box2dObject|undefined} */
     boxCast(pos, size)
     {
-        const queryCallback = new box2d.instance.JSQueryCallback();
+        const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
-            queryObject = fixture.GetBody().object;
+            const o = fixture.GetBody().object;
+            if (!o || o.destroyed)
+                return true; // a raw body with no Box2dObject or one destroyed this step, continue getting results
+            if (!box2dFixtureOverlaps(fixture, aabb))
+                return true; // only near the box, continue getting results
+            queryObject = o;
             return false; // stop getting results
         };
 
-        const aabb = new box2d.instance.b2AABB();
-        aabb.set_lowerBound(box2d.vec2dTo(pos.subtract(size.scale(.5))));
-        aabb.set_upperBound(box2d.vec2dTo(pos.add(size.scale(.5))));
+        const aabb = box2dQueryObject('aabb', 'b2AABB');
+        aabb.set_lowerBound(box2dTemp(pos.subtract(size.scale(.5))));
+        aabb.set_upperBound(box2dTemp(pos.add(size.scale(.5))));
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast &amp;&amp; debugRect(pos, size, queryObject ? '#f00' : '#00f', .02);
+        debugRaycast &amp;&amp; debugRect(pos, size, queryObject ? '#f00' : '#00f');
         return queryObject;
     }
 
-    /** circle cast and return all the objects
-     *  @param {Vector2} pos 
-     *  @param {number} diameter */
+    /** circle cast and return all the objects whose position is within the circle
+     *  @param {Vector2} pos
+     *  @param {number} diameter
+     *  @return {Array&lt;Box2dObject>} */
     circleCastAll(pos, diameter)
     {
         const radius2 = (diameter/2)**2;
@@ -1790,9 +2111,10 @@ class Box2dPlugin
         return results.filter(o=>o.pos.distanceSquared(pos) &lt; radius2);
     }
 
-    /** circle cast and return the first object
-     *  @param {Vector2} pos 
-     *  @param {number} diameter */
+    /** circle cast and return the object whose position is nearest, of those within the circle
+     *  @param {Vector2} pos
+     *  @param {number} diameter
+     *  @return {Box2dObject|undefined} */
     circleCast(pos, diameter)
     {
         const radius2 = (diameter/2)**2;
@@ -1812,29 +2134,33 @@ class Box2dPlugin
     }
 
     /** point cast and return the first object
-     *  @param {Vector2} pos 
-     *  @param {boolean} dynamicOnly */
+     *  @param {Vector2} pos
+     *  @param {boolean} [dynamicOnly]
+     *  @return {Box2dObject|undefined} */
     pointCast(pos, dynamicOnly=true)
     {
-        const queryCallback = new box2d.instance.JSQueryCallback();
+        const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
             if (dynamicOnly &amp;&amp; fixture.GetBody().GetType() !== box2d.instance.b2_dynamicBody)
                 return true; // continue getting results
-            if (!fixture.TestPoint(box2d.vec2dTo(pos)))
+            if (!fixture.TestPoint(box2dTemp(pos)))
                 return true; // continue getting results
-            queryObject = fixture.GetBody().object;
+            const o = fixture.GetBody().object;
+            if (!o || o.destroyed)
+                return true; // a raw body with no Box2dObject or one destroyed this step, continue getting results
+            queryObject = o;
             return false; // stop getting results
         };
 
-        const aabb = new box2d.instance.b2AABB();
-        aabb.set_lowerBound(box2d.vec2dTo(pos));
-        aabb.set_upperBound(box2d.vec2dTo(pos));
+        const aabb = box2dQueryObject('aabb', 'b2AABB');
+        aabb.set_lowerBound(box2dTemp(pos));
+        aabb.set_upperBound(box2dTemp(pos));
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast &amp;&amp; debugRect(pos, vec2(), queryObject ? '#f00' : '#00f', .02);
+        debugRaycast &amp;&amp; debugRect(pos, vec2(), queryObject ? '#f00' : '#00f');
         return queryObject;
     }
 
@@ -1865,8 +2191,8 @@ class Box2dPlugin
             }
             case box2d.instance.b2Shape.e_circle:
             {
-                const radius = shape.get_m_radius();
-                drawCircle(pos, radius*2, color, lineWidth, lineColor, useWebGL, false, context);
+                const radius = shape.get_m_radius(), offset = box2d.vec2From(shape.get_m_p());
+                drawCircle(pos.add(offset.rotate(angle)), radius*2, color, lineWidth, lineColor, useWebGL, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
@@ -1898,7 +2224,8 @@ class Box2dPlugin
         return box2d.vec2From(v);
     }
 
-    /** converts a Vector2 to a box2 vec2
+    /** converts a Vector2 to a new box2d vec2, which stays until destroyed with box2d.instance.destroy;
+     *  the plugin itself passes Box2D reused ones, since Box2D copies every vector it is given
      *  @param {Vector2} v */
     vec2dTo(v)
     {
@@ -1972,6 +2299,7 @@ class Box2dPlugin
 async function box2dInit()
 {
     // load box2d
+    // @ts-ignore - Box2D is the global that box2d.wasm.js defines
     new Box2dPlugin(await Box2D());
     setupDebugDraw();
     engineAddPlugin(box2dUpdate, box2dRender);
@@ -1980,14 +2308,16 @@ async function box2dInit()
     // add the box2d plugin to the engine
     function box2dUpdate()
     {
-        if (paused)
+        // frozen like the engine objects while paused or time is stopped
+        if (paused || !timeScale)
+        {
+            // what was destroyed while frozen leaves the list, the step does it otherwise
+            box2d.objects = box2d.objects.filter(o=>!o.destroyed);
             return;
+        }
 
         box2d.step();
 
-        // remove destroyed objects
-        box2d.objects = box2d.objects.filter(o=>!o.destroyed);
-        
         // copy box2d physics results to engine objects
         for (const o of box2d.objects)
         {
@@ -2073,4 +2403,4 @@ async function box2dInit()
         //debugDraw.AppendFlags(box2d.instance.b2Draw.e_centerOfMassBit);
         box2d.world.SetDebugDraw(debugDraw);
     }
-}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

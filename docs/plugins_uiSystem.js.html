@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><meta name="description" content="LittleJS is a lightweight HTML5 game engine with fast WebGL rendering, physics, particles, sound, and more!"><meta name="keywords" content="javascript, game engine, html5, webgl, 2d, game development, indie games"><meta name="author" content="Frank Force"><meta property="og:title" content="LittleJS - The Tiny JavaScript Game Engine"><meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound"><meta property="og:type" content="website"><title>Source: plugins/uiSystem.js</title><!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_uiSystem.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_uiSystem.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
  * LittleJS User Interface Plugin
  * - call new UISystemPlugin() to setup the UI system
  * - Gamepad and keyboard navigation support
@@ -45,7 +45,7 @@ function uiSetDebug(debugMode)
 class UISystemPlugin
 {
     /** Create the global UI system object
-     *  @param {CanvasRenderingContext2D} [context]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @example
      *  // create the ui plugin object
      *  new UISystemPlugin;
@@ -53,6 +53,7 @@ class UISystemPlugin
     constructor(context=mainContext)
     {
         ASSERT(!uiSystem, 'UI system already initialized');
+        ASSERT(context || headlessMode, 'create the UISystemPlugin after engineInit, in gameInit');
         uiSystem = this;
 
         // default settings
@@ -70,7 +71,8 @@ class UISystemPlugin
         this.defaultHoverColor = hsl(0,0,.9);
         /** @property {Color} - Default color for disabled UI elements */
         this.defaultDisabledColor = hsl(0,0,.3);
-        /** @property {Color} - Uses a gradient fill combined with color */
+        /** @property {Color|undefined} - Uses a gradient fill combined with color
+         *  @type {Color|undefined} */
         this.defaultGradientColor = undefined;
         /** @property {number} - Default line width for UI elements */
         this.defaultLineWidth = 4;
@@ -80,11 +82,14 @@ class UISystemPlugin
         this.defaultTextFitScale = .8;
         /** @property {string} - Default font for UI elements */
         this.defaultFont = fontDefault;
-        /** @property {Sound} - Default sound when interactive UI element is pressed */
+        /** @property {Sound|undefined} - Default sound when interactive UI element is pressed
+         *  @type {Sound|undefined} */
         this.defaultSoundPress = undefined;
-        /** @property {Sound} - Default sound when interactive UI element is released */
+        /** @property {Sound|undefined} - Default sound when interactive UI element is released
+         *  @type {Sound|undefined} */
         this.defaultSoundRelease = undefined;
-        /** @property {Sound} - Default sound when interactive UI element is clicked */
+        /** @property {Sound|undefined} - Default sound when interactive UI element is clicked
+         *  @type {Sound|undefined} */
         this.defaultSoundClick = undefined;
         /** @property {Color} - Color for shadow */
         this.defaultShadowColor = CLEAR_BLACK;
@@ -96,34 +101,60 @@ class UISystemPlugin
         this.nativeHeight = 0;
 
         // navigation properties
-        /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
+        /** @property {UIObject|undefined} - Object currently selected by navigation (gamepad or keyboard)
+         *  @type {UIObject|undefined} */
         this.navigationObject = undefined;
         /** @property {Timer} - Cool down timer for navigation inputs */
         this.navigationTimer = new Timer(undefined, true);
         /** @property {number} - Time between navigation inputs in seconds */
         this.navigationDelay = .2;
-        /** @property {boolean} - should the navigation be horizontal, vertical, or both? */
+        /** @property {number} - Which way keys and gamepads move the selection: 0 horizontal, 1 vertical, 2 both */
         this.navigationDirection = 1;
         /** @property {boolean} - True if user last used navigation instead of mouse */
         this.navigationMode = false;
 
         // system state
-        /** @property {Array&lt;UIObject>} - List of all UI elements */
+        /** @property {Array&lt;UIObject>} - List of all UI elements
+         *  @type {Array&lt;UIObject>} */
         this.uiObjects = [];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
         this.uiContext = context;
-        /** @property {UIObject} - Object user is currently interacting with */
+        /** @property {UIObject|undefined} - Object user is currently interacting with
+         *  @type {UIObject|undefined} */
         this.activeObject = undefined;
-        /** @property {UIObject} - Top most object user is over */
+        /** @property {UIObject|undefined} - Top most object user is over
+         *  @type {UIObject|undefined} */
         this.hoverObject = undefined;
-        /** @property {UIObject} - Hover object at start of update */
+        /** @property {UIObject|undefined} - Hover object at start of update
+         *  @type {UIObject|undefined} */
         this.lastHoverObject = undefined;
-        /** @property {UIObject} - Current confirm menu being shown */
+        /** @property {UIObject|undefined} - Current confirm menu being shown
+         *  @type {UIObject|undefined} */
         this.confirmDialog = undefined;
-        /** @private */
+        /** @private
+         *  @type {UIObject|undefined} */
         this._keyInputObject = undefined;
+        /** @private
+         *  @type {Array&lt;Array&lt;any>>|undefined} */
+        this._dragListeners = undefined;
         /** @private */
-        this._onKeyDown = (e) => this._keyInputObject?.onKeyDown(e);
+        this._onKeyDown = (e) =>
+        {
+            // a field that was hidden, disabled or destroyed since it took focus does not take the key, the game gets
+            // it, and the next UI update ends the edit, so it ends one way whichever comes first
+            const o = this._keyInputObject;
+            if (!o || !uiObjectIsUsable(o)) return;
+
+            // the field has the key, the game's input never sees it; browser shortcuts still work,
+            // and only the keys a field uses lose their default, so F5, F11, F12 and the like still work
+            e.stopPropagation();
+            const key = e.key || '';
+            if (!e.ctrlKey &amp;&amp; !e.metaKey &amp;&amp; !e.altKey)
+            if (key.length === 1 ||
+                /^(Backspace|Delete|Tab|Arrow(Up|Down|Left|Right)|Home|End|Enter|Escape)$/.test(key))
+                e.preventDefault(); // no scrolling, find as you type or going back
+            e.type === 'keydown' &amp;&amp; o.onKeyDown(e);
+        };
 
         engineAddPlugin(uiUpdate, uiRender);
 
@@ -158,13 +189,38 @@ class UISystemPlugin
         // update in reverse order to detect mouse enter/leave
         function uiUpdate()
         {
-            if (uiSystem.activeObject &amp;&amp; !uiSystem.activeObject.visible)
+            // a held or focused object that can no longer be used, itself or through a parent, lets go,
+            // and one that was hidden or disabled is still released, a destroyed one stays silent
+            const activeObject = uiSystem.activeObject;
+            if (activeObject &amp;&amp; !uiObjectIsUsable(activeObject))
+            {
+                // a text field being edited is active without being held, it was released when the press ended
                 uiSystem.activeObject = undefined;
+                activeObject.destroyed || activeObject === uiSystem.keyInputObject || activeObject.onRelease();
+            }
+            // an edit whose field can no longer be used ends as if it were finished, so onChange keeps the text
+            const keyInputObject = uiSystem.keyInputObject;
+            if (keyInputObject &amp;&amp; !uiObjectIsUsable(keyInputObject))
+            {
+                if (keyInputObject instanceof UITextInput &amp;&amp; !keyInputObject.destroyed)
+                    keyInputObject.stopEditing();
+                else
+                    uiSystem.keyInputObject = undefined;
+            }
 
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
             uiSystem.hoverObject = undefined;
-            
+
+            // a hidden object is not updated, so the one whose hover ends by hiding it, itself or through a parent,
+            // is left here; a disabled one still updates and handles its own leave
+            const lastHoverObject = uiSystem.lastHoverObject;
+            if (lastHoverObject &amp;&amp; !lastHoverObject.destroyed &amp;&amp; uiObjectIsHidden(lastHoverObject))
+            {
+                uiSystem.lastHoverObject = undefined;
+                lastHoverObject.onLeave();
+            }
+
             if (mouseWasPressed(0))
             {
                 // exit navigation mode on mouse press
@@ -173,11 +229,10 @@ class UISystemPlugin
             }
             if (uiSystem.keyInputObject)
             {
-                // handle text input
+                // handle text input, navigation keeps its place for when the edit ends, and the hover stays where it
+                // was, so an edit started by navigation does not end with an onLeave that had no onEnter
                 uiSystem.activeObject = uiSystem.keyInputObject;
-                uiSystem.hoverObject = uiSystem.keyInputObject;
-                uiSystem.navigationMode = false;
-                uiSystem.navigationObject = undefined;
+                uiSystem.hoverObject = uiSystem.lastHoverObject;
             }
 
             // navigation with gamepad/keyboard
@@ -236,16 +291,27 @@ class UISystemPlugin
                     }
                 }
 
-                // activate the navigation object when pressed
+                // activate the navigation object when pressed, the press is used up as a mouse click is
                 if (uiSystem.navigationObject)
                 if (uiSystem.getNavigationWasPressed())
+                {
                     uiSystem.navigationObject.navigatePressed();
+                    if (isUsingGamepad)
+                        inputClearKey(0, gamepadPrimary+1, false, true, false);
+                    else
+                    {
+                        inputClearKey('Space', 0, false, true, false);
+                        inputClearKey('Enter', 0, false, true, false);
+                    }
+                }
             }
 
-            // update in reverse order so topmost objects get priority
-            for (let i = uiSystem.uiObjects.length; i--;)
+            // update in reverse order so topmost objects get priority, from the list as it was
+            // since a callback may call destroyObjects, which swaps in a shorter one
+            const uiObjects = uiSystem.uiObjects;
+            for (let i = uiObjects.length; i--;)
             {
-                const o = uiSystem.uiObjects[i];
+                const o = uiObjects[i];
                 o.parent || updateObject(o);
             }
 
@@ -256,14 +322,12 @@ class UISystemPlugin
             {
                 if (o.destroyed || !o.visible) return;
 
-                // update in reverse order to detect mouse enter/leave
+                // update in reverse order to detect mouse enter/leave, from a copy since a child may destroy
+                // siblings mid-update (e.g. dialog close) and the ones after it would shift under the loop
                 updateTransforms(o);
-                for (let i=o.children.length; i--;)
-                {
-                    // a child may destroy siblings mid-update (e.g. dialog close)
-                    const child = o.children[i];
-                    child &amp;&amp; updateObject(child);
-                }
+                const children = o.children.slice();
+                for (let i=children.length; i--;)
+                    updateObject(children[i]);
                 if (!o.destroyed)
                     o.update();
             }
@@ -283,7 +347,8 @@ class UISystemPlugin
 
             function renderObject(o)
             {
-                if (!o.visible) return;
+                // a destroyed object stays in the list until the next update, but is gone now
+                if (o.destroyed || !o.visible) return;
 
                 // render object and children
                 updateTransforms(o);
@@ -299,6 +364,8 @@ class UISystemPlugin
                 function renderDebug(o, visible=true)
                 {
                     visible &amp;&amp;= !!o.visible;
+                    if (o.destroyed || !visible &amp;&amp; uiDebug &lt; 2)
+                        return; // only mode 2 shows the invisible ones
                     updateTransforms(o);
                     o.renderDebug(visible);
                     for (const c of o.children)
@@ -320,7 +387,7 @@ class UISystemPlugin
     *  @param {Color}   [gradientColor]
     *  @param {Color}   [shadowColor]
     *  @param {number}  [shadowBlur]
-    *  @param {Color}   [shadowOffset] */
+    *  @param {Vector2} [shadowOffset] */
     drawRect(pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, cornerRadius=0, gradientColor, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -397,7 +464,7 @@ class UISystemPlugin
     *  @param {boolean}  [mirror]
     *  @param {Color}    [shadowColor]
     *  @param {number}   [shadowBlur]
-    *  @param {Color}    [shadowOffset] */
+    *  @param {Vector2}  [shadowOffset] */
     drawTile(pos, size, tileInfo, color=uiSystem.defaultColor, angle=0, mirror=false, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         const context = uiSystem.uiContext;
@@ -421,14 +488,14 @@ class UISystemPlugin
     *  @param {Color}   [color=uiSystem.defaultColor]
     *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-    *  @param {string}  [align]
+    *  @param {'left'|'center'|'right'} [align]
     *  @param {string}  [font=uiSystem.defaultFont]
     *  @param {string}  [fontStyle]
     *  @param {boolean} [applyMaxWidth=true]
     *  @param {Vector2} [textShadow]
     *  @param {Color}   [shadowColor]
     *  @param {number}  [shadowBlur]
-    *  @param {Color}   [shadowOffset] */
+    *  @param {Vector2} [shadowOffset] */
     drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true, textShadow=undefined, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         const context = uiSystem.uiContext;
@@ -498,19 +565,27 @@ class UISystemPlugin
         return p;
     }
 
-    /** Object to send keyboard input to (typically a UITextInput).
-     *  The document keydown listener is only attached while this is set,
+    /** Object to send keyboard input to (typically a UITextInput), which keeps the keys from the game while set.
+     *  The keyboard listeners are only attached while this is set,
      *  so games that never use text input pay no event-handling cost.
-     *  @type {UIObject} */
+     *  @type {UIObject|undefined} */
     get keyInputObject() { return this._keyInputObject; }
     set keyInputObject(obj)
     {
         const had = !!this._keyInputObject;
         this._keyInputObject = obj;
+        // listen on the window as the event comes down, before the engine's input on the document can see it
         if (!had &amp;&amp; obj)
-            document.addEventListener('keydown', this._onKeyDown);
+        {
+            addEventListener('keydown', this._onKeyDown, true);
+            addEventListener('keyup', this._onKeyDown, true);
+            inputClearKeyboard(); // keys held when editing starts let go, or they would stay down
+        }
         else if (had &amp;&amp; !obj)
-            document.removeEventListener('keydown', this._onKeyDown);
+        {
+            removeEventListener('keydown', this._onKeyDown, true);
+            removeEventListener('keyup', this._onKeyDown, true);
+        }
     }
 
     /** Destroy and remove all objects
@@ -524,6 +599,7 @@ class UISystemPlugin
         this.hoverObject = undefined;
         this.lastHoverObject = undefined;
         this.keyInputObject = undefined;
+        this.confirmDialog = undefined;
     }
 
     /** Get all navigable UI objects sorted by navigationIndex
@@ -532,28 +608,53 @@ class UISystemPlugin
     {
         function getNavigableRecursive(o)
         {
-            if (!o.visible || o.disabled)
-                return; // skip children if parent is invisible or disabled
+            if (o.destroyed || !o.visible || o.disabled)
+                return; // skip children if parent is destroyed, invisible or disabled
 
             if (o.isInteractive() &amp;&amp; o.navigationIndex !== undefined)
                 objects.push(o);
-            for (let i=o.children.length; i--;)
-                getNavigableRecursive(o.children[i]);
+            for (const child of o.children)
+                getNavigableRecursive(child);
         }
 
         // get all the valid navigable objects recursively
         let objects = [];
-        for (let i = uiSystem.uiObjects.length; i--;)
+        for (const o of uiSystem.uiObjects)
         {
-            const o = uiSystem.uiObjects[i];
             if (uiSystem.confirmDialog &amp;&amp; o !== uiSystem.confirmDialog)
                 continue;
             o.parent || getNavigableRecursive(o);
         }
 
-        // sort by navigationIndex (lower numbers first)
+        // sort by navigationIndex (lower numbers first), ties keep creation and child order
         objects.sort((a, b)=> a.navigationIndex - b.navigationIndex);
         return objects;
+    }
+
+    /** Check if the mouse is over a visible UI object that can be hovered, or anywhere while the
+     *  confirm dialog is open, so a game can leave world clicks on the UI alone, on touch too.
+     *  The UI uses up a click before objects update and gameUpdatePost, so read world clicks there,
+     *  or check this in gameUpdate, which runs first. Positions are from the last UI update.
+     *  @return {boolean} */
+    isMouseOverUI()
+    {
+        function isOverRecursive(o)
+        {
+            if (o.destroyed || !o.visible)
+                return false; // a hidden parent hides its children
+            if (o.canBeHover &amp;&amp; o.isMouseOverlapping())
+                return true;
+            return o.children.some(isOverRecursive);
+        }
+
+        // a click while a text field is being edited ends the edit, the UI takes it
+        if (uiSystem.keyInputObject)
+            return true;
+
+        // while the confirm dialog is open it blocks everything else
+        if (uiSystem.confirmDialog)
+            return isOverRecursive(uiSystem.confirmDialog);
+        return uiSystem.uiObjects.some(o=> !o.parent &amp;&amp; isOverRecursive(o));
     }
 
     /** Get navigation direction from gamepad or keyboard
@@ -595,9 +696,10 @@ class UISystemPlugin
             const dpad = gamepadDpad(gamepadPrimary);
             return !vertical ? (stick.y || dpad.y) : (stick.x || dpad.x);
         }
-        const back = !vertical ? 'ArrowUp' : 'ArrowLeft';
-        const forward = !vertical ? 'ArrowDown' : 'ArrowRight';
-        return keyIsDown(back) ? -1 : keyIsDown(forward) ? 1 : 0;
+        // up is positive, as it is on the gamepad
+        if (!vertical)
+            return keyIsDown('ArrowUp') ? 1 : keyIsDown('ArrowDown') ? -1 : 0;
+        return keyIsDown('ArrowLeft') ? -1 : keyIsDown('ArrowRight') ? 1 : 0;
     }
 
     /** Get if navigation button was pressed from gamepad or keyboard
@@ -612,9 +714,9 @@ class UISystemPlugin
      *  Centers the dialog on the screen with darkened background
      *  @param {string} [text] - The message to display
      *  @param {Function} [yesCallback] - Called when Yes is clicked
-     *  @param {Function} [noCallback] - Called when No is clicked
-     *  @param {Vector2} [size] - Size of the confirmation dialog
-     *  @param {string} [exitKey] - Key that can exit the menu
+     *  @param {Function} [noCallback] - Called when No is clicked, or the exit key or gamepad B closes it
+     *  @param {Vector2} [size] - Size of the confirmation dialog, the title and buttons are placed by it
+     *  @param {string} [exitKey] - Key that closes the menu as No, gamepad B (button 1) does too
      *  @return {UIObject} The confirmation menu object
      */
     showConfirmDialog(text='Are you sure?', yesCallback, noCallback, size=vec2(500,250), exitKey='Escape')
@@ -634,20 +736,27 @@ class UISystemPlugin
             const backgroundColor = hsl(0,0,0,.7);
             uiSystem.drawRect(vec2(), vec2(1e9), backgroundColor);
         }
+        let opened = false;
         confirmMenu.onUpdate = ()=>
         {
-            if (keyWasPressed(exitKey))
-                closeMenu();
+            // not the press that opened it, a game may open it on the same back button, so its first update is skipped
+            // (not by frame number, which does not advance while paused, where a confirm is usually shown)
+            if (opened &amp;&amp; (keyWasPressed(exitKey) || gamepadWasPressed(1)))
+            {
+                closeMenu(); // the exit key or gamepad B answers no
+                noCallback &amp;&amp; noCallback();
+            }
+            opened = true;
         }
         confirmMenu.isMouseOverlapping = ()=> true; // always hover
         
-        // title text
-        const gap = 50;
-        const textTitle = new UIText(vec2(0,-50), vec2(size.x-gap,70), text);
+        // title text, placed by the dialog's size (at +-50 for the default 250 high)
+        const gap = 50, y = size.y/5;
+        const textTitle = new UIText(vec2(0,-y), vec2(size.x-gap,70), text);
         confirmMenu.addChild(textTitle);
-        
+
         // yes button
-        const buttonYes = new UIButton(vec2(-80,50), vec2(120,70), 'Yes');
+        const buttonYes = new UIButton(vec2(-80,y), vec2(120,70), 'Yes');
         buttonYes.textHeight = 40;
         buttonYes.navigationIndex = 1;
         buttonYes.hoverColor = hsl(0,1,.5);
@@ -655,38 +764,77 @@ class UISystemPlugin
         confirmMenu.addChild(buttonYes);
         
         // no button
-        const buttonNo = new UIButton(vec2(80,50), vec2(120,70), 'No');
+        const buttonNo = new UIButton(vec2(80,y), vec2(120,70), 'No');
         buttonNo.textHeight = 40;
         buttonNo.navigationIndex = 2;
         buttonNo.navigationAutoSelect = true;
         buttonNo.onClick = ()=> { closeMenu(); noCallback &amp;&amp; noCallback(); };
         confirmMenu.addChild(buttonNo);
 
-        // close menu and return to normal navigation
+        // return to normal navigation however the menu goes, by its buttons,
+        // destroyObjects or a call to its destroy
+        const destroy = confirmMenu.destroy.bind(confirmMenu);
+        confirmMenu.destroy = ()=>
+        {
+            if (uiSystem.confirmDialog === confirmMenu)
+            {
+                uiSystem.confirmDialog = undefined;
+                uiSystem.navigationDirection = savedNavigationDirection;
+            }
+            destroy();
+        };
+
+        // close menu and clear the input that closed it
         function closeMenu()
         {
             ASSERT(uiSystem.confirmDialog === confirmMenu);
             confirmMenu.destroy();
-            uiSystem.confirmDialog = undefined;
-            uiSystem.navigationDirection = savedNavigationDirection;
             inputClear();
         }
         return confirmMenu;
     }
 }
 
+// whether a UI object can still be used: it and every parent visible, enabled and not destroyed
+function uiObjectIsUsable(o)
+{
+    for (; o; o = o.parent)
+        if (o.destroyed || !o.visible || o.disabled)
+            return false;
+    return true;
+}
+
+// whether a UI object is disabled, itself or through a parent
+function uiObjectIsDisabled(o)
+{
+    for (; o; o = o.parent)
+        if (o.disabled)
+            return true;
+    return false;
+}
+
+// whether a UI object is hidden, itself or through a parent
+function uiObjectIsHidden(o)
+{
+    for (; o; o = o.parent)
+        if (!o.visible)
+            return true;
+    return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-/** 
+/**
  * UI Object - Base level object for all UI elements
  * @memberof UISystem */
 class UIObject
 {
     /** Create a UIObject
      *  @param {Vector2}  [pos=vec2()]
-     *  @param {Vector2}  [size=vec2(1)]
+     *  @param {Vector2}  [size=vec2()]
      */
     constructor(pos=vec2(), size=vec2())
     {
+        ASSERT(uiSystem, 'create the UISystemPlugin before UI objects');
         ASSERT(isVector2(pos), 'ui object pos must be a vec2');
         ASSERT(isVector2(size), 'ui object size must be a vec2');
 
@@ -703,9 +851,11 @@ class UIObject
         this.size = size.copy();
         /** @property {Color} - Color of the object */
         this.color = uiSystem.defaultColor.copy();
-        /** @property {Color} - Color of the object when active, uses hoverColor if undefined */
+        /** @property {Color|undefined} - Color of the object when active, uses hoverColor if undefined
+         *  @type {Color|undefined} */
         this.activeColor = undefined;
-        /** @property {string} - Text for this ui object */
+        /** @property {string|undefined} - Text for this ui object
+         *  @type {string|undefined} */
         this.text = undefined;
         /** @property {Color} - Color when disabled */
         this.disabledColor = uiSystem.defaultDisabledColor.copy();
@@ -717,7 +867,8 @@ class UIObject
         this.hoverColor = uiSystem.defaultHoverColor.copy();
         /** @property {Color} - Color for line drawing */
         this.lineColor = uiSystem.defaultLineColor.copy();
-        /** @property {Color} - Uses a gradient fill combined with color */
+        /** @property {Color|undefined} - Uses a gradient fill combined with color
+         *  @type {Color|undefined} */
         this.gradientColor = uiSystem.defaultGradientColor ? uiSystem.defaultGradientColor.copy() : undefined;
         /** @property {number} - Width for line drawing */
         this.lineWidth = uiSystem.defaultLineWidth;
@@ -725,33 +876,45 @@ class UIObject
         this.cornerRadius = uiSystem.defaultCornerRadius;
         /** @property {string} - Font for this object */
         this.font = uiSystem.defaultFont;
-        /** @property {string} - Font style for this object or undefined */
+        /** @property {string|undefined} - Font style for this object or undefined
+         *  @type {string|undefined} */
         this.fontStyle = undefined;
-        /** @property {number} - Override for text width */
+        /** @property {number|undefined} - Override for text width
+         *  @type {number|undefined} */
         this.textWidth = undefined;
-        /** @property {number} - Override for text height */
+        /** @property {number|undefined} - Override for text height
+         *  @type {number|undefined} */
         this.textHeight = undefined;
         /** @property {number} - Scale text to fit in the object */
         this.textFitScale = uiSystem.defaultTextFitScale;
-        /** @property {Vector2} - How much to offset the text shadow or undefined */
+        /** @property {Vector2|undefined} - How much to offset the text shadow or undefined.
+         *  UIText draws it in its shadowColor, which is clear by default, so set that too;
+         *  the blurred shadow then shows as well unless shadowBlur and shadowOffset are zero.
+         *  The other widgets draw it in black
+         *  @type {Vector2|undefined} */
         this.textShadow = undefined;
-        /** @property {number} - Color for text line drawing  */
+        /** @property {Color} - Color for text line drawing  */
         this.textLineColor = uiSystem.defaultLineColor.copy();
         /** @property {number} - Width for text line drawing */
         this.textLineWidth = 0;
         /** @property {boolean} - Should this object be drawn */
         this.visible  = true;
-        /** @property {Array&lt;UIObject>} - A list of this object's children */
+        /** @property {Array&lt;UIObject>} - A list of this object's children
+         *  @type {Array&lt;UIObject>} */
         this.children = [];
-        /** @property {UIObject} - This object's parent, position is in parent space */
+        /** @property {UIObject|undefined} - This object's parent, position is in parent space
+         *  @type {UIObject|undefined} */
         this.parent = undefined;
         /** @property {number} - Added size to make small buttons easier to touch on mobile devices */
         this.extraTouchSize = 0;
-        /** @property {Sound} - Sound when interactive element is pressed */
+        /** @property {Sound|undefined} - Sound when interactive element is pressed
+         *  @type {Sound|undefined} */
         this.soundPress = uiSystem.defaultSoundPress;
-        /** @property {Sound} - Sound when interactive element is released */
+        /** @property {Sound|undefined} - Sound when interactive element is released
+         *  @type {Sound|undefined} */
         this.soundRelease = uiSystem.defaultSoundRelease;
-        /** @property {Sound} - Sound when interactive element is clicked */
+        /** @property {Sound|undefined} - Sound when interactive element is clicked
+         *  @type {Sound|undefined} */
         this.soundClick = uiSystem.defaultSoundClick;
         /** @property {boolean} - Is this element interactive */
         this.interactive = false;
@@ -759,13 +922,14 @@ class UIObject
         this.dragActivate = false;
         /** @property {boolean} - True if this can be a hover object */
         this.canBeHover = true;
-        /** @property {Color} - Color for shadow, undefined if no shadow */
+        /** @property {Color} - Color for shadow */
         this.shadowColor = uiSystem.defaultShadowColor?.copy();
         /** @property {number} - Size of shadow blur */
         this.shadowBlur = uiSystem.defaultShadowBlur;
         /** @property {Vector2} - Offset of shadow blur */
         this.shadowOffset = uiSystem.defaultShadowOffset?.copy();
-        /** @property {number} - Optional navigation order index, lower values are selected first */
+        /** @property {number|undefined} - Optional navigation order index, lower values are selected first
+         *  @type {number|undefined} */
         this.navigationIndex = undefined;
         /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
         this.navigationAutoSelect = false;
@@ -773,6 +937,11 @@ class UIObject
          *  Components in [-1, 1]: (0,0)=center, (-1,-1)=top-left, (1,1)=bottom-right.
          *  Also acts as self-pivot — e.g. (1,-1) puts your top-right corner at the anchor point. */
         this.anchor = vec2();
+        /** @property {'left'|'center'|'right'} - Horizontal text alignment: left, center, or right
+         *  @type {'left'|'center'|'right'} */
+        this.align = 'center';
+        /** @property {boolean} - Has this object been destroyed? */
+        this.destroyed = false;
 
         uiSystem.uiObjects.push(this);
     }
@@ -813,7 +982,7 @@ class UIObject
         if (uiSystem.keyInputObject   === this) uiSystem.keyInputObject   = undefined;
 
         // disconnect from parent and destroy children
-        this.destroyed = 1;
+        this.destroyed = true;
         this.parent?.removeChild(this);
         for (const child of this.children)
         {
@@ -836,17 +1005,27 @@ class UIObject
         return isOverlapping(this.nativePos, size, pos);
     }
 
-    /** Update the object, called automatically by plugin once each frame */
+    /** Update the object, called automatically by plugin once each frame
+     *  @return {void} */
     update()
     {
-        // call the custom update callback
+        // call the custom update callback, which may destroy this object
         this.onUpdate();
+        if (this.destroyed) return;
 
-        // unset active if disabled
-        if (this.disabled)
+        // unset active if disabled, itself or through a parent, and let go of it
+        const disabled = uiObjectIsDisabled(this);
+        if (disabled)
         {
             if (this === uiSystem.activeObject)
+            {
                 uiSystem.activeObject = undefined;
+                if (this !== uiSystem.keyInputObject) // a field being edited was released when its press ended
+                {
+                    this.onRelease();
+                    if (this.destroyed) return;
+                }
+            }
             if (this === uiSystem.keyInputObject)
                 uiSystem.keyInputObject = undefined;
         }
@@ -857,7 +1036,8 @@ class UIObject
         const wasHover = uiSystem.lastHoverObject === this;
         const isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
-        const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
+        // a press and release in one frame is a press too, as it is for a button that is not drag activated
+        const mousePress = mouseWasPressed(0) || this.dragActivate &amp;&amp; mouseDown;
         if (this.canBeHover)
         if (!uiSystem.navigationMode) // no mouse hover in navigation mode
         if (mousePress || isActive || (!mouseDown &amp;&amp; !isTouchDevice))
@@ -865,30 +1045,39 @@ class UIObject
             uiSystem.hoverObject = this;
         if (this.isHoverObject())
         {
-            if (!this.disabled)
+            if (!disabled)
             {
                 if (mousePress)
                 {
                     if (this.interactive)
                     {
-                        if (!this.dragActivate || (!wasHover || mouseWasPressed(0)))
+                        // drag activate sees the held mouse as a press every frame, only a new one counts
+                        const newPress = !this.dragActivate || !wasHover || mouseWasPressed(0);
+                        if (newPress)
+                        {
                             this.onPress();
-                        this.soundPress &amp;&amp; this.soundPress.play();
-                        if (uiSystem.activeObject &amp;&amp; !isActive)
-                            uiSystem.activeObject.onRelease();
+                            if (this.destroyed) // the press took it away, and the press is used up
+                                return void inputClearKey(0, 0, false, true, false);
+                            this.soundPress &amp;&amp; this.soundPress.play();
+                            if (uiSystem.activeObject &amp;&amp; !isActive)
+                                uiSystem.activeObject.onRelease();
+                        }
                         uiSystem.activeObject = this;
 
-                        if (uiSystem.activateOnPress)
+                        if (newPress &amp;&amp; uiSystem.activateOnPress)
                             this.click(!this.soundPress);
+                        if (this.destroyed)
+                            return void inputClearKey(0, 0, false, true, false);
                     }
                 }
                 if (!uiSystem.activateOnPress)
                 if (!mouseDown &amp;&amp; this.isActiveObject() &amp;&amp; this.interactive)
                     this.click();
+                if (this.destroyed) return;
             }
 
             // clear mouse was pressed state even when disabled
-            mousePress &amp;&amp; inputClearKey(0,0,0,1,0);
+            mousePress &amp;&amp; inputClearKey(0, 0, false, true, false);
         }
         if (isActive)
         if (!mouseDown || (this.dragActivate &amp;&amp; !this.isHoverObject()))
@@ -912,18 +1101,19 @@ class UIObject
         if (!this.size.x || !this.size.y) return;
 
         const isNavigationObject = this.isNavigationObject();
+        const disabled = this.interactive ? uiObjectIsDisabled(this) : this.disabled;
         const lineColor = isNavigationObject ? this.color :
-            this.interactive &amp;&amp; this.isActiveObject() &amp;&amp; !this.disabled ?
+            this.interactive &amp;&amp; this.isActiveObject() &amp;&amp; !disabled ?
             this.color : this.lineColor;
         const color = isNavigationObject ? this.hoverColor :
-            this.disabled ? this.disabledColor :
+            disabled ? this.disabledColor :
             this.interactive ?
                 this.isActiveObject() ? this.activeColor || this.hoverColor :
                 this.isHoverObject() ? this.hoverColor :
                 this.color : this.color;
         const lineWidth = this.lineWidth * (isNavigationObject ? 1.5 : 1);
         
-        uiSystem.drawRect(this.nativePos, this.size, color, lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor, this.shadowBlur, this.shadowOffset);
+        uiSystem.drawRect(this.nativePos, this.size, color, lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
     }
 
     /** Get the size for text with overrides and scale
@@ -933,6 +1123,15 @@ class UIObject
         return vec2(
             this.textWidth  || this.textFitScale * this.size.x,
             this.textHeight || this.textFitScale * this.size.y);
+    }
+
+    /** Get where the text is drawn, the center, or the edge of the text area its align puts it against
+     *  @param {Vector2} textSize - From getTextSize
+     *  @return {Vector2} */
+    getTextPos(textSize)
+    {
+        const side = this.align === 'left' ? -1 : this.align === 'right' ? 1 : 0;
+        return this.nativePos.add(vec2(side * textSize.x / 2, 0));
     }
 
     /** Called when the navigation button is pressed on this object */
@@ -950,8 +1149,8 @@ class UIObject
     /** @return {boolean} - Is this object in keyboard input mode */
     isKeyInputObject() { return uiSystem.keyInputObject === this; }
 
-    /** @return {boolean} - Can it be interacted with */
-    isInteractive() { return this.interactive &amp;&amp; this.visible &amp;&amp; !this.disabled;}
+    /** @return {boolean} - Can it be interacted with, it and every parent visible and enabled */
+    isInteractive() { return this.interactive &amp;&amp; uiObjectIsUsable(this); }
 
     /** Returns string containing info about this object for debugging
      *  @return {string} */
@@ -972,14 +1171,14 @@ class UIObject
     }
 
     /** Called if uiDebug is enabled
-     *  @param {boolean} visible */
+     *  @param {boolean} [visible] */
     renderDebug(visible=true)
     {
         // apply color based on state
         const color =
             !visible ? GREEN :
             this.isHoverObject() ? YELLOW :
-            this.disabled ? PURPLE :
+            uiObjectIsDisabled(this) ? PURPLE :
             this.interactive ? RED : BLUE;
         uiSystem.drawRect(this.nativePos, this.size, CLEAR_BLACK, 4, color);
     }
@@ -1016,6 +1215,10 @@ class UIObject
 
     /** Called when the state of this object changes */
     onChange() {}
+
+    /** Called with each key while this is the keyInputObject
+     *  @param {KeyboardEvent} e */
+    onKeyDown(e) {}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1030,7 +1233,7 @@ class UIText extends UIObject
      *  @param {Vector2} [pos]
      *  @param {Vector2} [size]
      *  @param {string}  [text]
-     *  @param {string}  [align]
+     *  @param {'left'|'center'|'right'} [align]
      *  @param {string}  [font=uiSystem.defaultFont]
      */
     constructor(pos, size, text='', align='center', font=uiSystem.defaultFont)
@@ -1050,8 +1253,9 @@ class UIText extends UIObject
         this.canBeHover = false;
         
         // no background by default
-        this.color = CLEAR_BLACK;
-        this.shadowColor = CLEAR_BLACK;
+        this.color = CLEAR_BLACK.copy();
+        this.shadowColor = CLEAR_BLACK.copy();
+        /** @type {Color|undefined} */
         this.gradientColor = undefined;
         this.lineWidth = 0;
 
@@ -1064,7 +1268,7 @@ class UIText extends UIObject
 
         // render the text
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.nativePos, textSize, this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor, this.shadowBlur, this.shadowOffset);
+        uiSystem.drawText(this.text, this.getTextPos(textSize), textSize, this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
     }
 }
 
@@ -1073,6 +1277,8 @@ class UIText extends UIObject
  * UITextInput - An editable text input field
  * - A simple text entry field that supports basic editing
  * - Suitable for short text input like names or numbers
+ * - Reads a physical keyboard: no on-screen keyboard opens on touch devices, and IME composition and paste do not type,
+ *   use an HTML input element for those
  * @extends UIObject
  * @memberof UISystem
  */
@@ -1092,17 +1298,21 @@ class UITextInput extends UIObject
         /** @property {number} - Max length of input (0 = no limit) */
         this.maxLength = 0;
 
-        // set properties
-        this.text = text;
+        // set properties, as a string, which typing adds to
+        this.text = text + '';
         this.interactive = true;
         this.canBeHover = true;
     }
 
-    click()
+    /** Start editing the text, called when it is clicked
+     *  @param {boolean} [playSound] */
+    click(playSound=true)
     {
-        // start editing the text
+        // start editing the text, the gamepad press that started it is used up so it does not stop it too
         uiSystem.keyInputObject = this;
+        inputClearKey(0, gamepadPrimary+1, false, true, false);
         this.onClick();
+        playSound &amp;&amp; this.soundClick &amp;&amp; this.soundClick.play();
     }
 
     /** Stop editing the text */
@@ -1122,13 +1332,20 @@ class UITextInput extends UIObject
      *  @param {KeyboardEvent} [e] */
     onKeyDown(e)
     {
+        // named keys by key, so numpad Enter works as Enter
         const code = e.code, key = e.key
-        if (code === 'Backspace')
-            this.text = this.text.slice(0, -1);
-        else if (code === 'Enter' || code === 'Escape')
+        if (e.repeat &amp;&amp; (key === 'Enter' || code === 'Space'))
+            return; // a key held when editing began repeats, it should not type or stop editing
+        this.text += ''; // a game may have set a number
+        if (key === 'Backspace')
+            this.text = [...this.text].slice(0, -1).join(''); // a whole character, an emoji is two code units
+        else if (key === 'Enter' || key === 'Escape')
             this.stopEditing();
         else if (key.length === 1) // printable characters
         {
+            // ctrl and cmd shortcuts do not type, but AltGr reports ctrl and alt and types characters like @
+            if ((e.ctrlKey || e.metaKey) &amp;&amp; !e.getModifierState?.('AltGraph'))
+                return;
             if (!this.maxLength || this.text.length &lt; this.maxLength)
                 this.text += key;
         }
@@ -1145,9 +1362,13 @@ class UITextInput extends UIObject
         if (mouseWasPressed(0) &amp;&amp; !this.isMouseOverlapping() ||
             gamepadWasPressed(0, gamepadPrimary))
         {
+            // the press that stopped it is used up, by the mouse or the gamepad
             this.stopEditing();
             inputClearKey(0,0);
+            inputClearKey(0, gamepadPrimary+1, false, true, false);
         }
+        else if (mouseWasPressed(0))
+            inputClearKey(0, 0, false, true, false); // a click inside is used up like any click on the UI
     }
 
     render()
@@ -1159,7 +1380,7 @@ class UITextInput extends UIObject
         let text = this.text;
         if (this.isKeyInputObject()) // add a cursor to end of text
             text += timeReal%1 &lt; .5 ?  '█' : '░';
-        uiSystem.drawText(text, this.nativePos, textSize, 
+        uiSystem.drawText(text, this.getTextPos(textSize), textSize, 
             this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
@@ -1173,9 +1394,9 @@ class UITextInput extends UIObject
 class UITile extends UIObject
 {
     /** Create a UITile object
-     *  @param {Vector2}  [pos]
-     *  @param {Vector2}  [size]
-     *  @param {TileInfo} [tileInfo]
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  size
+     *  @param {TileInfo} tileInfo
      *  @param {Color}    [color=WHITE]
      *  @param {number}   [angle]
      *  @param {boolean}  [mirror]
@@ -1198,11 +1419,14 @@ class UITile extends UIObject
         this.color = color.copy();
 
         // no shadow by default
-        this.shadowColor = CLEAR_BLACK;
+        this.shadowColor = CLEAR_BLACK.copy();
     }
     render()
     {
-        uiSystem.drawTile(this.nativePos, this.size, this.tileInfo, this.color, this.angle, this.mirror, this.shadowColor, this.shadowBlur, this.shadowOffset);
+        // call the custom render callback
+        this.onRender();
+
+        uiSystem.drawTile(this.nativePos, this.size, this.tileInfo, this.color, this.angle, this.mirror, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
     }
 }
 
@@ -1241,7 +1465,7 @@ class UIButton extends UIObject
         
         // draw the text scaled to fit
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.nativePos.add(this.textOffset), textSize, 
+        uiSystem.drawText(this.text, this.getTextPos(textSize).add(this.textOffset), textSize, 
             this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
@@ -1275,10 +1499,12 @@ class UICheckbox extends UIObject
         this.color = color.copy();
         this.interactive = true;
     }
-    click()
+    /** Toggle the checkbox, called when it is clicked
+     *  @param {boolean} [playSound] */
+    click(playSound=true)
     {
         this.checked = !this.checked;
-        this.onClick();
+        super.click(playSound); // the click callback and sound, as every UI object has
         this.onChange();
     }
     render()
@@ -1386,7 +1612,7 @@ class UISlider extends UIObject
             const progressWidth = lerp(minWidth, barWidth, this.value);
             const p = (progressWidth - barWidth) * (isHorizontal ? .5 : -.5);
             const pos = this.nativePos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
-            const color = this.disabled ? this.disabledColor : this.handleColor;
+            const color = uiObjectIsDisabled(this) ? this.disabledColor : this.handleColor;
             const drawSize = isHorizontal ? 
                 vec2(progressWidth, this.size.y) : vec2(this.size.x, progressWidth);
             uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
@@ -1397,14 +1623,14 @@ class UISlider extends UIObject
             const value = clamp(isHorizontal ? this.value : 1 - this.value);
             const p = (barWidth - handleWidth) * (value - .5);
             const pos = this.nativePos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
-            const color = this.disabled ? this.disabledColor : this.handleColor;
+            const color = uiObjectIsDisabled(this) ? this.disabledColor : this.handleColor;
             const drawSize = vec2(handleWidth);
             uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
         }
 
         // draw the text scaled to fit on the slider
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.nativePos, textSize, 
+        uiSystem.drawText(this.text, this.getTextPos(textSize), textSize, 
             this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
     navigatePressed()
@@ -1418,12 +1644,12 @@ class UISlider extends UIObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** 
- * VideoPlayerUIObject - A UI object that plays video
+/**
+ * UIVideo - A UI object that plays video
  * @extends UIObject
  * @example
  * // Create a video player UI object
- * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
+ * const video = new UIVideo(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
  * video.play();
  * @memberof UISystem
  */
@@ -1444,7 +1670,7 @@ class UIVideo extends UIObject
         ASSERT(isStringLike(src), 'video src must be a string');
         ASSERT(isNumber(volume), 'video volume must be a number');
 
-        this.color = BLACK; // default to black background
+        this.color = BLACK.copy(); // default to black background
         this.cornerRadius = 0; // default to no corner radius
 
         /** @property {number} - The video volume */
@@ -1456,7 +1682,10 @@ class UIVideo extends UIObject
         this.video.loop = loop;
         this.video.volume = clamp(volume * soundVolume);
         this.video.muted = !soundEnable;
+        /** @private */
+        this._soundEnabled = soundEnable; // the sound setting the mute last followed
         this.video.style.display = 'none';
+        this.video.playsInline = true; // an iPhone would play it fullscreen and block its muted autoplay
         this.video.src = src;
         document.body.appendChild(this.video);
         autoplay &amp;&amp; this.play();
@@ -1523,14 +1752,21 @@ class UIVideo extends UIObject
     /** Seek to time in seconds
      *  @param {number} time - Time in seconds to seek to */
     setTime(time)
-    { this.video.currentTime = clamp(time, 0, this.getDuration()); }
+    {
+        // before the metadata loads there is no duration to clamp to, and the time set is where it starts
+        const duration = this.video.duration;
+        this.video.currentTime = duration ? clamp(time, 0, duration) : max(time, 0);
+    }
 
     update()
     {
         super.update();
 
-        // update volume based on global sound volume
+        // update volume based on global sound volume, and the mute when sound is turned on or off,
+        // so a game's own mute stays until then
         this.video.volume = clamp(this.volume * soundVolume);
+        if (this._soundEnabled !== soundEnable)
+            this.video.muted = !(this._soundEnabled = soundEnable);
     }
     
     /** Render video to UI canvas */
@@ -1598,11 +1834,13 @@ class UILayout extends UIObject
 
         if (transparent)
         {
-            // pure positioning helper - skip background, outline, and shadow
-            this.color = CLEAR_BLACK;
+            // pure positioning helper - skip background, outline, and shadow,
+            // and leave clicks in its gaps and padding to the game
+            this.color = CLEAR_BLACK.copy();
             this.gradientColor = undefined;
             this.lineWidth = 0;
-            this.shadowColor = CLEAR_BLACK;
+            this.shadowColor = CLEAR_BLACK.copy();
+            this.canBeHover = false;
         }
         this.relayout();
     }
@@ -1634,10 +1872,12 @@ class UILayout extends UIObject
         if (!n)
         {
             this.size = vec2(this.padding * 2);
+            this.parent instanceof UILayout &amp;&amp; this.parent.relayout(); // a layout it is in takes its new size
             return;
         }
 
-        const cols = this.columns;
+        // whole columns, at least one, and no empty ones, they would push it off center
+        const cols = clamp(floor(this.columns), 1, n);
         const rows = ceil(n / cols);
         const colWidths = new Array(cols).fill(0);
         const rowHeights = new Array(rows).fill(0);
@@ -1686,5 +1926,6 @@ class UILayout extends UIObject
 
         // container size = content + padding on all sides
         this.size = vec2(contentWidth + this.padding * 2, contentHeight + this.padding * 2);
+        this.parent instanceof UILayout &amp;&amp; this.parent.relayout(); // a layout it is in takes its new size
     }
-}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

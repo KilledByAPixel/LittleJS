@@ -1,0 +1,1249 @@
+<!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><meta name="description" content="LittleJS is a lightweight HTML5 game engine with fast WebGL rendering, physics, particles, sound, and more!"><meta name="keywords" content="javascript, game engine, html5, webgl, 2d, game development, indie games"><meta name="author" content="Frank Force"><meta property="og:title" content="LittleJS - The Tiny JavaScript Game Engine"><meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound"><meta property="og:type" content="website"><title>Source: plugins/render3dExtras.js</title><!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_render3dExtras.js</h1></header><article><pre class="prettyprint source lang-js"><code>/*
+ * LittleJS 3D Extras Plugin
+ * - Things built on the 3D renderer that it does not need in order to draw: the rest of the shape builders,
+ *   HeightMap terrain, the camera controls, ParticleEmitter3D and Trail3D, and the OBJ loader
+ * - Requires the Render3D plugin and goes after it, everything here is part of its Render3D namespace
+ */
+
+'use strict';
+
+///////////////////////////////////////////////////////////////////////////////
+// Helpers used only here
+
+// gap between lines of 3D text, as a share of the character height; flat text can let lines touch
+// the way the 2D font does, but extruded glyphs seen from an angle then overlap the line below
+const RENDER3D_TEXT_LEADING = 1.3;
+
+// surface normal from the slope of a height function, sampled half a cell each way but kept inside the half sizes
+function render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ)
+{
+    const x0 = max(x - ex, -halfX), x1 = min(x + ex, halfX), z0 = max(z - ez, -halfZ), z1 = min(z + ez, halfZ);
+    const dx = (heightFunction(x1, z) - heightFunction(x0, z)) / (x1 - x0 || 1);
+    const dz = (heightFunction(x, z1) - heightFunction(x, z0)) / (z1 - z0 || 1);
+    return vec3(-dx, 1, -dz).normalize();
+}
+
+// let go of the parent but stay where the object was in the world, which removeChild keeps by itself; a destroyed
+// parent has already let go, so the position remembered by the last update stands in
+function render3DDetach(o)
+{
+    if (o.parent)
+        o.parent.removeChild(o);
+    else if (o.worldPos3D)
+        o.pos3D = o.worldPos3D;
+}
+
+// a soft white dot for untextured particles, made once from a canvas, undefined headless or without a canvas
+let render3DSoftDotTexture;
+function render3DSoftDot()
+{
+    if (render3DSoftDotTexture || !glContext || typeof OffscreenCanvas == 'undefined') return render3DSoftDotTexture;
+    const size = 32, context = createCanvasContext(size);
+    const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    for (const [stop, alpha] of [[0, 1], [.33, .9], [.67, .7], [1, 0]]) // the same falloff as a soft disc
+        gradient.addColorStop(stop, 'rgba(255,255,255,' + alpha + ')');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, size, size);
+    return render3DSoftDotTexture = new TextureInfo(context.canvas);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// The rest of the shape builders: buildLathe, buildSphere, buildBox, buildGrid and buildSky live with the
+// renderer, since it hands those out itself
+
+/**
+ * Build a cylinder standing on the Y axis, centered on the origin
+ * @param {number} [size] - Diameter
+ * @param {number} [height]
+ * @param {number} [sides] - Around
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
+ * @param {boolean} [capped] - Close the ends
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildCylinder(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true)
+{
+    return buildLathe([[size / 2, -height / 2], [size / 2, height / 2]], sides, smooth, capped);
+}
+
+/**
+ * Build a cone standing on the Y axis, centered on the origin, the point up
+ * @param {number} [size] - Diameter of the base
+ * @param {number} [height]
+ * @param {number} [sides] - Around
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
+ * @param {boolean} [capped] - Close the base
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildCone(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true)
+{
+    return buildLathe([[size / 2, -height / 2], [0, height / 2]], sides, smooth, capped);
+}
+
+/**
+ * Build a capsule standing on the Y axis, centered on the origin: a cylinder with a half sphere on each end
+ * @param {number} [size] - Diameter
+ * @param {number} [height] - Total height including the rounded ends, at least the size
+ * @param {number} [sides] - Around
+ * @param {number} [rings] - On each end
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildCapsule(size=1, height=1, sides=16, rings=4, smooth=render3D?.smoothShading)
+{
+    // the rounded ends alone are already the size tall, so a shorter capsule is only a sphere
+    ASSERT(height >= size, 'a capsule is at least as tall as it is wide, the ends take up the size', size, height);
+    const profile = [], r = size / 2, straight = max(0, height - size) / 2;
+    for (let i = 0; i &lt;= rings; ++i)
+    {
+        const a = i / rings * PI / 2;
+        profile.push([r * sin(a), -straight - r * cos(a)]);
+    }
+    for (let i = 0; i &lt;= rings; ++i)
+    {
+        const a = i / rings * PI / 2;
+        profile.push([r * cos(a), straight + r * sin(a)]);
+    }
+    return buildLathe(profile, sides, smooth);
+}
+
+/**
+ * Build a donut lying flat around the Y axis
+ * @param {number} [size] - Diameter of the whole donut, outside edge to outside edge
+ * @param {number} [tubeSize] - Diameter of the tube
+ * @param {number} [sides] - Around the ring
+ * @param {number} [tubeSides] - Around the tube
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading
+ * @return {Mesh}
+ * @memberof Render3D
+ */
+function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3D?.smoothShading)
+{
+    ASSERT(tubeSize &lt;= size, 'the tube must fit inside the torus');
+    const profile = [], radius = (size - tubeSize) / 2, tubeRadius = tubeSize / 2;
+    for (let i = 0; i &lt;= tubeSides; ++i)
+    {
+        const a = i / tubeSides * 2 * PI;
+        profile.push([radius + tubeRadius * cos(a), tubeRadius * sin(a)]);
+    }
+    return buildLathe(profile, sides, smooth);
+}
+
+/**
+ * Build a lit ribbon along a path, for roads, tracks and walls
+ * - Each segment is a flat quad, the sides are across the path in the plane of the up vector
+ * - doubleSided, so it is seen and lit from below as well
+ * @param {Array&lt;Vector3>} points - Center line in order
+ * @param {number|Array&lt;number>} [width] - Full width, one for all or one per point
+ * @param {Color|Array&lt;Color>} [color] - One for all or one per point
+ * @param {boolean} [closed] - Join the last point back to the first
+ * @param {Vector3} [up] - Which way the ribbon faces
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * const road = buildRibbon(trackPoints, 8, GRAY, true); // a loop of road
+ */
+function buildRibbon(points, width=1, color=WHITE, closed=false, up=vec3(0, 1, 0))
+{
+    ASSERT(isArray(points) &amp;&amp; points.length > 1, 'ribbon needs at least 2 points');
+    const mesh = new Mesh, count = points.length, edges = [];
+    let across = (abs(up.y) &lt; .9 ? vec3(0, 1, 0) : vec3(1, 0, 0)).cross(up).normalize(); // anything across up
+    for (let i = 0; i &lt; count; ++i)
+    {
+        // across the path, from the tangent through this point; a step along up keeps the last across
+        const next = points[closed ? (i + 1) % count : min(i + 1, count - 1)];
+        const last = points[closed ? (i + count - 1) % count : max(i - 1, 0)];
+        const dir = next.subtract(last).cross(up);
+        if (dir.lengthSquared() > 1e-12)
+            across = dir.normalize();
+        const half = across.scale((isArray(width) ? width[i] : width) / 2);
+        edges.push([points[i].subtract(half), points[i].add(half)]);
+    }
+    for (let i = 0; i + 1 &lt; count + (closed ? 1 : 0); ++i)
+    {
+        const j = (i + 1) % count, a = edges[i], b = edges[j];
+        const c = isArray(color) ? [color[i], color[i], color[j], color[j]] : color;
+        mesh.addQuad(a[0], a[1], b[1], b[0], c); // counter clockwise seen from above
+    }
+    mesh.doubleSided = true; // a flat strip, seen from both sides
+    return mesh;
+}
+
+/**
+ * Build a hull from a row of diamond shaped slices along Z, for ships, planes and cars
+ * - Each slice is [z, width, top, bottom, sideHeight]
+ * - sideHeight is 0 to 1 and puts the side corners between the bottom and the top
+ * - List the slices nose first, with the nose at the largest z
+ * @param {Array&lt;Array&lt;number>>} stations
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * const hull = buildLoft([[1.2, .4, .2, -.1], [0, 1.4, .5, -.4], [-1, 1, .3, -.3]]);
+ */
+function buildLoft(stations)
+{
+    ASSERT(isArray(stations) &amp;&amp; stations.length > 1, 'loft needs at least 2 stations');
+    // the caps and the winding both assume the nose leads, so the other order turns the hull inside out
+    ASSERT(stations[0][0] > stations[stations.length-1][0], 'loft stations go nose first, from the largest z to the smallest');
+    const mesh = new Mesh;
+    // section points: left, top, right, bottom, wound clockwise seen from +z
+    /** @type {function(Array&lt;number>): Array&lt;Vector3>} */
+    const section = ([z, w, t, b, m=.5])=>
+        [vec3(-w / 2, lerp(b, t, m), z), vec3(0, t, z), vec3(w / 2, lerp(b, t, m), z), vec3(0, b, z)];
+    for (let i = 0; i + 1 &lt; stations.length; ++i)
+    {
+        const s1 = section(stations[i]), s2 = section(stations[i + 1]);
+        for (let k = 0; k &lt; 4; ++k)
+            mesh.addQuad(s1[k], s1[(k + 1) % 4], s2[(k + 1) % 4], s2[k]);
+    }
+    const tail = section(stations[stations.length - 1]), nose = section(stations[0]);
+    mesh.addQuad(tail[0], tail[1], tail[2], tail[3]);
+    mesh.addQuad(nose[3], nose[2], nose[1], nose[0]);
+    return mesh;
+}
+
+/**
+ * Turn a sprite into a 3D block model by giving its pixels thickness
+ * - A pixel counts as solid when it is more than half opaque
+ * - Each pixel keeps its own color, so white art takes the object's tint
+ * - Runs of matching pixels merge into one face, and side walls appear only at the sprite's edges
+ * - A texture's pixels are read once and kept, so redrawing a canvas texture will not change what this builds
+ * - Pixels can also be an array of rows, each a Color, a truthy value for white, or a falsy value for empty
+ * @param {TileInfo|Array&lt;Array&lt;Color|number|boolean>>} pixels - A tile from a loaded texture, or rows of pixels,
+ *  each a Color (empty when see through), a truthy value for white or a falsy value for empty
+ * @param {Vector2} [size] - World width and height of the whole tile, centered like buildBox
+ * @param {number} [depth] - Thickness along Z
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * new EngineObject3D(vec3(), buildExtrude(tile(3, 16), vec2(2), .5)); // a chunky version of tile 3
+ */
+function buildExtrude(pixels, size=vec2(1), depth=1)
+{
+    let rows = /** @type {Array&lt;Array&lt;Color|number|boolean>>} */ (pixels), width, height;
+    if (pixels instanceof TileInfo)
+    {
+        // colors for the tile's pixels only, undefined where alpha is half or less
+        const image = render3DReadPixels(pixels.textureInfo), data = image.data;
+        const x0 = pixels.pos.x | 0, y0 = pixels.pos.y | 0;
+        width = pixels.size.x | 0, height = pixels.size.y | 0;
+        rows = [];
+        for (let y = 0; y &lt; height; ++y)
+        {
+            const row = rows[y] = [];
+            for (let x = 0; x &lt; width; ++x)
+            {
+                const k = ((y0 + y) * image.width + x0 + x) * 4;
+                row.push(data[k + 3] > 127 ? rgb(data[k] / 255, data[k + 1] / 255, data[k + 2] / 255) : undefined);
+            }
+        }
+    }
+    else
+    {
+        ASSERT(isArray(pixels) &amp;&amp; pixels.length, 'pixels must be a TileInfo or rows of pixels');
+        height = rows.length, width = rows[0].length;
+    }
+
+    // the color of a solid pixel, undefined outside or where it is empty
+    const solid = (x, y)=>
+    {
+        if (x &lt; 0 || y &lt; 0 || x >= width || y >= height) return;
+        const c = /** @type {Color} */ (rows[y] &amp;&amp; rows[y][x]); // or a truthy value for white
+        if (!c) return;
+        return isColor(c) ? (c.a > .5 ? c : undefined) : WHITE; // a see through Color is empty too
+    };
+    const same = (a, b)=> a === b || !!a &amp;&amp; !!b &amp;&amp; a.rgbaInt() === b.rgbaInt();
+
+    // call emit(start, end, color) for each run of same colored pixels, colorAt(i) undefined breaks the run
+    const runs = (count, colorAt, emit)=>
+    {
+        let start = 0, color;
+        for (let i = 0; i &lt;= count; ++i)
+        {
+            const c = i &lt; count ? colorAt(i) : undefined;
+            if (same(c, color)) continue;
+            if (color) emit(start, i, color);
+            start = i, color = c;
+        }
+    };
+
+    // pixel edges in world space, y runs down the image
+    const mesh = new Mesh, sx = size.x / width, sy = size.y / height, hz = depth / 2;
+    const px = x=> x * sx - size.x / 2, py = y=> size.y / 2 - y * sy;
+    const quad = (origin, right, up, normal, color)=>
+        mesh.addStrip(render3DQuadAxes(origin.add(right.scale(.5)).add(up.scale(.5)), right.scale(.5), up.scale(.5)), normal, RENDER3D_QUAD_UVS, color);
+    const X = vec3(1, 0, 0), Y = vec3(0, 1, 0), Z = vec3(0, 0, 1);
+    for (let y = 0; y &lt; height; ++y)
+    {
+        // front and back faces along each row
+        runs(width, x=> solid(x, y), (a, b, c)=>
+        {
+            const w = X.scale((b - a) * sx), h = Y.scale(sy);
+            quad(vec3(px(a), py(y + 1), hz), w, h, Z, c);
+            quad(vec3(px(b), py(y + 1), -hz), w.scale(-1), h, Z.scale(-1), c);
+        });
+        // walls facing up and down where the pixel above or below is empty
+        runs(width, x=> solid(x, y - 1) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(a), py(y), hz), X.scale((b - a) * sx), Z.scale(-depth), Y, c));
+        runs(width, x=> solid(x, y + 1) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(a), py(y + 1), -hz), X.scale((b - a) * sx), Z.scale(depth), Y.scale(-1), c));
+    }
+    for (let x = 0; x &lt; width; ++x)
+    {
+        // walls facing left and right where the pixel beside is empty
+        runs(height, y=> solid(x - 1, y) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(x), py(b), -hz), Z.scale(depth), Y.scale((b - a) * sy), X.scale(-1), c));
+        runs(height, y=> solid(x + 1, y) ? undefined : solid(x, y), (a, b, c)=>
+            quad(vec3(px(x + 1), py(b), hz), Z.scale(-depth), Y.scale((b - a) * sy), X, c));
+    }
+    return mesh;
+}
+
+/**
+ * Build a mesh of extruded text from an image font, the engine font by default so it needs no assets
+ * - Each glyph is extruded once per font and reused, the block is centered and faces +Z
+ * - Newlines stack downward, spaced a little wider than the character height so the sides do not collide
+ * - Every call builds a new mesh, dispose the old one when text changes often
+ * - Glyphs are white in the engine font, so the object's color tints the text
+ * @param {string|number} text
+ * @param {number} [size] - Character height in world units
+ * @param {number} [depth] - Thickness along Z
+ * @param {ImageFont} [font] - Defaults to engineImageFont
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * new EngineObject3D(vec3(0, 2, 0), buildText3D('HELLO'), undefined, YELLOW);
+ */
+function buildText3D(text, size=1, depth=.2, font=engineImageFont)
+{
+    ASSERT(font instanceof ImageFont, 'font must be an ImageFont, the engine font loads before gameInit');
+    const tileInfo = font.tileInfo;
+    let glyphs = render3DGlyphCache.get(font); // unit sized, scaled when combined
+    glyphs || render3DGlyphCache.set(font, glyphs = new Map);
+    const charSize = vec2(size * tileInfo.size.x / tileInfo.size.y, size);
+    const mesh = new Mesh, lines = (text + '').split('\n');
+    lines.forEach((line, j)=>
+    {
+        const y = ((lines.length - 1) / 2 - j) * charSize.y * RENDER3D_TEXT_LEADING;
+        for (let i = 0; i &lt; line.length; ++i)
+        {
+            const charCode = line.charCodeAt(i);
+            const index = charCode &lt; 32 || charCode > 127 ? 95 : charCode - 32; // like ImageFont
+            if (!index) continue; // space
+            let glyph = glyphs.get(index);
+            if (!glyph)
+            {
+                const pos = font.getGlyphPos(index); // where ImageFont finds it
+                glyphs.set(index, glyph = buildExtrude(new TileInfo(pos, tileInfo.size, tileInfo.textureInfo)));
+            }
+            const x = (i - (line.length - 1) / 2) * charSize.x;
+            mesh.combine(glyph, buildMatrix(vec3(x, y, 0), undefined, vec3(charSize.x, charSize.y, depth)));
+        }
+    });
+    return mesh;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * HeightMap - Terrain built from a grid of heights, with a mesh, a height lookup and a raycast
+ * - heights is a 2D array [row][column] of 0 to 1 values
+ * - Row 0 is the far edge at -Z and column 0 is the left edge at -X
+ * - It can be an image instead, where the red channel is the height
+ * - colors is an optional 2D array of Colors or an image, sampled per vertex
+ * - images are read through a canvas, so they must be same origin or loaded with crossOrigin set
+ * @memberof Render3D
+ * @example
+ * const terrain = new HeightMap(heightImage, vec2(100, 100), 10, colorImage);
+ * new EngineObject3D(vec3(), terrain.buildMesh());
+ * const y = terrain.getHeight(x, z); // stand things on it
+ */
+class HeightMap
+{
+    /** Create a height map from an array or an image
+     *  @param {Array&lt;Array&lt;number>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} heights
+     *  @param {Vector2} [size] - World size along X and Z
+     *  @param {number} [height] - World height of a full value
+     *  @param {Array&lt;Array&lt;Color>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} [colors] */
+    constructor(heights, size=vec2(1), height=1, colors)
+    {
+        if (!isArray(heights))
+            heights = render3DImageToArray(heights, (r)=> r / 255);
+        if (colors &amp;&amp; !isArray(colors))
+            colors = render3DImageToArray(colors, (r, g, b, a)=> rgb(r / 255, g / 255, b / 255, a / 255));
+        ASSERT(isArray(heights) &amp;&amp; heights.length > 1 &amp;&amp; isArray(heights[0]) &amp;&amp; heights[0].length > 1, 'height map needs at least 2 rows and 2 columns');
+        ASSERT(size.x > 0 &amp;&amp; size.y > 0, 'height map size must be positive, a zero size has nowhere to look things up');
+
+        /** @property {Array&lt;Array&lt;number>>} - Heights 0-1 as [row][column], rows along Z */
+        this.heights = heights;
+        /** @property {Array&lt;Array&lt;Color>>|undefined} - Vertex colors as [row][column], undefined for white
+         *  @type {Array&lt;Array&lt;Color>>|undefined} */
+        this.colors = /** @type {Array&lt;Array&lt;Color>>|undefined} */ (colors);
+        /** @property {Vector2} - World size along X and Z */
+        this.size = size.copy();
+        /** @property {number} - World height of a full value */
+        this.height = height;
+    }
+
+    /** Number of rows, along Z
+     *  @return {number} */
+    get rows() { return this.heights.length; }
+
+    /** Number of columns, along X
+     *  @return {number} */
+    get columns() { return this.heights[0].length; }
+
+    /** World height at a position, exactly the height of the mesh buildMesh draws there, clamped at the edges
+     *  @param {number|Vector3} x - X, or a position to take X and Z from
+     *  @param {number} [z]
+     *  @return {number} */
+    getHeight(x, z)
+    {
+        if (x instanceof Vector3)
+            z = x.z, x = x.x; // a position works as well as its two numbers, its own y is ignored
+        const columns = this.columns, rows = this.rows, h = this.heights;
+        const u = clamp((x / this.size.x + .5) * (columns - 1), 0, columns - 1);
+        const v = clamp((z / this.size.y + .5) * (rows - 1), 0, rows - 1);
+        const i = min(floor(u), columns - 2), j = min(floor(v), rows - 2);
+        const fu = u - i, fv = v - j;
+        // each cell is two triangles split from (i, j+1) to (i+1, j), the same split buildGrid's quads use
+        const a = h[j][i], b = h[j+1][i], c = h[j+1][i+1], d = h[j][i+1];
+        const height = fu + fv &lt;= 1 ? a + fu * (d - a) + fv * (b - a) : c + (1 - fu) * (b - c) + (1 - fv) * (d - c);
+        return height * this.height;
+    }
+
+    /** Surface normal at a position, from the slope across a sample
+     *  @param {number|Vector3} x - X, or a position to take X and Z from
+     *  @param {number} [z]
+     *  @return {Vector3} */
+    getNormal(x, z)
+    {
+        if (x instanceof Vector3)
+            z = x.z, x = x.x;
+        const ex = this.size.x / (this.columns - 1) / 2, ez = this.size.y / (this.rows - 1) / 2;
+        return render3DSlopeNormal((x, z)=> this.getHeight(x, z), x, z, ex, ez, this.size.x / 2, this.size.y / 2);
+    }
+
+    /** Color of the nearest sample to a position, white when there are no colors
+     *  @param {number|Vector3} x - X, or a position to take X and Z from
+     *  @param {number} [z]
+     *  @return {Color} */
+    getColor(x, z)
+    {
+        if (x instanceof Vector3)
+            z = x.z, x = x.x;
+        const c = this.colors;
+        if (!c) return WHITE;
+        const columns = c[0].length, rows = c.length;
+        const i = clamp(round((x / this.size.x + .5) * (columns - 1)), 0, columns - 1);
+        const j = clamp(round((z / this.size.y + .5) * (rows - 1)), 0, rows - 1);
+        return c[j][i];
+    }
+
+    /** Distance along a ray to where it crosses the terrain surface, or undefined for a miss
+     *  - Steps along the ray half a cell at a time, then narrows in on the exact spot
+     *  - A ray that starts under the ground crosses on its way out, so the hit is still on the surface
+     *  @param {Ray3D} ray - From screenToRay, or any ray
+     *  @return {number|undefined} */
+    raycast(ray)
+    {
+        const {origin, direction} = ray;
+        const size = this.size, height = this.height, length = direction.length();
+        if (!length) return;
+
+        // clip to the box around the terrain, and walk it in half cell steps from there
+        let t = raycastBox(ray, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
+        if (t === undefined) return;
+        const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
+        const step = cell / 2 / length, end = t + hypot(size.x, size.y, height) / length;
+        if (!(step > 0)) return; // a zero size
+
+        // where the ray leaves the map's footprint, so the last step stops at the edge instead of past it
+        let exit = Infinity;
+        if (direction.x)
+            exit = min(exit, (sign(direction.x) * size.x / 2 - origin.x) / direction.x);
+        if (direction.z)
+            exit = min(exit, (sign(direction.z) * size.y / 2 - origin.z) / direction.z);
+
+        // is the ray below the ground this far along, or undefined where it is off the map; a point on an edge
+        // can round a hair outside it, so the edges have a little give, and getHeight clamps there
+        const under = (at)=>
+        {
+            const p = origin.add(direction.scale(at)), give = 1 + 1e-9;
+            if (abs(p.x) > size.x / 2 * give || abs(p.z) > size.y / 2 * give) return;
+            return p.y &lt;= this.getHeight(p.x, p.z);
+        };
+
+        // look for where the ray changes sides, so one coming up from under the ground
+        // lands on the surface it breaks through instead of wherever it entered the box
+        const startUnder = under(t);
+        if (startUnder === undefined) return; // it meets the box outside the map itself
+        for (; t &lt; end; t += step)
+        {
+            const next = min(t + step, exit);
+            const u = under(next);
+            if (u === undefined) return; // it left the map before crossing
+            if (u === startUnder)
+            {
+                if (next >= exit) return; // it reached the edge without crossing
+                continue;
+            }
+
+            // it crossed between the last two samples, halve the gap until it is exact
+            let a = t, b = next;
+            for (let i = 0; i &lt; 16; ++i)
+            {
+                const mid = (a + b) / 2;
+                under(mid) === startUnder ? a = mid : b = mid;
+            }
+            return b;
+        }
+    }
+
+    /** Build the terrain mesh, one vertex per sample, centered on the origin
+     *  @param {boolean} [smooth] - Defaults to render3D.smoothShading
+     *  @return {Mesh} */
+    buildMesh(smooth=render3D?.smoothShading)
+    {
+        // flat shading colors each cell from its center, halfway between two samples where rounding could pick
+        // either, so it is nudged a thousandth of a cell back to make it the cell's first corner every time
+        const nudgeX = smooth ? 0 : this.size.x / (this.columns - 1) / 1e3;
+        const nudgeZ = smooth ? 0 : this.size.y / (this.rows - 1) / 1e3;
+        return buildGrid(this.size, vec2(this.columns - 1, this.rows - 1),
+            this.colors &amp;&amp; ((x, z)=> this.getColor(x - nudgeX, z - nudgeZ)), (x, z)=> this.getHeight(x, z), smooth);
+    }
+}
+
+// read an image's pixel bytes through the engine's work canvas, as {data, width, height}
+function render3DImageData(image)
+{
+    if (image instanceof TextureInfo)
+        image = image.image;
+    ASSERT(image &amp;&amp; image.width &amp;&amp; image.height, 'image is not loaded');
+    ASSERT(workReadCanvas, 'reading an image needs a canvas, pass arrays in headless mode');
+    const width = image.width, height = image.height;
+    workReadCanvas.width = width;
+    workReadCanvas.height = height;
+    workReadContext.drawImage(image, 0, 0);
+    return workReadContext.getImageData(0, 0, width, height);
+}
+
+// read an image into a 2D array [row][column], sample is called with (r, g, b, a) bytes for each pixel
+function render3DImageToArray(image, sample)
+{
+    const {data, width, height} = render3DImageData(image);
+    const rows = [];
+    for (let y = 0; y &lt; height; ++y)
+    {
+        const row = rows[y] = [];
+        for (let x = 0; x &lt; width; ++x)
+        {
+            const k = (y * width + x) * 4;
+            row.push(sample(data[k], data[k+1], data[k+2], data[k+3]));
+        }
+    }
+    return rows;
+}
+
+// extruded glyph meshes by font, and the pixel bytes of a texture, read once per image
+const render3DGlyphCache = new WeakMap, render3DPixelCache = new WeakMap;
+function render3DReadPixels(textureInfo)
+{
+    const image = textureInfo.image;
+    let pixels = render3DPixelCache.get(image);
+    if (!pixels)
+        render3DPixelCache.set(image, pixels = render3DImageData(image));
+    return pixels;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
+ * - An EngineObject3D, so move its pos3D to follow something, or parent it to an object
+ * - Destroy it to hand the camera back, and it stops driving the camera
+ * - Set persistent to keep it when engineObjectsDestroy clears out a level
+ * - Every part of it is a field, so a game can change the buttons, speeds and limits
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * new CameraControl3D(vec3(0, 1, 0), 15); // look at a point from 15 units away
+ */
+class CameraControl3D extends EngineObject3D
+{
+    /** Create a camera control, it drives render3D.camera every frame
+     *  @param {Vector3} [target] - The point to look at, its pos3D
+     *  @param {number} [distance] - How far the camera sits from the target
+     *  @param {number} [pitch] - Angle above the horizon, PI/2 looks straight down, clamped to pitchRange
+     *  @param {number} [idleSpin] - Turned each frame while not dragging, 0 holds still */
+    constructor(target=vec3(), distance=10, pitch=.4, idleSpin=0)
+    {
+        super(target);
+        this.size3D = vec3(); // not a solid thing to pick or collect
+        /** @property {number} - How far the camera sits from the target */
+        this.distance = distance;
+        /** @property {number} - Angle above the horizon */
+        this.pitch = pitch;
+        /** @property {number} - Turned each frame while not dragging */
+        this.idleSpin = idleSpin;
+        /** @property {number} - Angle around the target, dragging changes it */
+        this.yaw = 0;
+        /** @property {number} - Mouse button that turns the camera, 0 is left and 2 is right */
+        this.dragButton = 0;
+        /** @property {number} - How far dragging a pixel turns the camera */
+        this.dragSpeed = .01;
+        /** @property {number} - How much one wheel notch zooms, 0 turns zooming off */
+        this.zoomSpeed = .1;
+        /** @property {Vector2} - Closest and furthest the wheel can zoom to */
+        this.zoomRange = vec2(distance/4, distance*3);
+        /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top, widened to hold the pitch given */
+        this.pitchRange = vec2(min(-.2, pitch), max(1.4, pitch));
+    }
+
+    /** Read the mouse and put the camera on its orbit, called automatically each frame */
+    update()
+    {
+        if (mouseIsDown(this.dragButton))
+        {
+            // the scene follows the drag
+            this.yaw -= mouseDeltaScreen.x * this.dragSpeed;
+            this.pitch += mouseDeltaScreen.y * this.dragSpeed;
+        }
+        else
+            this.yaw += this.idleSpin;
+        this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
+        if (this.zoomSpeed &amp;&amp; mouseWheel)
+            this.distance = clamp(this.distance * (1 + sign(mouseWheel) * this.zoomSpeed), this.zoomRange.x, this.zoomRange.y);
+        render3D.camera.orbit(this.getWorldPos3D(), this.distance, this.yaw, this.pitch);
+    }
+
+    /** Camera controls draw nothing */
+    render3D() {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * FirstPersonCamera3D - Look around with the mouse and move with the keys, with the camera at its position
+ * - Click to capture the mouse so looking needs no button held, Esc lets it go; holding the button looks too, for touch
+ * - WASD or the arrow keys walk level, or move the way it looks when fly is set
+ * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
+ *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
+ * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
+ * - As the child of an EngineObject3D, like a player on a ship, its yaw, pitch and walking are relative to the parent,
+ *   so it turns and moves with it
+ * - Destroy it to hand the camera back
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * const player = new FirstPersonCamera3D(vec3(0, 1.5, 5));
+ * player.size3D = vec3(1); // bump into solid objects
+ * player.collideAsSphere3D = true;
+ * player.setCollision();
+ */
+class FirstPersonCamera3D extends EngineObject3D
+{
+    /** Create a first person camera, it drives render3D.camera every frame
+     *  @param {Vector3} [pos3D] - Where the eye is, defaults to where the camera is now
+     *  @param {number} [yaw] - Radians around Y, defaults to the camera's
+     *  @param {number} [pitch] - Radians up from level, defaults to the camera's */
+    constructor(pos3D=render3D.camera.pos, yaw=render3D.camera.rotation.y, pitch=render3D.camera.rotation.x)
+    {
+        super(pos3D);
+        this.size3D = vec3(); // not a solid thing to pick or collect until it is given a size
+        this.mass = 1; // so solids push it out, and render3D.gravity pulls on it
+        /** @property {number} - Angle around Y, the mouse turns it */
+        this.yaw = yaw;
+        /** @property {number} - Angle up from level, the mouse tilts it */
+        this.pitch = pitch;
+        /** @property {number} - World units per frame at full speed */
+        this.moveSpeed = .1;
+        /** @property {number} - How far a pixel of mouse movement turns the view */
+        this.lookSpeed = .003;
+        /** @property {Vector2} - Lowest and highest pitch */
+        this.pitchRange = vec2(-1.5, 1.5);
+        /** @property {boolean} - Move the way it looks, up and down included, instead of walking level */
+        this.fly = false;
+        /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
+        this.lockPointer = true;
+    }
+
+    /** Move by velocity3D, and fall by render3D.gravity unless flying, called automatically each frame */
+    updatePhysics()
+    {
+        // flying moves the way it looks and nothing else, so gravity does not pull while fly is on; the scale set
+        // on it is put back, for walking
+        const gravityScale = this.gravityScale;
+        if (this.fly)
+            this.gravityScale = 0;
+        super.updatePhysics();
+        this.gravityScale = gravityScale;
+    }
+
+    /** Read the mouse and keys and put the camera at the eye, called automatically each frame */
+    update()
+    {
+        // only a root moves by its own physics, a child follows its parent, so gravity would still pull one that flies
+        ASSERT(!this.fly || !this.parent, 'a flying FirstPersonCamera3D moves on its own, it cannot be a child');
+
+        // a click captures the mouse, then it looks around while captured or while a button is held
+        if (this.lockPointer &amp;&amp; mouseWasPressed(0))
+            pointerLockRequest();
+        if (pointerLockIsActive() || mouseIsDown(0))
+        {
+            this.yaw -= mouseDeltaScreen.x * this.lookSpeed;
+            this.pitch -= mouseDeltaScreen.y * this.lookSpeed;
+        }
+        this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
+
+        // the keys move it level, or the way it looks when flying, and walking keeps its fall
+        const input = keyDirection();
+        const move = vec3(input.x, 0, -input.y).clampLength(1).scale(this.moveSpeed)
+            .rotateX(this.fly ? this.pitch : 0).rotateY(this.yaw);
+        this.velocity3D = this.fly ? move : vec3(move.x, this.velocity3D.y, move.z);
+
+        // the camera sits at the eye, where this frame's physics left it, looking the way it does in its parent's
+        // space, since a child's velocity3D moves it in that space too
+        const rotation = vec3(this.pitch, this.yaw, 0);
+        render3D.camera.pos = this.getWorldPos3D();
+        render3D.camera.rotation = this.parent instanceof EngineObject3D ?
+            this.parent.getMatrix().multiply(Matrix4.rotation(rotation)).getRotation() : rotation;
+    }
+
+    /** Let go of the mouse and stop driving the camera
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        this.lockPointer &amp;&amp; pointerLockIsActive() &amp;&amp; pointerLockExit();
+        super.destroy(immediate);
+    }
+
+    /** Camera controls draw nothing */
+    render3D() {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// a particle is this many floats of its emitter's particleData: position, velocity, start color, end color, start
+// and end size, life, age, angle, spin, and how many trail points it has in trailData
+const RENDER3D_PARTICLE_FLOATS = 21;
+// the position, color and size of the particle being drawn, shared by every emitter so the draw loop makes no objects
+const render3DParticlePos = vec3(), render3DParticleColor = new Color, render3DParticleSize = vec2();
+
+/**
+ * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
+ * - Each particle is a flat square facing the camera, with a soft round dot when no tile is given
+ * - Set trailTime to draw each particle as a streak along where it has been, for sparks
+ * - Set angleSpeed to tumble them in the camera plane, which the 2D emitter takes as an argument
+ * - Particles shoot out along the emitter's own up axis, turned by rotation3D
+ * - emitConeAngle spreads them, PI sprays in every direction
+ * - Speeds are per frame and sizes are world units, the same as the 2D emitter
+ * - scale3D, its own or a parent's, grows the whole effect: the spawn area, the sizes, the speed and the fall
+ * - gravity here is its own number added to velocity y each frame: it is neither the engine's 2D
+ *   gravity nor render3D.gravity, so an effect keeps its own fall wherever it is used
+ * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * // fire: a stream upward, yellow fading to transparent red, additive
+ * new ParticleEmitter3D(vec3(), .5, 0, 100, .3, undefined, hsl(.12, 1, .6), hsl(.08, 1, .5), hsl(0, 1, .5, 0), hsl(0, 1, .25, 0), 1, .5, 1.5, .05, .95, 0, .3, .2, true);
+ */
+class ParticleEmitter3D extends EngineObject3D
+{
+    /** Create a particle emitter
+     *  @param {Vector3} [pos3D] - World space position of the emitter
+     *  @param {number|Vector3} [emitSize] - Spawn area, a number for a sphere diameter or a vec3 for a box
+     *  @param {number} [emitTime] - How long to keep emitting, 0 is forever
+     *  @param {number} [emitRate] - Particles per second, 0 does not emit
+     *  @param {number} [emitConeAngle] - Half angle around the emit direction, PI is every direction
+     *  @param {TileInfo|TextureInfo} [tileInfo] - Tile to render particles with, or a whole texture, undefined is untextured
+     *  @param {Color} [colorStartA] - Color at start of life, randomized between the start colors
+     *  @param {Color} [colorStartB]
+     *  @param {Color} [colorEndA] - Color at end of life, randomized between the end colors
+     *  @param {Color} [colorEndB]
+     *  @param {number} [particleTime] - How long particles live in seconds
+     *  @param {number} [sizeStart] - Particle size at start of life
+     *  @param {number} [sizeEnd] - Particle size at end of life
+     *  @param {number} [speed] - Spawn speed in world units per frame
+     *  @param {number} [damping] - Per frame velocity multiplier, 1 is none
+     *  @param {number} [gravity] - Per frame change to velocity y, negative pulls down; its own number,
+     *    not render3D.gravity, so the 2D emitter's gravityScale has no equivalent here
+     *  @param {number} [fadeRate] - Fraction of life spent fading, half in and half out
+     *  @param {number} [randomness] - Extra randomness applied to speed, size and life
+     *  @param {boolean} [additive] - Additive blending */
+    constructor(pos3D=vec3(), emitSize=0, emitTime=0, emitRate=100, emitConeAngle=PI, tileInfo,
+        colorStartA=WHITE, colorStartB=WHITE, colorEndA=CLEAR_WHITE, colorEndB=CLEAR_WHITE,
+        particleTime=.5, sizeStart=.1, sizeEnd=1, speed=.1, damping=1, gravity=0, fadeRate=.1, randomness=.2, additive=false)
+    {
+        super(pos3D, undefined, tileInfo);
+        this.transparent = true;
+        this.castShadow = false;
+        this.size3D = vec3(); // not a solid thing to pick or collect
+
+        /** @property {number|Vector3} - Spawn area, a number for a sphere diameter or a vec3 for a box */
+        this.emitSize = emitSize;
+        /** @property {number} - How long to keep emitting, 0 is forever */
+        this.emitTime = emitTime;
+        /** @property {number} - Particles per second, 0 does not emit */
+        this.emitRate = emitRate;
+        /** @property {number} - Half angle around the emit direction, PI is every direction */
+        this.emitConeAngle = emitConeAngle;
+        /** @property {Color} - Color at start of life, randomized between the start colors */
+        this.colorStartA = colorStartA.copy();
+        /** @property {Color} - Color at start of life, randomized between the start colors */
+        this.colorStartB = colorStartB.copy();
+        /** @property {Color} - Color at end of life, randomized between the end colors */
+        this.colorEndA = colorEndA.copy();
+        /** @property {Color} - Color at end of life, randomized between the end colors */
+        this.colorEndB = colorEndB.copy();
+        /** @property {number} - How long particles live in seconds */
+        this.particleTime = particleTime;
+        /** @property {number} - Particle size at start of life */
+        this.sizeStart = sizeStart;
+        /** @property {number} - Particle size at end of life */
+        this.sizeEnd = sizeEnd;
+        /** @property {number} - Spawn speed in world units per frame */
+        this.speed = speed;
+        /** @property {number} - Per frame velocity multiplier */
+        this.damping = damping;
+        /** @property {number} - Per frame change to velocity y, its own number and not render3D.gravity */
+        this.gravity = gravity;
+        /** @property {number} - Fraction of life spent fading, half in and half out */
+        this.fadeRate = fadeRate;
+        /** @property {number} - Extra randomness applied to speed, size and life */
+        this.randomness = randomness;
+        /** @property {boolean} - Additive blending */
+        this.additive = additive;
+        /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards */
+        this.trailTime = 0;
+        /** @property {number} - Radians per frame each particle turns in the camera plane, either way; 0 is no spin */
+        this.angleSpeed = 0;
+        /** @property {number} - Per frame multiplier on that spin, 1 keeps it */
+        this.angleDamping = 1;
+        /** @property {Float32Array} - The live particles, 21 floats each: position, velocity, start and end color, start
+         *  and end size, life, age, angle, spin, and trail point count; the emitter owns them, nothing else needs to */
+        this.particleData = new Float32Array(64 * RENDER3D_PARTICLE_FLOATS);
+        /** @property {number} - How many particles are alive, the first that many of particleData */
+        this.particleCount = 0;
+        /** @property {Float32Array|undefined} - The trail points of every particle, trailMax per particle oldest first, when trailTime is set
+         *  @type {Float32Array|undefined} */
+        this.trailData = undefined;
+        /** @property {number} - Trail points kept per particle, from trailTime */
+        this.trailMax = 0;
+        /** @property {Vector3|undefined} - Where the emitter was at its last update, for when its parent is destroyed
+         *  @type {Vector3|undefined} */
+        this.worldPos3D = undefined;
+        this.emitTimeBuffer = 0;
+    }
+
+    /** Spawn new particles, move the live ones, and go away when done */
+    update()
+    {
+        // one transform for the frame: where the emitter is, and how big the effect it makes is
+        const matrix = render3DObjectMatrix(this); // the object's own, read only
+        this.worldPos3D = matrix.getTranslation(); // remembered for when the parent is destroyed
+        const scale = render3DMaxScale(matrix.m);
+
+        // emit until the emit time is up, then wait for the last particle and go away
+        if (!this.emitTime || this.getAliveTime() &lt;= this.emitTime)
+        {
+            // a rate of zero is an emitter fed by hand, and the global scale only quiets it,
+            // neither is a reason to stop counting down the emit time
+            if (this.emitRate &amp;&amp; particleEmitRateScale)
+            {
+                this.emitTimeBuffer += this.emitRate * particleEmitRateScale * timeDelta;
+                for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
+                    this.emitParticle();
+            }
+        }
+        else if (!this.particleCount)
+            this.destroy();
+
+        // the trail storage follows trailTime, a change starts every trail over
+        const trailMax = this.trailTime ? max(1, round(this.trailTime / timeDelta)) : 0;
+        if (trailMax !== this.trailMax)
+        {
+            this.trailMax = trailMax;
+            this.trailData = trailMax ? new Float32Array(this.particleData.length / RENDER3D_PARTICLE_FLOATS * trailMax * 3) : undefined;
+            for (let k = 20; k &lt; this.particleData.length; k += RENDER3D_PARTICLE_FLOATS)
+                this.particleData[k] = 0;
+        }
+
+        // move the particles and drop the dead ones, all in the typed array: this runs for every particle every frame
+        const F = RENDER3D_PARTICLE_FLOATS, data = this.particleData, trail = this.trailData;
+        const damping = this.damping, gravity = this.gravity * scale, angleDamping = this.angleDamping; // a bigger effect has to fall faster to keep the same arc
+        for (let i = this.particleCount; i--;)
+        {
+            // damped first and gravity added after, the order the 2D particle uses, so the same
+            // damping and gravity give the same arc in both
+            const k = i * F;
+            const vx = data[k+3] *= damping, vy = data[k+4] = data[k+4] * damping + gravity, vz = data[k+5] *= damping;
+            data[k] += vx, data[k+1] += vy, data[k+2] += vz;
+            data[k+18] += data[k+19] *= angleDamping;
+            const t = i * trailMax * 3;
+            if (trailMax)
+            {
+                // remember where it has been, oldest first; a full trail drops its oldest point
+                let n = data[k+20];
+                if (n === trailMax)
+                    trail.copyWithin(t, t + 3, t + n * 3), --n;
+                const j = t + n * 3;
+                trail[j] = data[k], trail[j+1] = data[k+1], trail[j+2] = data[k+2];
+                data[k+20] = n + 1;
+            }
+            if ((data[k+17] += timeDelta) >= data[k+16])
+            {
+                // dead: the last particle takes its slot, trail and all, order does not matter
+                const last = --this.particleCount, kl = last * F;
+                if (i !== last)
+                {
+                    data.copyWithin(k, kl, kl + F);
+                    trailMax &amp;&amp; trail.copyWithin(t, last * trailMax * 3, (last + 1) * trailMax * 3);
+                }
+            }
+        }
+    }
+
+    /** Stop emitting, and go away once the particles already out have finished like the 2D emitter's do
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        if (immediate || !this.particleCount || this.destroyed)
+            return super.destroy(immediate);
+        this.emitTime = -1; // stops emitting, and update destroys it once the particles are gone
+        render3DDetach(this); // the particles are in world space, they no longer need the parent
+    }
+
+    /** Spawn one particle now */
+    emitParticle()
+    {
+        const random = ()=> rand(1 - this.randomness, 1 + this.randomness);
+        const matrix = render3DObjectMatrix(this); // the object's own, read only
+        // the whole effect grows with the emitter, not just the area the particles start in
+        const scale = render3DMaxScale(matrix.m);
+
+        // spawn offset: inside a box or a sphere
+        const size = this.emitSize, box = /** @type {Vector3} */ (size);
+        const offset = isVector3(size) ? vec3(rand(-.5, .5) * box.x, rand(-.5, .5) * box.y, rand(-.5, .5) * box.z)
+            : randInSphere(/** @type {number} */ (size) / 2);
+
+        // direction inside the cone around local +Y
+        const direction = matrix.transformDirection(randVector3(1, this.emitConeAngle)).normalize();
+
+        const pos = matrix.transformPoint(offset), speed = this.speed * random() * scale;
+        const colorStart = randColor(this.colorStartA, this.colorStartB, true), colorEnd = randColor(this.colorEndA, this.colorEndB, true);
+
+        // room for one more, doubling as the set grows, the trails along with it
+        const F = RENDER3D_PARTICLE_FLOATS, k = this.particleCount++ * F;
+        if (k + F > this.particleData.length)
+        {
+            const grown = new Float32Array(this.particleData.length * 2);
+            grown.set(this.particleData);
+            this.particleData = grown;
+            if (this.trailData)
+            {
+                const trails = new Float32Array(this.trailData.length * 2);
+                trails.set(this.trailData);
+                this.trailData = trails;
+            }
+        }
+        const data = this.particleData;
+        data[k] = pos.x, data[k+1] = pos.y, data[k+2] = pos.z;
+        data[k+3] = direction.x * speed, data[k+4] = direction.y * speed, data[k+5] = direction.z * speed;
+        data[k+6] = colorStart.r, data[k+7] = colorStart.g, data[k+8] = colorStart.b, data[k+9] = colorStart.a;
+        data[k+10] = colorEnd.r, data[k+11] = colorEnd.g, data[k+12] = colorEnd.b, data[k+13] = colorEnd.a;
+        data[k+14] = this.sizeStart * random() * scale;
+        data[k+15] = this.sizeEnd * random() * scale;
+        data[k+16] = this.particleTime * random(); // life
+        data[k+17] = 0; // age
+        // a spinning particle starts anywhere and turns either way, one that is not stays at zero
+        data[k+18] = this.angleSpeed ? rand(2*PI) : 0;
+        data[k+19] = this.angleSpeed ? this.angleSpeed * random() * randSign() : 0;
+        data[k+20] = 0; // trail points
+    }
+
+    /** Draw the particles, as flat squares or as streaks when trailTime is set
+     *  - The whole emitter sorts as one thing, its particles are not sorted against each other
+     *  - With render3D.instancing on the squares go out as one instanced draw of render3D.billboardMesh
+     *  @return {void} */
+    render3D()
+    {
+        const r = render3D;
+        if (r.transparentQueue)
+            return r.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
+        const fade = this.fadeRate / 2, texture = this.tileInfo || render3DSoftDot(); // no dot headless
+        const color = render3DParticleColor, size = render3DParticleSize; // shared, so a particle makes no objects
+
+        // the instanced path: one matrix per particle, its right and up axes the quad's size long, facing the camera,
+        // written straight into the batch; the batch draws at the end so the order of the transparent stage holds
+        const quad = r.billboardMesh, instanced = texture &amp;&amp; r.instancing &amp;&amp; !r.capture &amp;&amp; render3DCanDraw();
+        let data, textureInfo, uv, lit;
+        if (instanced)
+        {
+            if (!quad.buffer || quad.dirty || quad.contextGeneration !== r.contextGeneration)
+                quad.upload();
+            textureInfo = texture instanceof TileInfo ? texture.textureInfo : texture;
+            uv = render3DGetTileUVs(texture);
+            lit = r.lighting;
+            r.lighting = r.shadowPass &amp;&amp; lit; // unlit on screen, in the shadow map the object's flag decides
+            r.cullBackFaces = r.mirrored = false;
+        }
+        const cr = r.cameraRight, cu = r.cameraUp, cb = r.cameraBack, shadowPass = r.shadowPass;
+        const F = RENDER3D_PARTICLE_FLOATS, particles = this.particleData, trailMax = this.trailMax, pos = render3DParticlePos;
+        try
+        {
+            for (let i = 0, count = this.particleCount; i &lt; count; ++i)
+            {
+                const p = i * F, t = particles[p+17] / particles[p+16];
+                const alpha = t &lt; fade ? t / fade : t > 1 - fade ? (1 - t) / fade : 1;
+                color.r = particles[p+6] + (particles[p+10] - particles[p+6]) * t;
+                color.g = particles[p+7] + (particles[p+11] - particles[p+7]) * t;
+                color.b = particles[p+8] + (particles[p+12] - particles[p+8]) * t;
+                color.a = (particles[p+9] + (particles[p+13] - particles[p+9]) * t) * alpha;
+                const s = size.x = size.y = lerp(particles[p+14], particles[p+15], t), angle = particles[p+18];
+                const trailCount = particles[p+20];
+                if (trailCount > 1)
+                {
+                    // a ribbon from the tail to the head, the tail thins and fades out
+                    const trail = this.trailData, points = [], widths = [], colors = [];
+                    for (let j = 0; j &lt; trailCount; ++j)
+                    {
+                        const f = (j + 1) / trailCount, q = (i * trailMax + j) * 3;
+                        points.push(vec3(trail[q], trail[q+1], trail[q+2]));
+                        widths.push(s * f);
+                        colors.push(color.scale(1, f));
+                    }
+                    r.drawRibbon(points, widths, this.tileInfo, colors);
+                }
+                else if (instanced)
+                {
+                    // the axes turned by the particle's angle in the camera plane, as drawBillboard turns them
+                    let rx = cr.x, ry = cr.y, rz = cr.z, ux = cu.x, uy = cu.y, uz = cu.z;
+                    if (angle)
+                    {
+                        const c = cos(angle), n = sin(angle);
+                        rx = cr.x * c + cu.x * n, ry = cr.y * c + cu.y * n, rz = cr.z * c + cu.z * n;
+                        ux = cu.x * c - cr.x * n, uy = cu.y * c - cr.y * n, uz = cu.z * c - cr.z * n;
+                    }
+                    const k = render3DInstanceSlot(quad, textureInfo);
+                    data = quad.instanceData;
+                    data[k]    = rx * s; data[k+1]  = ry * s; data[k+2]  = rz * s; data[k+3]  = 0;
+                    data[k+4]  = ux * s; data[k+5]  = uy * s; data[k+6]  = uz * s; data[k+7]  = 0;
+                    data[k+8]  = cb.x;   data[k+9]  = cb.y;   data[k+10] = cb.z;   data[k+11] = 0;
+                    data[k+12] = particles[p]; data[k+13] = particles[p+1]; data[k+14] = particles[p+2]; data[k+15] = 1;
+                    if (!shadowPass)
+                        data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a;
+                    data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
+                }
+                else
+                {
+                    pos.x = particles[p], pos.y = particles[p+1], pos.z = particles[p+2];
+                    if (texture)
+                        r.drawBillboard(pos, size, texture, color, angle);
+                    else
+                        r.drawSoftDisc(pos, s, color, undefined, 8); // no canvas for the dot, headless
+                }
+            }
+        }
+        finally
+        {
+            if (instanced)
+            {
+                r.lighting = lit;
+                r.flush(); // whatever the stream holds from before this emitter draws first
+                render3DFlushInstances(quad);
+            }
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Trail3D - A ribbon through where the object has been, thinning and fading with age
+ * - Records its world position each frame it moves, so parent it to something that moves or set pos3D yourself
+ * - The samples are world space, so width is a world width and scale3D does nothing to the ribbon
+ * - Drawn unlit in the transparent stage, dies down on its own once the object stops
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * const trail = new Trail3D(vec3(), 1, .3, undefined, hsl(.08, 1, .5), hsl(0, 1, .5, 0), true);
+ * ball.addChild(trail); // follows the ball
+ */
+class Trail3D extends EngineObject3D
+{
+    /** Create a trail
+     *  @param {Vector3} [pos3D]
+     *  @param {number} [lifeTime] - Seconds the ribbon takes to thin and fade from head to tail,
+     *    Infinity keeps every sample at full width and never drops one, so it grows as long as the object moves
+     *  @param {number} [width] - Width at the head, it thins to nothing at the tail
+     *  @param {TileInfo|TextureInfo} [tileInfo] - Tile or whole texture stretched along the trail, undefined is untextured
+     *  @param {Color} [color] - Color at the head
+     *  @param {Color} [colorEnd] - Color at the tail
+     *  @param {boolean} [additive] - Additive blending */
+    constructor(pos3D=vec3(), lifeTime=1, width=.2, tileInfo, color=WHITE, colorEnd=CLEAR_WHITE, additive=false)
+    {
+        super(pos3D, undefined, tileInfo, color);
+        this.transparent = true;
+        this.additive = additive;
+        this.castShadow = false;
+        this.size3D = vec3(); // not a solid thing to pick or collect
+        this.finishing = false; // set by destroy, the ribbon fades out then goes away
+
+        /** @property {number} - Seconds the ribbon takes to thin and fade from head to tail, Infinity never drops a sample */
+        this.lifeTime = lifeTime;
+        /** @property {number} - Width at the head */
+        this.width = width;
+        /** @property {Color} - Color at the tail */
+        this.colorEnd = colorEnd.copy();
+        /** @property {Vector3|undefined} - Direction across the ribbon, recorded with each sample, undefined faces the camera
+         *  @type {Vector3|undefined} */
+        this.side = undefined;
+        /** @property {Array&lt;{pos: Vector3, side: Vector3|undefined, time: number}>} - Recorded samples, oldest first
+         *  @type {Array&lt;{pos: Vector3, side: Vector3|undefined, time: number}>} */
+        this.samples = [];
+    }
+
+    /** Forget the trail so far, for when the object teleports */
+    clear() { this.samples.length = 0; }
+
+    /** Stop recording, and go away once the ribbon has faded
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        if (immediate || !this.samples.length || this.destroyed || this.lifeTime == Infinity)
+            return super.destroy(immediate);
+        this.finishing = true;
+        render3DDetach(this); // the samples are in world space, they no longer need the parent
+    }
+
+    /** Record the position when it moved and drop old samples, called automatically each frame */
+    update()
+    {
+        const samples = this.samples;
+        if (!this.finishing)
+        {
+            const pos = this.worldPos3D = this.getWorldPos3D(), last = samples[samples.length - 1];
+            if (!last || pos.distanceSquared(last.pos) > 1e-8)
+                samples.push({pos, side: this.side?.copy(), time});
+        }
+        while (samples.length &amp;&amp; time - samples[0].time > this.lifeTime)
+            samples.shift();
+        this.finishing &amp;&amp; !samples.length &amp;&amp; this.destroy();
+    }
+
+    /** Draw the ribbon
+     *  @return {void} */
+    render3D()
+    {
+        const samples = this.samples;
+        if (samples.length &lt; 2) return;
+        const points = [], widths = [], colors = [], sides = this.side ? [] : undefined;
+        for (const s of samples)
+        {
+            const age = clamp((time - s.time) / this.lifeTime);
+            points.push(s.pos);
+            widths.push(this.width * (1 - age));
+            colors.push(this.color.lerp(this.colorEnd, age));
+            sides?.push(s.side);
+        }
+        render3D.drawRibbon(points, widths, this.tileInfo, colors, sides);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// OBJ meshes
+
+/**
+ * Parse Wavefront OBJ text into a Mesh
+ * - Reads v, vt, vn and f lines with convex polygons of any size, materials and groups are ignored
+ * - Normals come from the file when every corner of a face has one, otherwise from the face
+ * - Use mesh.center() and mesh.fit(size) to bring a model of unknown units to the origin
+ * - Back faces are skipped like any mesh, set doubleSided for a model with open walls or single sided parts
+ * @param {string} text
+ * @param {boolean} [smooth] - Compute smooth normals for the faces the file gives none, defaults to render3D.smoothShading
+ * @return {Mesh}
+ * @memberof Render3D
+ * @example
+ * new EngineObject3D(vec3(), parseOBJ(objText).center().fit(4));
+ */
+function parseOBJ(text, smooth=render3D?.smoothShading)
+{
+    const positions = [], normals = [], uvs = [];
+    const points = [], vertexNormals = [], vertexUVs = [], indices = [], seen = new Map;
+    const fromFile = []; // which vertices have a normal from the file, the rest are smoothed when smooth is on
+    let missingNormals = false, face = 0;
+
+    // OBJ indices count from 1, and a negative one counts back from the end of the list so far
+    const index = (s, list)=> { const i = parseInt(s); return i &lt; 0 ? list.length + i : i - 1; };
+    const lookup = (s, list)=> list[index(s, list)];
+    for (const line of text.split('\n'))
+    {
+        const parts = line.trim().split(/\s+/);
+        switch (parts[0])
+        {
+            case 'v':  positions.push(vec3(+parts[1], +parts[2], +parts[3])); break;
+            case 'vn': normals.push(vec3(+parts[1], +parts[2], +parts[3])); break;
+            case 'vt': uvs.push(vec2(+parts[1], 1 - +parts[2])); break; // OBJ v runs up, tiles run down
+            case 'f':
+            {
+                const corners = parts.slice(1).map(c=> c.split('/'));
+                if (corners.length &lt; 3) break;
+                const facePoints = corners.map(c=> lookup(c[0], positions));
+                ASSERT(facePoints.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
+                const hasNormals = corners.every(c=> c[2]);
+                missingNormals ||= !hasNormals;
+                const faceNormal = hasNormals ? undefined : render3DFaceNormal(facePoints[0], facePoints[1], facePoints[2], facePoints[3]);
+                // a corner is one vertex with the same position, uv and normal; without file normals the face's own
+                // normal keeps its corners apart, unless they will be smoothed, when the position and uv are enough
+                const ids = corners.map((c, i)=>
+                {
+                    // by the vertices they are, a negative index means another vertex as the lists grow
+                    const key = index(c[0], positions) + '/' + (c[1] ? index(c[1], uvs) : '') + '/' +
+                        (hasNormals ? index(c[2], normals) : smooth ? '' : 'f' + face);
+                    let id = seen.get(key);
+                    if (id === undefined)
+                    {
+                        seen.set(key, id = points.length);
+                        points.push(facePoints[i]);
+                        vertexUVs.push(c[1] ? lookup(c[1], uvs) : RENDER3D_DEFAULT_UV);
+                        vertexNormals.push(hasNormals ? lookup(c[2], normals) : faceNormal);
+                        fromFile.push(hasNormals);
+                    }
+                    return id;
+                });
+                // a fan around the second corner, counter clockwise as the file lists them; that cuts a quad along
+                // the same diagonal the strip form did, so a smoothed model shades the same as before
+                for (let k = 2; k &lt; ids.length; ++k)
+                    indices.push(ids[1], ids[k], ids[(k + 1) % ids.length]);
+                ++face;
+            }
+        }
+    }
+    const mesh = new Mesh().addTriangles(points, indices, vertexNormals, vertexUVs);
+    if (missingNormals &amp;&amp; smooth)
+    {
+        // smooth the faces the file gave no normals, and keep the normals it did give
+        const given = mesh.normals;
+        mesh.computeNormals(true);
+        fromFile.forEach((f, i)=> f &amp;&amp; (mesh.normals[i] = given[i]));
+    }
+    return mesh;
+}
+
+/**
+ * Fetch and parse an OBJ file
+ * @param {string} url
+ * @param {boolean} [smooth] - Compute smooth normals when the file has none, defaults to render3D.smoothShading
+ * @return {Promise&lt;Mesh>}
+ * @memberof Render3D
+ * @example
+ * const mesh = await loadOBJ('ship.obj'); // in an async gameInit
+ */
+async function loadOBJ(url, smooth=render3D?.smoothShading)
+{
+    const response = await fetch(url);
+    if (!response.ok)
+        throw new Error('loadOBJ failed: ' + url);
+    return parseOBJ(await response.text(), smooth);
+}
+</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
