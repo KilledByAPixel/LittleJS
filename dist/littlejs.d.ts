@@ -3291,7 +3291,8 @@ declare module "littlejsengine" {
         /** Optional hook called during the light system plugin's lightmap pass to draw this object's lightmap contribution. Does nothing by default. */
         renderLight(): void;
         /** Draw this object into the light system's shadow map, called during its shadow pass when castShadow is set.
-         *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit */
+         *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit;
+         *  screen space draws in render() land in the shadow map's space, so skip them while lightSystem.shadowPass is set */
         renderShadow(): void;
         /** Destroy this object, destroy its children, detach its parent, and mark it for removal
          *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
@@ -3446,7 +3447,7 @@ declare module "littlejsengine" {
      * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
      *   is a no-op, delete that and call redraw() to show it
      *  @param {Object}   tileMapData - Level data from exported data
-     *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
+     *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
      *  @param {number}   [renderOrder] - Render order of the top layer
      *  @param {number}   [collisionLayer] - Layer to use for collision if any
      *  @param {boolean}  [draw] - Should the layer be drawn automatically
@@ -3544,7 +3545,7 @@ declare module "littlejsengine" {
         /** Create a tile layer object
         *  @param {Vector2}  pos - World space position
         *  @param {Vector2}  size - World space size
-        *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture)
+        *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture), tile() by default, none when no image is loaded
         *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
         *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
         */
@@ -3633,6 +3634,7 @@ declare module "littlejsengine" {
         redrawIfSwitched(): void;
         /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color, Shader|undefined]} */
         savedRenderSettings: [CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color, Shader | undefined];
+        savedRenderTarget: any[];
     }
     /**
      * Tile Collision Layer - a tile layer with collision
@@ -4258,9 +4260,9 @@ declare module "littlejsengine" {
         shadows: boolean;
         /** @property {number} - Pixels across the square shadow map, made again when changed */
         shadowMapSize: number;
-        /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it for a camera that turns */
+        /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it when lights reach further than a view past the screen */
         shadowMapScale: number;
-        /** @property {number} - Pixels across each light's own shadow texture, made again when changed */
+        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper, and a caster thinner than about 2*radius/shadowTextureSize world units lets light leak under the bleed */
         shadowTextureSize: number;
         /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
         shadowPassCount: number;
@@ -4318,6 +4320,8 @@ declare module "littlejsengine" {
      * to the LightSystem plugin's lightmap.
      * - castShadow on a Light means its rays stop at casters when lightSystem.shadows is on, three.js's meaning
      *   for a light; a Light's own render() draws nothing so the object meaning never applies to it
+     * - A light inside a caster is blocked entirely, so the object that holds it, its lamp, a torch, the player
+     *   carrying it, needs castShadow = false or a renderShadow that leaves the light's spot out
      * @extends EngineObject
      * @memberof LightSystem
      * @example
@@ -6357,6 +6361,12 @@ declare module "littlejsengine" {
         private lastTime;
         /** @private */
         private lastTimeReal;
+        /** @property {Object|undefined} - The object tweenProperty animates, the tween stops once it is destroyed,
+         *  even while paused
+         *  @type {{destroyed?: boolean}|undefined} */
+        target: {
+            destroyed?: boolean;
+        } | undefined;
         /** Set the easing curve and return this for chaining.
          *  @param {function(number):number} easeFn
          *  @returns {Tween<T>}

@@ -134,8 +134,9 @@ function medalsReset()
 function medalsSave()
 {
     if (debugMedals || !medalsSaveName) return;
+    // while medalsInit waits for medals made later, their saved entries are kept for them
     const saved = readSaveData(medalsSaveName);
-    const data = {};
+    const data = medalsLoadWaiting ? {...saved} : {};
     medalsForEach(medal=> {
         if (!medal.isLocal())
         {

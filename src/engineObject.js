@@ -447,7 +447,8 @@ class EngineObject
     renderLight() {}
 
     /** Draw this object into the light system's shadow map, called during its shadow pass when castShadow is set.
-     *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit */
+     *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit;
+     *  screen space draws in render() land in the shadow map's space, so skip them while lightSystem.shadowPass is set */
     renderShadow() { this.render(); }
 
     /** Destroy this object, destroy its children, detach its parent, and mark it for removal

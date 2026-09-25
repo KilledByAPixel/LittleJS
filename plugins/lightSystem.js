@@ -85,9 +85,9 @@ class LightSystemPlugin
         this.shadows = false;
         /** @property {number} - Pixels across the square shadow map, made again when changed */
         this.shadowMapSize = 1024;
-        /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it for a camera that turns */
+        /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it when lights reach further than a view past the screen */
         this.shadowMapScale = 2;
-        /** @property {number} - Pixels across each light's own shadow texture, made again when changed */
+        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper, and a caster thinner than about 2*radius/shadowTextureSize world units lets light leak under the bleed */
         this.shadowTextureSize = 256;
         /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
         this.shadowPassCount = 11;
@@ -274,7 +274,8 @@ class LightSystemPlugin
                 'void main(){'+
                 'vec2 w=lightPos+(uv-.5)*2.*radius;'+  // world position of this texel
                 'vec2 m=(w-mapOrigin)*mapInvSize;'+     // in the map, which holds world up at v=0 like an image
-                'c=vec4(texture(s,vec2(m.x,1.-m.y)).rgb,1);'+
+                // past the map's edge is open, clamping would stretch its edge texels across the light
+                'c=vec4(m==clamp(m,0.,1.)?texture(s,vec2(m.x,1.-m.y)).rgb:vec3(1),1);'+
                 '}');
 
             // stretch: soften, then multiply by the same texture stretched out from the center
@@ -360,6 +361,7 @@ class LightSystemPlugin
                 for (const o of engineObjects)
                 {
                     if (o.destroyed || !o.castShadow) continue;
+                    glColorMask = 0xff000000; // black again, a render that left setShadowTransparent on ends with it
                     setShader(o.shader); // its own Shader as in the main pass, so a snippet that cuts holes casts the same shape
                     o.renderShadow();
                 }
@@ -551,9 +553,10 @@ class LightSystemPlugin
         gl.uniform1f(glUniformLocation(cs, 'mapInvSize'), 1/this.shadowMapWorldSize);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-        // stretch the casters out from the light, starting 2 texels and growing 1.8x a pass, which
-        // reaches the edge in about 11 passes with no gaps since each pass scales by less than the
-        // shadow already extends; the bleed fades out over the first 7 passes (FrankEngine's soften)
+        // stretch the casters out from the light, starting a 128th of the texture and growing 1.8x a pass, which
+        // reaches the edge in about 11 passes with no gaps since each pass scales by less than the shadow already
+        // extends; a fraction of the texture rather than a count of texels, so a larger texture only makes the
+        // shadows sharper, not shorter; the bleed fades out over the first 7 passes (FrankEngine's soften)
         const ss = this.shadowStretchShader;
         gl.useProgram(ss);
         gl.bindVertexArray(this.shadowStretchVAO);
@@ -562,7 +565,7 @@ class LightSystemPlugin
         {
             gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, dst, 0);
             gl.bindTexture(gl.TEXTURE_2D, src);
-            gl.uniform1f(glUniformLocation(ss, 'scale'), (size + 2*1.8**k)/size);
+            gl.uniform1f(glUniformLocation(ss, 'scale'), 1 + 2*1.8**k/256);
             gl.uniform1f(glUniformLocation(ss, 'brightness'), clamp((7-k)/5)**2 * this.shadowSoftness);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             [src, dst] = [dst, src];
@@ -596,6 +599,8 @@ class LightSystemPlugin
  * to the LightSystem plugin's lightmap.
  * - castShadow on a Light means its rays stop at casters when lightSystem.shadows is on, three.js's meaning
  *   for a light; a Light's own render() draws nothing so the object meaning never applies to it
+ * - A light inside a caster is blocked entirely, so the object that holds it, its lamp, a torch, the player
+ *   carrying it, needs castShadow = false or a renderShadow that leaves the light's spot out
  * @extends EngineObject
  * @memberof LightSystem
  * @example

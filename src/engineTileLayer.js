@@ -126,13 +126,13 @@ const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [
  * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
  *   is a no-op, delete that and call redraw() to show it
  *  @param {Object}   tileMapData - Level data from exported data
- *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
+ *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
  *  @param {number}   [renderOrder] - Render order of the top layer
  *  @param {number}   [collisionLayer] - Layer to use for collision if any
  *  @param {boolean}  [draw] - Should the layer be drawn automatically
  *  @return {Array<TileCollisionLayer>}
  *  @memberof TileLayers */
-function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true)
+function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrder=0, collisionLayer, draw=true)
 {
     if (!tileMapData)
     {
@@ -369,7 +369,7 @@ class TileLayer extends CanvasLayer
     /** Create a tile layer object
     *  @param {Vector2}  pos - World space position
     *  @param {Vector2}  size - World space size
-    *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture)
+    *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture), tile() by default, none when no image is loaded
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
@@ -509,6 +509,10 @@ class TileLayer extends CanvasLayer
         /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color, Shader|undefined]} */
         this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader];
         setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
+        // a redraw from inside another target's pass, like the light system's shadow map, draws the tiles in color
+        // and hands that target back after
+        this.savedRenderTarget = [glRenderTarget, glColorMask];
+        glColorMask = -1;
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
@@ -543,10 +547,12 @@ class TileLayer extends CanvasLayer
         if (!this.context) return;
         ASSERT(drawContext === this.context);
 
-        // set stuff back to normal
-        if (this.isUsingWebGL)
-            glSetRenderTarget();
+        // set stuff back to normal, the camera first, so a target that was drawing before gets its own transform back
         [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
+        const [target, colorMask] = this.savedRenderTarget;
+        if (this.isUsingWebGL)
+            glSetRenderTarget(target);
+        glColorMask = colorMask;
     }
 
     /** Draw the tile at a given position in the tile layer
@@ -631,14 +637,17 @@ class TileLayer extends CanvasLayer
         pos.y = this.canvas.height - pos.y - .5;
 
         // draw the tile onto the layer canvas
-        const oldMainCanvasSize = mainCanvasSize;
+        // in color and handing back a target that was drawing before, like the light system's shadow map
+        const oldMainCanvasSize = mainCanvasSize, oldTarget = glRenderTarget, oldColorMask = glColorMask;
         mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
+        glColorMask = -1;
         const useWebGL = this.hasWebGL();
         useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
         const drawContext = useWebGL ? undefined : this.context;
         drawTile(pos, size, tileInfo, color, angle, mirror, undefined, useWebGL, true, drawContext);
-        useWebGL && glSetRenderTarget();
         mainCanvasSize = oldMainCanvasSize;
+        useWebGL && glSetRenderTarget(oldTarget);
+        glColorMask = oldColorMask;
     }
 
     /** Draw a rectangle onto the layer canvas in world space

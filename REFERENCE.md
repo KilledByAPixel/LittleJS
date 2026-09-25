@@ -681,7 +681,7 @@ tileCollisionRaycast(posStart, posEnd, object, normal, solidOnly=true) // Where 
                                                     // or undefined; a normal vec2 passed in is set to the surface's
 tileCollisionLayers                                 // List of all tile collision layers
 tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true) // collisionLayer is the index
-                                                    // of the layer that gets collision
+                                                    // of the layer that gets collision, no tile when no image is loaded
                                                     // Load tile layers from exported data, Tiled flips and turns included;
                                                     // groups are flattened and layer indices count that flat list,
                                                     // hidden layers load with collision but are not drawn
@@ -871,16 +871,19 @@ lightSystem.ambientColor  = rgb(0, 0, 0)      // Color of unlit areas
 lightSystem.shadows          = false  // on for shadows; off costs nothing
 lightSystem.shadowMapSize    = 1024   // pixels across the shadow map, a square of world around the camera
 lightSystem.shadowMapScale   = 2      // how many views the map spans, so casters just off screen still cast in;
-                                      // raise it for a camera that turns
-lightSystem.shadowTextureSize = 256   // pixels across each light's own shadow texture
+                                      // raise it when lights reach further than a view past the screen
+lightSystem.shadowTextureSize = 256   // pixels across each light's own shadow texture, larger is sharper; a caster
+                                      // thinner than about 2*radius/shadowTextureSize leaks light
 lightSystem.shadowPassCount  = 11     // stretch passes per light, fewer is cheaper and shorter shadows
 lightSystem.shadowSoftness   = .5     // light bled into a caster's near side, 0 hard, 1 most
 lightSystem.shadowPass                // read only: true inside the shadow pass, so a render() can skip its text or glow
 lightSystem.setShadowTransparent(on)  // in the shadow pass the draws that follow keep their color, tinting the light
                                       // through them; nothing outside it, so call it around the draws and set it back
-light.castShadow = true               // this light's rays stop at casters
+light.castShadow = true               // this light's rays stop at casters; a light inside a caster is blocked, so
+                                      // its lamp or the player carrying it needs castShadow = false
 obj.castShadow = true                 // draws into the shadow map; false for a floor TileLayer, a background, a pickup
-obj.renderShadow()                    // draws the shadow shape, render() by default; a figure draws a blob at its feet
+obj.renderShadow()                    // draws the shadow shape, render() by default, skip screen space draws in it;
+                                      // a figure draws a blob at its feet
                                       // to stay lit; additive draws add black so glows cast nothing; WebGL draws only
 
 // Lights are EngineObjects — auto-register, destroy() to remove
@@ -1166,7 +1169,8 @@ obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gr
              // velocity3D, damped first and gravity added after as in 2D, and damping is 1 by default for no slowing
 obj.size3D                              // full size for engineObjectsCollect3D, solid collision and
                                         // sprites, which it also picks by, a mesh is picked by its own box;
-                                        // starts at the size of the mesh's box, 1 with no mesh;
+                                        // starts at the size of the mesh's box, 1 with no mesh; the box is
+                                        // centered on pos3D, so center() a mesh whose origin is not its middle;
                                         // scale3D and a parent's scale grow it
 obj.setCollision(solids, isSolid)       // the same flags as in 2D, but the collision happens in 3D against size3D;
                                         // isSolid needs solids, an object cannot block without colliding;

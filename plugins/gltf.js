@@ -226,6 +226,10 @@ class GLTFObject extends EngineObject3D
     constructor(model, pos3D=vec3())
     {
         super(pos3D);
+        // the size of the whole model, as an object made from model.mesh would have
+        const mesh = model.mesh, bounds = mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
+        if (bounds)
+            this.size3D = bounds.max.subtract(bounds.min);
         /** @property {GLTFModel} - The model it shows */
         this.model = model;
         /** @property {GLTFAnimation|undefined} - The animation playing, or the last one, undefined for none

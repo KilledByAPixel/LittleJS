@@ -2130,7 +2130,7 @@ test('sprite objects blend by default and are picked by their size3D, lights and
     const light = new Light3D(vec3(0, 0, -2)), emitter = new ParticleEmitter3D(vec3(0, 0, -3), 0, 0, 0, PI, new TileInfo(vec2(), vec2(16)));
     const hit = render3D.pick(new Ray3D(vec3(), vec3(0, 0, -1)), [light, emitter, sprite]);
     assert.equal(hit.object, sprite);
-    near(hit.distance, 5 - Math.hypot(2, 2) / 2); // half the drawn diagonal, size3D.z is not drawn
+    near(hit.distance, 5); // a sprite is a disc facing the ray at its center's depth
     for (const o of engineObjects) o.destroy();
     engineObjects.length = 0;
 });

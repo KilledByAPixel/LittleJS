@@ -4415,7 +4415,8 @@ class EngineObject
     renderLight() {}
 
     /** Draw this object into the light system's shadow map, called during its shadow pass when castShadow is set.
-     *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit */
+     *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit;
+     *  screen space draws in render() land in the shadow map's space, so skip them while lightSystem.shadowPass is set */
     renderShadow() { this.render(); }
 
     /** Destroy this object, destroy its children, detach its parent, and mark it for removal
@@ -6931,7 +6932,10 @@ function inputInit()
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
 
-        if (inputPreventDefault && e.cancelable && document.hasFocus())
+        // a click on an HTML form control on the page is left to it, so it can take focus, place the caret or drag
+        const target = /** @type {HTMLElement} */ (e.target);
+        const onControl = !!target?.closest?.('input,textarea,select,[contenteditable]');
+        if (inputPreventDefault && e.cancelable && document.hasFocus() && !onControl)
         {
             // this keeps focus where it is, so a click outside a text field lets it go, or it keeps the keys
             const active = /** @type {HTMLElement} */ (document.activeElement);
@@ -8937,13 +8941,13 @@ const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [
  * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
  *   is a no-op, delete that and call redraw() to show it
  *  @param {Object}   tileMapData - Level data from exported data
- *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
+ *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
  *  @param {number}   [renderOrder] - Render order of the top layer
  *  @param {number}   [collisionLayer] - Layer to use for collision if any
  *  @param {boolean}  [draw] - Should the layer be drawn automatically
  *  @return {Array<TileCollisionLayer>}
  *  @memberof TileLayers */
-function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true)
+function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrder=0, collisionLayer, draw=true)
 {
     if (!tileMapData)
     {
@@ -9180,7 +9184,7 @@ class TileLayer extends CanvasLayer
     /** Create a tile layer object
     *  @param {Vector2}  pos - World space position
     *  @param {Vector2}  size - World space size
-    *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture)
+    *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture), tile() by default, none when no image is loaded
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
@@ -9320,6 +9324,10 @@ class TileLayer extends CanvasLayer
         /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color, Shader|undefined]} */
         this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader];
         setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
+        // a redraw from inside another target's pass, like the light system's shadow map, draws the tiles in color
+        // and hands that target back after
+        this.savedRenderTarget = [glRenderTarget, glColorMask];
+        glColorMask = -1;
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
@@ -9354,10 +9362,12 @@ class TileLayer extends CanvasLayer
         if (!this.context) return;
         ASSERT(drawContext === this.context);
 
-        // set stuff back to normal
-        if (this.isUsingWebGL)
-            glSetRenderTarget();
+        // set stuff back to normal, the camera first, so a target that was drawing before gets its own transform back
         [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
+        const [target, colorMask] = this.savedRenderTarget;
+        if (this.isUsingWebGL)
+            glSetRenderTarget(target);
+        glColorMask = colorMask;
     }
 
     /** Draw the tile at a given position in the tile layer
@@ -9442,14 +9452,17 @@ class TileLayer extends CanvasLayer
         pos.y = this.canvas.height - pos.y - .5;
 
         // draw the tile onto the layer canvas
-        const oldMainCanvasSize = mainCanvasSize;
+        // in color and handing back a target that was drawing before, like the light system's shadow map
+        const oldMainCanvasSize = mainCanvasSize, oldTarget = glRenderTarget, oldColorMask = glColorMask;
         mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
+        glColorMask = -1;
         const useWebGL = this.hasWebGL();
         useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
         const drawContext = useWebGL ? undefined : this.context;
         drawTile(pos, size, tileInfo, color, angle, mirror, undefined, useWebGL, true, drawContext);
-        useWebGL && glSetRenderTarget();
         mainCanvasSize = oldMainCanvasSize;
+        useWebGL && glSetRenderTarget(oldTarget);
+        glColorMask = oldColorMask;
     }
 
     /** Draw a rectangle onto the layer canvas in world space
@@ -10239,7 +10252,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
+let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new WeakMap, glCanBeEnabled = true;
 // ANDed onto every packed color as a draw is queued; the light system's shadow pass sets 0xff000000
 // to draw everything black with its alpha kept (rgbaInt packs alpha in the top byte)
 let glColorMask = -1;
@@ -10333,7 +10346,7 @@ function glInit(rootElement)
             shader.program = undefined;
         glBatchShader = undefined;
         glProgramCustom = true;
-        glUniformLocations = new Map; // the programs those belonged to are gone
+        glUniformLocations = new WeakMap; // the programs those belonged to are gone
         // drop any partially-filled batch so the next glFlush doesn't
         // upload stale glBatchCount against fresh empty buffers on restore
         glBatchCount = 0;
@@ -11619,8 +11632,9 @@ function medalsReset()
 function medalsSave()
 {
     if (debugMedals || !medalsSaveName) return;
+    // while medalsInit waits for medals made later, their saved entries are kept for them
     const saved = readSaveData(medalsSaveName);
-    const data = {};
+    const data = medalsLoadWaiting ? {...saved} : {};
     medalsForEach(medal=> {
         if (!medal.isLocal())
         {
@@ -12558,9 +12572,9 @@ class LightSystemPlugin
         this.shadows = false;
         /** @property {number} - Pixels across the square shadow map, made again when changed */
         this.shadowMapSize = 1024;
-        /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it for a camera that turns */
+        /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it when lights reach further than a view past the screen */
         this.shadowMapScale = 2;
-        /** @property {number} - Pixels across each light's own shadow texture, made again when changed */
+        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper, and a caster thinner than about 2*radius/shadowTextureSize world units lets light leak under the bleed */
         this.shadowTextureSize = 256;
         /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
         this.shadowPassCount = 11;
@@ -12747,7 +12761,8 @@ class LightSystemPlugin
                 'void main(){'+
                 'vec2 w=lightPos+(uv-.5)*2.*radius;'+  // world position of this texel
                 'vec2 m=(w-mapOrigin)*mapInvSize;'+     // in the map, which holds world up at v=0 like an image
-                'c=vec4(texture(s,vec2(m.x,1.-m.y)).rgb,1);'+
+                // past the map's edge is open, clamping would stretch its edge texels across the light
+                'c=vec4(m==clamp(m,0.,1.)?texture(s,vec2(m.x,1.-m.y)).rgb:vec3(1),1);'+
                 '}');
 
             // stretch: soften, then multiply by the same texture stretched out from the center
@@ -12833,6 +12848,7 @@ class LightSystemPlugin
                 for (const o of engineObjects)
                 {
                     if (o.destroyed || !o.castShadow) continue;
+                    glColorMask = 0xff000000; // black again, a render that left setShadowTransparent on ends with it
                     setShader(o.shader); // its own Shader as in the main pass, so a snippet that cuts holes casts the same shape
                     o.renderShadow();
                 }
@@ -13024,9 +13040,10 @@ class LightSystemPlugin
         gl.uniform1f(glUniformLocation(cs, 'mapInvSize'), 1/this.shadowMapWorldSize);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-        // stretch the casters out from the light, starting 2 texels and growing 1.8x a pass, which
-        // reaches the edge in about 11 passes with no gaps since each pass scales by less than the
-        // shadow already extends; the bleed fades out over the first 7 passes (FrankEngine's soften)
+        // stretch the casters out from the light, starting a 128th of the texture and growing 1.8x a pass, which
+        // reaches the edge in about 11 passes with no gaps since each pass scales by less than the shadow already
+        // extends; a fraction of the texture rather than a count of texels, so a larger texture only makes the
+        // shadows sharper, not shorter; the bleed fades out over the first 7 passes (FrankEngine's soften)
         const ss = this.shadowStretchShader;
         gl.useProgram(ss);
         gl.bindVertexArray(this.shadowStretchVAO);
@@ -13035,7 +13052,7 @@ class LightSystemPlugin
         {
             gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, dst, 0);
             gl.bindTexture(gl.TEXTURE_2D, src);
-            gl.uniform1f(glUniformLocation(ss, 'scale'), (size + 2*1.8**k)/size);
+            gl.uniform1f(glUniformLocation(ss, 'scale'), 1 + 2*1.8**k/256);
             gl.uniform1f(glUniformLocation(ss, 'brightness'), clamp((7-k)/5)**2 * this.shadowSoftness);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             [src, dst] = [dst, src];
@@ -13069,6 +13086,8 @@ class LightSystemPlugin
  * to the LightSystem plugin's lightmap.
  * - castShadow on a Light means its rays stop at casters when lightSystem.shadows is on, three.js's meaning
  *   for a light; a Light's own render() draws nothing so the object meaning never applies to it
+ * - A light inside a caster is blocked entirely, so the object that holds it, its lamp, a torch, the player
+ *   carrying it, needs castShadow = false or a renderShadow that leaves the light's spot out
  * @extends EngineObject
  * @memberof LightSystem
  * @example
@@ -14732,7 +14751,14 @@ class UIObject
                             if (uiSystem.activeObject && !isActive)
                                 uiSystem.activeObject.onRelease();
                         }
-                        uiSystem.activeObject = this;
+                        if (uiSystem.keyInputObject && uiSystem.keyInputObject !== this)
+                        {
+                            // its onPress started an edit elsewhere, the updates skip its release while it goes on
+                            this.onRelease();
+                            this.soundRelease && this.soundRelease.play();
+                        }
+                        else
+                            uiSystem.activeObject = this;
 
                         if (newPress && uiSystem.activateOnPress)
                             this.click(!this.soundPress);
@@ -14978,6 +15004,11 @@ class UITextInput extends UIObject
      *  @param {boolean} [playSound] */
     click(playSound=true)
     {
+        // an edit in another field ends first, with its onChange, like a Tab to the next field
+        const editing = uiSystem.keyInputObject;
+        if (editing !== this && editing instanceof UITextInput)
+            editing.stopEditing();
+
         // start editing the text, the gamepad press that started it is used up so it does not stop it too
         uiSystem.keyInputObject = this;
         inputClearKey(0, gamepadPrimary+1, false, true, false);
@@ -18899,6 +18930,10 @@ class Tween
         this.lastTime = time;
         /** @private */
         this.lastTimeReal = timeReal;
+        /** @property {Object|undefined} - The object tweenProperty animates, the tween stops once it is destroyed,
+         *  even while paused
+         *  @type {{destroyed?: boolean}|undefined} */
+        this.target = undefined;
 
         tweenActivate(this);
         // Snap target to start immediately.
@@ -19287,7 +19322,9 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
         }
         obj[lastKey] = value;
     };
-    return tween = new Tween(callback, start, end, duration, options);
+    tween = new Tween(callback, start, end, duration, options);
+    tween.target = target;
+    return tween;
 }
 
 // Start the next iteration with the time the last one ran over already spent, so a loop keeps its
@@ -19393,6 +19430,7 @@ function tweenUpdate(gameDelta, realDelta)
         }
         else
             dt = t.useRealTime ? realDelta : gameDelta;
+        if (t.target?.destroyed) { t.stop(); continue; } // its object is gone, paused or not
         if (t.paused || dt <= 0) continue;
 
         t.life -= dt;
@@ -24280,8 +24318,10 @@ class EngineObject3D extends EngineObject
         this.mesh = mesh;
         /** @property {Vector3} - Size for solid collision and the collect and callback helpers, and of the sprite when
          *  there is a tileInfo and no mesh; starts at the size of the mesh's box, or 1 with no mesh, and setMesh leaves
-         *  it as it is; scale3D and any parent's scale grow it, so drawing and picking agree */
-        const bounds = mesh && mesh.points.length ? mesh.getBounds() : undefined;
+         *  it as it is; the box is centered on pos3D, so center() a mesh whose origin is not its middle, like a model
+         *  standing on its feet, or set size3D; scale3D and any parent's scale grow it, so drawing and picking agree */
+        // a shared mesh measured since it last changed is not walked again for each object made from it
+        const bounds = mesh && mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
         this.size3D = bounds ? bounds.max.subtract(bounds.min) : vec3(1);
         /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none;
          *  scale3D and a parent's scale grow it, so set it once for the unscaled object */
@@ -24704,13 +24744,15 @@ function render3DRaycastObject(ray, o)
     // a mesh that changed since it was measured is measured again, an upload may not have come yet
     const radius = (mesh ? mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxStretch(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
-    const distance = raycastSphere(ray, matrix.getTranslation(), radius);
-    if (distance === undefined || !mesh) return distance;
+    const center = matrix.getTranslation();
+    if (!mesh) return render3DRaycastDisc(ray, center, radius); // a sprite faces the camera
+    const distance = raycastSphere(ray, center, radius);
+    if (distance === undefined) return;
 
     // the sphere is a quick reject, a mesh is hit where the ray meets its box in its own space, since a wide floor's
     // sphere reaches far above it; the direction is not made unit length, so the distance holds in the world;
-    // a mesh flattened to nothing on an axis has no inverse, its sphere is all there is to hit
-    if (!render3DDeterminant(matrix.m)) return distance;
+    // a mesh flattened to nothing on an axis has no inverse, it is hit as a disc like a sprite
+    if (!render3DDeterminant(matrix.m)) return render3DRaycastDisc(ray, center, radius);
     const inverse = matrix.copy().invert(), bounds = mesh.bounds || mesh.getBounds();
     const local = new Ray3D(inverse.transformPoint(ray.origin), inverse.transformDirection(ray.direction));
     const hit = raycastBox(local, bounds.min.add(bounds.max).scale(.5), bounds.max.subtract(bounds.min));
@@ -24725,7 +24767,16 @@ function render3DRaycastObject(ray, o)
         if (d)
             exit = min(exit, ((d > 0 ? bounds.max[k] : bounds.min[k]) - local.origin[k]) / d);
     }
-    return exit;
+    return exit === Infinity ? 0 : exit; // a ray of no length is where it starts
+}
+
+// a disc facing the ray at the center's depth along it, for a sprite, which faces the camera; a sphere would be hit
+// at 0 whenever the ray starts inside it, even with the sprite behind the camera
+function render3DRaycastDisc(ray, center, radius)
+{
+    const d = ray.direction, oc = center.subtract(ray.origin), dd = d.dot(d);
+    const t = dd ? oc.dot(d) / dd : 0; // its depth along the ray, in the ray's own units
+    return t >= 0 && oc.subtract(d.scale(t)).lengthSquared() <= radius*radius ? t : undefined;
 }
 
 /**
@@ -26476,6 +26527,10 @@ class GLTFObject extends EngineObject3D
     constructor(model, pos3D=vec3())
     {
         super(pos3D);
+        // the size of the whole model, as an object made from model.mesh would have
+        const mesh = model.mesh, bounds = mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
+        if (bounds)
+            this.size3D = bounds.max.subtract(bounds.min);
         /** @property {GLTFModel} - The model it shows */
         this.model = model;
         /** @property {GLTFAnimation|undefined} - The animation playing, or the last one, undefined for none

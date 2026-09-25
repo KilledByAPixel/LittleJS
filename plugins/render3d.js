@@ -3121,8 +3121,10 @@ class EngineObject3D extends EngineObject
         this.mesh = mesh;
         /** @property {Vector3} - Size for solid collision and the collect and callback helpers, and of the sprite when
          *  there is a tileInfo and no mesh; starts at the size of the mesh's box, or 1 with no mesh, and setMesh leaves
-         *  it as it is; scale3D and any parent's scale grow it, so drawing and picking agree */
-        const bounds = mesh && mesh.points.length ? mesh.getBounds() : undefined;
+         *  it as it is; the box is centered on pos3D, so center() a mesh whose origin is not its middle, like a model
+         *  standing on its feet, or set size3D; scale3D and any parent's scale grow it, so drawing and picking agree */
+        // a shared mesh measured since it last changed is not walked again for each object made from it
+        const bounds = mesh && mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
         this.size3D = bounds ? bounds.max.subtract(bounds.min) : vec3(1);
         /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none;
          *  scale3D and a parent's scale grow it, so set it once for the unscaled object */
@@ -3545,13 +3547,15 @@ function render3DRaycastObject(ray, o)
     // a mesh that changed since it was measured is measured again, an upload may not have come yet
     const radius = (mesh ? mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxStretch(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
-    const distance = raycastSphere(ray, matrix.getTranslation(), radius);
-    if (distance === undefined || !mesh) return distance;
+    const center = matrix.getTranslation();
+    if (!mesh) return render3DRaycastDisc(ray, center, radius); // a sprite faces the camera
+    const distance = raycastSphere(ray, center, radius);
+    if (distance === undefined) return;
 
     // the sphere is a quick reject, a mesh is hit where the ray meets its box in its own space, since a wide floor's
     // sphere reaches far above it; the direction is not made unit length, so the distance holds in the world;
-    // a mesh flattened to nothing on an axis has no inverse, its sphere is all there is to hit
-    if (!render3DDeterminant(matrix.m)) return distance;
+    // a mesh flattened to nothing on an axis has no inverse, it is hit as a disc like a sprite
+    if (!render3DDeterminant(matrix.m)) return render3DRaycastDisc(ray, center, radius);
     const inverse = matrix.copy().invert(), bounds = mesh.bounds || mesh.getBounds();
     const local = new Ray3D(inverse.transformPoint(ray.origin), inverse.transformDirection(ray.direction));
     const hit = raycastBox(local, bounds.min.add(bounds.max).scale(.5), bounds.max.subtract(bounds.min));
@@ -3566,7 +3570,16 @@ function render3DRaycastObject(ray, o)
         if (d)
             exit = min(exit, ((d > 0 ? bounds.max[k] : bounds.min[k]) - local.origin[k]) / d);
     }
-    return exit;
+    return exit === Infinity ? 0 : exit; // a ray of no length is where it starts
+}
+
+// a disc facing the ray at the center's depth along it, for a sprite, which faces the camera; a sphere would be hit
+// at 0 whenever the ray starts inside it, even with the sprite behind the camera
+function render3DRaycastDisc(ray, center, radius)
+{
+    const d = ray.direction, oc = center.subtract(ray.origin), dd = d.dot(d);
+    const t = dd ? oc.dot(d) / dd : 0; // its depth along the ray, in the ray's own units
+    return t >= 0 && oc.subtract(d.scale(t)).lengthSquared() <= radius*radius ? t : undefined;
 }
 
 /**

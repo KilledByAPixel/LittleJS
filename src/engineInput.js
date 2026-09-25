@@ -558,7 +558,10 @@ function inputInit()
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
 
-        if (inputPreventDefault && e.cancelable && document.hasFocus())
+        // a click on an HTML form control on the page is left to it, so it can take focus, place the caret or drag
+        const target = /** @type {HTMLElement} */ (e.target);
+        const onControl = !!target?.closest?.('input,textarea,select,[contenteditable]');
+        if (inputPreventDefault && e.cancelable && document.hasFocus() && !onControl)
         {
             // this keeps focus where it is, so a click outside a text field lets it go, or it keeps the keys
             const active = /** @type {HTMLElement} */ (document.activeElement);

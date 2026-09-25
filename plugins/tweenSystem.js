@@ -122,6 +122,10 @@ class Tween
         this.lastTime = time;
         /** @private */
         this.lastTimeReal = timeReal;
+        /** @property {Object|undefined} - The object tweenProperty animates, the tween stops once it is destroyed,
+         *  even while paused
+         *  @type {{destroyed?: boolean}|undefined} */
+        this.target = undefined;
 
         tweenActivate(this);
         // Snap target to start immediately.
@@ -510,7 +514,9 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
         }
         obj[lastKey] = value;
     };
-    return tween = new Tween(callback, start, end, duration, options);
+    tween = new Tween(callback, start, end, duration, options);
+    tween.target = target;
+    return tween;
 }
 
 // Start the next iteration with the time the last one ran over already spent, so a loop keeps its
@@ -616,6 +622,7 @@ function tweenUpdate(gameDelta, realDelta)
         }
         else
             dt = t.useRealTime ? realDelta : gameDelta;
+        if (t.target?.destroyed) { t.stop(); continue; } // its object is gone, paused or not
         if (t.paused || dt <= 0) continue;
 
         t.life -= dt;

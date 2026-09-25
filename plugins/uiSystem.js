@@ -1073,7 +1073,14 @@ class UIObject
                             if (uiSystem.activeObject && !isActive)
                                 uiSystem.activeObject.onRelease();
                         }
-                        uiSystem.activeObject = this;
+                        if (uiSystem.keyInputObject && uiSystem.keyInputObject !== this)
+                        {
+                            // its onPress started an edit elsewhere, the updates skip its release while it goes on
+                            this.onRelease();
+                            this.soundRelease && this.soundRelease.play();
+                        }
+                        else
+                            uiSystem.activeObject = this;
 
                         if (newPress && uiSystem.activateOnPress)
                             this.click(!this.soundPress);
@@ -1319,6 +1326,11 @@ class UITextInput extends UIObject
      *  @param {boolean} [playSound] */
     click(playSound=true)
     {
+        // an edit in another field ends first, with its onChange, like a Tab to the next field
+        const editing = uiSystem.keyInputObject;
+        if (editing !== this && editing instanceof UITextInput)
+            editing.stopEditing();
+
         // start editing the text, the gamepad press that started it is used up so it does not stop it too
         uiSystem.keyInputObject = this;
         inputClearKey(0, gamepadPrimary+1, false, true, false);
