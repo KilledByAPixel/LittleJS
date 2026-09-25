@@ -4046,6 +4046,8 @@ class EngineObject
         /** @property {Shader|undefined} - Custom shader to render with, undefined for the engine's own
          *  @type {Shader|undefined} */
         this.shader = undefined;
+        /** @property {boolean} - Does this object draw into the light system's shadow map; false for a floor layer, a background, a pickup */
+        this.castShadow = true;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         this.mirror = false;
         /** @property {boolean} - Has object been destroyed? */
@@ -4411,6 +4413,10 @@ class EngineObject
 
     /** Optional hook called during the light system plugin's lightmap pass to draw this object's lightmap contribution. Does nothing by default. */
     renderLight() {}
+
+    /** Draw this object into the light system's shadow map, called during its shadow pass when castShadow is set.
+     *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit */
+    renderShadow() { this.render(); }
 
     /** Destroy this object, destroy its children, detach its parent, and mark it for removal
      *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
@@ -10234,6 +10240,9 @@ let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
 let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
+// ANDed onto every packed color as a draw is queued; the light system's shadow pass sets 0xff000000
+// to draw everything black with its alpha kept (rgbaInt packs alpha in the top byte)
+let glColorMask = -1;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -10895,8 +10904,8 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
     glPositionData[offset++] = uv0Y;
     glPositionData[offset++] = uv1X;
     glPositionData[offset++] = uv1Y;
-    glColorData[offset++] = rgba;
-    glColorData[offset++] = rgbaAdditive;
+    glColorData[offset++] = rgba & glColorMask;
+    glColorData[offset++] = rgbaAdditive & glColorMask;
     glPositionData[offset++] = angle;
 }
 
@@ -10984,7 +10993,7 @@ function glDrawPoints(points, rgba)
         const point = points[j];
         glPositionData[offset++] = point.x;
         glPositionData[offset++] = point.y;
-        glColorData[offset++] = rgba;
+        glColorData[offset++] = rgba & glColorMask;
     }
     glBatchCount += vertCount;
 }
@@ -11015,7 +11024,7 @@ function glDrawColoredPoints(points, pointColors)
         const color = pointColors[j];
         glPositionData[offset++] = point.x;
         glPositionData[offset++] = point.y;
-        glColorData[offset++] = color;
+        glColorData[offset++] = color & glColorMask;
     }
     glBatchCount += vertCount;
 }

@@ -78,6 +78,8 @@ class EngineObject
         /** @property {Shader|undefined} - Custom shader to render with, undefined for the engine's own
          *  @type {Shader|undefined} */
         this.shader = undefined;
+        /** @property {boolean} - Does this object draw into the light system's shadow map; false for a floor layer, a background, a pickup */
+        this.castShadow = true;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         this.mirror = false;
         /** @property {boolean} - Has object been destroyed? */
@@ -443,6 +445,10 @@ class EngineObject
 
     /** Optional hook called during the light system plugin's lightmap pass to draw this object's lightmap contribution. Does nothing by default. */
     renderLight() {}
+
+    /** Draw this object into the light system's shadow map, called during its shadow pass when castShadow is set.
+     *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit */
+    renderShadow() { this.render(); }
 
     /** Destroy this object, destroy its children, detach its parent, and mark it for removal
      *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */

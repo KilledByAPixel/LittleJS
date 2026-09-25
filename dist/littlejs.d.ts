@@ -3224,6 +3224,8 @@ declare module "littlejsengine" {
         /** @property {Shader|undefined} - Custom shader to render with, undefined for the engine's own
          *  @type {Shader|undefined} */
         shader: Shader | undefined;
+        /** @property {boolean} - Does this object draw into the light system's shadow map; false for a floor layer, a background, a pickup */
+        castShadow: boolean;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         mirror: boolean;
         /** @property {boolean} - Has object been destroyed? */
@@ -3288,6 +3290,9 @@ declare module "littlejsengine" {
         render(): void;
         /** Optional hook called during the light system plugin's lightmap pass to draw this object's lightmap contribution. Does nothing by default. */
         renderLight(): void;
+        /** Draw this object into the light system's shadow map, called during its shadow pass when castShadow is set.
+         *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit */
+        renderShadow(): void;
         /** Destroy this object, destroy its children, detach its parent, and mark it for removal
          *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
         destroy(immediate?: boolean): void;
@@ -7606,8 +7611,6 @@ declare module "littlejsengine" {
         emissive: number;
         /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
         specular: number;
-        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, additive objects never cast */
-        castShadow: boolean;
         /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls around corners */
         collideAsSphere3D: boolean;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */

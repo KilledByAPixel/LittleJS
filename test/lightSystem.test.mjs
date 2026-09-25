@@ -132,3 +132,24 @@ test('a Light stays where it is put in a game with gravity', () =>
     }
     finally { setGravity(vec2()); }
 });
+
+test('EngineObject.castShadow defaults to true', () =>
+{
+    const o = new EngineObject(vec2(0, 0));
+    assert.equal(o.castShadow, true);
+});
+
+test('EngineObject.renderShadow() calls render() once by default', () =>
+{
+    const o = new EngineObject(vec2(0, 0));
+    let renders = 0;
+    o.render = () => ++renders;
+    o.renderShadow();
+    assert.equal(renders, 1);
+});
+
+test('Light.castShadow defaults to true', () =>
+{
+    const l = new Light(vec2(0, 0), 1);
+    assert.equal(l.castShadow, true);
+});

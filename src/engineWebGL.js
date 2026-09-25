@@ -33,6 +33,9 @@ let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
 let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new Map, glCanBeEnabled = true;
+// ANDed onto every packed color as a draw is queued; the light system's shadow pass sets 0xff000000
+// to draw everything black with its alpha kept (rgbaInt packs alpha in the top byte)
+let glColorMask = -1;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -694,8 +697,8 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
     glPositionData[offset++] = uv0Y;
     glPositionData[offset++] = uv1X;
     glPositionData[offset++] = uv1Y;
-    glColorData[offset++] = rgba;
-    glColorData[offset++] = rgbaAdditive;
+    glColorData[offset++] = rgba & glColorMask;
+    glColorData[offset++] = rgbaAdditive & glColorMask;
     glPositionData[offset++] = angle;
 }
 
@@ -783,7 +786,7 @@ function glDrawPoints(points, rgba)
         const point = points[j];
         glPositionData[offset++] = point.x;
         glPositionData[offset++] = point.y;
-        glColorData[offset++] = rgba;
+        glColorData[offset++] = rgba & glColorMask;
     }
     glBatchCount += vertCount;
 }
@@ -814,7 +817,7 @@ function glDrawColoredPoints(points, pointColors)
         const color = pointColors[j];
         glPositionData[offset++] = point.x;
         glPositionData[offset++] = point.y;
-        glColorData[offset++] = color;
+        glColorData[offset++] = color & glColorMask;
     }
     glBatchCount += vertCount;
 }
