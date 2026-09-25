@@ -484,12 +484,16 @@ class HeightMap
             const p = origin.add(direction.scale(at));
             return p.y - this.getHeight(p.x, p.z);
         };
+        // touching the surface counts as a hit too, where it starts, at the map's edge, or grazing it from below
+        const touching = (d)=> abs(d) <= 1e-9;
         let a = start, da = above(a);
+        if (touching(da)) return start;
         const startUnder = da <= 0;
         for (const b of breaks)
         {
             if (b <= a || b > end) continue;
             const db = above(b);
+            if (touching(db)) return b;
             if (db <= 0 !== startUnder)
                 return da === db ? b : a + (b - a) * da / (da - db);
             a = b, da = db;

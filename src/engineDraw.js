@@ -1354,12 +1354,15 @@ function cameraFit(center, size, worldMargin, screenInset)
     if (!(worldW > 0 && worldH > 0 && viewW > 0 && viewH > 0))
         return cameraScale;
 
-    // scale to fit the padded content
-    cameraScale = min(viewW / worldW, viewH / worldH);
+    // scale to fit the padded content, measured along the camera's axes when it is turned
+    const c = cos(cameraAngle), s = sin(cameraAngle);
+    const fitW = abs(c) * worldW + abs(s) * worldH, fitH = abs(s) * worldW + abs(c) * worldH;
+    cameraScale = min(viewW / fitW, viewH / fitH);
 
-    // calculate offset vectors
+    // calculate offset vectors, the inset is on the screen, so it turns back into the world with the camera
     const marginVector = vec2(margin.right - margin.left, margin.top - margin.bottom).scale(.5);
-    const insetVector = vec2(inset.right - inset.left, inset.top - inset.bottom).scale(.5 / cameraScale);
+    const ix = (inset.right - inset.left) * .5 / cameraScale, iy = (inset.top - inset.bottom) * .5 / cameraScale;
+    const insetVector = vec2(ix * c + iy * s, iy * c - ix * s);
 
     // apply the offsets and return camera scale
     cameraPos = center.add(marginVector).add(insetVector);

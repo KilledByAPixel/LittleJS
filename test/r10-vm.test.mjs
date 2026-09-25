@@ -144,3 +144,34 @@ test('the debug number and time keys work only with the overlay open, unless deb
         results;`);
     assert.deepEqual([...result], [false, 1, true, 10, false, 10]);
 });
+
+test('cameraFit fits a rectangle, and keeps a screen inset on its side, when the camera is turned', () =>
+{
+    const { run } = loadEngine();
+    const result = run(`
+        const corners = (center, size)=> [-1, 1].flatMap(sx=> [-1, 1].map(sy=>
+            worldToScreen(center.add(vec2(sx * size.x / 2, sy * size.y / 2)))));
+        const results = [];
+
+        // a wide rectangle turned a quarter turn, on a wide screen, fits its long side into the screen's height
+        mainCanvasSize = vec2(800, 400);
+        setCameraAngle(PI / 2);
+        results.push(cameraFit(vec2(), vec2(8, 2)));
+        results.push(corners(vec2(), vec2(8, 2)).every(p=> p.x > -1 && p.x < 801 && p.y > -1 && p.y < 401));
+
+        // and at an eighth of a turn, every corner is on screen, one of them touching an edge
+        setCameraAngle(PI / 4);
+        cameraFit(vec2(3, 1), vec2(8, 2));
+        const p = corners(vec2(3, 1), vec2(8, 2));
+        results.push(p.every(p=> p.x > -1 && p.x < 801 && p.y > -1 && p.y < 401));
+
+        // a band reserved at the top pushes the content down on screen, whichever way the camera is turned
+        mainCanvasSize = vec2(800);
+        setCameraAngle(PI / 2);
+        cameraFit(vec2(), vec2(2), 0, {top: 200});
+        const c = worldToScreen(vec2());
+        results.push(Math.round(c.x), Math.round(c.y));
+        setCameraAngle(0);
+        results;`);
+    assert.deepEqual([...result], [50, true, true, 400, 500]);
+});

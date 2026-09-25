@@ -188,3 +188,15 @@ test('a 3D object starts with the size of its mesh, so a built floor or wall is 
     }
     finally { clearObjects(); }
 });
+
+test('HeightMap.raycast hits a surface it only touches: starting on it, at the map\'s edge, or grazing it from below', () =>
+{
+    const flat = new LJS.HeightMap([[0, 0], [0, 0]], vec2(2), 1);
+    assert.equal(flat.raycast(new Ray3D(vec3(), vec3(0, -1, 0))), 0, 'starting on it, heading down');
+    assert.equal(flat.raycast(new Ray3D(vec3(), vec3(0, 1, 0))), 0, 'starting on it, heading up');
+    const edge = flat.raycast(new Ray3D(vec3(0, -1, 0), vec3(1, 1, 0)));
+    assert.ok(edge !== undefined && near(edge, 1), 'from below, meeting it at the edge: ' + edge);
+    const valley = new LJS.HeightMap([[1, 0, 1], [1, 0, 1]], vec2(2), 1);
+    const graze = valley.raycast(new Ray3D(vec3(-1, 0, 0), vec3(1, 0, 0)));
+    assert.ok(graze !== undefined && near(graze, 1), 'touching the valley floor from below: ' + graze);
+});

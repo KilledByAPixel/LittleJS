@@ -5968,12 +5968,15 @@ function cameraFit(center, size, worldMargin, screenInset)
     if (!(worldW > 0 && worldH > 0 && viewW > 0 && viewH > 0))
         return cameraScale;
 
-    // scale to fit the padded content
-    cameraScale = min(viewW / worldW, viewH / worldH);
+    // scale to fit the padded content, measured along the camera's axes when it is turned
+    const c = cos(cameraAngle), s = sin(cameraAngle);
+    const fitW = abs(c) * worldW + abs(s) * worldH, fitH = abs(s) * worldW + abs(c) * worldH;
+    cameraScale = min(viewW / fitW, viewH / fitH);
 
-    // calculate offset vectors
+    // calculate offset vectors, the inset is on the screen, so it turns back into the world with the camera
     const marginVector = vec2(margin.right - margin.left, margin.top - margin.bottom).scale(.5);
-    const insetVector = vec2(inset.right - inset.left, inset.top - inset.bottom).scale(.5 / cameraScale);
+    const ix = (inset.right - inset.left) * .5 / cameraScale, iy = (inset.top - inset.bottom) * .5 / cameraScale;
+    const insetVector = vec2(ix * c + iy * s, iy * c - ix * s);
 
     // apply the offsets and return camera scale
     cameraPos = center.add(marginVector).add(insetVector);
@@ -25201,12 +25204,16 @@ class HeightMap
             const p = origin.add(direction.scale(at));
             return p.y - this.getHeight(p.x, p.z);
         };
+        // touching the surface counts as a hit too, where it starts, at the map's edge, or grazing it from below
+        const touching = (d)=> abs(d) <= 1e-9;
         let a = start, da = above(a);
+        if (touching(da)) return start;
         const startUnder = da <= 0;
         for (const b of breaks)
         {
             if (b <= a || b > end) continue;
             const db = above(b);
+            if (touching(db)) return b;
             if (db <= 0 !== startUnder)
                 return da === db ? b : a + (b - a) * da / (da - db);
             a = b, da = db;
