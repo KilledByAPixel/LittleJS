@@ -7358,6 +7358,7 @@ class Sound
         this.sampleRate = audioBuffer.sampleRate;
         this.sampleLength = audioBuffer.length;
         this.sampleBuffer = audioBuffer;
+        this._sampleChannels = undefined; // samples read from a sound loaded before are that sound's, not this one's
         this.loadedPercent = 1;
         this.onloadCallback?.(this);
     }
@@ -14534,11 +14535,16 @@ function box2dFixtureOverlaps(fixture, aabb)
 // an edge of no length gives its neighbors a ghost vertex on their own end, and bodies fall through them
 function box2dEdgePoints(points, loop)
 {
+    // each point is kept if it is far enough from the last one kept, so a densely sampled curve keeps every few of
+    // its points rather than losing them all
     const slop2 = .005**2; // Box2D's linear slop, what its own chain shape asserts consecutive points are apart
-    points = points.filter((p, i)=> !i || p.distanceSquared(points[i-1]) > slop2);
-    if (loop && points.length > 1 && points[points.length-1].distanceSquared(points[0]) <= slop2)
-        points.pop();
-    return points;
+    const kept = [];
+    for (const p of points)
+        if (!kept.length || p.distanceSquared(kept[kept.length-1]) > slop2)
+            kept.push(p);
+    while (loop && kept.length > 1 && kept[kept.length-1].distanceSquared(kept[0]) <= slop2)
+        kept.pop();
+    return kept;
 }
 
 // wake a body and whatever touches it, Box2D does not when a body is moved, and a sleeping pair never updates

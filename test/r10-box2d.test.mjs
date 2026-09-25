@@ -130,3 +130,18 @@ test('a raycast passes through sensors unless it asks for them', () =>
     }
     finally { trigger.destroy(); wall.destroy(); box2d.step(); }
 });
+
+test('a densely sampled edge list keeps enough of its points to block what crosses it', () =>
+{
+    const ground = new Box2dStaticObject(vec2(0, 600));
+    const line = Array.from({length: 1001}, (_, i)=> vec2(i * .004, 0)); // four units in .004 steps
+    const loop = Array.from({length: 2000}, (_, i)=> vec2(2).setAngle(i / 2000 * 2 * Math.PI, 2)); // .006 apart
+    try
+    {
+        assert.ok(ground.addEdgeList(line).length > 100, 'fixtures made');
+        box2d.step();
+        assert.ok(box2d.raycast(vec2(2, 601), vec2(2, 599)), 'a ray down through its middle hits it');
+        assert.ok(ground.addEdgeLoop(loop.map(p=> p.add(vec2(10, 0)))).length > 1000, 'the dense loop is kept');
+    }
+    finally { ground.destroy(); box2d.step(); }
+});

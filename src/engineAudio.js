@@ -422,6 +422,7 @@ class Sound
         this.sampleRate = audioBuffer.sampleRate;
         this.sampleLength = audioBuffer.length;
         this.sampleBuffer = audioBuffer;
+        this._sampleChannels = undefined; // samples read from a sound loaded before are that sound's, not this one's
         this.loadedPercent = 1;
         this.onloadCallback?.(this);
     }

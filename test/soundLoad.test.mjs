@@ -189,3 +189,23 @@ test('assigning sampleChannels rebuilds the buffer', () =>
     assert.equal(custom.sampleBuffer, buffersCreated.at(-1));
     instance.stop();
 });
+
+test('loading a sound again replaces the samples read from the one before', async () =>
+{
+    const reloaded = new LJS.Sound;
+    const first = [new Float32Array([.25, .5])], second = [new Float32Array([.75, .875, 1])];
+    const buffer = (channels)=> ({ numberOfChannels: channels.length, sampleRate: SAMPLE_RATE,
+        length: channels[0].length, duration: channels[0].length / SAMPLE_RATE, getChannelData: (i)=> channels[i] });
+    const decode = ctxProto.decodeAudioData;
+    try
+    {
+        ctxProto.decodeAudioData = ()=> Promise.resolve(buffer(first));
+        await reloaded.loadSound('first.ogg');
+        const firstSamples = reloaded.sampleChannels;
+        ctxProto.decodeAudioData = ()=> Promise.resolve(buffer(second));
+        await reloaded.loadSound('second.ogg');
+        assert.deepEqual([...reloaded.sampleChannels[0]], [.75, .875, 1], 'the second file');
+        assert.deepEqual([...firstSamples[0]], [.25, .5], 'what was read before is left as it was');
+    }
+    finally { ctxProto.decodeAudioData = decode; }
+});
