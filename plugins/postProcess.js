@@ -33,7 +33,8 @@ class PostProcessPlugin
     /** Create global post processing shader
     *  @param {string} [shaderCode] - Shadertoy style mainImage code, a pass-through when left out
     *  @param {boolean} [includeMainCanvas] - combine mainCanvas onto glCanvas
-    *  @param {boolean} [feedbackTexture] - use glCanvas from previous frame as the texture
+    *  @param {boolean} [feedbackTexture] - also pass the shader's own output from the previous frame as iChannel1,
+    *                                       for trails and echoes; iChannel0 is still the frame just drawn
     *  @example
     *  // create the post process plugin object
     *  new PostProcessPlugin(shaderCode);
@@ -54,6 +55,9 @@ class PostProcessPlugin
         /** @property {WebGLTexture|undefined} - Texture for post processing
          *  @type {WebGLTexture|undefined} */
         this.texture = undefined;
+        /** @property {WebGLTexture|undefined} - The previous frame's output, iChannel1, when feedbackTexture is set
+         *  @type {WebGLTexture|undefined} */
+        this.feedbackTexture = undefined;
         /** @property {WebGLVertexArrayObject|undefined} - Vertex array object
          *  @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
@@ -71,7 +75,15 @@ class PostProcessPlugin
                 return;
             }
 
-            // create resources
+            // create resources, the feedback starting black, as if the frame before the first were empty
+            if (feedbackTexture)
+            {
+                postProcess.feedbackTexture = glCreateTexture();
+                glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
+                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA,
+                    glContext.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+                glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+            }
             postProcess.texture = glCreateTexture();
             postProcess.shader = glCreateProgram(
                 '#version 300 es\n' +            // specify GLSL ES version
@@ -84,6 +96,7 @@ class PostProcessPlugin
                 '#version 300 es\n' +            // specify GLSL ES version
                 'precision highp float;'+        // use highp for accuracy
                 'uniform sampler2D iChannel0;'+  // input texture
+                'uniform sampler2D iChannel1;'+  // the previous frame's output, when feedbackTexture is set
                 'uniform vec3 iResolution;'+     // size of output texture
                 'uniform float iTime;'+          // time
                 'out vec4 c;'+                   // out color
@@ -109,6 +122,7 @@ class PostProcessPlugin
         {
             postProcess.shader = undefined;
             postProcess.texture = undefined;
+            postProcess.feedbackTexture = undefined;
             LOG('PostProcessPlugin: WebGL context lost');
         }
         function postProcessContextRestored()
@@ -165,23 +179,32 @@ class PostProcessPlugin
                 // copy work canvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, workCanvas);
             }
-            else if (!feedbackTexture)
+            else
             {
                 // copy glCanvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
             }
 
+            // the previous frame's output, on the second texture unit
+            if (feedbackTexture)
+            {
+                glContext.activeTexture(glContext.TEXTURE1);
+                glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
+            }
+
             // set uniforms and draw
             const uniformLocation = (name)=>glUniformLocation(postProcess.shader, name);
             glContext.uniform1i(uniformLocation('iChannel0'), 0);
+            glContext.uniform1i(uniformLocation('iChannel1'), 1);
             glContext.uniform1f(uniformLocation('iTime'), time);
             glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
 
             if (feedbackTexture)
             {
-                // pass glCanvas back to overlay texture
+                // keep this frame's output for the next one, then hand the first texture unit back to the engine
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
+                glContext.activeTexture(glContext.TEXTURE0);
             }
 
             // restore defaults so subsequent dynamic texture uploads aren't flipped or premultiplied

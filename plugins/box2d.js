@@ -2061,8 +2061,9 @@ class Box2dPlugin
     /** raycast and return a list of all the results, nearest first
      *  @param {Vector2} start
      *  @param {Vector2} end
+     *  @param {boolean} [includeSensors] - Also hit sensors, trigger zones are passed through by default
      *  @return {Array<Box2dRaycastResult>} */
-    raycastAll(start, end)
+    raycastAll(start, end, includeSensors=false)
     {
         // a ray with no length fails an assert that stops Box2D for good, measured as Box2D does in 32 bit floats,
         // where two ends a float apart are one point; one that is not a number has no length either
@@ -2078,6 +2079,8 @@ class Box2dPlugin
             const o = fixture.GetBody().object;
             if (!o || o.destroyed)
                 return 1; // a raw body with no Box2dObject or one destroyed this step, continue getting results
+            if (!includeSensors && fixture.IsSensor())
+                return -1; // skip it, Box2D goes on as if it were not there
             point  = box2d.vec2FromPointer(point);
             normal = box2d.vec2FromPointer(normal);
             raycastResults.push(new Box2dRaycastResult(fixture, point, normal, fraction));
@@ -2094,10 +2097,11 @@ class Box2dPlugin
     /** raycast and return the first result
      *  @param {Vector2} start
      *  @param {Vector2} end
+     *  @param {boolean} [includeSensors] - Also hit sensors, trigger zones are passed through by default
      *  @return {Box2dRaycastResult|undefined} */
-    raycast(start, end)
+    raycast(start, end, includeSensors=false)
     {
-        return box2d.raycastAll(start, end)[0];
+        return box2d.raycastAll(start, end, includeSensors)[0];
     }
 
     /** box aabb cast and return all the objects

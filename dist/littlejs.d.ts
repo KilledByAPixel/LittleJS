@@ -230,8 +230,9 @@ declare module "littlejsengine" {
     /**
      * LittleJS Debug System
      * - Press Esc to toggle debug overlay with object picking
-     * - Number keys toggle debug visualizations (physics, particles, etc.)
-     * - +/- keys control time scale for slow motion/fast forward
+     * - Number keys toggle debug visualizations (physics, particles, etc.) while the overlay is open
+     * - +/- keys control time scale for slow motion/fast forward while the overlay is open
+     * - setDebugKeysAlways lets those keys work with the overlay closed too
      * - ASSERT and LOG macros for development (removed in release builds)
      * - Debug primitive rendering (rectangles, circles, lines, points, text)
      * - Screenshot and video capture support
@@ -259,6 +260,12 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Debug */
     export let debugKey: string;
+    /** Let the debug keys work while the overlay is closed, the number keys and the +/- time keys, for a game that does
+     *  not use them; off by default, so they only work while the overlay is open
+     *  @type {boolean}
+     *  @default
+     *  @memberof Debug */
+    export let debugKeysAlways: boolean;
     /** Asserts if the expression is false, does nothing in release builds
      *  Halts execution if the assert fails and throws an error
      *  @param {*} assert - any value, the assert fails when it is falsy
@@ -940,6 +947,10 @@ declare module "littlejsengine" {
      *  @param {string} key
      *  @memberof Debug */
     export function setDebugKey(key: string): void;
+    /** Set if the debug keys work while the overlay is closed, the number keys and the +/- time keys
+     *  @param {boolean} [enable]
+     *  @memberof Debug */
+    export function setDebugKeysAlways(enable?: boolean): void;
     /** Open or close the debug overlay from code, as the debug key does; does nothing in release builds
      *  @param {boolean} [show]
      *  @memberof Debug */
@@ -4129,7 +4140,8 @@ declare module "littlejsengine" {
         /** Create global post processing shader
         *  @param {string} [shaderCode] - Shadertoy style mainImage code, a pass-through when left out
         *  @param {boolean} [includeMainCanvas] - combine mainCanvas onto glCanvas
-        *  @param {boolean} [feedbackTexture] - use glCanvas from previous frame as the texture
+        *  @param {boolean} [feedbackTexture] - also pass the shader's own output from the previous frame as iChannel1,
+        *                                       for trails and echoes; iChannel0 is still the frame just drawn
         *  @example
         *  // create the post process plugin object
         *  new PostProcessPlugin(shaderCode);
@@ -4141,6 +4153,9 @@ declare module "littlejsengine" {
         /** @property {WebGLTexture|undefined} - Texture for post processing
          *  @type {WebGLTexture|undefined} */
         texture: WebGLTexture | undefined;
+        /** @property {WebGLTexture|undefined} - The previous frame's output, iChannel1, when feedbackTexture is set
+         *  @type {WebGLTexture|undefined} */
+        feedbackTexture: WebGLTexture | undefined;
         /** @property {WebGLVertexArrayObject|undefined} - Vertex array object
          *  @type {WebGLVertexArrayObject|undefined} */
         vao: WebGLVertexArrayObject | undefined;
@@ -5164,13 +5179,15 @@ declare module "littlejsengine" {
         /** raycast and return a list of all the results, nearest first
          *  @param {Vector2} start
          *  @param {Vector2} end
+         *  @param {boolean} [includeSensors] - Also hit sensors, trigger zones are passed through by default
          *  @return {Array<Box2dRaycastResult>} */
-        raycastAll(start: Vector2, end: Vector2): Array<Box2dRaycastResult>;
+        raycastAll(start: Vector2, end: Vector2, includeSensors?: boolean): Array<Box2dRaycastResult>;
         /** raycast and return the first result
          *  @param {Vector2} start
          *  @param {Vector2} end
+         *  @param {boolean} [includeSensors] - Also hit sensors, trigger zones are passed through by default
          *  @return {Box2dRaycastResult|undefined} */
-        raycast(start: Vector2, end: Vector2): Box2dRaycastResult | undefined;
+        raycast(start: Vector2, end: Vector2, includeSensors?: boolean): Box2dRaycastResult | undefined;
         /** box aabb cast and return all the objects
          *  @param {Vector2} pos
          *  @param {Vector2} size

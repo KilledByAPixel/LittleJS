@@ -121,3 +121,26 @@ test('a tile layer made from a packed tileset counts its tiles in the tileset, n
         drawn;`);
     assert.deepEqual([...drawn], ['100,8', '108,8', '116,8', '124,8', '100,16', '108,16', '116,16', '124,16']);
 });
+
+test('the debug number and time keys work only with the overlay open, unless debugKeysAlways is set', async () =>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true)');
+    await run('setEngineManualStep(true); engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+    const result = run(`
+        const tap = (key)=> { inputData[0][key] = 3; engineStep(); inputData[0][key] = 0; };
+        const heldStep = ()=> { const t = timeReal; inputData[0].Equal = 1; engineStep(); inputData[0].Equal = 0;
+            return Math.round((timeReal - t) * 60); };
+        const results = [];
+        tap('Digit1');
+        results.push(debugPhysics, heldStep()); // overlay closed: nothing
+        setDebugKeysAlways(true);
+        tap('Digit1');
+        results.push(debugPhysics, heldStep()); // always: the key works, time runs 10 times as fast
+        setDebugKeysAlways(false);
+        setDebugOverlay(true);
+        tap('Digit1');
+        results.push(debugPhysics, heldStep()); // overlay open: they work
+        results;`);
+    assert.deepEqual([...result], [false, 1, true, 10, false, 10]);
+});

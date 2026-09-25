@@ -113,3 +113,20 @@ test('hasJoints agrees with getJointList while a joint destroy waits for the ste
     }
     finally { setGravity(vec2(0, -20)); a.destroy(); b.destroy(); trigger.destroy(); box2d.step(); }
 });
+
+test('a raycast passes through sensors unless it asks for them', () =>
+{
+    const trigger = new Box2dStaticObject(vec2(5, 500));
+    trigger.addBox(vec2(1, 4), vec2(), 0, 0, 0, 0, true); // a checkpoint zone
+    const wall = new Box2dStaticObject(vec2(10, 500));
+    wall.addBox(vec2(1, 4));
+    try
+    {
+        box2d.step();
+        assert.equal(box2d.raycast(vec2(0, 500), vec2(20, 500))?.object, wall, 'through the zone to the wall');
+        assert.equal(box2d.raycast(vec2(0, 500), vec2(20, 500), true)?.object, trigger, 'the zone when asked');
+        assert.equal(box2d.raycastAll(vec2(0, 500), vec2(20, 500)).length, 1);
+        assert.equal(box2d.raycastAll(vec2(0, 500), vec2(20, 500), true).length, 2);
+    }
+    finally { trigger.destroy(); wall.destroy(); box2d.step(); }
+});

@@ -765,3 +765,8 @@ function setDebugWatermark(show) { debugWatermark = show; }
  *  @param {string} key
  *  @memberof Debug */
 function setDebugKey(key) { debugKey = key; }
+
+/** Set if the debug keys work while the overlay is closed, the number keys and the +/- time keys
+ *  @param {boolean} [enable]
+ *  @memberof Debug */
+function setDebugKeysAlways(enable=true) { debugKeysAlways = enable; }

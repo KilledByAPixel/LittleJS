@@ -236,8 +236,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         frameTimeLastMS = frameTimeMS;
         if (debug || debugWatermark)
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
-        const debugSpeedUp   = debug && keyIsDown('Equal'); // +
-        const debugSpeedDown = debug && keyIsDown('Minus'); // -
+        // the time keys work while the debug overlay is open, or always when debugKeysAlways is set
+        const debugKeys = debug && (debugOverlay || debugKeysAlways);
+        const debugSpeedUp   = debugKeys && keyIsDown('Equal'); // +
+        const debugSpeedDown = debugKeys && keyIsDown('Minus'); // -
         const debugScale = debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
 
         // apply time deltas
@@ -746,6 +748,7 @@ function engineObjectsRaycast(start, end, objects=engineObjects)
 
 let debugWatermark = 0;
 let debugKey = '';
+let debugKeysAlways = false;
 let debugClearCount = 0;
 const debug = 0;
 const debugOverlay = 0;
@@ -3105,6 +3108,11 @@ function setDebugWatermark(show) { debugWatermark = show; }
  *  @param {string} key
  *  @memberof Debug */
 function setDebugKey(key) { debugKey = key; }
+
+/** Set if the debug keys work while the overlay is closed, the number keys and the +/- time keys
+ *  @param {boolean} [enable]
+ *  @memberof Debug */
+function setDebugKeysAlways(enable=true) { debugKeysAlways = enable; }
 /**
  * LittleJS Object System
  * - EngineObject is the base class for all game objects
@@ -11347,7 +11355,8 @@ class PostProcessPlugin
     /** Create global post processing shader
     *  @param {string} [shaderCode] - Shadertoy style mainImage code, a pass-through when left out
     *  @param {boolean} [includeMainCanvas] - combine mainCanvas onto glCanvas
-    *  @param {boolean} [feedbackTexture] - use glCanvas from previous frame as the texture
+    *  @param {boolean} [feedbackTexture] - also pass the shader's own output from the previous frame as iChannel1,
+    *                                       for trails and echoes; iChannel0 is still the frame just drawn
     *  @example
     *  // create the post process plugin object
     *  new PostProcessPlugin(shaderCode);
@@ -11368,6 +11377,9 @@ class PostProcessPlugin
         /** @property {WebGLTexture|undefined} - Texture for post processing
          *  @type {WebGLTexture|undefined} */
         this.texture = undefined;
+        /** @property {WebGLTexture|undefined} - The previous frame's output, iChannel1, when feedbackTexture is set
+         *  @type {WebGLTexture|undefined} */
+        this.feedbackTexture = undefined;
         /** @property {WebGLVertexArrayObject|undefined} - Vertex array object
          *  @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
@@ -11385,7 +11397,15 @@ class PostProcessPlugin
                 return;
             }
 
-            // create resources
+            // create resources, the feedback starting black, as if the frame before the first were empty
+            if (feedbackTexture)
+            {
+                postProcess.feedbackTexture = glCreateTexture();
+                glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
+                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA,
+                    glContext.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+                glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+            }
             postProcess.texture = glCreateTexture();
             postProcess.shader = glCreateProgram(
                 '#version 300 es\n' +            // specify GLSL ES version
@@ -11398,6 +11418,7 @@ class PostProcessPlugin
                 '#version 300 es\n' +            // specify GLSL ES version
                 'precision highp float;'+        // use highp for accuracy
                 'uniform sampler2D iChannel0;'+  // input texture
+                'uniform sampler2D iChannel1;'+  // the previous frame's output, when feedbackTexture is set
                 'uniform vec3 iResolution;'+     // size of output texture
                 'uniform float iTime;'+          // time
                 'out vec4 c;'+                   // out color
@@ -11423,6 +11444,7 @@ class PostProcessPlugin
         {
             postProcess.shader = undefined;
             postProcess.texture = undefined;
+            postProcess.feedbackTexture = undefined;
             false&&LOG('PostProcessPlugin: WebGL context lost');
         }
         function postProcessContextRestored()
@@ -11479,23 +11501,32 @@ class PostProcessPlugin
                 // copy work canvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, workCanvas);
             }
-            else if (!feedbackTexture)
+            else
             {
                 // copy glCanvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
             }
 
+            // the previous frame's output, on the second texture unit
+            if (feedbackTexture)
+            {
+                glContext.activeTexture(glContext.TEXTURE1);
+                glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
+            }
+
             // set uniforms and draw
             const uniformLocation = (name)=>glUniformLocation(postProcess.shader, name);
             glContext.uniform1i(uniformLocation('iChannel0'), 0);
+            glContext.uniform1i(uniformLocation('iChannel1'), 1);
             glContext.uniform1f(uniformLocation('iTime'), time);
             glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
 
             if (feedbackTexture)
             {
-                // pass glCanvas back to overlay texture
+                // keep this frame's output for the next one, then hand the first texture unit back to the engine
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
+                glContext.activeTexture(glContext.TEXTURE0);
             }
 
             // restore defaults so subsequent dynamic texture uploads aren't flipped or premultiplied
@@ -16493,8 +16524,9 @@ class Box2dPlugin
     /** raycast and return a list of all the results, nearest first
      *  @param {Vector2} start
      *  @param {Vector2} end
+     *  @param {boolean} [includeSensors] - Also hit sensors, trigger zones are passed through by default
      *  @return {Array<Box2dRaycastResult>} */
-    raycastAll(start, end)
+    raycastAll(start, end, includeSensors=false)
     {
         // a ray with no length fails an assert that stops Box2D for good, measured as Box2D does in 32 bit floats,
         // where two ends a float apart are one point; one that is not a number has no length either
@@ -16510,6 +16542,8 @@ class Box2dPlugin
             const o = fixture.GetBody().object;
             if (!o || o.destroyed)
                 return 1; // a raw body with no Box2dObject or one destroyed this step, continue getting results
+            if (!includeSensors && fixture.IsSensor())
+                return -1; // skip it, Box2D goes on as if it were not there
             point  = box2d.vec2FromPointer(point);
             normal = box2d.vec2FromPointer(normal);
             raycastResults.push(new Box2dRaycastResult(fixture, point, normal, fraction));
@@ -16526,10 +16560,11 @@ class Box2dPlugin
     /** raycast and return the first result
      *  @param {Vector2} start
      *  @param {Vector2} end
+     *  @param {boolean} [includeSensors] - Also hit sensors, trigger zones are passed through by default
      *  @return {Box2dRaycastResult|undefined} */
-    raycast(start, end)
+    raycast(start, end, includeSensors=false)
     {
-        return box2d.raycastAll(start, end)[0];
+        return box2d.raycastAll(start, end, includeSensors)[0];
     }
 
     /** box aabb cast and return all the objects

@@ -155,8 +155,8 @@ test('an addRegularPoly with more than 8 sides says why it cannot be made', () =
 
 test('the query results and optional joint anchors are typed in the d.ts', () =>
 {
-    assert.match(dts, /raycastAll\(start: Vector2, end: Vector2\): Array<Box2dRaycastResult>;/);
-    assert.match(dts, /raycast\(start: Vector2, end: Vector2\): Box2dRaycastResult \| undefined;/);
+    assert.match(dts, /raycastAll\(start: Vector2, end: Vector2, includeSensors\?: boolean\): Array<Box2dRaycastResult>;/);
+    assert.match(dts, /raycast\(start: Vector2, end: Vector2, includeSensors\?: boolean\): Box2dRaycastResult \| undefined;/);
     assert.match(dts, /boxCastAll\(pos: Vector2, size: Vector2\): Array<Box2dObject>;/);
     assert.match(dts, /boxCast\(pos: Vector2, size: Vector2\): Box2dObject \| undefined;/);
     assert.match(dts, /circleCastAll\(pos: Vector2, diameter: number\): Array<Box2dObject>;/);

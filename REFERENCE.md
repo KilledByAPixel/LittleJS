@@ -884,7 +884,8 @@ class LavaTile extends EngineObject {
 
 ## LittleJS Post Processing
 - Optional plugin that applies a full screen WebGL shader to the rendered output
-- Shadertoy style uniforms: iTime, iResolution, iChannel0
+- Shadertoy style uniforms: iTime, iResolution, iChannel0 (the frame just drawn), and iChannel1 (the previous
+  frame's output) when feedbackTexture is set, for trails and echoes
 - See `examples/shorts/postProcess.js` for a demo
 
 ```javascript
@@ -1552,9 +1553,9 @@ obj.setMassData(localCenter, mass, momentOfInertia) // undefined leaves that one
 obj.getMass() / getCenterOfMass() / getInertia() // the center of mass in world space, setMassData takes a local one
 
 // Raycasting and queries
-box2d.raycast(start, end)      // Returns the closest Box2dRaycastResult or undefined; sensors are hit too, check
-                               // result.fixture.IsSensor()
-box2d.raycastAll(start, end)   // Every Box2dRaycastResult along the ray, nearest first
+box2d.raycast(start, end, includeSensors=false)    // Returns the closest Box2dRaycastResult or undefined; sensors
+                                                   // are passed through unless includeSensors
+box2d.raycastAll(start, end, includeSensors=false) // Every Box2dRaycastResult along the ray, nearest first
 box2d.boxCast(pos, size) / boxCastAll(pos, size) // An object, or all of them, whose shapes overlap the box
 box2d.circleCast(pos, diameter) / circleCastAll(pos, diameter) // The nearest object, or all of them, whose
                                // position is in the circle, wherever its shapes are
@@ -1702,10 +1703,11 @@ async function gameInit()
 
 ## LittleJS Debugging System
 - Press Escape key to toggle debug overlay
-- Number keys toggle debug functions: 1 physics, 2 particles, 3 gamepads, 4 raycasts, 5 screenshot, 6 video capture,
-  7 sound, 8 tiles (each tile layer's bounds, the collision values on screen, and the tiles under the mouse; pressing
-  8 again steps through the layers one at a time, then off)
-- +/- keys apply time scale to update
+- Number keys toggle debug functions while the overlay is open: 1 physics, 2 particles, 3 gamepads, 4 raycasts,
+  5 screenshot, 6 video capture, 7 sound, 8 tiles (each tile layer's bounds, the collision values on screen, and the
+  tiles under the mouse; pressing 8 again steps through the layers one at a time, then off)
+- +/- keys apply time scale to update while the overlay is open
+- setDebugKeysAlways(true) lets the number and +/- keys work with the overlay closed, for a game that does not use them
 - Debug primitive rendering system
 - Debug functions are only active in debug builds
 
@@ -1736,6 +1738,7 @@ saveDataURL(url, filename='download', revokeTime)           // Save url to a fil
 debug                // Is debug enabled?
 debugPointSize = .5  // Size to render debug points by default
 debugKey = 'Escape'  // Key code used to toggle debug mode
+debugKeysAlways = false // The number and +/- keys work with the overlay closed too, setDebugKeysAlways(enable=true)
 debugOverlay         // Is the debug overlay is active? setDebugOverlay(show=true) opens or closes it from code
 debugWatermark       // Should watermark with FPS appear in debug mode?
 ```

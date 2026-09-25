@@ -32,6 +32,7 @@ export
     debugOverlay,
     debugWatermark,
     debugKey,
+    debugKeysAlways,
 
     // Debug
     ASSERT,
@@ -167,6 +168,7 @@ export
     setSoundPauseWhenHidden,
     setDebugWatermark,
     setDebugKey,
+    setDebugKeysAlways,
     setDebugOverlay,
 
     // Math

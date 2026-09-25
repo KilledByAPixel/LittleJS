@@ -233,8 +233,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         frameTimeLastMS = frameTimeMS;
         if (debug || debugWatermark)
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
-        const debugSpeedUp   = debug && keyIsDown('Equal'); // +
-        const debugSpeedDown = debug && keyIsDown('Minus'); // -
+        // the time keys work while the debug overlay is open, or always when debugKeysAlways is set
+        const debugKeys = debug && (debugOverlay || debugKeysAlways);
+        const debugSpeedUp   = debugKeys && keyIsDown('Equal'); // +
+        const debugSpeedDown = debugKeys && keyIsDown('Minus'); // -
         const debugScale = debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
 
         // apply time deltas

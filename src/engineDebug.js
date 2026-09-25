@@ -1,8 +1,9 @@
 /**
  * LittleJS Debug System
  * - Press Esc to toggle debug overlay with object picking
- * - Number keys toggle debug visualizations (physics, particles, etc.)
- * - +/- keys control time scale for slow motion/fast forward
+ * - Number keys toggle debug visualizations (physics, particles, etc.) while the overlay is open
+ * - +/- keys control time scale for slow motion/fast forward while the overlay is open
+ * - setDebugKeysAlways lets those keys work with the overlay closed too
  * - ASSERT and LOG macros for development (removed in release builds)
  * - Debug primitive rendering (rectangles, circles, lines, points, text)
  * - Screenshot and video capture support
@@ -36,6 +37,13 @@ let debugWatermark = true;
  *  @default
  *  @memberof Debug */
 let debugKey = 'Escape';
+
+/** Let the debug keys work while the overlay is closed, the number keys and the +/- time keys, for a game that does
+ *  not use them; off by default, so they only work while the overlay is open
+ *  @type {boolean}
+ *  @default
+ *  @memberof Debug */
+let debugKeysAlways = false;
 
 /** True if the debug overlay is active, always false in release builds
  *  @type {boolean}
@@ -289,7 +297,8 @@ function debugUpdate()
 
     if (keyWasPressed(debugKey)) // Esc
         debugOverlay = !debugOverlay;
-    if (debugOverlay)
+    const debugKeys = debugOverlay || debugKeysAlways; // the keys work while the overlay is open, or always if set
+    if (debugKeys)
     {
         if (keyWasPressed('Digit1'))
             debugPhysics = !debugPhysics, debugParticles = false;
@@ -310,10 +319,10 @@ function debugUpdate()
     {
         // control to stop video capture, a capture the overlay started also stops when the overlay closes,
         // one the game started from code runs until it calls debugVideoCaptureStop
-        if (debugOverlay ? keyWasPressed('Digit6') : debugVideoCapture.fromOverlay)
+        if (debugKeys ? keyWasPressed('Digit6') : debugVideoCapture.fromOverlay)
             debugVideoCaptureStop();
     }
-    else if (debugOverlay && keyWasPressed('Digit6'))
+    else if (debugKeys && keyWasPressed('Digit6'))
     {
         debugVideoCaptureStart();
         if (debugVideoCapture)
