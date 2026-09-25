@@ -4302,6 +4302,11 @@ declare module "littlejsengine" {
          *  Called by Light.renderLight() during the plugin's render pass.
          *  @param {Light} light */
         drawLight(light: Light): void;
+        /** Build a light's shadow texture from the shadow map: the map around the light, its casters stretched
+         *  away from the light a little further each pass with light bled into their near sides. Leaves the
+         *  result on texture unit 1 and the lightmap bound again. Called by drawLight.
+         *  @param {Light} light */
+        renderLightShadow(light: Light): void;
         /** In the shadow pass, let the draws that follow keep their color in the shadow map, so light passing
          *  through them is tinted instead of blocked: a stained glass window, colored smoke. Does nothing outside
          *  the pass, so a render() can call it around those draws unconditionally; set it back to false after them.

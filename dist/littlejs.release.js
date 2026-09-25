@@ -11783,10 +11783,12 @@ class LightSystemPlugin
                 'uniform float radius;'+
                 'in vec2 g;'+              // unit quad geometry [0..1]
                 'out vec2 vWorldPos;'+
+                'out vec2 vUV;'+           // across the light's quad, the shadow texture's uv
                 'void main(){'+
                 'vec2 worldP=lightPos+(g-.5)*2.*radius;'+
                 'gl_Position=m*vec4(worldP,1,1);'+
                 'vWorldPos=worldP;'+
+                'vUV=g;'+
                 '}'
                 ,
                 '#version 300 es\n' +
@@ -11795,14 +11797,21 @@ class LightSystemPlugin
                 'uniform float radius;'+
                 'uniform float fadeRange;'+
                 'uniform vec4 color;'+
+                'uniform sampler2D shadowTexture;'+ // this light's shadow, white where its rays reach
+                'uniform bool useShadow;'+
                 'in vec2 vWorldPos;'+
+                'in vec2 vUV;'+
                 'out vec4 c;'+
                 'void main(){'+
                 'float dist=distance(vWorldPos,lightPos);'+
                 'float t=clamp((radius-dist)/max(fadeRange,1e-6),0.,1.);'+
                 'c=vec4(color.rgb*t*color.a,1.);'+
+                'if(useShadow)c.rgb*=texture(shadowTexture,vUV).rgb;'+
                 '}'
             );
+            // the shadow texture is on unit 1, the engine's tracked texture stays on unit 0
+            glContext.useProgram(lightSystem.lightShader);
+            glContext.uniform1i(glUniformLocation(lightSystem.lightShader, 'shadowTexture'), 1);
 
             // composite shader: fullscreen quad, samples the lightmap
             lightSystem.compositeShader = glCreateProgram(
@@ -12107,6 +12116,10 @@ class LightSystemPlugin
         // the engine's shader+VAO bound — NOT this plugin's light shader.
         glFlush();
 
+        // a shadow casting light builds its shadow texture first, leaving it on unit 1 and the lightmap bound
+        const useShadow = this.shadows && light.castShadow && !!this.shadowMap;
+        useShadow && this.renderLightShadow(light);
+
         glContext.useProgram(this.lightShader);
         glContext.bindVertexArray(this.lightVAO);
 
@@ -12115,6 +12128,7 @@ class LightSystemPlugin
         glContext.uniform2f(glUniformLocation(ls, 'lightPos'), light.pos.x, light.pos.y);
         glContext.uniform1f(glUniformLocation(ls, 'radius'), light.radius);
         glContext.uniform1f(glUniformLocation(ls, 'fadeRange'), light.fadeRange);
+        glContext.uniform1i(glUniformLocation(ls, 'useShadow'), useShadow ? 1 : 0);
         const c = light.color;
         glContext.uniform4f(glUniformLocation(ls, 'color'), c.r, c.g, c.b, c.a);
 
@@ -12123,6 +12137,55 @@ class LightSystemPlugin
         // restore engine's instanced shader+VAO so subsequent renderLight()
         // overrides that batch through drawRect/drawTile work correctly
         glSetInstancedMode(true);
+    }
+
+    /** Build a light's shadow texture from the shadow map: the map around the light, its casters stretched
+     *  away from the light a little further each pass with light bled into their near sides. Leaves the
+     *  result on texture unit 1 and the lightmap bound again. Called by drawLight.
+     *  @param {Light} light */
+    renderLightShadow(light)
+    {
+        const gl = glContext, size = this.shadowTextureSize;
+        gl.disable(gl.BLEND);
+        gl.viewport(0, 0, size, size);
+        gl.activeTexture(gl.TEXTURE1);
+
+        // the shadow map around the light, light at the center of the texture
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.shadowTextureA, 0);
+        const cs = this.shadowCopyShader;
+        gl.useProgram(cs);
+        gl.bindVertexArray(this.shadowCopyVAO);
+        gl.bindTexture(gl.TEXTURE_2D, this.shadowMap);
+        gl.uniform2f(glUniformLocation(cs, 'lightPos'), light.pos.x, light.pos.y);
+        gl.uniform1f(glUniformLocation(cs, 'radius'), light.radius);
+        gl.uniform2f(glUniformLocation(cs, 'mapOrigin'), this.shadowMapOrigin.x, this.shadowMapOrigin.y);
+        gl.uniform1f(glUniformLocation(cs, 'mapInvSize'), 1/this.shadowMapWorldSize);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        // stretch the casters out from the light, starting 2 texels and growing 1.8x a pass, which
+        // reaches the edge in about 11 passes with no gaps since each pass scales by less than the
+        // shadow already extends; the bleed fades out over the first 7 passes (FrankEngine's soften)
+        const ss = this.shadowStretchShader;
+        gl.useProgram(ss);
+        gl.bindVertexArray(this.shadowStretchVAO);
+        let src = this.shadowTextureA, dst = this.shadowTextureB;
+        for (let k = 0; k < this.shadowPassCount; ++k)
+        {
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, dst, 0);
+            gl.bindTexture(gl.TEXTURE_2D, src);
+            gl.uniform1f(glUniformLocation(ss, 'scale'), (size + 2*1.8**k)/size);
+            gl.uniform1f(glUniformLocation(ss, 'brightness'), clamp((7-k)/5)**2 * this.shadowSoftness);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            [src, dst] = [dst, src];
+        }
+
+        // leave the result on unit 1 for the light shader and go back to the lightmap
+        gl.bindTexture(gl.TEXTURE_2D, src);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0);
+        gl.viewport(0, 0, this.textureSize.x, this.textureSize.y);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE);
     }
 
     /** In the shadow pass, let the draws that follow keep their color in the shadow map, so light passing
