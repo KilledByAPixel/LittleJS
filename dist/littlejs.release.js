@@ -1340,11 +1340,14 @@ class RandomGenerator
         // xorshift stays at 0 once there, so a seed that is 0 as an integer uses the default seed
         this.seed = this.seed|0 || 123456789;
 
-        // xorshift algorithm
+        // xorshift algorithm steps the seed
         this.seed ^= this.seed << 13;
         this.seed ^= this.seed >>> 17;
         this.seed ^= this.seed << 5;
-        return valueB + (valueA - valueB) * ((this.seed >>> 0) / 2**32);
+
+        // the value is the seed scrambled by a hash, since xorshift barely mixes a small seed in its first steps,
+        // so nearby seeds would start with nearly the same values; the seed itself steps as before
+        return valueB + (valueA - valueB) * noiseHash(this.seed);
     }
 
     /** Returns a floored seeded random value the two values passed in
