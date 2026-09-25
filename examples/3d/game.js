@@ -190,7 +190,7 @@ function gameInit()
     // title text, extruded from the engine font
     const titleMesh = buildText3D('LITTLEJS 3D', 5, 2);
     title = new EngineObject3D(vec3(0,0,-40), titleMesh);
-    title.pos3D.y = terrain.getHeight(title.pos3D) + 9; // just above the ground
+    title.pos3D.y = terrain.getHeight(title.pos3D) + 7; // just above the ground
     title.color = hsl(.1,1,.6);
     title.specular = 1;
 
