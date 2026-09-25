@@ -98,6 +98,7 @@ function setPaused(isPaused=true) { paused = isPaused; }
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
+let engineFrameScheduled = false; // a frame of the loop is asked for and has not run yet
 
 // the pairs of objects asked about a collision this update and left overlapping, so the other's own physics does not
 // ask again, a set of others for each asker so the lookup stays quick when many objects pile up on one spot
@@ -236,6 +237,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         frameTimeLastMS = frameTimeMS;
         if (debug || debugWatermark)
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
+        audioUpdateVolume();
         // the time keys work while the debug overlay is open, or always when debugKeysAlways is set
         const debugKeys = debug && (debugOverlay || debugKeysAlways);
         const debugSpeedUp   = debugKeys && keyIsDown('Equal'); // +
@@ -319,13 +321,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // than the fixed update rate would otherwise redraw identical frames
         if (!debugVideoCaptureIsActive() && (wasUpdated || windowChanged))
             renderFrame();
-        if (!engineManualStep)
-        {
-            if (typeof requestAnimationFrame === 'function')
-                requestAnimationFrame(engineUpdate);
-            else // a headless server in Node has no display to wait for, a timer keeps the pace
-                setTimeout(()=> engineUpdate(performance.now()), 1e3 / frameRate);
-        }
+        engineManualStep || engineScheduleFrame();
 
         function renderFrame()
         {
@@ -550,6 +546,23 @@ function engineUpdateCanvas()
     mainContext.lineCap  = 'round';
 }
 
+// ask for the next frame of the loop, once however often it is called before that frame, and skip it if manual
+// step was turned on since, so turning it off and on again within a frame can not start a second loop
+function engineScheduleFrame()
+{
+    if (engineFrameScheduled) return;
+    engineFrameScheduled = true;
+    const next = (frameTimeMS)=>
+    {
+        engineFrameScheduled = false;
+        engineManualStep || engineUpdateInternal(frameTimeMS);
+    };
+    if (typeof requestAnimationFrame === 'function')
+        requestAnimationFrame(next);
+    else // a headless server in Node has no display to wait for, a timer keeps the pace
+        setTimeout(()=> next(performance.now()), 1e3 / frameRate);
+}
+
 // max frames engineStep can advance in one call, 10 minutes at 60fps
 // large counts block until they finish, so this catches runaway values
 const engineStepMaxFrames = 36000;
@@ -557,7 +570,8 @@ const engineStepMaxFrames = 36000;
 /** Advance the engine by a number of frames
  *  Requires setEngineManualStep(true) before engineInit
  *  Respects paused exactly as the normal update loop does
- *  @param {number} [frames] - number of engine update ticks, max 36000, each running one fixed update at timeScale 1
+ *  @param {number} [frames] - frames of 1/60 of a second to advance, max 36000; timeScale sets how many fixed
+ *  updates they run, as in the normal loop, one each at timeScale 1
  *  @example
  *  setHeadlessMode(true);
  *  setEngineManualStep(true);
@@ -586,7 +600,10 @@ function engineObjectsUpdate()
 {
     ++engineObjectsUpdateCount;
     engineObjectsCollidePairs.clear();
-    // get list of solid objects for physics optimization, in the order they were made, which 3D collision pairs by;
+    // objects update in render order, which rendering keeps them in, so a headless run or a frame that rendered
+    // nothing updates them the same way; the sort is stable, and nearly free on a list that is already sorted
+    engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+    // get list of solid objects for physics optimization, in update order, which 3D collision pairs by;
     // 2D checks the static ones last, so a contact with a moving object can not leave something back inside a static
     // solid it was already pushed out of
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
@@ -2866,10 +2883,21 @@ function setShowSplashScreen(show) { showSplashScreen = show; }
 function setHeadlessMode(headless) { headlessMode = headless; }
 
 /** Set if the engine only advances when engineStep is called
- *  Must be set before engineInit
+ *  Set before engineInit for a test or a server; turned on in a running game it stops the loop, and turned off
+ *  again it starts the loop from real time
  *  @param {boolean} [enable]
  *  @memberof Settings */
-function setEngineManualStep(enable=true) { engineManualStep = enable; }
+function setEngineManualStep(enable=true)
+{
+    const resume = engineManualStep && !enable;
+    engineManualStep = enable;
+    if (resume && engineUpdateInternal)
+    {
+        // engineStep may have run the clock ahead of real time, start from now so that is not waited out
+        frameTimeLastMS = performance.now();
+        engineScheduleFrame();
+    }
+}
 
 /** Set if WebGL rendering is enabled
  *  @param {boolean} enable
@@ -3080,8 +3108,7 @@ function setSoundEnable(enable) { soundEnable = enable; }
 function setSoundVolume(volume)
 {
     soundVolume = volume;
-    if (!headlessMode && audioMasterGain)
-        audioMasterGain.gain.value = volume; // update gain immediately, sound off or not
+    audioUpdateVolume(); // update gain immediately, sound off or not
 }
 
 /** Set default range where sound no longer plays
@@ -3760,7 +3787,7 @@ class EngineObject
         // show object info for debugging
         const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
         const color = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);
-        debugRect(this.pos, size, color, 0, this.angle, hasPhysics);
+        debugRect(this.pos, size, color, 0, hasPhysics ? 0 : this.angle, hasPhysics); // collision ignores the angle
         if (this.parent)
             debugRect(this.pos, size.scale(.8), rgb(1,1,1,.5), 0, this.angle);
         this.parent && debugLine(this.pos, this.parent.pos, rgb(1,1,1,.5), .5);
@@ -5108,6 +5135,14 @@ function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
  *  @memberof Draw */
 function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
 
+/** Padding for each side of a rectangle, the sides left out are 0
+ *  @typedef {Object} CameraFitSides
+ *  @property {number} [top]
+ *  @property {number} [right]
+ *  @property {number} [bottom]
+ *  @property {number} [left]
+ *  @memberof Draw */
+
 /** Fit the camera to a rectangle in world space by setting cameraPos and cameraScale
  *  - worldMargin pads the content rectangle in world units, so the gap scales with the content on resize
  *  - screenInset reserves space in screen pixels on each viewport edge (for example a HUD band) and
@@ -5116,8 +5151,8 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *    or an object with any of {top, right, bottom, left}
  *  @param {Vector2} center - Center of the rectangle in world space
  *  @param {Vector2} size - Size of the rectangle in world space
- *  @param {number|Vector2|Object} [worldMargin] - World space padding added around the content rectangle
- *  @param {number|Vector2|Object} [screenInset] - Screen space padding in pixels reserved on each viewport edge
+ *  @param {number|Vector2|CameraFitSides} [worldMargin] - World space padding added around the content rectangle
+ *  @param {number|Vector2|CameraFitSides} [screenInset] - Screen space padding in pixels reserved on each viewport edge
  *  @return {number} - The new camera scale
  *  @memberof Draw */
 function cameraFit(center, size, worldMargin, screenInset)
@@ -5723,6 +5758,7 @@ function inputClear()
 function keyIsDown(key, device=0)
 {
     false&&ASSERT(isStringLike(key), 'key must be a number or string');
+    false&&ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 1);
 }
@@ -5735,6 +5771,7 @@ function keyIsDown(key, device=0)
 function keyWasPressed(key, device=0)
 {
     false&&ASSERT(isStringLike(key), 'key must be a number or string');
+    false&&ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 2);
 }
@@ -5747,6 +5784,7 @@ function keyWasPressed(key, device=0)
 function keyWasReleased(key, device=0)
 {
     false&&ASSERT(isStringLike(key), 'key must be a number or string');
+    false&&ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 4);
 }
@@ -5882,7 +5920,7 @@ function gamepadStickCount(gamepad=gamepadPrimary)
 /** Pulse a gamepad's vibration hardware using the dual-rumble effect if it exists
  *  Strong magnitude is usually the left side motor, weak magnitude is usually the right side motor
  *  @param {number} [gamepad] - gamepad index
- *  @param {number} [duration] - effect duration in ms
+ *  @param {number} [duration] - effect duration in ms, browsers limit it and the delay to 5 seconds together
  *  @param {number} [strongMagnitude] - strong (left) motor intensity, 0 to 1
  *  @param {number} [weakMagnitude] - weak (right) motor intensity, 0 to 1
  *  @param {number} [startDelay] - delay in ms before the effect starts
@@ -5890,9 +5928,15 @@ function gamepadStickCount(gamepad=gamepadPrimary)
 function gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1, weakMagnitude=1, startDelay=0)
 {
     false&&ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    false&&ASSERT(strongMagnitude >= 0 && strongMagnitude <= 1 && weakMagnitude >= 0 && weakMagnitude <= 1,
+        'rumble magnitudes must be 0 to 1');
+    false&&ASSERT(duration >= 0 && startDelay >= 0 && duration + startDelay <= 5e3,
+        'browsers limit a rumble and its delay to 5 seconds');
     if (!vibrateEnable || headlessMode) return;
     const pad = inputGetGamepads()[gamepad];
-    pad?.vibrationActuator?.playEffect?.('dual-rumble', {duration, strongMagnitude, weakMagnitude, startDelay});
+    // a browser refuses a rumble it can not play by rejecting, which is nothing to report
+    pad?.vibrationActuator?.playEffect?.('dual-rumble', {duration, strongMagnitude, weakMagnitude, startDelay})
+        ?.catch?.(()=> {});
 }
 
 /** Stop vibration on a gamepad
@@ -6050,6 +6094,12 @@ function inputInit()
         if (preventDefaultKeys.includes(e.code) || printable)
             e.preventDefault();
     }
+    // true if an event is on an HTML control on the page, which handles it itself
+    function isOnControl(e)
+    {
+        const target = /** @type {HTMLElement} */ (e.target);
+        return !!target?.closest?.('input,textarea,select,button,a,label,[contenteditable]');
+    }
     function isTextInput(element)
     {
         // a field that takes typing or arrow keys, not an input that is really a button, checkbox or slider,
@@ -6099,9 +6149,7 @@ function inputInit()
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
 
         // a click on an HTML form control on the page is left to it, so it can take focus, place the caret or drag
-        const target = /** @type {HTMLElement} */ (e.target);
-        const onControl = !!target?.closest?.('input,textarea,select,[contenteditable]');
-        if (inputPreventDefault && e.cancelable && document.hasFocus() && !onControl)
+        if (inputPreventDefault && e.cancelable && document.hasFocus() && !isOnControl(e))
         {
             // this keeps focus where it is, so a click outside a text field lets it go, or it keeps the keys
             const active = /** @type {HTMLElement} */ (document.activeElement);
@@ -6145,8 +6193,8 @@ function inputInit()
         // accumulate so multiple wheel events in one frame are not lost
         if (!e.ctrlKey)
             mouseWheel += sign(e.deltaY);
-        if (inputPreventDefault && e.cancelable && document.hasFocus())
-            e.preventDefault(); // prevent page scrolling
+        if (inputPreventDefault && e.cancelable && document.hasFocus() && !isOnControl(e))
+            e.preventDefault(); // prevent page scrolling, but a text area or list keeps its own
     }
     function onContextMenu(e)
     {
@@ -6226,8 +6274,9 @@ function inputInit()
                 inputWasTouching = touching;
             }
 
-            // prevent default handling like copy, magnifier lens, and scrolling
-            if (inputPreventDefault && e.cancelable && document.hasFocus())
+            // prevent default handling like copy, magnifier lens, and scrolling, but a tap on an HTML control is
+            // left to it, cancelling a touch would also take away a button's click or a slider's drag
+            if (inputPreventDefault && e.cancelable && document.hasFocus() && !isOnControl(e))
             {
                 // like a mouse click, a tap outside a focused text field lets it go, the cancel keeps focus where it is
                 const active = /** @type {HTMLElement} */ (document.activeElement);
@@ -6737,7 +6786,7 @@ function touchGamepadBuildDebug(W, H)
     {
         ring(vec2(W/2, H/2), touchGamepadCenterButtonSize, '#ff0');
         for (let side = 0; side < 2; side++)
-            if (touchGamepadSideHasControl(side))
+            if (touchGamepadStartBlockSide(side))
                 ring(touchGamepadSideCenter(side, W, H), 2*S, '#f0f');
     }
 }
@@ -6849,6 +6898,12 @@ function touchGamepadControlAt(p, W, H)
     const leftHalf = p.x < W/2;
     const floatTop = H*.4; // floating grab region is the bottom 60% of the screen
 
+    // center start button first, a floating stick's region always covers it; blocked within 2*size of a fixed
+    // control so drift off a control can't accidentally fire start (matches the original exclusion logic)
+    if (touchGamepadCenterButtonSize && vec2(W/2, H/2).distance(p) < touchGamepadCenterButtonSize &&
+        !touchGamepadStartBlockedAt(p, W, H))
+        return {role:'start'};
+
     // check each side (left first for priority); a side is a stick or buttons
     for (let side = 0; side < 2; side++)
     {
@@ -6868,19 +6923,18 @@ function touchGamepadControlAt(p, W, H)
             if (btn >= 0) return {role:'face', btn};
         }
     }
-
-    // center start button, blocked within 2*size of a control so drift off a
-    // control can't accidentally fire start (matches the original exclusion logic)
-    if (touchGamepadCenterButtonSize)
-    {
-        for (let side = 0; side < 2; side++)
-            if (touchGamepadSideHasControl(side) &&
-                touchGamepadSideCenter(side, W, H).distance(p) < 2*S)
-                return;
-        if (vec2(W/2, H/2).distance(p) < touchGamepadCenterButtonSize)
-            return {role:'start'};
-    }
 }
+
+// true if a press is too near a fixed control for the start button, a floating stick has no fixed place
+function touchGamepadStartBlockedAt(p, W, H)
+{
+    for (let side = 0; side < 2; side++)
+        if (touchGamepadStartBlockSide(side) && touchGamepadSideCenter(side, W, H).distance(p) < 2*touchGamepadSize)
+            return true;
+    return false;
+}
+function touchGamepadStartBlockSide(side)
+{ return touchGamepadSideHasControl(side) && !(touchGamepadFloating && touchGamepadSideStick(side)); }
 
 function touchGamepadPointerDown(e, zone)
 {
@@ -6991,11 +7045,19 @@ let audioContext = typeof AudioContext == 'undefined' ? undefined : new AudioCon
  *  @type {GainNode}
  *  @memberof Audio */
 let audioMasterGain = audioContext?.createGain();
+let audioMasterVolume; // the soundVolume the master gain was last set to
 if (audioMasterGain)
 {
     audioMasterGain.connect(audioContext.destination);
-    audioMasterGain.gain.value = soundVolume; // set starting value
+    audioMasterGain.gain.value = audioMasterVolume = soundVolume; // set starting value
     audioContext.addEventListener?.('statechange', audioStateChange);
+}
+
+// soundVolume can be set directly, so the master gain follows it each frame
+function audioUpdateVolume()
+{
+    if (audioMasterGain && soundVolume !== audioMasterVolume)
+        audioMasterGain.gain.value = audioMasterVolume = soundVolume;
 }
 
 // the current master effect, kept so setAudioMasterEffect can undo the route it made,
@@ -7155,7 +7217,7 @@ function audioEffectNode(effectOrNode, key)
 class Sound
 {
     /** Create a sound object and cache the audio for later use
-     *  @param {string|Array} [asset] - Filename of audio file or zzfx array
+     *  @param {string|URL|Array} [asset] - Filename or URL of an audio file, or a zzfx array
      *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
@@ -8691,6 +8753,39 @@ class TileCollisionLayer extends TileLayer
 
         /** @property {boolean} - Solid layers block objects and particles, the solidOnly tests skip the others */
         this.isSolid = true;
+        /** @property {boolean} - In the light system's shadow pass, cast only from the cells with collision, drawn
+         *  as the layer shows them, so a floor in the same layer stays lit; false casts every tile */
+        this.shadowSolidOnly = true;
+    }
+
+    /** Draw this layer's shadow shape: the cells with collision in the part the shadow map covers, each row of
+     *  them in one draw from that part of the layer's texture, so see through pixels in a tile cast nothing;
+     *  every tile when shadowSolidOnly is off, or when the layer is turned or mirrored */
+    renderShadow()
+    {
+        if (!this.shadowSolidOnly || this.angle || this.mirror)
+            return super.renderShadow();
+
+        // the cells in view, which in the shadow pass is the shadow map
+        const size = this.size, drawSize = this.drawSize || size;
+        const cellWorld = drawSize.divide(size), cellPixels = this.tileInfo ? this.tileInfo.size : vec2(1);
+        const view = getCameraSize().scale(.5), low = cameraPos.subtract(view), high = cameraPos.add(view);
+        const x0 = max(0, floor((low.x - this.pos.x) / cellWorld.x)), x1 = min(size.x, ceil((high.x - this.pos.x) / cellWorld.x));
+        const y0 = max(0, floor((low.y - this.pos.y) / cellWorld.y)), y1 = min(size.y, ceil((high.y - this.pos.y) / cellWorld.y));
+        const textureHeight = size.y * cellPixels.y, useWebGL = this.hasWebGL();
+        for (let y = y0; y < y1; ++y)
+        for (let x = x0; x < x1; ++x)
+        {
+            if (!this.collisionData[y*size.x + x]) continue;
+            let end = x + 1; // a run of solid cells along the row
+            while (end < x1 && this.collisionData[y*size.x + end]) ++end;
+            const count = end - x;
+            const tileInfo = new TileInfo(vec2(x*cellPixels.x, textureHeight - (y+1)*cellPixels.y),
+                vec2(count*cellPixels.x, cellPixels.y), this.textureInfo, 0, 0);
+            const pos = vec2(this.pos.x + (x + count/2)*cellWorld.x, this.pos.y + (y + .5)*cellWorld.y);
+            drawTile(pos, vec2(count*cellWorld.x, cellWorld.y), tileInfo, this.color, 0, false, undefined, useWebGL);
+            x = end;
+        }
     }
 
     /** Destroy this tile layer
@@ -9232,7 +9327,8 @@ class Particle
         this.groundObject = undefined;
         /** @property {boolean} */
         this.destroyed = false;
-        /** @property {TileInfo} */
+        /** @property {TileInfo|undefined} - The emitter's tile, undefined for an untextured one
+         *  @type {TileInfo|undefined} */
         this.tileInfo = emitter.tileInfo;
     }
 
@@ -9261,8 +9357,15 @@ class Particle
         // apply physics; only the tile collision needs where the particle was
         const solve = enablePhysicsSolver && collideTiles;
         const oldX = this.pos.x, oldY = this.pos.y;
-        this.velocity.x = this.velocity.x * damping + gravity.x * gravityScale;
-        this.velocity.y = this.velocity.y * damping + gravity.y * gravityScale;
+        let gravityX = gravity.x * gravityScale, gravityY = gravity.y * gravityScale;
+        if (emitter.localSpace && emitter.angle)
+        {
+            // world gravity turned into the emitter's space, the render turns it back
+            const c = cos(emitter.angle), s = sin(emitter.angle);
+            [gravityX, gravityY] = [gravityX*c - gravityY*s, gravityX*s + gravityY*c];
+        }
+        this.velocity.x = this.velocity.x * damping + gravityX;
+        this.velocity.y = this.velocity.y * damping + gravityY;
         if (solve)
         {
             // apply max circular speed to prevent going through collision, before the move it protects
@@ -10725,7 +10828,8 @@ let medalsLoadWaiting = false; // medalsInit came before any medal, each one mad
  *  - Call this after creating all medals
  *  - Loads which medals are unlocked from the save, and writes the catalog back
  *  - A medal a service like Newgrounds holds is left as it is, see Medal.isLocal
- *  @param {string} saveName
+ *  @param {string} saveName - The localStorage key the medals are kept under, a different one from the game's own
+ *  readSaveData and writeSaveData, or each would overwrite the other
  *  @memberof Medals */
 function medalsInit(saveName)
 {
@@ -10741,10 +10845,13 @@ function medalsInit(saveName)
 // check which local medals are unlocked in the save, and write the catalog back
 function medalsLoad()
 {
-    // with no medals made yet, the save is left as it is for them, a game that calls medalsInit first keeps its unlocks
-    medalsLoadWaiting = !Object.keys(medals).length;
-    if (debugMedals || !medalsSaveName || medalsLoadWaiting) return;
+    // with no medals made yet, the save is left as it is for them, a game that calls medalsInit first keeps its unlocks;
+    // it keeps waiting from then on, so loading again (a dropped Newgrounds session) does not drop medals still to come
+    medalsLoadWaiting ||= !Object.keys(medals).length;
+    if (debugMedals || !medalsSaveName) return;
     const saved = readSaveData(medalsSaveName);
+    false&&ASSERT(Object.keys(saved).every(key=> isNumber(+key)),
+        'the medals save name holds other data, give medalsInit a name of its own');
     medalsForEach(medal=> {
         if (medal.isLocal())
             medal.unlocked = !!saved[medal.id]?.unlocked;
@@ -10797,6 +10904,15 @@ function medalsForEach(callback)
 function medalsReset()
 {
     medalsForEach(medal=> medal.isLocal() && (medal.unlocked = false));
+    if (medalsLoadWaiting && medalsSaveName && !debugMedals)
+    {
+        // the saved unlocks of medals not made yet are cleared too, they are read when those medals are made
+        const saved = readSaveData(medalsSaveName);
+        for (const id in saved)
+            if (!medals[id] && saved[id] && typeof saved[id] === 'object')
+                saved[id].unlocked = false;
+        writeSaveData(medalsSaveName, saved);
+    }
     medalsSave();
 }
 
@@ -10807,6 +10923,8 @@ function medalsSave()
     // while medalsInit waits for medals made later, their saved entries are kept for them
     const saved = readSaveData(medalsSaveName);
     const data = medalsLoadWaiting ? {...saved} : {};
+    for (const key in saved) // what is not a medal is the game's own, saved under the same name, and stays
+        isNumber(+key) || (data[key] = saved[key]);
     medalsForEach(medal=> {
         if (!medal.isLocal())
         {
@@ -11747,11 +11865,14 @@ class LightSystemPlugin
         this.shadowMapSize = 1024;
         /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it when lights reach further than a view past the screen */
         this.shadowMapScale = 2;
-        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper */
+        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper,
+         *  and a gap between casters narrower than about 4*radius/shadowTextureSize world units closes */
         this.shadowTextureSize = 256;
         /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
         this.shadowPassCount = 11;
-        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for most; the bleed reaches further in under a bigger light, so a thin wall under a big one lets some through, lower it for those */
+        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for more, 2 or 3
+         *  deeper still with steps along the shadow edges; the bleed reaches further in under a bigger light, so a thin wall
+         *  under a big one lets some through, lower it for those */
         this.shadowSoftness = .5;
         /** @property {boolean} - True while the shadow pass runs, read only, so a render() can skip parts that should not cast */
         this.shadowPass = false;
@@ -13175,11 +13296,14 @@ class UISystemPlugin
 
             // update in reverse order so topmost objects get priority, from the list as it was
             // since a callback may call destroyObjects, which swaps in a shorter one
-            const uiObjects = uiSystem.uiObjects;
+            // a confirm dialog is modal, so it goes first however late it was made, and UI made after it opened
+            // can not take the mouse through it
+            const uiObjects = uiSystem.uiObjects, dialog = uiSystem.confirmDialog;
+            dialog && updateObject(dialog);
             for (let i = uiObjects.length; i--;)
             {
                 const o = uiObjects[i];
-                o.parent || updateObject(o);
+                o.parent || o === dialog || updateObject(o);
             }
 
             // remove destroyed objects
@@ -13223,7 +13347,10 @@ class UISystemPlugin
                 for (const c of o.children)
                     renderObject(c);
             }
-            uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
+            // a confirm dialog is drawn over everything, UI made after it opened too
+            const dialog = uiSystem.confirmDialog;
+            uiSystem.uiObjects.forEach(o=> o.parent || o === dialog || renderObject(o));
+            dialog && renderObject(dialog);
 
             if (uiDebug > 0)
             {
@@ -13238,7 +13365,8 @@ class UISystemPlugin
                     for (const c of o.children)
                         renderDebug(c, visible);
                 }
-                uiSystem.uiObjects.forEach(o=> o.parent || renderDebug(o));
+                uiSystem.uiObjects.forEach(o=> o.parent || o === dialog || renderDebug(o));
+                dialog && renderDebug(dialog);
             }
             context.restore();
         }
@@ -16178,7 +16306,7 @@ class Box2dRevoluteJoint extends Box2dJoint
 
     /** Enable/disable the joint limit
      *  @param {boolean} [enable] */
-    enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
+    enableLimit(enable=true) { this.box2dJoint.EnableLimit(enable); }
 
     /** Get the lower joint limit, clockwise like angle
      *  @return {number} */
@@ -16195,7 +16323,7 @@ class Box2dRevoluteJoint extends Box2dJoint
     {
         false&&ASSERT(min <= max, 'the lower limit must not be above the upper one');
         if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
-        return this.box2dJoint.SetLimits(-max, -min);
+        this.box2dJoint.SetLimits(-max, -min);
     }
 
     /** Is the joint motor enabled?
@@ -16204,11 +16332,11 @@ class Box2dRevoluteJoint extends Box2dJoint
 
     /** Enable/disable the joint motor
      *  @param {boolean} [enable] */
-    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+    enableMotor(enable=true) { this.box2dJoint.EnableMotor(enable); }
 
     /** Set the motor speed, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
+    setMotorSpeed(speed) { this.box2dJoint.SetMotorSpeed(-speed); }
 
     /** Get the motor speed, clockwise like angle
      *  @return {number} */
@@ -16216,7 +16344,7 @@ class Box2dRevoluteJoint extends Box2dJoint
 
     /** Set the max motor torque, a magnitude
      *  @param {number} torque */
-    setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
+    setMaxMotorTorque(torque) { this.box2dJoint.SetMaxMotorTorque(torque); }
 
     /** Get the max motor torque
      *  @return {number} */
@@ -16375,7 +16503,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     
     /** Enable/disable the joint limit
      *  @param {boolean} [enable] */
-    enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
+    enableLimit(enable=true) { this.box2dJoint.EnableLimit(enable); }
     
     /** Get the lower joint limit
      *  @return {number} */
@@ -16392,7 +16520,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     {
         false&&ASSERT(min <= max, 'the lower limit must not be above the upper one');
         if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
-        return this.box2dJoint.SetLimits(min, max);
+        this.box2dJoint.SetLimits(min, max);
     }
     
     /** Is the motor enabled?
@@ -16401,11 +16529,11 @@ class Box2dPrismaticJoint extends Box2dJoint
     
     /** Enable/disable the joint motor
      *  @param {boolean} [enable] */
-    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+    enableMotor(enable=true) { this.box2dJoint.EnableMotor(enable); }
     
     /** Set the motor speed
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+    setMotorSpeed(speed) { this.box2dJoint.SetMotorSpeed(speed); }
     
     /** Get the motor speed
      *  @return {number} */
@@ -16413,7 +16541,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     
     /** Set the maximum motor force
      *  @param {number} force */
-    setMaxMotorForce(force) { return this.box2dJoint.SetMaxMotorForce(force); }
+    setMaxMotorForce(force) { this.box2dJoint.SetMaxMotorForce(force); }
     
     /** Get the maximum motor force
      *  @return {number} */
@@ -16485,11 +16613,11 @@ class Box2dWheelJoint extends Box2dJoint
 
     /** Enable/disable the joint motor
      *  @param {boolean} [enable] */
-    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+    enableMotor(enable=true) { this.box2dJoint.EnableMotor(enable); }
 
     /** Set the motor speed, the wheel's turn in radians per second, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
+    setMotorSpeed(speed) { this.box2dJoint.SetMotorSpeed(-speed); }
 
     /** Get the motor speed, clockwise like angle
      *  @return {number} */
@@ -16497,7 +16625,7 @@ class Box2dWheelJoint extends Box2dJoint
 
     /** Set the maximum motor torque, a magnitude
      *  @param {number} torque */
-    setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
+    setMaxMotorTorque(torque) { this.box2dJoint.SetMaxMotorTorque(torque); }
 
     /** Get the max motor torque
      *  @return {number} */
@@ -16936,13 +17064,16 @@ class Box2dPlugin
     /** box aabb cast and return all the objects
      *  @param {Vector2} pos
      *  @param {Vector2} size
+     *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default
      *  @return {Array<Box2dObject>} */
-    boxCastAll(pos, size)
+    boxCastAll(pos, size, includeSensors=false)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            if (!includeSensors && fixture.IsSensor())
+                return true; // a trigger zone, continue getting results
             const o = fixture.GetBody().object;
             if (o && !o.destroyed && !queryObjects.includes(o) // skip raw bodies and ones destroyed this step
                 && box2dFixtureOverlaps(fixture, aabb))
@@ -16963,13 +17094,16 @@ class Box2dPlugin
     /** box aabb cast and return the first object
      *  @param {Vector2} pos
      *  @param {Vector2} size
+     *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default
      *  @return {Box2dObject|undefined} */
-    boxCast(pos, size)
+    boxCast(pos, size, includeSensors=false)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            if (!includeSensors && fixture.IsSensor())
+                return true; // a trigger zone, continue getting results
             const o = fixture.GetBody().object;
             if (!o || o.destroyed)
                 return true; // a raw body with no Box2dObject or one destroyed this step, continue getting results
@@ -17024,13 +17158,16 @@ class Box2dPlugin
     /** point cast and return the first object
      *  @param {Vector2} pos
      *  @param {boolean} [dynamicOnly]
+     *  @param {boolean} [includeSensors] - Also find sensors, so a pickup radius does not grab its object from afar
      *  @return {Box2dObject|undefined} */
-    pointCast(pos, dynamicOnly=true)
+    pointCast(pos, dynamicOnly=true, includeSensors=false)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            if (!includeSensors && fixture.IsSensor())
+                return true; // a trigger zone, continue getting results
             if (dynamicOnly && fixture.GetBody().GetType() !== box2d.instance.b2_dynamicBody)
                 return true; // continue getting results
             if (!fixture.TestPoint(box2dTemp(pos)))
@@ -18782,8 +18919,8 @@ class PathFinder
          *  so a search always finishes; a lower one caps the time a search takes, see searchGaveUp
          *  @type {number|undefined} */
         this.maxLoop = undefined;
-        /** @property {boolean} - True when the last search stopped at maxLoop, so an empty path means it gave up
-         *  rather than that there is no way through */
+        /** @property {boolean} - True when the last search stopped at maxLoop with no path, so it gave up rather
+         *  than that there is no way through */
         this.searchGaveUp = false;
         /** @property {boolean} - If true, post-process paths with two-pass smoothing */
         this.smoothPath = true;
@@ -18972,7 +19109,8 @@ class PathFinder
             if (current === endNode) break;
             if (++loopCount > maxLoop)
             {
-                this.searchGaveUp = true;
+                // the goal may be found already, waiting its turn, and then the path to it comes back
+                this.searchGaveUp = !endNode.parent;
                 break;
             }
 
@@ -20613,8 +20751,7 @@ function render3DInstance(mesh, matrix, tileInfo, color)
 {
     const k = render3DInstanceSlot(mesh, tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo), data = mesh.instanceData;
     data.set(matrix.m, k);
-    if (!render3D.shadowPass) // the depth shader reads only the matrix and the uv rect, the tint can stay stale
-        data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a;
+    data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a; // the depth shader cuts by its alpha
     const uv = render3DGetTileUVs(tileInfo);
     data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
 }
@@ -21065,7 +21202,7 @@ class Render3DPlugin
     }
 
     /** Find the nearest object under a screen position or along a ray, for clicking on things
-     *  - Each object is tested as the box around its mesh in its own space, or a sphere around a sprite's size3D,
+     *  - Each object is tested as the box around its mesh in its own space, or a sprite as the quad it draws,
      *    not triangle by triangle
      *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
      *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
@@ -22000,21 +22137,21 @@ function render3DInitGL()
     // the shader, see RENDER3D_VERTEX_SOURCE and render3DFragmentSource
     r.program = glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource());
 
-    // the depth only shader for the shadow map, same vertex layout; see through pixels cast nothing,
-    // so sprites and cut out textures cast their outline
+    // the depth only shader for the shadow map, same vertex layout; see through pixels cast nothing, so sprites and
+    // cut out textures cast their outline, and an object faded below half its alpha casts nothing, as it draws
     r.shadowShader = glCreateProgram(
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform mat4 viewProj;' +
         RENDER3D_VERTEX_INPUTS +
-        'out vec2 T;' +
-        'void main(){T=uvRect.xy+t*uvRect.zw;gl_Position=viewProj*mat4(m0,m1,m2,m3)*vec4(p,1.);}'
+        'out vec2 T;out float A;' +
+        'void main(){T=uvRect.xy+t*uvRect.zw;A=c.a*tint.a;gl_Position=viewProj*mat4(m0,m1,m2,m3)*vec4(p,1.);}'
         ,
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform sampler2D tex;' +
-        'in vec2 T;' +
-        'void main(){if(texture(tex,T).a<.5)discard;}'
+        'in vec2 T;in float A;' +
+        'void main(){if(texture(tex,T).a*A<.5)discard;}'
     );
 
     // the vertex array object with the attributes enabled once, pointers are set per buffer by render3DBindVertexBuffer
@@ -23533,7 +23670,7 @@ class EngineObject3D extends EngineObject
         this.emissive = 0;
         /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
         this.specular = 0;
-        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, additive objects never cast */
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, an object faded below half its alpha casts nothing, a see through one casts only when textured, and additive objects never cast */
         this.castShadow = true;
         /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls around corners */
         this.collideAsSphere3D = false;
@@ -23926,17 +24063,17 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
 }
 
 // how far along a ray an object is hit, or undefined for a miss; each one is tested as the box around its mesh in
-// its own space, or a sphere around a sprite's size3D, not triangle by triangle
+// its own space, or a sprite as the quad it draws, not triangle by triangle
 function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) return;
     if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
-    const matrix = render3DObjectMatrix(o), mesh = o.mesh; // a sprite is picked by its size3D
+    const matrix = render3DObjectMatrix(o), mesh = o.mesh;
+    if (!mesh) return render3DRaycastSprite(ray, o, matrix);
     // a mesh that changed since it was measured is measured again, an upload may not have come yet
-    const radius = (mesh ? mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxStretch(matrix.m);
+    const radius = (mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius) * render3DMaxStretch(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
     const center = matrix.getTranslation();
-    if (!mesh) return render3DRaycastDisc(ray, center, radius); // a sprite faces the camera
     const distance = raycastSphere(ray, center, radius);
     if (distance === undefined) return;
 
@@ -23961,8 +24098,24 @@ function render3DRaycastObject(ray, o)
     return exit === Infinity ? 0 : exit; // a ray of no length is where it starts
 }
 
-// a disc facing the ray at the center's depth along it, for a sprite, which faces the camera; a sphere would be hit
-// at 0 whenever the ray starts inside it, even with the sprite behind the camera
+// a sprite is the quad drawBillboard draws, its size3D grown by the x and y scale as the draw does, facing the camera
+// as it was last drawn; where the ray meets its plane, inside its half axes
+function render3DRaycastSprite(ray, o, matrix)
+{
+    const m = matrix.m, center = matrix.getTranslation();
+    const size = vec2(o.size3D.x * hypot(m[0], m[1], m[2]), o.size3D.y * hypot(m[4], m[5], m[6]));
+    if (!(size.x > 0 && size.y > 0)) return; // nothing to hit
+    if (!ray.direction.lengthSquared()) // a ray of no length is where it starts
+        return render3DRaycastDisc(ray, center, hypot(size.x, size.y) / 2);
+    const a = render3DBillboardAxes(size, o.rotation3D.z, o.upright);
+    const right = vec3(a[0], a[1], a[2]), up = vec3(a[3], a[4], a[5]);
+    const t = raycastPlane(ray, center, right.cross(up));
+    if (t === undefined) return; // behind, or seen edge on
+    const p = ray.getPosition(t).subtract(center);
+    return abs(p.dot(right)) <= right.lengthSquared() && abs(p.dot(up)) <= up.lengthSquared() ? t : undefined;
+}
+
+// a mesh flattened to nothing, or a sprite for a ray of no length: a disc facing the ray at its center's depth
 function render3DRaycastDisc(ray, center, radius)
 {
     const d = ray.direction, oc = center.subtract(ray.origin), dd = d.dot(d);
@@ -25600,11 +25753,12 @@ class GLTFModel
         /** @property {TextureInfo|undefined} - The texture to draw mesh with, when every part uses the same one
          *  @type {TextureInfo|undefined} */
         this.textureInfo = textures.size === 1 ? textures.values().next().value : undefined;
+        this.bounds = undefined; // the box around every part, kept once measured, see getBounds
     }
 
-    /** The box around every part
+    /** The box around every part, measured once and again after transform, so change the model through that
      *  @return {{min: Vector3, max: Vector3}} */
-    getBounds() { return this.mesh.getBounds(); }
+    getBounds() { return this.bounds ||= this.mesh.getBounds(); }
 
     /** Move every part so the center of the model's bounds is on the origin, like Mesh.center
      *  @return {GLTFModel} */
@@ -25632,6 +25786,7 @@ class GLTFModel
         for (const part of this.parts)
             part.mesh.transform(matrix);
         this.mesh.transform(matrix);
+        this.bounds = undefined; // measured again when next asked for
         this.modelMatrix = matrix.copy().multiply(this.modelMatrix);
         return this;
     }
@@ -25718,8 +25873,8 @@ class GLTFObject extends EngineObject3D
     constructor(model, pos3D=vec3())
     {
         super(pos3D);
-        // the size of the whole model, as an object made from model.mesh would have
-        const mesh = model.mesh, bounds = mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
+        // the size of the whole model, as an object made from model.mesh would have, measured once for the model
+        const bounds = model.mesh.points.length ? model.getBounds() : undefined;
         if (bounds)
             this.size3D = bounds.max.subtract(bounds.min);
         /** @property {GLTFModel} - The model it shows */

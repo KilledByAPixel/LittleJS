@@ -523,10 +523,21 @@ function setShowSplashScreen(show) { showSplashScreen = show; }
 function setHeadlessMode(headless) { headlessMode = headless; }
 
 /** Set if the engine only advances when engineStep is called
- *  Must be set before engineInit
+ *  Set before engineInit for a test or a server; turned on in a running game it stops the loop, and turned off
+ *  again it starts the loop from real time
  *  @param {boolean} [enable]
  *  @memberof Settings */
-function setEngineManualStep(enable=true) { engineManualStep = enable; }
+function setEngineManualStep(enable=true)
+{
+    const resume = engineManualStep && !enable;
+    engineManualStep = enable;
+    if (resume && engineUpdateInternal)
+    {
+        // engineStep may have run the clock ahead of real time, start from now so that is not waited out
+        frameTimeLastMS = performance.now();
+        engineScheduleFrame();
+    }
+}
 
 /** Set if WebGL rendering is enabled
  *  @param {boolean} enable
@@ -737,8 +748,7 @@ function setSoundEnable(enable) { soundEnable = enable; }
 function setSoundVolume(volume)
 {
     soundVolume = volume;
-    if (!headlessMode && audioMasterGain)
-        audioMasterGain.gain.value = volume; // update gain immediately, sound off or not
+    audioUpdateVolume(); // update gain immediately, sound off or not
 }
 
 /** Set default range where sound no longer plays

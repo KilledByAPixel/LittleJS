@@ -306,11 +306,14 @@ class UISystemPlugin
 
             // update in reverse order so topmost objects get priority, from the list as it was
             // since a callback may call destroyObjects, which swaps in a shorter one
-            const uiObjects = uiSystem.uiObjects;
+            // a confirm dialog is modal, so it goes first however late it was made, and UI made after it opened
+            // can not take the mouse through it
+            const uiObjects = uiSystem.uiObjects, dialog = uiSystem.confirmDialog;
+            dialog && updateObject(dialog);
             for (let i = uiObjects.length; i--;)
             {
                 const o = uiObjects[i];
-                o.parent || updateObject(o);
+                o.parent || o === dialog || updateObject(o);
             }
 
             // remove destroyed objects
@@ -354,7 +357,10 @@ class UISystemPlugin
                 for (const c of o.children)
                     renderObject(c);
             }
-            uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
+            // a confirm dialog is drawn over everything, UI made after it opened too
+            const dialog = uiSystem.confirmDialog;
+            uiSystem.uiObjects.forEach(o=> o.parent || o === dialog || renderObject(o));
+            dialog && renderObject(dialog);
 
             if (uiDebug > 0)
             {
@@ -369,7 +375,8 @@ class UISystemPlugin
                     for (const c of o.children)
                         renderDebug(c, visible);
                 }
-                uiSystem.uiObjects.forEach(o=> o.parent || renderDebug(o));
+                uiSystem.uiObjects.forEach(o=> o.parent || o === dialog || renderDebug(o));
+                dialog && renderDebug(dialog);
             }
             context.restore();
         }

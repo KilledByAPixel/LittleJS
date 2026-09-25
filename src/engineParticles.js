@@ -410,7 +410,8 @@ class Particle
         this.groundObject = undefined;
         /** @property {boolean} */
         this.destroyed = false;
-        /** @property {TileInfo} */
+        /** @property {TileInfo|undefined} - The emitter's tile, undefined for an untextured one
+         *  @type {TileInfo|undefined} */
         this.tileInfo = emitter.tileInfo;
     }
 
@@ -439,8 +440,15 @@ class Particle
         // apply physics; only the tile collision needs where the particle was
         const solve = enablePhysicsSolver && collideTiles;
         const oldX = this.pos.x, oldY = this.pos.y;
-        this.velocity.x = this.velocity.x * damping + gravity.x * gravityScale;
-        this.velocity.y = this.velocity.y * damping + gravity.y * gravityScale;
+        let gravityX = gravity.x * gravityScale, gravityY = gravity.y * gravityScale;
+        if (emitter.localSpace && emitter.angle)
+        {
+            // world gravity turned into the emitter's space, the render turns it back
+            const c = cos(emitter.angle), s = sin(emitter.angle);
+            [gravityX, gravityY] = [gravityX*c - gravityY*s, gravityX*s + gravityY*c];
+        }
+        this.velocity.x = this.velocity.x * damping + gravityX;
+        this.velocity.y = this.velocity.y * damping + gravityY;
         if (solve)
         {
             // apply max circular speed to prevent going through collision, before the move it protects

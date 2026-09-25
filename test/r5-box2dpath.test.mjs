@@ -157,11 +157,11 @@ test('the query results and optional joint anchors are typed in the d.ts', () =>
 {
     assert.match(dts, /raycastAll\(start: Vector2, end: Vector2, includeSensors\?: boolean\): Array<Box2dRaycastResult>;/);
     assert.match(dts, /raycast\(start: Vector2, end: Vector2, includeSensors\?: boolean\): Box2dRaycastResult \| undefined;/);
-    assert.match(dts, /boxCastAll\(pos: Vector2, size: Vector2\): Array<Box2dObject>;/);
-    assert.match(dts, /boxCast\(pos: Vector2, size: Vector2\): Box2dObject \| undefined;/);
+    assert.match(dts, /boxCastAll\(pos: Vector2, size: Vector2, includeSensors\?: boolean\): Array<Box2dObject>;/);
+    assert.match(dts, /boxCast\(pos: Vector2, size: Vector2, includeSensors\?: boolean\): Box2dObject \| undefined;/);
     assert.match(dts, /circleCastAll\(pos: Vector2, diameter: number\): Array<Box2dObject>;/);
     assert.match(dts, /circleCast\(pos: Vector2, diameter: number\): Box2dObject \| undefined;/);
-    assert.match(dts, /pointCast\(pos: Vector2, dynamicOnly\?: boolean\): Box2dObject \| undefined;/);
+    assert.match(dts, /pointCast\(pos: Vector2, dynamicOnly\?: boolean, includeSensors\?: boolean\): Box2dObject \| undefined;/);
     assert.match(dts, /destroyFixture\(fixture: any\): void;/, 'the fixture is required');
 
     // every joint that fills in a missing anchor takes it as optional, the pulley's ground anchors stay required

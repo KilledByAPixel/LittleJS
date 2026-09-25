@@ -183,6 +183,7 @@ function inputClear()
 function keyIsDown(key, device=0)
 {
     ASSERT(isStringLike(key), 'key must be a number or string');
+    ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 1);
 }
@@ -195,6 +196,7 @@ function keyIsDown(key, device=0)
 function keyWasPressed(key, device=0)
 {
     ASSERT(isStringLike(key), 'key must be a number or string');
+    ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 2);
 }
@@ -207,6 +209,7 @@ function keyWasPressed(key, device=0)
 function keyWasReleased(key, device=0)
 {
     ASSERT(isStringLike(key), 'key must be a number or string');
+    ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 4);
 }
@@ -342,7 +345,7 @@ function gamepadStickCount(gamepad=gamepadPrimary)
 /** Pulse a gamepad's vibration hardware using the dual-rumble effect if it exists
  *  Strong magnitude is usually the left side motor, weak magnitude is usually the right side motor
  *  @param {number} [gamepad] - gamepad index
- *  @param {number} [duration] - effect duration in ms
+ *  @param {number} [duration] - effect duration in ms, browsers limit it and the delay to 5 seconds together
  *  @param {number} [strongMagnitude] - strong (left) motor intensity, 0 to 1
  *  @param {number} [weakMagnitude] - weak (right) motor intensity, 0 to 1
  *  @param {number} [startDelay] - delay in ms before the effect starts
@@ -350,9 +353,15 @@ function gamepadStickCount(gamepad=gamepadPrimary)
 function gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1, weakMagnitude=1, startDelay=0)
 {
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    ASSERT(strongMagnitude >= 0 && strongMagnitude <= 1 && weakMagnitude >= 0 && weakMagnitude <= 1,
+        'rumble magnitudes must be 0 to 1');
+    ASSERT(duration >= 0 && startDelay >= 0 && duration + startDelay <= 5e3,
+        'browsers limit a rumble and its delay to 5 seconds');
     if (!vibrateEnable || headlessMode) return;
     const pad = inputGetGamepads()[gamepad];
-    pad?.vibrationActuator?.playEffect?.('dual-rumble', {duration, strongMagnitude, weakMagnitude, startDelay});
+    // a browser refuses a rumble it can not play by rejecting, which is nothing to report
+    pad?.vibrationActuator?.playEffect?.('dual-rumble', {duration, strongMagnitude, weakMagnitude, startDelay})
+        ?.catch?.(()=> {});
 }
 
 /** Stop vibration on a gamepad
@@ -510,6 +519,12 @@ function inputInit()
         if (preventDefaultKeys.includes(e.code) || printable)
             e.preventDefault();
     }
+    // true if an event is on an HTML control on the page, which handles it itself
+    function isOnControl(e)
+    {
+        const target = /** @type {HTMLElement} */ (e.target);
+        return !!target?.closest?.('input,textarea,select,button,a,label,[contenteditable]');
+    }
     function isTextInput(element)
     {
         // a field that takes typing or arrow keys, not an input that is really a button, checkbox or slider,
@@ -559,9 +574,7 @@ function inputInit()
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
 
         // a click on an HTML form control on the page is left to it, so it can take focus, place the caret or drag
-        const target = /** @type {HTMLElement} */ (e.target);
-        const onControl = !!target?.closest?.('input,textarea,select,[contenteditable]');
-        if (inputPreventDefault && e.cancelable && document.hasFocus() && !onControl)
+        if (inputPreventDefault && e.cancelable && document.hasFocus() && !isOnControl(e))
         {
             // this keeps focus where it is, so a click outside a text field lets it go, or it keeps the keys
             const active = /** @type {HTMLElement} */ (document.activeElement);
@@ -605,8 +618,8 @@ function inputInit()
         // accumulate so multiple wheel events in one frame are not lost
         if (!e.ctrlKey)
             mouseWheel += sign(e.deltaY);
-        if (inputPreventDefault && e.cancelable && document.hasFocus())
-            e.preventDefault(); // prevent page scrolling
+        if (inputPreventDefault && e.cancelable && document.hasFocus() && !isOnControl(e))
+            e.preventDefault(); // prevent page scrolling, but a text area or list keeps its own
     }
     function onContextMenu(e)
     {
@@ -686,8 +699,9 @@ function inputInit()
                 inputWasTouching = touching;
             }
 
-            // prevent default handling like copy, magnifier lens, and scrolling
-            if (inputPreventDefault && e.cancelable && document.hasFocus())
+            // prevent default handling like copy, magnifier lens, and scrolling, but a tap on an HTML control is
+            // left to it, cancelling a touch would also take away a button's click or a slider's drag
+            if (inputPreventDefault && e.cancelable && document.hasFocus() && !isOnControl(e))
             {
                 // like a mouse click, a tap outside a focused text field lets it go, the cancel keeps focus where it is
                 const active = /** @type {HTMLElement} */ (document.activeElement);
@@ -1197,7 +1211,7 @@ function touchGamepadBuildDebug(W, H)
     {
         ring(vec2(W/2, H/2), touchGamepadCenterButtonSize, '#ff0');
         for (let side = 0; side < 2; side++)
-            if (touchGamepadSideHasControl(side))
+            if (touchGamepadStartBlockSide(side))
                 ring(touchGamepadSideCenter(side, W, H), 2*S, '#f0f');
     }
 }
@@ -1309,6 +1323,12 @@ function touchGamepadControlAt(p, W, H)
     const leftHalf = p.x < W/2;
     const floatTop = H*.4; // floating grab region is the bottom 60% of the screen
 
+    // center start button first, a floating stick's region always covers it; blocked within 2*size of a fixed
+    // control so drift off a control can't accidentally fire start (matches the original exclusion logic)
+    if (touchGamepadCenterButtonSize && vec2(W/2, H/2).distance(p) < touchGamepadCenterButtonSize &&
+        !touchGamepadStartBlockedAt(p, W, H))
+        return {role:'start'};
+
     // check each side (left first for priority); a side is a stick or buttons
     for (let side = 0; side < 2; side++)
     {
@@ -1328,19 +1348,18 @@ function touchGamepadControlAt(p, W, H)
             if (btn >= 0) return {role:'face', btn};
         }
     }
-
-    // center start button, blocked within 2*size of a control so drift off a
-    // control can't accidentally fire start (matches the original exclusion logic)
-    if (touchGamepadCenterButtonSize)
-    {
-        for (let side = 0; side < 2; side++)
-            if (touchGamepadSideHasControl(side) &&
-                touchGamepadSideCenter(side, W, H).distance(p) < 2*S)
-                return;
-        if (vec2(W/2, H/2).distance(p) < touchGamepadCenterButtonSize)
-            return {role:'start'};
-    }
 }
+
+// true if a press is too near a fixed control for the start button, a floating stick has no fixed place
+function touchGamepadStartBlockedAt(p, W, H)
+{
+    for (let side = 0; side < 2; side++)
+        if (touchGamepadStartBlockSide(side) && touchGamepadSideCenter(side, W, H).distance(p) < 2*touchGamepadSize)
+            return true;
+    return false;
+}
+function touchGamepadStartBlockSide(side)
+{ return touchGamepadSideHasControl(side) && !(touchGamepadFloating && touchGamepadSideStick(side)); }
 
 function touchGamepadPointerDown(e, zone)
 {

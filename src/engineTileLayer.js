@@ -710,6 +710,39 @@ class TileCollisionLayer extends TileLayer
 
         /** @property {boolean} - Solid layers block objects and particles, the solidOnly tests skip the others */
         this.isSolid = true;
+        /** @property {boolean} - In the light system's shadow pass, cast only from the cells with collision, drawn
+         *  as the layer shows them, so a floor in the same layer stays lit; false casts every tile */
+        this.shadowSolidOnly = true;
+    }
+
+    /** Draw this layer's shadow shape: the cells with collision in the part the shadow map covers, each row of
+     *  them in one draw from that part of the layer's texture, so see through pixels in a tile cast nothing;
+     *  every tile when shadowSolidOnly is off, or when the layer is turned or mirrored */
+    renderShadow()
+    {
+        if (!this.shadowSolidOnly || this.angle || this.mirror)
+            return super.renderShadow();
+
+        // the cells in view, which in the shadow pass is the shadow map
+        const size = this.size, drawSize = this.drawSize || size;
+        const cellWorld = drawSize.divide(size), cellPixels = this.tileInfo ? this.tileInfo.size : vec2(1);
+        const view = getCameraSize().scale(.5), low = cameraPos.subtract(view), high = cameraPos.add(view);
+        const x0 = max(0, floor((low.x - this.pos.x) / cellWorld.x)), x1 = min(size.x, ceil((high.x - this.pos.x) / cellWorld.x));
+        const y0 = max(0, floor((low.y - this.pos.y) / cellWorld.y)), y1 = min(size.y, ceil((high.y - this.pos.y) / cellWorld.y));
+        const textureHeight = size.y * cellPixels.y, useWebGL = this.hasWebGL();
+        for (let y = y0; y < y1; ++y)
+        for (let x = x0; x < x1; ++x)
+        {
+            if (!this.collisionData[y*size.x + x]) continue;
+            let end = x + 1; // a run of solid cells along the row
+            while (end < x1 && this.collisionData[y*size.x + end]) ++end;
+            const count = end - x;
+            const tileInfo = new TileInfo(vec2(x*cellPixels.x, textureHeight - (y+1)*cellPixels.y),
+                vec2(count*cellPixels.x, cellPixels.y), this.textureInfo, 0, 0);
+            const pos = vec2(this.pos.x + (x + count/2)*cellWorld.x, this.pos.y + (y + .5)*cellWorld.y);
+            drawTile(pos, vec2(count*cellWorld.x, cellWorld.y), tileInfo, this.color, 0, false, undefined, useWebGL);
+            x = end;
+        }
     }
 
     /** Destroy this tile layer

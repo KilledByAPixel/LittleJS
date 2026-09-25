@@ -88,11 +88,14 @@ class LightSystemPlugin
         this.shadowMapSize = 1024;
         /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it when lights reach further than a view past the screen */
         this.shadowMapScale = 2;
-        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper */
+        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper,
+         *  and a gap between casters narrower than about 4*radius/shadowTextureSize world units closes */
         this.shadowTextureSize = 256;
         /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
         this.shadowPassCount = 11;
-        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for most; the bleed reaches further in under a bigger light, so a thin wall under a big one lets some through, lower it for those */
+        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for more, 2 or 3
+         *  deeper still with steps along the shadow edges; the bleed reaches further in under a bigger light, so a thin wall
+         *  under a big one lets some through, lower it for those */
         this.shadowSoftness = .5;
         /** @property {boolean} - True while the shadow pass runs, read only, so a render() can skip parts that should not cast */
         this.shadowPass = false;

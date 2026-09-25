@@ -123,8 +123,8 @@ class PathFinder
          *  so a search always finishes; a lower one caps the time a search takes, see searchGaveUp
          *  @type {number|undefined} */
         this.maxLoop = undefined;
-        /** @property {boolean} - True when the last search stopped at maxLoop, so an empty path means it gave up
-         *  rather than that there is no way through */
+        /** @property {boolean} - True when the last search stopped at maxLoop with no path, so it gave up rather
+         *  than that there is no way through */
         this.searchGaveUp = false;
         /** @property {boolean} - If true, post-process paths with two-pass smoothing */
         this.smoothPath = true;
@@ -313,7 +313,8 @@ class PathFinder
             if (current === endNode) break;
             if (++loopCount > maxLoop)
             {
-                this.searchGaveUp = true;
+                // the goal may be found already, waiting its turn, and then the path to it comes back
+                this.searchGaveUp = !endNode.parent;
                 break;
             }
 

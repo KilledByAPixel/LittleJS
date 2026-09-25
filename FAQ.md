@@ -405,7 +405,7 @@ When you pass a numeric index, the engine multiplies it by the tile size to get 
 The full signature is `tile(index, size, texture, padding, bleed)`:
 - `texture` — which loaded image to read from (index into the array you passed to `engineInit`, default 0)
 - `padding` — pixels of padding between tiles in the sheet, if you laid them out with space around each
-- `bleed` — shrink the sampled region slightly to avoid edge bleeding (see the tile-bleed entry above)
+- `bleed` — shrink the sampled region slightly to avoid edge bleeding (see the tile-bleed entry below)
 
 ### Can I add and switch between multiple sprites for a game object?
 
@@ -508,6 +508,7 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 The shader gets these uniforms automatically:
 
 - `iChannel0` (`sampler2D`) — the rendered game frame
+- `iChannel1` (`sampler2D`) — the shader's own output from the previous frame, when `feedbackTexture` is on
 - `iResolution` (`vec3`) — canvas width, height, and `1`
 - `iTime` (`float`) — seconds since engine start
 
@@ -518,7 +519,7 @@ new PostProcessPlugin(shader, includeMainCanvas, feedbackTexture);
 ```
 
 - `includeMainCanvas` (default `false`) composites the Canvas2D layer (where some debug and text rendering goes) onto the WebGL canvas before the shader runs. Pass `true` if your post-process effect should apply to *everything* on screen, not just the WebGL-rendered objects.
-- `feedbackTexture` (default `false`) makes the previous frame available as `iChannel0` for effects like motion trails or feedback loops. Mutually exclusive with `includeMainCanvas`.
+- `feedbackTexture` (default `false`) also passes the shader's own output from the previous frame as `iChannel1`, for effects like motion trails or feedback loops; `iChannel0` is still the frame just drawn. Mutually exclusive with `includeMainCanvas`.
 
 See [plugins/postProcess.js](plugins/postProcess.js) and the [Breakout example](https://killedbyapixel.github.io/LittleJS/examples/breakout/) for working post-process effects.
 
@@ -554,7 +555,7 @@ Both pause automatically when the tab loses focus (audio context suspends) and r
 
 Browsers require a user interaction (click, key press, touch) before audio is allowed to play — this is a hard rule from the browser's autoplay policy, not something the engine can bypass. LittleJS handles the actual resume for you: the audio context starts in a suspended state and is automatically resumed on the first input event. You don't need to call `audioContext.resume()` yourself.
 
-The practical implication is that sounds you try to play during `gameInit()` or on the very first frame won't be audible. Design opening audio (title-screen music, intro sounds) so it kicks in after the first input — a common pattern is a "Press any key to start" screen that begins playing music the moment the player presses something.
+A sound played before that, in `gameInit()` or on the first frames, waits and starts once audio runs, so music started in `gameInit()` begins on the player's first click or key press.
 
 ### If I load several images, how do I control which is used?
 
@@ -791,14 +792,14 @@ LittleJS includes a medals plugin for tracking unlockable achievements with popu
 const medal_firstWin = new Medal(0, 'First Win', 'Win your first match', '🏆');
 const medal_perfect  = new Medal(1, 'Perfect Score', 'Score 100%', '⭐');
 
-// Initialize medals — saveName persists unlocks to localStorage
-medalsInit('MyGame');
+// Initialize medals — saveName persists unlocks to localStorage, a different name from your save data
+medalsInit('MyGame medals');
 
 // Unlock a medal (shows a popup, persists across visits)
 medal_firstWin.unlock();
 ```
 
-You can pass an image URL as the fifth argument to `Medal` instead of an emoji icon. The `saveName` you pass to `medalsInit` is used to track which medals have been unlocked in localStorage, so unlocks persist across visits.
+You can pass an image URL as the fifth argument to `Medal` instead of an emoji icon. The `saveName` you pass to `medalsInit` is used to track which medals have been unlocked in localStorage, so unlocks persist across visits. Give it a name of its own, not the one you pass to `readSaveData` and `writeSaveData`, or the medals and your save data overwrite each other.
 
 The plugin also supports [Newgrounds](https://www.newgrounds.com) scoreboards and medals held on the server through [plugins/newgrounds.js](plugins/newgrounds.js): create each medal as a `NewgroundsMedal` with the id Newgrounds gave it, call `medalsInit` as usual, then `new NewgroundsPlugin(app_id, cipher)`. The "LittleJS Medals & Newgrounds" section of REFERENCE.md has a short example.
 

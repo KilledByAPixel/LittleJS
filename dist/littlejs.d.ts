@@ -24,6 +24,15 @@ declare module "littlejsengine" {
      */
     export type Canvas2DDrawFunction = (context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => any;
     /**
+     * Padding for each side of a rectangle, the sides left out are 0
+     */
+    export type CameraFitSides = {
+        top?: number;
+        right?: number;
+        bottom?: number;
+        left?: number;
+    };
+    /**
      * Anything with input and output audio nodes, like an effect from the audio effects plugin
      */
     export type AudioEffectNodes = {
@@ -162,7 +171,8 @@ declare module "littlejsengine" {
     /** Advance the engine by a number of frames
      *  Requires setEngineManualStep(true) before engineInit
      *  Respects paused exactly as the normal update loop does
-     *  @param {number} [frames] - number of engine update ticks, max 36000, each running one fixed update at timeScale 1
+     *  @param {number} [frames] - frames of 1/60 of a second to advance, max 36000; timeScale sets how many fixed
+     *  updates they run, as in the normal loop, one each at timeScale 1
      *  @example
      *  setHeadlessMode(true);
      *  setEngineManualStep(true);
@@ -780,7 +790,8 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export function setHeadlessMode(headless: boolean): void;
     /** Set if the engine only advances when engineStep is called
-     *  Must be set before engineInit
+     *  Set before engineInit for a test or a server; turned on in a running game it stops the loop, and turned off
+     *  again it starts the loop from real time
      *  @param {boolean} [enable]
      *  @memberof Settings */
     export function setEngineManualStep(enable?: boolean): void;
@@ -2407,6 +2418,13 @@ declare module "littlejsengine" {
      *  @return {Vector2}
      *  @memberof Draw */
     export function getCameraSize(): Vector2;
+    /** Padding for each side of a rectangle, the sides left out are 0
+     *  @typedef {Object} CameraFitSides
+     *  @property {number} [top]
+     *  @property {number} [right]
+     *  @property {number} [bottom]
+     *  @property {number} [left]
+     *  @memberof Draw */
     /** Fit the camera to a rectangle in world space by setting cameraPos and cameraScale
      *  - worldMargin pads the content rectangle in world units, so the gap scales with the content on resize
      *  - screenInset reserves space in screen pixels on each viewport edge (for example a HUD band) and
@@ -2415,11 +2433,11 @@ declare module "littlejsengine" {
      *    or an object with any of {top, right, bottom, left}
      *  @param {Vector2} center - Center of the rectangle in world space
      *  @param {Vector2} size - Size of the rectangle in world space
-     *  @param {number|Vector2|Object} [worldMargin] - World space padding added around the content rectangle
-     *  @param {number|Vector2|Object} [screenInset] - Screen space padding in pixels reserved on each viewport edge
+     *  @param {number|Vector2|CameraFitSides} [worldMargin] - World space padding added around the content rectangle
+     *  @param {number|Vector2|CameraFitSides} [screenInset] - Screen space padding in pixels reserved on each viewport edge
      *  @return {number} - The new camera scale
      *  @memberof Draw */
-    export function cameraFit(center: Vector2, size: Vector2, worldMargin?: number | Vector2 | any, screenInset?: number | Vector2 | any): number;
+    export function cameraFit(center: Vector2, size: Vector2, worldMargin?: number | Vector2 | CameraFitSides, screenInset?: number | Vector2 | CameraFitSides): number;
     /** Check if a box, point, or circle is on screen with a circle test
      *  If size is a Vector2, uses the length as diameter
      *  This can be used to cull offscreen objects from render or update
@@ -2765,7 +2783,7 @@ declare module "littlejsengine" {
     /** Pulse a gamepad's vibration hardware using the dual-rumble effect if it exists
      *  Strong magnitude is usually the left side motor, weak magnitude is usually the right side motor
      *  @param {number} [gamepad] - gamepad index
-     *  @param {number} [duration] - effect duration in ms
+     *  @param {number} [duration] - effect duration in ms, browsers limit it and the delay to 5 seconds together
      *  @param {number} [strongMagnitude] - strong (left) motor intensity, 0 to 1
      *  @param {number} [weakMagnitude] - weak (right) motor intensity, 0 to 1
      *  @param {number} [startDelay] - delay in ms before the effect starts
@@ -2862,13 +2880,13 @@ declare module "littlejsengine" {
      */
     export class Sound {
         /** Create a sound object and cache the audio for later use
-         *  @param {string|Array} [asset] - Filename of audio file or zzfx array
+         *  @param {string|URL|Array} [asset] - Filename or URL of an audio file, or a zzfx array
          *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
          *  @param {number} [range=soundDefaultRange] - World space max range of sound
          *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
          *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
          */
-        constructor(asset?: string | any[], randomness?: number, range?: number, taper?: number, onloadCallback?: SoundLoadCallback);
+        constructor(asset?: string | URL | any[], randomness?: number, range?: number, taper?: number, onloadCallback?: SoundLoadCallback);
         /** @property {number} - World space max range of sound */
         range: number;
         /** @property {number} - At what percentage of range should it start tapering */
@@ -3648,6 +3666,9 @@ declare module "littlejsengine" {
         /** @property {Array<number>} - The tile collision grid
          *  @type {Array<number>} */
         collisionData: Array<number>;
+        /** @property {boolean} - In the light system's shadow pass, cast only from the cells with collision, drawn
+         *  as the layer shows them, so a floor in the same layer stays lit; false casts every tile */
+        shadowSolidOnly: boolean;
         /** Clear and initialize tile collision, the size is the layer's own, the tile data and canvas keep it
         *  @param {Vector2} size - width and height of tile collision 2d grid */
         initCollision(size: Vector2): void;
@@ -3871,8 +3892,9 @@ declare module "littlejsengine" {
         groundObject: EngineObject | undefined;
         /** @property {boolean} */
         destroyed: boolean;
-        /** @property {TileInfo} */
-        tileInfo: TileInfo;
+        /** @property {TileInfo|undefined} - The emitter's tile, undefined for an untextured one
+         *  @type {TileInfo|undefined} */
+        tileInfo: TileInfo | undefined;
         /** Update the particle */
         update(): void;
         /** Destroy this particle, once: a second call does nothing
@@ -3911,7 +3933,8 @@ declare module "littlejsengine" {
      *  - Call this after creating all medals
      *  - Loads which medals are unlocked from the save, and writes the catalog back
      *  - A medal a service like Newgrounds holds is left as it is, see Medal.isLocal
-     *  @param {string} saveName
+     *  @param {string} saveName - The localStorage key the medals are kept under, a different one from the game's own
+     *  readSaveData and writeSaveData, or each would overwrite the other
      *  @memberof Medals */
     export function medalsInit(saveName: string): void;
     /**
@@ -4263,11 +4286,14 @@ declare module "littlejsengine" {
         shadowMapSize: number;
         /** @property {number} - How many times the larger side of the view the shadow map covers, so casters just off screen still cast in; raise it when lights reach further than a view past the screen */
         shadowMapScale: number;
-        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper */
+        /** @property {number} - Pixels across each light's own shadow texture, made again when changed; larger is sharper,
+         *  and a gap between casters narrower than about 4*radius/shadowTextureSize world units closes */
         shadowTextureSize: number;
         /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
         shadowPassCount: number;
-        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for most; the bleed reaches further in under a bigger light, so a thin wall under a big one lets some through, lower it for those */
+        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for more, 2 or 3
+         *  deeper still with steps along the shadow edges; the bleed reaches further in under a bigger light, so a thin wall
+         *  under a big one lets some through, lower it for those */
         shadowSoftness: number;
         /** @property {boolean} - True while the shadow pass runs, read only, so a render() can skip parts that should not cast */
         shadowPass: boolean;
@@ -5265,13 +5291,15 @@ declare module "littlejsengine" {
         /** box aabb cast and return all the objects
          *  @param {Vector2} pos
          *  @param {Vector2} size
+         *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default
          *  @return {Array<Box2dObject>} */
-        boxCastAll(pos: Vector2, size: Vector2): Array<Box2dObject>;
+        boxCastAll(pos: Vector2, size: Vector2, includeSensors?: boolean): Array<Box2dObject>;
         /** box aabb cast and return the first object
          *  @param {Vector2} pos
          *  @param {Vector2} size
+         *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default
          *  @return {Box2dObject|undefined} */
-        boxCast(pos: Vector2, size: Vector2): Box2dObject | undefined;
+        boxCast(pos: Vector2, size: Vector2, includeSensors?: boolean): Box2dObject | undefined;
         /** circle cast and return all the objects whose position is within the circle, wherever their shapes are
          *  @param {Vector2} pos
          *  @param {number} diameter
@@ -5285,8 +5313,9 @@ declare module "littlejsengine" {
         /** point cast and return the first object
          *  @param {Vector2} pos
          *  @param {boolean} [dynamicOnly]
+         *  @param {boolean} [includeSensors] - Also find sensors, so a pickup radius does not grab its object from afar
          *  @return {Box2dObject|undefined} */
-        pointCast(pos: Vector2, dynamicOnly?: boolean): Box2dObject | undefined;
+        pointCast(pos: Vector2, dynamicOnly?: boolean, includeSensors?: boolean): Box2dObject | undefined;
         /** draws a fixture
          *  @param {Object} fixture
          *  @param {Vector2} pos
@@ -5834,7 +5863,7 @@ declare module "littlejsengine" {
         isLimitEnabled(): boolean;
         /** Enable/disable the joint limit
          *  @param {boolean} [enable] */
-        enableLimit(enable?: boolean): any;
+        enableLimit(enable?: boolean): void;
         /** Get the lower joint limit, clockwise like angle
          *  @return {number} */
         getLowerLimit(): number;
@@ -5844,22 +5873,22 @@ declare module "littlejsengine" {
         /** Set the joint limits, clockwise like angle
          *  @param {number} min
          *  @param {number} max */
-        setLimits(min: number, max: number): any;
+        setLimits(min: number, max: number): void;
         /** Is the joint motor enabled?
          *  @return {boolean} */
         isMotorEnabled(): boolean;
         /** Enable/disable the joint motor
          *  @param {boolean} [enable] */
-        enableMotor(enable?: boolean): any;
+        enableMotor(enable?: boolean): void;
         /** Set the motor speed, clockwise like angle
          *  @param {number} speed */
-        setMotorSpeed(speed: number): any;
+        setMotorSpeed(speed: number): void;
         /** Get the motor speed, clockwise like angle
          *  @return {number} */
         getMotorSpeed(): number;
         /** Set the max motor torque, a magnitude
          *  @param {number} torque */
-        setMaxMotorTorque(torque: number): any;
+        setMaxMotorTorque(torque: number): void;
         /** Get the max motor torque
          *  @return {number} */
         getMaxMotorTorque(): number;
@@ -5943,7 +5972,7 @@ declare module "littlejsengine" {
         isLimitEnabled(): boolean;
         /** Enable/disable the joint limit
          *  @param {boolean} [enable] */
-        enableLimit(enable?: boolean): any;
+        enableLimit(enable?: boolean): void;
         /** Get the lower joint limit
          *  @return {number} */
         getLowerLimit(): number;
@@ -5953,22 +5982,22 @@ declare module "littlejsengine" {
         /** Set the joint limits
          *  @param {number} min
          *  @param {number} max */
-        setLimits(min: number, max: number): any;
+        setLimits(min: number, max: number): void;
         /** Is the motor enabled?
          *  @return {boolean} */
         isMotorEnabled(): boolean;
         /** Enable/disable the joint motor
          *  @param {boolean} [enable] */
-        enableMotor(enable?: boolean): any;
+        enableMotor(enable?: boolean): void;
         /** Set the motor speed
          *  @param {number} speed */
-        setMotorSpeed(speed: number): any;
+        setMotorSpeed(speed: number): void;
         /** Get the motor speed
          *  @return {number} */
         getMotorSpeed(): number;
         /** Set the maximum motor force
          *  @param {number} force */
-        setMaxMotorForce(force: number): any;
+        setMaxMotorForce(force: number): void;
         /** Get the maximum motor force
          *  @return {number} */
         getMaxMotorForce(): number;
@@ -6014,16 +6043,16 @@ declare module "littlejsengine" {
         isMotorEnabled(): boolean;
         /** Enable/disable the joint motor
          *  @param {boolean} [enable] */
-        enableMotor(enable?: boolean): any;
+        enableMotor(enable?: boolean): void;
         /** Set the motor speed, the wheel's turn in radians per second, clockwise like angle
          *  @param {number} speed */
-        setMotorSpeed(speed: number): any;
+        setMotorSpeed(speed: number): void;
         /** Get the motor speed, clockwise like angle
          *  @return {number} */
         getMotorSpeed(): number;
         /** Set the maximum motor torque, a magnitude
          *  @param {number} torque */
-        setMaxMotorTorque(torque: number): any;
+        setMaxMotorTorque(torque: number): void;
         /** Get the max motor torque
          *  @return {number} */
         getMaxMotorTorque(): number;
@@ -6549,8 +6578,8 @@ declare module "littlejsengine" {
          *  so a search always finishes; a lower one caps the time a search takes, see searchGaveUp
          *  @type {number|undefined} */
         maxLoop: number | undefined;
-        /** @property {boolean} - True when the last search stopped at maxLoop, so an empty path means it gave up
-         *  rather than that there is no way through */
+        /** @property {boolean} - True when the last search stopped at maxLoop with no path, so it gave up rather
+         *  than that there is no way through */
         searchGaveUp: boolean;
         /** @property {boolean} - If true, post-process paths with two-pass smoothing */
         smoothPath: boolean;
@@ -7388,7 +7417,7 @@ declare module "littlejsengine" {
          *  @return {Vector3|undefined} - undefined when the ray misses the plane */
         screenToGround(screenPos: Vector2, groundHeight?: number, canvasSize?: Vector2): Vector3 | undefined;
         /** Find the nearest object under a screen position or along a ray, for clicking on things
-         *  - Each object is tested as the box around its mesh in its own space, or a sphere around a sprite's size3D,
+         *  - Each object is tested as the box around its mesh in its own space, or a sprite as the quad it draws,
          *    not triangle by triangle
          *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
          *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
@@ -8538,7 +8567,8 @@ declare module "littlejsengine" {
         /** @property {TextureInfo|undefined} - The texture to draw mesh with, when every part uses the same one
          *  @type {TextureInfo|undefined} */
         textureInfo: TextureInfo | undefined;
-        /** The box around every part
+        bounds: any;
+        /** The box around every part, measured once and again after transform, so change the model through that
          *  @return {{min: Vector3, max: Vector3}} */
         getBounds(): {
             min: Vector3;

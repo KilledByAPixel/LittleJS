@@ -55,7 +55,8 @@ let medalsLoadWaiting = false; // medalsInit came before any medal, each one mad
  *  - Call this after creating all medals
  *  - Loads which medals are unlocked from the save, and writes the catalog back
  *  - A medal a service like Newgrounds holds is left as it is, see Medal.isLocal
- *  @param {string} saveName
+ *  @param {string} saveName - The localStorage key the medals are kept under, a different one from the game's own
+ *  readSaveData and writeSaveData, or each would overwrite the other
  *  @memberof Medals */
 function medalsInit(saveName)
 {
@@ -71,10 +72,13 @@ function medalsInit(saveName)
 // check which local medals are unlocked in the save, and write the catalog back
 function medalsLoad()
 {
-    // with no medals made yet, the save is left as it is for them, a game that calls medalsInit first keeps its unlocks
-    medalsLoadWaiting = !Object.keys(medals).length;
-    if (debugMedals || !medalsSaveName || medalsLoadWaiting) return;
+    // with no medals made yet, the save is left as it is for them, a game that calls medalsInit first keeps its unlocks;
+    // it keeps waiting from then on, so loading again (a dropped Newgrounds session) does not drop medals still to come
+    medalsLoadWaiting ||= !Object.keys(medals).length;
+    if (debugMedals || !medalsSaveName) return;
     const saved = readSaveData(medalsSaveName);
+    ASSERT(Object.keys(saved).every(key=> isNumber(+key)),
+        'the medals save name holds other data, give medalsInit a name of its own');
     medalsForEach(medal=> {
         if (medal.isLocal())
             medal.unlocked = !!saved[medal.id]?.unlocked;
@@ -127,6 +131,15 @@ function medalsForEach(callback)
 function medalsReset()
 {
     medalsForEach(medal=> medal.isLocal() && (medal.unlocked = false));
+    if (medalsLoadWaiting && medalsSaveName && !debugMedals)
+    {
+        // the saved unlocks of medals not made yet are cleared too, they are read when those medals are made
+        const saved = readSaveData(medalsSaveName);
+        for (const id in saved)
+            if (!medals[id] && saved[id] && typeof saved[id] === 'object')
+                saved[id].unlocked = false;
+        writeSaveData(medalsSaveName, saved);
+    }
     medalsSave();
 }
 
@@ -137,6 +150,8 @@ function medalsSave()
     // while medalsInit waits for medals made later, their saved entries are kept for them
     const saved = readSaveData(medalsSaveName);
     const data = medalsLoadWaiting ? {...saved} : {};
+    for (const key in saved) // what is not a medal is the game's own, saved under the same name, and stays
+        isNumber(+key) || (data[key] = saved[key]);
     medalsForEach(medal=> {
         if (!medal.isLocal())
         {

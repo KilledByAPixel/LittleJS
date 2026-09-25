@@ -24,11 +24,19 @@ let audioContext = typeof AudioContext == 'undefined' ? undefined : new AudioCon
  *  @type {GainNode}
  *  @memberof Audio */
 let audioMasterGain = audioContext?.createGain();
+let audioMasterVolume; // the soundVolume the master gain was last set to
 if (audioMasterGain)
 {
     audioMasterGain.connect(audioContext.destination);
-    audioMasterGain.gain.value = soundVolume; // set starting value
+    audioMasterGain.gain.value = audioMasterVolume = soundVolume; // set starting value
     audioContext.addEventListener?.('statechange', audioStateChange);
+}
+
+// soundVolume can be set directly, so the master gain follows it each frame
+function audioUpdateVolume()
+{
+    if (audioMasterGain && soundVolume !== audioMasterVolume)
+        audioMasterGain.gain.value = audioMasterVolume = soundVolume;
 }
 
 // the current master effect, kept so setAudioMasterEffect can undo the route it made,
@@ -188,7 +196,7 @@ function audioEffectNode(effectOrNode, key)
 class Sound
 {
     /** Create a sound object and cache the audio for later use
-     *  @param {string|Array} [asset] - Filename of audio file or zzfx array
+     *  @param {string|URL|Array} [asset] - Filename or URL of an audio file, or a zzfx array
      *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering

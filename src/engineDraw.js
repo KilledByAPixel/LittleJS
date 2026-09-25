@@ -1342,6 +1342,14 @@ function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
  *  @memberof Draw */
 function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
 
+/** Padding for each side of a rectangle, the sides left out are 0
+ *  @typedef {Object} CameraFitSides
+ *  @property {number} [top]
+ *  @property {number} [right]
+ *  @property {number} [bottom]
+ *  @property {number} [left]
+ *  @memberof Draw */
+
 /** Fit the camera to a rectangle in world space by setting cameraPos and cameraScale
  *  - worldMargin pads the content rectangle in world units, so the gap scales with the content on resize
  *  - screenInset reserves space in screen pixels on each viewport edge (for example a HUD band) and
@@ -1350,8 +1358,8 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *    or an object with any of {top, right, bottom, left}
  *  @param {Vector2} center - Center of the rectangle in world space
  *  @param {Vector2} size - Size of the rectangle in world space
- *  @param {number|Vector2|Object} [worldMargin] - World space padding added around the content rectangle
- *  @param {number|Vector2|Object} [screenInset] - Screen space padding in pixels reserved on each viewport edge
+ *  @param {number|Vector2|CameraFitSides} [worldMargin] - World space padding added around the content rectangle
+ *  @param {number|Vector2|CameraFitSides} [screenInset] - Screen space padding in pixels reserved on each viewport edge
  *  @return {number} - The new camera scale
  *  @memberof Draw */
 function cameraFit(center, size, worldMargin, screenInset)

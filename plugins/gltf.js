@@ -108,11 +108,12 @@ class GLTFModel
         /** @property {TextureInfo|undefined} - The texture to draw mesh with, when every part uses the same one
          *  @type {TextureInfo|undefined} */
         this.textureInfo = textures.size === 1 ? textures.values().next().value : undefined;
+        this.bounds = undefined; // the box around every part, kept once measured, see getBounds
     }
 
-    /** The box around every part
+    /** The box around every part, measured once and again after transform, so change the model through that
      *  @return {{min: Vector3, max: Vector3}} */
-    getBounds() { return this.mesh.getBounds(); }
+    getBounds() { return this.bounds ||= this.mesh.getBounds(); }
 
     /** Move every part so the center of the model's bounds is on the origin, like Mesh.center
      *  @return {GLTFModel} */
@@ -140,6 +141,7 @@ class GLTFModel
         for (const part of this.parts)
             part.mesh.transform(matrix);
         this.mesh.transform(matrix);
+        this.bounds = undefined; // measured again when next asked for
         this.modelMatrix = matrix.copy().multiply(this.modelMatrix);
         return this;
     }
@@ -226,8 +228,8 @@ class GLTFObject extends EngineObject3D
     constructor(model, pos3D=vec3())
     {
         super(pos3D);
-        // the size of the whole model, as an object made from model.mesh would have
-        const mesh = model.mesh, bounds = mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
+        // the size of the whole model, as an object made from model.mesh would have, measured once for the model
+        const bounds = model.mesh.points.length ? model.getBounds() : undefined;
         if (bounds)
             this.size3D = bounds.max.subtract(bounds.min);
         /** @property {GLTFModel} - The model it shows */

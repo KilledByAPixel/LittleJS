@@ -138,7 +138,7 @@ fetchJSON(url)                        // Fetch and parse a JSON file (async)
 shareURL(title, url, callback)        // Share a URL via the navigator share API
 readSaveData(saveName, defaultSaveData) // Read game save data from localStorage, default must be an object
                                       // the result has the default's type in TypeScript
-writeSaveData(saveName, saveData)     // Write game save data to localStorage
+writeSaveData(saveName, saveData)     // Write game save data to localStorage; give medalsInit a different name
 
 // Random functions
 rand(valueA=1, valueB=0)             // Random float between values
@@ -246,6 +246,7 @@ Timer.valueOf()                       // Get how long since elapsed, 0 if not se
 ```javascript
 // Drawing functions
 // Most also accept optional trailing params: useWebGL=glEnable, screenSpace=false, context
+// Canvas2D draws (text, useWebGL=false) go to a canvas above every WebGL draw, whatever order they are drawn in
 drawTile(pos, size, tileInfo, color=WHITE, angle=0, mirror, additiveColor)
 drawRect(pos, size, color=WHITE, angle=0)
 drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0)
@@ -456,7 +457,7 @@ AudioFilter.node, AudioReverb.node, ...           // Each effect's wrapped Web A
 - Virtual gamepad for touch devices
 
 ```javascript
-// Keyboard
+// Keyboard, keys are KeyboardEvent.code names like 'KeyW', 'Space' or 'ArrowUp', not characters
 keyIsDown(key)                        // Is key down?
 keyWasPressed(key)                    // Was key pressed this frame?
 keyWasReleased(key)                   // Was key released this frame?
@@ -499,7 +500,7 @@ gamepadDpad(gamepad=gamepadPrimary)                // Get gamepad dpad as a dire
 gamepadStickCount(gamepad=gamepadPrimary)          // Get number of analog sticks
 gamepadConnected(gamepad=gamepadPrimary)           // Is the gamepad connected?
 gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1, weakMagnitude=1, startDelay=0) // Rumble,
-                                                   // durations in ms
+                                                   // durations in ms, browsers stop at 5 seconds with the delay
 gamepadVibrateStop(gamepad=gamepadPrimary)         // Stop gamepad vibration
 
 // Touch Gamepad
@@ -549,8 +550,8 @@ touchInputEnable = true               // Should touch input route to mouse event
 EngineObject(pos, size=(1,1), tileInfo, angle=0, color, renderOrder=0)
 EngineObject.update()                              // Update object, called automatically
 EngineObject.render()                              // Render object, called automatically
-EngineObject.destroy(immediate=false)              // Destroy this object and children, removed at the end of the frame
-                                                   // unless immediate
+EngineObject.destroy(immediate=false)              // Destroy this object and children, removed at the end of the frame;
+                                                   // immediate cuts attached emitters off instead of letting them finish
 EngineObject.collideWithTile(tileData, pos)        // Tile collision resolve check
 EngineObject.collideWithObject(object, push)       // Object collision resolve check, push is 3D only
 EngineObject.getAliveTime()                        // How long since object was created
@@ -694,7 +695,12 @@ tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw
 
 ```javascript
 // Particle Emitter Object
-ParticleEmitter(pos, angle, ...settings) // Create a particle system; collideTiles is for world space emitters only
+ParticleEmitter(pos, angle, emitSize, emitTime, emitRate, emitConeAngle, tileInfo, colorStartA, colorStartB,
+    colorEndA, colorEndB, particleTime, sizeStart, sizeEnd, speed, angleSpeed, damping, angleDamping,
+    gravityScale, particleConeAngle, fadeRate, randomness, collideTiles, additive, randomColorLinear,
+    renderOrder, localSpace) // Create a particle system, speeds are per frame; collideTiles is for world space only
+emitter.trailScale / velocityInheritance / restitution / friction / emitCircle // More settings, set after making it
+emitter.particleCreateCallback / particleDestroyCallback / particleCollideCallback // Called with each particle
 ParticleEmitter.emitParticle()           // Spawn one particle
 
 // Particle Settings
@@ -794,10 +800,10 @@ pf.getNode(x, y)                     // Get PathFinderNode at tile coords
 const ui = new UISystemPlugin()        // Creates global uiSystem
 uiSystem.defaultColor                  // Default style values used by all widgets
 uiSystem.defaultLineColor              // (override before constructing widgets)
-uiSystem.defaultLineWidth
-uiSystem.defaultButtonColor
-uiSystem.defaultHoverColor
-uiSystem.defaultFont
+uiSystem.defaultTextColor / defaultButtonColor / defaultHoverColor / defaultDisabledColor / defaultGradientColor
+uiSystem.defaultLineWidth / defaultCornerRadius / defaultTextFitScale / defaultFont
+uiSystem.defaultSoundPress / defaultSoundRelease / defaultSoundClick // Sounds every widget plays
+uiSystem.defaultShadowColor / defaultShadowBlur / defaultShadowOffset
 uiSystem.nativeHeight                  // If set, UI coords are normalized to this height
 uiSystem.destroyObjects()              // Remove all UI elements
 uiSystem.isMouseOverUI()               // True if the mouse is over a visible hoverable UI object, or a confirm dialog is open
@@ -852,7 +858,8 @@ UILayout.relayout()                    // Call manually if you mutate a child's 
 - Lights accumulate ADDITIVELY in the lightmap (red + blue = magenta)
 - The lightmap is MULTIPLIED with the scene during composite — draw your world at full brightness and the lightmap handles the darkening
 - Any EngineObject can override `renderLight()` to additively contribute to the lightmap (lava tiles, weapon flashes, glowing crystals, etc.)
-- Shadows: set `lightSystem.shadows` and every object draws black into a shadow map that blocks the lights by its alpha, so smoke or a fading sprite casts a partial shadow; a floor `TileLayer` needs `castShadow = false` or it blacks out the map
+- Shadows: set `lightSystem.shadows` and every object draws black into a shadow map that blocks the lights by its alpha, so smoke or a fading sprite casts a partial shadow; a `TileCollisionLayer` casts only from its cells with collision, and a plain floor `TileLayer` needs `castShadow = false` or it blacks out the map
+- The lightmap darkens WebGL draws only, so a HUD drawn with WebGL in gameRenderPost goes dark too; draw it with `useWebGL=false` or from a plugin made after this one
 - See `examples/shorts/lightShadows.js` for shadows, glass and a figure with a foot blob
 - Must be constructed BEFORE `PostProcessPlugin` so post-process sees lit pixels
 - See `examples/shorts/lightSystem.js` for a demo
@@ -872,10 +879,11 @@ lightSystem.shadows          = false  // on for shadows; off costs nothing
 lightSystem.shadowMapSize    = 1024   // pixels across the shadow map, a square of world around the camera
 lightSystem.shadowMapScale   = 2      // how many views the map spans, so casters just off screen still cast in;
                                       // raise it when lights reach further than a view past the screen
-lightSystem.shadowTextureSize = 256   // pixels across each light's own shadow texture, larger is sharper
+lightSystem.shadowTextureSize = 256   // pixels across each light's own shadow texture, larger is sharper; a gap
+                                      // narrower than about 4*radius/shadowTextureSize between casters closes
 lightSystem.shadowPassCount  = 11     // stretch passes per light, fewer is cheaper and shorter shadows
-lightSystem.shadowSoftness   = .5     // light bled into a caster's near side, 0 hard, 1 most; it reaches further
-                                      // in under a big light, so lower it if thin walls let light through
+lightSystem.shadowSoftness   = .5     // light bled into a caster's near side, 0 hard, 1 more, 2 or 3 deeper still;
+                                      // it reaches further in under a big light, lower it if thin walls let light in
 lightSystem.shadowPass                // read only: true inside the shadow pass, so a render() can skip its text or glow
 lightSystem.setShadowTransparent(on)  // in the shadow pass the draws that follow keep their color, tinting the light
                                       // through them (glass, colored smoke); nothing outside it, so call it around
@@ -884,6 +892,8 @@ light.castShadow = true               // this light's rays stop at casters; a li
 light.shadowCore = 0                  // radius around the light where casters are left out, so its lamp, torch
                                       // or the player carrying it does not block it
 obj.castShadow = true                 // draws into the shadow map; false for a floor TileLayer, a background, a pickup
+layer.shadowSolidOnly = true          // a TileCollisionLayer casts only from its cells with collision, as they are
+                                      // drawn, so a floor in the same layer stays lit; false casts every tile
 obj.renderShadow()                    // draws the shadow shape, render() by default, screen space draws skipped;
                                       // a figure draws a blob at its feet
                                       // to stay lit; additive draws add black so glows cast nothing; WebGL draws only
@@ -1000,7 +1010,8 @@ raycastBox(ray, pos, size)                     // distance t to the box, or unde
   drawRibbon)
 - Y is up and -Z is forward, so the ground is the XZ plane: 2D input maps to it as vec3(move.x, 0, -move.y), forward for
   a yaw is vec3(-sin(yaw), 0, -cos(yaw)) and right is vec3(cos(yaw), 0, -sin(yaw))
-- Below, a comment that says `e.g.` marks the value on that line as an example, not the default
+- Below, `name = value` shows a value to set; when that is not the default, the comment says what the default is,
+  or `e.g.` marks it as an example
 - See the `examples/shorts/render3d*.js` demos - features: render3dBasics to start, render3dShapes,
   render3dBillboards, render3dHeightMap terrain, render3dCollision with picking, render3dFirstPerson for a walking
   camera, render3dLights, render3dParticles, render3dTrails, render3dDraw for immediate drawing, render3dText,
@@ -1041,7 +1052,7 @@ new FirstPersonCamera3D(pos3D, yaw, pitch) // mouse look and WASD or arrows to m
 render3D.camera.follow(target, offset, percent=1) // chase camera: ease toward target + offset and look at it, percent
                                                   // is how far it moves each call, so call it every frame, from
                                                   // gameUpdatePost once the target has moved
-render3D.camera.align2D = true        // lock to the 2D camera so the z=0 plane matches world space
+render3D.camera.align2D = true        // lock to the 2D camera so the z=0 plane matches world space, false by default
 render3D.camera.getForward() .getRight() .getUp() // the camera's axes as it is right now; render3D.cameraRight
                                                   // .cameraUp .cameraForward are this frame's, read only
 render3D.viewMatrix .projectionMatrix .viewProjection .shadowMatrix // this frame's, rebuilt by updateMatrices()
@@ -1140,8 +1151,8 @@ render3D.frustumCulling = true // drawMesh skips meshes whose bounding sphere is
                                // space the camera can see
 render3D.mipmaps = true        // textures sample through mipmaps so they do not shimmer far away, false keeps each
                                // texture's own filtering like 2D; magnification follows tilesPixelated either way
-obj.pixelated = true           // keep one object's texture pixels hard edged, no mipmaps and no blending between
-                               // them, for pixel art that should not blur or bleed into its neighbors on the sheet
+obj.pixelated = true           // false by default; keep one object's texture pixels hard edged, no mipmaps or blending
+                               // between them, for pixel art that should not blur or bleed into its neighbors
 render3D.anisotropy = 4        // sharper textures seen at an angle, 1 to 16, 1 is off; needs mipmaps
 render3D.instancing = true     // every use of a mesh in the opaque stage is one draw call however many there are,
                                // mesh.instanced = false keeps one mesh drawing in object order instead
@@ -1153,7 +1164,7 @@ set.setColorAt(i, color)          // color one, they start in the object's color
 set.count = 500                   // draw the first 500 of the count it was made with
 render3D.renderAfter2D = false // true draws the 3D scene on top of the 2D scene instead of under it; objects that do
                                // not set their own renderAfter2D follow this
-render3D.smoothShading = true  // default for every builder's smooth argument, flat by default;
+render3D.smoothShading = true  // default for every builder's smooth argument, false (flat) by default;
                                // meshes already built keep the normals they have
 
 // Objects - EngineObject with a 3D transform, drawn by the 3D pass
@@ -1187,15 +1198,17 @@ obj.setCollision(solids, isSolid)       // the same flags as in 2D, but the coll
                                         // out, the same rule as in 2D; the solid box is axis aligned in the world,
                                         // rotation3D is ignored as angle is in 2D, so give a turned wall a size3D
                                         // along the world axes
-obj.collideAsSphere3D = true              // collide as the sphere that fits size3D instead of as the size3D box
+obj.collideAsSphere3D = true              // collide as the sphere that fits size3D instead of the box, false by default
 obj.collideWithObject(object, push)     // called when it touches a solid object, both objects are asked and either
                                         // returning false leaves the push and the bounce to you; push is what it
                                         // takes to move this one clear, it is undefined in 2D
-obj.softShadow = 2                      // a soft shadow of that diameter under the object on render3D.softShadowHeight;
-                                        // scale3D and a parent's scale grow it, so set it for the unscaled object
-obj.upright = true                      // a sprite stands on world up instead of tilting toward the camera
+obj.softShadow = 2                      // 0 by default; a soft shadow of that diameter under the object on
+                                        // render3D.softShadowHeight; scale3D and a parent's scale grow it, so set it
+                                        // for the unscaled object
+obj.upright = true                      // a sprite stands on world up instead of tilting toward the camera, false by
+                                        // default
                                         // a sprite also turns with rotation3D.z, like a 2D object turns with angle
-obj.sync2D = true // copy the 2D pos and angle into pos3D and rotation3D each frame; the 2D physics only run for a
+obj.sync2D = true // false by default; copy the 2D pos and angle into pos3D and rotation3D each frame; the 2D physics only run for a
                   // sync2D object, so set its mass to have them move it
 // these inherited EngineObject fields are 2D only and do nothing on a 3D object: angle, angleVelocity,
 // angleDamping, additiveColor, drawSize, mirror, clampSpeed, friction, groundObject; sync2D is the one way in
@@ -1203,14 +1216,16 @@ obj.mesh obj.tileInfo obj.color         // what to draw and how
 obj.setMesh(mesh)                       // draw a different mesh and free the GPU buffer of the one it replaces, for
                                         // text and terrain built again as things change; a mesh another object is
                                         // still drawing is left alone, so shared builders are safe
-obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes
-obj.additive = true                     // additive blending, implies the transparent stage
-obj.emissive = 1                        // how much it lights itself: 0 lit, 1 its own color for lamps and glowing
+obj.transparent = true                  // draw in the transparent stage, blended, sorted far to near, no depth writes;
+                                        // false by default, true for a sprite
+obj.additive = true                     // additive blending, implies the transparent stage, false by default
+obj.emissive = 1                        // 0 by default; how much it lights itself: 0 lit, 1 its own color for lamps and glowing
                                         // things, between partly self lit, above 1 brighter for bloom; still casts
-obj.specular = .5                       // highlight strength, 0 is none and 1 is full, as render3D.specular
-obj.castShadow = false                  // keep it out of the shadow map; sprites and cut out textures cast their
-                                        // outline, additive objects never cast
-obj.receiveShadow = false               // draw it without the shadow map's darkening
+obj.specular = .5                       // highlight strength, 0 is none and 1 is full, as render3D.specular; 0 by default
+obj.castShadow = false                  // true by default, false keeps it out of the shadow map; sprites and cut out
+                                        // textures cast their outline, an object faded below half its alpha casts
+                                        // nothing, a see through one casts only when textured, additive never casts
+obj.receiveShadow = false               // true by default, false draws it without the shadow map's darkening
 obj.renderOrder                         // sorts the opaque stage; instanced meshes draw as batches, so set
                                         // mesh.instanced = false on a mesh whose order matters
 obj.renderAfter2D = true // this object on top of the 2D scene, or false for under it; undefined follows
@@ -1419,7 +1434,7 @@ new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileIn
 // randomness on speed, size and life
 // an emitter with an emitTime destroys itself once its last particle is gone, so a burst is fire and forget
 // untextured particles are soft round dots, textured ones are billboards of the tile
-emitter.trailTime = .2 // draw each particle as a ribbon along its last .2 seconds instead, the texture stretches along
+emitter.trailTime = .2 // 0 by default; draw each particle as a ribbon along its last .2 seconds instead, the texture stretches along
                        // it
 // scale3D on the emitter, its own or a parent's, grows the whole effect: spawn area, sizes, speed and fall
 emitter.angleSpeed = .05; emitter.angleDamping = 1 // tumble each particle in the camera plane, either way from a random
@@ -1580,10 +1595,12 @@ obj.getMass() / getCenterOfMass() / getInertia() // the center of mass in world 
 box2d.raycast(start, end, includeSensors=false)    // Returns the closest Box2dRaycastResult or undefined; sensors
                                                    // are passed through unless includeSensors
 box2d.raycastAll(start, end, includeSensors=false) // Every Box2dRaycastResult along the ray, nearest first
-box2d.boxCast(pos, size) / boxCastAll(pos, size) // An object, or all of them, whose shapes overlap the box
+box2d.boxCast(pos, size, includeSensors=false) / boxCastAll(pos, size, includeSensors=false) // An object, or all
+                               // of them, whose shapes overlap the box; sensors are passed through unless included
 box2d.circleCast(pos, diameter) / circleCastAll(pos, diameter) // The nearest object, or all of them, whose
                                // position is in the circle, wherever its shapes are
-box2d.pointCast(pos, dynamicOnly=true) // The object with a shape under the point
+box2d.pointCast(pos, dynamicOnly=true, includeSensors=false) // The object with a shape under the point, sensors
+                               // passed through unless included, so a pickup radius does not grab from afar
 
 // Joints — all extend Box2dJoint
 new Box2dTargetJoint(object, fixedObject, worldPos) // Drag toward a point (mouse-follow)
@@ -1622,7 +1639,8 @@ medal.isLocal()                      // true while the local save holds the meda
                                      // player is logged in to Newgrounds, whose server holds it
 
 medals                               // Global { [id]: Medal } map
-medalsInit(saveName)                 // Restore unlocked state from localStorage under saveName, skipping
+medalsInit(saveName)                 // Restore unlocked state from localStorage under saveName, a different name
+                                     // from the game's own save data or each overwrites the other; skipping
                                      // NewgroundsMedals while logged in; call it after making the medals, since it
                                      // drops saved medals that do not exist (called before any, each medal reads its
                                      // own unlock as it is made); still needed with Newgrounds, before or after

@@ -647,7 +647,7 @@ class EngineObject
         // show object info for debugging
         const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
         const color = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);
-        debugRect(this.pos, size, color, 0, this.angle, hasPhysics);
+        debugRect(this.pos, size, color, 0, hasPhysics ? 0 : this.angle, hasPhysics); // collision ignores the angle
         if (this.parent)
             debugRect(this.pos, size.scale(.8), rgb(1,1,1,.5), 0, this.angle);
         this.parent && debugLine(this.pos, this.parent.pos, rgb(1,1,1,.5), .5);

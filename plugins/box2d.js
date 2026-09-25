@@ -1354,7 +1354,7 @@ class Box2dRevoluteJoint extends Box2dJoint
 
     /** Enable/disable the joint limit
      *  @param {boolean} [enable] */
-    enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
+    enableLimit(enable=true) { this.box2dJoint.EnableLimit(enable); }
 
     /** Get the lower joint limit, clockwise like angle
      *  @return {number} */
@@ -1371,7 +1371,7 @@ class Box2dRevoluteJoint extends Box2dJoint
     {
         ASSERT(min <= max, 'the lower limit must not be above the upper one');
         if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
-        return this.box2dJoint.SetLimits(-max, -min);
+        this.box2dJoint.SetLimits(-max, -min);
     }
 
     /** Is the joint motor enabled?
@@ -1380,11 +1380,11 @@ class Box2dRevoluteJoint extends Box2dJoint
 
     /** Enable/disable the joint motor
      *  @param {boolean} [enable] */
-    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+    enableMotor(enable=true) { this.box2dJoint.EnableMotor(enable); }
 
     /** Set the motor speed, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
+    setMotorSpeed(speed) { this.box2dJoint.SetMotorSpeed(-speed); }
 
     /** Get the motor speed, clockwise like angle
      *  @return {number} */
@@ -1392,7 +1392,7 @@ class Box2dRevoluteJoint extends Box2dJoint
 
     /** Set the max motor torque, a magnitude
      *  @param {number} torque */
-    setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
+    setMaxMotorTorque(torque) { this.box2dJoint.SetMaxMotorTorque(torque); }
 
     /** Get the max motor torque
      *  @return {number} */
@@ -1551,7 +1551,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     
     /** Enable/disable the joint limit
      *  @param {boolean} [enable] */
-    enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
+    enableLimit(enable=true) { this.box2dJoint.EnableLimit(enable); }
     
     /** Get the lower joint limit
      *  @return {number} */
@@ -1568,7 +1568,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     {
         ASSERT(min <= max, 'the lower limit must not be above the upper one');
         if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
-        return this.box2dJoint.SetLimits(min, max);
+        this.box2dJoint.SetLimits(min, max);
     }
     
     /** Is the motor enabled?
@@ -1577,11 +1577,11 @@ class Box2dPrismaticJoint extends Box2dJoint
     
     /** Enable/disable the joint motor
      *  @param {boolean} [enable] */
-    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+    enableMotor(enable=true) { this.box2dJoint.EnableMotor(enable); }
     
     /** Set the motor speed
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+    setMotorSpeed(speed) { this.box2dJoint.SetMotorSpeed(speed); }
     
     /** Get the motor speed
      *  @return {number} */
@@ -1589,7 +1589,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     
     /** Set the maximum motor force
      *  @param {number} force */
-    setMaxMotorForce(force) { return this.box2dJoint.SetMaxMotorForce(force); }
+    setMaxMotorForce(force) { this.box2dJoint.SetMaxMotorForce(force); }
     
     /** Get the maximum motor force
      *  @return {number} */
@@ -1661,11 +1661,11 @@ class Box2dWheelJoint extends Box2dJoint
 
     /** Enable/disable the joint motor
      *  @param {boolean} [enable] */
-    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+    enableMotor(enable=true) { this.box2dJoint.EnableMotor(enable); }
 
     /** Set the motor speed, the wheel's turn in radians per second, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
+    setMotorSpeed(speed) { this.box2dJoint.SetMotorSpeed(-speed); }
 
     /** Get the motor speed, clockwise like angle
      *  @return {number} */
@@ -1673,7 +1673,7 @@ class Box2dWheelJoint extends Box2dJoint
 
     /** Set the maximum motor torque, a magnitude
      *  @param {number} torque */
-    setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
+    setMaxMotorTorque(torque) { this.box2dJoint.SetMaxMotorTorque(torque); }
 
     /** Get the max motor torque
      *  @return {number} */
@@ -2112,13 +2112,16 @@ class Box2dPlugin
     /** box aabb cast and return all the objects
      *  @param {Vector2} pos
      *  @param {Vector2} size
+     *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default
      *  @return {Array<Box2dObject>} */
-    boxCastAll(pos, size)
+    boxCastAll(pos, size, includeSensors=false)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            if (!includeSensors && fixture.IsSensor())
+                return true; // a trigger zone, continue getting results
             const o = fixture.GetBody().object;
             if (o && !o.destroyed && !queryObjects.includes(o) // skip raw bodies and ones destroyed this step
                 && box2dFixtureOverlaps(fixture, aabb))
@@ -2139,13 +2142,16 @@ class Box2dPlugin
     /** box aabb cast and return the first object
      *  @param {Vector2} pos
      *  @param {Vector2} size
+     *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default
      *  @return {Box2dObject|undefined} */
-    boxCast(pos, size)
+    boxCast(pos, size, includeSensors=false)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            if (!includeSensors && fixture.IsSensor())
+                return true; // a trigger zone, continue getting results
             const o = fixture.GetBody().object;
             if (!o || o.destroyed)
                 return true; // a raw body with no Box2dObject or one destroyed this step, continue getting results
@@ -2200,13 +2206,16 @@ class Box2dPlugin
     /** point cast and return the first object
      *  @param {Vector2} pos
      *  @param {boolean} [dynamicOnly]
+     *  @param {boolean} [includeSensors] - Also find sensors, so a pickup radius does not grab its object from afar
      *  @return {Box2dObject|undefined} */
-    pointCast(pos, dynamicOnly=true)
+    pointCast(pos, dynamicOnly=true, includeSensors=false)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            if (!includeSensors && fixture.IsSensor())
+                return true; // a trigger zone, continue getting results
             if (dynamicOnly && fixture.GetBody().GetType() !== box2d.instance.b2_dynamicBody)
                 return true; // continue getting results
             if (!fixture.TestPoint(box2dTemp(pos)))

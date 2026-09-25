@@ -95,6 +95,7 @@ function setPaused(isPaused=true) { paused = isPaused; }
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
+let engineFrameScheduled = false; // a frame of the loop is asked for and has not run yet
 
 // the pairs of objects asked about a collision this update and left overlapping, so the other's own physics does not
 // ask again, a set of others for each asker so the lookup stays quick when many objects pile up on one spot
@@ -233,6 +234,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         frameTimeLastMS = frameTimeMS;
         if (debug || debugWatermark)
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
+        audioUpdateVolume();
         // the time keys work while the debug overlay is open, or always when debugKeysAlways is set
         const debugKeys = debug && (debugOverlay || debugKeysAlways);
         const debugSpeedUp   = debugKeys && keyIsDown('Equal'); // +
@@ -316,13 +318,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // than the fixed update rate would otherwise redraw identical frames
         if (!debugVideoCaptureIsActive() && (wasUpdated || windowChanged))
             renderFrame();
-        if (!engineManualStep)
-        {
-            if (typeof requestAnimationFrame === 'function')
-                requestAnimationFrame(engineUpdate);
-            else // a headless server in Node has no display to wait for, a timer keeps the pace
-                setTimeout(()=> engineUpdate(performance.now()), 1e3 / frameRate);
-        }
+        engineManualStep || engineScheduleFrame();
 
         function renderFrame()
         {
@@ -547,6 +543,23 @@ function engineUpdateCanvas()
     mainContext.lineCap  = 'round';
 }
 
+// ask for the next frame of the loop, once however often it is called before that frame, and skip it if manual
+// step was turned on since, so turning it off and on again within a frame can not start a second loop
+function engineScheduleFrame()
+{
+    if (engineFrameScheduled) return;
+    engineFrameScheduled = true;
+    const next = (frameTimeMS)=>
+    {
+        engineFrameScheduled = false;
+        engineManualStep || engineUpdateInternal(frameTimeMS);
+    };
+    if (typeof requestAnimationFrame === 'function')
+        requestAnimationFrame(next);
+    else // a headless server in Node has no display to wait for, a timer keeps the pace
+        setTimeout(()=> next(performance.now()), 1e3 / frameRate);
+}
+
 // max frames engineStep can advance in one call, 10 minutes at 60fps
 // large counts block until they finish, so this catches runaway values
 const engineStepMaxFrames = 36000;
@@ -554,7 +567,8 @@ const engineStepMaxFrames = 36000;
 /** Advance the engine by a number of frames
  *  Requires setEngineManualStep(true) before engineInit
  *  Respects paused exactly as the normal update loop does
- *  @param {number} [frames] - number of engine update ticks, max 36000, each running one fixed update at timeScale 1
+ *  @param {number} [frames] - frames of 1/60 of a second to advance, max 36000; timeScale sets how many fixed
+ *  updates they run, as in the normal loop, one each at timeScale 1
  *  @example
  *  setHeadlessMode(true);
  *  setEngineManualStep(true);
@@ -583,7 +597,10 @@ function engineObjectsUpdate()
 {
     ++engineObjectsUpdateCount;
     engineObjectsCollidePairs.clear();
-    // get list of solid objects for physics optimization, in the order they were made, which 3D collision pairs by;
+    // objects update in render order, which rendering keeps them in, so a headless run or a frame that rendered
+    // nothing updates them the same way; the sort is stable, and nearly free on a list that is already sorted
+    engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+    // get list of solid objects for physics optimization, in update order, which 3D collision pairs by;
     // 2D checks the static ones last, so a contact with a moving object can not leave something back inside a static
     // solid it was already pushed out of
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);

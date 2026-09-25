@@ -225,8 +225,7 @@ function render3DInstance(mesh, matrix, tileInfo, color)
 {
     const k = render3DInstanceSlot(mesh, tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo), data = mesh.instanceData;
     data.set(matrix.m, k);
-    if (!render3D.shadowPass) // the depth shader reads only the matrix and the uv rect, the tint can stay stale
-        data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a;
+    data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a; // the depth shader cuts by its alpha
     const uv = render3DGetTileUVs(tileInfo);
     data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
 }
@@ -677,7 +676,7 @@ class Render3DPlugin
     }
 
     /** Find the nearest object under a screen position or along a ray, for clicking on things
-     *  - Each object is tested as the box around its mesh in its own space, or a sphere around a sprite's size3D,
+     *  - Each object is tested as the box around its mesh in its own space, or a sprite as the quad it draws,
      *    not triangle by triangle
      *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
      *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
@@ -1612,21 +1611,21 @@ function render3DInitGL()
     // the shader, see RENDER3D_VERTEX_SOURCE and render3DFragmentSource
     r.program = glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource());
 
-    // the depth only shader for the shadow map, same vertex layout; see through pixels cast nothing,
-    // so sprites and cut out textures cast their outline
+    // the depth only shader for the shadow map, same vertex layout; see through pixels cast nothing, so sprites and
+    // cut out textures cast their outline, and an object faded below half its alpha casts nothing, as it draws
     r.shadowShader = glCreateProgram(
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform mat4 viewProj;' +
         RENDER3D_VERTEX_INPUTS +
-        'out vec2 T;' +
-        'void main(){T=uvRect.xy+t*uvRect.zw;gl_Position=viewProj*mat4(m0,m1,m2,m3)*vec4(p,1.);}'
+        'out vec2 T;out float A;' +
+        'void main(){T=uvRect.xy+t*uvRect.zw;A=c.a*tint.a;gl_Position=viewProj*mat4(m0,m1,m2,m3)*vec4(p,1.);}'
         ,
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform sampler2D tex;' +
-        'in vec2 T;' +
-        'void main(){if(texture(tex,T).a<.5)discard;}'
+        'in vec2 T;in float A;' +
+        'void main(){if(texture(tex,T).a*A<.5)discard;}'
     );
 
     // the vertex array object with the attributes enabled once, pointers are set per buffer by render3DBindVertexBuffer
@@ -3145,7 +3144,7 @@ class EngineObject3D extends EngineObject
         this.emissive = 0;
         /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
         this.specular = 0;
-        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, additive objects never cast */
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, an object faded below half its alpha casts nothing, a see through one casts only when textured, and additive objects never cast */
         this.castShadow = true;
         /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls around corners */
         this.collideAsSphere3D = false;
@@ -3538,17 +3537,17 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
 }
 
 // how far along a ray an object is hit, or undefined for a miss; each one is tested as the box around its mesh in
-// its own space, or a sphere around a sprite's size3D, not triangle by triangle
+// its own space, or a sprite as the quad it draws, not triangle by triangle
 function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) return;
     if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
-    const matrix = render3DObjectMatrix(o), mesh = o.mesh; // a sprite is picked by its size3D
+    const matrix = render3DObjectMatrix(o), mesh = o.mesh;
+    if (!mesh) return render3DRaycastSprite(ray, o, matrix);
     // a mesh that changed since it was measured is measured again, an upload may not have come yet
-    const radius = (mesh ? mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius : hypot(o.size3D.x, o.size3D.y) / 2) * render3DMaxStretch(matrix.m);
+    const radius = (mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius) * render3DMaxStretch(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
     const center = matrix.getTranslation();
-    if (!mesh) return render3DRaycastDisc(ray, center, radius); // a sprite faces the camera
     const distance = raycastSphere(ray, center, radius);
     if (distance === undefined) return;
 
@@ -3573,8 +3572,24 @@ function render3DRaycastObject(ray, o)
     return exit === Infinity ? 0 : exit; // a ray of no length is where it starts
 }
 
-// a disc facing the ray at the center's depth along it, for a sprite, which faces the camera; a sphere would be hit
-// at 0 whenever the ray starts inside it, even with the sprite behind the camera
+// a sprite is the quad drawBillboard draws, its size3D grown by the x and y scale as the draw does, facing the camera
+// as it was last drawn; where the ray meets its plane, inside its half axes
+function render3DRaycastSprite(ray, o, matrix)
+{
+    const m = matrix.m, center = matrix.getTranslation();
+    const size = vec2(o.size3D.x * hypot(m[0], m[1], m[2]), o.size3D.y * hypot(m[4], m[5], m[6]));
+    if (!(size.x > 0 && size.y > 0)) return; // nothing to hit
+    if (!ray.direction.lengthSquared()) // a ray of no length is where it starts
+        return render3DRaycastDisc(ray, center, hypot(size.x, size.y) / 2);
+    const a = render3DBillboardAxes(size, o.rotation3D.z, o.upright);
+    const right = vec3(a[0], a[1], a[2]), up = vec3(a[3], a[4], a[5]);
+    const t = raycastPlane(ray, center, right.cross(up));
+    if (t === undefined) return; // behind, or seen edge on
+    const p = ray.getPosition(t).subtract(center);
+    return abs(p.dot(right)) <= right.lengthSquared() && abs(p.dot(up)) <= up.lengthSquared() ? t : undefined;
+}
+
+// a mesh flattened to nothing, or a sprite for a ray of no length: a disc facing the ray at its center's depth
 function render3DRaycastDisc(ray, center, radius)
 {
     const d = ray.direction, oc = center.subtract(ray.origin), dd = d.dot(d);
