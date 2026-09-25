@@ -532,6 +532,11 @@ function inputInit()
             if (!inputKeysHeld.has(key) && !(inputWASDEmulateDirection && inputKeysHeld.has(inputArrowToWASD[key])))
                 if (inputData[0][key] & 1)
                     inputData[0][key] = (inputData[0][key]&2) | 4;
+
+        // a Mac sends no keyup for a key let go while Cmd is held, so letting go of Cmd lets go of every key
+        if (e.key === 'Meta')
+            for (const code of [...inputKeysHeld])
+                onKeyUp({code});
     }
     function remapKey(k)
     {
@@ -680,7 +685,12 @@ function inputInit()
 
             // prevent default handling like copy, magnifier lens, and scrolling
             if (inputPreventDefault && e.cancelable && document.hasFocus())
+            {
+                // like a mouse click, a tap outside a focused text field lets it go, the cancel keeps focus where it is
+                const active = /** @type {HTMLElement} */ (document.activeElement);
+                e.type == 'touchstart' && isTextInput(active) && !active.contains(/** @type {Node} */ (e.target)) && active.blur();
                 e.preventDefault();
+            }
 
             // must return true so the document will get focus
             return true;
@@ -1331,7 +1341,8 @@ function touchGamepadControlAt(p, W, H)
 
 function touchGamepadPointerDown(e, zone)
 {
-    if (!touchGamepadEnable) return;
+    // a mouse on a touchscreen laptop clicks the game, the zones are there even while the gamepad is hidden
+    if (!touchGamepadEnable || e.pointerType === 'mouse') return;
     e.preventDefault();
     zone.setPointerCapture(e.pointerId);
     touchGamepadTimer.set();

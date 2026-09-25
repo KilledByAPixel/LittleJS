@@ -450,7 +450,17 @@ That's called tile bleeding — pixels from one tile blend into a neighboring ti
 
 ### How do I handle animations in LittleJS?
 
-Use the `TileInfo.frame(n)` method to offset along a row of animation frames on your sprite sheet. Lay out each animation's frames left-to-right next to each other on the sheet, then index into them from a base sprite:
+Use `SpriteAnimation`, which steps through frames laid out left-to-right on your sprite sheet, and can loop, play once or ping-pong, pausing with the game:
+
+```javascript
+const walk = new SpriteAnimation(tile(0, 16), 4, .1); // four frames, a tenth of a second each
+const attack = new SpriteAnimation(tile(4, 16), 3, .05).play(); // once, then holds the last frame
+
+// in update()
+this.tileInfo = (attack.isDone ? walk : attack).tileInfo;
+```
+
+To do it by hand, use the `TileInfo.frame(n)` method to offset along the row of frames from a base sprite:
 
 ```javascript
 // store the base sprite (the first frame of the animation)

@@ -117,7 +117,8 @@ const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [
 
 /**
  * Load tile layers from exported data
- * - Tiled maps come in as they are, flipped and turned tiles included
+ * - Tiled maps come in as they are, flipped and turned tiles included, from one tileset image (a second tileset's
+ *   tiles continue its numbering), finite maps in the CSV or array layer format; layer offsets and parallax are not read
  * - Group layers are flattened in order, each replaced by the layers inside it, so the layer indices
  *   (collisionLayer and the returned array) count that flattened list; a group's tint, opacity and
  *   visibility carry to the layers inside it
@@ -186,7 +187,7 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
         const {dataLayer, color: layerColor, visible} = layers[layerIndex];
         if (!layerColor)
             continue;
-        ASSERT(dataLayer.data && dataLayer.data.length);
+        ASSERT(dataLayer.data && dataLayer.data.length, 'tile layer has no data, infinite maps and compressed layers are not supported');
         ASSERT(levelSize.area() === dataLayer.data.length);
 
         const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
@@ -348,6 +349,9 @@ class CanvasLayer extends EngineObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// a layer's default tile, none when no image is loaded, so a collision only layer works in a game with no images
+function tileLayerDefaultTile() { return textureInfos[0]?.size.x ? tile() : undefined; }
+
 /**
  * Tile Layer - cached rendering system for tile layers
  * - Each Tile layer is rendered to an off screen canvas
@@ -369,8 +373,10 @@ class TileLayer extends CanvasLayer
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(pos, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
+    constructor(pos, size, tileInfo=tileLayerDefaultTile(), renderOrder=0, useWebGL=true)
     {
+        ASSERT(!tileInfo || tileInfo.size.x > 0 && tileInfo.size.y > 0,
+            'the tile has no size yet, a loadSprite tile is filled in once spritesReady resolves');
         size = size.floor(); // whole cells, a fractional size would never finish filling the data
         const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
         super(pos, size, 0, renderOrder, canvasSize, useWebGL);
@@ -563,7 +569,8 @@ class TileLayer extends CanvasLayer
         const d = this.getData(layerPos);
         if (!d || d.tile === undefined) return;
 
-        const tileInfo = this.tileInfo && this.tileInfo.index(d.tile);
+        // a tileset packed by loadSprite keeps its own columns, counted from its first tile, not the sheet's grid
+        const t = this.tileInfo, tileInfo = t && (t.columns ? t.frame(d.tile) : t.index(d.tile));
         this.drawLayerTile(drawPos, drawSize, tileInfo, d.color, d.direction*PI/2, d.mirror);
     }
 
@@ -673,11 +680,11 @@ class TileCollisionLayer extends TileLayer
     /** Create a tile layer object
     *  @param {Vector2}  pos - World space position
     *  @param {Vector2}  size - World space size
-    *  @param {TileInfo} [tileInfo] - Tile info for layer
+    *  @param {TileInfo} [tileInfo] - Tile info for layer, tile() by default, none when no image is loaded
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(pos, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
+    constructor(pos, size, tileInfo=tileLayerDefaultTile(), renderOrder=0, useWebGL=true)
     {
         super(pos, size.floor(), tileInfo, renderOrder, useWebGL);
 

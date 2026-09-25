@@ -533,15 +533,19 @@ class UISystemPlugin
             for (const [type, listener] of this._dragListeners)
                 document.removeEventListener(type, listener);
         this._dragListeners = [];
-        const setCallback = (callback, listenerType)=>
+        const setCallback = (callback, listenerType, when=()=> true)=>
         {
-            const listener = (e)=> { e.preventDefault(); callback && callback(e); };
+            const listener = (e)=> { e.preventDefault(); when() && callback && callback(e); };
             document.addEventListener(listenerType, listener);
             this._dragListeners.push([listenerType, listener]);
         };
-        setCallback(onDrop,      'drop');
-        setCallback(onDragEnter, 'dragenter');
-        setCallback(onDragLeave, 'dragleave');
+
+        // every element the drag crosses sends its own enter and leave, and a move between two ends with a leave,
+        // so they are counted, and only the first enter and the last leave are the window's
+        let depth = 0;
+        setCallback(onDrop,      'drop',      ()=> { depth = 0; return true; });
+        setCallback(onDragEnter, 'dragenter', ()=> !depth++);
+        setCallback(onDragLeave, 'dragleave', ()=> !!depth && !--depth);
         setCallback(onDragOver,  'dragover');
     }
 
@@ -578,6 +582,16 @@ class UISystemPlugin
             addEventListener('keydown', this._onKeyDown, true);
             addEventListener('keyup', this._onKeyDown, true);
             inputClearKeyboard(); // keys held when editing starts let go, or they would stay down
+
+            // a press that starts the edit, as with activateOnPress, is let go now, the updates skip its release
+            // while the edit goes on; a click on release already had its release
+            const held = this.activeObject;
+            if (held && mouseIsDown(0))
+            {
+                this.activeObject = undefined;
+                held.onRelease();
+                held.soundRelease && held.soundRelease.play();
+            }
         }
         else if (had && !obj)
         {
@@ -719,7 +733,7 @@ class UISystemPlugin
      */
     showConfirmDialog(text='Are you sure?', yesCallback, noCallback, size=vec2(500,250), exitKey='Escape')
     {
-        ASSERT(!uiSystem.confirmDialog);
+        ASSERT(!uiSystem.confirmDialog, 'a confirm dialog is already open, check uiSystem.confirmDialog');
 
         const savedNavigationDirection = uiSystem.navigationDirection;
 
@@ -949,7 +963,7 @@ class UIObject
      *  @return {UIObject} The child object added */
     addChild(child)
     {
-        ASSERT(!child.parent && !this.children.includes(child));
+        ASSERT(!child.parent && !this.children.includes(child), 'child already has a parent, removeChild it first');
         this.children.push(child);
         child.parent = this;
         return child;
@@ -1024,8 +1038,7 @@ class UIObject
                     if (this.destroyed) return;
                 }
             }
-            if (this === uiSystem.keyInputObject)
-                uiSystem.keyInputObject = undefined;
+            // a field being edited is ended by the next UI update, through stopEditing, so onChange keeps its text
         }
 
         if (uiSystem.keyInputObject)
@@ -1690,12 +1703,12 @@ class UIVideo extends UIObject
     }
     
     /** Play or resume the video
-     *  @return {Promise} Promise that resolves when playback starts */
+     *  @return {Promise<boolean>} Resolves true once playback starts, false if the browser refused it */
     async play()
     {
         // try to play the video, catch any errors (autoplay may be blocked)
-        try { await this.video.play(); }
-        catch(e) {}
+        try { await this.video.play(); return true; }
+        catch(e) { return false; }
     }
     
     /** Pause the video */

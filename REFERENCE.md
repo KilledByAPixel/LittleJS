@@ -593,6 +593,11 @@ EngineObject.gravityScale  // How much to scale gravity by
 EngineObject.renderOrder   // Objects are sorted by render order
 EngineObject.velocity      // Velocity of the object, world units per frame
 EngineObject.angleVelocity // Angular velocity of the object, radians per frame
+EngineObject.groundObject  // What it stands on this frame, a tile layer or an object, undefined in the air; a
+                           // moving platform carries its rider through velocity.x, so a controller adds to it
+EngineObject.clampSpeed    // Clamp velocity to objectMaxSpeed, true by default; false for fast bullets that do not
+                           // collide, since each axis is clamped on its own, which bends a fast diagonal
+EngineObject.parent / children // Set by addChild, a child is placed by its parent and sits out solid collision
 
 // Engine Object settings
 enablePhysicsSolver = true    // Enable collisions, between objects and with tiles?
@@ -602,7 +607,7 @@ objectDefaultAngleDamping = 1 // Fraction of angular velocity kept each frame (1
 objectDefaultRestitution = 0  // How much to bounce when a collision occurs (0-1)
 objectDefaultFriction = .8    // Fraction of sliding speed kept each frame on the ground (1 is no friction)
 objectMaxSpeed = 1            // Clamp each axis of velocity, world units per frame, so fast objects don't miss
-                              // collisions
+                              // collisions; each axis on its own, so a faster diagonal bends toward 45 degrees
 gravity = (0,0)               // How much gravity to apply to objects, added to velocity each frame
 
 // Engine Object functions
@@ -661,7 +666,8 @@ TileLayerData(tile, direction=0, mirror=false, color=WHITE) // Create tile data 
 TileLayerData.clear()                                       // Clear this tile data, it draws nothing
 
 // Tile Collision Layer
-TileCollisionLayer(pos, size, tileInfo=tile())      // Create a tile collision layer object
+TileCollisionLayer(pos, size, tileInfo=tile())      // Create a tile collision layer object, with no tile when no
+                                                    // image is loaded, for a collision only layer
 TileCollisionLayer.setCollisionData(layerPos, data=1) // Set tile collision data at a cell in the layer
 TileCollisionLayer.getCollisionData(layerPos)       // Get tile collision data at a cell, 0 outside the layer
 TileCollisionLayer.clearCollisionData(layerPos)     // Clear tile collision data at a cell
@@ -674,7 +680,9 @@ tileCollisionTest(pos, size=(0,0), object)          // Check if collision should
 tileCollisionRaycast(posStart, posEnd, object, normal, solidOnly=true) // Where the ray meets the first tile hit,
                                                     // or undefined; a normal vec2 passed in is set to the surface's
 tileCollisionLayers                                 // List of all tile collision layers
-tileLayersLoad(tileMapData, tileInfo)               // Load tile layers from exported data, Tiled flips and turns included;
+tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true) // collisionLayer is the index
+                                                    // of the layer that gets collision
+                                                    // Load tile layers from exported data, Tiled flips and turns included;
                                                     // groups are flattened and layer indices count that flat list,
                                                     // hidden layers load with collision but are not drawn
 
@@ -778,7 +786,7 @@ pf.getNode(x, y)                     // Get PathFinderNode at tile coords
 - Standalone UI plugin with buttons, text, sliders, checkboxes, text input, video, and auto-layout
 - Auto-registers via `engineAddPlugin` — `new UISystemPlugin()` is all you need
 - Keyboard listener only attached while a UITextInput is being edited
-- A click on the UI, or a navigation press (Space, Enter, gamepad A) that activates it, is used up before objects update and `gameUpdatePost`, so read world clicks there; `gameUpdate` runs first and still sees it, so check `uiSystem.isMouseOverUI()` there
+- A click on the UI, or a navigation press (Space, Enter, gamepad A) that activates it, is used up before objects update and `gameUpdatePost`, so read world clicks there; `gameUpdate` runs first and still sees it, so check `uiSystem.isMouseOverUI()` there; only the press is used up, `mouseIsDown` stays true while it is held, so a held action like auto fire checks `uiSystem.isMouseOverUI()` too
 - See `examples/uiSystem/` and `examples/shorts/uiSystem.js` for demos
 
 ```javascript
@@ -807,6 +815,11 @@ uiSystem.drawLine(posA, posB, lineWidth, lineColor)
 // Base widget
 new UIObject(pos=vec2(), size=vec2())
 UIObject.anchor                        // vec2 in [-1,1]; anchors to parent (or canvas if root) + self-pivot; default vec2()=center
+UIObject.localPos                      // Position from its anchor, what the pos passed in sets; move or tween this,
+                                       // nativePos is worked out from it each frame
+UIObject.visible / disabled            // Hidden objects are skipped, disabled ones draw but do not respond
+UIObject.text / textHeight             // The text it draws, and a fixed text height, undefined fits it to the size
+UIObject.navigationIndex               // Order for keyboard and gamepad navigation, undefined leaves it out
 UIObject.addChild(child)               // Returns child, parents it
 UIObject.removeChild(child)
 UIObject.destroy()
@@ -1132,8 +1145,10 @@ obj.updatePhysics()                // moves it and pushes it out of solids; boun
                                    // runs once every object has moved, so the fix lands before the frame draws
 obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gravity, gravityScale and damping act on
              // velocity3D, damped first and gravity added after as in 2D, and damping is 1 by default for no slowing
-obj.size3D                              // full size for engineObjectsCollect3D, picking, solid collision and
-                                        // sprites; scale3D and a parent's scale grow it
+obj.size3D                              // full size for engineObjectsCollect3D, solid collision and
+                                        // sprites, which it also picks by, a mesh is picked by its own box;
+                                        // starts at the size of the mesh's box, 1 with no mesh;
+                                        // scale3D and a parent's scale grow it
 obj.setCollision(solids, isSolid)       // the same flags as in 2D, but the collision happens in 3D against size3D;
                                         // isSolid needs solids, an object cannot block without colliding;
                                         // a 3D object has no 2D size, so it is never an obstacle in a 2D scene;
@@ -1537,7 +1552,8 @@ obj.setMassData(localCenter, mass, momentOfInertia) // undefined leaves that one
 obj.getMass() / getCenterOfMass() / getInertia() // the center of mass in world space, setMassData takes a local one
 
 // Raycasting and queries
-box2d.raycast(start, end)      // Returns the closest Box2dRaycastResult or undefined
+box2d.raycast(start, end)      // Returns the closest Box2dRaycastResult or undefined; sensors are hit too, check
+                               // result.fixture.IsSensor()
 box2d.raycastAll(start, end)   // Every Box2dRaycastResult along the ray, nearest first
 box2d.boxCast(pos, size) / boxCastAll(pos, size) // An object, or all of them, whose shapes overlap the box
 box2d.circleCast(pos, diameter) / circleCastAll(pos, diameter) // The nearest object, or all of them, whose
@@ -1557,7 +1573,7 @@ new Box2dWeldJoint(objectA, objectB, anchor)
 new Box2dFrictionJoint(objectA, objectB, anchor)
 new Box2dPulleyJoint(objectA, objectB, groundA, groundB, anchorA, anchorB, ratio)
 new Box2dMotorJoint(objectA, objectB)
-new Box2dGearJoint(objectA, objectB, joint1, joint2, ratio=1)
+new Box2dGearJoint(objectA, objectB, joint1, joint2, ratio=1) // turns objectB of each joint, which must be dynamic
 ```
 
 ## LittleJS Medals & Newgrounds
@@ -1582,7 +1598,9 @@ medal.isLocal()                      // true while the local save holds the meda
 
 medals                               // Global { [id]: Medal } map
 medalsInit(saveName)                 // Restore unlocked state from localStorage under saveName, skipping
-                                     // NewgroundsMedals while logged in; still needed with Newgrounds, before or after
+                                     // NewgroundsMedals while logged in; call it after making the medals, since it
+                                     // drops saved medals that do not exist (called before any, each medal reads its
+                                     // own unlock as it is made); still needed with Newgrounds, before or after
 medalsForEach(callback)              // Iterate all registered medals
 medalsReset()                        // Lock all medals and persist the cleared catalog; NewgroundsMedals while logged
                                      // in are left alone
@@ -1654,7 +1672,8 @@ getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=glCircleS
 ## LittleJS Texture Sheets
 - Optional plugin: packs images into texture sheets at runtime and returns a TileInfo
 - Sheets are created and filled automatically, there is nothing to set up first
-- Frames are packed into a contiguous row so `tileInfo.frame(n)` works
+- Grid images keep their layout, frames wrap to the next row, and `tileInfo.frame(n)` follows them; a tile layer or
+  ImageFont made from one counts its tiles the same way
 - See `examples/shorts/textureSheet.js`
 
 ```javascript
@@ -1665,7 +1684,7 @@ spritesReady()                        // Promise resolved when all sprites are p
 textureSheets                         // Array of TextureSheet created by loadSprite
 new TextureSheet(size=2048)           // A texture that images are packed into
 sheet.tryAdd(imageSize, frameSize, padding, sourcePadding) // Reserve a spot, returns a TileInfo
-sheet.drawImage(image, tileInfo, update=true) // Draw an image into a reserved spot
+sheet.drawImage(image, tileInfo, update=true, sourcePadding=0) // Draw an image into a reserved spot
 sheet.updateTexture()                 // Upload batched images to WebGL
 
 // Settings

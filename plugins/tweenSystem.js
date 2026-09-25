@@ -466,6 +466,10 @@ const Ease =
  *
  *  `start` and `end` may be numbers, Vector2, Vector3 or Color instances, or
  *  any object with a `lerp(other, percent) => sameType` method.
+ *
+ *  It stops on its own once the target is destroyed, so a looping tween on an object ends with it; a tween on a
+ *  value inside the object, like `tweenProperty(obj.pos, 'x')`, or a new Tween with its own callback, has to be
+ *  stopped by the game.
  *  @template [T=any]
  *  @param {Object} target - The object whose property is being animated
  *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'` or `'color'`
@@ -493,8 +497,11 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
 
     const parts = propertyPath.split('.');
     const lastKey = parts.pop();
+    let tween;
     const callback = (value) =>
     {
+        // a destroyed object ends it, a loop or pingPong would run on it for good and keep it from being freed
+        if (target.destroyed) return void tween?.stop();
         let obj = target;
         for (const k of parts)
         {
@@ -503,7 +510,7 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
         }
         obj[lastKey] = value;
     };
-    return new Tween(callback, start, end, duration, options);
+    return tween = new Tween(callback, start, end, duration, options);
 }
 
 // Start the next iteration with the time the last one ran over already spent, so a loop keeps its
@@ -571,9 +578,9 @@ function tweenPingPongContinuation(tween)
 /** Engine plugin hook: advance every active tween by the appropriate delta.
  *  The engine calls it with no arguments on every fixed update, so it can run
  *  more than once in a rendered frame, and on paused updates too, where only
- *  real time tweens move. May also be
- *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
- *  — useful for headless tests or custom replay/scrubbing systems.
+ *  real time tweens move. May also be called with `(gameDelta, realDelta)` to drive tweens without the engine
+ *  loop, for headless tests or an engine in manual step that is not stepped; in a running game such a call adds to
+ *  the engine's own update, and a delta of 0 or less does nothing.
  *  @param {number} [gameDelta] - Game-time delta in seconds; default: game time since the tween's last engine update
  *  @param {number} [realDelta] - Real-time delta in seconds; default: real time since the tween's last engine update
  *  @memberof TweenSystem */

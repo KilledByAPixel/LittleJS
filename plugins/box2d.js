@@ -64,6 +64,17 @@ function box2dFixtureOverlaps(fixture, aabb)
     return false;
 }
 
+// the points of an edge list or loop, without one that repeats the one before, or a loop's closing repeat of the first;
+// an edge of no length gives its neighbors a ghost vertex on their own end, and bodies fall through them
+function box2dEdgePoints(points, loop)
+{
+    const slop2 = .005**2; // Box2D's linear slop, what its own chain shape asserts consecutive points are apart
+    points = points.filter((p, i)=> !i || p.distanceSquared(points[i-1]) > slop2);
+    if (loop && points.length > 1 && points[points.length-1].distanceSquared(points[0]) <= slop2)
+        points.pop();
+    return points;
+}
+
 // wake a body and whatever touches it, Box2D does not when a body is moved, and a sleeping pair never updates
 function box2dWakeWithContacts(body)
 {
@@ -459,7 +470,9 @@ class Box2dObject extends EngineObject
     addEdgeList(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
+        points = box2dEdgePoints(points);
         const fixtures = [], edgePoints = [];
+        if (points.length < 2) return fixtures;
         for (let i=0; i<points.length-1; ++i)
         {
             // the ghost vertices, where there is a neighbor, make the edges one smooth surface
@@ -490,7 +503,9 @@ class Box2dObject extends EngineObject
     addEdgeLoop(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
+        points = box2dEdgePoints(points, true);
         const fixtures = [], edgePoints = [];
+        if (points.length < 2) return fixtures;
         const getPoint = i=> points[mod(i,points.length)];
         for (let i=0; i<points.length; ++i)
         {
@@ -608,15 +623,32 @@ class Box2dObject extends EngineObject
         });
     }
     
-    /** Sets the position
+    /** Sets the position, from a contact callback the body moves once the step is done, keeping the angle it has then
      *  @param {Vector2} pos */
     setPosition(pos)
-    { this.setTransform(pos, this.angle); }
+    {
+        this.pos = pos.copy();
+        const x = pos.x, y = pos.y;
+        box2dWhenUnlocked(()=>
+        {
+            if (!this.body) return;
+            this.body.SetTransform(box2dTemp(vec2(x, y)), this.body.GetAngle());
+            box2dWakeWithContacts(this.body);
+        });
+    }
 
-    /** Sets the angle
+    /** Sets the angle, from a contact callback the body turns once the step is done, keeping the position it has then
      *  @param {number} angle */
     setAngle(angle)
-    { this.setTransform(this.pos, angle); }
+    {
+        this.angle = angle;
+        box2dWhenUnlocked(()=>
+        {
+            if (!this.body) return;
+            this.body.SetTransform(this.body.GetPosition(), -angle); // box2d uses reverse angle
+            box2dWakeWithContacts(this.body);
+        });
+    }
 
     /** Sets the linear velocity
      *  @param {Vector2} velocity */
@@ -738,7 +770,10 @@ class Box2dObject extends EngineObject
     /** Set if this body is a sensor
      *  @param {boolean} [isSensor] */
     setSensor(isSensor=true)
-    { this.getFixtureList().forEach(f=>f.SetSensor(isSensor)); }
+    {
+        this.getFixtureList().forEach(f=>f.SetSensor(isSensor));
+        box2dWakeWithContacts(this.body); // what rests on it or sits in it moves again, a sleeping pair never updates
+    }
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics force and torque functions
@@ -829,7 +864,7 @@ class Box2dObject extends EngineObject
 
     /** Check if this object has any joints
      *  @return {boolean} */
-    hasJoints() { return !box2d.isNull(this.body.GetJointList()); }
+    hasJoints() { return this.getJointList().length > 0; } // not the ones destroyed and waiting for the step to end
     
     /** Get list of joints for this object, the Box2dJoint for each one made through LittleJS,
      *  and the Box2D joint, cast to its type, for any made on the world directly
@@ -1393,6 +1428,7 @@ class Box2dPinJoint extends Box2dRevoluteJoint
  * - You specify a gear ratio to bind the motions together
  * - joint1's angle or translation plus ratio times joint2's stays constant, angles clockwise like angle
  * - It is destroyed along with either joint, or an object either joint is on
+ * - It turns objectB of each joint, so make each with its fixed or carrying object first, and a dynamic objectB
  * @extends Box2dJoint
  * @memberof Box2D
  */
@@ -1410,6 +1446,10 @@ class Box2dGearJoint extends Box2dJoint
         // needs the ratio reversed too, two of a kind keep it
         const isGearable = (j)=> (j instanceof Box2dRevoluteJoint || j instanceof Box2dPrismaticJoint) && !!j.box2dJoint;
         ASSERT(isGearable(joint1) && isGearable(joint2), 'a gear joint needs two revolute or prismatic joints that exist');
+        // Box2D turns objectB of each joint, with objectA as its carrier, so a static objectB leaves the gear doing nothing
+        ASSERT(joint1.getObjectB()?.getBodyType() === box2d.bodyTypeDynamic &&
+            joint2.getObjectB()?.getBodyType() === box2d.bodyTypeDynamic,
+            'a gear joint turns objectB of each joint, make each joint with its fixed or carrying object first');
         const ratioSign = (joint1 instanceof Box2dRevoluteJoint) === (joint2 instanceof Box2dRevoluteJoint) ? 1 : -1;
         const jointDef = new box2d.instance.b2GearJointDef();
         jointDef.set_bodyA(objectA.body);

@@ -1192,7 +1192,10 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
 async function loadTexture(textureIndex, src)
 {
     ASSERT(isNumber(textureIndex), 'textureIndex must be a number');
-    ASSERT(!textureInfos[textureIndex], 'textureIndex is already loaded!');
+    // engineInit's empty placeholder in slot 0, when it was given no images, or a load that failed can be replaced
+    const old = textureInfos[textureIndex];
+    ASSERT(!old?.size.x, 'textureIndex is already loaded!');
+    old?.destroyWebGLTexture();
     ASSERT(!src || isStringLike(src), 'image src must be a string');
     
     const image = new Image;
@@ -1635,7 +1638,7 @@ class ImageFont
         ASSERT(!!tileInfo, 'tileInfo is required for ImageFont');
         
         /** @property {TileInfo} - Tile info for the font */
-        this.tileInfo = tileInfo.frame(0);
+        this.tileInfo = tileInfo; // kept, not copied, so a loadSprite tile filled in once it loads is seen
     }
 
     /** Draw text in world space using the image font

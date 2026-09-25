@@ -187,8 +187,8 @@ class EngineObject
         }
 
         // physics sanity checks
-        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
-        ASSERT(this.damping >= 0 && this.damping <= 1);
+        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1, 'angleDamping must be 0 to 1, the fraction kept each frame');
+        ASSERT(this.damping >= 0 && this.damping <= 1, 'damping must be 0 to 1, the fraction of velocity kept each frame');
 
         // apply physics; only the solver needs where the object was, so only then is it copied
         const solve = enablePhysicsSolver && this.mass;
@@ -299,7 +299,8 @@ class EngineObject
 
                 // check for collision
                 const sizeBoth = this.size.add(o.size);
-                const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity.y; // prefer to push up if small delta
+                // prefer to push up if small delta, up away from this object's own gravity
+                const smallStepUp = (gravityY > 0 ? o.pos.y - oldPos.y : oldPos.y - o.pos.y)*2 > sizeBoth.y - abs(gravityY);
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
                 const restitution = max(this.restitution, o.restitution);
@@ -353,8 +354,8 @@ class EngineObject
                         this.velocity.x = lerp(inelastic, elastic0, restitution);
                         o.velocity.x = lerp(inelastic, elastic1, restitution);
                     }
-                    else // bounce if other object is fixed
-                        this.velocity.x *= -restitution;
+                    else // bounce if other object is fixed, relative to it as a landing is
+                        this.velocity.x = o.velocity.x - (this.velocity.x - o.velocity.x) * restitution;
                 }
                 debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
             }
@@ -405,9 +406,12 @@ class EngineObject
                             // this prevents gap between object and ground
                             const epsilon = .0001;
                             const offset = this.size.y/2 + epsilon;
-                            this.pos.y = gravityY < 0 ?
-                                floor(oldPos.y-this.size.y/2) + offset :
-                                ceil( oldPos.y+this.size.y/2) - offset;
+                            // rounded in the layer's space as its collision test is, or a bottom a hair below a
+                            // grid line would round to the row under it, inside the floor, and fall through
+                            const layerY = hitLayer.pos.y;
+                            this.pos.y = layerY + (gravityY < 0 ?
+                                floor(oldPos.y - layerY - this.size.y/2) + offset :
+                                ceil( oldPos.y - layerY + this.size.y/2) - offset);
 
                             // set ground object for tile collision
                             this.groundObject = hitLayer;
@@ -475,8 +479,10 @@ class EngineObject
     /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
      *  - Called for each solid tile the physics tests, which can be several times a frame for the same tile, and for
      *    positions it only tries, so keep it free of side effects or guard them to once a frame
+     *  - this.pos has already moved, so a check on where it came from, like a one way platform, needs the position
+     *    saved in update, as the platformer example does
      *  @param {number}  tileData - the value of the tile at the position
-     *  @param {Vector2} pos - tile where the collision occurred
+     *  @param {Vector2} pos - the tile's bottom left corner in world space
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
     collideWithTile(tileData, pos) { return tileData > 0; }
 
@@ -536,7 +542,7 @@ class EngineObject
     {
         ASSERT(!this.destroyed, 'cannot add child to destroyed object');
         if (this.destroyed) return child;
-        ASSERT(!child.parent && !this.children.includes(child));
+        ASSERT(!child.parent && !this.children.includes(child), 'child already has a parent, removeChild it first or use attach');
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         ASSERT(!child.destroyed, 'cannot add a destroyed child');
         for (let p = /** @type {EngineObject} */ (this); p; p = p.parent)

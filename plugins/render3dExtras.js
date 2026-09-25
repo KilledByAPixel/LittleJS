@@ -1176,7 +1176,7 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
         {
             case 'v':  positions.push(vec3(+parts[1], +parts[2], +parts[3])); break;
             case 'vn': normals.push(vec3(+parts[1], +parts[2], +parts[3])); break;
-            case 'vt': uvs.push(vec2(+parts[1], 1 - +parts[2])); break; // OBJ v runs up, tiles run down
+            case 'vt': uvs.push(vec2(+parts[1], 1 - (+parts[2] || 0))); break; // v runs up and is 0 left out
             case 'f':
             {
                 const corners = parts.slice(1).map(c=> c.split('/'));

@@ -178,7 +178,13 @@ class LightSystemPlugin
         {
             if (headlessMode || !glEnable) return;
             if (!lightSystem.enabled) return;
-            if (!lightSystem.texture) return;     // init failed or context lost
+            if (!lightSystem.texture)
+            {
+                // made now if WebGL was off when the plugin was made, or when a lost context came back
+                if (glContext.isContextLost()) return;
+                initLightSystem();
+                if (!lightSystem.texture) return;
+            }
 
             // 1. flush any in-flight sprite batch from earlier render passes
             glFlush();

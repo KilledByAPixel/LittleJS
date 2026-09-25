@@ -254,7 +254,7 @@ export class MotorJointObject extends LJS.Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // soft body sim using grid of weld joints
-export class SoftBodyObject extends LJS.Box2dObject
+export class SoftBodyObject extends LJS.Box2dStaticObject // holds the nodes, it does not fall
 {
     constructor(pos, scale, sizeCount, color)
     {
@@ -358,7 +358,7 @@ export class ClothObject extends LJS.Box2dStaticObject
         {
             // alternate direction each row for stability
             const d = y%2 ? 1 : -1;
-            const x2 = d>1 ? x : sizeCount.x-1-x;
+            const x2 = d>0 ? x : sizeCount.x-1-x;
             const o = this.getNode(x2, y);
             const tryAddJoint = (xo, yo)=>
             {

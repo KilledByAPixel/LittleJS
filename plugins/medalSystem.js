@@ -47,6 +47,7 @@ const medals = {};
 
 // Engine internal variables not exposed to documentation
 let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast, medalsRenderAdded;
+let medalsLoadWaiting = false; // medalsInit came before any medal, each one made reads its own unlock
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -70,7 +71,9 @@ function medalsInit(saveName)
 // check which local medals are unlocked in the save, and write the catalog back
 function medalsLoad()
 {
-    if (debugMedals || !medalsSaveName) return;
+    // with no medals made yet, the save is left as it is for them, a game that calls medalsInit first keeps its unlocks
+    medalsLoadWaiting = !Object.keys(medals).length;
+    if (debugMedals || !medalsSaveName || medalsLoadWaiting) return;
     const saved = readSaveData(medalsSaveName);
     medalsForEach(medal=> {
         if (medal.isLocal())
@@ -201,8 +204,10 @@ class Medal
         if (src)
             (this.image = new Image).src = src;
 
-        // add this to list of medals
+        // add this to list of medals, unlocked if the save says so when medalsInit came before any medal
         medals[id] = this;
+        if (medalsLoadWaiting && !debugMedals && this.isLocal())
+            this.unlocked = !!readSaveData(medalsSaveName)[id]?.unlocked;
     }
 
     /** Unlocks a medal if not already unlocked

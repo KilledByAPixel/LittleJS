@@ -1703,7 +1703,7 @@ test('an orthographic camera projects parallel rays', () =>
     near(render3D.worldToClip(vec3(20, 0, -50)).x, 1);
     const ray = render3D.screenToRay(vec2(0, 0), vec2(200, 100)); // top left of a 2:1 canvas
     nearVec(ray.direction, 0, 0, -1);
-    nearVec(ray.origin, -20, 10, 10);
+    nearVec(ray.origin, -20, 10, 10 - c.near); // on the near plane
     c.orthographic = 0;
     render3D.updateMatrices(1);
 });

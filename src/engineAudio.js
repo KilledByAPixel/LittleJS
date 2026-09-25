@@ -936,7 +936,7 @@ function zzfxG
         f,             // wave frequency
 
         // biquad LP/HP filter
-        quality = 2, w = PI2 * abs(filter) * 2 / sampleRate,
+        quality = 2, w = PI2 * min(abs(filter), sampleRate/4 - 1) * 2 / sampleRate, // stable below a quarter rate
         cosw = cos(w), alpha = sin(w) / 2 / quality,
         a0 = 1 + alpha, a1 = -2*cosw / a0, a2 = (1 - alpha) / a0,
         b0 = (1 + sign(filter) * cosw) / 2 / a0,
@@ -986,7 +986,7 @@ function zzfxG
 
             s = delay ? s/2 + (delay > i ? 0 :           // delay
                 (i<length-delay? 1 : (length-i)/delay) * // release delay
-                b[i-delay|0]/2/volume) : s;              // sample delay
+                b[i-delay|0]/2/(volume||1)) : s;         // sample delay, stored samples are 0 at volume 0
 
             if (filter)                                  // apply filter
                 s = y1 = b2*x2 + b1*(x2=x1) + b0*(x1=s) - a2*y2 - a1*(y2=y1);

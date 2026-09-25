@@ -3295,8 +3295,10 @@ declare module "littlejsengine" {
         /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
          *  - Called for each solid tile the physics tests, which can be several times a frame for the same tile, and for
          *    positions it only tries, so keep it free of side effects or guard them to once a frame
+         *  - this.pos has already moved, so a check on where it came from, like a one way platform, needs the position
+         *    saved in update, as the platformer example does
          *  @param {number}  tileData - the value of the tile at the position
-         *  @param {Vector2} pos - tile where the collision occurred
+         *  @param {Vector2} pos - the tile's bottom left corner in world space
          *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
         collideWithTile(tileData: number, pos: Vector2): boolean;
         /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
@@ -3419,7 +3421,8 @@ declare module "littlejsengine" {
     export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, callbackObject?: EngineObject | TileCollisionCallback, normal?: Vector2, solidOnly?: boolean): Vector2 | undefined;
     /**
      * Load tile layers from exported data
-     * - Tiled maps come in as they are, flipped and turned tiles included
+     * - Tiled maps come in as they are, flipped and turned tiles included, from one tileset image (a second tileset's
+     *   tiles continue its numbering), finite maps in the CSV or array layer format; layer offsets and parallax are not read
      * - Group layers are flattened in order, each replaced by the layers inside it, so the layer indices
      *   (collisionLayer and the returned array) count that flattened list; a group's tint, opacity and
      *   visibility carry to the layers inside it
@@ -5019,8 +5022,8 @@ declare module "littlejsengine" {
         /** @private */
         private _soundEnabled;
         /** Play or resume the video
-         *  @return {Promise} Promise that resolves when playback starts */
-        play(): Promise<any>;
+         *  @return {Promise<boolean>} Resolves true once playback starts, false if the browser refused it */
+        play(): Promise<boolean>;
         /** Pause the video */
         pause(): void;
         /** Stop and reset the video */
@@ -5377,10 +5380,10 @@ declare module "littlejsengine" {
          *  @param {Vector2} pos
          *  @param {number} angle */
         setTransform(pos: Vector2, angle: number): void;
-        /** Sets the position
+        /** Sets the position, from a contact callback the body moves once the step is done, keeping the angle it has then
          *  @param {Vector2} pos */
         setPosition(pos: Vector2): void;
-        /** Sets the angle
+        /** Sets the angle, from a contact callback the body turns once the step is done, keeping the position it has then
          *  @param {number} angle */
         setAngle(angle: number): void;
         /** Sets the linear velocity
@@ -5781,6 +5784,7 @@ declare module "littlejsengine" {
      * - You specify a gear ratio to bind the motions together
      * - joint1's angle or translation plus ratio times joint2's stays constant, angles clockwise like angle
      * - It is destroyed along with either joint, or an object either joint is on
+     * - It turns objectB of each joint, so make each with its fixed or carrying object first, and a dynamic objectB
      * @extends Box2dJoint
      * @memberof Box2D
      */
@@ -6361,6 +6365,10 @@ declare module "littlejsengine" {
      *
      *  `start` and `end` may be numbers, Vector2, Vector3 or Color instances, or
      *  any object with a `lerp(other, percent) => sameType` method.
+     *
+     *  It stops on its own once the target is destroyed, so a looping tween on an object ends with it; a tween on a
+     *  value inside the object, like `tweenProperty(obj.pos, 'x')`, or a new Tween with its own callback, has to be
+     *  stopped by the game.
      *  @template [T=any]
      *  @param {Object} target - The object whose property is being animated
      *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'` or `'color'`
@@ -6393,9 +6401,9 @@ declare module "littlejsengine" {
     /** Engine plugin hook: advance every active tween by the appropriate delta.
      *  The engine calls it with no arguments on every fixed update, so it can run
      *  more than once in a rendered frame, and on paused updates too, where only
-     *  real time tweens move. May also be
-     *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
-     *  — useful for headless tests or custom replay/scrubbing systems.
+     *  real time tweens move. May also be called with `(gameDelta, realDelta)` to drive tweens without the engine
+     *  loop, for headless tests or an engine in manual step that is not stepped; in a running game such a call adds to
+     *  the engine's own update, and a delta of 0 or less does nothing.
      *  @param {number} [gameDelta] - Game-time delta in seconds; default: game time since the tween's last engine update
      *  @param {number} [realDelta] - Real-time delta in seconds; default: real time since the tween's last engine update
      *  @memberof TweenSystem */
@@ -7274,7 +7282,7 @@ declare module "littlejsengine" {
          *  - It brings the view matrices up to date for that canvas, so worldToScreen stays its exact opposite
          *  @param {Vector2} screenPos - Same space as mousePosScreen
          *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
-         *  @return {Ray3D} - Starts at the camera with a unit direction, or on the camera plane when orthographic */
+         *  @return {Ray3D} - Starts at the camera with a unit direction, or on the near plane when orthographic */
         screenToRay(screenPos: Vector2, canvasSize?: Vector2): Ray3D;
         /** Where a screen position lands on a flat ground plane, for top down games; use HeightMap.raycast for terrain
          *  @param {Vector2} screenPos - Same space as mousePosScreen
@@ -7561,8 +7569,6 @@ declare module "littlejsengine" {
         /** @property {Mesh|undefined} - Mesh to draw
          *  @type {Mesh|undefined} */
         mesh: Mesh | undefined;
-        /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo
-         *  and no mesh; scale3D and any parent's scale grow it, so drawing and picking agree */
         size3D: Vector3;
         /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none;
          *  scale3D and a parent's scale grow it, so set it once for the unscaled object */

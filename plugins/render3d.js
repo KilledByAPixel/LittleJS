@@ -155,8 +155,11 @@ function render3DMatrix(matrix)
 function render3DNormalMatrix(matrix) { return matrix.copy().invert().transpose(); }
 
 // whether a matrix mirrors, its determinant negative, so what it moves reads the other way round
-function render3DMirrors(m)
-{ return m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]) < 0; }
+function render3DMirrors(m) { return render3DDeterminant(m) < 0; }
+
+// the determinant of a matrix's 3x3 part, 0 when it flattens a shape and has no inverse
+function render3DDeterminant(m)
+{ return m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]); }
 
 // a column of a matrix as a direction: 0 is the right axis, 4 up, 8 back
 function render3DAxis(m, i) { return vec3(m[i], m[i+1], m[i+2]); }
@@ -643,7 +646,7 @@ class Render3DPlugin
      *  - It brings the view matrices up to date for that canvas, so worldToScreen stays its exact opposite
      *  @param {Vector2} screenPos - Same space as mousePosScreen
      *  @param {Vector2} [canvasSize] - Defaults to the main canvas size
-     *  @return {Ray3D} - Starts at the camera with a unit direction, or on the camera plane when orthographic */
+     *  @return {Ray3D} - Starts at the camera with a unit direction, or on the near plane when orthographic */
     screenToRay(screenPos, canvasSize=mainCanvasSize)
     {
         const width = canvasSize.x || 1, height = canvasSize.y || 1; // a canvas with no size stands in as 1x1, rather than dividing by zero
@@ -655,8 +658,9 @@ class Render3DPlugin
         // the screen offset moves a parallel ray's origin, or bends a perspective ray's direction
         const h = camera.orthographic ? camera.orthographic / 2 : tan(camera.fov / 2);
         const offset = this.cameraRight.scale(clipX * h * aspect).add(this.cameraUp.scale(clipY * h));
+        // a parallel ray starts on the near plane, which an orthographic camera may put behind it, like three.js
         return camera.orthographic
-            ? new Ray3D(camera.pos.add(offset), this.cameraForward.copy())
+            ? new Ray3D(camera.pos.add(offset).add(this.cameraForward.scale(camera.near)), this.cameraForward.copy())
             : new Ray3D(camera.pos.copy(), this.cameraForward.add(offset).normalize());
     }
 
@@ -1408,7 +1412,8 @@ class Camera3D
     {
         const r = cos(pitch) * distance;
         this.pos = target.add(vec3(sin(yaw) * r, sin(pitch) * distance, cos(yaw) * r));
-        this.lookAt(target);
+        // straight down has no yaw of its own to look along, so the orbit's yaw is used, and a top down view turns
+        this.rotation = render3DLookRotation(target.subtract(this.pos), vec3(0, yaw, 0));
     }
 
     /** Chase a target from an offset, easing toward it, and look at it
@@ -3114,9 +3119,11 @@ class EngineObject3D extends EngineObject
         /** @property {Mesh|undefined} - Mesh to draw
          *  @type {Mesh|undefined} */
         this.mesh = mesh;
-        /** @property {Vector3} - Size for the collect and callback helpers, and of the sprite when there is a tileInfo
-         *  and no mesh; scale3D and any parent's scale grow it, so drawing and picking agree */
-        this.size3D = vec3(1);
+        /** @property {Vector3} - Size for solid collision and the collect and callback helpers, and of the sprite when
+         *  there is a tileInfo and no mesh; starts at the size of the mesh's box, or 1 with no mesh, and setMesh leaves
+         *  it as it is; scale3D and any parent's scale grow it, so drawing and picking agree */
+        const bounds = mesh && mesh.points.length ? mesh.getBounds() : undefined;
+        this.size3D = bounds ? bounds.max.subtract(bounds.min) : vec3(1);
         /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none;
          *  scale3D and a parent's scale grow it, so set it once for the unscaled object */
         this.softShadow = 0;
@@ -3542,10 +3549,24 @@ function render3DRaycastObject(ray, o)
     if (distance === undefined || !mesh) return distance;
 
     // the sphere is a quick reject, a mesh is hit where the ray meets its box in its own space, since a wide floor's
-    // sphere reaches far above it; the direction is not made unit length, so the distance holds in the world
+    // sphere reaches far above it; the direction is not made unit length, so the distance holds in the world;
+    // a mesh flattened to nothing on an axis has no inverse, its sphere is all there is to hit
+    if (!render3DDeterminant(matrix.m)) return distance;
     const inverse = matrix.copy().invert(), bounds = mesh.bounds || mesh.getBounds();
     const local = new Ray3D(inverse.transformPoint(ray.origin), inverse.transformDirection(ray.direction));
-    return raycastBox(local, bounds.min.add(bounds.max).scale(.5), bounds.max.subtract(bounds.min));
+    const hit = raycastBox(local, bounds.min.add(bounds.max).scale(.5), bounds.max.subtract(bounds.min));
+    if (hit !== 0) return hit;
+
+    // it starts inside the box, like a camera on terrain or in a room, so it is hit where it leaves, and what stands
+    // inside comes first
+    let exit = Infinity;
+    for (const k of ['x', 'y', 'z'])
+    {
+        const d = local.direction[k];
+        if (d)
+            exit = min(exit, ((d > 0 ? bounds.max[k] : bounds.min[k]) - local.origin[k]) / d);
+    }
+    return exit;
 }
 
 /**

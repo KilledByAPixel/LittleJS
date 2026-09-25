@@ -1,7 +1,7 @@
 /*
     LittleJS Box2D Example - Scenes
     - Each scene demonstrates a feature of Box2D
-    - Feel free to use tis code in your own projects
+    - Feel free to use this code in your own projects
     - 0  = Shapes: box, circle, poly, and edge
     - 1  = Pyramid stack
     - 2  = Dominoes chain reaction
@@ -13,6 +13,7 @@
     - 8  = Mobile object with multiple bodies
     - 9  = Cloth object grid using rope joints
     - 10 = Softbody object grid using weld joints
+    - 11 = Ragdolls
 */
 
 'use strict';
