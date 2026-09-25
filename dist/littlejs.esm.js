@@ -12828,16 +12828,23 @@ class LightSystemPlugin
             glSetRenderTarget(ls.shadowMap, true);
             glColorMask = 0xff000000; // every color black, its alpha kept
             ls.shadowPass = true;
-            for (const o of engineObjects)
+            try
             {
-                if (o.destroyed || !o.castShadow) continue;
-                setShader(o.shader); // its own Shader as in the main pass, so a snippet that cuts holes casts the same shape
-                o.renderShadow();
+                for (const o of engineObjects)
+                {
+                    if (o.destroyed || !o.castShadow) continue;
+                    setShader(o.shader); // its own Shader as in the main pass, so a snippet that cuts holes casts the same shape
+                    o.renderShadow();
+                }
             }
-            ls.shadowPass = false;
-            glColorMask = -1;
-            glSetRenderTarget();
-            [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = saved;
+            finally
+            {
+                // hand everything back even when a render threw, or every frame after it draws black with no text
+                ls.shadowPass = false;
+                glColorMask = -1;
+                glSetRenderTarget();
+                [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = saved;
+            }
         }
         function lightSystemRender()
         {
