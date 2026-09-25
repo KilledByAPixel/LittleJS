@@ -852,6 +852,8 @@ UILayout.relayout()                    // Call manually if you mutate a child's 
 - Lights accumulate ADDITIVELY in the lightmap (red + blue = magenta)
 - The lightmap is MULTIPLIED with the scene during composite — draw your world at full brightness and the lightmap handles the darkening
 - Any EngineObject can override `renderLight()` to additively contribute to the lightmap (lava tiles, weapon flashes, glowing crystals, etc.)
+- Shadows: set `lightSystem.shadows` and every object draws black into a shadow map that blocks the lights; a floor `TileLayer` needs `castShadow = false` or it blacks out the map
+- See `examples/shorts/lightShadows.js` for shadows, glass and a figure with a foot blob
 - Must be constructed BEFORE `PostProcessPlugin` so post-process sees lit pixels
 - See `examples/shorts/lightSystem.js` for a demo
 
@@ -864,6 +866,22 @@ new LightSystemPlugin(undefined, rgb(.1,.1,.15)) // Faint moonlight ambient
 // Tunables
 lightSystem.enabled       = true              // Skip the render pass entirely when false
 lightSystem.ambientColor  = rgb(0, 0, 0)      // Color of unlit areas
+
+// Shadows: once a frame every object draws black into a shadow map, and each light's rays stop at them
+lightSystem.shadows          = false  // on for shadows; off costs nothing
+lightSystem.shadowMapSize    = 1024   // pixels across the shadow map, a square of world around the camera
+lightSystem.shadowMapScale   = 2      // how many views the map spans, so casters just off screen still cast in;
+                                      // raise it for a camera that turns
+lightSystem.shadowTextureSize = 256   // pixels across each light's own shadow texture
+lightSystem.shadowPassCount  = 11     // stretch passes per light, fewer is cheaper and shorter shadows
+lightSystem.shadowSoftness   = .5     // light bled into a caster's near side, 0 hard, 1 most
+lightSystem.shadowPass                // read only: true inside the shadow pass, so a render() can skip its text or glow
+lightSystem.setShadowTransparent(on)  // in the shadow pass the draws that follow keep their color, tinting the light
+                                      // through them; nothing outside it, so call it around the draws and set it back
+light.castShadow = true               // this light's rays stop at casters
+obj.castShadow = true                 // draws into the shadow map; false for a floor TileLayer, a background, a pickup
+obj.renderShadow()                    // draws the shadow shape, render() by default; a figure draws a blob at its feet
+                                      // to stay lit; additive draws add black so glows cast nothing; WebGL draws only
 
 // Lights are EngineObjects — auto-register, destroy() to remove
 new Light(pos, radius, color=WHITE, fadeRange=radius)
