@@ -33,3 +33,30 @@ test('screen space WebGL draws are skipped while glSkipScreenSpace is set, world
     assert.equal(counts[1], 0, 'none while the flag is set');
     assert.equal(counts[2], counts[0], 'world space draws still go through');
 });
+
+test('world space draws that pass through screen space still draw while glSkipScreenSpace is set', () =>
+{
+    // an ImageFont's world text and a TileLayer's own draws both hand drawTile screenSpace = true internally
+    const OffscreenCanvas = class { constructor(width, height) { this.width = width; this.height = height; }
+        getContext() { return { canvas: this }; } };
+    const { run } = loadEngine({ OffscreenCanvas });
+    const counts = run(`
+        glEnable = true; glContext = new Proxy({}, { get: ()=> ()=> {} });
+        let draws = 0;
+        glDraw = glDrawUntextured = ()=> ++draws;
+        glSetTexture = glSetRenderTarget = ()=> {};
+        const texture = { glTexture: {}, size: vec2(128), sizeInverse: vec2(1/128) };
+        const font = new ImageFont(new TileInfo(vec2(), vec2(8), texture));
+        const layer = new TileLayer(vec2(), vec2(4));
+        layer.hasWebGL = ()=> true;
+        layer.textureInfo = texture;
+        glSkipScreenSpace = true;
+        const result = [];
+        font.drawText('ab', vec2(1), 1); result.push(draws); draws = 0;
+        layer.drawRect(vec2(1), vec2(1), WHITE); result.push(draws); draws = 0;
+        glSkipScreenSpace = false;
+        result;
+    `);
+    assert.equal(counts[0], 2, 'the world text casts, one draw per glyph');
+    assert.equal(counts[1], 1, 'the tile layer draws into its own texture');
+});

@@ -1684,7 +1684,11 @@ class ImageFont
         }
         else
             size = size.scale(cameraScale);
+        // world text, only drawn through screen space, so it still casts in a pass that skips screen space draws
+        const skip = glSkipScreenSpace;
+        glSkipScreenSpace = false;
         this.drawTextScreen(text, worldToScreen(pos), size, center, color, useWebGL, context);
+        glSkipScreenSpace = skip;
     }
 
     /** Draw text in screen space using the image font

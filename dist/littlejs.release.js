@@ -5450,7 +5450,11 @@ class ImageFont
         }
         else
             size = size.scale(cameraScale);
+        // world text, only drawn through screen space, so it still casts in a pass that skips screen space draws
+        const skip = glSkipScreenSpace;
+        glSkipScreenSpace = false;
         this.drawTextScreen(text, worldToScreen(pos), size, center, color, useWebGL, context);
+        glSkipScreenSpace = skip;
     }
 
     /** Draw text in screen space using the image font
@@ -8616,8 +8620,10 @@ class TileLayer extends CanvasLayer
         // draw the tile onto the layer canvas
         // in color and handing back a target that was drawing before, like the light system's shadow map
         const oldMainCanvasSize = mainCanvasSize, oldTarget = glRenderTarget, oldColorMask = glColorMask;
+        const oldSkip = glSkipScreenSpace;
         mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
         glColorMask = -1;
+        glSkipScreenSpace = false; // its screen space is the layer's own canvas
         const useWebGL = this.hasWebGL();
         useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
         const drawContext = useWebGL ? undefined : this.context;
@@ -8625,6 +8631,7 @@ class TileLayer extends CanvasLayer
         mainCanvasSize = oldMainCanvasSize;
         useWebGL && glSetRenderTarget(oldTarget);
         glColorMask = oldColorMask;
+        glSkipScreenSpace = oldSkip;
     }
 
     /** Draw a rectangle onto the layer canvas in world space
