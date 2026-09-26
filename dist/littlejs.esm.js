@@ -9421,8 +9421,9 @@ class TileLayer extends CanvasLayer
         setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
         // a redraw from inside another target's pass, like the light system's shadow map, draws the tiles in color
         // and hands that target back after
-        this.savedRenderTarget = [glRenderTarget, glColorMask, glSkipScreenSpace];
+        this.savedRenderTarget = [glRenderTarget, glColorMask, glColorAdditive, glSkipScreenSpace];
         glColorMask = -1;
+        glColorAdditive = 0;
         glSkipScreenSpace = false; // screen space is the layer's own pixels here
 
         // set the draw canvas and context to this layer
@@ -9460,10 +9461,11 @@ class TileLayer extends CanvasLayer
 
         // set stuff back to normal, the camera first, so a target that was drawing before gets its own transform back
         [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
-        const [target, colorMask, skipScreenSpace] = this.savedRenderTarget;
+        const [target, colorMask, colorAdditive, skipScreenSpace] = this.savedRenderTarget;
         if (this.isUsingWebGL)
             glSetRenderTarget(target);
         glColorMask = colorMask;
+        glColorAdditive = colorAdditive;
         glSkipScreenSpace = skipScreenSpace;
     }
 
@@ -9551,9 +9553,10 @@ class TileLayer extends CanvasLayer
         // draw the tile onto the layer canvas
         // in color and handing back a target that was drawing before, like the light system's shadow map
         const oldMainCanvasSize = mainCanvasSize, oldTarget = glRenderTarget, oldColorMask = glColorMask;
-        const oldSkip = glSkipScreenSpace;
+        const oldSkip = glSkipScreenSpace, oldColorAdditive = glColorAdditive;
         mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
         glColorMask = -1;
+        glColorAdditive = 0;
         glSkipScreenSpace = false; // its screen space is the layer's own canvas
         const useWebGL = this.hasWebGL();
         useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
@@ -9562,6 +9565,7 @@ class TileLayer extends CanvasLayer
         mainCanvasSize = oldMainCanvasSize;
         useWebGL && glSetRenderTarget(oldTarget);
         glColorMask = oldColorMask;
+        glColorAdditive = oldColorAdditive;
         glSkipScreenSpace = oldSkip;
     }
 
@@ -13128,7 +13132,11 @@ class LightSystemPlugin
             try
             {
                 for (const o of engineObjects)
-                    o.destroyed || o.renderLight();
+                {
+                    if (o.destroyed) continue;
+                    glAdditive || setAdditiveBlendMode(); // added again, an emitter ends its render with it off
+                    o.renderLight();
+                }
 
                 // 3b. emissive objects draw their shape in grey at their emissive level, white at 1, adding that much
                 //     light where they are so they show their own colors; text goes to the 1x1 canvas as in the
@@ -13144,6 +13152,7 @@ class LightSystemPlugin
                         const level = clamp(o.emissive)*255+.5|0; // packed like rgbaInt, red in the low byte
                         glColorMask = 0xff000000; // its own alpha, and the grey from the additive color
                         glColorAdditive = level | level<<8 | level<<16;
+                        glAdditive || setAdditiveBlendMode(); // added, an emitter ends its render with it off
                         setShader(o.shader);
                         o.renderEmissive();
                     }
@@ -18468,6 +18477,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
             [startTile.offset(step.multiply(vec2(col, row))), 0], color, additiveColor, useWebGL, context);
         return;
     }
+    borderSize = min(borderSize, abs(size.x)/2, abs(size.y)/2); // a box too small for two borders splits between them
     const centerTile = startTile.offset(step);
     const centerSize = size.add(vec2(extraSpace-borderSize*2));
     const cornerSize = vec2(borderSize);
@@ -18551,6 +18561,7 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
         }, color, additiveColor, useWebGL, context);
         return;
     }
+    borderSize = min(borderSize, abs(size.x)/2, abs(size.y)/2); // a box too small for two borders splits between them
     const centerSize = size.add(vec2(extraSpace-borderSize*2));
     const cornerSize = vec2(borderSize);
     const cornerOffset = size.scale(.5).subtract(cornerSize.scale(.5));

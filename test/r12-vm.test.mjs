@@ -281,3 +281,25 @@ test('engineStep runs one update a frame after manual step is turned on in a run
     `);
     assert.deepEqual([...counts], [2, 2, 2]);
 });
+
+test('a tile layer redraw or stamp inside the emissive pass draws its own texture in its own colors', () =>
+{
+    // the emissive pass forces a grey onto every draw, which must not go into a layer's texture
+    const OffscreenCanvas = class { constructor(width, height) { this.width = width; this.height = height; }
+        getContext() { return { canvas: this, imageSmoothingEnabled: true }; } };
+    const { run } = loadEngine({ OffscreenCanvas });
+    const seen = run(`
+        const layer = new TileLayer(vec2(), vec2(2));
+        const seen = [];
+        layer.onRedraw = ()=> seen.push('in redraw ' + glColorAdditive);
+        glColorMask = 0xff000000; glColorAdditive = 0x00ffffff;
+        layer.redraw();
+        seen.push('after redraw ' + glColorAdditive);
+        drawTile = ()=> seen.push('in stamp ' + glColorAdditive);
+        layer.drawTile(vec2(), vec2(1), new TileInfo(vec2(), vec2(8)));
+        seen.push('after stamp ' + glColorAdditive);
+        glColorMask = -1; glColorAdditive = 0;
+        seen;
+    `);
+    assert.deepEqual([...seen], ['in redraw 0', 'after redraw 16777215', 'in stamp 0', 'after stamp 16777215']);
+});

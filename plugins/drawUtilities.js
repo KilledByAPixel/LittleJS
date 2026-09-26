@@ -60,6 +60,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
             [startTile.offset(step.multiply(vec2(col, row))), 0], color, additiveColor, useWebGL, context);
         return;
     }
+    borderSize = min(borderSize, abs(size.x)/2, abs(size.y)/2); // a box too small for two borders splits between them
     const centerTile = startTile.offset(step);
     const centerSize = size.add(vec2(extraSpace-borderSize*2));
     const cornerSize = vec2(borderSize);
@@ -143,6 +144,7 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
         }, color, additiveColor, useWebGL, context);
         return;
     }
+    borderSize = min(borderSize, abs(size.x)/2, abs(size.y)/2); // a box too small for two borders splits between them
     const centerSize = size.add(vec2(extraSpace-borderSize*2));
     const cornerSize = vec2(borderSize);
     const cornerOffset = size.scale(.5).subtract(cornerSize.scale(.5));

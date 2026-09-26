@@ -113,3 +113,35 @@ test('screen space nine and three slices put every piece on whole pixels, meetin
     `);
     assert.deepEqual(JSON.parse(JSON.stringify(result)), [[true, true, 9], [true, true, 9]]);
 });
+
+test('a slice smaller than its borders draws inside its box, and an empty one draws nothing', () =>
+{
+    const { run } = loadEngine();
+    const result = run(`
+        let rects = [];
+        drawTile = (pos, size, tileInfo, color, angle, mirror, additive, useWebGL, screenSpace)=>
+        {
+            const turned = Math.round(angle / (PI/2)) % 2, shift = screenSpace && !useWebGL ? .5 : 0;
+            const w = turned ? size.y : size.x, h = turned ? size.x : size.y;
+            rects.push([pos.x + shift - w/2, pos.y + shift - h/2, w, h]);
+        };
+        const t = new TileInfo(vec2(), vec2(16));
+        const inside = (x0, y0, x1, y1)=> rects.every(r=> r[2] >= 0 && r[3] >= 0 && r[0] >= x0 - 1e-9 &&
+            r[1] >= y0 - 1e-9 && r[0] + r[2] <= x1 + 1e-9 && r[1] + r[3] <= y1 + 1e-9);
+        const out = [];
+        for (const draw of [drawNineSliceScreen, drawThreeSliceScreen])
+        {
+            rects = []; draw(vec2(100, 50), vec2(0, 40), t, WHITE, 16, undefined, 0, 0, false);
+            out.push(rects.filter(r=> r[2] && r[3]).length);   // empty: nothing with area
+            rects = []; draw(vec2(100, 50), vec2(10, 40), t, WHITE, 16, undefined, 0, 0, false);
+            out.push(inside(95, 30, 105, 70));                  // narrow: inside its box
+        }
+        for (const draw of [drawNineSlice, drawThreeSlice])
+        {
+            rects = []; draw(vec2(0, 0), vec2(1, 4), t, WHITE, 2, undefined, 0, 0, false);
+            out.push(inside(-.5, -2, .5, 2));                   // world space, narrower than two borders
+        }
+        out;
+    `);
+    assert.deepEqual([...result], [0, true, 0, true, true, true]);
+});

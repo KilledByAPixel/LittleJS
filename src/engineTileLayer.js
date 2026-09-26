@@ -511,8 +511,9 @@ class TileLayer extends CanvasLayer
         setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
         // a redraw from inside another target's pass, like the light system's shadow map, draws the tiles in color
         // and hands that target back after
-        this.savedRenderTarget = [glRenderTarget, glColorMask, glSkipScreenSpace];
+        this.savedRenderTarget = [glRenderTarget, glColorMask, glColorAdditive, glSkipScreenSpace];
         glColorMask = -1;
+        glColorAdditive = 0;
         glSkipScreenSpace = false; // screen space is the layer's own pixels here
 
         // set the draw canvas and context to this layer
@@ -550,10 +551,11 @@ class TileLayer extends CanvasLayer
 
         // set stuff back to normal, the camera first, so a target that was drawing before gets its own transform back
         [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
-        const [target, colorMask, skipScreenSpace] = this.savedRenderTarget;
+        const [target, colorMask, colorAdditive, skipScreenSpace] = this.savedRenderTarget;
         if (this.isUsingWebGL)
             glSetRenderTarget(target);
         glColorMask = colorMask;
+        glColorAdditive = colorAdditive;
         glSkipScreenSpace = skipScreenSpace;
     }
 
@@ -641,9 +643,10 @@ class TileLayer extends CanvasLayer
         // draw the tile onto the layer canvas
         // in color and handing back a target that was drawing before, like the light system's shadow map
         const oldMainCanvasSize = mainCanvasSize, oldTarget = glRenderTarget, oldColorMask = glColorMask;
-        const oldSkip = glSkipScreenSpace;
+        const oldSkip = glSkipScreenSpace, oldColorAdditive = glColorAdditive;
         mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
         glColorMask = -1;
+        glColorAdditive = 0;
         glSkipScreenSpace = false; // its screen space is the layer's own canvas
         const useWebGL = this.hasWebGL();
         useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
@@ -652,6 +655,7 @@ class TileLayer extends CanvasLayer
         mainCanvasSize = oldMainCanvasSize;
         useWebGL && glSetRenderTarget(oldTarget);
         glColorMask = oldColorMask;
+        glColorAdditive = oldColorAdditive;
         glSkipScreenSpace = oldSkip;
     }
 
