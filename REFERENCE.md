@@ -1799,6 +1799,8 @@ tweakEngineDefaults()      // Add gravity, timeScale, cameraScale and soundVolum
 
 ```javascript
 editMode = false           // Is the editor open? setEditMode(enable=true)
+setEditorTileCallback(callback) // What the game does with a painted tile, like set its collision,
+                           // called with (layer, layerPos, tile), tile undefined when erased
 ```
 
 ## LittleJS Debugging System

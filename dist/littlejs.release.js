@@ -816,6 +816,9 @@ function tweakButton(){}
 function tweakDivider(){}
 function tweakEngineDefaults(){}
 function setEditMode(){}
+function setEditorTileCallback(){}
+function editorMapRestore(map){ return map; }
+function editorMapLoaded(){}
 /**
  * LittleJS Math Classes and Functions
  * - Comprehensive math utilities for game development
@@ -8237,6 +8240,9 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         tileMapData.layers[0].data = new Array(s*s).fill(0);
     }
 
+    // the editor, in debug builds, keeps the map as the source of its edits and brings back autosaved ones
+    tileMapData = editorMapRestore(tileMapData);
+
     // validate the tile map data
     false&&ASSERT(tileMapData.width && tileMapData.height);
     false&&ASSERT(tileMapData.layers && tileMapData.layers.length);
@@ -8312,6 +8318,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         if (draw && visible)
             tileLayer.redraw();
     }
+    editorMapLoaded(tileMapData, tileLayers, layers);
     return tileLayers;
 }
 

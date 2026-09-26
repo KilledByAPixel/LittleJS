@@ -54,3 +54,6 @@ function tweakButton(){}
 function tweakDivider(){}
 function tweakEngineDefaults(){}
 function setEditMode(){}
+function setEditorTileCallback(){}
+function editorMapRestore(map){ return map; }
+function editorMapLoaded(){}

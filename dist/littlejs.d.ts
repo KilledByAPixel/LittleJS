@@ -1017,6 +1017,15 @@ declare module "littlejsengine" {
      *  @param {boolean} [enable]
      *  @memberof Editor */
     export function setEditMode(enable?: boolean): void;
+    /** Set what the game does when the editor paints a tile, like setting its collision or its look the way the
+     *  game does when it loads the level; without one, the collision layer gets collision 1 where there is a tile
+     *  - Called with the layer, the cell's layer position, and the tile, undefined for an empty cell
+     *  - Does nothing in release builds
+     *  @param {function(TileLayer, Vector2, number|undefined):void} [callback]
+     *  @memberof Editor
+     *  @example
+     *  setEditorTileCallback((layer, pos, tile)=> layer.setCollisionData(pos, tile === ladderTile ? -1 : tile ? 1 : 0)); */
+    export function setEditorTileCallback(callback?: (arg0: TileLayer, arg1: Vector2, arg2: number | undefined) => void): void;
     /** Open or close the debug overlay from code, as the debug key does; does nothing in release builds
      *  @param {boolean} [show]
      *  @memberof Debug */

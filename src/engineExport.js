@@ -173,6 +173,7 @@ export
     setDebugKeysAlways,
     setDebugTweakables,
     setEditMode,
+    setEditorTileCallback,
     setDebugOverlay,
 
     // Math

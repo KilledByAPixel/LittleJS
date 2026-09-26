@@ -87,3 +87,97 @@ test('release builds have no editor or tweakables code, only their stubs', () =>
         tweakEngineDefaults();`);
     assert.equal(run('editMode'), false);
 });
+
+// a map with a group, an object layer between the tile layers, and flip bits; front is the collision layer,
+// index 2 once the group is flattened: back 0, things 1, front 2
+const mapCode = `
+    var map = { width: 3, height: 2, tilewidth: 16, tileheight: 16, tilesets: [{ firstgid: 1, source: 't.tsx' }],
+        layers: [
+            { type: 'tilelayer', name: 'back', width: 3, height: 2, data: [1, 0, 0, 0, 0, 2] },
+            { type: 'objectgroup', name: 'things', objects: [{ id: 1, x: 8, y: 8, type: 'Coin' }] },
+            { type: 'group', name: 'g', layers:
+                [{ type: 'tilelayer', name: 'front', width: 3, height: 2, data: [0, 0, 3, 0, 0, 0] }] },
+        ] };
+    var layers = tileLayersLoad(map, undefined, 0, 2);
+    var front = editorLayerRecord(layers[2]);
+    var frontData = map.layers[2].layers[0].data;`;
+
+test('every Tiled flip comes back as the gid it was loaded from', async () =>
+{
+    const { run } = await loadGame();
+    const gids = [0, 1, 2, 3, 4, 5, 6, 7].map((f)=> ((f << 29) | 5) >>> 0);
+    const back = run(`
+        const map = { width: 8, height: 1,
+            layers: [{ type: 'tilelayer', width: 8, height: 1, data: ${JSON.stringify(gids)} }] };
+        const [layer] = tileLayersLoad(map, undefined, 0, undefined, false);
+        [...Array(8)].map((_, x)=> { const d = layer.getData(vec2(x, 0));
+            return editorTileToGid(d.tile, d.direction, d.mirror); });`);
+    assert.deepEqual([...back], gids);
+    assert.equal(run('editorTileToGid(undefined)'), 0);
+    assert.equal(run('editorGidToTile(0)'), undefined);
+});
+
+test('painting writes the map and the live layer, and the collision layer gets collision', async () =>
+{
+    const { run } = await loadGame();
+    const gid = ((7 << 29) | 7) >>> 0; // tile 6, a quarter turn, mirrored
+    const result = run(mapCode + `
+        editorPaint(front, vec2(0, 1), editorTileToGid(6, 1, true));
+        editorStrokeEnd();
+        const d = layers[2].getData(vec2(0, 1));
+        [frontData[0], d.tile, d.direction, d.mirror, layers[2].getCollisionData(vec2(0, 1))];`);
+    assert.deepEqual([...result], [gid, 6, 1, true, 1]);
+});
+
+test('a stroke is one undo, and redo puts it back', async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode + `
+        editorPaint(front, vec2(0, 0), editorTileToGid(1));
+        editorPaint(front, vec2(1, 0), editorTileToGid(1));
+        editorPaint(front, vec2(2, 1), 0); // the tile 3 that was there
+        editorStrokeEnd();`);
+    assert.deepEqual([...run('frontData')], [0, 0, 0, 2, 2, 0]);
+    run('editorUndo()');
+    assert.deepEqual([...run('frontData')], [0, 0, 3, 0, 0, 0]);
+    assert.equal(run('layers[2].getCollisionData(vec2(0, 0))'), 0);
+    assert.equal(run('layers[2].getCollisionData(vec2(2, 1))'), 1);
+    run('editorUndo(true)');
+    assert.deepEqual([...run('frontData')], [0, 0, 0, 2, 2, 0]);
+});
+
+test('a map loaded again keeps its changes, and undo reaches the new layers', async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode + `
+        editorPaint(front, vec2(0, 0), editorTileToGid(4));
+        editorStrokeEnd();
+        engineObjectsDestroy();
+        layers = tileLayersLoad(map, undefined, 0, 2);`);
+    assert.equal(run('layers[2].getData(vec2(0, 0)).tile'), 4, 'the restart loaded the edit');
+    assert.equal(run('editorLayerRecord(layers[2]) === front'), true, 'the same layer record');
+    run('editorUndo()');
+    assert.equal(run('layers[2].getData(vec2(0, 0)).tile'), undefined);
+});
+
+test('a tile callback takes over from the default collision', async () =>
+{
+    const { run } = await loadGame();
+    const seen = run(mapCode + `
+        const calls = [];
+        setEditorTileCallback((layer, pos, tile)=> { calls.push([layer === layers[2], pos.x, pos.y, tile]);
+            layer.setCollisionData(pos, -1); });
+        editorPaint(front, vec2(1, 1), editorTileToGid(8));
+        editorPaint(front, vec2(2, 1), 0);
+        editorStrokeEnd();
+        [calls, layers[2].getCollisionData(vec2(1, 1))];`);
+    assert.deepEqual(JSON.parse(JSON.stringify(seen)), [[[true, 1, 1, 8], [true, 2, 1, null]], -1]);
+});
+
+test('tiles the game removes in play stay in the map', async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode + `layers[0].clearData(vec2(0, 1)); layers[2].clearData(vec2(2, 1));`);
+    assert.deepEqual([...run('map.layers[0].data')], [1, 0, 0, 0, 0, 2]);
+    assert.deepEqual([...run('frontData')], [0, 0, 3, 0, 0, 0]);
+});
