@@ -4817,6 +4817,7 @@ declare module "littlejsengine" {
         /** Object to send keyboard input to (typically a UITextInput), which keeps the keys from the game while set.
          *  The keyboard listeners are only attached while this is set,
          *  so games that never use text input pay no event-handling cost.
+         *  To end typing in a field, call its stopEditing(), which also fires its onChange and release sound
          *  @type {UIObject|undefined} */
         get keyInputObject(): UIObject;
         /** Destroy and remove all objects

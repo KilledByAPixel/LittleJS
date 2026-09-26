@@ -841,6 +841,8 @@ UIObject.isHoverObject()               // True if mouse is over this object
 UIObject.isInteractive()
 UIObject.onClick / onPress / onRelease / onChange / onEnter / onLeave / onUpdate / onRender // Hooks
 UIObject.onKeyDown(e)                  // Each key while this object is uiSystem.keyInputObject
+uiSystem.keyInputObject                // The object being typed into; end typing with field.stopEditing(),
+                                       // which also fires its onChange
 
 // Widgets
 new UIText(pos, size, text='', align='center', font)
