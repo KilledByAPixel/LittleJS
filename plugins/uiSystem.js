@@ -215,6 +215,12 @@ class UISystemPlugin
                     uiSystem.keyInputObject = undefined;
             }
 
+            // a click off the field being edited ends the edit before anything updates, so the click goes on to
+            // what it lands on, another field or a button, as in a web form
+            const editing = uiSystem.keyInputObject;
+            const clickedOff = editing instanceof UITextInput && mouseWasPressed(0) && !editing.isMouseOverlapping();
+            clickedOff && editing.stopEditing();
+
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
             uiSystem.hoverObject = undefined;
@@ -324,6 +330,9 @@ class UISystemPlugin
                 const o = uiObjects[i];
                 o.parent || o === dialog || updateObject(o);
             }
+
+            // a click off the field that no UI object took is used up, the game does not see the click that ended it
+            clickedOff && mouseWasPressed(0) && inputClearKey(0, 0);
 
             // remove destroyed objects
             uiSystem.uiObjects = uiSystem.uiObjects.filter(o=>!o.destroyed);
@@ -1427,13 +1436,10 @@ class UITextInput extends UIObject
         if (!this.isKeyInputObject())
             return;
 
-        // click off object to stop editing
-        if (mouseWasPressed(0) && !this.isMouseOverlapping() ||
-            gamepadWasPressed(0, gamepadPrimary))
+        // the gamepad's press stops editing and is used up, a click off the field is handled by the UI update
+        if (gamepadWasPressed(0, gamepadPrimary))
         {
-            // the press that stopped it is used up, by the mouse or the gamepad
             this.stopEditing();
-            inputClearKey(0,0);
             inputClearKey(0, gamepadPrimary+1, false, true, false);
         }
         else if (mouseWasPressed(0))

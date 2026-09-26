@@ -69,6 +69,40 @@ test('a confirm dialog closed with Escape gives the selection back to the item t
     assert.equal(run('uiSystem.navigationObject?.text'), 'B3');
 });
 
+test('a click off a text field being edited ends the edit and reaches what it lands on, as in a web form', async () =>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true)');
+    await run(`setEngineManualStep(true); var gameSawPress = 0;
+        engineInit(()=> {}, ()=> {}, ()=> { mouseWasPressed(0) && ++gameSawPress; }, ()=> {}, ()=> {})`);
+    const result = run(`
+        new UISystemPlugin;
+        const a = new UITextInput(vec2(0, 0), vec2(200, 50), 'a');
+        const b = new UITextInput(vec2(0, 100), vec2(200, 50), 'b');
+        const ok = new UIButton(vec2(0, 200), vec2(200, 50), 'OK');
+        let changesA = 0, clicks = 0;
+        a.onChange = ()=> ++changesA;
+        ok.onClick = ()=> ++clicks;
+        engineStep();
+        const click = (pos)=>
+        {
+            mousePosScreen = pos.copy();
+            inputData[0][0] = 3; engineStep(); inputData[0][0] = 1; engineStep();
+            inputData[0][0] = 4; engineStep(); inputData[0][0] = 0; engineStep();
+        };
+        click(a.nativePos);
+        const editingA = a.isKeyInputObject();
+        click(b.nativePos);
+        const editingB = b.isKeyInputObject();
+        click(ok.nativePos);
+        const afterOk = [clicks, uiSystem.keyInputObject === undefined];
+        click(a.nativePos);
+        click(vec2(900, 900)); // the world, off every UI object
+        [editingA, editingB, changesA, ...afterOk, uiSystem.keyInputObject === undefined, gameSawPress];
+    `);
+    assert.deepEqual([...result], [true, true, 2, 1, true, true, 0]);
+});
+
 test('an ImageBitmap uploads through a canvas, so the premultiply flag applies to it as to any image', () =>
 {
     const ImageBitmap = class { constructor() { this.width = this.height = 4; } };

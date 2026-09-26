@@ -39,6 +39,7 @@ The code is very clean and well documented with many examples to get you started
 
 - Blazing fast WebGL2 + Canvas2D hybrid rendering system
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects, or on any object or draw
+- 2D lights with soft shadows, tinted glass and emissive objects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 - Load sprites and animations into texture sheets at runtime, or import [TexturePacker](https://www.codeandweb.com/texturepacker) and [Aseprite](https://www.aseprite.org) atlases
 
@@ -46,7 +47,7 @@ The code is very clean and well documented with many examples to get you started
 
 - Built-in 3D renderer that shares the canvas with your 2D game
 - 3D objects with the same physics, children and timers as 2D
-- Shape builders, extruded sprites and text, and OBJ loading
+- Shape builders, extruded sprites and text, and OBJ and glTF model loading
 - Height map terrain with collision and raycasts
 - Shadow maps, colored lights, specular, emissive glow and fog
 - Particles, trails, billboards and instanced drawing
@@ -85,6 +86,8 @@ The code is very clean and well documented with many examples to get you started
 
 - Live example browser with code editor
 - Import level editor data from [Tiled](https://github.com/mapeditor/tiled) or other JSON
+- UI system with buttons, sliders, text input and nine-slice skins
+- Tween system with easing curves
 - Debug overlay and primitive rendering system
 - Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
 - Node.js build system
