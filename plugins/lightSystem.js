@@ -13,6 +13,8 @@
  *   a plugin created after this one
  * - Any EngineObject may override renderLight() to additively contribute to the
  *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
+ * - Set obj.emissive to 1 to show an object at full brightness in its own colors, lit or not, or between 0 and 1 for
+ *   partly: it draws its shape into the lightmap through renderEmissive(), which calls render() by default
  * - Set lightSystem.shadows for objects to block light: each frame every object draws black into a
  *   shadow map through renderShadow(), which calls render() by default; obj.castShadow = false keeps it
  *   out (a floor TileLayer, a background), a draw's alpha sets how much light it blocks, and
@@ -99,6 +101,8 @@ class LightSystemPlugin
         this.shadowSoftness = .5;
         /** @property {boolean} - True while the shadow pass runs, read only, so a render() can skip parts that should not cast */
         this.shadowPass = false;
+        /** @property {boolean} - True while emissive objects draw into the lightmap, read only, see EngineObject.emissive */
+        this.emissivePass = false;
         /** @property {WebGLTexture|undefined} - The shadow map, casters drawn black on white around the camera, read only
          *  @type {WebGLTexture|undefined} */
         this.shadowMap = undefined;
@@ -120,7 +124,7 @@ class LightSystemPlugin
         /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the stretch shader
          *  @type {WebGLVertexArrayObject|undefined} */
         this.shadowStretchVAO = undefined;
-        /** @property {OffscreenCanvasRenderingContext2D|undefined} - Where Canvas2D draws go during the shadow pass, a 1x1 canvas, so text in a render() is not drawn twice
+        /** @property {OffscreenCanvasRenderingContext2D|undefined} - Where Canvas2D draws go during the shadow and emissive passes, a 1x1 canvas, so text in a render() is not drawn twice
          *  @type {OffscreenCanvasRenderingContext2D|undefined} */
         this.shadowContext = undefined;
         /** @property {Vector2} - World position of the shadow map's bottom left corner, set each shadow pass */
@@ -142,6 +146,9 @@ class LightSystemPlugin
                 console.warn('LightSystemPlugin: WebGL not enabled!');
                 return;
             }
+
+            // where Canvas2D draws go during the shadow and emissive passes
+            lightSystem.shadowContext ||= new OffscreenCanvas(1, 1).getContext('2d');
 
             // resolve texture size default at init time (mainCanvasSize may
             // not be set yet at the moment the constructor first ran), and
@@ -252,7 +259,6 @@ class LightSystemPlugin
             ls.shadowTextureB = createTexture(ls.shadowTextureSize);
             ls.shadowMapSizeAllocated = ls.shadowMapSize;
             ls.shadowTextureSizeAllocated = ls.shadowTextureSize;
-            ls.shadowContext ||= new OffscreenCanvas(1, 1).getContext('2d');
             // put back the texture the engine tracks
             if (glActiveTexture)
                 gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
@@ -455,6 +461,33 @@ class LightSystemPlugin
 
             for (const o of engineObjects)
                 o.destroyed || o.renderLight();
+
+            // 3b. emissive objects draw their shape in grey at their emissive level, white at 1, adding that much
+            //     light where they are so they show their own colors; text goes to the 1x1 canvas as in the
+            //     shadow pass, so it is not drawn twice
+            const saved = [drawContext, glCustomShader];
+            drawContext = lightSystem.shadowContext;
+            lightSystem.emissivePass = true;
+            try
+            {
+                for (const o of engineObjects)
+                {
+                    if (o.destroyed || !(o.emissive > 0)) continue;
+                    const level = clamp(o.emissive)*255+.5|0; // packed like rgbaInt, red in the low byte
+                    glColorMask = 0xff000000; // its own alpha, and the grey from the additive color
+                    glColorAdditive = level | level<<8 | level<<16;
+                    setShader(o.shader);
+                    o.renderEmissive();
+                }
+                glFlush();
+            }
+            finally
+            {
+                lightSystem.emissivePass = false;
+                glColorMask = -1;
+                glColorAdditive = 0;
+                [drawContext, glCustomShader] = saved;
+            }
 
             // 4. drain any sprite-batched draws (e.g. drawTile inside a
             //    custom renderLight override) so they hit the FBO, not the

@@ -36,6 +36,9 @@ let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMip
 // ANDed onto every packed color as a draw is queued; the light system's shadow pass sets 0xff000000
 // to draw everything black with its alpha kept (rgbaInt packs alpha in the top byte)
 let glColorMask = -1;
+// ORed onto the additive color of every quad and onto every poly point's color as a draw is queued; the light system's
+// emissive pass sets a grey with the mask at 0xff000000, so a draw comes out that grey in its own shape
+let glColorAdditive = 0;
 // set by the light system's shadow pass, which draws the world with its own camera, so a screen space
 // WebGL draw in a render() is skipped instead of landing somewhere in the world
 let glSkipScreenSpace = false;
@@ -701,7 +704,7 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
     glPositionData[offset++] = uv1X;
     glPositionData[offset++] = uv1Y;
     glColorData[offset++] = rgba & glColorMask;
-    glColorData[offset++] = rgbaAdditive & glColorMask;
+    glColorData[offset++] = rgbaAdditive & glColorMask | glColorAdditive;
     glPositionData[offset++] = angle;
 }
 
@@ -789,7 +792,7 @@ function glDrawPoints(points, rgba)
         const point = points[j];
         glPositionData[offset++] = point.x;
         glPositionData[offset++] = point.y;
-        glColorData[offset++] = rgba & glColorMask;
+        glColorData[offset++] = rgba & glColorMask | glColorAdditive;
     }
     glBatchCount += vertCount;
 }
@@ -820,7 +823,7 @@ function glDrawColoredPoints(points, pointColors)
         const color = pointColors[j];
         glPositionData[offset++] = point.x;
         glPositionData[offset++] = point.y;
-        glColorData[offset++] = color & glColorMask;
+        glColorData[offset++] = color & glColorMask | glColorAdditive;
     }
     glBatchCount += vertCount;
 }

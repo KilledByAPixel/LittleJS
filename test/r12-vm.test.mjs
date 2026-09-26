@@ -258,3 +258,26 @@ test('medals saved under the game\'s own save name keep the game\'s data, and th
     assert.equal(saved.runs, 4);
     assert.equal(saved[0].unlocked, true);
 });
+
+test('engineStep runs one update a frame after manual step is turned on in a running game', async () =>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true)');
+    await run('setEngineManualStep(true); engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+    // the loop running, where a frame with a long gap left next to no time over, then manual step turned on
+    const counts = run(`
+        const counts = [];
+        for (const last of [1234.5678, 12345.678, 98765.4321])
+        {
+            engineManualStep = false;
+            frameTimeLastMS = last;
+            frameTimeBufferMS = -7.105427357601002e-15;
+            setEngineManualStep(true);
+            const f = frame;
+            engineStep(2);
+            counts.push(frame - f);
+        }
+        counts;
+    `);
+    assert.deepEqual([...counts], [2, 2, 2]);
+});

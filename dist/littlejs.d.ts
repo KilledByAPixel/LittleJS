@@ -3244,6 +3244,10 @@ declare module "littlejsengine" {
         shader: Shader | undefined;
         /** @property {boolean} - Does this object draw into the light system's shadow map; false for a floor layer, a background, a pickup */
         castShadow: boolean;
+        /** @property {number} - With the light system, how much it lights itself: 0 lit only by the lights, 1 full
+         *  brightness in its own colors whatever the lights do, between partly; drawn into the lightmap through
+         *  renderEmissive, as 3D's emissive */
+        emissive: number;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         mirror: boolean;
         /** @property {boolean} - Has object been destroyed? */
@@ -3312,6 +3316,10 @@ declare module "littlejsengine" {
          *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit;
          *  screen space WebGL draws in render() are skipped during the pass */
         renderShadow(): void;
+        /** Draw this object's shape into the light system's lightmap, called during its light pass when emissive is above
+         *  0; what it draws shows in its own colors that much brighter. Calls render() by default so the whole object
+         *  glows; override to glow a part, like a robot's eyes */
+        renderEmissive(): void;
         /** Destroy this object, destroy its children, detach its parent, and mark it for removal
          *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
         destroy(immediate?: boolean): void;
@@ -4228,6 +4236,8 @@ declare module "littlejsengine" {
      *   a plugin created after this one
      * - Any EngineObject may override renderLight() to additively contribute to the
      *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
+     * - Set obj.emissive to 1 to show an object at full brightness in its own colors, lit or not, or between 0 and 1 for
+     *   partly: it draws its shape into the lightmap through renderEmissive(), which calls render() by default
      * - Set lightSystem.shadows for objects to block light: each frame every object draws black into a
      *   shadow map through renderShadow(), which calls render() by default; obj.castShadow = false keeps it
      *   out (a floor TileLayer, a background), a draw's alpha sets how much light it blocks, and
@@ -4297,6 +4307,8 @@ declare module "littlejsengine" {
         shadowSoftness: number;
         /** @property {boolean} - True while the shadow pass runs, read only, so a render() can skip parts that should not cast */
         shadowPass: boolean;
+        /** @property {boolean} - True while emissive objects draw into the lightmap, read only, see EngineObject.emissive */
+        emissivePass: boolean;
         /** @property {WebGLTexture|undefined} - The shadow map, casters drawn black on white around the camera, read only
          *  @type {WebGLTexture|undefined} */
         shadowMap: WebGLTexture | undefined;
@@ -4318,7 +4330,7 @@ declare module "littlejsengine" {
         /** @property {WebGLVertexArrayObject|undefined} - Vertex array object for the stretch shader
          *  @type {WebGLVertexArrayObject|undefined} */
         shadowStretchVAO: WebGLVertexArrayObject | undefined;
-        /** @property {OffscreenCanvasRenderingContext2D|undefined} - Where Canvas2D draws go during the shadow pass, a 1x1 canvas, so text in a render() is not drawn twice
+        /** @property {OffscreenCanvasRenderingContext2D|undefined} - Where Canvas2D draws go during the shadow and emissive passes, a 1x1 canvas, so text in a render() is not drawn twice
          *  @type {OffscreenCanvasRenderingContext2D|undefined} */
         shadowContext: OffscreenCanvasRenderingContext2D | undefined;
         /** @property {Vector2} - World position of the shadow map's bottom left corner, set each shadow pass */
@@ -7710,9 +7722,6 @@ declare module "littlejsengine" {
         transparent: boolean;
         /** @property {boolean} - Additive blending, in the transparent stage */
         additive: boolean;
-        /** @property {number} - How much it lights itself: 0 is lit as normal, 1 is its own color with no shading, for
-         *  lamps and glowing things, between is partly self lit, and above 1 is brighter than its color, for bloom */
-        emissive: number;
         /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
         specular: number;
         /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls around corners */

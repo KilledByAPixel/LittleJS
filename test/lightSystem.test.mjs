@@ -189,3 +189,16 @@ test('Light.shadowCore defaults to 0, so a caster over the light still blocks it
     const l = new Light(vec2(0, 0), 1);
     assert.equal(l.shadowCore, 0);
 });
+
+test('objects are not emissive by default, and renderEmissive draws render()', async () =>
+{
+    const { lightSystem } = await import('../dist/littlejs.esm.js');
+    const o = new EngineObject(vec2());
+    assert.equal(o.emissive, 0);
+    let rendered = 0;
+    o.render = ()=> ++rendered;
+    o.renderEmissive();
+    assert.equal(rendered, 1);
+    assert.equal(lightSystem.emissivePass, false);
+    o.destroy();
+});

@@ -530,6 +530,9 @@ function setHeadlessMode(headless) { headlessMode = headless; }
 function setEngineManualStep(enable=true)
 {
     const resume = engineManualStep && !enable;
+    if (enable && !engineManualStep)
+        frameTimeBufferMS = -.5e3 / frameRate; // half a frame short, so each engineStep frame runs one update,
+                                               // not one more from time the last real frame left over
     engineManualStep = enable;
     if (resume && engineUpdateInternal)
     {

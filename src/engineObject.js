@@ -80,6 +80,10 @@ class EngineObject
         this.shader = undefined;
         /** @property {boolean} - Does this object draw into the light system's shadow map; false for a floor layer, a background, a pickup */
         this.castShadow = true;
+        /** @property {number} - With the light system, how much it lights itself: 0 lit only by the lights, 1 full
+         *  brightness in its own colors whatever the lights do, between partly; drawn into the lightmap through
+         *  renderEmissive, as 3D's emissive */
+        this.emissive = 0;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         this.mirror = false;
         /** @property {boolean} - Has object been destroyed? */
@@ -450,6 +454,11 @@ class EngineObject
      *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit;
      *  screen space WebGL draws in render() are skipped during the pass */
     renderShadow() { this.render(); }
+
+    /** Draw this object's shape into the light system's lightmap, called during its light pass when emissive is above
+     *  0; what it draws shows in its own colors that much brighter. Calls render() by default so the whole object
+     *  glows; override to glow a part, like a robot's eyes */
+    renderEmissive() { this.render(); }
 
     /** Destroy this object, destroy its children, detach its parent, and mark it for removal
      *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */

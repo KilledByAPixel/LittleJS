@@ -885,12 +885,16 @@ lightSystem.shadowPassCount  = 16     // stretch passes per light, fewer is chea
 lightSystem.shadowSoftness   = .5     // light bled into a caster's near side, 0 hard, 1 most; it reaches further
                                       // in under a big light, lower it if thin walls let light in
 lightSystem.shadowPass                // read only: true inside the shadow pass, so a render() can skip its text or glow
+lightSystem.emissivePass              // read only: true while emissive objects draw into the lightmap
 lightSystem.setShadowTransparent(on)  // in the shadow pass the draws that follow keep their color, tinting the light
                                       // through them (glass, colored smoke); nothing outside it, so call it around
                                       // the draws and set it back
 light.castShadow = true               // this light's rays stop at casters; a light inside a caster is blocked
 light.shadowCore = 0                  // radius around the light where casters are left out, so its lamp, torch
                                       // or the player carrying it does not block it
+obj.emissive = 0                      // 1 shows it at full brightness in its own colors, lit or not, between partly
+obj.renderEmissive()                  // draws its glowing shape into the lightmap, render() by default; override to
+                                      // glow only a part, like a robot's eyes
 obj.castShadow = true                 // draws into the shadow map; false for a floor TileLayer, a background, a pickup
 layer.shadowSolidOnly = true          // a TileCollisionLayer casts only from its cells with collision, as they are
                                       // drawn, so a floor in the same layer stays lit; false casts every tile
