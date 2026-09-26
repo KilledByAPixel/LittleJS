@@ -817,7 +817,7 @@ uiSystem.isMouseOverUI()               // True if the mouse is over a visible ho
 uiSetDebug(enable)                     // Toggle uiDebug rendering of widget bounds
 
 // Confirm dialog
-uiSystem.showConfirmDialog(text='Are you sure?', yes, no, size, exitKey='Escape') // the exit key or gamepad B answers no, the layout follows size
+uiSystem.showConfirmDialog(text='Are you sure?', yes, no, size, exitKey='Escape') // the exit key or gamepad B answers no, the title and buttons scale with size
 
 // Drawing helpers (use these instead of the engine's draw* during UI rendering)
 uiSystem.drawRect(pos, size, color, lineWidth, lineColor, cornerRadius, gradientColor, shadowColor, shadowBlur, shadowOffset)

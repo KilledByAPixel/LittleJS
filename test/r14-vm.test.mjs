@@ -157,3 +157,27 @@ test('smooth textures upload premultiplied and draw as premultiplied, pixel art 
     `);
     assert.deepEqual([...result], [false, false, true, 'true,false']);
 });
+
+test('a confirm dialog fits its title and buttons to its size, the default size unchanged', async () =>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true)');
+    await run('setEngineManualStep(true); engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+    run('new UISystemPlugin');
+    const layout = (size)=> JSON.parse(run(`(()=> {
+        const dialog = uiSystem.showConfirmDialog('Quit?', undefined, undefined, vec2(${size}));
+        const [title, yes, no] = dialog.children;
+        const box = (o)=> [o.localPos.x - o.size.x/2, o.localPos.y - o.size.y/2, o.localPos.x + o.size.x/2,
+            o.localPos.y + o.size.y/2];
+        const result = JSON.stringify({ title: box(title), yes: box(yes), no: box(no), height: yes.textHeight });
+        dialog.destroy();
+        return result;
+    })()`));
+    const standard = layout('500, 250');
+    assert.deepEqual(standard, { title: [-225, -85, 225, -15], yes: [-140, 15, -20, 85], no: [20, 15, 140, 85],
+        height: 40 }, 'the default layout as it was');
+    const narrow = layout('240, 250');
+    assert.ok(narrow.yes[0] >= -120 && narrow.no[2] <= 120, 'the buttons stay inside a narrow dialog');
+    const short = layout('500, 120');
+    assert.ok(short.title[3] <= short.yes[1], 'the title stays above the buttons in a short dialog');
+});

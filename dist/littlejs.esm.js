@@ -14759,22 +14759,25 @@ class UISystemPlugin
         }
         confirmMenu.isMouseOverlapping = ()=> true; // always hover
         
-        // title text, placed by the dialog's size (at +-50 for the default 250 high)
+        // the title and buttons are laid out for the default 500 by 250 and scaled to the dialog's size, so a
+        // small or narrow one still fits them
+        const scaleX = size.x/500, scaleY = size.y/250;
         const gap = 50, y = size.y/5;
-        const textTitle = new UIText(vec2(0,-y), vec2(size.x-gap,70), text);
+        const textTitle = new UIText(vec2(0,-y), vec2(size.x-gap, 70*scaleY), text);
         confirmMenu.addChild(textTitle);
 
         // yes button
-        const buttonYes = new UIButton(vec2(-80,y), vec2(120,70), 'Yes');
-        buttonYes.textHeight = 40;
+        const buttonSize = vec2(120*scaleX, 70*scaleY);
+        const buttonYes = new UIButton(vec2(-80*scaleX,y), buttonSize, 'Yes');
+        buttonYes.textHeight = 40*scaleY;
         buttonYes.navigationIndex = 1;
         buttonYes.hoverColor = hsl(0,1,.5);
         buttonYes.onClick = ()=> { closeMenu(); yesCallback && yesCallback(); };
         confirmMenu.addChild(buttonYes);
         
         // no button
-        const buttonNo = new UIButton(vec2(80,y), vec2(120,70), 'No');
-        buttonNo.textHeight = 40;
+        const buttonNo = new UIButton(vec2(80*scaleX,y), buttonSize, 'No');
+        buttonNo.textHeight = 40*scaleY;
         buttonNo.navigationIndex = 2;
         buttonNo.navigationAutoSelect = true;
         buttonNo.onClick = ()=> { closeMenu(); noCallback && noCallback(); };
