@@ -310,13 +310,14 @@ function effectMakeEmitter(effect, pos)
 // the code to make the effect, one expression unless it needs more
 function effectToCode(effect, expand)
 {
+    // settings are written as they are, colors are turned into hsl
+    // and rounded, which changes nothing that can be seen
     const s = effect.settings;
-    const num = (n)=> String(Number(n.toFixed(3)));
-    const value = (name)=>
-        typeof s[name] === 'boolean' ? String(s[name]) : num(s[name]);
+    const value = (name)=> String(s[name]);
     const arg = (name)=> [value(name), name];
     const color = (name)=>
     {
+        const num = (n)=> String(Number(n.toFixed(3)));
         const [h, sat, l, a] = new Color(...s[name]).HSLA();
         return [`hsl(${num(h)}, ${num(sat)}, ${num(l)}, ${num(a)})`, name];
     };
@@ -324,7 +325,7 @@ function effectToCode(effect, expand)
         `tile(${s.tileIndex}, ${s.tileSize}` +
         (s.tilePadding ? `, 0, ${s.tilePadding})` : ')');
     const emitSize = s.emitRect ?
-        `vec2(${num(s.emitSize)}, ${num(s.emitHeight)})` : num(s.emitSize);
+        `vec2(${s.emitSize}, ${s.emitHeight})` : value('emitSize');
 
     // constructor arguments in order
     const args =
@@ -363,7 +364,7 @@ function effectToCode(effect, expand)
     {
         code += 'emitter.particleUpdateCallback = (p)=>\n{\n';
         for (const b of behaviors)
-            code += `    ${b.name}(p, ${num(b.strength)});\n`;
+            code += `    ${b.name}(p, ${b.strength});\n`;
         code += '};\n';
         for (const b of behaviors)
             code += '\n' + effectBehavior(b.name).update + '\n';

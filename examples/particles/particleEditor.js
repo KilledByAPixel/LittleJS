@@ -475,6 +475,7 @@ function setupPreviewControls()
     fit();
 
     $('buttonRestart').onclick = ()=> restartEmitter();
+    $('buttonResetZoom').onclick = ()=> setCameraScale(64);
     $('buttonPause').onclick = ()=>
     {
         setPaused(!paused);
@@ -547,14 +548,12 @@ function setupLibraryBar()
         selectEffect(first);
     };
     $('buttonExport').onclick = ()=>
+        download('littlejs-particles.json', effectLibraryText(library));
+    $('buttonExportEffect').onclick = ()=>
     {
-        const blob = new Blob([effectLibraryText(library)],
-            {type:'application/json'});
-        const link = makeElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'littlejs-particles.json';
-        link.click();
-        setTimeout(()=> URL.revokeObjectURL(link.href), 1e3);
+        // a library file with one effect, Import adds it to any library
+        const name = effect.name.replace(/[^\w -]/g, '').trim() || 'effect';
+        download(name + '.json', effectLibraryText([effect]));
     };
     $('buttonImport').onclick = ()=> $('importFile').click();
     $('importFile').onchange = ()=>
@@ -563,6 +562,17 @@ function setupLibraryBar()
         $('importFile').value = ''; // the same file can be picked again
         file && file.text().then(importLibrary);
     };
+}
+
+// save text to a file
+function download(fileName, text)
+{
+    const blob = new Blob([text], {type:'application/json'});
+    const link = makeElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+    setTimeout(()=> URL.revokeObjectURL(link.href), 1e3);
 }
 
 // add an effect with a unique name, selecting it unless told not to
@@ -749,7 +759,7 @@ function refreshTexture()
 function gameInit()
 {
     setGravity(vec2(0, -.01));
-    setCameraScale(64);
+    setCameraScale(64); // the Reset Zoom button goes back to this
     setCanvasClearColor(hsl(0, 0, 0));
     buildSettingsPanel();
     setupLibraryBar();
