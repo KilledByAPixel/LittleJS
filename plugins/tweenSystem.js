@@ -605,7 +605,8 @@ function tweenUpdate(gameDelta, realDelta)
     // may stop any tween, even all of them, and one that is stopped is skipped; a tween
     // made or started again during the update, like the next turn of a loop, moves on
     // from the next update. Newest first, as the list has always been walked.
-    const list = tweenUpdateList, pass = ++tweenUpdatePass;
+    // a callback that calls tweenUpdate itself gets a list of its own, the outer update is still walking this one
+    const list = tweenUpdateList.length ? [] : tweenUpdateList, pass = ++tweenUpdatePass;
     for (const t of tweenActive)
         list.push(t);
     for (let i = list.length; i--;)

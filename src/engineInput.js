@@ -616,10 +616,14 @@ function inputInit()
     function onMouseWheel(e)
     {
         // accumulate so multiple wheel events in one frame are not lost
+        // a text area, list or field on the page scrolls itself, and the game does not take that wheel
+        const target = /** @type {HTMLElement} */ (e.target);
+        if (target?.closest?.('input,textarea,select,[contenteditable]'))
+            return;
         if (!e.ctrlKey)
             mouseWheel += sign(e.deltaY);
-        if (inputPreventDefault && e.cancelable && document.hasFocus() && !isOnControl(e))
-            e.preventDefault(); // prevent page scrolling, but a text area or list keeps its own
+        if (inputPreventDefault && e.cancelable && document.hasFocus())
+            e.preventDefault(); // prevent page scrolling
     }
     function onContextMenu(e)
     {

@@ -526,7 +526,8 @@ vibrateStop()                         // Stop all vibration
 gamepadsEnable = true                 // Should gamepads be allowed?
 gamepadDirectionEmulateStick = true   // Should dpad be routed to the left analog stick?
 gamepadAxisFilterEnable = true        // Ignore axes that don't rest near center (steering wheels)
-inputWASDEmulateDirection = true      // Should WASD keys be routed to the direction keys?
+inputWASDEmulateDirection = true      // Should WASD keys be routed to the direction keys? Off for two players on one
+                                      // keyboard, WASD and arrows
 inputPreventDefault = true            // Should input events prevent default browser handling?
 inputMouseMoveThreshold = 6           // Screen-px mouse movement per frame that counts as mouse use
 vibrateEnable = true                  // Allow vibration hardware if it exists?
@@ -584,7 +585,7 @@ EngineObject.angle         // Rotation angle for rendering
 EngineObject.color         // Color to apply when rendered
 EngineObject.additiveColor // Additive color to apply when rendered
 EngineObject.mirror        // Should it flip along y axis when rendered
-EngineObject.mass          // Weight of object, static if 0
+EngineObject.mass          // Weight of object, static if 0: it moves by its velocity but only others collide with it
 EngineObject.damping       // Fraction of velocity kept each frame, 1 keeps all, 0 stops at once
 EngineObject.angleDamping  // Fraction of angular velocity kept each frame, 1 keeps all, 0 stops at once
 EngineObject.restitution   // How bouncy is it when colliding (0-1)
@@ -896,7 +897,7 @@ lightSystem.setShadowTransparent(on)  // in the shadow pass the draws that follo
                                       // the draws and set it back
 light.castShadow = true               // this light's rays stop at casters; a light inside a caster is blocked
 light.shadowCore = 0                  // radius around the light where casters are left out, so its lamp, torch
-                                      // or the player carrying it does not block it
+                                      // or the player carrying it does not block it; reach past its corners
 obj.emissive = 0                      // 1 shows it at full brightness in its own colors, lit or not, between partly;
                                       // exact for solid pixels, a half alpha one shows at a quarter
 obj.renderEmissive()                  // draws its glowing shape into the lightmap, render() by default; override to
@@ -1549,7 +1550,8 @@ obj.syncMesh()                 // copy the 2D transform to the mesh
 
 ## LittleJS Box2D Physics
 - Optional plugin wrapping the Box2D physics engine (via box2d.wasm.js)
-- Drop-in replacement for engine objects: `Box2dObject extends EngineObject`
+- Drop-in replacement for engine objects: `Box2dObject extends EngineObject`; Box2D moves it, so pos and angle are
+  read only, move it with `setPosition`, `setAngle` or `setTransform` and push it with velocities and forces
 - Joints, raycasting, polygon/circle/edge fixtures
 - Angular values are clockwise like `angle`: angular velocity, torque, joint angles and limits, motor speeds
 - See `examples/box2d/` for a full demo
@@ -1607,12 +1609,14 @@ box2d.raycast(start, end, includeSensors=false)    // Returns the closest Box2dR
 box2d.raycastAll(start, end, includeSensors=false) // Every Box2dRaycastResult along the ray, nearest first
 box2d.boxCast(pos, size, includeSensors=false) / boxCastAll(pos, size, includeSensors=false) // An object, or all
                                // of them, whose shapes overlap the box; sensors are passed through unless included
-box2d.circleCast(pos, diameter) / circleCastAll(pos, diameter) // The nearest object, or all of them, whose
-                               // position is in the circle, wherever its shapes are
+box2d.circleCast(pos, diameter, includeSensors=false) / circleCastAll(pos, diameter, includeSensors=false) // The
+                               // nearest object, or all of them, whose position is in the circle, wherever its shapes
+                               // are; objects of only sensors are passed over unless included
 box2d.pointCast(pos, dynamicOnly=true, includeSensors=false) // The object with a shape under the point, sensors
                                // passed through unless included, so a pickup radius does not grab from afar
 
-// Joints — all extend Box2dJoint
+// Joints — all extend Box2dJoint; a joint goes along with either of its objects, check joint.isDestroyed()
+// before using a kept one, joint.isActive() is false then
 new Box2dTargetJoint(object, fixedObject, worldPos) // Drag toward a point (mouse-follow)
 new Box2dDistanceJoint(objectA, objectB, anchorA, anchorB)
 new Box2dPinJoint(objectA, objectB, pos=objectA.pos) // pins the two together at pos, turning freely; a revolute joint
@@ -1724,6 +1728,7 @@ slice.drawScreen(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=false,
 
 // Crescent — moon-phase shape (percent: 0=new, .25=first quarter, .5=full, .75=last quarter)
 drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace, context)
+                                      // lit side up at angle 0, invert draws the unlit part
 getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=glCircleSides) // crescent points for drawPoly
 ```
 

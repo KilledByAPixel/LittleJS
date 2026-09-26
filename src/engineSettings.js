@@ -252,6 +252,7 @@ let gamepadDirectionEmulateStick = true;
 let gamepadAxisFilterEnable = true;
 
 /** If true the WASD keys are also routed to the direction keys (for better accessibility)
+ *  - Turn it off for a game with two players on one keyboard, one on WASD and one on the arrows
  *  @type {boolean}
  *  @default
  *  @memberof Settings */

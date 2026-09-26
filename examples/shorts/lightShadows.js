@@ -46,7 +46,7 @@ function gameInit()
 
     // make an emissive lava brick
     const lava = new EngineObject(vec2(0, -5), vec2(1), tile(1), 0, RED);
-    lava.emissive = true;
+    lava.emissive = 1;
 
     // make some shadow casting lights
     new Light(vec2(-7, 4), 8, hsl(.1,.8,.9));

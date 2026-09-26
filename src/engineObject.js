@@ -92,7 +92,8 @@ class EngineObject
         this.updatePass = 0; // the engine update pass it was last updated in, so nothing updates twice in one
 
         // physical properties
-        /** @property {number} - How heavy the object is, static if 0 */
+        /** @property {number} - How heavy the object is, static if 0: a static object moves by its velocity but does not
+         *  collide on its own, the moving ones collide with it */
         this.mass = objectDefaultMass;
         /** @property {number} - Fraction of velocity kept each frame, 1 keeps all of it, 0 stops at once */
         this.damping = objectDefaultDamping;

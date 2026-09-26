@@ -674,7 +674,8 @@ function debugRender()
             let mousePressed = '';
             for (const i in inputData[0])
             {
-                if (!keyIsDown(i, 0))
+                // read the input state itself, keyIsDown asserts on the numbered keys for..in gives as strings
+                if (!(inputData[0][i] & 1))
                     continue;
                 if (!isNaN(+i)) // mouse buttons are numbered, keys are named
                     mousePressed += i + ' ' ;
@@ -691,7 +692,7 @@ function debugRender()
                 if (inputData[i])
                 for (const j in inputData[i])
                 {
-                    if (keyIsDown(j, i))
+                    if (inputData[i][j] & 1)
                         buttonsPressed += j + ' ' ;
                 }
                 buttonsPressed && debugContext.fillText(`Gamepad ${i-1}: ` + buttonsPressed, x, y += h);

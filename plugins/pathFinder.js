@@ -210,6 +210,7 @@ class PathFinder
      *  findPath; call it directly before searches made with rebuild=false. */
     buildNodeData()
     {
+        this.nodeDataBuilt = true;
         const w = this.size.x;
         const h = this.size.y;
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
@@ -742,7 +743,7 @@ class PathFinder
         ASSERT(isVector2(startPos) && isVector2(endPos), 'findPath needs Vector2 endpoints');
 
         this.searchGaveUp = false;
-        if (rebuild) this.buildNodeData();
+        if (rebuild || !this.nodeDataBuilt) this.buildNodeData(); // a grid never built has nothing to walk yet
 
         // rebuild=false because we just built — avoid redundant work per snap.
         // the ends go to the nearest cell that can be walked, whatever it costs to cross

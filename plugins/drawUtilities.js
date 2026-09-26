@@ -49,6 +49,9 @@ function drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, a
  *  @memberof DrawUtilities */
 function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 {
+    if (!size.x || !size.y) return; // nothing to draw, the spacing must not make a sliver of it
+    if (color && color.a < 1)
+        extraSpace = 0; // see through, the overlap that hides a seam would draw twice and show brighter
     // setup nine slice tiles - startTile is the top-left of a 3x3 tile block,
     // so the center tile is one tile down and right from it, stepping over
     // the padding around each tile the way tile() lays out the grid
@@ -129,6 +132,9 @@ function drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, 
  *  @memberof DrawUtilities */
 function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 {
+    if (!size.x || !size.y) return; // nothing to draw, the spacing must not make a sliver of it
+    if (color && color.a < 1)
+        extraSpace = 0; // see through, the overlap that hides a seam would draw twice and show brighter
     // setup three slice tiles - 3 tiles in a row starting at startTile
     const cornerTile = startTile.frame(0);
     const sideTile   = startTile.frame(1);
@@ -183,9 +189,9 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
  * - The UI system draws a widget's background with one, see uiSystem.defaultSlice
  * @memberof DrawUtilities
  * @example
- * const panel = new TileSlice(tile(0, 16), 9, 12);
+ * const panel = new TileSlice(tile(0, 16), 9, .5); // a border of half a world unit
  * panel.draw(vec2(0, 5), vec2(10, 4));
- * uiSystem.defaultSlice = panel; // every UI widget made after this
+ * uiSystem.defaultSlice = new TileSlice(tile(0, 16), 9, 16); // UI sizes are pixels, every widget made after this
  */
 class TileSlice
 {
@@ -223,6 +229,8 @@ class TileSlice
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
     draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=false, context)
     {
+        if (screenSpace) // with the screen space defaults for the border and spacing
+            return this.drawScreen(pos, size, color, additiveColor, angle, useWebGL, context);
         if (this.slices === 9)
             drawNineSlice(pos, size, this.tileInfo, color, this.borderSize, additiveColor, this.extraSpace, angle, useWebGL, screenSpace, context);
         else if (this.slices === 3)
@@ -255,15 +263,22 @@ class TileSlice
 // a seam; pieceTile(col, row) gives the tile and angle for the piece in that column and row of the box, top left 0
 function drawSliceSnapped(pos, size, borderSize, pieceTile, color, additiveColor, useWebGL, context)
 {
-    const border = max(1, round(borderSize));
-    const edges = (center, length)=>
+    // the pixels it lands on are the device's: a 2D context's own scale and offset, like the UI under nativeHeight
+    // centered on an odd sized canvas, or the pixel ratio; the draws land half a pixel past, see shift below
+    const canvas2D = !useWebGL || !glEnable || !!context;
+    const transform = canvas2D && (context || drawContext)?.getTransform?.();
+    const ratio = getCanvasPixelRatio();
+    const [scaleX, scaleY, offsetX, offsetY] = transform ?
+        [transform.a || 1, transform.d || 1, transform.e || 0, transform.f || 0] : [ratio, ratio, 0, 0];
+    const edges = (center, length, scale, offset)=>
     {
-        const start = round(center - length/2), end = start + round(length);
+        const border = max(1, round(borderSize * abs(scale)));
+        const start = round((center - length/2) * scale + offset), end = start + round(length * scale);
         const inner = min(start + border, floor((start + end)/2)); // a box too small for two borders splits
-        return [start, inner, max(end - border, inner), end];
+        return [start, inner, max(end - border, inner), end].map(edge=> (edge - offset) / scale);
     };
-    const xs = edges(pos.x, size.x), ys = edges(pos.y, size.y);
-    const shift = useWebGL && glEnable && !context ? 0 : .5; // Canvas2D draws half a pixel over its position
+    const xs = edges(pos.x, size.x, scaleX, offsetX), ys = edges(pos.y, size.y, scaleY, offsetY);
+    const shift = .5; // a screen space draw lands half a pixel past its position, in Canvas2D and WebGL alike
     for (let row = 3; row--;)
     for (let col = 3; col--;)
     {
@@ -278,12 +293,13 @@ function drawSliceSnapped(pos, size, borderSize, pieceTile, color, additiveColor
 
 /** Draw a crescent / moon-phase shape built from a polygon
  *  Routes through drawPoly, so it supports WebGL, screen space, color, and outlines
+ *  - At angle 0 the lit side faces up, and the lit width grows evenly with the phase, not as the real moon's does
  *  @param {Vector2} pos - Center position
  *  @param {number}  [size] - Diameter
  *  @param {number}  [percent] - Moon phase over a full cycle (0=new, .25=first quarter, .5=full, .75=last quarter), wraps
  *  @param {Color}   [color] - Fill color
  *  @param {number}  [angle] - Angle to rotate by
- *  @param {boolean} [invert] - Flip which side is illuminated
+ *  @param {boolean} [invert] - Draw the unlit part of the disk instead of the lit part
  *  @param {number}  [lineWidth] - Outline width, 0 for no outline
  *  @param {Color}   [lineColor] - Outline color
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering

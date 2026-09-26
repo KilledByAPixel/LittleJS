@@ -44,6 +44,7 @@ const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
 const RENDER3D_SHADOW_COLOR = Object.freeze(hsl(0, 0, 0, .5));
 const RENDER3D_IDENTITY = new Matrix4; // never modified
 const RENDER3D_DEBUG_WIDTH = .05; // line width of the debug primitives
+let render3DShadowCut; // the cut last sent to the shadow shader, see render3DApplyDrawState
 ///////////////////////////////////////////////////////////////////////////////
 // Private helpers
 
@@ -1606,13 +1607,15 @@ function render3DInitGL()
     glFlush(); // a pending 2D batch draws now, while the engine's own buffer, vertex array and program are bound
     r.uniforms = new Map;
     r.uniformValues = {};
+    render3DShadowCut = undefined; // the shadow shader is new too
     r.attribValues = []; // a fresh context has its own attribute defaults, so nothing sent before it counts
 
     // the shader, see RENDER3D_VERTEX_SOURCE and render3DFragmentSource
     r.program = glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource());
 
     // the depth only shader for the shadow map, same vertex layout; see through pixels cast nothing, so sprites and
-    // cut out textures cast their outline, and an object faded below half its alpha casts nothing, as it draws
+    // cut out textures cast their outline, and a blended object faded below half its alpha casts nothing, as it
+    // draws; an opaque one draws solid whatever its tint alpha, and casts so
     r.shadowShader = glCreateProgram(
         '#version 300 es\n' +
         'precision highp float;' +
@@ -1624,8 +1627,9 @@ function render3DInitGL()
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform sampler2D tex;' +
+        'uniform float cut;' + // 1 for a blended batch, cut by its tint and vertex alpha too, 0 by the texture only
         'in vec2 T;in float A;' +
-        'void main(){if(texture(tex,T).a*A<.5)discard;}'
+        'void main(){if(texture(tex,T).a*mix(1.,A,cut)<.5)discard;}'
     );
 
     // the vertex array object with the attributes enabled once, pointers are set per buffer by render3DBindVertexBuffer
@@ -1823,7 +1827,14 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     uvRect ||= render3DGetTileUVs(tileInfo);
     render3DDrawAttribs(matrix.m, tint, uvRect);
     render3DBindTexture(tileInfo, state);
-    if (r.shadowPass) return; // the shadow map needs nothing else
+    if (r.shadowPass)
+    {
+        // the shadow map needs only how to cut: by the alpha it blends with, or the texture's as an opaque draw
+        const cut = state.blend ? 1 : 0;
+        if (render3DShadowCut !== cut)
+            glContext.uniform1f(render3DUniform('cut', r.shadowShader), render3DShadowCut = cut);
+        return;
+    }
 
     // the program: a Shader's own, compiled by its first draw, or the plugin's; switching sends the pass uniforms
     const program = state.shader ? render3DShaderProgram(state.shader) : r.program;

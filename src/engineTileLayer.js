@@ -192,6 +192,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
 
         const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
+        tileLayer.isSolid = layerIndex === collisionLayer; // the others are art, the solid tests skip them
         tileLayers[layerIndex] = tileLayer;
         if (!visible)
             tileLayer.render = ()=> {}; // a hidden layer keeps its tiles and collision but is not drawn
@@ -292,6 +293,12 @@ class CanvasLayer extends EngineObject
         /** @property {TextureInfo} - Texture info to use for this object rendering */
         this.textureInfo = new TextureInfo(this.canvas, useWebGL);
 
+        // a texture past the device's limit fails with only a WebGL warning and draws black, and phones often
+        // allow 4096 where a desktop allows 16384, so say so in release builds too
+        const maxSize = useWebGL && glContext ? glContext.getParameter(glContext.MAX_TEXTURE_SIZE) : 0;
+        if (maxSize && max(canvasSize.x, canvasSize.y) > maxSize)
+            console.warn(`LittleJS: a ${canvasSize.x}x${canvasSize.y} layer is over this device's ${maxSize} pixel texture limit and draws black, split it into smaller layers`);
+
         // disable physics by default
         this.mass = 0;
     }
@@ -320,8 +327,7 @@ class CanvasLayer extends EngineObject
     *  @param {boolean} [mirror] - If true image is flipped along the Y axis
     *  @param {Color}   [additiveColor] - Additive color to be applied if any
     *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
-    *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
-    *  @memberof Draw */
+    *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to */
     draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=false, context)
     {
         // the canvas may have been resized since, updateWebGL only refreshes the size for WebGL
@@ -643,10 +649,11 @@ class TileLayer extends CanvasLayer
         // draw the tile onto the layer canvas
         // in color and handing back a target that was drawing before, like the light system's shadow map
         const oldMainCanvasSize = mainCanvasSize, oldTarget = glRenderTarget, oldColorMask = glColorMask;
-        const oldSkip = glSkipScreenSpace, oldColorAdditive = glColorAdditive;
+        const oldSkip = glSkipScreenSpace, oldColorAdditive = glColorAdditive, oldShader = glCustomShader;
         mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
         glColorMask = -1;
         glColorAdditive = 0;
+        setShader(); // plain, as a redraw draws, a layer's own Shader applies when the layer is drawn
         glSkipScreenSpace = false; // its screen space is the layer's own canvas
         const useWebGL = this.hasWebGL();
         useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
@@ -657,6 +664,7 @@ class TileLayer extends CanvasLayer
         glColorMask = oldColorMask;
         glColorAdditive = oldColorAdditive;
         glSkipScreenSpace = oldSkip;
+        setShader(oldShader);
     }
 
     /** Draw a rectangle onto the layer canvas in world space

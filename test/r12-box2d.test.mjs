@@ -75,3 +75,39 @@ test('a path finder that returns a path did not give up', () =>
     }
     assert.ok(searches > 1000);
 });
+
+test('a joint whose object is destroyed says so, and isActive is false instead of throwing', async () =>
+{
+    const { Box2dRopeJoint } = await import('../dist/littlejs.esm.js');
+    const anchor = new Box2dStaticObject(vec2(40, 10)), enemy = new Box2dObject(vec2(40, 5));
+    enemy.addBox(vec2(1));
+    const rope = new Box2dRopeJoint(anchor, enemy);
+    engineStep();
+    assert.equal(rope.isDestroyed(), false);
+    enemy.destroy();
+    engineStep();
+    assert.equal(rope.isDestroyed(), true);
+    assert.equal(rope.isActive(), false);
+    anchor.destroy();
+    engineStep();
+});
+
+test('circleCast passes over objects made only of sensors unless includeSensors is set', () =>
+{
+    const pickup = new Box2dObject(vec2(60, 0));
+    pickup.addCircle(1, vec2(), 0, 0, 0, true);
+    const crate = new Box2dObject(vec2(61, 0));
+    crate.addBox(vec2(1));
+    engineStep();
+    assert.deepEqual(box2d.circleCastAll(vec2(60.5, 0), 4), [crate]);
+    assert.equal(box2d.circleCastAll(vec2(60.5, 0), 4, true).length, 2);
+    pickup.destroy(); crate.destroy();
+    engineStep();
+});
+
+test('a path finder searched with rebuild false before it was ever built builds its grid first', () =>
+{
+    const finder = new PathFinder(vec2(8));
+    const path = finder.findPath(vec2(.5), vec2(6.5), false);
+    assert.ok(path.length >= 2);
+});

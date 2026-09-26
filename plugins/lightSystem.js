@@ -699,7 +699,8 @@ class Light extends EngineObject
         /** @property {number} - Width of the soft edge in world units */
         this.fadeRange = fadeRange === undefined ? radius : fadeRange;
         /** @property {number} - Radius around the light where casters are left out of its shadow, so the lamp
-         *  or torch that holds it, or the player carrying it, does not block it */
+         *  or torch that holds it, or the player carrying it, does not block it; it has to reach past that object's
+         *  corners, about half its diagonal and a little more, or dark rays run out from them */
         this.shadowCore = 0;
     }
 

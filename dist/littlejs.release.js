@@ -568,7 +568,7 @@ function engineScheduleFrame()
 const engineStepMaxFrames = 36000;
 
 /** Advance the engine by a number of frames
- *  Requires setEngineManualStep(true) before engineInit
+ *  Requires setEngineManualStep(true), before engineInit or while running; it stops early if an update turns it off
  *  Respects paused exactly as the normal update loop does
  *  @param {number} [frames] - frames of 1/60 of a second to advance, max 36000; timeScale sets how many fixed
  *  updates they run, as in the normal loop, one each at timeScale 1
@@ -581,7 +581,7 @@ const engineStepMaxFrames = 36000;
 function engineStep(frames=1)
 {
     false&&ASSERT(engineManualStep,
-        'engineStep requires setEngineManualStep(true) before engineInit');
+        'engineStep requires setEngineManualStep(true)');
     false&&ASSERT(engineUpdateInternal, 'engineStep requires engineInit to complete');
     // runtime guard so release builds (where the asserts are stripped) can't
     // start a second requestAnimationFrame chain or call an undefined update
@@ -589,7 +589,7 @@ function engineStep(frames=1)
     false&&ASSERT(Number.isInteger(frames) && frames >= 0 && frames <= engineStepMaxFrames,
         'engineStep requires a whole frame count from 0 to ' + engineStepMaxFrames);
     frames = min(frames, engineStepMaxFrames); // release has no asserts, don't freeze
-    for (let i = frames; i > 0; --i)
+    for (let i = frames; i > 0 && engineManualStep; --i) // an update that turns manual step off hands back the loop
         engineUpdateInternal(frameTimeLastMS + 1e3 / frameRate);
 }
 
@@ -639,9 +639,9 @@ function engineObjectsUpdate()
         o.children.length && o.updateTransforms(false);
         updateChildObjects(o.children);
     }
-    for (const o of engineObjects)
+    function updateTopObject(o)
     {
-        if (o.parent || o.destroyed || o.updatePass === pass) continue; // a child that let go is not updated twice
+        if (o.parent || o.destroyed || o.updatePass === pass) return; // a child that let go is not updated twice
 
         // update top level objects, each child places itself before it updates so it sees this frame's position,
         // then the whole tree is placed again so what the children changed in their localPos lands before render
@@ -650,6 +650,12 @@ function engineObjectsUpdate()
         updateChildObjects(o.children);
         o.updateTransforms();
     }
+    for (const o of engineObjects)
+        updateTopObject(o);
+
+    // a child let go during the update from a place in the list already walked is on its own now, updated here
+    for (const o of engineObjects)
+        updateTopObject(o);
 
     // remove destroyed objects
     engineObjects = engineObjects.filter(o=>!o.destroyed);
@@ -2612,6 +2618,7 @@ let gamepadDirectionEmulateStick = true;
 let gamepadAxisFilterEnable = true;
 
 /** If true the WASD keys are also routed to the direction keys (for better accessibility)
+ *  - Turn it off for a game with two players on one keyboard, one on WASD and one on the arrows
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -3235,7 +3242,8 @@ class EngineObject
         this.updatePass = 0; // the engine update pass it was last updated in, so nothing updates twice in one
 
         // physical properties
-        /** @property {number} - How heavy the object is, static if 0 */
+        /** @property {number} - How heavy the object is, static if 0: a static object moves by its velocity but does not
+         *  collide on its own, the moving ones collide with it */
         this.mass = objectDefaultMass;
         /** @property {number} - Fraction of velocity kept each frame, 1 keeps all of it, 0 stops at once */
         this.damping = objectDefaultDamping;
@@ -4632,6 +4640,8 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
 }
 
 /** Draw colored polygon using passed in points
+ *  - WebGL fills a polygon whose edges do not cross, concave or not; a self crossing one, like a star through its
+ *    outer points, fills wrong there, so draw it as its simple outline or in parts
  *  @param {Array<Vector2>} points - Array of Vector2 points
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
@@ -6204,10 +6214,14 @@ function inputInit()
     function onMouseWheel(e)
     {
         // accumulate so multiple wheel events in one frame are not lost
+        // a text area, list or field on the page scrolls itself, and the game does not take that wheel
+        const target = /** @type {HTMLElement} */ (e.target);
+        if (target?.closest?.('input,textarea,select,[contenteditable]'))
+            return;
         if (!e.ctrlKey)
             mouseWheel += sign(e.deltaY);
-        if (inputPreventDefault && e.cancelable && document.hasFocus() && !isOnControl(e))
-            e.preventDefault(); // prevent page scrolling, but a text area or list keeps its own
+        if (inputPreventDefault && e.cancelable && document.hasFocus())
+            e.preventDefault(); // prevent page scrolling
     }
     function onContextMenu(e)
     {
@@ -8248,6 +8262,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
 
         const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
+        tileLayer.isSolid = layerIndex === collisionLayer; // the others are art, the solid tests skip them
         tileLayers[layerIndex] = tileLayer;
         if (!visible)
             tileLayer.render = ()=> {}; // a hidden layer keeps its tiles and collision but is not drawn
@@ -8348,6 +8363,12 @@ class CanvasLayer extends EngineObject
         /** @property {TextureInfo} - Texture info to use for this object rendering */
         this.textureInfo = new TextureInfo(this.canvas, useWebGL);
 
+        // a texture past the device's limit fails with only a WebGL warning and draws black, and phones often
+        // allow 4096 where a desktop allows 16384, so say so in release builds too
+        const maxSize = useWebGL && glContext ? glContext.getParameter(glContext.MAX_TEXTURE_SIZE) : 0;
+        if (maxSize && max(canvasSize.x, canvasSize.y) > maxSize)
+            console.warn(`LittleJS: a ${canvasSize.x}x${canvasSize.y} layer is over this device's ${maxSize} pixel texture limit and draws black, split it into smaller layers`);
+
         // disable physics by default
         this.mass = 0;
     }
@@ -8376,8 +8397,7 @@ class CanvasLayer extends EngineObject
     *  @param {boolean} [mirror] - If true image is flipped along the Y axis
     *  @param {Color}   [additiveColor] - Additive color to be applied if any
     *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
-    *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
-    *  @memberof Draw */
+    *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to */
     draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=false, context)
     {
         // the canvas may have been resized since, updateWebGL only refreshes the size for WebGL
@@ -8699,10 +8719,11 @@ class TileLayer extends CanvasLayer
         // draw the tile onto the layer canvas
         // in color and handing back a target that was drawing before, like the light system's shadow map
         const oldMainCanvasSize = mainCanvasSize, oldTarget = glRenderTarget, oldColorMask = glColorMask;
-        const oldSkip = glSkipScreenSpace, oldColorAdditive = glColorAdditive;
+        const oldSkip = glSkipScreenSpace, oldColorAdditive = glColorAdditive, oldShader = glCustomShader;
         mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
         glColorMask = -1;
         glColorAdditive = 0;
+        setShader(); // plain, as a redraw draws, a layer's own Shader applies when the layer is drawn
         glSkipScreenSpace = false; // its screen space is the layer's own canvas
         const useWebGL = this.hasWebGL();
         useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
@@ -8713,6 +8734,7 @@ class TileLayer extends CanvasLayer
         glColorMask = oldColorMask;
         glColorAdditive = oldColorAdditive;
         glSkipScreenSpace = oldSkip;
+        setShader(oldShader);
     }
 
     /** Draw a rectangle onto the layer canvas in world space
@@ -12513,7 +12535,8 @@ class Light extends EngineObject
         /** @property {number} - Width of the soft edge in world units */
         this.fadeRange = fadeRange === undefined ? radius : fadeRange;
         /** @property {number} - Radius around the light where casters are left out of its shadow, so the lamp
-         *  or torch that holds it, or the player carrying it, does not block it */
+         *  or torch that holds it, or the player carrying it, does not block it; it has to reach past that object's
+         *  corners, about half its diagonal and a little more, or dark rays run out from them */
         this.shadowCore = 0;
     }
 
@@ -13537,7 +13560,8 @@ class UISystemPlugin
         false&&ASSERT(isVector2(pos), 'pos must be a vec2');
         false&&ASSERT(isVector2(size), 'size must be a vec2');
         false&&ASSERT(isColor(color), 'color must be a color');
-        slice.drawScreen(pos, size, color, undefined, 0, false, uiSystem.uiContext);
+        if (color.a > 0) // a clear one, like a UIText's, costs a tint of each piece for nothing
+            slice.drawScreen(pos, size, color, undefined, 0, false, uiSystem.uiContext);
     }
 
     /** Draw a line to the UI context
@@ -15211,12 +15235,22 @@ function box2dRunPending()
 // each Box2dJoint by its native pointer, so a joint Box2D destroys along with a body can let go of its wrapper
 const box2dJoints = new Map;
 
+// the gear joints, kept apart from the others, since every joint that goes looks through them
+const box2dGearJoints = new Set;
+
 // a gear joint keeps pointers to the joints it gears and to their bodies, so it goes before either joint does
 function box2dDestroyGears(joint)
 {
-    for (const gear of box2dJoints.values())
-        if (gear instanceof Box2dGearJoint && (gear.joint1 === joint || gear.joint2 === joint))
+    for (const gear of box2dGearJoints)
+    {
+        if (!gear.box2dJoint)
+            box2dGearJoints.delete(gear); // gone already, with a body
+        else if (gear.joint1 === joint || gear.joint2 === joint)
+        {
+            box2dGearJoints.delete(gear);
             gear.destroy();
+        }
+    }
 }
 
 /** Enable Box2D debug drawing
@@ -16212,7 +16246,11 @@ class Box2dJoint
 
     /** Check if either connected body is active
      *  @return {boolean} */
-    isActive() { return this.box2dJoint.IsActive();}
+    isActive() { return !!this.box2dJoint && this.box2dJoint.IsActive(); }
+
+    /** Check if the joint is gone, destroyed or taken along with one of its objects; its other methods can not be used then
+     *  @return {boolean} */
+    isDestroyed() { return !this.box2dJoint; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -16554,6 +16592,7 @@ class Box2dGearJoint extends Box2dJoint
         this.joint1 = joint1;
         this.joint2 = joint2;
         this.ratioSign = ratioSign;
+        box2dGearJoints.add(this);
     }
 
     /** Get the first joint
@@ -17261,12 +17300,14 @@ class Box2dPlugin
     /** circle cast and return all the objects whose position is within the circle, wherever their shapes are
      *  @param {Vector2} pos
      *  @param {number} diameter
+     *  @param {boolean} [includeSensors] - Also find objects whose shapes are all sensors, like trigger zones
      *  @return {Array<Box2dObject>} */
-    circleCastAll(pos, diameter)
+    circleCastAll(pos, diameter, includeSensors=false)
     {
         // by each object's position, so an object whose shapes are offset from it is still found
         const radius2 = (diameter/2)**2;
-        const results = box2d.objects.filter(o=> !o.destroyed && o.body && o.pos.distanceSquared(pos) < radius2);
+        const results = box2d.objects.filter(o=> !o.destroyed && o.body && o.pos.distanceSquared(pos) < radius2 &&
+            (includeSensors || o.getFixtureList().some(fixture=> !fixture.IsSensor())));
         debugRaycast && debugCircle(pos, diameter, results.length ? '#f00' : '#00f');
         return results;
     }
@@ -17274,11 +17315,12 @@ class Box2dPlugin
     /** circle cast and return the object whose position is nearest, of those within the circle
      *  @param {Vector2} pos
      *  @param {number} diameter
+     *  @param {boolean} [includeSensors] - Also find objects whose shapes are all sensors, like trigger zones
      *  @return {Box2dObject|undefined} */
-    circleCast(pos, diameter)
+    circleCast(pos, diameter, includeSensors=false)
     {
         let bestResult, bestDistance2;
-        for (const result of box2d.circleCastAll(pos, diameter))
+        for (const result of box2d.circleCastAll(pos, diameter, includeSensors))
         {
             const distance2 = result.pos.distanceSquared(pos);
             if (!bestResult || distance2 < bestDistance2)
@@ -17613,6 +17655,9 @@ function drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, a
  *  @memberof DrawUtilities */
 function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 {
+    if (!size.x || !size.y) return; // nothing to draw, the spacing must not make a sliver of it
+    if (color && color.a < 1)
+        extraSpace = 0; // see through, the overlap that hides a seam would draw twice and show brighter
     // setup nine slice tiles - startTile is the top-left of a 3x3 tile block,
     // so the center tile is one tile down and right from it, stepping over
     // the padding around each tile the way tile() lays out the grid
@@ -17693,6 +17738,9 @@ function drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, 
  *  @memberof DrawUtilities */
 function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 {
+    if (!size.x || !size.y) return; // nothing to draw, the spacing must not make a sliver of it
+    if (color && color.a < 1)
+        extraSpace = 0; // see through, the overlap that hides a seam would draw twice and show brighter
     // setup three slice tiles - 3 tiles in a row starting at startTile
     const cornerTile = startTile.frame(0);
     const sideTile   = startTile.frame(1);
@@ -17747,9 +17795,9 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
  * - The UI system draws a widget's background with one, see uiSystem.defaultSlice
  * @memberof DrawUtilities
  * @example
- * const panel = new TileSlice(tile(0, 16), 9, 12);
+ * const panel = new TileSlice(tile(0, 16), 9, .5); // a border of half a world unit
  * panel.draw(vec2(0, 5), vec2(10, 4));
- * uiSystem.defaultSlice = panel; // every UI widget made after this
+ * uiSystem.defaultSlice = new TileSlice(tile(0, 16), 9, 16); // UI sizes are pixels, every widget made after this
  */
 class TileSlice
 {
@@ -17787,6 +17835,8 @@ class TileSlice
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
     draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=false, context)
     {
+        if (screenSpace) // with the screen space defaults for the border and spacing
+            return this.drawScreen(pos, size, color, additiveColor, angle, useWebGL, context);
         if (this.slices === 9)
             drawNineSlice(pos, size, this.tileInfo, color, this.borderSize, additiveColor, this.extraSpace, angle, useWebGL, screenSpace, context);
         else if (this.slices === 3)
@@ -17819,15 +17869,22 @@ class TileSlice
 // a seam; pieceTile(col, row) gives the tile and angle for the piece in that column and row of the box, top left 0
 function drawSliceSnapped(pos, size, borderSize, pieceTile, color, additiveColor, useWebGL, context)
 {
-    const border = max(1, round(borderSize));
-    const edges = (center, length)=>
+    // the pixels it lands on are the device's: a 2D context's own scale and offset, like the UI under nativeHeight
+    // centered on an odd sized canvas, or the pixel ratio; the draws land half a pixel past, see shift below
+    const canvas2D = !useWebGL || !glEnable || !!context;
+    const transform = canvas2D && (context || drawContext)?.getTransform?.();
+    const ratio = getCanvasPixelRatio();
+    const [scaleX, scaleY, offsetX, offsetY] = transform ?
+        [transform.a || 1, transform.d || 1, transform.e || 0, transform.f || 0] : [ratio, ratio, 0, 0];
+    const edges = (center, length, scale, offset)=>
     {
-        const start = round(center - length/2), end = start + round(length);
+        const border = max(1, round(borderSize * abs(scale)));
+        const start = round((center - length/2) * scale + offset), end = start + round(length * scale);
         const inner = min(start + border, floor((start + end)/2)); // a box too small for two borders splits
-        return [start, inner, max(end - border, inner), end];
+        return [start, inner, max(end - border, inner), end].map(edge=> (edge - offset) / scale);
     };
-    const xs = edges(pos.x, size.x), ys = edges(pos.y, size.y);
-    const shift = useWebGL && glEnable && !context ? 0 : .5; // Canvas2D draws half a pixel over its position
+    const xs = edges(pos.x, size.x, scaleX, offsetX), ys = edges(pos.y, size.y, scaleY, offsetY);
+    const shift = .5; // a screen space draw lands half a pixel past its position, in Canvas2D and WebGL alike
     for (let row = 3; row--;)
     for (let col = 3; col--;)
     {
@@ -17842,12 +17899,13 @@ function drawSliceSnapped(pos, size, borderSize, pieceTile, color, additiveColor
 
 /** Draw a crescent / moon-phase shape built from a polygon
  *  Routes through drawPoly, so it supports WebGL, screen space, color, and outlines
+ *  - At angle 0 the lit side faces up, and the lit width grows evenly with the phase, not as the real moon's does
  *  @param {Vector2} pos - Center position
  *  @param {number}  [size] - Diameter
  *  @param {number}  [percent] - Moon phase over a full cycle (0=new, .25=first quarter, .5=full, .75=last quarter), wraps
  *  @param {Color}   [color] - Fill color
  *  @param {number}  [angle] - Angle to rotate by
- *  @param {boolean} [invert] - Flip which side is illuminated
+ *  @param {boolean} [invert] - Draw the unlit part of the disk instead of the lit part
  *  @param {number}  [lineWidth] - Outline width, 0 for no outline
  *  @param {Color}   [lineColor] - Outline color
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
@@ -19001,7 +19059,8 @@ function tweenUpdate(gameDelta, realDelta)
     // may stop any tween, even all of them, and one that is stopped is skipped; a tween
     // made or started again during the update, like the next turn of a loop, moves on
     // from the next update. Newest first, as the list has always been walked.
-    const list = tweenUpdateList, pass = ++tweenUpdatePass;
+    // a callback that calls tweenUpdate itself gets a list of its own, the outer update is still walking this one
+    const list = tweenUpdateList.length ? [] : tweenUpdateList, pass = ++tweenUpdatePass;
     for (const t of tweenActive)
         list.push(t);
     for (let i = list.length; i--;)
@@ -19266,6 +19325,7 @@ class PathFinder
      *  findPath; call it directly before searches made with rebuild=false. */
     buildNodeData()
     {
+        this.nodeDataBuilt = true;
         const w = this.size.x;
         const h = this.size.y;
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
@@ -19798,7 +19858,7 @@ class PathFinder
         false&&ASSERT(isVector2(startPos) && isVector2(endPos), 'findPath needs Vector2 endpoints');
 
         this.searchGaveUp = false;
-        if (rebuild) this.buildNodeData();
+        if (rebuild || !this.nodeDataBuilt) this.buildNodeData(); // a grid never built has nothing to walk yet
 
         // rebuild=false because we just built — avoid redundant work per snap.
         // the ends go to the nearest cell that can be walked, whatever it costs to cross
@@ -20830,6 +20890,7 @@ const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
 const RENDER3D_SHADOW_COLOR = Object.freeze(hsl(0, 0, 0, .5));
 const RENDER3D_IDENTITY = new Matrix4; // never modified
 const RENDER3D_DEBUG_WIDTH = .05; // line width of the debug primitives
+let render3DShadowCut; // the cut last sent to the shadow shader, see render3DApplyDrawState
 ///////////////////////////////////////////////////////////////////////////////
 // Private helpers
 
@@ -22392,13 +22453,15 @@ function render3DInitGL()
     glFlush(); // a pending 2D batch draws now, while the engine's own buffer, vertex array and program are bound
     r.uniforms = new Map;
     r.uniformValues = {};
+    render3DShadowCut = undefined; // the shadow shader is new too
     r.attribValues = []; // a fresh context has its own attribute defaults, so nothing sent before it counts
 
     // the shader, see RENDER3D_VERTEX_SOURCE and render3DFragmentSource
     r.program = glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource());
 
     // the depth only shader for the shadow map, same vertex layout; see through pixels cast nothing, so sprites and
-    // cut out textures cast their outline, and an object faded below half its alpha casts nothing, as it draws
+    // cut out textures cast their outline, and a blended object faded below half its alpha casts nothing, as it
+    // draws; an opaque one draws solid whatever its tint alpha, and casts so
     r.shadowShader = glCreateProgram(
         '#version 300 es\n' +
         'precision highp float;' +
@@ -22410,8 +22473,9 @@ function render3DInitGL()
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform sampler2D tex;' +
+        'uniform float cut;' + // 1 for a blended batch, cut by its tint and vertex alpha too, 0 by the texture only
         'in vec2 T;in float A;' +
-        'void main(){if(texture(tex,T).a*A<.5)discard;}'
+        'void main(){if(texture(tex,T).a*mix(1.,A,cut)<.5)discard;}'
     );
 
     // the vertex array object with the attributes enabled once, pointers are set per buffer by render3DBindVertexBuffer
@@ -22609,7 +22673,14 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     uvRect ||= render3DGetTileUVs(tileInfo);
     render3DDrawAttribs(matrix.m, tint, uvRect);
     render3DBindTexture(tileInfo, state);
-    if (r.shadowPass) return; // the shadow map needs nothing else
+    if (r.shadowPass)
+    {
+        // the shadow map needs only how to cut: by the alpha it blends with, or the texture's as an opaque draw
+        const cut = state.blend ? 1 : 0;
+        if (render3DShadowCut !== cut)
+            glContext.uniform1f(render3DUniform('cut', r.shadowShader), render3DShadowCut = cut);
+        return;
+    }
 
     // the program: a Shader's own, compiled by its first draw, or the plugin's; switching sends the pass uniforms
     const program = state.shader ? render3DShaderProgram(state.shader) : r.program;
@@ -26013,12 +26084,17 @@ class GLTFModel
         /** @property {TextureInfo|undefined} - The texture to draw mesh with, when every part uses the same one
          *  @type {TextureInfo|undefined} */
         this.textureInfo = textures.size === 1 ? textures.values().next().value : undefined;
+        /** @type {{min: Vector3, max: Vector3}|undefined} */
         this.bounds = undefined; // the box around every part, kept once measured, see getBounds
     }
 
     /** The box around every part, measured once and again after transform, so change the model through that
      *  @return {{min: Vector3, max: Vector3}} */
-    getBounds() { return this.bounds ||= this.mesh.getBounds(); }
+    getBounds()
+    {
+        const bounds = this.bounds ||= this.mesh.getBounds();
+        return { min: bounds.min.copy(), max: bounds.max.copy() }; // a copy, so a change to it leaves the model's
+    }
 
     /** Move every part so the center of the model's bounds is on the origin, like Mesh.center
      *  @return {GLTFModel} */

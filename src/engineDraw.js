@@ -826,6 +826,8 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
 }
 
 /** Draw colored polygon using passed in points
+ *  - WebGL fills a polygon whose edges do not cross, concave or not; a self crossing one, like a star through its
+ *    outer points, fills wrong there, so draw it as its simple outline or in parts
  *  @param {Array<Vector2>} points - Array of Vector2 points
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]

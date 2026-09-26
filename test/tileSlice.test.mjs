@@ -145,3 +145,54 @@ test('a slice smaller than its borders draws inside its box, and an empty one dr
     `);
     assert.deepEqual([...result], [0, true, 0, true, true, true]);
 });
+
+test('snapped slices land on whole device pixels of a scaled context, and WebGL shifts half a pixel as Canvas2D does', () =>
+{
+    const { run } = loadEngine();
+    const result = run(`
+        let rects = [];
+        drawTile = (pos, size)=> rects.push([pos.x + .5 - size.x/2, pos.y + .5 - size.y/2, size.x, size.y]);
+        const t = new TileInfo(vec2(), vec2(16));
+        const scaled = { getTransform: ()=> ({ a: 1.5, b: 0, c: 0, d: 1.5 }) }; // the UI under nativeHeight
+        drawNineSliceScreen(vec2(100.3, 50.7), vec2(120.4, 40.6), t, WHITE, 12.4, undefined, 2, 0, false, scaled);
+        const device = rects.flatMap(r=> [r[0], r[1], r[0] + r[2], r[1] + r[3]]).map(v=> v * 1.5);
+        const onPixels = device.every(v=> Math.abs(v - Math.round(v)) < 1e-9);
+        rects = [];
+        glEnable = true; glContext = new Proxy({}, { get: ()=> ()=> {} }); // WebGL at a pixel ratio of 1
+        drawNineSliceScreen(vec2(64), vec2(64), t, WHITE, 16, undefined, 0, 0, true);
+        const edges = [Math.min(...rects.map(r=> r[0])), Math.max(...rects.map(r=> r[0] + r[2]))];
+        [onPixels, edges];
+    `);
+    assert.deepEqual(JSON.parse(JSON.stringify(result)), [true, [32, 96]]);
+});
+
+test('an empty slice draws nothing turned or in world space, where the spacing would make a sliver', () =>
+{
+    const { run } = loadEngine();
+    const count = run(`
+        let draws = 0;
+        drawTile = ()=> ++draws;
+        const t = new TileInfo(vec2(), vec2(16));
+        drawNineSliceScreen(vec2(128), vec2(0, 40), t, WHITE, 16, undefined, undefined, .3);
+        drawThreeSliceScreen(vec2(128), vec2(40, 0), t, WHITE, 16, undefined, undefined, .3);
+        drawNineSlice(vec2(), vec2(0, 4), t);
+        drawThreeSlice(vec2(), vec2(4, 0), t);
+        draws;
+    `);
+    assert.equal(count, 0);
+});
+
+test('snapped slices land on whole device pixels when the context is offset too, like a centered odd canvas', () =>
+{
+    const { run } = loadEngine();
+    const onPixels = run(`
+        const rects = [];
+        drawTile = (pos, size)=> rects.push([pos.x + .5 - size.x/2, pos.y + .5 - size.y/2, size.x, size.y]);
+        const scaled = { getTransform: ()=> ({ a: 1.5, b: 0, c: 0, d: 1.5, e: 480.5, f: 270.25 }) };
+        drawNineSliceScreen(vec2(10.3, 20.7), vec2(120.4, 40.6), new TileInfo(vec2(), vec2(16)), WHITE, 12.4,
+            undefined, 2, 0, false, scaled);
+        rects.every(r=> [r[0] * 1.5 + 480.5, (r[0] + r[2]) * 1.5 + 480.5, r[1] * 1.5 + 270.25,
+            (r[1] + r[3]) * 1.5 + 270.25].every(v=> Math.abs(v - Math.round(v)) < 1e-9));
+    `);
+    assert.equal(onPixels, true);
+});

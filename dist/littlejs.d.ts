@@ -169,7 +169,7 @@ declare module "littlejsengine" {
      *  @memberof Engine */
     export function engineInit(gameInit?: GameInitCallback, gameUpdate?: GameCallback, gameUpdatePost?: GameCallback, gameRender?: GameCallback, gameRenderPost?: GameCallback, imageSources?: Array<string>, rootElement?: HTMLElement): Promise<void>;
     /** Advance the engine by a number of frames
-     *  Requires setEngineManualStep(true) before engineInit
+     *  Requires setEngineManualStep(true), before engineInit or while running; it stops early if an update turns it off
      *  Respects paused exactly as the normal update loop does
      *  @param {number} [frames] - frames of 1/60 of a second to advance, max 36000; timeScale sets how many fixed
      *  updates they run, as in the normal loop, one each at timeScale 1
@@ -574,6 +574,7 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export let gamepadAxisFilterEnable: boolean;
     /** If true the WASD keys are also routed to the direction keys (for better accessibility)
+     *  - Turn it off for a game with two players on one keyboard, one on WASD and one on the arrows
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -2206,6 +2207,8 @@ declare module "littlejsengine" {
      *  @memberof Draw */
     export function drawLine(posA: Vector2, posB: Vector2, width?: number, color?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored polygon using passed in points
+     *  - WebGL fills a polygon whose edges do not cross, concave or not; a self crossing one, like a star through its
+     *    outer points, fills wrong there, so draw it as its simple outline or in parts
      *  @param {Array<Vector2>} points - Array of Vector2 points
      *  @param {Color}   [color=WHITE]
      *  @param {number}  [lineWidth]
@@ -3254,7 +3257,8 @@ declare module "littlejsengine" {
         /** @property {boolean} - Has object been destroyed? */
         destroyed: boolean;
         updatePass: number;
-        /** @property {number} - How heavy the object is, static if 0 */
+        /** @property {number} - How heavy the object is, static if 0: a static object moves by its velocity but does not
+         *  collide on its own, the moving ones collide with it */
         mass: number;
         /** @property {number} - Fraction of velocity kept each frame, 1 keeps all of it, 0 stops at once */
         damping: number;
@@ -3547,8 +3551,7 @@ declare module "littlejsengine" {
         *  @param {boolean} [mirror] - If true image is flipped along the Y axis
         *  @param {Color}   [additiveColor] - Additive color to be applied if any
         *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
-        *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
-        *  @memberof Draw */
+        *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to */
         draw(pos: Vector2, size?: Vector2, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
         /** Create WebGL texture if necessary and copy layer canvas to it */
         updateWebGL(): void;
@@ -4385,7 +4388,8 @@ declare module "littlejsengine" {
         /** @property {number} - Width of the soft edge in world units */
         fadeRange: number;
         /** @property {number} - Radius around the light where casters are left out of its shadow, so the lamp
-         *  or torch that holds it, or the player carrying it, does not block it */
+         *  or torch that holds it, or the player carrying it, does not block it; it has to reach past that object's
+         *  corners, about half its diagonal and a little more, or dark rays run out from them */
         shadowCore: number;
     }
     /**
@@ -5345,13 +5349,15 @@ declare module "littlejsengine" {
         /** circle cast and return all the objects whose position is within the circle, wherever their shapes are
          *  @param {Vector2} pos
          *  @param {number} diameter
+         *  @param {boolean} [includeSensors] - Also find objects whose shapes are all sensors, like trigger zones
          *  @return {Array<Box2dObject>} */
-        circleCastAll(pos: Vector2, diameter: number): Array<Box2dObject>;
+        circleCastAll(pos: Vector2, diameter: number, includeSensors?: boolean): Array<Box2dObject>;
         /** circle cast and return the object whose position is nearest, of those within the circle
          *  @param {Vector2} pos
          *  @param {number} diameter
+         *  @param {boolean} [includeSensors] - Also find objects whose shapes are all sensors, like trigger zones
          *  @return {Box2dObject|undefined} */
-        circleCast(pos: Vector2, diameter: number): Box2dObject | undefined;
+        circleCast(pos: Vector2, diameter: number, includeSensors?: boolean): Box2dObject | undefined;
         /** point cast and return the first object
          *  @param {Vector2} pos
          *  @param {boolean} [dynamicOnly]
@@ -5756,6 +5762,9 @@ declare module "littlejsengine" {
         /** Check if either connected body is active
          *  @return {boolean} */
         isActive(): boolean;
+        /** Check if the joint is gone, destroyed or taken along with one of its objects; its other methods can not be used then
+         *  @return {boolean} */
+        isDestroyed(): boolean;
     }
     /**
      * Box2D Target Joint, also known as a mouse joint
@@ -6351,9 +6360,9 @@ declare module "littlejsengine" {
      * - The UI system draws a widget's background with one, see uiSystem.defaultSlice
      * @memberof DrawUtilities
      * @example
-     * const panel = new TileSlice(tile(0, 16), 9, 12);
+     * const panel = new TileSlice(tile(0, 16), 9, .5); // a border of half a world unit
      * panel.draw(vec2(0, 5), vec2(10, 4));
-     * uiSystem.defaultSlice = panel; // every UI widget made after this
+     * uiSystem.defaultSlice = new TileSlice(tile(0, 16), 9, 16); // UI sizes are pixels, every widget made after this
      */
     export class TileSlice {
         /** Create a tile slice style
@@ -6394,12 +6403,13 @@ declare module "littlejsengine" {
     }
     /** Draw a crescent / moon-phase shape built from a polygon
      *  Routes through drawPoly, so it supports WebGL, screen space, color, and outlines
+     *  - At angle 0 the lit side faces up, and the lit width grows evenly with the phase, not as the real moon's does
      *  @param {Vector2} pos - Center position
      *  @param {number}  [size] - Diameter
      *  @param {number}  [percent] - Moon phase over a full cycle (0=new, .25=first quarter, .5=full, .75=last quarter), wraps
      *  @param {Color}   [color] - Fill color
      *  @param {number}  [angle] - Angle to rotate by
-     *  @param {boolean} [invert] - Flip which side is illuminated
+     *  @param {boolean} [invert] - Draw the unlit part of the disk instead of the lit part
      *  @param {number}  [lineWidth] - Outline width, 0 for no outline
      *  @param {Color}   [lineColor] - Outline color
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
@@ -6720,6 +6730,7 @@ declare module "littlejsengine" {
          *  current isWalkable / getCost overrides. Called at the start of
          *  findPath; call it directly before searches made with rebuild=false. */
         buildNodeData(): void;
+        nodeDataBuilt: boolean;
         /** Core A* search loop. Expects buildNodeData() to have been called first.
          *  Marks node.parent for path reconstruction. Returns true if endNode was
          *  reached; false on disconnected goal or maxLoop exhaustion, which sets searchGaveUp.
@@ -8657,7 +8668,11 @@ declare module "littlejsengine" {
         /** @property {TextureInfo|undefined} - The texture to draw mesh with, when every part uses the same one
          *  @type {TextureInfo|undefined} */
         textureInfo: TextureInfo | undefined;
-        bounds: any;
+        /** @type {{min: Vector3, max: Vector3}|undefined} */
+        bounds: {
+            min: Vector3;
+            max: Vector3;
+        } | undefined;
         /** The box around every part, measured once and again after transform, so change the model through that
          *  @return {{min: Vector3, max: Vector3}} */
         getBounds(): {

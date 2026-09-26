@@ -124,12 +124,22 @@ function box2dRunPending()
 // each Box2dJoint by its native pointer, so a joint Box2D destroys along with a body can let go of its wrapper
 const box2dJoints = new Map;
 
+// the gear joints, kept apart from the others, since every joint that goes looks through them
+const box2dGearJoints = new Set;
+
 // a gear joint keeps pointers to the joints it gears and to their bodies, so it goes before either joint does
 function box2dDestroyGears(joint)
 {
-    for (const gear of box2dJoints.values())
-        if (gear instanceof Box2dGearJoint && (gear.joint1 === joint || gear.joint2 === joint))
+    for (const gear of box2dGearJoints)
+    {
+        if (!gear.box2dJoint)
+            box2dGearJoints.delete(gear); // gone already, with a body
+        else if (gear.joint1 === joint || gear.joint2 === joint)
+        {
+            box2dGearJoints.delete(gear);
             gear.destroy();
+        }
+    }
 }
 
 /** Enable Box2D debug drawing
@@ -1125,7 +1135,11 @@ class Box2dJoint
 
     /** Check if either connected body is active
      *  @return {boolean} */
-    isActive() { return this.box2dJoint.IsActive();}
+    isActive() { return !!this.box2dJoint && this.box2dJoint.IsActive(); }
+
+    /** Check if the joint is gone, destroyed or taken along with one of its objects; its other methods can not be used then
+     *  @return {boolean} */
+    isDestroyed() { return !this.box2dJoint; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1467,6 +1481,7 @@ class Box2dGearJoint extends Box2dJoint
         this.joint1 = joint1;
         this.joint2 = joint2;
         this.ratioSign = ratioSign;
+        box2dGearJoints.add(this);
     }
 
     /** Get the first joint
@@ -2174,12 +2189,14 @@ class Box2dPlugin
     /** circle cast and return all the objects whose position is within the circle, wherever their shapes are
      *  @param {Vector2} pos
      *  @param {number} diameter
+     *  @param {boolean} [includeSensors] - Also find objects whose shapes are all sensors, like trigger zones
      *  @return {Array<Box2dObject>} */
-    circleCastAll(pos, diameter)
+    circleCastAll(pos, diameter, includeSensors=false)
     {
         // by each object's position, so an object whose shapes are offset from it is still found
         const radius2 = (diameter/2)**2;
-        const results = box2d.objects.filter(o=> !o.destroyed && o.body && o.pos.distanceSquared(pos) < radius2);
+        const results = box2d.objects.filter(o=> !o.destroyed && o.body && o.pos.distanceSquared(pos) < radius2 &&
+            (includeSensors || o.getFixtureList().some(fixture=> !fixture.IsSensor())));
         debugRaycast && debugCircle(pos, diameter, results.length ? '#f00' : '#00f');
         return results;
     }
@@ -2187,11 +2204,12 @@ class Box2dPlugin
     /** circle cast and return the object whose position is nearest, of those within the circle
      *  @param {Vector2} pos
      *  @param {number} diameter
+     *  @param {boolean} [includeSensors] - Also find objects whose shapes are all sensors, like trigger zones
      *  @return {Box2dObject|undefined} */
-    circleCast(pos, diameter)
+    circleCast(pos, diameter, includeSensors=false)
     {
         let bestResult, bestDistance2;
-        for (const result of box2d.circleCastAll(pos, diameter))
+        for (const result of box2d.circleCastAll(pos, diameter, includeSensors))
         {
             const distance2 = result.pos.distanceSquared(pos);
             if (!bestResult || distance2 < bestDistance2)

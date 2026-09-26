@@ -108,12 +108,17 @@ class GLTFModel
         /** @property {TextureInfo|undefined} - The texture to draw mesh with, when every part uses the same one
          *  @type {TextureInfo|undefined} */
         this.textureInfo = textures.size === 1 ? textures.values().next().value : undefined;
+        /** @type {{min: Vector3, max: Vector3}|undefined} */
         this.bounds = undefined; // the box around every part, kept once measured, see getBounds
     }
 
     /** The box around every part, measured once and again after transform, so change the model through that
      *  @return {{min: Vector3, max: Vector3}} */
-    getBounds() { return this.bounds ||= this.mesh.getBounds(); }
+    getBounds()
+    {
+        const bounds = this.bounds ||= this.mesh.getBounds();
+        return { min: bounds.min.copy(), max: bounds.max.copy() }; // a copy, so a change to it leaves the model's
+    }
 
     /** Move every part so the center of the model's bounds is on the origin, like Mesh.center
      *  @return {GLTFModel} */

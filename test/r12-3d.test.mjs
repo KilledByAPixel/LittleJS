@@ -71,3 +71,11 @@ test('a model measures its whole mesh once for the objects made from it, and aga
     assert.equal(measured, 2, 'measured again once it moved');
     for (const o of objects) o.destroy();
 });
+
+test('a model hands out a copy of its bounds, so a change to it leaves the model alone', async () =>
+{
+    const { GLTFModel, GLTFPart } = await import('../dist/littlejs.esm.js');
+    const model = new GLTFModel([new GLTFPart('ball', buildSphere(2, 8, 4), undefined, undefined, false)]);
+    model.getBounds().max.x = 100;
+    assert.ok(Math.abs(model.getBounds().max.x - 1) < 1e-6);
+});

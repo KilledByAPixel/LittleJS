@@ -565,7 +565,7 @@ function engineScheduleFrame()
 const engineStepMaxFrames = 36000;
 
 /** Advance the engine by a number of frames
- *  Requires setEngineManualStep(true) before engineInit
+ *  Requires setEngineManualStep(true), before engineInit or while running; it stops early if an update turns it off
  *  Respects paused exactly as the normal update loop does
  *  @param {number} [frames] - frames of 1/60 of a second to advance, max 36000; timeScale sets how many fixed
  *  updates they run, as in the normal loop, one each at timeScale 1
@@ -578,7 +578,7 @@ const engineStepMaxFrames = 36000;
 function engineStep(frames=1)
 {
     ASSERT(engineManualStep,
-        'engineStep requires setEngineManualStep(true) before engineInit');
+        'engineStep requires setEngineManualStep(true)');
     ASSERT(engineUpdateInternal, 'engineStep requires engineInit to complete');
     // runtime guard so release builds (where the asserts are stripped) can't
     // start a second requestAnimationFrame chain or call an undefined update
@@ -586,7 +586,7 @@ function engineStep(frames=1)
     ASSERT(Number.isInteger(frames) && frames >= 0 && frames <= engineStepMaxFrames,
         'engineStep requires a whole frame count from 0 to ' + engineStepMaxFrames);
     frames = min(frames, engineStepMaxFrames); // release has no asserts, don't freeze
-    for (let i = frames; i > 0; --i)
+    for (let i = frames; i > 0 && engineManualStep; --i) // an update that turns manual step off hands back the loop
         engineUpdateInternal(frameTimeLastMS + 1e3 / frameRate);
 }
 
@@ -636,9 +636,9 @@ function engineObjectsUpdate()
         o.children.length && o.updateTransforms(false);
         updateChildObjects(o.children);
     }
-    for (const o of engineObjects)
+    function updateTopObject(o)
     {
-        if (o.parent || o.destroyed || o.updatePass === pass) continue; // a child that let go is not updated twice
+        if (o.parent || o.destroyed || o.updatePass === pass) return; // a child that let go is not updated twice
 
         // update top level objects, each child places itself before it updates so it sees this frame's position,
         // then the whole tree is placed again so what the children changed in their localPos lands before render
@@ -647,6 +647,12 @@ function engineObjectsUpdate()
         updateChildObjects(o.children);
         o.updateTransforms();
     }
+    for (const o of engineObjects)
+        updateTopObject(o);
+
+    // a child let go during the update from a place in the list already walked is on its own now, updated here
+    for (const o of engineObjects)
+        updateTopObject(o);
 
     // remove destroyed objects
     engineObjects = engineObjects.filter(o=>!o.destroyed);

@@ -457,7 +457,8 @@ class UISystemPlugin
         ASSERT(isVector2(pos), 'pos must be a vec2');
         ASSERT(isVector2(size), 'size must be a vec2');
         ASSERT(isColor(color), 'color must be a color');
-        slice.drawScreen(pos, size, color, undefined, 0, false, uiSystem.uiContext);
+        if (color.a > 0) // a clear one, like a UIText's, costs a tint of each piece for nothing
+            slice.drawScreen(pos, size, color, undefined, 0, false, uiSystem.uiContext);
     }
 
     /** Draw a line to the UI context
