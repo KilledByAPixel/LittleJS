@@ -39,6 +39,9 @@ let glColorMask = -1;
 // ORed onto the additive color of every quad and onto every poly point's color as a draw is queued; the light system's
 // emissive pass sets a grey with the mask at 0xff000000, so a draw comes out that grey in its own shape
 let glColorAdditive = 0;
+// a texture drawn into with the canvas's own transform and its size, the light system's lightmap while its pass
+// runs: a target set and ended inside it, like a tile layer redrawn in a renderLight, goes back to it, not the canvas
+let glRenderTargetBase;
 // set by the light system's shadow pass, which draws the world with its own camera, so a screen space
 // WebGL draw in a render() is skipped instead of landing somewhere in the world
 let glSkipScreenSpace = false;
@@ -862,11 +865,23 @@ function glSetRenderTarget(texture, clear=false)
     else
     {
         glRenderTarget = undefined;
-        glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
+        if (glRenderTargetBase)
+        {
+            // back to the texture the canvas transform was drawing into, at its own size
+            const [baseTexture, baseSize] = glRenderTargetBase;
+            glContext.bindFramebuffer(glContext.FRAMEBUFFER, glFramebuffer);
+            glContext.framebufferTexture2D(glContext.FRAMEBUFFER,
+                glContext.COLOR_ATTACHMENT0, glContext.TEXTURE_2D, baseTexture, 0);
+            glContext.viewport(0, 0, baseSize.x, baseSize.y);
+        }
+        else
+        {
+            glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
 
-        // use the backing store size, mainCanvasSize is css pixels and may
-        // still be the render target's size when unwinding a layer redraw
-        glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
+            // use the backing store size, mainCanvasSize is css pixels and may
+            // still be the render target's size when unwinding a layer redraw
+            glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
+        }
 
         // the canvas's own transform and blend mode again, the target set its own
         if (glRenderTargetSaved)

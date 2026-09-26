@@ -4350,7 +4350,9 @@ declare module "littlejsengine" {
         renderLightShadow(light: Light): void;
         /** In the shadow pass, let the draws that follow keep their color in the shadow map, so light passing
          *  through them is tinted instead of blocked: a stained glass window, colored smoke. Any draw blocks light
-         *  by its alpha, so a fading sprite casts a fading shadow; this keeps the color as well. Does nothing outside
+         *  by its alpha, so a fading sprite casts a fading shadow; this keeps the color as well. It covers what was drawn
+         *  under it in the map as any draw does, so glass drawn after a wall cuts a tinted window in the wall's shadow, and
+         *  a wall drawn after the glass covers it. Does nothing outside
          *  the pass, so a render() can call it around those draws unconditionally; set it back to false after them.
          *  @param {boolean} [transparent] */
         setShadowTransparent(transparent?: boolean): void;

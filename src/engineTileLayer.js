@@ -511,8 +511,9 @@ class TileLayer extends CanvasLayer
         setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
         // a redraw from inside another target's pass, like the light system's shadow map, draws the tiles in color
         // and hands that target back after
-        this.savedRenderTarget = [glRenderTarget, glColorMask];
+        this.savedRenderTarget = [glRenderTarget, glColorMask, glSkipScreenSpace];
         glColorMask = -1;
+        glSkipScreenSpace = false; // screen space is the layer's own pixels here
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
@@ -549,10 +550,11 @@ class TileLayer extends CanvasLayer
 
         // set stuff back to normal, the camera first, so a target that was drawing before gets its own transform back
         [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
-        const [target, colorMask] = this.savedRenderTarget;
+        const [target, colorMask, skipScreenSpace] = this.savedRenderTarget;
         if (this.isUsingWebGL)
             glSetRenderTarget(target);
         glColorMask = colorMask;
+        glSkipScreenSpace = skipScreenSpace;
     }
 
     /** Draw the tile at a given position in the tile layer

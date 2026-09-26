@@ -9421,8 +9421,9 @@ class TileLayer extends CanvasLayer
         setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
         // a redraw from inside another target's pass, like the light system's shadow map, draws the tiles in color
         // and hands that target back after
-        this.savedRenderTarget = [glRenderTarget, glColorMask];
+        this.savedRenderTarget = [glRenderTarget, glColorMask, glSkipScreenSpace];
         glColorMask = -1;
+        glSkipScreenSpace = false; // screen space is the layer's own pixels here
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
@@ -9459,10 +9460,11 @@ class TileLayer extends CanvasLayer
 
         // set stuff back to normal, the camera first, so a target that was drawing before gets its own transform back
         [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
-        const [target, colorMask] = this.savedRenderTarget;
+        const [target, colorMask, skipScreenSpace] = this.savedRenderTarget;
         if (this.isUsingWebGL)
             glSetRenderTarget(target);
         glColorMask = colorMask;
+        glSkipScreenSpace = skipScreenSpace;
     }
 
     /** Draw the tile at a given position in the tile layer
@@ -10398,6 +10400,9 @@ let glColorMask = -1;
 // ORed onto the additive color of every quad and onto every poly point's color as a draw is queued; the light system's
 // emissive pass sets a grey with the mask at 0xff000000, so a draw comes out that grey in its own shape
 let glColorAdditive = 0;
+// a texture drawn into with the canvas's own transform and its size, the light system's lightmap while its pass
+// runs: a target set and ended inside it, like a tile layer redrawn in a renderLight, goes back to it, not the canvas
+let glRenderTargetBase;
 // set by the light system's shadow pass, which draws the world with its own camera, so a screen space
 // WebGL draw in a render() is skipped instead of landing somewhere in the world
 let glSkipScreenSpace = false;
@@ -11221,11 +11226,23 @@ function glSetRenderTarget(texture, clear=false)
     else
     {
         glRenderTarget = undefined;
-        glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
+        if (glRenderTargetBase)
+        {
+            // back to the texture the canvas transform was drawing into, at its own size
+            const [baseTexture, baseSize] = glRenderTargetBase;
+            glContext.bindFramebuffer(glContext.FRAMEBUFFER, glFramebuffer);
+            glContext.framebufferTexture2D(glContext.FRAMEBUFFER,
+                glContext.COLOR_ATTACHMENT0, glContext.TEXTURE_2D, baseTexture, 0);
+            glContext.viewport(0, 0, baseSize.x, baseSize.y);
+        }
+        else
+        {
+            glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
 
-        // use the backing store size, mainCanvasSize is css pixels and may
-        // still be the render target's size when unwinding a layer redraw
-        glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
+            // use the backing store size, mainCanvasSize is css pixels and may
+            // still be the render target's size when unwinding a layer redraw
+            glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
+        }
 
         // the canvas's own transform and blend mode again, the target set its own
         if (glRenderTargetSaved)
@@ -13106,34 +13123,43 @@ class LightSystemPlugin
             glContext.uniformMatrix4fv(glUniformLocation(ls, 'm'), false, glTransform);
             glSetInstancedMode(true);
 
-            for (const o of engineObjects)
-                o.destroyed || o.renderLight();
-
-            // 3b. emissive objects draw their shape in grey at their emissive level, white at 1, adding that much
-            //     light where they are so they show their own colors; text goes to the 1x1 canvas as in the
-            //     shadow pass, so it is not drawn twice
-            const saved = [drawContext, glCustomShader];
-            drawContext = lightSystem.shadowContext;
-            lightSystem.emissivePass = true;
+            // a target set and ended while the lights draw, a tile layer redrawn in a renderLight, comes back here
+            glRenderTargetBase = [lightSystem.texture, lightSystem.textureSize];
             try
             {
                 for (const o of engineObjects)
+                    o.destroyed || o.renderLight();
+
+                // 3b. emissive objects draw their shape in grey at their emissive level, white at 1, adding that much
+                //     light where they are so they show their own colors; text goes to the 1x1 canvas as in the
+                //     shadow pass, so it is not drawn twice
+                const saved = [drawContext, glCustomShader];
+                drawContext = lightSystem.shadowContext;
+                lightSystem.emissivePass = true;
+                try
                 {
-                    if (o.destroyed || !(o.emissive > 0)) continue;
-                    const level = clamp(o.emissive)*255+.5|0; // packed like rgbaInt, red in the low byte
-                    glColorMask = 0xff000000; // its own alpha, and the grey from the additive color
-                    glColorAdditive = level | level<<8 | level<<16;
-                    setShader(o.shader);
-                    o.renderEmissive();
+                    for (const o of engineObjects)
+                    {
+                        if (o.destroyed || !(o.emissive > 0)) continue;
+                        const level = clamp(o.emissive)*255+.5|0; // packed like rgbaInt, red in the low byte
+                        glColorMask = 0xff000000; // its own alpha, and the grey from the additive color
+                        glColorAdditive = level | level<<8 | level<<16;
+                        setShader(o.shader);
+                        o.renderEmissive();
+                    }
+                    glFlush();
                 }
-                glFlush();
+                finally
+                {
+                    lightSystem.emissivePass = false;
+                    glColorMask = -1;
+                    glColorAdditive = 0;
+                    [drawContext, glCustomShader] = saved;
+                }
             }
             finally
             {
-                lightSystem.emissivePass = false;
-                glColorMask = -1;
-                glColorAdditive = 0;
-                [drawContext, glCustomShader] = saved;
+                glRenderTargetBase = undefined;
             }
 
             // 4. drain any sprite-batched draws (e.g. drawTile inside a
@@ -13208,6 +13234,8 @@ class LightSystemPlugin
 
         glContext.useProgram(this.lightShader);
         glContext.bindVertexArray(this.lightVAO);
+        glContext.enable(glContext.BLEND);
+        glContext.blendFunc(glContext.ONE, glContext.ONE); // added, whatever a tile layer redrawn before it left set
 
         // the camera transform 'm' was set once for the pass by the plugin
         const ls = this.lightShader;
@@ -13280,7 +13308,9 @@ class LightSystemPlugin
 
     /** In the shadow pass, let the draws that follow keep their color in the shadow map, so light passing
      *  through them is tinted instead of blocked: a stained glass window, colored smoke. Any draw blocks light
-     *  by its alpha, so a fading sprite casts a fading shadow; this keeps the color as well. Does nothing outside
+     *  by its alpha, so a fading sprite casts a fading shadow; this keeps the color as well. It covers what was drawn
+     *  under it in the map as any draw does, so glass drawn after a wall cuts a tinted window in the wall's shadow, and
+     *  a wall drawn after the glass covers it. Does nothing outside
      *  the pass, so a render() can call it around those draws unconditionally; set it back to false after them.
      *  @param {boolean} [transparent] */
     setShadowTransparent(transparent=true)
