@@ -283,7 +283,7 @@ function refreshAll()
     for (const pair of ['A', 'B'])
         $('strip' + pair).style.background = `linear-gradient(to right, ` +
             `${css(s['colorStart' + pair])}, ${css(s['colorEnd' + pair])}), ${checker}`;
-    typeof refreshTexture === 'function' && refreshTexture();
+    refreshTexture();
 }
 
 // after any edit: the live emitter, the floor, the code and storage
@@ -464,14 +464,231 @@ function setupPreviewControls()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// library bar
+
+function setupLibraryBar()
+{
+    $('effectName').onchange = ()=>
+    {
+        const name = $('effectName').value.trim().slice(0, 60);
+        if (name && name !== effect.name)
+            effect.name = effectUniqueName(library.filter(e=> e !== effect), name);
+        refreshLibraryBar();
+        saveLibrary();
+    };
+    $('buttonNew').onclick = ()=> addEffect(effectSanitize({name:'New Effect'}));
+    $('buttonDuplicate').onclick = ()=> addEffect(structuredClone(effect));
+    $('buttonDelete').onclick = ()=>
+    {
+        if (!confirm(`Delete ${effect.name}?`))
+            return;
+        const index = library.indexOf(effect);
+        library.splice(index, 1);
+        library.length || library.push(effectSanitize({name:'New Effect'}));
+        selectEffect(min(index, library.length - 1));
+    };
+    $('buttonPresets').onclick = ()=>
+    {
+        const first = library.length;
+        for (const preset of effectPresets)
+            addEffect(effectSanitize(preset), false);
+        selectEffect(first);
+    };
+    $('buttonExport').onclick = ()=>
+    {
+        const blob = new Blob([effectLibraryText(library)], {type:'application/json'});
+        const link = makeElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'littlejs-particles.json';
+        link.click();
+        setTimeout(()=> URL.revokeObjectURL(link.href), 1e3);
+    };
+    $('buttonImport').onclick = ()=> $('importFile').click();
+    $('importFile').onchange = ()=>
+    {
+        const file = $('importFile').files[0];
+        $('importFile').value = ''; // the same file can be picked again
+        file && file.text().then(importLibrary);
+    };
+}
+
+// add an effect with a unique name, selecting it unless told not to
+function addEffect(newEffect, select=true)
+{
+    newEffect.name = effectUniqueName(library, newEffect.name);
+    library.push(newEffect);
+    select ? selectEffect(library.length - 1) : saveLibrary();
+}
+
+// add every effect in a library file, a bad file changes nothing
+function importLibrary(text)
+{
+    let effects;
+    try { effects = effectLibraryParse(text); }
+    catch (e) { alert('Could not import: ' + e.message); return; }
+    const first = library.length;
+    for (const imported of effects)
+        addEffect(imported, false);
+    selectEffect(first);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// texture: tile picker, custom image and the default texture
+
+let defaultTextureInfo; // tiles.png, captured at startup
+
+function setupTexture()
+{
+    defaultTextureInfo = textureInfos[0];
+
+    // picker, buttons and warning go above the tile rows
+    const group = settingsGroups.Texture;
+    const picker = makeElement('canvas');
+    picker.id = 'tilePicker';
+    picker.title = 'Click a tile to use it';
+    const buttons = makeElement('div', undefined, 'buttons');
+    const buttonNone = makeElement('button', buttons);
+    buttonNone.textContent = 'Untextured';
+    buttonNone.onclick = ()=> setValue('tileIndex', -1);
+    const buttonLoad = makeElement('button', buttons);
+    buttonLoad.textContent = 'Load Image';
+    buttonLoad.onclick = ()=> $('textureFile').click();
+    const buttonDefault = makeElement('button', buttons);
+    buttonDefault.id = 'buttonDefaultTexture';
+    buttonDefault.textContent = 'Default Texture';
+    buttonDefault.onclick = ()=> restoreDefaultTexture();
+    const warning = makeElement('div', undefined, 'warning');
+    warning.id = 'tileWarning';
+    warning.textContent = 'This tile does not fit the texture, drawing untextured';
+    const file = makeElement('input');
+    file.id = 'textureFile';
+    file.type = 'file';
+    file.accept = 'image/*';
+    file.hidden = true;
+    group.prepend(picker, buttons, warning, file);
+
+    picker.onclick = (e)=>
+    {
+        // the tile under the click, in texture pixels
+        const s = effect.settings, texture = textureInfos[0].size;
+        const rect = picker.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width * texture.x;
+        const y = (e.clientY - rect.top) / rect.height * texture.y;
+        const cell = s.tileSize + s.tilePadding*2;
+        const columns = floor(texture.x / cell), rows = floor(texture.y / cell);
+        const column = floor(x / cell), row = floor(y / cell);
+        if (column < columns && row < rows)
+            setValue('tileIndex', row * columns + column);
+    };
+    file.onchange = ()=>
+    {
+        file.files[0] && readTextureFile(file.files[0]);
+        file.value = '';
+    };
+
+    // drop an image anywhere on the page
+    document.addEventListener('dragover', (e)=> e.preventDefault());
+    document.addEventListener('drop', (e)=>
+    {
+        e.preventDefault();
+        const dropped = e.dataTransfer.files[0];
+        dropped && readTextureFile(dropped);
+    });
+
+    const saved = storageLoad('particles_textureData');
+    saved && loadCustomTexture(saved);
+}
+
+function readTextureFile(file)
+{
+    if (!file.type.startsWith('image/'))
+        return;
+    const reader = new FileReader;
+    reader.onload = ()=>
+    {
+        // too big for storage still works, it just is not kept
+        try { localStorage.setItem('particles_textureData', reader.result); }
+        catch { storageSave('particles_textureData'); }
+        loadCustomTexture(reader.result);
+    };
+    reader.readAsDataURL(file);
+}
+
+function loadCustomTexture(dataURL)
+{
+    const image = new Image;
+    image.onload = ()=> setCustomTexture(image);
+    image.src = dataURL;
+}
+
+function setCustomTexture(image)
+{
+    // swap texture 0 so tile() and the exported code keep working
+    const old = textureInfos[0];
+    old !== defaultTextureInfo && old.destroyWebGLTexture();
+    textureInfos[0] = new TextureInfo(image);
+    refreshAll();
+    effectChanged();
+}
+
+function restoreDefaultTexture()
+{
+    storageSave('particles_textureData');
+    if (textureInfos[0] !== defaultTextureInfo)
+    {
+        textureInfos[0].destroyWebGLTexture();
+        textureInfos[0] = defaultTextureInfo;
+    }
+    refreshAll();
+    effectChanged();
+}
+
+// draw the texture with its tile grid and the chosen tile, and show the warning if it does not fit
+function refreshTexture()
+{
+    const picker = $('tilePicker');
+    if (!picker || !defaultTextureInfo)
+        return;
+    const s = effect.settings, texture = textureInfos[0];
+    const image = texture.image, size = texture.size;
+    const scale = max(1, floor(256 / max(size.x, size.y)));
+    picker.width = size.x * scale;
+    picker.height = size.y * scale;
+    const context = picker.getContext('2d');
+    context.imageSmoothingEnabled = false;
+    context.fillStyle = '#222';
+    context.fillRect(0, 0, picker.width, picker.height);
+    image && context.drawImage(image, 0, 0, picker.width, picker.height);
+
+    // grid lines and the chosen tile
+    const cell = (s.tileSize + s.tilePadding*2) * scale;
+    const columns = floor(size.x * scale / cell), rows = floor(size.y * scale / cell);
+    context.strokeStyle = 'hsla(0,0%,100%,.12)';
+    context.lineWidth = 1;
+    for (let x = 0; x <= columns; ++x)
+        context.strokeRect(x * cell + .5, 0, 0, rows * cell);
+    for (let y = 0; y <= rows; ++y)
+        context.strokeRect(0, y * cell + .5, columns * cell, 0);
+    if (s.tileIndex >= 0 && s.tileIndex < columns * rows)
+    {
+        context.strokeStyle = 'hsl(200,80%,60%)';
+        context.lineWidth = 2;
+        context.strokeRect((s.tileIndex % columns) * cell + 1, floor(s.tileIndex / columns) * cell + 1,
+            cell - 2, cell - 2);
+    }
+    $('tileWarning').style.display = effectTileFits(s) ? 'none' : '';
+    $('buttonDefaultTexture').disabled = textureInfos[0] === defaultTextureInfo;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
     setGravity(vec2(0, -.01));
     setCameraScale(64);
     setCanvasClearColor(hsl(0, 0, 0));
     buildSettingsPanel();
-    typeof setupLibraryBar === 'function' && setupLibraryBar();
-    typeof setupTexture === 'function' && setupTexture();
+    setupLibraryBar();
+    setupTexture();
     setupPreviewControls();
     $('effectSelect').oninput = ()=> selectEffect(parseInt($('effectSelect').value));
     selectEffect(loadLibrary());
