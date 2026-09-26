@@ -22,6 +22,19 @@ export const tileType_breakable = 2;
 export let playerStartPos, tileLayers, foregroundTileLayer, sky;
 export let levelSize, levelColor, levelBackgroundColor, levelOutlineColor;
 
+// table for tiles in the level tilemap
+const tileLookup =
+{
+    circle: 0,
+    ground: 1,
+    ladder: 3,
+    metal:  4,
+    player: 16,
+    crate:  17,
+    enemy:  18,
+    coin:   19,
+}
+
 export function buildLevel()
 {
     // destroy all objects
@@ -55,19 +68,6 @@ function loadLevelData()
     playerStartPos = vec2(0, levelSize.y); // default player start
     foregroundTileLayer = tileLayers[0];
 
-    // create table for tiles in the level tilemap
-    const tileLookup =
-    {
-        circle: 0,
-        ground: 1,
-        ladder: 3,
-        metal:  4,
-        player: 16,
-        crate:  17,
-        enemy:  18,
-        coin:   19,
-    }
-
     for (let i=tileLayers.length; i--;)
     {
         const tileLayer = tileLayers[i];
@@ -81,50 +81,7 @@ function loadLevelData()
         for (let y=levelSize.y; y--;)
         {
             const pos = vec2(x,levelSize.y-1-y);
-            const tileData = tileLayer.getData(pos).tile;
-            if (tileData >= tileLookup.player)
-            {
-                // create object instead of tile
-                const objectPos = pos.add(vec2(.5));
-                if (tileData == tileLookup.player)
-                    playerStartPos = objectPos;
-                if (tileData == tileLookup.crate)
-                    new GameObjects.Crate(objectPos);
-                if (tileData == tileLookup.enemy)
-                    new GameObjects.Enemy(objectPos);
-                if (tileData == tileLookup.coin)
-                    new GameObjects.Coin(objectPos);
-
-                // replace with empty tile and empty collision
-                tileLayer.clearData(pos);
-                tileLayer.clearCollisionData(pos);
-                continue;
-            }
-
-            // get tile type
-            let tileType = tileData? tileType_breakable : tileType_empty;
-            if (tileData == tileLookup.ladder)
-                tileType = tileType_ladder;
-            if (tileData == tileLookup.metal)
-                tileType = tileType_solid;
-            if (tileType)
-            {
-                // set collision for solid tiles
-                if (tileLayer.isSolid)
-                    tileLayer.setCollisionData(pos, tileType);
-                if (tileType == tileType_breakable)
-                {
-                    // randomize tile appearance
-                    let direction = LJS.randInt(4);
-                    let mirror = LJS.randInt(2);
-                    let color = i ? levelColor : levelBackgroundColor;
-                    color = color.mutate(.03);
-
-                    // set tile layer data
-                    const data = new LJS.TileLayerData(tileData, direction, mirror, color);
-                    tileLayer.setData(pos, data);
-                }
-            }
+            setupTile(tileLayer, pos, tileLayer.getData(pos).tile, true);
         }
         
         tileLayer.onRedraw = ()=>
@@ -135,6 +92,58 @@ function loadLevelData()
                 decorateTile(vec2(x,y), tileLayer);
         }
         tileLayer.redraw();
+    }
+
+    // the level editor (Esc then 0) paints tiles with the same rules
+    LJS.setEditorTileCallback((tileLayer, pos, tileData)=> setupTile(tileLayer, pos, tileData, false));
+}
+
+// set up a cell's collision and look from its tile, when the level loads and when the level editor paints it;
+// object tiles become objects when the level loads, the editor shows them faded until then
+function setupTile(tileLayer, pos, tileData, spawnObjects)
+{
+    if (tileData >= tileLookup.player)
+    {
+        if (spawnObjects)
+        {
+            // create object instead of tile
+            const objectPos = pos.add(vec2(.5));
+            if (tileData == tileLookup.player)
+                playerStartPos = objectPos;
+            if (tileData == tileLookup.crate)
+                new GameObjects.Crate(objectPos);
+            if (tileData == tileLookup.enemy)
+                new GameObjects.Enemy(objectPos);
+            if (tileData == tileLookup.coin)
+                new GameObjects.Coin(objectPos);
+        }
+
+        // replace with empty tile and empty collision
+        tileLayer.clearData(pos, !spawnObjects);
+        tileLayer.clearCollisionData(pos);
+        return;
+    }
+
+    // get tile type
+    let tileType = tileData? tileType_breakable : tileType_empty;
+    if (tileData == tileLookup.ladder)
+        tileType = tileType_ladder;
+    if (tileData == tileLookup.metal)
+        tileType = tileType_solid;
+
+    // set collision for solid tiles, and clear it where the editor erased one
+    if (tileLayer.isSolid)
+        tileLayer.setCollisionData(pos, tileType);
+    if (tileType == tileType_breakable)
+    {
+        // randomize tile appearance
+        const direction = LJS.randInt(4);
+        const mirror = LJS.randInt(2);
+        const color = (tileLayer == foregroundTileLayer ? levelColor : levelBackgroundColor).mutate(.03);
+
+        // set tile layer data
+        const data = new LJS.TileLayerData(tileData, direction, mirror, color);
+        tileLayer.setData(pos, data, !spawnObjects);
     }
 }
 
