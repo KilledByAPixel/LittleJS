@@ -679,6 +679,38 @@ function editorPaste() { editorClipboard && (editorBrush = editorClipboard); }
 
 let editorPanel, editorPanelParts;
 
+// the list of keys ? shows
+const editorHelpLines =
+[
+    'Left: paint · Shift+Left: line from the last tile',
+    'Right click: pick a tile · Right drag: select',
+    'Middle drag or Space+drag: pan · Wheel or pinch: zoom',
+    '1-9: layer · 0: play',
+    'F: fill · Delete: clear the selection',
+    'Ctrl+C / X / V: copy, cut, paste · Ctrl+Z / Y: undo, redo',
+    'R, Shift+R: turn · M: mirror · E: erase · G: grid · ?: keys',
+];
+
+// the hint line, for what is held and whether there is a selection
+function editorHint()
+{
+    if (keyIsDown('Space')) return 'Drag to pan';
+    if (editorSelection) return 'Selection: F fill · Delete clear · Ctrl+C copy · Ctrl+X cut · click to clear';
+    if (keyIsDown('ShiftLeft') || keyIsDown('ShiftRight')) return 'Shift: line from the last tile';
+    return 'Left paint · Right pick / drag select · F fill · Space or middle drag pans · ? keys';
+}
+
+// what the brush is, in words
+function editorBrushLabel()
+{
+    const {width, height, grids} = editorBrush, t = editorBrushTile();
+    if (t)
+        return `Brush: tile ${t.tile}` + (t.direction ? `, turned ${t.direction * 90}°` : '') +
+            (t.mirror ? ', mirrored' : '');
+    if (width === 1 && height === 1 && grids.length === 1) return 'Brush: Erase';
+    return `Brush: ${width}x${height} stamp` + (grids.length > 1 ? `, ${grids.length} layers` : '');
+}
+
 function editorElement(tag, parent, style='', text='')
 {
     const element = document.createElement(tag);
@@ -722,12 +754,11 @@ function editorPanelInit()
     button(pendingRow, 'Apply edits', ()=> editorApplyPending(editorLayer.record));
     button(pendingRow, 'Drop them', ()=> editorDiscardPending(editorLayer.record));
 
-    const layerSelect = editorElement('select', editorPanel, 'width:100%;margin:4px 0;background:#222;color:#eee');
-    layerSelect.onchange = ()=>
-    {
-        editorLayer = editorLayers()[layerSelect.selectedIndex];
-        layerSelect.blur(); // a focused select takes the keys
-    };
+    // the layers as numbered buttons, made again when layers come or go, and All Layers
+    const layerRow = editorElement('div', editorPanel, 'display:flex;gap:4px;margin:4px 0;flex-wrap:wrap');
+    const allLayers = editorElement('button', editorPanel, 'width:100%;padding:3px;cursor:pointer;margin-bottom:4px');
+    allLayers.title = 'Delete, Ctrl+C and Ctrl+X act on every layer of the map';
+    allLayers.onclick = ()=> { editorAllLayers = !editorAllLayers; allLayers.blur(); };
 
     const turns = row();
     button(turns, 'Turn', ()=> editorBrush = editorStampTurn(editorBrush), 'R, Shift+R turns back');
@@ -742,15 +773,19 @@ function editorPanelInit()
         slot <= editorPaletteTiles(editorLayer).length && e.offsetX < editorPaletteColumns * cell &&
             editorPalettePick(slot);
     };
+    const brush = editorElement('div', editorPanel, 'color:#ccc;margin:2px 0');
 
     const file = row();
     button(file, 'Save', ()=> editorSave(editorLayer.record), 'Download the level as Tiled JSON');
     button(file, 'Revert', ()=> editorRevert(editorLayer.record), 'Back to the file, can be undone');
     const status = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;min-height:1em');
-    editorElement('div', editorPanel, 'color:#777;margin-top:4px',
-        'Right click picks, right drag selects, middle drag pans, wheel zooms');
+    const hint = editorElement('div', editorPanel, 'color:#8ab;margin-top:4px');
+    const help = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;border-top:1px solid #444;padding-top:4px');
+    for (const line of editorHelpLines)
+        editorElement('div', help, 'margin:2px 0', line);
+    button(help, 'Close', ()=> editorHelp = false, '?');
 
-    editorPanelParts = {pending, layerSelect, palette, status, layers: undefined};
+    editorPanelParts = {pending, layerRow, allLayers, palette, brush, status, hint, help, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -834,14 +869,24 @@ function editorPanelUpdate()
     editorPanel.style.display = '';
     const p = editorPanelParts, layers = editorLayers();
 
-    // the layer list, made again when layers came or went
+    // the layer buttons, made again when layers came or went
     if (!p.layers || layers.length !== p.layers.length || layers.some((layer, i)=> layer !== p.layers[i]))
     {
         p.layers = layers;
-        p.layerSelect.replaceChildren(...layers.map((layer, i)=>
-            editorElement('option', undefined, '', `${layer.source.name || 'Layer ' + i} (${layer.record.fileName})`)));
+        p.layerRow.replaceChildren(...layers.map((layer, i)=>
+        {
+            const b = editorElement('button', undefined, 'flex:1;min-width:28px;padding:3px;cursor:pointer',
+                i < 9 ? String(i + 1) : '·');
+            b.title = `${layer.source.name || 'Layer ' + (i + 1)} (${layer.record.fileName})`;
+            b.onclick = ()=> { editorStrokeEnd(); editorLayer = layer; editorLastCell = undefined; b.blur(); };
+            return b;
+        }));
     }
-    p.layerSelect.selectedIndex = layers.indexOf(editorLayer);
+    layers.forEach((layer, i)=> p.layerRow.children[i].style.outline = layer === editorLayer ? '2px solid #4af' : '');
+    p.allLayers.textContent = editorAllLayers ? 'All Layers: on' : 'All Layers: off';
+    p.brush.textContent = editorBrushLabel();
+    p.hint.textContent = editorHint();
+    p.help.style.display = editorHelp ? '' : 'none';
     p.pending.style.display = editorLayer?.record.pending ? '' : 'none';
 
     // the palette, drawn again when the layer or the brush changed, a change makes a new brush
@@ -1047,8 +1092,20 @@ function editorRender()
     }
 
     // the layer's edge
-    const edge = hsl(.55, 1, .6, .8), corners = [vec2(), vec2(width, 0), vec2(width, height), vec2(0, height)];
-    corners.forEach((c, i)=> drawLine(live.pos.add(c), live.pos.add(corners[(i + 1) % 4]), thin * 2, edge));
+    const outline = (a, b, color, width)=>
+    {
+        const corners = [vec2(a.x, a.y), vec2(b.x, a.y), vec2(b.x, b.y), vec2(a.x, b.y)];
+        corners.forEach((c, i)=> drawLine(live.pos.add(c), live.pos.add(corners[(i + 1) % 4]), width, color));
+    };
+    outline(vec2(), live.size, hsl(.55, 1, .6, .8), thin * 2);
+
+    // the selection, and the line Shift would draw
+    if (editorSelection)
+        outline(editorSelection.min, editorSelection.max.add(vec2(1)), hsl(.15, 1, .6), thin * 3);
+    const last = editorLastPlaced, shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
+    if (shift && editorHover && last?.layer === layer && !mouseIsDown(0))
+        drawLine(live.pos.add(last.pos).add(vec2(.5)), live.pos.add(editorHover).add(vec2(.5)), thin * 2,
+            hsl(.55, 1, .6, .6));
 
     // the brush where it would paint, the Erase brush's cells in red
     if (editorHover)

@@ -1795,6 +1795,8 @@ tweakEngineDefaults()      // Add gravity, timeScale, cameraScale and soundVolum
 - Press 0 while the debug overlay is open to pause the game and paint its tile layers, 0 again to keep playing
 - Edits the Tiled map the game passed to tileLayersLoad, so a game that loads it again gets the changes
 - Every change is autosaved and comes back after a reload, Save writes the map as Tiled JSON
+- Left paints, right click picks, right drag selects, middle or Space drag pans, the wheel zooms, 1-9 pick a layer
+- F fills, Delete clears the selection, Ctrl+C/X/V copy, cut and paste it as a stamp, R turns, M mirrors, ? lists the keys
 - Debug builds only, release builds have none of its code
 
 ```javascript

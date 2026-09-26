@@ -768,3 +768,30 @@ test('a stamp copied from all layers paints each layer, onto a map with fewer la
         editorPaintStamp(only, vec2(0, 0)); editorStrokeEnd();`);
     assert.deepEqual([...engine.run('small.layers[0].data')], [1, 0]);
 });
+
+// panel text
+
+test('the hint line follows what is held and whether there is a selection', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode);
+    assert.match(engine.run('editorHint()'), /^Left paint/);
+    engine.handlers.keydown(keyEvent('ShiftLeft'));
+    assert.match(engine.run('editorHint()'), /^Shift: line/);
+    engine.handlers.keyup(keyEvent('ShiftLeft'));
+    engine.run('editorSelection = editorArea(vec2(0, 0), vec2(1, 1))');
+    assert.match(engine.run('editorHint()'), /^Selection: F fill/);
+    engine.handlers.keydown(keyEvent('Space'));
+    assert.equal(engine.run('editorHint()'), 'Drag to pan');
+});
+
+test('the brush label names the Erase brush, a turned and mirrored tile, and a stamp with its layers', async () =>
+{
+    const { run } = await loadGame();
+    run(editCode);
+    assert.equal(run('editorBrush = editorStampTile(0); editorBrushLabel()'), 'Brush: Erase');
+    assert.equal(run('editorBrush = editorStampTile(editorTileToGid(5, 1, true)); editorBrushLabel()'),
+        'Brush: tile 5, turned 90°, mirrored');
+    assert.equal(run('editorBrush = { width: 3, height: 2, grids: [[], []] }; editorBrushLabel()'),
+        'Brush: 3x2 stamp, 2 layers');
+});
