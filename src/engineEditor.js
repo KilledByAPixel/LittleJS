@@ -746,6 +746,7 @@ function editorPanelInit()
     button(top, 'Play', ()=> setEditMode(false), '0');
     button(top, 'Undo', ()=> editorUndo(), 'Ctrl+Z');
     button(top, 'Redo', ()=> editorUndo(true), 'Ctrl+Y');
+    button(top, 'Keys', ()=> editorHelp = !editorHelp, 'Every control, ?');
 
     // a file that changed under its autosave
     const pending = editorElement('div', editorPanel, 'padding:4px;margin:4px 0;background:#630;border-radius:3px');
@@ -929,12 +930,23 @@ const editorCtrlKeys =
     v: ()=> editorPaste(),
 };
 
+// a field that takes typed keys, as the engine counts one: a checkbox, slider or button left with focus, as a
+// tweak is, does not take them
+function editorIsTextField(target)
+{
+    const field = target?.closest?.('input,textarea,select,[contenteditable]');
+    return !!field && !(field.tagName === 'INPUT' &&
+        /^(button|checkbox|color|file|image|radio|range|reset|submit)$/i.test(field.type));
+}
+
 // the editor's own key listener, a key typed into a field is the field's, and Alt with Ctrl is AltGr typing
-// a character
+// a character; a letter that is not a Latin one, on a Cyrillic or Greek keyboard, goes by the key's position
 function editorOnKeyDown(e)
 {
-    if (!editMode || e.repeat || e.altKey || e.target?.closest?.('input,textarea,select,[contenteditable]')) return;
-    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (!editMode || e.repeat || e.altKey || editorIsTextField(e.target)) return;
+    let key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (key.length === 1 && !/[a-z?]/.test(key))
+        key = e.code?.match(/^Key([A-Z])$/)?.[1].toLowerCase() ?? key;
     const action = (e.ctrlKey || e.metaKey ? editorCtrlKeys : editorKeys)[key];
     if (!action) return;
     e.preventDefault();
@@ -945,7 +957,7 @@ function editorOnKeyDown(e)
 // leaves alone
 function editorOnWheel(e)
 {
-    if (!editMode || e.target?.closest?.('input,textarea,select,[contenteditable]')) return;
+    if (!editMode || editorIsTextField(e.target)) return;
     const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
     editorZoom(Math.exp(-pixels * (e.ctrlKey ? .01 : .002)));
 }

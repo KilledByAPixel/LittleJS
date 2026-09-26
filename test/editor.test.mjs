@@ -795,3 +795,25 @@ test('the brush label names the Erase brush, a turned and mirrored tile, and a s
     assert.equal(run('editorBrush = { width: 3, height: 2, grids: [[], []] }; editorBrushLabel()'),
         'Brush: 3x2 stamp, 2 layers');
 });
+
+// review fixes
+
+test('a checkbox or slider with focus, as a tweak leaves, does not take the editor shortcuts', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + `setEditMode(true); editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();
+        var checkbox = { tagName: 'INPUT', type: 'checkbox' }; checkbox.closest = ()=> checkbox;`);
+    typed(engine, 'z', { ctrl: true, target: 'checkbox' });
+    assert.equal(engine.run('frontData[3]'), 0, 'undone');
+    engine.run(`var box = { tagName: 'INPUT', type: 'number' }; box.closest = ()=> box;`);
+    typed(engine, 'y', { ctrl: true, target: 'box' });
+    assert.equal(engine.run('frontData[3]'), 0, 'a number box being typed in keeps its keys');
+});
+
+test('on a layout without Latin letters the shortcuts go by key position', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + `setEditMode(true); editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();`);
+    typed(engine, 'я', { ctrl: true, code: 'KeyZ' }); // the Z key of a Russian keyboard
+    assert.equal(engine.run('frontData[3]'), 0);
+});
