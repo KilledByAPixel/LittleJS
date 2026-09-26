@@ -112,14 +112,27 @@ function editorTileLayerData(layers, list=[])
     return list;
 }
 
-// called by tileLayersLoad before it reads a map, keeps a record of a map it has not seen
+// called by tileLayersLoad before it reads a map; a map it has not seen gets a record, and its autosave is copied
+// in when the file is the one it was made over; a file that changed since keeps the autosave pending for the
+// panel to apply or drop, and one that already has the autosaved data, saved from the editor, drops it
 function editorMapRestore(map)
 {
-    if (!editorMapList.some((record)=> record.map === map))
+    if (editorMapList.some((record)=> record.map === map)) return map; // loaded again, it has the changes
+    const url = editorFetchedURLs.get(map), data = editorTileLayerData(map.layers);
+    const fileName = url?.split(/[?#]/)[0].split('/').pop() || 'level.json';
+    const record = {map, url, fileName, key: editorMapKey(map, url), hash: editorMapHash(data),
+        original: data.map((layer)=> [...layer]), layers: []};
+    editorMapList.push(record);
+
+    const saved = editorSaves()[record.key];
+    if (!saved) return map;
+    if (editorSameData(saved.layers, data))
+        editorDiscardPending(record);
+    else if (saved.hash !== record.hash || !editorCopyData(data, saved.layers))
     {
-        const url = editorFetchedURLs.get(map);
-        const fileName = url?.split(/[?#]/)[0].split('/').pop() || 'level.json';
-        editorMapList.push({map, url, layers: [], fileName});
+        record.pending = saved;
+        console.warn(`LittleJS editor: ${record.fileName} changed since its autosaved edits, ` +
+            'open the editor (Esc then 0) to apply or drop them');
     }
     return map;
 }
@@ -193,6 +206,86 @@ function editorSave(record)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// autosave
+
+// every page keeps its own autosaves, one for each map by its key
+function editorSaveName() { return 'LittleJS editor ' + (globalThis.location?.pathname ?? ''); }
+const editorSaves = ()=> readSaveData(editorSaveName(), {});
+
+// a map's name for its autosave, the file it was fetched from, or its size and layer names
+function editorMapKey(map, url)
+{ return url ?? `${map.width}x${map.height} ` + map.layers.map((layer)=> layer.name).join(); }
+
+// a quick hash of a map's tile data, to know when the file changed under its autosave
+function editorMapHash(data)
+{
+    let hash = 2166136261;
+    for (const layer of data)
+    for (const gid of layer)
+        hash = Math.imul(hash ^ gid, 16777619);
+    return hash >>> 0;
+}
+
+const editorSameData = (a, b)=> JSON.stringify(a) === JSON.stringify(b);
+
+// copy saved tile data into a map's layers in place, when every layer is the size it was
+function editorCopyData(data, saved)
+{
+    if (saved.length !== data.length || saved.some((layer, i)=> layer.length !== data[i].length)) return false;
+    saved.forEach((layer, i)=> { for (let j = layer.length; j--;) data[i][j] = layer[j]; });
+    return true;
+}
+
+// remember a map's tile data, or forget it when it is back to the file
+function editorAutosave(record)
+{
+    if (record.synthetic) return; // a layer made in code has no load to bring it back in, save it to a file
+    const saves = editorSaves(), data = editorTileLayerData(record.map.layers);
+    if (editorSameData(data, record.original))
+        delete saves[record.key];
+    else
+        saves[record.key] = {hash: record.hash, layers: data};
+    writeSaveData(editorSaveName(), saves);
+}
+
+// paint every cell of a map's layers from a list of tile data, the tile layers of the map in order
+function editorPaintData(record, data)
+{
+    const all = editorTileLayerData(record.map.layers);
+    for (const layer of record.layers)
+    {
+        const gids = data[all.indexOf(layer.source.data)], {x: width, y: height} = layer.live.size;
+        if (gids?.length === width * height)
+            gids.forEach((gid, i)=> editorPaint(layer, vec2(i % width, height - 1 - (i / width | 0)), gid));
+    }
+    editorStroke ? editorStrokeEnd() : editorAutosave(record);
+}
+
+// the autosaved edits of a file that changed since, applied as one undo
+function editorApplyPending(record)
+{
+    const saved = record.pending;
+    record.pending = undefined;
+    saved && editorPaintData(record, saved.layers);
+}
+
+// drop the autosaved edits of a file that changed since
+function editorDiscardPending(record)
+{
+    record.pending = undefined;
+    const saves = editorSaves();
+    delete saves[record.key];
+    writeSaveData(editorSaveName(), saves);
+}
+
+// put every layer back to the file, as one undo
+function editorRevert(record)
+{
+    record.pending = undefined;
+    editorPaintData(record, record.original);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // cells and undo
 
 // the strokes that can be undone and redone, each a list of cells with the gid before and after
@@ -253,6 +346,8 @@ function editorChanged(stroke)
 {
     for (const layer of new Set(stroke.map((cell)=> cell.layer)))
         layer.live.destroyed || layer.live.redraw();
+    for (const record of new Set(stroke.map((cell)=> cell.layer.record)))
+        editorAutosave(record);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

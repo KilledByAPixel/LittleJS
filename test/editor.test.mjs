@@ -218,3 +218,83 @@ test('a map fetched with fetchJSON saves under its file name', async () =>
     assert.equal(run('editorMapList.at(-1).fileName'), 'one.json');
     assert.equal(run('editorMapList.at(-1).url'), 'levels/one.json?v=2');
 });
+
+const saveName = 'LittleJS editor /game/';
+const mapKey = '3x2 back,things,g'; // no file, so its size and layer names
+
+// a page load of a game whose file has this data in its front layer
+async function reload(storage, front=[0, 0, 3, 0, 0, 0])
+{
+    const engine = await loadGame({ localStorage: storage });
+    engine.run(mapCode.replace('data: [0, 0, 3, 0, 0, 0]', `data: ${JSON.stringify(front)}`));
+    return engine;
+}
+const paintAndSave = (engine)=> engine.run('editorPaint(front, vec2(0, 1), editorTileToGid(4)); editorStrokeEnd();');
+const saved = (storage)=> JSON.parse(storage.items[saveName] ?? '{}')[mapKey];
+
+test('an edit is autosaved and comes back after a reload', async () =>
+{
+    const storage = makeStorage();
+    paintAndSave(await reload(storage));
+    assert.ok(saved(storage), 'saved under the page and the map');
+    const second = await reload(storage);
+    assert.deepEqual([...second.run('frontData')], [5, 0, 3, 0, 0, 0]);
+    assert.equal(second.run('layers[2].getData(vec2(0, 1)).tile'), 4, 'restored before the layers were made');
+});
+
+test('the file saved from the editor loads with no question, and its autosave is dropped', async () =>
+{
+    const storage = makeStorage();
+    paintAndSave(await reload(storage));
+    const second = await reload(storage, [5, 0, 3, 0, 0, 0]); // the file now has the edit
+    assert.equal(second.run('front.record.pending'), undefined);
+    assert.equal(saved(storage), undefined);
+});
+
+test('a file changed under an autosave is loaded as it is, and applying the edits is one undo', async () =>
+{
+    const storage = makeStorage();
+    paintAndSave(await reload(storage));
+    const second = await reload(storage, [0, 7, 3, 0, 0, 0]); // someone changed the file in Tiled
+    assert.deepEqual([...second.run('frontData')], [0, 7, 3, 0, 0, 0]);
+    assert.ok(second.run('front.record.pending'));
+    second.run('editorApplyPending(front.record)');
+    assert.deepEqual([...second.run('frontData')], [5, 0, 3, 0, 0, 0], 'the autosaved layers as they were');
+    const third = await reload(storage, [0, 7, 3, 0, 0, 0]);
+    assert.deepEqual([...third.run('frontData')], [5, 0, 3, 0, 0, 0], 'saved over the new file, so no question');
+    second.run('editorUndo()');
+    assert.deepEqual([...second.run('frontData')], [0, 7, 3, 0, 0, 0], 'applying is one undo');
+});
+
+test('dropping the edits of a changed file forgets them', async () =>
+{
+    const storage = makeStorage();
+    paintAndSave(await reload(storage));
+    const second = await reload(storage, [0, 7, 3, 0, 0, 0]);
+    second.run('editorDiscardPending(front.record)');
+    assert.equal(second.run('front.record.pending'), undefined);
+    assert.equal(saved(storage), undefined);
+    const third = await reload(storage, [0, 7, 3, 0, 0, 0]);
+    assert.equal(third.run('front.record.pending'), undefined);
+});
+
+test('going back to the file forgets the autosave, and can be undone', async () =>
+{
+    const storage = makeStorage();
+    const engine = await reload(storage);
+    paintAndSave(engine);
+    engine.run('editorRevert(front.record)');
+    assert.deepEqual([...engine.run('frontData')], [0, 0, 3, 0, 0, 0]);
+    assert.equal(saved(storage), undefined);
+    engine.run('editorUndo()');
+    assert.deepEqual([...engine.run('frontData')], [5, 0, 3, 0, 0, 0]);
+});
+
+test('a layer made in code is not autosaved, there is no load to bring it back in', async () =>
+{
+    const storage = makeStorage();
+    const engine = await loadGame({ localStorage: storage });
+    engine.run(`const live = new TileLayer(vec2(), vec2(2, 1), undefined);
+        editorPaint(editorLayerRecord(live), vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();`);
+    assert.equal(storage.items[saveName], undefined);
+});
