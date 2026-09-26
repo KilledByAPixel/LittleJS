@@ -1,545 +1,127 @@
 <!DOCTYPE html><head>
-<title>LittleJS Particle System Designer</title>
+<title>LittleJS Particle Designer</title>
 <meta charset=utf-8>
 <meta name=viewport content=width=device-width,height=device-height,initial-scale=1,maximum-scale=1>
 <meta name=apple-mobile-web-app-capable content=yes>
 <meta name=mobile-web-app-capable content=yes>
 <link rel=icon type=image/png href=../favicon.png>
 <style>
-input { width:99px; }
-button { margin:1px; }
-body { color:#fff; }
-#div_emitterSettings
+:root
 {
-    position:absolute;
-    z-index: 1;
-    height: 100vh;
-    overflow:auto;
-    padding:5px;
-    font-family:sans-serif;
-    column-count: 2;
-    column-fill: auto;
+    --back:#101216; --panel:#181b21; --line:#2a2f38; --text:#dde1e8; --dim:#8a93a3;
+    --accent:hsl(200,80%,60%); --button:#262b34; --buttonHover:#313743;
+}
+*, *::before, *::after { box-sizing:border-box; }
+html, body { margin:0; height:100%; background:var(--back); color:var(--text);
+    font:13px system-ui, sans-serif; }
+button, select, input { font:inherit; color:inherit; }
+button, select, input[type=text], input[type=number]
+{
+    background:var(--button); border:1px solid var(--line); border-radius:4px; padding:3px 6px;
+}
+button { cursor:pointer; }
+button:hover:not(:disabled) { background:var(--buttonHover); }
+button:disabled { opacity:.4; cursor:default; }
+input[type=range] { accent-color:var(--accent); width:100%; min-width:0; margin:0; }
+input[type=checkbox] { accent-color:var(--accent); margin:0; }
+input[type=color] { width:32px; height:22px; padding:0; border:1px solid var(--line);
+    border-radius:4px; background:none; }
+
+#app { display:flex; height:100vh; }
+#panel { width:360px; flex:none; overflow-y:auto; background:var(--panel);
+    border-right:1px solid var(--line); }
+#panel header { padding:10px 12px 6px; }
+#panel h1 { font-size:16px; margin:0; }
+#panel header p { margin:2px 0 0; color:var(--dim); font-size:12px; }
+#libraryBar { padding:6px 12px 10px; border-bottom:1px solid var(--line);
+    display:flex; flex-wrap:wrap; gap:4px; }
+#libraryBar select, #libraryBar input[type=text] { flex:1 1 140px; min-width:0; }
+
+details.group { border-bottom:1px solid var(--line); }
+details.group > summary { padding:8px 12px; cursor:pointer; font-weight:600; user-select:none; }
+details.group > div { padding:0 12px 8px; }
+.row { display:grid; grid-template-columns:118px 1fr 62px 22px; gap:6px; align-items:center;
+    padding:3px 0; }
+.row label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.row input[type=number] { width:100%; padding:2px 4px; }
+.row .reset { padding:0; width:22px; height:22px; line-height:1; color:var(--dim); }
+.row .hint { grid-column:1 / -1; margin-top:-3px; color:var(--dim); font-size:11px; }
+.row.colorRow .swatch { display:flex; gap:6px; align-items:center; }
+.strip { height:14px; border-radius:3px; margin:4px 0; border:1px solid var(--line); }
+.stripLabel { color:var(--dim); font-size:11px; }
+.warning { color:hsl(35,90%,60%); font-size:12px; margin:4px 0; }
+.buttons { display:flex; flex-wrap:wrap; gap:4px; margin:6px 0; }
+#tilePicker { width:100%; image-rendering:pixelated; cursor:crosshair; border:1px solid var(--line);
+    border-radius:3px; display:block; }
+
+#main { flex:1; min-width:0; display:flex; flex-direction:column; }
+#toolbar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:6px 10px;
+    background:var(--panel); border-bottom:1px solid var(--line); }
+#toolbar .spacer { flex:1; }
+#toolbar label { display:flex; gap:4px; align-items:center; color:var(--dim); }
+#particleCount { color:var(--dim); min-width:90px; }
+#previewArea { flex:1; min-height:0; position:relative; }
+#codePanel { flex:none; height:170px; display:flex; flex-direction:column; background:var(--panel);
+    border-top:1px solid var(--line); }
+#codeBar { display:flex; gap:8px; align-items:center; padding:6px 10px; }
+#codeBar strong { flex:1; }
+#codeBar label { display:flex; gap:4px; align-items:center; color:var(--dim); }
+#codeText { flex:1; resize:none; margin:0 10px 10px; background:var(--back); color:var(--text);
+    border:1px solid var(--line); border-radius:4px; padding:6px; font:12px ui-monospace, monospace;
+    white-space:pre; }
+
+@media (max-width:720px)
+{
+    #app { flex-direction:column; height:auto; min-height:100vh; }
+    #panel { width:100%; max-height:none; border-right:0; border-bottom:1px solid var(--line); }
+    #main { flex:none; height:100vh; }
 }
 </style>
 </head><body>
-<div id=div_emitterSettings></div>
-<script type=module>
-
-// import LittleJS module
-import * as LJS from '../../dist/littlejs.esm.js';
-const {vec2} = LJS;
-
-'use strict';
-
-// tiles.png has 1 pixel of padding around each tile
-LJS.setTileDefaultPadding(1);
-
-// allow html input controls
-LJS.setInputPreventDefault(false);
-
-let particleEditor = 0, particleSystem, particleSystemDiv, particleSystemCode;
-let inputExpand;
-let restartTimer = new LJS.Timer();
-const storagePrefix = 'particles_';
-
-const particleSettings = [];
-function addSetting(name, type, min, max, step, description)
-{
-    particleSettings.push({name, type:type||'number', min, max, step, description});
-}
-
-addSetting('emitSize',         '', 0, 1e9, .1, 'World space size of the emitter');
-addSetting('emitTime',         '', 0, 1e9, .1, 'How long to stay alive (0 is forever)');
-addSetting('emitRate',         '', 0, 1e9, 1,  'How many particles per second to spawn, does not emit if 0');
-addSetting('emitConeAngle',    '', 0, 1e9, .01,'Local angle to apply velocity to particles from emitter');
-addSetting('tileIndex',        '', -1, 1e9, 1, 'Tile to use to render object (-1 is untextured)');
-addSetting('tileSize',         '', 0, 1e9, 1,  'Size of texture tile in source pixels');
-addSetting('tilePadding',      '', 0, 1e9, 1,  'How many pixels padding around tiles');
-addSetting('colorStartA',      'color',0,0,0, 'Color at start of life 1');
-addSetting('colorStartA_alpha', 'alpha', 0,    1,   .01, 'Alpha at start of life 1');
-addSetting('colorStartB',      'color',0,0,0, 'Color at start of life 2');
-addSetting('colorStartB_alpha', 'alpha', 0,    1,   .01, 'Alpha at start of life 2');
-addSetting('colorEndA',        'color',0,0,0, 'Color at end of life 1');
-addSetting('colorEndA_alpha',   'alpha', 0,    1,   .01, 'Alpha at end of life 1');
-addSetting('colorEndB',        'color',0,0,0, 'Color at end of life 2');
-addSetting('colorEndB_alpha',   'alpha', 0,    1,   .01, 'Alpha at end of life 2');
-addSetting('particleTime',     '', 0,    1e9, .1, 'How long particles live');
-addSetting('sizeStart',        '', 0,    1e9, .01,'How big are particles at start');
-addSetting('sizeEnd',          '', 0,    1e9, .01,'How big are particles at end');
-addSetting('speed',            '', 0,    1e9, .01,'How fast are particles when spawned');
-addSetting('angleSpeed',       '', 0,    1e9, .01,'How fast are particles rotating');
-addSetting('damping',          '', 0,    1,   .01,'How much to dampen particle speed');
-addSetting('angleDamping',     '', 0,    1,   .01,'How much to dampen particle angular speed');
-addSetting('gravityScale',     '', -1e9, 1e9, .1, 'How much does gravity effect particles');
-addSetting('particleConeAngle','', 0,    1e9, .1, 'Cone for start particle angle');
-addSetting('fadeRate',         '', 0,    1,   .01,'How quickly particles fade in percent of life');
-addSetting('randomness',       '', 0,    1,   .01,'Apply extra randomness percent');
-addSetting('additive',         'checkbox',0,0,0,  'Should particles use additive blend?');
-addSetting('randomColorLinear','checkbox',0,0,0,  'Should color be randomized linearly?');
-
-function makeEmitter()
-{
-    if (particleSystem)
-        particleSystem.destroy();
-    particleSystem = new LJS.ParticleEmitter(LJS.cameraPos);
-    particleSystem.tileInfo = LJS.tile();
-    particleSystem.emitConeAngle =
-    particleSystem.particleConeAngle = 3.14;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// custom texture drag and drop
-
-let defaultTextureInfo; // original tiles.png texture, captured at startup
-let buttonDefaultTexture; // enabled only while a custom texture is active
-
-function updateTextureButton()
-{ buttonDefaultTexture.disabled = LJS.textureInfos[0] == defaultTextureInfo; }
-
-function setCustomTexture(image)
-{
-    // swap texture 0 so tile() and the generated code keep working
-    const old = LJS.textureInfos[0];
-    if (old != defaultTextureInfo)
-        old.destroyWebGLTexture();
-    LJS.textureInfos[0] = new LJS.TextureInfo(image);
-    updateTextureButton();
-    updateParticles(1);
-}
-
-function restoreDefaultTexture()
-{
-    delete localStorage[storagePrefix + 'textureData'];
-    if (LJS.textureInfos[0] != defaultTextureInfo)
-    {
-        LJS.textureInfos[0].destroyWebGLTexture();
-        LJS.textureInfos[0] = defaultTextureInfo;
-    }
-    updateTextureButton();
-}
-
-function loadCustomTexture(dataURL)
-{
-    const image = new Image;
-    image.onload = ()=> setCustomTexture(image);
-    image.src = dataURL;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-function gameInit()
-{
-    makeEmitter();
-    LJS.setGravity(vec2(0,-.01));
-    LJS.setCameraScale(64);
-
-    const div = div_emitterSettings;
-    const title = document.createElement('span')
-    title.innerText = 'LittleJS Particle Tool';
-    title.style = 'font-size:20px;font-weight:bold;';
-    div.appendChild(title);
-
-    const hint = document.createElement('div');
-    hint.innerText = 'Drop an image to use it as the texture';
-    hint.style = 'font-size:12px;color:#aaa;';
-    div.appendChild(hint);
-
-    for (const setting of particleSettings)
-    {
-        // get default value
-        // todo: clean this up
-        let defaultValue = '';
-        {
-            const name = setting.name;
-            const type = setting.type;
-            
-            if (type == 'color')
-            {
-                const color = particleSystem[name];
-                defaultValue = color.toString(false);
-            }
-            else if (type == 'alpha')
-            {
-                if (name == 'colorStartA_alpha')
-                    defaultValue = particleSystem.colorStartA.a;
-                else if (name == 'colorStartB_alpha')
-                    defaultValue = particleSystem.colorStartB.a;
-                else if (name == 'colorEndA_alpha')
-                    defaultValue = particleSystem.colorEndA.a;
-                else if (name == 'colorEndB_alpha')
-                    defaultValue = particleSystem.colorEndB.a;
-            }
-            else if (name == 'tileSize')
-                defaultValue = particleSystem.tileInfo.size.x;
-            else if (name == 'tilePadding')
-                defaultValue = particleSystem.tileInfo.padding;
-            else if (name == 'emitSize')
-                defaultValue = particleSystem.emitSize.x;
-            else if (type == 'checkbox')
-                defaultValue = particleSystem[name];
-            else
-                defaultValue = particleSystem[name] || '0';
-        }
-
-        div.appendChild(document.createElement('br'));
-
-        const input = setting.input = document.createElement('input');
-        const name = setting.name;
-        input.type = setting.type == 'alpha' ? 'number' : setting.type;
-        input.title = setting.description;
-        input.oninput = (e)=> updateParticles(setting.type == 'checkbox');
-        input.onblur = (e)=> updateParticles(1);
-        if (setting.min !== undefined)
-            input.min = setting.min;
-        if (setting.max !== undefined)
-            input.max = setting.max;
-        if (setting.step !== undefined)
-            input.step = setting.step;
-        if (name == 'emitConeAngle' || name  == 'particleConeAngle')
-            particleSystem[name] = 3.14; // simplify pi
-        
-        const inputReset = document.createElement('button');
-        inputReset.innerText = '♻️';
-        inputReset.onclick = (e)=> 
-        {
-            setting.type == 'checkbox'? 
-                setting.input.checked = defaultValue : 
-                setting.input.value = defaultValue;
-            updateParticles(1);
-        }
-        div.appendChild(inputReset);
-        div.appendChild(input);
-        div.appendChild(document.createTextNode(' ' + name));
-    }
-
-    div.appendChild(document.createElement('br'));
-    div.appendChild(document.createElement('br'));
-
-    {
-        buttonDefaultTexture = document.createElement('button');
-        div.appendChild(buttonDefaultTexture);
-        buttonDefaultTexture.innerHTML = 'Use Default Texture';
-        buttonDefaultTexture.disabled = true;
-        buttonDefaultTexture.onclick = (e)=>
-        {
-            restoreDefaultTexture();
-            for (const setting of particleSettings)
-            {
-                if (setting.name == 'tileSize')
-                    setting.input.value = LJS.tileDefaultSize.x;
-                if (setting.name == 'tilePadding')
-                    setting.input.value = LJS.tileDefaultPadding;
-            }
-            updateParticles(1);
-        }
-        div.appendChild(document.createElement('br'));
-    }
-    {
-        const button = document.createElement('button')
-        div.appendChild(button);
-        button.innerHTML = 'Copy To Clipboard';
-        button.onclick = (e)=> navigator.clipboard.writeText(particleSystemCode.value);
-    }
-    {
-        const button = document.createElement('button');
-        div.appendChild(button);
-        button.innerHTML = 'Reset';
-        button.onclick = (e)=>
-        {
-            if (!confirm('Reset to default?'))
-                return;
-            restoreDefaultTexture();
-            makeEmitter();
-            updateInputs();
-            LJS.setCameraScale(50);
-        }
-    }
-    {
-        inputExpand = document.createElement('input');
-        div.appendChild(inputExpand);
-        inputExpand.type = 'checkbox';
-        inputExpand.style.width = 'initial';
-        inputExpand.oninput = (e)=> updateParticles(1);
-        div.appendChild(document.createTextNode(' Expand'));
-    }
-    
-    //div.appendChild(document.createTextNode('JavaScript Code... '));
-    div.appendChild(document.createElement('br'));
-    div.appendChild(particleSystemCode = document.createElement('textarea'));
-    particleSystemCode.style.width = '300px';
-    particleSystemCode.style.height = '100px';
-    particleSystemCode.disabled = true;
-
-    updateInputs(0);
-
-    // setup drag and drop for custom texture
-    defaultTextureInfo = LJS.textureInfos[0];
-    document.addEventListener('dragover', (e)=> e.preventDefault());
-    document.addEventListener('drop', (e)=>
-    {
-        e.preventDefault();
-        const file = e.dataTransfer.files[0];
-        if (!file || !file.type.startsWith('image/'))
-            return;
-        const reader = new FileReader();
-        reader.onload = ()=>
-        {
-            const dataURL = reader.result;
-            try { localStorage[storagePrefix + 'textureData'] = dataURL; }
-            catch { delete localStorage[storagePrefix + 'textureData']; }
-            loadCustomTexture(dataURL);
-        };
-        reader.readAsDataURL(file);
-    });
-
-    // load custom texture from storage
-    const savedTexture = localStorage[storagePrefix + 'textureData'];
-    if (savedTexture)
-        loadCustomTexture(savedTexture);
-
-    // load from storage
-    for (const setting of particleSettings)
-    {
-        const type = setting.type;
-        const storageName = storagePrefix + setting.name;
-        const savedValue = localStorage[storageName];
-        if (savedValue == undefined)
-            continue;
-
-        if (type == 'checkbox')
-            setting.input.checked = savedValue == 'true';
-        else
-            setting.input.value = savedValue;
-    }
-
-    updateParticles();
-    particleSystemCode.value = getCode();
-}
-
-function updateParticles(shouldUpdateInput)
-{
-    for (const setting of particleSettings)
-    {
-        const input = setting.input;
-        const name = setting.name;
-        const type = setting.type;
-        const inputFloat = parseFloat(input.value) || 0;
-        if (type == 'color')
-        {
-            const color = new LJS.Color().setHex(input.value);
-            particleSystem[name].r = color.r;
-            particleSystem[name].g = color.g;
-            particleSystem[name].b = color.b;
-        }
-        else if (type == 'alpha')
-        {
-            if (name == 'colorStartA_alpha')
-                particleSystem.colorStartA.a = LJS.clamp(inputFloat);
-            else if (name == 'colorStartB_alpha')
-                particleSystem.colorStartB.a = LJS.clamp(inputFloat);
-            else if (name == 'colorEndA_alpha')
-                particleSystem.colorEndA.a   = LJS.clamp(inputFloat);
-            else if (name == 'colorEndB_alpha')
-                particleSystem.colorEndB.a   = LJS.clamp(inputFloat);
-        }
-        else if (name == 'tileIndex')
-        {
-            const tileIndex = parseInt(input.value);
-            particleSystem.tileIndex = tileIndex
-            // only rebuild the tile if the size and padding fit the texture,
-            // otherwise tile() asserts and updates stop working
-            const size = particleSystem.tileInfo.size;
-            const padding = particleSystem.tileInfo.padding;
-            const textureSize = LJS.textureInfos[0].size;
-            if (size.x > 0 && size.y > 0 &&
-                size.x + padding*2 <= textureSize.x && size.y + padding*2 <= textureSize.y)
-                particleSystem.tileInfo = LJS.tile(tileIndex, size, 0, padding);
-        }
-        else if (name == 'tileSize')
-            particleSystem.tileInfo.size = vec2(parseInt(input.value));
-        else if (name == 'tilePadding')
-            particleSystem.tileInfo.padding = parseInt(input.value) || 0;
-        else if (name == 'emitSize')
-            particleSystem.emitSize = vec2(LJS.clamp(inputFloat, setting.min, setting.max));
-        else if (type == 'checkbox')
-            particleSystem[name] = input.checked ? 1 : 0;
-        else if (name == 'emitRate')
-            particleSystem[name] = LJS.min(inputFloat,1e4);
-        else
-            particleSystem[name] = LJS.clamp(inputFloat, setting.min, setting.max);
-    }
-    shouldUpdateInput && updateInputs()
-}
-
-function updateInputs(save=1)
-{
-    for (const setting of particleSettings)
-        updateSetting(setting, save);
-    particleSystemCode.value = getCode();
-}
-
-function updateSetting(setting, save=1)
-{
-    const input = setting.input;
-    const name = setting.name;
-    const type = setting.type;
-    
-    if (type == 'color')
-    {
-        const color = particleSystem[name];
-        input.value = color.toString(false);
-    }
-    else if (type == 'alpha')
-    {
-        if (name == 'colorStartA_alpha')
-            input.value = particleSystem.colorStartA.a;
-        else if (name == 'colorStartB_alpha')
-            input.value = particleSystem.colorStartB.a;
-        else if (name == 'colorEndA_alpha')
-            input.value = particleSystem.colorEndA.a;
-        else if (name == 'colorEndB_alpha')
-            input.value = particleSystem.colorEndB.a;
-    }
-    else if (name == 'tileSize')
-        input.value = particleSystem.tileInfo.size.x;
-    else if (name == 'tilePadding')
-        input.value = particleSystem.tileInfo.padding;
-    else if (name == 'emitSize')
-        input.value = particleSystem.emitSize.x;
-    else if (type == 'checkbox')
-        input.checked = particleSystem[name];
-    else
-        input.value = particleSystem[name] || '0';
-
-    if (save)
-    {
-        const storageName = storagePrefix + setting.name;
-        localStorage[storageName] = type == 'checkbox' ? 
-            input.checked : input.value;
-    }
-}
-
-function getCode()
-{
-    const expand = inputExpand.checked;
-    let code = '';
-    
-    // limit float precision to prevent long strings
-    const trimFloat = (n, decimals=3)=>
-        Number(Number(n).toFixed(decimals));
-
-    code = 'new ParticleEmitter(';
-    if (expand)
-        code += '\n  vec2(), 0,\t//position, angle\n';
-    else
-        code += 'vec2(), 0, ';
-
-    let count = 0;
-    for (const setting of particleSettings)
-    {
-        const name = setting.name;
-        const type = setting.type;
-        let value;
-        if (name == 'tileSize' || name == 'tilePadding' || type == 'alpha')
-            continue;
-
-        if (name == 'tileIndex')
-        {
-            const padding = particleSystem.tileInfo.padding;
-            value = `tile(${particleSystem.tileIndex}, ${particleSystem.tileInfo.size.x}` +
-                (padding ? `, 0, ${padding})` : ')');
-        }
-        else if (type == 'color')
-        {
-            const [h, s, l, a] = particleSystem[name].HSLA();
-            value = `hsl(${trimFloat(h)}, ${trimFloat(s)}, ${trimFloat(l)}, ${trimFloat(a)})`;
-        }
-        else if (type == 'checkbox')
-            value = !!particleSystem[name];
-        else if (name == 'emitSize')
-            value = trimFloat(particleSystem.emitSize.x);
-        else
-            value = trimFloat(particleSystem[name]);
-
-        // collideTiles has no setting here, but it comes before additive
-        if (name == 'additive')
-            code += expand ? '  false,\t// collideTiles\n' : 'false, ';
-
-        if (expand)
-            code += '  ';
-        code += value;
-
-        const isEnd = name == 'randomColorLinear';
-        if (expand)
-        {
-            code += ',\t// ' + name;
-            if (!isEnd)
-                code += '\n';
-        }
-        else if (!isEnd)
-            code += ', ';
-    }
-
-    if (expand)
-        code += '\n); // particle emitter';
-    else
-        code += ');';
-
-    return code;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-function gameUpdate()
-{
-    if (!restartTimer.isSet() && particleSystem.destroyed)
-        restartTimer.set(1);
-    else if (restartTimer.elapsed())
-    {
-        restartTimer.unset()
-        makeEmitter();
-        updateParticles();
-    }
-
-    if (document.activeElement == document.body)
-    {
-        if (LJS.mouseIsDown(0))
-        {
-            particleSystem.pos = LJS.mousePos;
-            particleSystem.velocity = LJS.mouseDelta.scale(.3*LJS.timeDelta);
-        }
-        else
-        {
-            particleSystem.pos = vec2();
-            particleSystem.velocity = vec2();
-        }
-        if (LJS.mouseWheel)
-        {
-            // zoom camera
-            let cameraScale = LJS.cameraScale;
-            cameraScale -= LJS.sign(LJS.mouseWheel)*cameraScale/5;
-            cameraScale = LJS.clamp(cameraScale, 10, 300);
-            LJS.setCameraScale(cameraScale);
-        }
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-function gameUpdatePost()
-{
-
-}
-
-///////////////////////////////////////////////////////////////////////////////
-function gameRender()
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-function gameRenderPost()
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Startup LittleJS Engine
-LJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
-
-</script>
+<div id=app>
+    <aside id=panel>
+        <header>
+            <h1>LittleJS Particle Designer</h1>
+            <p>Drag in the preview to move the emitter, wheel to zoom. Drop an image to use it as the texture.</p>
+        </header>
+        <div id=libraryBar>
+            <select id=effectSelect title="Effect to edit"></select>
+            <input id=effectName type=text title="Effect name" maxlength=60>
+            <div class=buttons>
+                <button id=buttonNew>New</button>
+                <button id=buttonDuplicate>Duplicate</button>
+                <button id=buttonDelete>Delete</button>
+                <button id=buttonImport title="Add effects from a library file">Import</button>
+                <button id=buttonExport title="Save every effect to a file">Export</button>
+                <button id=buttonPresets title="Add the built in effects again">Add Presets</button>
+            </div>
+            <input id=importFile type=file accept=".json,application/json" hidden>
+        </div>
+        <div id=settingsPanel></div>
+    </aside>
+    <main id=main>
+        <div id=toolbar>
+            <button id=buttonRestart>Restart</button>
+            <button id=buttonPause>Pause</button>
+            <span id=particleCount></span>
+            <span class=spacer></span>
+            <label>Background <select id=backgroundSelect>
+                <option value=0>Dark</option><option value=.35>Gray</option><option value=.85>Light</option>
+            </select></label>
+            <label><input id=debugCheckbox type=checkbox> Show bounds</label>
+        </div>
+        <div id=previewArea></div>
+        <section id=codePanel>
+            <div id=codeBar>
+                <strong>Code</strong>
+                <label><input id=expandCheckbox type=checkbox> Expanded</label>
+                <button id=buttonCopy>Copy</button>
+            </div>
+            <textarea id=codeText readonly spellcheck=false></textarea>
+        </section>
+    </main>
+</div>
+<script src=../../dist/littlejs.js></script>
+<script src=particleEffects.js></script>
+<script src=particleEditor.js></script>
+</body>
