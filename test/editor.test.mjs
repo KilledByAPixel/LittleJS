@@ -309,7 +309,7 @@ test('a click paints the cell under the mouse on the selected layer, and letting
 {
     const engine = await loadGame();
     const { run, handlers } = engine;
-    run(mapCode + `setEditMode(true); editorLayer = front; editorBrush.tile = 6;
+    run(mapCode + `setEditMode(true); editorLayer = front; editorBrush = editorStampTile(editorTileToGid(6));
         editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;`);
     // vmEngine's canvas is 1000 square at the origin, so the middle of the screen is the camera, cell (1, 0)
     const target = { tagName: 'CANVAS', closest: ()=> null };
@@ -331,17 +331,20 @@ test('a fast drag paints every cell between, not only where the mouse was each s
     assert.equal([...painted].filter((t)=> t === 0).length, 3, 'three cells on a line of two steps across');
 });
 
-test('R turns the brush, M mirrors it, and the pick tool takes a placed tile into the brush', async () =>
+test('R turns the brush, M mirrors it as seen on screen, and a pick takes a placed tile into the brush', async () =>
 {
     const engine = await loadGame();
     engine.run(mapCode + 'setEditMode(true); editorLayer = front;');
     press(engine, 'KeyR');
     press(engine, 'KeyM');
-    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrush)')), { tile: 0, direction: 1, mirror: true });
+    // a quarter turn then a mirror is Tiled's turn then horizontal flip: the tile turned the other way, mirrored
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrushTile())')),
+        { tile: 0, direction: 3, mirror: true });
     engine.run('editorPick(front, vec2(2, 1))');
-    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrush)')), { tile: 2, direction: 0, mirror: false });
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrushTile())')),
+        { tile: 2, direction: 0, mirror: false });
     engine.run('editorPick(front, vec2(0, 0))');
-    assert.equal(engine.run('editorTool'), 'eraser', 'picking an empty cell picks the eraser');
+    assert.equal(engine.run('editorBrush.grids[0][0]'), 0, 'an empty cell picks the Erase brush');
 });
 
 test('the selected layer starts as the collision layer', async () =>
@@ -373,7 +376,7 @@ test('a quick click, down and up before the next step, still paints its cell', a
 {
     const engine = await loadGame();
     const { run, handlers } = engine;
-    run(mapCode + `setEditMode(true); editorLayer = front; editorBrush.tile = 6;
+    run(mapCode + `setEditMode(true); editorLayer = front; editorBrush = editorStampTile(editorTileToGid(6));
         editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;`);
     const target = { tagName: 'CANVAS', closest: ()=> null };
     handlers.mousedown({ button: 0, x: 500, y: 500, target, cancelable: false });
@@ -440,7 +443,7 @@ test('painting a ghost with the tile it shows puts the tile back', async () =>
 // the mouse on the canvas at a cell of the test map, with the camera on cell (1, 0) at 100 pixels a cell
 const canvas = { tagName: 'CANVAS', closest: ()=> null };
 const at = (x, y)=> ({ button: 0, x: 500 + (x - 1) * 100, y: 500 - y * 100, target: canvas, cancelable: false });
-const editCode = mapCode + `setEditMode(true); editorLayer = front; editorBrush.tile = 6;
+const editCode = mapCode + `setEditMode(true); editorLayer = front; editorBrush = editorStampTile(editorTileToGid(6));
     editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;`;
 
 test('a drag that leaves the layer and comes back in does not paint across the gap', async () =>
@@ -458,21 +461,6 @@ test('a drag that leaves the layer and comes back in does not paint across the g
     step(engine);
     assert.equal(run('layers[2].getData(vec2(1, 0)).tile'), undefined, 'the cell between was not painted');
     assert.equal(run('layers[2].getData(vec2(2, 1)).tile'), 6);
-});
-
-test('the pick tool only picks, a held button after it does not paint', async () =>
-{
-    const engine = await loadGame();
-    const { run, handlers } = engine;
-    run(editCode + `editorTool = 'pick';`);
-    handlers.mousedown(at(1, 0)); // an empty cell, picks the eraser
-    step(engine);
-    handlers.mousemove(at(2, 1)); // held over the tile 3 cell
-    step(engine);
-    handlers.mouseup(at(2, 1));
-    step(engine);
-    assert.equal(run('editorTool'), 'eraser');
-    assert.equal(run('layers[2].getData(vec2(2, 1)).tile'), 2, 'not erased');
 });
 
 test('autosaved edits brought back say so, so they are not forgotten in the file', async () =>
@@ -505,5 +493,58 @@ test('the right button erases whatever the tool, and the middle button only move
     handlers.mouseup({ ...at(2, 1), button: 2 });
     step(engine);
     assert.equal(run('layers[2].getData(vec2(2, 1)).tile'), undefined, 'erased');
-    assert.equal(run('editorTool'), 'pencil', 'the tool is left as it was');
+});
+
+// stamps
+
+test('a stamp paints from the bottom left, its see-through cells and cells off the layer leave things as they are',
+    async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode + `editorBrush = { width: 2, height: 2, grids: [[editorTileToGid(4), undefined, 0, editorTileToGid(5)]] };
+        editorPaintStamp(front, vec2(1, 0)); editorPaintStamp(front, vec2(2, 1)); editorStrokeEnd();`);
+    // the first at (1, 0): (1, 0) tile 4, (2, 0) see-through, (1, 1) erased, (2, 1) tile 5
+    // the second at (2, 1): only (2, 1) is on the layer, tile 4
+    assert.deepEqual([...run('frontData')], [0, 0, 5, 0, 5, 0]);
+    assert.equal(run('editorUndoList.length'), 1, 'one stroke');
+});
+
+test('a quarter turn puts the stamp bottom row in its left column, top first, and turns each tile', async () =>
+{
+    const { run } = await loadGame();
+    const turned = run(`const s = editorStampTurn({ width: 2, height: 1, grids: [[editorTileToGid(1), undefined]] });
+        [s.width, s.height, s.grids[0][1] === editorTileToGid(1, 1), s.grids[0][0]];`);
+    assert.deepEqual([...turned], [1, 2, true, undefined]);
+});
+
+test('turning four times, turning then back, and mirroring twice each give the stamp back', async () =>
+{
+    const { run } = await loadGame();
+    const same = run(`const s = { width: 3, height: 2, grids: [[1, 2, undefined, 0, editorTileToGid(7, 2, true), 9]] };
+        const text = JSON.stringify(s), turn = (x)=> editorStampTurn(x);
+        [JSON.stringify(turn(turn(turn(turn(s))))), JSON.stringify(editorStampTurn(turn(s), true)),
+            JSON.stringify(editorStampMirror(editorStampMirror(s)))].map((t)=> t === text);`);
+    assert.deepEqual([...same], [true, true, true]);
+});
+
+test('mirroring a tile is Tiled\'s horizontal flip for every turn and mirror', async () =>
+{
+    const { run } = await loadGame();
+    const flips = [0, 1, 2, 3, 4, 5, 6, 7];
+    const mirrored = run(`${JSON.stringify(flips)}.map((f)=> editorGidMirror(((f << 29) | 5) >>> 0))`);
+    assert.deepEqual([...mirrored], flips.map((f)=> (((f ^ 4) << 29) | 5) >>> 0));
+});
+
+test('E and the palette Erase slot give the Erase brush, and a palette tile keeps the brush turn', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + `setEditMode(true); editorLayer = front;
+        editorBrush = editorStampTile(editorTileToGid(3, 2, true));`);
+    engine.run('editorPalettePick(4)');
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrushTile())')),
+        { tile: 3, direction: 2, mirror: true }, 'slot 4 is tile 3, the turn kept');
+    press(engine, 'KeyE');
+    assert.equal(engine.run('editorBrush.grids[0][0]'), 0);
+    engine.run('editorBrush = editorStampTile(1); editorPalettePick(0)');
+    assert.equal(engine.run('editorBrush.grids[0][0]'), 0);
 });

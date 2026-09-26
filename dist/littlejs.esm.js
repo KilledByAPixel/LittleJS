@@ -28195,9 +28195,9 @@ let editorGameState;
 // the editor's own view, so the game's camera is left where the game had it
 let editorCameraPos = vec2(), editorCameraScale = 32;
 
-// what a click paints, the tool, the layer being painted, the cell under the mouse, the last cell of a stroke
-const editorBrush = {tile: 0, direction: 0, mirror: false};
-let editorTool = 'pencil', editorLayer, editorHover, editorLastCell, editorPicking;
+// the layer being painted, the cell under the mouse, the last cell of a stroke, the last cell a stamp was
+// placed on, for a Shift line, and if the press is an Alt pick
+let editorLayer, editorHover, editorLastCell, editorLastPlaced, editorPicking;
 
 /** Open or close the editor, the game is paused while it is open and carries on with the changes after
  *  - Does nothing in release builds
@@ -28593,29 +28593,127 @@ function editorTileInfo(live, tile)
     return t && (t.columns ? t.frame(tile) : t.index(tile));
 }
 
-// the brush takes the tile in a cell, an empty cell picks the eraser
-function editorPick(layer, pos)
+///////////////////////////////////////////////////////////////////////////////
+// stamps
+
+// the brush is a stamp: its size and, for each layer it paints, a grid of gids from its bottom row up, undefined
+// see-through; one grid paints the layer being edited, one copied from all layers has a grid for each layer of the
+// map, in order; the last one copied is kept for Ctrl+V
+let editorBrush = editorStampTile(editorTileToGid(0)), editorClipboard;
+
+// a stamp of one tile, gid 0 is the Erase brush
+function editorStampTile(gid) { return {width: 1, height: 1, grids: [[gid]]}; }
+
+// the gid in a cell of a layer, as the map holds it
+function editorGidAt(layer, cell)
+{ return layer.source.data[cell.x + (layer.live.size.y - 1 - cell.y) * layer.live.size.x]; }
+
+// each layer a stamp paints with its grid: a stamp of one grid paints the layer being edited, one copied from all
+// layers paints the layers of that layer's map, as many as it has
+function editorStampTargets(layer, stamp)
 {
-    const t = editorGidToTile(layer.source.data[pos.x + (layer.live.size.y - 1 - pos.y) * layer.live.size.x]);
-    if (t)
-    {
-        Object.assign(editorBrush, t);
-        editorTool = 'pencil';
-    }
-    else
-        editorTool = 'eraser';
+    return stamp.grids.length > 1 ?
+        layer.record.layers.slice(0, stamp.grids.length).map((target, i)=> [target, stamp.grids[i]]) :
+        [[layer, stamp.grids[0]]];
 }
 
-// paint every cell on the line from the last cell, so a fast drag leaves no gaps
-function editorPaintLine(layer, pos, erase=editorTool === 'eraser')
+// the grid of a stamp that paints a layer
+function editorStampGrid(layer, stamp)
+{ return stamp.grids.length > 1 ? stamp.grids[layer.record.layers.indexOf(layer)] ?? [] : stamp.grids[0]; }
+
+// paint a stamp with its bottom left on a cell, its see-through cells and cells off the layer leave things as they are
+function editorPaintStamp(layer, pos, stamp=editorBrush)
 {
     if (layer.record.pending) return; // its autosaved edits wait to be applied or dropped first
-    const from = editorLastCell ?? pos, steps = max(abs(pos.x - from.x), abs(pos.y - from.y));
-    const {tile, direction, mirror} = editorBrush;
-    const gid = erase ? 0 : editorTileToGid(tile, direction, mirror);
+    for (const [target, grid] of editorStampTargets(layer, stamp))
+    for (let y = stamp.height; y--;)
+    for (let x = stamp.width; x--;)
+    {
+        const gid = grid[x + y * stamp.width], cell = pos.add(vec2(x, y));
+        gid === undefined || !cell.arrayCheck(target.live.size) || editorPaint(target, cell, gid);
+    }
+    editorLastPlaced = {layer, pos: pos.copy()};
+}
+
+// paint a stamp on every cell of the line between two cells
+function editorPaintBetween(layer, from, to, stamp=editorBrush)
+{
+    const steps = max(abs(to.x - from.x), abs(to.y - from.y));
     for (let i = 0; i <= steps; ++i)
-        editorPaint(layer, from.lerp(pos, steps ? i / steps : 1).floor(), gid);
+        editorPaintStamp(layer, from.lerp(to, steps ? i / steps : 1).floor(), stamp);
+}
+
+// paint a stamp along a drag from its last cell, so a fast drag leaves no gaps
+function editorPaintLine(layer, pos, stamp=editorBrush)
+{
+    editorPaintBetween(layer, editorLastCell ?? pos, pos, stamp);
     editorLastCell = pos;
+}
+
+// a gid turned a quarter turn clockwise on screen: Tiled draws direction one that way, flipped diagonally then
+// horizontally, and tileLayersLoad reads it the same, so a turned stamp looks the same in both
+function editorGidTurn(gid)
+{
+    const t = editorGidToTile(gid);
+    return t ? editorTileToGid(t.tile, (t.direction + 1) % 4, t.mirror) : gid;
+}
+
+// a gid mirrored left to right, Tiled's horizontal flip: a mirror over a turn is the mirror under the turn the
+// other way
+function editorGidMirror(gid)
+{
+    const t = editorGidToTile(gid);
+    return t ? editorTileToGid(t.tile, (4 - t.direction) % 4, !t.mirror) : gid;
+}
+
+// a stamp turned a quarter turn clockwise on screen, or back, its cells and their tiles together; cell (x, y) goes
+// to (y, width - 1 - x), so the bottom row becomes the left column, its left end at the top
+function editorStampTurn(stamp, back=false)
+{
+    for (let turns = back ? 3 : 1; turns--;)
+    {
+        const {width, height} = stamp;
+        stamp = {width: height, height: width, grids: stamp.grids.map((grid)=>
+        {
+            const turned = [];
+            for (let y = height; y--;)
+            for (let x = width; x--;)
+                turned[y + (width - 1 - x) * height] = editorGidTurn(grid[x + y * width]);
+            return turned;
+        })};
+    }
+    return stamp;
+}
+
+// a stamp mirrored left to right, its cells and their tiles together
+function editorStampMirror(stamp)
+{
+    const {width, height} = stamp;
+    return {width, height, grids: stamp.grids.map((grid)=>
+    {
+        const mirrored = [];
+        for (let y = height; y--;)
+        for (let x = width; x--;)
+            mirrored[width - 1 - x + y * width] = editorGidMirror(grid[x + y * width]);
+        return mirrored;
+    })};
+}
+
+// the brush's tile when it is one tile, with its turn and mirror, undefined for the Erase brush or a bigger stamp
+function editorBrushTile()
+{
+    const {width, height, grids} = editorBrush;
+    return width === 1 && height === 1 && grids.length === 1 ? editorGidToTile(grids[0][0]) : undefined;
+}
+
+// the brush takes the tile in a cell, an empty cell gives the Erase brush
+function editorPick(layer, pos) { editorBrush = editorStampTile(editorGidAt(layer, pos) || 0); }
+
+// a palette slot into the brush: slot 0 is the Erase brush, slot n tile n - 1, keeping a one tile brush's turn
+function editorPalettePick(slot)
+{
+    const t = editorBrushTile();
+    editorBrush = editorStampTile(slot ? editorTileToGid(slot - 1, t?.direction, t?.mirror) : 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -28673,25 +28771,18 @@ function editorPanelInit()
         layerSelect.blur(); // a focused select takes the keys
     };
 
-    const tools = row();
-    const toolButtons = {
-        pencil: button(tools, 'Pencil', ()=> editorTool = 'pencil', 'B'),
-        eraser: button(tools, 'Eraser', ()=> editorTool = 'eraser', 'E, or hold the right button'),
-        pick:   button(tools, 'Pick', ()=> editorTool = 'pick', 'I, or Alt+click'),
-    };
     const turns = row();
-    const turn = button(turns, '', ()=> editorBrush.direction = (editorBrush.direction + 1) % 4, 'R, Shift+R turns back');
-    const mirror = button(turns, '', ()=> editorBrush.mirror = !editorBrush.mirror, 'M');
+    button(turns, 'Turn', ()=> editorBrush = editorStampTurn(editorBrush), 'R, Shift+R turns back');
+    button(turns, 'Mirror', ()=> editorBrush = editorStampMirror(editorBrush), 'M');
 
     // the layer's tiles in a grid, a click picks one
     const palette = editorElement('canvas', editorPanel,
         'display:block;background:#333;cursor:crosshair;margin:4px 0');
     palette.onclick = (e)=>
     {
-        const cell = editorPaletteCell, tile = (e.offsetY / cell | 0) * editorPaletteColumns + (e.offsetX / cell | 0);
-        if (tile >= editorPaletteTiles(editorLayer).length || e.offsetX >= editorPaletteColumns * cell) return;
-        editorBrush.tile = tile;
-        editorTool = 'pencil';
+        const cell = editorPaletteCell, slot = (e.offsetY / cell | 0) * editorPaletteColumns + (e.offsetX / cell | 0);
+        slot <= editorPaletteTiles(editorLayer).length && e.offsetX < editorPaletteColumns * cell &&
+            editorPalettePick(slot);
     };
 
     const file = row();
@@ -28699,9 +28790,9 @@ function editorPanelInit()
     button(file, 'Revert', ()=> editorRevert(editorLayer.record), 'Back to the file, can be undone');
     const status = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;min-height:1em');
     editorElement('div', editorPanel, 'color:#777;margin-top:4px',
-        'Right button erases, middle drag pans, wheel zooms');
+        'Right button erases, Alt+click picks, middle drag pans, wheel zooms');
 
-    editorPanelParts = {pending, layerSelect, toolButtons, turn, mirror, palette, status, layers: undefined};
+    editorPanelParts = {pending, layerSelect, palette, status, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -28744,21 +28835,33 @@ function editorPaletteTiles(layer)
 function editorPaletteDraw(canvas, layer)
 {
     const tiles = editorPaletteTiles(layer), cell = editorPaletteCell, columns = editorPaletteColumns;
-    const image = layer?.live.tileInfo?.textureInfo?.image;
+    const image = layer?.live.tileInfo?.textureInfo?.image, slots = tiles.length + 1;
     canvas.style.display = tiles.length ? '' : 'none';
     canvas.width = columns * cell;
-    canvas.height = ceil(tiles.length / columns) * cell;
+    canvas.height = ceil(slots / columns) * cell;
     const context = canvas.getContext('2d');
     context.imageSmoothingEnabled = false;
+
+    // slot 0 is the Erase brush, a red cross, the tiles follow
+    context.strokeStyle = '#e44';
+    context.lineWidth = 2;
+    context.strokeRect(4, 4, cell - 8, cell - 8);
+    context.beginPath();
+    context.moveTo(8, 8), context.lineTo(cell - 8, cell - 8);
+    context.moveTo(cell - 8, 8), context.lineTo(8, cell - 8);
+    context.stroke();
     tiles.forEach((t, i)=>
     {
-        const x = i % columns * cell, y = (i / columns | 0) * cell;
+        const slot = i + 1, x = slot % columns * cell, y = (slot / columns | 0) * cell;
         context.drawImage(image, t.pos.x, t.pos.y, t.size.x, t.size.y, x + 2, y + 2, cell - 4, cell - 4);
-        if (i !== editorBrush.tile) return;
-        context.strokeStyle = '#4af';
-        context.lineWidth = 2;
-        context.strokeRect(x + 1, y + 1, cell - 2, cell - 2);
     });
+
+    // the brush's slot outlined, when it is one tile or Erase
+    const t = editorBrushTile(), erase = !t && editorBrush.width === 1 && editorBrush.height === 1 &&
+        editorBrush.grids[0][0] === 0, selected = erase ? 0 : t ? t.tile + 1 : -1;
+    if (selected < 0) return;
+    context.strokeStyle = '#4af';
+    context.strokeRect(selected % columns * cell + 1, (selected / columns | 0) * cell + 1, cell - 2, cell - 2);
 }
 
 // shows or hides the panel, and shows what changed since the last frame
@@ -28782,17 +28885,13 @@ function editorPanelUpdate()
     }
     p.layerSelect.selectedIndex = layers.indexOf(editorLayer);
     p.pending.style.display = editorLayer?.record.pending ? '' : 'none';
-    for (const [tool, b] of Object.entries(p.toolButtons))
-        b.style.outline = tool === editorTool ? '2px solid #4af' : '';
-    p.turn.textContent = `Turn ${editorBrush.direction * 90}°`;
-    p.mirror.textContent = editorBrush.mirror ? 'Mirrored' : 'Mirror';
 
-    // the palette, drawn again when the layer or the brush tile changed
+    // the palette, drawn again when the layer or the brush changed, a change makes a new brush
     const live = editorLayer?.live;
-    if (p.paletteLayer !== editorLayer || p.paletteTile !== editorBrush.tile)
+    if (p.paletteLayer !== editorLayer || p.paletteBrush !== editorBrush)
     {
         p.paletteLayer = editorLayer;
-        p.paletteTile = editorBrush.tile;
+        p.paletteBrush = editorBrush;
         editorPaletteDraw(p.palette, editorLayer);
     }
 
@@ -28827,11 +28926,9 @@ function editorUpdate()
     if (ctrl && keyWasPressed('KeyY')) editorUndo(true);
     if (!ctrl)
     {
-        if (keyWasPressed('KeyR')) editorBrush.direction = (editorBrush.direction + (shift ? 3 : 1)) % 4;
-        if (keyWasPressed('KeyM')) editorBrush.mirror = !editorBrush.mirror;
-        if (keyWasPressed('KeyB')) editorTool = 'pencil';
-        if (keyWasPressed('KeyE')) editorTool = 'eraser';
-        if (keyWasPressed('KeyI')) editorTool = 'pick';
+        if (keyWasPressed('KeyR')) editorBrush = editorStampTurn(editorBrush, shift);
+        if (keyWasPressed('KeyM')) editorBrush = editorStampMirror(editorBrush);
+        if (keyWasPressed('KeyE')) editorBrush = editorStampTile(0);
     }
 
     // the middle button drags the view, the wheel zooms on the point under the mouse
@@ -28852,11 +28949,11 @@ function editorUpdate()
     editorHover = layer && editorCellAt(layer.live, screenToWorld(mousePosScreen));
     const left = mouseIsDown(0) || mouseWasPressed(0), right = mouseIsDown(2) || mouseWasPressed(2);
     if (mouseWasPressed(0))
-        editorPicking = editorTool === 'pick' || keyIsDown('AltLeft') || keyIsDown('AltRight');
+        editorPicking = keyIsDown('AltLeft') || keyIsDown('AltRight');
     if (!editorHover)
         editorLastCell = undefined; // off the layer, coming back in starts the line again
     else if (right)
-        editorPaintLine(layer, editorHover, true);
+        editorPaintLine(layer, editorHover, editorStampTile(0));
     else if (editorPicking)
         mouseWasPressed(0) && editorPick(layer, editorHover); // a pick is the press, holding on does not paint
     else if (left)
@@ -28912,14 +29009,21 @@ function editorRender()
     const edge = hsl(.55, 1, .6, .8), corners = [vec2(), vec2(width, 0), vec2(width, height), vec2(0, height)];
     corners.forEach((c, i)=> drawLine(live.pos.add(c), live.pos.add(corners[(i + 1) % 4]), thin * 2, edge));
 
-    // the brush where it would paint
+    // the brush where it would paint, the Erase brush's cells in red
     if (editorHover)
     {
-        const center = live.pos.add(editorHover).add(vec2(.5));
-        if (editorTool === 'pencil')
-            drawTile(center, vec2(1), editorTileInfo(live, editorBrush.tile), hsl(0, 0, 1, .7),
-                editorBrush.direction * PI/2, editorBrush.mirror);
-        drawRect(center, vec2(1), hsl(.55, 1, .6, .25));
+        const grid = editorStampGrid(layer, editorBrush), {width: w, height: h} = editorBrush;
+        for (let y = h; y--;)
+        for (let x = w; x--;)
+        {
+            const gid = grid[x + y * w], t = editorGidToTile(gid);
+            const center = live.pos.add(editorHover).add(vec2(x + .5, y + .5));
+            if (t)
+                drawTile(center, vec2(1), editorTileInfo(live, t.tile), hsl(0, 0, 1, .7), t.direction * PI/2, t.mirror);
+            else if (gid === 0)
+                drawRect(center, vec2(1), hsl(0, 1, .5, .3));
+        }
+        drawRect(live.pos.add(editorHover).add(vec2(w / 2, h / 2)), vec2(w, h), hsl(.55, 1, .6, .25));
     }
 }
 
