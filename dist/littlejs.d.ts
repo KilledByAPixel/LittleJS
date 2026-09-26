@@ -6294,6 +6294,7 @@ declare module "littlejsengine" {
      */
     /** Draw a scalable nine-slice UI element in screen space, drawNineSlice with screenSpace set
      *  - Draws with the 2D context by default, on top of what WebGL drew, like drawTextScreen
+     *  - With no angle its pieces land on whole pixels and meet exactly, so pixel art lines up and extraSpace is not used
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
@@ -6327,6 +6328,7 @@ declare module "littlejsengine" {
     export function drawThreeSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw a scalable three-slice UI element in screen space, drawThreeSlice with screenSpace set
      *  - Draws with the 2D context by default, on top of what WebGL drew, like drawTextScreen
+     *  - With no angle its pieces land on whole pixels and meet exactly, so pixel art lines up and extraSpace is not used
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)

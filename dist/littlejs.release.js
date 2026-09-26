@@ -17564,6 +17564,7 @@ async function box2dInit()
 
 /** Draw a scalable nine-slice UI element in screen space, drawNineSlice with screenSpace set
  *  - Draws with the 2D context by default, on top of what WebGL drew, like drawTextScreen
+ *  - With no angle its pieces land on whole pixels and meet exactly, so pixel art lines up and extraSpace is not used
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
@@ -17605,6 +17606,13 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
     // so the center tile is one tile down and right from it, stepping over
     // the padding around each tile the way tile() lays out the grid
     const step = startTile.size.add(vec2(startTile.padding*2));
+    if (screenSpace && !angle)
+    {
+        // on whole pixels, the pieces in the screen's rows and columns of the block
+        drawSliceSnapped(pos, size, borderSize, (col, row)=>
+            [startTile.offset(step.multiply(vec2(col, row))), 0], color, additiveColor, useWebGL, context);
+        return;
+    }
     const centerTile = startTile.offset(step);
     const centerSize = size.add(vec2(extraSpace-borderSize*2));
     const cornerSize = vec2(borderSize);
@@ -17636,6 +17644,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
 
 /** Draw a scalable three-slice UI element in screen space, drawThreeSlice with screenSpace set
  *  - Draws with the 2D context by default, on top of what WebGL drew, like drawTextScreen
+ *  - With no angle its pieces land on whole pixels and meet exactly, so pixel art lines up and extraSpace is not used
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
@@ -17676,6 +17685,17 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
     const cornerTile = startTile.frame(0);
     const sideTile   = startTile.frame(1);
     const centerTile = startTile.frame(2);
+    if (screenSpace && !angle)
+    {
+        // on whole pixels, each corner and side the top left one's tile turned a quarter more going clockwise
+        const turns = [[0,0,1],[3,-1,1],[3,2,2]]; // by column in each row, -1 for the center
+        drawSliceSnapped(pos, size, borderSize, (col, row)=>
+        {
+            const turn = turns[row][col], corner = col !== 1 && row !== 1;
+            return turn < 0 ? [centerTile, 0] : [corner ? cornerTile : sideTile, turn*PI/2];
+        }, color, additiveColor, useWebGL, context);
+        return;
+    }
     const centerSize = size.add(vec2(extraSpace-borderSize*2));
     const cornerSize = vec2(borderSize);
     const cornerOffset = size.scale(.5).subtract(cornerSize.scale(.5));
@@ -17778,6 +17798,32 @@ class TileSlice
             drawThreeSliceScreen(pos, size, this.tileInfo, color, this.borderSize, additiveColor, this.extraSpace, angle, useWebGL, context);
         else
             drawTile(pos, size, this.tileInfo, color, angle, false, additiveColor, useWebGL, true, context);
+    }
+}
+
+// draw a slice box in screen space with no angle on whole pixels: the edges and the border are rounded, and every
+// piece is cut from them, so the pieces meet exactly and their texels line up where they do, with no overlap to hide
+// a seam; pieceTile(col, row) gives the tile and angle for the piece in that column and row of the box, top left 0
+function drawSliceSnapped(pos, size, borderSize, pieceTile, color, additiveColor, useWebGL, context)
+{
+    const border = max(1, round(borderSize));
+    const edges = (center, length)=>
+    {
+        const start = round(center - length/2), end = start + round(length);
+        const inner = min(start + border, floor((start + end)/2)); // a box too small for two borders splits
+        return [start, inner, max(end - border, inner), end];
+    };
+    const xs = edges(pos.x, size.x), ys = edges(pos.y, size.y);
+    const shift = useWebGL && glEnable && !context ? 0 : .5; // Canvas2D draws half a pixel over its position
+    for (let row = 3; row--;)
+    for (let col = 3; col--;)
+    {
+        const w = xs[col+1] - xs[col], h = ys[row+1] - ys[row];
+        if (w <= 0 || h <= 0) continue;
+        const [tileInfo, angle] = pieceTile(col, row);
+        const turned = round(angle / (PI/2)) % 2; // a quarter turn swaps the sides it is drawn with
+        const piecePos = vec2(xs[col] + w/2 - shift, ys[row] + h/2 - shift);
+        drawTile(piecePos, turned ? vec2(h, w) : vec2(w, h), tileInfo, color, angle, false, additiveColor, useWebGL, true, context);
     }
 }
 
