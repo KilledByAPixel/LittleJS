@@ -28196,8 +28196,12 @@ let editorGameState;
 let editorCameraPos = vec2(), editorCameraScale = 32;
 
 // the layer being painted, the cell under the mouse, the last cell of a stroke, the last cell a stamp was
-// placed on, for a Shift line, and if the press is an Alt pick
-let editorLayer, editorHover, editorLastCell, editorLastPlaced, editorPicking;
+// placed on, for a Shift line
+let editorLayer, editorHover, editorLastCell, editorLastPlaced;
+
+// the selected area, cells of the layer being edited from min to max, the right button's press while it is held,
+// and a left press that only cleared a selection, which paints nothing until let go
+let editorSelection, editorRightPress, editorLeftSpent;
 
 // the grid drawn over the layer, G, and the list of keys in the panel, ?
 let editorGrid = true, editorHelp = false;
@@ -28223,6 +28227,7 @@ function setEditMode(enable=true)
     else
     {
         editorStrokeEnd();
+        editorSelection = editorRightPress = undefined;
         const state = editorGameState;
         setPaused(state.paused);
         setCameraPos(state.cameraPos);
@@ -28589,6 +28594,17 @@ function editorCellAt(live, worldPos)
     return pos.arrayCheck(live.size) ? pos : undefined;
 }
 
+// the cell of a layer nearest a world position, clamped onto the layer
+function editorCellClamped(live, worldPos)
+{
+    const pos = worldPos.subtract(live.pos).floor();
+    return vec2(clamp(pos.x, 0, live.size.x - 1), clamp(pos.y, 0, live.size.y - 1));
+}
+
+// the area between two cells, corners in any order
+function editorArea(a, b)
+{ return {min: vec2(min(a.x, b.x), min(a.y, b.y)), max: vec2(max(a.x, b.x), max(a.y, b.y))}; }
+
 // the tile info a layer draws a tile with, as TileLayer.drawTileData picks it
 function editorTileInfo(live, tile)
 {
@@ -28793,7 +28809,7 @@ function editorPanelInit()
     button(file, 'Revert', ()=> editorRevert(editorLayer.record), 'Back to the file, can be undone');
     const status = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;min-height:1em');
     editorElement('div', editorPanel, 'color:#777;margin-top:4px',
-        'Right button erases, Alt+click picks, middle drag pans, wheel zooms');
+        'Right click picks, right drag selects, middle drag pans, wheel zooms');
 
     editorPanelParts = {pending, layerSelect, palette, status, layers: undefined};
 }
@@ -28987,30 +29003,61 @@ function editorUpdate()
         }
     }
 
-    // the middle button drags the view
-    if (mouseIsDown(1))
+    // the middle button, or Space with the left, drags the view
+    const space = keyIsDown('Space');
+    if (mouseIsDown(1) || space && mouseIsDown(0))
         editorCameraPos = editorCameraPos.subtract(screenToWorldDelta(mouseDeltaScreen));
     editorApplyCamera();
 
-    // the left button paints, or picks with the pick tool or Alt held, the right button erases; a quick click
-    // let go before this step still reads as pressed
-    const layer = editorLayer?.live.destroyed ? undefined : editorLayer;
-    editorHover = layer && editorCellAt(layer.live, screenToWorld(mousePosScreen));
-    const left = mouseIsDown(0) || mouseWasPressed(0), right = mouseIsDown(2) || mouseWasPressed(2);
-    if (mouseWasPressed(0))
-        editorPicking = keyIsDown('AltLeft') || keyIsDown('AltRight');
+    const layer = editorLayer?.live.destroyed ? undefined : editorLayer, mouse = screenToWorld(mousePosScreen);
+    editorHover = layer && editorCellAt(layer.live, mouse);
+
+    // the right button: a click picks the tile under the mouse, or clears the selection off the layer, a drag
+    // selects an area; a release within half a cell of the press is a click
+    if (mouseWasPressed(2) && layer)
+        editorRightPress = {screen: mousePosScreen.copy(), cell: editorCellClamped(layer.live, mouse), drag: false};
+    const press = editorRightPress;
+    if (press && layer)
+    {
+        press.drag ||= mousePosScreen.distance(press.screen) > editorCameraScale / 2;
+        if (press.drag)
+            editorSelection = editorArea(press.cell, editorCellClamped(layer.live, mouse));
+        if (!mouseIsDown(2))
+        {
+            if (!press.drag)
+                editorHover ? editorPick(layer, editorHover) : editorSelection = undefined;
+            editorRightPress = undefined;
+        }
+    }
+    else
+        editorRightPress = undefined;
+
+    // the left button paints; the first press with a selection only clears it, Shift draws a line from the
+    // last tile placed; a quick click let go before this step still reads as pressed
+    if (mouseWasPressed(0) && !space && editorSelection)
+    {
+        editorSelection = undefined;
+        editorLeftSpent = true;
+    }
+    const left = mouseIsDown(0) || mouseWasPressed(0);
     if (!editorHover)
         editorLastCell = undefined; // off the layer, coming back in starts the line again
-    else if (right)
-        editorPaintLine(layer, editorHover, editorStampTile(0));
-    else if (editorPicking)
-        mouseWasPressed(0) && editorPick(layer, editorHover); // a pick is the press, holding on does not paint
-    else if (left)
-        editorPaintLine(layer, editorHover);
-    if (!mouseIsDown(0) && !mouseIsDown(2))
+    else if (left && !space && !editorLeftSpent && !editorRightPress)
+    {
+        const last = editorLastPlaced, shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
+        if (mouseWasPressed(0) && shift && last?.layer === layer)
+        {
+            editorPaintBetween(layer, last.pos, editorHover);
+            editorLastCell = editorHover;
+        }
+        else
+            editorPaintLine(layer, editorHover);
+    }
+    if (!mouseIsDown(0))
     {
         editorStrokeEnd();
         editorLastCell = undefined;
+        editorLeftSpent = false;
     }
 }
 

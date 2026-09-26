@@ -474,7 +474,7 @@ test('autosaved edits brought back say so, so they are not forgotten in the file
     assert.ok(warnings.some((text)=> /unsaved edits/.test(text)), warnings.join());
 });
 
-test('the right button erases whatever the tool, and the middle button only moves the view', async () =>
+test('the middle button only moves the view', async () =>
 {
     const engine = await loadGame();
     const { run, handlers } = engine;
@@ -487,12 +487,6 @@ test('the right button erases whatever the tool, and the middle button only move
     step(engine);
     assert.equal(run('editorUndoList.length'), 0, 'the middle button painted nothing');
     assert.notEqual(run('editorCameraPos.x'), 1.5, 'it moved the view');
-    run('editorCameraPos = vec2(1.5, .5)');
-    handlers.mousedown({ ...at(2, 1), button: 2 });
-    step(engine);
-    handlers.mouseup({ ...at(2, 1), button: 2 });
-    step(engine);
-    assert.equal(run('layers[2].getData(vec2(2, 1)).tile'), undefined, 'erased');
 });
 
 // stamps
@@ -600,4 +594,96 @@ test('G toggles the grid and ? the list of keys', async () =>
     typed(engine, 'g');
     typed(engine, '?', { shift: true });
     assert.deepEqual([...engine.run('[editorGrid, editorHelp]')], [false, true]);
+});
+
+// the right button, a click or a drag
+function rightClick(engine, x, y)
+{
+    engine.handlers.mousedown({ ...at(x, y), button: 2 });
+    step(engine);
+    engine.handlers.mouseup({ ...at(x, y), button: 2 });
+    step(engine);
+}
+function rightDrag(engine, from, to)
+{
+    engine.handlers.mousedown({ ...at(...from), button: 2 });
+    step(engine);
+    engine.handlers.mousemove({ ...at(...to), button: 2 });
+    step(engine);
+    engine.handlers.mouseup({ ...at(...to), button: 2 });
+    step(engine);
+}
+const selection = (engine)=> engine.run('editorSelection && [editorSelection.min.x, editorSelection.min.y, '
+    + 'editorSelection.max.x, editorSelection.max.y]');
+
+test('a right click picks the tile under the mouse, an empty cell the Erase brush, and paints nothing', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode);
+    rightClick(engine, 2, 1);
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrushTile())')), { tile: 2, direction: 0, mirror: false });
+    rightClick(engine, 0, 0);
+    assert.equal(engine.run('editorBrush.grids[0][0]'), 0);
+    assert.equal(engine.run('editorUndoList.length'), 0);
+});
+
+test('a right drag selects the area between press and release, clamped to the layer, and does not pick', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode);
+    rightDrag(engine, [0, 0], [5, 3]); // past the layer's corner
+    assert.deepEqual([...selection(engine)], [0, 0, 2, 1]);
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrushTile())')), { tile: 6, direction: 0, mirror: false });
+});
+
+test('a right click outside the layer clears the selection, and the first left click with one only clears it',
+    async () =>
+{
+    const engine = await loadGame();
+    const { run, handlers } = engine;
+    run(editCode);
+    rightDrag(engine, [0, 0], [1, 1]);
+    rightClick(engine, -3, 0);
+    assert.equal(selection(engine), undefined);
+    rightDrag(engine, [0, 0], [1, 1]);
+    handlers.mousedown(at(0, 0));
+    step(engine);
+    handlers.mousemove(at(1, 0));
+    step(engine);
+    handlers.mouseup(at(1, 0));
+    step(engine);
+    assert.equal(selection(engine), undefined);
+    assert.equal(run('editorUndoList.length'), 0, 'that press painted nothing, not even when held on');
+});
+
+test('Shift + left click draws a line from the last tile placed', async () =>
+{
+    const engine = await loadGame();
+    const { run, handlers } = engine;
+    run(editCode + 'editorPaintStamp(front, vec2(0, 0)); editorStrokeEnd();');
+    handlers.keydown(keyEvent('ShiftLeft'));
+    handlers.mousedown(at(2, 0));
+    step(engine);
+    handlers.mouseup(at(2, 0));
+    handlers.keyup(keyEvent('ShiftLeft'));
+    step(engine);
+    assert.deepEqual([0, 1, 2].map((x)=> run(`layers[2].getData(vec2(${x}, 0)).tile`)), [6, 6, 6]);
+    assert.equal(run('editorUndoList.length'), 2, 'the line is one undo');
+});
+
+test('Space held with the left button pans and paints nothing', async () =>
+{
+    const engine = await loadGame();
+    const { run, handlers } = engine;
+    run(editCode);
+    handlers.keydown(keyEvent('Space'));
+    handlers.mousedown(at(1, 0));
+    step(engine);
+    handlers.mousemove(at(0, 0));
+    step(engine);
+    handlers.mouseup(at(0, 0));
+    handlers.keyup(keyEvent('Space'));
+    step(engine);
+    assert.equal(run('editorUndoList.length'), 0);
+    assert.notEqual(run('editorCameraPos.x'), 1.5);
 });
