@@ -2457,7 +2457,8 @@ let canvasPixelated = false;
 
 /** Disables texture filtering for crisper pixel art
  *  - Leave true for pixel art so sprites stay sharp when scaled (uses NEAREST filtering)
- *  - Set false for smooth/high-resolution art to enable bilinear filtering and mipmaps
+ *  - Set false for smooth/high-resolution art to enable bilinear filtering and mipmaps; those textures upload
+ *    premultiplied, so filtering does not pull dark from see through texels into the edges
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -10078,8 +10079,16 @@ function glSetTextureData(texture, image)
     false&&ASSERT(image?.width > 0, 'Invalid image data.');
     texture === glActiveTexture && glFlush();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
+    // smooth filtering mixes a texel with its see through neighbors, right only for premultiplied color, or the
+    // edges go dark; pixel art is sampled a texel at a time, and uploads straight color as it always has
+    const premultiply = !tilesPixelated;
+    glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, premultiply);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
-    glPremultipliedTextures.delete(texture); // an image uploads straight color, even into a used render target
+    glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    if (premultiply)
+        glPremultipliedTextures.add(texture); // drawn with the premultiplied blend, as a render target is
+    else
+        glPremultipliedTextures.delete(texture); // an image uploads straight color, even into a used render target
 
     // keep mipmaps in sync with new level 0 data, for any texture that has them
     if (glMipmappedTextures.has(texture))
@@ -14277,9 +14286,11 @@ class UIObject
      *  @return {Vector2} */
     getTextSize()
     {
+        // text fitted to the size shares its height between its lines, a set textHeight is the height of each line
+        const lines = this.textHeight ? 1 : (this.text + '').split('\n').length;
         return vec2(
             this.textWidth  || this.textFitScale * this.size.x,
-            this.textHeight || this.textFitScale * this.size.y);
+            this.textHeight || this.textFitScale * this.size.y / lines);
     }
 
     /** Get where the text is drawn, the center, or the edge of the text area its align puts it against

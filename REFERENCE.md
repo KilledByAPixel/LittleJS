@@ -344,6 +344,7 @@ canvasColorTiles = true       // Allow tiles to be tinted when drawn
 fontDefault = 'arial'         // Default font used for text rendering
 canvasPixelated = false       // Use nearest neighbor canvas scaling for more pixelated look
 tilesPixelated = true         // Disable filtering for crisper pixel art, when false textures get mipmaps at any size
+                              // and upload premultiplied, so smooth edges do not darken
 showSplashScreen = false      // Show the LittleJS splash screen on startup
 glEnable = true               // Enable fast WebGL rendering
 
@@ -830,7 +831,8 @@ UIObject.anchor                        // vec2 in [-1,1]; anchors to parent (or 
 UIObject.localPos                      // Position from its anchor, what the pos passed in sets; move or tween this,
                                        // nativePos is worked out from it each frame
 UIObject.visible / disabled            // Hidden objects are skipped, disabled ones draw but do not respond
-UIObject.text / textHeight             // The text it draws, and a fixed text height, undefined fits it to the size
+UIObject.text / textHeight             // The text it draws, and a fixed height per line, undefined fits it to the
+                                        // size, its lines sharing the height
 UIObject.navigationIndex               // Order for keyboard and gamepad navigation, undefined leaves it out
 UIObject.addChild(child)               // Returns child, parents it
 UIObject.removeChild(child)

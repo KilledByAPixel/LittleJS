@@ -123,3 +123,37 @@ test('a layer over the device texture limit warns, in release builds too', () =>
         new CanvasLayer(vec2(), vec2(10), 0, 0, vec2(4000, 100));`);
     assert.equal(warnings.filter(w=> /texture limit/.test(w)).length, 1);
 });
+
+test('multi-line UI text fitted to its widget splits the height between its lines, a set textHeight is per line', () =>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true); new UISystemPlugin');
+    const heights = run(`
+        const one = new UIText(vec2(), vec2(300, 100), 'One line');
+        const two = new UIText(vec2(), vec2(300, 100), 'Two\\nlines');
+        const set = new UIText(vec2(), vec2(300, 100), 'Two\\nlines');
+        set.textHeight = 40;
+        [one.getTextSize().y, two.getTextSize().y, set.getTextSize().y];
+    `);
+    assert.deepEqual([...heights], [100, 50, 40]); // a UIText fits its text at scale 1
+});
+
+test('smooth textures upload premultiplied and draw as premultiplied, pixel art uploads as it is', () =>
+{
+    const { run } = loadEngine();
+    const result = run(`
+        const calls = [];
+        glEnable = true;
+        glContext = new Proxy({ UNPACK_PREMULTIPLY_ALPHA_WEBGL: 37441 }, { get: (target, key)=> key in target ? target[key] :
+            key === 'pixelStorei' ? (name, value)=> calls.push(value) : key === 'createTexture' ? ()=> ({}) : ()=> {} });
+        const image = { width: 4, height: 4 };
+        tilesPixelated = true;
+        const pixel = glCreateTexture(image);
+        const pixelState = [glPremultipliedTextures.has(pixel), calls.includes(true)];
+        calls.length = 0;
+        tilesPixelated = false;
+        const smooth = glCreateTexture(image);
+        [...pixelState, glPremultipliedTextures.has(smooth), calls.join()];
+    `);
+    assert.deepEqual([...result], [false, false, true, 'true,false']);
+});

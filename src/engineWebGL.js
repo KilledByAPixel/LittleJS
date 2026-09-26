@@ -545,8 +545,16 @@ function glSetTextureData(texture, image)
     ASSERT(image?.width > 0, 'Invalid image data.');
     texture === glActiveTexture && glFlush();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
+    // smooth filtering mixes a texel with its see through neighbors, right only for premultiplied color, or the
+    // edges go dark; pixel art is sampled a texel at a time, and uploads straight color as it always has
+    const premultiply = !tilesPixelated;
+    glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, premultiply);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
-    glPremultipliedTextures.delete(texture); // an image uploads straight color, even into a used render target
+    glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    if (premultiply)
+        glPremultipliedTextures.add(texture); // drawn with the premultiplied blend, as a render target is
+    else
+        glPremultipliedTextures.delete(texture); // an image uploads straight color, even into a used render target
 
     // keep mipmaps in sync with new level 0 data, for any texture that has them
     if (glMipmappedTextures.has(texture))

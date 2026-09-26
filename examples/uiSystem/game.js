@@ -30,7 +30,7 @@ function createUI()
     // setup root to attach all ui elements to
     uiRoot = new LJS.UIObject;
     uiRoot.anchor = vec2(0, -1); // top-center of canvas
-    const uiInfo = new LJS.UIText(vec2(0,90), vec2(1e3, 70),
+    const uiInfo = new LJS.UIText(vec2(0,90), vec2(1e3, 140),
         'LittleJS UI System Example\nM = Toggle menu');
     uiInfo.textColor = LJS.WHITE;
     uiInfo.textLineWidth = 8;
@@ -51,7 +51,7 @@ function createUI()
     textTitle.textLineWidth = 4;
 
     // example multiline text
-    const textTest = new LJS.UIText(vec2(-60,-120), vec2(300, 60), 'Test Text\nSecond text line.')
+    const textTest = new LJS.UIText(vec2(-60,-120), vec2(300, 120), 'Test Text\nSecond text line.')
     uiMenu.addChild(textTest);
 
     // example tile image

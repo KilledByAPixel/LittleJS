@@ -1174,9 +1174,11 @@ class UIObject
      *  @return {Vector2} */
     getTextSize()
     {
+        // text fitted to the size shares its height between its lines, a set textHeight is the height of each line
+        const lines = this.textHeight ? 1 : (this.text + '').split('\n').length;
         return vec2(
             this.textWidth  || this.textFitScale * this.size.x,
-            this.textHeight || this.textFitScale * this.size.y);
+            this.textHeight || this.textFitScale * this.size.y / lines);
     }
 
     /** Get where the text is drawn, the center, or the edge of the text area its align puts it against
