@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { setEngineManualStep, setHeadlessMode, engineInit, engineStep, EngineObject, ParticleEmitter,
-    engineObjects, setGravity, vec2, PI } from '../dist/littlejs.esm.js';
+    setGravity, vec2, PI } from '../dist/littlejs.esm.js';
 
 // review round 12: local space particle gravity, and the update order in headless mode
 

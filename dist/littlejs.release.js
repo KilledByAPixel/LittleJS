@@ -12203,7 +12203,6 @@ class LightSystemPlugin
             cameraAngle = 0;
             canvasClearColor = WHITE;
             glSetRenderTarget(ls.shadowMap, true);
-            glColorMask = 0xff000000; // every color black, its alpha kept
             glSkipScreenSpace = true; // the map's camera would put them anywhere
             ls.shadowPass = true;
             try
@@ -12211,7 +12210,9 @@ class LightSystemPlugin
                 for (const o of engineObjects)
                 {
                     if (o.destroyed || !o.castShadow) continue;
-                    glColorMask = 0xff000000; // black again, a render that left setShadowTransparent on ends with it
+                    // every color black, its alpha kept, set for each object since a render that left
+                    // setShadowTransparent on ends with it
+                    glColorMask = 0xff000000;
                     setShader(o.shader); // its own Shader as in the main pass, so a snippet that cuts holes casts the same shape
                     o.renderShadow();
                 }

@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, EngineObject3D, vec3, vec2, Ray3D, TileInfo, TextureInfo, buildBox, buildSphere,
-    Mesh, PI } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, EngineObject3D, vec3, vec2, Ray3D, TileInfo, TextureInfo, buildSphere, PI } from '../dist/littlejs.esm.js';
 
 // review round 12: a sprite is picked as the quad it draws, and a model's objects do not measure the whole model
 // each time one is made

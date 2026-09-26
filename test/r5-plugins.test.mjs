@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import
 {
-    setEngineManualStep, setHeadlessMode, engineInit, engineStep, setPaused, frame,
-    Tween, tweenUpdate, tweenStopAll, EngineObject, TextureSheet, vec2,
+    setEngineManualStep, setHeadlessMode, engineInit, engineStep, setPaused,
+    Tween, tweenUpdate, EngineObject, vec2,
     LightSystemPlugin, PostProcessPlugin,
 } from '../dist/littlejs.esm.js';
 

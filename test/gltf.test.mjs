@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseGLTF, GLTFModel, GLTFPart, GLTFObject, GLTFAnimation, vec3, buildMatrix, Matrix4, EngineObject3D, engineObjects } from '../dist/littlejs.esm.js';
+import { parseGLTF, GLTFModel, GLTFPart, GLTFObject, GLTFAnimation, vec3, buildMatrix, EngineObject3D, engineObjects } from '../dist/littlejs.esm.js';
 
 const near = (a, b, msg)=> assert.ok(Math.abs(a - b) < 1e-4, `${msg || ''} ${a} vs ${b}`);
 const nearVec = (v, x, y, z)=> { near(v.x, x, 'x'); near(v.y, y, 'y'); near(v.z, z, 'z'); };

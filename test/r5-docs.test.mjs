@@ -73,14 +73,15 @@ test('an object with restitution bounces off a tile floor and settles above it',
     const o = new EngineObject(vec2(10, 6), vec2(1));
     o.setCollision();
     o.restitution = .8;
-    let bounced = false, peakAfterBounce = 0, lowest = Infinity;
+    let bounced = false, peakAfterBounce = 0, lowest = Infinity, lastVelocityY = o.velocity.y;
     for (let i = 0; i < 200; ++i)
     {
-        const vy = o.velocity.y;
         engineStep();
         lowest = Math.min(lowest, o.pos.y);
-        if (vy < 0 && o.velocity.y > 0)
+        const velocityY = o.velocity.y;
+        if (lastVelocityY < 0 && velocityY > 0)
             bounced = true;
+        lastVelocityY = velocityY;
         if (bounced)
             peakAfterBounce = Math.max(peakAfterBounce, o.pos.y);
     }

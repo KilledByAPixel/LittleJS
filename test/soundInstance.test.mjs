@@ -65,7 +65,7 @@ const audioContext = LJS.audioContext;
 // zzfx sound with ~.6 seconds of samples (attack 0, sustain .5, release .1)
 const sound = new LJS.Sound([1, 0, 220, 0, .5, .1]);
 const epsilon = 1e-9;
-const near = (a, b)=> assert.ok(Math.abs(a - b) < epsilon, a + ' != ' + b);
+const near = (a, b, message='')=> assert.ok(Math.abs(a - b) < epsilon, `${message} ${a} != ${b}`);
 
 test('zzfx sound generates samples and duration', () =>
 {

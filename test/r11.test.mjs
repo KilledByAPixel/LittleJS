@@ -35,7 +35,8 @@ test('a sprite behind the ray is not picked, one ahead is picked at its depth', 
         assert.equal(LJS.render3D.pick(ray)?.object, crate, 'the crate ahead, not the sprite around the eye');
         const ahead = new EngineObject3D(vec3(.5, 0, -2), undefined, tile);
         const hit = LJS.render3D.pick(ray);
-        assert.equal(hit?.object, ahead);
+        assert.ok(hit, 'the sprite ahead is picked');
+        assert.equal(hit.object, ahead);
         assert.ok(Math.abs(hit.distance - 2) < 1e-6, 'at its depth: ' + hit.distance);
     }
     finally { clearObjects(); }

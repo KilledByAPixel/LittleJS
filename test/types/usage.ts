@@ -19,6 +19,7 @@ new Tween(v => { countdown = v; }, 10, 0, 5).then(() => { countdown = 0; });
 let slidePos: Vector2 = vec2();
 new Tween((p: Vector2) => { slidePos = p; }, vec2(), vec2(5, 2), 2, { ease: Ease.OUT(Ease.SINE) });
 new Tween(p => { slidePos = p.scale(2); }, vec2(), vec2(5, 2));
+export { countdown, slidePos }; // read by nothing, kept so the callbacks' writes are used
 
 // buildGrid calls its color and height functions with the grid position
 const grid: Mesh = buildGrid(vec2(9), 9, (x, z) => hsl(x/9, 1, .5), (x, z) => x*z*.1);
