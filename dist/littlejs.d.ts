@@ -307,6 +307,19 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Debug */
     export let debugTweakables: boolean;
+    /**
+     * LittleJS Level Editor
+     * - Paint the game's tile layers while it is paused, then keep playing with the changes
+     * - Press 0 while the debug overlay is open to edit, 0 again to play, or call setEditMode
+     * - Edits the Tiled map the game loaded, saves it back as Tiled JSON, and autosaves every change
+     * - Debug builds only, the release build has stubs for its names in engineRelease.js and none of its code
+     * @namespace Editor
+     */
+    /** True while the editor is open, the game is paused under it, setEditMode(enable=true)
+     *  @type {boolean}
+     *  @default
+     *  @memberof Editor */
+    export let editMode: boolean;
     /** Asserts if the expression is false, does nothing in release builds
      *  Halts execution if the assert fails and throws an error
      *  @param {*} assert - any value, the assert fails when it is falsy
@@ -999,6 +1012,11 @@ declare module "littlejsengine" {
      *  @param {boolean} [show]
      *  @memberof Debug */
     export function setDebugTweakables(show?: boolean): void;
+    /** Open or close the editor, the game is paused while it is open and carries on with the changes after
+     *  - Does nothing in release builds
+     *  @param {boolean} [enable]
+     *  @memberof Editor */
+    export function setEditMode(enable?: boolean): void;
     /** Open or close the debug overlay from code, as the debug key does; does nothing in release builds
      *  @param {boolean} [show]
      *  @memberof Debug */

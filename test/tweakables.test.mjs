@@ -203,5 +203,5 @@ test('the release build adds nothing and never reads the saved values', () =>
         tweakDivider('Divider'); tweakButton('Button', ()=> {}); tweak('speed', {object: {speed: 1}});`,
         'littlejs.release.js');
     assert.equal(run('speed'), 5);
-    assert.equal(run('tweakList.length'), 0);
+    assert.equal(run('typeof tweakList'), 'undefined', 'none of its code is in the release build');
 });

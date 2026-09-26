@@ -1778,7 +1778,7 @@ async function gameInit()
 - Changes are saved and come back after a refresh, until the value in the code changes
 - Copy puts the changed values on the clipboard as lines of code, Reset puts back the code values
 - Paths are found by name, so only a script's globals work; an ES module game passes the object option
-- In release builds nothing is added and the code's values are used as they are
+- Release builds have none of its code, tweak and the rest do nothing, and the code's values are used as they are
 - See `examples/shorts/tweakables.js` for a demo
 
 ```javascript
@@ -1791,11 +1791,22 @@ tweakButton(label, callback) // Add a button that calls a function, like one to 
 tweakEngineDefaults()      // Add gravity, timeScale, cameraScale and soundVolume
 ```
 
+## LittleJS Level Editor
+- Press 0 while the debug overlay is open to pause the game and paint its tile layers, 0 again to keep playing
+- Edits the Tiled map the game passed to tileLayersLoad, so a game that loads it again gets the changes
+- Every change is autosaved and comes back after a reload, Save writes the map as Tiled JSON
+- Debug builds only, release builds have none of its code
+
+```javascript
+editMode = false           // Is the editor open? setEditMode(enable=true)
+```
+
 ## LittleJS Debugging System
 - Press Escape key to toggle debug overlay
 - Number keys toggle debug functions while the overlay is open: 1 physics, 2 tiles (each tile layer's bounds, the
   collision values on screen, and the tiles under the mouse; pressing 2 again steps through the layers one at a time,
-  then off), 3 particles, 4 raycasts, 5 gamepads, 6 sound, 7 screenshot, 8 video capture, 9 tweakables panel
+  then off), 3 particles, 4 raycasts, 5 gamepads, 6 sound, 7 screenshot, 8 video capture, 9 tweakables panel,
+  0 level editor
 - +/- keys apply time scale to update while the overlay is open
 - setDebugKeysAlways(true) lets the number and +/- keys work with the overlay closed, for a game that does not use them
 - Debug primitive rendering system

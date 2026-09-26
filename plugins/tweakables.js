@@ -8,7 +8,8 @@
  * - Press 9 while the debug overlay is open to show the panel, or set debugTweakables to show it from the start
  * - Changes are saved and come back after a refresh, until the value in the code itself changes
  * - Copy puts the changed values on the clipboard as lines of code, to paste over the values in the code
- * - Debug builds only, in a release build nothing is added and the code's values are used as they are
+ * - Debug builds only, the release build has none of this code, its functions are stubs that do nothing, so the
+ *   code's values are used as they are
  * @namespace Tweakables
  */
 

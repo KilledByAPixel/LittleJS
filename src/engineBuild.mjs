@@ -50,12 +50,17 @@ const enginePluginFiles =
     `${PLUGIN_FOLDER}/textureSheet.js`,
     `${PLUGIN_FOLDER}/tweenSystem.js`,
     `${PLUGIN_FOLDER}/pathFinder.js`,
-    `${PLUGIN_FOLDER}/tweakables.js`,
     `${PLUGIN_FOLDER}/math3d.js`,
     `${PLUGIN_FOLDER}/render3d.js`,
     `${PLUGIN_FOLDER}/render3dExtras.js`,
     `${PLUGIN_FOLDER}/gltf.js`,
     `${PLUGIN_FOLDER}/threejs.js`,
+];
+// debug only, the release build has stubs for these in engineRelease.js and none of their code
+const engineDebugFiles =
+[
+    `${PLUGIN_FOLDER}/tweakables.js`,
+    `${SOURCE_FOLDER}/engineEditor.js`,
 ];
 const engineExtraFiles =
 [
@@ -108,7 +113,8 @@ async function buildAll()
                 `${SOURCE_FOLDER}/engine.js`,
                 `${SOURCE_FOLDER}/engineDebug.js`,
                 ...engineSourceFiles,
-                ...enginePluginFiles
+                ...enginePluginFiles,
+                ...engineDebugFiles
             ],
             [], true
         ),

@@ -14,6 +14,7 @@ let debugWatermark = 0;
 let debugKey = '';
 let debugKeysAlways = false;
 let debugTweakables = false;
+let editMode = false;
 let debugClearCount = 0;
 const debug = 0;
 const debugOverlay = 0;
@@ -46,3 +47,10 @@ function debugVideoCaptureIsActive(){ return false; }
 function debugVideoCaptureStart (){}
 function debugVideoCaptureStop  (){}
 function debugProtectConstant(o){ return o; }
+
+// the tweakables and the level editor are debug only
+function tweak(){}
+function tweakButton(){}
+function tweakDivider(){}
+function tweakEngineDefaults(){}
+function setEditMode(){}
