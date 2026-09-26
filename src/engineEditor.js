@@ -116,7 +116,11 @@ function editorTileLayerData(layers, list=[])
 function editorMapRestore(map)
 {
     if (!editorMapList.some((record)=> record.map === map))
-        editorMapList.push({map, layers: [], fileName: 'level.json'});
+    {
+        const url = editorFetchedURLs.get(map);
+        const fileName = url?.split(/[?#]/)[0].split('/').pop() || 'level.json';
+        editorMapList.push({map, url, layers: [], fileName});
+    }
     return map;
 }
 
@@ -171,6 +175,21 @@ function editorTilesets(live)
     return [{firstgid: 1, name: file.replace(/\.\w+$/, ''), image: file, imagewidth: image.width,
         imageheight: image.height, tilewidth, tileheight, margin: padding, spacing: padding*2, columns,
         tilecount: columns * rows}];
+}
+
+// the file each json fetchJSON loaded came from, its name for saving and autosaving
+const editorFetchedURLs = new WeakMap;
+function editorJSONFetched(url, json)
+{ json && typeof json === 'object' && editorFetchedURLs.set(json, String(url)); }
+
+// a map as Tiled JSON, everything it was loaded with kept, the tile data as the editor left it
+function editorMapJSON(record) { return JSON.stringify(record.map); }
+
+// download a map as Tiled JSON, under the name of the file it came from
+function editorSave(record)
+{
+    editorStrokeEnd();
+    saveText(editorMapJSON(record), record.fileName, 'application/json');
 }
 
 ///////////////////////////////////////////////////////////////////////////////

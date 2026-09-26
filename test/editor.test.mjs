@@ -181,3 +181,40 @@ test('tiles the game removes in play stay in the map', async () =>
     assert.deepEqual([...run('map.layers[0].data')], [1, 0, 0, 0, 0, 2]);
     assert.deepEqual([...run('frontData')], [0, 0, 3, 0, 0, 0]);
 });
+
+test('a save is the map as it was loaded, the edit and the flip bits included, groups and objects kept', async () =>
+{
+    const { run } = await loadGame();
+    const saved = JSON.parse(run(mapCode + `
+        var original = JSON.parse(JSON.stringify(map));
+        editorPaint(front, vec2(0, 1), editorTileToGid(2, 0, true));
+        editorStrokeEnd();
+        editorMapJSON(front.record);`));
+    const expected = JSON.parse(run('JSON.stringify(original)'));
+    expected.layers[2].layers[0].data[0] = ((4 << 29) | 3) >>> 0; // [0, 1] is flips 4, the horizontal bit
+    assert.deepEqual(saved, expected);
+    assert.ok(saved.layers[2].layers[0].data[0] > 2**31, 'unsigned, as Tiled writes it');
+});
+
+test('a layer made in code saves as a map of its own that tileLayersLoad reads back', async () =>
+{
+    const { run } = await loadGame();
+    const tiles = run(`
+        const live = new TileLayer(vec2(), vec2(2, 1), undefined);
+        live.setData(vec2(1, 0), new TileLayerData(5, 2, true));
+        const json = editorMapJSON(editorLayerRecord(live).record);
+        const [again] = tileLayersLoad(JSON.parse(json), undefined, 0, undefined, false);
+        const d = again.getData(vec2(1, 0));
+        [again.getData(vec2(0, 0)).tile, d.tile, d.direction, d.mirror];`);
+    assert.deepEqual([...tiles], [undefined, 5, 2, true]);
+});
+
+test('a map fetched with fetchJSON saves under its file name', async () =>
+{
+    const text = JSON.stringify({ width: 1, height: 1,
+        layers: [{ type: 'tilelayer', width: 1, height: 1, data: [1] }] });
+    const { run } = await loadGame({ fetch: async ()=> ({ ok: true, json: async ()=> JSON.parse(text) }) });
+    await run(`fetchJSON('levels/one.json?v=2').then((m)=> { tileLayersLoad(m, undefined, 0, 0, false); })`);
+    assert.equal(run('editorMapList.at(-1).fileName'), 'one.json');
+    assert.equal(run('editorMapList.at(-1).url'), 'levels/one.json?v=2');
+});

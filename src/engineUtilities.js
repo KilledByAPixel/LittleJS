@@ -124,7 +124,9 @@ async function fetchJSON(url)
     const response = await fetch(url);
     if (!response.ok)
         throw new Error(`Failed to fetch JSON from ${url}: ${response.status} ${response.statusText}`);
-    return response.json();
+    const json = await response.json();
+    editorJSONFetched(url, json); // debug builds remember the file a level came from, to save it by that name
+    return json;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
