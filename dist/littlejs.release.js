@@ -20120,10 +20120,10 @@ function tweakAdd(name, get, set, toCode, options)
 // every page keeps its own tweaks
 function tweakSaveName() { return 'LittleJS tweaks ' + (globalThis.location?.pathname ?? ''); }
 
-function tweakCopy(v) { return typeof v === 'object' ? v.copy() : v; }
+function tweakCopy(v) { return v?.copy ? v.copy() : v; }
 
-// a Vector3 when the 3D math plugin is loaded
-function tweakIsVector3(v) { return typeof isVector3 === 'function' && isVector3(v); }
+// a Vector3, a build may leave out the 3D math
+function tweakIsVector3(v) { return typeof Vector3 !== 'undefined' && isVector3(v); }
 
 // the value as json can hold it, and back
 function tweakToSave(v)
