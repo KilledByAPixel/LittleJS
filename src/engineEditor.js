@@ -32,6 +32,9 @@ let editorLayer, editorHover, editorLastCell, editorLastPlaced;
 // and a left press that only cleared a selection, which paints nothing until let go
 let editorSelection, editorRightPress, editorLeftSpent;
 
+// if selection edits, Delete, Ctrl+C and Ctrl+X, act on every tile layer of the edited layer's map
+let editorAllLayers = false;
+
 // the grid drawn over the layer, G, and the list of keys in the panel, ?
 let editorGrid = true, editorHelp = false;
 
@@ -565,6 +568,113 @@ function editorPalettePick(slot)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// selection
+
+// the layers the selection acts on, the one being edited, or all of its map's with All Layers on
+function editorSelectionLayers()
+{ return !editorLayer ? [] : editorAllLayers ? editorLayer.record.layers : [editorLayer]; }
+
+// call back for each selected cell that is on a layer
+function editorSelectionCells(live, callback)
+{
+    const {min: a, max: b} = editorSelection;
+    for (let y = a.y; y <= b.y; ++y)
+    for (let x = a.x; x <= b.x; ++x)
+    {
+        const cell = vec2(x, y);
+        cell.arrayCheck(live.size) && callback(cell);
+    }
+}
+
+// fill with the brush: the selection when there is one, or the cells joined to the one under the mouse that
+// match it exactly, on the layer being edited; a stamp repeats across it, as one undo
+function editorFill()
+{
+    const layer = editorLayer, stamp = editorBrush, {width: w, height: h} = stamp;
+    if (!layer || layer.live.destroyed || layer.record.pending) return;
+    const paint = (target, grid, cell, anchor)=>
+    {
+        const x = ((cell.x - anchor.x) % w + w) % w, y = ((cell.y - anchor.y) % h + h) % h;
+        const gid = grid[x + y * w];
+        gid === undefined || editorPaint(target, cell, gid);
+    };
+    if (editorSelection)
+    {
+        for (const [target, grid] of editorStampTargets(layer, stamp))
+            editorSelectionCells(target.live, (cell)=> paint(target, grid, cell, editorSelection.min));
+    }
+    else if (editorHover)
+    {
+        const grid = editorStampGrid(layer, stamp), start = editorHover;
+        for (const cell of editorFloodCells(layer, start))
+            paint(layer, grid, cell, start);
+    }
+    editorStrokeEnd();
+}
+
+// the cells joined through their sides to a cell, holding the same gid, turn and mirror included
+function editorFloodCells(layer, start)
+{
+    const {live} = layer, gid = editorGidAt(layer, start), seen = new Set, cells = [], open = [start];
+    while (open.length)
+    {
+        const cell = open.pop();
+        if (!cell.arrayCheck(live.size)) continue;
+        const key = cell.x + cell.y * live.size.x;
+        if (seen.has(key) || editorGidAt(layer, cell) !== gid) continue;
+        seen.add(key);
+        cells.push(cell);
+        open.push(vec2(cell.x + 1, cell.y), vec2(cell.x - 1, cell.y), vec2(cell.x, cell.y + 1), vec2(cell.x, cell.y - 1));
+    }
+    return cells;
+}
+
+// clear the selected area, as one undo
+function editorClear()
+{
+    if (!editorSelection) return;
+    for (const layer of editorSelectionLayers())
+        layer.record.pending || editorSelectionCells(layer.live, (cell)=> editorPaint(layer, cell, 0));
+    editorStrokeEnd();
+}
+
+// the selected area into the brush as a stamp, its empty cells see-through, and the selection cleared so the
+// next click paints it
+function editorCopy()
+{
+    const area = editorSelection;
+    if (!area) return;
+    const width = area.max.x - area.min.x + 1, height = area.max.y - area.min.y + 1;
+    const grids = editorSelectionLayers().map((layer)=>
+    {
+        const grid = [];
+        for (let y = height; y--;)
+        for (let x = width; x--;)
+        {
+            const cell = area.min.add(vec2(x, y));
+            grid[x + y * width] = cell.arrayCheck(layer.live.size) && editorGidAt(layer, cell) || undefined;
+        }
+        return grid;
+    });
+    editorBrush = editorClipboard = {width, height, grids};
+    editorSelection = undefined;
+}
+
+// copy the selected area, then clear it, as one undo
+function editorCut()
+{
+    const area = editorSelection;
+    if (!area) return;
+    editorCopy();
+    editorSelection = area;
+    editorClear();
+    editorSelection = undefined;
+}
+
+// the last copied stamp back into the brush
+function editorPaste() { editorClipboard && (editorBrush = editorClipboard); }
+
+///////////////////////////////////////////////////////////////////////////////
 // panel
 
 let editorPanel, editorPanelParts;
@@ -761,11 +871,17 @@ const editorKeys =
     e: ()=> editorBrush = editorStampTile(0),
     g: ()=> editorGrid = !editorGrid,
     '?': ()=> editorHelp = !editorHelp,
+    f: ()=> editorFill(),
+    Delete: ()=> editorClear(),
+    Backspace: ()=> editorClear(),
 };
 const editorCtrlKeys =
 {
     z: (shift)=> editorUndo(shift),
     y: ()=> editorUndo(true),
+    c: ()=> editorCopy(),
+    x: ()=> editorCut(),
+    v: ()=> editorPaste(),
 };
 
 // the editor's own key listener, a key typed into a field is the field's, and Alt with Ctrl is AltGr typing

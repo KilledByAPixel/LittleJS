@@ -687,3 +687,84 @@ test('Space held with the left button pans and paints nothing', async () =>
     assert.equal(run('editorUndoList.length'), 0);
     assert.notEqual(run('editorCameraPos.x'), 1.5);
 });
+
+// fill, clear, copy, cut and paste
+
+test('F fills the selection with the brush, a stamp repeating from its bottom left, as one undo', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorSelection = editorArea(vec2(0, 0), vec2(2, 1));
+        editorBrush = { width: 2, height: 1, grids: [[editorTileToGid(4), editorTileToGid(5)]] };`);
+    typed(engine, 'f');
+    assert.deepEqual([...engine.run('frontData')], [5, 6, 5, 5, 6, 5]);
+    assert.equal(engine.run('editorUndoList.length'), 1);
+});
+
+test('F without a selection floods the cells joined to the one under the mouse that match it exactly', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + `setEditMode(true); editorLayer = front;
+        frontData.splice(0, 6, 0, editorTileToGid(3, 1), 3, 0, 0, 0); layers = tileLayersLoad(map, undefined, 0, 2);
+        editorHover = vec2(0, 0); editorBrush = editorStampTile(editorTileToGid(7));`);
+    typed(engine, 'f'); // floods the empty cells joined to (0, 0): all four, not the two tiles
+    assert.deepEqual([...engine.run('frontData')], [8, engine.run('editorTileToGid(3, 1)'), 3, 8, 8, 8]);
+    engine.run('editorHover = vec2(1, 1); editorBrush = editorStampTile(0);');
+    typed(engine, 'f'); // the turned tile 3 is not the plain tile 3 beside it
+    assert.deepEqual([...engine.run('frontData')], [8, 0, 3, 8, 8, 8]);
+});
+
+test('Delete clears the selection on the layer being edited, or on every layer of its map with All Layers', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorSelection = editorArea(vec2(0, 1), vec2(2, 1));`);
+    typed(engine, 'Delete');
+    assert.deepEqual([...engine.run('frontData')], [0, 0, 0, 0, 0, 0]);
+    assert.deepEqual([...engine.run('map.layers[0].data')], [1, 0, 0, 0, 0, 2], 'the back layer is untouched');
+    engine.run(`editorAllLayers = true; editorSelection = editorArea(vec2(0, 0), vec2(2, 1));`);
+    typed(engine, 'Backspace');
+    assert.deepEqual([...engine.run('map.layers[0].data')], [0, 0, 0, 0, 0, 0]);
+});
+
+test('Ctrl+C makes the selection the brush, empty cells see-through, and clears it so the next click paints',
+    async () =>
+{
+    const engine = await loadGame();
+    const { run, handlers } = engine;
+    run(editCode + `editorSelection = editorArea(vec2(1, 1), vec2(2, 1));`); // (1, 1) empty, (2, 1) tile 2
+    typed(engine, 'c', { ctrl: true });
+    assert.equal(selection(engine), undefined);
+    assert.deepEqual(JSON.parse(run('JSON.stringify(editorBrush)')),
+        { width: 2, height: 1, grids: [[null, 3]] }, 'JSON writes see-through as null');
+    handlers.mousedown(at(0, 0));
+    step(engine);
+    handlers.mouseup(at(0, 0));
+    step(engine);
+    assert.deepEqual([...run('frontData')], [0, 0, 3, 0, 3, 0]);
+});
+
+test('Ctrl+X copies and clears as one undo, and Ctrl+V brings the stamp back after a pick', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorSelection = editorArea(vec2(2, 1), vec2(2, 1));`);
+    typed(engine, 'x', { ctrl: true });
+    assert.deepEqual([...engine.run('frontData')], [0, 0, 0, 0, 0, 0]);
+    assert.equal(engine.run('editorUndoList.length'), 1);
+    engine.run('editorPick(front, vec2(0, 0))');
+    typed(engine, 'v', { ctrl: true });
+    assert.equal(engine.run('editorBrush === editorClipboard && editorBrush.grids[0][0]'), 3);
+});
+
+test('a stamp copied from all layers paints each layer, onto a map with fewer layers only the ones it has',
+    async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorAllLayers = true; editorSelection = editorArea(vec2(0, 1), vec2(0, 1));`);
+    typed(engine, 'c', { ctrl: true }); // back has tile 0 there, front is empty
+    engine.run('editorPaintStamp(front, vec2(1, 0)); editorStrokeEnd();');
+    assert.equal(engine.run('map.layers[0].data[4]'), 1, 'the back layer got its tile');
+    engine.run(`const small = { width: 2, height: 1,
+            layers: [{ type: 'tilelayer', name: 'only', width: 2, height: 1, data: [0, 0] }] };
+        var only = editorLayerRecord(tileLayersLoad(small, undefined, 0, 0, false)[0]);
+        editorPaintStamp(only, vec2(0, 0)); editorStrokeEnd();`);
+    assert.deepEqual([...engine.run('small.layers[0].data')], [1, 0]);
+});
