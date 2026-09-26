@@ -57,7 +57,6 @@ let engineObjects = [];
 let engineObjectsCollide = [];
 
 // the same objects with the static ones last, the order 2D physics checks them in
-/** @type {Array<EngineObject>} */
 let engineObjectsCollideStaticLast = [];
 
 /** Current update frame, used to calculate time
@@ -97,16 +96,17 @@ let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
 let engineFrameScheduled = false; // a frame of the loop is asked for and has not run yet
 
-// the pairs of objects asked about a collision this update and left overlapping, so the other's own physics does not
-// ask again, a set of others for each asker so the lookup stays quick when many objects pile up on one spot
+// the pairs of objects asked about a collision this update, so the other's own physics does not ask again: each
+// asker's others, with true for a pair both said to resolve, and false for one left overlapping, ignored or only
+// nudged apart; a map for each asker so the lookup stays quick when many objects pile up on one spot
 const engineObjectsCollidePairs = new Map;
-function engineObjectsCollidePairAsked(asker, other)
-{ return !!engineObjectsCollidePairs.get(asker)?.has(other); }
-function engineObjectsCollidePairAdd(asker, other)
+function engineObjectsCollidePairAnswer(asker, other)
+{ return engineObjectsCollidePairs.get(asker)?.get(other); }
+function engineObjectsCollidePairAdd(asker, other, resolve=false)
 {
     let others = engineObjectsCollidePairs.get(asker);
-    others || engineObjectsCollidePairs.set(asker, others = new Set);
-    others.add(other);
+    others || engineObjectsCollidePairs.set(asker, others = new Map);
+    others.set(other, resolve);
 }
 let engineInitialized = false; // engineInit ran, with or without a canvas
 let engineObjectsUpdateCount = 0; // passes of engineObjectsUpdate so far, how a child knows it moved this pass
@@ -209,9 +209,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // Called automatically by engine to setup render system
     function enginePreRender()
     {
-        // mainCanvasSize is set by engineUpdateCanvas which always runs first,
-        // it is css pixels so it does not match the canvas backing store
-
         // disable smoothing for pixel art
         mainContext.imageSmoothingEnabled = !tilesPixelated;
 
@@ -226,6 +223,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // internal update loop for engine
     function engineUpdate(frameTimeMS=0)
     {
+        const manualStepAtStart = engineManualStep;
+
         // update time keeping
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         // skip delta on the very first frame so timeReal doesn't jump
@@ -300,6 +299,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
         // add the time smoothing back in
         frameTimeBufferMS += deltaSmooth;
+
+        // manual step turned on by this frame's updates, set the buffer the loop and smoothing just moved again
+        if (engineManualStep && !manualStepAtStart)
+            frameTimeBufferMS = -.5e3 / frameRate;
 
         // check if the window changed so a resize is picked up even when
         // the game is not updating, for example when timeScale is 0
@@ -482,8 +485,8 @@ function engineUpdateCanvas()
         mainCanvasSize.x = min(innerWidth,  canvasMaxSize.x) | 0;
         mainCanvasSize.y = min(innerHeight, canvasMaxSize.y) | 0;
 
-        // responsive aspect ratio
-        const innerAspect = innerWidth / innerHeight;
+        // responsive aspect ratio, of the size after canvasMaxSize, which can change its shape
+        const innerAspect = mainCanvasSize.x / mainCanvasSize.y;
         ASSERT(!canvasMaxAspect || canvasMinAspect <= canvasMaxAspect);
         if (canvasMaxAspect && innerAspect > canvasMaxAspect)
         {
@@ -590,8 +593,8 @@ function engineStep(frames=1)
         engineUpdateInternal(frameTimeLastMS + 1e3 / frameRate);
 }
 
-/** Update each engine object and remove destroyed objects; time and frame do not advance, engineStep does that
- * can be called manually if objects need to be updated outside of main loop
+/** Update each engine object and remove destroyed objects; time and frame are advanced by the engine loop, not here
+ *  - Can be called manually if objects need to be updated outside of main loop
  *  @memberof Engine */
 function engineObjectsUpdate()
 {

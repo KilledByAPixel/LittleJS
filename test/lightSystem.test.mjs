@@ -51,12 +51,12 @@ test('Light.renderLight() does not throw in headless mode', () =>
 
 test('Light constructor asserts on negative radius', () =>
 {
-    assert.throws(() => new Light(vec2(0, 0), -1, undefined));
+    assert.throws(() => new Light(vec2(0, 0), -1, undefined), /Assert failed/);
 });
 
 test('Light constructor asserts on negative fadeRange', () =>
 {
-    assert.throws(() => new Light(vec2(0, 0), 5, undefined, -1));
+    assert.throws(() => new Light(vec2(0, 0), 5, undefined, -1), /Assert failed/);
 });
 
 test('LightSystemPlugin can be constructed in headless mode without throwing', async () =>
@@ -79,10 +79,8 @@ test('LightSystemPlugin exposes enabled=true by default', async () =>
 test('Second LightSystemPlugin construction asserts', async () =>
 {
     const { LightSystemPlugin } = await import('../dist/littlejs.esm.js');
-    // Note: LittleJS ASSERT throws Error('Assert failed!') and writes the
-    // 'already initialized' message to console.assert, so we can't regex-match
-    // the Error message. The throw itself is the meaningful signal.
-    assert.throws(() => new LightSystemPlugin());
+    // LittleJS ASSERT throws Error('Assert failed!') and writes the 'already initialized' message to console.assert
+    assert.throws(() => new LightSystemPlugin(), /Assert failed/);
 });
 
 test('LightSystemPlugin defensively copies ambientColor (does not retain a frozen BLACK reference)', async () =>
@@ -92,7 +90,7 @@ test('LightSystemPlugin defensively copies ambientColor (does not retain a froze
     assert.notEqual(lightSystem.ambientColor, BLACK);
 });
 
-test('Light with radius=0 does not throw', () =>
+test('a Light with radius 0 constructs, and renderLight is a no-op headless', () =>
 {
     const l = new Light(vec2(0, 0), 0, undefined);
     assert.equal(l.radius, 0);
@@ -100,20 +98,19 @@ test('Light with radius=0 does not throw', () =>
     assert.doesNotThrow(() => l.renderLight());
 });
 
-test('Light with fadeRange=0 does not throw (hard disc)', () =>
+test('a Light with fadeRange 0 (a hard disc) constructs, and renderLight is a no-op headless', () =>
 {
     const l = new Light(vec2(0, 0), 4, undefined, 0);
     assert.equal(l.fadeRange, 0);
     assert.doesNotThrow(() => l.renderLight());
 });
 
-test('a Light renders its light without a throw while lightSystem.enabled is off', async () =>
+test('lightSystem.enabled can be turned off, and renderLight is a no-op headless', async () =>
 {
     const { lightSystem } = await import('../dist/littlejs.esm.js');
     const prev = lightSystem.enabled;
     lightSystem.enabled = false;
-    // no easy way to trigger the plugin's render callback in headless mode;
-    // just verify the property round-trips and renderLight() on a Light is harmless
+    // drawLight itself is covered with a stubbed WebGL in r15-vm.test.mjs
     const l = new Light(vec2(0, 0), 1, undefined);
     assert.doesNotThrow(() => l.renderLight());
     lightSystem.enabled = prev;
@@ -175,7 +172,7 @@ test('setShadowTransparent outside the shadow pass does nothing and does not thr
     assert.equal(lightSystem.shadowPass, false);
 });
 
-test('a Light renders its light without a throw in headless mode with shadows on', async () =>
+test('with shadows on, renderLight is still a no-op headless', async () =>
 {
     const { lightSystem } = await import('../dist/littlejs.esm.js');
     lightSystem.shadows = true;

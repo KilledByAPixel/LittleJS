@@ -34,7 +34,7 @@ class PathFinderNode
         this.pos = vec2(x, y);
         /** @property {Vector2} - World-space center of this tile (set by buildNodeData) */
         this.posWorld = vec2();
-        /** @property {boolean} - True if this cell is passable (cleared each findPath call) */
+        /** @property {boolean} - True if this cell is passable (set by buildNodeData) */
         this.walkable = false;
         /** @property {number} - Extra cost added to A* G-score for stepping on this cell */
         this.cost = 0;
@@ -55,18 +55,16 @@ class PathFinderNode
         this.heapIndex = 0;
     }
 
-    /** Reset per-search state (called at the start of buildNodeData). */
-    reset()
+    /** Clear what a search left on this node, keeping walkable and cost */
+    resetSearch()
     {
-        this.walkable = false;
-        this.cost = 0;
-        this.g = 0;
-        this.f = 0;
-        this.h = 0;
+        this.g = this.f = this.h = 0;
         this.parent = null;
-        this.isOpen = false;
-        this.isClosed = false;
+        this.isOpen = this.isClosed = false;
     }
+
+    /** Reset per-search state and walkability (called by buildNodeData). */
+    reset() { this.walkable = false; this.cost = 0; this.resetSearch(); }
 
     /** True if walkable and not blocked by cost. */
     isClear()
@@ -95,9 +93,7 @@ class PathFinder
      *  overrides isWalkable). */
     constructor(source)
     {
-        // Accept either a Vector2 size or a TileCollisionLayer (which has a .size).
-        // We don't import TileCollisionLayer to avoid coupling; we duck-type on
-        // .size + .getCollisionData.
+        // Accept a Vector2 size, or a TileCollisionLayer or any object with its size and getCollisionData
         if (isVector2(source))
         {
             /** @property {Vector2} - Grid dimensions in tiles
@@ -140,12 +136,18 @@ class PathFinder
         for (let x = 0; x < this.size.x; ++x)
             this.nodes[x + y * this.size.x] = new PathFinderNode(x, y);
 
+        // Whether buildNodeData has run, a search without a rebuild builds it the first time.
+        /** @private */
+        this.nodeDataBuilt = false;
+
         // Scratch Vector2 reused to avoid allocations in the isWalkable hot path.
+        /** @private */
         this.collisionScratch = vec2();
 
         // The nodes the last search changed, reset before the next one so a
         // search without a rebuild starts as fresh as one after it.
-        /** @type {Array<PathFinderNode>} */
+        /** @type {Array<PathFinderNode>}
+         *  @private */
         this.searchNodes = [];
     }
 
@@ -184,8 +186,7 @@ class PathFinder
 
     /** Convert a world-space position to integer tile coords (no clamping).
      *  @param {Vector2} worldPos
-     *  @returns {Vector2}
-     *  @memberof PathFinding */
+     *  @returns {Vector2} */
     worldToTile(worldPos)
     {
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
@@ -196,8 +197,7 @@ class PathFinder
     /** Convert integer tile coords to the world-space center of that tile.
      *  @param {number} x
      *  @param {number} y
-     *  @returns {Vector2}
-     *  @memberof PathFinding */
+     *  @returns {Vector2} */
     tileToWorld(x, y)
     {
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
@@ -252,12 +252,7 @@ class PathFinder
         // Undo what the last search changed, so one without a rebuild starts
         // from the same state; after buildNodeData these are fresh already.
         const searchNodes = this.searchNodes;
-        for (const n of searchNodes)
-        {
-            n.g = n.f = n.h = 0;
-            n.parent = null;
-            n.isOpen = n.isClosed = false;
-        }
+        for (const n of searchNodes) n.resetSearch();
         searchNodes.length = 0;
         searchNodes.push(startNode);
 
@@ -392,12 +387,11 @@ class PathFinder
      *  @param {Vector2} worldPos
      *  @param {number} [searchRange=10] - Max box-radius in tiles
      *  @param {boolean} [rebuild=true] - Whether to call buildNodeData first
-     *  @returns {PathFinderNode|null}
-     *  @memberof PathFinding */
+     *  @returns {PathFinderNode|null} */
     getNearestClearNode(worldPos, searchRange = 10, rebuild = true)
     {
         ASSERT(isVector2(worldPos), 'worldPos must be a Vector2');
-        if (rebuild) this.buildNodeData();
+        if (rebuild || !this.nodeDataBuilt) this.buildNodeData(); // a grid never built has nothing to walk yet
         return pathFinderNearestNode(this, worldPos, searchRange, (node)=> node.isClear());
     }
 
@@ -422,8 +416,9 @@ class PathFinder
             const dy = next.pos.y - prev.pos.y;
             const lenSq = dx * dx + dy * dy;
 
-            // dx,dy is the prev-to-current step direction; needed for the
-            // 135° "mostly vertical/horizontal" disambiguation.
+            // stepDx,stepDy is the prev-to-node step and stepDxNext,stepDyNext the node-to-next step; the 135°
+            // case uses them to tell mostly vertical from mostly horizontal, the straight case to tell a line
+            // from a bump
             const stepDx = node.pos.x - prev.pos.x;
             const stepDy = node.pos.y - prev.pos.y;
             const stepDxNext = next.pos.x - node.pos.x;
@@ -486,8 +481,8 @@ class PathFinder
                 const dd2y = s2y - prevPrev.pos.y;
                 const dist1Sq = dd1x * dd1x + dd1y * dd1y;
                 const dist2Sq = dd2x * dd2x + dd2y * dd2y;
-                const sx = dist1Sq < dist2Sq ? s1x : s1x === s2x && s1y === s2y ? s1x : s2x;
-                const sy = dist1Sq < dist2Sq ? s1y : s1x === s2x && s1y === s2y ? s1y : s2y;
+                const useFirst = dist1Sq < dist2Sq;
+                const sx = useFirst ? s1x : s2x, sy = useFirst ? s1y : s2y;
 
                 const shortcut = this.getNode(sx, sy);
                 if (shortcut && shortcut !== node && shortcut.isClear())
@@ -736,8 +731,7 @@ class PathFinder
      *  @param {Vector2} startPos - World-space start
      *  @param {Vector2} endPos - World-space end
      *  @param {boolean} [rebuild] - Whether to call buildNodeData first
-     *  @returns {Vector2[]}
-     *  @memberof PathFinding */
+     *  @returns {Vector2[]} */
     findPath(startPos, endPos, rebuild = true)
     {
         ASSERT(isVector2(startPos) && isVector2(endPos), 'findPath needs Vector2 endpoints');
@@ -794,10 +788,8 @@ class PathFinder
 // best of one ring is not always the nearest, a cell one ring out can be closer
 function pathFinderNearestNode(finder, worldPos, searchRange, test)
 {
-    const ox = finder.tileLayer ? finder.tileLayer.pos.x : 0;
-    const oy = finder.tileLayer ? finder.tileLayer.pos.y : 0;
-    const centerX = floor(worldPos.x - ox);
-    const centerY = floor(worldPos.y - oy);
+    const center = finder.worldToTile(worldPos);
+    const centerX = center.x, centerY = center.y;
 
     let nearest = null, nearestDistSq = 0;
     for (let offset = 0; offset <= searchRange; ++offset)

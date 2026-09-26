@@ -377,38 +377,38 @@ class Particle
      */
     constructor(emitter, pos, angle, colorStart, colorEnd, lifeTime, sizeStart, sizeEnd, velocity = vec2(), angleVelocity = 0)
     {
-        /** @property {ParticleEmitter} */
+        /** @property {ParticleEmitter} - The emitter this particle came from */
         this.emitter = emitter;
-        /** @property {Vector2} */
+        /** @property {Vector2} - Position, world space or local to the emitter when localSpace is set */
         this.pos = pos;
-        /** @property {number} */
+        /** @property {number} - Angle in radians */
         this.angle = angle;
         /** @property {Vector2} - Current size, updated as it renders */
         this.size = vec2(sizeStart);
-        /** @property {Color} */
+        /** @property {Color} - Current color, updated as it renders */
         this.color = colorStart.copy();
-        /** @property {Color} */
+        /** @property {Color} - Color at start of life */
         this.colorStart = colorStart;
-        /** @property {Color} */
+        /** @property {Color} - Color at end of life */
         this.colorEnd = colorEnd;
-        /** @property {number} */
+        /** @property {number} - How long this particle lives for */
         this.lifeTime = lifeTime;
-        /** @property {number} */
+        /** @property {number} - Size at start of life */
         this.sizeStart = sizeStart;
-        /** @property {number} */
+        /** @property {number} - Size at end of life */
         this.sizeEnd = sizeEnd;
-        /** @property {Vector2} */
+        /** @property {Vector2} - Velocity in world units per frame (at 60fps) */
         this.velocity = velocity;
-        /** @property {number} */
+        /** @property {number} - Angular speed in radians per frame (at 60fps) */
         this.angleVelocity = angleVelocity;
-        /** @property {number} */
+        /** @property {number} - Engine time it was made at */
         this.spawnTime = time;
-        /** @property {boolean} */
+        /** @property {boolean} - If true the tile is flipped along the x axis */
         this.mirror = randBool();
-        /** @property {EngineObject|undefined}
+        /** @property {EngineObject|undefined} - Tile layer it last landed on, undefined in the air
          *  @type {EngineObject|undefined} */
         this.groundObject = undefined;
-        /** @property {boolean} */
+        /** @property {boolean} - Has this particle been destroyed */
         this.destroyed = false;
         /** @property {TileInfo|undefined} - The emitter's tile, undefined for an untextured one
          *  @type {TileInfo|undefined} */
@@ -529,9 +529,9 @@ class Particle
 
         // lerp color and size
         const p1 = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1, p2 = 1-p1;
-        const radius = p2 * this.sizeStart + p1 * this.sizeEnd;
-        this.size.set(radius, radius); // kept current for callbacks, drawn from the scratch since a trail stretches it
-        const size = particleDrawSize.set(radius, radius);
+        const sizeNow = p2 * this.sizeStart + p1 * this.sizeEnd;
+        this.size.set(sizeNow, sizeNow); // kept current for callbacks, drawn from the scratch since a trail stretches it
+        const size = particleDrawSize.set(sizeNow, sizeNow);
         const alphaFade = p1 < fadeRate ? p1/fadeRate : 
             p1 > 1-fadeRate ? (1-p1)/fadeRate : 1;
         this.color.r = p2 * this.colorStart.r + p1 * this.colorEnd.r;
@@ -556,21 +556,17 @@ class Particle
         additive && setAdditiveBlendMode();
         if (trailScale)
         {
-            // trail style particles
+            // trail style particles stretch in the direction of motion, and draw as they are at rest
             const velocity = localSpace ?
                 this.velocity.rotate(emitter.angle) : this.velocity;
             const speed = velocity.length();
             if (speed)
             {
-                // stretch in direction of motion
-                const trailLength = speed * trailScale;
-                size.y = max(size.x, trailLength);
+                size.y = max(size.x, speed * trailScale);
                 angle = atan2(velocity.x, velocity.y);
-                drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
             }
         }
-        else
-            drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
+        drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
         additive && setAdditiveBlendMode(false);
         debugParticles && debugRect(pos, size, '#f005', 0, angle);
     }

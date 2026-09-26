@@ -12,7 +12,7 @@
  *   darkened too; draw the HUD with useWebGL=false (the main canvas) or from
  *   a plugin created after this one
  * - Any EngineObject may override renderLight() to additively contribute to the
- *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
+ *   lightmap (e.g. lava that lights the floor around it, weapon flashes, glowing crystals)
  * - Set obj.emissive to 1 to show an object at full brightness in its own colors, lit or not, or between 0 and 1 for
  *   partly: it draws its shape into the lightmap through renderEmissive(), which calls render() by default; exact for
  *   solid pixels, a partly transparent one is self lit by its alpha too, so it shows darker

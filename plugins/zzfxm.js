@@ -47,12 +47,10 @@ class ZzFXMusic extends Sound
         super(undefined);
 
         if (!soundEnable || headlessMode) return;
-        this.randomness = 0;
         const [instruments, patterns, sequence, BPM] = zzfxMusic;
         super.sampleChannels = zzfxM(instruments, patterns, sequence, BPM); // the setter, without declaring a field that hides it in the typings
         this.buildSampleBuffer(); // hand the samples to an audio buffer now, like a zzfx sound, so the arrays are released
         this.loadedPercent = 1; // generated in place, so it is loaded like a zzfx sound
-        this.onloadCallback?.(this);
     }
 }
 

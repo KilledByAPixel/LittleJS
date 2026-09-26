@@ -27,7 +27,7 @@ timeDelta             // Time between updates (1/60)
 timeScale = 1         // Game speed, more or fewer fixed updates per second; timeDelta stays 1/60
 paused                // Is the game paused? (set with setPaused)
 headlessMode = false  // Run without rendering for testing/servers (set before engineInit)
-engineManualStep      // Advance only via engineStep, default false (set before engineInit)
+engineManualStep      // Advance only via engineStep, default false; can be turned on and off while running
 engineStep(frames=1)  // Advance the engine manually, needs engineManualStep
 ```
 
@@ -56,8 +56,9 @@ setPaused(true);
 engineStep(5);                // gameUpdatePost runs, time and frame do not advance
 ```
 
-Both settings must be set before `engineInit`. Input is not synthesized in headless
-mode, so tests drive game state directly rather than through `keyIsDown` and friends.
+`headlessMode` must be set before `engineInit`; `engineManualStep` can be, or it can be turned
+on and off later to stop and restart the loop. Input is not synthesized in headless mode, so
+tests drive game state directly rather than through `keyIsDown` and friends.
 
 `engineStep` is synchronous and does not yield — every frame runs back to back before
 it returns. That is what makes it deterministic, and in headless mode it is what you
@@ -278,7 +279,8 @@ new Shader(fragmentCode)          // fragmentCode defines void mainImage(out vec
                                   // apply in 2D, and the lighting, shadows and fog in 3D
 obj.shader = shader               // any EngineObject or EngineObject3D; draws that share a Shader share a batch
 // names in the snippet: iChannel0 the texture, iTime, iResolution, localUV 0 to 1 across the sprite or the mesh uv,
-// premultipliedTexture true for a render target, whose rgb and alpha change together;
+// premultipliedTexture true for a render target or a smooth image (tilesPixelated false), whose rgb and alpha
+// change together;
 // in 2D untextured draws like drawRect are not shaded; a bad snippet throws with the GLSL log in debug builds;
 // in 3D the shadow map is drawn without the Shader, so a snippet that cuts holes still casts the whole shadow
 
@@ -574,8 +576,8 @@ EngineObject.setCollision(solids=true, isSolid=true, tiles=true, raycast=true) /
                                                    // leaves it out of engineObjectsRaycast; an object with no width
                                                    // or height is not a solid obstacle, so it blocks nothing and
                                                    // nothing blocks it
-EngineObject.persistent = true                     // skipped by engineObjectsDestroy, for things that outlive a
-                                                   // level like a camera; destroy() still destroys it
+EngineObject.persistent = false                    // true skips it in engineObjectsDestroy, for things that outlive
+                                                   // a level like a camera; destroy() still destroys it
 
 // Engine Object Members
 EngineObject.pos           // World space position
@@ -795,7 +797,7 @@ pf.getNode(x, y)                     // Get PathFinderNode at tile coords
 - Auto-registers via `engineAddPlugin` — `new UISystemPlugin()` is all you need
 - Keyboard listener only attached while a UITextInput is being edited
 - A click on the UI, or a navigation press (Space, Enter, gamepad A) that activates it, is used up before objects update and `gameUpdatePost`, so read world clicks there; `gameUpdate` runs first and still sees it, so check `uiSystem.isMouseOverUI()` there; only the press is used up, `mouseIsDown` stays true while it is held, so a held action like auto fire checks `uiSystem.isMouseOverUI()` too
-- See `examples/uiSystem/` and `examples/shorts/uiSystem.js` for demos
+- See `examples/uiSystem/`, `examples/shorts/uiSystem.js` and `examples/shorts/uiSlice.js` for demos
 
 ```javascript
 // Setup
@@ -870,7 +872,7 @@ UILayout.relayout()                    // Call manually if you mutate a child's 
 - Any EngineObject can override `renderLight()` to additively contribute to the lightmap (lava tiles, weapon flashes, glowing crystals, etc.)
 - Shadows: set `lightSystem.shadows` and every object draws black into a shadow map that blocks the lights by its alpha, so smoke or a fading sprite casts a partial shadow; a `TileCollisionLayer` casts only from its cells with collision, and a plain floor `TileLayer` needs `castShadow = false` or it blacks out the map
 - The lightmap darkens WebGL draws only, so a HUD drawn with WebGL in gameRenderPost goes dark too; draw it with `useWebGL=false` or from a plugin made after this one
-- See `examples/shorts/lightShadows.js` for shadows, glass and a figure with a foot blob
+- See `examples/shorts/lightShadows.js` for shadows, glass, a coin left out with castShadow and an emissive lava brick
 - Must be constructed BEFORE `PostProcessPlugin` so post-process sees lit pixels
 - See `examples/shorts/lightSystem.js` for a demo
 
@@ -1713,17 +1715,17 @@ newgrounds.resendUnlocks()           // advanced: send the ones whose request di
 
 ## LittleJS Drawing Utilities
 - Optional plugin: nine-slice and three-slice helpers for scalable UI panels, plus a crescent shape
-- World-space (WebGL or 2D) and screen-space (always 2D) variants
-- See `examples/shorts/nineSlice.js` and `examples/shorts/crescent.js`
+- World-space (WebGL or 2D) and screen-space (2D by default, useWebGL for WebGL) variants
+- See `examples/shorts/nineSlice.js`, `examples/shorts/uiSlice.js` and `examples/shorts/crescent.js`
 
 ```javascript
 // Nine-slice — 3x3 tile grid scaled to fit
 drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
-drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0)
+drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 
 // Three-slice — 1x3 tile strip (corner / side / center) rotated around the box
 drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
-drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0)
+drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 
 // TileSlice — a tile kept as a box style: slices 9 is a nine-slice, 3 a three-slice, 1 the whole tile stretched
 new TileSlice(tileInfo, slices=9, borderSize, extraSpace) // borderSize and extraSpace default to the draw's own
@@ -1805,7 +1807,7 @@ debug                // Is debug enabled?
 debugPointSize = .5  // Size to render debug points by default
 debugKey = 'Escape'  // Key code used to toggle debug mode
 debugKeysAlways = false // The number and +/- keys work with the overlay closed too, setDebugKeysAlways(enable=true)
-debugOverlay         // Is the debug overlay is active? setDebugOverlay(show=true) opens or closes it from code
+debugOverlay         // Is the debug overlay active? setDebugOverlay(show=true) opens or closes it from code
 debugWatermark       // Should watermark with FPS appear in debug mode?
 ```
 

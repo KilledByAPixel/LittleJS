@@ -101,7 +101,7 @@ const tan = Math.tan;
  *  @memberof Math */
 const atan2 = Math.atan2;
 
-/** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
+/** Returns first param modulo the second param, but adjusted so negative numbers work as expected
  *  @param {number} dividend
  *  @param {number} [divisor]
  *  @return {number}
@@ -116,7 +116,7 @@ function mod(dividend, divisor=1) { return ((dividend % divisor) + divisor) % di
  *  @memberof Math */
 function clamp(value, min=0, max=1) { return value < min ? min : value > max ? max : value; }
 
-/** Returns what percentage the value is between valueA and valueB
+/** Returns what percentage the value is between valueA and valueB, clamped to 0-1
  *  @param {number} value
  *  @param {number} valueA
  *  @param {number} valueB
@@ -125,7 +125,7 @@ function clamp(value, min=0, max=1) { return value < min ? min : value > max ? m
 function percent(value, valueA, valueB)
 { return (valueB-=valueA) ? clamp((value-valueA)/valueB) : 0; }
 
-/** Linearly interpolates between values passed in using percent
+/** Linearly interpolates between values passed in using percent, percent is clamped to 0-1
  *  @param {number} valueA
  *  @param {number} valueB
  *  @param {number} percent
@@ -159,7 +159,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
     return d*2 % wrapSize - d;
 }
 
-/** Linearly interpolates between values passed in with wrapping
+/** Linearly interpolates between values passed in with wrapping, percent is clamped to 0-1
  *  @param {number} valueA
  *  @param {number} valueB
  *  @param {number} percent
@@ -176,7 +176,7 @@ function lerpWrap(valueA, valueB, percent, wrapSize=1)
  *  @memberof Math */
 function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*PI); }
 
-/** Linearly interpolates between the angles passed in with wrapping
+/** Linearly interpolates between the angles passed in with wrapping, percent is clamped to 0-1
  *  @param {number} angleA
  *  @param {number} angleB
  *  @param {number} percent
@@ -580,7 +580,7 @@ class RandomGenerator
         return valueB + (valueA - valueB) * noiseHash(this.seed);
     }
 
-    /** Returns a floored seeded random value the two values passed in
+    /** Returns a floored seeded random value between the two values passed in
     *  @param {number} valueA
     *  @param {number} [valueB]
     *  @return {number} */
@@ -691,7 +691,7 @@ function ASSERT_VECTOR2_NORMAL(v)
 
 /**
  * 2D Vector object with vector math library
- * - Functions do not change this so they can be chained together
+ * - Most functions return a new vector so they can be chained, the set functions change this one
  * @memberof Engine
  * @example
  * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
@@ -754,7 +754,7 @@ class Vector2
      *  @return {Vector2} */
     divide(v) { return new Vector2(this.x / v.x, this.y / v.y); }
 
-    /** Returns a copy of this vector scaled by the vector passed in
+    /** Returns a copy of this vector scaled by the number passed in
      *  @param {number} s - scale
      *  @return {Vector2} */
     scale(s) { return new Vector2(this.x * s, this.y * s); }
@@ -840,7 +840,7 @@ class Vector2
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
-    /** Sets this this vector to point in the specified integer direction (0-3), corresponding to multiples of 90 degree rotation
+    /** Sets this vector to point in the specified integer direction (0-3), corresponding to multiples of 90 degree rotation
      * @param {number} direction
      * @param {number} [length]
      * @return {Vector2} */
@@ -895,7 +895,7 @@ class Vector2
      * @return {number} */
     area() { return abs(this.x * this.y); }
 
-    /** Returns a new vector that is p percent between this and the vector passed in
+    /** Returns a new vector that is p percent between this and the vector passed in, percent is clamped to 0-1
      * @param {Vector2} v - other vector
      * @param {number}  percent
      * @return {Vector2} */
@@ -1064,7 +1064,7 @@ class Color
      * @return {Color} */
     clamp() { return new Color(clamp(this.r), clamp(this.g), clamp(this.b), clamp(this.a)); }
 
-    /** Returns a new color that is p percent between this and the color passed in
+    /** Returns a new color that is p percent between this and the color passed in, percent is clamped to 0-1
      * @param {Color}  c - other color
      * @param {number} percent
      * @return {Color} */
@@ -1105,7 +1105,7 @@ class Color
     }
 
     /** Returns this color expressed in hsla format
-     * @return {Array<number>} */
+     * @return {[number, number, number, number]} - hue, saturation, lightness and alpha */
     HSLA()
     {
         const r = clamp(this.r);

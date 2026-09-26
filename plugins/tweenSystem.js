@@ -37,7 +37,7 @@ function tweenIsLerpable(v) { return v && typeof v.lerp === 'function'; }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** A numeric tween: drives a callback with a value interpolated between
+/** A tween: drives a callback with a value interpolated between
  *  `start` and `end` over `duration` seconds. Pauses with the game by default.
  *  - In TypeScript it is a `Tween<T>` of the type it tweens, which comes from `start` and `end` or
  *    the callback's parameter, so `(v: number)=> ...` takes a number
@@ -134,8 +134,7 @@ class Tween
 
     /** Set the easing curve and return this for chaining.
      *  @param {function(number):number} easeFn
-     *  @returns {Tween<T>}
-     *  @memberof TweenSystem */
+     *  @returns {Tween<T>} */
     setEase(easeFn)
     {
         this.ease = easeFn;
@@ -150,8 +149,7 @@ class Tween
      *  - It is kept by `restart`, so a restarted tween calls it again when it completes
      *  - `stop` and `tweenStopAll` end a tween without calling it
      *  @param {function():void} callback
-     *  @returns {Tween<T>}
-     *  @memberof TweenSystem */
+     *  @returns {Tween<T>} */
     then(callback)
     {
         this.onComplete = callback;
@@ -167,8 +165,7 @@ class Tween
      *  A `then` callback, set before or after, is called when the last
      *  iteration ends.
      *  @param {number} [count=Infinity]
-     *  @returns {Tween<T>}
-     *  @memberof TweenSystem */
+     *  @returns {Tween<T>} */
     loop(count = Infinity)
     {
         this.loopRemaining = count;
@@ -183,8 +180,7 @@ class Tween
      *  A `then` callback, set before or after, is called when the last
      *  iteration ends.
      *  @param {number} [count=Infinity]
-     *  @returns {Tween<T>}
-     *  @memberof TweenSystem */
+     *  @returns {Tween<T>} */
     pingPong(count = Infinity)
     {
         this.loopRemaining = count;
@@ -192,12 +188,10 @@ class Tween
         return this;
     }
 
-    /** Pause this tween. While paused, tweenUpdate skips it.
-     *  @memberof TweenSystem */
+    /** Pause this tween. While paused, tweenUpdate skips it. */
     pause() { this.paused = true; }
 
-    /** Resume a paused tween.
-     *  @memberof TweenSystem */
+    /** Resume a paused tween. */
     resume() { this.paused = false; }
 
     /** Reset this tween to the start: life back to duration, pause cleared,
@@ -207,8 +201,7 @@ class Tween
      *  over, a pingPong that ended on its way back plays that way again, and a
      *  restart mid loop keeps the iterations left. Call loop or pingPong again
      *  after restart to repeat it. The `then` callback is kept and is called
-     *  again when it completes.
-     *  @memberof TweenSystem */
+     *  again when it completes. */
     restart()
     {
         this.life = this.duration;
@@ -220,8 +213,7 @@ class Tween
     }
 
     /** True if this tween is in the active list and not paused.
-     *  @returns {boolean}
-     *  @memberof TweenSystem */
+     *  @returns {boolean} */
     isActive()
     {
         return !this.paused && this.active;
@@ -229,8 +221,7 @@ class Tween
 
     /** Get how far this tween has progressed, from 0 (just started) to 1
      *  (completed). Clamped — overshoot past completion still reads 1.
-     *  @returns {number}
-     *  @memberof TweenSystem */
+     *  @returns {number} */
     getPercent()
     {
         return percent(this.duration - this.life, 0, this.duration);
@@ -239,8 +230,7 @@ class Tween
     /** Get the current interpolated value (the value most recently passed to
      *  the callback). Returns a number, Vector2, Vector3 or Color depending on the
      *  tween's start/end types.
-     *  @returns {T}
-     *  @memberof TweenSystem */
+     *  @returns {T} */
     getValue()
     {
         return this.interp(this.life);
@@ -252,8 +242,7 @@ class Tween
      *  - A vector goes past its ends as far as the easing does, as a number does; a Color stays between them,
      *    so its channels stay in range, and any other type goes as far as its own lerp takes it
      *  @param {number} life
-     *  @returns {T}
-     *  @memberof TweenSystem */
+     *  @returns {T} */
     interp(life)
     {
         // the ends of whatever type it tweens, each kind is handled below
@@ -273,8 +262,7 @@ class Tween
     }
 
     /** Remove this tween from the active list, ending a loop or pingPong too, without calling
-     *  the then-callback. It keeps the then-callback, so a restart calls it when it completes.
-     *  @memberof TweenSystem */
+     *  the then-callback. It keeps the then-callback, so a restart calls it when it completes. */
     stop()
     {
         tweenDeactivate(this);
@@ -298,44 +286,44 @@ const Ease =
     /** Linear (identity) curve.
      *  @param {number} x
      *  @returns {number}
-     *  @memberof TweenSystem */
+     *  @memberof TweenSystem.Ease */
     LINEAR: (x) => x,
 
     /** Power curve factory: `Ease.POWER(n)` returns `x => x**n`.
      *  Use n=2 for quadratic, n=3 for cubic, etc.
      *  @param {number} n
      *  @returns {function(number):number}
-     *  @memberof TweenSystem */
+     *  @memberof TweenSystem.Ease */
     POWER: (n) => (x) => x ** n,
 
     /** Sine ease-in curve: starts slow, ends fast.
      *  @param {number} x
      *  @returns {number}
-     *  @memberof TweenSystem */
+     *  @memberof TweenSystem.Ease */
     SINE: (x) => 1 - cos(x * (PI / 2)),
 
     /** Circular ease-in curve.
      *  @param {number} x
      *  @returns {number}
-     *  @memberof TweenSystem */
+     *  @memberof TweenSystem.Ease */
     CIRC: (x) => 1 - (1 - x * x)**.5,
 
     /** Exponential ease-in curve (`2^(10x-10)`).
      *  @param {number} x
      *  @returns {number}
-     *  @memberof TweenSystem */
+     *  @memberof TweenSystem.Ease */
     EXPO: (x) => x === 0 ? 0 : 2 ** (10 * x - 10),
 
     /** Back ease-in: overshoots backward at the start before snapping forward.
      *  @param {number} x
      *  @returns {number}
-     *  @memberof TweenSystem */
+     *  @memberof TweenSystem.Ease */
     BACK: (x) => x * x * (2.70158 * x - 1.70158),
 
     /** Elastic ease-in: oscillations that grow toward the end.
      *  @param {number} x
      *  @returns {number}
-     *  @memberof TweenSystem */
+     *  @memberof TweenSystem.Ease */
     ELASTIC: (x) =>
         x === 0 ? 0 :
         x === 1 ? 1 :
@@ -345,7 +333,7 @@ const Ease =
      *  `Ease.OUT(Ease.SPRING)` overshoots and settles on the target.
      *  @param {number} x
      *  @returns {number}
-     *  @memberof TweenSystem */
+     *  @memberof TweenSystem.Ease */
     SPRING: (x) =>
         1 -
         (sin(PI * (1 - x) * (0.2 + 2.5 * (1 - x) ** 3)) *
@@ -359,7 +347,7 @@ const Ease =
      *  wrap with `Ease.OUT`: `Ease.OUT(Ease.BOUNCE)`.
      *  @param {number} x
      *  @returns {number}
-     *  @memberof TweenSystem
+     *  @memberof TweenSystem.Ease
      *  @example
      *  Ease.BOUNCE                  // ease-in bounce (bouncy at start)
      *  Ease.OUT(Ease.BOUNCE)        // ease-out bounce (object hits ground)
@@ -382,7 +370,7 @@ const Ease =
      *  picking the direction programmatically.
      *  @param {function(number):number} f - Curve to use as ease-in (returned unchanged)
      *  @returns {function(number):number}
-     *  @memberof TweenSystem
+     *  @memberof TweenSystem.Ease
      *  @example
      *  // Pick direction at runtime
      *  const dir = bouncyMode ? Ease.OUT : Ease.IN;
@@ -393,18 +381,16 @@ const Ease =
     /** Reverse a curve so it eases out instead of in: `x => 1 - f(1 - x)`.
      *  @param {function(number):number} f
      *  @returns {function(number):number}
-     *  @memberof TweenSystem
+     *  @memberof TweenSystem.Ease
      *  @example
      *  Ease.OUT(Ease.POWER(2)) // ease-out quadratic
      */
     OUT: (f) => (x) => 1 - f(1 - x),
 
     /** Combine the first half of `f` with `Ease.OUT(f)` for a symmetric curve.
-     *  Bug-fix vs the original library: the original referenced an undefined
-     *  global `Piecewise`; this implementation routes through `Ease.PIECEWISE`.
      *  @param {function(number):number} f
      *  @returns {function(number):number}
-     *  @memberof TweenSystem */
+     *  @memberof TweenSystem.Ease */
     IN_OUT: (f) => Ease.PIECEWISE(f, Ease.OUT(f)),
 
     /** Split [0,1] into N equal sections and run a different curve in each.
@@ -412,7 +398,7 @@ const Ease =
      *  and its output is mapped to [i/n, (i+1)/n] of the overall range.
      *  @param {...function(number):number} fns
      *  @returns {function(number):number}
-     *  @memberof TweenSystem */
+     *  @memberof TweenSystem.Ease */
     PIECEWISE: (...fns) =>
     {
         const n = fns.length;
@@ -430,7 +416,7 @@ const Ease =
      *  @param {number} x2
      *  @param {number} y2
      *  @returns {function(number):number}
-     *  @memberof TweenSystem
+     *  @memberof TweenSystem.Ease
      *  @example
      *  Ease.BEZIER(0.25, 0.1, 0.25, 1) // CSS "ease"
      */
@@ -534,22 +520,25 @@ function tweenPassed(tween)
     return duration ? 1 + floor(-min(tween.life, 0) / duration) : 1;
 }
 
+// start the next iteration of a loop or pingPong, the time the last one ran over already spent, true
+function tweenNextIteration(tween, passed, continuation)
+{
+    tween.loopRemaining -= passed;
+    tweenCarryOvershoot(tween);
+    tween.thenCallback = continuation;
+    tweenActivate(tween);
+    tween.callback(tween.interp(tween.life)); // snap to where the new iteration is
+    return true;
+}
+
 // Continuation that schedules the next loop iteration when one finishes, true if it did.
-// Reuses the same Tween object across iterations so the user's handle
-// from `.loop()` keeps working — calling `.stop()` mid-loop now cancels
-// the entire chain instead of just the current iteration.
+// Reuses the same Tween across iterations, so the handle from `.loop()` pauses or stops the whole loop.
 function tweenLoopContinuation(tween)
 {
     // count every iteration that went by, a finite loop ends once they run out
     const passed = tweenPassed(tween);
     if (tween.loopRemaining <= passed) return false; // Infinity never runs out
-    tween.loopRemaining -= passed;
-    tweenCarryOvershoot(tween);
-    tween.thenCallback = () => tweenLoopContinuation(tween);
-    tweenActivate(tween);
-    // snap to where the new iteration is, its start less the time the last one ran over
-    tween.callback(tween.interp(tween.life));
-    return true;
+    return tweenNextIteration(tween, passed, () => tweenLoopContinuation(tween));
 }
 
 // Continuation for pingPong: swaps start and end on the same tween each iteration, true if it started another.
@@ -573,12 +562,7 @@ function tweenPingPongContinuation(tween)
             tween.callback(tween.interp(0));
         return false;
     }
-    tween.loopRemaining -= passed;
-    tweenCarryOvershoot(tween);
-    tween.thenCallback = () => tweenPingPongContinuation(tween);
-    tweenActivate(tween);
-    tween.callback(tween.interp(tween.life));
-    return true;
+    return tweenNextIteration(tween, passed, () => tweenPingPongContinuation(tween));
 }
 
 /** Engine plugin hook: advance every active tween by the appropriate delta.

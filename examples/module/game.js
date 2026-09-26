@@ -103,7 +103,7 @@ function gameUpdate()
         medal_example.unlock();
     }
 
-    // move particles to mouse location if on screen
+    // move particles to the mouse once it has moved
     if (LJS.mousePosScreen.x)
         particleEmitter.pos = LJS.mousePos;
 }

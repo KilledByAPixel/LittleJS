@@ -21,14 +21,14 @@ test('the debug overlay lists a held mouse button and gamepad button without ass
     assert.deepEqual([...result], ['Mouse: 0 ', 'Gamepad 0: 3 ']);
 });
 
-test('an update that turns manual step off stops engineStep there, and the loop runs from real time', async () =>
+test('an update that turns manual step off stops engineStep there', async () =>
 {
     const { run } = loadEngine();
     run('setHeadlessMode(true)');
     await run(`setEngineManualStep(true); engineInit(()=> {}, ()=> { frame === 5 && setEngineManualStep(false); },
         ()=> {}, ()=> {}, ()=> {})`);
     const stepped = run('engineStep(600); const f = frame; setEngineManualStep(true); f');
-    assert.ok(stepped <= 6, 'stopped at the frame that turned it off, not after ' + stepped);
+    assert.equal(stepped, 5, 'stopped at the frame that turned it off');
 });
 
 test('the mouse wheel over a text field is left to it, and the game does not take it', () =>

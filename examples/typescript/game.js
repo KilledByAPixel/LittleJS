@@ -64,7 +64,7 @@ function gameInit() {
     .05, .5, true, true // fadeRate, randomness, collide, additive
     );
     particleEmitter.restitution = .3; // bounce when it collides
-    particleEmitter.trailScale = 2; // stretch stretch as it moves
+    particleEmitter.trailScale = 2; // stretch as it moves
     particleEmitter.velocityInheritance = .3; // inherit emitter velocity
 }
 ///////////////////////////////////////////////////////////////////////////////
@@ -80,7 +80,7 @@ function gameUpdate() {
         // unlock medals
         medal_example.unlock();
     }
-    // move particles to mouse location if on screen
+    // move particles to the mouse once it has moved
     if (LJS.mousePosScreen.x)
         particleEmitter.pos = LJS.mousePos;
 }

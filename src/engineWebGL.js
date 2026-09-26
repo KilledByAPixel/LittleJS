@@ -57,7 +57,6 @@ const gl_MAX_POLY_VERTEXES = gl_ARRAY_BUFFER_SIZE / gl_POLY_VERTEX_BYTE_STRIDE |
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Initialize WebGL, called automatically by the engine
 // the sprite vertex shader, shared by the engine's program and every Shader so one vertex layout fits all
 const gl_VERTEX_SOURCE =
     '#version 300 es\n' +            // specify GLSL ES version
@@ -79,15 +78,16 @@ const gl_VERTEX_SOURCE =
     '}';                             // end of shader
 
 // the end of every sprite fragment shader, the engine's and each Shader's: t is the surface color
-// a render target's texture holds premultiplied color, so that batch blends with ONE and premultiplies here,
+// a render target and a smooth image hold premultiplied color, so their batches blend with ONE and premultiply here,
 // giving what a straight texel gives, clamped as the blend clamps it: exactly when the additive alpha is 0 or
 // the texel is clear or opaque, and close otherwise, since the straight color is not kept to be multiplied
 const gl_FRAGMENT_TINT_SOURCE =
     'c=t*d+e;'+                      // modulate by color plus additive
-    'if(premultipliedTexture){'+     // a render target
+    'if(premultipliedTexture){'+     // a render target or a smooth image
     'c.a=min(c.a,1.);'+              // the alpha the blend uses
     'c.rgb=min(t.rgb*d.rgb*min(d.a+e.a,1.)+e.rgb*c.a,c.a);}';
 
+// Initialize WebGL, called automatically by the engine
 function glInit(rootElement)
 {
     if (!glEnable || headlessMode)
@@ -170,7 +170,7 @@ function glInit(rootElement)
             '#version 300 es\n' +     // specify GLSL ES version
             'precision highp float;'+ // use highp for accuracy
             'uniform sampler2D s;'+   // texture
-            'uniform bool premultipliedTexture;'+ // is the texture a render target
+            'uniform bool premultipliedTexture;'+ // is the texture premultiplied, a render target or a smooth image
             'in vec2 v;'+             // in: uv
             'in vec4 d,e;'+           // in: color, additiveColor
             'out vec4 c;'+            // out: color
@@ -236,7 +236,8 @@ function glInit(rootElement)
         // configure instanced vertex attributes
         offset = 0, shader = glShader, stride = gl_INSTANCE_BYTE_STRIDE;
         glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
-        initVertexAttrib('g', glContext.FLOAT, 0, 2); // geometry
+        // geometry, its own packed buffer: typeSize 0 gives stride 0 and does not advance the offset
+        initVertexAttrib('g', glContext.FLOAT, 0, 2);
         glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
         glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
         initVertexAttrib('p', glContext.FLOAT, 4, 4, 1); // position & size
@@ -313,6 +314,8 @@ function glPreRender(clear=true)
     const p = vec2(-1).subtract(rotatedCam.multiply(s));
     const ca = cos(cameraAngle);
     const sa = sin(cameraAngle);
+    // column major; the shaders send (x, y, 1, 1), so the third column adds 1 to x and y and p takes it back off:
+    // clip = s * (world turned by -cameraAngle - the camera turned the same way), z = 1
     const transform = [
         s.x  * ca,  s.y * sa, 0, 0,
         -s.x * sa,  s.y * ca, 0, 0,
@@ -467,7 +470,7 @@ function glShaderProgram(shader)
         'uniform sampler2D iChannel0;' + // the texture
         'uniform vec3 iResolution;' +    // canvas size in pixels
         'uniform float iTime;' +         // engine time
-        'uniform bool premultipliedTexture;' + // is the texture a render target
+        'uniform bool premultipliedTexture;' + // is the texture premultiplied, a render target or a smooth image
         'in vec2 v,l;in vec4 d,e;out vec4 c;\n' + // a define needs its own line
         '#define localUV l\n' +
         shader.fragmentCode + '\n' +
@@ -545,6 +548,14 @@ function glSetTextureData(texture, image)
     ASSERT(image?.width > 0, 'Invalid image data.');
     texture === glActiveTexture && glFlush();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
+    if (typeof ImageBitmap != 'undefined' && image instanceof ImageBitmap)
+    {
+        // WebGL ignores the unpack flag below for a bitmap and uploads it as it was made, so it is drawn onto a
+        // canvas first, which reads either kind of bitmap right and uploads as the flag says
+        const canvas = new OffscreenCanvas(image.width, image.height);
+        canvas.getContext('2d').drawImage(image, 0, 0);
+        image = canvas;
+    }
     // smooth filtering mixes a texel with its see through neighbors, right only for premultiplied color, or the
     // edges go dark; pixel art is sampled a texel at a time, and uploads straight color as it always has
     const premultiply = !tilesPixelated;
@@ -664,7 +675,7 @@ function glFlush()
     glBatchShader = glCustomShader;
 }
 
-/** Flush any sprites still in the buffer and copy to main canvas
+/** Flush any sprites still in the buffer and copy the WebGL canvas to a 2D context
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
  *  @memberof WebGL */
 function glCopyToContext(context)
@@ -761,7 +772,7 @@ function glDrawPointsTransform(points, rgba, x, y, sx, sy, angle, tristrip=true)
     glDrawPoints(drawPoints, rgba);
 }
 
-/** Transform and add a polygon to the gl draw list
+/** Transform and add a polygon's outline to the gl draw list
  *  @param {Array<Vector2>} points - Array of Vector2 points
  *  @param {number} rgba - Color of the polygon as a 32-bit integer
  *  @param {number} lineWidth - Width of the outline
@@ -783,36 +794,18 @@ function glDrawOutlineTransform(points, rgba, lineWidth, x, y, sx, sy, angle, wr
  *  @param {number} rgba - Color as a 32-bit integer
  *  @memberof WebGL */
 function glDrawPoints(points, rgba)
-{
-    if (!glEnable || points.length < 3)
-        return; // needs at least 3 points to have area
-
-    // flush if there is not enough room or if different blend mode
-    const vertCount = points.length + 2;
-    if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
-        glFlush();
-    ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
-    if (vertCount >= gl_MAX_POLY_VERTEXES) return; // release-build safety net
-    glSetPolyMode();
-  
-    // setup triangle strip with degenerate verts at start and end
-    let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
-    for (let i = vertCount; i--;)
-    {
-        const j = clamp(i-1, 0, vertCount-3);
-        const point = points[j];
-        glPositionData[offset++] = point.x;
-        glPositionData[offset++] = point.y;
-        glColorData[offset++] = rgba & glColorMask | glColorAdditive;
-    }
-    glBatchCount += vertCount;
-}
+{ glDrawPolyStrip(points, rgba); }
 
 /** Add a list of colored points to the gl draw list
  *  @param {Array<Vector2>} points - Array of Vector2 points in tri strip order
  *  @param {Array<number>} pointColors - Array of 32-bit integer colors
  *  @memberof WebGL */
 function glDrawColoredPoints(points, pointColors)
+{ glDrawPolyStrip(points, 0, pointColors); }
+
+// queue a triangle strip in the poly batch with degenerate verts at start and end,
+// one color for all its points or one each
+function glDrawPolyStrip(points, rgba, pointColors)
 {
     if (!glEnable || points.length < 3)
         return; // needs at least 3 points to have area
@@ -824,14 +817,14 @@ function glDrawColoredPoints(points, pointColors)
     ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
     if (vertCount >= gl_MAX_POLY_VERTEXES) return; // release-build safety net
     glSetPolyMode();
-  
+
     // setup triangle strip with degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
     for (let i = vertCount; i--;)
     {
         const j = clamp(i-1, 0, vertCount-3);
         const point = points[j];
-        const color = pointColors[j];
+        const color = pointColors ? pointColors[j] : rgba;
         glPositionData[offset++] = point.x;
         glPositionData[offset++] = point.y;
         glColorData[offset++] = color & glColorMask | glColorAdditive;

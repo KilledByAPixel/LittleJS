@@ -71,20 +71,21 @@ class TextureSheet
 
     /** Find a spot for an image on this sheet without drawing it
      *  @param {Vector2} imageSize - Size of the source image in pixels
-     *  @param {Vector2} [frameSize] - Size of each frame, or the whole image if not passed
+     *  @param {Vector2} [frameSize] - Size of each frame, or the whole image less its source padding if not passed
      *  @param {number} [padding] - How many pixels padding around each frame
      *  @param {number|Vector2} [sourcePadding] - How many pixels padding around each frame in the source image
-     *  @return {TileInfo} Tile for the packed image, or undefined if the sheet is full */
-    tryAdd(imageSize, frameSize=imageSize, padding=textureSheetPadding, sourcePadding=0)
+     *  @return {TileInfo|undefined} Tile for the packed image, or undefined if the sheet is full */
+    tryAdd(imageSize, frameSize, padding=textureSheetPadding, sourcePadding=0)
     {
-        ASSERT(isVector2(imageSize) && isVector2(frameSize), 'sizes must be vec2');
-        ASSERT(frameSize.x > 0 && frameSize.y > 0, 'frame size must be positive');
-
         // a number pads both axes the same
         const sourcePad = isNumber(sourcePadding) ?
             vec2(/** @type {number} */ (sourcePadding)) : /** @type {Vector2} */ (sourcePadding);
         ASSERT(isVector2(sourcePad) && sourcePad.x >= 0 && sourcePad.y >= 0,
             'sourcePadding must be a number or vec2 >= 0');
+        ASSERT(isVector2(imageSize), 'sizes must be vec2');
+        frameSize ||= imageSize.subtract(sourcePad.scale(2)); // the whole image, less the padding baked into it
+        ASSERT(isVector2(frameSize), 'sizes must be vec2');
+        ASSERT(frameSize.x > 0 && frameSize.y > 0, 'frame size must be positive');
 
         // the source may have its own padding baked in around each frame
         const sourceCellWidth = frameSize.x + sourcePad.x*2;
@@ -188,7 +189,8 @@ class TextureSheet
  *  - Grid images keep their layout and frames wrap down to the next row
  *  - Pass sourcePadding if the source image has padding baked in around frames
  *  @param {string} src - Image source path
- *  @param {Vector2|number} [frameSize] - Size of each animation frame in pixels
+ *  @param {Vector2|number} [frameSize] - Size of each animation frame in pixels, or the whole image less its
+ *  source padding if not passed
  *  @param {number} [padding] - How many pixels padding around each frame
  *  @param {number|Vector2} [sourcePadding] - How many pixels padding around each frame in the source image
  *  @return {TileInfo}
@@ -407,11 +409,11 @@ function parseAtlas(data)
     }
 
     // group frames that share a name stem with contiguous trailing numbers
-    // run_0.png and run_1.png become a 2 frame animation named run
+    // run_0.png and run_1.png become a 2 frame animation named run, and so do the folder style run/0.png and run/1.png
     const stems = new Map;
     for (const f of frames)
     {
-        let match = f.name.match(/^(.+?)([-_ ])?(\d+)$/);
+        let match = f.name.match(/^(.+?)([-_ /])?(\d+)$/);
         if (match && !match[2] && /\d$/.test(match[1]))
             match = undefined; // all digit tails like 10 are a name, not frame 0 of 1
         const stem = match ? match[1] : f.name;

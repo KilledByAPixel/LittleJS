@@ -204,7 +204,7 @@ npm run build
 npm test
 ```
 
-- Tests target `dist/littlejs.esm.js` — rebuild with `npm run build` after changing source.
+- Most tests import `dist/littlejs.esm.js`; a test that needs engine internals or DOM events loads its own copy of the script build `dist/littlejs.js` through `loadEngine()` in [test/vmEngine.mjs](test/vmEngine.mjs), where `run(code)` can read internals and reassign engine functions like `drawTile`. Inside a `run(\`...\`)` template literal a regex backslash is lost, so write `[0-9]`, not `\d`. Rebuild with `npm run build` after changing source.
 - [test/setup.mjs](test/setup.mjs) stubs minimal DOM and enables headless mode. Most tests shouldn't call `engineInit` or `render()`, or assume `time` advances — construct objects directly instead.
 - To test time-driven logic (timers, cooldowns, spawns), call `setEngineManualStep(true)` before `engineInit`, then advance with `engineStep(frames)`. See [test/engineStep.test.mjs](test/engineStep.test.mjs). Call `engineInit` once per file at module scope: `frame` and `time` are module globals and monotonic, and `node --test` gives each test file its own process.
 - Zero test dependencies — uses Node's built-in `node --test`. Match the style in [test/](test/) when adding new ones.

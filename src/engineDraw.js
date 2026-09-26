@@ -92,8 +92,12 @@ let primitiveCount = 0;
 // internal predicates for tint short-circuiting in canvas2D draw paths
 // isWhite ignores alpha because alpha is applied via globalAlpha, not multiply
 // isBlack includes alpha so additive colors that only contribute alpha are not skipped
-/** @param {Color} c */ function isWhite(c) { return c.r >= 1 && c.g >= 1 && c.b >= 1; }
-/** @param {Color} c */ function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
+/** @ignore
+ *  @param {Color} c */
+function isWhite(c) { return c.r >= 1 && c.g >= 1 && c.b >= 1; }
+/** @ignore
+ *  @param {Color} c */
+function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -403,9 +407,10 @@ class SpriteAnimation
  * - Set it as obj.shader, or use setShader for 2D draws and render3D.shader for 3D draws
  * - Draws that share a Shader share a batch; with no Shader set nothing changes
  * - In 2D it shades textured draws, untextured ones like drawRect draw as they are
- * - A render target, like a tile layer drawn in WebGL, holds premultiplied color, so there iChannel0 reads
- *   premultiplied texels and the snippet's color is taken as premultiplied too; premultipliedTexture is true there,
- *   so a snippet that changes the alpha scales the rgb with it: `if (premultipliedTexture) c.rgb *= k;`
+ * - A render target, like a tile layer drawn in WebGL, holds premultiplied color, and so does every image when
+ *   tilesPixelated is false; there iChannel0 reads premultiplied texels and the snippet's color is taken as
+ *   premultiplied too. premultipliedTexture is true there, so a snippet that changes the alpha, or makes a see
+ *   through color of its own, scales the rgb with it: `if (premultipliedTexture) c.rgb *= k;`
  * - Compiled once per renderer by the first draw that needs it; a bad snippet throws with the GLSL log in debug
  * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, premultipliedTexture, and localUV, 0 to 1
@@ -419,7 +424,9 @@ class SpriteAnimation
  * void mainImage(out vec4 c, vec2 uv)
  * {
  *     c = texture(iChannel0, uv);
- *     c.a *= .5 + .5*sin(iTime); // on an image; for a 2D tile layer scale the rgb too, see above
+ *     float fade = .5 + .5*sin(iTime);
+ *     c.a *= fade;
+ *     if (premultipliedTexture) c.rgb *= fade; // a tile layer, or any image with tilesPixelated false
  * }`);
  * obj.shader = fade;
  * @memberof Draw
@@ -510,8 +517,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
         }
         else
         {
-            // untextured: fold color+additive to match the Canvas2D path's
-            // color.add(additiveColor) on line ~337.
+            // untextured: color plus additive in one color, as the Canvas2D path below does
             const combined = additiveColor ? color.add(additiveColor) : color;
             glDrawUntextured(pos.x, pos.y, size.x, size.y, angle, combined.rgbaInt());
         }
@@ -583,10 +589,7 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, an
         if (screenSpace)
         {
             if (glSkipScreenSpace) return;
-            // convert to world space
-            pos = screenToWorld(pos);
-            size = size.scale(1/cameraScale);
-            angle += cameraAngle;
+            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
         }
         // build 4 corner points for the rectangle
         const points = [], colors = [];
@@ -650,8 +653,8 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     ASSERT(!(texture instanceof TileInfo),
         'pass a TextureInfo or texture index, not a TileInfo — use tileInfo.textureInfo');
 
-    // short-circuit before texture lookup — textureInfos[0] is undefined in headless mode
-    if (headlessMode) return;
+    // only a context passed in is drawn to in headless mode, before the texture lookup, textureInfos is empty there
+    if (headlessMode && !context) return;
 
     // resolve texture argument: TextureInfo or index
     const textureInfo = typeof texture === 'number' ? textureInfos[texture] : texture;
@@ -1000,7 +1003,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
-    if (headlessMode) return;
+    if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
 
     if (useWebGL && glEnable)
     {
@@ -1008,10 +1011,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
         if (screenSpace)
         {
             if (glSkipScreenSpace) return;
-            // convert to world space
-            pos = screenToWorld(pos);
-            size = size.scale(1/cameraScale);
-            angle += cameraAngle;
+            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
         }
         // fan as tristrip; rotate the boundary vertex by one slice per call
         // so back-to-back gradients at the same position have their hole
@@ -1426,8 +1426,7 @@ function isOnScreen(pos, size=0)
     // cameraScale of 0 collapses world coords; nothing is visible
     if (!cameraScale) return false;
 
-    // optimized circle on screen test
-    // pos = worldToScreen(pos);
+    // circle on screen test, worldToScreen inlined in doubled screen units so it compares against the full canvas size
     let x = pos.x - cameraPos.x;
     let y = pos.y - cameraPos.y;
     if (cameraAngle)
@@ -1501,6 +1500,31 @@ function combineCanvases()
     mainContext.restore();
 }
 
+// tint straight color pixels in place, rgb times color, plus additiveColor with alpha when it adds anything;
+// returns true when color.a went into the alpha, so it is not applied again as globalAlpha
+function tintImageData(data, color, additiveColor)
+{
+    if (additiveColor && !isBlack(additiveColor))
+    {
+        // multiply + additive (slower), color.a is baked into the alpha channel here
+        const colorMultiply = [color.r, color.g, color.b, color.a];
+        const colorAdd = [additiveColor.r * 255, additiveColor.g * 255,
+                          additiveColor.b * 255, additiveColor.a * 255];
+        for (let i = 0; i < data.length; ++i)
+            data[i] = data[i] * colorMultiply[i&3] + colorAdd[i&3] |0;
+        return true;
+    }
+
+    // RGB only, faster — alpha left intact for the caller
+    for (let i = 0; i < data.length; i+=4)
+    {
+        data[i  ] *= color.r;
+        data[i+1] *= color.g;
+        data[i+2] *= color.b;
+    }
+    return false;
+}
+
 // Internal: bake a color/additive-color tint into workReadCanvas at the
 // image's native resolution. Returns the work canvas, suitable for
 // passing to context.createPattern. Used by drawTextureWrapped's
@@ -1514,46 +1538,27 @@ function bakeTintedImage(image, color, additiveColor)
     workReadContext.drawImage(image, 0, 0);
 
     const imageData = workReadContext.getImageData(0, 0, w, h);
-    const data = imageData.data;
-    if (additiveColor && !isBlack(additiveColor))
-    {
-        // multiply + additive (slower)
-        const colorMultiply = [color.r, color.g, color.b, color.a];
-        const colorAdd = [additiveColor.r * 255, additiveColor.g * 255,
-                          additiveColor.b * 255, additiveColor.a * 255];
-        for (let i = 0; i < data.length; ++i)
-            data[i] = data[i] * colorMultiply[i&3] + colorAdd[i&3] |0;
-    }
-    else
-    {
-        // RGB only, faster — alpha left intact for the caller
-        for (let i = 0; i < data.length; i+=4)
-        {
-            data[i  ] *= color.r;
-            data[i+1] *= color.g;
-            data[i+2] *= color.b;
-        }
-    }
+    tintImageData(imageData.data, color, additiveColor);
     workReadContext.putImageData(imageData, 0, 0);
     return workReadCanvas;
 }
 
 /** Internal: draw an image with color and additive color applied in Canvas2D, drawTile calls it
- *  This is slower then normal drawImage when color is applied
-    *  @ignore
-    *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
-    *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
-    *  @param {number} sx
-    *  @param {number} sy
-    *  @param {number} sWidth
-    *  @param {number} sHeight
-    *  @param {number} dx
-    *  @param {number} dy
-    *  @param {number} dWidth
-    *  @param {number} dHeight
-    *  @param {Color} color
-    *  @param {Color} [additiveColor]
-    *  @param {number} [bleed] - How many pixels to shrink the source, used to fix bleeding
+ *  This is slower than normal drawImage when color is applied
+ *  @ignore
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+ *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
+ *  @param {number} sx
+ *  @param {number} sy
+ *  @param {number} sWidth
+ *  @param {number} sHeight
+ *  @param {number} dx
+ *  @param {number} dy
+ *  @param {number} dWidth
+ *  @param {number} dHeight
+ *  @param {Color} color
+ *  @param {Color} [additiveColor]
+ *  @param {number} [bleed] - How many pixels to shrink the source, used to fix bleeding
  *  @memberof Draw */
 function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, color, additiveColor, bleed=0)
 {
@@ -1579,31 +1584,11 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
 
         // tint image using offscreen work context
         const imageData = workReadContext.getImageData(0, 0, sWidth, sHeight);
-        const data = imageData.data;
-        if (additiveColor && !isBlack(additiveColor))
-        {
-            // slower path with additive color
-            const colorMultiply = [color.r, color.g, color.b, color.a];
-            const colorAdd = [additiveColor.r * 255, additiveColor.g * 255, additiveColor.b * 255, additiveColor.a * 255];
-            for (let i = 0; i < data.length; ++i)
-                data[i] = data[i] * colorMultiply[i&3] + colorAdd[i&3] |0;
-            workReadContext.putImageData(imageData, 0, 0);
-            context.drawImage(workReadCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
-        }
-        else
-        {
-            // faster path with no additive color
-            for (let i = 0; i < data.length; i+=4)
-            {
-                data[i  ] *= color.r;
-                data[i+1] *= color.g;
-                data[i+2] *= color.b;
-            }
-            workReadContext.putImageData(imageData, 0, 0);
-            context.globalAlpha = color.a;
-            context.drawImage(workReadCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
-            context.globalAlpha = 1;
-        }
+        const alphaBaked = tintImageData(imageData.data, color, additiveColor);
+        workReadContext.putImageData(imageData, 0, 0);
+        if (!alphaBaked) context.globalAlpha = color.a;
+        context.drawImage(workReadCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
+        if (!alphaBaked) context.globalAlpha = 1;
     }
 }
 

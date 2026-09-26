@@ -10,23 +10,7 @@
 'use strict';
 
 ///////////////////////////////////////////////////////////////////////////////
-
-// ramp an audio param to a value, cancelling anything already scheduled so stacked calls don't fight
-function audioParamRamp(param, value, fadeTime=0)
-{
-    ASSERT(fadeTime >= 0, 'fadeTime must be positive or zero');
-    const startTime = audioContext.currentTime;
-    param.cancelScheduledValues(startTime);
-    if (fadeTime)
-    {
-        param.setValueAtTime(param.value, startTime);
-        param.linearRampToValueAtTime(value, startTime + fadeTime);
-    }
-    else
-        param.value = value;
-}
-
-///////////////////////////////////////////////////////////////////////////////
+// audioParamRamp lives in engineAudio.js, core loads before plugins in the bundle
 /**
  * Base class for audio effects, an input and output with a wet/dry mix between them
  * - Sounds connect to input, output goes to the master gain until connect() moves it

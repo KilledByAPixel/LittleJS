@@ -730,14 +730,7 @@ function debugRender()
     }
 }
 
-function debugRenderPost()
-{
-    if (debugVideoCaptureIsActive())
-    {
-        debugVideoCaptureUpdate();
-        return;
-    }
-}
+function debugRenderPost() { debugVideoCaptureIsActive() && debugVideoCaptureUpdate(); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // video capture - records video and audio at 60 fps using MediaRecorder API
@@ -869,8 +862,8 @@ function debugVideoCaptureUpdate()
     // save the video frame
     combineCanvases();
     debugVideoCapture.videoTrack.requestFrame();
-    debugVideoCaptureIcon.textContent = '● REC ' 
-        + formatTime(debugVideoCapture.captureTimer);
+    debugVideoCaptureIcon.textContent = '● REC '
+        + formatTime(debugVideoCapture.captureTimer.get());
 }
 
 ///////////////////////////////////////////////////////////////////////////////

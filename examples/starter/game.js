@@ -106,7 +106,7 @@ function gameUpdate()
         cameraScale = clamp(cameraScale, 10, 300);
     }
 
-    // move particles to mouse location if on screen
+    // move particles to the mouse once it has moved
     if (mousePosScreen.x)
         particleEmitter.pos = mousePos;
 }

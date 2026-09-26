@@ -94,19 +94,26 @@ function setInputPreventDefault(preventDefault=true) { inputPreventDefault = pre
  *  @memberof Input */
 function setInputMouseMoveThreshold(threshold) { inputMouseMoveThreshold = threshold; }
 
-/** @return {boolean} - Is the mouse the most recently used input device?    @memberof Input */
-function usingMouseInput()    { return lastInputDevice === 'mouse'; }
-/** @return {boolean} - Is the keyboard the most recently used input device? @memberof Input */
+/** Is the mouse the most recently used input device?
+ *  @return {boolean}
+ *  @memberof Input */
+function usingMouseInput() { return lastInputDevice === 'mouse'; }
+/** Is the keyboard the most recently used input device?
+ *  @return {boolean}
+ *  @memberof Input */
 function usingKeyboardInput() { return lastInputDevice === 'keyboard'; }
-/** @return {boolean} - Is a gamepad the most recently used input device?    @memberof Input */
-function usingGamepadInput()  { return lastInputDevice === 'gamepad'; }
+/** Is a gamepad the most recently used input device?
+ *  @return {boolean}
+ *  @memberof Input */
+function usingGamepadInput() { return lastInputDevice === 'gamepad'; }
 
-/** Clears an input key state
- *  @param {string|number} key
- *  @param {number} [device]
- *  @param {boolean} [clearDown=true]
- *  @param {boolean} [clearPressed=true]
- *  @param {boolean} [clearReleased=true]
+/** Clear a key's state, so it stops reading as down, pressed or released this frame; a key still held is not
+ *  pressed again until it is let go
+ *  @param {string|number} key - A key code like 'Space', or a mouse or gamepad button number
+ *  @param {number} [device] - 0 for the keyboard and mouse, gamepad n is device n + 1
+ *  @param {boolean} [clearDown] - Clear the held state
+ *  @param {boolean} [clearPressed] - Clear the pressed this frame state
+ *  @param {boolean} [clearReleased] - Clear the released this frame state
  *  @memberof Input */
 function inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearReleased=true)
 {
@@ -177,7 +184,7 @@ function inputClear()
 
 /** Returns true if device key is down
  *  @param {string|number} key
- *  @param {number} [device]
+ *  @param {number} [device] - 0 for the keyboard and mouse, gamepad n is device n + 1
  *  @return {boolean}
  *  @memberof Input */
 function keyIsDown(key, device=0)
@@ -190,7 +197,7 @@ function keyIsDown(key, device=0)
 
 /** Returns true if device key was pressed this frame
  *  @param {string|number} key
- *  @param {number} [device]
+ *  @param {number} [device] - 0 for the keyboard and mouse, gamepad n is device n + 1
  *  @return {boolean}
  *  @memberof Input */
 function keyWasPressed(key, device=0)
@@ -203,7 +210,7 @@ function keyWasPressed(key, device=0)
 
 /** Returns true if device key was released this frame
  *  @param {string|number} key
- *  @param {number} [device]
+ *  @param {number} [device] - 0 for the keyboard and mouse, gamepad n is device n + 1
  *  @return {boolean}
  *  @memberof Input */
 function keyWasReleased(key, device=0)
@@ -303,7 +310,7 @@ function gamepadWasReleased(button, gamepad=gamepadPrimary)
 /** Returns gamepad stick value
  *  @param {number} stick
  *  @param {number} [gamepad]
- *  @return {Vector2}
+ *  @return {Vector2} - Where the stick points, y up, length 0 to 1 past the dead zone, zero when there is no such stick
  *  @memberof Input */
 function gamepadStick(stick, gamepad=gamepadPrimary)
 {
@@ -1034,6 +1041,10 @@ function touchGamepadSideButtonBase(side)
 // output stick index for a side: the right stick uses stick 0 when there is no left stick
 function touchGamepadStickOut(side)
 { return side && touchGamepadLeftStick ? 1 : 0; }
+// the button a stick's touch presses, 10 for stick 0 and 11 for stick 1, following the output index
+function touchGamepadStickButton(side) { return touchGamepadStickOut(side) ? 11 : 10; }
+// a face button's place around the cluster to its gamepad index, 2 and 3 swap to match the gamepad layout
+function touchGamepadFaceIndex(b) { return b === 3 ? 2 : b === 2 ? 3 : b; }
 // true if the side has any control (a stick or at least one button)
 function touchGamepadSideHasControl(side)
 { return touchGamepadSideStick(side) || touchGamepadSideButtonCount(side) > 0; }
@@ -1158,7 +1169,7 @@ function touchGamepadBuildSvg(W, H)
         {
             const j = mod(i-1, 4);
             let button = count > 2 ? j : min(j, count-1);
-            button = button === 3 ? 2 : button === 2 ? 3 : button; // match gamepad layout
+            button = touchGamepadFaceIndex(button);
             const offset = vec2().setDirection(j, S/2);
             if (count === 2) offset.x *= -1;
             // left side mirrors the right layout's positions, keeping indices in order
@@ -1299,7 +1310,7 @@ function touchGamepadApplyStick(side, p)
 {
     const delta = p.subtract(touchGamepadStickAnchors[side]);
     touchGamepadSticks[side] = delta.scale(2/touchGamepadSize).clampLength();
-    touchGamepadButtons[touchGamepadStickOut(side) ? 11 : 10] = 1;
+    touchGamepadButtons[touchGamepadStickButton(side)] = 1;
 }
 
 // pick a side's gamepad button index from a stage-local point, or -1 if outside the cluster
@@ -1313,7 +1324,7 @@ function touchGamepadFaceButtonAt(side, p, W, H)
     const d = bc.subtract(p);
     if (!side) d.x *= -1; // left side mirrors the right layout's positions horizontally
     let button = count === 2 ? (d.x < d.y ? 1 : 0) : mod(d.direction()+2, 4);
-    button = button === 3 ? 2 : button === 2 ? 3 : button; // match gamepad layout
+    button = touchGamepadFaceIndex(button);
     return button < count ? base + button : -1;
 }
 
@@ -1405,7 +1416,7 @@ function touchGamepadPointerDown(e, zone)
         touchGamepadPointerRole.set(e.pointerId, 'stick'+side);
         touchGamepadNeedRelayout = true; // base may have re-anchored
         touchGamepadApplyStick(side, p);
-        touchGamepadButtonsPressed[touchGamepadStickOut(side) ? 11 : 10] = 1; // the stick's own press, latched
+        touchGamepadButtonsPressed[touchGamepadStickButton(side)] = 1; // the stick's own press, latched
     }
     else if (hit.role === 'face')
     {
@@ -1442,7 +1453,7 @@ function touchGamepadPointerUp(e)
         const side = role === 'stick1' ? 1 : 0;
         touchGamepadStickPointerId[side] = undefined;
         touchGamepadSticks[side] = vec2();
-        delete touchGamepadButtons[touchGamepadStickOut(side) ? 11 : 10];
+        delete touchGamepadButtons[touchGamepadStickButton(side)];
     }
     else if (role === 'start')
         delete touchGamepadButtons[9];

@@ -49,7 +49,7 @@ class Ball extends Box2dObject
         // draw white circle and ball number
         drawCircle(this.pos, .6, WHITE);
         const textPos = this.pos.add(vec2(0,-.06));
-       	if (this.number)
+        if (this.number)
             drawText(this.number, textPos, .5, BLACK);
         if (this.canHit())
         {

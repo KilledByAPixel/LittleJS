@@ -25,6 +25,15 @@ const tileCollisionLayers = [];
 function tileCollisionAssertWhole(layer)
 { ASSERT(layer.pos.x % 1 === 0 && layer.pos.y % 1 === 0, 'a tile collision layer must sit at a whole number position', layer.pos); }
 
+// the test a tile query applies to a cell's data: the callback, the object's collideWithTile, or solid data
+function tileCollisionTester(callbackObject)
+{
+    ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
+    return !callbackObject ? (tileData)=> tileData > 0 :
+        typeof callbackObject === 'function' ? (tileData, pos)=> callbackObject(tileData, pos) :
+        (tileData, pos)=> callbackObject.collideWithTile(tileData, pos);
+}
+
 /** Get tile collision data for a given cell in the grid
 *  @param {Vector2} pos
 *  @param {boolean} [solidOnly] - Only check solid layers?
@@ -230,7 +239,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
  * // create tile layer data with tile index 0 and random orientation and color
  * const tileIndex = 0;
  * const direction = randInt(4)
- * const mirror = randInt(2);
+ * const mirror = randBool();
  * const color = randColor();
  * const data = new TileLayerData(tileIndex, direction, mirror, color);
  */
@@ -319,7 +328,7 @@ class CanvasLayer extends EngineObject
         this.draw(this.pos, this.size, this.color, this.angle, this.mirror, this.additiveColor);
     }
 
-    /** Draw this canvas layer centered in world space, with color applied if using WebGL
+    /** Draw this canvas layer centered in world space
     *  @param {Vector2} pos - Center in world space
     *  @param {Vector2} [size] - Size in world space
     *  @param {Color}   [color] - Color to modulate with
@@ -360,10 +369,9 @@ function tileLayerDefaultTile() { return textureInfos[0]?.size.x ? tile() : unde
 
 /**
  * Tile Layer - cached rendering system for tile layers
- * - Each Tile layer is rendered to an off screen canvas
- * - To allow dynamic modifications, layers are rendered using canvas 2d
- * - Some devices like mobile phones are limited to 4k texture resolution
- * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
+ * - Tiles are drawn once into a texture, a WebGL render target, or the layer's canvas when WebGL is off
+ *   or useWebGL is false, and the layer draws that as one image
+ * - Some devices like mobile phones are limited to 4k textures, which with 16x16 tiles limits a layer to 256x256
  * - Tile layers are centered on their corner, so normal levels are at (0,0)
  * @extends CanvasLayer
  * @memberof TileLayers
@@ -435,9 +443,9 @@ class TileLayer extends CanvasLayer
      *  @param {boolean}       [redraw] - Force the tile to redraw if true */
     setData(layerPos, data, redraw=false)
     {
-        layerPos = layerPos.floor();
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
         ASSERT(data instanceof TileLayerData, 'data must be a TileLayerData');
+        layerPos = layerPos.floor();
 
         if (!layerPos.arrayCheck(this.size)) return;
         this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)] = data;
@@ -577,9 +585,9 @@ class TileLayer extends CanvasLayer
         ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
         
         // clear out where the tile was, can be skipped for fully opaque tiles
-        const drawSize = this.tileInfo?.size ?? vec2(1);
-        const drawPos = layerPos.multiply(drawSize);
-        clear && this.clearLayerRect(drawPos, drawSize);
+        const cellPixels = this.tileInfo?.size ?? vec2(1);
+        const drawPos = layerPos.multiply(cellPixels);
+        clear && this.clearLayerRect(drawPos, cellPixels);
 
         // draw the tile if it has layer data, an empty cell has no tile and tile 0 is a tile like any other
         const d = this.getData(layerPos);
@@ -587,7 +595,7 @@ class TileLayer extends CanvasLayer
 
         // a tileset packed by loadSprite keeps its own columns, counted from its first tile, not the sheet's grid
         const t = this.tileInfo, tileInfo = t && (t.columns ? t.frame(d.tile) : t.index(d.tile));
-        this.drawLayerTile(drawPos, drawSize, tileInfo, d.color, d.direction*PI/2, d.mirror);
+        this.drawLayerTile(drawPos, cellPixels, tileInfo, d.color, d.direction*PI/2, d.mirror);
     }
 
     /** Draw the tile at a given position in the tile layer
@@ -816,13 +824,7 @@ class TileCollisionLayer extends TileLayer
     {
         ASSERT(isVector2(pos) && isVector2(size), 'pos and size must be Vector2s');
         tileCollisionAssertWhole(this);
-        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
-
-        // make function to check for collision
-        const collisionTest = callbackObject ? typeof callbackObject === 'function' ?
-            (tileData, pos)=> callbackObject(tileData, pos) :
-            (tileData, pos)=> callbackObject.collideWithTile(tileData, pos) :
-            (tileData)=> tileData > 0;
+        const collisionTest = tileCollisionTester(callbackObject);
 
         // check any tiles in the area for collision
         const posX = pos.x - this.pos.x;
@@ -859,13 +861,7 @@ class TileCollisionLayer extends TileLayer
     {
         ASSERT(isVector2(posStart) && isVector2(posEnd), 'positions must be Vector2s');
         tileCollisionAssertWhole(this);
-        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
-
-        // make function to check for collision
-        const collisionTest = callbackObject ? typeof callbackObject === 'function' ?
-            (tileData, pos)=> callbackObject(tileData, pos) :
-            (tileData, pos)=> callbackObject.collideWithTile(tileData, pos) :
-            (tileData)=> tileData > 0;
+        const collisionTest = tileCollisionTester(callbackObject);
         // the line is walked in the layer's own space, so its cells are the tiles wherever the layer sits
         const offset = this.pos;
         const testFunction = (pos)=>

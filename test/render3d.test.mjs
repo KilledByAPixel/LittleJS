@@ -1562,10 +1562,10 @@ test('HeightMap.raycast finds the ground along a ray', () =>
     // a slope from 10 high at the back to 0 at the front, straight down at the middle meets it at 5
     const slope = new HeightMap([[1, 1], [0, 0]], vec2(10, 10), 10);
     const t = slope.raycast(new Ray3D(vec3(0, 20, 0), vec3(0, -1, 0)));
-    close(t, 15); assert.ok(true, `${t}`);
+    close(t, 15);
     // a ray from the side hits the slope face, not the clamped ground beyond the edge
     const side = slope.raycast(new Ray3D(vec3(0, 2.5, 20), vec3(0, 0, -1)));
-    close(side, 17.5); assert.ok(true, `${side}`);
+    close(side, 17.5);
 });
 
 test('the stage loop sets the draw state from each object, so render3D overrides inherit it', () =>

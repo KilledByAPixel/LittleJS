@@ -979,13 +979,13 @@ class ParticleEmitter3D extends EngineObject3D
         {
             if (!quad.buffer || quad.dirty || quad.contextGeneration !== r.contextGeneration)
                 quad.upload();
-            textureInfo = texture instanceof TileInfo ? texture.textureInfo : texture;
+            textureInfo = render3DTextureOf(texture);
             uv = render3DGetTileUVs(texture);
             lit = r.lighting;
             r.lighting = r.shadowPass && lit; // unlit on screen, in the shadow map the object's flag decides
             r.cullBackFaces = r.mirrored = false;
         }
-        const cr = r.cameraRight, cu = r.cameraUp, cb = r.cameraBack, shadowPass = r.shadowPass;
+        const cb = r.cameraBack;
         const F = RENDER3D_PARTICLE_FLOATS, particles = this.particleData, trailMax = this.trailMax, pos = render3DParticlePos;
         try
         {
@@ -1014,22 +1014,14 @@ class ParticleEmitter3D extends EngineObject3D
                 }
                 else if (instanced)
                 {
-                    // the axes turned by the particle's angle in the camera plane, as drawBillboard turns them
-                    let rx = cr.x, ry = cr.y, rz = cr.z, ux = cu.x, uy = cu.y, uz = cu.z;
-                    if (angle)
-                    {
-                        const c = cos(angle), n = sin(angle);
-                        rx = cr.x * c + cu.x * n, ry = cr.y * c + cu.y * n, rz = cr.z * c + cu.z * n;
-                        ux = cu.x * c - cr.x * n, uy = cu.y * c - cr.y * n, uz = cu.z * c - cr.z * n;
-                    }
-                    const k = render3DInstanceSlot(quad, textureInfo);
+                    // the quad's half axes, turned as drawBillboard turns them, doubled for billboardMesh's unit square
+                    const a = render3DBillboardAxes(size, angle, false), k = render3DInstanceSlot(quad, textureInfo);
                     data = quad.instanceData;
-                    data[k]    = rx * s; data[k+1]  = ry * s; data[k+2]  = rz * s; data[k+3]  = 0;
-                    data[k+4]  = ux * s; data[k+5]  = uy * s; data[k+6]  = uz * s; data[k+7]  = 0;
+                    data[k]    = a[0] * 2; data[k+1] = a[1] * 2; data[k+2]  = a[2] * 2; data[k+3]  = 0;
+                    data[k+4]  = a[3] * 2; data[k+5] = a[4] * 2; data[k+6]  = a[5] * 2; data[k+7]  = 0;
                     data[k+8]  = cb.x;   data[k+9]  = cb.y;   data[k+10] = cb.z;   data[k+11] = 0;
                     data[k+12] = particles[p]; data[k+13] = particles[p+1]; data[k+14] = particles[p+2]; data[k+15] = 1;
-                    if (!shadowPass)
-                        data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a;
+                    data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a;
                     data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
                 }
                 else

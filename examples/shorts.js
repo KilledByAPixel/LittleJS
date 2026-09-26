@@ -77,7 +77,7 @@ const exampleList =
     new ExampleInfo('Post Processing', 'postProcess.js', 'Shader effects and filters', false, 'webgl, visual, effect'),
     new ExampleInfo('Object Shaders', 'shaders.js', 'Custom shaders on sprites and draws', false, 'webgl, visual, effect, Shader, setShader'),
     new ExampleInfo('Light System', 'lightSystem.js', 'Soft additive 2D lights', false, 'webgl, visual, lighting, additive, color, glow'),
-    new ExampleInfo('Light Shadows', 'lightShadows.js', 'Lights blocked by walls and tinted by glass', false, 'webgl, visual, lighting, shadow, shadows, glass, castShadow, renderShadow'),
+    new ExampleInfo('Light Shadows', 'lightShadows.js', 'Lights blocked by walls and tinted by glass', false, 'webgl, visual, lighting, shadow, shadows, glass, castShadow, emissive'),
     new ExampleInfo('--- BOX2D PHYSICS ---'),
     new ExampleInfo('Box2D Demo', 'box2d.js', 'Box2D physics plugin', false, 'objects, mouse'),
     new ExampleInfo('Box2D Car', 'box2dCar.js', 'Drivable car with Box2D physics', false, 'objects, vehicle, suspension, wheels'),

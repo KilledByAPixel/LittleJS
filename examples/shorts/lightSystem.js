@@ -12,11 +12,12 @@ function gameInit()
     new Light(vec2( 0, 4), 4, GREEN);
     new Light(vec2( 6, 0), 8, BLUE);
 
-    // emissive object
+    // a glowing object: renderLight adds light around it to the
+    // lightmap, where obj.emissive would only show its own colors
     const lava = new EngineObject(vec2(0, -5), vec2(2));
     lava.renderLight = function()
     {
-        // additive emissive into the lightmap
+        // drawn additively into the lightmap
         drawRect(this.pos, vec2(2), ORANGE);
     }
 

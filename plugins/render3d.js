@@ -44,7 +44,7 @@ const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
 const RENDER3D_SHADOW_COLOR = Object.freeze(hsl(0, 0, 0, .5));
 const RENDER3D_IDENTITY = new Matrix4; // never modified
 const RENDER3D_DEBUG_WIDTH = .05; // line width of the debug primitives
-let render3DShadowCut; // the cut last sent to the shadow shader, see render3DApplyDrawState
+let render3DShadowCut; // the cut last sent to the shadow shader, see render3DSetDrawUniforms
 ///////////////////////////////////////////////////////////////////////////////
 // Private helpers
 
@@ -208,6 +208,8 @@ function render3DSetObjectState(o)
     ASSERT(!o?.shader || o.shader instanceof Shader, 'shader must be a Shader, not the snippet itself');
     r.shader = o?.shader || undefined; // null is no shader too, so it batches with none
     r.depthTest = true;
+    if (r.shadowPass)
+        r.blend = !!o?.transparent; // the depth shader cuts a see through caster by the alpha it would blend with
 }
 
 // draw objects each with the draw state set from its own flags, then reset to the defaults
@@ -224,9 +226,11 @@ function render3DDrawObjects(objects)
 // add a draw of a mesh to its batch; a batch is one mesh under one texture and draw state, so a change flushes it
 function render3DInstance(mesh, matrix, tileInfo, color)
 {
-    const k = render3DInstanceSlot(mesh, tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo), data = mesh.instanceData;
+    const k = render3DInstanceSlot(mesh, render3DTextureOf(tileInfo)), data = mesh.instanceData;
     data.set(matrix.m, k);
-    data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a; // the depth shader cuts by its alpha
+    // the tint; this batch is never blended, so in the shadow pass the depth shader cuts it by its texture alpha
+    // alone, a see through caster draws blended instead and is cut by its tint alpha too
+    data[k+16] = color.r, data[k+17] = color.g, data[k+18] = color.b, data[k+19] = color.a;
     const uv = render3DGetTileUVs(tileInfo);
     data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
 }
@@ -1746,7 +1750,7 @@ function render3DUpdateSamplers()
 function render3DBindTexture(tileInfo, state=render3D)
 {
     const gl = glContext, r = render3D;
-    const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
+    const textureInfo = render3DTextureOf(tileInfo);
     const texture = textureInfo?.glTexture || r.whiteTexture;
     gl.bindTexture(gl.TEXTURE_2D, texture);
     if (texture === r.whiteTexture || !r.mipmaps && !state.pixelated)
@@ -1797,6 +1801,9 @@ function render3DBindMesh(mesh)
     glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
 }
 
+// the texture a draw samples: a tile's texture, a TextureInfo as it is, or undefined for white
+function render3DTextureOf(tileInfo) { return tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo; }
+
 // where a tile sits in its texture, pulled in slightly at the edges so neighbors do not bleed in
 // this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
@@ -1816,7 +1823,8 @@ function render3DGetTileUVs(tileInfo)
     return rect;
 }
 
-// set the per draw uniforms and gl state for a draw, in the shadow pass only the model matrix of the depth shader
+// set the per draw uniforms and gl state for a draw, in the shadow pass only the per draw attributes, the texture
+// and the depth shader's cut
 // tileInfo may be a TileInfo, a TextureInfo, or undefined for the white texture
 // state is the plugin's current fields, or the captured state of a stream batch
 function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
@@ -1872,7 +1880,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     render3DUniform4f('shadowParams', r.shadows && r.passIsDefault && state.receiveShadow ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, blendMode);
 
     // a render target's texture holds premultiplied color, the blend writes it that way, so the shader undoes it
-    const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
+    const textureInfo = render3DTextureOf(tileInfo);
     render3DUniform1i('premultipliedTexture', +!!(textureInfo?.glTexture && glPremultipliedTextures.has(textureInfo.glTexture)));
 }
 
@@ -1947,6 +1955,10 @@ function render3DRenderPass(after2D)
     // the leading repeat on every strip shifts the triangles by one, which flips
     // which way they read, so tell WebGL that clockwise is the front here
     gl.frontFace(gl.CW);
+    // every program's shadow sampler is on unit 1, where a 2D plugin like PostProcessPlugin or LightSystemPlugin
+    // may have left its own texture, which fails every draw; the shadow map goes back there even with shadows off
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture || null);
     gl.activeTexture(gl.TEXTURE0);
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT);
@@ -2073,7 +2085,7 @@ function render3DBeginStrip(count, tileInfo)
     if (r.shadowPass && !r.lighting) return; // unlit things cast no shadow
     ASSERT(count <= RENDER3D_MAX_STREAM_VERTS, 'strip is too large for the stream, bake it into a mesh');
     if (count > RENDER3D_MAX_STREAM_VERTS) return;
-    const textureInfo = tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo;
+    const textureInfo = render3DTextureOf(tileInfo);
     if (r.streamCount && (textureInfo !== r.streamTileInfo || render3DStateChanged(r.streamState)
         || r.streamCount + count > RENDER3D_MAX_STREAM_VERTS))
         r.flush();
@@ -2231,6 +2243,19 @@ const render3DMeshBuffers = typeof FinalizationRegistry == 'undefined' ? undefin
         glContext.deleteBuffer(buffer);
         glContext.deleteBuffer(indexBuffer);
     });
+
+// the place a point is at, to a hundred thousandth, which smooth normals are summed by
+function render3DPlaceKey(p) { return `${round(p.x * 1e5)},${round(p.y * 1e5)},${round(p.z * 1e5)}`; }
+
+// add a face normal to the sum at a triangle's corner a, weighted by the angle there, so a cube corner averages its
+// three faces evenly however it is cut into triangles
+function render3DAddCornerNormal(sums, a, b, c, normal)
+{
+    const u = b.subtract(a), v = c.subtract(a);
+    const angle = Math.acos(clamp(u.dot(v) / (u.length() * v.length() || 1), -1, 1));
+    const k = render3DPlaceKey(a);
+    sums.set(k, (sums.get(k) || vec3()).add(normal.scale(angle)));
+}
 
 /**
  * Mesh - Triangles with positions, normals, uvs and colors, uploaded once and drawn by matrix
@@ -2424,7 +2449,7 @@ class Mesh
         }
         else if (mirrors && part.points.length)
         {
-            // a strip reads the other way round with one more point at each end, as in flipNormals
+            // a strip reads the other way round with one more point at each end, as render3DFlipWinding does
             const last = part.points.length - 1;
             order = [0, ...part.points.keys(), last];
         }
@@ -2556,7 +2581,6 @@ class Mesh
                 this.indices = this.indices.map((_, i)=> i);
             }
             const points = this.points, indices = this.indices, normals = points.map(()=> RENDER3D_DEFAULT_NORMAL), sums = new Map;
-            const key = (p)=> `${round(p.x * 1e5)},${round(p.y * 1e5)},${round(p.z * 1e5)}`;
             for (let t = 0; t < indices.length; t += 3)
             {
                 const a = points[indices[t]], b = points[indices[t+1]], c = points[indices[t+2]];
@@ -2569,14 +2593,9 @@ class Mesh
                     continue;
                 }
                 for (let j = 0; j < 3; ++j)
-                {
-                    const p = points[indices[t+j]], u = points[indices[t+(j+1)%3]].subtract(p), v = points[indices[t+(j+2)%3]].subtract(p);
-                    const angle = Math.acos(clamp(u.dot(v) / (u.length() * v.length() || 1), -1, 1));
-                    const k = key(p);
-                    sums.set(k, (sums.get(k) || vec3()).add(normal.scale(angle)));
-                }
+                    render3DAddCornerNormal(sums, points[indices[t+j]], points[indices[t+(j+1)%3]], points[indices[t+(j+2)%3]], normal);
             }
-            this.normals = smooth ? points.map(p=> { const s = sums.get(key(p)); return s && s.lengthSquared() ? s.normalize() : RENDER3D_DEFAULT_NORMAL; }) : normals;
+            this.normals = smooth ? points.map(p=> { const s = sums.get(render3DPlaceKey(p)); return s && s.lengthSquared() ? s.normalize() : RENDER3D_DEFAULT_NORMAL; }) : normals;
             this.dirty = true;
             return this;
         }
@@ -2600,16 +2619,10 @@ class Mesh
             // add up the face normals meeting at each position, each weighted by its corner angle so a cube
             // corner averages its three faces evenly however the strips cut them, then normalize
             const sums = new Map;
-            const key = (p)=> `${round(p.x * 1e5)},${round(p.y * 1e5)},${round(p.z * 1e5)}`;
             faceNormals.forEach((f, i)=> f && [0, 1, 2].forEach(j=>
-            {
-                const a = points[i + j], u = points[i + (j + 1) % 3].subtract(a), v = points[i + (j + 2) % 3].subtract(a);
-                const angle = Math.acos(clamp(u.dot(v) / (u.length() * v.length() || 1), -1, 1));
-                const k = key(a);
-                sums.set(k, (sums.get(k) || vec3()).add(f.scale(angle)));
-            }));
+                render3DAddCornerNormal(sums, points[i+j], points[i+(j+1)%3], points[i+(j+2)%3], f)));
             for (let i = 0; i < n; ++i)
-                normals[i] = (sums.get(key(points[i])) || RENDER3D_DEFAULT_NORMAL).normalize();
+                normals[i] = (sums.get(render3DPlaceKey(points[i])) || RENDER3D_DEFAULT_NORMAL).normalize();
         }
         else
             // every triangle writes its own three corners, so the only vertices left with the default
@@ -3804,7 +3817,7 @@ class InstancedMesh3D extends EngineObject3D
         r.depthTest || r.shadowPass || render3DFlushInstances(); // as in drawMesh, what was drawn before goes under it
         const cullBackFaces = r.cullBackFaces, tileInfo = this.tileInfo;
         r.cullBackFaces = !mesh.doubleSided;
-        render3DDrawInstanced(mesh, this.buffer, this.count, tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo, r);
+        render3DDrawInstanced(mesh, this.buffer, this.count, render3DTextureOf(tileInfo), r);
         r.cullBackFaces = cullBackFaces;
     }
 

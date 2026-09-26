@@ -245,19 +245,24 @@ class EngineObject
                 if (!this.isOverlappingObject(o)) continue;
 
                 // each moving object checks its own contacts, so a pair the other one already asked about this frame
-                // and left overlapping, ignored or only nudged apart, is not asked twice
-                if (engineObjectsCollidePairAsked(o, this)) continue;
-
-                // notify objects of collision and check if should be resolved
-                const collide1 = this.collideWithObject(o);
-                const collide2 = o.collideWithObject(this);
-                if (!collide1 || !collide2)
+                // is not asked twice: left overlapping, ignored or only nudged apart it is skipped, and one both said
+                // to resolve, pushed back together since, is resolved again
+                const answer = engineObjectsCollidePairAnswer(o, this);
+                if (answer === false) continue;
+                if (!answer)
                 {
-                    engineObjectsCollidePairAdd(this, o);
-                    continue;
+                    // notify objects of collision and check if should be resolved
+                    const collide1 = this.collideWithObject(o);
+                    const collide2 = o.collideWithObject(this);
+                    if (!collide1 || !collide2)
+                    {
+                        engineObjectsCollidePairAdd(this, o);
+                        continue;
+                    }
                 }
 
-                if (isOverlapping(oldPos, this.size, o.pos, o.size) && (!o.mass || o.groundObject))
+                const wasOverlapping = isOverlapping(oldPos, this.size, o.pos, o.size);
+                if (wasOverlapping && (!o.mass || o.groundObject))
                 {
                     // a static solid that moved into it, like a door or an elevator, pushes it out the shortest way
                     // at once and carries it along, it would only drift out slowly and the solid would pass through;
@@ -289,7 +294,7 @@ class EngineObject
                     debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
                 }
-                if (isOverlapping(oldPos, this.size, o.pos, o.size))
+                if (wasOverlapping)
                 {
                     // if already was touching, try to push away
                     const deltaPos = oldPos.subtract(o.pos);
@@ -327,7 +332,7 @@ class EngineObject
                         // platform moving down instead of landing on it again every few frames
                         this.velocity.y = o.velocity.y - (this.velocity.y - o.velocity.y) * restitution;
                     }
-                    else if (o.mass)
+                    else // o has mass here, the other branch already handled the massless case
                     {
                         // inelastic collision
                         const inelastic = (this.mass * this.velocity.y + o.mass * o.velocity.y) / (this.mass + o.mass);
@@ -365,6 +370,7 @@ class EngineObject
                     else // bounce if other object is fixed, relative to it as a landing is
                         this.velocity.x = o.velocity.x - (this.velocity.x - o.velocity.x) * restitution;
                 }
+                engineObjectsCollidePairAdd(this, o, true);
                 debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
             }
         }
@@ -384,18 +390,14 @@ class EngineObject
                     const restitution = max(this.restitution, hitLayer.restitution);
                     if (isBlockedX)
                     {
-                        // try to step over a 1-tile bump (direction follows gravity sign
-                        // so inverted gravity steps down off a ceiling bump instead of up;
-                        // zero gravity defaults to the normal-gravity step-up direction)
+                        // a ledge caught less than maxMove below its top lifts the object onto it instead of stopping it,
+                        // down off a ceiling ledge when gravity points up; zero gravity counts as down
                         const epsilon = 1e-3;
                         const maxMove = .1;
-                        const gravitySign = gravityY > 0 ? -1 : 1;
-                        const y = gravitySign > 0 ?
-                            floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon :
-                            ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon;
-                        const delta = abs(y - this.pos.y);
-                        if (delta < maxMove)
-                        if (!tileCollisionTest(vec2(this.pos.x, y), this.size, this))
+                        const y = gravityY > 0 ?
+                            ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon :
+                            floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon;
+                        if (abs(y - this.pos.y) < maxMove && !tileCollisionTest(vec2(this.pos.x, y), this.size, this))
                         {
                             this.pos.y = y;
                             debugPhysics && debugRect(this.pos, this.size, '#ff0');
@@ -533,16 +535,19 @@ class EngineObject
     getSpeed() { return this.velocity.length(); }
 
     /** Apply acceleration to this object (adjust velocity, not affected by mass)
+     *  - Does nothing on a static object (mass 0), set its velocity instead
      *  @param {Vector2} acceleration */
     applyAcceleration(acceleration)
     { if (this.mass) this.velocity = this.velocity.add(acceleration); }
 
     /** Apply angular acceleration to this object
+     *  - Does nothing on a static object (mass 0), set its angleVelocity instead
      *  @param {number} acceleration */
     applyAngularAcceleration(acceleration)
     { if (this.mass) this.angleVelocity += acceleration; }
 
     /** Apply force to this object (adjust velocity, affected by mass)
+     *  - Does nothing on a static object (mass 0), set its velocity instead
      *  @param {Vector2} force */
     applyForce(force)
     { if (this.mass) this.applyAcceleration(force.scale(1/this.mass)); }
@@ -599,8 +604,7 @@ class EngineObject
         child.parent = child.localPos = undefined;
     }
 
-    /** Check if overlapping another engine object
-     *  Collisions are resolved to prevent overlaps
+    /** Check if this object's box overlaps another object's box
      *  @param {EngineObject} object
      *  @return {boolean} */
     isOverlappingObject(object)
@@ -641,8 +645,7 @@ class EngineObject
             text += '\nsize = ' + this.size;
         if (this.angle)
             text += '\nangle = ' + this.angle.toFixed(3);
-        if (this.color)
-            text += '\ncolor = ' + this.color;
+        text += '\ncolor = ' + this.color;
         return text;
     }
 

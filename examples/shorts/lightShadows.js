@@ -14,8 +14,7 @@ class Glass extends Wall
 {
     constructor(pos, size, color)
     {
-        super(pos, size);
-        this.color = color;
+        super(pos, size, undefined, color);
     }
     render()
     {

@@ -145,10 +145,11 @@ class UISystemPlugin
         /** @private */
         this._onKeyDown = (e) =>
         {
-            // a field that was hidden, disabled or destroyed since it took focus does not take the key, the game gets
-            // it, and the next UI update ends the edit, so it ends one way whichever comes first
+            // a field that was hidden, disabled or destroyed since it took focus, or is behind a confirm dialog opened
+            // since, does not take the key, the game gets it, and the next UI update ends the edit, so it ends one
+            // way whichever comes first
             const o = this._keyInputObject;
-            if (!o || !uiObjectIsUsable(o)) return;
+            if (!o || !uiObjectIsUsable(o) || uiObjectIsBehindDialog(o)) return;
 
             // the field has the key, the game's input never sees it; browser shortcuts still work,
             // and only the keys a field uses lose their default, so F5, F11, F12 and the like still work
@@ -203,9 +204,10 @@ class UISystemPlugin
                 uiSystem.activeObject = undefined;
                 activeObject.destroyed || activeObject === uiSystem.keyInputObject || activeObject.onRelease();
             }
-            // an edit whose field can no longer be used ends as if it were finished, so onChange keeps the text
+            // an edit whose field can no longer be used, or is behind a confirm dialog, ends as if it were finished,
+            // so onChange keeps the text
             const keyInputObject = uiSystem.keyInputObject;
-            if (keyInputObject && !uiObjectIsUsable(keyInputObject))
+            if (keyInputObject && (!uiObjectIsUsable(keyInputObject) || uiObjectIsBehindDialog(keyInputObject)))
             {
                 if (keyInputObject instanceof UITextInput && !keyInputObject.destroyed)
                     keyInputObject.stopEditing();
@@ -422,15 +424,7 @@ class UISystemPlugin
         }
         else
             context.fillStyle = color.toString();
-        if (shadowBlur || shadowOffset.x || shadowOffset.y)
-        if (shadowColor.a > 0)
-        {
-            // setup shadow
-            context.shadowColor = shadowColor.toString();
-            context.shadowBlur = shadowBlur;
-            context.shadowOffsetX = shadowOffset.x;
-            context.shadowOffsetY = shadowOffset.y;
-        }
+        uiSetShadow(context, shadowColor, shadowBlur, shadowOffset);
         context.beginPath();
         if (cornerRadius && context['roundRect'])
             context['roundRect'](pos.x-size.x/2, pos.y-size.y/2, size.x, size.y, cornerRadius);
@@ -495,15 +489,7 @@ class UISystemPlugin
     drawTile(pos, size, tileInfo, color=uiSystem.defaultColor, angle=0, mirror=false, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         const context = uiSystem.uiContext;
-        if (shadowBlur || shadowOffset.x || shadowOffset.y)
-        if (shadowColor.a > 0)
-        {
-            // setup shadow
-            context.shadowColor = shadowColor.toString();
-            context.shadowBlur = shadowBlur;
-            context.shadowOffsetX = shadowOffset.x;
-            context.shadowOffsetY = shadowOffset.y;
-        }
+        uiSetShadow(context, shadowColor, shadowBlur, shadowOffset);
         drawTile(pos, size, tileInfo, color, angle, mirror, CLEAR_BLACK, false, true, context);
         context.shadowColor = '#0000';
     }
@@ -526,19 +512,9 @@ class UISystemPlugin
     drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true, textShadow=undefined, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         const context = uiSystem.uiContext;
-        if (shadowColor.a > 0)
-        {
-            if (textShadow)
-                drawTextScreen(text, pos.add(textShadow), size.y, shadowColor, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
-            if (shadowBlur || shadowOffset.x || shadowOffset.y)
-            {
-                // setup shadow
-                context.shadowColor = shadowColor.toString();
-                context.shadowBlur = shadowBlur;
-                context.shadowOffsetX = shadowOffset.x;
-                context.shadowOffsetY = shadowOffset.y;
-            }
-        }
+        if (textShadow && shadowColor.a > 0)
+            drawTextScreen(text, pos.add(textShadow), size.y, shadowColor, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
+        uiSetShadow(context, shadowColor, shadowBlur, shadowOffset);
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
         context.shadowColor = '#0000';
     }
@@ -660,13 +636,12 @@ class UISystemPlugin
         }
 
         // get all the valid navigable objects recursively
-        let objects = [];
-        for (const o of uiSystem.uiObjects)
-        {
-            if (uiSystem.confirmDialog && o !== uiSystem.confirmDialog)
-                continue;
+        // while the confirm dialog is open only its buttons can be navigated
+        const objects = [];
+        if (uiSystem.confirmDialog)
+            getNavigableRecursive(uiSystem.confirmDialog);
+        else for (const o of uiSystem.uiObjects)
             o.parent || getNavigableRecursive(o);
-        }
 
         // sort by navigationIndex (lower numbers first), ties keep creation and child order
         objects.sort((a, b)=> a.navigationIndex - b.navigationIndex);
@@ -766,6 +741,7 @@ class UISystemPlugin
         ASSERT(!uiSystem.confirmDialog, 'a confirm dialog is already open, check uiSystem.confirmDialog');
 
         const savedNavigationDirection = uiSystem.navigationDirection;
+        const savedNavigationObject = uiSystem.navigationObject;
 
         // allow both axes for navigation
         uiSystem.navigationDirection = 2;
@@ -817,16 +793,19 @@ class UISystemPlugin
         confirmMenu.addChild(buttonNo);
 
         // return to normal navigation however the menu goes, by its buttons,
-        // destroyObjects or a call to its destroy
+        // destroyObjects or a call to its destroy, with the item that opened it selected again
         const destroy = confirmMenu.destroy.bind(confirmMenu);
         confirmMenu.destroy = ()=>
         {
-            if (uiSystem.confirmDialog === confirmMenu)
+            const closing = uiSystem.confirmDialog === confirmMenu;
+            if (closing)
             {
                 uiSystem.confirmDialog = undefined;
                 uiSystem.navigationDirection = savedNavigationDirection;
             }
-            destroy();
+            destroy(); // its buttons go, and the one selected clears the selection
+            if (closing && savedNavigationObject && !savedNavigationObject.destroyed)
+                uiSystem.navigationObject = savedNavigationObject;
         };
 
         // close menu and clear the input that closed it
@@ -845,6 +824,30 @@ function uiObjectIsUsable(o)
 {
     for (; o; o = o.parent)
         if (o.destroyed || !o.visible || o.disabled)
+            return false;
+    return true;
+}
+
+// set the canvas shadow for the next draw, when it has a color and a blur or an offset; the caller clears it
+function uiSetShadow(context, shadowColor, shadowBlur, shadowOffset)
+{
+    if (shadowColor.a > 0 && (shadowBlur || shadowOffset.x || shadowOffset.y))
+    {
+        context.shadowColor = shadowColor.toString();
+        context.shadowBlur = shadowBlur;
+        context.shadowOffsetX = shadowOffset.x;
+        context.shadowOffsetY = shadowOffset.y;
+    }
+}
+
+// whether an open confirm dialog shuts a UI object out, it is modal: all but the dialog and what is in it
+function uiObjectIsBehindDialog(o)
+{
+    const dialog = uiSystem.confirmDialog;
+    if (!dialog)
+        return false;
+    for (; o; o = o.parent)
+        if (o === dialog)
             return false;
     return true;
 }
@@ -1267,7 +1270,8 @@ class UIObject
     /** Called when the mouse is pressed while over the object */
     onPress() {}
 
-    /** Called when the mouse is released while over the object */
+    /** Called when a press on it ends, wherever the mouse is let go, or when it is disabled or hidden while held, or
+     *  an edit takes the press; onClick is the one for a press let go over it */
     onRelease() {}
 
     /** Called when user clicks on this object */
@@ -1394,11 +1398,11 @@ class UITextInput extends UIObject
     }
 
     /** Key down event handler if this object is being edited
-     *  @param {KeyboardEvent} [e] */
+     *  @param {KeyboardEvent} e */
     onKeyDown(e)
     {
         // named keys by key, so numpad Enter works as Enter
-        const code = e.code, key = e.key
+        const code = e.code, key = e.key;
         if (e.repeat && (key === 'Enter' || code === 'Space'))
             return; // a key held when editing began repeats, it should not type or stop editing
         this.text += ''; // a game may have set a number
@@ -1687,6 +1691,7 @@ class UISlider extends UIObject
         const isHorizontal = this.size.x > this.size.y;
         const barWidth = isHorizontal ? this.size.x : this.size.y;
         const handleWidth = isHorizontal ? this.size.y : this.size.x;
+        const color = uiObjectIsDisabled(this) ? this.disabledColor : this.handleColor;
         if (this.fillMode)
         {
             // draw progress bar
@@ -1694,7 +1699,6 @@ class UISlider extends UIObject
             const progressWidth = lerp(minWidth, barWidth, this.value);
             const p = (progressWidth - barWidth) * (isHorizontal ? .5 : -.5);
             const pos = this.nativePos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
-            const color = uiObjectIsDisabled(this) ? this.disabledColor : this.handleColor;
             const drawSize = isHorizontal ? 
                 vec2(progressWidth, this.size.y) : vec2(this.size.x, progressWidth);
             this.drawHandle(pos, drawSize, color);
@@ -1705,7 +1709,6 @@ class UISlider extends UIObject
             const value = clamp(isHorizontal ? this.value : 1 - this.value);
             const p = (barWidth - handleWidth) * (value - .5);
             const pos = this.nativePos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
-            const color = uiObjectIsDisabled(this) ? this.disabledColor : this.handleColor;
             const drawSize = vec2(handleWidth);
             this.drawHandle(pos, drawSize, color);
         }

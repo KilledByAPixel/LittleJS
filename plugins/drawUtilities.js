@@ -29,7 +29,7 @@ function drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, a
 }
 
 /** Draw a scalable nine-slice UI element in world space
- *  This function can apply color and additive color if WebGL is enabled
+ *  Color and additive color apply in WebGL and Canvas2D (with canvasColorTiles)
  *  The nine-slice samples a 3x3 block of tiles from the tilesheet, it does not
  *  subdivide a single tile. Pass the top-left tile of that block as startTile;
  *  the other 8 tiles (edges, corners, and center) are taken automatically from
@@ -113,7 +113,7 @@ function drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, 
 }
 
 /** Draw a scalable three-slice UI element in world space
- *  This function can apply color and additive color if WebGL is enabled
+ *  Color and additive color apply in WebGL and Canvas2D (with canvasColorTiles)
  *  The three-slice samples 3 consecutive tiles from the tilesheet, it does not
  *  subdivide a single tile. Pass the first tile as startTile; the three tiles
  *  are used in order as corner, side, and center, then rotated and mirrored to
@@ -272,10 +272,13 @@ function drawSliceSnapped(pos, size, borderSize, pieceTile, color, additiveColor
         [transform.a || 1, transform.d || 1, transform.e || 0, transform.f || 0] : [ratio, ratio, 0, 0];
     const edges = (center, length, scale, offset)=>
     {
+        // snapped in device order, which a mirrored context reverses, then put back in the box's own order
         const border = max(1, round(borderSize * abs(scale)));
-        const start = round((center - length/2) * scale + offset), end = start + round(length * scale);
+        const a = round((center - length/2) * scale + offset), b = a + round(length * scale);
+        const start = min(a, b), end = max(a, b);
         const inner = min(start + border, floor((start + end)/2)); // a box too small for two borders splits
-        return [start, inner, max(end - border, inner), end].map(edge=> (edge - offset) / scale);
+        const device = [start, inner, max(end - border, inner), end];
+        return (scale < 0 ? device.reverse() : device).map(edge=> (edge - offset) / scale);
     };
     const xs = edges(pos.x, size.x, scaleX, offsetX), ys = edges(pos.y, size.y, scaleY, offsetY);
     const shift = .5; // a screen space draw lands half a pixel past its position, in Canvas2D and WebGL alike
@@ -293,7 +296,8 @@ function drawSliceSnapped(pos, size, borderSize, pieceTile, color, additiveColor
 
 /** Draw a crescent / moon-phase shape built from a polygon
  *  Routes through drawPoly, so it supports WebGL, screen space, color, and outlines
- *  - At angle 0 the lit side faces up, and the lit width grows evenly with the phase, not as the real moon's does
+ *  - At angle 0 the lit side faces up while waxing (percent below .5) and down while waning, and the lit width
+ *    grows evenly with the phase, not as the real moon's does
  *  @param {Vector2} pos - Center position
  *  @param {number}  [size] - Diameter
  *  @param {number}  [percent] - Moon phase over a full cycle (0=new, .25=first quarter, .5=full, .75=last quarter), wraps
@@ -319,7 +323,7 @@ function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false
  *  @param {number}  [size] - Diameter
  *  @param {number}  [percent] - Moon phase over a full cycle (0=new, .25=first quarter, .5=full, .75=last quarter), wraps
  *  @param {number}  [angle] - Angle to rotate by
- *  @param {boolean} [invert] - Flip which side is illuminated
+ *  @param {boolean} [invert] - The unlit part of the disk instead of the lit part
  *  @param {number}  [sides=glCircleSides] - Number of sides for a full circle (halved per arc)
  *  @return {Array<Vector2>} - List of points making up the crescent
  *  @memberof DrawUtilities */
@@ -333,7 +337,7 @@ function getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=
     if (p >= 2)                // second half of cycle flips orientation
         angle += PI;
     p = p <= 2 ? p-1 : 3-p;
-    if (invert)                // flip the illuminated side
+    if (invert)                // the unlit part: the other side of the same curve
     {
         p = -p;
         angle += PI;

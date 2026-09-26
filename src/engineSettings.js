@@ -589,12 +589,12 @@ function setEnablePhysicsSolver(enable) { enablePhysicsSolver = enable; }
  *  @memberof Settings */
 function setObjectDefaultMass(mass) { objectDefaultMass = mass; }
 
-/** Set how much to slow velocity by each frame
+/** Set the fraction of velocity objects keep each frame, 1 keeps all of it, 0 stops at once
  *  @param {number} damp
  *  @memberof Settings */
 function setObjectDefaultDamping(damp) { objectDefaultDamping = damp; }
 
-/** Set how much to slow angular velocity each frame
+/** Set the fraction of angular velocity objects keep each frame, 1 keeps all of it, 0 stops at once
  *  @param {number} damp
  *  @memberof Settings */
 function setObjectDefaultAngleDamping(damp) { objectDefaultAngleDamping = damp; }
@@ -604,7 +604,7 @@ function setObjectDefaultAngleDamping(damp) { objectDefaultAngleDamping = damp; 
  *  @memberof Settings */
 function setObjectDefaultRestitution(restitution) { objectDefaultRestitution = restitution; }
 
-/** Set how much to slow when touching
+/** Set the fraction of sliding speed objects keep each frame on the ground, 1 is no friction, 0 stops at once
  *  @param {number} friction
  *  @memberof Settings */
 function setObjectDefaultFriction(friction) { objectDefaultFriction = friction; }
@@ -619,7 +619,7 @@ function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
  *  @memberof Settings */
 function setGravity(newGravity) { gravity = newGravity.copy(); }
 
-/** Set to scales emit rate of particles
+/** Set the scale for the emit rate of particles, 0 disables particle emitters
  *  @param {number} scale
  *  @memberof Settings */
 function setParticleEmitRateScale(scale) { particleEmitRateScale = scale; }
@@ -639,7 +639,7 @@ function setGamepadDirectionEmulateStick(enable) { gamepadDirectionEmulateStick 
  *  @memberof Settings */
 function setGamepadAxisFilterEnable(enable) { gamepadAxisFilterEnable = enable; }
 
-/** Set if true the WASD keys are also routed to the direction keys
+/** Set if the WASD keys are also routed to the direction keys
  *  @param {boolean} enable
  *  @memberof Settings */
 function setInputWASDEmulateDirection(enable) { inputWASDEmulateDirection = enable; }
@@ -717,7 +717,7 @@ function setTouchGamepadAnalog(analog) { touchGamepadAnalog = analog; }
  *  @memberof Settings */
 function setTouchGamepadFloating(floating) { touchGamepadFloating = floating; }
 
-/** Set size of virtual gamepad for touch devices in pixels
+/** Set size of virtual gamepad for touch devices in viewport CSS pixels
  *  @param {number} size
  *  @memberof Settings */
 function setTouchGamepadSize(size) { touchGamepadSize = size; }
@@ -742,7 +742,7 @@ function setTouchGamepadVibration(ms) { touchGamepadVibration = ms; }
  *  @memberof Settings */
 function setVibrateEnable(enable) { vibrateEnable = enable; }
 
-/** Set to disable all audio code
+/** Set if audio is enabled, false turns all sound off
  *  @param {boolean} enable
  *  @memberof Settings */
 function setSoundEnable(enable) { soundEnable = enable; }

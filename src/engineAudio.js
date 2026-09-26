@@ -158,12 +158,30 @@ function setAudioMasterEffect(input, output)
 // get one of an effect's nodes, or the thing itself when it is already a node
 /** @param {AudioNode|AudioEffectNodes|undefined} effectOrNode
  *  @param {'input'|'output'} key
- *  @return {AudioNode} */
+ *  @return {AudioNode}
+ *  @ignore */
 function audioEffectNode(effectOrNode, key)
 {
     if (effectOrNode && 'input' in effectOrNode)
         return /** @type {AudioEffectNodes} */ (effectOrNode)[key];
     return /** @type {AudioNode} */ (effectOrNode);
+}
+
+// ramp an audio param to a value, cancelling anything already scheduled so stacked calls don't fight;
+// returns when the ramp ends
+function audioParamRamp(param, value, fadeTime=0)
+{
+    ASSERT(fadeTime >= 0, 'fadeTime must be positive or zero');
+    const startTime = audioContext.currentTime;
+    param.cancelScheduledValues(startTime);
+    if (fadeTime)
+    {
+        param.setValueAtTime(param.value, startTime);
+        param.linearRampToValueAtTime(value, startTime + fadeTime);
+    }
+    else
+        param.value = value;
+    return startTime + fadeTime;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -223,8 +241,8 @@ class Sound
         this.sampleRate = audioDefaultSampleRate;
         /** @property {number} - How many samples per channel this sound has */
         this.sampleLength = 0;
-        /** @property {AudioBuffer} - Decoded audio shared by every play of this sound
-         *  @type {AudioBuffer} */
+        /** @property {AudioBuffer|undefined} - Decoded audio shared by every play of this sound
+         *  @type {AudioBuffer|undefined} */
         this.sampleBuffer = undefined;
         /** @ignore internal, the 3D plugin reads it to know the sound has loaded
          *  @type {Array<Array<number>|Float32Array>|undefined} */
@@ -235,9 +253,9 @@ class Sound
         /** @property {SoundLoadCallback|undefined} - function to call when sound is loaded
          *  @type {SoundLoadCallback|undefined} */
         this.onloadCallback = onloadCallback;
-        /** @property {AudioNode|AudioEffectNodes} - Node or effect to route every play of this sound through instead of the master gain
+        /** @property {AudioNode|AudioEffectNodes|undefined} - Node or effect to route every play of this sound through instead of the master gain
          *  - Where this sound's audio goes, unlike AudioEffect.output which is an effect's own node, effects chain with connect()
-         *  @type {AudioNode|AudioEffectNodes} */
+         *  @type {AudioNode|AudioEffectNodes|undefined} */
         this.output = undefined;
 
         if (isArray(asset))
@@ -271,7 +289,7 @@ class Sound
      *  Sounds keep their samples in an audio buffer, so reading this rebuilds
      *  the arrays from it and caches them. The copies are safe to hold onto,
      *  playing a sound detaches the buffer's own channel arrays.
-     *  @type {Array<Array<number>|Float32Array>} */
+     *  @return {Array<Array<number>|Float32Array>|undefined} */
     get sampleChannels()
     {
         const buffer = this.sampleBuffer;
@@ -496,8 +514,8 @@ class SoundInstance
         /** @property {AudioBufferSourceNode|undefined} - Source node of the audio, undefined while not playing
          *  @type {AudioBufferSourceNode|undefined} */
         this.source = undefined;
-        /** @property {AudioNode|AudioEffectNodes} - Node or effect to route this instance through, copied from the sound
-         *  @type {AudioNode|AudioEffectNodes} */
+        /** @property {AudioNode|AudioEffectNodes|undefined} - Node or effect to route this instance through, copied from the sound
+         *  @type {AudioNode|AudioEffectNodes|undefined} */
         this.output = sound.output;
         /** @property {AudioEndedCallback|undefined} - Called when this instance plays to its end, not when it is stopped
          *  or paused; it is read when the sound ends, so it can be set at any time
@@ -569,20 +587,7 @@ class SoundInstance
         ASSERT(volume >= 0, 'Sound volume must be positive or zero');
         ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
         this.volume = volume;
-        if (!this.gainNode) return;
-
-        // drop any fade still scheduled so stacked calls don't fight,
-        // then ramp from wherever the gain is now or jump straight there
-        const gain = this.gainNode.gain;
-        const startFade = audioContext.currentTime;
-        gain.cancelScheduledValues(startFade);
-        if (fadeTime)
-        {
-            gain.setValueAtTime(gain.value, startFade);
-            gain.linearRampToValueAtTime(volume, startFade + fadeTime);
-        }
-        else
-            gain.value = volume;
+        this.gainNode && audioParamRamp(this.gainNode.gain, volume, fadeTime);
     }
 
     /** Set the stereo pan of this sound instance, while it plays too
@@ -627,15 +632,8 @@ class SoundInstance
                 // ramp off gain from where it is now (not 1, or low-volume
                 // instances would jump back up before fading, and a volume
                 // fade in flight carries on down from its current point);
-                // cancel any prior scheduling so stacked stop calls don't
-                // re-anchor partway through a previous fade
-                const gain = this.gainNode.gain;
-                const startFade = audioContext.currentTime;
-                const endFade = startFade + fadeTime;
-                gain.cancelScheduledValues(startFade);
-                gain.setValueAtTime(gain.value, startFade);
-                gain.linearRampToValueAtTime(0, endFade);
-                this.source.stop(endFade);
+                // the ramp and the stop share one end time
+                this.source.stop(audioParamRamp(this.gainNode.gain, 0, fadeTime));
             }
             else
                 this.source.stop();

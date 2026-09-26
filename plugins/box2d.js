@@ -88,7 +88,7 @@ function box2dWakeWithContacts(body)
         edge.get_other().SetAwake(true);
 }
 
-// wake both bodies of a joint whose length changed, a sleeping body would stay where it was
+// wake both bodies of a joint whose length, spring, ratio or strength changed, a sleeping body would stay where it was
 function box2dWakeJoint(joint)
 {
     joint.GetBodyA().SetAwake(true);
@@ -545,8 +545,10 @@ class Box2dObject extends EngineObject
      *  @param {Object} fixture */
     destroyFixture(fixture)
     {
+        const pointer = box2d.instance.getPointer(fixture);
+
         // an edge list or loop that loses a fixture is no longer one line, what is left of it draws edge by edge
-        const edgeFixtures = this.edgeListFixtures, points = edgeFixtures.get(box2d.instance.getPointer(fixture));
+        const edgeFixtures = this.edgeListFixtures, points = edgeFixtures.get(pointer);
         if (points)
         {
             this.edgeLists = this.edgeLists.filter(p=> p !== points);
@@ -556,7 +558,6 @@ class Box2dObject extends EngineObject
 
         // not once the body is gone, which takes its fixtures with it, or once the fixture is,
         // since a second destroy of it, like one from each of two contacts in a step, stops Box2D for good
-        const pointer = box2d.instance.getPointer(fixture);
         box2dWhenUnlocked(()=> this.body && this.getFixtureList().some(f=> box2d.instance.getPointer(f) === pointer)
             && this.body.DestroyFixture(fixture));
     }
@@ -713,7 +714,10 @@ class Box2dObject extends EngineObject
     /** Set whether the body can rotate
      *  @param {boolean} [isFixed] */
     setFixedRotation(isFixed=true)
-    { this.body.SetFixedRotation(isFixed); }
+    {
+        this.body.SetFixedRotation(isFixed);
+        this.body.SetAwake(true); // a sleeping body would not tip over once it can turn
+    }
 
     /** Set the center of mass of the body, local to it
      *  @param {Vector2} center */
@@ -981,10 +985,6 @@ class Box2dTileLayer extends Box2dStaticObject
         // destroy all fixtures and create new ones
         this.destroyAllFixtures();
 
-        // create box2d object for this layer
-        this.pos = this.tileLayer.pos.copy();
-        this.size = this.tileLayer.size.copy();
-
         // track which tiles have been processed
         const processed = [];
         const getIndex = (x, y)=> x + y * this.size.x;
@@ -1076,10 +1076,19 @@ class Box2dJoint
     constructor(jointDef)
     {
         ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D joints during a contact callback');
-        ASSERT(box2d.instance.getPointer(jointDef.get_bodyA()) !== box2d.instance.getPointer(jointDef.get_bodyB()),
-            'a joint needs two different objects');
+        const bodyA = jointDef.get_bodyA(), bodyB = jointDef.get_bodyB();
+        const bothLive = !box2d.isNull(bodyA) && !box2d.isNull(bodyB);
+        ASSERT(bothLive, 'a joint needs two objects that are not destroyed');
+        ASSERT(box2d.instance.getPointer(bodyA) !== box2d.instance.getPointer(bodyB), 'a joint needs two different objects');
 
         /** @property {Object} - The Box2d joint, 0 once it is destroyed, as it is when either object is */
+        this.box2dJoint = 0;
+        if (!bothLive)
+        {
+            // one of its objects is gone, so it is made destroyed, as it would be had it gone after
+            box2d.instance.destroy(jointDef);
+            return;
+        }
         this.box2dJoint = box2d.castJointObject(box2d.world.CreateJoint(jointDef));
         box2d.instance.destroy(jointDef);
         box2dJoints.set(box2d.instance.getPointer(this.box2dJoint), this);
@@ -1119,15 +1128,15 @@ class Box2dJoint
      *  @return {Vector2} */
     getAnchorB() { return box2d.vec2From(this.box2dJoint.GetAnchorB());}
     
-    /** Get the reaction force on bodyB at the joint anchor given a time step
-     *  @param {number} time
+    /** Get the reaction force on bodyB at the joint anchor over the last step
+     *  @param {number} [time] - The step length in seconds, the world steps by timeDelta
      *  @return {Vector2} */
-    getReactionForce(time)  { return box2d.vec2From(this.box2dJoint.GetReactionForce(1/time));}
+    getReactionForce(time=timeDelta)  { return box2d.vec2From(this.box2dJoint.GetReactionForce(1/time));}
 
-    /** Get the reaction torque on bodyB in N*m given a time step, clockwise like angle
-     *  @param {number} time
+    /** Get the reaction torque on bodyB in N*m over the last step, clockwise like angle
+     *  @param {number} [time] - The step length in seconds, the world steps by timeDelta
      *  @return {number} */
-    getReactionTorque(time) { return -this.box2dJoint.GetReactionTorque(1/time);} // box2d uses reverse angle
+    getReactionTorque(time=timeDelta) { return -this.box2dJoint.GetReactionTorque(1/time);} // box2d uses reverse angle
     
     /** Check if the connected bodies should collide
      *  @return {boolean} */
@@ -1180,7 +1189,7 @@ class Box2dTargetJoint extends Box2dJoint
 
     /** Sets the maximum force in Newtons
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); box2dWakeJoint(this.box2dJoint); }
     
     /** Gets the maximum force in Newtons
      *  @return {number} */
@@ -1188,7 +1197,7 @@ class Box2dTargetJoint extends Box2dJoint
     
     /** Sets the joint frequency in Hertz, above 0, Box2D stops for good on 0
      *  @param {number} hz */
-    setFrequency(hz) { this.box2dJoint.SetFrequency(max(hz, 1e-3)); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(max(hz, 1e-3)); box2dWakeJoint(this.box2dJoint); }
     
     /** Gets the joint frequency in Hertz
      *  @return {number} */
@@ -1412,10 +1421,10 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
-    /** Get the motor torque given a time step, clockwise like angle
-     *  @param {number} time
+    /** Get the motor torque over the last step, clockwise like angle
+     *  @param {number} [time] - The step length in seconds, the world steps by timeDelta
      *  @return {number} */
-    getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
+    getMotorTorque(time=timeDelta) { return -this.box2dJoint.GetMotorTorque(1/time); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1454,8 +1463,8 @@ class Box2dPinJoint extends Box2dRevoluteJoint
 class Box2dGearJoint extends Box2dJoint
 {
     /** Create a gear joint
-     *  @param {Box2dObject} objectA
-     *  @param {Box2dObject} objectB
+     *  @param {Box2dObject} objectA - objectB of joint1, Box2D joins that one whatever is passed
+     *  @param {Box2dObject} objectB - objectB of joint2, Box2D joins that one whatever is passed
      *  @param {Box2dJoint} joint1
      *  @param {Box2dJoint} joint2
      *  @param {number} [ratio] */
@@ -1469,6 +1478,8 @@ class Box2dGearJoint extends Box2dJoint
         ASSERT(joint1.getObjectB()?.getBodyType() === box2d.bodyTypeDynamic &&
             joint2.getObjectB()?.getBodyType() === box2d.bodyTypeDynamic,
             'a gear joint turns objectB of each joint, make each joint with its fixed or carrying object first');
+        ASSERT(objectA === joint1.getObjectB() && objectB === joint2.getObjectB(),
+            'a gear joint joins objectB of joint1 and objectB of joint2, pass those');
         const ratioSign = (joint1 instanceof Box2dRevoluteJoint) === (joint2 instanceof Box2dRevoluteJoint) ? 1 : -1;
         const jointDef = new box2d.instance.b2GearJointDef();
         jointDef.set_bodyA(objectA.body);
@@ -1610,10 +1621,10 @@ class Box2dPrismaticJoint extends Box2dJoint
      *  @return {number} */
     getMaxMotorForce() { return this.box2dJoint.GetMaxMotorForce(); }
     
-    /** Get the motor force given a time step
-     *  @param {number} time
+    /** Get the motor force over the last step
+     *  @param {number} [time] - The step length in seconds, the world steps by timeDelta
      *  @return {number} */
-    getMotorForce(time) { return this.box2dJoint.GetMotorForce(1/time); }
+    getMotorForce(time=timeDelta) { return this.box2dJoint.GetMotorForce(1/time); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1694,10 +1705,10 @@ class Box2dWheelJoint extends Box2dJoint
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
-    /** Get the motor torque for a time step, clockwise like angle
-     *  @param {number} time
+    /** Get the motor torque over the last step, clockwise like angle
+     *  @param {number} [time] - The step length in seconds, the world steps by timeDelta
      *  @return {number} */
-    getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
+    getMotorTorque(time=timeDelta) { return -this.box2dJoint.GetMotorTorque(1/time); }
 
     /** Set the spring frequency in Hertz
      *  @param {number} hz */
@@ -1945,7 +1956,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the maximum force
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); } // Box2D stops on a negative one
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); box2dWakeJoint(this.box2dJoint); } // Box2D stops on a negative one
 
     /** Get the maximum force
      *  @return {number} */
@@ -1953,7 +1964,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the maximum torque
      *  @param {number} torque */
-    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); } // Box2D stops on a negative one
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); box2dWakeJoint(this.box2dJoint); } // Box2D stops on a negative one
 
     /** Get the maximum torque
      *  @return {number} */
@@ -1961,7 +1972,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the position correction factor in the range [0,1]
      *  @param {number} factor */
-    setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(clamp(factor)); }
+    setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(clamp(factor)); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the position correction factor in the range [0,1]
      *  @return {number} */
@@ -2006,7 +2017,8 @@ class Box2dPlugin
         this.bodyTypeDynamic = instance.b2_dynamicBody;
 
         // a body that goes takes its joints with it, their wrappers let go of them, and a gear joint on one of them
-        // goes too, since it would keep pointers to what was freed; it hangs off other bodies, so it goes after
+        // goes too, since it would keep pointers to what was freed; that destroy waits in the queue, which DestroyBody
+        // runs from, and is skipped if the gear hung off this same body and went with it
         const destructionListener = new box2d.instance.JSDestructionListener();
         destructionListener.SayGoodbyeJoint = function(jointPointer)
         {
@@ -2234,7 +2246,7 @@ class Box2dPlugin
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
             if (!includeSensors && fixture.IsSensor())
                 return true; // a trigger zone, continue getting results
-            if (dynamicOnly && fixture.GetBody().GetType() !== box2d.instance.b2_dynamicBody)
+            if (dynamicOnly && fixture.GetBody().GetType() !== box2d.bodyTypeDynamic)
                 return true; // continue getting results
             if (!fixture.TestPoint(box2dTemp(pos)))
                 return true; // continue getting results
