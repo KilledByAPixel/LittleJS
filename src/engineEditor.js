@@ -436,12 +436,12 @@ function editorPick(layer, pos)
 }
 
 // paint every cell on the line from the last cell, so a fast drag leaves no gaps
-function editorPaintLine(layer, pos)
+function editorPaintLine(layer, pos, erase=editorTool === 'eraser')
 {
     if (layer.record.pending) return; // its autosaved edits wait to be applied or dropped first
     const from = editorLastCell ?? pos, steps = max(abs(pos.x - from.x), abs(pos.y - from.y));
     const {tile, direction, mirror} = editorBrush;
-    const gid = editorTool === 'eraser' ? 0 : editorTileToGid(tile, direction, mirror);
+    const gid = erase ? 0 : editorTileToGid(tile, direction, mirror);
     for (let i = 0; i <= steps; ++i)
         editorPaint(layer, from.lerp(pos, steps ? i / steps : 1).floor(), gid);
     editorLastCell = pos;
@@ -505,7 +505,7 @@ function editorPanelInit()
     const tools = row();
     const toolButtons = {
         pencil: button(tools, 'Pencil', ()=> editorTool = 'pencil', 'B'),
-        eraser: button(tools, 'Eraser', ()=> editorTool = 'eraser', 'E'),
+        eraser: button(tools, 'Eraser', ()=> editorTool = 'eraser', 'E, or hold the right button'),
         pick:   button(tools, 'Pick', ()=> editorTool = 'pick', 'I, or Alt+click'),
     };
     const turns = row();
@@ -528,7 +528,7 @@ function editorPanelInit()
     button(file, 'Revert', ()=> editorRevert(editorLayer.record), 'Back to the file, can be undone');
     const status = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;min-height:1em');
     editorElement('div', editorPanel, 'color:#777;margin-top:4px',
-        'Right drag pans, wheel zooms');
+        'Right button erases, middle drag pans, wheel zooms');
 
     editorPanelParts = {pending, layerSelect, toolButtons, turn, mirror, palette, status, layers: undefined};
 }
@@ -663,8 +663,8 @@ function editorUpdate()
         if (keyWasPressed('KeyI')) editorTool = 'pick';
     }
 
-    // the right or middle button drags the view, the wheel zooms on the point under the mouse
-    if (mouseIsDown(1) || mouseIsDown(2))
+    // the middle button drags the view, the wheel zooms on the point under the mouse
+    if (mouseIsDown(1))
         editorCameraPos = editorCameraPos.subtract(screenToWorldDelta(mouseDeltaScreen));
     if (mouseWheel)
     {
@@ -675,25 +675,30 @@ function editorUpdate()
     }
     editorApplyCamera();
 
-    // the left button paints, or picks with the pick tool or Alt held; a quick click let go before this step
-    // still reads as pressed
+    // the left button paints, or picks with the pick tool or Alt held, the right button erases; a quick click
+    // let go before this step still reads as pressed
     const layer = editorLayer?.live.destroyed ? undefined : editorLayer;
     editorHover = layer && editorCellAt(layer.live, screenToWorld(mousePosScreen));
+    const left = mouseIsDown(0) || mouseWasPressed(0), right = mouseIsDown(2) || mouseWasPressed(2);
     if (mouseWasPressed(0))
         editorPicking = editorTool === 'pick' || keyIsDown('AltLeft') || keyIsDown('AltRight');
     if (!editorHover)
         editorLastCell = undefined; // off the layer, coming back in starts the line again
+    else if (right)
+        editorPaintLine(layer, editorHover, true);
     else if (editorPicking)
         mouseWasPressed(0) && editorPick(layer, editorHover); // a pick is the press, holding on does not paint
-    else if (mouseIsDown(0) || mouseWasPressed(0))
+    else if (left)
         editorPaintLine(layer, editorHover);
-    if (!mouseIsDown(0))
+    if (!mouseIsDown(0) && !mouseIsDown(2))
     {
         editorStrokeEnd();
         editorLastCell = undefined;
     }
 }
 
+// called by the engine before the camera goes to WebGL, so the level is drawn with the editor's view, a game may move
+// the camera from gameUpdatePost, which runs while paused
 function editorPreRender() { editMode && editorApplyCamera(); }
 
 // the layer's edge, a grid when zoomed in, the map's tiles the layer does not show, and the brush under the mouse
@@ -747,4 +752,4 @@ function editorRender()
     }
 }
 
-debug && engineAddPlugin(editorUpdate, editorRender, undefined, undefined, editorPreRender);
+debug && engineAddPlugin(editorUpdate, editorRender);

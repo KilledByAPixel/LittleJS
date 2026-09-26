@@ -58,3 +58,4 @@ function setEditorTileCallback(){}
 function editorMapRestore(map){ return map; }
 function editorMapLoaded(){}
 function editorJSONFetched(){}
+function editorPreRender(){}

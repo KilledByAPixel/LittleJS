@@ -212,6 +212,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // Called automatically by engine to setup render system
     function enginePreRender()
     {
+        // the level editor's own view while it is open, in debug builds, before the camera goes to WebGL
+        editorPreRender();
+
         // disable smoothing for pixel art
         mainContext.imageSmoothingEnabled = !tilesPixelated;
 
@@ -820,6 +823,7 @@ function setEditorTileCallback(){}
 function editorMapRestore(map){ return map; }
 function editorMapLoaded(){}
 function editorJSONFetched(){}
+function editorPreRender(){}
 /**
  * LittleJS Math Classes and Functions
  * - Comprehensive math utilities for game development

@@ -209,6 +209,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // Called automatically by engine to setup render system
     function enginePreRender()
     {
+        // the level editor's own view while it is open, in debug builds, before the camera goes to WebGL
+        editorPreRender();
+
         // disable smoothing for pixel art
         mainContext.imageSmoothingEnabled = !tilesPixelated;
 

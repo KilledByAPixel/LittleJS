@@ -485,3 +485,25 @@ test('autosaved edits brought back say so, so they are not forgotten in the file
     engine.run(fileCode());
     assert.ok(warnings.some((text)=> /unsaved edits/.test(text)), warnings.join());
 });
+
+test('the right button erases whatever the tool, and the middle button only moves the view', async () =>
+{
+    const engine = await loadGame();
+    const { run, handlers } = engine;
+    run(editCode);
+    handlers.mousedown({ ...at(2, 1), button: 1 });
+    step(engine);
+    handlers.mousemove({ ...at(1, 0), button: 1 });
+    step(engine);
+    handlers.mouseup({ ...at(1, 0), button: 1 });
+    step(engine);
+    assert.equal(run('editorUndoList.length'), 0, 'the middle button painted nothing');
+    assert.notEqual(run('editorCameraPos.x'), 1.5, 'it moved the view');
+    run('editorCameraPos = vec2(1.5, .5)');
+    handlers.mousedown({ ...at(2, 1), button: 2 });
+    step(engine);
+    handlers.mouseup({ ...at(2, 1), button: 2 });
+    step(engine);
+    assert.equal(run('layers[2].getData(vec2(2, 1)).tile'), undefined, 'erased');
+    assert.equal(run('editorTool'), 'pencil', 'the tool is left as it was');
+});
