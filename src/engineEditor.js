@@ -26,7 +26,7 @@ let editorCameraPos = vec2(), editorCameraScale = 32;
 
 // what a click paints, the tool, the layer being painted, the cell under the mouse, the last cell of a stroke
 const editorBrush = {tile: 0, direction: 0, mirror: false};
-let editorTool = 'pencil', editorLayer, editorHover, editorLastCell;
+let editorTool = 'pencil', editorLayer, editorHover, editorLastCell, editorPicking;
 
 /** Open or close the editor, the game is paused while it is open and carries on with the changes after
  *  - Does nothing in release builds
@@ -125,10 +125,25 @@ function editorTileLayerData(layers, list=[])
 function editorMapRestore(map)
 {
     if (editorMapList.some((record)=> record.map === map)) return map; // loaded again, it has the changes
-    const url = editorFetchedURLs.get(map), data = editorTileLayerData(map.layers);
+
+    // a map object seen before, its record retired when its layers went, gets it back as it was, its data has the
+    // changes already
+    const retired = editorRetiredMaps.get(map);
+    if (retired)
+    {
+        editorRetire((record)=> record.key === retired.key);
+        editorMapList.push(retired);
+        return map;
+    }
+
+    const url = editorFetchedURLs.get(map), data = editorTileLayerData(map.layers), hash = editorMapHash(data);
     const fileName = url?.split(/[?#]/)[0].split('/').pop() || 'level.json';
-    const record = {map, url, fileName, key: editorMapKey(map, url), hash: editorMapHash(data),
+    const record = {map, url, fileName, key: editorMapKey(map, url, hash), hash,
         original: data.map((layer)=> [...layer]), layers: []};
+
+    // a new copy of a map takes over from the one before, and maps whose layers are all gone step aside
+    editorRetire((other)=> other.key === record.key ||
+        other.layers.length && other.layers.every((layer)=> layer.live.destroyed));
     editorMapList.push(record);
 
     const saved = editorSaves()[record.key];
@@ -141,7 +156,31 @@ function editorMapRestore(map)
         console.warn(`LittleJS editor: ${record.fileName} changed since its autosaved edits, ` +
             'open the editor (Esc then 0) to apply or drop them');
     }
+    else
+        console.warn(`LittleJS editor: brought back unsaved edits to ${record.fileName}, ` +
+            'Save in the editor (Esc then 0) writes them to the file');
     return map;
+}
+
+// the records of maps the game moved on from, by map object, for a map it loads again
+const editorRetiredMaps = new WeakMap;
+
+// take records out of the list, with the undo that would change them, so an undo never writes a map
+// the game no longer shows; a map object loaded again gets its record back
+function editorRetire(isRetired)
+{
+    const gone = editorMapList.filter(isRetired);
+    if (!gone.length) return;
+    for (const record of gone)
+    {
+        editorMapList.splice(editorMapList.indexOf(record), 1);
+        record.synthetic || editorRetiredMaps.set(record.map, record);
+    }
+    for (const list of [editorUndoList, editorRedoList])
+    for (let i = list.length; i--;)
+        list[i].some((cell)=> gone.includes(cell.layer.record)) && list.splice(i, 1);
+    if (gone.includes(editorLayer?.record))
+        editorLayer = undefined;
 }
 
 // called by tileLayersLoad with the layers it made, a map loaded again keeps its layer records, with the new layers
@@ -219,9 +258,10 @@ function editorSave(record)
 function editorSaveName() { return 'LittleJS editor ' + (globalThis.location?.pathname ?? ''); }
 const editorSaves = ()=> readSaveData(editorSaveName(), {});
 
-// a map's name for its autosave, the file it was fetched from, or its size and layer names
-function editorMapKey(map, url)
-{ return url ?? `${map.width}x${map.height} ` + map.layers.map((layer)=> layer.name).join(); }
+// a map's name for its autosave, the file it was fetched from, or its size, layer names and data as loaded; a map with
+// no file can not tell a changed map from another one, so each is its own
+function editorMapKey(map, url, hash)
+{ return url ?? `${map.width}x${map.height} ` + map.layers.map((layer)=> layer.name).join() + ' #' + hash; }
 
 // a quick hash of a map's tile data, to know when the file changed under its autosave
 function editorMapHash(data)
@@ -305,7 +345,8 @@ function editorSetCell(layer, pos, gid)
     const {source, live, color} = layer;
     const index = pos.x + (live.size.y - 1 - pos.y) * live.size.x;
     const before = source.data[index];
-    if (before === gid) return before;
+    if (before === gid && (!gid || live.destroyed || live.getData(pos).tile !== undefined))
+        return before; // the same, unless the layer lost the tile in play, a ghost painted with its own tile
     source.data[index] = gid;
     if (live.destroyed) return before; // a layer the game let go of, the map still has the change
 
@@ -397,6 +438,7 @@ function editorPick(layer, pos)
 // paint every cell on the line from the last cell, so a fast drag leaves no gaps
 function editorPaintLine(layer, pos)
 {
+    if (layer.record.pending) return; // its autosaved edits wait to be applied or dropped first
     const from = editorLastCell ?? pos, steps = max(abs(pos.x - from.x), abs(pos.y - from.y));
     const {tile, direction, mirror} = editorBrush;
     const gid = editorTool === 'eraser' ? 0 : editorTileToGid(tile, direction, mirror);
@@ -435,7 +477,7 @@ function editorPanelInit()
     const button = (parent, text, onclick, title='')=>
     {
         const b = editorElement('button', parent, 'flex:1;padding:3px;cursor:pointer', text);
-        b.onclick = onclick;
+        b.onclick = (e)=> { onclick(e); b.blur(); }; // the keys go back to the editor
         b.title = title;
         return b;
     };
@@ -454,7 +496,11 @@ function editorPanelInit()
     button(pendingRow, 'Drop them', ()=> editorDiscardPending(editorLayer.record));
 
     const layerSelect = editorElement('select', editorPanel, 'width:100%;margin:4px 0;background:#222;color:#eee');
-    layerSelect.onchange = ()=> { editorLayer = editorLayers()[layerSelect.selectedIndex]; };
+    layerSelect.onchange = ()=>
+    {
+        editorLayer = editorLayers()[layerSelect.selectedIndex];
+        layerSelect.blur(); // a focused select takes the keys
+    };
 
     const tools = row();
     const toolButtons = {
@@ -633,13 +679,14 @@ function editorUpdate()
     // still reads as pressed
     const layer = editorLayer?.live.destroyed ? undefined : editorLayer;
     editorHover = layer && editorCellAt(layer.live, screenToWorld(mousePosScreen));
-    if ((mouseIsDown(0) || mouseWasPressed(0)) && editorHover)
-    {
-        if (editorTool === 'pick' || keyIsDown('AltLeft') || keyIsDown('AltRight'))
-            editorPick(layer, editorHover);
-        else
-            editorPaintLine(layer, editorHover);
-    }
+    if (mouseWasPressed(0))
+        editorPicking = editorTool === 'pick' || keyIsDown('AltLeft') || keyIsDown('AltRight');
+    if (!editorHover)
+        editorLastCell = undefined; // off the layer, coming back in starts the line again
+    else if (editorPicking)
+        mouseWasPressed(0) && editorPick(layer, editorHover); // a pick is the press, holding on does not paint
+    else if (mouseIsDown(0) || mouseWasPressed(0))
+        editorPaintLine(layer, editorHover);
     if (!mouseIsDown(0))
     {
         editorStrokeEnd();

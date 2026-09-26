@@ -220,13 +220,19 @@ test('a map fetched with fetchJSON saves under its file name', async () =>
 });
 
 const saveName = 'LittleJS editor /game/';
-const mapKey = '3x2 back,things,g'; // no file, so its size and layer names
+const mapKey = 'levels/test.json'; // autosaved by the file it came from
+
+// the test map as fetchJSON would load it from a file, with this data in its front layer
+const fileCode = (front=[0, 0, 3, 0, 0, 0])=> mapCode
+    .replace('data: [0, 0, 3, 0, 0, 0]', `data: ${JSON.stringify(front)}`)
+    .replace('var layers = tileLayersLoad', `editorJSONFetched('${mapKey}', map);
+    var layers = tileLayersLoad`);
 
 // a page load of a game whose file has this data in its front layer
-async function reload(storage, front=[0, 0, 3, 0, 0, 0])
+async function reload(storage, front)
 {
     const engine = await loadGame({ localStorage: storage });
-    engine.run(mapCode.replace('data: [0, 0, 3, 0, 0, 0]', `data: ${JSON.stringify(front)}`));
+    engine.run(fileCode(front));
     return engine;
 }
 const paintAndSave = (engine)=> engine.run('editorPaint(front, vec2(0, 1), editorTileToGid(4)); editorStrokeEnd();');
@@ -375,4 +381,107 @@ test('a quick click, down and up before the next step, still paints its cell', a
     step(engine);
     assert.equal(run('layers[2].getData(vec2(1, 0)).tile'), 6);
     assert.equal(run('editorUndoList.length'), 1, 'and the stroke ended');
+});
+
+// review fixes
+
+test('two levels with no file and the same size and layer names keep their own autosaves', async () =>
+{
+    const storage = makeStorage();
+    const level = (data)=> `tileLayersLoad({ width: 2, height: 1,
+        layers: [{ type: 'tilelayer', name: 'Tile Layer 1', width: 2, height: 1, data: ${JSON.stringify(data)} }] },
+        undefined, 0, 0, false)`;
+    const engine = await loadGame({ localStorage: storage });
+    engine.run(`var one = editorLayerRecord(${level([1, 0])}[0]);
+        editorPaint(one, vec2(1, 0), editorTileToGid(4)); editorStrokeEnd();
+        var two = editorLayerRecord(${level([7, 7])}[0]);`);
+    assert.equal(engine.run('two.record.pending'), undefined, 'a different level, not a changed file');
+    engine.run('editorPaint(two, vec2(0, 0), editorTileToGid(2)); editorStrokeEnd();');
+    const again = await loadGame({ localStorage: storage });
+    assert.deepEqual([...again.run(`${level([1, 0])}[0].data.map((d)=> d.tile ?? -1)`)], [0, 4]);
+    assert.deepEqual([...again.run(`${level([7, 7])}[0].data.map((d)=> d.tile ?? -1)`)], [2, 6]);
+});
+
+test('while a changed file waits for its edits to be applied or dropped, painting it is held off', async () =>
+{
+    const storage = makeStorage();
+    paintAndSave(await reload(storage));
+    const second = await reload(storage, [0, 7, 3, 0, 0, 0]);
+    second.run('editorLastCell = undefined; editorPaintLine(front, vec2(2, 0)); editorStrokeEnd();');
+    assert.deepEqual([...second.run('frontData')], [0, 7, 3, 0, 0, 0], 'not painted');
+    assert.deepEqual(saved(storage).layers[1], [5, 0, 3, 0, 0, 0], 'the waiting edits are kept');
+});
+
+test('a map loaded again as a new copy retires the old one, and undo does not reach through it', async () =>
+{
+    const storage = makeStorage();
+    const engine = await reload(storage);
+    paintAndSave(engine);
+    engine.run(`engineObjectsDestroy(); var copy = JSON.parse(JSON.stringify(map));
+        copy.layers[2].layers[0].data = [0, 0, 3, 0, 0, 0]; editorJSONFetched('${mapKey}', copy);
+        layers = tileLayersLoad(copy, undefined, 0, 2);`);
+    assert.equal(engine.run('layers[2].getData(vec2(0, 1)).tile'), 4, 'the copy got the autosave');
+    assert.equal(engine.run('editorMapList.includes(front.record)'), false, 'the old record is gone');
+    engine.run('editorUndo()');
+    assert.deepEqual(saved(storage).layers[1], [5, 0, 3, 0, 0, 0], 'the autosave is untouched');
+    assert.equal(engine.run('layers[2].getData(vec2(0, 1)).tile'), 4);
+});
+
+test('painting a ghost with the tile it shows puts the tile back', async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode + `layers[2].clearData(vec2(2, 1)); layers[2].clearCollisionData(vec2(2, 1));
+        editorPaint(front, vec2(2, 1), editorTileToGid(2)); editorStrokeEnd();`);
+    assert.equal(run('layers[2].getData(vec2(2, 1)).tile'), 2);
+    assert.equal(run('layers[2].getCollisionData(vec2(2, 1))'), 1);
+    assert.equal(run('editorUndoList.length'), 0, 'the map did not change, nothing to undo');
+});
+
+// the mouse on the canvas at a cell of the test map, with the camera on cell (1, 0) at 100 pixels a cell
+const canvas = { tagName: 'CANVAS', closest: ()=> null };
+const at = (x, y)=> ({ button: 0, x: 500 + (x - 1) * 100, y: 500 - y * 100, target: canvas, cancelable: false });
+const editCode = mapCode + `setEditMode(true); editorLayer = front; editorBrush.tile = 6;
+    editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;`;
+
+test('a drag that leaves the layer and comes back in does not paint across the gap', async () =>
+{
+    const engine = await loadGame();
+    const { run, handlers } = engine;
+    run(editCode);
+    handlers.mousedown(at(0, 0));
+    step(engine);
+    handlers.mousemove(at(-3, 0)); // off the layer
+    step(engine);
+    handlers.mousemove(at(2, 1)); // back in at the far corner
+    step(engine);
+    handlers.mouseup(at(2, 1));
+    step(engine);
+    assert.equal(run('layers[2].getData(vec2(1, 0)).tile'), undefined, 'the cell between was not painted');
+    assert.equal(run('layers[2].getData(vec2(2, 1)).tile'), 6);
+});
+
+test('the pick tool only picks, a held button after it does not paint', async () =>
+{
+    const engine = await loadGame();
+    const { run, handlers } = engine;
+    run(editCode + `editorTool = 'pick';`);
+    handlers.mousedown(at(1, 0)); // an empty cell, picks the eraser
+    step(engine);
+    handlers.mousemove(at(2, 1)); // held over the tile 3 cell
+    step(engine);
+    handlers.mouseup(at(2, 1));
+    step(engine);
+    assert.equal(run('editorTool'), 'eraser');
+    assert.equal(run('layers[2].getData(vec2(2, 1)).tile'), 2, 'not erased');
+});
+
+test('autosaved edits brought back say so, so they are not forgotten in the file', async () =>
+{
+    const storage = makeStorage(), warnings = [];
+    paintAndSave(await reload(storage));
+    const engine = loadEngine({ localStorage: storage, location,
+        console: { ...console, warn: (text)=> warnings.push(text) } });
+    engine.run('setHeadlessMode(true)');
+    engine.run(fileCode());
+    assert.ok(warnings.some((text)=> /unsaved edits/.test(text)), warnings.join());
 });
