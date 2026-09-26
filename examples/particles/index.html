@@ -8,72 +8,116 @@
 <style>
 :root
 {
-    --back:#101216; --panel:#181b21; --line:#2a2f38; --text:#dde1e8; --dim:#8a93a3;
-    --accent:hsl(200,80%,60%); --button:#262b34; --buttonHover:#313743;
+    --back:#101216; --panel:#181b21; --line:#2a2f38;
+    --text:#dde1e8; --dim:#8a93a3; --accent:hsl(200,80%,60%);
+    --button:#262b34; --buttonHover:#313743;
 }
 *, *::before, *::after { box-sizing:border-box; }
-html, body { margin:0; height:100%; background:var(--back); color:var(--text);
-    font:13px system-ui, sans-serif; }
+html, body
+{
+    margin:0; height:100%; background:var(--back); color:var(--text);
+    font:13px system-ui, sans-serif;
+}
 button, select, input { font:inherit; color:inherit; }
 button, select, input[type=text], input[type=number]
 {
-    background:var(--button); border:1px solid var(--line); border-radius:4px; padding:3px 6px;
+    background:var(--button); border:1px solid var(--line);
+    border-radius:4px; padding:3px 6px;
 }
 button { cursor:pointer; }
 button:hover:not(:disabled) { background:var(--buttonHover); }
 button:disabled { opacity:.4; cursor:default; }
-input[type=range] { accent-color:var(--accent); width:100%; min-width:0; margin:0; }
+input[type=range]
+{ accent-color:var(--accent); width:100%; min-width:0; margin:0; }
 input[type=checkbox] { accent-color:var(--accent); margin:0; }
-input[type=color] { width:32px; height:22px; padding:0; border:1px solid var(--line);
-    border-radius:4px; background:none; }
+input[type=color]
+{
+    width:32px; height:22px; padding:0; border:1px solid var(--line);
+    border-radius:4px; background:none;
+}
 
 #app { display:flex; height:100vh; }
-#panel { width:360px; flex:none; overflow-y:auto; background:var(--panel);
-    border-right:1px solid var(--line); }
+#panel
+{
+    width:360px; flex:none; overflow-y:auto; background:var(--panel);
+    border-right:1px solid var(--line);
+}
 #panel header { padding:10px 12px 6px; }
 #panel h1 { font-size:16px; margin:0; }
 #panel header p { margin:2px 0 0; color:var(--dim); font-size:12px; }
-#libraryBar { padding:6px 12px 10px; border-bottom:1px solid var(--line);
-    display:flex; flex-wrap:wrap; gap:4px; }
-#libraryBar select, #libraryBar input[type=text] { flex:1 1 140px; min-width:0; }
+#libraryBar
+{
+    padding:6px 12px 10px; border-bottom:1px solid var(--line);
+    display:flex; flex-wrap:wrap; gap:4px;
+}
+#libraryBar select, #libraryBar input[type=text]
+{ flex:1 1 140px; min-width:0; }
 
 details.group { border-bottom:1px solid var(--line); }
-details.group > summary { padding:8px 12px; cursor:pointer; font-weight:600; user-select:none; }
+details.group > summary
+{ padding:8px 12px; cursor:pointer; font-weight:600; user-select:none; }
 details.group > div { padding:0 12px 8px; }
-.row { display:grid; grid-template-columns:118px 1fr 62px 22px; gap:6px; align-items:center;
-    padding:3px 0; }
+.row
+{
+    display:grid; grid-template-columns:118px 1fr 62px 22px; gap:6px;
+    align-items:center; padding:3px 0;
+}
 .row label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .row input[type=number] { width:100%; padding:2px 4px; }
-.row .reset { padding:0; width:22px; height:22px; line-height:1; color:var(--dim); }
-.row .hint { grid-column:1 / -1; margin-top:-3px; color:var(--dim); font-size:11px; }
+.row .reset
+{ padding:0; width:22px; height:22px; line-height:1; color:var(--dim); }
+.row .hint
+{ grid-column:1 / -1; margin-top:-3px; color:var(--dim); font-size:11px; }
 .row.colorRow .swatch { display:flex; gap:6px; align-items:center; }
-.strip { height:14px; border-radius:3px; margin:4px 0; border:1px solid var(--line); }
+.strip
+{
+    height:14px; border-radius:3px; margin:4px 0;
+    border:1px solid var(--line);
+}
 .stripLabel { color:var(--dim); font-size:11px; }
 .warning { color:hsl(35,90%,60%); font-size:12px; margin:4px 0; }
 .buttons { display:flex; flex-wrap:wrap; gap:4px; margin:6px 0; }
-#tilePicker { width:100%; image-rendering:pixelated; cursor:crosshair; border:1px solid var(--line);
-    border-radius:3px; display:block; }
+#tilePicker
+{
+    width:100%; image-rendering:pixelated; cursor:crosshair; display:block;
+    border:1px solid var(--line); border-radius:3px;
+}
 
 #main { flex:1; min-width:0; display:flex; flex-direction:column; }
-#toolbar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:6px 10px;
-    background:var(--panel); border-bottom:1px solid var(--line); }
+#toolbar
+{
+    display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    padding:6px 10px; background:var(--panel);
+    border-bottom:1px solid var(--line);
+}
 #toolbar .spacer { flex:1; }
 #toolbar label { display:flex; gap:4px; align-items:center; color:var(--dim); }
 #particleCount { color:var(--dim); min-width:90px; }
 #previewArea { flex:1; min-height:0; position:relative; }
-#codePanel { flex:none; height:170px; display:flex; flex-direction:column; background:var(--panel);
-    border-top:1px solid var(--line); }
+#codePanel
+{
+    flex:none; height:170px; display:flex; flex-direction:column;
+    background:var(--panel); border-top:1px solid var(--line);
+}
 #codeBar { display:flex; gap:8px; align-items:center; padding:6px 10px; }
 #codeBar strong { flex:1; }
 #codeBar label { display:flex; gap:4px; align-items:center; color:var(--dim); }
-#codeText { flex:1; resize:none; margin:0 10px 10px; background:var(--back); color:var(--text);
-    border:1px solid var(--line); border-radius:4px; padding:6px; font:12px ui-monospace, monospace;
-    white-space:pre; }
+#codeText
+{
+    flex:1; resize:none; margin:0 10px 10px; padding:6px;
+    background:var(--back); color:var(--text);
+    border:1px solid var(--line); border-radius:4px;
+    font:12px ui-monospace, monospace; white-space:pre;
+}
 
 @media (max-width:720px)
 {
     #app { flex-direction:column; height:auto; min-height:100vh; }
-    #panel { width:100%; max-height:none; border-right:0; border-bottom:1px solid var(--line); }
+    #panel
+    {
+        width:100%; max-height:none; border-right:0;
+        border-bottom:1px solid var(--line);
+    }
     #main { flex:none; height:100vh; }
 }
 </style>
@@ -82,7 +126,8 @@ details.group > div { padding:0 12px 8px; }
     <aside id=panel>
         <header>
             <h1>LittleJS Particle Designer</h1>
-            <p>Drag in the preview to move the emitter, wheel to zoom. Drop an image to use it as the texture.</p>
+            <p>Drag in the preview to move the emitter, wheel to zoom.
+                Drop an image to use it as the texture.</p>
         </header>
         <div id=libraryBar>
             <select id=effectSelect title="Effect to edit"></select>
@@ -91,11 +136,15 @@ details.group > div { padding:0 12px 8px; }
                 <button id=buttonNew>New</button>
                 <button id=buttonDuplicate>Duplicate</button>
                 <button id=buttonDelete>Delete</button>
-                <button id=buttonImport title="Add effects from a library file">Import</button>
-                <button id=buttonExport title="Save every effect to a file">Export</button>
-                <button id=buttonPresets title="Add the built in effects again">Add Presets</button>
+                <button id=buttonImport
+                    title="Add effects from a library file">Import</button>
+                <button id=buttonExport
+                    title="Save every effect to a file">Export</button>
+                <button id=buttonPresets
+                    title="Add the built in effects again">Add Presets</button>
             </div>
-            <input id=importFile type=file accept=".json,application/json" hidden>
+            <input id=importFile type=file hidden
+                accept=".json,application/json">
         </div>
         <div id=settingsPanel></div>
     </aside>
@@ -106,7 +155,9 @@ details.group > div { padding:0 12px 8px; }
             <span id=particleCount></span>
             <span class=spacer></span>
             <label>Background <select id=backgroundSelect>
-                <option value=0>Dark</option><option value=.35>Gray</option><option value=.85>Light</option>
+                <option value=0>Dark</option>
+                <option value=.35>Gray</option>
+                <option value=.85>Light</option>
             </select></label>
             <label><input id=debugCheckbox type=checkbox> Show bounds</label>
         </div>

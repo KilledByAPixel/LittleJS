@@ -16,7 +16,7 @@ const storageExpandKey = 'particles_expand';
 let library = [];      // every effect, saved as one
 let effect;            // the effect being edited, one of the library
 let emitter;           // the preview emitter
-let floorLayer;        // a floor to land on while the effect collides with tiles
+let floorLayer;        // a floor to land on while the effect hits tiles
 let dragging = false;  // moving the emitter with the mouse
 let previewHover = false;
 const restartTimer = new Timer;
@@ -45,7 +45,11 @@ function storageLoad(key)
 
 function storageSave(key, value)
 {
-    try { value === undefined ? localStorage.removeItem(key) : localStorage.setItem(key, value); }
+    try
+    {
+        value === undefined ? localStorage.removeItem(key) :
+            localStorage.setItem(key, value);
+    }
     catch {}
 }
 
@@ -78,16 +82,19 @@ function buildSettingsPanel()
     const colorGroup = settingsGroups.Color;
     for (const pair of ['A', 'B'])
     {
-        makeElement('div', colorGroup, 'stripLabel').textContent = `${pair}: start to end`;
+        const label = makeElement('div', colorGroup, 'stripLabel');
+        label.textContent = `${pair}: start to end`;
         const strip = makeElement('div', colorGroup, 'strip');
         strip.id = 'strip' + pair;
     }
 
     for (const behavior of effectBehaviors)
-        rows['behavior_' + behavior.name] = makeBehaviorRow(settingsGroups.Behaviors, behavior);
+        rows['behavior_' + behavior.name] =
+            makeBehaviorRow(settingsGroups.Behaviors, behavior);
 }
 
-// a row with a label, a hint under it and a reset button, the controls go in between
+// a row with a label, a hint under it and a reset button,
+// the controls go in between
 function makeRow(parent, name, description, onReset)
 {
     const row = makeElement('div', parent, 'row');
@@ -133,7 +140,8 @@ function makeNumberRow(parent, setting)
     {
         const value = effect.settings[setting.name];
         range.value = value;
-        document.activeElement === box || (box.value = String(Number(value.toFixed(4))));
+        if (document.activeElement !== box)
+            box.value = String(Number(value.toFixed(4)));
     };
     return {refresh};
 }
@@ -188,17 +196,18 @@ function makeColorRow(parent, setting)
     const refresh = ()=>
     {
         const c = effect.settings[setting.name];
-        picker.value = rgb(c[0], c[1], c[2]).toString(false);
+        picker.value = new Color(c[0], c[1], c[2]).toString(false);
         alpha.value = c[3];
-        document.activeElement === alphaBox || (alphaBox.value = String(Number(c[3].toFixed(3))));
+        if (document.activeElement !== alphaBox)
+            alphaBox.value = String(Number(c[3].toFixed(3)));
     };
     return {refresh};
 }
 
 function makeBehaviorRow(parent, behavior)
 {
-    const {row, label, finish} = makeRow(parent, behavior.name, behavior.description,
-        ()=> setBehavior(behavior.name, false));
+    const {row, label, finish} = makeRow(parent, behavior.name,
+        behavior.description, ()=> setBehavior(behavior.name, false));
     const checkbox = makeElement('input');
     checkbox.type = 'checkbox';
     label.prepend(checkbox, ' ');
@@ -214,8 +223,10 @@ function makeBehaviorRow(parent, behavior)
     box.step = .01;
     finish();
 
-    checkbox.oninput = ()=> setBehavior(behavior.name, checkbox.checked, parseFloat(range.value));
-    range.oninput = ()=> setBehavior(behavior.name, true, parseFloat(range.value));
+    const strength = ()=> parseFloat(range.value);
+    checkbox.oninput = ()=>
+        setBehavior(behavior.name, checkbox.checked, strength());
+    range.oninput = ()=> setBehavior(behavior.name, true, strength());
     box.oninput = ()=>
     {
         const value = parseFloat(box.value);
@@ -248,7 +259,8 @@ function setValue(name, value)
     const s = effect.settings;
     s[name] = value;
 
-    // local space particles cannot collide with tiles, the one just turned on wins
+    // local space particles cannot collide with tiles,
+    // the one just turned on wins
     if (name === 'localSpace' && value) s.collideTiles = false;
     if (name === 'collideTiles' && value) s.localSpace = false;
 
@@ -262,8 +274,10 @@ function setBehavior(name, on, strength)
     const behavior = effectBehavior(name);
     const others = effect.behaviors.filter(b=> b.name !== name);
     if (on)
-        others.push({name, strength:clamp(isNumber(strength) ? strength : behavior.value,
-            behavior.min, behavior.max)});
+    {
+        const value = isNumber(strength) ? strength : behavior.value;
+        others.push({name, strength:clamp(value, behavior.min, behavior.max)});
+    }
 
     // kept in table order so the export reads the same every time
     const order = (b)=> effectBehaviors.indexOf(effectBehavior(b.name));
@@ -277,12 +291,14 @@ function refreshAll()
 {
     for (const name in rows)
         rows[name].refresh();
-    const css = (c)=> `rgb(${c[0]*255} ${c[1]*255} ${c[2]*255} / ${c[3]})`;
-    const checker = 'repeating-conic-gradient(#555 0 25%, #333 0 50%) 0 0 / 10px 10px';
+    const css = (c)=> new Color(...c).toString();
+    const checker =
+        'repeating-conic-gradient(#555 0 25%, #333 0 50%) 0 0 / 10px 10px';
     const s = effect.settings;
     for (const pair of ['A', 'B'])
         $('strip' + pair).style.background = `linear-gradient(to right, ` +
-            `${css(s['colorStart' + pair])}, ${css(s['colorEnd' + pair])}), ${checker}`;
+            `${css(s['colorStart' + pair])}, ${css(s['colorEnd' + pair])}), ` +
+            checker;
     refreshTexture();
 }
 
@@ -307,14 +323,16 @@ function restartEmitter()
     restartTimer.unset();
 }
 
-// a floor to land on while particles collide with tiles, at the bottom of the view
+// a floor to land on while particles collide with tiles, 3 below the emitter
 function updateFloor()
 {
     const collide = effect.settings.collideTiles;
     if (collide && !floorLayer)
     {
-        const bottom = ceil(-getCameraSize().y/2), width = 400;
-        floorLayer = new TileCollisionLayer(vec2(-width/2, bottom), vec2(width, 1));
+        // a 1 pixel tile keeps the layer's canvas small
+        const width = 200, tileInfo = tile(0, 1, defaultTextureInfo, 0);
+        floorLayer = new TileCollisionLayer(vec2(-width/2, -4),
+            vec2(width, 1), tileInfo);
         floorLayer.friction = 0; // so the effect's own friction decides
         for (let x = 0; x < width; ++x)
             floorLayer.setCollisionData(vec2(x, 0));
@@ -346,7 +364,8 @@ function loadLibrary()
     if (!library.length)
         library = effectPresets.map(effectSanitize);
 
-    // the designer used to keep one effect as a key per field, carried over once
+    // the designer used to keep one effect as a key per field,
+    // carried over once
     const saved = migrateOldSettings();
     if (saved)
     {
@@ -385,11 +404,12 @@ function migrateOldSettings()
     }
 
     // remove the old keys, the texture keeps its key
+    const kept = ['particles_textureData', storageKey, storageSelectedKey,
+        storageExpandKey];
     try
     {
         for (const key of Object.keys(localStorage))
-            if (key.startsWith('particles_') && key !== 'particles_textureData' &&
-                key !== storageKey && key !== storageSelectedKey && key !== storageExpandKey)
+            if (key.startsWith('particles_') && !kept.includes(key))
                 localStorage.removeItem(key);
     }
     catch {}
@@ -418,7 +438,8 @@ function refreshLibraryBar()
         return option;
     }));
     select.value = library.indexOf(effect);
-    document.activeElement === $('effectName') || ($('effectName').value = effect.name);
+    if (document.activeElement !== $('effectName'))
+        $('effectName').value = effect.name;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -427,13 +448,15 @@ function refreshLibraryBar()
 function setupPreviewControls()
 {
     const preview = $('previewArea');
-    preview.addEventListener('pointerdown', (e)=> e.button === 0 && (dragging = true));
+    preview.addEventListener('pointerdown', (e)=>
+        e.button === 0 && (dragging = true));
     addEventListener('pointerup', ()=> dragging = false);
     preview.addEventListener('pointerenter', ()=> previewHover = true);
     preview.addEventListener('pointerleave', ()=> previewHover = false);
 
-    // the canvas fills the preview area, not the window, and never shrinks to nothing
-    const fit = ()=> setCanvasMaxSize(vec2(max(preview.clientWidth, 1), max(preview.clientHeight, 1)));
+    // the canvas fills the preview area, not the window, never shrinking to 0
+    const fit = ()=> setCanvasMaxSize(vec2(max(preview.clientWidth, 1),
+        max(preview.clientHeight, 1)));
     new ResizeObserver(fit).observe(preview);
     fit();
 
@@ -445,7 +468,8 @@ function setupPreviewControls()
     };
     $('backgroundSelect').oninput = ()=>
         setCanvasClearColor(hsl(0, 0, parseFloat($('backgroundSelect').value)));
-    $('debugCheckbox').oninput = ()=> debugParticles = $('debugCheckbox').checked;
+    $('debugCheckbox').oninput = ()=>
+        debugParticles = $('debugCheckbox').checked;
 
     $('expandCheckbox').checked = storageLoad(storageExpandKey) === 'true';
     $('expandCheckbox').oninput = ()=>
@@ -472,11 +496,15 @@ function setupLibraryBar()
     {
         const name = $('effectName').value.trim().slice(0, 60);
         if (name && name !== effect.name)
-            effect.name = effectUniqueName(library.filter(e=> e !== effect), name);
+        {
+            const others = library.filter(e=> e !== effect);
+            effect.name = effectUniqueName(others, name);
+        }
         refreshLibraryBar();
         saveLibrary();
     };
-    $('buttonNew').onclick = ()=> addEffect(effectSanitize({name:'New Effect'}));
+    $('buttonNew').onclick = ()=>
+        addEffect(effectSanitize({name:'New Effect'}));
     $('buttonDuplicate').onclick = ()=> addEffect(structuredClone(effect));
     $('buttonDelete').onclick = ()=>
     {
@@ -496,7 +524,8 @@ function setupLibraryBar()
     };
     $('buttonExport').onclick = ()=>
     {
-        const blob = new Blob([effectLibraryText(library)], {type:'application/json'});
+        const blob = new Blob([effectLibraryText(library)],
+            {type:'application/json'});
         const link = makeElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = 'littlejs-particles.json';
@@ -559,7 +588,8 @@ function setupTexture()
     buttonDefault.onclick = ()=> restoreDefaultTexture();
     const warning = makeElement('div', undefined, 'warning');
     warning.id = 'tileWarning';
-    warning.textContent = 'This tile does not fit the texture, drawing untextured';
+    warning.textContent =
+        'This tile does not fit the texture, drawing untextured';
     const file = makeElement('input');
     file.id = 'textureFile';
     file.type = 'file';
@@ -624,26 +654,29 @@ function loadCustomTexture(dataURL)
 function setCustomTexture(image)
 {
     // swap texture 0 so tile() and the exported code keep working
-    const old = textureInfos[0];
-    old !== defaultTextureInfo && old.destroyWebGLTexture();
-    textureInfos[0] = new TextureInfo(image);
-    refreshAll();
-    effectChanged();
+    swapTexture(new TextureInfo(image));
 }
 
 function restoreDefaultTexture()
 {
     storageSave('particles_textureData');
-    if (textureInfos[0] !== defaultTextureInfo)
-    {
-        textureInfos[0].destroyWebGLTexture();
-        textureInfos[0] = defaultTextureInfo;
-    }
-    refreshAll();
-    effectChanged();
+    swapTexture(defaultTextureInfo);
 }
 
-// draw the texture with its tile grid and the chosen tile, and show the warning if it does not fit
+function swapTexture(textureInfo)
+{
+    // particles keep the tile they were made with, so they go first
+    const old = textureInfos[0];
+    textureInfos[0] = textureInfo;
+    restartEmitter();
+    refreshAll();
+    effectChanged();
+    if (old !== defaultTextureInfo && old !== textureInfo)
+        old.destroyWebGLTexture();
+}
+
+// draw the texture with its tile grid and the chosen tile,
+// and show the warning if the tile does not fit
 function refreshTexture()
 {
     const picker = $('tilePicker');
@@ -662,7 +695,8 @@ function refreshTexture()
 
     // grid lines and the chosen tile
     const cell = (s.tileSize + s.tilePadding*2) * scale;
-    const columns = floor(size.x * scale / cell), rows = floor(size.y * scale / cell);
+    const columns = floor(size.x * scale / cell);
+    const rows = floor(size.y * scale / cell);
     context.strokeStyle = 'hsla(0,0%,100%,.12)';
     context.lineWidth = 1;
     for (let x = 0; x <= columns; ++x)
@@ -673,8 +707,8 @@ function refreshTexture()
     {
         context.strokeStyle = 'hsl(200,80%,60%)';
         context.lineWidth = 2;
-        context.strokeRect((s.tileIndex % columns) * cell + 1, floor(s.tileIndex / columns) * cell + 1,
-            cell - 2, cell - 2);
+        const x = s.tileIndex % columns, y = floor(s.tileIndex / columns);
+        context.strokeRect(x * cell + 1, y * cell + 1, cell - 2, cell - 2);
     }
     $('tileWarning').style.display = effectTileFits(s) ? 'none' : '';
     $('buttonDefaultTexture').disabled = textureInfos[0] === defaultTextureInfo;
@@ -690,7 +724,8 @@ function gameInit()
     setupLibraryBar();
     setupTexture();
     setupPreviewControls();
-    $('effectSelect').oninput = ()=> selectEffect(parseInt($('effectSelect').value));
+    $('effectSelect').oninput = ()=>
+        selectEffect(parseInt($('effectSelect').value));
     selectEffect(loadLibrary());
 }
 
@@ -718,7 +753,8 @@ function gameUpdatePost()
         setCameraScale(clamp(cameraScale * (1 - sign(mouseWheel)/5), 10, 300));
 
     const count = emitter.particles.length + ' particles';
-    $('particleCount').textContent === count || ($('particleCount').textContent = count);
+    if ($('particleCount').textContent !== count)
+        $('particleCount').textContent = count;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -726,8 +762,10 @@ function gameRender()
 {
     // show the floor the particles land on
     if (floorLayer)
-        drawRect(floorLayer.pos.add(vec2(floorLayer.size.x/2, .5)), vec2(floorLayer.size.x, 1),
-            hsl(0, 0, .3));
+    {
+        const size = floorLayer.size;
+        drawRect(floorLayer.pos.add(size.scale(.5)), size, hsl(0, 0, .3));
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -735,5 +773,5 @@ function gameRenderPost() {}
 
 ///////////////////////////////////////////////////////////////////////////////
 // startup LittleJS engine, drawing into the preview area
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png'],
-    $('previewArea'));
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost,
+    ['tiles.png'], $('previewArea'));
