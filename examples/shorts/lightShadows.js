@@ -1,15 +1,15 @@
 let mouseLight;
 
-// walls cast shadows by default; the floor is drawn in gameRender and does not
+// walls cast shadows by default
 class Wall extends EngineObject
 {
-    constructor(pos, size, tileInfo)
+    constructor(pos, size, tileInfo, color = hsl(0,0,.9))
     {
-        super(pos, size, tileInfo, 0, hsl(.6,.1,.7));
+        super(pos, size, tileInfo, 0, color);
     }
 }
 
-// stained glass: its color passes through into the light instead of blocking it
+// tinted glass has its color pass through 
 class Glass extends Wall
 {
     constructor(pos, size, color)
@@ -19,7 +19,8 @@ class Glass extends Wall
     }
     render()
     {
-        lightSystem.setShadowTransparent(true); // only acts in the shadow pass
+        // set this object transparent for the shadow pass
+        lightSystem.setShadowTransparent(true); 
         drawRect(this.pos, this.size, this.color);
         lightSystem.setShadowTransparent(false);
     }
@@ -27,22 +28,24 @@ class Glass extends Wall
 
 function gameInit()
 {
-    new LightSystemPlugin(undefined, hsl(0,0,.05));
+    new LightSystemPlugin();
     lightSystem.shadows = true;
-    canvasClearColor = hsl(0,0,.9);
 
-    // a room with pillars
+    // a room with shadow casting pillars
     for (let i = 0; i < 6; ++i)
         new Wall(vec2(-10 + i*4, 0), vec2(1, 3));
     new Wall(vec2(0, 8), vec2(24, 1));
     new Wall(vec2(0, -8), vec2(24, 1));
-    new Glass(vec2(-4, 4), vec2(3, .5), hsl(0, 1, .5));
-    new Glass(vec2(4, 4), vec2(3, .5), hsl(.6, 1, .5));
-    new Wall(vec2(4, -5), vec2(3), tile(3));
-    const coin = new EngineObject(vec2(-4, -5), vec2(1), undefined, 0, YELLOW);
-    coin.castShadow = false; // small things can stay out of the shadow map
+    new Glass(vec2(-2, 4), vec2(.5, 3), hsl(0, 1, .5));
+    new Glass(vec2(4, 4), vec2(.5, 3), hsl(.6, 1, .5));
+    new Wall(vec2(-4, -5), vec2(2), tile(3), GREEN);
 
-    new Light(vec2(-8, 4), 8, hsl(.1,.8,.9));
+    // make a coin that does not cast a shadow
+    const coin = new EngineObject(vec2(4, -5), vec2(1), tile(0), 0, YELLOW);
+    coin.castShadow = false;
+
+    // make some shadow casting lights
+    new Light(vec2(-7, 4), 8, hsl(.1,.8,.9));
     new Light(vec2(0, -4), 8, hsl(.55,.8,.9));
     mouseLight = new Light(vec2(), 10, WHITE);
 }
@@ -54,8 +57,8 @@ function gameUpdate()
 
 function gameRender()
 {
-    // the floor, drawn here so it casts no shadow
-    drawRect(vec2(), vec2(100), hsl(0,0,.35));
+    // the floor with no shadow
+    drawRect(vec2(), vec2(100), hsl(0,0,.3));
     for (let x = -12; x <= 12; x += 2)
     for (let y = -7;  y <= 7;  y += 2)
         drawRect(vec2(x, y), vec2(1.8), hsl(0,0,.4));
