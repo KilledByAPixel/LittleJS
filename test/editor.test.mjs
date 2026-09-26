@@ -362,3 +362,17 @@ test('Ctrl+Z undoes a stroke and Ctrl+Shift+Z redoes it', async () =>
     chord(['ControlLeft', 'ShiftLeft', 'KeyZ']);
     assert.equal(run('frontData[3]'), 2);
 });
+
+test('a quick click, down and up before the next step, still paints its cell', async () =>
+{
+    const engine = await loadGame();
+    const { run, handlers } = engine;
+    run(mapCode + `setEditMode(true); editorLayer = front; editorBrush.tile = 6;
+        editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;`);
+    const target = { tagName: 'CANVAS', closest: ()=> null };
+    handlers.mousedown({ button: 0, x: 500, y: 500, target, cancelable: false });
+    handlers.mouseup({ button: 0, x: 500, y: 500, target });
+    step(engine);
+    assert.equal(run('layers[2].getData(vec2(1, 0)).tile'), 6);
+    assert.equal(run('editorUndoList.length'), 1, 'and the stroke ended');
+});

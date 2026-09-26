@@ -406,6 +406,186 @@ function editorPaintLine(layer, pos)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// panel
+
+let editorPanel, editorPanelParts;
+
+function editorElement(tag, parent, style='', text='')
+{
+    const element = document.createElement(tag);
+    element.style.cssText = style;
+    element.textContent = text;
+    parent?.appendChild(element);
+    return element;
+}
+
+// the panel, made the first time the editor opens, on the left so it can sit beside the tweakables panel
+function editorPanelInit()
+{
+    editorPanel = editorElement('div', document.body,
+        'position:fixed;top:8px;left:8px;width:260px;max-height:calc(100% - 16px);overflow-y:auto;' +
+        'box-sizing:border-box;padding:8px;background:#111d;color:#eee;font:12px monospace;' +
+        'border-radius:4px;z-index:9999;user-select:none');
+
+    // a click or touch on the panel is not the game's, a mouse up still goes on so a drag can let go
+    for (const type of ['mousedown','wheel','touchstart','touchmove','touchend','touchcancel'])
+        editorPanel.addEventListener(type, (e)=> e.stopPropagation());
+
+    const row = ()=> editorElement('div', editorPanel, 'display:flex;gap:4px;margin:4px 0');
+    const button = (parent, text, onclick, title='')=>
+    {
+        const b = editorElement('button', parent, 'flex:1;padding:3px;cursor:pointer', text);
+        b.onclick = onclick;
+        b.title = title;
+        return b;
+    };
+
+    editorElement('div', editorPanel, 'font-weight:bold', 'Level Editor');
+    const top = row();
+    button(top, 'Play', ()=> setEditMode(false), '0');
+    button(top, 'Undo', ()=> editorUndo(), 'Ctrl+Z');
+    button(top, 'Redo', ()=> editorUndo(true), 'Ctrl+Y');
+
+    // a file that changed under its autosave
+    const pending = editorElement('div', editorPanel, 'padding:4px;margin:4px 0;background:#630;border-radius:3px');
+    editorElement('div', pending, '', 'The level file changed since your autosaved edits');
+    const pendingRow = editorElement('div', pending, 'display:flex;gap:4px;margin-top:4px');
+    button(pendingRow, 'Apply edits', ()=> editorApplyPending(editorLayer.record));
+    button(pendingRow, 'Drop them', ()=> editorDiscardPending(editorLayer.record));
+
+    const layerSelect = editorElement('select', editorPanel, 'width:100%;margin:4px 0;background:#222;color:#eee');
+    layerSelect.onchange = ()=> { editorLayer = editorLayers()[layerSelect.selectedIndex]; };
+
+    const tools = row();
+    const toolButtons = {
+        pencil: button(tools, 'Pencil', ()=> editorTool = 'pencil', 'B'),
+        eraser: button(tools, 'Eraser', ()=> editorTool = 'eraser', 'E'),
+        pick:   button(tools, 'Pick', ()=> editorTool = 'pick', 'I, or Alt+click'),
+    };
+    const turns = row();
+    const turn = button(turns, '', ()=> editorBrush.direction = (editorBrush.direction + 1) % 4, 'R, Shift+R turns back');
+    const mirror = button(turns, '', ()=> editorBrush.mirror = !editorBrush.mirror, 'M');
+
+    // the layer's tiles in a grid, a click picks one
+    const palette = editorElement('canvas', editorPanel,
+        'display:block;background:#333;cursor:crosshair;margin:4px 0');
+    palette.onclick = (e)=>
+    {
+        const cell = editorPaletteCell, tile = (e.offsetY / cell | 0) * editorPaletteColumns + (e.offsetX / cell | 0);
+        if (tile >= editorPaletteTiles(editorLayer).length || e.offsetX >= editorPaletteColumns * cell) return;
+        editorBrush.tile = tile;
+        editorTool = 'pencil';
+    };
+
+    const file = row();
+    button(file, 'Save', ()=> editorSave(editorLayer.record), 'Download the level as Tiled JSON');
+    button(file, 'Revert', ()=> editorRevert(editorLayer.record), 'Back to the file, can be undone');
+    const status = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;min-height:1em');
+    editorElement('div', editorPanel, 'color:#777;margin-top:4px',
+        'Right drag pans, wheel zooms');
+
+    editorPanelParts = {pending, layerSelect, toolButtons, turn, mirror, palette, status, layers: undefined};
+}
+
+// the palette's cell size in pixels and how many to a row
+const editorPaletteCell = 30, editorPaletteColumns = 8;
+
+// a layer's tiles in order, as the tile infos it draws them with, up to the image's edge and without the blank
+// ones at the end, a tile of one flat color; found once for each layer
+function editorPaletteTiles(layer)
+{
+    const live = layer?.live, image = live?.tileInfo?.textureInfo?.image;
+    if (!image) return [];
+    if (layer.palette?.image === image) return layer.palette.tiles;
+
+    const tiles = [];
+    for (let i = 0; i < 4096; ++i)
+    {
+        const t = editorTileInfo(live, i);
+        if (t.pos.x + t.size.x > image.width || t.pos.y + t.size.y > image.height) break;
+        tiles.push(t);
+    }
+    try
+    {
+        // an image from a file page can not be read back, then every tile is kept
+        const context = createCanvasContext(image.width, image.height, true);
+        context.drawImage(image, 0, 0);
+        const blank = (t)=>
+        {
+            const pixels = new Uint32Array(context.getImageData(t.pos.x, t.pos.y, t.size.x, t.size.y).data.buffer);
+            return pixels.every((p)=> p === pixels[0]);
+        };
+        while (tiles.length > 1 && blank(tiles.at(-1)))
+            tiles.pop();
+    }
+    catch {}
+    layer.palette = {image, tiles};
+    return tiles;
+}
+
+// draw the palette again, for a new layer or brush tile
+function editorPaletteDraw(canvas, layer)
+{
+    const tiles = editorPaletteTiles(layer), cell = editorPaletteCell, columns = editorPaletteColumns;
+    const image = layer?.live.tileInfo?.textureInfo?.image;
+    canvas.style.display = tiles.length ? '' : 'none';
+    canvas.width = columns * cell;
+    canvas.height = ceil(tiles.length / columns) * cell;
+    const context = canvas.getContext('2d');
+    context.imageSmoothingEnabled = false;
+    tiles.forEach((t, i)=>
+    {
+        const x = i % columns * cell, y = (i / columns | 0) * cell;
+        context.drawImage(image, t.pos.x, t.pos.y, t.size.x, t.size.y, x + 2, y + 2, cell - 4, cell - 4);
+        if (i !== editorBrush.tile) return;
+        context.strokeStyle = '#4af';
+        context.lineWidth = 2;
+        context.strokeRect(x + 1, y + 1, cell - 2, cell - 2);
+    });
+}
+
+// shows or hides the panel, and shows what changed since the last frame
+function editorPanelUpdate()
+{
+    if (!editMode)
+    {
+        editorPanel && (editorPanel.style.display = 'none');
+        return;
+    }
+    editorPanel || editorPanelInit();
+    editorPanel.style.display = '';
+    const p = editorPanelParts, layers = editorLayers();
+
+    // the layer list, made again when layers came or went
+    if (!p.layers || layers.length !== p.layers.length || layers.some((layer, i)=> layer !== p.layers[i]))
+    {
+        p.layers = layers;
+        p.layerSelect.replaceChildren(...layers.map((layer, i)=>
+            editorElement('option', undefined, '', `${layer.source.name || 'Layer ' + i} (${layer.record.fileName})`)));
+    }
+    p.layerSelect.selectedIndex = layers.indexOf(editorLayer);
+    p.pending.style.display = editorLayer?.record.pending ? '' : 'none';
+    for (const [tool, b] of Object.entries(p.toolButtons))
+        b.style.outline = tool === editorTool ? '2px solid #4af' : '';
+    p.turn.textContent = `Turn ${editorBrush.direction * 90}°`;
+    p.mirror.textContent = editorBrush.mirror ? 'Mirrored' : 'Mirror';
+
+    // the palette, drawn again when the layer or the brush tile changed
+    const live = editorLayer?.live;
+    if (p.paletteLayer !== editorLayer || p.paletteTile !== editorBrush.tile)
+    {
+        p.paletteLayer = editorLayer;
+        p.paletteTile = editorBrush.tile;
+        editorPaletteDraw(p.palette, editorLayer);
+    }
+
+    const t = editorHover && editorGidToTile(editorLayer.source.data[editorHover.x +
+        (live.size.y - 1 - editorHover.y) * live.size.x]);
+    p.status.textContent = editorHover ? `cell ${editorHover.x}, ${editorHover.y}` +
+        (t ? `  tile ${t.tile}` : '') : '';
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // plugin
 
 function editorUpdate()
@@ -449,10 +629,11 @@ function editorUpdate()
     }
     editorApplyCamera();
 
-    // the left button paints, or picks with the pick tool or Alt held
+    // the left button paints, or picks with the pick tool or Alt held; a quick click let go before this step
+    // still reads as pressed
     const layer = editorLayer?.live.destroyed ? undefined : editorLayer;
     editorHover = layer && editorCellAt(layer.live, screenToWorld(mousePosScreen));
-    if (mouseIsDown(0) && editorHover)
+    if ((mouseIsDown(0) || mouseWasPressed(0)) && editorHover)
     {
         if (editorTool === 'pick' || keyIsDown('AltLeft') || keyIsDown('AltRight'))
             editorPick(layer, editorHover);
@@ -471,6 +652,7 @@ function editorPreRender() { editMode && editorApplyCamera(); }
 // the layer's edge, a grid when zoomed in, the map's tiles the layer does not show, and the brush under the mouse
 function editorRender()
 {
+    headlessMode || editorPanelUpdate();
     if (!editMode || headlessMode) return;
     const layer = editorLayer;
     if (!layer || layer.live.destroyed) return;
