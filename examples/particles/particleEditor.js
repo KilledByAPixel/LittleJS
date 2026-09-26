@@ -13,6 +13,10 @@ const storageKey = 'particles_library';
 const storageSelectedKey = 'particles_selected';
 const storageExpandKey = 'particles_expand';
 const storageBackupKey = 'particles_library_backup';
+const storagePixelatedKey = 'particles_pixelated';
+
+// a texture takes this when it is made, so it is set before the engine starts
+setTilesPixelated(storageLoad(storagePixelatedKey) !== 'false');
 
 let library = [];      // every effect, saved as one
 let effect;            // the effect being edited, one of the library
@@ -418,7 +422,7 @@ function migrateOldSettings()
 
     // remove the old keys, the texture keeps its key
     const kept = ['particles_textureData', storageKey, storageSelectedKey,
-        storageExpandKey, storageBackupKey];
+        storageExpandKey, storageBackupKey, storagePixelatedKey];
     try
     {
         for (const key of Object.keys(localStorage))
@@ -485,6 +489,18 @@ function setupPreviewControls()
         setCanvasClearColor(hsl(0, 0, parseFloat($('backgroundSelect').value)));
     $('debugCheckbox').oninput = ()=>
         debugParticles = $('debugCheckbox').checked;
+    $('pixelatedCheckbox').checked = tilesPixelated;
+    $('pixelatedCheckbox').oninput = ()=>
+    {
+        // a game sets this once, the textures here are made again to show it
+        setTilesPixelated($('pixelatedCheckbox').checked);
+        storageSave(storagePixelatedKey, String(tilesPixelated));
+        for (const texture of new Set([textureInfos[0], defaultTextureInfo]))
+        {
+            texture.destroyWebGLTexture();
+            texture.createWebGLTexture();
+        }
+    };
 
     $('expandCheckbox').checked = storageLoad(storageExpandKey) === 'true';
     $('expandCheckbox').oninput = ()=>
