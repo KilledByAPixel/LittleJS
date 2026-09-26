@@ -24,6 +24,10 @@ let editorGameState;
 // the editor's own view, so the game's camera is left where the game had it
 let editorCameraPos = vec2(), editorCameraScale = 32;
 
+// what a click paints, the tool, the layer being painted, the cell under the mouse, the last cell of a stroke
+const editorBrush = {tile: 0, direction: 0, mirror: false};
+let editorTool = 'pencil', editorLayer, editorHover, editorLastCell;
+
 /** Open or close the editor, the game is paused while it is open and carries on with the changes after
  *  - Does nothing in release builds
  *  @param {boolean} [enable]
@@ -39,9 +43,12 @@ function setEditMode(enable=true)
         editorCameraScale = cameraScale;
         setPaused(true);
         setDebugOverlay(false); // out of the way of the level
+        const layers = editorLayers();
+        editorLayer = layers.find((layer)=> layer.live.isSolid) ?? layers.at(-1);
     }
     else
     {
+        editorStrokeEnd();
         const state = editorGameState;
         setPaused(state.paused);
         setCameraPos(state.cameraPos);
@@ -351,6 +358,54 @@ function editorChanged(stroke)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// editing
+
+// every tile layer in the game, as the editor's records, in render order
+function editorLayers()
+{
+    return engineObjects.filter((o)=> o instanceof TileLayer && !o.destroyed)
+        .sort((a, b)=> a.renderOrder - b.renderOrder).map(editorLayerRecord);
+}
+
+// the cell of a layer at a world position, undefined off the layer
+function editorCellAt(live, worldPos)
+{
+    const pos = worldPos.subtract(live.pos).floor();
+    return pos.arrayCheck(live.size) ? pos : undefined;
+}
+
+// the tile info a layer draws a tile with, as TileLayer.drawTileData picks it
+function editorTileInfo(live, tile)
+{
+    const t = live.tileInfo;
+    return t && (t.columns ? t.frame(tile) : t.index(tile));
+}
+
+// the brush takes the tile in a cell, an empty cell picks the eraser
+function editorPick(layer, pos)
+{
+    const t = editorGidToTile(layer.source.data[pos.x + (layer.live.size.y - 1 - pos.y) * layer.live.size.x]);
+    if (t)
+    {
+        Object.assign(editorBrush, t);
+        editorTool = 'pencil';
+    }
+    else
+        editorTool = 'eraser';
+}
+
+// paint every cell on the line from the last cell, so a fast drag leaves no gaps
+function editorPaintLine(layer, pos)
+{
+    const from = editorLastCell ?? pos, steps = max(abs(pos.x - from.x), abs(pos.y - from.y));
+    const {tile, direction, mirror} = editorBrush;
+    const gid = editorTool === 'eraser' ? 0 : editorTileToGid(tile, direction, mirror);
+    for (let i = 0; i <= steps; ++i)
+        editorPaint(layer, from.lerp(pos, steps ? i / steps : 1).floor(), gid);
+    editorLastCell = pos;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // plugin
 
 function editorUpdate()
@@ -364,11 +419,103 @@ function editorUpdate()
     {
         inputClearKey('Digit0');
         setEditMode(false);
+        return;
+    }
+
+    // keys, the paused game's update does not see them
+    const ctrl = keyIsDown('ControlLeft') || keyIsDown('ControlRight') ||
+        keyIsDown('MetaLeft') || keyIsDown('MetaRight');
+    const shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
+    if (ctrl && keyWasPressed('KeyZ')) editorUndo(shift);
+    if (ctrl && keyWasPressed('KeyY')) editorUndo(true);
+    if (!ctrl)
+    {
+        if (keyWasPressed('KeyR')) editorBrush.direction = (editorBrush.direction + (shift ? 3 : 1)) % 4;
+        if (keyWasPressed('KeyM')) editorBrush.mirror = !editorBrush.mirror;
+        if (keyWasPressed('KeyB')) editorTool = 'pencil';
+        if (keyWasPressed('KeyE')) editorTool = 'eraser';
+        if (keyWasPressed('KeyI')) editorTool = 'pick';
+    }
+
+    // the right or middle button drags the view, the wheel zooms on the point under the mouse
+    if (mouseIsDown(1) || mouseIsDown(2))
+        editorCameraPos = editorCameraPos.subtract(screenToWorldDelta(mouseDeltaScreen));
+    if (mouseWheel)
+    {
+        const before = screenToWorld(mousePosScreen);
+        editorCameraScale = clamp(editorCameraScale * (1 - mouseWheel/10), 1, 1e3);
+        editorApplyCamera();
+        editorCameraPos = editorCameraPos.add(before.subtract(screenToWorld(mousePosScreen)));
+    }
+    editorApplyCamera();
+
+    // the left button paints, or picks with the pick tool or Alt held
+    const layer = editorLayer?.live.destroyed ? undefined : editorLayer;
+    editorHover = layer && editorCellAt(layer.live, screenToWorld(mousePosScreen));
+    if (mouseIsDown(0) && editorHover)
+    {
+        if (editorTool === 'pick' || keyIsDown('AltLeft') || keyIsDown('AltRight'))
+            editorPick(layer, editorHover);
+        else
+            editorPaintLine(layer, editorHover);
+    }
+    if (!mouseIsDown(0))
+    {
+        editorStrokeEnd();
+        editorLastCell = undefined;
     }
 }
 
 function editorPreRender() { editMode && editorApplyCamera(); }
 
-function editorRender() {}
+// the layer's edge, a grid when zoomed in, the map's tiles the layer does not show, and the brush under the mouse
+function editorRender()
+{
+    if (!editMode || headlessMode) return;
+    const layer = editorLayer;
+    if (!layer || layer.live.destroyed) return;
+    const {live, source} = layer, {x: width, y: height} = live.size;
+
+    // the cells on screen
+    const low = screenToWorld(vec2(0, mainCanvasSize.y)).subtract(live.pos);
+    const high = screenToWorld(vec2(mainCanvasSize.x, 0)).subtract(live.pos);
+    const x0 = max(0, floor(low.x)), y0 = max(0, floor(low.y));
+    const x1 = min(width, ceil(high.x)), y1 = min(height, ceil(high.y));
+
+    // ghosts, cells the map has that the layer does not show: markers a game made objects of, tiles broken in play
+    const ghost = hsl(0, 0, 1, .4);
+    for (let x = x0; x < x1; ++x)
+    for (let y = y0; y < y1; ++y)
+    {
+        const t = editorGidToTile(source.data[x + (height - 1 - y) * width]);
+        if (t && live.getData(vec2(x, y)).tile === undefined)
+            drawTile(live.pos.add(vec2(x + .5, y + .5)), vec2(1), editorTileInfo(live, t.tile), ghost,
+                t.direction * PI/2, t.mirror);
+    }
+
+    // a grid once the cells are big enough to see one
+    const line = hsl(0, 0, 1, .12), thin = 1 / editorCameraScale;
+    if (editorCameraScale >= 12)
+    {
+        for (let x = x0; x <= x1; ++x)
+            drawLine(live.pos.add(vec2(x, y0)), live.pos.add(vec2(x, y1)), thin, line);
+        for (let y = y0; y <= y1; ++y)
+            drawLine(live.pos.add(vec2(x0, y)), live.pos.add(vec2(x1, y)), thin, line);
+    }
+
+    // the layer's edge
+    const edge = hsl(.55, 1, .6, .8), corners = [vec2(), vec2(width, 0), vec2(width, height), vec2(0, height)];
+    corners.forEach((c, i)=> drawLine(live.pos.add(c), live.pos.add(corners[(i + 1) % 4]), thin * 2, edge));
+
+    // the brush where it would paint
+    if (editorHover)
+    {
+        const center = live.pos.add(editorHover).add(vec2(.5));
+        if (editorTool === 'pencil')
+            drawTile(center, vec2(1), editorTileInfo(live, editorBrush.tile), hsl(0, 0, 1, .7),
+                editorBrush.direction * PI/2, editorBrush.mirror);
+        drawRect(center, vec2(1), hsl(.55, 1, .6, .25));
+    }
+}
 
 debug && engineAddPlugin(editorUpdate, editorRender, undefined, undefined, editorPreRender);

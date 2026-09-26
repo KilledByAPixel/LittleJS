@@ -298,3 +298,67 @@ test('a layer made in code is not autosaved, there is no load to bring it back i
         editorPaint(editorLayerRecord(live), vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();`);
     assert.equal(storage.items[saveName], undefined);
 });
+
+test('a click paints the cell under the mouse on the selected layer, and letting go ends the stroke', async () =>
+{
+    const engine = await loadGame();
+    const { run, handlers } = engine;
+    run(mapCode + `setEditMode(true); editorLayer = front; editorBrush.tile = 6;
+        editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;`);
+    // vmEngine's canvas is 1000 square at the origin, so the middle of the screen is the camera, cell (1, 0)
+    const target = { tagName: 'CANVAS', closest: ()=> null };
+    handlers.mousedown({ button: 0, x: 500, y: 500, target, cancelable: false });
+    step(engine);
+    assert.equal(run('layers[2].getData(vec2(1, 0)).tile'), 6);
+    handlers.mouseup({ button: 0, x: 500, y: 500, target });
+    step(engine);
+    assert.equal(run('editorUndoList.length'), 1);
+});
+
+test('a fast drag paints every cell between, not only where the mouse was each step', async () =>
+{
+    const engine = await loadGame();
+    const { run } = engine;
+    run(mapCode + `setEditMode(true); editorLayer = front;
+        editorPaintLine(front, vec2(0, 0)); editorPaintLine(front, vec2(2, 1)); editorStrokeEnd();`);
+    const painted = run('[vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(2, 1)].map((p)=> layers[2].getData(p).tile)');
+    assert.equal([...painted].filter((t)=> t === 0).length, 3, 'three cells on a line of two steps across');
+});
+
+test('R turns the brush, M mirrors it, and the pick tool takes a placed tile into the brush', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + 'setEditMode(true); editorLayer = front;');
+    press(engine, 'KeyR');
+    press(engine, 'KeyM');
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrush)')), { tile: 0, direction: 1, mirror: true });
+    engine.run('editorPick(front, vec2(2, 1))');
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrush)')), { tile: 2, direction: 0, mirror: false });
+    engine.run('editorPick(front, vec2(0, 0))');
+    assert.equal(engine.run('editorTool'), 'eraser', 'picking an empty cell picks the eraser');
+});
+
+test('the selected layer starts as the collision layer', async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode + 'setEditMode(true)');
+    assert.equal(run('editorLayer === front'), true);
+});
+
+test('Ctrl+Z undoes a stroke and Ctrl+Shift+Z redoes it', async () =>
+{
+    const engine = await loadGame();
+    const { run, handlers } = engine;
+    run(mapCode + `setEditMode(true); editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();`);
+    const chord = (codes)=>
+    {
+        codes.forEach((code)=> handlers.keydown(keyEvent(code)));
+        step(engine);
+        codes.forEach((code)=> handlers.keyup(keyEvent(code)));
+        step(engine);
+    };
+    chord(['ControlLeft', 'KeyZ']);
+    assert.equal(run('frontData[3]'), 0);
+    chord(['ControlLeft', 'ShiftLeft', 'KeyZ']);
+    assert.equal(run('frontData[3]'), 2);
+});
