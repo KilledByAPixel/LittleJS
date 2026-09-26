@@ -14,7 +14,8 @@
  * - Any EngineObject may override renderLight() to additively contribute to the
  *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
  * - Set obj.emissive to 1 to show an object at full brightness in its own colors, lit or not, or between 0 and 1 for
- *   partly: it draws its shape into the lightmap through renderEmissive(), which calls render() by default
+ *   partly: it draws its shape into the lightmap through renderEmissive(), which calls render() by default; exact for
+ *   solid pixels, a partly transparent one is self lit by its alpha too, so it shows darker
  * - Set lightSystem.shadows for objects to block light: each frame every object draws black into a
  *   shadow map through renderShadow(), which calls render() by default; obj.castShadow = false keeps it
  *   out (a floor TileLayer, a background), a draw's alpha sets how much light it blocks, and

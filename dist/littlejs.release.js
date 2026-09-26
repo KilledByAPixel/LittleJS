@@ -3225,7 +3225,8 @@ class EngineObject
         this.castShadow = true;
         /** @property {number} - With the light system, how much it lights itself: 0 lit only by the lights, 1 full
          *  brightness in its own colors whatever the lights do, between partly; drawn into the lightmap through
-         *  renderEmissive, as 3D's emissive */
+         *  renderEmissive, as 3D's emissive. Exact for solid pixels; a partly transparent one is self lit by its alpha
+         *  too, so a half alpha pixel shows at a quarter and a fading emissive sprite fades a little faster */
         this.emissive = 0;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         this.mirror = false;
@@ -11829,7 +11830,8 @@ function postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=fa
  * - Any EngineObject may override renderLight() to additively contribute to the
  *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
  * - Set obj.emissive to 1 to show an object at full brightness in its own colors, lit or not, or between 0 and 1 for
- *   partly: it draws its shape into the lightmap through renderEmissive(), which calls render() by default
+ *   partly: it draws its shape into the lightmap through renderEmissive(), which calls render() by default; exact for
+ *   solid pixels, a partly transparent one is self lit by its alpha too, so it shows darker
  * - Set lightSystem.shadows for objects to block light: each frame every object draws black into a
  *   shadow map through renderShadow(), which calls render() by default; obj.castShadow = false keeps it
  *   out (a floor TileLayer, a background), a draw's alpha sets how much light it blocks, and

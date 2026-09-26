@@ -82,7 +82,8 @@ class EngineObject
         this.castShadow = true;
         /** @property {number} - With the light system, how much it lights itself: 0 lit only by the lights, 1 full
          *  brightness in its own colors whatever the lights do, between partly; drawn into the lightmap through
-         *  renderEmissive, as 3D's emissive */
+         *  renderEmissive, as 3D's emissive. Exact for solid pixels; a partly transparent one is self lit by its alpha
+         *  too, so a half alpha pixel shows at a quarter and a fading emissive sprite fades a little faster */
         this.emissive = 0;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         this.mirror = false;

@@ -897,7 +897,8 @@ lightSystem.setShadowTransparent(on)  // in the shadow pass the draws that follo
 light.castShadow = true               // this light's rays stop at casters; a light inside a caster is blocked
 light.shadowCore = 0                  // radius around the light where casters are left out, so its lamp, torch
                                       // or the player carrying it does not block it
-obj.emissive = 0                      // 1 shows it at full brightness in its own colors, lit or not, between partly
+obj.emissive = 0                      // 1 shows it at full brightness in its own colors, lit or not, between partly;
+                                      // exact for solid pixels, a half alpha one shows at a quarter
 obj.renderEmissive()                  // draws its glowing shape into the lightmap, render() by default; override to
                                       // glow only a part, like a robot's eyes
 obj.castShadow = true                 // draws into the shadow map; false for a floor TileLayer, a background, a pickup
