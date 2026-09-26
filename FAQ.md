@@ -258,6 +258,7 @@ Plugins are self-contained features that live alongside the engine but aren't pa
 | `uiSystem.js` | Lightweight in-engine UI widgets (buttons, text, checkboxes, sliders, text input, video, layout) |
 | `tweenSystem.js` | Tween any property over time with easing curves |
 | `pathFinder.js` | Grid-based A* pathfinding with optional path smoothing |
+| `tweakables.js` | A debug panel to change values live while the game runs, press 9 with the debug overlay open |
 | `medalSystem.js` | Achievement / medal tracking with popup notifications |
 | `newgrounds.js` | Newgrounds.io integration (medals held on the server, scoreboards) |
 | `zzfxm.js` | Procedural chiptune music via the `ZzFXMusic` class |

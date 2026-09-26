@@ -52,6 +52,31 @@ declare module "littlejsengine" {
      */
     export type MedalCallbackFunction = (medal: Medal) => any;
     /**
+     * Options for a tweak
+     */
+    export type TweakOptions = {
+        /**
+         * - Lowest value on the slider, the slider shows when min and max are both set
+         */
+        min?: number;
+        /**
+         * - Highest value on the slider
+         */
+        max?: number;
+        /**
+         * - Step for the slider and number box, a thousandth of the range by default
+         */
+        step?: number;
+        /**
+         * - Name to show in place of the path, and the name it is saved by with an object
+         */
+        label?: string;
+        /**
+         * - Object the path is a field of, in place of a global, for an ES module game
+         */
+        object?: any;
+    };
+    /**
      * - Function called when sound is loaded
      */
     export type SoundLoadCallback = (sound: Sound) => any;
@@ -276,6 +301,12 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Debug */
     export let debugKeysAlways: boolean;
+    /** True if the tweakables panel is shown, 9 toggles it while the overlay is open; set it to show the panel
+     *  from the start, the panel is never shown in release builds
+     *  @type {boolean}
+     *  @default
+     *  @memberof Debug */
+    export let debugTweakables: boolean;
     /** Asserts if the expression is false, does nothing in release builds
      *  Halts execution if the assert fails and throws an error
      *  @param {*} assert - any value, the assert fails when it is falsy
@@ -964,6 +995,10 @@ declare module "littlejsengine" {
      *  @param {boolean} [enable]
      *  @memberof Debug */
     export function setDebugKeysAlways(enable?: boolean): void;
+    /** Set if the tweakables panel is shown, as 9 does while the debug overlay is open
+     *  @param {boolean} [show]
+     *  @memberof Debug */
+    export function setDebugTweakables(show?: boolean): void;
     /** Open or close the debug overlay from code, as the debug key does; does nothing in release builds
      *  @param {boolean} [show]
      *  @memberof Debug */
@@ -6868,6 +6903,51 @@ declare module "littlejsengine" {
         /** True if walkable and not blocked by cost. */
         isClear(): boolean;
     }
+    /** Options for a tweak
+     *  @typedef {Object} TweakOptions
+     *  @property {number} [min] - Lowest value on the slider, the slider shows when min and max are both set
+     *  @property {number} [max] - Highest value on the slider
+     *  @property {number} [step] - Step for the slider and number box, a thousandth of the range by default
+     *  @property {string} [label] - Name to show in place of the path, and the name it is saved by with an object
+     *  @property {Object} [object] - Object the path is a field of, in place of a global, for an ES module game
+     *  @memberof Tweakables */
+    /** Add a value to the tweakables panel, so it can be changed while the game runs
+     *  - The path is the name of a global, or a dotted path to a field on one like 'player.speed'
+     *  - Only globals of a script can be found by name, an ES module game passes the object its values are on
+     *  - Its type comes from the value it has now: a number, boolean, Color, Vector2 or Vector3
+     *  - Call it after the value is set, at the end of gameInit
+     *  - Adding the same path again keeps its row and brings its tweaked value back, for an object made again;
+     *    with the object option it is known by its label, so two objects with the same field need their own labels
+     *  - Does nothing in release builds
+     *  @param {string} path - Name of a global, or a dotted path to a field on one or on the object option
+     *  @param {TweakOptions} [options]
+     *  @memberof Tweakables
+     *  @example
+     *  tweak('jumpSpeed', {min: 0, max: 1});
+     *  tweak('skyColor');
+     *  tweak('player.size', {label: 'Player Size'});
+     *  tweak('speed', {object: settings}); // settings.speed, in an ES module */
+    export function tweak(path: string, options?: TweakOptions): void;
+    /** Add a divider to the tweakables panel, with a label for the tweaks after it
+     *  - Does nothing in release builds
+     *  @param {string} [label]
+     *  @memberof Tweakables */
+    export function tweakDivider(label?: string): void;
+    /** Add a button to the tweakables panel that calls a function, like one to restart the level
+     *  - Adding the same label again replaces its function
+     *  - Does nothing in release builds
+     *  @param {string} label
+     *  @param {function():void} callback
+     *  @memberof Tweakables
+     *  @example
+     *  tweakButton('Restart', restartLevel); */
+    export function tweakButton(label: string, callback: () => void): void;
+    /** Add the engine settings a game most often tunes to the tweakables panel:
+     *  gravity, timeScale, cameraScale and soundVolume, under an Engine divider
+     *  - They are changed through their setters, so this works in the ES module build too
+     *  - Does nothing in release builds
+     *  @memberof Tweakables */
+    export function tweakEngineDefaults(): void;
     /**
      * LittleJS 3D Math Plugin
      * - Vector3 and Matrix4 for 3D games and plugins

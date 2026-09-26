@@ -56,6 +56,13 @@ let debugOverlay = false;
  *  @memberof Debug */
 function setDebugOverlay(show=true) { debug && (debugOverlay = !!show); }
 
+/** True if the tweakables panel is shown, 9 toggles it while the overlay is open; set it to show the panel
+ *  from the start, the panel is never shown in release builds
+ *  @type {boolean}
+ *  @default
+ *  @memberof Debug */
+let debugTweakables = false;
+
 // the shadow behind debug text, so it reads over anything: the overlay menu and the mouse text both use it;
 // a smaller blur is tighter and darker, a larger one softer and fainter
 const debugTextShadowColor = '#000', debugTextShadowBlur = 9;
@@ -303,26 +310,28 @@ function debugUpdate()
         if (keyWasPressed('Digit1'))
             debugPhysics = !debugPhysics, debugParticles = false;
         if (keyWasPressed('Digit2'))
-            debugParticles = !debugParticles, debugPhysics = false;
+            debugTiles = (debugTiles + 1) % (debugTileLayersShown().length + 2); // off, all, then each layer
         if (keyWasPressed('Digit3'))
-            debugGamepads = !debugGamepads;
+            debugParticles = !debugParticles, debugPhysics = false;
         if (keyWasPressed('Digit4'))
             debugRaycast = !debugRaycast;
         if (keyWasPressed('Digit5'))
-            debugScreenshot();
-        if (keyWasPressed('Digit7'))
+            debugGamepads = !debugGamepads;
+        if (keyWasPressed('Digit6'))
             debugSound = !debugSound;
-        if (keyWasPressed('Digit8'))
-            debugTiles = (debugTiles + 1) % (debugTileLayersShown().length + 2); // off, all, then each layer
+        if (keyWasPressed('Digit7'))
+            debugScreenshot();
+        if (keyWasPressed('Digit9'))
+            debugTweakables = !debugTweakables;
     }
     if (debugVideoCaptureIsActive())
     {
         // control to stop video capture, a capture the overlay started also stops when the overlay closes,
         // one the game started from code runs until it calls debugVideoCaptureStop
-        if (debugKeys ? keyWasPressed('Digit6') : debugVideoCapture.fromOverlay)
+        if (debugKeys ? keyWasPressed('Digit8') : debugVideoCapture.fromOverlay)
             debugVideoCaptureStop();
     }
-    else if (debugKeys && keyWasPressed('Digit6'))
+    else if (debugKeys && keyWasPressed('Digit8'))
     {
         debugVideoCaptureStart();
         if (debugVideoCapture)
@@ -358,7 +367,7 @@ function debugTileLayersShown()
         .sort((a, b)=> a.renderOrder - b.renderOrder); // a stable sort, so equal orders keep the order they were made in
 }
 
-// the layers Debug Tiles shows right now, from the ones shown: every one, or the one the 8 key has stepped to,
+// the layers Debug Tiles shows right now, from the ones shown: every one, or the one the 2 key has stepped to,
 // every one again if layers went away since
 function debugTileLayersSelected(layers)
 {
@@ -408,7 +417,7 @@ function debugTileLayers(layers)
 function debugTileText(layers)
 {
     if (!debugTiles) return '';
-    // each layer by its number in the 8 key's cycle, the one the menu shows
+    // each layer by its number in the 2 key's cycle, the one the menu shows
     let text = '';
     for (const layer of debugTileLayersSelected(layers))
     {
@@ -656,19 +665,22 @@ function debugRender()
             debugContext.fillText('ESC: Debug Overlay', x, y += h);
             debugContext.fillStyle = debugPhysics ? '#f00' : '#fff';
             debugContext.fillText('1: Debug Physics', x, y += h);
+            debugContext.fillStyle = debugTiles ? '#f00' : '#fff';
+            debugContext.fillText('2: Debug Tiles' + debugTilesLabel(tileLayers), x, y += h);
             debugContext.fillStyle = debugParticles ? '#f00' : '#fff';
-            debugContext.fillText('2: Debug Particles', x, y += h);
-            debugContext.fillStyle = debugGamepads ? '#f00' : '#fff';
-            debugContext.fillText('3: Debug Gamepads', x, y += h);
+            debugContext.fillText('3: Debug Particles', x, y += h);
             debugContext.fillStyle = debugRaycast ? '#f00' : '#fff';
             debugContext.fillText('4: Debug Raycasts', x, y += h);
-            debugContext.fillStyle = '#fff';
-            debugContext.fillText('5: Save Screenshot', x, y += h);
-            debugContext.fillText('6: Toggle Video Capture', x, y += h);
+            debugContext.fillStyle = debugGamepads ? '#f00' : '#fff';
+            debugContext.fillText('5: Debug Gamepads', x, y += h);
             debugContext.fillStyle = debugSound ? '#f00' : '#fff';
-            debugContext.fillText('7: Debug Sound', x, y += h);
-            debugContext.fillStyle = debugTiles ? '#f00' : '#fff';
-            debugContext.fillText('8: Debug Tiles' + debugTilesLabel(tileLayers), x, y += h);
+            debugContext.fillText('6: Debug Sound', x, y += h);
+            debugContext.fillStyle = '#fff';
+            debugContext.fillText('7: Save Screenshot', x, y += h);
+            debugContext.fillText('8: Toggle Video Capture', x, y += h);
+            debugContext.fillStyle = debugTweakables ? '#f00' : '#fff';
+            debugContext.fillText('9: Tweakables', x, y += h);
+            debugContext.fillStyle = '#fff';
 
             let keysPressed = '';
             let mousePressed = '';
@@ -701,10 +713,10 @@ function debugRender()
         else
         {
             debugContext.fillText(debugPhysics ? 'Debug Physics' : '', x, y += h);
+            debugContext.fillText(debugTiles ? 'Debug Tiles' + debugTilesLabel(tileLayers) : '', x, y += h);
             debugContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
             debugContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
             debugContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
-            debugContext.fillText(debugTiles ? 'Debug Tiles' + debugTilesLabel(tileLayers) : '', x, y += h);
             debugContext.fillText(debugSound ? 'Debug Sound' : '', x, y += h);
         }
 

@@ -814,7 +814,7 @@ function gameUpdatePost()
     if (mouseWheel && previewHover)
         setCameraScale(clamp(cameraScale * (1 - sign(mouseWheel)/5), 10, 300));
 
-    // debug key 2 toggles the bounds too
+    // debug key 3 toggles the bounds too
     if ($('debugCheckbox').checked !== debugParticles)
         $('debugCheckbox').checked = debugParticles;
 

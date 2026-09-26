@@ -33,6 +33,7 @@ export
     debugWatermark,
     debugKey,
     debugKeysAlways,
+    debugTweakables,
 
     // Debug
     ASSERT,
@@ -169,6 +170,7 @@ export
     setDebugWatermark,
     setDebugKey,
     setDebugKeysAlways,
+    setDebugTweakables,
     setDebugOverlay,
 
     // Math

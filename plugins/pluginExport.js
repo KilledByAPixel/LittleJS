@@ -107,6 +107,12 @@ export
     PathFinder,
     PathFinderNode,
 
+    // Tweakables
+    tweak,
+    tweakDivider,
+    tweakButton,
+    tweakEngineDefaults,
+
     // Math3D
     vec3,
     isVector3,

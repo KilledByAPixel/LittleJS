@@ -650,7 +650,7 @@ TileLayer(pos, size, tileInfo, renderOrder=0, useWebGL=true) // Create a tile la
 TileLayer.setData(layerPos, data, redraw)      // Set data at position
 TileLayer.clearData(layerPos, redraw)          // Clear data at position
 TileLayer.getData(layerPos)                    // Get data at position
-TileLayer.debugShow = true                     // Shown by the debug overlay's 8: Debug Tiles, off to leave a layer out
+TileLayer.debugShow = true                     // Shown by the debug overlay's 2: Debug Tiles, off to leave a layer out
 TileLayer.redraw()                             // Draw to an offscreen canvas
 TileLayer.redrawStart(clear=false)             // Start drawing to the layer, for updating parts of it
 TileLayer.redrawEnd()                          // Finish drawing to the layer
@@ -1770,11 +1770,32 @@ async function gameInit()
 }
 ```
 
+## LittleJS Tweakables
+- A panel to change values live while the game runs, debug builds only
+- Press 9 while the debug overlay is open to show it, or set debugTweakables = true to show it from the start
+- A number gets a slider when it has a min and max, a boolean a checkbox, a Color a picker and an alpha slider,
+  a Vector2 or Vector3 a number for each axis
+- Changes are saved and come back after a refresh, until the value in the code changes
+- Copy puts the changed values on the clipboard as lines of code, Reset puts back the code values
+- Paths are found by name, so only a script's globals work; an ES module game passes the object option
+- In release builds nothing is added and the code's values are used as they are
+- See `examples/shorts/tweakables.js` for a demo
+
+```javascript
+tweak(path, options)       // Add a global, or a dotted path to a field on one, call it at the end of gameInit
+                           // options: {min, max, step, label, object}, the slider shows when min and max are set
+tweak('speed', {object: settings}) // A field of an object, for an ES module game; with two objects that share a
+                                   // field, give each a label, the name it is known and saved by
+tweakDivider(label)        // Add a divider with a label for the tweaks after it
+tweakButton(label, callback) // Add a button that calls a function, like one to restart the level
+tweakEngineDefaults()      // Add gravity, timeScale, cameraScale and soundVolume
+```
+
 ## LittleJS Debugging System
 - Press Escape key to toggle debug overlay
-- Number keys toggle debug functions while the overlay is open: 1 physics, 2 particles, 3 gamepads, 4 raycasts,
-  5 screenshot, 6 video capture, 7 sound, 8 tiles (each tile layer's bounds, the collision values on screen, and the
-  tiles under the mouse; pressing 8 again steps through the layers one at a time, then off)
+- Number keys toggle debug functions while the overlay is open: 1 physics, 2 tiles (each tile layer's bounds, the
+  collision values on screen, and the tiles under the mouse; pressing 2 again steps through the layers one at a time,
+  then off), 3 particles, 4 raycasts, 5 gamepads, 6 sound, 7 screenshot, 8 video capture, 9 tweakables panel
 - +/- keys apply time scale to update while the overlay is open
 - setDebugKeysAlways(true) lets the number and +/- keys work with the overlay closed, for a game that does not use them
 - Debug primitive rendering system
@@ -1809,6 +1830,7 @@ debugPointSize = .5  // Size to render debug points by default
 debugKey = 'Escape'  // Key code used to toggle debug mode
 debugKeysAlways = false // The number and +/- keys work with the overlay closed too, setDebugKeysAlways(enable=true)
 debugOverlay         // Is the debug overlay active? setDebugOverlay(show=true) opens or closes it from code
+debugTweakables = false // Is the tweakables panel shown? setDebugTweakables(show=true)
 debugWatermark       // Should watermark with FPS appear in debug mode?
 ```
 

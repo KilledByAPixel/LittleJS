@@ -785,3 +785,8 @@ function setDebugKey(key) { debugKey = key; }
  *  @param {boolean} [enable]
  *  @memberof Debug */
 function setDebugKeysAlways(enable=true) { debugKeysAlways = enable; }
+
+/** Set if the tweakables panel is shown, as 9 does while the debug overlay is open
+ *  @param {boolean} [show]
+ *  @memberof Debug */
+function setDebugTweakables(show=true) { debugTweakables = show; }
