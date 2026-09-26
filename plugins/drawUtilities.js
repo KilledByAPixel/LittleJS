@@ -1,7 +1,7 @@
 /**
  * LittleJS Drawing Utilities Plugin
  * - Extra drawing functions for LittleJS
- * - Nine slice and three slice drawing
+ * - Nine slice and three slice drawing, and TileSlice to keep one as a style, like a UI skin
  * @namespace DrawUtilities
  */
 
@@ -148,6 +148,83 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
         const flipY = i>1;
         const cornerPos = cornerOffset.multiply(vec2(flipX?-1:1, flipY?-flip:flip));
         drawTile(pos.add(cornerPos.rotate(rotateAngle)), cornerSize, cornerTile, color, a, false, additiveColor, useWebGL, screenSpace, context);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * A tile drawn as a box of any size, kept as a style to draw with, like a UI skin
+ * - 9 slices is a nine-slice from the 3x3 block of tiles at tileInfo, see drawNineSlice
+ * - 3 slices is a three-slice from the 3 tiles in a row at tileInfo, see drawThreeSlice
+ * - 1 slice is the whole tile stretched over the box, a plain image
+ * - The UI system draws a widget's background with one, see uiSystem.defaultSlice
+ * @memberof DrawUtilities
+ * @example
+ * const panel = new TileSlice(tile(0, 16), 9, 12);
+ * panel.draw(vec2(0, 5), vec2(10, 4));
+ * uiSystem.defaultSlice = panel; // every UI widget made after this
+ */
+class TileSlice
+{
+    /** Create a tile slice style
+     *  @param {TileInfo} tileInfo - The tile, or the first of the tiles, to draw with
+     *  @param {number} [slices] - 9 for a nine-slice, 3 for a three-slice, 1 for the whole tile
+     *  @param {number} [borderSize] - Drawn thickness of the edges and corners, undefined for the draw's own default
+     *  @param {number} [extraSpace] - Extra spacing adjustment of the slices, undefined for the draw's own default */
+    constructor(tileInfo, slices=9, borderSize, extraSpace)
+    {
+        ASSERT(tileInfo instanceof TileInfo, 'tileInfo must be a TileInfo');
+        ASSERT(slices === 9 || slices === 3 || slices === 1, 'slices must be 9, 3 or 1');
+        ASSERT(borderSize === undefined || isNumber(borderSize), 'borderSize must be a number');
+
+        /** @property {TileInfo} - The tile, or the first of the tiles, to draw with */
+        this.tileInfo = tileInfo;
+        /** @property {number} - 9 for a nine-slice, 3 for a three-slice, 1 for the whole tile */
+        this.slices = slices;
+        /** @property {number|undefined} - Drawn thickness of the edges and corners, undefined for the draw's default
+         *  @type {number|undefined} */
+        this.borderSize = borderSize;
+        /** @property {number|undefined} - Extra spacing adjustment of the slices, undefined for the draw's default
+         *  @type {number|undefined} */
+        this.extraSpace = extraSpace;
+    }
+
+    /** Draw it as a box in world space, or in screen space
+     *  @param {Vector2} pos - Center position
+     *  @param {Vector2} size - Size of the box
+     *  @param {Color} [color] - Color to modulate with
+     *  @param {Color} [additiveColor] - Additive color
+     *  @param {number} [angle] - Angle to rotate by
+     *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
+     *  @param {boolean} [screenSpace] - Are pos and size in screen space?
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
+    draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=false, context)
+    {
+        if (this.slices === 9)
+            drawNineSlice(pos, size, this.tileInfo, color, this.borderSize, additiveColor, this.extraSpace, angle, useWebGL, screenSpace, context);
+        else if (this.slices === 3)
+            drawThreeSlice(pos, size, this.tileInfo, color, this.borderSize, additiveColor, this.extraSpace, angle, useWebGL, screenSpace, context);
+        else
+            drawTile(pos, size, this.tileInfo, color, angle, false, additiveColor, useWebGL, screenSpace, context);
+    }
+
+    /** Draw it as a box in screen space, with the 2D context by default, on top of what WebGL drew, like drawTextScreen
+     *  @param {Vector2} pos - Screen space center position
+     *  @param {Vector2} size - Screen space size
+     *  @param {Color} [color] - Color to modulate with
+     *  @param {Color} [additiveColor] - Additive color
+     *  @param {number} [angle] - Angle to rotate by
+     *  @param {boolean} [useWebGL] - Use WebGL for rendering
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
+    drawScreen(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=false, context)
+    {
+        if (this.slices === 9)
+            drawNineSliceScreen(pos, size, this.tileInfo, color, this.borderSize, additiveColor, this.extraSpace, angle, useWebGL, context);
+        else if (this.slices === 3)
+            drawThreeSliceScreen(pos, size, this.tileInfo, color, this.borderSize, additiveColor, this.extraSpace, angle, useWebGL, context);
+        else
+            drawTile(pos, size, this.tileInfo, color, angle, false, additiveColor, useWebGL, true, context);
     }
 }
 

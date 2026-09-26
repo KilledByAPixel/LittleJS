@@ -72,6 +72,7 @@ const exampleList =
     new ExampleInfo('Crescent', 'crescent.js', 'Moon phase crescent shapes', false, 'moon, phase, polygon, draw, circle, lunar'),
     new ExampleInfo('UI System', 'uiSystem.js', 'Buttons, sliders and checkboxes', false, 'objects, widgets, interactive'),
     new ExampleInfo('UI Layout', 'uiLayout.js', 'Menus laid out in rows, columns or grids', false, 'grid, menu, layout'),
+    new ExampleInfo('UI Tile Slice', 'uiSlice.js', 'UI styled with nine-slice and tile art', false, 'skin, theme, nine slice, three slice, TileSlice, widgets, tiles'),
     new ExampleInfo('WebGL Shader', 'shader.js', 'Full canvas WebGL shader', false, 'webgl, visual, effect'),
     new ExampleInfo('Post Processing', 'postProcess.js', 'Shader effects and filters', false, 'webgl, visual, effect'),
     new ExampleInfo('Object Shaders', 'shaders.js', 'Custom shaders on sprites and draws', false, 'webgl, visual, effect, Shader, setShader'),

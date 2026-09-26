@@ -92,6 +92,7 @@ export
     drawNineSliceScreen,
     drawThreeSlice,
     drawThreeSliceScreen,
+    TileSlice,
     drawCrescent,
     getCrescentPoints,
 

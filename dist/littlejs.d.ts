@@ -4694,6 +4694,13 @@ declare module "littlejsengine" {
         defaultShadowBlur: number;
         /** @property {Vector2} - Offset of shadow blur */
         defaultShadowOffset: Vector2;
+        /** @property {TileSlice|undefined} - Style to draw UI elements with in place of their rectangle, tinted by
+         *  their color, undefined for rectangles; needs the drawUtilities plugin
+         *  @type {TileSlice|undefined} */
+        defaultSlice: TileSlice | undefined;
+        /** @property {TileSlice|undefined} - Style to draw slider handles with, undefined for the slider's own slice
+         *  @type {TileSlice|undefined} */
+        defaultHandleSlice: TileSlice | undefined;
         /** @property {number} - If set ui coords will be renormalized to this canvas height */
         nativeHeight: number;
         /** @property {UIObject|undefined} - Object currently selected by navigation (gamepad or keyboard)
@@ -4744,6 +4751,12 @@ declare module "littlejsengine" {
         *  @param {number}  [shadowBlur]
         *  @param {Vector2} [shadowOffset] */
         drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, cornerRadius?: number, gradientColor?: Color, shadowColor?: Color, shadowBlur?: number, shadowOffset?: Vector2): void;
+        /** Draw a TileSlice to the UI context, in place of a rectangle
+        *  @param {TileSlice} slice
+        *  @param {Vector2}   pos
+        *  @param {Vector2}   size
+        *  @param {Color}     [color] */
+        drawSlice(slice: TileSlice, pos: Vector2, size: Vector2, color?: Color): void;
         /** Draw a line to the UI context
         *  @param {Vector2} posA
         *  @param {Vector2} posB
@@ -4876,6 +4889,10 @@ declare module "littlejsengine" {
         lineWidth: number;
         /** @property {number} - Corner radius for rounded rects */
         cornerRadius: number;
+        /** @property {TileSlice|undefined} - Style to draw with in place of the rectangle, tinted by the color for its
+         *  state; its art has the frame, so the outline, corner radius and shadow are not drawn
+         *  @type {TileSlice|undefined} */
+        slice: TileSlice | undefined;
         /** @property {string} - Font for this object */
         font: string;
         /** @property {string|undefined} - Font style for this object or undefined
@@ -5122,8 +5139,17 @@ declare module "littlejsengine" {
         value: number;
         /** @property {Color} - Color for the handle part of the slider */
         handleColor: Color;
+        /** @property {TileSlice|undefined} - Style to draw the handle, or the fill, with; undefined for the slider's own
+         *  slice, or a rectangle when it has none
+         *  @type {TileSlice|undefined} */
+        handleSlice: TileSlice | undefined;
         /** @property {boolean} - Should it fill up like a progress bar? */
         fillMode: boolean;
+        /** Draw the handle, or the fill of a fill mode slider, with the handle slice, the slider's own, or a rectangle
+         *  @param {Vector2} pos
+         *  @param {Vector2} size
+         *  @param {Color}   color */
+        drawHandle(pos: Vector2, size: Vector2, color: Color): void;
     }
     /**
      * UIVideo - A UI object that plays video
@@ -6263,7 +6289,7 @@ declare module "littlejsengine" {
     /**
      * LittleJS Drawing Utilities Plugin
      * - Extra drawing functions for LittleJS
-     * - Nine slice and three slice drawing
+     * - Nine slice and three slice drawing, and TileSlice to keep one as a style, like a UI skin
      * @namespace DrawUtilities
      */
     /** Draw a scalable nine-slice UI element in screen space, drawNineSlice with screenSpace set
@@ -6313,6 +6339,55 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
     export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    /**
+     * A tile drawn as a box of any size, kept as a style to draw with, like a UI skin
+     * - 9 slices is a nine-slice from the 3x3 block of tiles at tileInfo, see drawNineSlice
+     * - 3 slices is a three-slice from the 3 tiles in a row at tileInfo, see drawThreeSlice
+     * - 1 slice is the whole tile stretched over the box, a plain image
+     * - The UI system draws a widget's background with one, see uiSystem.defaultSlice
+     * @memberof DrawUtilities
+     * @example
+     * const panel = new TileSlice(tile(0, 16), 9, 12);
+     * panel.draw(vec2(0, 5), vec2(10, 4));
+     * uiSystem.defaultSlice = panel; // every UI widget made after this
+     */
+    export class TileSlice {
+        /** Create a tile slice style
+         *  @param {TileInfo} tileInfo - The tile, or the first of the tiles, to draw with
+         *  @param {number} [slices] - 9 for a nine-slice, 3 for a three-slice, 1 for the whole tile
+         *  @param {number} [borderSize] - Drawn thickness of the edges and corners, undefined for the draw's own default
+         *  @param {number} [extraSpace] - Extra spacing adjustment of the slices, undefined for the draw's own default */
+        constructor(tileInfo: TileInfo, slices?: number, borderSize?: number, extraSpace?: number);
+        /** @property {TileInfo} - The tile, or the first of the tiles, to draw with */
+        tileInfo: TileInfo;
+        /** @property {number} - 9 for a nine-slice, 3 for a three-slice, 1 for the whole tile */
+        slices: number;
+        /** @property {number|undefined} - Drawn thickness of the edges and corners, undefined for the draw's default
+         *  @type {number|undefined} */
+        borderSize: number | undefined;
+        /** @property {number|undefined} - Extra spacing adjustment of the slices, undefined for the draw's default
+         *  @type {number|undefined} */
+        extraSpace: number | undefined;
+        /** Draw it as a box in world space, or in screen space
+         *  @param {Vector2} pos - Center position
+         *  @param {Vector2} size - Size of the box
+         *  @param {Color} [color] - Color to modulate with
+         *  @param {Color} [additiveColor] - Additive color
+         *  @param {number} [angle] - Angle to rotate by
+         *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
+         *  @param {boolean} [screenSpace] - Are pos and size in screen space?
+         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
+        draw(pos: Vector2, size: Vector2, color?: Color, additiveColor?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+        /** Draw it as a box in screen space, with the 2D context by default, on top of what WebGL drew, like drawTextScreen
+         *  @param {Vector2} pos - Screen space center position
+         *  @param {Vector2} size - Screen space size
+         *  @param {Color} [color] - Color to modulate with
+         *  @param {Color} [additiveColor] - Additive color
+         *  @param {number} [angle] - Angle to rotate by
+         *  @param {boolean} [useWebGL] - Use WebGL for rendering
+         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
+        drawScreen(pos: Vector2, size: Vector2, color?: Color, additiveColor?: Color, angle?: number, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    }
     /** Draw a crescent / moon-phase shape built from a polygon
      *  Routes through drawPoly, so it supports WebGL, screen space, color, and outlines
      *  @param {Vector2} pos - Center position

@@ -95,6 +95,13 @@ class UISystemPlugin
         this.defaultShadowBlur = 5;
         /** @property {Vector2} - Offset of shadow blur */
         this.defaultShadowOffset = vec2(5);
+        /** @property {TileSlice|undefined} - Style to draw UI elements with in place of their rectangle, tinted by
+         *  their color, undefined for rectangles; needs the drawUtilities plugin
+         *  @type {TileSlice|undefined} */
+        this.defaultSlice = undefined;
+        /** @property {TileSlice|undefined} - Style to draw slider handles with, undefined for the slider's own slice
+         *  @type {TileSlice|undefined} */
+        this.defaultHandleSlice = undefined;
         /** @property {number} - If set ui coords will be renormalized to this canvas height */
         this.nativeHeight = 0;
 
@@ -437,6 +444,20 @@ class UISystemPlugin
             context.lineWidth = lineWidth;
             context.stroke();
         }
+    }
+
+    /** Draw a TileSlice to the UI context, in place of a rectangle
+    *  @param {TileSlice} slice
+    *  @param {Vector2}   pos
+    *  @param {Vector2}   size
+    *  @param {Color}     [color] */
+    drawSlice(slice, pos, size, color=WHITE)
+    {
+        ASSERT(typeof TileSlice === 'function' && slice instanceof TileSlice, 'slice must be a TileSlice, from the drawUtilities plugin');
+        ASSERT(isVector2(pos), 'pos must be a vec2');
+        ASSERT(isVector2(size), 'size must be a vec2');
+        ASSERT(isColor(color), 'color must be a color');
+        slice.drawScreen(pos, size, color, undefined, 0, false, uiSystem.uiContext);
     }
 
     /** Draw a line to the UI context
@@ -893,6 +914,10 @@ class UIObject
         this.lineWidth = uiSystem.defaultLineWidth;
         /** @property {number} - Corner radius for rounded rects */
         this.cornerRadius = uiSystem.defaultCornerRadius;
+        /** @property {TileSlice|undefined} - Style to draw with in place of the rectangle, tinted by the color for its
+         *  state; its art has the frame, so the outline, corner radius and shadow are not drawn
+         *  @type {TileSlice|undefined} */
+        this.slice = uiSystem.defaultSlice;
         /** @property {string} - Font for this object */
         this.font = uiSystem.defaultFont;
         /** @property {string|undefined} - Font style for this object or undefined
@@ -1138,7 +1163,10 @@ class UIObject
                 this.color : this.color;
         const lineWidth = this.lineWidth * (isNavigationObject ? 1.5 : 1);
         
-        uiSystem.drawRect(this.nativePos, this.size, color, lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
+        if (this.slice)
+            uiSystem.drawSlice(this.slice, this.nativePos, this.size, color);
+        else
+            uiSystem.drawRect(this.nativePos, this.size, color, lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
     }
 
     /** Get the size for text with overrides and scale
@@ -1586,6 +1614,10 @@ class UISlider extends UIObject
         this.value = value;
         /** @property {Color} - Color for the handle part of the slider */
         this.handleColor = handleColor.copy();
+        /** @property {TileSlice|undefined} - Style to draw the handle, or the fill, with; undefined for the slider's own
+         *  slice, or a rectangle when it has none
+         *  @type {TileSlice|undefined} */
+        this.handleSlice = uiSystem.defaultHandleSlice;
         /** @property {boolean} - Should it fill up like a progress bar? */
         this.fillMode = false;
 
@@ -1627,6 +1659,19 @@ class UISlider extends UIObject
         }
         this.value === oldValue || this.onChange();
     }
+
+    /** Draw the handle, or the fill of a fill mode slider, with the handle slice, the slider's own, or a rectangle
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
+     *  @param {Color}   color */
+    drawHandle(pos, size, color)
+    {
+        const slice = this.handleSlice || this.slice;
+        if (slice)
+            uiSystem.drawSlice(slice, pos, size, color);
+        else
+            uiSystem.drawRect(pos, size, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
+    }
     render()
     {
         super.render();
@@ -1645,7 +1690,7 @@ class UISlider extends UIObject
             const color = uiObjectIsDisabled(this) ? this.disabledColor : this.handleColor;
             const drawSize = isHorizontal ? 
                 vec2(progressWidth, this.size.y) : vec2(this.size.x, progressWidth);
-            uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
+            this.drawHandle(pos, drawSize, color);
         }
         else
         {
@@ -1655,7 +1700,7 @@ class UISlider extends UIObject
             const pos = this.nativePos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
             const color = uiObjectIsDisabled(this) ? this.disabledColor : this.handleColor;
             const drawSize = vec2(handleWidth);
-            uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
+            this.drawHandle(pos, drawSize, color);
         }
 
         // draw the text scaled to fit on the slider

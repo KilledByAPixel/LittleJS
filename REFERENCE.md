@@ -804,6 +804,11 @@ uiSystem.defaultTextColor / defaultButtonColor / defaultHoverColor / defaultDisa
 uiSystem.defaultLineWidth / defaultCornerRadius / defaultTextFitScale / defaultFont
 uiSystem.defaultSoundPress / defaultSoundRelease / defaultSoundClick // Sounds every widget plays
 uiSystem.defaultShadowColor / defaultShadowBlur / defaultShadowOffset
+uiSystem.defaultSlice                  // a TileSlice drawn in place of every widget's rectangle, tinted by its state
+                                       // color, undefined for rectangles; needs the drawUtilities plugin
+uiSystem.defaultHandleSlice            // a TileSlice for slider handles, undefined for the slider's own slice
+obj.slice / slider.handleSlice         // the same for one widget, starting from the defaults
+uiSystem.drawSlice(slice, pos, size, color=WHITE) // Draw a TileSlice to the UI context
 uiSystem.nativeHeight                  // If set, UI coords are normalized to this height
 uiSystem.destroyObjects()              // Remove all UI elements
 uiSystem.isMouseOverUI()               // True if the mouse is over a visible hoverable UI object, or a confirm dialog is open
@@ -1710,6 +1715,11 @@ drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveCo
 // Three-slice — 1x3 tile strip (corner / side / center) rotated around the box
 drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0)
+
+// TileSlice — a tile kept as a box style: slices 9 is a nine-slice, 3 a three-slice, 1 the whole tile stretched
+new TileSlice(tileInfo, slices=9, borderSize, extraSpace) // borderSize and extraSpace default to the draw's own
+slice.draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=false, context)
+slice.drawScreen(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=false, context)
 
 // Crescent — moon-phase shape (percent: 0=new, .25=first quarter, .5=full, .75=last quarter)
 drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace, context)

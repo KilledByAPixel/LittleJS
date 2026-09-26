@@ -14019,6 +14019,13 @@ class UISystemPlugin
         this.defaultShadowBlur = 5;
         /** @property {Vector2} - Offset of shadow blur */
         this.defaultShadowOffset = vec2(5);
+        /** @property {TileSlice|undefined} - Style to draw UI elements with in place of their rectangle, tinted by
+         *  their color, undefined for rectangles; needs the drawUtilities plugin
+         *  @type {TileSlice|undefined} */
+        this.defaultSlice = undefined;
+        /** @property {TileSlice|undefined} - Style to draw slider handles with, undefined for the slider's own slice
+         *  @type {TileSlice|undefined} */
+        this.defaultHandleSlice = undefined;
         /** @property {number} - If set ui coords will be renormalized to this canvas height */
         this.nativeHeight = 0;
 
@@ -14361,6 +14368,20 @@ class UISystemPlugin
             context.lineWidth = lineWidth;
             context.stroke();
         }
+    }
+
+    /** Draw a TileSlice to the UI context, in place of a rectangle
+    *  @param {TileSlice} slice
+    *  @param {Vector2}   pos
+    *  @param {Vector2}   size
+    *  @param {Color}     [color] */
+    drawSlice(slice, pos, size, color=WHITE)
+    {
+        ASSERT(typeof TileSlice === 'function' && slice instanceof TileSlice, 'slice must be a TileSlice, from the drawUtilities plugin');
+        ASSERT(isVector2(pos), 'pos must be a vec2');
+        ASSERT(isVector2(size), 'size must be a vec2');
+        ASSERT(isColor(color), 'color must be a color');
+        slice.drawScreen(pos, size, color, undefined, 0, false, uiSystem.uiContext);
     }
 
     /** Draw a line to the UI context
@@ -14817,6 +14838,10 @@ class UIObject
         this.lineWidth = uiSystem.defaultLineWidth;
         /** @property {number} - Corner radius for rounded rects */
         this.cornerRadius = uiSystem.defaultCornerRadius;
+        /** @property {TileSlice|undefined} - Style to draw with in place of the rectangle, tinted by the color for its
+         *  state; its art has the frame, so the outline, corner radius and shadow are not drawn
+         *  @type {TileSlice|undefined} */
+        this.slice = uiSystem.defaultSlice;
         /** @property {string} - Font for this object */
         this.font = uiSystem.defaultFont;
         /** @property {string|undefined} - Font style for this object or undefined
@@ -15062,7 +15087,10 @@ class UIObject
                 this.color : this.color;
         const lineWidth = this.lineWidth * (isNavigationObject ? 1.5 : 1);
         
-        uiSystem.drawRect(this.nativePos, this.size, color, lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
+        if (this.slice)
+            uiSystem.drawSlice(this.slice, this.nativePos, this.size, color);
+        else
+            uiSystem.drawRect(this.nativePos, this.size, color, lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor || CLEAR_BLACK, this.shadowBlur, this.shadowOffset);
     }
 
     /** Get the size for text with overrides and scale
@@ -15510,6 +15538,10 @@ class UISlider extends UIObject
         this.value = value;
         /** @property {Color} - Color for the handle part of the slider */
         this.handleColor = handleColor.copy();
+        /** @property {TileSlice|undefined} - Style to draw the handle, or the fill, with; undefined for the slider's own
+         *  slice, or a rectangle when it has none
+         *  @type {TileSlice|undefined} */
+        this.handleSlice = uiSystem.defaultHandleSlice;
         /** @property {boolean} - Should it fill up like a progress bar? */
         this.fillMode = false;
 
@@ -15551,6 +15583,19 @@ class UISlider extends UIObject
         }
         this.value === oldValue || this.onChange();
     }
+
+    /** Draw the handle, or the fill of a fill mode slider, with the handle slice, the slider's own, or a rectangle
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
+     *  @param {Color}   color */
+    drawHandle(pos, size, color)
+    {
+        const slice = this.handleSlice || this.slice;
+        if (slice)
+            uiSystem.drawSlice(slice, pos, size, color);
+        else
+            uiSystem.drawRect(pos, size, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
+    }
     render()
     {
         super.render();
@@ -15569,7 +15614,7 @@ class UISlider extends UIObject
             const color = uiObjectIsDisabled(this) ? this.disabledColor : this.handleColor;
             const drawSize = isHorizontal ? 
                 vec2(progressWidth, this.size.y) : vec2(this.size.x, progressWidth);
-            uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
+            this.drawHandle(pos, drawSize, color);
         }
         else
         {
@@ -15579,7 +15624,7 @@ class UISlider extends UIObject
             const pos = this.nativePos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
             const color = uiObjectIsDisabled(this) ? this.disabledColor : this.handleColor;
             const drawSize = vec2(handleWidth);
-            uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
+            this.drawHandle(pos, drawSize, color);
         }
 
         // draw the text scaled to fit on the slider
@@ -18366,7 +18411,7 @@ async function box2dInit()
 /**
  * LittleJS Drawing Utilities Plugin
  * - Extra drawing functions for LittleJS
- * - Nine slice and three slice drawing
+ * - Nine slice and three slice drawing, and TileSlice to keep one as a style, like a UI skin
  * @namespace DrawUtilities
  */
 
@@ -18511,6 +18556,83 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
         const flipY = i>1;
         const cornerPos = cornerOffset.multiply(vec2(flipX?-1:1, flipY?-flip:flip));
         drawTile(pos.add(cornerPos.rotate(rotateAngle)), cornerSize, cornerTile, color, a, false, additiveColor, useWebGL, screenSpace, context);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * A tile drawn as a box of any size, kept as a style to draw with, like a UI skin
+ * - 9 slices is a nine-slice from the 3x3 block of tiles at tileInfo, see drawNineSlice
+ * - 3 slices is a three-slice from the 3 tiles in a row at tileInfo, see drawThreeSlice
+ * - 1 slice is the whole tile stretched over the box, a plain image
+ * - The UI system draws a widget's background with one, see uiSystem.defaultSlice
+ * @memberof DrawUtilities
+ * @example
+ * const panel = new TileSlice(tile(0, 16), 9, 12);
+ * panel.draw(vec2(0, 5), vec2(10, 4));
+ * uiSystem.defaultSlice = panel; // every UI widget made after this
+ */
+class TileSlice
+{
+    /** Create a tile slice style
+     *  @param {TileInfo} tileInfo - The tile, or the first of the tiles, to draw with
+     *  @param {number} [slices] - 9 for a nine-slice, 3 for a three-slice, 1 for the whole tile
+     *  @param {number} [borderSize] - Drawn thickness of the edges and corners, undefined for the draw's own default
+     *  @param {number} [extraSpace] - Extra spacing adjustment of the slices, undefined for the draw's own default */
+    constructor(tileInfo, slices=9, borderSize, extraSpace)
+    {
+        ASSERT(tileInfo instanceof TileInfo, 'tileInfo must be a TileInfo');
+        ASSERT(slices === 9 || slices === 3 || slices === 1, 'slices must be 9, 3 or 1');
+        ASSERT(borderSize === undefined || isNumber(borderSize), 'borderSize must be a number');
+
+        /** @property {TileInfo} - The tile, or the first of the tiles, to draw with */
+        this.tileInfo = tileInfo;
+        /** @property {number} - 9 for a nine-slice, 3 for a three-slice, 1 for the whole tile */
+        this.slices = slices;
+        /** @property {number|undefined} - Drawn thickness of the edges and corners, undefined for the draw's default
+         *  @type {number|undefined} */
+        this.borderSize = borderSize;
+        /** @property {number|undefined} - Extra spacing adjustment of the slices, undefined for the draw's default
+         *  @type {number|undefined} */
+        this.extraSpace = extraSpace;
+    }
+
+    /** Draw it as a box in world space, or in screen space
+     *  @param {Vector2} pos - Center position
+     *  @param {Vector2} size - Size of the box
+     *  @param {Color} [color] - Color to modulate with
+     *  @param {Color} [additiveColor] - Additive color
+     *  @param {number} [angle] - Angle to rotate by
+     *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
+     *  @param {boolean} [screenSpace] - Are pos and size in screen space?
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
+    draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=false, context)
+    {
+        if (this.slices === 9)
+            drawNineSlice(pos, size, this.tileInfo, color, this.borderSize, additiveColor, this.extraSpace, angle, useWebGL, screenSpace, context);
+        else if (this.slices === 3)
+            drawThreeSlice(pos, size, this.tileInfo, color, this.borderSize, additiveColor, this.extraSpace, angle, useWebGL, screenSpace, context);
+        else
+            drawTile(pos, size, this.tileInfo, color, angle, false, additiveColor, useWebGL, screenSpace, context);
+    }
+
+    /** Draw it as a box in screen space, with the 2D context by default, on top of what WebGL drew, like drawTextScreen
+     *  @param {Vector2} pos - Screen space center position
+     *  @param {Vector2} size - Screen space size
+     *  @param {Color} [color] - Color to modulate with
+     *  @param {Color} [additiveColor] - Additive color
+     *  @param {number} [angle] - Angle to rotate by
+     *  @param {boolean} [useWebGL] - Use WebGL for rendering
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
+    drawScreen(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=false, context)
+    {
+        if (this.slices === 9)
+            drawNineSliceScreen(pos, size, this.tileInfo, color, this.borderSize, additiveColor, this.extraSpace, angle, useWebGL, context);
+        else if (this.slices === 3)
+            drawThreeSliceScreen(pos, size, this.tileInfo, color, this.borderSize, additiveColor, this.extraSpace, angle, useWebGL, context);
+        else
+            drawTile(pos, size, this.tileInfo, color, angle, false, additiveColor, useWebGL, true, context);
     }
 }
 
@@ -27986,6 +28108,7 @@ export
     drawNineSliceScreen,
     drawThreeSlice,
     drawThreeSliceScreen,
+    TileSlice,
     drawCrescent,
     getCrescentPoints,
 
