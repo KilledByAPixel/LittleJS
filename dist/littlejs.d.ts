@@ -4291,9 +4291,9 @@ declare module "littlejsengine" {
         shadowTextureSize: number;
         /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
         shadowPassCount: number;
-        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for more, 2 or 3
-         *  deeper still with steps along the shadow edges; the bleed reaches further in under a bigger light, so a thin wall
-         *  under a big one lets some through, lower it for those */
+        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for most;
+         *  the bleed reaches further in under a bigger light, so a thin wall under a big one lets some through, lower it
+         *  for those */
         shadowSoftness: number;
         /** @property {boolean} - True while the shadow pass runs, read only, so a render() can skip parts that should not cast */
         shadowPass: boolean;

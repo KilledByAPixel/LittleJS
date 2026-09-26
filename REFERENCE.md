@@ -881,9 +881,9 @@ lightSystem.shadowMapScale   = 2      // how many views the map spans, so caster
                                       // raise it when lights reach further than a view past the screen
 lightSystem.shadowTextureSize = 256   // pixels across each light's own shadow texture, larger is sharper; a gap
                                       // narrower than about 4*radius/shadowTextureSize between casters closes
-lightSystem.shadowPassCount  = 11     // stretch passes per light, fewer is cheaper and shorter shadows
-lightSystem.shadowSoftness   = .5     // light bled into a caster's near side, 0 hard, 1 more, 2 or 3 deeper still;
-                                      // it reaches further in under a big light, lower it if thin walls let light in
+lightSystem.shadowPassCount  = 16     // stretch passes per light, fewer is cheaper and shorter shadows
+lightSystem.shadowSoftness   = .5     // light bled into a caster's near side, 0 hard, 1 most; it reaches further
+                                      // in under a big light, lower it if thin walls let light in
 lightSystem.shadowPass                // read only: true inside the shadow pass, so a render() can skip its text or glow
 lightSystem.setShadowTransparent(on)  // in the shadow pass the draws that follow keep their color, tinting the light
                                       // through them (glass, colored smoke); nothing outside it, so call it around

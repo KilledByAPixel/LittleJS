@@ -161,7 +161,7 @@ test('shadows are off by default and the shadow settings have their defaults', a
     assert.equal(lightSystem.shadowMapSize, 1024);
     assert.equal(lightSystem.shadowMapScale, 2);
     assert.equal(lightSystem.shadowTextureSize, 256);
-    assert.equal(lightSystem.shadowPassCount, 11);
+    assert.equal(lightSystem.shadowPassCount, 16);
     assert.equal(lightSystem.shadowSoftness, .5);
     assert.equal(lightSystem.shadowPass, false);
     assert.equal(lightSystem.shadowMap, undefined);

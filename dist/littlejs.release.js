@@ -11869,10 +11869,10 @@ class LightSystemPlugin
          *  and a gap between casters narrower than about 4*radius/shadowTextureSize world units closes */
         this.shadowTextureSize = 256;
         /** @property {number} - Stretch passes per shadow casting light, fewer is cheaper and shorter shadows */
-        this.shadowPassCount = 11;
-        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for more, 2 or 3
-         *  deeper still with steps along the shadow edges; the bleed reaches further in under a bigger light, so a thin wall
-         *  under a big one lets some through, lower it for those */
+        this.shadowPassCount = 16;
+        /** @property {number} - How much light bleeds into a caster's near side, 0 for hard edged casters, 1 for most;
+         *  the bleed reaches further in under a bigger light, so a thin wall under a big one lets some through, lower it
+         *  for those */
         this.shadowSoftness = .5;
         /** @property {boolean} - True while the shadow pass runs, read only, so a render() can skip parts that should not cast */
         this.shadowPass = false;
@@ -12079,7 +12079,7 @@ class LightSystemPlugin
                 'in vec2 uv;'+
                 'out vec4 c;'+
                 'void main(){'+
-                'float mask=clamp(1.-2.*length(uv-.5),0.,1.);'+  // brightest at the light
+                'float mask=1.-smoothstep(.35,.525,length(uv-.5));'+ // full out to 70% of the radius, FrankEngine's light mask
                 'vec3 b=texture(s,(uv-.5)/scale+.5).rgb;'+
                 'c=vec4(min(texture(s,uv).rgb+brightness*mask*b,b),1);'+
                 '}');
@@ -12347,10 +12347,11 @@ class LightSystemPlugin
         gl.uniform1f(glUniformLocation(cs, 'core'), light.shadowCore);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-        // stretch the casters out from the light, starting a 128th of the texture and growing 1.8x a pass, which
-        // reaches the edge in about 11 passes with no gaps since each pass scales by less than the shadow already
-        // extends; a fraction of the texture rather than a count of texels, so a larger texture only makes the
-        // shadows sharper, not shorter; the bleed fades out over the first 7 passes (FrankEngine's soften)
+        // stretch the casters out from the light, starting a 128th of the texture and growing 1.5x a pass, which
+        // reaches the edge in about 16 passes with no gaps since each pass scales by less than the shadow already
+        // extends; small steps, so the bleed does not show as stairs along the shadow edges; a fraction of the
+        // texture rather than a count of texels, so a larger texture only makes the shadows sharper, not shorter;
+        // the bleed fades out over the first 10 passes, the distances FrankEngine's soften covered at 1.8x
         const ss = this.shadowStretchShader;
         gl.useProgram(ss);
         gl.bindVertexArray(this.shadowStretchVAO);
@@ -12359,8 +12360,8 @@ class LightSystemPlugin
         {
             gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, dst, 0);
             gl.bindTexture(gl.TEXTURE_2D, src);
-            gl.uniform1f(glUniformLocation(ss, 'scale'), 1 + 2*1.8**k/256);
-            gl.uniform1f(glUniformLocation(ss, 'brightness'), clamp((7-k)/5)**2 * this.shadowSoftness);
+            gl.uniform1f(glUniformLocation(ss, 'scale'), 1 + 2*1.5**k/256);
+            gl.uniform1f(glUniformLocation(ss, 'brightness'), clamp((10.1-k)/7.2)**2 * this.shadowSoftness);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             [src, dst] = [dst, src];
         }
