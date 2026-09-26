@@ -28199,6 +28199,9 @@ let editorCameraPos = vec2(), editorCameraScale = 32;
 // placed on, for a Shift line, and if the press is an Alt pick
 let editorLayer, editorHover, editorLastCell, editorLastPlaced, editorPicking;
 
+// the grid drawn over the layer, G, and the list of keys in the panel, ?
+let editorGrid = true, editorHelp = false;
+
 /** Open or close the editor, the game is paused while it is open and carries on with the changes after
  *  - Does nothing in release builds
  *  @param {boolean} [enable]
@@ -28902,6 +28905,57 @@ function editorPanelUpdate()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// keys and wheel
+
+// letter shortcuts, by the key's label so they follow the letter printed on any keyboard layout, each called
+// with whether Shift is held
+const editorKeys =
+{
+    r: (shift)=> editorBrush = editorStampTurn(editorBrush, shift),
+    m: ()=> editorBrush = editorStampMirror(editorBrush),
+    e: ()=> editorBrush = editorStampTile(0),
+    g: ()=> editorGrid = !editorGrid,
+    '?': ()=> editorHelp = !editorHelp,
+};
+const editorCtrlKeys =
+{
+    z: (shift)=> editorUndo(shift),
+    y: ()=> editorUndo(true),
+};
+
+// the editor's own key listener, a key typed into a field is the field's, and Alt with Ctrl is AltGr typing
+// a character
+function editorOnKeyDown(e)
+{
+    if (!editMode || e.repeat || e.altKey || e.target?.closest?.('input,textarea,select,[contenteditable]')) return;
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const action = (e.ctrlKey || e.metaKey ? editorCtrlKeys : editorKeys)[key];
+    if (!action) return;
+    e.preventDefault();
+    action(e.shiftKey);
+}
+
+// the wheel zooms toward the mouse by how far it moved; a trackpad pinch is a wheel with ctrlKey, which the engine
+// leaves alone
+function editorOnWheel(e)
+{
+    if (!editMode || e.target?.closest?.('input,textarea,select,[contenteditable]')) return;
+    const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+    editorZoom(Math.exp(-pixels * (e.ctrlKey ? .01 : .002)));
+}
+
+// zoom by a factor, keeping the point under the mouse where it is
+function editorZoom(factor)
+{
+    editorApplyCamera();
+    const before = screenToWorld(mousePosScreen);
+    editorCameraScale = clamp(editorCameraScale * factor, 1, 1e3);
+    editorApplyCamera();
+    editorCameraPos = editorCameraPos.add(before.subtract(screenToWorld(mousePosScreen)));
+    editorApplyCamera();
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // plugin
 
 function editorUpdate()
@@ -28918,29 +28972,24 @@ function editorUpdate()
         return;
     }
 
-    // keys, the paused game's update does not see them
-    const ctrl = keyIsDown('ControlLeft') || keyIsDown('ControlRight') ||
-        keyIsDown('MetaLeft') || keyIsDown('MetaRight');
-    const shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
-    if (ctrl && keyWasPressed('KeyZ')) editorUndo(shift);
-    if (ctrl && keyWasPressed('KeyY')) editorUndo(true);
-    if (!ctrl)
+    // 1 to 9 pick a layer from the back; taken, so debugKeysAlways does not also flip the debug views, the overlay
+    // keeps them while it is open
+    for (let i = 1; !debugOverlay && i <= 9; ++i)
     {
-        if (keyWasPressed('KeyR')) editorBrush = editorStampTurn(editorBrush, shift);
-        if (keyWasPressed('KeyM')) editorBrush = editorStampMirror(editorBrush);
-        if (keyWasPressed('KeyE')) editorBrush = editorStampTile(0);
+        if (!keyWasPressed('Digit' + i)) continue;
+        inputClearKey('Digit' + i);
+        const layer = editorLayers()[i - 1];
+        if (layer && layer !== editorLayer)
+        {
+            editorStrokeEnd();
+            editorLayer = layer;
+            editorLastCell = undefined; // a drag does not carry across layers
+        }
     }
 
-    // the middle button drags the view, the wheel zooms on the point under the mouse
+    // the middle button drags the view
     if (mouseIsDown(1))
         editorCameraPos = editorCameraPos.subtract(screenToWorldDelta(mouseDeltaScreen));
-    if (mouseWheel)
-    {
-        const before = screenToWorld(mousePosScreen);
-        editorCameraScale = clamp(editorCameraScale * (1 - mouseWheel/10), 1, 1e3);
-        editorApplyCamera();
-        editorCameraPos = editorCameraPos.add(before.subtract(screenToWorld(mousePosScreen)));
-    }
     editorApplyCamera();
 
     // the left button paints, or picks with the pick tool or Alt held, the right button erases; a quick click
@@ -28997,7 +29046,7 @@ function editorRender()
 
     // a grid once the cells are big enough to see one
     const line = hsl(0, 0, 1, .12), thin = 1 / editorCameraScale;
-    if (editorCameraScale >= 12)
+    if (editorGrid && editorCameraScale >= 12)
     {
         for (let x = x0; x <= x1; ++x)
             drawLine(live.pos.add(vec2(x, y0)), live.pos.add(vec2(x, y1)), thin, line);
@@ -29028,6 +29077,13 @@ function editorRender()
 }
 
 debug && engineAddPlugin(editorUpdate, editorRender);
+
+// the editor's own listeners for letter shortcuts and the wheel, the engine's input reads keys by position
+if (debug && globalThis.document?.addEventListener)
+{
+    document.addEventListener('keydown', editorOnKeyDown);
+    document.addEventListener('wheel', editorOnWheel, {passive: true});
+}
 
 
 /**

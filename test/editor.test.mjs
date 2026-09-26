@@ -40,6 +40,11 @@ function press(engine, code)
     step(engine);
 }
 
+// a key typed, as the browser gives it to the editor's own listener: key is the printed letter, code the position
+const typed = (engine, key, { ctrl=false, shift=false, alt=false, code='', target='undefined' }={})=>
+    engine.run(`editorOnKeyDown({ key: ${JSON.stringify(key)}, code: ${JSON.stringify(code)}, repeat: false,
+        ctrlKey: ${ctrl}, metaKey: false, shiftKey: ${shift}, altKey: ${alt}, target: ${target}, preventDefault() {} })`);
+
 test('0 on the overlay opens the editor and pauses the game, 0 again gives back the pause and camera', async () =>
 {
     const engine = await loadGame();
@@ -335,8 +340,8 @@ test('R turns the brush, M mirrors it as seen on screen, and a pick takes a plac
 {
     const engine = await loadGame();
     engine.run(mapCode + 'setEditMode(true); editorLayer = front;');
-    press(engine, 'KeyR');
-    press(engine, 'KeyM');
+    typed(engine, 'r');
+    typed(engine, 'm');
     // a quarter turn then a mirror is Tiled's turn then horizontal flip: the tile turned the other way, mirrored
     assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrushTile())')),
         { tile: 0, direction: 3, mirror: true });
@@ -354,22 +359,17 @@ test('the selected layer starts as the collision layer', async () =>
     assert.equal(run('editorLayer === front'), true);
 });
 
-test('Ctrl+Z undoes a stroke and Ctrl+Shift+Z redoes it', async () =>
+test('Ctrl+Z undoes, Ctrl+Shift+Z and Ctrl+Y redo, found by the key label, so an AZERTY Z undoes too', async () =>
 {
     const engine = await loadGame();
-    const { run, handlers } = engine;
-    run(mapCode + `setEditMode(true); editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();`);
-    const chord = (codes)=>
-    {
-        codes.forEach((code)=> handlers.keydown(keyEvent(code)));
-        step(engine);
-        codes.forEach((code)=> handlers.keyup(keyEvent(code)));
-        step(engine);
-    };
-    chord(['ControlLeft', 'KeyZ']);
-    assert.equal(run('frontData[3]'), 0);
-    chord(['ControlLeft', 'ShiftLeft', 'KeyZ']);
-    assert.equal(run('frontData[3]'), 2);
+    engine.run(mapCode + `setEditMode(true); editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();`);
+    typed(engine, 'z', { ctrl: true, code: 'KeyW' }); // the Z of an AZERTY keyboard sits where QWERTY has W
+    assert.equal(engine.run('frontData[3]'), 0);
+    typed(engine, 'Z', { ctrl: true, shift: true, code: 'KeyW' });
+    assert.equal(engine.run('frontData[3]'), 2);
+    typed(engine, 'z', { ctrl: true });
+    typed(engine, 'y', { ctrl: true });
+    assert.equal(engine.run('frontData[3]'), 2);
 });
 
 test('a quick click, down and up before the next step, still paints its cell', async () =>
@@ -543,8 +543,61 @@ test('E and the palette Erase slot give the Erase brush, and a palette tile keep
     engine.run('editorPalettePick(4)');
     assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrushTile())')),
         { tile: 3, direction: 2, mirror: true }, 'slot 4 is tile 3, the turn kept');
-    press(engine, 'KeyE');
+    typed(engine, 'e');
     assert.equal(engine.run('editorBrush.grids[0][0]'), 0);
     engine.run('editorBrush = editorStampTile(1); editorPalettePick(0)');
     assert.equal(engine.run('editorBrush.grids[0][0]'), 0);
+});
+
+// keys and wheel
+
+test('a shortcut typed into a text field, with AltGr, or with the editor closed is left alone', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + `setEditMode(true); var before = editorBrush;`);
+    typed(engine, 'r', { target: '{ closest: ()=> ({}) }' }); // inside an input
+    typed(engine, 'r', { ctrl: true, alt: true }); // AltGr reports Ctrl and Alt
+    engine.run('setEditMode(false)');
+    typed(engine, 'r');
+    assert.equal(engine.run('editorBrush === before'), true);
+});
+
+test('the wheel zooms by how far it moved and toward the mouse, and a pinch zooms too', async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode + `setEditMode(true); editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;
+        mousePosScreen = vec2(700, 500);`); // one cell right of the middle
+    const wheel = (deltaY, ctrlKey=false)=> run(`var before = screenToWorld(mousePosScreen);
+        editorOnWheel({ deltaY: ${deltaY}, deltaMode: 0, ctrlKey: ${ctrlKey}, target: undefined });
+        [editorCameraScale, screenToWorld(mousePosScreen).distance(before)];`);
+    const [small] = wheel(-10), [big] = wheel(-100);
+    assert.ok(small > 100 && big / small > small / 100, 'a bigger wheel move zooms more');
+    const [scaled, drift] = wheel(100);
+    assert.ok(scaled < big && drift < 1e-9, 'the point under the mouse stays put');
+    const [pinched] = wheel(-10, true);
+    assert.ok(pinched > scaled, 'a pinch zooms in');
+});
+
+test('1 to 9 pick layers from the back, the key is taken so debugKeysAlways leaves the debug views, and a drag '
+    + 'does not carry across', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + `setEditMode(true); setDebugKeysAlways(true); editorLastCell = vec2(0, 0);`);
+    press(engine, 'Digit1');
+    assert.equal(engine.run('editorLayer === editorLayerRecord(layers[0])'), true);
+    assert.equal(engine.run('debugPhysics'), false);
+    assert.equal(engine.run('editorLastCell'), undefined);
+    press(engine, 'Digit2');
+    assert.equal(engine.run('editorLayer === front'), true);
+    press(engine, 'Digit9'); // no ninth layer, nothing changes
+    assert.equal(engine.run('editorLayer === front'), true);
+});
+
+test('G toggles the grid and ? the list of keys', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + 'setEditMode(true)');
+    typed(engine, 'g');
+    typed(engine, '?', { shift: true });
+    assert.deepEqual([...engine.run('[editorGrid, editorHelp]')], [false, true]);
 });
