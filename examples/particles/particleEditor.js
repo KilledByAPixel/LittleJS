@@ -69,7 +69,7 @@ function buildSettingsPanel()
     for (const group of effectGroups)
     {
         const details = makeElement('details', panel, 'group');
-        details.open = group !== 'Advanced';
+        details.open = true;
         makeElement('summary', details).textContent = group;
         settingsGroups[group] = makeElement('div', details);
     }

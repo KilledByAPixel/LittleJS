@@ -11,8 +11,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 // settings, read by the page, the emitter setup, the export and the sanitizer
 
-const effectGroups = ['Emitter', 'Particles', 'Color', 'Motion', 'Texture',
-    'Behaviors', 'Advanced'];
+const effectGroups = ['Emitter', 'Particles', 'Color', 'Motion', 'Collision',
+    'Texture', 'Behaviors'];
 const effectSettings = [];
 let effectSettingGroup; // the group settings are being added to
 
@@ -34,8 +34,14 @@ addEffectSetting('emitTime', 'number', 0, 0, 5, .05,
     'Seconds to emit for, 0 is forever', 0, 1e9);
 addEffectSetting('emitSize', 'number', 0, 0, 10, .05,
     'Diameter, or width when rectangular', 0, 1e9);
+addEffectSetting('emitRect', 'checkbox', false, 0, 0, 0,
+    'Rectangle emitter, off is a circle');
+addEffectSetting('emitHeight', 'number', 0, 0, 10, .05,
+    'Rectangle height', 0, 1e9);
 addEffectSetting('emitConeAngle', 'number', PI, 0, PI, .01,
     'Half angle particles move in, 3.14 is all ways');
+addEffectSetting('angle', 'number', 0, -PI, PI, .01,
+    'Emitter angle, 0 points up');
 
 effectSettingGroup = 'Particles';
 addEffectSetting('particleTime', 'number', .5, 0, 5, .05,
@@ -50,6 +56,8 @@ addEffectSetting('randomness', 'number', .2, 0, 1, .01,
     'How much each particle varies');
 addEffectSetting('particleConeAngle', 'number', PI, 0, PI, .01,
     'Half angle of start rotation, 3.14 is any');
+addEffectSetting('trailScale', 'number', 0, 0, 20, .1,
+    'Stretch along the motion, 0 is off', 0, 1e9);
 addEffectSetting('additive', 'checkbox', false, 0, 0, 0,
     'Glow with additive blending');
 
@@ -76,6 +84,18 @@ addEffectSetting('angleDamping', 'number', 1, .8, 1, .001,
     'Spin kept each frame', 0, 1);
 addEffectSetting('gravityScale', 'number', 0, -2, 2, .05,
     'How much gravity pulls', -1e9, 1e9);
+addEffectSetting('velocityInheritance', 'number', 0, 0, 1, .01,
+    'Share of emitter motion passed on');
+addEffectSetting('localSpace', 'checkbox', false, 0, 0, 0,
+    'Particles move with the emitter');
+
+effectSettingGroup = 'Collision';
+addEffectSetting('collideTiles', 'checkbox', false, 0, 0, 0,
+    'Hit tiles, the preview adds a floor');
+addEffectSetting('restitution', 'number', 0, 0, 1, .01,
+    'Bounce when hitting tiles');
+addEffectSetting('friction', 'number', .8, 0, 1, .01,
+    'Speed kept sliding along tiles');
 
 effectSettingGroup = 'Texture';
 addEffectSetting('tileIndex', 'number', 0, -1, 63, 1,
@@ -84,26 +104,6 @@ addEffectSetting('tileSize', 'number', 16, 1, 128, 1,
     'Tile size in texture pixels', 1, 4096);
 addEffectSetting('tilePadding', 'number', 1, 0, 8, 1,
     'Pixels of padding around each tile', 0, 64);
-
-effectSettingGroup = 'Advanced';
-addEffectSetting('angle', 'number', 0, -PI, PI, .01,
-    'Emitter angle, 0 points up');
-addEffectSetting('emitRect', 'checkbox', false, 0, 0, 0,
-    'Rectangle emitter, off is a circle');
-addEffectSetting('emitHeight', 'number', 0, 0, 10, .05,
-    'Rectangle height', 0, 1e9);
-addEffectSetting('trailScale', 'number', 0, 0, 20, .1,
-    'Stretch along the motion, 0 is off', 0, 1e9);
-addEffectSetting('velocityInheritance', 'number', 0, 0, 1, .01,
-    'Share of emitter motion passed on');
-addEffectSetting('localSpace', 'checkbox', false, 0, 0, 0,
-    'Particles move with the emitter');
-addEffectSetting('collideTiles', 'checkbox', false, 0, 0, 0,
-    'Hit tiles, the preview adds a floor');
-addEffectSetting('restitution', 'number', 0, 0, 1, .01,
-    'Bounce when hitting tiles');
-addEffectSetting('friction', 'number', .8, 0, 1, .01,
-    'Speed kept sliding along tiles');
 
 // settings that do nothing unless another is on, the page dims them
 const effectNeeds = {emitHeight:'emitRect', restitution:'collideTiles',
