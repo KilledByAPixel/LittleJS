@@ -40,8 +40,8 @@ addEffectSetting('emitHeight', 'number', 0, 0, 10, .05,
     'Rectangle height', 0, 1e9);
 addEffectSetting('emitConeAngle', 'number', PI, 0, PI, .01,
     'Half angle particles move in, 3.14 is all ways');
-addEffectSetting('angle', 'number', 0, -PI, PI, .01,
-    'Emitter angle, 0 points up');
+addEffectSetting('angle', 'number', 0, -3.14, 3.14, .01,
+    'Emitter angle, 0 points up', -PI, PI); // the slider steps from its min
 
 effectSettingGroup = 'Particles';
 addEffectSetting('particleTime', 'number', .5, 0, 5, .05,
@@ -313,7 +313,7 @@ function effectToCode(effect, expand)
     // settings are written as they are, colors are turned into hsl
     // and rounded, which changes nothing that can be seen
     const s = effect.settings;
-    const value = (name)=> String(s[name]);
+    const value = (name)=> s[name] === PI ? 'PI' : String(s[name]);
     const arg = (name)=> [value(name), name];
     const color = (name)=>
     {

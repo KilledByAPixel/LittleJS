@@ -131,9 +131,7 @@ function makeNumberRow(parent, setting)
     range.step = setting.step;
     const box = makeElement('input', row);
     box.type = 'number';
-    box.step = setting.step;
-    box.min = setting.hardMin;
-    box.max = setting.hardMax;
+    box.step = setting.step; // no min, so the arrows step from 0
     box.id = label.htmlFor = 'setting_' + setting.name;
     finish();
 
@@ -360,6 +358,9 @@ function updateFloor()
     }
 }
 
+// the starting zoom, less on a small preview so the floor still shows
+function fitCameraScale() { return min(64, $('previewArea').clientHeight / 9); }
+
 ///////////////////////////////////////////////////////////////////////////////
 // library and storage
 
@@ -479,7 +480,7 @@ function setupPreviewControls()
     fit();
 
     $('buttonRestart').onclick = ()=> restartEmitter();
-    $('buttonResetZoom').onclick = ()=> setCameraScale(64);
+    $('buttonResetZoom').onclick = ()=> setCameraScale(fitCameraScale());
     $('buttonPause').onclick = ()=>
     {
         setPaused(!paused);
@@ -775,7 +776,7 @@ function refreshTexture()
 function gameInit()
 {
     setGravity(vec2(0, -.01));
-    setCameraScale(64); // the Reset Zoom button goes back to this
+    setCameraScale(fitCameraScale());
     setCanvasClearColor(hsl(0, 0, 0));
     buildSettingsPanel();
     setupLibraryBar();

@@ -544,7 +544,7 @@ test('a particle calls its update callback once each update, after it moves, and
     e.destroy();
 });
 
-test('a particle its collide callback destroyed is not passed to the update callback', () =>
+test('a particle destroyed by its collide callback is not passed to the update callback', () =>
 {
     const layer = new TileCollisionLayer(vec2(0, 0), vec2(4, 4));
     layer.setCollisionData(vec2(1, 0));
