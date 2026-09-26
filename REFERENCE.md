@@ -705,6 +705,7 @@ ParticleEmitter(pos, angle, emitSize, emitTime, emitRate, emitConeAngle, tileInf
     renderOrder, localSpace) // Create a particle system, speeds are per frame; collideTiles is for world space only
 emitter.trailScale / velocityInheritance / restitution / friction / emitCircle // More settings, set after making it
 emitter.particleCreateCallback / particleDestroyCallback / particleCollideCallback // Called with each particle
+emitter.particleUpdateCallback // Called with each particle every update, after it moves
 ParticleEmitter.emitParticle()           // Spawn one particle
 
 // Particle Settings

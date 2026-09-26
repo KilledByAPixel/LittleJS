@@ -515,6 +515,35 @@ test('a particle reports its death once however it dies, and a local space emitt
     local.destroy();
 });
 
+test('a particle calls its update callback once each update, after it moves, and not once it dies', () =>
+{
+    let calls = 0;
+    const e = new ParticleEmitter(vec2(), 0, 0, 0, 0);
+    e.damping = 1;
+    e.gravityScale = 0;
+    e.particleUpdateCallback = (p)=> { ++calls; p.velocity.x = 0; };
+    const p = e.emitParticle();
+    p.pos.set(0, 0);
+    p.velocity.set(1, 0);
+    p.update();
+    assert.equal(calls, 1);
+    assert.equal(p.pos.x, 1, 'moved before the callback stopped it');
+    p.update();
+    assert.equal(calls, 2);
+    assert.equal(p.pos.x, 1, 'the callback change held');
+
+    // the tile collision path reaches it too
+    e.collideTiles = true;
+    p.update();
+    assert.equal(calls, 3);
+
+    // a particle whose time is up is not called
+    p.lifeTime = 0;
+    p.update();
+    assert.equal(calls, 3);
+    e.destroy();
+});
+
 test('an object that detaches from its parent in update is not updated again as a root in the same pass', () =>
 {
     const parent = new EngineObject(vec2(), vec2(1));

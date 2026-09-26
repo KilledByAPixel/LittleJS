@@ -9128,6 +9128,9 @@ class ParticleEmitter extends EngineObject
         /** @property {ParticleCollideCallback|undefined} - Callback when particle collides
          *  @type {ParticleCollideCallback|undefined} */
         this.particleCollideCallback = undefined;
+        /** @property {ParticleCallback|undefined} - Callback each time a particle updates, after it moves
+         *  @type {ParticleCallback|undefined} */
+        this.particleUpdateCallback = undefined;
         /** @property {number} - Percentage of velocity to pass to particles (0-1) */
         this.velocityInheritance = 0;
         /** @property {number} - Particles owed to the emit rate, starts at one so the first comes out at once */
@@ -9383,6 +9386,7 @@ class Particle
         const gravityScale = emitter.gravityScale;
         const collideTiles = emitter.collideTiles;
         const collideCallback = emitter.particleCollideCallback;
+        const updateCallback = emitter.particleUpdateCallback;
 
         // destroy particle when its time runs out
         if (this.lifeTime <= 0 || time - this.spawnTime > this.lifeTime) // no lifetime is gone at once, not never
@@ -9419,7 +9423,11 @@ class Particle
         this.angle += this.angleVelocity *= angleDamping;
 
         // don't do collision if solver disabled
-        if (!solve) return;
+        if (!solve)
+        {
+            updateCallback?.(this);
+            return;
+        }
 
         // check collision against tiles
         this.groundObject = undefined;
@@ -9456,6 +9464,9 @@ class Particle
                 debugPhysics && debugRect(this.pos, this.size, '#f00');
             }
         }
+
+        // a collide callback may have destroyed it
+        this.destroyed || updateCallback?.(this);
     }
 
     /** Destroy this particle, once: a second call does nothing

@@ -3847,6 +3847,9 @@ declare module "littlejsengine" {
         /** @property {ParticleCollideCallback|undefined} - Callback when particle collides
          *  @type {ParticleCollideCallback|undefined} */
         particleCollideCallback: ParticleCollideCallback | undefined;
+        /** @property {ParticleCallback|undefined} - Callback each time a particle updates, after it moves
+         *  @type {ParticleCallback|undefined} */
+        particleUpdateCallback: ParticleCallback | undefined;
         /** @property {number} - Percentage of velocity to pass to particles (0-1) */
         velocityInheritance: number;
         /** @property {number} - Particles owed to the emit rate, starts at one so the first comes out at once */
