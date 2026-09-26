@@ -105,6 +105,10 @@ addEffectSetting('restitution', 'number', 0, 0, 1, .01,
 addEffectSetting('friction', 'number', .8, 0, 1, .01,
     'Speed kept sliding along tiles');
 
+// settings that do nothing unless another is on, the page dims them
+const effectNeeds = {emitHeight:'emitRect', restitution:'collideTiles',
+    friction:'collideTiles'};
+
 // settings effectApply sets itself instead of copying across
 const effectIndirect = ['emitSize', 'emitRect', 'emitHeight', 'tileIndex',
     'tileSize', 'tilePadding'];
@@ -213,7 +217,8 @@ function effectSanitize(raw)
     {
         const value = input[setting.name], fallback = setting.value;
         if (setting.kind === 'checkbox')
-            settings[setting.name] = value === undefined ? fallback : !!value;
+            settings[setting.name] = typeof value === 'boolean' ? value :
+                value === 0 || value === 1 ? !!value : fallback;
         else if (setting.kind === 'color')
             settings[setting.name] = effectColor(value) || fallback.slice();
         else if (isNumber(value))

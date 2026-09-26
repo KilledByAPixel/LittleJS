@@ -107,18 +107,21 @@ details.group > div { padding:0 12px 8px; }
     flex:1; resize:none; margin:0 10px 10px; padding:6px;
     background:var(--back); color:var(--text);
     border:1px solid var(--line); border-radius:4px;
-    font:12px ui-monospace, monospace; white-space:pre;
+    font:12px ui-monospace, monospace;
+    white-space:pre-wrap; overflow-wrap:anywhere; overflow-x:hidden;
 }
 
+/* on a phone the preview stays at the top while the settings scroll */
 @media (max-width:720px)
 {
     #app { flex-direction:column; height:auto; min-height:100vh; }
-    #panel
+    #main
     {
-        width:100%; max-height:none; border-right:0;
-        border-bottom:1px solid var(--line);
+        order:-1; flex:none; height:55vh;
+        position:sticky; top:0; z-index:1;
     }
-    #main { flex:none; height:100vh; }
+    #codePanel { height:110px; }
+    #panel { width:100%; border-right:0; }
 }
 </style>
 </head><body>

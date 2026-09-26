@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     EngineObject, ParticleEmitter, TileLayerData, TileInfo, TextureInfo,
-    TileLayer, CanvasLayer, Medal,
+    TileLayer, TileCollisionLayer, CanvasLayer, Medal,
     Timer, tile, vec2, rgb, engineObjects, engineObjectsDestroy, engineObjectsUpdate, objectMaxSpeed,
 } from '../dist/littlejs.esm.js';
 
@@ -542,6 +542,27 @@ test('a particle calls its update callback once each update, after it moves, and
     p.update();
     assert.equal(calls, 3);
     e.destroy();
+});
+
+test('a particle its collide callback destroyed is not passed to the update callback', () =>
+{
+    const layer = new TileCollisionLayer(vec2(0, 0), vec2(4, 4));
+    layer.setCollisionData(vec2(1, 0));
+    let calls = 0;
+    const e = new ParticleEmitter(vec2(), 0, 0, 0, 0);
+    e.collideTiles = true;
+    e.damping = 1;
+    e.gravityScale = 0;
+    e.particleCollideCallback = (p)=> { p.destroy(); return true; };
+    e.particleUpdateCallback = ()=> ++calls;
+    const p = e.emitParticle();
+    p.pos.set(.5, .5);
+    p.velocity.set(1, 0); // into the solid cell
+    p.update();
+    assert.ok(p.destroyed, 'the collide callback ran');
+    assert.equal(calls, 0);
+    e.destroy();
+    layer.destroy();
 });
 
 test('an object that detaches from its parent in update is not updated again as a root in the same pass', () =>

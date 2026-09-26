@@ -12,13 +12,16 @@ setInputPreventDefault(false);
 const storageKey = 'particles_library';
 const storageSelectedKey = 'particles_selected';
 const storageExpandKey = 'particles_expand';
+const storageBackupKey = 'particles_library_backup';
 
 let library = [];      // every effect, saved as one
 let effect;            // the effect being edited, one of the library
 let emitter;           // the preview emitter
 let floorLayer;        // a floor to land on while the effect hits tiles
 let dragging = false;  // moving the emitter with the mouse
+let draggingLast = false;
 let previewHover = false;
+let pickerDrawn;       // what the tile picker last drew
 const restartTimer = new Timer;
 const rows = {};           // settings rows by name, each with refresh()
 const settingsGroups = {}; // group content elements by name
@@ -115,8 +118,8 @@ function makeRow(parent, name, description, onReset)
 
 function makeNumberRow(parent, setting)
 {
-    const {row, finish} = makeRow(parent, setting.name, setting.description,
-        ()=> setValue(setting.name, setting.value));
+    const {row, label, finish} = makeRow(parent, setting.name,
+        setting.description, ()=> setValue(setting.name, setting.value));
     const range = makeElement('input', row);
     range.type = 'range';
     range.min = setting.min;
@@ -127,6 +130,7 @@ function makeNumberRow(parent, setting)
     box.step = setting.step;
     box.min = setting.hardMin;
     box.max = setting.hardMax;
+    box.id = label.htmlFor = 'setting_' + setting.name;
     finish();
 
     range.oninput = ()=> setValue(setting.name, parseFloat(range.value));
@@ -148,10 +152,11 @@ function makeNumberRow(parent, setting)
 
 function makeCheckboxRow(parent, setting)
 {
-    const {row, finish} = makeRow(parent, setting.name, setting.description,
-        ()=> setValue(setting.name, setting.value));
+    const {row, label, finish} = makeRow(parent, setting.name,
+        setting.description, ()=> setValue(setting.name, setting.value));
     const checkbox = makeElement('input', row);
     checkbox.type = 'checkbox';
+    checkbox.id = label.htmlFor = 'setting_' + setting.name;
     checkbox.style.gridColumn = 'span 2';
     finish();
     checkbox.oninput = ()=> setValue(setting.name, checkbox.checked);
@@ -299,6 +304,13 @@ function refreshAll()
         $('strip' + pair).style.background = `linear-gradient(to right, ` +
             `${css(s['colorStart' + pair])}, ${css(s['colorEnd' + pair])}), ` +
             checker;
+
+    // dim settings that do nothing without another one on
+    for (const name in effectNeeds)
+    {
+        const row = document.querySelector(`.row[data-name=${name}]`);
+        row.style.opacity = s[effectNeeds[name]] ? '' : .5;
+    }
     refreshTexture();
 }
 
@@ -358,8 +370,9 @@ function loadLibrary()
     const text = storageLoad(storageKey);
     if (text)
     {
+        // one that cannot be read is kept aside, not overwritten
         try { library = effectLibraryParse(text); }
-        catch { library = []; }
+        catch { storageSave(storageBackupKey, text); }
     }
     if (!library.length)
         library = effectPresets.map(effectSanitize);
@@ -405,7 +418,7 @@ function migrateOldSettings()
 
     // remove the old keys, the texture keeps its key
     const kept = ['particles_textureData', storageKey, storageSelectedKey,
-        storageExpandKey];
+        storageExpandKey, storageBackupKey];
     try
     {
         for (const key of Object.keys(localStorage))
@@ -451,6 +464,7 @@ function setupPreviewControls()
     preview.addEventListener('pointerdown', (e)=>
         e.button === 0 && (dragging = true));
     addEventListener('pointerup', ()=> dragging = false);
+    addEventListener('pointercancel', ()=> dragging = false);
     preview.addEventListener('pointerenter', ()=> previewHover = true);
     preview.addEventListener('pointerleave', ()=> previewHover = false);
 
@@ -479,11 +493,21 @@ function setupPreviewControls()
     };
     $('buttonCopy').onclick = ()=>
     {
-        navigator.clipboard.writeText($('codeText').value).then(()=>
+        const copied = ()=>
         {
             $('buttonCopy').textContent = 'Copied';
             setTimeout(()=> $('buttonCopy').textContent = 'Copy', 1e3);
-        });
+        };
+
+        // the clipboard api needs a secure page, selecting works anywhere
+        // and leaves the code selected to copy by hand if that fails too
+        const select = ()=>
+        {
+            $('codeText').select();
+            document.execCommand('copy') && copied();
+        };
+        const clipboard = navigator.clipboard, text = $('codeText').value;
+        clipboard ? clipboard.writeText(text).then(copied, select) : select();
     };
 }
 
@@ -648,6 +672,7 @@ function loadCustomTexture(dataURL)
 {
     const image = new Image;
     image.onload = ()=> setCustomTexture(image);
+    image.onerror = ()=> storageSave('particles_textureData'); // not kept
     image.src = dataURL;
 }
 
@@ -683,6 +708,14 @@ function refreshTexture()
     if (!picker || !defaultTextureInfo)
         return;
     const s = effect.settings, texture = textureInfos[0];
+    $('tileWarning').style.display = effectTileFits(s) ? 'none' : '';
+    $('buttonDefaultTexture').disabled = texture === defaultTextureInfo;
+
+    // redrawn only when what it shows changes, not on every slider tick
+    const drawn = [texture, s.tileIndex, s.tileSize, s.tilePadding];
+    if (pickerDrawn && drawn.every((v, i)=> v === pickerDrawn[i]))
+        return;
+    pickerDrawn = drawn;
     const image = texture.image, size = texture.size;
     const scale = max(1, floor(256 / max(size.x, size.y)));
     picker.width = size.x * scale;
@@ -710,8 +743,6 @@ function refreshTexture()
         const x = s.tileIndex % columns, y = floor(s.tileIndex / columns);
         context.strokeRect(x * cell + 1, y * cell + 1, cell - 2, cell - 2);
     }
-    $('tileWarning').style.display = effectTileFits(s) ? 'none' : '';
-    $('buttonDefaultTexture').disabled = textureInfos[0] === defaultTextureInfo;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -742,7 +773,11 @@ function gameUpdate()
     }
 
     // drag to move the emitter, it goes back to the middle on release
-    emitter.pos = dragging ? mousePos.copy() : vec2();
+    const pos = dragging ? mousePos.copy() : vec2();
+    if (dragging !== draggingLast)
+        emitter.previousPos = pos.copy(); // a grab or release is not a throw
+    draggingLast = dragging;
+    emitter.pos = pos;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -751,6 +786,10 @@ function gameUpdatePost()
     // zoom works while paused too
     if (mouseWheel && previewHover)
         setCameraScale(clamp(cameraScale * (1 - sign(mouseWheel)/5), 10, 300));
+
+    // debug key 2 toggles the bounds too
+    if ($('debugCheckbox').checked !== debugParticles)
+        $('debugCheckbox').checked = debugParticles;
 
     const count = emitter.particles.length + ' particles';
     if ($('particleCount').textContent !== count)
