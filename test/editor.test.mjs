@@ -1337,3 +1337,44 @@ test('a key pressed while dragging a selection ends the drag, so Delete clears t
     engine.run('editorUndo(); editorUndo();');
     assert.deepEqual([...engine.run('frontData')], [6, 0, 3, 5, 0, 0], 'the move and the clear, an undo each');
 });
+
+// review 2026-09-26: autosaved edits that no longer fit the file are kept, never lost
+
+// the test file as it might change: a column wider, its layers the other way round, a layer renamed, or its object
+// layer gone
+const widerCode = ()=> fileCode([0, 0, 3, 0, 0, 0, 0, 0]).replace(/width: 3, height: 2/g, 'width: 4, height: 2')
+    .replace('[1, 0, 0, 0, 0, 2]', '[1, 0, 0, 0, 0, 0, 0, 2]');
+const turnedCode = ()=> fileCode().replace(/width: 3, height: 2/g, 'width: 2, height: 3');
+const renamedCode = ()=> fileCode().replace(`name: 'back'`, `name: 'sky'`);
+const noObjectsCode = ()=> fileCode()
+    .replace(`{ type: 'objectgroup', name: 'things', objects: [{ id: 1, x: 8, y: 8, type: 'Coin' }] },`, '')
+    .replace('editorLayerRecord(layers[2])', 'editorLayerRecord(layers[1])').replace('map.layers[2].layers', 'map.layers[1].layers');
+
+test('edits that do not fit the file any more are not applied, and stay waiting with their autosave', async () =>
+{
+    for (const changed of [widerCode, noObjectsCode])
+    {
+        const storage = makeStorage();
+        paintAndSave(await reload(storage));
+        const before = saved(storage);
+        const engine = await loadGame({ localStorage: storage });
+        engine.run(changed());
+        assert.equal(engine.run('!!front.record.pending'), true);
+        assert.equal(engine.run('editorApplyPending(front.record)'), false);
+        assert.deepEqual([...engine.run('[!!front.record.pending, editorUndoList.length]')], [true, 0]);
+        assert.deepEqual(saved(storage), before, 'the only copy of the edits is kept');
+    }
+});
+
+test('a file whose layers changed shape or name, the same tiles in it, waits instead of taking the edits', async () =>
+{
+    for (const changed of [turnedCode, renamedCode])
+    {
+        const storage = makeStorage();
+        paintAndSave(await reload(storage));
+        const engine = await loadGame({ localStorage: storage });
+        engine.run(changed());
+        assert.equal(engine.run('!!front.record.pending'), true);
+        assert.deepEqual([...engine.run('map.layers[0].data')], [1, 0, 0, 0, 0, 2], 'the file as it is');
+    }
+});

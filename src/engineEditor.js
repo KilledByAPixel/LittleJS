@@ -229,7 +229,7 @@ function editorMapRestore(map)
     const data = map.layers ? editorTileLayerData(map.layers) : [];
     if (!map.layers || data.some((layer)=> !Array.isArray(layer))) return map;
     const objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
-    const url = editorFetchedURLs.get(map), hash = editorMapHash(data, objects);
+    const url = editorFetchedURLs.get(map), hash = editorMapHash(data, objects, editorMapLayout(map));
     const fileName = url?.split(/[?#]/)[0].split('/').pop() || 'level.json';
     const record = {map, url, fileName, key: editorMapKey(map, url, hash), hash,
         original: data.map((layer)=> [...layer]), originalObjects: editorObjectsCopy(objects),
@@ -242,8 +242,10 @@ function editorMapRestore(map)
 
     const saved = editorSaves()[record.key];
     if (!saved) return map;
-    // an autosave from before objects were in the hash matches on its tiles, one of a resized map is resized to first
-    const sameFile = saved.hash === record.hash || !saved.objects && saved.hash === editorMapHash(data);
+    // an autosave from before the map's shape was in the hash matches on its tiles and objects, and one from before
+    // objects were matches on its tiles; one of a resized map is resized to first
+    const sameFile = saved.hash === record.hash || !saved.width &&
+        (saved.hash === editorMapHash(data, objects) || !saved.objects && saved.hash === editorMapHash(data));
     if ((saved.width ?? map.width) === map.width && (saved.height ?? map.height) === map.height &&
         editorSameData(saved.layers, data) && editorSameData(saved.objects ?? [], objects))
         editorDiscardPending(record);
@@ -458,20 +460,26 @@ function editorWriteSaves(saves)
 function editorMapKey(map, url, hash)
 { return url?.split(/[?#]/)[0] ?? `${map.width}x${map.height} ` + map.layers.map((layer)=> layer.name).join() + ' #' + hash; }
 
-// a quick hash of a map's tile data and objects, to know when the file changed under its autosave
-function editorMapHash(data, objects=[])
+// a quick hash of a map's tile data, objects and shape, to know when the file changed under its autosave
+function editorMapHash(data, objects=[], layout='')
 {
     let hash = 2166136261;
     for (const layer of data)
     for (const gid of layer)
         hash = Math.imul(hash ^ gid, 16777619);
-    if (objects.length)
-    {
-        const text = JSON.stringify(objects);
-        for (let i = 0; i < text.length; ++i)
-            hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
-    }
+    const text = (objects.length ? JSON.stringify(objects) : '') + layout;
+    for (let i = 0; i < text.length; ++i)
+        hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
     return hash >>> 0;
+}
+
+// a map's shape: its size, tile size, and its tile and object layers by name, in order, so a file whose tiles read
+// the same laid out another way is a changed file
+function editorMapLayout(map)
+{
+    const names = (layers)=> layers.map((layer)=> layer.id + ':' + layer.name).join();
+    return `${map.width}x${map.height} ${map.tilewidth}x${map.tileheight} ` +
+        names(editorTileLayers(map.layers)) + ' | ' + names(editorObjectGroups(map.layers));
 }
 
 const editorSameData = (a, b)=> JSON.stringify(a) === JSON.stringify(b);
@@ -530,20 +538,40 @@ function editorPaintData(record, data, objects, width=record.map.width, height=r
     editorStroke ? editorStrokeEnd() : editorAutosave(record);
 }
 
-// the autosaved edits of a file that changed since, applied as one undo
+// the autosaved edits of a file that changed since, applied as one undo; edits that do not fit the file now are
+// kept waiting, with their autosave, until they are dropped, and it returns false
 function editorApplyPending(record)
 {
     const saved = record?.pending;
-    if (!saved) return;
-    record.pending = undefined;
+    if (!saved) return false;
+    if (!editorPendingFits(record, saved))
+    {
+        record.pendingUnfit = true;
+        console.warn(`LittleJS editor: the autosaved edits to ${record.fileName} do not fit the file now, ` +
+            'they are kept until dropped');
+        return false;
+    }
+    record.pending = record.pendingUnfit = undefined;
     editorPaintData(record, saved.layers, saved.objects, saved.width, saved.height);
+    return true;
+}
+
+// if autosaved edits fit a map now: as many tile layers, each the size they were saved at, which needs the Restart
+// hook when the map is another size, and no objects in object layers the map no longer has
+function editorPendingFits(record, saved)
+{
+    const map = record.map, data = editorTileLayerData(map.layers), groups = editorObjectGroups(map.layers).length;
+    const width = saved.width ?? map.width, height = saved.height ?? map.height;
+    return (width === map.width && height === map.height || !!levelEditor.onRestart) &&
+        saved.layers?.length === data.length && saved.layers.every((layer)=> layer.length === width * height) &&
+        (saved.objects ?? []).every((objects, i)=> i < groups || !objects.length);
 }
 
 // drop the autosaved edits of a file that changed since
 function editorDiscardPending(record)
 {
     if (!record) return;
-    record.pending = undefined;
+    record.pending = record.pendingUnfit = undefined;
     const saves = editorSaves();
     delete saves[record.key];
     editorWriteSaves(saves);
@@ -553,7 +581,7 @@ function editorDiscardPending(record)
 function editorRevert(record)
 {
     if (!record || record.synthetic) return; // a layer made in code has no file
-    record.pending = undefined;
+    record.pending = record.pendingUnfit = undefined;
     const {width, height} = record.originalSize ?? record.map;
     editorPaintData(record, record.original, record.originalObjects, width, height);
 }
@@ -1641,6 +1669,8 @@ function editorPanelInit()
     const pendingRow = editorElement('div', pending, 'display:flex;gap:4px;margin-top:4px');
     button(pendingRow, 'Apply edits', ()=> editorApplyPending(editorLayer?.record));
     button(pendingRow, 'Drop them', ()=> editorDiscardPending(editorLayer?.record));
+    const pendingUnfit = editorElement('div', pending, 'color:#fb8;margin-top:4px',
+        'They do not fit the file now, its layers or size changed; they are kept until dropped');
 
     // the layers as numbered buttons, made again when layers come or go, and All Layers
     const layerRow = editorElement('div', editorPanel, 'display:flex;gap:4px;margin:4px 0;flex-wrap:wrap');
@@ -1720,7 +1750,7 @@ function editorPanelInit()
         editorElement('div', help, 'margin:2px 0', line);
     button(help, 'Close', ()=> editorHelp = false, '?');
 
-    editorPanelParts = {advancedToggle, advanced, playFromLabel, playFrom, sizeRow, sizeX, sizeY, resize, restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
+    editorPanelParts = {pendingUnfit, reset, advancedToggle, advanced, playFromLabel, playFrom, sizeRow, sizeX, sizeY, resize, restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -1886,6 +1916,8 @@ function editorPanelUpdate()
     p.resize.title = canResize ? '' : 'Resizing needs levelEditor.onRestart, to make the level again';
     p.turns.style.display = editorObjectLayer ? 'none' : ''; // the tile brush's, not an object layer's
     p.pending.style.display = editorLayer?.record.pending ? '' : 'none';
+    p.pendingUnfit.style.display = editorLayer?.record.pendingUnfit ? '' : 'none';
+    p.reset.style.display = editorLayer?.record.synthetic ? 'none' : ''; // a layer made in code has no file
 
     // the palette, drawn again when the layer or the brush changed, a change makes a new brush
     const live = editorLayer?.live;
