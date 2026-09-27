@@ -7982,6 +7982,11 @@ declare module "littlejsengine" {
         matrixParent: EngineObject3D | undefined;
         matrixParentVersion: number;
         movePass: number;
+        /** Called by a VoxelMap to ask whether a block stops this object, a hook to let one through or react to it
+         *  @param {number} type - The block's type, 1 to 255
+         *  @param {Vector3} cell - The block's cell in the map
+         *  @return {boolean} - true to be stopped by it, every block stops it by default */
+        collideWithVoxel(type: number, cell: Vector3): boolean;
         /** Returns the world position
          *  @return {Vector3} */
         getWorldPos3D(): Vector3;
@@ -8538,6 +8543,11 @@ declare module "littlejsengine" {
          *  @return {number|undefined}
          *  @ignore */
         levelRaycast3D(ray: Ray3D): number | undefined;
+        /** Keep an object above the ground, called by the engine for each object with collideLevel
+         *  @param {EngineObject3D} o
+         *  @param {Vector3} oldPos - Where it was before it moved
+         *  @ignore */
+        levelCollide3D(o: EngineObject3D, oldPos: Vector3): void;
     }
     /**
      * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else

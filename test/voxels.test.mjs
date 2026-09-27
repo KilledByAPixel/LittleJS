@@ -32,3 +32,31 @@ test('rebuild gives a HeightMap a new mesh after its heights change', () =>
     near(terrain.getHeight(-1, -1), 1);
     terrain.destroy();
 });
+
+test('a body with collideLevel falls onto a HeightMap and stands on it, even one placed off the origin', () =>
+{
+    const terrain = new HeightMap([[.5, .5], [.5, .5]], vec2(10), 2, undefined, vec3(10, 3, 0));
+    const body = new EngineObject3D(vec3(10, 9, 0));
+    body.setCollision(false, false);
+    body.mass = 1;
+    render3D.gravity = vec3(0, -.02, 0);
+    for (let i = 0; i < 200; ++i)
+        engineObjectsUpdate();
+    near(body.pos3D.y, 3 + 1 + .5, 1e-6, 'its box bottom on the surface');
+    assert.equal(body.groundObject, terrain);
+    body.pos3D.x = 30; // off the map's footprint it falls
+    for (let i = 0; i < 10; ++i)
+        engineObjectsUpdate();
+    assert.ok(body.pos3D.y < 4.4);
+    render3D.gravity = vec3();
+    body.destroy();
+    terrain.destroy();
+});
+
+test('a 3D object made to collide collides with the level by default', () =>
+{
+    const o = new EngineObject3D;
+    o.setCollision();
+    assert.equal(o.collideLevel, true);
+    o.destroy();
+});

@@ -583,6 +583,23 @@ class HeightMap extends EngineObject3D
      *  @ignore */
     levelRaycast3D(ray) { return this.raycast(ray); }
 
+    /** Keep an object above the ground, called by the engine for each object with collideLevel
+     *  @param {EngineObject3D} o
+     *  @param {Vector3} oldPos - Where it was before it moved
+     *  @ignore */
+    levelCollide3D(o, oldPos)
+    {
+        const p = o.pos3D, m = this.pos3D, size = this.mapSize;
+        if (abs(p.x - m.x) > size.x / 2 || abs(p.z - m.z) > size.y / 2) return; // off the map
+        const half = o.size3D.y * abs(o.scale3D.y) / 2, ground = this.getHeight(p.x, p.z);
+        if (p.y - half > ground) return;
+        p.y = ground + half;
+        const v = o.velocity3D;
+        if (v.y < 0)
+            v.y *= -max(o.restitution, this.restitution);
+        o.groundObject = this;
+    }
+
     /** Keeps an eye on its placement, called automatically each frame */
     update()
     {

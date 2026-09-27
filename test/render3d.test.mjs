@@ -1,6 +1,10 @@
-import { test } from 'node:test';
+import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, FirstPersonCamera3D, EngineObject3D, EngineObject, engineObjects, Light3D, DirectionalLight3D, Shader, InstancedMesh3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale, setCameraScale } from '../dist/littlejs.esm.js';
+
+// a HeightMap joins the level's collision until it is destroyed, so one a test made as a lookup must not catch the
+// bodies of the tests after it
+afterEach(() => { for (const o of engineObjects) o instanceof HeightMap && o.destroy(); });
 
 // a ParticleEmitter3D keeps its particles in one typed array, 21 floats each; read one back as an object for the checks
 const PARTICLE_FLOATS = 21;
@@ -2246,7 +2250,7 @@ test('HeightMap.getNormal measures the same slope at the edge as in the middle, 
     o.rotation3D = vec3(0, .7, 0);
     o.lookAt(vec3(0, 5, 0));
     near(o.rotation3D.x, PI / 2); near(o.rotation3D.y, .7);
-    o.destroy(); engineObjects.length = 0;
+    o.destroy(); slope.destroy(); engineObjects.length = 0;
 });
 
 test('setFog sets the distances and only changes the color when one is passed', () =>
@@ -2915,7 +2919,7 @@ test('setCollision on a 3D object skips the 2D only flags', () =>
     o.setCollision();
     assert.equal(o.collideSolidObjects, true);
     assert.equal(o.isSolid, true);
-    assert.equal(o.collideLevel, false, 'level collision is 2D until the voxel map, it needs sync2D');
+    assert.equal(o.collideLevel, true, 'the level, voxel maps and height maps, by default');
     assert.equal(o.collideRaycast, false, 'raycasts are 2D, 3D picking is render3D.pick');
     o.destroy();
 });

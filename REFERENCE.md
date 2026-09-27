@@ -1208,14 +1208,16 @@ obj.size3D                              // full size for engineObjectsCollect3D,
                                         // starts at the size of the mesh's box, 1 with no mesh; the box is
                                         // centered on pos3D, so center() a mesh whose origin is not its middle;
                                         // scale3D and a parent's scale grow it
-obj.setCollision(solids, isSolid)       // the same flags as in 2D, but the collision happens in 3D against size3D;
+obj.setCollision(solids, isSolid, level) // the same flags as in 2D, but the collision happens in 3D against size3D;
                                         // isSolid needs solids, an object cannot block without colliding;
                                         // a 3D object has no 2D size, so it is never an obstacle in a 2D scene;
                                         // both objects of a pair need solids, and a pair where neither one blocks
                                         // passes through, so movers hit the level without shoving each other;
                                         // heavier objects move less and each bounces by its own restitution; mass 0
                                         // stays put and keeps its velocity, a wall the other bounces off;
-                                        // the tile and raycast halves are 2D only and default off here;
+                                        // collideLevel is on by default: voxel maps and height maps, which an
+                                        // object with mass is kept out of, or the tile layers for a sync2D object;
+                                        // the raycast half is 2D only and defaults off here;
                                         // a sync2D object collides in 2D instead, against the 2D size, so set that
                                         // as well as size3D; a child rides with its parent so it sits solid collision
                                         // out, the same rule as in 2D; the solid box is axis aligned in the world,
@@ -1225,6 +1227,9 @@ obj.collideAsSphere3D = true              // collide as the sphere that fits siz
 obj.collideWithObject(object, push)     // called when it touches a solid object, both objects are asked and either
                                         // returning false leaves the push and the bounce to you; push is what it
                                         // takes to move this one clear, it is undefined in 2D
+obj.collideWithVoxel(type, cell)        // asked by a VoxelMap whether a block stops it, true by default; return false
+                                        // to pass through, as for water
+obj.groundObject                        // the height map or voxel map it stands on this frame, undefined in the air
 obj.softShadow = 2                      // 0 by default; a soft shadow of that diameter under the object on
                                         // render3D.softShadowHeight; scale3D and a parent's scale grow it, so set it
                                         // for the unscaled object
@@ -1234,7 +1239,7 @@ obj.upright = true                      // a sprite stands on world up instead o
 obj.sync2D = true // false by default; copy the 2D pos and angle into pos3D and rotation3D each frame; the 2D physics only run for a
                   // sync2D object, so set its mass to have them move it
 // these inherited EngineObject fields are 2D only and do nothing on a 3D object: angle, angleVelocity,
-// angleDamping, additiveColor, drawSize, mirror, clampSpeed, friction, groundObject; sync2D is the one way in
+// angleDamping, additiveColor, drawSize, mirror, clampSpeed, friction; sync2D is the one way in
 obj.mesh obj.tileInfo obj.color         // what to draw and how
 obj.setMesh(mesh)                       // draw a different mesh and free the GPU buffer of the one it replaces, for
                                         // text and terrain built again as things change; a mesh another object is

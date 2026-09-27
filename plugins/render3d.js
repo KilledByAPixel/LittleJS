@@ -3352,7 +3352,10 @@ class EngineObject3D extends EngineObject
             'a sync2D object collides in 2D, so give it a 2D size as well as a size3D', this.size);
         if (this.sync2D)
             super.updatePhysics();
+        // a moving object keeps out of the level, the height maps and voxel maps, from where it was before it moved
+        const oldPos = this.collideLevel && this.mass && !this.sync2D ? this.pos3D.copy() : undefined;
         render3DMove(this);
+        oldPos && render3DCollideLevel(this, oldPos);
         // the engine only runs this for objects that own where they are, a child rides along with its parent
         if (this.collideSolidObjects && !this.sync2D)
             render3DCollideSolid(this);
@@ -3390,10 +3393,17 @@ class EngineObject3D extends EngineObject
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
-     *  @param {boolean} [collideLevel] - Level collision, the 2D tile layers, so it needs sync2D
+     *  @param {boolean} [collideLevel] - Collide with the level, the height maps and voxel maps, or the 2D tile layers
+     *    for a sync2D object
      *  @param {boolean} [collideRaycast] - Raycasts, 2D only; 3D has render3D.pick and engineObjectsRaycast3D */
-    setCollision(collideSolidObjects=true, isSolid=true, collideLevel=false, collideRaycast=false)
+    setCollision(collideSolidObjects=true, isSolid=true, collideLevel=true, collideRaycast=false)
     { super.setCollision(collideSolidObjects, isSolid, collideLevel, collideRaycast); }
+
+    /** Called by a VoxelMap to ask whether a block stops this object, a hook to let one through or react to it
+     *  @param {number} type - The block's type, 1 to 255
+     *  @param {Vector3} cell - The block's cell in the map
+     *  @return {boolean} - true to be stopped by it, every block stops it by default */
+    collideWithVoxel(type, cell) { return true; }
 
     /** Returns the world position
      *  @return {Vector3} */
@@ -3580,6 +3590,14 @@ function render3DMove(o)
     }
     p.x += v.x, p.y += v.y, p.z += v.z;
     r.x += a.x, r.y += a.y, r.z += a.z;
+}
+
+// keep an object that moved out of the level's solid geometry, clearing what it stood on for the level to set again
+function render3DCollideLevel(o, oldPos)
+{
+    o.groundObject = undefined;
+    for (const level of render3DLevel)
+        level.destroyed || level.levelCollide3D(o, oldPos);
 }
 
 // where a solid object is in the world and what it collides as: the sphere that fits size3D, or the size3D box,
