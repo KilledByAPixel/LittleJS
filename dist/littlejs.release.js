@@ -26338,11 +26338,12 @@ class Render3DCSGNode
     }
 }
 
-// the plane through three points, facing the side they run counter clockwise from, undefined when they are in a line
+// the plane through three points, facing the side they run counter clockwise from, undefined when they are in a
+// line, or so nearly that the plane would lean any way
 function render3DCSGPlane(a, b, c)
 {
     const n = b.subtract(a).cross(c.subtract(a));
-    if (n.lengthSquared() < 1e-20) return;
+    if (n.lengthSquared() < 1e-18) return;
     const normal = n.normalize();
     return {normal, w: normal.dot(a)};
 }
@@ -26544,12 +26545,12 @@ function render3DCSGMesh(polygons)
     // points within the epsilon made one, the first found standing for the rest; moving one any farther would take
     // it off its plane by more than the epsilon, and the next cut through it would split it again; a point on an
     // edge, whose ends may each have moved that far, is looked for a few times that far from its line
-    const reach = RENDER3D_CSG_EPSILON * 4, placer = render3DCSGPlacer(RENDER3D_CSG_EPSILON), places = [];
+    const reach = RENDER3D_CSG_EPSILON * 4, placer = render3DCSGPlacer(RENDER3D_CSG_EPSILON), placed = new Set;
     const cellKey = (x, y, z)=> x + ',' + y + ',' + z;
     const place = (p)=>
     {
         const q = placer(p);
-        q === p && places.push(p);
+        placed.add(q); // polygons share points, so one can be placed more than once
         return q;
     };
     const loops = polygons.map(polygon=>
@@ -26566,6 +26567,7 @@ function render3DCSGMesh(polygons)
     });
 
     // the places in a coarser grid, sized so a cell holds a few, to find the ones lying along each edge
+    const places = [...placed];
     let lo = vec3(Infinity), hi = vec3(-Infinity);
     for (const p of places)
     {
@@ -26602,9 +26604,28 @@ function render3DCSGMesh(polygons)
         return found.sort((f, g)=> f[0] - g[0]);
     };
 
-    // the mesh, each loop with the points along its edges put in, as a fan
-    const mesh = new Mesh;
+    // the mesh, each vertex once: vertices at one place that are the same in every value are shared
+    const mesh = new Mesh, shared = new Map;
     mesh.indices = [];
+    const vertexIndex = (v)=>
+    {
+        const n = v.normal.lengthSquared() ? v.normal.normalize() : RENDER3D_DEFAULT_NORMAL, c = v.color;
+        const key = [n.x, n.y, n.z, v.uv.x, v.uv.y, c.r, c.g, c.b, c.a].map(x=> round(x * 1e6)).join();
+        let atPlace = shared.get(v.pos), i;
+        atPlace || shared.set(v.pos, atPlace = new Map);
+        if ((i = atPlace.get(key)) === undefined)
+        {
+            atPlace.set(key, i = mesh.points.length);
+            mesh.points.push(v.pos.copy());
+            mesh.normals.push(n);
+            mesh.uvs.push(v.uv.copy());
+            mesh.colors.push(c.copy());
+        }
+        return i;
+    };
+
+    // each loop with the points along its edges put in, as a fan
+    const flat = (a, b, c)=> b.subtract(a).cross(c.subtract(a)).lengthSquared() < 1e-18;
     for (const loop of loops)
     {
         if (loop.length < 3) continue;
@@ -26619,16 +26640,36 @@ function render3DCSGMesh(polygons)
                 full.push(new Render3DCSGVertex(p, v.normal, v.uv, v.color));
             }
         }
-        const base = mesh.points.length;
-        for (const v of full)
+        // a polygon with no area, its points in a line, is no surface, and its neighbors have its points along
+        // their edges, so it goes
+        const n = full.length, pos = (i)=> full[i % n].pos;
+        let area = vec3();
+        for (let j = 1; j < n - 1; ++j)
+            area = area.add(pos(j).subtract(pos(0)).cross(pos(j + 1).subtract(pos(0))));
+        if (area.lengthSquared() < 1e-18) continue;
+
+        // cut off one corner at a time, one that makes a triangle with some area with its neighbors and leaves the
+        // rest some area too, so the points put in along the sides make no flat triangles; areas add, so what is
+        // left is the whole less the corner
+        const ring = full.map(v=> ({pos: v.pos, id: vertexIndex(v)}));
+        const earArea = (i)=>
         {
-            mesh.points.push(v.pos.copy());
-            mesh.normals.push(v.normal.lengthSquared() ? v.normal.normalize() : RENDER3D_DEFAULT_NORMAL);
-            mesh.uvs.push(v.uv.copy());
-            mesh.colors.push(v.color.copy());
+            const a = ring[(i + ring.length - 1) % ring.length].pos, b = ring[i].pos, c = ring[(i + 1) % ring.length].pos;
+            return b.subtract(a).cross(c.subtract(a));
+        };
+        while (ring.length > 3)
+        {
+            let i = ring.findIndex((_, i)=>
+            {
+                const ear = earArea(i);
+                return ear.lengthSquared() >= 1e-18 && area.subtract(ear).lengthSquared() >= 1e-18;
+            });
+            i < 0 && (i = 0); // no corner leaves area, a sliver, cut off the first
+            area = area.subtract(earArea(i));
+            mesh.indices.push(ring[(i + ring.length - 1) % ring.length].id, ring[i].id, ring[(i + 1) % ring.length].id);
+            ring.splice(i, 1);
         }
-        for (let i = 2; i < full.length; ++i)
-            mesh.indices.push(base, base + i - 1, base + i);
+        mesh.indices.push(ring[0].id, ring[1].id, ring[2].id);
     }
     mesh.dirty = true;
     return mesh;

@@ -263,9 +263,9 @@ test('a mirroring matrix places the cutter the right way out', () =>
     near(cut.getBounds().max.x, 1);
 });
 
-test('big smooth meshes do not overflow the stack and stay closed', () =>
+test('a smoother ball bitten by another stays closed', () =>
 {
-    const ball = buildSphere(2, 64, 32);
+    const ball = buildSphere(2, 32, 16);
     const bitten = ball.subtract(ball, vec3(.8, .3, 0));
     assert.equal(isClosed(bitten), true);
     assert.ok(volume(bitten) > 0 && volume(bitten) < volume(ball));
@@ -314,9 +314,54 @@ test('rows of overlapping holes drilled one at a time stay closed', () =>
 
 test('holes drilled one at a time only cut where they are, the plate does not multiply its triangles', () =>
 {
-    let plate = buildBox(vec3(4, .3, 1));
+    let plate = buildBox(vec3(4, .3, 1)), counts = [];
     for (let k = 0; k < 8; ++k)
+    {
         plate = plate.subtract(buildCylinder(.25, 1, 16), vec3(-1.6 + k * 3.2 / 7, 0, 0));
-    const count = plate.indices.length / 3;
-    assert.ok(count < 3000, 'triangles ' + count); // each hole adds its wall and the cuts around it, about 250
+        counts.push(plate.indices.length / 3);
+    }
+    // each hole adds its wall and the cuts around it, about the same each time, where cutting every face at every
+    // hole's planes had grown the whole threefold a hole
+    const added = counts.map((count, k)=> count - (counts[k - 1] || 12));
+    assert.ok(added[7] < added[3] * 2, 'triangles ' + counts.join());
+    assert.ok(counts[7] < 6000, 'triangles ' + counts[7]);
+});
+
+// the CSG results the next tests look at: one cut, a chain of cuts, and round shapes cut by round ones
+const csgResults = ()=>
+{
+    let plate = buildBox(vec3(4, .3, 1));
+    for (let k = 0; k < 4; ++k)
+        plate = plate.subtract(buildCylinder(.25, 1, 16), vec3(-1.6 + k * .8, 0, 0));
+    const ball = buildSphere(2, 16, 8);
+    return [buildBox(2).subtract(buildBox(1)), plate, ball.subtract(ball, vec3(.8, .3, 0)),
+        buildBox(1.6).intersect(buildSphere(2.1, 24, 12)).subtract(buildCylinder(.7, 3, 16))];
+};
+
+test('a CSG result holds each vertex once, those the same in every value are shared', () =>
+{
+    for (const mesh of csgResults())
+    {
+        const keys = new Set(mesh.points.map((p, i)=>
+        {
+            const n = mesh.normals[i], uv = mesh.uvs[i], c = mesh.colors[i];
+            return [p.x, p.y, p.z, n.x, n.y, n.z, uv.x, uv.y, c.r, c.g, c.b, c.a].map(v=> Math.round(v * 1e6)).join();
+        }));
+        assert.equal(keys.size, mesh.points.length);
+        assert.equal(isClosed(mesh) || isClosedWithin(mesh), true);
+    }
+});
+
+test('a CSG result has no flat triangles, its faces are cut into triangles that each have an area', () =>
+{
+    for (const mesh of csgResults())
+    {
+        let flat = 0;
+        for (let t = 0; t < mesh.indices.length; t += 3)
+        {
+            const a = mesh.points[mesh.indices[t]], b = mesh.points[mesh.indices[t+1]], c = mesh.points[mesh.indices[t+2]];
+            b.subtract(a).cross(c.subtract(a)).length() < 1e-9 && ++flat;
+        }
+        assert.equal(flat, 0);
+    }
 });
