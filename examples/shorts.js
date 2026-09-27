@@ -101,6 +101,7 @@ const exampleList =
     new ExampleInfo('--- LITTLEJS 3D ---'),
     new ExampleInfo('3D Basics', 'render3dBasics.js', 'Text, a cube, a sphere, a light and shadows', false, 'intro, basics, text, light, shadow, camera'),
     new ExampleInfo('3D Shapes', 'render3dShapes.js', 'Every shape builder, lit and shadowed', false, 'mesh, sphere, lathe, shading, specular'),
+    new ExampleInfo('3D Mesh Operations', 'render3dMeshOps.js', 'Bevels, CSG cuts, mirror and spin', false, 'mesh, bevel, chamfer, csg, subtract, union, intersect, mirror, spin'),
     new ExampleInfo('3D Billboards', 'render3dBillboards.js', 'Tile sprites that always face the camera', false, 'billboard, sprite, soft shadow'),
     new ExampleInfo('3D Height Map', 'render3dHeightMap.js', 'Terrain from height and color images', false, 'terrain, heightmap, raycast'),
     new ExampleInfo('3D Collision', 'render3dCollision.js', 'Solid objects, bouncing and picking', false, 'solid, sphere, box, cylinder, picking'),
