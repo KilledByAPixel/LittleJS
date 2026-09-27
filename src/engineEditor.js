@@ -363,7 +363,10 @@ function editorAutosave(record)
     if (record.synthetic) return; // a layer made in code has no load to bring it back in, save it to a file
     const saves = editorSaves(), map = record.map, data = editorTileLayerData(map.layers);
     const objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
-    if (editorSameData(data, record.original) && editorSameData(objects, record.originalObjects ?? []))
+    const original = record.originalObjects ?? [], kept = objects.slice();
+    while (kept.length > original.length && !kept.at(-1).length)
+        kept.pop(); // an Objects layer the editor made, empty again, is not an edit
+    if (editorSameData(data, record.original) && editorSameData(kept, original))
         delete saves[record.key];
     else
         saves[record.key] = {hash: record.hash, layers: data, objects, nextobjectid: map.nextobjectid};
@@ -557,10 +560,12 @@ function editorNewObjectGroup(map)
 // the Tiled object layer of an editor object layer, made the first time it is needed
 function editorObjectGroup(layer) { return layer.group ||= editorNewObjectGroup(layer.record.map); }
 
-// the next object id of a map, as Tiled counts them
+// the next object id of a map, as Tiled counts them, and past every id the map has, for a map with no nextobjectid
+// or one an autosave left behind
 function editorNextObjectId(map)
 {
-    const id = map.nextobjectid ?? 1;
+    const ids = editorObjectGroups(map.layers).flatMap((group)=> (group.objects ?? []).map((object)=> object.id));
+    const id = max(map.nextobjectid ?? 1, ...ids.map((id)=> id + 1));
     map.nextobjectid = id + 1;
     return id;
 }
@@ -648,6 +653,8 @@ function editorChangeObjects(layer, change)
 // set an object's property as Tiled keeps it, only where it differs from its type's default, a color as #AARRGGBB
 function editorObjectSetProperty(object, name, value, defaultValue)
 {
+    if (Number.isInteger(defaultValue) && isNumber(value))
+        value = round(value); // an integer stays one, as Tiled keeps an int
     const properties = (object.properties ?? []).filter((property)=> property.name !== name);
     const text = (v)=> isColor(v) ? v.toString() : JSON.stringify(v);
     if (text(value) !== text(defaultValue))
@@ -689,7 +696,7 @@ let editorObjectDrag, editorObjectBox;
 function editorSelectLayer(layer)
 {
     editorStrokeEnd();
-    editorLastCell = editorObjectDrag = undefined;
+    editorLastCell = editorObjectDrag = editorRightPress = editorObjectBox = undefined; // presses stay on their layer
     editorObjectSelection.clear();
     if (layer.isObjects)
     {
@@ -1386,7 +1393,6 @@ function editorPaletteTiles(layer)
     return tiles;
 }
 
-// draw the palette again, for a new layer or brush tile
 // draw the palette of object types, each its icon or the start of its name, the brush's type outlined
 function editorPaletteDrawObjects(canvas)
 {
@@ -1417,6 +1423,7 @@ function editorPaletteDrawObjects(canvas)
     });
 }
 
+// draw the palette again, for a new layer or brush tile
 function editorPaletteDraw(canvas, layer)
 {
     const tiles = editorPaletteTiles(layer), cell = editorPaletteCell, columns = editorPaletteColumns;
@@ -1574,17 +1581,30 @@ function editorZoom(factor)
 // the position a click places or drags to, a cell center unless the grid is off
 function editorSnap(pos) { return editorGrid ? pos.floor().add(vec2(.5)) : pos.copy(); }
 
+// if the properties box has an input for a default's type, a number, boolean, string or Color
+const editorPropertyEditable = (value)=> ['number', 'boolean', 'string'].includes(typeof value) || isColor(value);
+
 // set a property of the one selected object, from the properties box, as one undo
 function editorSetSelectedProperty(name, value)
 {
     const selected = editorSelectedObjects(), object = selected[0];
-    const type = object && objectLayersTypes.get(object.type || object.class);
-    if (selected.length !== 1 || !type) return false;
+    const type = object && objectLayersTypes.get(object.type || object.class), defaultValue = type?.defaults[name];
+    if (selected.length !== 1 || !editorPropertyEditable(defaultValue) ||
+        (isColor(defaultValue) ? !isColor(value) : typeof value !== typeof defaultValue)) return false;
     editorStrokeEnd();
     editorChangeObjects(editorObjectLayer, (list)=>
         editorObjectSetProperty(list.find((o)=> o.id === object.id), name, value, type.defaults[name]));
     editorStrokeEnd();
     return true;
+}
+
+// if the game has nothing where the level puts an object: gone in play, moved in play, or not a game object, like a
+// player start, so the editor draws its icon there
+function editorObjectIsGhost(layer, object)
+{
+    const made = layer.instances.get(object.id);
+    return !made || made.destroyed || !isVector2(made.pos) ||
+        made.pos.distance(editorObjectPos(layer.record, object)) > .01;
 }
 
 // a world box's outline
@@ -1616,9 +1636,8 @@ function editorRenderObjects(thin)
     for (const object of layer.group?.objects ?? [])
     {
         const pos = editorObjectPos(record, object), size = editorObjectSize(layer, object);
-        const made = layer.instances.get(object.id), name = object.type || object.class;
-        if (!made || made.destroyed || isVector2(made.pos) && made.pos.distance(pos) > .01)
-            editorDrawObjectIcon(name, pos, size, .5); // gone in play, moved in play, or not a game object
+        if (editorObjectIsGhost(layer, object))
+            editorDrawObjectIcon(object.type || object.class, pos, size, .5);
         const selected = editorObjectSelection.has(object.id);
         editorDrawBox(pos, size, selected ? hsl(.15, 1, .6) : hsl(.55, 1, .6, .6), thin * (selected ? 3 : 1.5));
     }
@@ -1673,11 +1692,17 @@ function editorPropertiesUpdate(box)
             input.value = String(value);
             input.onchange = ()=> { const v = parseFloat(input.value); isNumber(v) && set(v); };
         }
-        else
+        else if (typeof defaultValue === 'string')
         {
             input.type = 'text';
             input.value = String(value ?? '');
             input.onchange = ()=> set(input.value);
+        }
+        else
+        {
+            // a type it has no input for, a Vector2 say, shown as it is
+            input.readOnly = true;
+            input.value = String(value);
         }
     }
 }

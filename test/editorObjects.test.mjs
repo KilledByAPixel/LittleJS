@@ -360,3 +360,77 @@ test('the properties box sets a property of the one selected object, as one undo
     engine.run('editorObjectSelection.add(2)');
     assert.equal(engine.run(`editorSetSelectedProperty('value', 4)`), false, 'only with one object selected');
 });
+
+// review fixes
+
+test('a right press carried across a layer switch does not throw', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode);
+    engine.handlers.mousedown(at(.5, .5, 2));
+    step(engine);
+    press(engine, 'Digit2'); // to the object layer, the button still held
+    engine.handlers.mousemove(at(3.5, 1.5, 2));
+    step(engine);
+    engine.handlers.mouseup(at(3.5, 1.5, 2));
+    step(engine);
+    assert.equal(engine.run('editorObjectLayer === objects'), true);
+});
+
+test('a new object\'s id is past every id the map has, whatever nextobjectid says', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorSelectLayer(objects); delete map.nextobjectid;
+        editorObjectBrush = [{ type: 'Coin', properties: [], offset: vec2() }];`);
+    click(engine, 3.5, .5);
+    engine.run('map.nextobjectid = 1');
+    click(engine, 3.5, 1.5);
+    assert.deepEqual(positions(engine).map((p)=> p[0]), [1, 2, 3, 4]);
+    assert.equal(engine.run('coins().length'), 4);
+});
+
+test('objects loaded before the tile layers are linked, and made from the autosave', async () =>
+{
+    const storage = makeStorage();
+    const first = await loadGame({ localStorage: storage });
+    first.run(fileCode + `editorChangeObjects(objects, (l)=> editorObjectSetPos(objects.record, l[0], vec2(3.5, .5)));
+        editorStrokeEnd();`);
+    const second = await loadGame({ localStorage: storage });
+    second.run(fileCode.replace('var layers = tileLayersLoad(map, undefined, 0, 0), made = objectLayersLoad(map);',
+        'var made = objectLayersLoad(map), layers = tileLayersLoad(map, undefined, 0, 0);'));
+    assert.deepEqual([...second.run('[objects.instances.get(1) === made[0], made[0].pos.x, made[0].pos.y]')], [true, 3.5, .5]);
+});
+
+test('an object is drawn as a ghost where the game has nothing at its place', async () =>
+{
+    const { run } = await loadGame();
+    run(objectCode.replace('var layers', `objectLayersAddType('Start', (pos)=> pos);
+        map.layers[1].objects.push({ id: 5, type: 'Start', point: true, x: 8, y: 24 });
+        var layers`));
+    const ghosts = ()=> [...run('list().map((o)=> editorObjectIsGhost(objects, o))')];
+    assert.deepEqual(ghosts(), [false, false, true], 'a player start is not a game object');
+    run('made[0].pos = vec2(3, 3); made[1].destroy()');
+    assert.deepEqual(ghosts(), [true, true, true], 'moved in play, and gone in play');
+});
+
+test('undoing the first object placed in a map with no object layer forgets the autosave', async () =>
+{
+    const storage = makeStorage();
+    const engine = await loadGame({ localStorage: storage });
+    engine.run(fileCode.replace(/,\s*\{ type: 'objectgroup'[\s\S]*?\] \}\] \};/, '] };')
+        .replace('var list = ()=> map.layers[1].objects;', '') + `
+        editorChangeObjects(objects, (l)=> l.push({ id: editorNextObjectId(map), type: 'Coin', x: 8, y: 8 }));
+        editorStrokeEnd(); editorUndo();`);
+    assert.equal(JSON.parse(storage.items['LittleJS editor /game/'])[mapKey], undefined);
+});
+
+test('the properties box leaves a default it has no input for alone, and rounds an integer', async () =>
+{
+    const { run } = await loadGame();
+    run(editCode.replace(`{ value: 1, tint: hsl(0, 0, 1) }`, `{ value: 1, tint: hsl(0, 0, 1), offset: vec2(1, 0) }`) +
+        'editorSelectLayer(objects); editorObjectSelection.add(1);');
+    assert.equal(run(`editorSetSelectedProperty('offset', '( 2, 0 )')`), false);
+    assert.equal(run(`editorSetSelectedProperty('value', 2.6)`), true);
+    assert.deepEqual(JSON.parse(run('JSON.stringify([list()[0].properties, made[0].value])')),
+        [[{ name: 'value', type: 'int', value: 3 }], 3]);
+});

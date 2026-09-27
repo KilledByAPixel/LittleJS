@@ -8370,6 +8370,8 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
  *  @memberof TileLayers */
 function objectLayersLoad(tileMapData)
 {
+    // the level editor, in debug builds, keeps the map and brings back its autosaved objects before they are made
+    tileMapData && editorMapRestore(tileMapData);
     const made = [];
     const addObjects = (dataLayers)=>
     {
