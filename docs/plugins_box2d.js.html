@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><meta name="description" content="LittleJS is a lightweight HTML5 game engine with fast WebGL rendering, physics, particles, sound, and more!"><meta name="keywords" content="javascript, game engine, html5, webgl, 2d, game development, indie games"><meta name="author" content="Frank Force"><meta property="og:title" content="LittleJS - The Tiny JavaScript Game Engine"><meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound"><meta property="og:type" content="website"><title>Source: plugins/box2d.js</title><!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_box2d.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_box2d.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
  * LittleJS Box2D Physics Plugin
  * - Box2dObject extends EngineObject with Box2D physics
  * - Call box2dInit() to enable
@@ -66,6 +66,22 @@ function box2dFixtureOverlaps(fixture, aabb)
     return false;
 }
 
+// the points of an edge list or loop, without one that repeats the one before, or a loop's closing repeat of the first;
+// an edge of no length gives its neighbors a ghost vertex on their own end, and bodies fall through them
+function box2dEdgePoints(points, loop)
+{
+    // each point is kept if it is far enough from the last one kept, so a densely sampled curve keeps every few of
+    // its points rather than losing them all
+    const slop2 = .005**2; // Box2D's linear slop, what its own chain shape asserts consecutive points are apart
+    const kept = [];
+    for (const p of points)
+        if (!kept.length || p.distanceSquared(kept[kept.length-1]) > slop2)
+            kept.push(p);
+    while (loop &amp;&amp; kept.length > 1 &amp;&amp; kept[kept.length-1].distanceSquared(kept[0]) &lt;= slop2)
+        kept.pop();
+    return kept;
+}
+
 // wake a body and whatever touches it, Box2D does not when a body is moved, and a sleeping pair never updates
 function box2dWakeWithContacts(body)
 {
@@ -74,7 +90,7 @@ function box2dWakeWithContacts(body)
         edge.get_other().SetAwake(true);
 }
 
-// wake both bodies of a joint whose length changed, a sleeping body would stay where it was
+// wake both bodies of a joint whose length, spring, ratio or strength changed, a sleeping body would stay where it was
 function box2dWakeJoint(joint)
 {
     joint.GetBodyA().SetAwake(true);
@@ -110,12 +126,22 @@ function box2dRunPending()
 // each Box2dJoint by its native pointer, so a joint Box2D destroys along with a body can let go of its wrapper
 const box2dJoints = new Map;
 
+// the gear joints, kept apart from the others, since every joint that goes looks through them
+const box2dGearJoints = new Set;
+
 // a gear joint keeps pointers to the joints it gears and to their bodies, so it goes before either joint does
 function box2dDestroyGears(joint)
 {
-    for (const gear of box2dJoints.values())
-        if (gear instanceof Box2dGearJoint &amp;&amp; (gear.joint1 === joint || gear.joint2 === joint))
+    for (const gear of box2dGearJoints)
+    {
+        if (!gear.box2dJoint)
+            box2dGearJoints.delete(gear); // gone already, with a body
+        else if (gear.joint1 === joint || gear.joint2 === joint)
+        {
+            box2dGearJoints.delete(gear);
             gear.destroy();
+        }
+    }
 }
 
 /** Enable Box2D debug drawing
@@ -183,15 +209,32 @@ class Box2dObject extends EngineObject
         // destroy physics body, fixtures, and joints; from a contact callback the world is still
         // stepping and cannot lose a body, so it goes as soon as the step is done; the object
         // leaves box2d.objects at the next step, or the next frame while paused or time is stopped;
-        // the body lets go of it after, since destroying it calls endContact, which finds it there
+        // the body lets go of it after, since destroying it calls endContact, which finds it there;
+        // that endContact can destroy this same object again, before it is marked destroyed, so the body is
+        // destroyed only by the call that still finds it, Box2D would lose count of its bodies on a second
         ASSERT(this.body, 'Box2dObject has no body to destroy');
         const body = this.body;
-        box2dWhenUnlocked(()=> { box2d.world.DestroyBody(body); body.object = undefined; this.body = undefined; });
+        box2dWhenUnlocked(()=>
+        {
+            if (this.body !== body) return; // destroyed already
+            box2d.world.DestroyBody(body);
+            body.object = undefined;
+            this.body = undefined;
+        });
         super.destroy(immediate);
     }
 
     /** Box2d objects updated with Box2d world step */
     updatePhysics() {}
+
+    /** Update the object transform, called automatically by engine even when paused;
+     *  its body places it, so it can be a parent but not a child, connect it to another with a joint
+     *  @param {boolean} [updateChildren] - Also update the children's transforms */
+    updateTransforms(updateChildren=true)
+    {
+        ASSERT(!this.parent, 'a Box2dObject cannot be a child, its body would stay behind, connect it with a joint');
+        super.updateTransforms(updateChildren);
+    }
 
     /** Render the object, uses box2d drawing if no tile info exists */
     render()
@@ -444,7 +487,9 @@ class Box2dObject extends EngineObject
     addEdgeList(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
+        points = box2dEdgePoints(points);
         const fixtures = [], edgePoints = [];
+        if (points.length &lt; 2) return fixtures;
         for (let i=0; i&lt;points.length-1; ++i)
         {
             // the ghost vertices, where there is a neighbor, make the edges one smooth surface
@@ -475,7 +520,9 @@ class Box2dObject extends EngineObject
     addEdgeLoop(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
+        points = box2dEdgePoints(points, true);
         const fixtures = [], edgePoints = [];
+        if (points.length &lt; 2) return fixtures;
         const getPoint = i=> points[mod(i,points.length)];
         for (let i=0; i&lt;points.length; ++i)
         {
@@ -500,8 +547,10 @@ class Box2dObject extends EngineObject
      *  @param {Object} fixture */
     destroyFixture(fixture)
     {
+        const pointer = box2d.instance.getPointer(fixture);
+
         // an edge list or loop that loses a fixture is no longer one line, what is left of it draws edge by edge
-        const edgeFixtures = this.edgeListFixtures, points = edgeFixtures.get(box2d.instance.getPointer(fixture));
+        const edgeFixtures = this.edgeListFixtures, points = edgeFixtures.get(pointer);
         if (points)
         {
             this.edgeLists = this.edgeLists.filter(p=> p !== points);
@@ -511,7 +560,6 @@ class Box2dObject extends EngineObject
 
         // not once the body is gone, which takes its fixtures with it, or once the fixture is,
         // since a second destroy of it, like one from each of two contacts in a step, stops Box2D for good
-        const pointer = box2d.instance.getPointer(fixture);
         box2dWhenUnlocked(()=> this.body &amp;&amp; this.getFixtureList().some(f=> box2d.instance.getPointer(f) === pointer)
             &amp;&amp; this.body.DestroyFixture(fixture));
     }
@@ -593,15 +641,32 @@ class Box2dObject extends EngineObject
         });
     }
     
-    /** Sets the position
+    /** Sets the position, from a contact callback the body moves once the step is done, keeping the angle it has then
      *  @param {Vector2} pos */
     setPosition(pos)
-    { this.setTransform(pos, this.angle); }
+    {
+        this.pos = pos.copy();
+        const x = pos.x, y = pos.y;
+        box2dWhenUnlocked(()=>
+        {
+            if (!this.body) return;
+            this.body.SetTransform(box2dTemp(vec2(x, y)), this.body.GetAngle());
+            box2dWakeWithContacts(this.body);
+        });
+    }
 
-    /** Sets the angle
+    /** Sets the angle, from a contact callback the body turns once the step is done, keeping the position it has then
      *  @param {number} angle */
     setAngle(angle)
-    { this.setTransform(this.pos, angle); }
+    {
+        this.angle = angle;
+        box2dWhenUnlocked(()=>
+        {
+            if (!this.body) return;
+            this.body.SetTransform(this.body.GetPosition(), -angle); // box2d uses reverse angle
+            box2dWakeWithContacts(this.body);
+        });
+    }
 
     /** Sets the linear velocity
      *  @param {Vector2} velocity */
@@ -651,7 +716,10 @@ class Box2dObject extends EngineObject
     /** Set whether the body can rotate
      *  @param {boolean} [isFixed] */
     setFixedRotation(isFixed=true)
-    { this.body.SetFixedRotation(isFixed); }
+    {
+        this.body.SetFixedRotation(isFixed);
+        this.body.SetAwake(true); // a sleeping body would not tip over once it can turn
+    }
 
     /** Set the center of mass of the body, local to it
      *  @param {Vector2} center */
@@ -723,7 +791,10 @@ class Box2dObject extends EngineObject
     /** Set if this body is a sensor
      *  @param {boolean} [isSensor] */
     setSensor(isSensor=true)
-    { this.getFixtureList().forEach(f=>f.SetSensor(isSensor)); }
+    {
+        this.getFixtureList().forEach(f=>f.SetSensor(isSensor));
+        box2dWakeWithContacts(this.body); // what rests on it or sits in it moves again, a sleeping pair never updates
+    }
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics force and torque functions
@@ -814,7 +885,7 @@ class Box2dObject extends EngineObject
 
     /** Check if this object has any joints
      *  @return {boolean} */
-    hasJoints() { return !box2d.isNull(this.body.GetJointList()); }
+    hasJoints() { return this.getJointList().length > 0; } // not the ones destroyed and waiting for the step to end
     
     /** Get list of joints for this object, the Box2dJoint for each one made through LittleJS,
      *  and the Box2D joint, cast to its type, for any made on the world directly
@@ -916,10 +987,6 @@ class Box2dTileLayer extends Box2dStaticObject
         // destroy all fixtures and create new ones
         this.destroyAllFixtures();
 
-        // create box2d object for this layer
-        this.pos = this.tileLayer.pos.copy();
-        this.size = this.tileLayer.size.copy();
-
         // track which tiles have been processed
         const processed = [];
         const getIndex = (x, y)=> x + y * this.size.x;
@@ -1011,10 +1078,19 @@ class Box2dJoint
     constructor(jointDef)
     {
         ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D joints during a contact callback');
-        ASSERT(box2d.instance.getPointer(jointDef.get_bodyA()) !== box2d.instance.getPointer(jointDef.get_bodyB()),
-            'a joint needs two different objects');
+        const bodyA = jointDef.get_bodyA(), bodyB = jointDef.get_bodyB();
+        const bothLive = !box2d.isNull(bodyA) &amp;&amp; !box2d.isNull(bodyB);
+        ASSERT(bothLive, 'a joint needs two objects that are not destroyed');
+        ASSERT(box2d.instance.getPointer(bodyA) !== box2d.instance.getPointer(bodyB), 'a joint needs two different objects');
 
         /** @property {Object} - The Box2d joint, 0 once it is destroyed, as it is when either object is */
+        this.box2dJoint = 0;
+        if (!bothLive)
+        {
+            // one of its objects is gone, so it is made destroyed, as it would be had it gone after
+            box2d.instance.destroy(jointDef);
+            return;
+        }
         this.box2dJoint = box2d.castJointObject(box2d.world.CreateJoint(jointDef));
         box2d.instance.destroy(jointDef);
         box2dJoints.set(box2d.instance.getPointer(this.box2dJoint), this);
@@ -1054,15 +1130,15 @@ class Box2dJoint
      *  @return {Vector2} */
     getAnchorB() { return box2d.vec2From(this.box2dJoint.GetAnchorB());}
     
-    /** Get the reaction force on bodyB at the joint anchor given a time step
-     *  @param {number} time
+    /** Get the reaction force on bodyB at the joint anchor over the last step
+     *  @param {number} [time] - The step length in seconds, the world steps by timeDelta
      *  @return {Vector2} */
-    getReactionForce(time)  { return box2d.vec2From(this.box2dJoint.GetReactionForce(1/time));}
+    getReactionForce(time=timeDelta)  { return box2d.vec2From(this.box2dJoint.GetReactionForce(1/time));}
 
-    /** Get the reaction torque on bodyB in N*m given a time step, clockwise like angle
-     *  @param {number} time
+    /** Get the reaction torque on bodyB in N*m over the last step, clockwise like angle
+     *  @param {number} [time] - The step length in seconds, the world steps by timeDelta
      *  @return {number} */
-    getReactionTorque(time) { return -this.box2dJoint.GetReactionTorque(1/time);} // box2d uses reverse angle
+    getReactionTorque(time=timeDelta) { return -this.box2dJoint.GetReactionTorque(1/time);} // box2d uses reverse angle
     
     /** Check if the connected bodies should collide
      *  @return {boolean} */
@@ -1070,7 +1146,11 @@ class Box2dJoint
 
     /** Check if either connected body is active
      *  @return {boolean} */
-    isActive() { return this.box2dJoint.IsActive();}
+    isActive() { return !!this.box2dJoint &amp;&amp; this.box2dJoint.IsActive(); }
+
+    /** Check if the joint is gone, destroyed or taken along with one of its objects; its other methods can not be used then
+     *  @return {boolean} */
+    isDestroyed() { return !this.box2dJoint; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1111,7 +1191,7 @@ class Box2dTargetJoint extends Box2dJoint
 
     /** Sets the maximum force in Newtons
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); box2dWakeJoint(this.box2dJoint); }
     
     /** Gets the maximum force in Newtons
      *  @return {number} */
@@ -1119,7 +1199,7 @@ class Box2dTargetJoint extends Box2dJoint
     
     /** Sets the joint frequency in Hertz, above 0, Box2D stops for good on 0
      *  @param {number} hz */
-    setFrequency(hz) { this.box2dJoint.SetFrequency(max(hz, 1e-3)); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(max(hz, 1e-3)); box2dWakeJoint(this.box2dJoint); }
     
     /** Gets the joint frequency in Hertz
      *  @return {number} */
@@ -1189,26 +1269,6 @@ class Box2dDistanceJoint extends Box2dJoint
     /** Get the damping ratio
      *  @return {number} */
     getDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/** 
- * Box2D Pin Joint
- * - Pins two objects together at a point
- * @extends Box2dDistanceJoint
- * @memberof Box2D
- */
-class Box2dPinJoint extends Box2dDistanceJoint
-{
-    /** Create a pin joint
-     *  @param {Box2dObject} objectA
-     *  @param {Box2dObject} objectB
-     *  @param {Vector2} [pos]
-     *  @param {boolean} [collide] */
-    constructor(objectA, objectB, pos=objectA.pos, collide=false)
-    {
-        super(objectA, objectB, pos, pos, collide);
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1319,7 +1379,7 @@ class Box2dRevoluteJoint extends Box2dJoint
 
     /** Enable/disable the joint limit
      *  @param {boolean} [enable] */
-    enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
+    enableLimit(enable=true) { this.box2dJoint.EnableLimit(enable); }
 
     /** Get the lower joint limit, clockwise like angle
      *  @return {number} */
@@ -1336,7 +1396,7 @@ class Box2dRevoluteJoint extends Box2dJoint
     {
         ASSERT(min &lt;= max, 'the lower limit must not be above the upper one');
         if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
-        return this.box2dJoint.SetLimits(-max, -min);
+        this.box2dJoint.SetLimits(-max, -min);
     }
 
     /** Is the joint motor enabled?
@@ -1345,11 +1405,11 @@ class Box2dRevoluteJoint extends Box2dJoint
 
     /** Enable/disable the joint motor
      *  @param {boolean} [enable] */
-    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+    enableMotor(enable=true) { this.box2dJoint.EnableMotor(enable); }
 
     /** Set the motor speed, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
+    setMotorSpeed(speed) { this.box2dJoint.SetMotorSpeed(-speed); }
 
     /** Get the motor speed, clockwise like angle
      *  @return {number} */
@@ -1357,16 +1417,37 @@ class Box2dRevoluteJoint extends Box2dJoint
 
     /** Set the max motor torque, a magnitude
      *  @param {number} torque */
-    setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
+    setMaxMotorTorque(torque) { this.box2dJoint.SetMaxMotorTorque(torque); }
 
     /** Get the max motor torque
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
-    /** Get the motor torque given a time step, clockwise like angle
-     *  @param {number} time
+    /** Get the motor torque over the last step, clockwise like angle
+     *  @param {number} [time] - The step length in seconds, the world steps by timeDelta
      *  @return {number} */
-    getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
+    getMotorTorque(time=timeDelta) { return -this.box2dJoint.GetMotorTorque(1/time); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Pin Joint
+ * - Pins two objects together at a point, where they still turn freely, like a nail through two boards
+ * - A revolute joint at that point, so it holds exactly and its limits and motor work too
+ * @extends Box2dRevoluteJoint
+ * @memberof Box2D
+ */
+class Box2dPinJoint extends Box2dRevoluteJoint
+{
+    /** Create a pin joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} [pos] - World position, objectA's position if not given
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, pos=objectA.pos, collide=false)
+    {
+        super(objectA, objectB, pos, collide);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1377,14 +1458,15 @@ class Box2dRevoluteJoint extends Box2dJoint
  * - You specify a gear ratio to bind the motions together
  * - joint1's angle or translation plus ratio times joint2's stays constant, angles clockwise like angle
  * - It is destroyed along with either joint, or an object either joint is on
+ * - It turns objectB of each joint, so make each with its fixed or carrying object first, and a dynamic objectB
  * @extends Box2dJoint
  * @memberof Box2D
  */
 class Box2dGearJoint extends Box2dJoint
 {
     /** Create a gear joint
-     *  @param {Box2dObject} objectA
-     *  @param {Box2dObject} objectB
+     *  @param {Box2dObject} objectA - objectB of joint1, Box2D joins that one whatever is passed
+     *  @param {Box2dObject} objectB - objectB of joint2, Box2D joins that one whatever is passed
      *  @param {Box2dJoint} joint1
      *  @param {Box2dJoint} joint2
      *  @param {number} [ratio] */
@@ -1394,6 +1476,12 @@ class Box2dGearJoint extends Box2dJoint
         // needs the ratio reversed too, two of a kind keep it
         const isGearable = (j)=> (j instanceof Box2dRevoluteJoint || j instanceof Box2dPrismaticJoint) &amp;&amp; !!j.box2dJoint;
         ASSERT(isGearable(joint1) &amp;&amp; isGearable(joint2), 'a gear joint needs two revolute or prismatic joints that exist');
+        // Box2D turns objectB of each joint, with objectA as its carrier, so a static objectB leaves the gear doing nothing
+        ASSERT(joint1.getObjectB()?.getBodyType() === box2d.bodyTypeDynamic &amp;&amp;
+            joint2.getObjectB()?.getBodyType() === box2d.bodyTypeDynamic,
+            'a gear joint turns objectB of each joint, make each joint with its fixed or carrying object first');
+        ASSERT(objectA === joint1.getObjectB() &amp;&amp; objectB === joint2.getObjectB(),
+            'a gear joint joins objectB of joint1 and objectB of joint2, pass those');
         const ratioSign = (joint1 instanceof Box2dRevoluteJoint) === (joint2 instanceof Box2dRevoluteJoint) ? 1 : -1;
         const jointDef = new box2d.instance.b2GearJointDef();
         jointDef.set_bodyA(objectA.body);
@@ -1406,6 +1494,7 @@ class Box2dGearJoint extends Box2dJoint
         this.joint1 = joint1;
         this.joint2 = joint2;
         this.ratioSign = ratioSign;
+        box2dGearJoints.add(this);
     }
 
     /** Get the first joint
@@ -1490,7 +1579,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     
     /** Enable/disable the joint limit
      *  @param {boolean} [enable] */
-    enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
+    enableLimit(enable=true) { this.box2dJoint.EnableLimit(enable); }
     
     /** Get the lower joint limit
      *  @return {number} */
@@ -1507,7 +1596,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     {
         ASSERT(min &lt;= max, 'the lower limit must not be above the upper one');
         if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
-        return this.box2dJoint.SetLimits(min, max);
+        this.box2dJoint.SetLimits(min, max);
     }
     
     /** Is the motor enabled?
@@ -1516,11 +1605,11 @@ class Box2dPrismaticJoint extends Box2dJoint
     
     /** Enable/disable the joint motor
      *  @param {boolean} [enable] */
-    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+    enableMotor(enable=true) { this.box2dJoint.EnableMotor(enable); }
     
     /** Set the motor speed
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+    setMotorSpeed(speed) { this.box2dJoint.SetMotorSpeed(speed); }
     
     /** Get the motor speed
      *  @return {number} */
@@ -1528,16 +1617,16 @@ class Box2dPrismaticJoint extends Box2dJoint
     
     /** Set the maximum motor force
      *  @param {number} force */
-    setMaxMotorForce(force) { return this.box2dJoint.SetMaxMotorForce(force); }
+    setMaxMotorForce(force) { this.box2dJoint.SetMaxMotorForce(force); }
     
     /** Get the maximum motor force
      *  @return {number} */
     getMaxMotorForce() { return this.box2dJoint.GetMaxMotorForce(); }
     
-    /** Get the motor force given a time step
-     *  @param {number} time
+    /** Get the motor force over the last step
+     *  @param {number} [time] - The step length in seconds, the world steps by timeDelta
      *  @return {number} */
-    getMotorForce(time) { return this.box2dJoint.GetMotorForce(1/time); }
+    getMotorForce(time=timeDelta) { return this.box2dJoint.GetMotorForce(1/time); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1600,11 +1689,11 @@ class Box2dWheelJoint extends Box2dJoint
 
     /** Enable/disable the joint motor
      *  @param {boolean} [enable] */
-    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+    enableMotor(enable=true) { this.box2dJoint.EnableMotor(enable); }
 
     /** Set the motor speed, the wheel's turn in radians per second, clockwise like angle
      *  @param {number} speed */
-    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(-speed); }
+    setMotorSpeed(speed) { this.box2dJoint.SetMotorSpeed(-speed); }
 
     /** Get the motor speed, clockwise like angle
      *  @return {number} */
@@ -1612,16 +1701,16 @@ class Box2dWheelJoint extends Box2dJoint
 
     /** Set the maximum motor torque, a magnitude
      *  @param {number} torque */
-    setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
+    setMaxMotorTorque(torque) { this.box2dJoint.SetMaxMotorTorque(torque); }
 
     /** Get the max motor torque
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
-    /** Get the motor torque for a time step, clockwise like angle
-     *  @param {number} time
+    /** Get the motor torque over the last step, clockwise like angle
+     *  @param {number} [time] - The step length in seconds, the world steps by timeDelta
      *  @return {number} */
-    getMotorTorque(time) { return -this.box2dJoint.GetMotorTorque(1/time); }
+    getMotorTorque(time=timeDelta) { return -this.box2dJoint.GetMotorTorque(1/time); }
 
     /** Set the spring frequency in Hertz
      *  @param {number} hz */
@@ -1869,7 +1958,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the maximum force
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); } // Box2D stops on a negative one
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); box2dWakeJoint(this.box2dJoint); } // Box2D stops on a negative one
 
     /** Get the maximum force
      *  @return {number} */
@@ -1877,7 +1966,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the maximum torque
      *  @param {number} torque */
-    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); } // Box2D stops on a negative one
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); box2dWakeJoint(this.box2dJoint); } // Box2D stops on a negative one
 
     /** Get the maximum torque
      *  @return {number} */
@@ -1885,7 +1974,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the position correction factor in the range [0,1]
      *  @param {number} factor */
-    setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(clamp(factor)); }
+    setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(clamp(factor)); box2dWakeJoint(this.box2dJoint); }
 
     /** Get the position correction factor in the range [0,1]
      *  @return {number} */
@@ -1930,7 +2019,8 @@ class Box2dPlugin
         this.bodyTypeDynamic = instance.b2_dynamicBody;
 
         // a body that goes takes its joints with it, their wrappers let go of them, and a gear joint on one of them
-        // goes too, since it would keep pointers to what was freed; it hangs off other bodies, so it goes after
+        // goes too, since it would keep pointers to what was freed; that destroy waits in the queue, which DestroyBody
+        // runs from, and is skipped if the gear hung off this same body and went with it
         const destructionListener = new box2d.instance.JSDestructionListener();
         destructionListener.SayGoodbyeJoint = function(jointPointer)
         {
@@ -2005,8 +2095,9 @@ class Box2dPlugin
     /** raycast and return a list of all the results, nearest first
      *  @param {Vector2} start
      *  @param {Vector2} end
+     *  @param {boolean} [includeSensors] - Also hit sensors, trigger zones are passed through by default
      *  @return {Array&lt;Box2dRaycastResult>} */
-    raycastAll(start, end)
+    raycastAll(start, end, includeSensors=false)
     {
         // a ray with no length fails an assert that stops Box2D for good, measured as Box2D does in 32 bit floats,
         // where two ends a float apart are one point; one that is not a number has no length either
@@ -2022,6 +2113,8 @@ class Box2dPlugin
             const o = fixture.GetBody().object;
             if (!o || o.destroyed)
                 return 1; // a raw body with no Box2dObject or one destroyed this step, continue getting results
+            if (!includeSensors &amp;&amp; fixture.IsSensor())
+                return -1; // skip it, Box2D goes on as if it were not there
             point  = box2d.vec2FromPointer(point);
             normal = box2d.vec2FromPointer(normal);
             raycastResults.push(new Box2dRaycastResult(fixture, point, normal, fraction));
@@ -2038,22 +2131,26 @@ class Box2dPlugin
     /** raycast and return the first result
      *  @param {Vector2} start
      *  @param {Vector2} end
+     *  @param {boolean} [includeSensors] - Also hit sensors, trigger zones are passed through by default
      *  @return {Box2dRaycastResult|undefined} */
-    raycast(start, end)
+    raycast(start, end, includeSensors=false)
     {
-        return box2d.raycastAll(start, end)[0];
+        return box2d.raycastAll(start, end, includeSensors)[0];
     }
 
     /** box aabb cast and return all the objects
      *  @param {Vector2} pos
      *  @param {Vector2} size
+     *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default
      *  @return {Array&lt;Box2dObject>} */
-    boxCastAll(pos, size)
+    boxCastAll(pos, size, includeSensors=false)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            if (!includeSensors &amp;&amp; fixture.IsSensor())
+                return true; // a trigger zone, continue getting results
             const o = fixture.GetBody().object;
             if (o &amp;&amp; !o.destroyed &amp;&amp; !queryObjects.includes(o) // skip raw bodies and ones destroyed this step
                 &amp;&amp; box2dFixtureOverlaps(fixture, aabb))
@@ -2074,13 +2171,16 @@ class Box2dPlugin
     /** box aabb cast and return the first object
      *  @param {Vector2} pos
      *  @param {Vector2} size
+     *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default
      *  @return {Box2dObject|undefined} */
-    boxCast(pos, size)
+    boxCast(pos, size, includeSensors=false)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            if (!includeSensors &amp;&amp; fixture.IsSensor())
+                return true; // a trigger zone, continue getting results
             const o = fixture.GetBody().object;
             if (!o || o.destroyed)
                 return true; // a raw body with no Box2dObject or one destroyed this step, continue getting results
@@ -2100,31 +2200,33 @@ class Box2dPlugin
         return queryObject;
     }
 
-    /** circle cast and return all the objects whose position is within the circle
+    /** circle cast and return all the objects whose position is within the circle, wherever their shapes are
      *  @param {Vector2} pos
      *  @param {number} diameter
+     *  @param {boolean} [includeSensors] - Also find objects whose shapes are all sensors, like trigger zones
      *  @return {Array&lt;Box2dObject>} */
-    circleCastAll(pos, diameter)
+    circleCastAll(pos, diameter, includeSensors=false)
     {
+        // by each object's position, so an object whose shapes are offset from it is still found
         const radius2 = (diameter/2)**2;
-        const results = box2d.boxCastAll(pos, vec2(diameter));
-        return results.filter(o=>o.pos.distanceSquared(pos) &lt; radius2);
+        const results = box2d.objects.filter(o=> !o.destroyed &amp;&amp; o.body &amp;&amp; o.pos.distanceSquared(pos) &lt; radius2 &amp;&amp;
+            (includeSensors || o.getFixtureList().some(fixture=> !fixture.IsSensor())));
+        debugRaycast &amp;&amp; debugCircle(pos, diameter, results.length ? '#f00' : '#00f');
+        return results;
     }
 
     /** circle cast and return the object whose position is nearest, of those within the circle
      *  @param {Vector2} pos
      *  @param {number} diameter
+     *  @param {boolean} [includeSensors] - Also find objects whose shapes are all sensors, like trigger zones
      *  @return {Box2dObject|undefined} */
-    circleCast(pos, diameter)
+    circleCast(pos, diameter, includeSensors=false)
     {
-        const radius2 = (diameter/2)**2;
-        let results = box2d.boxCastAll(pos, vec2(diameter));
-
         let bestResult, bestDistance2;
-        for (const result of results)
+        for (const result of box2d.circleCastAll(pos, diameter, includeSensors))
         {
             const distance2 = result.pos.distanceSquared(pos);
-            if (distance2 &lt; radius2 &amp;&amp; (!bestResult || distance2 &lt; bestDistance2))
+            if (!bestResult || distance2 &lt; bestDistance2)
             {
                 bestResult = result;
                 bestDistance2 = distance2;
@@ -2136,14 +2238,17 @@ class Box2dPlugin
     /** point cast and return the first object
      *  @param {Vector2} pos
      *  @param {boolean} [dynamicOnly]
+     *  @param {boolean} [includeSensors] - Also find sensors, so a pickup radius does not grab its object from afar
      *  @return {Box2dObject|undefined} */
-    pointCast(pos, dynamicOnly=true)
+    pointCast(pos, dynamicOnly=true, includeSensors=false)
     {
         const queryCallback = box2dQueryObject('query', 'JSQueryCallback');
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
-            if (dynamicOnly &amp;&amp; fixture.GetBody().GetType() !== box2d.instance.b2_dynamicBody)
+            if (!includeSensors &amp;&amp; fixture.IsSensor())
+                return true; // a trigger zone, continue getting results
+            if (dynamicOnly &amp;&amp; fixture.GetBody().GetType() !== box2d.bodyTypeDynamic)
                 return true; // continue getting results
             if (!fixture.TestPoint(box2dTemp(pos)))
                 return true; // continue getting results
@@ -2403,4 +2508,4 @@ async function box2dInit()
         //debugDraw.AppendFlags(box2d.instance.b2Draw.e_centerOfMassBit);
         box2d.world.SetDebugDraw(debugDraw);
     }
-}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
