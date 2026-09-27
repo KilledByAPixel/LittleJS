@@ -176,9 +176,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
 
             // apply layer color, Tiled writes a tint with alpha as #AARRGGBB
             const tint = dataLayer.tintcolor;
-            const color = tint ?
-                new Color().setHex(tint.length === 9 ? '#' + tint.slice(3) + tint.slice(1, 3) : tint) :
-                (dataLayer.color || WHITE).copy();
+            const color = tint ? tileLayersColor(tint) : (dataLayer.color || WHITE).copy();
             ASSERT(isColor(color), 'layer color is not a color');
             color.a *= dataLayer.opacity ?? 1;
             const visible = groupVisible && dataLayer.visible !== false;
@@ -233,6 +231,95 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     }
     editorMapLoaded(tileMapData, tileLayers, layers);
     return tileLayers;
+}
+
+// a color as Tiled writes it, #AARRGGBB, or #RRGGBB
+function tileLayersColor(hex)
+{ return new Color().setHex(hex.length === 9 ? '#' + hex.slice(3) + hex.slice(1, 3) : hex); }
+
+///////////////////////////////////////////////////////////////////////////////
+// Object layers
+
+// the types a map's objects are made from, by the name they have in Tiled
+const objectLayersTypes = new Map;
+
+/** Add a type of object, so objectLayersLoad makes one wherever a map's object layer has an object of that type
+ *  - The name is the object's type in Tiled (its class in Tiled 1.9); it is a string because minified builds
+ *    rename classes
+ *  - A class, or any function with a prototype, is made with new make(pos); an arrow function is called as
+ *    make(pos), for what is not an object, like a player start
+ *  - The defaults, and then the properties the object has in Tiled, are set on what it made
+ *  - Adding a name again replaces it
+ *  @param {string} name - The type the objects have in Tiled
+ *  @param {Function} make - A class made at each object's position, or a function called with it
+ *  @param {Object} [defaults] - Properties set on each one made, the level editor shows inputs for them
+ *  @param {TileInfo} [tileInfo] - An icon for the level editor
+ *  @memberof TileLayers
+ *  @example
+ *  objectLayersAddType('Coin', Coin, {value: 1}, tile(5, 16));
+ *  objectLayersAddType('PlayerStart', (pos)=> playerStartPos = pos); */
+function objectLayersAddType(name, make, defaults={}, tileInfo)
+{
+    ASSERT(isStringLike(name), 'object type name must be a string');
+    ASSERT(typeof make === 'function', 'make must be a class or function');
+    ASSERT(!!defaults && typeof defaults === 'object', 'defaults must be an object');
+    objectLayersTypes.set(String(name), {make, defaults, tileInfo});
+}
+
+/** Make the objects in a map's object layers, each from the type added for its name with objectLayersAddType
+ *  - An object is made at its position, the world y up as tileLayersLoad places the layers; layer offsets are
+ *    not read, and a shape or tile object is made at its position too
+ *  - Group layers are flattened in order, as tileLayersLoad does
+ *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors
+ *  - An object whose type was not added is skipped, with a warning in debug builds
+ *  @param {Object} tileMapData - The same Tiled map given to tileLayersLoad
+ *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
+ *  @memberof TileLayers */
+function objectLayersLoad(tileMapData)
+{
+    const made = [];
+    const {height=0, tilewidth=1, tileheight=1} = tileMapData ?? {};
+    const addObjects = (dataLayers)=>
+    {
+        for (const dataLayer of dataLayers || [])
+        {
+            if (dataLayer.type === 'group')
+                addObjects(dataLayer.layers);
+            if (dataLayer.type !== 'objectgroup')
+                continue;
+            for (const object of dataLayer.objects || [])
+            {
+                const name = object.type || object.class, type = objectLayersTypes.get(name);
+                if (!type)
+                {
+                    debug && console.warn(`objectLayersLoad: no type added for ${name}, skipped`);
+                    continue;
+                }
+
+                // the defaults, each object with its own copy of a Color or Vector2, then its Tiled properties
+                const properties = {};
+                for (const [key, value] of Object.entries(type.defaults))
+                    properties[key] = value?.copy ? value.copy() : value;
+                for (const property of object.properties || [])
+                {
+                    if (property.type !== 'color')
+                        properties[property.name] = property.value;
+                    else if (property.value)
+                        properties[property.name] = tileLayersColor(property.value); // an empty color is unset
+                }
+
+                const pos = vec2(object.x / tilewidth, height - object.y / tileheight);
+                const {make} = type, result = make.prototype ? new make(pos) : make(pos);
+                if (result && typeof result === 'object')
+                {
+                    Object.assign(result, properties);
+                    made.push(result);
+                }
+            }
+        }
+    };
+    addObjects(tileMapData?.layers);
+    return made;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -690,6 +690,10 @@ tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw
                                                     // Load tile layers from exported data, Tiled flips and turns included;
                                                     // groups are flattened and layer indices count that flat list,
                                                     // hidden layers load with collision but are not drawn
+objectLayersAddType(name, make, defaults={}, tileInfo) // Name a type of object in a Tiled map: a class made
+                                                    // with new make(pos), or an arrow function called make(pos),
+                                                    // defaults set on what it made; tileInfo is an editor icon
+objectLayersLoad(tileMapData)                       // Make the objects of a map's object layers, returns them
 
 ```
 

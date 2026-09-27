@@ -404,6 +404,8 @@ export
     tileCollisionTest,
     tileCollisionRaycast,
     tileLayersLoad,
+    objectLayersAddType,
+    objectLayersLoad,
     TileLayerData,
     CanvasLayer,
     TileLayer,

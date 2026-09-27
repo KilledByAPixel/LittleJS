@@ -3541,6 +3541,32 @@ declare module "littlejsengine" {
      *  @return {Array<TileCollisionLayer>}
      *  @memberof TileLayers */
     export function tileLayersLoad(tileMapData: any, tileInfo?: TileInfo, renderOrder?: number, collisionLayer?: number, draw?: boolean): Array<TileCollisionLayer>;
+    /** Add a type of object, so objectLayersLoad makes one wherever a map's object layer has an object of that type
+     *  - The name is the object's type in Tiled (its class in Tiled 1.9); it is a string because minified builds
+     *    rename classes
+     *  - A class, or any function with a prototype, is made with new make(pos); an arrow function is called as
+     *    make(pos), for what is not an object, like a player start
+     *  - The defaults, and then the properties the object has in Tiled, are set on what it made
+     *  - Adding a name again replaces it
+     *  @param {string} name - The type the objects have in Tiled
+     *  @param {Function} make - A class made at each object's position, or a function called with it
+     *  @param {Object} [defaults] - Properties set on each one made, the level editor shows inputs for them
+     *  @param {TileInfo} [tileInfo] - An icon for the level editor
+     *  @memberof TileLayers
+     *  @example
+     *  objectLayersAddType('Coin', Coin, {value: 1}, tile(5, 16));
+     *  objectLayersAddType('PlayerStart', (pos)=> playerStartPos = pos); */
+    export function objectLayersAddType(name: string, make: Function, defaults?: any, tileInfo?: TileInfo): void;
+    /** Make the objects in a map's object layers, each from the type added for its name with objectLayersAddType
+     *  - An object is made at its position, the world y up as tileLayersLoad places the layers; layer offsets are
+     *    not read, and a shape or tile object is made at its position too
+     *  - Group layers are flattened in order, as tileLayersLoad does
+     *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors
+     *  - An object whose type was not added is skipped, with a warning in debug builds
+     *  @param {Object} tileMapData - The same Tiled map given to tileLayersLoad
+     *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
+     *  @memberof TileLayers */
+    export function objectLayersLoad(tileMapData: any): Array<any>;
     /**
      * Tile layer data object stores info about how to draw a tile
      * @memberof TileLayers
