@@ -104,6 +104,7 @@ const exampleList =
     new ExampleInfo('3D Mesh Operations', 'render3dMeshOps.js', 'Bevels, CSG cuts, mirror and spin', false, 'mesh, bevel, chamfer, csg, subtract, union, intersect, mirror, spin'),
     new ExampleInfo('3D Billboards', 'render3dBillboards.js', 'Tile sprites that always face the camera', false, 'billboard, sprite, soft shadow'),
     new ExampleInfo('3D Height Map', 'render3dHeightMap.js', 'Terrain from height and color images', false, 'terrain, heightmap, raycast'),
+    new ExampleInfo('3D Voxels', 'render3dVoxels.js', 'Walk, jump, dig and build in a voxel world', false, 'voxel, blocks, minecraft, first person, jump, VoxelMap'),
     new ExampleInfo('3D Collision', 'render3dCollision.js', 'Solid objects, bouncing and picking', false, 'solid, sphere, box, cylinder, picking'),
     new ExampleInfo('3D First Person', 'render3dFirstPerson.js', 'Walk a maze with mouse look and WASD', false, 'first person, camera, maze'),
     new ExampleInfo('3D Lights', 'render3dLights.js', 'Colored point lights and a directional fill', false, 'light, point light, Light3D, DirectionalLight3D'),
