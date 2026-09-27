@@ -435,6 +435,30 @@ test('the properties box takes only a value of the default\'s type, and rounds a
         [[{ name: 'value', type: 'int', value: 3 }], 3]);
 });
 
+test('a Vector2 field emptied or half typed keeps its value, and a number in it sets it as one undo', async () =>
+{
+    const { run } = await loadGame();
+    // the properties box is html: the few element members it uses, enough to build it and fire its inputs
+    run(`document.createElement = (tag)=> ({ tag, style: {}, dataset: {}, children: [], textContent: '', value: '',
+        appendChild(c) { this.children.push(c); }, replaceChildren() { this.children = []; }, contains: ()=> false,
+        blur() {} });`);
+    run(editCode.replace(`{ value: 1, tint: hsl(0, 0, 1) }`, `{ value: 1, tint: hsl(0, 0, 1), offset: vec2(1, 2) }`) +
+        `editorSelectLayer(objects); editorObjectSelection.add(1);
+        var box = document.createElement('div');
+        editorPropertiesUpdate(box);
+        var row = box.children.find((r)=> r.children[0]?.textContent === 'offset'), [, x, y] = row.children;`);
+    // a browser's number input reads an unfinished number as empty, and a lone minus is none either
+    for (const [field, text] of [['x', ''], ['y', ''], ['x', '-']])
+    {
+        run(`${field}.value = '${text}'; ${field}.onchange();`);
+        assert.deepEqual([...run('[x.value, y.value]')], ['1', '2'], `${field} '${text}' shows the value it has`);
+    }
+    assert.equal(run('editorUndoList.length'), 0, 'nothing set');
+    run(`x.value = '3'; x.onchange();`);
+    assert.deepEqual(JSON.parse(run('JSON.stringify([list()[0].properties, editorUndoList.length])')),
+        [[{ name: 'offset', type: 'string', value: '3,2' }], 1]);
+});
+
 test('a Vector2 property is saved as Tiled keeps one, the string x,y, and only where it differs', async () =>
 {
     const { run } = await loadGame();

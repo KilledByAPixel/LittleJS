@@ -1257,6 +1257,22 @@ test('Escape during the drag puts the selection back and stays in the editor', a
     assert.equal(engine.run('levelEditor.isOpen'), false, 'the next Escape plays');
 });
 
+test('the debug key during a drag leaves nothing to undo, and a game with its own debug key cancels with it', async () =>
+{
+    for (const key of ['Escape', 'Backquote'])
+    {
+        const engine = await loadGame();
+        engine.run(moveCode + `setDebugKey('${key}');`);
+        const undos = engine.run('editorUndoList.length');
+        leftDrag(engine, [0, 0], [2, 0]);
+        press(engine, key);
+        assert.equal(engine.run('levelEditor.isOpen'), true, key);
+        assert.deepEqual([...engine.run('frontData')], [6, 0, 3, 5, 0, 0], key);
+        assert.equal(engine.run('editorUndoList.length'), undos, key + ' made no undo');
+        leftUp(engine);
+    }
+});
+
 test('with All Layers the objects in the selection move with it', async () =>
 {
     const engine = await loadGame();

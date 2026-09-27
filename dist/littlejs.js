@@ -30889,9 +30889,10 @@ function editorIsTextField(target)
 function editorOnKeyDown(e)
 {
     if (!editorIsOpen || e.repeat || e.altKey || editorIsTextField(e.target)) return;
-    if (editorSelectionDrag)
+    if (editorSelectionDrag && !(debugKey && e.code === debugKey))
     {
-        // a key ends a selection drag where it is, an undo of its own, so Delete or undo acts on what is there
+        // a key ends a selection drag where it is, an undo of its own, so Delete or undo acts on what is there;
+        // the debug key, Escape, is left to the update, which puts the selection back
         editorStrokeEnd();
         editorSelectionDrag = undefined;
     }
@@ -31060,8 +31061,12 @@ function editorPropertiesUpdate(box)
                 field.value = String(v);
                 field.onchange = ()=>
                 {
-                    const pos = vec2(parseFloat(input.value), parseFloat(y.value));
-                    isVector2(pos) && set(pos);
+                    // both checked before a vector is made of them, an emptied or half typed field shows its value again
+                    const px = parseFloat(input.value), py = parseFloat(y.value);
+                    if (isNumber(px) && isNumber(py))
+                        set(vec2(px, py));
+                    else
+                        input.value = String(value.x), y.value = String(value.y);
                     field.blur();
                 };
             }
