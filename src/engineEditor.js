@@ -342,9 +342,58 @@ function editorJSONFetched(url, json)
 // a map as Tiled JSON, everything it was loaded with kept, the tile data as the editor left it
 function editorMapJSON(record) { return JSON.stringify(record.map); }
 
+// the files picked to save maps to, kept across reloads in IndexedDB by page and map, which is where a browser
+// lets a page keep them; each resolves to undefined when the store can not be used
+let editorFileStore =
+{
+    get: (key)=> editorFileStoreRequest('readonly', (store)=> store.get(key)),
+    set: (key, handle)=> editorFileStoreRequest('readwrite', (store)=> handle ? store.put(handle, key) : store.delete(key)),
+};
+
+// a request on the editor's file store, resolves to its result, or undefined if anything failed
+function editorFileStoreRequest(mode, request)
+{
+    return new Promise((resolve)=>
+    {
+        try
+        {
+            const open = indexedDB.open('LittleJS editor', 1);
+            open.onupgradeneeded = ()=> open.result.createObjectStore('files');
+            open.onerror = ()=> resolve(undefined);
+            open.onsuccess = ()=>
+            {
+                const db = open.result, done = (result)=> { db.close(); resolve(result); };
+                try
+                {
+                    const r = request(db.transaction('files', mode).objectStore('files'));
+                    r.onsuccess = ()=> done(r.result);
+                    r.onerror = ()=> done(undefined);
+                }
+                catch { done(undefined); }
+            };
+        }
+        catch { resolve(undefined); }
+    });
+}
+
+// the file a map was saved to on an earlier page load, when the browser gives permission to write it again
+async function editorRememberedFile(record)
+{
+    const handle = await editorFileStore.get(editorFileKey(record)), mode = {mode: 'readwrite'};
+    try
+    {
+        if (handle && (await handle.queryPermission(mode) === 'granted' ||
+            await handle.requestPermission(mode) === 'granted'))
+            return handle;
+    }
+    catch { } // a handle that can not ask, the picker instead
+}
+const editorFileKey = (record)=> (globalThis.location?.pathname ?? '') + ' ' + record.key;
+
 // save a map as Tiled JSON: where the browser lets a page write files, Chrome and Edge, to a file picked once and
-// written again on each Save after, or picked again with Save As; elsewhere as a download under the name of the
-// file it came from; resolves to how it saved, undefined when the picker was closed
+// written again on each Save after, even after a reload once the browser gives permission, or picked again with
+// Save As; elsewhere as a download under the name of the file it came from; resolves to how it saved, undefined
+// when the picker was closed
 async function editorSave(record, pickAgain=false)
 {
     if (!record) return;
@@ -354,9 +403,14 @@ async function editorSave(record, pickAgain=false)
     {
         try
         {
+            if (!pickAgain && !record.fileHandle)
+                record.fileHandle = await editorRememberedFile(record);
             if (pickAgain || !record.fileHandle)
+            {
                 record.fileHandle = await picker.call(globalThis, {suggestedName: record.fileName,
                     types: [{description: 'Tiled JSON', accept: {'application/json': ['.json']}}]});
+                editorFileStore.set(editorFileKey(record), record.fileHandle);
+            }
             const writable = await record.fileHandle.createWritable();
             await writable.write(text);
             await writable.close();
@@ -365,7 +419,8 @@ async function editorSave(record, pickAgain=false)
         catch (error)
         {
             if (error?.name === 'AbortError') return; // the picker was closed, nothing saved
-            record.fileHandle = undefined; // a file it could not write, a download instead
+            record.fileHandle = undefined; // a file it could not write, a download instead, and not kept
+            editorFileStore.set(editorFileKey(record), undefined);
         }
     }
     saveText(text, record.fileName, 'application/json');

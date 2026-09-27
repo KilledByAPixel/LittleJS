@@ -1012,18 +1012,35 @@ test('Restart plays on in the session, Escape comes back to the editor', async (
 });
 
 // saving where the browser lets a page write files: a stand-in for Chrome's file picker that counts picks and keeps
-// what was written
+// what was written, its files asking for permission again after a reload, which is given or not
 function filePicker()
 {
-    const picker = { picks: 0, written: [], abort: false };
+    const picker = { picks: 0, written: [], abort: false, permission: 'granted' };
     picker.showSaveFilePicker = async (options)=>
     {
         ++picker.picks;
         if (picker.abort) throw { name: 'AbortError' };
         return { name: options.suggestedName, createWritable: async ()=>
-            ({ write: async (text)=> picker.written.push(text), close: async ()=> {} }) };
+            ({ write: async (text)=> picker.written.push(text), close: async ()=> {} }),
+            queryPermission: async ()=> 'prompt', requestPermission: async ()=> picker.permission };
     };
     return picker;
+}
+
+// a stand-in for the IndexedDB store the picked files are kept in, kept between engines like the page's
+function fileStore()
+{
+    const files = new Map;
+    return { files, get: async (key)=> files.get(key),
+        set: async (key, handle)=> { handle ? files.set(key, handle) : files.delete(key); } };
+}
+
+// a page load of the file's game that saves with this picker and file store
+async function savingGame(picker, store)
+{
+    const engine = await loadGame({ showSaveFilePicker: picker.showSaveFilePicker, fileStore: store });
+    engine.run('editorFileStore = fileStore;' + fileCode());
+    return engine;
 }
 
 test('where the browser lets a page write files, Save picks the file once and writes it on each Save after',
@@ -1039,6 +1056,38 @@ test('where the browser lets a page write files, Save picks the file once and wr
     assert.equal(JSON.parse(picker.written[1]).layers[2].layers[0].data[3], 2, 'the second save has the edit');
     await engine.run('editorSave(front.record, true)');
     assert.equal(picker.picks, 2, 'Save As picks again');
+});
+
+test('the file picked is remembered across a reload, Save writes it again once the browser gives permission',
+    async () =>
+{
+    const picker = filePicker(), store = fileStore();
+    await (await savingGame(picker, store)).run('editorSave(front.record)');
+    assert.equal(store.files.size, 1);
+    assert.equal(await (await savingGame(picker, store)).run('editorSave(front.record)'), 'written');
+    assert.deepEqual([picker.picks, picker.written.length], [1, 2], 'no picker the second time');
+});
+
+test('a remembered file the browser is refused permission for is picked again, and the new pick remembered',
+    async () =>
+{
+    const picker = filePicker(), store = fileStore();
+    await (await savingGame(picker, store)).run('editorSave(front.record)');
+    picker.permission = 'denied';
+    const first = [...store.files.values()][0];
+    assert.equal(await (await savingGame(picker, store)).run('editorSave(front.record)'), 'written');
+    assert.equal(picker.picks, 2);
+    assert.notEqual([...store.files.values()][0], first);
+});
+
+test('without IndexedDB the file store finds nothing, and Save picks', async () =>
+{
+    const picker = filePicker();
+    const engine = await loadGame({ showSaveFilePicker: picker.showSaveFilePicker });
+    engine.run(fileCode());
+    assert.equal(await engine.run('editorFileStore.get("x")'), undefined);
+    assert.equal(await engine.run('editorSave(front.record)'), 'written');
+    assert.equal(picker.picks, 1);
 });
 
 test('closing the file picker saves nothing', async () =>
