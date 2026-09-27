@@ -2917,15 +2917,94 @@ function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
     return buildLathe(profile, sides, smooth);
 }
 
+// a box with its edges cut by a bevel of size t: each face shrunk by t, a strip along each edge around a quarter
+// circle, and an eighth of a sphere at each corner; one segment makes them flat, a chamfer
+function render3DBevelBox(half, t, segments, faces)
+{
+    const mesh = new Mesh, inner = half.subtract(vec3(t)), n = max(1, segments | 0);
+
+    // a triangle facing out, since the box is convex around the origin, flat shaded or with the normals of the
+    // round, and uvs from the face it faces most, as a plain box maps that face
+    const triangle = (a, b, c, na, nb, nc)=>
+    {
+        let normal = b.subtract(a).cross(c.subtract(a));
+        if (normal.lengthSquared() < 1e-20) return; // an edge or face with no size
+        if (normal.dot(a.add(b).add(c)) < 0)
+            [b, c, nb, nc, normal] = [c, b, nc, nb, normal.scale(-1)];
+        normal = normal.normalize();
+        let face = faces[0];
+        for (const f of faces)
+            if (f[0].dot(normal) > face[0].dot(normal))
+                face = f;
+        const [, r, u] = face, hr = abs(half.dot(r)), hu = abs(half.dot(u));
+        const uv = (p)=> vec2(.5 + p.dot(r) / (2 * hr), .5 - p.dot(u) / (2 * hu));
+        mesh.addStrip([a, b, c], n > 1 && na ? [na, nb, nc] : normal, [uv(a), uv(b), uv(c)]);
+    };
+
+    // the faces, shrunk by the bevel
+    for (const [normal, r, u] of faces)
+    {
+        const [a, b, c, d] = render3DQuadAxes(normal.multiply(half), r.multiply(inner), u.multiply(inner));
+        triangle(a, b, c);
+        triangle(c, b, d);
+    }
+
+    // the edges, each a strip around a quarter circle from one face to the next
+    const axes = [vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)];
+    for (let k = 0; k < 3; ++k)
+    for (const si of [-1, 1])
+    for (const sj of [-1, 1])
+    {
+        const n1 = axes[(k + 1) % 3].scale(si), n2 = axes[(k + 2) % 3].scale(sj);
+        const middle = n1.multiply(inner).add(n2.multiply(inner)), along = axes[k].multiply(inner);
+        const start = middle.subtract(along), end = middle.add(along);
+        const dir = (m)=> n1.scale(cos(m / n * PI / 2)).add(n2.scale(sin(m / n * PI / 2)));
+        for (let m = 0; m < n; ++m)
+        {
+            const d0 = dir(m), d1 = dir(m + 1);
+            const a = start.add(d0.scale(t)), b = end.add(d0.scale(t));
+            const c = start.add(d1.scale(t)), d = end.add(d1.scale(t));
+            triangle(a, b, c, d0, d0, d1);
+            triangle(c, b, d, d1, d0, d1);
+        }
+    }
+
+    // the corners, an eighth of a sphere in rows from one face's axis down to the edge between the other two
+    for (const sx of [-1, 1])
+    for (const sy of [-1, 1])
+    for (const sz of [-1, 1])
+    {
+        const nx = vec3(sx, 0, 0), ny = vec3(0, sy, 0), nz = vec3(0, 0, sz), corner = inner.multiply(vec3(sx, sy, sz));
+        const dir = (i, j)=>
+        {
+            const polar = i / n * PI / 2, around = i ? j / i * PI / 2 : 0;
+            return nz.scale(cos(polar)).add(nx.scale(cos(around) * sin(polar))).add(ny.scale(sin(around) * sin(polar)));
+        };
+        const point = (i, j)=> corner.add(dir(i, j).scale(t));
+        for (let i = 0; i < n; ++i)
+        {
+            for (let j = 0; j <= i; ++j)
+                triangle(point(i, j), point(i + 1, j), point(i + 1, j + 1), dir(i, j), dir(i + 1, j), dir(i + 1, j + 1));
+            for (let j = 0; j < i; ++j)
+                triangle(point(i, j), point(i + 1, j + 1), point(i, j + 1), dir(i, j), dir(i + 1, j + 1), dir(i, j + 1));
+        }
+    }
+    return mesh;
+}
+
 /**
  * Build a box centered on the origin, six flat faces with uvs covering each face
+ * - bevel cuts its edges and corners: 1 segment is a flat chamfer, more round them, and the biggest bevel, half
+ *   the smallest side, rounds a cube into a ball
  * @param {Vector3|number} [size] - Full size, a number for a cube
+ * @param {number} [bevel] - Size of the cut on each edge, clamped to half the smallest side
+ * @param {number} [bevelSegments] - Steps around each edge, 1 for a flat chamfer
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildBox(size=1)
+function buildBox(size=1, bevel=0, bevelSegments=1)
 {
-    const mesh = new Mesh;
+    ASSERT(isNumber(bevel) && bevel >= 0, 'bevel must be a number, 0 or more');
     const half = render3DSize3(size).scale(.5);
     // each face: normal, right axis, up axis (right cross up = normal)
     const faces = [
@@ -2936,6 +3015,10 @@ function buildBox(size=1)
         [vec3(0, 1, 0),  vec3(1, 0, 0),  vec3(0, 0, -1)],
         [vec3(0, -1, 0), vec3(1, 0, 0),  vec3(0, 0, 1)],
     ];
+    const t = min(bevel, half.x, half.y, half.z);
+    if (t > 0)
+        return render3DBevelBox(half, t, bevelSegments, faces);
+    const mesh = new Mesh;
     for (const [n, r, u] of faces)
     {
         const center = n.multiply(half);

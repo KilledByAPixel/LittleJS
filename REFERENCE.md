@@ -1364,7 +1364,9 @@ mesh.getTriangles()                           // {vertices, indices}: the strip 
                                               // indexed mesh gives its own, read clockwise as the pass draws
 
 // Shape builders - return a Mesh centered on the origin, sizes are full sizes, smooth defaults to the plugin setting
-buildBox(size=1)                              // a vec3 or a number, six faces with uvs, always flat
+buildBox(size=1, bevel=0, bevelSegments=1)    // a vec3 or a number, six flat faces with uvs; bevel cuts the edges
+                                              // and corners, 1 segment a flat chamfer, more round them, clamped
+                                              // to half the smallest side
 buildSphere(size=1, sides=16, rings=8, smooth)
 buildCylinder(size=1, height=1, sides=16, smooth, capped=true)
 buildCone(size=1, height=1, sides=16, smooth, capped=true)      // point up

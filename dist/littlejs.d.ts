@@ -8311,11 +8311,15 @@ declare module "littlejsengine" {
     export function buildTorus(size?: number, tubeSize?: number, sides?: number, tubeSides?: number, smooth?: boolean): Mesh;
     /**
      * Build a box centered on the origin, six flat faces with uvs covering each face
+     * - bevel cuts its edges and corners: 1 segment is a flat chamfer, more round them, and the biggest bevel, half
+     *   the smallest side, rounds a cube into a ball
      * @param {Vector3|number} [size] - Full size, a number for a cube
+     * @param {number} [bevel] - Size of the cut on each edge, clamped to half the smallest side
+     * @param {number} [bevelSegments] - Steps around each edge, 1 for a flat chamfer
      * @return {Mesh}
      * @memberof Render3D
      */
-    export function buildBox(size?: Vector3 | number): Mesh;
+    export function buildBox(size?: Vector3 | number, bevel?: number, bevelSegments?: number): Mesh;
     /**
      * Build a heightfield grid in the XZ plane centered on the origin
      * - smooth rounds the lighting across cells and colors each corner
