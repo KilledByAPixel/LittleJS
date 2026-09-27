@@ -28,6 +28,7 @@ LittleJS is a modular HTML5 game engine with:
 - **Core engine**: `src/engine*.js` (main loop, objects, rendering, physics, input, etc.)
 - **Plugins**: `plugins/*.js` (optional features like Box2D, post-processing, UI, audio helpers, etc.)
 - **3D**: `plugins/math3d.js` (Vector3, Matrix4, Ray3D, 3D collision and raycasts) and `plugins/render3d.js` (the 3D renderer: meshes, the basic builders, lights, shadows, EngineObject3D, instancing) with `plugins/render3dExtras.js` after it (the other builders, HeightMap, camera controls, particles, trails, the OBJ loader: things built on the renderer that it does not need to draw), and `plugins/gltf.js` loads glTF and GLB models onto it. All are plugins in the same bundle, and `plugins/threejs.js` is the alternative that renders with Three.js.
+- **Level editor**: `src/engineEditor.js`, debug only; object layers (`objectLayersAddType`, `objectLayersLoad`) ship in `src/engineTileLayer.js`. See "Level editor" below
 - **Build system**: `src/engineBuild.mjs` (concatenates modules into distributable bundles)
 
 ## Repo structure and file types
@@ -134,6 +135,19 @@ The 3D API mirrors the 2D one, so the same rules hold unless a 3D reason overrid
 - Lighting: `render3D.sunDirection` points toward the sun, a `DirectionalLight3D` shines from its position toward the origin, `emissive` is a number (0 lit, 1 its own color, above 1 overbright), and `rotation3D` is Euler pitch, yaw, roll applied roll, pitch, yaw. All of it matches three.js, and REFERENCE.md has a "Coming from three.js" section to keep in step
 - Custom shaders: `Shader` (core, `src/engineDraw.js`) holds a `mainImage` snippet in the post-process style; each renderer wraps it with its own program on the first draw (`glShaderProgram` in 2D, `render3DFragmentSource` and `render3DShaderProgram` in 3D). The 3D fragment source is one function for the plugin's own program and every snippet's, so they cannot drift, and the promised snippet names are macros in `RENDER3D_SNIPPET_NAMES`. With no Shader set, rendering must stay pixel-identical
 
+### Level editor
+The editor paints a game's tile layers and edits its object layers while the game is paused, saving Tiled JSON:
+- **Where it lives.** `src/engineEditor.js`, in the `engineDebugFiles` build list with `plugins/tweakables.js`, so the debug bundle has it and the release bundles do not; `src/engineRelease.js` stubs every name core code calls. Core has only small hooks: `tileLayersLoad` calls `editorMapRestore` and `editorMapLoaded`, `objectLayersLoad` calls `editorMapRestore` and `editorObjectMade`, `fetchJSON` calls `editorJSONFetched`, and `enginePreRender` calls `editorPreRender` so WebGL takes the editor's camera
+- **The map is the source of truth.** The editor changes the Tiled map object the game passed to `tileLayersLoad` in place, and mirrors each change onto what the game made from it; saves and autosaves come from the map, never from the live layers, so tiles changed in play and the game's own post-processing never leak into a save. A game that loads the same map object again, as a restart does, gets the edits
+- **Records.** `editorMapList` has a record for each map: `{map, layers, objectLayers, original, originalObjects, key, hash, pending}`. A tile layer record is `{record, source, live, color}` (the Tiled layer and its live `TileLayer`); an object layer record is `{record, isObjects, group, name, instances}` (the Tiled object layer, undefined until the first object is placed, and what the game made for each object id). A layer the game built in code gets a map of its own
+- **Every edit goes through one path, so undo, autosave and the game stay in line.** A tile: `editorPaint(layer, cell, gid)`. Objects: `editorChangeObjects(layer, (list)=> ...)`, which edits a copy of the layer's object list and has `editorSetObjects` bring the game's objects in line. Both add to the current stroke, and `editorStrokeEnd()` makes it one undo and autosaves it; a big edit (fill, clear, undo) runs inside `editorBulkEdit` so each layer redraws once
+- **Input.** Letter shortcuts are in `editorKeys` and `editorCtrlKeys`, read by the key's printed letter (`e.key`) from the editor's own listener; an action that returns `false` did nothing and leaves the key to the browser. Digits, Space and the mouse come through the engine's input in `editorUpdate`, which hands an object layer to `editorUpdateObjects`. In an editing session Escape (the debug key) switches between playing and editing
+- **Adding a tool or key:** add it to `editorKeys` (and a button in `editorPanelInit` when it needs one), make the edit through `editorPaint` or `editorChangeObjects`, end with `editorStrokeEnd()`, and add it to `editorHelpLines` and, when it depends on what is held, `editorHint`
+- **Adding an object property type:** `editorPropertyEditable` and `editorPropertiesUpdate` make its input, `editorObjectSetProperty` writes it as a Tiled property, and `objectLayersProperties` reads it back when objects are made
+- **Game hooks.** `levelEditor` (`isOpen`, `open()`, `close()`, `onTile`, `onRestart`) is the editor's public API; `objectLayersAddType(name, make, defaults, tileInfo)` names the object types, with a string since minified builds rename classes. `examples/platformer` sets all of them
+- **Save and autosave.** Save writes the map as Tiled JSON with everything it was loaded with, to a file picked once where the browser allows (Chrome, Edge) or as a download. Autosaves live in `localStorage` under `LittleJS editor <page path>`, one entry per map keyed by the file it was fetched from, or by its size, layer names and hash: `{hash, layers, objects, nextobjectid}`. A file that changed under an autosave waits for Apply or Drop in the panel
+- **Tests.** `test/editor.test.mjs` (tiles, controls, autosave), `test/editorObjects.test.mjs` and `test/objectLayers.test.mjs` run headless on `test/vmEngine.mjs`; headless mode skips `inputUpdatePost`, so their `step()` clears the pressed keys by hand, and the panel is never made. The panel and drawing are checked in headless Chrome on the platformer, with scripts under `.claude/editorcheck` (not in the repo): a whole mouse drag inside one slow SwiftShader frame reads as a click, so drags are paced, and screenshots wait for the layer redraw
+
 ### Global variables
 - Engine time: `time`, `timeReal`, `frame`, `timeDelta`
 - Camera: `cameraPos`, `cameraScale`, `cameraAngle`
@@ -226,6 +240,6 @@ npm run build-docs
 
 ### Debug features
 - Press `Esc` to toggle debug overlay
-- Number keys toggle visualizations
+- Number keys toggle visualizations; `9` shows the tweakables panel and `0` opens the level editor, after which `Esc` switches between playing and editing until the editor's Exit
 - `+`/`-` keys control time scale
 - Debug functions: `debugRect()`, `debugCircle()`, `debugLine()`, `debugText()`, and in 3D `debugBox3D()`, `debugSphere3D()`, `debugLine3D()`, `debugPoint3D()`
