@@ -813,7 +813,7 @@ function editorPasteObjects()
 function editorUpdateObjects(space)
 {
     const layer = editorObjectLayer, record = layer.record, mouse = screenToWorld(mousePosScreen);
-    const snap = (pos)=> editorGrid ? pos.floor().add(vec2(.5)) : pos.copy(); // cell centers, unless the grid is off
+    const snap = editorSnap;
     const shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
     const ctrl = keyIsDown('ControlLeft') || keyIsDown('ControlRight') || keyIsDown('MetaLeft') || keyIsDown('MetaRight');
     editorHover = undefined;
@@ -1036,9 +1036,17 @@ function editorBrushTile()
 // the brush takes the tile in a cell, an empty cell gives the Erase brush
 function editorPick(layer, pos) { editorBrush = editorStampTile(editorGidAt(layer, pos) || 0); }
 
-// a palette slot into the brush: slot 0 is the Erase brush, slot n tile n - 1, keeping a one tile brush's turn
+// a palette slot into the brush: slot 0 is the Erase brush, slot n tile n - 1, keeping a one tile brush's turn; on
+// an object layer slot n is the nth object type
 function editorPalettePick(slot)
 {
+    if (editorObjectLayer)
+    {
+        // on an object layer the palette is the types the game added, in order
+        const type = [...objectLayersTypes.keys()][slot];
+        type && (editorObjectBrush = [{type, properties: [], offset: vec2()}]);
+        return;
+    }
     const t = editorBrushTile();
     editorBrush = editorStampTile(slot ? editorTileToGid(slot - 1, t?.direction, t?.mirror) : 0);
 }
@@ -1233,6 +1241,9 @@ const editorHelpLines =
 function editorHint()
 {
     if (keyIsDown('Space')) return 'Drag to pan';
+    if (editorObjectLayer)
+        return editorObjectSelection.size ? 'Selection: drag moves · Delete removes · Ctrl+C copy · Ctrl+X cut · click to clear' :
+            'Left place / select · drag moves · Right pick / drag select · Delete removes';
     if (editorSelection) return 'Selection: F fill · Delete clear · Ctrl+C copy · Ctrl+X cut · click to clear';
     if (keyIsDown('ShiftLeft') || keyIsDown('ShiftRight')) return 'Shift: line from the last tile';
     return 'Left paint · Right pick / drag select · F fill · Space or middle drag pans · ? keys';
@@ -1241,6 +1252,11 @@ function editorHint()
 // what the brush is, in words
 function editorBrushLabel()
 {
+    if (editorObjectLayer)
+    {
+        const brush = editorObjectBrush;
+        return !brush ? 'Brush: none' : brush.length > 1 ? `Brush: ${brush.length} objects` : `Brush: ${brush[0].type}`;
+    }
     const {width, height, grids} = editorBrush, t = editorBrushTile();
     if (t)
         return `Brush: tile ${t.tile}` + (t.direction ? `, turned ${t.direction * 90}°` : '') +
@@ -1313,10 +1329,11 @@ function editorPanelInit()
     palette.onclick = (e)=>
     {
         const cell = editorPaletteCell, slot = (e.offsetY / cell | 0) * editorPaletteColumns + (e.offsetX / cell | 0);
-        slot <= editorPaletteTiles(editorLayer).length && e.offsetX < editorPaletteColumns * cell &&
-            editorPalettePick(slot);
+        const slots = editorObjectLayer ? objectLayersTypes.size : editorPaletteTiles(editorLayer).length + 1;
+        slot < slots && e.offsetX < editorPaletteColumns * cell && editorPalettePick(slot);
     };
     const brush = editorElement('div', editorPanel, 'color:#ccc;margin:2px 0');
+    const properties = editorElement('div', editorPanel, 'margin:4px 0;padding:4px;background:#222;border-radius:3px');
 
     const file = row();
     button(file, 'Save', ()=> editorSave(editorLayer?.record), 'Download the level as Tiled JSON');
@@ -1330,7 +1347,7 @@ function editorPanelInit()
         editorElement('div', help, 'margin:2px 0', line);
     button(help, 'Close', ()=> editorHelp = false, '?');
 
-    editorPanelParts = {restart, pending, layerRow, allLayers, palette, brush, status, storage, hint, help, layers: undefined};
+    editorPanelParts = {restart, pending, layerRow, allLayers, palette, brush, properties, status, storage, hint, help, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -1370,6 +1387,36 @@ function editorPaletteTiles(layer)
 }
 
 // draw the palette again, for a new layer or brush tile
+// draw the palette of object types, each its icon or the start of its name, the brush's type outlined
+function editorPaletteDrawObjects(canvas)
+{
+    const cell = editorPaletteCell, columns = editorPaletteColumns, types = [...objectLayersTypes];
+    canvas.style.display = types.length ? '' : 'none';
+    canvas.width = columns * cell;
+    canvas.height = ceil(types.length / columns) * cell;
+    const context = canvas.getContext('2d');
+    context.imageSmoothingEnabled = false;
+    context.font = '10px monospace';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    types.forEach(([name, {tileInfo}], i)=>
+    {
+        const x = i % columns * cell, y = (i / columns | 0) * cell, image = tileInfo?.textureInfo?.image;
+        if (image)
+            context.drawImage(image, tileInfo.pos.x, tileInfo.pos.y, tileInfo.size.x, tileInfo.size.y,
+                x + 2, y + 2, cell - 4, cell - 4);
+        else
+        {
+            context.fillStyle = '#ccc';
+            context.fillText(name.slice(0, 4), x + cell / 2, y + cell / 2);
+        }
+        if (editorObjectBrush?.length !== 1 || editorObjectBrush[0].type !== name) return;
+        context.strokeStyle = '#4af';
+        context.lineWidth = 2;
+        context.strokeRect(x + 1, y + 1, cell - 2, cell - 2);
+    });
+}
+
 function editorPaletteDraw(canvas, layer)
 {
     const tiles = editorPaletteTiles(layer), cell = editorPaletteCell, columns = editorPaletteColumns;
@@ -1422,7 +1469,7 @@ function editorPanelUpdate()
         {
             const b = editorElement('button', undefined, 'flex:1;min-width:28px;padding:3px;cursor:pointer',
                 i < 9 ? String(i + 1) : '·');
-            b.title = `${layer.source.name || 'Layer ' + (i + 1)} (${layer.record.fileName})`;
+            b.title = `${(layer.isObjects ? layer.name : layer.source.name) || 'Layer ' + (i + 1)} (${layer.record.fileName})`;
             b.onclick = ()=> { editorSelectLayer(layer); b.blur(); };
             return b;
         }));
@@ -1439,12 +1486,14 @@ function editorPanelUpdate()
 
     // the palette, drawn again when the layer or the brush changed, a change makes a new brush
     const live = editorLayer?.live;
-    if (p.paletteLayer !== editorLayer || p.paletteBrush !== editorBrush)
+    const paletteLayer = editorObjectLayer ?? editorLayer, paletteBrush = editorObjectLayer ? editorObjectBrush : editorBrush;
+    if (p.paletteLayer !== paletteLayer || p.paletteBrush !== paletteBrush)
     {
-        p.paletteLayer = editorLayer;
-        p.paletteBrush = editorBrush;
-        editorPaletteDraw(p.palette, editorLayer);
+        p.paletteLayer = paletteLayer;
+        p.paletteBrush = paletteBrush;
+        editorObjectLayer ? editorPaletteDrawObjects(p.palette) : editorPaletteDraw(p.palette, editorLayer);
     }
+    editorPropertiesUpdate(p.properties);
 
     const t = editorHover && editorGidToTile(editorLayer.source.data[editorHover.x +
         (live.size.y - 1 - editorHover.y) * live.size.x]);
@@ -1517,6 +1566,120 @@ function editorZoom(factor)
     editorApplyCamera();
     editorCameraPos = editorCameraPos.add(before.subtract(screenToWorld(mousePosScreen)));
     editorApplyCamera();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// objects in the panel and the level
+
+// the position a click places or drags to, a cell center unless the grid is off
+function editorSnap(pos) { return editorGrid ? pos.floor().add(vec2(.5)) : pos.copy(); }
+
+// set a property of the one selected object, from the properties box, as one undo
+function editorSetSelectedProperty(name, value)
+{
+    const selected = editorSelectedObjects(), object = selected[0];
+    const type = object && objectLayersTypes.get(object.type || object.class);
+    if (selected.length !== 1 || !type) return false;
+    editorStrokeEnd();
+    editorChangeObjects(editorObjectLayer, (list)=>
+        editorObjectSetProperty(list.find((o)=> o.id === object.id), name, value, type.defaults[name]));
+    editorStrokeEnd();
+    return true;
+}
+
+// a world box's outline
+function editorDrawBox(center, size, color, width)
+{
+    const half = size.scale(.5), corners = [vec2(-1, -1), vec2(1, -1), vec2(1, 1), vec2(-1, 1)]
+        .map((c)=> center.add(c.multiply(half)));
+    corners.forEach((c, i)=> drawLine(c, corners[(i + 1) % 4], width, color));
+}
+
+// an object type's icon, or a box with its name when it has none
+function editorDrawObjectIcon(name, pos, size, alpha)
+{
+    const tileInfo = objectLayersTypes.get(name)?.tileInfo;
+    if (tileInfo)
+        drawTile(pos, size, tileInfo, hsl(0, 0, 1, alpha));
+    else
+    {
+        drawRect(pos, size, hsl(0, 0, 0, alpha * .6));
+        drawText(name ?? '?', pos, min(size.x, size.y) * .3, hsl(0, 0, 1, alpha));
+    }
+}
+
+// the objects of the object layer being edited: each one's outline, yellow when selected, a ghost of one the game does
+// not have where the level puts it, the box being dragged, and the brush's objects at the mouse
+function editorRenderObjects(thin)
+{
+    const layer = editorObjectLayer, record = layer.record;
+    for (const object of layer.group?.objects ?? [])
+    {
+        const pos = editorObjectPos(record, object), size = editorObjectSize(layer, object);
+        const made = layer.instances.get(object.id), name = object.type || object.class;
+        if (!made || made.destroyed || isVector2(made.pos) && made.pos.distance(pos) > .01)
+            editorDrawObjectIcon(name, pos, size, .5); // gone in play, moved in play, or not a game object
+        const selected = editorObjectSelection.has(object.id);
+        editorDrawBox(pos, size, selected ? hsl(.15, 1, .6) : hsl(.55, 1, .6, .6), thin * (selected ? 3 : 1.5));
+    }
+    const box = editorObjectBox;
+    if (box)
+        editorDrawBox(box.a.add(box.b).scale(.5), box.b.subtract(box.a).abs(), hsl(.15, 1, .6), thin * 2);
+    else if (editorObjectBrush && !editorObjectDrag && !editorObjectSelection.size && !mouseIsDown(1))
+    {
+        const pos = editorSnap(screenToWorld(mousePosScreen));
+        for (const object of editorObjectBrush)
+            editorDrawObjectIcon(object.type, pos.add(object.offset), vec2(1), .5);
+    }
+}
+
+// the properties box: an input for each default of the one selected object's type, made again when the selection or
+// the object changes, but not while one of its inputs is being typed in
+function editorPropertiesUpdate(box)
+{
+    const selected = editorObjectLayer ? editorSelectedObjects() : [], object = selected.length === 1 && selected[0];
+    const type = object && objectLayersTypes.get(object.type || object.class);
+    const key = type ? editorObjectLayer.record.fileName + object.id + JSON.stringify(object.properties) : '';
+    box.style.display = key ? '' : 'none';
+    if (box.dataset.key === key || box.contains(document.activeElement)) return;
+    box.dataset.key = key;
+    box.replaceChildren();
+    if (!type) return;
+
+    editorElement('div', box, 'color:#aaa;margin-bottom:2px', `${object.type || object.class} ${object.id}`);
+    const values = objectLayersProperties(type, object);
+    for (const [name, defaultValue] of Object.entries(type.defaults))
+    {
+        const row = editorElement('label', box, 'display:flex;gap:6px;align-items:center;margin:2px 0');
+        editorElement('span', row, 'flex:1', name);
+        const value = values[name], input = editorElement('input', row, 'width:110px;background:#222;color:#eee');
+        const set = (v)=> { editorSetSelectedProperty(name, v); input.blur(); };
+        if (typeof defaultValue === 'boolean')
+        {
+            input.type = 'checkbox';
+            input.checked = !!value;
+            input.onchange = ()=> set(input.checked);
+        }
+        else if (isColor(defaultValue))
+        {
+            input.type = 'color';
+            input.value = value.toString(false);
+            input.onchange = ()=> { const color = rgb().setHex(input.value); color.a = value.a; set(color); };
+        }
+        else if (typeof defaultValue === 'number')
+        {
+            input.type = 'number';
+            input.step = Number.isInteger(defaultValue) ? '1' : 'any';
+            input.value = String(value);
+            input.onchange = ()=> { const v = parseFloat(input.value); isNumber(v) && set(v); };
+        }
+        else
+        {
+            input.type = 'text';
+            input.value = String(value ?? '');
+            input.onchange = ()=> set(input.value);
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1637,7 +1800,7 @@ function editorRender()
 
     // ghosts, cells the map has that the layer does not show: markers a game made objects of, tiles broken in play
     const ghost = hsl(0, 0, 1, .4);
-    for (let x = x0; x < x1; ++x)
+    for (let x = x0; !editorObjectLayer && x < x1; ++x)
     for (let y = y0; y < y1; ++y)
     {
         const t = editorGidToTile(source.data[x + (height - 1 - y) * width]);
@@ -1665,7 +1828,7 @@ function editorRender()
     outline(vec2(), live.size, hsl(.55, 1, .6, .8), thin * 2);
 
     // the selection, and the line Shift would draw
-    if (editorSelection)
+    if (editorSelection && !editorObjectLayer)
         outline(editorSelection.min, editorSelection.max.add(vec2(1)), hsl(.15, 1, .6), thin * 3);
     const last = editorLastPlaced, shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
     if (shift && editorHover && last?.layer === layer && !mouseIsDown(0))
@@ -1688,6 +1851,7 @@ function editorRender()
         }
         drawRect(live.pos.add(editorHover).add(vec2(w / 2, h / 2)), vec2(w, h), hsl(.55, 1, .6, .25));
     }
+    editorObjectLayer && editorRenderObjects(thin);
 }
 
 debug && engineAddPlugin(editorUpdate, editorRender);

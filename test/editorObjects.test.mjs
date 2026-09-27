@@ -332,3 +332,31 @@ test('R and M turn and mirror a stamp\'s object offsets with its cells', async (
     assert.deepEqual([...engine.run('const m = editorStampMirror(stamp); [m.objects[0].offset.x, m.objects[0].offset.y]')],
         [1.5, .5]);
 });
+
+// the panel on an object layer
+
+test('on an object layer the brush label names the object type, and the hint line tells the object controls',
+    async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorSelectLayer(objects); editorObjectBrush = undefined;`);
+    assert.equal(engine.run('editorBrushLabel()'), 'Brush: none');
+    engine.run('editorPalettePick(0)'); // the first type added
+    assert.equal(engine.run('editorBrushLabel()'), 'Brush: Coin');
+    engine.run(`editorObjectBrush = [0, 1, 2].map(()=> ({ type: 'Coin', properties: [], offset: vec2() }))`);
+    assert.equal(engine.run('editorBrushLabel()'), 'Brush: 3 objects');
+    assert.equal(engine.run('editorHint()'), 'Left place / select · drag moves · Right pick / drag select · Delete removes');
+    engine.run('editorObjectSelection.add(1)');
+    assert.match(engine.run('editorHint()'), /^Selection: drag moves · Delete removes/);
+});
+
+test('the properties box sets a property of the one selected object, as one undo', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorSelectLayer(objects); editorObjectSelection.add(1);`);
+    assert.equal(engine.run(`editorSetSelectedProperty('value', 3)`), true);
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify([list()[0].properties, made[0].value, editorUndoList.length])')),
+        [[{ name: 'value', type: 'int', value: 3 }], 3, 1]);
+    engine.run('editorObjectSelection.add(2)');
+    assert.equal(engine.run(`editorSetSelectedProperty('value', 4)`), false, 'only with one object selected');
+});
