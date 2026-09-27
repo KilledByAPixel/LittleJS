@@ -181,10 +181,11 @@ function editorMapRestore(map)
     // which asserts on what it can not load, and a layer made from it gets a map of its own when edited
     const data = map.layers ? editorTileLayerData(map.layers) : [];
     if (!map.layers || data.some((layer)=> !Array.isArray(layer))) return map;
-    const url = editorFetchedURLs.get(map), hash = editorMapHash(data);
+    const objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
+    const url = editorFetchedURLs.get(map), hash = editorMapHash(data, objects);
     const fileName = url?.split(/[?#]/)[0].split('/').pop() || 'level.json';
     const record = {map, url, fileName, key: editorMapKey(map, url, hash), hash,
-        original: data.map((layer)=> [...layer]), layers: []};
+        original: data.map((layer)=> [...layer]), originalObjects: editorObjectsCopy(objects), layers: []};
 
     // a new copy of a map takes over from the one before, and maps whose layers are all gone step aside
     editorRetire((other)=> other.key === record.key ||
@@ -193,7 +194,7 @@ function editorMapRestore(map)
 
     const saved = editorSaves()[record.key];
     if (!saved) return map;
-    if (editorSameData(saved.layers, data))
+    if (editorSameData(saved.layers, data) && editorSameData(saved.objects ?? [], objects))
         editorDiscardPending(record);
     else if (saved.hash !== record.hash || !editorCopyData(data, saved.layers))
     {
@@ -202,8 +203,11 @@ function editorMapRestore(map)
             'open the editor (Esc then 0) to apply or drop them');
     }
     else
+    {
+        editorCopyObjects(map, saved);
         console.warn(`LittleJS editor: brought back unsaved edits to ${record.fileName}, ` +
             'Save in the editor (Esc then 0) writes them to the file');
+    }
     return map;
 }
 
@@ -223,7 +227,7 @@ function editorRetire(isRetired)
     }
     for (const list of [editorUndoList, editorRedoList])
     for (let i = list.length; i--;)
-        list[i].some((cell)=> gone.includes(cell.layer.record)) && list.splice(i, 1);
+        list[i].some((entry)=> gone.includes((entry.layer ?? entry.objectLayer).record)) && list.splice(i, 1);
     if (gone.includes(editorLayer?.record))
         editorLayer = editorSelection = undefined; // the selection was an area of that layer
 }
@@ -323,13 +327,19 @@ function editorWriteSaves(saves)
 function editorMapKey(map, url, hash)
 { return url?.split(/[?#]/)[0] ?? `${map.width}x${map.height} ` + map.layers.map((layer)=> layer.name).join() + ' #' + hash; }
 
-// a quick hash of a map's tile data, to know when the file changed under its autosave
-function editorMapHash(data)
+// a quick hash of a map's tile data and objects, to know when the file changed under its autosave
+function editorMapHash(data, objects=[])
 {
     let hash = 2166136261;
     for (const layer of data)
     for (const gid of layer)
         hash = Math.imul(hash ^ gid, 16777619);
+    if (objects.length)
+    {
+        const text = JSON.stringify(objects);
+        for (let i = 0; i < text.length; ++i)
+            hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
+    }
     return hash >>> 0;
 }
 
@@ -343,20 +353,22 @@ function editorCopyData(data, saved)
     return true;
 }
 
-// remember a map's tile data, or forget it when it is back to the file
+// remember a map's tile data and objects, or forget them when they are back to the file
 function editorAutosave(record)
 {
     if (record.synthetic) return; // a layer made in code has no load to bring it back in, save it to a file
-    const saves = editorSaves(), data = editorTileLayerData(record.map.layers);
-    if (editorSameData(data, record.original))
+    const saves = editorSaves(), map = record.map, data = editorTileLayerData(map.layers);
+    const objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
+    if (editorSameData(data, record.original) && editorSameData(objects, record.originalObjects ?? []))
         delete saves[record.key];
     else
-        saves[record.key] = {hash: record.hash, layers: data};
+        saves[record.key] = {hash: record.hash, layers: data, objects, nextobjectid: map.nextobjectid};
     editorWriteSaves(saves);
 }
 
-// paint every cell of a map's layers from a list of tile data, the tile layers of the map in order
-function editorPaintData(record, data)
+// paint every cell of a map's layers from a list of tile data, the tile layers of the map in order, and set its
+// object layers' objects from a list of them
+function editorPaintData(record, data, objects)
 {
     editorStrokeEnd();
     const all = editorTileLayerData(record.map.layers);
@@ -368,6 +380,8 @@ function editorPaintData(record, data)
             if (gids?.length === width * height)
                 gids.forEach((gid, i)=> editorPaint(layer, vec2(i % width, height - 1 - (i / width | 0)), gid));
         }
+        editorObjectLayers(record).forEach((layer, i)=> objects &&
+            editorChangeObjects(layer, (list)=> list.splice(0, list.length, ...editorObjectsCopy(objects[i] ?? []))));
     });
     editorStroke ? editorStrokeEnd() : editorAutosave(record);
 }
@@ -378,7 +392,7 @@ function editorApplyPending(record)
     const saved = record?.pending;
     if (!saved) return;
     record.pending = undefined;
-    editorPaintData(record, saved.layers);
+    editorPaintData(record, saved.layers, saved.objects);
 }
 
 // drop the autosaved edits of a file that changed since
@@ -396,13 +410,14 @@ function editorRevert(record)
 {
     if (!record) return;
     record.pending = undefined;
-    editorPaintData(record, record.original);
+    editorPaintData(record, record.original, record.originalObjects);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // cells and undo
 
-// the strokes that can be undone and redone, each a list of cells with the gid before and after
+// the strokes that can be undone and redone, each a list of cells with the gid before and after, and of object
+// layers with their objects before and after
 const editorUndoList = [], editorRedoList = [];
 let editorStroke;
 
@@ -475,19 +490,185 @@ function editorUndo(redo=false)
     (redo ? editorUndoList : editorRedoList).push(stroke);
     editorBulkEdit(()=>
     {
-        for (const cell of redo ? stroke : [...stroke].reverse())
-            editorSetCell(cell.layer, cell.pos, redo ? cell.after : cell.before);
+        for (const entry of redo ? stroke : [...stroke].reverse())
+        {
+            if (entry.objectLayer)
+                editorSetObjects(entry.objectLayer, redo ? entry.after : entry.before);
+            else
+                editorSetCell(entry.layer, entry.pos, redo ? entry.after : entry.before);
+        }
     });
     editorChanged(stroke);
 }
 
-// after a change the layers it touched draw again whole, so a game's onRedraw decoration sees the new tiles
+// after a change the tile layers it touched draw again whole, so a game's onRedraw decoration sees the new tiles,
+// and the maps it touched are autosaved
 function editorChanged(stroke)
 {
-    for (const layer of new Set(stroke.map((cell)=> cell.layer)))
+    for (const layer of new Set(stroke.filter((entry)=> entry.layer).map((entry)=> entry.layer)))
         layer.live.destroyed || layer.live.redraw();
-    for (const record of new Set(stroke.map((cell)=> cell.layer.record)))
+    for (const record of new Set(stroke.map((entry)=> (entry.layer ?? entry.objectLayer).record)))
         editorAutosave(record);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// objects
+
+// the object layers of a map's Tiled layers in order, groups flattened
+function editorObjectGroups(layers, list=[])
+{
+    for (const layer of layers || [])
+    {
+        if (layer.type === 'group')
+            editorObjectGroups(layer.layers, list);
+        else if (layer.type === 'objectgroup')
+            list.push(layer);
+    }
+    return list;
+}
+
+// the editor's object layers of a map, each {record, isObjects, group, name, instances}: group is the Tiled object
+// layer, undefined for one not made yet, and instances what the game made for each object id; a map with no object
+// layer gets one to place objects in once the game has added a type, made in the map the first time it is used
+function editorObjectLayers(record)
+{
+    if (!record || record.synthetic) return [];
+    record.objectLayers ||= editorObjectGroups(record.map.layers).map((group)=>
+        ({record, isObjects: true, group, name: group.name || 'Objects', instances: new Map}));
+    if (!record.objectLayers.length && objectLayersTypes.size)
+        record.objectLayers.push({record, isObjects: true, group: undefined, name: 'Objects', instances: new Map});
+    return record.objectLayers;
+}
+
+// a new Tiled object layer named Objects, on top of a map
+function editorNewObjectGroup(map)
+{
+    const id = map.nextlayerid ?? map.layers.length + 1, group = {draworder: 'topdown', id, name: 'Objects',
+        objects: [], opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0};
+    map.nextlayerid = id + 1;
+    map.layers.push(group);
+    return group;
+}
+
+// the Tiled object layer of an editor object layer, made the first time it is needed
+function editorObjectGroup(layer) { return layer.group ||= editorNewObjectGroup(layer.record.map); }
+
+// the next object id of a map, as Tiled counts them
+function editorNextObjectId(map)
+{
+    const id = map.nextobjectid ?? 1;
+    map.nextobjectid = id + 1;
+    return id;
+}
+
+// an object's world position, as objectLayersLoad places it
+function editorObjectPos(record, object)
+{
+    const {height=0, tilewidth=1, tileheight=1} = record.map;
+    return vec2(object.x / tilewidth, height - object.y / tileheight);
+}
+
+// set an object's position in the map from a world position
+function editorObjectSetPos(record, object, pos)
+{
+    const {height=0, tilewidth=1, tileheight=1} = record.map;
+    object.x = pos.x * tilewidth;
+    object.y = (height - pos.y) * tileheight;
+}
+
+// called by objectLayersLoad for each object it read, the editor keeps what the game made by the object's id
+function editorObjectMade(map, group, object, made)
+{
+    const record = editorMapList.find((record)=> record.map === map);
+    const layer = editorObjectLayers(record).find((layer)=> layer.group === group);
+    layer && (made ? layer.instances.set(object.id, made) : layer.instances.delete(object.id));
+}
+
+// a copy of objects as undo and autosave keep them, and an object layer's objects now
+const editorObjectsCopy = (value)=> JSON.parse(JSON.stringify(value));
+const editorObjectList = (layer)=> editorObjectsCopy(layer.group?.objects ?? []);
+
+// set an object layer's objects to a list and bring the game's objects in line: one gone is destroyed, a new one
+// made, a moved one moved, one with changed properties given them; a type made by an arrow function, like a player
+// start, is called again when its object changes, and a class is not made again for an object the game let go of
+function editorSetObjects(layer, list)
+{
+    const {record, instances} = layer, group = editorObjectGroup(layer);
+    const before = new Map(group.objects.map((object)=> [object.id, object]));
+    group.objects = editorObjectsCopy(list);
+    const ids = new Set(group.objects.map((object)=> object.id));
+    for (const [id, made] of instances)
+    {
+        if (ids.has(id)) continue;
+        made.destroy?.();
+        instances.delete(id);
+    }
+    for (const object of group.objects)
+    {
+        const old = before.get(object.id), made = instances.get(object.id);
+        const name = object.type || object.class, type = objectLayersTypes.get(name);
+        if (!type || old && editorSameData(old, object)) continue;
+        if (!old || (old.type || old.class) !== name || !type.make.prototype)
+        {
+            // new, of a new type, or a function to call again
+            made?.destroy?.();
+            const result = objectLayersMake(record.map, object);
+            result ? instances.set(object.id, result) : instances.delete(object.id);
+        }
+        else if (made && !made.destroyed)
+        {
+            if ('pos' in made)
+                made.pos = editorObjectPos(record, object);
+            Object.assign(made, objectLayersProperties(type, object));
+        }
+    }
+}
+
+// change an object layer's objects as part of the stroke being made: change edits a copy of the list; one stroke's
+// changes to one layer are one undo entry, so a drag is one undo
+function editorChangeObjects(layer, change)
+{
+    if (!layer || layer.record.pending) return false; // its autosaved edits wait to be applied or dropped first
+    const before = editorObjectList(layer), after = editorObjectsCopy(before);
+    change(after);
+    if (editorSameData(before, after)) return false;
+    editorSetObjects(layer, after);
+    const last = editorStroke?.at(-1);
+    if (last?.objectLayer === layer)
+        last.after = after;
+    else
+        (editorStroke ||= []).push({objectLayer: layer, before, after});
+    return true;
+}
+
+// set an object's property as Tiled keeps it, only where it differs from its type's default, a color as #AARRGGBB
+function editorObjectSetProperty(object, name, value, defaultValue)
+{
+    const properties = (object.properties ?? []).filter((property)=> property.name !== name);
+    const text = (v)=> isColor(v) ? v.toString() : JSON.stringify(v);
+    if (text(value) !== text(defaultValue))
+    {
+        const hex = isColor(value) && value.toString();
+        properties.push(hex ? {name, type: 'color', value: '#' + hex.slice(7, 9) + hex.slice(1, 7)} :
+            {name, type: typeof value === 'boolean' ? 'bool' : typeof value === 'string' ? 'string' :
+            Number.isInteger(defaultValue) ? 'int' : 'float', value});
+    }
+    if (properties.length)
+        object.properties = properties;
+    else
+        delete object.properties;
+}
+
+// copy saved objects into a map's object layers, making an Objects layer for any it saved that the map lacks
+function editorCopyObjects(map, saved)
+{
+    const groups = editorObjectGroups(map.layers);
+    (saved.objects ?? []).forEach((objects, i)=>
+    {
+        (groups[i] ?? editorNewObjectGroup(map)).objects = editorObjectsCopy(objects);
+    });
+    if (saved.nextobjectid > (map.nextobjectid ?? 1))
+        map.nextobjectid = saved.nextobjectid;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

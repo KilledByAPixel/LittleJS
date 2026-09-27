@@ -278,7 +278,6 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
 function objectLayersLoad(tileMapData)
 {
     const made = [];
-    const {height=0, tilewidth=1, tileheight=1} = tileMapData ?? {};
     const addObjects = (dataLayers)=>
     {
         for (const dataLayer of dataLayers || [])
@@ -289,37 +288,46 @@ function objectLayersLoad(tileMapData)
                 continue;
             for (const object of dataLayer.objects || [])
             {
-                const name = object.type || object.class, type = objectLayersTypes.get(name);
-                if (!type)
-                {
-                    debug && console.warn(`objectLayersLoad: no type added for ${name}, skipped`);
-                    continue;
-                }
-
-                // the defaults, each object with its own copy of a Color or Vector2, then its Tiled properties
-                const properties = {};
-                for (const [key, value] of Object.entries(type.defaults))
-                    properties[key] = value?.copy ? value.copy() : value;
-                for (const property of object.properties || [])
-                {
-                    if (property.type !== 'color')
-                        properties[property.name] = property.value;
-                    else if (property.value)
-                        properties[property.name] = tileLayersColor(property.value); // an empty color is unset
-                }
-
-                const pos = vec2(object.x / tilewidth, height - object.y / tileheight);
-                const {make} = type, result = make.prototype ? new make(pos) : make(pos);
-                if (result && typeof result === 'object')
-                {
-                    Object.assign(result, properties);
-                    made.push(result);
-                }
+                const result = objectLayersMake(tileMapData, object);
+                editorObjectMade(tileMapData, dataLayer, object, result); // debug builds link it for the level editor
+                result && made.push(result);
             }
         }
     };
     addObjects(tileMapData?.layers);
     return made;
+}
+
+// the defaults of an object's type, a Color or Vector2 copied for each, then its properties in Tiled over them
+function objectLayersProperties(type, object)
+{
+    const properties = {};
+    for (const [key, value] of Object.entries(type.defaults))
+        properties[key] = value?.copy ? value.copy() : value;
+    for (const property of object.properties || [])
+    {
+        if (property.type !== 'color')
+            properties[property.name] = property.value;
+        else if (property.value)
+            properties[property.name] = tileLayersColor(property.value); // an empty color is unset
+    }
+    return properties;
+}
+
+// make one Tiled object from the type added for its name, undefined when there is no such type or it made nothing
+function objectLayersMake(tileMapData, object)
+{
+    const name = object.type || object.class, type = objectLayersTypes.get(name);
+    if (!type)
+    {
+        debug && console.warn(`objectLayersLoad: no type added for ${name}, skipped`);
+        return;
+    }
+    const {height=0, tilewidth=1, tileheight=1} = tileMapData;
+    const pos = vec2(object.x / tilewidth, height - object.y / tileheight);
+    const {make} = type, result = make.prototype ? new make(pos) : make(pos);
+    if (!result || typeof result !== 'object') return;
+    return Object.assign(result, objectLayersProperties(type, object));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
