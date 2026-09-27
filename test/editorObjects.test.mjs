@@ -434,3 +434,40 @@ test('the properties box leaves a default it has no input for alone, and rounds 
     assert.deepEqual(JSON.parse(run('JSON.stringify([list()[0].properties, made[0].value])')),
         [[{ name: 'value', type: 'int', value: 3 }], 3]);
 });
+
+// minor fixes
+
+test('on an object layer R, M and E leave the tile brush alone, and the key list tells the object controls',
+    async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + 'editorSelectLayer(objects); var before = editorBrush;');
+    assert.deepEqual(['r', 'm', 'e'].map((key)=> typed(engine, key)), [false, false, false]);
+    assert.equal(engine.run('editorBrush === before'), true);
+    assert.equal(engine.run(`editorHelpLines.some((line)=> line.startsWith('Objects layer:'))`), true);
+});
+
+test('an autosave from before objects were in the hash still comes back quietly', async () =>
+{
+    const storage = makeStorage(), saveName = 'LittleJS editor /game/';
+    const first = await loadGame({ localStorage: storage });
+    first.run(fileCode + 'editorPaint(ground, vec2(0, 1), editorTileToGid(4)); editorStrokeEnd();');
+    // the autosave as it was written then: a hash of the tiles alone, and no objects
+    const saves = JSON.parse(storage.items[saveName]);
+    saves[mapKey] = { hash: first.run('editorMapHash(ground.record.original)'), layers: saves[mapKey].layers };
+    storage.items[saveName] = JSON.stringify(saves);
+    const second = await loadGame({ localStorage: storage });
+    second.run(fileCode);
+    assert.deepEqual([...second.run('[ground.record.pending, map.layers[0].data[0], list().length]')], [undefined, 5, 2]);
+});
+
+test('after the game loads its map again, as a restart does, undo moves the new game object', async () =>
+{
+    const { run } = await loadGame();
+    run(objectCode + `editorChangeObjects(objects, (l)=> editorObjectSetPos(objects.record, l[0], vec2(3.5, .5)));
+        editorStrokeEnd();
+        engineObjectsDestroy(); layers = tileLayersLoad(map, undefined, 0, 0); var again = objectLayersLoad(map);`);
+    assert.deepEqual([...run('[again[0].pos.x, again[0].pos.y, objects.instances.get(1) === again[0]]')], [3.5, .5, true]);
+    run('editorUndo()');
+    assert.deepEqual([...run('[again[0].pos.x, again[0].pos.y, again[0].destroyed, coins().length]')], [.5, 1.5, false, 2]);
+});

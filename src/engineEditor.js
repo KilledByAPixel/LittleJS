@@ -198,7 +198,8 @@ function editorMapRestore(map)
     if (!saved) return map;
     if (editorSameData(saved.layers, data) && editorSameData(saved.objects ?? [], objects))
         editorDiscardPending(record);
-    else if (saved.hash !== record.hash || !editorCopyData(data, saved.layers))
+    else if (saved.hash !== record.hash && !(!saved.objects && saved.hash === editorMapHash(data)) ||
+        !editorCopyData(data, saved.layers)) // an autosave from before objects were in the hash matches on its tiles
     {
         record.pending = saved;
         console.warn(`LittleJS editor: ${record.fileName} changed since its autosaved edits, ` +
@@ -1242,6 +1243,7 @@ const editorHelpLines =
     'F: fill · Delete: clear the selection',
     'Ctrl+C / X / V: copy, cut, paste · Ctrl+Z / Y: undo, redo',
     'R, Shift+R: turn · M: mirror · E: erase · G: grid · ?: keys',
+    'Objects layer: left places or selects, drag moves, right picks or box-selects, Delete removes, Ctrl+C / X / V',
 ];
 
 // the hint line, for what is held and whether there is a selection
@@ -1354,7 +1356,7 @@ function editorPanelInit()
         editorElement('div', help, 'margin:2px 0', line);
     button(help, 'Close', ()=> editorHelp = false, '?');
 
-    editorPanelParts = {restart, pending, layerRow, allLayers, palette, brush, properties, status, storage, hint, help, layers: undefined};
+    editorPanelParts = {restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -1489,6 +1491,7 @@ function editorPanelUpdate()
     p.help.style.display = editorHelp ? '' : 'none';
     p.storage.style.display = editorSaveFailed ? '' : 'none';
     p.restart.style.display = levelEditor.onRestart ? '' : 'none';
+    p.turns.style.display = editorObjectLayer ? 'none' : ''; // the tile brush's, not an object layer's
     p.pending.style.display = editorLayer?.record.pending ? '' : 'none';
 
     // the palette, drawn again when the layer or the brush changed, a change makes a new brush
@@ -1515,9 +1518,9 @@ function editorPanelUpdate()
 // with whether Shift is held; one that returns false did nothing, and leaves the key to the browser
 const editorKeys =
 {
-    r: (shift)=> editorBrush = editorStampTurn(editorBrush, shift),
-    m: ()=> editorBrush = editorStampMirror(editorBrush),
-    e: ()=> editorBrush = editorStampTile(0),
+    r: (shift)=> editorObjectLayer ? false : editorBrush = editorStampTurn(editorBrush, shift),
+    m: ()=> editorObjectLayer ? false : editorBrush = editorStampMirror(editorBrush),
+    e: ()=> editorObjectLayer ? false : editorBrush = editorStampTile(0),
     g: ()=> { editorGrid = !editorGrid; },
     '?': ()=> { editorHelp = !editorHelp; },
     f: ()=> editorObjectLayer ? false : editorFill(),
