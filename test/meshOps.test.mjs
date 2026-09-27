@@ -42,6 +42,32 @@ function isClosed(mesh)
     return true;
 }
 
+// closed as the engine checks CSG input: places closer than 1e-4 count as one, since CSG run on its own results can
+// leave slivers that thin, which are no gap
+function isClosedWithin(mesh, distance=1e-4)
+{
+    const m = triangles(mesh), places = [], edges = new Map;
+    const id = (p)=>
+    {
+        let i = places.findIndex(q=> q.distanceSquared(p) < distance * distance);
+        i < 0 && (i = places.push(p) - 1);
+        return i;
+    };
+    for (let t = 0; t < m.indices.length; t += 3)
+    for (let e = 0; e < 3; ++e)
+    {
+        const a = id(m.points[m.indices[t+e]]), b = id(m.points[m.indices[t+(e+1)%3]]);
+        if (a !== b)
+            edges.set(a + ',' + b, (edges.get(a + ',' + b) || 0) + 1);
+    }
+    for (const [edge, count] of edges)
+    {
+        const [a, b] = edge.split(',');
+        if (edges.get(b + ',' + a) !== count) return false;
+    }
+    return edges.size > 0;
+}
+
 const near = (a, b, epsilon=1e-6, message='')=> assert.ok(Math.abs(a - b) < epsilon, `${message} ${a} != ${b}`);
 
 test('the helpers: a plain box is closed and has its volume', () =>
@@ -259,4 +285,38 @@ test('CSG with an open or doubleSided mesh asserts', () =>
     assert.throws(()=> buildBox(1).union(buildLathe([[1, -1], [1, 1]], 8, true, false)), /Assert failed/);
     const open = new Mesh().addQuad(vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 1, 0), vec3(0, 1, 0));
     assert.throws(()=> buildBox(1).intersect(open), /Assert failed/);
+});
+
+test('a row of holes drilled one at a time, each cut on the last, stays closed and ends as one cut of them all', () =>
+{
+    let plate = buildBox(vec3(4, .3, 1)), cutters = new Mesh;
+    for (let k = 0; k < 8; ++k)
+    {
+        const place = vec3(-1.6 + k * 3.2 / 7, 0, 0);
+        plate = plate.subtract(buildCylinder(.25, 1, 16), place); // the debug build asserts its input is closed
+        assert.equal(isClosedWithin(plate), true, 'after hole ' + (k + 1));
+        cutters.combine(buildCylinder(.25, 1, 16), place);
+    }
+    near(volume(plate), volume(buildBox(vec3(4, .3, 1)).subtract(cutters)), 1e-4);
+});
+
+test('rows of overlapping holes drilled one at a time stay closed', () =>
+{
+    for (const sides of [8, 12, 16, 24])
+    for (const spacing of [.15, .2, .3])
+    {
+        let plate = buildBox(vec3(2, .3, 1));
+        for (let k = 0; k < 4; ++k)
+            plate = plate.subtract(buildCylinder(.25, 1, sides), vec3(-.5 + k * spacing, 0, 0));
+        assert.equal(isClosedWithin(plate), true, `sides ${sides} spacing ${spacing}`);
+    }
+});
+
+test('holes drilled one at a time only cut where they are, the plate does not multiply its triangles', () =>
+{
+    let plate = buildBox(vec3(4, .3, 1));
+    for (let k = 0; k < 8; ++k)
+        plate = plate.subtract(buildCylinder(.25, 1, 16), vec3(-1.6 + k * 3.2 / 7, 0, 0));
+    const count = plate.indices.length / 3;
+    assert.ok(count < 3000, 'triangles ' + count); // each hole adds its wall and the cuts around it, about 250
 });

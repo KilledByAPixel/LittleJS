@@ -8139,7 +8139,12 @@ declare module "littlejsengine" {
          *    ones like buildGrid and buildRibbon; the result is closed and indexed, and neither mesh changes
          *  - The faces a cut makes come from the other mesh's surface, turned to face out, with its normals, uvs and
          *    colors, so a smooth cylinder drills a round hole
-         *  - Cuts split triangles, so the result has more of them: build shapes this way at load time, not every frame
+         *  - Parts that overlap must be joined with union to be one solid, not with combine, mirror or spin, which
+         *    leave them overlapping, and CSG then gives a wrong shape
+         *  - Cuts split the triangles near them, so the result has more: a few thousand triangles take tens to a few
+         *    hundred milliseconds, so build shapes this way at load time, not every frame; joining several cutters
+         *    with union and cutting once is quicker than cutting with each in turn
+         *  - Details closer than about 1e-4 are made one, so build a very small part larger and scale it after
          *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
          *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
          *  @return {Mesh}

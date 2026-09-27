@@ -23488,7 +23488,12 @@ class Mesh
      *    ones like buildGrid and buildRibbon; the result is closed and indexed, and neither mesh changes
      *  - The faces a cut makes come from the other mesh's surface, turned to face out, with its normals, uvs and
      *    colors, so a smooth cylinder drills a round hole
-     *  - Cuts split triangles, so the result has more of them: build shapes this way at load time, not every frame
+     *  - Parts that overlap must be joined with union to be one solid, not with combine, mirror or spin, which
+     *    leave them overlapping, and CSG then gives a wrong shape
+     *  - Cuts split the triangles near them, so the result has more: a few thousand triangles take tens to a few
+     *    hundred milliseconds, so build shapes this way at load time, not every frame; joining several cutters
+     *    with union and cutting once is quicker than cutting with each in turn
+     *  - Details closer than about 1e-4 are made one, so build a very small part larger and scale it after
      *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
      *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
      *  @return {Mesh}
@@ -26412,12 +26417,11 @@ function render3DCSGBuild(root, polygons)
     }
 }
 
-// turn the solid a tree bounds inside out
+// turn the solid a tree bounds inside out, its planes facing the other way
 function render3DCSGInvert(root)
 {
     for (const node of render3DCSGNodes(root))
     {
-        node.polygons = node.polygons.map(polygon=> polygon.flipped());
         node.plane &&= {normal: node.plane.normal.scale(-1), w: -node.plane.w};
         [node.front, node.back] = [node.back, node.front];
     }
@@ -26447,40 +26451,72 @@ function render3DCSGClipPolygons(root, polygons)
     return result;
 }
 
-// cut away the parts of a tree's polygons inside another tree's solid
-function render3DCSGClipTo(root, other)
+// the polygons split into the parts inside the box around the other polygons and the parts beyond it, a polygon
+// that reaches into the box cut at its faces, so the cuts made inside it stay inside it; a part on a face, within
+// the epsilon, counts as inside
+function render3DCSGNear(polygons, polygonsOther)
 {
-    for (const node of render3DCSGNodes(root))
-        node.polygons = render3DCSGClipPolygons(other, node.polygons);
+    const lo = vec3(Infinity), hi = vec3(-Infinity);
+    for (const polygon of polygonsOther)
+    for (const {pos} of polygon.vertices)
+    {
+        lo.x = min(lo.x, pos.x); lo.y = min(lo.y, pos.y); lo.z = min(lo.z, pos.z);
+        hi.x = max(hi.x, pos.x); hi.y = max(hi.y, pos.y); hi.z = max(hi.z, pos.z);
+    }
+    // the box's faces as planes facing out, a part in front of any of them is beyond it
+    const near = [], far = [];
+    const faces = [[vec3(1, 0, 0), hi.x], [vec3(-1, 0, 0), -lo.x], [vec3(0, 1, 0), hi.y],
+        [vec3(0, -1, 0), -lo.y], [vec3(0, 0, 1), hi.z], [vec3(0, 0, -1), -lo.z]];
+    for (const polygon of polygons)
+    {
+        let inside = [polygon];
+        for (const [normal, w] of faces)
+        {
+            const next = [];
+            for (const part of inside)
+                render3DCSGSplit({normal, w}, part, next, next, far, next);
+            inside = next;
+        }
+        for (const part of inside) near.push(part);
+    }
+    return [near, far];
 }
 
-// every polygon in a tree
-function render3DCSGAll(root)
+// a function giving a point the first point it was given within distance of it, or the point itself when there is
+// none, through a grid of cells that size, so points closer than distance come out as one
+function render3DCSGPlacer(distance)
 {
-    const polygons = [];
-    for (const node of render3DCSGNodes(root))
-        for (const polygon of node.polygons) polygons.push(polygon);
-    return polygons;
+    const cells = new Map, cellKey = (x, y, z)=> x + ',' + y + ',' + z;
+    return (p)=>
+    {
+        const cx = floor(p.x / distance), cy = floor(p.y / distance), cz = floor(p.z / distance);
+        for (let x = cx - 1; x <= cx + 1; ++x)
+        for (let y = cy - 1; y <= cy + 1; ++y)
+        for (let z = cz - 1; z <= cz + 1; ++z)
+            for (const q of cells.get(cellKey(x, y, z)) || [])
+                if (q.distanceSquared(p) < distance ** 2)
+                    return q;
+        const k = cellKey(cx, cy, cz);
+        cells.has(k) || cells.set(k, []);
+        cells.get(k).push(p);
+        return p;
+    };
 }
 
-// whether an indexed mesh is closed: every edge between two places is run as often one way as the other, so it
-// has an inside
+// whether an indexed mesh is closed around an inside: the areas of a closed surface, each facing out, add up to
+// nothing, and an opening or a face turned the wrong way leaves an area over; CSG run on its own results can leave
+// gaps a few epsilons wide, which come to next to nothing, so a sliver of the whole is allowed
 function render3DMeshIsClosed(mesh)
 {
-    const edges = new Map, indices = mesh.indices, key = (i)=> render3DPlaceKey(mesh.points[i]);
+    const points = mesh.points, indices = mesh.indices;
+    let x = 0, y = 0, z = 0, total = 0;
     for (let t = 0; t < indices.length; t += 3)
-    for (let e = 0; e < 3; ++e)
     {
-        const a = key(indices[t + e]), b = key(indices[t + (e + 1) % 3]);
-        if (a !== b)
-            edges.set(a + '|' + b, (edges.get(a + '|' + b) || 0) + 1);
+        const a = points[indices[t]], n = points[indices[t + 1]].subtract(a).cross(points[indices[t + 2]].subtract(a));
+        x += n.x, y += n.y, z += n.z;
+        total += n.length();
     }
-    for (const [edge, count] of edges)
-    {
-        const [a, b] = edge.split('|');
-        if (edges.get(b + '|' + a) !== count) return false;
-    }
-    return edges.size > 0;
+    return total > 0 && hypot(x, y, z) <= total * 1e-4;
 }
 
 // the triangles of a closed mesh placed by a matrix, as CSG polygons
@@ -26501,27 +26537,20 @@ function render3DCSGPolygons(mesh, matrix)
     return polygons;
 }
 
-// a mesh from CSG polygons: points within the epsilon made one, and each edge given the points other polygons have
+// a mesh from CSG polygons: points close together made one, and each edge given the points other polygons have
 // along it, so neighbors meet at every point with no crack between them; each polygon then as a fan of triangles
 function render3DCSGMesh(polygons)
 {
-    // one point for each place, found in a grid of cells twice the epsilon
-    const cell = RENDER3D_CSG_EPSILON * 2, cells = new Map, places = [];
+    // points within the epsilon made one, the first found standing for the rest; moving one any farther would take
+    // it off its plane by more than the epsilon, and the next cut through it would split it again; a point on an
+    // edge, whose ends may each have moved that far, is looked for a few times that far from its line
+    const reach = RENDER3D_CSG_EPSILON * 4, placer = render3DCSGPlacer(RENDER3D_CSG_EPSILON), places = [];
     const cellKey = (x, y, z)=> x + ',' + y + ',' + z;
     const place = (p)=>
     {
-        const cx = floor(p.x / cell), cy = floor(p.y / cell), cz = floor(p.z / cell);
-        for (let x = cx - 1; x <= cx + 1; ++x)
-        for (let y = cy - 1; y <= cy + 1; ++y)
-        for (let z = cz - 1; z <= cz + 1; ++z)
-            for (const q of cells.get(cellKey(x, y, z)) || [])
-                if (q.distanceSquared(p) < RENDER3D_CSG_EPSILON ** 2)
-                    return q;
-        const k = cellKey(cx, cy, cz);
-        cells.has(k) || cells.set(k, []);
-        cells.get(k).push(p);
-        places.push(p);
-        return p;
+        const q = placer(p);
+        q === p && places.push(p);
+        return q;
     };
     const loops = polygons.map(polygon=>
     {
@@ -26544,7 +26573,7 @@ function render3DCSGMesh(polygons)
         hi = vec3(max(hi.x, p.x), max(hi.y, p.y), max(hi.z, p.z));
     }
     const span = places.length ? max(hi.x - lo.x, hi.y - lo.y, hi.z - lo.z) : 0;
-    const size = max(span / Math.cbrt(places.length || 1), cell), grid = new Map;
+    const size = max(span / Math.cbrt(places.length || 1), reach), grid = new Map;
     const gridKey = (p)=> cellKey(floor((p.x - lo.x) / size), floor((p.y - lo.y) / size), floor((p.z - lo.z) / size));
     for (const p of places)
     {
@@ -26552,9 +26581,6 @@ function render3DCSGMesh(polygons)
         grid.has(k) || grid.set(k, []);
         grid.get(k).push(p);
     }
-    // made one, the ends of an edge and a point on it can each move by up to the epsilon, so a point on an edge is
-    // looked for a few times that far from its line
-    const reach = RENDER3D_CSG_EPSILON * 4;
     const onEdge = (a, b)=>
     {
         // the places strictly between a and b, within reach of the line, in order from a
@@ -26609,42 +26635,39 @@ function render3DCSGMesh(polygons)
 }
 
 // a new mesh of a and b placed by matrix: 0 their union, 1 a with b cut out, 2 what is in both
+// - csg.js's steps with the polygons kept in lists: the trees only tell inside from outside, and only the polygons
+//   that reach into the other mesh's box are cut, one beyond it is all outside and is kept or dropped whole, so a
+//   shape cut again and again only splits where each cut is
+// - the clip twice through the same tree, with a flip between, drops the one of two coplanar faces that would
+//   double up
 function meshCSG(a, b, matrix, operation)
 {
-    const nodeA = new Render3DCSGNode, nodeB = new Render3DCSGNode;
-    render3DCSGBuild(nodeA, render3DCSGPolygons(a));
-    render3DCSGBuild(nodeB, render3DCSGPolygons(b, matrix));
+    const polygonsA = render3DCSGPolygons(a), polygonsB = render3DCSGPolygons(b, matrix);
+    const [nearA, farA] = render3DCSGNear(polygonsA, polygonsB), [nearB, farB] = render3DCSGNear(polygonsB, polygonsA);
+    const treeA = new Render3DCSGNode, treeB = new Render3DCSGNode;
+    render3DCSGBuild(treeA, polygonsA);
+    render3DCSGBuild(treeB, polygonsB);
+    const clip = render3DCSGClipPolygons, flip = (list)=> list.map(polygon=> polygon.flipped());
+    let polygons;
     if (operation === 0)
     {
-        render3DCSGClipTo(nodeA, nodeB);
-        render3DCSGClipTo(nodeB, nodeA);
-        render3DCSGInvert(nodeB);
-        render3DCSGClipTo(nodeB, nodeA);
-        render3DCSGInvert(nodeB);
-        render3DCSGBuild(nodeA, render3DCSGAll(nodeB));
+        // each outside the other
+        polygons = [...farA, ...clip(treeB, nearA), ...farB, ...flip(clip(treeA, flip(clip(treeA, nearB))))];
     }
     else if (operation === 1)
     {
-        render3DCSGInvert(nodeA);
-        render3DCSGClipTo(nodeA, nodeB);
-        render3DCSGClipTo(nodeB, nodeA);
-        render3DCSGInvert(nodeB);
-        render3DCSGClipTo(nodeB, nodeA);
-        render3DCSGInvert(nodeB);
-        render3DCSGBuild(nodeA, render3DCSGAll(nodeB));
-        render3DCSGInvert(nodeA);
+        // a outside b, and b inside a turned to face out
+        render3DCSGInvert(treeA);
+        polygons = [...farA, ...flip(clip(treeB, flip(nearA))), ...clip(treeA, flip(clip(treeA, nearB)))];
     }
     else
     {
-        render3DCSGInvert(nodeA);
-        render3DCSGClipTo(nodeB, nodeA);
-        render3DCSGInvert(nodeB);
-        render3DCSGClipTo(nodeA, nodeB);
-        render3DCSGClipTo(nodeB, nodeA);
-        render3DCSGBuild(nodeA, render3DCSGAll(nodeB));
-        render3DCSGInvert(nodeA);
+        // each inside the other
+        render3DCSGInvert(treeA);
+        render3DCSGInvert(treeB);
+        polygons = [...flip(clip(treeB, flip(nearA))), ...flip(clip(treeA, flip(clip(treeA, nearB))))];
     }
-    return render3DCSGMesh(render3DCSGAll(nodeA));
+    return render3DCSGMesh(polygons);
 }
 
 /**

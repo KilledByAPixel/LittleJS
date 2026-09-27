@@ -31,13 +31,12 @@ function gameInit()
         .subtract(buildBox(vec3(.7, .6, 1)), vec3(.8, .3, 0));
     show(vec3(-4, 1.2, 0), wall, hsl(.08, .3, .6));
 
-    // the classic: a cube and a ball, three bars drilled through
-    const bar = buildCylinder(.7, 3, 24);
+    // the classic: a cube and a ball, three bars joined then drilled through
+    const bar = buildCylinder(.7, 3, 16);
     const turn = (pitch, roll)=> buildMatrix(vec3(), vec3(pitch, 0, roll));
+    const bars = bar.union(bar, turn(PI/2, 0)).union(bar, turn(0, PI/2));
     const classic = buildBox(1.6).intersect(buildSphere(2.1, 24, 12))
-        .subtract(bar)
-        .subtract(bar, turn(PI/2, 0))
-        .subtract(bar, turn(0, PI/2));
+        .subtract(bars);
     show(vec3(0, 1.2, 0), classic, hsl(.55, .6, .6));
 
     // a union: a box and a ball melted together
