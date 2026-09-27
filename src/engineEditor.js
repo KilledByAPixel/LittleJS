@@ -907,9 +907,12 @@ function editorSetObjects(layer, list)
         }
         else if (made && !made.destroyed)
         {
-            if ('pos' in made)
+            // only what the edit changed, so moving an object keeps its health and the rest of its state from play
+            if ('pos' in made && (old.x !== object.x || old.y !== object.y))
                 made.pos = editorObjectPos(record, object);
-            Object.assign(made, objectLayersProperties(type, object));
+            const was = objectLayersProperties(type, old), now = objectLayersProperties(type, object);
+            for (const name in now)
+                editorSameData(was[name], now[name]) || (made[name] = now[name]);
         }
     }
 }

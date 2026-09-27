@@ -494,3 +494,21 @@ test('after the game loads its map again, as a restart does, undo moves the new 
     run('editorUndo()');
     assert.deepEqual([...run('[again[0].pos.x, again[0].pos.y, again[0].destroyed, coins().length]')], [.5, 1.5, false, 2]);
 });
+
+// review 2026-09-26
+
+test('moving an object or setting one property leaves the rest of its state from play alone', async () =>
+{
+    const { run } = await loadGame();
+    run(objectCode + 'made[0].value = 25;'); // changed in play
+    run(`editorChangeObjects(objects, (l)=> editorObjectSetPos(objects.record, l[0], vec2(2.5, .5))); editorStrokeEnd();`);
+    assert.deepEqual([...run('[made[0].pos.x, made[0].value]')], [2.5, 25], 'moved, its value kept');
+    run('made[0].pos = vec2(3, 3);'); // moved in play
+    run(`editorChangeObjects(objects, (l)=> editorObjectSetProperty(l[0], 'tint', hsl(0, 1, .5), hsl(0, 0, 1)));
+        editorStrokeEnd();`);
+    assert.deepEqual([...run('[made[0].pos.x, made[0].value, made[0].tint.g]')], [3, 25, 0], 'only the tint set');
+    run('editorUndo()');
+    assert.deepEqual([...run('[made[0].pos.x, made[0].value, made[0].tint.g]')], [3, 25, 1]);
+    run('editorUndo()');
+    assert.deepEqual([...run('[made[0].pos.x, made[0].value]')], [.5, 25], 'the move undone');
+});
