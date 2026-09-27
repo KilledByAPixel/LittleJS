@@ -25842,6 +25842,9 @@ class FirstPersonCamera3D extends EngineObject3D
         this.fly = false;
         /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
         this.lockPointer = true;
+        /** @property {number} - Speed of a jump in world units a frame, 0 for none; Space or gamepad button 0 jumps
+         *  while it stands on something, a height map or voxel map it collides with, see collideLevel */
+        this.jumpSpeed = 0;
     }
 
     /** Move by velocity3D, and fall by render3D.gravity unless flying, called automatically each frame */
@@ -25877,6 +25880,9 @@ class FirstPersonCamera3D extends EngineObject3D
         const move = vec3(input.x, 0, -input.y).clampLength(1).scale(this.moveSpeed)
             .rotateX(this.fly ? this.pitch : 0).rotateY(this.yaw);
         this.velocity3D = this.fly ? move : vec3(move.x, this.velocity3D.y, move.z);
+        // a jump from the ground, level collision sets what it stands on
+        if (this.jumpSpeed && !this.fly && this.groundObject && (keyWasPressed('Space') || gamepadWasPressed(0)))
+            this.velocity3D.y = this.jumpSpeed;
 
         // the camera sits at the eye, where this frame's physics left it, looking the way it does in its parent's
         // space, since a child's velocity3D moves it in that space too

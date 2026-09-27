@@ -8811,6 +8811,9 @@ declare module "littlejsengine" {
         fly: boolean;
         /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
         lockPointer: boolean;
+        /** @property {number} - Speed of a jump in world units a frame, 0 for none; Space or gamepad button 0 jumps
+         *  while it stands on something, a height map or voxel map it collides with, see collideLevel */
+        jumpSpeed: number;
     }
     /**
      * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter

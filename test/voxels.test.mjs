@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { render3D, Render3DPlugin, HeightMap, VoxelMap, EngineObject3D, Ray3D, TextureInfo, TileInfo, vec2, vec3,
     engineObjectsUpdate }
     from '../dist/littlejs.esm.js';
+import { loadEngine, keyEvent } from './vmEngine.mjs';
 
 // the level in 3D: height maps and voxel maps that draw themselves and that objects collide with
 
@@ -275,4 +276,33 @@ test('render3D.pick lands on a voxel face and on the terrain surface, not their 
     const hit = render3D.pick(new Ray3D(vec3(-1, 10, -1), vec3(0, -1, 0)), [terrain]);
     near(hit.distance, 10 - terrain.getHeight(-1, -1), 1e-9);
     terrain.destroy();
+});
+
+test('a FirstPersonCamera3D with jumpSpeed jumps on Space only while it stands on something', async () =>
+{
+    const { run, handlers } = loadEngine();
+    run('setHeadlessMode(true)');
+    await run('setEngineManualStep(true); engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+    run(`new Render3DPlugin; render3D.gravity = vec3(0, -.02, 0);
+        var map = new VoxelMap(vec3(-4, 0, -4), vec3(8));
+        for (let x = 8; x--;) for (let z = 8; z--;) map.setVoxel(vec3(x, 0, z), 3);
+        var camera = new FirstPersonCamera3D(vec3(0, 6, 0));
+        camera.lockPointer = false; camera.size3D = vec3(.6, 1.6, .6); camera.setCollision(false, false);
+        camera.jumpSpeed = .3;`);
+    // a step with Space pressed, then the pressed state cleared as inputUpdatePost does in a browser, which headless
+    // mode skips, or Space would still read as pressed in the steps after
+    const clear = 'for (const device of inputData) for (const i in device) device[i] &= 1;';
+    const press = ()=>
+    {
+        handlers.keydown(keyEvent('Space'));
+        run('engineStep();' + clear);
+        handlers.keyup(keyEvent('Space'));
+        run(clear);
+    };
+    press(); // in the air, falling
+    assert.ok(run('camera.velocity3D.y') < 0, 'no jump in the air');
+    run('engineStep(120)');
+    assert.equal(run('camera.groundObject === map'), true);
+    press();
+    assert.ok(run('camera.velocity3D.y') > .2, 'jumped from the ground');
 });
