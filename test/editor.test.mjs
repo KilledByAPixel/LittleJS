@@ -1010,3 +1010,43 @@ test('Restart plays on in the session, Escape comes back to the editor', async (
     press(engine, 'Escape');
     assert.equal(engine.run('levelEditor.isOpen'), true);
 });
+
+// saving where the browser lets a page write files: a stand-in for Chrome's file picker that counts picks and keeps
+// what was written
+function filePicker()
+{
+    const picker = { picks: 0, written: [], abort: false };
+    picker.showSaveFilePicker = async (options)=>
+    {
+        ++picker.picks;
+        if (picker.abort) throw { name: 'AbortError' };
+        return { name: options.suggestedName, createWritable: async ()=>
+            ({ write: async (text)=> picker.written.push(text), close: async ()=> {} }) };
+    };
+    return picker;
+}
+
+test('where the browser lets a page write files, Save picks the file once and writes it on each Save after',
+    async () =>
+{
+    const picker = filePicker();
+    const engine = await loadGame({ showSaveFilePicker: picker.showSaveFilePicker });
+    engine.run(mapCode);
+    assert.equal(await engine.run('editorSave(front.record)'), 'written');
+    engine.run('editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();');
+    await engine.run('editorSave(front.record)');
+    assert.deepEqual([picker.picks, picker.written.length], [1, 2]);
+    assert.equal(JSON.parse(picker.written[1]).layers[2].layers[0].data[3], 2, 'the second save has the edit');
+    await engine.run('editorSave(front.record, true)');
+    assert.equal(picker.picks, 2, 'Save As picks again');
+});
+
+test('closing the file picker saves nothing', async () =>
+{
+    const picker = filePicker();
+    picker.abort = true;
+    const engine = await loadGame({ showSaveFilePicker: picker.showSaveFilePicker });
+    engine.run(mapCode);
+    assert.equal(await engine.run('editorSave(front.record)'), undefined);
+    assert.equal(picker.written.length, 0);
+});

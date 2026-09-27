@@ -28579,12 +28579,34 @@ function editorJSONFetched(url, json)
 // a map as Tiled JSON, everything it was loaded with kept, the tile data as the editor left it
 function editorMapJSON(record) { return JSON.stringify(record.map); }
 
-// download a map as Tiled JSON, under the name of the file it came from
-function editorSave(record)
+// save a map as Tiled JSON: where the browser lets a page write files, Chrome and Edge, to a file picked once and
+// written again on each Save after, or picked again with Save As; elsewhere as a download under the name of the
+// file it came from; resolves to how it saved, undefined when the picker was closed
+async function editorSave(record, pickAgain=false)
 {
     if (!record) return;
     editorStrokeEnd();
-    saveText(editorMapJSON(record), record.fileName, 'application/json');
+    const text = editorMapJSON(record), picker = /** @type {any} */ (globalThis).showSaveFilePicker;
+    if (picker)
+    {
+        try
+        {
+            if (pickAgain || !record.fileHandle)
+                record.fileHandle = await picker.call(globalThis, {suggestedName: record.fileName,
+                    types: [{description: 'Tiled JSON', accept: {'application/json': ['.json']}}]});
+            const writable = await record.fileHandle.createWritable();
+            await writable.write(text);
+            await writable.close();
+            return 'written';
+        }
+        catch (error)
+        {
+            if (error?.name === 'AbortError') return; // the picker was closed, nothing saved
+            record.fileHandle = undefined; // a file it could not write, a download instead
+        }
+    }
+    saveText(text, record.fileName, 'application/json');
+    return 'downloaded';
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -29627,7 +29649,13 @@ function editorPanelInit()
     const properties = editorElement('div', editorPanel, 'margin:4px 0;padding:4px;background:#222;border-radius:3px');
 
     const file = row();
-    button(file, 'Save', ()=> editorSave(editorLayer?.record), 'Download the level as Tiled JSON');
+    // Save says so for a moment when it saved, Save As shows where a page can write files
+    const saved = (b, label)=> (result)=> result && (b.textContent = 'Saved', setTimeout(()=> b.textContent = label, 1e3));
+    const save = button(file, 'Save', ()=> editorSave(editorLayer?.record).then(saved(save, 'Save')),
+        'Save, to the file picked the first time, or a download');
+    const saveAs = button(file, 'Save As', ()=> editorSave(editorLayer?.record, true).then(saved(saveAs, 'Save As')),
+        'Save As, to a file picked again');
+    /** @type {any} */ (globalThis).showSaveFilePicker || (saveAs.style.display = 'none');
     button(file, 'Revert', ()=> editorRevert(editorLayer?.record), 'Back to the file, can be undone');
     const storage = editorElement('div', editorPanel, 'color:#f86;margin-top:4px',
         'Autosave failed, storage is full: Save to a file');
