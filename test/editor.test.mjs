@@ -1415,3 +1415,57 @@ test('a selection drag over the panel stops at its edge and ends where it was on
     step(engine);
     assert.deepEqual([...selection(engine)], [0, 0, 1, 1]);
 });
+
+// review 2026-09-26 F4: a file Save wrote is the file from then on
+
+// a game loaded from the file with the picker and storage it shares with others
+async function pickerGame(picker, storage, front)
+{
+    const engine = await loadGame({ localStorage: storage, showSaveFilePicker: picker.showSaveFilePicker });
+    engine.run(fileCode(front));
+    return engine;
+}
+const writtenFront = (picker)=> JSON.parse(picker.written.at(-1)).layers[2].layers[0].data;
+
+test('after Save, edits made since come back on a reload of the saved file, with nothing to apply', async () =>
+{
+    const picker = filePicker(), storage = makeStorage();
+    const first = await pickerGame(picker, storage);
+    first.run('editorPaint(front, vec2(0, 1), editorTileToGid(4)); editorStrokeEnd();');
+    await first.run('editorSave(front.record)');
+    first.run('editorPaint(front, vec2(1, 1), editorTileToGid(5)); editorStrokeEnd();');
+    const second = await pickerGame(picker, storage, writtenFront(picker));
+    assert.equal(second.run('front.record.pending'), undefined);
+    assert.deepEqual([...second.run('frontData')], [5, 6, 3, 0, 0, 0]);
+});
+
+test('after Save, Reset to file goes back to what was saved, and a save of the file as it is drops the autosave',
+    async () =>
+{
+    const picker = filePicker(), storage = makeStorage();
+    const engine = await pickerGame(picker, storage);
+    engine.run('editorPaint(front, vec2(0, 1), editorTileToGid(4)); editorStrokeEnd();');
+    await engine.run('editorSave(front.record)');
+    assert.equal(saved(storage), undefined, 'the file has every edit');
+    engine.run('editorPaint(front, vec2(1, 1), editorTileToGid(5)); editorStrokeEnd(); editorRevert(front.record);');
+    assert.deepEqual([...engine.run('frontData')], [5, 0, 3, 0, 0, 0]);
+});
+
+test('an edit made while Save is writing is kept as an edit the file does not have', async () =>
+{
+    const picker = filePicker(), storage = makeStorage();
+    const engine = await pickerGame(picker, storage);
+    await engine.run(`var saving = editorSave(front.record);
+        editorPaint(front, vec2(1, 1), editorTileToGid(5)); editorStrokeEnd(); saving`);
+    assert.deepEqual(writtenFront(picker), [0, 0, 3, 0, 0, 0]);
+    assert.deepEqual(saved(storage).layers[1], [0, 6, 3, 0, 0, 0]);
+});
+
+test('a download does not change what the file is, the editor can not know it replaced the file', async () =>
+{
+    const storage = makeStorage();
+    const engine = await loadGame({ localStorage: storage });
+    engine.run(fileCode() + 'editorPaint(front, vec2(0, 1), editorTileToGid(4)); editorStrokeEnd(); saveText = ()=> {};');
+    assert.equal(await engine.run('editorSave(front.record)'), 'downloaded');
+    assert.deepEqual(saved(storage).layers[1], [5, 0, 3, 0, 0, 0]);
+});

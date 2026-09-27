@@ -402,6 +402,18 @@ async function editorRememberedFile(record)
 }
 const editorFileKey = (record)=> (globalThis.location?.pathname ?? '') + ' ' + record.key;
 
+// a map as a file Save wrote is the file from then on: Reset to file goes back to it, the autosave keeps only the
+// edits since, and a reload of it has nothing to apply; a download can not say it replaced the file, so it does not
+function editorSetBaseline(record, written)
+{
+    if (record.synthetic) return; // a layer made in code has no file to load it from
+    const data = editorTileLayerData(written.layers);
+    const objects = editorObjectGroups(written.layers).map((group)=> group.objects ?? []);
+    Object.assign(record, {original: data, originalObjects: objects, hash: editorMapHash(data, objects,
+        editorMapLayout(written)), originalSize: {width: written.width, height: written.height}});
+    record.pending || editorAutosave(record); // edits waiting to be applied keep their autosave
+}
+
 // save a map as Tiled JSON: where the browser lets a page write files, Chrome and Edge, to a file picked once and
 // written again on each Save after, even after a reload once the browser gives permission, or picked again with
 // Save As; elsewhere as a download under the name of the file it came from; resolves to how it saved, undefined
@@ -426,6 +438,7 @@ async function editorSave(record, pickAgain=false)
             const writable = await record.fileHandle.createWritable();
             await writable.write(text);
             await writable.close();
+            editorSetBaseline(record, JSON.parse(text));
             return 'written';
         }
         catch (error)
@@ -1749,7 +1762,7 @@ function editorPanelInit()
     resize.onclick = resizeLevel;
     const reset = editorElement('button', advanced, 'width:100%;padding:3px;cursor:pointer;margin-top:4px',
         'Reset to file');
-    reset.title = 'Put the level back to the file it was loaded from, can be undone';
+    reset.title = 'Put the level back to the file it was loaded from, or last saved to, can be undone';
     reset.onclick = ()=> { editorRevert(editorLayer?.record); reset.blur(); };
     const storage = editorElement('div', editorPanel, 'color:#f86;margin-top:4px',
         'Autosave failed, storage is full: Save to a file');
