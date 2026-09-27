@@ -8665,6 +8665,24 @@ declare module "littlejsengine" {
          *  @param {Vector3} oldPos - Where it was before it moved
          *  @ignore */
         levelCollide3D(o: EngineObject3D, oldPos: Vector3): void;
+        /** The first block a ray hits, walking the grid cell by cell: its distance along the ray, its cell, the normal of
+         *  the face it comes in through, which a new block goes against, and its type
+         *  - A ray that starts inside a block hits it at 0, its normal back along the ray
+         *  @param {Ray3D} ray - Its distance is in the ray's own units, as the other raycasts
+         *  @param {number} [maxDistance]
+         *  @param {function(number, Vector3): boolean} [test] - (type, cell) says which blocks count, every block by default
+         *  @return {{distance: number, cell: Vector3, normal: Vector3, type: number}|undefined} */
+        raycast(ray: Ray3D, maxDistance?: number, test?: (arg0: number, arg1: Vector3) => boolean): {
+            distance: number;
+            cell: Vector3;
+            normal: Vector3;
+            type: number;
+        };
+        /** How far along a ray the first block is, for picking, see raycast
+         *  @param {Ray3D} ray
+         *  @return {number|undefined}
+         *  @ignore */
+        levelRaycast3D(ray: Ray3D): number | undefined;
         /** Draw the chunks, each at its center, with the whole texture so each face shows its own tile
          *  @param {boolean} transparent
          *  @ignore */

@@ -3733,7 +3733,10 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
 // its own space, or a sprite as the quad it draws, not triangle by triangle
 function render3DRaycastObject(ray, o)
 {
-    if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) return;
+    if (o.destroyed || !(o instanceof EngineObject3D)) return;
+    // a height map or voxel map is hit on its surface, not its box
+    if (o instanceof HeightMap || o instanceof VoxelMap) return o.levelRaycast3D(ray);
+    if (!(o.mesh || o.tileInfo)) return;
     if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
     const matrix = render3DObjectMatrix(o), mesh = o.mesh;
     if (!mesh) return render3DRaycastSprite(ray, o, matrix);

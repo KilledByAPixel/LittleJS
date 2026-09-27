@@ -1428,6 +1428,19 @@ terrain.raycast(ray)                          // distance along a ray to where i
 terrain.getColor(pos3D) or (x, z)             // nearest sample color
 terrain.rows terrain.columns                  // samples along Z and X
 
+// Voxel map - a 3D tile map, from the render3dVoxels plugin
+const map = new VoxelMap(pos3D=vec3(), mapSize=vec3(16), tileInfo=tile()) // a grid of blocks that draws itself and
+        // that objects with collideLevel collide with; pos3D is its corner and a cell is 1 unit, it stays upright
+map.setVoxel(cell, type) / map.getVoxel(cell) // type 1-255 shows that tile on every face, 0 is empty, a cell outside
+                                              // the map is ignored and reads 0
+map.setBlockType(type, faces, {seeThrough, transparent}) // faces: a tile, six (+x, -x, +y, -y, +z, -z), or
+        // {top, side, bottom}; seeThrough for holes like leaves, transparent to blend like water, drawn after the rest
+map.raycast(ray, maxDistance, test)           // {distance, cell, normal, type} of the first block a ray hits, or
+                                              // undefined; test(type, cell) says which blocks count
+map.data / map.rebuild()                      // the Uint8Array of types, x + mapSize.x*(y + mapSize.y*z); rebuild
+                                              // after editing it directly
+map.ambientOcclusion = true                   // darken corners where blocks meet, rebuild after changing it
+
 // OBJ meshes - v, vt, vn and f lines, convex polygons, no materials
 parseOBJ(text, smooth)                        // Mesh from OBJ text, smooth normals when the file has none
 await loadOBJ(url, smooth) // fetch then parse, in an async gameInit; chain .center().fit(size) for models of unknown

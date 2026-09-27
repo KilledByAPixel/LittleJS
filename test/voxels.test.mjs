@@ -223,3 +223,56 @@ test('a wall stops a sideways move, a ceiling stops a rise, and collideWithVoxel
     render3D.gravity = vec3();
     walker.destroy(); jumper.destroy(); diver.destroy(); map.destroy();
 });
+
+test('a raycast finds the block, the face it came in through and the distance, both ways down each axis', () =>
+{
+    const map = new VoxelMap(vec3(10, 0, 0), vec3(8));
+    map.setVoxel(vec3(4, 4, 4), 3); // world 14..15, 4..5, 4..5
+    const cases = [
+        [vec3(5, 4.5, 4.5), vec3(1, 0, 0), 9, vec3(-1, 0, 0)],
+        [vec3(20, 4.5, 4.5), vec3(-1, 0, 0), 5, vec3(1, 0, 0)],
+        [vec3(14.5, 20, 4.5), vec3(0, -1, 0), 15, vec3(0, 1, 0)],
+        [vec3(14.5, -3, 4.5), vec3(0, 1, 0), 7, vec3(0, -1, 0)],
+        [vec3(14.5, 4.5, 9), vec3(0, 0, -1), 4, vec3(0, 0, 1)],
+        [vec3(14.5, 4.5, 1), vec3(0, 0, 1), 3, vec3(0, 0, -1)],
+    ];
+    for (const [origin, direction, distance, normal] of cases)
+    {
+        const hit = map.raycast(new Ray3D(origin, direction));
+        assert.ok(hit, 'hit from ' + origin);
+        near(hit.distance, distance);
+        assert.deepEqual([hit.cell.x, hit.cell.y, hit.cell.z, hit.type], [4, 4, 4, 3]);
+        assert.deepEqual([hit.normal.x, hit.normal.y, hit.normal.z], [normal.x, normal.y, normal.z]);
+    }
+    assert.equal(map.raycast(new Ray3D(vec3(5, 4.5, 4.5), vec3(1, 0, 0)), 8), undefined, 'out of reach');
+    map.destroy();
+});
+
+test('a raycast can look through water, starts inside a block at 0, and a ray with no direction or wide of it misses', () =>
+{
+    const map = new VoxelMap(vec3(), vec3(8));
+    map.setVoxel(vec3(2, 1, 1), 6);
+    map.setVoxel(vec3(4, 1, 1), 3);
+    const ray = new Ray3D(vec3(0, 1.5, 1.5), vec3(1, 0, 0));
+    assert.equal(map.raycast(ray).type, 6);
+    assert.equal(map.raycast(ray, Infinity, (type)=> type !== 6).type, 3);
+    near(map.raycast(new Ray3D(vec3(4.5, 1.5, 1.5), vec3(0, 1, 0))).distance, 0);
+    assert.equal(map.raycast(new Ray3D(vec3(1, 1.5, 1.5), vec3())), undefined);
+    assert.equal(map.raycast(new Ray3D(vec3(0, 20, 1.5), vec3(1, 0, 0))), undefined, 'parallel above the map');
+    map.destroy();
+});
+
+test('render3D.pick lands on a voxel face and on the terrain surface, not their boxes', () =>
+{
+    const map = new VoxelMap(vec3(), vec3(8));
+    map.setVoxel(vec3(3, 0, 3), 3);
+    const down = new Ray3D(vec3(3.5, 10, 3.5), vec3(0, -1, 0));
+    near(render3D.pick(down, [map]).distance, 9);
+    assert.equal(render3D.pick(new Ray3D(vec3(.5, 10, .5), vec3(0, -1, 0)), [map]), undefined, 'empty cells are no hit');
+    map.destroy();
+
+    const terrain = new HeightMap([[0, 0], [0, 1]], vec2(4), 2);
+    const hit = render3D.pick(new Ray3D(vec3(-1, 10, -1), vec3(0, -1, 0)), [terrain]);
+    near(hit.distance, 10 - terrain.getHeight(-1, -1), 1e-9);
+    terrain.destroy();
+});

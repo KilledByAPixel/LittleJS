@@ -316,6 +316,79 @@ class VoxelMap extends EngineObject3D
         p.set(place.x, place.y, place.z);
     }
 
+    /** The first block a ray hits, walking the grid cell by cell: its distance along the ray, its cell, the normal of
+     *  the face it comes in through, which a new block goes against, and its type
+     *  - A ray that starts inside a block hits it at 0, its normal back along the ray
+     *  @param {Ray3D} ray - Its distance is in the ray's own units, as the other raycasts
+     *  @param {number} [maxDistance]
+     *  @param {function(number, Vector3): boolean} [test] - (type, cell) says which blocks count, every block by default
+     *  @return {{distance: number, cell: Vector3, normal: Vector3, type: number}|undefined} */
+    raycast(ray, maxDistance=Infinity, test=()=> true)
+    {
+        const s = this.mapSize, o = ray.origin.subtract(this.pos3D), d = ray.direction, axes = ['x', 'y', 'z'];
+        if (!d.lengthSquared()) return;
+
+        // where it enters the map's box, the axis of the face it comes in through, or where it starts inside it
+        let enter = 0, exit = maxDistance, entryAxis = -1;
+        for (let k = 0; k < 3; ++k)
+        {
+            const a = axes[k], dk = d[a], ok = o[a];
+            if (!dk)
+            {
+                if (ok < 0 || ok > s[a]) return; // alongside the map, never in it
+                continue;
+            }
+            let t0 = -ok / dk, t1 = (s[a] - ok) / dk;
+            if (t0 > t1) [t0, t1] = [t1, t0];
+            if (t0 > enter) enter = t0, entryAxis = k;
+            exit = min(exit, t1);
+        }
+        if (enter > exit) return;
+
+        // walk the cells, stepping across whichever cell edge comes next
+        const start = o.add(d.scale(enter)), cell = [], step = [], next = [], delta = [];
+        for (let k = 0; k < 3; ++k)
+        {
+            const a = axes[k], dk = d[a];
+            cell[k] = clamp(floor(start[a]), 0, s[a] - 1);
+            step[k] = sign(dk);
+            next[k] = dk ? enter + (cell[k] + (dk > 0 ? 1 : 0) - start[a]) / dk : Infinity;
+            delta[k] = dk ? abs(1 / dk) : Infinity;
+        }
+        const normalOn = (k)=> vec3(k === 0 ? -step[0] : 0, k === 1 ? -step[1] : 0, k === 2 ? -step[2] : 0);
+        let normal, t = enter;
+        if (entryAxis >= 0)
+            normal = normalOn(entryAxis);
+        else
+        {
+            // starting inside, the normal faces back along the ray's strongest axis
+            const k = abs(d.x) >= abs(d.y) && abs(d.x) >= abs(d.z) ? 0 : abs(d.y) >= abs(d.z) ? 1 : 2;
+            normal = normalOn(k);
+        }
+        while (t <= maxDistance)
+        {
+            const type = this.data[cell[0] + s.x * (cell[1] + s.y * cell[2])];
+            if (type)
+            {
+                const at = vec3(cell[0], cell[1], cell[2]);
+                if (test(type, at))
+                    return {distance: t, cell: at, normal, type};
+            }
+            const k = next[0] < next[1] ? (next[0] < next[2] ? 0 : 2) : (next[1] < next[2] ? 1 : 2);
+            t = next[k];
+            cell[k] += step[k];
+            if (cell[k] < 0 || cell[k] >= s[axes[k]]) return;
+            next[k] += delta[k];
+            normal = normalOn(k);
+        }
+    }
+
+    /** How far along a ray the first block is, for picking, see raycast
+     *  @param {Ray3D} ray
+     *  @return {number|undefined}
+     *  @ignore */
+    levelRaycast3D(ray) { return this.raycast(ray)?.distance; }
+
     /** Keeps an eye on its placement, called automatically each frame */
     update()
     {
