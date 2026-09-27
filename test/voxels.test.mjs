@@ -149,3 +149,77 @@ test('setting a block builds only its chunk, and the chunk beside it when it is 
     assert.deepEqual(built, [], 'nothing changed, nothing built');
     map.destroy();
 });
+
+// a map with a floor of stone at y 0 across it, placed off the origin, and a body above it
+function floorMap()
+{
+    const map = new VoxelMap(vec3(-8, 2, -8), vec3(16, 8, 16));
+    for (let x = 16; x--;)
+    for (let z = 16; z--;)
+        map.setVoxel(vec3(x, 0, z), 3);
+    return map;
+}
+const step = (frames)=> { for (let i = 0; i < frames; ++i) engineObjectsUpdate(); };
+
+test('a body falls onto a voxel floor and rests on it, grounded every frame', () =>
+{
+    const map = floorMap(), body = new EngineObject3D(vec3(.5, 8, .5));
+    body.size3D = vec3(.8);
+    body.setCollision(false, false);
+    body.mass = 1;
+    render3D.gravity = vec3(0, -.02, 0);
+    step(120);
+    near(body.pos3D.y, 2 + 1 + .4, 2e-3, 'on the floor top, which is the map corner plus one cell');
+    for (let i = 0; i < 30; ++i)
+    {
+        step(1);
+        assert.equal(body.groundObject, map, 'grounded at frame ' + i);
+    }
+    near(body.pos3D.y, 2 + 1 + .4, 2e-3, 'still there, no sinking');
+
+    // a point with no size, the first person camera's default, rests on it too
+    const point = new EngineObject3D(vec3(2.5, 6, 2.5));
+    point.size3D = vec3();
+    point.setCollision(false, false);
+    point.mass = 1;
+    step(120);
+    near(point.pos3D.y, 3, 2e-3);
+    render3D.gravity = vec3();
+    body.destroy(); point.destroy(); map.destroy();
+});
+
+test('a wall stops a sideways move, a ceiling stops a rise, and collideWithVoxel can let a block through', () =>
+{
+    const map = floorMap();
+    for (let y = 1; y < 4; ++y)
+        map.setVoxel(vec3(12, y, 8), 3); // a wall cell at world x 4..5
+    map.setVoxel(vec3(8, 3, 4), 3);       // a ceiling cell at world y 5..6 above (0.5, *, -3.5)
+    map.setVoxel(vec3(4, 1, 4), 6);       // water on the floor at world (-3.5, 3.5, -3.5)
+
+    const walker = new EngineObject3D(vec3(2.5, 3.5, .5));
+    walker.size3D = vec3(1);
+    walker.setCollision(false, false);
+    walker.mass = 1;
+    walker.velocity3D = vec3(.3, 0, 0);
+    for (let i = 0; i < 20; ++i) { walker.velocity3D.x = .3; step(1); }
+    assert.ok(walker.pos3D.x + .5 <= 4 + 1e-6, 'stopped at the wall, x ' + walker.pos3D.x);
+
+    const jumper = new EngineObject3D(vec3(.5, 3.5, -3.5));
+    jumper.size3D = vec3(1);
+    jumper.setCollision(false, false);
+    jumper.mass = 1;
+    jumper.velocity3D = vec3(0, .5, 0);
+    step(3);
+    assert.ok(jumper.pos3D.y + .5 <= 5 + 1e-6, 'stopped under the ceiling, y ' + jumper.pos3D.y);
+
+    const diver = new EngineObject3D(vec3(-3.5, 7, -3.5));
+    diver.size3D = vec3(.8);
+    diver.setCollision(false, false);
+    diver.mass = 1;
+    diver.collideWithVoxel = (type)=> type !== 6; // swims through water
+    render3D.gravity = vec3(0, -.02, 0);
+    step(150);
+    near(diver.pos3D.y, 3 + .4, 2e-3, 'through the water to the floor under it');
+    render3D.gravity = vec3();
+    walker.destroy(); jumper.destroy(); diver.destroy(); map.destroy();
+});

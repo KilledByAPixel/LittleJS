@@ -253,6 +253,69 @@ class VoxelMap extends EngineObject3D
         return t;
     }
 
+    /** Whether a box hits a block that stops the object, see EngineObject3D.collideWithVoxel
+     *  @param {Vector3} pos - Center of the box in the world
+     *  @param {Vector3} size
+     *  @param {EngineObject3D} o
+     *  @return {boolean}
+     *  @ignore */
+    boxBlocked(pos, size, o)
+    {
+        // the cells the box is in, one only touching a cell's face is not in it
+        const m = this.pos3D, s = this.mapSize, tiny = 1e-9;
+        const x0 = max(floor(pos.x - size.x / 2 - m.x + tiny), 0), x1 = min(ceil(pos.x + size.x / 2 - m.x - tiny) - 1, s.x - 1);
+        const y0 = max(floor(pos.y - size.y / 2 - m.y + tiny), 0), y1 = min(ceil(pos.y + size.y / 2 - m.y - tiny) - 1, s.y - 1);
+        const z0 = max(floor(pos.z - size.z / 2 - m.z + tiny), 0), z1 = min(ceil(pos.z + size.z / 2 - m.z - tiny) - 1, s.z - 1);
+        for (let z = z0; z <= z1; ++z)
+        for (let y = y0; y <= y1; ++y)
+        for (let x = x0; x <= x1; ++x)
+        {
+            const type = this.data[x + s.x * (y + s.y * z)];
+            if (type && o.collideWithVoxel(type, vec3(x, y, z)))
+                return true;
+        }
+        return false;
+    }
+
+    /** Keep an object out of the blocks, one axis at a time as 2D tiles do, called by the engine for each object with
+     *  collideLevel; a sphere collides as its box, and one moving more than about a cell a frame can pass through
+     *  @param {EngineObject3D} o
+     *  @param {Vector3} oldPos - Where it was before it moved
+     *  @ignore */
+    levelCollide3D(o, oldPos)
+    {
+        const k = o.scale3D, size = vec3(o.size3D.x * abs(k.x), o.size3D.y * abs(k.y), o.size3D.z * abs(k.z));
+        const p = o.pos3D;
+        if (!this.boxBlocked(p, size, o)) return;
+
+        // from where it was, each axis alone, y first so a landing wins; a blocked axis goes flush against the block
+        // it ran into, or stays where it was, and its speed bounces by the restitution
+        const v = o.velocity3D, m = this.pos3D, epsilon = 1e-3, restitution = max(o.restitution, this.restitution);
+        const place = oldPos.copy();
+        for (const axis of ['y', 'x', 'z'])
+        {
+            const moved = place.copy();
+            moved[axis] = p[axis];
+            if (!this.boxBlocked(moved, size, o))
+            {
+                place[axis] = p[axis];
+                continue;
+            }
+            const half = size[axis] / 2, move = p[axis] - oldPos[axis];
+            if (move)
+            {
+                moved[axis] = move < 0 ? m[axis] + floor(p[axis] - half - m[axis]) + 1 + half + epsilon :
+                    m[axis] + ceil(p[axis] + half - m[axis]) - 1 - half - epsilon;
+                if (!this.boxBlocked(moved, size, o))
+                    place[axis] = moved[axis];
+            }
+            if (axis === 'y' && move < 0)
+                o.groundObject = this;
+            v[axis] *= -restitution;
+        }
+        p.set(place.x, place.y, place.z);
+    }
+
     /** Keeps an eye on its placement, called automatically each frame */
     update()
     {

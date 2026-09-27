@@ -8652,6 +8652,19 @@ declare module "littlejsengine" {
          *  @return {TileInfo}
          *  @ignore */
         tileOf(index: number): TileInfo;
+        /** Whether a box hits a block that stops the object, see EngineObject3D.collideWithVoxel
+         *  @param {Vector3} pos - Center of the box in the world
+         *  @param {Vector3} size
+         *  @param {EngineObject3D} o
+         *  @return {boolean}
+         *  @ignore */
+        boxBlocked(pos: Vector3, size: Vector3, o: EngineObject3D): boolean;
+        /** Keep an object out of the blocks, one axis at a time as 2D tiles do, called by the engine for each object with
+         *  collideLevel; a sphere collides as its box, and one moving more than about a cell a frame can pass through
+         *  @param {EngineObject3D} o
+         *  @param {Vector3} oldPos - Where it was before it moved
+         *  @ignore */
+        levelCollide3D(o: EngineObject3D, oldPos: Vector3): void;
         /** Draw the chunks, each at its center, with the whole texture so each face shows its own tile
          *  @param {boolean} transparent
          *  @ignore */
