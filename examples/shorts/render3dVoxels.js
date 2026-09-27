@@ -1,14 +1,12 @@
-// a little voxel world: walk, jump, dig and build
-
 const names = ['Grass','Dirt','Stone','Wood','Leaves','Water','Glass'];
 let map, player, hit, selected = 1;
 
-// draw the block textures into a sheet of 8 tiles, 16 pixels each
+// draw block textures into a small tile sheet, 16 pixels each
 function makeTiles()
 {
     const context = createCanvasContext(128, 16);
-    const colors = [hsl(.3,.6,.45), hsl(.08,.4,.35), hsl(.08,.4,.35),
-        hsl(0,0,.5), hsl(.08,.5,.3), hsl(.3,.6,.35), hsl(.58,.8,.5,.6),
+    const colors = [hsl(.3,.6,.45), hsl(.1,.4,.35), hsl(.1,.4,.35),
+        hsl(0,0,.5), hsl(.1,.5,.3), hsl(.3,.6,.35), hsl(.6,.8,.5,.6),
         hsl(.55,.3,.9,.3)];
     for (let i = 8; i--;)
     for (let y = 16; y--;)
@@ -43,14 +41,12 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky();
     render3D.gravity = vec3(0, -.01, 0);
-    const size = vec3(50);
-    map = new VoxelMap(vec3(), size,
-        tile(0, 16, makeTiles()));
+    map = new VoxelMap(vec3(), vec3(50), tile(0, 16, makeTiles()));
     map.setBlockType(1, {top:0, side:1, bottom:2});
     for (let i = 5; i < 8; ++i)
-        map.setBlockType(i, i, {seeThrough: i == 5, transparent: i > 5});
+        map.setBlockType(i, i, {seeThrough: i==5, transparent: i>5});
 
-    // rolling hills of grass over dirt over stone, water in the low parts
+    // rolling hills of grass over dirt over stone, water in low parts
     for (let x = 48; x--;)
     for (let z = 48; z--;)
     {
@@ -63,10 +59,9 @@ function gameInit()
             tree(x, h+1, z);
     }
 
-    player = new FirstPersonCamera3D(vec3(size.x/2, 10, size.z/2));
+    player = new FirstPersonCamera3D(vec3(25, 9, 25));
     player.setCollision();
     player.size3D = vec3(.5, 1.5, .5);
-    player.moveSpeed = .1;
     player.jumpSpeed = .2;
 
     // outline block under the crosshair
@@ -80,9 +75,9 @@ function gameUpdate()
         if (keyWasPressed('Digit' + (i+1)))
             selected = i + 1;
 
-    // the block in the middle of the view, looking through water
+    // get the block in the middle of the view
     const ray = render3D.screenToRay(mainCanvasSize.scale(.5));
-    hit = map.raycast(ray, 6, (type)=> type != 6);
+    hit = map.raycast(ray, 6, (type)=> type != 6); // ignore water
     if (!hit || !pointerLockIsActive()) return;
     if (mouseWasPressed(0))
         map.setVoxel(hit.cell, 0);
@@ -91,7 +86,8 @@ function gameUpdate()
         // place against the face, unless it would be in the player
         const cell = hit.cell.add(hit.normal);
         const center = map.pos3D.add(cell).add(vec3(.5));
-        if (!isOverlapping3D(center, vec3(1), player.pos3D, player.size3D))
+        const pos = player.pos3D, size = player.size3D;
+        if (!isOverlapping3D(center, vec3(1), pos, size))
             map.setVoxel(cell, selected);
     }
 }
@@ -100,7 +96,8 @@ function gameRenderPost()
 {
     // crosshair and the selected block
     const center = mainCanvasSize.scale(.5);
-    drawCircle(center, 12, CLEAR_BLACK, 1, WHITE, true, true);
+    drawRect(center, vec2(2,20), WHITE, 0, true, true);
+    drawRect(center, vec2(20,2), WHITE, 0, true, true);
     const selectedName = selected + ' ' + names[selected-1];
     drawTextScreen(selectedName, vec2(center.x, mainCanvasSize.y - 40), 40);
 }
