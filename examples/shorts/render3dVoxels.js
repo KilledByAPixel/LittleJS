@@ -17,7 +17,7 @@ function makeTiles()
         let color = colors[i].scale(rand(.85, 1.1), 1);
         if (i == 1 && y < 4 + rand(2)) color = colors[0]; // grass edge
         if (i == 5 && rand() < .3) color = CLEAR_BLACK;   // leaf holes
-        if (i == 7 && !(x%15 && y%15)) color = WHITE;      // glass rim
+        if (i == 7 && !(x%15 && y%15)) color = WHITE;     // glass rim
         context.fillStyle = color.toString();
         context.fillRect(i*16 + x, y, 1, 1);
     }
@@ -42,9 +42,9 @@ function gameInit()
 {
     new Render3DPlugin;
     render3D.setSky();
-    render3D.gravity = vec3(0, -.012, 0);
-    const size = vec3(48, 24, 48);
-    map = new VoxelMap(size.scale(-.5).multiply(vec3(1,0,1)), size,
+    render3D.gravity = vec3(0, -.01, 0);
+    const size = vec3(50);
+    map = new VoxelMap(vec3(), size,
         tile(0, 16, makeTiles()));
     map.setBlockType(1, {top:0, side:1, bottom:2});
     for (let i = 5; i < 8; ++i)
@@ -56,22 +56,22 @@ function gameInit()
     {
         const h = 6 + 3*sin(x/7) + 3*cos(z/9) | 0;
         for (let y = 0; y <= h; ++y)
-            map.setVoxel(vec3(x, y, z), y == h ? 1 : y > h-3 ? 2 : 3);
+            map.setVoxel(vec3(x,y,z), y==h ? 1 : y>h-3 ? 2 : 3);
         for (let y = h+1; y < 6; ++y)
-            map.setVoxel(vec3(x, y, z), 6);
+            map.setVoxel(vec3(x,y,z), 6);
         if (h > 7 && rand() < .01)
             tree(x, h+1, z);
     }
 
-    player = new FirstPersonCamera3D(vec3(0, 20, 0));
-    player.size3D = vec3(.6, 1.6, .6);
-    player.setCollision(false, false); // the level only
-    player.moveSpeed = .08;
-    player.jumpSpeed = .22;
+    player = new FirstPersonCamera3D(vec3(size.x/2, 10, size.z/2));
+    player.setCollision();
+    player.size3D = vec3(.5, 1.5, .5);
+    player.moveSpeed = .1;
+    player.jumpSpeed = .2;
 
-    // outline the block under the crosshair
+    // outline block under the crosshair
     render3D.onRenderTransparent = ()=> hit && render3D.drawBox(
-        map.pos3D.add(hit.cell).add(vec3(.5)), 1.02, hsl(0,0,1,.25));
+        map.pos3D.add(hit.cell).add(vec3(.5)), 1.02, hsl(0,0,1,.5));
 }
 
 function gameUpdate()
@@ -101,10 +101,7 @@ function gameRenderPost()
 {
     // crosshair and the selected block
     const center = mainCanvasSize.scale(.5);
-    drawRect(center, vec2(12, 2), WHITE, 0, false, true);
-    drawRect(center, vec2(2, 12), WHITE, 0, false, true);
-    drawTextScreen(selected + ' ' + names[selected-1],
-        vec2(center.x, mainCanvasSize.y - 40), 40);
-    drawTextScreen('Click to look, WASD Space, left dig, right build',
-        vec2(center.x, 30), 24);
+    drawCircle(center, 12, CLEAR_BLACK, 1, WHITE, true, true);
+    const selectedName = selected + ' ' + names[selected-1];
+    drawTextScreen(selectedName, vec2(center.x, mainCanvasSize.y - 40), 40);
 }
