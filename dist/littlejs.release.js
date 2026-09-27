@@ -23477,6 +23477,31 @@ class Mesh
         return mesh;
     }
 
+    /** Returns a new mesh of everything in this mesh or the other, see subtract
+     *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
+     *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
+     *  @return {Mesh} */
+    union(mesh, matrix) { return meshCSG(this, mesh, matrix, 0); }
+
+    /** Returns a new mesh of this one with the other cut out of it, CSG with BSP trees
+     *  - Both must be closed, every edge shared by two triangles, as the builders make them apart from the open
+     *    ones like buildGrid and buildRibbon; the result is closed and indexed, and neither mesh changes
+     *  - The faces a cut makes come from the other mesh's surface, turned to face out, with its normals, uvs and
+     *    colors, so a smooth cylinder drills a round hole
+     *  - Cuts split triangles, so the result has more of them: build shapes this way at load time, not every frame
+     *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
+     *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
+     *  @return {Mesh}
+     *  @example
+     *  const wall = buildBox(vec3(4, 3, .5)).subtract(buildBox(vec3(1, 2, 1)), vec3(0, -.5, 0)); // a doorway */
+    subtract(mesh, matrix) { return meshCSG(this, mesh, matrix, 1); }
+
+    /** Returns a new mesh of only what is in both this mesh and the other, see subtract
+     *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
+     *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
+     *  @return {Mesh} */
+    intersect(mesh, matrix) { return meshCSG(this, mesh, matrix, 2); }
+
     /** Scale every uv, so a whole texture repeats across the mesh when its TextureInfo wraps
      *  @param {Vector2|number} scale - Repeats across and up, a number for both
      *  @return {Mesh} */
@@ -26268,6 +26293,358 @@ async function loadOBJ(url, smooth=render3D?.smoothShading)
     if (!response.ok)
         throw new Error('loadOBJ failed: ' + url);
     return parseOBJ(await response.text(), smooth);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// CSG: union, subtract and intersect of closed meshes with BSP trees, after Evan Wallace's csg.js (MIT license);
+// the trees are walked with stacks, so a deep one can not overflow the call stack
+
+const RENDER3D_CSG_EPSILON = 1e-5; // closer than this to a plane counts as on it
+
+// a vertex of a CSG polygon, its values lerped where a cut splits an edge
+class Render3DCSGVertex
+{
+    constructor(pos, normal, uv, color) { this.pos = pos; this.normal = normal; this.uv = uv; this.color = color; }
+    lerp(v, t)
+    { return new Render3DCSGVertex(this.pos.lerp(v.pos, t), this.normal.lerp(v.normal, t), this.uv.lerp(v.uv, t), this.color.lerp(v.color, t)); }
+    flipped() { return new Render3DCSGVertex(this.pos, this.normal.scale(-1), this.uv, this.color); }
+}
+
+// a convex polygon, its vertices counter clockwise from the front, and the plane it lies on
+class Render3DCSGPolygon
+{
+    constructor(vertices, plane) { this.vertices = vertices; this.plane = plane; }
+    flipped()
+    {
+        const plane = {normal: this.plane.normal.scale(-1), w: -this.plane.w};
+        return new Render3DCSGPolygon(this.vertices.map(v=> v.flipped()).reverse(), plane);
+    }
+}
+
+// a node of a BSP tree: a plane, the polygons that lie on it, and the trees in front of and behind it
+class Render3DCSGNode
+{
+    constructor()
+    {
+        this.plane = undefined;
+        this.front = undefined;
+        this.back = undefined;
+        this.polygons = [];
+    }
+}
+
+// the plane through three points, facing the side they run counter clockwise from, undefined when they are in a line
+function render3DCSGPlane(a, b, c)
+{
+    const n = b.subtract(a).cross(c.subtract(a));
+    if (n.lengthSquared() < 1e-20) return;
+    const normal = n.normalize();
+    return {normal, w: normal.dot(a)};
+}
+
+// sort a polygon against a plane into the lists, cutting it in two when it spans the plane
+function render3DCSGSplit(plane, polygon, coplanarFront, coplanarBack, front, back)
+{
+    const COPLANAR = 0, FRONT = 1, BACK = 2, SPANNING = 3;
+    const {normal, w} = plane, vertices = polygon.vertices, types = [];
+    let polygonType = COPLANAR;
+    for (const v of vertices)
+    {
+        const t = normal.dot(v.pos) - w;
+        const type = t < -RENDER3D_CSG_EPSILON ? BACK : t > RENDER3D_CSG_EPSILON ? FRONT : COPLANAR;
+        polygonType |= type;
+        types.push(type);
+    }
+    if (polygonType === COPLANAR)
+        (normal.dot(polygon.plane.normal) > 0 ? coplanarFront : coplanarBack).push(polygon);
+    else if (polygonType === FRONT)
+        front.push(polygon);
+    else if (polygonType === BACK)
+        back.push(polygon);
+    else
+    {
+        const f = [], b = [];
+        for (let i = 0; i < vertices.length; ++i)
+        {
+            const j = (i + 1) % vertices.length, ti = types[i], tj = types[j], vi = vertices[i], vj = vertices[j];
+            if (ti !== BACK) f.push(vi);
+            if (ti !== FRONT) b.push(vi);
+            if ((ti | tj) === SPANNING)
+            {
+                const v = vi.lerp(vj, (w - normal.dot(vi.pos)) / normal.dot(vj.pos.subtract(vi.pos)));
+                f.push(v);
+                b.push(v);
+            }
+        }
+        f.length >= 3 && front.push(new Render3DCSGPolygon(f, polygon.plane));
+        b.length >= 3 && back.push(new Render3DCSGPolygon(b, polygon.plane));
+    }
+}
+
+// every node of a tree
+function render3DCSGNodes(root)
+{
+    const nodes = [], stack = [root];
+    while (stack.length)
+    {
+        const node = stack.pop();
+        nodes.push(node);
+        node.front && stack.push(node.front);
+        node.back && stack.push(node.back);
+    }
+    return nodes;
+}
+
+// add polygons to a tree, each node splitting what reaches it by its plane
+function render3DCSGBuild(root, polygons)
+{
+    const stack = [[root, polygons]];
+    while (stack.length)
+    {
+        const [node, list] = stack.pop();
+        if (!list.length) continue;
+        node.plane ||= list[0].plane;
+        const front = [], back = [];
+        for (const polygon of list)
+            render3DCSGSplit(node.plane, polygon, node.polygons, node.polygons, front, back);
+        front.length && stack.push([node.front ||= new Render3DCSGNode, front]);
+        back.length && stack.push([node.back ||= new Render3DCSGNode, back]);
+    }
+}
+
+// turn the solid a tree bounds inside out
+function render3DCSGInvert(root)
+{
+    for (const node of render3DCSGNodes(root))
+    {
+        node.polygons = node.polygons.map(polygon=> polygon.flipped());
+        node.plane &&= {normal: node.plane.normal.scale(-1), w: -node.plane.w};
+        [node.front, node.back] = [node.back, node.front];
+    }
+}
+
+// the parts of the polygons outside the solid a tree bounds
+function render3DCSGClipPolygons(root, polygons)
+{
+    const result = [], stack = [[root, polygons]];
+    while (stack.length)
+    {
+        const [node, list] = stack.pop();
+        if (!node.plane)
+        {
+            for (const polygon of list) result.push(polygon);
+            continue;
+        }
+        const front = [], back = [];
+        for (const polygon of list)
+            render3DCSGSplit(node.plane, polygon, front, back, front, back);
+        if (node.front)
+            stack.push([node.front, front]);
+        else
+            for (const polygon of front) result.push(polygon);
+        node.back && stack.push([node.back, back]); // behind a leaf is inside the solid, and goes
+    }
+    return result;
+}
+
+// cut away the parts of a tree's polygons inside another tree's solid
+function render3DCSGClipTo(root, other)
+{
+    for (const node of render3DCSGNodes(root))
+        node.polygons = render3DCSGClipPolygons(other, node.polygons);
+}
+
+// every polygon in a tree
+function render3DCSGAll(root)
+{
+    const polygons = [];
+    for (const node of render3DCSGNodes(root))
+        for (const polygon of node.polygons) polygons.push(polygon);
+    return polygons;
+}
+
+// whether an indexed mesh is closed: every edge between two places is run as often one way as the other, so it
+// has an inside
+function render3DMeshIsClosed(mesh)
+{
+    const edges = new Map, indices = mesh.indices, key = (i)=> render3DPlaceKey(mesh.points[i]);
+    for (let t = 0; t < indices.length; t += 3)
+    for (let e = 0; e < 3; ++e)
+    {
+        const a = key(indices[t + e]), b = key(indices[t + (e + 1) % 3]);
+        if (a !== b)
+            edges.set(a + '|' + b, (edges.get(a + '|' + b) || 0) + 1);
+    }
+    for (const [edge, count] of edges)
+    {
+        const [a, b] = edge.split('|');
+        if (edges.get(b + '|' + a) !== count) return false;
+    }
+    return edges.size > 0;
+}
+
+// the triangles of a closed mesh placed by a matrix, as CSG polygons
+function render3DCSGPolygons(mesh, matrix)
+{
+    false&&ASSERT(mesh instanceof Mesh, 'CSG takes a Mesh');
+    false&&ASSERT(!mesh.doubleSided, 'CSG needs closed meshes, a doubleSided one like buildGrid has no inside');
+    const list = new Mesh().combine(mesh, matrix).toIndexed();
+    false&&ASSERT(!list.points.length || render3DMeshIsClosed(list), 'CSG needs closed meshes, every edge shared by two triangles');
+    const vertex = (i)=> new Render3DCSGVertex(list.points[i], list.normals[i], list.uvs[i], list.colors[i]);
+    const polygons = [];
+    for (let t = 0; t < list.indices.length; t += 3)
+    {
+        const i = list.indices[t], j = list.indices[t + 1], k = list.indices[t + 2];
+        const plane = render3DCSGPlane(list.points[i], list.points[j], list.points[k]);
+        plane && polygons.push(new Render3DCSGPolygon([vertex(i), vertex(j), vertex(k)], plane)); // no area, no face
+    }
+    return polygons;
+}
+
+// a mesh from CSG polygons: points within the epsilon made one, and each edge given the points other polygons have
+// along it, so neighbors meet at every point with no crack between them; each polygon then as a fan of triangles
+function render3DCSGMesh(polygons)
+{
+    // one point for each place, found in a grid of cells twice the epsilon
+    const cell = RENDER3D_CSG_EPSILON * 2, cells = new Map, places = [];
+    const cellKey = (x, y, z)=> x + ',' + y + ',' + z;
+    const place = (p)=>
+    {
+        const cx = floor(p.x / cell), cy = floor(p.y / cell), cz = floor(p.z / cell);
+        for (let x = cx - 1; x <= cx + 1; ++x)
+        for (let y = cy - 1; y <= cy + 1; ++y)
+        for (let z = cz - 1; z <= cz + 1; ++z)
+            for (const q of cells.get(cellKey(x, y, z)) || [])
+                if (q.distanceSquared(p) < RENDER3D_CSG_EPSILON ** 2)
+                    return q;
+        const k = cellKey(cx, cy, cz);
+        cells.has(k) || cells.set(k, []);
+        cells.get(k).push(p);
+        places.push(p);
+        return p;
+    };
+    const loops = polygons.map(polygon=>
+    {
+        const loop = [];
+        for (const v of polygon.vertices)
+        {
+            const pos = place(v.pos);
+            if (loop.length && loop[loop.length - 1].pos === pos) continue; // a sliver edge closed up
+            loop.push(new Render3DCSGVertex(pos, v.normal, v.uv, v.color));
+        }
+        loop.length > 1 && loop[0].pos === loop[loop.length - 1].pos && loop.pop();
+        return loop;
+    });
+
+    // the places in a coarser grid, sized so a cell holds a few, to find the ones lying along each edge
+    let lo = vec3(Infinity), hi = vec3(-Infinity);
+    for (const p of places)
+    {
+        lo = vec3(min(lo.x, p.x), min(lo.y, p.y), min(lo.z, p.z));
+        hi = vec3(max(hi.x, p.x), max(hi.y, p.y), max(hi.z, p.z));
+    }
+    const span = places.length ? max(hi.x - lo.x, hi.y - lo.y, hi.z - lo.z) : 0;
+    const size = max(span / Math.cbrt(places.length || 1), cell), grid = new Map;
+    const gridKey = (p)=> cellKey(floor((p.x - lo.x) / size), floor((p.y - lo.y) / size), floor((p.z - lo.z) / size));
+    for (const p of places)
+    {
+        const k = gridKey(p);
+        grid.has(k) || grid.set(k, []);
+        grid.get(k).push(p);
+    }
+    // made one, the ends of an edge and a point on it can each move by up to the epsilon, so a point on an edge is
+    // looked for a few times that far from its line
+    const reach = RENDER3D_CSG_EPSILON * 4;
+    const onEdge = (a, b)=>
+    {
+        // the places strictly between a and b, within reach of the line, in order from a
+        const found = [], ab = b.subtract(a), length2 = ab.lengthSquared();
+        const x0 = floor((min(a.x, b.x) - lo.x - reach) / size), x1 = floor((max(a.x, b.x) - lo.x + reach) / size);
+        const y0 = floor((min(a.y, b.y) - lo.y - reach) / size), y1 = floor((max(a.y, b.y) - lo.y + reach) / size);
+        const z0 = floor((min(a.z, b.z) - lo.z - reach) / size), z1 = floor((max(a.z, b.z) - lo.z + reach) / size);
+        for (let x = x0; x <= x1; ++x)
+        for (let y = y0; y <= y1; ++y)
+        for (let z = z0; z <= z1; ++z)
+            for (const p of grid.get(cellKey(x, y, z)) || [])
+            {
+                if (p === a || p === b) continue;
+                const t = p.subtract(a).dot(ab) / length2;
+                if (t <= 0 || t >= 1) continue;
+                if (a.add(ab.scale(t)).distanceSquared(p) < reach ** 2)
+                    found.push([t, p]);
+            }
+        return found.sort((f, g)=> f[0] - g[0]);
+    };
+
+    // the mesh, each loop with the points along its edges put in, as a fan
+    const mesh = new Mesh;
+    mesh.indices = [];
+    for (const loop of loops)
+    {
+        if (loop.length < 3) continue;
+        const full = [];
+        for (let i = 0; i < loop.length; ++i)
+        {
+            const a = loop[i], b = loop[(i + 1) % loop.length];
+            full.push(a);
+            for (const [t, p] of onEdge(a.pos, b.pos))
+            {
+                const v = a.lerp(b, t);
+                full.push(new Render3DCSGVertex(p, v.normal, v.uv, v.color));
+            }
+        }
+        const base = mesh.points.length;
+        for (const v of full)
+        {
+            mesh.points.push(v.pos.copy());
+            mesh.normals.push(v.normal.lengthSquared() ? v.normal.normalize() : RENDER3D_DEFAULT_NORMAL);
+            mesh.uvs.push(v.uv.copy());
+            mesh.colors.push(v.color.copy());
+        }
+        for (let i = 2; i < full.length; ++i)
+            mesh.indices.push(base, base + i - 1, base + i);
+    }
+    mesh.dirty = true;
+    return mesh;
+}
+
+// a new mesh of a and b placed by matrix: 0 their union, 1 a with b cut out, 2 what is in both
+function meshCSG(a, b, matrix, operation)
+{
+    const nodeA = new Render3DCSGNode, nodeB = new Render3DCSGNode;
+    render3DCSGBuild(nodeA, render3DCSGPolygons(a));
+    render3DCSGBuild(nodeB, render3DCSGPolygons(b, matrix));
+    if (operation === 0)
+    {
+        render3DCSGClipTo(nodeA, nodeB);
+        render3DCSGClipTo(nodeB, nodeA);
+        render3DCSGInvert(nodeB);
+        render3DCSGClipTo(nodeB, nodeA);
+        render3DCSGInvert(nodeB);
+        render3DCSGBuild(nodeA, render3DCSGAll(nodeB));
+    }
+    else if (operation === 1)
+    {
+        render3DCSGInvert(nodeA);
+        render3DCSGClipTo(nodeA, nodeB);
+        render3DCSGClipTo(nodeB, nodeA);
+        render3DCSGInvert(nodeB);
+        render3DCSGClipTo(nodeB, nodeA);
+        render3DCSGInvert(nodeB);
+        render3DCSGBuild(nodeA, render3DCSGAll(nodeB));
+        render3DCSGInvert(nodeA);
+    }
+    else
+    {
+        render3DCSGInvert(nodeA);
+        render3DCSGClipTo(nodeB, nodeA);
+        render3DCSGInvert(nodeB);
+        render3DCSGClipTo(nodeA, nodeB);
+        render3DCSGClipTo(nodeB, nodeA);
+        render3DCSGBuild(nodeA, render3DCSGAll(nodeB));
+        render3DCSGInvert(nodeA);
+    }
+    return render3DCSGMesh(render3DCSGAll(nodeA));
 }
 
 /**

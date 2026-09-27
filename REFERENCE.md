@@ -1337,6 +1337,11 @@ mesh.combine(otherMesh, matrix, color)        // append a transformed, tinted co
 mesh.mirror(axis=vec3(1,0,0))                 // a new mesh: this one and its image across the plane through the
                                               // origin facing axis, for modeling half a shape against that plane
 mesh.spin(count, axis=vec3(0,1,0))            // a new mesh of count copies turned evenly around the axis
+mesh.union(otherMesh, matrix)                 // CSG, each a new closed indexed mesh from two closed ones (not
+mesh.subtract(otherMesh, matrix)              // grids or ribbons), neither changed: all of both, this one with the
+mesh.intersect(otherMesh, matrix)             // other cut out, or only what is in both; matrix or a vec3 places
+                                              // the other; cut faces take its normals, uvs and colors; cuts add
+                                              // triangles, so build shapes this way at load time
 mesh.scaleUVs(scale)                          // repeat a wrapping texture across the mesh, a vec2 or a number
 mesh.transform(matrix)                        // move every vertex in place, a mirror turns the faces too
 mesh.flipNormals()                            // turn it inside out, for rooms and domes seen from within

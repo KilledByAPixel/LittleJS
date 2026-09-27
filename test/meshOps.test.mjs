@@ -176,3 +176,87 @@ test('spin makes count copies turned evenly around the axis', () =>
     near(upright.getBounds().min.x, -2.5);
     near(volume(arm.spin(1)), 1);
 });
+
+test('subtract cuts one box out of another, and the result is closed and indexed', () =>
+{
+    const outer = buildBox(2), inner = buildBox(1), count = outer.points.length;
+    const hollow = outer.subtract(inner);
+    near(volume(hollow), 7, 1e-6);
+    assert.equal(isClosed(hollow), true);
+    assert.ok(hollow.indices, 'indexed');
+    assert.equal(outer.points.length, count, 'the inputs are left as they were');
+    for (const n of hollow.normals)
+        near(n.length(), 1);
+});
+
+test('union and intersect of two overlapping cubes, faces coplanar on four sides', () =>
+{
+    const a = buildBox(1);
+    near(volume(a.intersect(a, vec3(.5, 0, 0))), .5);
+    near(volume(a.union(a, vec3(.5, 0, 0))), 1.5);
+    assert.equal(isClosed(a.intersect(a, vec3(.5, 0, 0))), true);
+    assert.equal(isClosed(a.union(a, vec3(.5, 0, 0))), true);
+});
+
+test('a disjoint subtract changes nothing, and a disjoint intersect is empty', () =>
+{
+    const a = buildBox(1);
+    near(volume(a.subtract(a, vec3(5, 0, 0))), 1);
+    assert.equal(a.intersect(a, vec3(5, 0, 0)).points.length, 0);
+});
+
+test('the other mesh is placed by a Matrix4, a turned cube meets a cube in an octagon', () =>
+{
+    const a = buildBox(1);
+    const octagon = a.intersect(a, buildMatrix(vec3(), vec3(0, PI / 4, 0)));
+    near(volume(octagon), 2 * (Math.SQRT2 - 1), 1e-5); // a unit square and one turned 45 degrees overlap in an octagon
+    assert.equal(isClosed(octagon), true);
+});
+
+test('a hole as deep as the wall, cut faces coplanar with both sides', () =>
+{
+    const wall = buildBox(vec3(2, 2, .4)).subtract(buildBox(vec3(1, 1, .4)));
+    near(volume(wall), 1.6 - .4, 1e-6);
+    assert.equal(isClosed(wall), true);
+});
+
+test('CSG on its own results stays closed: two boxes joined, then a cylinder drilled through', () =>
+{
+    const block = buildBox(1).union(buildBox(1), vec3(.8, 0, 0));
+    const drilled = block.subtract(buildCylinder(.5, 2, 16));
+    assert.equal(isClosed(drilled), true);
+    assert.ok(volume(drilled) < volume(block) && volume(drilled) > 0);
+});
+
+test('a mirroring matrix places the cutter the right way out', () =>
+{
+    const cutter = new Mesh().combine(buildBox(1), vec3(.5, 0, 0)); // from 0 to 1 on x
+    const cut = buildBox(2).subtract(cutter, buildMatrix(vec3(), vec3(), vec3(-1, 1, 1))); // flipped to -1..0
+    near(volume(cut), 7, 1e-6);
+    assert.equal(isClosed(cut), true);
+    near(cut.getBounds().max.x, 1);
+});
+
+test('big smooth meshes do not overflow the stack and stay closed', () =>
+{
+    const ball = buildSphere(2, 64, 32);
+    const bitten = ball.subtract(ball, vec3(.8, .3, 0));
+    assert.equal(isClosed(bitten), true);
+    assert.ok(volume(bitten) > 0 && volume(bitten) < volume(ball));
+});
+
+test('a spun ring of cylinders drills a ring of holes in one subtract', () =>
+{
+    const pins = new Mesh().combine(buildCylinder(.2, 2, 12), vec3(.8, 0, 0)).spin(6);
+    const disc = buildCylinder(2.4, .3, 32).subtract(pins);
+    assert.equal(isClosed(disc), true);
+    assert.ok(volume(disc) < volume(buildCylinder(2.4, .3, 32)));
+});
+
+test('CSG with an open or doubleSided mesh asserts', () =>
+{
+    assert.throws(()=> buildBox(1).subtract(buildGrid(vec2(2))), /Assert failed/);
+    assert.throws(()=> buildBox(1).union(buildLathe([[1, -1], [1, 1]], 8, true, false)), /Assert failed/);
+    const open = new Mesh().addQuad(vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 1, 0), vec3(0, 1, 0));
+    assert.throws(()=> buildBox(1).intersect(open), /Assert failed/);
+});

@@ -8129,6 +8129,28 @@ declare module "littlejsengine" {
          *  @param {Vector3} [axis] - Up by default
          *  @return {Mesh} */
         spin(count: number, axis?: Vector3): Mesh;
+        /** Returns a new mesh of everything in this mesh or the other, see subtract
+         *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
+         *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
+         *  @return {Mesh} */
+        union(mesh: Mesh, matrix?: Matrix4 | Vector3): Mesh;
+        /** Returns a new mesh of this one with the other cut out of it, CSG with BSP trees
+         *  - Both must be closed, every edge shared by two triangles, as the builders make them apart from the open
+         *    ones like buildGrid and buildRibbon; the result is closed and indexed, and neither mesh changes
+         *  - The faces a cut makes come from the other mesh's surface, turned to face out, with its normals, uvs and
+         *    colors, so a smooth cylinder drills a round hole
+         *  - Cuts split triangles, so the result has more of them: build shapes this way at load time, not every frame
+         *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
+         *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
+         *  @return {Mesh}
+         *  @example
+         *  const wall = buildBox(vec3(4, 3, .5)).subtract(buildBox(vec3(1, 2, 1)), vec3(0, -.5, 0)); // a doorway */
+        subtract(mesh: Mesh, matrix?: Matrix4 | Vector3): Mesh;
+        /** Returns a new mesh of only what is in both this mesh and the other, see subtract
+         *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
+         *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
+         *  @return {Mesh} */
+        intersect(mesh: Mesh, matrix?: Matrix4 | Vector3): Mesh;
         /** Scale every uv, so a whole texture repeats across the mesh when its TextureInfo wraps
          *  @param {Vector2|number} scale - Repeats across and up, a number for both
          *  @return {Mesh} */
