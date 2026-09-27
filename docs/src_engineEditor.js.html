@@ -15,6 +15,11 @@
 // the level editor
 
 /**
+ *  @callback EditorRestartCallback - Rebuilds the level from the map the level editor changed
+ *  @memberof Editor
+ */
+
+/**
  *  @callback EditorTileCallback - What the game does when the level editor paints a tile
  *  @param {TileLayer} layer - The layer painted
  *  @param {Vector2} pos - The cell's position in the layer
@@ -41,8 +46,8 @@ class LevelEditor
          *  @type {EditorTileCallback|undefined} */
         this.onTile = undefined;
         /** @property {Function|undefined} - Rebuild the level from the map the editor changed, a Restart button
-         *  calls it after closing the editor; without one there is no Restart button
-         *  @type {(function():void)|undefined} */
+         *  calls it after switching to play; without one there is no Restart button
+         *  @type {EditorRestartCallback|undefined} */
         this.onRestart = undefined;
     }
 
@@ -50,11 +55,22 @@ class LevelEditor
      *  @return {boolean} */
     get isOpen() { return editorIsOpen; }
 
-    /** Open the editor, pausing the game */
-    open() { editorSetOpen(true); }
+    /** Open the editor, pausing the game; until close(), Escape (the debug key) switches between playing and editing */
+    open()
+    {
+        if (!editorSession)
+            editorCameraScale = cameraScale; // a new session starts at the game's zoom, a return keeps the editor's
+        editorSession = true;
+        editorSetOpen(true);
+    }
 
-    /** Close the editor, the game carries on with the changes */
-    close() { editorSetOpen(false); }
+    /** Close the editor and end its session, the game carries on with the changes and Escape opens the debug
+     *  overlay again */
+    close()
+    {
+        editorSession = false;
+        editorSetOpen(false);
+    }
 }
 
 /** The level editor, levelEditor.open() to edit the level, levelEditor.close() to play on with the changes
@@ -62,8 +78,8 @@ class LevelEditor
  *  @memberof Editor */
 const levelEditor = new LevelEditor;
 
-// if the editor is open
-let editorIsOpen = false;
+// if the editor is open, and if it was opened and not exited, while Escape switches between playing and editing
+let editorIsOpen = false, editorSession = false;
 
 // the game's pause and camera from before the editor opened, handed back when it closes
 let editorGameState;
@@ -93,13 +109,15 @@ function editorSetOpen(open)
     if (editorIsOpen)
     {
         editorGameState = {paused, cameraPos: cameraPos.copy(), cameraScale, cameraAngle};
-        editorCameraPos = cameraPos.copy();
-        editorCameraScale = cameraScale;
+        editorCameraPos = cameraPos.copy(); // where the game is, the zoom stays the editor's
         setPaused(true);
         setDebugOverlay(false); // out of the way of the level
+
+        // the layer edited last, when it is still there, or the collision layer
         const layers = editorLayers();
-        editorLayer = layers.find((layer)=> layer.live?.isSolid) ?? layers.filter((layer)=> !layer.isObjects).at(-1);
-        editorObjectLayer = undefined;
+        layers.includes(editorLayer) || (editorLayer = layers.find((layer)=> layer.live?.isSolid) ??
+            layers.filter((layer)=> !layer.isObjects).at(-1));
+        layers.includes(editorObjectLayer) || (editorObjectLayer = undefined);
     }
     else
     {
@@ -300,12 +318,34 @@ function editorJSONFetched(url, json)
 // a map as Tiled JSON, everything it was loaded with kept, the tile data as the editor left it
 function editorMapJSON(record) { return JSON.stringify(record.map); }
 
-// download a map as Tiled JSON, under the name of the file it came from
-function editorSave(record)
+// save a map as Tiled JSON: where the browser lets a page write files, Chrome and Edge, to a file picked once and
+// written again on each Save after, or picked again with Save As; elsewhere as a download under the name of the
+// file it came from; resolves to how it saved, undefined when the picker was closed
+async function editorSave(record, pickAgain=false)
 {
     if (!record) return;
     editorStrokeEnd();
-    saveText(editorMapJSON(record), record.fileName, 'application/json');
+    const text = editorMapJSON(record), picker = /** @type {any} */ (globalThis).showSaveFilePicker;
+    if (picker)
+    {
+        try
+        {
+            if (pickAgain || !record.fileHandle)
+                record.fileHandle = await picker.call(globalThis, {suggestedName: record.fileName,
+                    types: [{description: 'Tiled JSON', accept: {'application/json': ['.json']}}]});
+            const writable = await record.fileHandle.createWritable();
+            await writable.write(text);
+            await writable.close();
+            return 'written';
+        }
+        catch (error)
+        {
+            if (error?.name === 'AbortError') return; // the picker was closed, nothing saved
+            record.fileHandle = undefined; // a file it could not write, a download instead
+        }
+    }
+    saveText(text, record.fileName, 'application/json');
+    return 'downloaded';
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1241,7 +1281,7 @@ const editorHelpLines =
     'Left: paint · Shift+Left: line from the last tile',
     'Right click: pick a tile · Right drag: select',
     'Middle drag or Space+drag: pan · Wheel or pinch: zoom',
-    '1-9: layer · 0: play',
+    '1-9: layer · Esc: play and edit · 0: exit the editor',
     'F: fill · Delete: clear the selection',
     'Ctrl+C / X / V: copy, cut, paste · Ctrl+Z / Y: undo, redo',
     'R, Shift+R: turn · M: mirror · E: erase · G: grid · ?: keys',
@@ -1310,8 +1350,9 @@ function editorPanelInit()
 
     editorElement('div', editorPanel, 'font-weight:bold', 'Level Editor');
     const top = row();
-    button(top, 'Play', ()=> levelEditor.close(), '0');
-    const restart = button(top, 'Restart', editorRestart, 'Close the editor and rebuild the level');
+    button(top, 'Play', ()=> editorSetOpen(false), 'Esc, and Esc again comes back to the editor');
+    const restart = button(top, 'Restart', editorRestart, 'Rebuild the level and play it');
+    button(top, 'Exit', ()=> levelEditor.close(), '0, then Esc opens the debug overlay again');
     const undo = row();
     button(undo, 'Undo', ()=> editorUndo(), 'Ctrl+Z');
     button(undo, 'Redo', ()=> editorUndo(true), 'Ctrl+Y');
@@ -1347,7 +1388,13 @@ function editorPanelInit()
     const properties = editorElement('div', editorPanel, 'margin:4px 0;padding:4px;background:#222;border-radius:3px');
 
     const file = row();
-    button(file, 'Save', ()=> editorSave(editorLayer?.record), 'Download the level as Tiled JSON');
+    // Save says so for a moment when it saved, Save As shows where a page can write files
+    const saved = (b, label)=> (result)=> result &amp;&amp; (b.textContent = 'Saved', setTimeout(()=> b.textContent = label, 1e3));
+    const save = button(file, 'Save', ()=> editorSave(editorLayer?.record).then(saved(save, 'Save')),
+        'Save, to the file picked the first time, or a download');
+    const saveAs = button(file, 'Save As', ()=> editorSave(editorLayer?.record, true).then(saved(saveAs, 'Save As')),
+        'Save As, to a file picked again');
+    /** @type {any} */ (globalThis).showSaveFilePicker || (saveAs.style.display = 'none');
     button(file, 'Revert', ()=> editorRevert(editorLayer?.record), 'Back to the file, can be undone');
     const storage = editorElement('div', editorPanel, 'color:#f86;margin-top:4px',
         'Autosave failed, storage is full: Save to a file');
@@ -1460,9 +1507,22 @@ function editorPaletteDraw(canvas, layer)
     context.strokeRect(selected % columns * cell + 1, (selected / columns | 0) * cell + 1, cell - 2, cell - 2);
 }
 
+// while playing in an editing session, a tag in the corner says how to get back to the editor
+let editorTag;
+function editorTagUpdate()
+{
+    const show = editorSession &amp;&amp; !editorIsOpen;
+    if (!show &amp;&amp; !editorTag) return;
+    editorTag ||= editorElement('div', document.body, 'position:fixed;bottom:8px;left:8px;padding:4px 8px;' +
+        'background:#111d;color:#eee;font:12px monospace;border-radius:4px;z-index:9999;pointer-events:none');
+    editorTag.textContent = `${debugKey === 'Escape' ? 'Esc' : debugKey}: edit level`;
+    editorTag.style.display = show ? '' : 'none';
+}
+
 // shows or hides the panel, and shows what changed since the last frame
 function editorPanelUpdate()
 {
+    editorTagUpdate();
     if (!editorIsOpen)
     {
         editorPanel &amp;&amp; (editorPanel.style.display = 'none');
@@ -1717,10 +1777,18 @@ function editorPropertiesUpdate(box)
 
 function editorUpdate()
 {
+    // in an editing session Escape, the debug key, switches between playing and editing; taken, so the debug
+    // overlay waits till the session ends
+    if (editorSession &amp;&amp; debugKey &amp;&amp; keyWasPressed(debugKey))
+    {
+        inputClearKey(debugKey);
+        editorSetOpen(!editorIsOpen);
+        return;
+    }
     if (!editorIsOpen) return;
     editorApplyCamera();
 
-    // 0 plays again, the overlay's 0 does it while the overlay is open; cleared so debugKeysAlways
+    // 0 exits the editor, the overlay's 0 does it while the overlay is open; cleared so debugKeysAlways
     // does not toggle it back in the same step
     if (!debugOverlay &amp;&amp; keyWasPressed('Digit0'))
     {
@@ -1801,11 +1869,11 @@ function editorUpdate()
     }
 }
 
-// close the editor and have the game rebuild its level from the changed map, when it has a hook for that
+// switch to play and have the game rebuild its level from the changed map, when it has a hook for that
 function editorRestart()
 {
     if (!levelEditor.onRestart) return;
-    levelEditor.close(); // ends a held stroke, and hands back the game's pause and camera
+    editorSetOpen(false); // ends a held stroke, and hands back the game's pause and camera, Escape comes back
     levelEditor.onRestart();
 }
 

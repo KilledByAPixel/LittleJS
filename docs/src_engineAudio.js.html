@@ -246,7 +246,8 @@ class Sound
         /** @property {AudioBuffer|undefined} - Decoded audio shared by every play of this sound
          *  @type {AudioBuffer|undefined} */
         this.sampleBuffer = undefined;
-        /** @ignore internal, the 3D plugin reads it to know the sound has loaded
+        // internal, the 3D plugin reads it to know the sound has loaded
+        /** @ignore
          *  @type {Array&lt;Array&lt;number>|Float32Array>|undefined} */
         this._sampleChannels = undefined;
         /** @property {number} - Percentage of this sound currently loaded, sounds
