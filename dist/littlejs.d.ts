@@ -8550,6 +8550,114 @@ declare module "littlejsengine" {
         levelCollide3D(o: EngineObject3D, oldPos: Vector3): void;
     }
     /**
+     * VoxelMap - A grid of blocks, a 3D tile map: it draws itself, and objects with collideLevel collide with it
+     * - pos3D is its corner, as a 2D tile layer's is, and each cell is one world unit, so cell (x, y, z) fills
+     *   pos3D + (x..x+1, y..y+1, z..z+1); it stays upright and unscaled at the root
+     * - A block's type is a number from 1 to 255, 0 is empty; a type shows that tile of the sheet on every face unless
+     *   setBlockType gives it its own faces, or makes it see-through or transparent
+     * - Faces between blocks are left out, and the map is drawn in chunks of 16 cells a side, a chunk built again only
+     *   when a block in or beside it changes
+     * - Objects with collideLevel collide with it, see EngineObject3D.collideWithVoxel, and raycast finds the block a ray
+     *   hits and the face it comes in through
+     * @extends EngineObject3D
+     * @memberof Render3D
+     * @example
+     * const map = new VoxelMap(vec3(), vec3(32, 16, 32), tile(0, 16));
+     * map.setBlockType(1, {top: 0, side: 1, bottom: 2}); // grass
+     * map.setVoxel(vec3(3, 0, 5), 1);
+     */
+    export class VoxelMap extends EngineObject3D {
+        /** Create a voxel map, it draws itself and joins the level's collision
+         *  @param {Vector3} [pos3D] - Its corner
+         *  @param {Vector3} [mapSize] - Cells along X, Y and Z
+         *  @param {TileInfo} [tileInfo] - The sheet's first tile, as for a TileLayer, a block's type counts tiles from it */
+        constructor(pos3D?: Vector3, mapSize?: Vector3, tileInfo?: TileInfo);
+        /** @property {Vector3} - Cells along X, Y and Z */
+        mapSize: Vector3;
+        /** @property {Uint8Array} - The block type of each cell, x + mapSize.x * (y + mapSize.y * z), 0 empty; call
+         *  rebuild() after changing it directly */
+        data: Uint8Array;
+        /** @property {boolean} - Darken the corners where blocks meet, rebuild() after changing it */
+        ambientOcclusion: boolean;
+        chunkCount: Vector3;
+        /** @type {Array<Mesh|undefined>} */
+        chunkMeshes: Array<Mesh | undefined>;
+        /** @type {Array<Mesh|undefined>} */
+        chunkTransparentMeshes: Array<Mesh | undefined>;
+        /** @type {Array<Vector3>} */
+        chunkCenters: Array<Vector3>;
+        chunksChanged: Set<any>;
+        /** @type {Array<{faces: Array<number>, seeThrough: boolean, transparent: boolean}|undefined>} */
+        blockTypes: Array<{
+            faces: Array<number>;
+            seeThrough: boolean;
+            transparent: boolean;
+        } | undefined>;
+        tiles: Map<any, any>;
+        /** The block type at a cell, 0 for empty or outside the map
+         *  @param {Vector3} cell
+         *  @return {number} */
+        getVoxel(cell: Vector3): number;
+        /** The block type at whole number cell coordinates, 0 outside
+         *  @param {number} x
+         *  @param {number} y
+         *  @param {number} z
+         *  @return {number}
+         *  @ignore */
+        voxelAt(x: number, y: number, z: number): number;
+        /** Set the block at a cell, 0 clears it; a cell outside the map is ignored
+         *  @param {Vector3} cell
+         *  @param {number} type - 0 to 255 */
+        setVoxel(cell: Vector3, type: number): void;
+        /** Mark the chunk holding a cell as changed, a cell outside the map has none
+         *  @param {number} x
+         *  @param {number} y
+         *  @param {number} z
+         *  @ignore */
+        markChunk(x: number, y: number, z: number): void;
+        /** Give a block type its own faces, or make it see-through or transparent
+         *  @param {number} type - 1 to 255
+         *  @param {number|Array<number>|{top?: number, side: number, bottom?: number}} faces - A tile index for every face,
+         *    six in the order +x, -x, +y, -y, +z, -z, or the side's with the top and bottom's, which default to the side's
+         *  @param {{seeThrough?: boolean, transparent?: boolean}} [options] - seeThrough for holes in its texture, like
+         *    leaves, so the blocks beside it keep their faces; transparent to blend, like glass or water, drawn in the
+         *    transparent stage, and see-through too */
+        setBlockType(type: number, faces: number | Array<number> | {
+            top?: number;
+            side: number;
+            bottom?: number;
+        }, { seeThrough, transparent }?: {
+            seeThrough?: boolean;
+            transparent?: boolean;
+        }): void;
+        /** A block type's faces and how it is seen through
+         *  @param {number} type
+         *  @return {{faces: Array<number>, seeThrough: boolean, transparent: boolean}}
+         *  @ignore */
+        blockType(type: number): {
+            faces: Array<number>;
+            seeThrough: boolean;
+            transparent: boolean;
+        };
+        /** Build every chunk again, after changing data directly or ambientOcclusion */
+        rebuild(): void;
+        /** Build the chunks that changed, the map calls it before it draws */
+        buildChunks(): void;
+        /** Build one chunk's meshes, a face for each block side that shows
+         *  @param {number} index
+         *  @ignore */
+        buildChunk(index: number): void;
+        /** The TileInfo of a tile index, counted from the map's first tile as a TileLayer counts them
+         *  @param {number} index
+         *  @return {TileInfo}
+         *  @ignore */
+        tileOf(index: number): TileInfo;
+        /** Draw the chunks, each at its center, with the whole texture so each face shows its own tile
+         *  @param {boolean} transparent
+         *  @ignore */
+        renderChunks(transparent: boolean): void;
+    }
+    /**
      * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
      * - A point light: it lights what is near it and fades out by its radius, DirectionalLight3D shines from far away
      * - Only the sun, render3D.sunDirection, casts shadows; these light and make highlights without one

@@ -154,6 +154,7 @@ export
     buildExtrude,
     buildText3D,
     HeightMap,
+    VoxelMap,
     Light3D,
     DirectionalLight3D,
     CameraControl3D,
