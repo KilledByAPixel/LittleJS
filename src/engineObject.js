@@ -134,8 +134,9 @@ class EngineObject
         this.localAngle = 0;
 
         // collision flags
-        /** @property {boolean} - Object collides with the tile collision */
-        this.collideTiles = false;
+        /** @property {boolean} - Object collides with the level, its tile collision layers
+         *  @type {boolean} */
+        this.collideLevel = false;
         /** @property {boolean} - Object collides with solid objects */
         this.collideSolidObjects = false;
         /** @property {boolean} - Object collides with and blocks other objects */
@@ -374,7 +375,7 @@ class EngineObject
                 debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
             }
         }
-        if (this.collideTiles)
+        if (this.collideLevel)
         {
             // check collision against tiles
             const hitLayer = tileCollisionTest(this.pos, this.size, this);
@@ -620,17 +621,22 @@ class EngineObject
     /** Set how this object collides
      *  @param {boolean} [collideSolidObjects] - Does it collide with solid objects?
      *  @param {boolean} [isSolid]             - Does it collide with and block other objects? (expensive in large numbers)
-     *  @param {boolean} [collideTiles]        - Does it collide with the tile collision?
+     *  @param {boolean} [collideLevel]        - Does it collide with the level, its tile collision layers?
      *  @param {boolean} [collideRaycast]      - Does it collide with raycasts? */
-    setCollision(collideSolidObjects=true, isSolid=true, collideTiles=true, collideRaycast=true)
+    setCollision(collideSolidObjects=true, isSolid=true, collideLevel=true, collideRaycast=true)
     {
         ASSERT(collideSolidObjects || !isSolid, 'solid objects must be set to collide');
 
         this.collideSolidObjects = collideSolidObjects;
         this.isSolid = isSolid;
-        this.collideTiles = collideTiles;
+        this.collideLevel = collideLevel;
         this.collideRaycast = collideRaycast;
     }
+
+    /** @deprecated since 1.20, use collideLevel
+     *  @type {boolean} */
+    get collideTiles() { return this.collideLevel; }
+    set collideTiles(collide) { this.collideLevel = collide; }
 
     /** Returns string containing info about this object for debugging
      *  @return {string} */
@@ -655,12 +661,12 @@ class EngineObject
         if (!debug) return;
 
         // check if there is anything to show
-        const hasPhysics = this.collideTiles || this.collideSolidObjects || this.isSolid;
+        const hasPhysics = this.collideLevel || this.collideSolidObjects || this.isSolid;
         if (!hasPhysics && !this.parent) return;
 
         // show object info for debugging
         const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
-        const color = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);
+        const color = rgb(this.collideLevel?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);
         debugRect(this.pos, size, color, 0, hasPhysics ? 0 : this.angle, hasPhysics); // collision ignores the angle
         if (this.parent)
             debugRect(this.pos, size.scale(.8), rgb(1,1,1,.5), 0, this.angle);

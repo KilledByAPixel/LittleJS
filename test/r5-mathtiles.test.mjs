@@ -157,7 +157,7 @@ test('a colliding particle does not copy its position every frame', () =>
 {
     const layer = new TileCollisionLayer(vec2(), vec2(4), tile(), 0, false);
     const emitter = new ParticleEmitter(vec2());
-    emitter.collideTiles = true;
+    emitter.collideLevel = true;
     const particles = [];
     for (let i = 0; i < 10; ++i)
         particles.push(new Particle(emitter, vec2(.5 + i*.3, 2), 0, WHITE, WHITE, 1, 1, 1, vec2(.01, 0)));
@@ -179,7 +179,7 @@ test('a particle still bounces off a solid tile and its collide callback still g
     const layer = new TileCollisionLayer(vec2(), vec2(4), tile(), 0, false);
     layer.setCollisionData(vec2(1, 1), 1);
     const emitter = new ParticleEmitter(vec2());
-    emitter.collideTiles = true;
+    emitter.collideLevel = true;
     emitter.restitution = .5;
     const falling = new Particle(emitter, vec2(1.5, 2.2), 0, WHITE, WHITE, 1, 1, 1, vec2(0, -.5));
     falling.update();

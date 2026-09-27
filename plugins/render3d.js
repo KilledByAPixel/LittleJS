@@ -3386,10 +3386,10 @@ class EngineObject3D extends EngineObject
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
-     *  @param {boolean} [collideTiles] - Tile collision, 2D only so it needs sync2D
+     *  @param {boolean} [collideLevel] - Level collision, the 2D tile layers, so it needs sync2D
      *  @param {boolean} [collideRaycast] - Raycasts, 2D only; 3D has render3D.pick and engineObjectsRaycast3D */
-    setCollision(collideSolidObjects=true, isSolid=true, collideTiles=false, collideRaycast=false)
-    { super.setCollision(collideSolidObjects, isSolid, collideTiles, collideRaycast); }
+    setCollision(collideSolidObjects=true, isSolid=true, collideLevel=false, collideRaycast=false)
+    { super.setCollision(collideSolidObjects, isSolid, collideLevel, collideRaycast); }
 
     /** Returns the world position
      *  @return {Vector3} */

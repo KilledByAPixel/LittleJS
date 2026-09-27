@@ -64,7 +64,9 @@ test('when logged in the server holds the newgrounds medals, the local save keep
     assert.deepEqual(inputs['App.logView'], { app_id: 'an app', session_id: 'abc123',
         execute: { component: 'App.logView', parameters: { host: 'uploads.ungrounded.net' } } }, 'the view names the host');
     assert.equal(gateway, 'https://www.newgrounds.io/gateway_v3.php', 'the gateway the Newgrounds.io docs give');
-    assert.equal('logView' in plugin, false, 'the plugin logs it, a game does not');
+    const sent = calls.length;
+    plugin.logView(); // deprecated since 1.20, the plugin logs it, a game does not
+    assert.equal(calls.length, sent, 'logView sends nothing');
     assert.equal(plugin.user.name, 'Frank');
     assert.ok(keepAlive, 'the keep alive is set up once the session is good');
     assert.equal(m1.unlocked, false);

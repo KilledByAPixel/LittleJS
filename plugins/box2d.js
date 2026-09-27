@@ -1787,6 +1787,14 @@ class Box2dWeldJoint extends Box2dJoint
     /** Get the damping ratio
      *  @return {number} */
     getDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
+
+    /** @deprecated since 1.20, use setDampingRatio
+     *  @param {number} ratio */
+    setSpringDampingRatio(ratio) { this.setDampingRatio(ratio); }
+
+    /** @deprecated since 1.20, use getDampingRatio
+     *  @return {number} */
+    getSpringDampingRatio() { return this.getDampingRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

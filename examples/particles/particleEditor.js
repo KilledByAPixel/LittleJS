@@ -268,8 +268,8 @@ function setValue(name, value)
 
     // local space particles cannot collide with tiles,
     // the one just turned on wins
-    if (name === 'localSpace' && value) s.collideTiles = false;
-    if (name === 'collideTiles' && value) s.localSpace = false;
+    if (name === 'localSpace' && value) s.collideLevel = false;
+    if (name === 'collideLevel' && value) s.localSpace = false;
 
     refreshAll();
     effectChanged();
@@ -340,7 +340,7 @@ function restartEmitter()
 // a floor to land on while particles collide with tiles, 3 below the emitter
 function updateFloor()
 {
-    const collide = effect.settings.collideTiles;
+    const collide = effect.settings.collideLevel;
     if (collide && !floorLayer)
     {
         // a 1 pixel tile keeps the layer's canvas small

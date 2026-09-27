@@ -2914,7 +2914,7 @@ test('setCollision on a 3D object skips the 2D only flags', () =>
     o.setCollision();
     assert.equal(o.collideSolidObjects, true);
     assert.equal(o.isSolid, true);
-    assert.equal(o.collideTiles, false, 'tile collision is 2D, it needs sync2D');
+    assert.equal(o.collideLevel, false, 'level collision is 2D until the voxel map, it needs sync2D');
     assert.equal(o.collideRaycast, false, 'raycasts are 2D, 3D picking is render3D.pick');
     o.destroy();
 });

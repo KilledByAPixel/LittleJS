@@ -90,7 +90,7 @@ addEffectSetting('localSpace', 'checkbox', false, 0, 0, 0,
     'Particles move with the emitter');
 
 effectSettingGroup = 'Collision';
-addEffectSetting('collideTiles', 'checkbox', false, 0, 0, 0,
+addEffectSetting('collideLevel', 'checkbox', false, 0, 0, 0,
     'Hit tiles, the preview adds a floor');
 addEffectSetting('restitution', 'number', 0, 0, 1, .01,
     'Bounce when hitting tiles');
@@ -106,8 +106,8 @@ addEffectSetting('tilePadding', 'number', 1, 0, 8, 1,
     'Pixels of padding around each tile', 0, 64);
 
 // settings that do nothing unless another is on, the page dims them
-const effectNeeds = {emitHeight:'emitRect', restitution:'collideTiles',
-    friction:'collideTiles'};
+const effectNeeds = {emitHeight:'emitRect', restitution:'collideLevel',
+    friction:'collideLevel'};
 
 // settings effectApply sets itself instead of copying across
 const effectIndirect = ['emitSize', 'emitRect', 'emitHeight', 'tileIndex',
@@ -165,7 +165,7 @@ function wind(p, strength)
 
 function stick(p, strength)
 {
-    // grip the ground on landing, pair with collideTiles
+    // grip the ground on landing, pair with collideLevel
     if (!p.groundObject) return;
     p.velocity.x *= 1 - strength;
     p.angleVelocity *= 1 - strength;
@@ -186,7 +186,7 @@ const effectBehaviors =
     {update:wind,       min:-2, max:2, value:1,
         description:'A sideways push that grows with age'},
     {update:stick,      min:0,  max:1, value:1,
-        description:'Grip on landing, pair with collideTiles'},
+        description:'Grip on landing, pair with collideLevel'},
 ];
 for (const b of effectBehaviors)
     b.name = b.update.name;
@@ -211,7 +211,8 @@ function effectSanitize(raw)
     const name = typeof raw?.name === 'string' && raw.name.trim() ?
         raw.name.trim().slice(0, 60) : 'Effect';
     const input = raw?.settings && typeof raw.settings === 'object' ?
-        raw.settings : {};
+        {...raw.settings} : {};
+    input.collideLevel ??= input.collideTiles; // its name before 1.20
     const settings = {};
     for (const setting of effectSettings)
     {
@@ -234,7 +235,7 @@ function effectSanitize(raw)
     // local space particles are placed relative to the emitter,
     // the tile collision is in the world
     if (settings.localSpace)
-        settings.collideTiles = false;
+        settings.collideLevel = false;
 
     // known behaviors once each, in table order
     const behaviors = [];
@@ -337,7 +338,7 @@ function effectToCode(effect, expand)
         color('colorEndA'), color('colorEndB'),
         ...['particleTime', 'sizeStart', 'sizeEnd', 'speed', 'angleSpeed',
             'damping', 'angleDamping', 'gravityScale', 'particleConeAngle',
-            'fadeRate', 'randomness', 'collideTiles', 'additive',
+            'fadeRate', 'randomness', 'collideLevel', 'additive',
             'randomColorLinear'].map(arg),
     ];
     let code = 'new ParticleEmitter(';
@@ -451,7 +452,7 @@ const effectPresets =
         behaviors:[{name:'wobble', strength:1}]},
     {name:'Blood', settings:{emitRate:300, emitTime:.1, emitConeAngle:.8,
         tileIndex:0, particleTime:3, sizeStart:.15, sizeEnd:.1, speed:.2,
-        gravityScale:1, fadeRate:.1, randomness:.4, collideTiles:true,
+        gravityScale:1, fadeRate:.1, randomness:.4, collideLevel:true,
         restitution:.1,
         colorStartA:hsl(0,1,.35), colorStartB:hsl(0,1,.2),
         colorEndA:hsl(0,1,.25), colorEndB:hsl(0,1,.15)},

@@ -71,7 +71,7 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [particleConeAngle] - Half angle each side of the emitter's angle for a particle's start angle, PI is any angle
      *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
      *  @param {number} [randomness]    - Apply extra randomness percent
-     *  @param {boolean} [collideTiles] - Do particles collide against tiles, world space emitters only
+     *  @param {boolean} [collideLevel] - Do particles collide with the level's tiles, world space emitters only
      *  @param {boolean} [additive]     - Should particles use additive blend
      *  @param {boolean} [randomColorLinear] - Should color be randomized linearly or across each component
      *  @param {number} [renderOrder] - Render order for particles (additive is above other stuff by default)
@@ -101,7 +101,7 @@ class ParticleEmitter extends EngineObject
         particleConeAngle = PI,
         fadeRate = .1,
         randomness = .2,
-        collideTiles = false,
+        collideLevel = false,
         additive = false,
         randomColorLinear = true,
         renderOrder = additive ? 1e9 : 0,
@@ -157,8 +157,8 @@ class ParticleEmitter extends EngineObject
         this.fadeRate          = fadeRate;
         /** @property {number} - Apply extra randomness percent */
         this.randomness        = randomness;
-        /** @property {boolean} - Do particles collide against tiles */
-        this.collideTiles      = collideTiles;
+        /** @property {boolean} - Do particles collide with the level's tiles */
+        this.collideLevel      = collideLevel;
         /** @property {boolean} - Should particles use additive blend */
         this.additive          = additive;
         /** @property {boolean} - Should it be in local space of emitter */
@@ -234,7 +234,7 @@ class ParticleEmitter extends EngineObject
             this.destroy(true);
             
         // a local space particle is placed relative to the emitter, but the tile collision is in the world
-        ASSERT(!this.localSpace || !this.collideTiles, 'local space particles cannot collide with tiles, turn one of them off');
+        ASSERT(!this.localSpace || !this.collideLevel, 'local space particles cannot collide with the level, turn one of them off');
 
         // update and remove destroyed particles in place to avoid per-frame array allocation
         const particles = this.particles;
@@ -430,7 +430,7 @@ class Particle
         const restitution = emitter.restitution;
         const friction = emitter.friction;
         const gravityScale = emitter.gravityScale;
-        const collideTiles = emitter.collideTiles;
+        const collideLevel = emitter.collideLevel;
         const collideCallback = emitter.particleCollideCallback;
         const updateCallback = emitter.particleUpdateCallback;
 
@@ -442,7 +442,7 @@ class Particle
         }
 
         // apply physics; only the tile collision needs where the particle was
-        const solve = enablePhysicsSolver && collideTiles;
+        const solve = enablePhysicsSolver && collideLevel;
         const oldX = this.pos.x, oldY = this.pos.y;
         let gravityX = gravity.x * gravityScale, gravityY = gravity.y * gravityScale;
         if (emitter.localSpace && emitter.angle)

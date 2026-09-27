@@ -3310,8 +3310,9 @@ class EngineObject
         this.localAngle = 0;
 
         // collision flags
-        /** @property {boolean} - Object collides with the tile collision */
-        this.collideTiles = false;
+        /** @property {boolean} - Object collides with the level, its tile collision layers
+         *  @type {boolean} */
+        this.collideLevel = false;
         /** @property {boolean} - Object collides with solid objects */
         this.collideSolidObjects = false;
         /** @property {boolean} - Object collides with and blocks other objects */
@@ -3550,7 +3551,7 @@ class EngineObject
                 debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
             }
         }
-        if (this.collideTiles)
+        if (this.collideLevel)
         {
             // check collision against tiles
             const hitLayer = tileCollisionTest(this.pos, this.size, this);
@@ -3796,17 +3797,22 @@ class EngineObject
     /** Set how this object collides
      *  @param {boolean} [collideSolidObjects] - Does it collide with solid objects?
      *  @param {boolean} [isSolid]             - Does it collide with and block other objects? (expensive in large numbers)
-     *  @param {boolean} [collideTiles]        - Does it collide with the tile collision?
+     *  @param {boolean} [collideLevel]        - Does it collide with the level, its tile collision layers?
      *  @param {boolean} [collideRaycast]      - Does it collide with raycasts? */
-    setCollision(collideSolidObjects=true, isSolid=true, collideTiles=true, collideRaycast=true)
+    setCollision(collideSolidObjects=true, isSolid=true, collideLevel=true, collideRaycast=true)
     {
         false&&ASSERT(collideSolidObjects || !isSolid, 'solid objects must be set to collide');
 
         this.collideSolidObjects = collideSolidObjects;
         this.isSolid = isSolid;
-        this.collideTiles = collideTiles;
+        this.collideLevel = collideLevel;
         this.collideRaycast = collideRaycast;
     }
+
+    /** @deprecated since 1.20, use collideLevel
+     *  @type {boolean} */
+    get collideTiles() { return this.collideLevel; }
+    set collideTiles(collide) { this.collideLevel = collide; }
 
     /** Returns string containing info about this object for debugging
      *  @return {string} */
@@ -3831,12 +3837,12 @@ class EngineObject
         if (!debug) return;
 
         // check if there is anything to show
-        const hasPhysics = this.collideTiles || this.collideSolidObjects || this.isSolid;
+        const hasPhysics = this.collideLevel || this.collideSolidObjects || this.isSolid;
         if (!hasPhysics && !this.parent) return;
 
         // show object info for debugging
         const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
-        const color = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);
+        const color = rgb(this.collideLevel?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);
         debugRect(this.pos, size, color, 0, hasPhysics ? 0 : this.angle, hasPhysics); // collision ignores the angle
         if (this.parent)
             debugRect(this.pos, size.scale(.8), rgb(1,1,1,.5), 0, this.angle);
@@ -9159,7 +9165,7 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [particleConeAngle] - Half angle each side of the emitter's angle for a particle's start angle, PI is any angle
      *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
      *  @param {number} [randomness]    - Apply extra randomness percent
-     *  @param {boolean} [collideTiles] - Do particles collide against tiles, world space emitters only
+     *  @param {boolean} [collideLevel] - Do particles collide with the level's tiles, world space emitters only
      *  @param {boolean} [additive]     - Should particles use additive blend
      *  @param {boolean} [randomColorLinear] - Should color be randomized linearly or across each component
      *  @param {number} [renderOrder] - Render order for particles (additive is above other stuff by default)
@@ -9189,7 +9195,7 @@ class ParticleEmitter extends EngineObject
         particleConeAngle = PI,
         fadeRate = .1,
         randomness = .2,
-        collideTiles = false,
+        collideLevel = false,
         additive = false,
         randomColorLinear = true,
         renderOrder = additive ? 1e9 : 0,
@@ -9245,8 +9251,8 @@ class ParticleEmitter extends EngineObject
         this.fadeRate          = fadeRate;
         /** @property {number} - Apply extra randomness percent */
         this.randomness        = randomness;
-        /** @property {boolean} - Do particles collide against tiles */
-        this.collideTiles      = collideTiles;
+        /** @property {boolean} - Do particles collide with the level's tiles */
+        this.collideLevel      = collideLevel;
         /** @property {boolean} - Should particles use additive blend */
         this.additive          = additive;
         /** @property {boolean} - Should it be in local space of emitter */
@@ -9322,7 +9328,7 @@ class ParticleEmitter extends EngineObject
             this.destroy(true);
             
         // a local space particle is placed relative to the emitter, but the tile collision is in the world
-        false&&ASSERT(!this.localSpace || !this.collideTiles, 'local space particles cannot collide with tiles, turn one of them off');
+        false&&ASSERT(!this.localSpace || !this.collideLevel, 'local space particles cannot collide with the level, turn one of them off');
 
         // update and remove destroyed particles in place to avoid per-frame array allocation
         const particles = this.particles;
@@ -9518,7 +9524,7 @@ class Particle
         const restitution = emitter.restitution;
         const friction = emitter.friction;
         const gravityScale = emitter.gravityScale;
-        const collideTiles = emitter.collideTiles;
+        const collideLevel = emitter.collideLevel;
         const collideCallback = emitter.particleCollideCallback;
         const updateCallback = emitter.particleUpdateCallback;
 
@@ -9530,7 +9536,7 @@ class Particle
         }
 
         // apply physics; only the tile collision needs where the particle was
-        const solve = enablePhysicsSolver && collideTiles;
+        const solve = enablePhysicsSolver && collideLevel;
         const oldX = this.pos.x, oldY = this.pos.y;
         let gravityX = gravity.x * gravityScale, gravityY = gravity.y * gravityScale;
         if (emitter.localSpace && emitter.angle)
@@ -11475,6 +11481,9 @@ class NewgroundsPlugin
         /** @property {Promise<NewgroundsPlugin>} - Resolves once the session is checked and the lists are in, empty if the server could not be reached */
         this.ready = this.init();
     }
+
+    /** @deprecated since 1.20, the view is logged when the plugin starts, so this does nothing */
+    logView() {}
 
     /** Log the view, check the session, fetch the medals and scoreboards, then keep the session alive; the constructor runs it once
      *  @private */
@@ -17034,6 +17043,14 @@ class Box2dWeldJoint extends Box2dJoint
     /** Get the damping ratio
      *  @return {number} */
     getDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
+
+    /** @deprecated since 1.20, use setDampingRatio
+     *  @param {number} ratio */
+    setSpringDampingRatio(ratio) { this.setDampingRatio(ratio); }
+
+    /** @deprecated since 1.20, use getDampingRatio
+     *  @return {number} */
+    getSpringDampingRatio() { return this.getDampingRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -17769,7 +17786,7 @@ async function box2dInit()
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
- *  @param {Color} [color=WHITE] - Color to modulate with
+ *  @param {Color|number} [color=WHITE] - Color to modulate with; a number here is the borderSize of the order before 1.20, deprecated
  *  @param {number} [borderSize] - Rendered thickness of the border sections
  *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
@@ -17779,7 +17796,12 @@ async function box2dInit()
  *  @memberof DrawUtilities */
 function drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 {
-    drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
+    if (isNumber(color)) // deprecated since 1.20, the order before it: borderSize, extraSpace and angle after startTile
+    {
+        [borderSize, extraSpace, angle] = [/** @type {number} */ (color), arguments[4] ?? 2, arguments[5] ?? 0];
+        color = WHITE, additiveColor = undefined;
+    }
+    drawNineSlice(pos, size, startTile, /** @type {Color} */ (color), borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
 }
 
 /** Draw a scalable nine-slice UI element in world space
@@ -17853,7 +17875,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
- *  @param {Color} [color=WHITE] - Color to modulate with
+ *  @param {Color|number} [color=WHITE] - Color to modulate with; a number here is the borderSize of the order before 1.20, deprecated
  *  @param {number} [borderSize] - Rendered thickness of the border sections
  *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
@@ -17863,7 +17885,12 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
  *  @memberof DrawUtilities */
 function drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 {
-    drawThreeSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
+    if (isNumber(color)) // deprecated since 1.20, the order before it: borderSize, extraSpace and angle after startTile
+    {
+        [borderSize, extraSpace, angle] = [/** @type {number} */ (color), arguments[4] ?? 2, arguments[5] ?? 0];
+        color = WHITE, additiveColor = undefined;
+    }
+    drawThreeSlice(pos, size, startTile, /** @type {Color} */ (color), borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
 }
 
 /** Draw a scalable three-slice UI element in world space
@@ -24362,10 +24389,10 @@ class EngineObject3D extends EngineObject
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
-     *  @param {boolean} [collideTiles] - Tile collision, 2D only so it needs sync2D
+     *  @param {boolean} [collideLevel] - Level collision, the 2D tile layers, so it needs sync2D
      *  @param {boolean} [collideRaycast] - Raycasts, 2D only; 3D has render3D.pick and engineObjectsRaycast3D */
-    setCollision(collideSolidObjects=true, isSolid=true, collideTiles=false, collideRaycast=false)
-    { super.setCollision(collideSolidObjects, isSolid, collideTiles, collideRaycast); }
+    setCollision(collideSolidObjects=true, isSolid=true, collideLevel=false, collideRaycast=false)
+    { super.setCollision(collideSolidObjects, isSolid, collideLevel, collideRaycast); }
 
     /** Returns the world position
      *  @return {Vector3} */

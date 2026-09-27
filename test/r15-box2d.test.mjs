@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { box2dInit, Box2dObject, Box2dStaticObject, Box2dMotorJoint, Box2dTargetJoint, Box2dDistanceJoint, vec2,
+import { box2dInit, Box2dObject, Box2dStaticObject, Box2dMotorJoint, Box2dTargetJoint, Box2dDistanceJoint, Box2dWeldJoint, vec2,
     setEngineManualStep, engineInit } from '../dist/littlejs.esm.js';
 
 // review round 15: joint setters that wake a sleeping body, and a joint made to a destroyed object
@@ -60,4 +60,17 @@ test('a joint made to a destroyed object asserts and is not linked into the worl
     assert.throws(()=> new Box2dDistanceJoint(a, b, vec2(0, 100), vec2(0, 103)), /Assert failed/);
     assert.equal(a.hasJoints(), false);
     a.destroy();
+});
+
+test('the weld joint still takes setSpringDampingRatio and getSpringDampingRatio, deprecated since 1.20', () =>
+{
+    const a = new Box2dObject(vec2(0, 200)), b = new Box2dObject(vec2(1, 200));
+    a.addBox();
+    b.addBox();
+    const weld = new Box2dWeldJoint(a, b, vec2(.5, 200));
+    weld.setSpringDampingRatio(.4);
+    assert.ok(Math.abs(weld.getDampingRatio() - .4) < 1e-6);
+    assert.ok(Math.abs(weld.getSpringDampingRatio() - .4) < 1e-6);
+    a.destroy();
+    b.destroy();
 });

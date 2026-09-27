@@ -572,7 +572,8 @@ EngineObject.isOverlapping(pos, size=(0,0))        // Does its box overlap a box
 EngineObject.addChild(child, localPos, localAngle) // Attach a child at an offset; localPos only exists on a child
 EngineObject.attach(child)                         // Attach a child where it is, the offset worked out for it
 EngineObject.removeChild(child)                    // Remove a child, it stays where it was in the world
-EngineObject.setCollision(solids=true, isSolid=true, tiles=true, raycast=true) // Set collision; raycast=false
+EngineObject.setCollision(solids=true, isSolid=true, level=true, raycast=true) // Set collision, level is collideLevel,
+                                                   // the tile collision layers; raycast=false
                                                    // leaves it out of engineObjectsRaycast; an object with no width
                                                    // or height is not a solid obstacle, so it blocks nothing and
                                                    // nothing blocks it
@@ -705,8 +706,8 @@ objectLayersLoad(tileMapData)                       // Make the objects of a map
 // Particle Emitter Object
 ParticleEmitter(pos, angle, emitSize, emitTime, emitRate, emitConeAngle, tileInfo, colorStartA, colorStartB,
     colorEndA, colorEndB, particleTime, sizeStart, sizeEnd, speed, angleSpeed, damping, angleDamping,
-    gravityScale, particleConeAngle, fadeRate, randomness, collideTiles, additive, randomColorLinear,
-    renderOrder, localSpace) // Create a particle system, speeds are per frame; collideTiles is for world space only
+    gravityScale, particleConeAngle, fadeRate, randomness, collideLevel, additive, randomColorLinear,
+    renderOrder, localSpace) // Create a particle system, speeds are per frame; collideLevel is for world space only
 emitter.trailScale / velocityInheritance / restitution / friction / emitCircle // More settings, set after making it
 emitter.particleCreateCallback / particleDestroyCallback / particleCollideCallback // Called with each particle
 emitter.particleUpdateCallback // Called with each particle every update, after it moves
@@ -1869,6 +1870,19 @@ debugKeysAlways = false // The number and +/- keys work with the overlay closed 
 debugOverlay         // Is the debug overlay active? setDebugOverlay(show=true) opens or closes it from code
 debugTweakables = false // Is the tweakables panel shown? setDebugTweakables(show=true)
 debugWatermark       // Should watermark with FPS appear in debug mode?
+```
+
+## Deprecated
+
+Old names and argument orders that still work, marked `@deprecated` in the types; use the new ones, the old will be
+removed in a later release.
+
+```javascript
+obj.collideTiles                         // since 1.20, use obj.collideLevel, the same flag
+weldJoint.setSpringDampingRatio(ratio)   // since 1.20, use setDampingRatio, and getDampingRatio for the getter
+newgrounds.logView()                     // since 1.20, does nothing, the view is logged when the plugin starts
+drawNineSliceScreen(pos, size, startTile, borderSize, extraSpace, angle) // since 1.20, the order is now
+drawThreeSliceScreen(pos, size, startTile, borderSize, extraSpace, angle) // (pos, size, startTile, color, ...)
 ```
 
 [LittleJS Engine](https://github.com/KilledByAPixel/LittleJS) Copyright 2021 Frank Force

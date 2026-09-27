@@ -3357,8 +3357,9 @@ declare module "littlejsengine" {
         localPos: Vector2 | undefined;
         /** @property {number} - Local angle if child  */
         localAngle: number;
-        /** @property {boolean} - Object collides with the tile collision */
-        collideTiles: boolean;
+        /** @property {boolean} - Object collides with the level, its tile collision layers
+         *  @type {boolean} */
+        collideLevel: boolean;
         /** @property {boolean} - Object collides with solid objects */
         collideSolidObjects: boolean;
         /** @property {boolean} - Object collides with and blocks other objects */
@@ -3475,9 +3476,13 @@ declare module "littlejsengine" {
         /** Set how this object collides
          *  @param {boolean} [collideSolidObjects] - Does it collide with solid objects?
          *  @param {boolean} [isSolid]             - Does it collide with and block other objects? (expensive in large numbers)
-         *  @param {boolean} [collideTiles]        - Does it collide with the tile collision?
+         *  @param {boolean} [collideLevel]        - Does it collide with the level, its tile collision layers?
          *  @param {boolean} [collideRaycast]      - Does it collide with raycasts? */
-        setCollision(collideSolidObjects?: boolean, isSolid?: boolean, collideTiles?: boolean, collideRaycast?: boolean): void;
+        setCollision(collideSolidObjects?: boolean, isSolid?: boolean, collideLevel?: boolean, collideRaycast?: boolean): void;
+        set collideTiles(arg: boolean);
+        /** @deprecated since 1.20, use collideLevel
+         *  @type {boolean} */
+        get collideTiles(): boolean;
         /** Returns string containing info about this object for debugging
          *  @return {string} */
         toString(): string;
@@ -3867,13 +3872,13 @@ declare module "littlejsengine" {
          *  @param {number} [particleConeAngle] - Half angle each side of the emitter's angle for a particle's start angle, PI is any angle
          *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
          *  @param {number} [randomness]    - Apply extra randomness percent
-         *  @param {boolean} [collideTiles] - Do particles collide against tiles, world space emitters only
+         *  @param {boolean} [collideLevel] - Do particles collide with the level's tiles, world space emitters only
          *  @param {boolean} [additive]     - Should particles use additive blend
          *  @param {boolean} [randomColorLinear] - Should color be randomized linearly or across each component
          *  @param {number} [renderOrder] - Render order for particles (additive is above other stuff by default)
          *  @param {boolean}  [localSpace] - Should it be in local space of emitter (world space is default)
          */
-        constructor(pos: Vector2, angle?: number, emitSize?: number | Vector2, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileInfo?: TileInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideTiles?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number, localSpace?: boolean);
+        constructor(pos: Vector2, angle?: number, emitSize?: number | Vector2, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileInfo?: TileInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideLevel?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number, localSpace?: boolean);
         /** @property {boolean} - Should particles be emitted in a circle */
         emitCircle: boolean;
         /** @property {Vector2} - World space size of the emitter, x is the diameter when emitCircle is set */
@@ -4189,6 +4194,8 @@ declare module "littlejsengine" {
         session_id: string | null;
         /** @property {Promise<NewgroundsPlugin>} - Resolves once the session is checked and the lists are in, empty if the server could not be reached */
         ready: Promise<this>;
+        /** @deprecated since 1.20, the view is logged when the plugin starts, so this does nothing */
+        logView(): void;
         /** Log the view, check the session, fetch the medals and scoreboards, then keep the session alive; the constructor runs it once
          *  @private */
         private init;
@@ -6259,6 +6266,12 @@ declare module "littlejsengine" {
         /** Get the damping ratio
          *  @return {number} */
         getDampingRatio(): number;
+        /** @deprecated since 1.20, use setDampingRatio
+         *  @param {number} ratio */
+        setSpringDampingRatio(ratio: number): void;
+        /** @deprecated since 1.20, use getDampingRatio
+         *  @return {number} */
+        getSpringDampingRatio(): number;
     }
     /**
      * Box2D Friction Joint
@@ -6409,7 +6422,7 @@ declare module "littlejsengine" {
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
-     *  @param {Color} [color=WHITE] - Color to modulate with
+     *  @param {Color|number} [color=WHITE] - Color to modulate with; a number here is the borderSize of the order before 1.20, deprecated
      *  @param {number} [borderSize] - Rendered thickness of the border sections
      *  @param {Color} [additiveColor] - Additive color
      *  @param {number} [extraSpace] - Extra spacing adjustment
@@ -6417,7 +6430,7 @@ declare module "littlejsengine" {
      *  @param {boolean} [useWebGL] - Use WebGL for rendering
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
-    export function drawNineSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawNineSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color | number, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, ...args: any[]): void;
     /** Draw a scalable three-slice UI element in world space
      *  Color and additive color apply in WebGL and Canvas2D (with canvasColorTiles)
      *  The three-slice samples 3 consecutive tiles from the tilesheet, it does not
@@ -6443,7 +6456,7 @@ declare module "littlejsengine" {
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
-     *  @param {Color} [color=WHITE] - Color to modulate with
+     *  @param {Color|number} [color=WHITE] - Color to modulate with; a number here is the borderSize of the order before 1.20, deprecated
      *  @param {number} [borderSize] - Rendered thickness of the border sections
      *  @param {Color} [additiveColor] - Additive color
      *  @param {number} [extraSpace] - Extra spacing adjustment
@@ -6451,7 +6464,7 @@ declare module "littlejsengine" {
      *  @param {boolean} [useWebGL] - Use WebGL for rendering
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
-    export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color | number, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, ...args: any[]): void;
     /**
      * A tile drawn as a box of any size, kept as a style to draw with, like a UI skin
      * - 9 slices is a nine-slice from the 3x3 block of tiles at tileInfo, see drawNineSlice

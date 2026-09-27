@@ -138,26 +138,26 @@ test('Timer unset returns 0 from get/getPercent/getSetTime', () =>
 test('EngineObject.setCollision applies each flag to the right slot', () =>
 {
     // Asymmetric patterns: each of the four (collideSolidObjects, isSolid,
-    // collideTiles, collideRaycast) slots gets a different value from its
+    // collideLevel, collideRaycast) slots gets a different value from its
     // neighbors, so any pairwise swap of assignments would show up.
     const o = new EngineObject(vec2(0, 0), vec2(1, 1));
     // pattern A: [T, F, T, F]
     o.setCollision(true, false, true, false);
     assert.equal(o.collideSolidObjects, true);
     assert.equal(o.isSolid, false);
-    assert.equal(o.collideTiles, true);
+    assert.equal(o.collideLevel, true);
     assert.equal(o.collideRaycast, false);
     // pattern B: [T, T, F, T] — flips everything from A (ASSERT requires collideSolidObjects||!isSolid)
     o.setCollision(true, true, false, true);
     assert.equal(o.collideSolidObjects, true);
     assert.equal(o.isSolid, true);
-    assert.equal(o.collideTiles, false);
+    assert.equal(o.collideLevel, false);
     assert.equal(o.collideRaycast, true);
     // defaults: all true
     o.setCollision();
     assert.equal(o.collideSolidObjects, true);
     assert.equal(o.isSolid, true);
-    assert.equal(o.collideTiles, true);
+    assert.equal(o.collideLevel, true);
     assert.equal(o.collideRaycast, true);
 });
 
@@ -481,7 +481,7 @@ test('a particle emitter in local space spawns its box unrotated, and a fast par
     }
     // the speed limit that keeps a particle from passing through a wall has to apply before the step it protects
     const e = new ParticleEmitter(vec2(), 0, 0, 0, 0, 1);
-    e.collideTiles = true;
+    e.collideLevel = true;
     e.damping = 1;
     const p = e.emitParticle();
     p.pos.set(0, 0);
@@ -510,7 +510,7 @@ test('a particle reports its death once however it dies, and a local space emitt
     // local space particles are relative to the emitter, the tile collision is in the world
     const local = new ParticleEmitter(vec2(), 0, 0, 0, 0);
     local.localSpace = true;
-    local.collideTiles = true;
+    local.collideLevel = true;
     assert.throws(()=> local.update(), /Assert/);
     local.destroy();
 });
@@ -533,7 +533,7 @@ test('a particle calls its update callback once each update, after it moves, and
     assert.equal(p.pos.x, 1, 'the callback change held');
 
     // the tile collision path reaches it too
-    e.collideTiles = true;
+    e.collideLevel = true;
     p.update();
     assert.equal(calls, 3);
 
@@ -550,7 +550,7 @@ test('a particle destroyed by its collide callback is not passed to the update c
     layer.setCollisionData(vec2(1, 0));
     let calls = 0;
     const e = new ParticleEmitter(vec2(), 0, 0, 0, 0);
-    e.collideTiles = true;
+    e.collideLevel = true;
     e.damping = 1;
     e.gravityScale = 0;
     e.particleCollideCallback = (p)=> { p.destroy(); return true; };
