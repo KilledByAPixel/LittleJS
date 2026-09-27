@@ -1801,8 +1801,10 @@ tweakEngineDefaults()      // Add gravity, timeScale, cameraScale and soundVolum
 - Every change is autosaved and comes back after a reload, Save writes the map as Tiled JSON
 - Left paints, right click picks, right drag selects, middle or Space drag pans, the wheel zooms, 1-9 pick a layer
 - F fills, Delete clears the selection, Ctrl+C/X/V copy, cut and paste it as a stamp, R turns, M mirrors, ? lists the keys
+- Left drag a selection to move it, Escape or a right click puts it back
 - A map's object layers come after its tile layers: left places the palette's type or selects and drags,
   right click picks, right drag box-selects, a selected object's properties show in the panel
+- The panel's Advanced section has Play from mouse, the level's size to resize it, and Reset to file
 - Debug builds only, release builds have none of its code
 
 ```javascript

@@ -9217,7 +9217,8 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
  *  - An object is made at its position, the world y up as tileLayersLoad places the layers; layer offsets are
  *    not read, and a shape or tile object is made at its position too
  *  - Group layers are flattened in order, as tileLayersLoad does
- *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors
+ *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors,
+ *    and for a Vector2 default the string x,y
  *  - An object whose type was not added is skipped, with a warning in debug builds
  *  @param {Object} tileMapData - The same Tiled map given to tileLayersLoad
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
@@ -9255,10 +9256,17 @@ function objectLayersProperties(type, object)
         properties[key] = value?.copy ? value.copy() : value;
     for (const property of object.properties || [])
     {
-        if (property.type !== 'color')
-            properties[property.name] = property.value;
-        else if (property.value)
-            properties[property.name] = tileLayersColor(property.value); // an empty color is unset
+        const {name, value} = property;
+        if (property.type === 'color')
+            value && (properties[name] = tileLayersColor(value)); // an empty color is unset
+        else if (isVector2(type.defaults[name]))
+        {
+            // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default
+            const [x, y] = String(value).split(',').map(Number);
+            isNumber(x) && isNumber(y) && (properties[name] = vec2(x, y));
+        }
+        else
+            properties[name] = value;
     }
     return properties;
 }
@@ -29164,16 +29172,18 @@ function editorChangeObjects(layer, change)
 }
 
 // set an object's property as Tiled keeps it, only where it differs from its type's default, a color as #AARRGGBB
+// and a Vector2 as the string x,y
 function editorObjectSetProperty(object, name, value, defaultValue)
 {
     if (Number.isInteger(defaultValue) && isNumber(value))
         value = round(value); // an integer stays one, as Tiled keeps an int
     const properties = (object.properties ?? []).filter((property)=> property.name !== name);
-    const text = (v)=> isColor(v) ? v.toString() : JSON.stringify(v);
+    const text = (v)=> isColor(v) ? v.toString() : isVector2(v) ? v.x + ',' + v.y : JSON.stringify(v);
     if (text(value) !== text(defaultValue))
     {
         const hex = isColor(value) && value.toString();
         properties.push(hex ? {name, type: 'color', value: '#' + hex.slice(7, 9) + hex.slice(1, 7)} :
+            isVector2(value) ? {name, type: 'string', value: text(value)} :
             {name, type: typeof value === 'boolean' ? 'bool' : typeof value === 'string' ? 'string' :
             Number.isInteger(defaultValue) ? 'int' : 'float', value});
     }
@@ -30233,7 +30243,8 @@ function editorZoom(factor)
 function editorSnap(pos) { return editorGrid ? pos.floor().add(vec2(.5)) : pos.copy(); }
 
 // if the properties box has an input for a default's type, a number, boolean, string or Color
-const editorPropertyEditable = (value)=> ['number', 'boolean', 'string'].includes(typeof value) || isColor(value);
+const editorPropertyEditable = (value)=>
+    ['number', 'boolean', 'string'].includes(typeof value) || isColor(value) || isVector2(value);
 
 // set a property of the one selected object, from the properties box, as one undo
 function editorSetSelectedProperty(name, value)
@@ -30241,7 +30252,8 @@ function editorSetSelectedProperty(name, value)
     const selected = editorSelectedObjects(), object = selected[0];
     const type = object && objectLayersTypes.get(object.type || object.class), defaultValue = type?.defaults[name];
     if (selected.length !== 1 || !editorPropertyEditable(defaultValue) ||
-        (isColor(defaultValue) ? !isColor(value) : typeof value !== typeof defaultValue)) return false;
+        (isColor(defaultValue) ? !isColor(value) : isVector2(defaultValue) ? !isVector2(value) :
+        typeof value !== typeof defaultValue)) return false;
     editorStrokeEnd();
     editorChangeObjects(editorObjectLayer, (list)=>
         editorObjectSetProperty(list.find((o)=> o.id === object.id), name, value, type.defaults[name]));
@@ -30349,9 +30361,27 @@ function editorPropertiesUpdate(box)
             input.value = String(value ?? '');
             input.onchange = ()=> set(input.value);
         }
+        else if (isVector2(defaultValue))
+        {
+            // x and y, the row's second input for y
+            const y = editorElement('input', row, 'width:52px;background:#222;color:#eee');
+            input.style.width = '52px';
+            for (const [field, v] of [[input, value.x], [y, value.y]])
+            {
+                field.type = 'number';
+                field.step = 'any';
+                field.value = String(v);
+                field.onchange = ()=>
+                {
+                    const pos = vec2(parseFloat(input.value), parseFloat(y.value));
+                    isVector2(pos) && set(pos);
+                    field.blur();
+                };
+            }
+        }
         else
         {
-            // a type it has no input for, a Vector2 say, shown as it is
+            // a type it has no input for, an array say, shown as it is
             input.readOnly = true;
             input.value = String(value);
         }

@@ -424,7 +424,7 @@ test('undoing the first object placed in a map with no object layer forgets the 
     assert.equal(JSON.parse(storage.items['LittleJS editor /game/'])[mapKey], undefined);
 });
 
-test('the properties box leaves a default it has no input for alone, and rounds an integer', async () =>
+test('the properties box takes only a value of the default\'s type, and rounds an integer', async () =>
 {
     const { run } = await loadGame();
     run(editCode.replace(`{ value: 1, tint: hsl(0, 0, 1) }`, `{ value: 1, tint: hsl(0, 0, 1), offset: vec2(1, 0) }`) +
@@ -433,6 +433,29 @@ test('the properties box leaves a default it has no input for alone, and rounds 
     assert.equal(run(`editorSetSelectedProperty('value', 2.6)`), true);
     assert.deepEqual(JSON.parse(run('JSON.stringify([list()[0].properties, made[0].value])')),
         [[{ name: 'value', type: 'int', value: 3 }], 3]);
+});
+
+test('a Vector2 property is saved as Tiled keeps one, the string x,y, and only where it differs', async () =>
+{
+    const { run } = await loadGame();
+    run(objectCode + 'var object = { id: 9, type: \'Coin\' };');
+    run(`editorObjectSetProperty(object, 'dir', vec2(1, 0), vec2(0, 1))`);
+    assert.deepEqual(JSON.parse(run('JSON.stringify(object.properties)')),
+        [{ name: 'dir', type: 'string', value: '1,0' }]);
+    run(`editorObjectSetProperty(object, 'dir', vec2(0, 1), vec2(0, 1))`);
+    assert.equal(run('object.properties'), undefined, 'back to the default, no override');
+});
+
+test('the properties box sets a Vector2, and the game object gets a Vector2', async () =>
+{
+    const { run } = await loadGame();
+    run(editCode.replace(`{ value: 1, tint: hsl(0, 0, 1) }`, `{ value: 1, tint: hsl(0, 0, 1), offset: vec2(1, 0) }`) +
+        'editorSelectLayer(objects); editorObjectSelection.add(1);');
+    assert.equal(run(`editorSetSelectedProperty('offset', vec2(2, 3))`), true);
+    assert.deepEqual(JSON.parse(run('JSON.stringify([list()[0].properties, isVector2(made[0].offset)])')),
+        [[{ name: 'offset', type: 'string', value: '2,3' }], true]);
+    assert.deepEqual([...run('[made[0].offset.x, made[0].offset.y]')], [2, 3]);
+    assert.equal(run('editorPropertyEditable(vec2())'), true);
 });
 
 // minor fixes

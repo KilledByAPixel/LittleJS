@@ -270,7 +270,8 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
  *  - An object is made at its position, the world y up as tileLayersLoad places the layers; layer offsets are
  *    not read, and a shape or tile object is made at its position too
  *  - Group layers are flattened in order, as tileLayersLoad does
- *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors
+ *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors,
+ *    and for a Vector2 default the string x,y
  *  - An object whose type was not added is skipped, with a warning in debug builds
  *  @param {Object} tileMapData - The same Tiled map given to tileLayersLoad
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
@@ -308,10 +309,17 @@ function objectLayersProperties(type, object)
         properties[key] = value?.copy ? value.copy() : value;
     for (const property of object.properties || [])
     {
-        if (property.type !== 'color')
-            properties[property.name] = property.value;
-        else if (property.value)
-            properties[property.name] = tileLayersColor(property.value); // an empty color is unset
+        const {name, value} = property;
+        if (property.type === 'color')
+            value && (properties[name] = tileLayersColor(value)); // an empty color is unset
+        else if (isVector2(type.defaults[name]))
+        {
+            // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default
+            const [x, y] = String(value).split(',').map(Number);
+            isNumber(x) && isNumber(y) && (properties[name] = vec2(x, y));
+        }
+        else
+            properties[name] = value;
     }
     return properties;
 }

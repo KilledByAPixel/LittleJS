@@ -3569,7 +3569,8 @@ declare module "littlejsengine" {
      *  - An object is made at its position, the world y up as tileLayersLoad places the layers; layer offsets are
      *    not read, and a shape or tile object is made at its position too
      *  - Group layers are flattened in order, as tileLayersLoad does
-     *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors
+     *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors,
+     *    and for a Vector2 default the string x,y
      *  - An object whose type was not added is skipped, with a warning in debug builds
      *  @param {Object} tileMapData - The same Tiled map given to tileLayersLoad
      *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
