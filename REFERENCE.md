@@ -1368,8 +1368,8 @@ buildBox(size=1, bevel=0, bevelSegments=1)    // a vec3 or a number, six flat fa
                                               // and corners, 1 segment a flat chamfer, more round them, clamped
                                               // to half the smallest side
 buildSphere(size=1, sides=16, rings=8, smooth)
-buildCylinder(size=1, height=1, sides=16, smooth, capped=true)
-buildCone(size=1, height=1, sides=16, smooth, capped=true)      // point up
+buildCylinder(size=1, height=1, sides=16, smooth, capped=true, bevel=0, bevelSegments=1) // bevel cuts both rims
+buildCone(size=1, height=1, sides=16, smooth, capped=true, bevel=0, bevelSegments=1) // point up, bevel cuts the base rim
 buildCapsule(size=1, height=1, sides=16, rings=4, smooth) // total height including the rounded ends, at least the size
 buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth) // size is the diameter of the whole donut, outside edge
                                                                // to outside edge; it lies flat in the XZ plane like a

@@ -25009,6 +25009,33 @@ function render3DSoftDot()
 // The rest of the shape builders: buildLathe, buildSphere, buildBox, buildGrid and buildSky live with the
 // renderer, since it hands those out itself
 
+// lathe profile points rounding the corner at [r, y] where two sides leave it along the unit directions d1 and d2,
+// from t along d1 to t along d2; one segment is a flat chamfer, its points doubled so the lathe shades both of its
+// edges hard, more follow the circle that touches both sides
+function render3DBevelProfile(corner, d1, d2, t, segments)
+{
+    const p1 = [corner[0] + d1[0] * t, corner[1] + d1[1] * t];
+    const p2 = [corner[0] + d2[0] * t, corner[1] + d2[1] * t];
+    segments = max(1, segments | 0);
+    if (segments === 1)
+        return [p1, p1, p2, p2];
+
+    // the circle's center is on the line halfway between the sides, as far from each as its radius
+    const half = Math.acos(clamp(d1[0] * d2[0] + d1[1] * d2[1], -1, 1)) / 2;
+    const bx = d1[0] + d2[0], by = d1[1] + d2[1], reach = t / cos(half) / hypot(bx, by);
+    const cx = corner[0] + bx * reach, cy = corner[1] + by * reach, radius = t * tan(half);
+    const start = atan2(p1[1] - cy, p1[0] - cx);
+    const turn = mod(atan2(p2[1] - cy, p2[0] - cx) - start + PI, 2 * PI) - PI; // the short way round
+    const points = [p1];
+    for (let i = 1; i < segments; ++i)
+    {
+        const a = start + turn * i / segments;
+        points.push([cx + cos(a) * radius, cy + sin(a) * radius]);
+    }
+    points.push(p2);
+    return points;
+}
+
 /**
  * Build a cylinder standing on the Y axis, centered on the origin
  * @param {number} [size] - Diameter
@@ -25016,12 +25043,19 @@ function render3DSoftDot()
  * @param {number} [sides] - Around
  * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @param {boolean} [capped] - Close the ends
+ * @param {number} [bevel] - Size of the cut on the top and bottom rims, clamped to the radius and half the height
+ * @param {number} [bevelSegments] - Steps around each rim, 1 for a flat chamfer
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildCylinder(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true)
+function buildCylinder(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true, bevel=0, bevelSegments=1)
 {
-    return buildLathe([[size / 2, -height / 2], [size / 2, height / 2]], sides, smooth, capped);
+    false&&ASSERT(isNumber(bevel) && bevel >= 0, 'bevel must be a number, 0 or more');
+    const r = size / 2, h = height / 2, t = min(bevel, r, h);
+    if (!(t > 0))
+        return buildLathe([[r, -h], [r, h]], sides, smooth, capped);
+    return buildLathe([...render3DBevelProfile([r, -h], [-1, 0], [0, 1], t, bevelSegments),
+        ...render3DBevelProfile([r, h], [0, -1], [-1, 0], t, bevelSegments)], sides, smooth, capped);
 }
 
 /**
@@ -25031,12 +25065,20 @@ function buildCylinder(size=1, height=1, sides=16, smooth=render3D?.smoothShadin
  * @param {number} [sides] - Around
  * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @param {boolean} [capped] - Close the base
+ * @param {number} [bevel] - Size of the cut on the base rim, clamped to the radius and half the slanted side
+ * @param {number} [bevelSegments] - Steps around the rim, 1 for a flat chamfer
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildCone(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true)
+function buildCone(size=1, height=1, sides=16, smooth=render3D?.smoothShading, capped=true, bevel=0, bevelSegments=1)
 {
-    return buildLathe([[size / 2, -height / 2], [0, height / 2]], sides, smooth, capped);
+    false&&ASSERT(isNumber(bevel) && bevel >= 0, 'bevel must be a number, 0 or more');
+    const r = size / 2, h = height / 2, slant = hypot(r, height), t = min(bevel, r, slant / 2);
+    if (!(t > 0))
+        return buildLathe([[r, -h], [0, h]], sides, smooth, capped);
+    const up = [-r / slant, height / slant]; // along the slanted side from the rim toward the point
+    return buildLathe([...render3DBevelProfile([r, -h], [-1, 0], up, t, bevelSegments), [0, h]],
+        sides, smooth, capped);
 }
 
 /**

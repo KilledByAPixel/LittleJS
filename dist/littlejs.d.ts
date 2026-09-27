@@ -8262,10 +8262,12 @@ declare module "littlejsengine" {
      * @param {number} [sides] - Around
      * @param {boolean} [smooth] - Defaults to render3D.smoothShading
      * @param {boolean} [capped] - Close the ends
+     * @param {number} [bevel] - Size of the cut on the top and bottom rims, clamped to the radius and half the height
+     * @param {number} [bevelSegments] - Steps around each rim, 1 for a flat chamfer
      * @return {Mesh}
      * @memberof Render3D
      */
-    export function buildCylinder(size?: number, height?: number, sides?: number, smooth?: boolean, capped?: boolean): Mesh;
+    export function buildCylinder(size?: number, height?: number, sides?: number, smooth?: boolean, capped?: boolean, bevel?: number, bevelSegments?: number): Mesh;
     /**
      * Build a sphere centered on the origin
      * @param {number} [size] - Diameter
@@ -8283,10 +8285,12 @@ declare module "littlejsengine" {
      * @param {number} [sides] - Around
      * @param {boolean} [smooth] - Defaults to render3D.smoothShading
      * @param {boolean} [capped] - Close the base
+     * @param {number} [bevel] - Size of the cut on the base rim, clamped to the radius and half the slanted side
+     * @param {number} [bevelSegments] - Steps around the rim, 1 for a flat chamfer
      * @return {Mesh}
      * @memberof Render3D
      */
-    export function buildCone(size?: number, height?: number, sides?: number, smooth?: boolean, capped?: boolean): Mesh;
+    export function buildCone(size?: number, height?: number, sides?: number, smooth?: boolean, capped?: boolean, bevel?: number, bevelSegments?: number): Mesh;
     /**
      * Build a capsule standing on the Y axis, centered on the origin: a cylinder with a half sphere on each end
      * @param {number} [size] - Diameter

@@ -104,3 +104,48 @@ test('a beveled face keeps the uvs a plain box face has', () =>
     assert.ok(i >= 0);
     near(box.uvs[i].x, .75); near(box.uvs[i].y, .25);
 });
+
+test('a cylinder and cone with no bevel are exactly what they were', () =>
+{
+    assert.deepEqual(buildCylinder(2, 3, 12, true, true, 0).points, buildCylinder(2, 3, 12, true).points);
+    assert.deepEqual(buildCone(2, 3, 12, false, true, 0).points, buildCone(2, 3, 12, false).points);
+});
+
+test('a beveled cylinder keeps its size, is closed, and loses a little volume at each rim', () =>
+{
+    for (const segments of [1, 4])
+    for (const smooth of [true, false])
+    {
+        const plain = buildCylinder(2, 2, 24, smooth), beveled = buildCylinder(2, 2, 24, smooth, true, .25, segments);
+        const {min, max} = beveled.getBounds();
+        near(min.y, -1); near(max.y, 1); near(max.x, 1, 1e-6);
+        assert.equal(isClosed(beveled), true, `segments ${segments} smooth ${smooth}`);
+        const v = volume(beveled), full = volume(plain);
+        assert.ok(v < full && v > full * .9, `volume ${v} of ${full}`);
+        for (const n of beveled.normals)
+            near(n.length(), 1);
+    }
+});
+
+test('a bevel as big as the cylinder allows is clamped, and still closed', () =>
+{
+    const round = buildCylinder(2, 1, 16, true, true, 5, 4); // clamped to the half height .5
+    assert.equal(isClosed(round), true);
+    const {min, max} = round.getBounds();
+    near(min.y, -.5); near(max.y, .5); near(max.x, 1, 1e-6);
+    assert.ok(volume(round) < volume(buildCylinder(2, 1, 16, true)), 'the clamped bevel still cuts');
+});
+
+test('a beveled cone rounds only its base rim, keeps its size and is closed', () =>
+{
+    for (const segments of [1, 4])
+    {
+        const plain = buildCone(2, 2, 24, true), beveled = buildCone(2, 2, 24, true, true, .3, segments);
+        const {min, max} = beveled.getBounds();
+        near(min.y, -1); near(max.y, 1);
+        assert.ok(max.x < 1 && max.x > .8, 'the rim, the widest place, is cut back ' + max.x);
+        assert.equal(isClosed(beveled), true);
+        assert.ok(volume(beveled) < volume(plain));
+        assert.equal(isClosed(buildCone(2, 2, 24, true, true, 5, segments)), true); // clamped
+    }
+});
