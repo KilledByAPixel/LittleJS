@@ -1077,3 +1077,55 @@ test('with Play from mouse off, or on Exit and Restart, the game is not moved', 
     engine.run('editorPlayFromMouse = true; editorRestart(); levelEditor.open(); levelEditor.close();');
     assert.equal(engine.run('calls'), 0);
 });
+
+// resizing: the map grows and shrinks at the right and top, and the game rebuilds it with its Restart hook
+
+const restartCode = `var restarts = 0; levelEditor.onRestart = ()=>
+    { ++restarts; engineObjectsDestroy(); layers = tileLayersLoad(map, undefined, 0, 2); };`;
+
+test('without a Restart hook the level size can not change', async () =>
+{
+    const { run } = await loadGame();
+    assert.equal(run(mapCode + 'editorResize(front.record, 4, 3)'), false);
+    assert.equal(run('map.width'), 3);
+});
+
+test('growing adds empty cells at the right and top, tiles and objects keep their places, as one undo', async () =>
+{
+    const { run } = await loadGame();
+    assert.equal(run(mapCode + restartCode + 'editorResize(front.record, 4, 3)'), true);
+    assert.deepEqual([...run('frontData = map.layers[2].layers[0].data')], [0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0]);
+    assert.deepEqual([...run('map.layers[0].data')], [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2, 0]);
+    assert.deepEqual([...run(`[map.width, map.height, map.layers[0].width, map.layers[0].height,
+        map.layers[1].objects[0].y, restarts, layers[2].size.x, layers[2].size.y]`)], [4, 3, 4, 3, 24, 1, 4, 3]);
+    run('editorUndo()');
+    assert.deepEqual([...run('[map.width, map.height, map.layers[1].objects[0].y, restarts, layers[2].size.x]')],
+        [3, 2, 8, 2, 3]);
+    assert.deepEqual([...run('map.layers[0].data')], [1, 0, 0, 0, 0, 2]);
+});
+
+test('shrinking drops tiles and objects past the new right and top edges', async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode + restartCode + 'editorResize(front.record, 2, 1)');
+    assert.deepEqual([...run('map.layers[0].data')], [0, 0]);
+    assert.equal(run('map.layers[1].objects.length'), 0, 'the object at the top is past the new top edge');
+});
+
+test('a resized level is autosaved and comes back at its size on reload, and Reset to file puts the size back',
+    async () =>
+{
+    const storage = makeStorage();
+    const first = await loadGame({ localStorage: storage });
+    first.run(fileCode() + restartCode + 'editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();' +
+        'editorResize(front.record, 4, 3);');
+    const second = await loadGame({ localStorage: storage });
+    second.run(fileCode() + restartCode);
+    assert.deepEqual([...second.run('[map.width, map.height, layers[2].size.x, layers[2].size.y]')], [4, 3, 4, 3]);
+    assert.equal(second.run('map.layers[2].layers[0].data[8]'), 2, 'the painted tile, now on the bottom row');
+    second.run('editorRevert(front.record)');
+    assert.deepEqual([...second.run('[map.width, map.height, restarts]')], [3, 2, 1]);
+    assert.deepEqual([...second.run('map.layers[2].layers[0].data')], [0, 0, 3, 0, 0, 0]);
+    second.run('editorUndo()');
+    assert.deepEqual([...second.run('[map.width, map.height]')], [4, 3], 'Reset to file is one undo');
+});
