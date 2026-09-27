@@ -117,6 +117,10 @@ let editorSelection, editorRightPress, editorLeftSpent;
 // they were, and with All Layers the ids of the objects in it, by object layer
 let editorSelectionDrag;
 
+// if the mouse is over the panel, and where it was last on the level, which is where the editor reads it while it is
+// over the panel, so a drag held across it stops at its edge and paints nothing behind it
+let editorMouseOnPanel = false, editorMouseScreen = vec2();
+
 // if selection edits, Delete, Ctrl+C and Ctrl+X, act on every tile layer of the edited layer's map
 let editorAllLayers = false;
 
@@ -146,6 +150,7 @@ function editorSetOpen(open)
         editorStrokeEnd();
         editorSelection = editorSelectionDrag = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
         editorObjectSelection.clear();
+        editorMouseOnPanel = false; // the panel hides, with no mouseleave
         const state = editorGameState;
         setPaused(state.paused);
         setCameraPos(state.cameraPos);
@@ -1106,7 +1111,7 @@ function editorPasteObjects()
 // Shift adding and Ctrl taking away
 function editorUpdateObjects(space)
 {
-    const layer = editorObjectLayer, record = layer.record, mouse = screenToWorld(mousePosScreen);
+    const layer = editorObjectLayer, record = layer.record, mouse = screenToWorld(editorMouseScreen);
     const snap = editorSnap;
     const shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
     const ctrl = keyIsDown('ControlLeft') || keyIsDown('ControlRight') || keyIsDown('MetaLeft') || keyIsDown('MetaRight');
@@ -1646,6 +1651,8 @@ function editorPanelInit()
     // a click or touch on the panel is not the game's, a mouse up still goes on so a drag can let go
     for (const type of ['mousedown','wheel','touchstart','touchmove','touchend','touchcancel'])
         editorPanel.addEventListener(type, (e)=> e.stopPropagation());
+    editorPanel.addEventListener('mouseenter', ()=> editorMouseOnPanel = true);
+    editorPanel.addEventListener('mouseleave', ()=> editorMouseOnPanel = false);
 
     const row = ()=> editorElement('div', editorPanel, 'display:flex;gap:4px;margin:4px 0');
     const button = (parent, text, onclick, title='')=>
@@ -2219,10 +2226,11 @@ function editorUpdate()
         editorCameraPos = editorCameraPos.subtract(screenToWorldDelta(mouseDeltaScreen));
     editorApplyCamera();
 
+    editorMouseOnPanel || (editorMouseScreen = mousePosScreen.copy());
     if (editorObjectLayer)
         return editorUpdateObjects(space);
-    const layer = editorLayer?.live.destroyed ? undefined : editorLayer, mouse = screenToWorld(mousePosScreen);
-    editorHover = layer && editorCellAt(layer.live, mouse);
+    const layer = editorLayer?.live.destroyed ? undefined : editorLayer, mouse = screenToWorld(editorMouseScreen);
+    editorHover = layer && !editorMouseOnPanel && editorCellAt(layer.live, mouse); // over the panel, a line starts again
 
     // a right press while dragging the selection puts it back, and is taken so it does not pick or select
     if (editorSelectionDrag && mouseWasPressed(2))

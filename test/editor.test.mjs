@@ -1378,3 +1378,40 @@ test('a file whose layers changed shape or name, the same tiles in it, waits ins
         assert.deepEqual([...engine.run('map.layers[0].data')], [1, 0, 0, 0, 0, 2], 'the file as it is');
     }
 });
+
+test('a paint drag over the panel paints nothing behind it, and starts again where it comes back', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode);
+    leftDrag(engine, [0, 0]);
+    engine.run('editorMouseOnPanel = true'); // as the panel's mouseenter sets it
+    for (const cell of [[1, 1], [2, 1]])
+    {
+        engine.handlers.mousemove(at(...cell));
+        step(engine);
+    }
+    engine.run('editorMouseOnPanel = false');
+    engine.handlers.mousemove(at(2, 0));
+    step(engine);
+    leftUp(engine);
+    const tile = (x, y)=> engine.run(`layers[2].getData(vec2(${x}, ${y})).tile`);
+    assert.deepEqual([tile(0, 0), tile(1, 0), tile(1, 1), tile(2, 0)], [6, undefined, undefined, 6]);
+    assert.equal(tile(2, 1), 2, 'the tile it had');
+});
+
+test('a selection drag over the panel stops at its edge and ends where it was on the level', async () =>
+{
+    const engine = await loadGame();
+    engine.handlers.mousemove(at(0, 0));
+    engine.run(editCode);
+    engine.handlers.mousedown({ ...at(0, 0), button: 2 });
+    step(engine);
+    engine.handlers.mousemove({ ...at(1, 1), button: 2 });
+    step(engine);
+    engine.run('editorMouseOnPanel = true');
+    engine.handlers.mousemove({ ...at(2, 1), button: 2 });
+    step(engine);
+    engine.handlers.mouseup({ ...at(2, 1), button: 2 });
+    step(engine);
+    assert.deepEqual([...selection(engine)], [0, 0, 1, 1]);
+});
