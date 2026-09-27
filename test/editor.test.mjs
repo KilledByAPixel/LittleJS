@@ -817,3 +817,128 @@ test('on a layout without Latin letters the shortcuts go by key position', async
     typed(engine, 'я', { ctrl: true, code: 'KeyZ' }); // the Z key of a Russian keyboard
     assert.equal(engine.run('frontData[3]'), 0);
 });
+
+// minor fixes
+
+test('F or Delete pressed during a held drag is an undo of its own', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorPaint(front, vec2(0, 0), editorTileToGid(1)); // a drag still held
+        editorSelection = editorArea(vec2(1, 0), vec2(2, 0));`);
+    typed(engine, 'f');
+    assert.equal(engine.run('editorUndoList.length'), 2);
+    engine.run(`editorPaint(front, vec2(0, 1), editorTileToGid(1)); editorSelection = editorArea(vec2(1, 0), vec2(2, 0));`);
+    typed(engine, 'Delete');
+    assert.equal(engine.run('editorUndoList.length'), 4);
+});
+
+test('copying an area with nothing in it keeps the brush, and a see-through cell is not called Erase', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `var before = editorBrush; editorSelection = editorArea(vec2(0, 0), vec2(1, 0));`);
+    typed(engine, 'c', { ctrl: true });
+    assert.equal(engine.run('editorBrush === before'), true);
+    assert.equal(engine.run('editorBrush = { width: 1, height: 1, grids: [[undefined]] }; editorBrushLabel()'),
+        'Brush: empty');
+});
+
+test('Ctrl+C, X and V leave the browser its own copy and paste when they have nothing to do', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode);
+    const prevented = (key, ctrl=true)=> engine.run(`(()=> { let prevented = false;
+        editorOnKeyDown({ key: '${key}', code: '', repeat: false, ctrlKey: ${ctrl}, metaKey: false, shiftKey: false,
+            altKey: false, target: undefined, preventDefault() { prevented = true; } });
+        return prevented; })()`);
+    assert.deepEqual(['c', 'x', 'v'].map((key)=> prevented(key)), [false, false, false]);
+    engine.run('editorSelection = editorArea(vec2(2, 1), vec2(2, 1))');
+    assert.equal(prevented('c'), true);
+    assert.equal(prevented('v'), true, 'there is a stamp to paste now');
+    assert.equal(prevented('g', false), true);
+});
+
+test('a right click that moves a few pixels far zoomed out still picks', async () =>
+{
+    const engine = await loadGame();
+    const { run, handlers } = engine;
+    run(editCode + 'editorCameraScale = 4; editorBrush = editorStampTile(editorTileToGid(6));');
+    handlers.mousedown({ ...at(1, 0), button: 2 });
+    step(engine);
+    handlers.mousemove({ ...at(1, 0), x: 503, button: 2 });
+    step(engine);
+    handlers.mouseup({ ...at(1, 0), x: 503, button: 2 });
+    step(engine);
+    assert.equal(selection(engine), undefined);
+    assert.equal(run('editorBrush.grids[0][0]'), 0, 'picked the empty cell under the mouse');
+});
+
+test('a fill or an undo draws the layer once, not cell by cell, and painting one cell still shows at once',
+    async () =>
+{
+    const engine = await loadGame();
+    // a canvas of its own, as in a browser, so setData redraws a cell through redrawTileData
+    engine.run(editCode + `var cells = 0, full = 0; layers[2].context = {};
+        layers[2].redrawTileData = ()=> ++cells; layers[2].redraw = ()=> ++full;
+        editorSelection = editorArea(vec2(0, 0), vec2(2, 1));`);
+    typed(engine, 'f');
+    assert.deepEqual([...engine.run('[cells, full]')], [0, 1]);
+    typed(engine, 'z', { ctrl: true });
+    assert.deepEqual([...engine.run('[cells, full]')], [0, 2]);
+    engine.run('editorPaint(front, vec2(0, 0), editorTileToGid(2))');
+    assert.equal(engine.run('cells'), 1, 'a drag shows each cell as it is painted');
+});
+
+test('a selection goes with its layer when the game loads the map again, and Ctrl+C then does nothing', async () =>
+{
+    const storage = makeStorage();
+    const engine = await reload(storage);
+    engine.run(`setEditMode(true); editorLayer = front; var before = editorBrush;
+        editorSelection = editorArea(vec2(0, 0), vec2(1, 0));
+        engineObjectsDestroy(); var copy = JSON.parse(JSON.stringify(map)); editorJSONFetched('${mapKey}', copy);
+        layers = tileLayersLoad(copy, undefined, 0, 2);`);
+    assert.equal(engine.run('editorSelection'), undefined);
+    typed(engine, 'c', { ctrl: true });
+    assert.equal(engine.run('editorBrush === before'), true);
+});
+
+test('Save, Revert, Apply and Drop do nothing with no layer to act on', async () =>
+{
+    const { run } = await loadGame();
+    run('editorSave(undefined); editorRevert(undefined); editorApplyPending(undefined); editorDiscardPending(undefined)');
+});
+
+test('an infinite map gets the loader\'s own message, and typed array data saves as plain gids', async () =>
+{
+    const { run } = await loadGame();
+    assert.throws(()=> run(`tileLayersLoad({ width: 2, height: 1, infinite: true,
+        layers: [{ type: 'tilelayer', width: 2, height: 1, chunks: [] }] })`), /Assert failed/);
+    const saved = JSON.parse(run(`const [typed] = tileLayersLoad({ width: 2, height: 1,
+        layers: [{ type: 'tilelayer', width: 2, height: 1, data: new Uint32Array([1, 0]) }] }, undefined, 0, 0, false);
+        editorMapJSON(editorLayerRecord(typed).record)`));
+    assert.deepEqual(saved.layers[0].data, [1, 0]);
+});
+
+test('a level URL with a version query keeps its autosave when the version changes', async () =>
+{
+    const storage = makeStorage();
+    const load = async (version)=>
+    {
+        const engine = await loadGame({ localStorage: storage });
+        engine.run(mapCode.replace('var layers = tileLayersLoad',
+            `editorJSONFetched('levels/one.json?v=${version}', map);\n    var layers = tileLayersLoad`));
+        return engine;
+    };
+    paintAndSave(await load(1));
+    assert.deepEqual([...(await load(2)).run('frontData')], [5, 0, 3, 0, 0, 0]);
+});
+
+test('an autosave that does not fit in storage says so', async () =>
+{
+    const full = { getItem: ()=> null, setItem() { throw new Error('QuotaExceededError'); } };
+    const engine = await loadGame({ localStorage: full });
+    engine.run(mapCode + 'editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();');
+    assert.equal(engine.run('editorSaveFailed'), true);
+    const fine = await loadGame();
+    fine.run(mapCode + 'editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();');
+    assert.equal(fine.run('editorSaveFailed'), false);
+});

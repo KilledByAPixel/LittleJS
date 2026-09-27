@@ -28318,7 +28318,11 @@ function editorMapRestore(map)
         return map;
     }
 
-    const url = editorFetchedURLs.get(map), data = editorTileLayerData(map.layers), hash = editorMapHash(data);
+    // a map it can not read as plain gids, an infinite one or one with typed arrays, is left to tileLayersLoad,
+    // which asserts on what it can not load, and a layer made from it gets a map of its own when edited
+    const data = map.layers ? editorTileLayerData(map.layers) : [];
+    if (!map.layers || data.some((layer)=> !Array.isArray(layer))) return map;
+    const url = editorFetchedURLs.get(map), hash = editorMapHash(data);
     const fileName = url?.split(/[?#]/)[0].split('/').pop() || 'level.json';
     const record = {map, url, fileName, key: editorMapKey(map, url, hash), hash,
         original: data.map((layer)=> [...layer]), layers: []};
@@ -28362,14 +28366,14 @@ function editorRetire(isRetired)
     for (let i = list.length; i--;)
         list[i].some((cell)=> gone.includes(cell.layer.record)) && list.splice(i, 1);
     if (gone.includes(editorLayer?.record))
-        editorLayer = undefined;
+        editorLayer = editorSelection = undefined; // the selection was an area of that layer
 }
 
 // called by tileLayersLoad with the layers it made, a map loaded again keeps its layer records, with the new layers
 function editorMapLoaded(map, tileLayers, flatLayers)
 {
     const record = editorMapList.find((record)=> record.map === map);
-    tileLayers.forEach((live, i)=>
+    record && tileLayers.forEach((live, i)=>
     {
         const {dataLayer: source, color} = flatLayers[i];
         const layer = record.layers.find((layer)=> layer.source === source);
@@ -28429,6 +28433,7 @@ function editorMapJSON(record) { return JSON.stringify(record.map); }
 // download a map as Tiled JSON, under the name of the file it came from
 function editorSave(record)
 {
+    if (!record) return;
     editorStrokeEnd();
     saveText(editorMapJSON(record), record.fileName, 'application/json');
 }
@@ -28440,10 +28445,24 @@ function editorSave(record)
 function editorSaveName() { return 'LittleJS editor ' + (globalThis.location?.pathname ?? ''); }
 const editorSaves = ()=> readSaveData(editorSaveName(), {});
 
-// a map's name for its autosave, the file it was fetched from, or its size, layer names and data as loaded; a map with
+// if the last autosave did not fit in storage, the panel says so
+let editorSaveFailed = false;
+
+// write the autosaves, noting whether storage took them
+function editorWriteSaves(saves)
+{
+    try
+    {
+        localStorage.setItem(editorSaveName(), JSON.stringify(saves));
+        editorSaveFailed = false;
+    }
+    catch { editorSaveFailed = true; }
+}
+
+// a map's name for its autosave, the file it was fetched from without a query, or its size, layer names and data as loaded; a map with
 // no file can not tell a changed map from another one, so each is its own
 function editorMapKey(map, url, hash)
-{ return url ?? `${map.width}x${map.height} ` + map.layers.map((layer)=> layer.name).join() + ' #' + hash; }
+{ return url?.split(/[?#]/)[0] ?? `${map.width}x${map.height} ` + map.layers.map((layer)=> layer.name).join() + ' #' + hash; }
 
 // a quick hash of a map's tile data, to know when the file changed under its autosave
 function editorMapHash(data)
@@ -28474,42 +28493,49 @@ function editorAutosave(record)
         delete saves[record.key];
     else
         saves[record.key] = {hash: record.hash, layers: data};
-    writeSaveData(editorSaveName(), saves);
+    editorWriteSaves(saves);
 }
 
 // paint every cell of a map's layers from a list of tile data, the tile layers of the map in order
 function editorPaintData(record, data)
 {
+    editorStrokeEnd();
     const all = editorTileLayerData(record.map.layers);
-    for (const layer of record.layers)
+    editorBulkEdit(()=>
     {
-        const gids = data[all.indexOf(layer.source.data)], {x: width, y: height} = layer.live.size;
-        if (gids?.length === width * height)
-            gids.forEach((gid, i)=> editorPaint(layer, vec2(i % width, height - 1 - (i / width | 0)), gid));
-    }
+        for (const layer of record.layers)
+        {
+            const gids = data[all.indexOf(layer.source.data)], {x: width, y: height} = layer.live.size;
+            if (gids?.length === width * height)
+                gids.forEach((gid, i)=> editorPaint(layer, vec2(i % width, height - 1 - (i / width | 0)), gid));
+        }
+    });
     editorStroke ? editorStrokeEnd() : editorAutosave(record);
 }
 
 // the autosaved edits of a file that changed since, applied as one undo
 function editorApplyPending(record)
 {
-    const saved = record.pending;
+    const saved = record?.pending;
+    if (!saved) return;
     record.pending = undefined;
-    saved && editorPaintData(record, saved.layers);
+    editorPaintData(record, saved.layers);
 }
 
 // drop the autosaved edits of a file that changed since
 function editorDiscardPending(record)
 {
+    if (!record) return;
     record.pending = undefined;
     const saves = editorSaves();
     delete saves[record.key];
-    writeSaveData(editorSaveName(), saves);
+    editorWriteSaves(saves);
 }
 
 // put every layer back to the file, as one undo
 function editorRevert(record)
 {
+    if (!record) return;
     record.pending = undefined;
     editorPaintData(record, record.original);
 }
@@ -28520,6 +28546,23 @@ function editorRevert(record)
 // the strokes that can be undone and redone, each a list of cells with the gid before and after
 const editorUndoList = [], editorRedoList = [];
 let editorStroke;
+
+// during a big edit, the layers whose cell by cell redraws are held off, with the redraw each had of its own
+let editorHeldRedraws;
+
+// make a big edit, a fill, clear, undo, apply or revert, with each layer's cell by cell redraws held off, a game's
+// tile callback's included; the stroke's end draws each layer it touched again whole
+function editorBulkEdit(edit)
+{
+    const held = editorHeldRedraws = new Map;
+    try { edit(); }
+    finally
+    {
+        editorHeldRedraws = undefined;
+        for (const [live, own] of held)
+            own ? live.redrawTileData = own : delete live.redrawTileData;
+    }
+}
 
 // set a cell to a gid, in the map and on the live layer, with the game's rules, and return the gid it had
 function editorSetCell(layer, pos, gid)
@@ -28532,6 +28575,11 @@ function editorSetCell(layer, pos, gid)
     source.data[index] = gid;
     if (live.destroyed) return before; // a layer the game let go of, the map still has the change
 
+    if (editorHeldRedraws && !editorHeldRedraws.has(live))
+    {
+        editorHeldRedraws.set(live, live.hasOwnProperty('redrawTileData') ? live.redrawTileData : undefined);
+        live.redrawTileData = ()=> {};
+    }
     const t = editorGidToTile(gid);
     live.setData(pos, t ? new TileLayerData(t.tile, t.direction, t.mirror, color) : new TileLayerData, true);
     if (editorTileCallback)
@@ -28566,8 +28614,11 @@ function editorUndo(redo=false)
     const stroke = (redo ? editorRedoList : editorUndoList).pop();
     if (!stroke) return;
     (redo ? editorUndoList : editorRedoList).push(stroke);
-    for (const cell of redo ? stroke : [...stroke].reverse())
-        editorSetCell(cell.layer, cell.pos, redo ? cell.after : cell.before);
+    editorBulkEdit(()=>
+    {
+        for (const cell of redo ? stroke : [...stroke].reverse())
+            editorSetCell(cell.layer, cell.pos, redo ? cell.after : cell.before);
+    });
     editorChanged(stroke);
 }
 
@@ -28763,39 +28814,48 @@ function editorFill()
 {
     const layer = editorLayer, stamp = editorBrush, {width: w, height: h} = stamp;
     if (!layer || layer.live.destroyed || layer.record.pending) return;
+    editorStrokeEnd(); // a drag held while F is pressed is an undo of its own
     const paint = (target, grid, cell, anchor)=>
     {
         const x = ((cell.x - anchor.x) % w + w) % w, y = ((cell.y - anchor.y) % h + h) % h;
         const gid = grid[x + y * w];
         gid === undefined || editorPaint(target, cell, gid);
     };
-    if (editorSelection)
+    editorBulkEdit(()=>
     {
-        for (const [target, grid] of editorStampTargets(layer, stamp))
-            editorSelectionCells(target.live, (cell)=> paint(target, grid, cell, editorSelection.min));
-    }
-    else if (editorHover)
-    {
-        const grid = editorStampGrid(layer, stamp), start = editorHover;
-        for (const cell of editorFloodCells(layer, start))
-            paint(layer, grid, cell, start);
-    }
+        if (editorSelection)
+        {
+            for (const [target, grid] of editorStampTargets(layer, stamp))
+                editorSelectionCells(target.live, (cell)=> paint(target, grid, cell, editorSelection.min));
+        }
+        else if (editorHover)
+        {
+            const grid = editorStampGrid(layer, stamp), start = editorHover;
+            for (const cell of editorFloodCells(layer, start))
+                paint(layer, grid, cell, start);
+        }
+    });
     editorStrokeEnd();
 }
 
 // the cells joined through their sides to a cell, holding the same gid, turn and mirror included
 function editorFloodCells(layer, start)
 {
-    const {live} = layer, gid = editorGidAt(layer, start), seen = new Set, cells = [], open = [start];
+    // cells by index, x + y * width, each looked at once
+    const {x: width, y: height} = layer.live.size, gid = editorGidAt(layer, start);
+    const seen = new Uint8Array(width * height), cells = [], open = [start.x + start.y * width];
     while (open.length)
     {
-        const cell = open.pop();
-        if (!cell.arrayCheck(live.size)) continue;
-        const key = cell.x + cell.y * live.size.x;
-        if (seen.has(key) || editorGidAt(layer, cell) !== gid) continue;
-        seen.add(key);
+        const i = open.pop();
+        if (seen[i]) continue;
+        seen[i] = 1;
+        const x = i % width, y = i / width | 0, cell = vec2(x, y);
+        if (editorGidAt(layer, cell) !== gid) continue;
         cells.push(cell);
-        open.push(vec2(cell.x + 1, cell.y), vec2(cell.x - 1, cell.y), vec2(cell.x, cell.y + 1), vec2(cell.x, cell.y - 1));
+        x + 1 < width && open.push(i + 1);
+        x && open.push(i - 1);
+        y + 1 < height && open.push(i + width);
+        y && open.push(i - width);
     }
     return cells;
 }
@@ -28804,8 +28864,12 @@ function editorFloodCells(layer, start)
 function editorClear()
 {
     if (!editorSelection) return;
-    for (const layer of editorSelectionLayers())
-        layer.record.pending || editorSelectionCells(layer.live, (cell)=> editorPaint(layer, cell, 0));
+    editorStrokeEnd(); // a drag held while Delete is pressed is an undo of its own
+    editorBulkEdit(()=>
+    {
+        for (const layer of editorSelectionLayers())
+            layer.record.pending || editorSelectionCells(layer.live, (cell)=> editorPaint(layer, cell, 0));
+    });
     editorStrokeEnd();
 }
 
@@ -28814,7 +28878,7 @@ function editorClear()
 function editorCopy()
 {
     const area = editorSelection;
-    if (!area) return;
+    if (!area || !editorLayer) return false;
     const width = area.max.x - area.min.x + 1, height = area.max.y - area.min.y + 1;
     const grids = editorSelectionLayers().map((layer)=>
     {
@@ -28827,23 +28891,31 @@ function editorCopy()
         }
         return grid;
     });
+    if (grids.every((grid)=> grid.every((gid)=> gid === undefined)))
+        return false; // nothing there, the brush stays as it was
     editorBrush = editorClipboard = {width, height, grids};
     editorSelection = undefined;
+    return true;
 }
 
 // copy the selected area, then clear it, as one undo
 function editorCut()
 {
     const area = editorSelection;
-    if (!area) return;
-    editorCopy();
+    if (!editorCopy()) return false;
     editorSelection = area;
     editorClear();
     editorSelection = undefined;
+    return true;
 }
 
 // the last copied stamp back into the brush
-function editorPaste() { editorClipboard && (editorBrush = editorClipboard); }
+function editorPaste()
+{
+    if (!editorClipboard) return false;
+    editorBrush = editorClipboard;
+    return true;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // panel
@@ -28878,7 +28950,7 @@ function editorBrushLabel()
     if (t)
         return `Brush: tile ${t.tile}` + (t.direction ? `, turned ${t.direction * 90}°` : '') +
             (t.mirror ? ', mirrored' : '');
-    if (width === 1 && height === 1 && grids.length === 1) return 'Brush: Erase';
+    if (width === 1 && height === 1 && grids.length === 1) return grids[0][0] === 0 ? 'Brush: Erase' : 'Brush: empty';
     return `Brush: ${width}x${height} stamp` + (grids.length > 1 ? `, ${grids.length} layers` : '');
 }
 
@@ -28923,8 +28995,8 @@ function editorPanelInit()
     const pending = editorElement('div', editorPanel, 'padding:4px;margin:4px 0;background:#630;border-radius:3px');
     editorElement('div', pending, '', 'The level file changed since your autosaved edits');
     const pendingRow = editorElement('div', pending, 'display:flex;gap:4px;margin-top:4px');
-    button(pendingRow, 'Apply edits', ()=> editorApplyPending(editorLayer.record));
-    button(pendingRow, 'Drop them', ()=> editorDiscardPending(editorLayer.record));
+    button(pendingRow, 'Apply edits', ()=> editorApplyPending(editorLayer?.record));
+    button(pendingRow, 'Drop them', ()=> editorDiscardPending(editorLayer?.record));
 
     // the layers as numbered buttons, made again when layers come or go, and All Layers
     const layerRow = editorElement('div', editorPanel, 'display:flex;gap:4px;margin:4px 0;flex-wrap:wrap');
@@ -28948,8 +29020,10 @@ function editorPanelInit()
     const brush = editorElement('div', editorPanel, 'color:#ccc;margin:2px 0');
 
     const file = row();
-    button(file, 'Save', ()=> editorSave(editorLayer.record), 'Download the level as Tiled JSON');
-    button(file, 'Revert', ()=> editorRevert(editorLayer.record), 'Back to the file, can be undone');
+    button(file, 'Save', ()=> editorSave(editorLayer?.record), 'Download the level as Tiled JSON');
+    button(file, 'Revert', ()=> editorRevert(editorLayer?.record), 'Back to the file, can be undone');
+    const storage = editorElement('div', editorPanel, 'color:#f86;margin-top:4px',
+        'Autosave failed, storage is full: Save to a file');
     const status = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;min-height:1em');
     const hint = editorElement('div', editorPanel, 'color:#8ab;margin-top:4px');
     const help = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;border-top:1px solid #444;padding-top:4px');
@@ -28957,7 +29031,7 @@ function editorPanelInit()
         editorElement('div', help, 'margin:2px 0', line);
     button(help, 'Close', ()=> editorHelp = false, '?');
 
-    editorPanelParts = {pending, layerRow, allLayers, palette, brush, status, hint, help, layers: undefined};
+    editorPanelParts = {pending, layerRow, allLayers, palette, brush, status, storage, hint, help, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -29059,6 +29133,7 @@ function editorPanelUpdate()
     p.brush.textContent = editorBrushLabel();
     p.hint.textContent = editorHint();
     p.help.style.display = editorHelp ? '' : 'none';
+    p.storage.style.display = editorSaveFailed ? '' : 'none';
     p.pending.style.display = editorLayer?.record.pending ? '' : 'none';
 
     // the palette, drawn again when the layer or the brush changed, a change makes a new brush
@@ -29080,14 +29155,14 @@ function editorPanelUpdate()
 // keys and wheel
 
 // letter shortcuts, by the key's label so they follow the letter printed on any keyboard layout, each called
-// with whether Shift is held
+// with whether Shift is held; one that returns false did nothing, and leaves the key to the browser
 const editorKeys =
 {
     r: (shift)=> editorBrush = editorStampTurn(editorBrush, shift),
     m: ()=> editorBrush = editorStampMirror(editorBrush),
     e: ()=> editorBrush = editorStampTile(0),
-    g: ()=> editorGrid = !editorGrid,
-    '?': ()=> editorHelp = !editorHelp,
+    g: ()=> { editorGrid = !editorGrid; },
+    '?': ()=> { editorHelp = !editorHelp; },
     f: ()=> editorFill(),
     Delete: ()=> editorClear(),
     Backspace: ()=> editorClear(),
@@ -29119,9 +29194,8 @@ function editorOnKeyDown(e)
     if (key.length === 1 && !/[a-z?]/.test(key))
         key = e.code?.match(/^Key([A-Z])$/)?.[1].toLowerCase() ?? key;
     const action = (e.ctrlKey || e.metaKey ? editorCtrlKeys : editorKeys)[key];
-    if (!action) return;
-    e.preventDefault();
-    action(e.shiftKey);
+    if (action && action(e.shiftKey) !== false)
+        e.preventDefault();
 }
 
 // the wheel zooms toward the mouse by how far it moved; a trackpad pinch is a wheel with ctrlKey, which the engine
@@ -29186,13 +29260,13 @@ function editorUpdate()
     editorHover = layer && editorCellAt(layer.live, mouse);
 
     // the right button: a click picks the tile under the mouse, or clears the selection off the layer, a drag
-    // selects an area; a release within half a cell of the press is a click
+    // selects an area; a release within half a cell of the press, or 4 pixels zoomed far out, is a click
     if (mouseWasPressed(2) && layer)
         editorRightPress = {screen: mousePosScreen.copy(), cell: editorCellClamped(layer.live, mouse), drag: false};
     const press = editorRightPress;
     if (press && layer)
     {
-        press.drag ||= mousePosScreen.distance(press.screen) > editorCameraScale / 2;
+        press.drag ||= mousePosScreen.distance(press.screen) > max(4, editorCameraScale / 2); // a few pixels of wobble at any zoom
         if (press.drag)
             editorSelection = editorArea(press.cell, editorCellClamped(layer.live, mouse));
         if (!mouseIsDown(2))
