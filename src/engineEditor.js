@@ -739,20 +739,23 @@ function editorObjectsIn(layer, a, b)
 function editorPickObject(object)
 { editorObjectBrush = [{type: object.type || object.class, properties: editorObjectsCopy(object.properties ?? []), offset: vec2()}]; }
 
+// a new Tiled point object for a brush's object, at a world position, with the map's next id
+function editorNewObject(record, {type, properties}, pos)
+{
+    const object = {id: editorNextObjectId(record.map), name: '', type, point: true, rotation: 0, visible: true,
+        width: 0, height: 0, x: 0, y: 0};
+    properties.length && (object.properties = editorObjectsCopy(properties));
+    editorObjectSetPos(record, object, pos);
+    return object;
+}
+
 // place an object brush's objects at a position plus each one's offset, as one undo
 function editorPlaceObjects(layer, pos, brush)
 {
-    const {record} = layer;
     editorChangeObjects(layer, (list)=>
     {
-        for (const {type, properties, offset} of brush)
-        {
-            const object = {id: editorNextObjectId(record.map), name: '', type, point: true, rotation: 0, visible: true,
-                width: 0, height: 0, x: 0, y: 0};
-            properties.length && (object.properties = editorObjectsCopy(properties));
-            editorObjectSetPos(record, object, pos.add(offset));
-            list.push(object);
-        }
+        for (const object of brush)
+            list.push(editorNewObject(layer.record, object, pos.add(object.offset)));
     });
     editorStrokeEnd();
 }
@@ -988,13 +991,14 @@ function editorGidMirror(gid)
     return t ? editorTileToGid(t.tile, (4 - t.direction) % 4, !t.mirror) : gid;
 }
 
-// a stamp turned a quarter turn clockwise on screen, or back, its cells and their tiles together; cell (x, y) goes
-// to (y, width - 1 - x), so the bottom row becomes the left column, its left end at the top
+// a stamp turned a quarter turn clockwise on screen, or back, its cells, their tiles and its objects together; cell
+// (x, y) goes to (y, width - 1 - x), so the bottom row becomes the left column, its left end at the top
 function editorStampTurn(stamp, back=false)
 {
     for (let turns = back ? 3 : 1; turns--;)
     {
         const {width, height} = stamp;
+        const objects = stamp.objects?.map((object)=> ({...object, offset: vec2(object.offset.y, width - object.offset.x)}));
         stamp = {width: height, height: width, grids: stamp.grids.map((grid)=>
         {
             const turned = [];
@@ -1002,15 +1006,16 @@ function editorStampTurn(stamp, back=false)
             for (let x = width; x--;)
                 turned[y + (width - 1 - x) * height] = editorGidTurn(grid[x + y * width]);
             return turned;
-        })};
+        }), ...(objects && {objects})};
     }
     return stamp;
 }
 
-// a stamp mirrored left to right, its cells and their tiles together
+// a stamp mirrored left to right, its cells, their tiles and its objects together
 function editorStampMirror(stamp)
 {
     const {width, height} = stamp;
+    const objects = stamp.objects?.map((object)=> ({...object, offset: vec2(width - object.offset.x, object.offset.y)}));
     return {width, height, grids: stamp.grids.map((grid)=>
     {
         const mirrored = [];
@@ -1018,7 +1023,7 @@ function editorStampMirror(stamp)
         for (let x = width; x--;)
             mirrored[width - 1 - x + y * width] = editorGidMirror(grid[x + y * width]);
         return mirrored;
-    })};
+    }), ...(objects && {objects})};
 }
 
 // the brush's tile when it is one tile, with its turn and mirror, undefined for the Erase brush or a bigger stamp
@@ -1109,7 +1114,7 @@ function editorFloodCells(layer, start)
     return cells;
 }
 
-// clear the selected area, as one undo
+// clear the selected area, with All Layers the objects in it too, as one undo
 function editorClear()
 {
     if (!editorSelection) return;
@@ -1118,12 +1123,52 @@ function editorClear()
     {
         for (const layer of editorSelectionLayers())
             layer.record.pending || editorSelectionCells(layer.live, (cell)=> editorPaint(layer, cell, 0));
+        if (editorAllLayers && editorLayer)
+        {
+            const corner = editorLayer.live.pos.add(editorSelection.min);
+            const far = editorLayer.live.pos.add(editorSelection.max).add(vec2(1));
+            for (const objectLayer of editorObjectLayers(editorLayer.record))
+            {
+                const ids = new Set(editorObjectsIn(objectLayer, corner, far));
+                ids.size && editorChangeObjects(objectLayer, (list)=>
+                    list.splice(0, list.length, ...list.filter((object)=> !ids.has(object.id))));
+            }
+        }
     });
     editorStrokeEnd();
 }
 
-// the selected area into the brush as a stamp, its empty cells see-through, and the selection cleared so the
-// next click paints it
+// the objects of a map's object layers inside a tile area, each {group, type, properties, offset}: the index of its
+// object layer, and its offset from the area's bottom left corner, as a stamp keeps them
+function editorAreaObjects(layer, area)
+{
+    const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
+    return editorObjectLayers(layer.record).flatMap((objectLayer, group)=>
+    {
+        const ids = new Set(editorObjectsIn(objectLayer, corner, far));
+        return (objectLayer.group?.objects ?? []).filter((object)=> ids.has(object.id)).map((object)=>
+            ({group, type: object.type || object.class, properties: editorObjectsCopy(object.properties ?? []),
+            offset: editorObjectPos(layer.record, object).subtract(corner)}));
+    });
+}
+
+// place a stamp's objects with the stamp's bottom left on a cell of a tile layer, into its map's object layers
+function editorPlaceStampObjects(layer, cell, stamp)
+{
+    const targets = editorObjectLayers(layer.record), corner = layer.live.pos.add(cell);
+    targets.forEach((target, group)=>
+    {
+        const objects = (stamp.objects ?? []).filter((object)=> (targets[object.group] ? object.group : 0) === group);
+        objects.length && editorChangeObjects(target, (list)=>
+        {
+            for (const object of objects)
+                list.push(editorNewObject(layer.record, object, corner.add(object.offset)));
+        });
+    });
+}
+
+// the selected area into the brush as a stamp, its empty cells see-through, with All Layers the objects in it too,
+// and the selection cleared so the next click paints it
 function editorCopy()
 {
     const area = editorSelection;
@@ -1140,9 +1185,10 @@ function editorCopy()
         }
         return grid;
     });
-    if (grids.every((grid)=> grid.every((gid)=> gid === undefined)))
+    const objects = editorAllLayers ? editorAreaObjects(editorLayer, area) : [];
+    if (!objects.length && grids.every((grid)=> grid.every((gid)=> gid === undefined)))
         return false; // nothing there, the brush stays as it was
-    editorBrush = editorClipboard = {width, height, grids};
+    editorBrush = editorClipboard = objects.length ? {width, height, grids, objects} : {width, height, grids};
     editorSelection = undefined;
     return true;
 }
@@ -1200,7 +1246,9 @@ function editorBrushLabel()
         return `Brush: tile ${t.tile}` + (t.direction ? `, turned ${t.direction * 90}°` : '') +
             (t.mirror ? ', mirrored' : '');
     if (width === 1 && height === 1 && grids.length === 1) return grids[0][0] === 0 ? 'Brush: Erase' : 'Brush: empty';
-    return `Brush: ${width}x${height} stamp` + (grids.length > 1 ? `, ${grids.length} layers` : '');
+    const objects = editorBrush.objects?.length;
+    return `Brush: ${width}x${height} stamp` + (grids.length > 1 ? `, ${grids.length} layers` : '') +
+        (objects ? `, ${objects} object${objects > 1 ? 's' : ''}` : '');
 }
 
 function editorElement(tag, parent, style='', text='')
@@ -1549,6 +1597,8 @@ function editorUpdate()
         }
         else
             editorPaintLine(layer, editorHover);
+        if (mouseWasPressed(0) && editorBrush.objects)
+            editorPlaceStampObjects(layer, editorHover, editorBrush); // once a click, not along the drag
     }
     if (!mouseIsDown(0))
     {

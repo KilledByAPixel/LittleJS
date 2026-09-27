@@ -286,3 +286,49 @@ test('Ctrl+X copies and removes as one undo, and F does nothing on an object lay
     assert.equal(typed(engine, 'f'), false);
     assert.equal(engine.run('list().length'), 1);
 });
+
+// All Layers takes objects: the ground's top row, cells (0, 1) and (1, 1), holds coin 1 at (.5, 1.5)
+
+test('with All Layers, Ctrl+C on a tile area takes the objects inside it, even when its tiles are empty', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + 'editorAllLayers = true; editorSelection = editorArea(vec2(0, 1), vec2(1, 1));');
+    assert.equal(typed(engine, 'c', true), true);
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrush.objects)')),
+        [{ group: 0, type: 'Coin', properties: [], offset: { x: .5, y: .5 } }]);
+    assert.equal(engine.run('editorBrushLabel()'), 'Brush: 2x1 stamp, 1 object');
+});
+
+test('a stamp\'s objects are placed once on the left press, not along the drag after it', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorAllLayers = true; editorSelection = editorArea(vec2(0, 1), vec2(1, 1));
+        editorCopy(); editorSelection = undefined;`);
+    drag(engine, [2.5, .5], [3.5, .5]);
+    assert.deepEqual(positions(engine).slice(2), [[3, 40, 24]], 'one coin at cell (2, 0) plus its offset');
+    assert.deepEqual([...engine.run('[coins().length, editorUndoList.length]')], [3, 1]);
+});
+
+test('Delete with All Layers removes the objects in the area with the tiles, as one undo', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + 'editorAllLayers = true; editorSelection = editorArea(vec2(0, 0), vec2(1, 1));');
+    typed(engine, 'Delete');
+    assert.deepEqual([...engine.run('[list().length, coins().length, ...map.layers[0].data]')],
+        [1, 1, 0, 0, 0, 0, 0, 0, 1, 1]);
+    assert.equal(engine.run('editorUndoList.length'), 1);
+    engine.run('editorUndo()');
+    assert.deepEqual([...engine.run('[list().length, coins().length, ...map.layers[0].data]')],
+        [2, 2, 0, 0, 0, 0, 1, 1, 1, 1]);
+});
+
+test('R and M turn and mirror a stamp\'s object offsets with its cells', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `var stamp = { width: 2, height: 1, grids: [[undefined, undefined]],
+        objects: [{ group: 0, type: 'Coin', properties: [], offset: vec2(.5, .5) }] };`);
+    assert.deepEqual([...engine.run('const t = editorStampTurn(stamp); [t.objects[0].offset.x, t.objects[0].offset.y]')],
+        [.5, 1.5]);
+    assert.deepEqual([...engine.run('const m = editorStampMirror(stamp); [m.objects[0].offset.x, m.objects[0].offset.y]')],
+        [1.5, .5]);
+});
