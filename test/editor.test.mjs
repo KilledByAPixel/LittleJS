@@ -636,7 +636,7 @@ test('a right drag selects the area between press and release, clamped to the la
     assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrushTile())')), { tile: 6, direction: 0, mirror: false });
 });
 
-test('a right click outside the layer clears the selection, and the first left click with one only clears it',
+test('a right click outside the layer clears the selection, and a left click outside one only clears it',
     async () =>
 {
     const engine = await loadGame();
@@ -646,11 +646,11 @@ test('a right click outside the layer clears the selection, and the first left c
     rightClick(engine, -3, 0);
     assert.equal(selection(engine), undefined);
     rightDrag(engine, [0, 0], [1, 1]);
-    handlers.mousedown(at(0, 0));
+    handlers.mousedown(at(2, 1));
     step(engine);
-    handlers.mousemove(at(1, 0));
+    handlers.mousemove(at(2, 0));
     step(engine);
-    handlers.mouseup(at(1, 0));
+    handlers.mouseup(at(2, 0));
     step(engine);
     assert.equal(selection(engine), undefined);
     assert.equal(run('editorUndoList.length'), 0, 'that press painted nothing, not even when held on');
@@ -780,7 +780,7 @@ test('the hint line follows what is held and whether there is a selection', asyn
     assert.match(engine.run('editorHint()'), /^Shift: line/);
     engine.handlers.keyup(keyEvent('ShiftLeft'));
     engine.run('editorSelection = editorArea(vec2(0, 0), vec2(1, 1))');
-    assert.match(engine.run('editorHint()'), /^Selection: F fill/);
+    assert.match(engine.run('editorHint()'), /^Selection: drag moves · F fill/);
     engine.handlers.keydown(keyEvent('Space'));
     assert.equal(engine.run('editorHint()'), 'Drag to pan');
 });
@@ -1177,4 +1177,93 @@ test('a resized level is autosaved and comes back at its size on reload, and Res
     assert.deepEqual([...second.run('map.layers[2].layers[0].data')], [0, 0, 3, 0, 0, 0]);
     second.run('editorUndo()');
     assert.deepEqual([...second.run('[map.width, map.height]')], [4, 3], 'Reset to file is one undo');
+});
+
+// moving a selection: a left press inside it drags its tiles, the objects in it too with All Layers
+
+// two tiles on the front layer at (0, 0) and (0, 1), selected, the far column has tile 2 at (2, 1)
+const moveCode = editCode + `editorPaint(front, vec2(0, 0), 5); editorPaint(front, vec2(0, 1), 6); editorStrokeEnd();
+    editorSelection = editorArea(vec2(0, 0), vec2(0, 1));`;
+
+// a left press at a cell, then a move through each cell after it, a step each
+function leftDrag(engine, from, ...cells)
+{
+    engine.handlers.mousedown(at(...from));
+    step(engine);
+    for (const cell of cells)
+    {
+        engine.handlers.mousemove(at(...cell));
+        step(engine);
+    }
+}
+function leftUp(engine)
+{
+    engine.handlers.mouseup(at(0, 0));
+    step(engine);
+}
+
+test('a left drag from inside the selection moves its tiles, leaving their cells empty, as one undo', async () =>
+{
+    const engine = await loadGame();
+    engine.run(moveCode);
+    const undos = engine.run('editorUndoList.length');
+    leftDrag(engine, [0, 0], [1, 0], [2, 0]);
+    leftUp(engine);
+    assert.deepEqual([...engine.run('frontData')], [0, 0, 6, 0, 0, 5]);
+    assert.deepEqual([...selection(engine)], [2, 0, 2, 1], 'the selection went with them');
+    assert.deepEqual([...engine.run('[layers[2].getData(vec2(2, 0)).tile, layers[2].getData(vec2(0, 0)).tile]')],
+        [4, undefined]);
+    assert.equal(engine.run('editorUndoList.length'), undos + 1);
+    engine.run('editorUndo()');
+    assert.deepEqual([...engine.run('frontData')], [6, 0, 3, 5, 0, 0]);
+});
+
+test('a selection dragged back to where it was changes nothing', async () =>
+{
+    const engine = await loadGame();
+    engine.run(moveCode);
+    const undos = engine.run('editorUndoList.length');
+    leftDrag(engine, [0, 0], [2, 0], [0, 0]);
+    leftUp(engine);
+    assert.deepEqual([...engine.run('frontData')], [6, 0, 3, 5, 0, 0]);
+    assert.equal(engine.run('editorUndoList.length'), undos);
+});
+
+test('a right click during the drag puts the selection back, with nothing to undo and no tile picked', async () =>
+{
+    const engine = await loadGame();
+    engine.run(moveCode);
+    const undos = engine.run('editorUndoList.length');
+    leftDrag(engine, [0, 0], [2, 0]);
+    rightClick(engine, 2, 0);
+    leftUp(engine);
+    assert.deepEqual([...engine.run('frontData')], [6, 0, 3, 5, 0, 0]);
+    assert.deepEqual([...selection(engine)], [0, 0, 0, 1]);
+    assert.equal(engine.run('editorUndoList.length'), undos);
+    assert.equal(engine.run('editorBrushTile().tile'), 6, 'the brush it had');
+});
+
+test('Escape during the drag puts the selection back and stays in the editor', async () =>
+{
+    const engine = await loadGame();
+    engine.run(moveCode);
+    leftDrag(engine, [0, 0], [2, 0]);
+    press(engine, 'Escape');
+    assert.equal(engine.run('levelEditor.isOpen'), true);
+    assert.deepEqual([...engine.run('frontData')], [6, 0, 3, 5, 0, 0]);
+    leftUp(engine);
+    assert.deepEqual([...engine.run('frontData')], [6, 0, 3, 5, 0, 0], 'letting go after did not paint');
+    press(engine, 'Escape');
+    assert.equal(engine.run('levelEditor.isOpen'), false, 'the next Escape plays');
+});
+
+test('with All Layers the objects in the selection move with it', async () =>
+{
+    const engine = await loadGame();
+    engine.run(moveCode + 'editorAllLayers = true;');
+    leftDrag(engine, [0, 0], [2, 0]);
+    leftUp(engine);
+    assert.deepEqual([...engine.run('[map.layers[1].objects[0].x, map.layers[1].objects[0].y]')], [40, 8]);
+    engine.run('editorUndo()');
+    assert.equal(engine.run('map.layers[1].objects[0].x'), 8);
 });

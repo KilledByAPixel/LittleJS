@@ -28382,6 +28382,10 @@ let editorLayer, editorHover, editorLastCell, editorLastPlaced;
 // and a left press that only cleared a selection, which paints nothing until let go
 let editorSelection, editorRightPress, editorLeftSpent;
 
+// a left drag moving the selection: the layer, the cell pressed and how far it moved, the area and its tiles as
+// they were, and with All Layers the ids of the objects in it, by object layer
+let editorSelectionDrag;
+
 // if selection edits, Delete, Ctrl+C and Ctrl+X, act on every tile layer of the edited layer's map
 let editorAllLayers = false;
 
@@ -28409,7 +28413,7 @@ function editorSetOpen(open)
     else
     {
         editorStrokeEnd();
-        editorSelection = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
+        editorSelection = editorSelectionDrag = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
         editorObjectSelection.clear();
         const state = editorGameState;
         setPaused(state.paused);
@@ -28456,18 +28460,21 @@ function editorGidToTile(gid)
 const editorMapList = [];
 
 
-// the tile layers' data arrays of a map in the order tileLayersLoad makes them, groups flattened
-function editorTileLayerData(layers, list=[])
+// the tile layers of a map's Tiled layers in the order tileLayersLoad makes them, groups flattened
+function editorTileLayers(layers, list=[])
 {
     for (const layer of layers)
     {
         if (layer.type === 'group')
-            editorTileLayerData(layer.layers || [], list);
+            editorTileLayers(layer.layers || [], list);
         else if (!layer.type || layer.type === 'tilelayer')
-            list.push(layer.data);
+            list.push(layer);
     }
     return list;
 }
+
+// the tile layers' data arrays of a map, in the same order
+const editorTileLayerData = (layers)=> editorTileLayers(layers).map((layer)=> layer.data);
 
 // called by tileLayersLoad before it reads a map; a map it has not seen gets a record, and its autosave is copied
 // in when the file is the one it was made over; a file that changed since keeps the autosave pending for the
@@ -28494,7 +28501,8 @@ function editorMapRestore(map)
     const url = editorFetchedURLs.get(map), hash = editorMapHash(data, objects);
     const fileName = url?.split(/[?#]/)[0].split('/').pop() || 'level.json';
     const record = {map, url, fileName, key: editorMapKey(map, url, hash), hash,
-        original: data.map((layer)=> [...layer]), originalObjects: editorObjectsCopy(objects), layers: []};
+        original: data.map((layer)=> [...layer]), originalObjects: editorObjectsCopy(objects),
+        originalSize: {width: map.width, height: map.height}, layers: []};
 
     // a new copy of a map takes over from the one before, and maps whose layers are all gone step aside
     editorRetire((other)=> other.key === record.key ||
@@ -28503,10 +28511,12 @@ function editorMapRestore(map)
 
     const saved = editorSaves()[record.key];
     if (!saved) return map;
+    // an autosave from before objects were in the hash matches on its tiles, one of a resized map is resized to first
+    const sameFile = saved.hash === record.hash || !saved.objects && saved.hash === editorMapHash(data);
     if (editorSameData(saved.layers, data) && editorSameData(saved.objects ?? [], objects))
         editorDiscardPending(record);
-    else if (saved.hash !== record.hash && !(!saved.objects && saved.hash === editorMapHash(data)) ||
-        !editorCopyData(data, saved.layers)) // an autosave from before objects were in the hash matches on its tiles
+    else if (!sameFile || !editorResizeMap(map, saved.width ?? map.width, saved.height ?? map.height) ||
+        !editorCopyData(data, saved.layers))
     {
         record.pending = saved;
         console.warn(`LittleJS editor: ${record.fileName} changed since its autosaved edits, ` +
@@ -28537,9 +28547,9 @@ function editorRetire(isRetired)
     }
     for (const list of [editorUndoList, editorRedoList])
     for (let i = list.length; i--;)
-        list[i].some((entry)=> gone.includes((entry.layer ?? entry.objectLayer).record)) && list.splice(i, 1);
+        list[i].some((entry)=> gone.includes(editorEntryRecord(entry))) && list.splice(i, 1);
     if (gone.includes(editorLayer?.record))
-        editorLayer = editorSelection = undefined; // the selection was an area of that layer
+        editorLayer = editorSelection = editorSelectionDrag = undefined; // the selection was an area of that layer
     if (gone.includes(editorObjectLayer?.record))
         editorObjectLayer = undefined;
 }
@@ -28605,9 +28615,58 @@ function editorJSONFetched(url, json)
 // a map as Tiled JSON, everything it was loaded with kept, the tile data as the editor left it
 function editorMapJSON(record) { return JSON.stringify(record.map); }
 
+// the files picked to save maps to, kept across reloads in IndexedDB by page and map, which is where a browser
+// lets a page keep them; each resolves to undefined when the store can not be used
+let editorFileStore =
+{
+    get: (key)=> editorFileStoreRequest('readonly', (store)=> store.get(key)),
+    set: (key, handle)=> editorFileStoreRequest('readwrite', (store)=> handle ? store.put(handle, key) : store.delete(key)),
+};
+
+// a request on the editor's file store, resolves to its result, or undefined if anything failed
+function editorFileStoreRequest(mode, request)
+{
+    return new Promise((resolve)=>
+    {
+        try
+        {
+            const open = indexedDB.open('LittleJS editor', 1);
+            open.onupgradeneeded = ()=> open.result.createObjectStore('files');
+            open.onerror = ()=> resolve(undefined);
+            open.onsuccess = ()=>
+            {
+                const db = open.result, done = (result)=> { db.close(); resolve(result); };
+                try
+                {
+                    const r = request(db.transaction('files', mode).objectStore('files'));
+                    r.onsuccess = ()=> done(r.result);
+                    r.onerror = ()=> done(undefined);
+                }
+                catch { done(undefined); }
+            };
+        }
+        catch { resolve(undefined); }
+    });
+}
+
+// the file a map was saved to on an earlier page load, when the browser gives permission to write it again
+async function editorRememberedFile(record)
+{
+    const handle = await editorFileStore.get(editorFileKey(record)), mode = {mode: 'readwrite'};
+    try
+    {
+        if (handle && (await handle.queryPermission(mode) === 'granted' ||
+            await handle.requestPermission(mode) === 'granted'))
+            return handle;
+    }
+    catch { } // a handle that can not ask, the picker instead
+}
+const editorFileKey = (record)=> (globalThis.location?.pathname ?? '') + ' ' + record.key;
+
 // save a map as Tiled JSON: where the browser lets a page write files, Chrome and Edge, to a file picked once and
-// written again on each Save after, or picked again with Save As; elsewhere as a download under the name of the
-// file it came from; resolves to how it saved, undefined when the picker was closed
+// written again on each Save after, even after a reload once the browser gives permission, or picked again with
+// Save As; elsewhere as a download under the name of the file it came from; resolves to how it saved, undefined
+// when the picker was closed
 async function editorSave(record, pickAgain=false)
 {
     if (!record) return;
@@ -28617,9 +28676,14 @@ async function editorSave(record, pickAgain=false)
     {
         try
         {
+            if (!pickAgain && !record.fileHandle)
+                record.fileHandle = await editorRememberedFile(record);
             if (pickAgain || !record.fileHandle)
+            {
                 record.fileHandle = await picker.call(globalThis, {suggestedName: record.fileName,
                     types: [{description: 'Tiled JSON', accept: {'application/json': ['.json']}}]});
+                editorFileStore.set(editorFileKey(record), record.fileHandle);
+            }
             const writable = await record.fileHandle.createWritable();
             await writable.write(text);
             await writable.close();
@@ -28628,7 +28692,8 @@ async function editorSave(record, pickAgain=false)
         catch (error)
         {
             if (error?.name === 'AbortError') return; // the picker was closed, nothing saved
-            record.fileHandle = undefined; // a file it could not write, a download instead
+            record.fileHandle = undefined; // a file it could not write, a download instead, and not kept
+            editorFileStore.set(editorFileKey(record), undefined);
         }
     }
     saveText(text, record.fileName, 'application/json');
@@ -28699,15 +28764,24 @@ function editorAutosave(record)
     if (editorSameData(data, record.original) && editorSameData(kept, original))
         delete saves[record.key];
     else
-        saves[record.key] = {hash: record.hash, layers: data, objects, nextobjectid: map.nextobjectid};
+        saves[record.key] = {hash: record.hash, width: map.width, height: map.height, layers: data, objects,
+            nextobjectid: map.nextobjectid};
     editorWriteSaves(saves);
 }
 
 // paint every cell of a map's layers from a list of tile data, the tile layers of the map in order, and set its
-// object layers' objects from a list of them
-function editorPaintData(record, data, objects)
+// object layers' objects from a list of them; data of another size resizes the map, which needs the Restart hook
+function editorPaintData(record, data, objects, width=record.map.width, height=record.map.height)
 {
     editorStrokeEnd();
+    if (width !== record.map.width || height !== record.map.height)
+    {
+        if (!levelEditor.onRestart) return;
+        const before = editorMapSnapshot(record);
+        editorSetMapSnapshot(record, {width, height, layers: data, objects});
+        editorMapChanged(record, before);
+        return;
+    }
     const all = editorTileLayerData(record.map.layers);
     editorBulkEdit(()=>
     {
@@ -28729,7 +28803,7 @@ function editorApplyPending(record)
     const saved = record?.pending;
     if (!saved) return;
     record.pending = undefined;
-    editorPaintData(record, saved.layers, saved.objects);
+    editorPaintData(record, saved.layers, saved.objects, saved.width, saved.height);
 }
 
 // drop the autosaved edits of a file that changed since
@@ -28742,20 +28816,105 @@ function editorDiscardPending(record)
     editorWriteSaves(saves);
 }
 
-// put every layer back to the file, as one undo
+// put every layer back to the file, its size too, as one undo
 function editorRevert(record)
 {
     if (!record) return;
     record.pending = undefined;
-    editorPaintData(record, record.original, record.originalObjects);
+    const {width, height} = record.originalSize ?? record.map;
+    editorPaintData(record, record.original, record.originalObjects, width, height);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// resizing
+
+// change a map's size in place, at the right and top, so the tiles and objects keep their places from the bottom
+// left; a row added goes at the start of each layer's data, Tiled's rows run from the top, and objects past the new
+// edges are dropped; returns false for a size it can not have
+function editorResizeMap(map, width, height)
+{
+    if (!(width >= 1 && height >= 1 && width % 1 === 0 && height % 1 === 0)) return false;
+    if (width === map.width && height === map.height) return true;
+    const oldWidth = map.width, added = height - map.height;
+    for (const layer of editorTileLayers(map.layers))
+    {
+        const old = [...layer.data];
+        layer.data.length = 0;
+        for (let row = 0; row < height; ++row)
+        for (let x = 0; x < width; ++x)
+        {
+            const oldRow = row - added;
+            layer.data.push(x < oldWidth && oldRow >= 0 && old[x + oldRow * oldWidth] || 0);
+        }
+        layer.width = width;
+        layer.height = height;
+    }
+    const tileWidth = map.tilewidth ?? 16, tileHeight = map.tileheight ?? 16;
+    for (const group of editorObjectGroups(map.layers))
+    {
+        for (const object of group.objects ?? [])
+            object.y += added * tileHeight;
+        group.objects &&= group.objects.filter((object)=> object.x < width * tileWidth && object.y >= 0);
+    }
+    map.width = width;
+    map.height = height;
+    return true;
+}
+
+// a map's size, tiles and objects, for an undo
+function editorMapSnapshot(record)
+{
+    const map = record.map, objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
+    return editorObjectsCopy({width: map.width, height: map.height, layers: editorTileLayerData(map.layers), objects});
+}
+
+// give a map a size, tiles and objects, the game's Restart hook makes its layers again
+function editorSetMapSnapshot(record, snapshot)
+{
+    const map = record.map;
+    editorResizeMap(map, snapshot.width, snapshot.height);
+    editorCopyData(editorTileLayerData(map.layers), snapshot.layers);
+    editorRestoreObjects(map, snapshot);
+    editorClearSelections();
+}
+
+// the selections go when the map changes size, they are cells and objects of the old one
+function editorClearSelections()
+{
+    editorSelection = editorSelectionDrag = editorLastCell = editorHover = undefined;
+    editorObjectSelection.clear();
+}
+
+// a map changed whole, the undo can put it back; it is autosaved, and the game makes its level again, in the editor
+function editorMapChanged(record, before)
+{
+    const stroke = [{resize: record, before, after: editorMapSnapshot(record)}];
+    editorUndoList.push(stroke);
+    editorRedoList.length = 0;
+    editorChanged(stroke);
+}
+
+// resize a map, as one undo; a game without the Restart hook can not make its layers again, so it can not
+function editorResize(record, width, height)
+{
+    const map = record?.map;
+    if (!map || record.synthetic || !levelEditor.onRestart) return false;
+    if (width === map.width && height === map.height) return false;
+    editorStrokeEnd();
+    const before = editorMapSnapshot(record);
+    if (!editorResizeMap(map, width, height)) return false;
+    editorClearSelections();
+    editorMapChanged(record, before);
+    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // cells and undo
 
 // the strokes that can be undone and redone, each a list of cells with the gid before and after, and of object
-// layers with their objects before and after
+// layers with their objects before and after, or a resize with the map before and after
 const editorUndoList = [], editorRedoList = [];
+const editorEntryRecord = (entry)=> entry.resize ?? (entry.layer ?? entry.objectLayer).record;
 let editorStroke;
 
 // during a big edit, the layers whose cell by cell redraws are held off, with the redraw each had of its own
@@ -28818,6 +28977,21 @@ function editorStrokeEnd()
     editorStroke = undefined;
 }
 
+// undo the stroke being made, with no undo entry, as if it was never made
+function editorStrokeCancel()
+{
+    const stroke = editorStroke;
+    editorStroke = undefined;
+    if (!stroke) return;
+    editorBulkEdit(()=>
+    {
+        for (const entry of [...stroke].reverse())
+            entry.objectLayer ? editorSetObjects(entry.objectLayer, entry.before) :
+                editorSetCell(entry.layer, entry.pos, entry.before);
+    });
+    editorRedraw(stroke);
+}
+
 // undo the last stroke, or redo the last one undone
 function editorUndo(redo=false)
 {
@@ -28829,7 +29003,9 @@ function editorUndo(redo=false)
     {
         for (const entry of redo ? stroke : [...stroke].reverse())
         {
-            if (entry.objectLayer)
+            if (entry.resize)
+                editorSetMapSnapshot(entry.resize, redo ? entry.after : entry.before);
+            else if (entry.objectLayer)
                 editorSetObjects(entry.objectLayer, redo ? entry.after : entry.before);
             else
                 editorSetCell(entry.layer, entry.pos, redo ? entry.after : entry.before);
@@ -28839,13 +29015,20 @@ function editorUndo(redo=false)
 }
 
 // after a change the tile layers it touched draw again whole, so a game's onRedraw decoration sees the new tiles,
-// and the maps it touched are autosaved
+// and the maps it touched are autosaved; a resized map is made again by the game, with the editor staying open
 function editorChanged(stroke)
+{
+    editorRedraw(stroke);
+    for (const record of new Set(stroke.map(editorEntryRecord)))
+        editorAutosave(record);
+    stroke.some((entry)=> entry.resize) && levelEditor.onRestart?.();
+}
+
+// the tile layers a stroke touched draw again whole
+function editorRedraw(stroke)
 {
     for (const layer of new Set(stroke.filter((entry)=> entry.layer).map((entry)=> entry.layer)))
         layer.live.destroyed || layer.live.redraw();
-    for (const record of new Set(stroke.map((entry)=> (entry.layer ?? entry.objectLayer).record)))
-        editorAutosave(record);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -29027,6 +29210,7 @@ function editorSelectLayer(layer)
 {
     editorStrokeEnd();
     editorLastCell = editorObjectDrag = editorRightPress = editorObjectBox = undefined; // presses stay on their layer
+    editorSelectionDrag = undefined; // a move so far is kept, the stroke ended
     editorObjectSelection.clear();
     if (layer.isObjects)
     {
@@ -29512,12 +29696,9 @@ function editorPlaceStampObjects(layer, cell, stamp)
     });
 }
 
-// the selected area into the brush as a stamp, its empty cells see-through, with All Layers the objects in it too,
-// and the selection cleared so the next click paints it
-function editorCopy()
+// the tiles of an area on the selection layers as a stamp, its empty cells see-through
+function editorSelectionStamp(area)
 {
-    const area = editorSelection;
-    if (!area || !editorLayer) return false;
     const width = area.max.x - area.min.x + 1, height = area.max.y - area.min.y + 1;
     const grids = editorSelectionLayers().map((layer)=>
     {
@@ -29530,12 +29711,77 @@ function editorCopy()
         }
         return grid;
     });
-    const objects = editorAllLayers ? editorAreaObjects(editorLayer, area) : [];
-    if (!objects.length && grids.every((grid)=> grid.every((gid)=> gid === undefined)))
+    return {width, height, grids};
+}
+
+// the selected area into the brush as a stamp, its empty cells see-through, with All Layers the objects in it too,
+// and the selection cleared so the next click paints it
+function editorCopy()
+{
+    const area = editorSelection;
+    if (!area || !editorLayer) return false;
+    const stamp = editorSelectionStamp(area), objects = editorAllLayers ? editorAreaObjects(editorLayer, area) : [];
+    if (!objects.length && stamp.grids.every((grid)=> grid.every((gid)=> gid === undefined)))
         return false; // nothing there, the brush stays as it was
-    editorBrush = editorClipboard = objects.length ? {width, height, grids, objects} : {width, height, grids};
+    editorBrush = editorClipboard = objects.length ? {...stamp, objects} : stamp;
     editorSelection = undefined;
     return true;
+}
+
+// start dragging the selection from a cell in it, with All Layers the objects in it go too
+function editorSelectionDragStart(layer, cell)
+{
+    editorStrokeEnd();
+    const area = editorSelection, objects = [];
+    if (editorAllLayers)
+    {
+        const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
+        for (const objectLayer of editorObjectLayers(layer.record))
+        {
+            const ids = new Set(editorObjectsIn(objectLayer, corner, far));
+            ids.size && objects.push({objectLayer, ids});
+        }
+    }
+    editorSelectionDrag = {layer, start: cell, delta: vec2(), area, stamp: editorSelectionStamp(area), objects};
+}
+
+// move the dragged selection to a cell, as the stroke being made: taken back, then its area cleared and its tiles
+// and objects put down that far from where they were; letting go ends the stroke, one undo
+function editorSelectionDragTo(cell)
+{
+    const drag = editorSelectionDrag, delta = cell.subtract(drag.start), {layer, area, stamp} = drag;
+    if (delta.x === drag.delta.x && delta.y === drag.delta.y) return;
+    drag.delta = delta;
+    editorStrokeCancel();
+    editorSelection = {min: area.min.add(delta), max: area.max.add(delta)};
+    if (!delta.x && !delta.y) return; // back where it was, no change
+    editorBulkEdit(()=>
+    {
+        for (const [target] of editorStampTargets(layer, stamp))
+        for (let y = area.min.y; y <= area.max.y; ++y)
+        for (let x = area.min.x; x <= area.max.x; ++x)
+        {
+            const from = vec2(x, y);
+            from.arrayCheck(target.live.size) && editorPaint(target, from, 0);
+        }
+        editorPaintStamp(layer, editorSelection.min, stamp);
+        for (const {objectLayer, ids} of drag.objects)
+            editorChangeObjects(objectLayer, (list)=>
+            {
+                for (const object of list)
+                    ids.has(object.id) && editorObjectSetPos(layer.record, object,
+                        editorObjectPos(layer.record, object).add(delta));
+            });
+    });
+    editorStroke && editorRedraw(editorStroke);
+}
+
+// put the dragged selection back where it was, with nothing to undo
+function editorSelectionDragCancel()
+{
+    editorStrokeCancel();
+    editorSelection = editorSelectionDrag.area;
+    editorSelectionDrag = undefined;
 }
 
 // copy the selected area, then clear it, as one undo
@@ -29567,6 +29813,7 @@ const editorHelpLines =
 [
     'Left: paint · Shift+Left: line from the last tile',
     'Right click: pick a tile · Right drag: select',
+    'Left drag a selection: move it · Esc or right click: put it back',
     'Middle drag or Space+drag: pan · Wheel or pinch: zoom',
     '1-9: layer · Esc: play and edit · 0: exit the editor',
     'F: fill · Delete: clear the selection',
@@ -29582,7 +29829,8 @@ function editorHint()
     if (editorObjectLayer)
         return editorObjectSelection.size ? 'Selection: drag moves · Delete removes · Ctrl+C copy · Ctrl+X cut · click to clear' :
             'Left place / select · drag moves · Right pick / drag select · Delete removes';
-    if (editorSelection) return 'Selection: F fill · Delete clear · Ctrl+C copy · Ctrl+X cut · click to clear';
+    if (editorSelection)
+        return 'Selection: drag moves · F fill · Delete clear · Ctrl+C copy · Ctrl+X cut · click to clear';
     if (keyIsDown('ShiftLeft') || keyIsDown('ShiftRight')) return 'Shift: line from the last tile';
     return 'Left paint · Right pick / drag select · F fill · Space or middle drag pans · ? keys';
 }
@@ -29694,6 +29942,27 @@ function editorPanelInit()
     playFrom.type = 'checkbox';
     playFrom.onchange = ()=> { editorPlayFromMouse = playFrom.checked; playFrom.blur(); };
     editorElement('span', playFromLabel, '', 'Play from mouse');
+    const sizeRow = editorElement('div', advanced, 'display:flex;gap:4px;align-items:center;margin:4px 0');
+    sizeRow.title = 'The level grows or shrinks at the right and top, can be undone';
+    editorElement('span', sizeRow, '', 'Size');
+    const sizeInput = ()=>
+    {
+        const input = editorElement('input', sizeRow, 'width:48px;background:#333;color:#eee');
+        input.type = 'number';
+        input.min = input.step = '1';
+        input.onkeydown = (e)=> e.key === 'Enter' && resizeLevel();
+        return input;
+    };
+    const sizeX = sizeInput();
+    editorElement('span', sizeRow, '', '×');
+    const sizeY = sizeInput();
+    const resize = editorElement('button', sizeRow, 'flex:1;padding:3px;cursor:pointer', 'Resize');
+    const resizeLevel = ()=>
+    {
+        editorResize(editorLayer?.record, parseInt(sizeX.value), parseInt(sizeY.value));
+        resize.blur(); sizeX.blur(); sizeY.blur(); // the fields show the size again
+    };
+    resize.onclick = resizeLevel;
     const reset = editorElement('button', advanced, 'width:100%;padding:3px;cursor:pointer;margin-top:4px',
         'Reset to file');
     reset.title = 'Put the level back to the file it was loaded from, can be undone';
@@ -29707,7 +29976,7 @@ function editorPanelInit()
         editorElement('div', help, 'margin:2px 0', line);
     button(help, 'Close', ()=> editorHelp = false, '?');
 
-    editorPanelParts = {advancedToggle, advanced, playFromLabel, playFrom, restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
+    editorPanelParts = {advancedToggle, advanced, playFromLabel, playFrom, sizeRow, sizeX, sizeY, resize, restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -29859,6 +30128,17 @@ function editorPanelUpdate()
     p.advanced.style.display = editorAdvanced ? '' : 'none';
     p.playFromLabel.style.display = levelEditor.onPlayFrom ? 'flex' : 'none';
     p.playFrom.checked = editorPlayFromMouse;
+
+    // the level's size, shown until a field is being typed in; without the Restart hook it can not change
+    const map = editorLayer?.record.map, canResize = !!levelEditor.onRestart && !editorLayer?.record.synthetic;
+    p.sizeRow.style.display = map ? 'flex' : 'none';
+    if (map && !p.sizeRow.contains(document.activeElement))
+    {
+        p.sizeX.value = String(map.width);
+        p.sizeY.value = String(map.height);
+    }
+    p.sizeX.disabled = p.sizeY.disabled = p.resize.disabled = !canResize;
+    p.resize.title = canResize ? '' : 'Resizing needs levelEditor.onRestart, to make the level again';
     p.turns.style.display = editorObjectLayer ? 'none' : ''; // the tile brush's, not an object layer's
     p.pending.style.display = editorLayer?.record.pending ? '' : 'none';
 
@@ -30083,6 +30363,14 @@ function editorPropertiesUpdate(box)
 
 function editorUpdate()
 {
+    // Escape while dragging a selection puts it back, and stays in the editor
+    if (editorSelectionDrag && debugKey && keyWasPressed(debugKey))
+    {
+        inputClearKey(debugKey);
+        editorSelectionDragCancel();
+        return;
+    }
+
     // in an editing session Escape, the debug key, switches between playing and editing; taken, so the debug
     // overlay waits till the session ends
     if (editorSession && debugKey && keyWasPressed(debugKey))
@@ -30130,6 +30418,13 @@ function editorUpdate()
     const layer = editorLayer?.live.destroyed ? undefined : editorLayer, mouse = screenToWorld(mousePosScreen);
     editorHover = layer && editorCellAt(layer.live, mouse);
 
+    // a right press while dragging the selection puts it back, and is taken so it does not pick or select
+    if (editorSelectionDrag && mouseWasPressed(2))
+    {
+        inputClearKey(2);
+        editorSelectionDragCancel();
+    }
+
     // the right button: a click picks the tile under the mouse, or clears the selection off the layer, a drag
     // selects an area; a release within half a cell of the press, or 4 pixels zoomed far out, is a click
     if (mouseWasPressed(2) && layer)
@@ -30150,13 +30445,19 @@ function editorUpdate()
     else
         editorRightPress = undefined;
 
-    // the left button paints; the first press with a selection only clears it, Shift draws a line from the
-    // last tile placed; a quick click let go before this step still reads as pressed
+    // the left button paints; a press in the selection drags it, the first press outside it only clears it, Shift
+    // draws a line from the last tile placed; a quick click let go before this step still reads as pressed
     if (mouseWasPressed(0) && !space && editorSelection)
     {
-        editorSelection = undefined;
+        const {min: a, max: b} = editorSelection, cell = editorHover;
+        if (cell && !layer.record.pending && cell.x >= a.x && cell.y >= a.y && cell.x <= b.x && cell.y <= b.y)
+            editorSelectionDragStart(layer, cell);
+        else
+            editorSelection = undefined;
         editorLeftSpent = true;
     }
+    if (editorSelectionDrag && layer)
+        editorSelectionDragTo(editorCellClamped(layer.live, mouse));
     const left = mouseIsDown(0) || mouseWasPressed(0);
     if (!editorHover)
         editorLastCell = undefined; // off the layer, coming back in starts the line again
@@ -30176,7 +30477,7 @@ function editorUpdate()
     if (!mouseIsDown(0))
     {
         editorStrokeEnd();
-        editorLastCell = undefined;
+        editorLastCell = editorSelectionDrag = undefined;
         editorLeftSpent = false;
     }
 }

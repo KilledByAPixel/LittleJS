@@ -113,6 +113,10 @@ let editorLayer, editorHover, editorLastCell, editorLastPlaced;
 // and a left press that only cleared a selection, which paints nothing until let go
 let editorSelection, editorRightPress, editorLeftSpent;
 
+// a left drag moving the selection: the layer, the cell pressed and how far it moved, the area and its tiles as
+// they were, and with All Layers the ids of the objects in it, by object layer
+let editorSelectionDrag;
+
 // if selection edits, Delete, Ctrl+C and Ctrl+X, act on every tile layer of the edited layer's map
 let editorAllLayers = false;
 
@@ -140,7 +144,7 @@ function editorSetOpen(open)
     else
     {
         editorStrokeEnd();
-        editorSelection = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
+        editorSelection = editorSelectionDrag = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
         editorObjectSelection.clear();
         const state = editorGameState;
         setPaused(state.paused);
@@ -276,7 +280,7 @@ function editorRetire(isRetired)
     for (let i = list.length; i--;)
         list[i].some((entry)=> gone.includes(editorEntryRecord(entry))) && list.splice(i, 1);
     if (gone.includes(editorLayer?.record))
-        editorLayer = editorSelection = undefined; // the selection was an area of that layer
+        editorLayer = editorSelection = editorSelectionDrag = undefined; // the selection was an area of that layer
     if (gone.includes(editorObjectLayer?.record))
         editorObjectLayer = undefined;
 }
@@ -608,7 +612,7 @@ function editorSetMapSnapshot(record, snapshot)
 // the selections go when the map changes size, they are cells and objects of the old one
 function editorClearSelections()
 {
-    editorSelection = editorLastCell = editorHover = undefined;
+    editorSelection = editorSelectionDrag = editorLastCell = editorHover = undefined;
     editorObjectSelection.clear();
 }
 
@@ -704,6 +708,21 @@ function editorStrokeEnd()
     editorStroke = undefined;
 }
 
+// undo the stroke being made, with no undo entry, as if it was never made
+function editorStrokeCancel()
+{
+    const stroke = editorStroke;
+    editorStroke = undefined;
+    if (!stroke) return;
+    editorBulkEdit(()=>
+    {
+        for (const entry of [...stroke].reverse())
+            entry.objectLayer ? editorSetObjects(entry.objectLayer, entry.before) :
+                editorSetCell(entry.layer, entry.pos, entry.before);
+    });
+    editorRedraw(stroke);
+}
+
 // undo the last stroke, or redo the last one undone
 function editorUndo(redo=false)
 {
@@ -730,11 +749,17 @@ function editorUndo(redo=false)
 // and the maps it touched are autosaved; a resized map is made again by the game, with the editor staying open
 function editorChanged(stroke)
 {
-    for (const layer of new Set(stroke.filter((entry)=> entry.layer).map((entry)=> entry.layer)))
-        layer.live.destroyed || layer.live.redraw();
+    editorRedraw(stroke);
     for (const record of new Set(stroke.map(editorEntryRecord)))
         editorAutosave(record);
     stroke.some((entry)=> entry.resize) && levelEditor.onRestart?.();
+}
+
+// the tile layers a stroke touched draw again whole
+function editorRedraw(stroke)
+{
+    for (const layer of new Set(stroke.filter((entry)=> entry.layer).map((entry)=> entry.layer)))
+        layer.live.destroyed || layer.live.redraw();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -916,6 +941,7 @@ function editorSelectLayer(layer)
 {
     editorStrokeEnd();
     editorLastCell = editorObjectDrag = editorRightPress = editorObjectBox = undefined; // presses stay on their layer
+    editorSelectionDrag = undefined; // a move so far is kept, the stroke ended
     editorObjectSelection.clear();
     if (layer.isObjects)
     {
@@ -1401,12 +1427,9 @@ function editorPlaceStampObjects(layer, cell, stamp)
     });
 }
 
-// the selected area into the brush as a stamp, its empty cells see-through, with All Layers the objects in it too,
-// and the selection cleared so the next click paints it
-function editorCopy()
+// the tiles of an area on the selection layers as a stamp, its empty cells see-through
+function editorSelectionStamp(area)
 {
-    const area = editorSelection;
-    if (!area || !editorLayer) return false;
     const width = area.max.x - area.min.x + 1, height = area.max.y - area.min.y + 1;
     const grids = editorSelectionLayers().map((layer)=>
     {
@@ -1419,12 +1442,77 @@ function editorCopy()
         }
         return grid;
     });
-    const objects = editorAllLayers ? editorAreaObjects(editorLayer, area) : [];
-    if (!objects.length && grids.every((grid)=> grid.every((gid)=> gid === undefined)))
+    return {width, height, grids};
+}
+
+// the selected area into the brush as a stamp, its empty cells see-through, with All Layers the objects in it too,
+// and the selection cleared so the next click paints it
+function editorCopy()
+{
+    const area = editorSelection;
+    if (!area || !editorLayer) return false;
+    const stamp = editorSelectionStamp(area), objects = editorAllLayers ? editorAreaObjects(editorLayer, area) : [];
+    if (!objects.length && stamp.grids.every((grid)=> grid.every((gid)=> gid === undefined)))
         return false; // nothing there, the brush stays as it was
-    editorBrush = editorClipboard = objects.length ? {width, height, grids, objects} : {width, height, grids};
+    editorBrush = editorClipboard = objects.length ? {...stamp, objects} : stamp;
     editorSelection = undefined;
     return true;
+}
+
+// start dragging the selection from a cell in it, with All Layers the objects in it go too
+function editorSelectionDragStart(layer, cell)
+{
+    editorStrokeEnd();
+    const area = editorSelection, objects = [];
+    if (editorAllLayers)
+    {
+        const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
+        for (const objectLayer of editorObjectLayers(layer.record))
+        {
+            const ids = new Set(editorObjectsIn(objectLayer, corner, far));
+            ids.size && objects.push({objectLayer, ids});
+        }
+    }
+    editorSelectionDrag = {layer, start: cell, delta: vec2(), area, stamp: editorSelectionStamp(area), objects};
+}
+
+// move the dragged selection to a cell, as the stroke being made: taken back, then its area cleared and its tiles
+// and objects put down that far from where they were; letting go ends the stroke, one undo
+function editorSelectionDragTo(cell)
+{
+    const drag = editorSelectionDrag, delta = cell.subtract(drag.start), {layer, area, stamp} = drag;
+    if (delta.x === drag.delta.x && delta.y === drag.delta.y) return;
+    drag.delta = delta;
+    editorStrokeCancel();
+    editorSelection = {min: area.min.add(delta), max: area.max.add(delta)};
+    if (!delta.x && !delta.y) return; // back where it was, no change
+    editorBulkEdit(()=>
+    {
+        for (const [target] of editorStampTargets(layer, stamp))
+        for (let y = area.min.y; y <= area.max.y; ++y)
+        for (let x = area.min.x; x <= area.max.x; ++x)
+        {
+            const from = vec2(x, y);
+            from.arrayCheck(target.live.size) && editorPaint(target, from, 0);
+        }
+        editorPaintStamp(layer, editorSelection.min, stamp);
+        for (const {objectLayer, ids} of drag.objects)
+            editorChangeObjects(objectLayer, (list)=>
+            {
+                for (const object of list)
+                    ids.has(object.id) && editorObjectSetPos(layer.record, object,
+                        editorObjectPos(layer.record, object).add(delta));
+            });
+    });
+    editorStroke && editorRedraw(editorStroke);
+}
+
+// put the dragged selection back where it was, with nothing to undo
+function editorSelectionDragCancel()
+{
+    editorStrokeCancel();
+    editorSelection = editorSelectionDrag.area;
+    editorSelectionDrag = undefined;
 }
 
 // copy the selected area, then clear it, as one undo
@@ -1456,6 +1544,7 @@ const editorHelpLines =
 [
     'Left: paint · Shift+Left: line from the last tile',
     'Right click: pick a tile · Right drag: select',
+    'Left drag a selection: move it · Esc or right click: put it back',
     'Middle drag or Space+drag: pan · Wheel or pinch: zoom',
     '1-9: layer · Esc: play and edit · 0: exit the editor',
     'F: fill · Delete: clear the selection',
@@ -1471,7 +1560,8 @@ function editorHint()
     if (editorObjectLayer)
         return editorObjectSelection.size ? 'Selection: drag moves · Delete removes · Ctrl+C copy · Ctrl+X cut · click to clear' :
             'Left place / select · drag moves · Right pick / drag select · Delete removes';
-    if (editorSelection) return 'Selection: F fill · Delete clear · Ctrl+C copy · Ctrl+X cut · click to clear';
+    if (editorSelection)
+        return 'Selection: drag moves · F fill · Delete clear · Ctrl+C copy · Ctrl+X cut · click to clear';
     if (keyIsDown('ShiftLeft') || keyIsDown('ShiftRight')) return 'Shift: line from the last tile';
     return 'Left paint · Right pick / drag select · F fill · Space or middle drag pans · ? keys';
 }
@@ -2004,6 +2094,14 @@ function editorPropertiesUpdate(box)
 
 function editorUpdate()
 {
+    // Escape while dragging a selection puts it back, and stays in the editor
+    if (editorSelectionDrag && debugKey && keyWasPressed(debugKey))
+    {
+        inputClearKey(debugKey);
+        editorSelectionDragCancel();
+        return;
+    }
+
     // in an editing session Escape, the debug key, switches between playing and editing; taken, so the debug
     // overlay waits till the session ends
     if (editorSession && debugKey && keyWasPressed(debugKey))
@@ -2051,6 +2149,13 @@ function editorUpdate()
     const layer = editorLayer?.live.destroyed ? undefined : editorLayer, mouse = screenToWorld(mousePosScreen);
     editorHover = layer && editorCellAt(layer.live, mouse);
 
+    // a right press while dragging the selection puts it back, and is taken so it does not pick or select
+    if (editorSelectionDrag && mouseWasPressed(2))
+    {
+        inputClearKey(2);
+        editorSelectionDragCancel();
+    }
+
     // the right button: a click picks the tile under the mouse, or clears the selection off the layer, a drag
     // selects an area; a release within half a cell of the press, or 4 pixels zoomed far out, is a click
     if (mouseWasPressed(2) && layer)
@@ -2071,13 +2176,19 @@ function editorUpdate()
     else
         editorRightPress = undefined;
 
-    // the left button paints; the first press with a selection only clears it, Shift draws a line from the
-    // last tile placed; a quick click let go before this step still reads as pressed
+    // the left button paints; a press in the selection drags it, the first press outside it only clears it, Shift
+    // draws a line from the last tile placed; a quick click let go before this step still reads as pressed
     if (mouseWasPressed(0) && !space && editorSelection)
     {
-        editorSelection = undefined;
+        const {min: a, max: b} = editorSelection, cell = editorHover;
+        if (cell && !layer.record.pending && cell.x >= a.x && cell.y >= a.y && cell.x <= b.x && cell.y <= b.y)
+            editorSelectionDragStart(layer, cell);
+        else
+            editorSelection = undefined;
         editorLeftSpent = true;
     }
+    if (editorSelectionDrag && layer)
+        editorSelectionDragTo(editorCellClamped(layer.live, mouse));
     const left = mouseIsDown(0) || mouseWasPressed(0);
     if (!editorHover)
         editorLastCell = undefined; // off the layer, coming back in starts the line again
@@ -2097,7 +2208,7 @@ function editorUpdate()
     if (!mouseIsDown(0))
     {
         editorStrokeEnd();
-        editorLastCell = undefined;
+        editorLastCell = editorSelectionDrag = undefined;
         editorLeftSpent = false;
     }
 }
