@@ -1618,7 +1618,7 @@ function render3DCSGMesh(polygons)
 //   shape cut again and again only splits where each cut is
 // - the clip twice through the same tree, with a flip between, drops the one of two coplanar faces that would
 //   double up
-function meshCSG(a, b, matrix, operation)
+function render3DMeshCSG(a, b, matrix, operation)
 {
     const polygonsA = render3DCSGPolygons(a), polygonsB = render3DCSGPolygons(b, matrix);
     const [nearA, farA] = render3DCSGNear(polygonsA, polygonsB), [nearB, farB] = render3DCSGNear(polygonsB, polygonsA);

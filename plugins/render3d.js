@@ -2505,7 +2505,7 @@ class Mesh
      *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
      *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
      *  @return {Mesh} */
-    union(mesh, matrix) { return meshCSG(this, mesh, matrix, 0); }
+    union(mesh, matrix) { return render3DMeshCSG(this, mesh, matrix, 0); }
 
     /** Returns a new mesh of this one with the other cut out of it, CSG with BSP trees
      *  - Both must be closed, every edge shared by two triangles, as the builders make them apart from the open
@@ -2523,13 +2523,13 @@ class Mesh
      *  @return {Mesh}
      *  @example
      *  const wall = buildBox(vec3(4, 3, .5)).subtract(buildBox(vec3(1, 2, 1)), vec3(0, -.5, 0)); // a doorway */
-    subtract(mesh, matrix) { return meshCSG(this, mesh, matrix, 1); }
+    subtract(mesh, matrix) { return render3DMeshCSG(this, mesh, matrix, 1); }
 
     /** Returns a new mesh of only what is in both this mesh and the other, see subtract
      *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
      *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
      *  @return {Mesh} */
-    intersect(mesh, matrix) { return meshCSG(this, mesh, matrix, 2); }
+    intersect(mesh, matrix) { return render3DMeshCSG(this, mesh, matrix, 2); }
 
     /** Scale every uv, so a whole texture repeats across the mesh when its TextureInfo wraps
      *  @param {Vector2|number} scale - Repeats across and up, a number for both
