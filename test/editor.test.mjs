@@ -1267,3 +1267,44 @@ test('with All Layers the objects in the selection move with it', async () =>
     engine.run('editorUndo()');
     assert.equal(engine.run('map.layers[1].objects[0].x'), 8);
 });
+
+// review fixes: resizing
+
+test('a map with autosaved edits waiting to be applied can not be resized, the edits are kept', async () =>
+{
+    const storage = makeStorage();
+    paintAndSave(await reload(storage));
+    const before = saved(storage);
+    const engine = await reload(storage, [0, 0, 4, 0, 0, 0]); // the file changed under the autosave
+    engine.run(restartCode);
+    assert.equal(engine.run('!!front.record.pending'), true);
+    assert.equal(engine.run('editorResize(front.record, 4, 3)'), false);
+    assert.deepEqual(saved(storage), before);
+});
+
+test('Reset to file after a resize empties an Objects layer the editor made', async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode + restartCode + `editorNewObjectGroup(map).objects = [{ id: 5, x: 8, y: 8, type: 'Coin' }];
+        editorResize(front.record, 4, 3); editorRevert(front.record);`);
+    assert.deepEqual([...run('editorObjectGroups(map.layers).map((group)=> group.objects.length)')], [1, 0]);
+});
+
+test('a resize that keeps the same tile data, a blank level turned on its side, is autosaved', async () =>
+{
+    const storage = makeStorage();
+    const blank = (code)=> code.replace('data: [1, 0, 0, 0, 0, 2]', 'data: [0, 0, 0, 0, 0, 0]')
+        .replace(`objects: [{ id: 1, x: 8, y: 8, type: 'Coin' }]`, 'objects: []');
+    const first = await loadGame({ localStorage: storage });
+    first.run(blank(fileCode([0, 0, 0, 0, 0, 0])) + restartCode + 'editorResize(front.record, 2, 3)');
+    const second = await loadGame({ localStorage: storage });
+    second.run(blank(fileCode([0, 0, 0, 0, 0, 0])));
+    assert.deepEqual([...second.run('[map.width, map.height]')], [2, 3]);
+});
+
+test('Reset to file on a layer made in code does nothing, it has no file', async () =>
+{
+    const { run } = await loadGame();
+    run(`const live = new TileLayer(vec2(), vec2(2, 1), undefined);
+        editorRevert(editorLayerRecord(live).record);`);
+});

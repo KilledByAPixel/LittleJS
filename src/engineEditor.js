@@ -244,7 +244,8 @@ function editorMapRestore(map)
     if (!saved) return map;
     // an autosave from before objects were in the hash matches on its tiles, one of a resized map is resized to first
     const sameFile = saved.hash === record.hash || !saved.objects && saved.hash === editorMapHash(data);
-    if (editorSameData(saved.layers, data) && editorSameData(saved.objects ?? [], objects))
+    if ((saved.width ?? map.width) === map.width && (saved.height ?? map.height) === map.height &&
+        editorSameData(saved.layers, data) && editorSameData(saved.objects ?? [], objects))
         editorDiscardPending(record);
     else if (!sameFile || !editorResizeMap(map, saved.width ?? map.width, saved.height ?? map.height) ||
         !editorCopyData(data, saved.layers))
@@ -492,7 +493,8 @@ function editorAutosave(record)
     const original = record.originalObjects ?? [], kept = objects.slice();
     while (kept.length > original.length && !kept.at(-1).length)
         kept.pop(); // an Objects layer the editor made, empty again, is not an edit
-    if (editorSameData(data, record.original) && editorSameData(kept, original))
+    const size = record.originalSize, sameSize = map.width === size.width && map.height === size.height;
+    if (sameSize && editorSameData(data, record.original) && editorSameData(kept, original))
         delete saves[record.key];
     else
         saves[record.key] = {hash: record.hash, width: map.width, height: map.height, layers: data, objects,
@@ -550,7 +552,7 @@ function editorDiscardPending(record)
 // put every layer back to the file, its size too, as one undo
 function editorRevert(record)
 {
-    if (!record) return;
+    if (!record || record.synthetic) return; // a layer made in code has no file
     record.pending = undefined;
     const {width, height} = record.originalSize ?? record.map;
     editorPaintData(record, record.original, record.originalObjects, width, height);
@@ -606,6 +608,8 @@ function editorSetMapSnapshot(record, snapshot)
     editorResizeMap(map, snapshot.width, snapshot.height);
     editorCopyData(editorTileLayerData(map.layers), snapshot.layers);
     editorRestoreObjects(map, snapshot);
+    for (const group of editorObjectGroups(map.layers).slice(snapshot.objects.length))
+        group.objects = []; // an Objects layer the editor made since
     editorClearSelections();
 }
 
@@ -629,7 +633,7 @@ function editorMapChanged(record, before)
 function editorResize(record, width, height)
 {
     const map = record?.map;
-    if (!map || record.synthetic || !levelEditor.onRestart) return false;
+    if (!map || record.synthetic || record.pending || !levelEditor.onRestart) return false;
     if (width === map.width && height === map.height) return false;
     editorStrokeEnd();
     const before = editorMapSnapshot(record);
@@ -1863,7 +1867,8 @@ function editorPanelUpdate()
     p.playFrom.checked = editorPlayFromMouse;
 
     // the level's size, shown until a field is being typed in; without the Restart hook it can not change
-    const map = editorLayer?.record.map, canResize = !!levelEditor.onRestart && !editorLayer?.record.synthetic;
+    const map = editorLayer?.record.map;
+    const canResize = !!levelEditor.onRestart && !editorLayer?.record.synthetic && !editorLayer?.record.pending;
     p.sizeRow.style.display = map ? 'flex' : 'none';
     if (map && !p.sizeRow.contains(document.activeElement))
     {
