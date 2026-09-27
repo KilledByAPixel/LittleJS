@@ -94,6 +94,15 @@ function loadLevelData()
         tileLayer.redraw();
     }
 
+    // the objects of the level's object layer, each type with its marker tile as an icon for the level editor;
+    // an old map with marker tiles still works, the loop above makes those
+    const icon = (index)=> tile(index, 16, 1);
+    LJS.objectLayersAddType('PlayerStart', (pos)=> playerStartPos = pos, {}, icon(tileLookup.player));
+    LJS.objectLayersAddType('Crate', GameObjects.Crate, {}, icon(tileLookup.crate));
+    LJS.objectLayersAddType('Enemy', GameObjects.Enemy, {}, icon(tileLookup.enemy));
+    LJS.objectLayersAddType('Coin', GameObjects.Coin, {}, icon(tileLookup.coin));
+    LJS.objectLayersLoad(tileMapData);
+
     // the level editor (Esc then 0) paints tiles with the same rules
     LJS.levelEditor.onTile = (tileLayer, pos, tileData)=> setupTile(tileLayer, pos, tileData, false);
 }
