@@ -45,6 +45,6 @@ new Box2dObject().destroy(true);
 // a voxel raycast that misses is undefined, so its hit is checked before it is read
 const voxels = new VoxelMap(vec3(), vec3(8));
 const voxelHit = voxels.raycast(new Ray3D(vec3(), vec3(1, 0, 0)));
-// @ts-expect-error
-voxelHit.distance;
 voxelHit?.cell.add(voxelHit.normal);
+// @ts-expect-error
+voxels.raycast(new Ray3D(vec3(), vec3(0, 1, 0))).distance;
