@@ -157,3 +157,132 @@ test('a map with no object layer gets one named Objects the first time an object
     assert.deepEqual(JSON.parse(second.run('JSON.stringify([map.layers[1]?.name, list()?.length, coins().length])')),
         ['Objects', 1, 1]);
 });
+
+// objects mode: the camera on (2, 1) at 100 pixels a cell, the mouse at a world position
+const editCode = objectCode + `levelEditor.open(); editorCameraPos = vec2(2, 1); editorCameraScale = 100;`;
+const canvas = { tagName: 'CANVAS', closest: ()=> null };
+const at = (x, y, button=0)=> ({ button, x: 500 + (x - 2) * 100, y: 500 - (y - 1) * 100, target: canvas, cancelable: false });
+function click(engine, x, y, button=0)
+{
+    engine.handlers.mousedown(at(x, y, button));
+    step(engine);
+    engine.handlers.mouseup(at(x, y, button));
+    step(engine);
+}
+function drag(engine, from, to, button=0)
+{
+    engine.handlers.mousedown(at(...from, button));
+    step(engine);
+    engine.handlers.mousemove(at(...to, button));
+    step(engine);
+    engine.handlers.mouseup(at(...to, button));
+    step(engine);
+}
+function press(engine, code)
+{
+    engine.handlers.keydown(keyEvent(code));
+    step(engine);
+    engine.handlers.keyup(keyEvent(code));
+    step(engine);
+}
+const typed = (engine, key, ctrl=false)=> engine.run(`(()=> { let prevented = false;
+    editorOnKeyDown({ key: '${key}', code: '', repeat: false, ctrlKey: ${ctrl}, metaKey: false, shiftKey: false,
+        altKey: false, target: undefined, preventDefault() { prevented = true; } });
+    return prevented; })()`);
+const selected = (engine)=> [...engine.run('[...editorObjectSelection].sort()')];
+const positions = (engine)=> JSON.parse(engine.run('JSON.stringify(list().map((o)=> [o.id, o.x, o.y]))'));
+
+test('1 and 2 pick the tile layer and the object layer after it', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode);
+    press(engine, 'Digit2');
+    assert.equal(engine.run('editorObjectLayer === objects'), true);
+    press(engine, 'Digit1');
+    assert.deepEqual([...engine.run('[editorObjectLayer, editorLayer === ground]')], [undefined, true]);
+});
+
+test('a left click on empty space places the brush\'s object at the cell center, as one undo', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorSelectLayer(objects); editorObjectBrush = [{ type: 'Coin', properties: [], offset: vec2() }];`);
+    click(engine, 3.2, .7);
+    assert.deepEqual(positions(engine).at(-1), [3, 56, 24]);
+    assert.deepEqual([...engine.run('[coins().length, editorUndoList.length]')], [3, 1]);
+});
+
+test('a left click selects an object, and dragging moves it by whole cells, as one undo', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + 'editorSelectLayer(objects);');
+    drag(engine, [.5, 1.5], [2.6, 1.4]);
+    assert.deepEqual(selected(engine), [1]);
+    assert.deepEqual(positions(engine)[0], [1, 40, 8]);
+    assert.deepEqual([...engine.run('[made[0].pos.x, made[0].pos.y, editorUndoList.length]')], [2.5, 1.5, 1]);
+});
+
+test('the first left click with a selection only clears it', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorSelectLayer(objects); editorObjectSelection.add(2);
+        editorObjectBrush = [{ type: 'Coin', properties: [], offset: vec2() }];`);
+    click(engine, 3.5, .5);
+    assert.deepEqual([...engine.run('[editorObjectSelection.size, list().length]')], [0, 2]);
+});
+
+test('a right click picks an object into the brush with its properties, on empty space it clears the selection',
+    async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + 'editorSelectLayer(objects); editorObjectSelection.add(1);');
+    click(engine, 2.5, 1.5, 2);
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorObjectBrush)')),
+        [{ type: 'Coin', properties: [{ name: 'value', type: 'int', value: 5 }], offset: { x: 0, y: 0 } }]);
+    click(engine, 3.5, .5, 2);
+    assert.equal(engine.run('editorObjectSelection.size'), 0);
+});
+
+test('a right drag box-selects, with Shift it adds, with Ctrl it takes away', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + 'editorSelectLayer(objects);');
+    drag(engine, [0, 0], [1.9, 2], 2);
+    assert.deepEqual(selected(engine), [1]);
+    engine.handlers.keydown(keyEvent('ShiftLeft'));
+    drag(engine, [2, 0], [4, 2], 2);
+    engine.handlers.keyup(keyEvent('ShiftLeft'));
+    assert.deepEqual(selected(engine), [1, 2]);
+    engine.handlers.keydown(keyEvent('ControlLeft'));
+    drag(engine, [0, 0], [1, 2], 2);
+    engine.handlers.keyup(keyEvent('ControlLeft'));
+    assert.deepEqual(selected(engine), [2]);
+});
+
+test('Delete removes the selected objects and their game objects', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + 'editorSelectLayer(objects); editorObjectSelection.add(1);');
+    typed(engine, 'Delete');
+    assert.deepEqual([...engine.run('[list().length, coins().length, made[0].destroyed]')], [1, 1, true]);
+});
+
+test('Ctrl+C makes the selection the brush, and a click places copies keeping their offsets', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + 'editorSelectLayer(objects); editorObjectSelection.add(1); editorObjectSelection.add(2);');
+    assert.equal(typed(engine, 'c', true), true);
+    assert.equal(engine.run('editorObjectSelection.size'), 0);
+    click(engine, 1.5, .5);
+    assert.deepEqual(positions(engine).slice(2), [[3, 24, 24], [4, 56, 24]]);
+    assert.equal(engine.run('list()[3].properties[0].value'), 5, 'with its properties');
+});
+
+test('Ctrl+X copies and removes as one undo, and F does nothing on an object layer', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + 'editorSelectLayer(objects); editorObjectSelection.add(2);');
+    typed(engine, 'x', true);
+    assert.deepEqual([...engine.run('[list().length, editorUndoList.length, editorObjectBrush.length]')], [1, 1, 1]);
+    assert.equal(typed(engine, 'f'), false);
+    assert.equal(engine.run('list().length'), 1);
+});

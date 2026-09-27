@@ -96,12 +96,14 @@ function editorSetOpen(open)
         setPaused(true);
         setDebugOverlay(false); // out of the way of the level
         const layers = editorLayers();
-        editorLayer = layers.find((layer)=> layer.live.isSolid) ?? layers.at(-1);
+        editorLayer = layers.find((layer)=> layer.live?.isSolid) ?? layers.filter((layer)=> !layer.isObjects).at(-1);
+        editorObjectLayer = undefined;
     }
     else
     {
         editorStrokeEnd();
-        editorSelection = editorRightPress = undefined;
+        editorSelection = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
+        editorObjectSelection.clear();
         const state = editorGameState;
         setPaused(state.paused);
         setCameraPos(state.cameraPos);
@@ -204,7 +206,7 @@ function editorMapRestore(map)
     }
     else
     {
-        editorCopyObjects(map, saved);
+        editorRestoreObjects(map, saved);
         console.warn(`LittleJS editor: brought back unsaved edits to ${record.fileName}, ` +
             'Save in the editor (Esc then 0) writes them to the file');
     }
@@ -230,6 +232,8 @@ function editorRetire(isRetired)
         list[i].some((entry)=> gone.includes((entry.layer ?? entry.objectLayer).record)) && list.splice(i, 1);
     if (gone.includes(editorLayer?.record))
         editorLayer = editorSelection = undefined; // the selection was an area of that layer
+    if (gone.includes(editorObjectLayer?.record))
+        editorObjectLayer = undefined;
 }
 
 // called by tileLayersLoad with the layers it made, a map loaded again keeps its layer records, with the new layers
@@ -660,7 +664,7 @@ function editorObjectSetProperty(object, name, value, defaultValue)
 }
 
 // copy saved objects into a map's object layers, making an Objects layer for any it saved that the map lacks
-function editorCopyObjects(map, saved)
+function editorRestoreObjects(map, saved)
 {
     const groups = editorObjectGroups(map.layers);
     (saved.objects ?? []).forEach((objects, i)=>
@@ -672,13 +676,218 @@ function editorCopyObjects(map, saved)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// object editing
+
+// the object layer being edited, undefined while a tile layer is; the ids of the objects selected in it; the object
+// brush and the last objects copied, each a list of {type, properties, offset} placed at the mouse plus the offset;
+// a left drag moving the selected objects, and a right drag's box
+let editorObjectLayer, editorObjectSelection = new Set, editorObjectBrush, editorObjectClipboard;
+let editorObjectDrag, editorObjectBox;
+
+// make a layer the one being edited, a tile layer or an object layer; an object layer keeps a tile layer of its map
+// as editorLayer, for All Layers
+function editorSelectLayer(layer)
+{
+    editorStrokeEnd();
+    editorLastCell = editorObjectDrag = undefined;
+    editorObjectSelection.clear();
+    if (layer.isObjects)
+    {
+        editorObjectLayer = layer;
+        if (editorLayer?.record !== layer.record)
+            editorLayer = layer.record.layers[0] ?? editorLayer;
+    }
+    else
+    {
+        editorObjectLayer = undefined;
+        editorLayer = layer;
+    }
+}
+
+// the size of an object for picking it, what the game made it, or a cell
+function editorObjectSize(layer, object)
+{
+    const made = layer.instances.get(object.id);
+    return made && !made.destroyed && isVector2(made.size) ? made.size : vec2(1);
+}
+
+// the object under a world position, the one drawn last first
+function editorObjectAt(layer, pos)
+{
+    const objects = layer.group?.objects ?? [];
+    for (let i = objects.length; i--;)
+    {
+        const object = objects[i], center = editorObjectPos(layer.record, object);
+        const size = editorObjectSize(layer, object);
+        if (abs(pos.x - center.x) <= size.x / 2 && abs(pos.y - center.y) <= size.y / 2)
+            return object;
+    }
+}
+
+// the ids of the objects whose positions are inside the box between two world positions
+function editorObjectsIn(layer, a, b)
+{
+    const low = vec2(min(a.x, b.x), min(a.y, b.y)), high = vec2(max(a.x, b.x), max(a.y, b.y));
+    return (layer.group?.objects ?? []).filter((object)=>
+    {
+        const pos = editorObjectPos(layer.record, object);
+        return pos.x >= low.x && pos.y >= low.y && pos.x <= high.x && pos.y <= high.y;
+    }).map((object)=> object.id);
+}
+
+// the brush takes an object's type and properties
+function editorPickObject(object)
+{ editorObjectBrush = [{type: object.type || object.class, properties: editorObjectsCopy(object.properties ?? []), offset: vec2()}]; }
+
+// place an object brush's objects at a position plus each one's offset, as one undo
+function editorPlaceObjects(layer, pos, brush)
+{
+    const {record} = layer;
+    editorChangeObjects(layer, (list)=>
+    {
+        for (const {type, properties, offset} of brush)
+        {
+            const object = {id: editorNextObjectId(record.map), name: '', type, point: true, rotation: 0, visible: true,
+                width: 0, height: 0, x: 0, y: 0};
+            properties.length && (object.properties = editorObjectsCopy(properties));
+            editorObjectSetPos(record, object, pos.add(offset));
+            list.push(object);
+        }
+    });
+    editorStrokeEnd();
+}
+
+// the selected objects of the object layer being edited
+function editorSelectedObjects()
+{ return (editorObjectLayer?.group?.objects ?? []).filter((object)=> editorObjectSelection.has(object.id)); }
+
+// remove the selected objects, as one undo
+function editorDeleteObjects()
+{
+    if (!editorObjectSelection.size) return false;
+    const selection = editorObjectSelection;
+    editorStrokeEnd();
+    editorChangeObjects(editorObjectLayer, (list)=>
+        list.splice(0, list.length, ...list.filter((object)=> !selection.has(object.id))));
+    editorObjectSelection = new Set;
+    editorStrokeEnd();
+    return true;
+}
+
+// the selected objects into the brush, their offsets from the lowest corner of their positions, and the selection
+// cleared so the next click places them
+function editorCopyObjects()
+{
+    const objects = editorSelectedObjects();
+    if (!objects.length) return false;
+    const positions = objects.map((object)=> editorObjectPos(editorObjectLayer.record, object));
+    const low = vec2(min(...positions.map((p)=> p.x)), min(...positions.map((p)=> p.y)));
+    editorObjectBrush = editorObjectClipboard = objects.map((object, i)=> ({type: object.type || object.class,
+        properties: editorObjectsCopy(object.properties ?? []), offset: positions[i].subtract(low)}));
+    editorObjectSelection.clear();
+    return true;
+}
+
+// copy the selected objects, then remove them, as one undo
+function editorCutObjects()
+{
+    const selection = new Set(editorObjectSelection);
+    if (!editorCopyObjects()) return false;
+    editorObjectSelection = selection;
+    return editorDeleteObjects();
+}
+
+// the last copied objects back into the brush
+function editorPasteObjects()
+{
+    if (!editorObjectClipboard) return false;
+    editorObjectBrush = editorObjectClipboard;
+    return true;
+}
+
+// the mouse on an object layer: the left places, selects and drags objects, the right picks one or box-selects,
+// Shift adding and Ctrl taking away
+function editorUpdateObjects(space)
+{
+    const layer = editorObjectLayer, record = layer.record, mouse = screenToWorld(mousePosScreen);
+    const snap = (pos)=> editorGrid ? pos.floor().add(vec2(.5)) : pos.copy(); // cell centers, unless the grid is off
+    const shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
+    const ctrl = keyIsDown('ControlLeft') || keyIsDown('ControlRight') || keyIsDown('MetaLeft') || keyIsDown('MetaRight');
+    editorHover = undefined;
+
+    // the right button: a click picks the object under the mouse, or clears the selection, a drag box-selects
+    if (mouseWasPressed(2))
+        editorRightPress = {screen: mousePosScreen.copy(), world: mouse.copy(), drag: false};
+    const press = editorRightPress;
+    if (press)
+    {
+        press.drag ||= mousePosScreen.distance(press.screen) > max(4, editorCameraScale / 2);
+        editorObjectBox = press.drag ? {a: press.world, b: mouse} : undefined;
+        if (!mouseIsDown(2))
+        {
+            const hit = !press.drag && editorObjectAt(layer, mouse);
+            const ids = press.drag ? editorObjectsIn(layer, press.world, mouse) : hit ? [hit.id] : [];
+            if (press.drag || hit && (shift || ctrl))
+            {
+                shift || ctrl || editorObjectSelection.clear();
+                for (const id of ids)
+                    ctrl ? editorObjectSelection.delete(id) : editorObjectSelection.add(id);
+            }
+            else if (hit)
+                editorPickObject(hit);
+            else
+                editorObjectSelection.clear();
+            editorRightPress = editorObjectBox = undefined;
+        }
+        return;
+    }
+
+    // the left button: on an object selects it and starts a drag of the selection, on empty space the first click
+    // with a selection only clears it, otherwise it places the brush
+    if (mouseWasPressed(0) && !space)
+    {
+        const hit = editorObjectAt(layer, mouse);
+        if (hit)
+        {
+            if (!editorObjectSelection.has(hit.id))
+                editorObjectSelection = new Set([hit.id]);
+            editorObjectDrag = {start: snap(mouse), from: new Map(editorSelectedObjects().map((object)=>
+                [object.id, editorObjectPos(record, object)]))};
+        }
+        else if (editorObjectSelection.size)
+            editorObjectSelection.clear();
+        else if (editorObjectBrush)
+            editorPlaceObjects(layer, snap(mouse), editorObjectBrush);
+    }
+    const drag = editorObjectDrag;
+    if (drag && mouseIsDown(0))
+    {
+        const delta = snap(mouse).subtract(drag.start);
+        editorChangeObjects(layer, (list)=>
+        {
+            for (const object of list)
+            {
+                const from = drag.from.get(object.id);
+                from && editorObjectSetPos(record, object, from.add(delta));
+            }
+        });
+    }
+    if (!mouseIsDown(0))
+    {
+        editorObjectDrag = undefined;
+        editorStrokeEnd();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // editing
 
-// every tile layer in the game, as the editor's records, in render order
+// every tile layer in the game, as the editor's records, in render order, then the object layers of their maps
 function editorLayers()
 {
-    return engineObjects.filter((o)=> o instanceof TileLayer && !o.destroyed)
+    const tiles = engineObjects.filter((o)=> o instanceof TileLayer && !o.destroyed)
         .sort((a, b)=> a.renderOrder - b.renderOrder).map(editorLayerRecord);
+    return [...tiles, ...[...new Set(tiles.map((layer)=> layer.record))].flatMap(editorObjectLayers)];
 }
 
 // the cell of a layer at a world position, undefined off the layer
@@ -1166,11 +1375,12 @@ function editorPanelUpdate()
             const b = editorElement('button', undefined, 'flex:1;min-width:28px;padding:3px;cursor:pointer',
                 i < 9 ? String(i + 1) : '·');
             b.title = `${layer.source.name || 'Layer ' + (i + 1)} (${layer.record.fileName})`;
-            b.onclick = ()=> { editorStrokeEnd(); editorLayer = layer; editorLastCell = undefined; b.blur(); };
+            b.onclick = ()=> { editorSelectLayer(layer); b.blur(); };
             return b;
         }));
     }
-    layers.forEach((layer, i)=> p.layerRow.children[i].style.outline = layer === editorLayer ? '2px solid #4af' : '');
+    layers.forEach((layer, i)=> p.layerRow.children[i].style.outline =
+        layer === (editorObjectLayer ?? editorLayer) ? '2px solid #4af' : '');
     p.allLayers.textContent = editorAllLayers ? 'All Layers: on' : 'All Layers: off';
     p.brush.textContent = editorBrushLabel();
     p.hint.textContent = editorHint();
@@ -1206,17 +1416,17 @@ const editorKeys =
     e: ()=> editorBrush = editorStampTile(0),
     g: ()=> { editorGrid = !editorGrid; },
     '?': ()=> { editorHelp = !editorHelp; },
-    f: ()=> editorFill(),
-    Delete: ()=> editorClear(),
-    Backspace: ()=> editorClear(),
+    f: ()=> editorObjectLayer ? false : editorFill(),
+    Delete: ()=> editorObjectLayer ? editorDeleteObjects() : editorClear(),
+    Backspace: ()=> editorObjectLayer ? editorDeleteObjects() : editorClear(),
 };
 const editorCtrlKeys =
 {
     z: (shift)=> editorUndo(shift),
     y: ()=> editorUndo(true),
-    c: ()=> editorCopy(),
-    x: ()=> editorCut(),
-    v: ()=> editorPaste(),
+    c: ()=> editorObjectLayer ? editorCopyObjects() : editorCopy(),
+    x: ()=> editorObjectLayer ? editorCutObjects() : editorCut(),
+    v: ()=> editorObjectLayer ? editorPasteObjects() : editorPaste(),
 };
 
 // a field that takes typed keys, as the engine counts one: a checkbox, slider or button left with focus, as a
@@ -1285,12 +1495,7 @@ function editorUpdate()
         if (!keyWasPressed('Digit' + i)) continue;
         inputClearKey('Digit' + i);
         const layer = editorLayers()[i - 1];
-        if (layer && layer !== editorLayer)
-        {
-            editorStrokeEnd();
-            editorLayer = layer;
-            editorLastCell = undefined; // a drag does not carry across layers
-        }
+        layer && layer !== (editorObjectLayer ?? editorLayer) && editorSelectLayer(layer); // a drag does not carry across
     }
 
     // the middle button, or Space with the left, drags the view
@@ -1299,6 +1504,8 @@ function editorUpdate()
         editorCameraPos = editorCameraPos.subtract(screenToWorldDelta(mouseDeltaScreen));
     editorApplyCamera();
 
+    if (editorObjectLayer)
+        return editorUpdateObjects(space);
     const layer = editorLayer?.live.destroyed ? undefined : editorLayer, mouse = screenToWorld(mousePosScreen);
     editorHover = layer && editorCellAt(layer.live, mouse);
 
