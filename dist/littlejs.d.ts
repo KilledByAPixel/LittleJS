@@ -8119,6 +8119,16 @@ declare module "littlejsengine" {
          *  @param {Color} [color] - Multiplies the appended vertex colors
          *  @return {Mesh} */
         combine(mesh: Mesh, matrix?: Matrix4 | Vector3, color?: Color): Mesh;
+        /** Returns a new mesh: this one and its mirror image across the plane through the origin facing axis
+         *  - For modeling half a shape against that plane, a part that crosses it overlaps its image
+         *  @param {Vector3} [axis] - Faces the mirror plane, vec3(1,0,0) mirrors across x
+         *  @return {Mesh} */
+        mirror(axis?: Vector3): Mesh;
+        /** Returns a new mesh of count copies of this one, each turned further around an axis through the origin
+         *  @param {number} count - Copies, spaced evenly around the whole turn
+         *  @param {Vector3} [axis] - Up by default
+         *  @return {Mesh} */
+        spin(count: number, axis?: Vector3): Mesh;
         /** Scale every uv, so a whole texture repeats across the mesh when its TextureInfo wraps
          *  @param {Vector2|number} scale - Repeats across and up, a number for both
          *  @return {Mesh} */

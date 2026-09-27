@@ -1334,6 +1334,9 @@ mesh.toIndexed()                     // turn a strip mesh into the indexed form 
 mesh.indices                         // the triangles of an indexed mesh, undefined for a strip; either form draws the same
 mesh.combine(otherMesh, matrix, color)        // append a transformed, tinted copy, to build one shape out of several;
                                               // matrix can be a vec3 when the part only needs moving into place
+mesh.mirror(axis=vec3(1,0,0))                 // a new mesh: this one and its image across the plane through the
+                                              // origin facing axis, for modeling half a shape against that plane
+mesh.spin(count, axis=vec3(0,1,0))            // a new mesh of count copies turned evenly around the axis
 mesh.scaleUVs(scale)                          // repeat a wrapping texture across the mesh, a vec2 or a number
 mesh.transform(matrix)                        // move every vertex in place, a mirror turns the faces too
 mesh.flipNormals()                            // turn it inside out, for rooms and domes seen from within

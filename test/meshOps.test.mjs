@@ -149,3 +149,30 @@ test('a beveled cone rounds only its base rim, keeps its size and is closed', ()
         assert.equal(isClosed(buildCone(2, 2, 24, true, true, 5, segments)), true); // clamped
     }
 });
+
+test('mirror adds the mirror image, the right way out, and leaves the mesh as it was', () =>
+{
+    const half = new Mesh().combine(buildBox(1), vec3(1, 0, 0));
+    const count = half.points.length;
+    const whole = half.mirror(vec3(1, 0, 0));
+    assert.equal(half.points.length, count);
+    assert.equal(triangles(whole).indices.length, triangles(half).indices.length * 2);
+    near(volume(whole), 2);
+    assert.equal(isClosed(whole), true);
+    const {min, max} = whole.getBounds();
+    near(min.x, -1.5); near(max.x, 1.5);
+    near(volume(buildBox(1).combine(buildBox(1), vec3(0, 2, 0)).mirror(vec3(0, 1, 1))), 4); // any axis, unit or not
+});
+
+test('spin makes count copies turned evenly around the axis', () =>
+{
+    const arm = new Mesh().combine(buildBox(1), vec3(2, 0, 0));
+    const ring = arm.spin(4);
+    near(volume(ring), 4);
+    assert.equal(isClosed(ring), true);
+    const {min, max} = ring.getBounds();
+    near(min.x, -2.5); near(max.z, 2.5);
+    const upright = arm.spin(2, vec3(0, 0, 1)); // around z, the copy lands at -2 on x
+    near(upright.getBounds().min.x, -2.5);
+    near(volume(arm.spin(1)), 1);
+});

@@ -21994,6 +21994,13 @@ function render3DDeterminant(m)
 // a column of a matrix as a direction: 0 is the right axis, 4 up, 8 back
 function render3DAxis(m, i) { return vec3(m[i], m[i+1], m[i+2]); }
 
+// a matrix turning by angle around a unit axis through the origin, counter clockwise when the axis points at you
+function render3DAxisRotation(axis, angle)
+{
+    const x = vec3(1, 0, 0).rotate(axis, angle), y = vec3(0, 1, 0).rotate(axis, angle), z = vec3(0, 0, 1).rotate(axis, angle);
+    return new Matrix4([x.x, x.y, x.z, 0, y.x, y.y, y.z, 0, z.x, z.y, z.z, 0, 0, 0, 0, 1]);
+}
+
 // the largest axis scale of a matrix, how much it grows a bounding sphere
 function render3DMaxScale(m)
 {
@@ -24294,6 +24301,33 @@ class Mesh
         this.vertexKeys = undefined; // the new entries have no keys
         this.dirty = true;
         return this;
+    }
+
+    /** Returns a new mesh: this one and its mirror image across the plane through the origin facing axis
+     *  - For modeling half a shape against that plane, a part that crosses it overlaps its image
+     *  @param {Vector3} [axis] - Faces the mirror plane, vec3(1,0,0) mirrors across x
+     *  @return {Mesh} */
+    mirror(axis=vec3(1, 0, 0))
+    {
+        ASSERT(isVector3(axis) && axis.lengthSquared() > 0, 'mirror needs an axis');
+        const n = axis.normalize(), a = -2 * n.x, b = -2 * n.y, c = -2 * n.z;
+        const reflect = new Matrix4([1 + a * n.x, b * n.x, c * n.x, 0, a * n.y, 1 + b * n.y, c * n.y, 0,
+            a * n.z, b * n.z, 1 + c * n.z, 0, 0, 0, 0, 1]);
+        return new Mesh().combine(this).combine(this, reflect); // combine turns the image's faces the right way out
+    }
+
+    /** Returns a new mesh of count copies of this one, each turned further around an axis through the origin
+     *  @param {number} count - Copies, spaced evenly around the whole turn
+     *  @param {Vector3} [axis] - Up by default
+     *  @return {Mesh} */
+    spin(count, axis=vec3(0, 1, 0))
+    {
+        ASSERT(count >= 1 && count % 1 === 0, 'spin count must be a whole number, 1 or more');
+        ASSERT(isVector3(axis) && axis.lengthSquared() > 0, 'spin needs an axis');
+        const mesh = new Mesh, unit = axis.normalize();
+        for (let i = 0; i < count; ++i)
+            mesh.combine(this, render3DAxisRotation(unit, i / count * 2 * PI));
+        return mesh;
     }
 
     /** Scale every uv, so a whole texture repeats across the mesh when its TextureInfo wraps
