@@ -290,18 +290,39 @@ class VoxelMap extends EngineObject3D
 
     /** Keep an object out of the blocks, one axis at a time as 2D tiles do, called by the engine for each object with
      *  collideLevel; a sphere collides as its box, and one moving more than about a cell a frame can pass through
+     *  - One already in blocks, as when a block is set on it, is pushed up to stand on those in its lower half when
+     *    there is room, or else left free to move out, only kept from sinking
      *  @param {EngineObject3D} o
      *  @param {Vector3} oldPos - Where it was before it moved
      *  @ignore */
     levelCollide3D(o, oldPos)
     {
         const k = o.scale3D, size = vec3(o.size3D.x * abs(k.x), o.size3D.y * abs(k.y), o.size3D.z * abs(k.z));
-        const p = o.pos3D;
+        const p = o.pos3D, v = o.velocity3D, m = this.pos3D, epsilon = 1e-4;
         if (!this.boxBlocked(p, size, o)) return;
+
+        if (this.boxBlocked(oldPos, size, o))
+        {
+            // the top of the highest blocked layer from its bottom up to its middle, each layer a flat box
+            const half = size.y / 2, flat = vec3(size.x, 0, size.z);
+            let top;
+            for (let y = floor(oldPos.y - half - m.y); y <= floor(oldPos.y - m.y); ++y)
+                if (this.boxBlocked(vec3(oldPos.x, m.y + y + .5, oldPos.z), flat, o))
+                    top = y + 1;
+            const up = top === undefined ? undefined : vec3(oldPos.x, m.y + top + half + epsilon, oldPos.z);
+            if (up && !this.boxBlocked(up, size, o))
+                p.set(up.x, up.y, up.z);
+            else if (p.y < oldPos.y)
+                p.y = oldPos.y;
+            else return;
+            v.y = max(v.y, 0);
+            o.groundObject = this;
+            return;
+        }
 
         // from where it was, each axis alone, y first so a landing wins; a blocked axis goes flush against the block
         // it ran into, or stays where it was, and its speed bounces by the restitution
-        const v = o.velocity3D, m = this.pos3D, epsilon = 1e-4, restitution = max(o.restitution, this.restitution);
+        const restitution = max(o.restitution, this.restitution);
         const place = oldPos.copy();
         for (const axis of ['y', 'x', 'z'])
         {

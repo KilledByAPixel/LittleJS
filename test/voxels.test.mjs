@@ -354,3 +354,37 @@ test('walking down a HeightMap slope keeps to the ground, grounded every frame s
     render3D.gravity = vec3();
     body.destroy(); terrain.destroy();
 });
+
+test('a block set in a body\'s lower half pushes it up onto the block, one at its head leaves it free to walk out', () =>
+{
+    const map = floorMap(), body = new EngineObject3D(vec3(.5, 3 + .75, .5));
+    body.size3D = vec3(.5, 1.5, .5);
+    body.setCollision(false, false);
+    body.mass = 1;
+    render3D.gravity = vec3(0, -.01, 0);
+    step(10);
+    map.setVoxel(vec3(8, 1, 8), 3); // the cell at its feet, world y 3 to 4
+    step(1);
+    near(body.pos3D.y, 4 + .75, 2e-3, 'standing on the new block');
+    assert.equal(body.groundObject, map);
+    step(10);
+    near(body.pos3D.y, 4 + .75, 2e-3, 'and resting there');
+
+    map.setVoxel(vec3(8, 3, 8), 3); // at its head, world y 5 to 6, above its middle
+    step(10);
+    near(body.pos3D.y, 4 + .75, 2e-3, 'not pushed up over it, and not sinking');
+    for (let i = 0; i < 30; ++i) { body.velocity3D.x = .1; step(1); }
+    assert.ok(body.pos3D.x > 3, 'walked out the way it was going, x ' + body.pos3D.x);
+    near(body.pos3D.y, 3 + .75, 2e-3, 'down on the floor once clear');
+
+    const point = new EngineObject3D(vec3(-3.5, 3.5, -3.5)); // a point, the first person camera's default size
+    point.size3D = vec3();
+    point.setCollision(false, false);
+    point.mass = 1;
+    step(5);
+    map.setVoxel(vec3(4, 1, 4), 3);
+    step(1);
+    near(point.pos3D.y, 4, 2e-3, 'a point in a new block stands on it');
+    render3D.gravity = vec3();
+    body.destroy(); point.destroy(); map.destroy();
+});

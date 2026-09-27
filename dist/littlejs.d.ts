@@ -8676,6 +8676,8 @@ declare module "littlejsengine" {
         boxBlocked(pos: Vector3, size: Vector3, o: EngineObject3D): boolean;
         /** Keep an object out of the blocks, one axis at a time as 2D tiles do, called by the engine for each object with
          *  collideLevel; a sphere collides as its box, and one moving more than about a cell a frame can pass through
+         *  - One already in blocks, as when a block is set on it, is pushed up to stand on those in its lower half when
+         *    there is room, or else left free to move out, only kept from sinking
          *  @param {EngineObject3D} o
          *  @param {Vector3} oldPos - Where it was before it moved
          *  @ignore */

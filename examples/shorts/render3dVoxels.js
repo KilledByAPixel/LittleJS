@@ -88,11 +88,10 @@ function gameUpdate()
         map.setVoxel(hit.cell, 0);
     if (mouseWasPressed(2))
     {
-        // place against the face, not into the player
+        // place against the face, unless it would be in the player
         const cell = hit.cell.add(hit.normal);
-        const gap = map.pos3D.add(cell).add(vec3(.5))
-            .subtract(player.pos3D).abs();
-        if (gap.x > .8 || gap.y > 1.3 || gap.z > .8)
+        const center = map.pos3D.add(cell).add(vec3(.5));
+        if (!isOverlapping3D(center, vec3(1), player.pos3D, player.size3D))
             map.setVoxel(cell, selected);
     }
 }
