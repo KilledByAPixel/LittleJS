@@ -512,3 +512,49 @@ test('moving an object or setting one property leaves the rest of its state from
     run('editorUndo()');
     assert.deepEqual([...run('[made[0].pos.x, made[0].value]')], [.5, 25], 'the move undone');
 });
+
+// review 2026-09-26 F5: a level of objects alone, with no tile layer
+
+// a map of one object layer holding a coin, loaded as a game loads it, and rebuilt by its Restart hook
+const objectsOnlyCode = `
+    class Coin extends EngineObject { constructor(pos) { super(pos, vec2(1)); this.value = 0; } }
+    objectLayersAddType('Coin', Coin, { value: 1 });
+    var level = (id)=> ({ width: 4, height: 2, tilewidth: 16, tileheight: 16, nextobjectid: 2, layers: [
+        { type: 'objectgroup', id: 1, name: 'Objects', objects: [{ id: 1, type: 'Coin', point: true, x: 8, y: 8 }] }] });
+    var map = level(), made = objectLayersLoad(map);
+    levelEditor.onRestart = ()=> { engineObjectsDestroy(); made = objectLayersLoad(map); };
+    var coins = ()=> engineObjects.filter((o)=> o instanceof Coin && !o.destroyed);
+    var list = ()=> map.layers[0].objects;`;
+
+test('a level of objects alone is listed, the editor opens on its object layer, and a click places the brush',
+    async () =>
+{
+    const engine = await loadGame();
+    engine.run(objectsOnlyCode + 'levelEditor.open(); editorCameraPos = vec2(2, 1); editorCameraScale = 100;');
+    assert.deepEqual([...engine.run(`const layers = editorLayers();
+        [layers.length, layers[0].isObjects, editorObjectLayer === layers[0], editorLayer, editorRecord().map === map]`)],
+        [1, true, true, undefined, true]);
+    engine.run(`editorObjectBrush = [{ type: 'Coin', properties: [], offset: vec2() }];`);
+    click(engine, 3.5, .5);
+    assert.deepEqual([...engine.run('[list().length, coins().length]')], [2, 2]);
+});
+
+test('a level of objects alone resizes and resets to its file like any other', async () =>
+{
+    const { run } = await loadGame();
+    run(objectsOnlyCode + 'levelEditor.open();');
+    assert.equal(run('editorResize(editorRecord(), 6, 3)'), true);
+    assert.deepEqual([...run('[map.width, list()[0].y, coins().length, made[0].pos.y]')], [6, 24, 1, 1.5]);
+    run('editorRevert(editorRecord())');
+    assert.deepEqual([...run('[map.width, list()[0].y]')], [4, 8]);
+});
+
+test('a level of objects alone is listed beside a tile map, and steps aside when the game loads another',
+    async () =>
+{
+    const { run } = await loadGame();
+    run(objectCode + objectsOnlyCode.replace('class Coin', 'class Coin2'));
+    assert.deepEqual([...run('editorLayers().map((layer)=> layer.record.map === map)')], [false, false, true]);
+    run('engineObjectsDestroy(); var next = level(); objectLayersLoad(next);');
+    assert.deepEqual([...run('editorLayers().map((layer)=> layer.record.map === next)')], [true]);
+});

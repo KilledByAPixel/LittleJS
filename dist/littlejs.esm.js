@@ -28383,6 +28383,9 @@ let editorGameState;
 // the editor's own view, so the game's camera is left where the game had it
 let editorCameraPos = vec2(), editorCameraScale = 32;
 
+// the map being edited, the selected object layer's or tile layer's, a level of objects alone has no tile layer
+const editorRecord = ()=> (editorObjectLayer ?? editorLayer)?.record;
+
 // the layer being painted, the cell under the mouse, the last cell of a stroke, the last cell a stamp was
 // placed on, for a Shift line
 let editorLayer, editorHover, editorLastCell, editorLastPlaced;
@@ -28421,7 +28424,8 @@ function editorSetOpen(open)
         const layers = editorLayers();
         layers.includes(editorLayer) || (editorLayer = layers.find((layer)=> layer.live?.isSolid) ??
             layers.filter((layer)=> !layer.isObjects).at(-1));
-        layers.includes(editorObjectLayer) || (editorObjectLayer = undefined);
+        layers.includes(editorObjectLayer) || (editorObjectLayer = editorLayer ? undefined :
+            layers.find((layer)=> layer.isObjects)); // a level of objects alone
     }
     else
     {
@@ -28519,7 +28523,7 @@ function editorMapRestore(map)
         originalSize: {width: map.width, height: map.height}, layers: []};
 
     // a new copy of a map takes over from the one before, and maps whose layers are all gone step aside
-    editorRetire((other)=> other.key === record.key ||
+    editorRetire((other)=> other.key === record.key || editorObjectsGone(other) ||
         other.layers.length && other.layers.every((layer)=> layer.live.destroyed));
     editorMapList.push(record);
 
@@ -29285,7 +29289,7 @@ function editorSelectLayer(layer)
     {
         editorObjectLayer = layer;
         if (editorLayer?.record !== layer.record)
-            editorLayer = layer.record.layers[0] ?? editorLayer;
+            editorLayer = layer.record.layers[0]; // none for a level of objects alone
     }
     else
     {
@@ -29475,13 +29479,22 @@ function editorUpdateObjects(space)
 ///////////////////////////////////////////////////////////////////////////////
 // editing
 
-// every tile layer in the game, as the editor's records, in render order, then the object layers of their maps
+// every tile layer in the game, as the editor's records, in render order, then the object layers of their maps, and
+// of the maps the game loaded objects alone from
 function editorLayers()
 {
     const tiles = engineObjects.filter((o)=> o instanceof TileLayer && !o.destroyed)
         .sort((a, b)=> a.renderOrder - b.renderOrder).map(editorLayerRecord);
-    return [...tiles, ...[...new Set(tiles.map((layer)=> layer.record))].flatMap(editorObjectLayers)];
+    const records = [...new Set(tiles.map((layer)=> layer.record))];
+    for (const record of editorMapList)
+        record.synthetic || record.layers.length || records.includes(record) || records.push(record);
+    return [...tiles, ...records.flatMap(editorObjectLayers)];
 }
+
+// if a map of objects alone has nothing left in the game, the level moved on, a marker that is no game object counts
+// as nothing
+const editorObjectsGone = (record)=> !record.layers.length &&
+    editorObjectLayers(record).every((layer)=> [...layer.instances.values()].every((made)=> !made.destroy || made.destroyed));
 
 // the cell of a layer at a world position, undefined off the layer
 function editorCellAt(live, worldPos)
@@ -29968,8 +29981,8 @@ function editorPanelInit()
     const pending = editorElement('div', editorPanel, 'padding:4px;margin:4px 0;background:#630;border-radius:3px');
     editorElement('div', pending, '', 'The level file changed since your autosaved edits');
     const pendingRow = editorElement('div', pending, 'display:flex;gap:4px;margin-top:4px');
-    button(pendingRow, 'Apply edits', ()=> editorApplyPending(editorLayer?.record));
-    button(pendingRow, 'Drop them', ()=> editorDiscardPending(editorLayer?.record));
+    button(pendingRow, 'Apply edits', ()=> editorApplyPending(editorRecord()));
+    button(pendingRow, 'Drop them', ()=> editorDiscardPending(editorRecord()));
     const pendingUnfit = editorElement('div', pending, 'color:#fb8;margin-top:4px',
         'They do not fit the file now, its layers or size changed; they are kept until dropped');
 
@@ -29998,9 +30011,9 @@ function editorPanelInit()
     const file = row();
     // Save says so for a moment when it saved, Save As shows where a page can write files
     const saved = (b, label)=> (result)=> result && (b.textContent = 'Saved', setTimeout(()=> b.textContent = label, 1e3));
-    const save = button(file, 'Save', ()=> editorSave(editorLayer?.record).then(saved(save, 'Save')),
+    const save = button(file, 'Save', ()=> editorSave(editorRecord()).then(saved(save, 'Save')),
         'Save, to the file picked the first time, or a download');
-    const saveAs = button(file, 'Save As', ()=> editorSave(editorLayer?.record, true).then(saved(saveAs, 'Save As')),
+    const saveAs = button(file, 'Save As', ()=> editorSave(editorRecord(), true).then(saved(saveAs, 'Save As')),
         'Save As, to a file picked again');
     /** @type {any} */ (globalThis).showSaveFilePicker || (saveAs.style.display = 'none');
 
@@ -30034,14 +30047,14 @@ function editorPanelInit()
     {
         // up to 1000 a side from here, editorResize takes any size from code
         const size = (input)=> clamp(parseInt(input.value) || 1, 1, 1e3);
-        editorResize(editorLayer?.record, size(sizeX), size(sizeY));
+        editorResize(editorRecord(), size(sizeX), size(sizeY));
         resize.blur(); sizeX.blur(); sizeY.blur(); // the fields show the size again
     };
     resize.onclick = resizeLevel;
     const reset = editorElement('button', advanced, 'width:100%;padding:3px;cursor:pointer;margin-top:4px',
         'Reset to file');
     reset.title = 'Put the level back to the file it was loaded from, or last saved to, can be undone';
-    reset.onclick = ()=> { editorRevert(editorLayer?.record); reset.blur(); };
+    reset.onclick = ()=> { editorRevert(editorRecord()); reset.blur(); };
     const storage = editorElement('div', editorPanel, 'color:#f86;margin-top:4px',
         'Autosave failed, storage is full: Save to a file');
     const status = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;min-height:1em');
@@ -30205,8 +30218,8 @@ function editorPanelUpdate()
     p.playFrom.checked = editorPlayFromMouse;
 
     // the level's size, shown until a field is being typed in; without the Restart hook it can not change
-    const map = editorLayer?.record.map;
-    const canResize = !!levelEditor.onRestart && !editorLayer?.record.synthetic && !editorLayer?.record.pending;
+    const record = editorRecord(), map = record?.map;
+    const canResize = !!levelEditor.onRestart && !record?.synthetic && !record?.pending;
     p.sizeRow.style.display = map ? 'flex' : 'none';
     if (map && !p.sizeRow.contains(document.activeElement))
     {
@@ -30216,9 +30229,9 @@ function editorPanelUpdate()
     p.sizeX.disabled = p.sizeY.disabled = p.resize.disabled = !canResize;
     p.resize.title = canResize ? '' : 'Resizing needs levelEditor.onRestart, to make the level again';
     p.turns.style.display = editorObjectLayer ? 'none' : ''; // the tile brush's, not an object layer's
-    p.pending.style.display = editorLayer?.record.pending ? '' : 'none';
-    p.pendingUnfit.style.display = editorLayer?.record.pendingUnfit ? '' : 'none';
-    p.reset.style.display = editorLayer?.record.synthetic ? 'none' : ''; // a layer made in code has no file
+    p.pending.style.display = record?.pending ? '' : 'none';
+    p.pendingUnfit.style.display = record?.pendingUnfit ? '' : 'none';
+    p.reset.style.display = record?.synthetic ? 'none' : ''; // a layer made in code has no file
 
     // the palette, drawn again when the layer or the brush changed, a change makes a new brush
     const live = editorLayer?.live;
@@ -30599,24 +30612,29 @@ function editorRestart()
 // the camera from gameUpdatePost, which runs while paused
 function editorPreRender() { editorIsOpen && editorApplyCamera(); }
 
-// the layer's edge, a grid when zoomed in, the map's tiles the layer does not show, and the brush under the mouse
+// the layer's edge, or the map's for a level of objects alone, a grid when zoomed in, the map's tiles the layer does not
+// show, and the brush under the mouse
 function editorRender()
 {
     headlessMode || editorPanelUpdate();
     if (!editorIsOpen || headlessMode) return;
-    const layer = editorLayer;
-    if (!layer || layer.live.destroyed) return;
-    const {live, source} = layer, {x: width, y: height} = live.size;
+    const layer = editorLayer?.live.destroyed ? undefined : editorLayer;
+    if (!layer && !editorObjectLayer) return;
+
+    // the area drawn, the tile layer's, or for a level of objects alone the map's, where objectLayersLoad puts it
+    const map = editorRecord().map, live = layer?.live, source = layer?.source;
+    const pos = live ? live.pos : vec2(), size = live ? live.size : vec2(map.width, map.height);
+    const {x: width, y: height} = size;
 
     // the cells on screen
-    const low = screenToWorld(vec2(0, mainCanvasSize.y)).subtract(live.pos);
-    const high = screenToWorld(vec2(mainCanvasSize.x, 0)).subtract(live.pos);
+    const low = screenToWorld(vec2(0, mainCanvasSize.y)).subtract(pos);
+    const high = screenToWorld(vec2(mainCanvasSize.x, 0)).subtract(pos);
     const x0 = max(0, floor(low.x)), y0 = max(0, floor(low.y));
     const x1 = min(width, ceil(high.x)), y1 = min(height, ceil(high.y));
 
     // ghosts, cells the map has that the layer does not show: markers a game made objects of, tiles broken in play
     const ghost = hsl(0, 0, 1, .4);
-    for (let x = x0; !editorObjectLayer && x < x1; ++x)
+    for (let x = x0; live && !editorObjectLayer && x < x1; ++x)
     for (let y = y0; y < y1; ++y)
     {
         const t = editorGidToTile(source.data[x + (height - 1 - y) * width]);
@@ -30630,18 +30648,18 @@ function editorRender()
     if (editorGrid && editorCameraScale >= 12)
     {
         for (let x = x0; x <= x1; ++x)
-            drawLine(live.pos.add(vec2(x, y0)), live.pos.add(vec2(x, y1)), thin, line);
+            drawLine(pos.add(vec2(x, y0)), pos.add(vec2(x, y1)), thin, line);
         for (let y = y0; y <= y1; ++y)
-            drawLine(live.pos.add(vec2(x0, y)), live.pos.add(vec2(x1, y)), thin, line);
+            drawLine(pos.add(vec2(x0, y)), pos.add(vec2(x1, y)), thin, line);
     }
 
     // the layer's edge
     const outline = (a, b, color, width)=>
     {
         const corners = [vec2(a.x, a.y), vec2(b.x, a.y), vec2(b.x, b.y), vec2(a.x, b.y)];
-        corners.forEach((c, i)=> drawLine(live.pos.add(c), live.pos.add(corners[(i + 1) % 4]), width, color));
+        corners.forEach((c, i)=> drawLine(pos.add(c), pos.add(corners[(i + 1) % 4]), width, color));
     };
-    outline(vec2(), live.size, hsl(.55, 1, .6, .8), thin * 2);
+    outline(vec2(), size, hsl(.55, 1, .6, .8), thin * 2);
 
     // the selection, and the line Shift would draw
     if (editorSelection && !editorObjectLayer)
