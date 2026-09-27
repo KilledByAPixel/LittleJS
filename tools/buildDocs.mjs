@@ -91,15 +91,16 @@ catch (e) { handleError(e, 'Failed to copy static files!'); }
 console.log(`Docs built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds! ✨`);
 
 // The engine writes TypeScript flavored JSDoc on purpose so dist/littlejs.d.ts gets
-// precise types. Tuples like [Vector2, Vector2, number] and predicates like
-// "a is Array<any>" have no spelling both tools accept: jsdoc's type parser is Closure
+// precise types. Tuples like [Vector2, Vector2, number], arrays of them like
+// Array<[number, boolean]>, records with optional fields like {color?: Color}, and
+// predicates like "a is Array<any>" have no spelling both tools accept: jsdoc's type parser is Closure
 // only, and the forms it does accept, Array<Vector2|number> or a record type, throw the
 // positions away. So jsdoc always rejects those and that is expected. Every other
 // message is a real problem, and burying it in the expected ones is how tags rot.
 function checkJSDocMessages(output)
 {
     const lines = output.split(/\r?\n/).map(line => line.trim()).filter(line => line);
-    const expected = (line)=> /Invalid type expression "(\[|\w+ is )/.test(line);
+    const expected = (line)=> /Invalid type expression "(\[|\w+ is |Array<\[|[^"]*\w\?: )/.test(line);
     const unexpected = lines.filter(line => !expected(line));
     if (unexpected.length)
     {

@@ -8170,7 +8170,8 @@ class Sound
         /** @property {AudioBuffer|undefined} - Decoded audio shared by every play of this sound
          *  @type {AudioBuffer|undefined} */
         this.sampleBuffer = undefined;
-        /** @ignore internal, the 3D plugin reads it to know the sound has loaded
+        // internal, the 3D plugin reads it to know the sound has loaded
+        /** @ignore
          *  @type {Array<Array<number>|Float32Array>|undefined} */
         this._sampleChannels = undefined;
         /** @property {number} - Percentage of this sound currently loaded, sounds
@@ -28281,6 +28282,11 @@ debug && engineAddPlugin(undefined, tweakRender);
 // the level editor
 
 /**
+ *  @callback EditorRestartCallback - Rebuilds the level from the map the level editor changed
+ *  @memberof Editor
+ */
+
+/**
  *  @callback EditorTileCallback - What the game does when the level editor paints a tile
  *  @param {TileLayer} layer - The layer painted
  *  @param {Vector2} pos - The cell's position in the layer
@@ -28308,7 +28314,7 @@ class LevelEditor
         this.onTile = undefined;
         /** @property {Function|undefined} - Rebuild the level from the map the editor changed, a Restart button
          *  calls it after switching to play; without one there is no Restart button
-         *  @type {(function():void)|undefined} */
+         *  @type {EditorRestartCallback|undefined} */
         this.onRestart = undefined;
     }
 

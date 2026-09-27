@@ -89,6 +89,10 @@ declare module "littlejsengine" {
      */
     export type ParticleCollideCallback = (particle: Particle, tileData: number, pos: Vector2) => boolean;
     /**
+     * - Rebuilds the level from the map the level editor changed
+     */
+    export type EditorRestartCallback = () => any;
+    /**
      * - What the game does when the level editor paints a tile
      */
     export type EditorTileCallback = (layer: TileLayer, pos: Vector2, tile: number | undefined) => any;
@@ -2958,7 +2962,7 @@ declare module "littlejsengine" {
         /** @property {AudioBuffer|undefined} - Decoded audio shared by every play of this sound
          *  @type {AudioBuffer|undefined} */
         sampleBuffer: AudioBuffer | undefined;
-        /** @ignore internal, the 3D plugin reads it to know the sound has loaded
+        /** @ignore
          *  @type {Array<Array<number>|Float32Array>|undefined} */
         _sampleChannels: Array<Array<number> | Float32Array> | undefined;
         /** @property {number} - Percentage of this sound currently loaded, sounds
@@ -9204,6 +9208,10 @@ declare module "littlejsengine" {
      * @namespace Editor
      */
     /**
+     *  @callback EditorRestartCallback - Rebuilds the level from the map the level editor changed
+     *  @memberof Editor
+     */
+    /**
      *  @callback EditorTileCallback - What the game does when the level editor paints a tile
      *  @param {TileLayer} layer - The layer painted
      *  @param {Vector2} pos - The cell's position in the layer
@@ -9227,8 +9235,8 @@ declare module "littlejsengine" {
         onTile: EditorTileCallback | undefined;
         /** @property {Function|undefined} - Rebuild the level from the map the editor changed, a Restart button
          *  calls it after switching to play; without one there is no Restart button
-         *  @type {(function():void)|undefined} */
-        onRestart: (() => void) | undefined;
+         *  @type {EditorRestartCallback|undefined} */
+        onRestart: EditorRestartCallback | undefined;
         /** True while the editor is open, the game is paused under it
          *  @return {boolean} */
         get isOpen(): boolean;
