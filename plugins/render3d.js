@@ -3595,9 +3595,10 @@ function render3DMove(o)
 // keep an object that moved out of the level's solid geometry, clearing what it stood on for the level to set again
 function render3DCollideLevel(o, oldPos)
 {
+    const ground = o.groundObject;
     o.groundObject = undefined;
     for (const level of render3DLevel)
-        level.destroyed || level.levelCollide3D(o, oldPos);
+        level.destroyed || level.levelCollide3D(o, oldPos, level === ground);
 }
 
 // where a solid object is in the world and what it collides as: the sphere that fits size3D, or the size3D box,

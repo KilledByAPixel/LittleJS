@@ -25451,9 +25451,10 @@ function render3DMove(o)
 // keep an object that moved out of the level's solid geometry, clearing what it stood on for the level to set again
 function render3DCollideLevel(o, oldPos)
 {
+    const ground = o.groundObject;
     o.groundObject = undefined;
     for (const level of render3DLevel)
-        level.destroyed || level.levelCollide3D(o, oldPos);
+        level.destroyed || level.levelCollide3D(o, oldPos, level === ground);
 }
 
 // where a solid object is in the world and what it collides as: the sphere that fits size3D, or the size3D box,
@@ -26513,13 +26514,17 @@ class HeightMap extends EngineObject3D
     /** Keep an object above the ground, called by the engine for each object with collideLevel
      *  @param {EngineObject3D} o
      *  @param {Vector3} oldPos - Where it was before it moved
+     *  @param {boolean} [wasOn] - It stood on this map last frame
      *  @ignore */
-    levelCollide3D(o, oldPos)
+    levelCollide3D(o, oldPos, wasOn)
     {
         const p = o.pos3D, m = this.pos3D, size = this.mapSize;
         if (abs(p.x - m.x) > size.x / 2 || abs(p.z - m.z) > size.y / 2) return; // off the map
         const half = o.size3D.y * abs(o.scale3D.y) / 2, ground = this.getHeight(p.x, p.z);
-        if (p.y - half > ground) return;
+        // one that stood on it and is not rising keeps to it going downhill, as far down as it moved across, so it
+        // stays grounded down a slope as steep as 45 degrees instead of falling in small hops
+        const follow = wasOn && o.velocity3D.y <= 0 ? hypot(p.x - oldPos.x, p.z - oldPos.z) : 0;
+        if (p.y - half > ground + follow) return;
         p.y = ground + half;
         const v = o.velocity3D;
         if (v.y < 0)
@@ -27710,6 +27715,11 @@ const RENDER3D_VOXEL_FACES = [
 // the shade of a corner by how many solid blocks crowd it, from 0, closed in, to 3, open
 const RENDER3D_VOXEL_SHADES = [.55, .7, .85, 1].map(v=> Object.freeze(rgb(v, v, v)));
 
+/** What VoxelMap.raycast finds: how far along the ray, the block's cell and type, and the normal of the face it comes in
+ *  through
+ *  @typedef {{distance: number, cell: Vector3, normal: Vector3, type: number}} VoxelHit
+ *  @memberof Render3D */
+
 /**
  * VoxelMap - A grid of blocks, a 3D tile map: it draws itself, and objects with collideLevel collide with it
  * - pos3D is its corner, as a 2D tile layer's is, and each cell is one world unit, so cell (x, y, z) fills
@@ -27945,11 +27955,17 @@ class VoxelMap extends EngineObject3D
      *  @ignore */
     boxBlocked(pos, size, o)
     {
-        // the cells the box is in, one only touching a cell's face is not in it
+        // the cells the box is in along an axis, one only touching a cell's face is not in it, but a point, a box with
+        // no size, is in the cell it is at, even on a whole number where the two ends pass each other
         const m = this.pos3D, s = this.mapSize, tiny = 1e-9;
-        const x0 = max(floor(pos.x - size.x / 2 - m.x + tiny), 0), x1 = min(ceil(pos.x + size.x / 2 - m.x - tiny) - 1, s.x - 1);
-        const y0 = max(floor(pos.y - size.y / 2 - m.y + tiny), 0), y1 = min(ceil(pos.y + size.y / 2 - m.y - tiny) - 1, s.y - 1);
-        const z0 = max(floor(pos.z - size.z / 2 - m.z + tiny), 0), z1 = min(ceil(pos.z + size.z / 2 - m.z - tiny) - 1, s.z - 1);
+        const cells = (center, half, corner, count)=>
+        {
+            const first = floor(center - half - corner + tiny), last = max(ceil(center + half - corner - tiny) - 1, first);
+            return [max(first, 0), min(last, count - 1)];
+        };
+        const [x0, x1] = cells(pos.x, size.x / 2, m.x, s.x);
+        const [y0, y1] = cells(pos.y, size.y / 2, m.y, s.y);
+        const [z0, z1] = cells(pos.z, size.z / 2, m.z, s.z);
         for (let z = z0; z <= z1; ++z)
         for (let y = y0; y <= y1; ++y)
         for (let x = x0; x <= x1; ++x)
@@ -27974,7 +27990,7 @@ class VoxelMap extends EngineObject3D
 
         // from where it was, each axis alone, y first so a landing wins; a blocked axis goes flush against the block
         // it ran into, or stays where it was, and its speed bounces by the restitution
-        const v = o.velocity3D, m = this.pos3D, epsilon = 1e-3, restitution = max(o.restitution, this.restitution);
+        const v = o.velocity3D, m = this.pos3D, epsilon = 1e-4, restitution = max(o.restitution, this.restitution);
         const place = oldPos.copy();
         for (const axis of ['y', 'x', 'z'])
         {
@@ -28006,7 +28022,7 @@ class VoxelMap extends EngineObject3D
      *  @param {Ray3D} ray - Its distance is in the ray's own units, as the other raycasts
      *  @param {number} [maxDistance]
      *  @param {function(number, Vector3): boolean} [test] - (type, cell) says which blocks count, every block by default
-     *  @return {{distance: number, cell: Vector3, normal: Vector3, type: number}|undefined} */
+     *  @return {VoxelHit|undefined} */
     raycast(ray, maxDistance=Infinity, test=()=> true)
     {
         const s = this.mapSize, o = ray.origin.subtract(this.pos3D), d = ray.direction, axes = ['x', 'y', 'z'];

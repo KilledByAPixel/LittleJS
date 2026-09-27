@@ -586,13 +586,17 @@ class HeightMap extends EngineObject3D
     /** Keep an object above the ground, called by the engine for each object with collideLevel
      *  @param {EngineObject3D} o
      *  @param {Vector3} oldPos - Where it was before it moved
+     *  @param {boolean} [wasOn] - It stood on this map last frame
      *  @ignore */
-    levelCollide3D(o, oldPos)
+    levelCollide3D(o, oldPos, wasOn)
     {
         const p = o.pos3D, m = this.pos3D, size = this.mapSize;
         if (abs(p.x - m.x) > size.x / 2 || abs(p.z - m.z) > size.y / 2) return; // off the map
         const half = o.size3D.y * abs(o.scale3D.y) / 2, ground = this.getHeight(p.x, p.z);
-        if (p.y - half > ground) return;
+        // one that stood on it and is not rising keeps to it going downhill, as far down as it moved across, so it
+        // stays grounded down a slope as steep as 45 degrees instead of falling in small hops
+        const follow = wasOn && o.velocity3D.y <= 0 ? hypot(p.x - oldPos.x, p.z - oldPos.z) : 0;
+        if (p.y - half > ground + follow) return;
         p.y = ground + half;
         const v = o.velocity3D;
         if (v.y < 0)

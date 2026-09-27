@@ -2,7 +2,7 @@
 // it is only type checked, never run, so nothing here needs an engine, a canvas or Box2D
 import { vec2, vec3, hsl, Vector2, EngineObject, engineObjectsCallback, engineObjectsCallback3D,
     Tween, Ease, buildGrid, Mesh, Box2dObject, Box2dWheelJoint, Box2dRevoluteJoint, Box2dWeldJoint,
-    Box2dDistanceJoint, AudioFilter, AudioReverb, AudioDelay, Sound } from 'littlejsengine';
+    Box2dDistanceJoint, AudioFilter, AudioReverb, AudioDelay, Sound, VoxelMap, Ray3D } from 'littlejsengine';
 
 // Box2D joints default their anchors to the objects' positions
 const box2dA = new Box2dObject(vec2(), vec2(1));
@@ -41,3 +41,10 @@ loadedSound.onloadCallback = () => { soundLoaded = !soundLoaded; };
 
 // Box2D objects destroy like any object, immediate included
 new Box2dObject().destroy(true);
+
+// a voxel raycast that misses is undefined, so its hit is checked before it is read
+const voxels = new VoxelMap(vec3(), vec3(8));
+const voxelHit = voxels.raycast(new Ray3D(vec3(), vec3(1, 0, 0)));
+// @ts-expect-error
+voxelHit.distance;
+voxelHit?.cell.add(voxelHit.normal);

@@ -306,3 +306,51 @@ test('a FirstPersonCamera3D with jumpSpeed jumps on Space only while it stands o
     press();
     assert.ok(run('camera.velocity3D.y') > .2, 'jumped from the ground');
 });
+
+test('a point collider at whole number x and z, the first person camera at its spawn, lands on a voxel floor', () =>
+{
+    const map = floorMap(), point = new EngineObject3D(vec3(0, 5, 0));
+    point.size3D = vec3();
+    point.setCollision(false, false);
+    point.mass = 1;
+    render3D.gravity = vec3(0, -.02, 0);
+    step(120);
+    near(point.pos3D.y, 3, 2e-3);
+    render3D.gravity = vec3();
+    point.destroy(); map.destroy();
+});
+
+test('a body resting on a voxel floor under light gravity is grounded every frame', () =>
+{
+    const map = floorMap(), body = new EngineObject3D(vec3(.5, 3.5, .5));
+    body.setCollision(false, false);
+    body.mass = 1;
+    render3D.gravity = vec3(0, -.0004, 0);
+    step(5);
+    for (let i = 0; i < 20; ++i)
+    {
+        step(1);
+        assert.equal(body.groundObject, map, 'grounded at frame ' + i);
+    }
+    render3D.gravity = vec3();
+    body.destroy(); map.destroy();
+});
+
+test('walking down a HeightMap slope keeps to the ground, grounded every frame so it can jump', () =>
+{
+    const terrain = new HeightMap([[1, 0], [1, 0]], vec2(20), 10); // falls .5 a unit toward +x
+    const body = new EngineObject3D(vec3(-8, terrain.getHeight(-8, 0) + .5, 0));
+    body.setCollision(false, false);
+    body.mass = 1;
+    render3D.gravity = vec3(0, -.012, 0);
+    step(2);
+    for (let i = 0; i < 40; ++i)
+    {
+        body.velocity3D.x = .08;
+        step(1);
+        assert.equal(body.groundObject, terrain, 'grounded at frame ' + i);
+    }
+    near(body.pos3D.y, terrain.getHeight(body.pos3D) + .5, 1e-6, 'on the surface');
+    render3D.gravity = vec3();
+    body.destroy(); terrain.destroy();
+});

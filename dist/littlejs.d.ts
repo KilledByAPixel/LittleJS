@@ -89,6 +89,16 @@ declare module "littlejsengine" {
      */
     export type ParticleCollideCallback = (particle: Particle, tileData: number, pos: Vector2) => boolean;
     /**
+     * What VoxelMap.raycast finds: how far along the ray, the block's cell and type, and the normal of the face it comes in
+     * through
+     */
+    export type VoxelHit = {
+        distance: number;
+        cell: Vector3;
+        normal: Vector3;
+        type: number;
+    };
+    /**
      * - Puts the player at a world position, for the level editor's Play from mouse
      */
     export type EditorPlayFromCallback = (pos: Vector2) => any;
@@ -8546,9 +8556,14 @@ declare module "littlejsengine" {
         /** Keep an object above the ground, called by the engine for each object with collideLevel
          *  @param {EngineObject3D} o
          *  @param {Vector3} oldPos - Where it was before it moved
+         *  @param {boolean} [wasOn] - It stood on this map last frame
          *  @ignore */
-        levelCollide3D(o: EngineObject3D, oldPos: Vector3): void;
+        levelCollide3D(o: EngineObject3D, oldPos: Vector3, wasOn?: boolean): void;
     }
+    /** What VoxelMap.raycast finds: how far along the ray, the block's cell and type, and the normal of the face it comes in
+     *  through
+     *  @typedef {{distance: number, cell: Vector3, normal: Vector3, type: number}} VoxelHit
+     *  @memberof Render3D */
     /**
      * VoxelMap - A grid of blocks, a 3D tile map: it draws itself, and objects with collideLevel collide with it
      * - pos3D is its corner, as a 2D tile layer's is, and each cell is one world unit, so cell (x, y, z) fills
@@ -8671,13 +8686,8 @@ declare module "littlejsengine" {
          *  @param {Ray3D} ray - Its distance is in the ray's own units, as the other raycasts
          *  @param {number} [maxDistance]
          *  @param {function(number, Vector3): boolean} [test] - (type, cell) says which blocks count, every block by default
-         *  @return {{distance: number, cell: Vector3, normal: Vector3, type: number}|undefined} */
-        raycast(ray: Ray3D, maxDistance?: number, test?: (arg0: number, arg1: Vector3) => boolean): {
-            distance: number;
-            cell: Vector3;
-            normal: Vector3;
-            type: number;
-        };
+         *  @return {VoxelHit|undefined} */
+        raycast(ray: Ray3D, maxDistance?: number, test?: (arg0: number, arg1: Vector3) => boolean): VoxelHit | undefined;
         /** How far along a ray the first block is, for picking, see raycast
          *  @param {Ray3D} ray
          *  @return {number|undefined}
