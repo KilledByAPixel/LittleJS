@@ -144,3 +144,16 @@ test('the release build makes the same objects', () =>
             properties: [{ name: 'value', type: 'int', value: 3 }] }])}).map((o)=> [o.pos.x, o.pos.y, o.value]);`);
     assert.deepEqual(JSON.parse(JSON.stringify(made)), [[1.5, 3.5, 3]]);
 });
+
+test('a Vector2 string must be exactly two numbers, anything else keeps the default', () =>
+{
+    const { run } = engine();
+    const values = run(`${coinCode}
+        objectLayersAddType('Coin', Coin, { offset: vec2(1, 2) });
+        const coin = (id, value)=> ({ id, type: 'Coin', x: 0, y: 0,
+            properties: [{ name: 'offset', type: 'string', value }] });
+        objectLayersLoad({ width: 4, height: 4, tilewidth: 16, tileheight: 16, layers: [{ type: 'objectgroup',
+            objects: ['7,', ',', '1,2,3', '', ' 2 , 3 '].map((v, i)=> coin(i + 1, v)) }] })
+            .map((c)=> [c.offset.x, c.offset.y]);`);
+    assert.deepEqual(JSON.parse(JSON.stringify(values)), [[1, 2], [1, 2], [1, 2], [1, 2], [2, 3]]);
+});

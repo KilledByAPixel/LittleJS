@@ -315,8 +315,9 @@ function objectLayersProperties(type, object)
         else if (isVector2(type.defaults[name]))
         {
             // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default
-            const [x, y] = String(value).split(',').map(Number);
-            isNumber(x) && isNumber(y) && (properties[name] = vec2(x, y));
+            const parts = String(value).split(','), [x, y] = parts.map(Number);
+            parts.length === 2 && parts.every((part)=> part.trim()) && isNumber(x) && isNumber(y) &&
+                (properties[name] = vec2(x, y));
         }
         else
             properties[name] = value;

@@ -9262,8 +9262,9 @@ function objectLayersProperties(type, object)
         else if (isVector2(type.defaults[name]))
         {
             // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default
-            const [x, y] = String(value).split(',').map(Number);
-            isNumber(x) && isNumber(y) && (properties[name] = vec2(x, y));
+            const parts = String(value).split(','), [x, y] = parts.map(Number);
+            parts.length === 2 && parts.every((part)=> part.trim()) && isNumber(x) && isNumber(y) &&
+                (properties[name] = vec2(x, y));
         }
         else
             properties[name] = value;
@@ -28859,12 +28860,17 @@ function editorResizeMap(map, width, height)
         layer.width = width;
         layer.height = height;
     }
-    const tileWidth = map.tilewidth ?? 16, tileHeight = map.tileheight ?? 16;
+    // an object on the map before and off it after is dropped, one that was already off it stays
+    const {tilewidth=1, tileheight=1} = map, oldHeight = map.height;
+    const inside = (object, w, h)=> object.x >= 0 && object.x < w * tilewidth && object.y > 0 && object.y <= h * tileheight;
     for (const group of editorObjectGroups(map.layers))
     {
-        for (const object of group.objects ?? [])
-            object.y += added * tileHeight;
-        group.objects &&= group.objects.filter((object)=> object.x < width * tileWidth && object.y >= 0);
+        group.objects &&= group.objects.filter((object)=>
+        {
+            const was = inside(object, oldWidth, oldHeight);
+            object.y += added * tileheight;
+            return !was || inside(object, width, height);
+        });
     }
     map.width = width;
     map.height = height;
@@ -29973,7 +29979,9 @@ function editorPanelInit()
     const resize = editorElement('button', sizeRow, 'flex:1;padding:3px;cursor:pointer', 'Resize');
     const resizeLevel = ()=>
     {
-        editorResize(editorLayer?.record, parseInt(sizeX.value), parseInt(sizeY.value));
+        // up to 1000 a side from here, editorResize takes any size from code
+        const size = (input)=> clamp(parseInt(input.value) || 1, 1, 1e3);
+        editorResize(editorLayer?.record, size(sizeX), size(sizeY));
         resize.blur(); sizeX.blur(); sizeY.blur(); // the fields show the size again
     };
     resize.onclick = resizeLevel;
@@ -30213,6 +30221,12 @@ function editorIsTextField(target)
 function editorOnKeyDown(e)
 {
     if (!editorIsOpen || e.repeat || e.altKey || editorIsTextField(e.target)) return;
+    if (editorSelectionDrag)
+    {
+        // a key ends a selection drag where it is, an undo of its own, so Delete or undo acts on what is there
+        editorStrokeEnd();
+        editorSelectionDrag = undefined;
+    }
     let key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (key.length === 1 && !/[a-z?]/.test(key))
         key = e.code?.match(/^Key([A-Z])$/)?.[1].toLowerCase() ?? key;

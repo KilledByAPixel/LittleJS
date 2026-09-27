@@ -1308,3 +1308,32 @@ test('Reset to file on a layer made in code does nothing, it has no file', async
     run(`const live = new TileLayer(vec2(), vec2(2, 1), undefined);
         editorRevert(editorLayerRecord(live).record);`);
 });
+
+// the minor fixes: resize edges, keys during a drag
+
+test('a resize keeps objects that were already outside the map, and a map with no tile size keeps its objects\' places',
+    async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode.replace('tilewidth: 16, tileheight: 16, ', '')
+        .replace(`objects: [{ id: 1, x: 8, y: 8, type: 'Coin' }]`,
+            `objects: [{ id: 1, x: 1.5, y: .5, type: 'Coin' }, { id: 2, x: 1, y: -4, type: 'Coin' }]`) + restartCode +
+        'var before = editorObjectPos(front.record, map.layers[1].objects[0]); editorResize(front.record, 4, 3);');
+    assert.equal(run('map.layers[1].objects.length'), 2, 'the one above the top stays');
+    assert.deepEqual([...run('[before.x, before.y]')],
+        [...run('const after = editorObjectPos(front.record, map.layers[1].objects[0]); [after.x, after.y]')]);
+});
+
+test('a key pressed while dragging a selection ends the drag, so Delete clears the tiles where they are', async () =>
+{
+    const engine = await loadGame();
+    engine.run(moveCode);
+    leftDrag(engine, [0, 0], [1, 0]);
+    typed(engine, 'Delete');
+    engine.handlers.mousemove(at(2, 0));
+    step(engine);
+    leftUp(engine);
+    assert.deepEqual([...engine.run('frontData')], [0, 0, 3, 0, 0, 0]);
+    engine.run('editorUndo(); editorUndo();');
+    assert.deepEqual([...engine.run('frontData')], [6, 0, 3, 5, 0, 0], 'the move and the clear, an undo each');
+});
