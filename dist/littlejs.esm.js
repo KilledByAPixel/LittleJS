@@ -29964,7 +29964,7 @@ function editorPanelInit()
         const input = editorElement('input', sizeRow, 'width:48px;background:#333;color:#eee');
         input.type = 'number';
         input.min = input.step = '1';
-        input.onkeydown = (e)=> e.key === 'Enter' && resizeLevel();
+        input.onkeydown = (e)=> { e.key === 'Enter' && resizeLevel(); }; // returning false would block typing
         return input;
     };
     const sizeX = sizeInput();
