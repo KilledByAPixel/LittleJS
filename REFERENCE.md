@@ -1811,6 +1811,7 @@ levelEditor.open()         // Open the editor, pausing the game; close() plays o
 levelEditor.onTile = (layer, layerPos, tile)=> {} // What the game does with a painted tile, like set its
                            // collision, tile undefined when erased
 levelEditor.onRestart = ()=> {} // Rebuild the level, adds a Restart button
+levelEditor.onPlayFrom = (pos)=> {} // Put the player at pos, adds Play from mouse to the Advanced section
 ```
 
 ## LittleJS Debugging System

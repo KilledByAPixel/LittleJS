@@ -85,8 +85,14 @@ function gameInit()
     objectLayersAddType('Coin', Coin, {value: 1}, tile(7));
     loadLevel();
 
-    // start in the level editor, its Restart button rebuilds the level
+    // start in the level editor, its Restart button rebuilds the level,
+    // and Play from mouse, in its Advanced section, puts the player there
     levelEditor.onRestart = loadLevel;
+    levelEditor.onPlayFrom = (pos)=>
+    {
+        player.pos = pos.copy();
+        player.velocity = vec2();
+    };
     levelEditor.open();
 }
 

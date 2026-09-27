@@ -28282,6 +28282,12 @@ debug && engineAddPlugin(undefined, tweakRender);
 // the level editor
 
 /**
+ *  @callback EditorPlayFromCallback - Puts the player at a world position, for the level editor's Play from mouse
+ *  @param {Vector2} pos - Where to start playing
+ *  @memberof Editor
+ */
+
+/**
  *  @callback EditorRestartCallback - Rebuilds the level from the map the level editor changed
  *  @memberof Editor
  */
@@ -28316,6 +28322,10 @@ class LevelEditor
          *  calls it after switching to play; without one there is no Restart button
          *  @type {EditorRestartCallback|undefined} */
         this.onRestart = undefined;
+        /** @property {Function|undefined} - Put the player at a world position; with it, the editor's Advanced
+         *  section has Play from mouse, which starts play there, Escape at the mouse and Play at the view center
+         *  @type {EditorPlayFromCallback|undefined} */
+        this.onPlayFrom = undefined;
     }
 
     /** True while the editor is open, the game is paused under it
@@ -28347,6 +28357,16 @@ const levelEditor = new LevelEditor;
 
 // if the editor is open, and if it was opened and not exited, while Escape switches between playing and editing
 let editorIsOpen = false, editorSession = false;
+
+// if switching to play puts the player at the mouse, and if the panel's Advanced section is shown
+let editorPlayFromMouse = false, editorAdvanced = false;
+
+// switch to play in the session, with the player at a position when Play from mouse is on and the game has a hook
+function editorPlay(pos)
+{
+    editorSetOpen(false);
+    editorPlayFromMouse && pos && levelEditor.onPlayFrom?.(pos.copy());
+}
 
 // the game's pause and camera from before the editor opened, handed back when it closes
 let editorGameState;
@@ -29617,7 +29637,7 @@ function editorPanelInit()
 
     editorElement('div', editorPanel, 'font-weight:bold', 'Level Editor');
     const top = row();
-    button(top, 'Play', ()=> editorSetOpen(false), 'Esc, and Esc again comes back to the editor');
+    button(top, 'Play', ()=> editorPlay(editorCameraPos), 'Esc, and Esc again comes back to the editor');
     const restart = button(top, 'Restart', editorRestart, 'Rebuild the level and play it');
     button(top, 'Exit', ()=> levelEditor.close(), '0, then Esc opens the debug overlay again');
     const undo = row();
@@ -29662,7 +29682,22 @@ function editorPanelInit()
     const saveAs = button(file, 'Save As', ()=> editorSave(editorLayer?.record, true).then(saved(saveAs, 'Save As')),
         'Save As, to a file picked again');
     /** @type {any} */ (globalThis).showSaveFilePicker || (saveAs.style.display = 'none');
-    button(file, 'Revert', ()=> editorRevert(editorLayer?.record), 'Back to the file, can be undone');
+
+    // the Advanced section, shown by its heading: Play from mouse, the level's size, Reset to file
+    const advancedToggle = editorElement('button', editorPanel,
+        'width:100%;padding:3px;cursor:pointer;margin-top:4px;text-align:left');
+    advancedToggle.onclick = ()=> { editorAdvanced = !editorAdvanced; advancedToggle.blur(); };
+    const advanced = editorElement('div', editorPanel, 'margin:4px 0;padding:4px;background:#222;border-radius:3px');
+    const playFromLabel = editorElement('label', advanced, 'display:flex;gap:6px;align-items:center;margin:2px 0');
+    playFromLabel.title = 'Escape starts play with the player at the mouse, Play at the view center';
+    const playFrom = editorElement('input', playFromLabel);
+    playFrom.type = 'checkbox';
+    playFrom.onchange = ()=> { editorPlayFromMouse = playFrom.checked; playFrom.blur(); };
+    editorElement('span', playFromLabel, '', 'Play from mouse');
+    const reset = editorElement('button', advanced, 'width:100%;padding:3px;cursor:pointer;margin-top:4px',
+        'Reset to file');
+    reset.title = 'Put the level back to the file it was loaded from, can be undone';
+    reset.onclick = ()=> { editorRevert(editorLayer?.record); reset.blur(); };
     const storage = editorElement('div', editorPanel, 'color:#f86;margin-top:4px',
         'Autosave failed, storage is full: Save to a file');
     const status = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;min-height:1em');
@@ -29672,7 +29707,7 @@ function editorPanelInit()
         editorElement('div', help, 'margin:2px 0', line);
     button(help, 'Close', ()=> editorHelp = false, '?');
 
-    editorPanelParts = {restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
+    editorPanelParts = {advancedToggle, advanced, playFromLabel, playFrom, restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -29820,6 +29855,10 @@ function editorPanelUpdate()
     p.help.style.display = editorHelp ? '' : 'none';
     p.storage.style.display = editorSaveFailed ? '' : 'none';
     p.restart.style.display = levelEditor.onRestart ? '' : 'none';
+    p.advancedToggle.textContent = editorAdvanced ? 'Advanced ▾' : 'Advanced ▸';
+    p.advanced.style.display = editorAdvanced ? '' : 'none';
+    p.playFromLabel.style.display = levelEditor.onPlayFrom ? 'flex' : 'none';
+    p.playFrom.checked = editorPlayFromMouse;
     p.turns.style.display = editorObjectLayer ? 'none' : ''; // the tile brush's, not an object layer's
     p.pending.style.display = editorLayer?.record.pending ? '' : 'none';
 
@@ -30049,7 +30088,13 @@ function editorUpdate()
     if (editorSession && debugKey && keyWasPressed(debugKey))
     {
         inputClearKey(debugKey);
-        editorSetOpen(!editorIsOpen);
+        if (editorIsOpen)
+        {
+            editorApplyCamera(); // the mouse is read through the editor's view
+            editorPlay(screenToWorld(mousePosScreen));
+        }
+        else
+            editorSetOpen(true);
         return;
     }
     if (!editorIsOpen) return;

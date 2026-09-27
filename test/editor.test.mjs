@@ -1050,3 +1050,30 @@ test('closing the file picker saves nothing', async () =>
     assert.equal(await engine.run('editorSave(front.record)'), undefined);
     assert.equal(picker.written.length, 0);
 });
+
+// play from the mouse
+
+test('with Play from mouse on, Escape to play hands the game the mouse position, Play the view center', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + `var from = []; // a screen position is a pixel center, so rounded
+        levelEditor.onPlayFrom = (pos)=> from.push([+pos.x.toFixed(1), +pos.y.toFixed(1)]);
+        levelEditor.open(); editorCameraPos = vec2(1.5, .5); editorCameraScale = 100; editorPlayFromMouse = true;
+        mousePosScreen = vec2(700, 400);`); // one cell right and up of the middle
+    press(engine, 'Escape');
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(from)')), [[3.5, 1.5]]);
+    press(engine, 'Escape');
+    engine.run('editorCameraPos = vec2(1.5, .5); editorPlay(editorCameraPos)'); // coming back centered the game
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(from)')).at(-1), [1.5, .5]);
+});
+
+test('with Play from mouse off, or on Exit and Restart, the game is not moved', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + `var calls = 0; levelEditor.onPlayFrom = ()=> ++calls; levelEditor.onRestart = ()=> {};
+        levelEditor.open();`);
+    press(engine, 'Escape');
+    press(engine, 'Escape');
+    engine.run('editorPlayFromMouse = true; editorRestart(); levelEditor.open(); levelEditor.close();');
+    assert.equal(engine.run('calls'), 0);
+});

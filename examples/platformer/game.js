@@ -72,8 +72,10 @@ async function gameInit()
 
     loadLevel();
 
-    // the level editor's Restart button (Esc then 0) rebuilds the level with its changes
+    // the level editor's Restart button (Esc then 0) rebuilds the level with its changes, and its Play from mouse
+    // puts the player where the mouse is
     LJS.levelEditor.onRestart = loadLevel;
+    LJS.levelEditor.onPlayFrom = (pos)=> { player.pos = pos.copy(); player.velocity = vec2(); };
 }
 
 ///////////////////////////////////////////////////////////////////////////////

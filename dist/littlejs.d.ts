@@ -89,6 +89,10 @@ declare module "littlejsengine" {
      */
     export type ParticleCollideCallback = (particle: Particle, tileData: number, pos: Vector2) => boolean;
     /**
+     * - Puts the player at a world position, for the level editor's Play from mouse
+     */
+    export type EditorPlayFromCallback = (pos: Vector2) => any;
+    /**
      * - Rebuilds the level from the map the level editor changed
      */
     export type EditorRestartCallback = () => any;
@@ -9208,6 +9212,11 @@ declare module "littlejsengine" {
      * @namespace Editor
      */
     /**
+     *  @callback EditorPlayFromCallback - Puts the player at a world position, for the level editor's Play from mouse
+     *  @param {Vector2} pos - Where to start playing
+     *  @memberof Editor
+     */
+    /**
      *  @callback EditorRestartCallback - Rebuilds the level from the map the level editor changed
      *  @memberof Editor
      */
@@ -9237,6 +9246,10 @@ declare module "littlejsengine" {
          *  calls it after switching to play; without one there is no Restart button
          *  @type {EditorRestartCallback|undefined} */
         onRestart: EditorRestartCallback | undefined;
+        /** @property {Function|undefined} - Put the player at a world position; with it, the editor's Advanced
+         *  section has Play from mouse, which starts play there, Escape at the mouse and Play at the view center
+         *  @type {EditorPlayFromCallback|undefined} */
+        onPlayFrom: EditorPlayFromCallback | undefined;
         /** True while the editor is open, the game is paused under it
          *  @return {boolean} */
         get isOpen(): boolean;
