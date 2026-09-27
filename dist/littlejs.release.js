@@ -22815,6 +22815,10 @@ function render3DBindMesh(mesh)
 function render3DTextureOf(tileInfo) { return tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo; }
 
 // where a tile sits in its texture, pulled in slightly at the edges so neighbors do not bleed in
+// the level's solid geometry in 3D, the height maps and voxel maps that objects with collideLevel collide with, as
+// tileCollisionLayers is in 2D; each joins when made and leaves when destroyed
+const render3DLevel = [];
+
 // this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 // the tiles of objects made from a whole TextureInfo, they cover all of it even after the texture is resized
@@ -25438,43 +25442,54 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * HeightMap - Terrain built from a grid of heights, with a mesh, a height lookup and a raycast
+ * HeightMap - Terrain from a grid of heights: an object that draws itself, and that objects with collideLevel stand on
  * - heights is a 2D array [row][column] of 0 to 1 values
  * - Row 0 is the far edge at -Z and column 0 is the left edge at -X
  * - It can be an image instead, where the red channel is the height
  * - colors is an optional 2D array of Colors or an image, sampled per vertex
  * - images are read through a canvas, so they must be same origin or loaded with crossOrigin set
+ * - pos3D is the center of the map, its grid spans mapSize on X and Z around it, and a full value is height above it
+ * - getHeight, getNormal, getColor and raycast are in world space, with the map's position taken off
+ * - It stays upright and unscaled, its lookups do not turn with it
+ * @extends EngineObject3D
  * @memberof Render3D
  * @example
  * const terrain = new HeightMap(heightImage, vec2(100, 100), 10, colorImage);
- * new EngineObject3D(vec3(), terrain.buildMesh());
- * const y = terrain.getHeight(x, z); // stand things on it
+ * const y = terrain.getHeight(x, z); // stand things on it, or give them collideLevel
  */
-class HeightMap
+class HeightMap extends EngineObject3D
 {
-    /** Create a height map from an array or an image
+    /** Create a height map from an array or an image, it draws itself and joins the level's collision
      *  @param {Array<Array<number>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} heights
-     *  @param {Vector2} [size] - World size along X and Z
+     *  @param {Vector2} [mapSize] - World size along X and Z
      *  @param {number} [height] - World height of a full value
-     *  @param {Array<Array<Color>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} [colors] */
-    constructor(heights, size=vec2(1), height=1, colors)
+     *  @param {Array<Array<Color>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} [colors]
+     *  @param {Vector3} [pos3D] - Center of the map
+     *  @param {boolean} [smooth] - Defaults to render3D.smoothShading */
+    constructor(heights, mapSize=vec2(1), height=1, colors, pos3D=vec3(), smooth=render3D?.smoothShading)
     {
+        super(pos3D);
         if (!isArray(heights))
             heights = render3DImageToArray(heights, (r)=> r / 255);
         if (colors && !isArray(colors))
             colors = render3DImageToArray(colors, (r, g, b, a)=> rgb(r / 255, g / 255, b / 255, a / 255));
         false&&ASSERT(isArray(heights) && heights.length > 1 && isArray(heights[0]) && heights[0].length > 1, 'height map needs at least 2 rows and 2 columns');
-        false&&ASSERT(size.x > 0 && size.y > 0, 'height map size must be positive, a zero size has nowhere to look things up');
+        false&&ASSERT(mapSize.x > 0 && mapSize.y > 0, 'height map size must be positive, a zero size has nowhere to look things up');
 
-        /** @property {Array<Array<number>>} - Heights 0-1 as [row][column], rows along Z */
+        /** @property {Array<Array<number>>} - Heights 0-1 as [row][column], rows along Z, rebuild() after changing them */
         this.heights = heights;
         /** @property {Array<Array<Color>>|undefined} - Vertex colors as [row][column], undefined for white
          *  @type {Array<Array<Color>>|undefined} */
         this.colors = /** @type {Array<Array<Color>>|undefined} */ (colors);
         /** @property {Vector2} - World size along X and Z */
-        this.size = size.copy();
+        this.mapSize = mapSize.copy();
         /** @property {number} - World height of a full value */
         this.height = height;
+        /** @property {boolean} - Smooth shading, rebuild() after changing it */
+        this.smooth = !!smooth;
+        this.size3D = vec3(mapSize.x, height, mapSize.y);
+        this.rebuild();
+        render3DLevel.push(this);
     }
 
     /** Number of rows, along Z
@@ -25493,15 +25508,17 @@ class HeightMap
     {
         if (x instanceof Vector3)
             z = x.z, x = x.x; // a position works as well as its two numbers, its own y is ignored
+        const p = this.pos3D;
+        x -= p.x, z -= p.z;
         const columns = this.columns, rows = this.rows, h = this.heights;
-        const u = clamp((x / this.size.x + .5) * (columns - 1), 0, columns - 1);
-        const v = clamp((z / this.size.y + .5) * (rows - 1), 0, rows - 1);
+        const u = clamp((x / this.mapSize.x + .5) * (columns - 1), 0, columns - 1);
+        const v = clamp((z / this.mapSize.y + .5) * (rows - 1), 0, rows - 1);
         const i = min(floor(u), columns - 2), j = min(floor(v), rows - 2);
         const fu = u - i, fv = v - j;
         // each cell is two triangles split from (i, j+1) to (i+1, j), the same split buildGrid's quads use
         const a = h[j][i], b = h[j+1][i], c = h[j+1][i+1], d = h[j][i+1];
         const height = fu + fv <= 1 ? a + fu * (d - a) + fv * (b - a) : c + (1 - fu) * (b - c) + (1 - fv) * (d - c);
-        return height * this.height;
+        return height * this.height + p.y;
     }
 
     /** Surface normal at a position, from the slope across a sample
@@ -25512,8 +25529,10 @@ class HeightMap
     {
         if (x instanceof Vector3)
             z = x.z, x = x.x;
-        const ex = this.size.x / (this.columns - 1) / 2, ez = this.size.y / (this.rows - 1) / 2;
-        return render3DSlopeNormal((x, z)=> this.getHeight(x, z), x, z, ex, ez, this.size.x / 2, this.size.y / 2);
+        const p = this.pos3D, size = this.mapSize;
+        const ex = size.x / (this.columns - 1) / 2, ez = size.y / (this.rows - 1) / 2;
+        const local = (lx, lz)=> this.getHeight(lx + p.x, lz + p.z);
+        return render3DSlopeNormal(local, x - p.x, z - p.z, ex, ez, size.x / 2, size.y / 2);
     }
 
     /** Color of the nearest sample to a position, white when there are no colors
@@ -25526,9 +25545,10 @@ class HeightMap
             z = x.z, x = x.x;
         const c = this.colors;
         if (!c) return WHITE;
+        x -= this.pos3D.x, z -= this.pos3D.z;
         const columns = c[0].length, rows = c.length;
-        const i = clamp(round((x / this.size.x + .5) * (columns - 1)), 0, columns - 1);
-        const j = clamp(round((z / this.size.y + .5) * (rows - 1)), 0, rows - 1);
+        const i = clamp(round((x / this.mapSize.x + .5) * (columns - 1)), 0, columns - 1);
+        const j = clamp(round((z / this.mapSize.y + .5) * (rows - 1)), 0, rows - 1);
         return c[j][i];
     }
 
@@ -25540,12 +25560,13 @@ class HeightMap
      *  @return {number|undefined} */
     raycast(ray)
     {
-        const {origin, direction} = ray;
-        const size = this.size, height = this.height, length = direction.length();
+        // in the map's own space, its position taken off the ray
+        const p = this.pos3D, origin = ray.origin.subtract(p), direction = ray.direction;
+        const size = this.mapSize, height = this.height, length = direction.length();
         if (!length) return;
 
         // clip to the box around the terrain, from where the ray enters it to where it leaves the map's footprint
-        const start = raycastBox(ray, vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
+        const start = raycastBox(new Ray3D(origin, direction), vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
         if (start === undefined || !(size.x > 0 && size.y > 0)) return;
         let end = start + hypot(size.x, size.y, height) / length;
         if (direction.x)
@@ -25572,8 +25593,8 @@ class HeightMap
         // one that starts under the ground finds where it comes out, the surface it breaks through
         const above = (at)=>
         {
-            const p = origin.add(direction.scale(at));
-            return p.y - this.getHeight(p.x, p.z);
+            const q = origin.add(direction.scale(at));
+            return q.y + p.y - this.getHeight(q.x + p.x, q.z + p.z);
         };
         // touching the surface counts as a hit too, where it starts, at the map's edge, or grazing it from below
         const touching = (d)=> abs(d) <= 1e-9;
@@ -25591,17 +25612,45 @@ class HeightMap
         }
     }
 
-    /** Build the terrain mesh, one vertex per sample, centered on the origin
+    /** Build the terrain mesh, one vertex per sample, centered on the map's own origin
      *  @param {boolean} [smooth] - Defaults to render3D.smoothShading
      *  @return {Mesh} */
     buildMesh(smooth=render3D?.smoothShading)
     {
         // flat shading colors each cell from its center, halfway between two samples where rounding could pick
         // either, so it is nudged a thousandth of a cell back to make it the cell's first corner every time
-        const nudgeX = smooth ? 0 : this.size.x / (this.columns - 1) / 1e3;
-        const nudgeZ = smooth ? 0 : this.size.y / (this.rows - 1) / 1e3;
-        return buildGrid(this.size, vec2(this.columns - 1, this.rows - 1),
-            this.colors && ((x, z)=> this.getColor(x - nudgeX, z - nudgeZ)), (x, z)=> this.getHeight(x, z), smooth);
+        const p = this.pos3D, size = this.mapSize;
+        const nudgeX = smooth ? 0 : size.x / (this.columns - 1) / 1e3;
+        const nudgeZ = smooth ? 0 : size.y / (this.rows - 1) / 1e3;
+        return buildGrid(size, vec2(this.columns - 1, this.rows - 1),
+            this.colors && ((x, z)=> this.getColor(x - nudgeX + p.x, z - nudgeZ + p.z)),
+            (x, z)=> this.getHeight(x + p.x, z + p.z) - p.y, smooth);
+    }
+
+    /** Make the mesh again from the heights and colors, after changing them or smooth */
+    rebuild() { this.setMesh(this.buildMesh(this.smooth)); }
+
+    /** How far along a ray the surface is, for picking, see raycast
+     *  @param {Ray3D} ray
+     *  @return {number|undefined}
+     *  @ignore */
+    levelRaycast3D(ray) { return this.raycast(ray); }
+
+    /** Keeps an eye on its placement, called automatically each frame */
+    update()
+    {
+        super.update();
+        false&&ASSERT(!this.parent && !this.rotation3D.lengthSquared() && this.scale3D.x === 1 && this.scale3D.y === 1 &&
+            this.scale3D.z === 1, 'a HeightMap stays upright and unscaled at the root, its lookups do not turn with it');
+    }
+
+    /** Destroy the map, it leaves the level's collision
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        const i = render3DLevel.indexOf(this);
+        i >= 0 && render3DLevel.splice(i, 1);
+        super.destroy(immediate);
     }
 }
 

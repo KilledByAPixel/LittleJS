@@ -8464,34 +8464,41 @@ declare module "littlejsengine" {
      */
     export function buildText3D(text: string | number, size?: number, depth?: number, font?: ImageFont): Mesh;
     /**
-     * HeightMap - Terrain built from a grid of heights, with a mesh, a height lookup and a raycast
+     * HeightMap - Terrain from a grid of heights: an object that draws itself, and that objects with collideLevel stand on
      * - heights is a 2D array [row][column] of 0 to 1 values
      * - Row 0 is the far edge at -Z and column 0 is the left edge at -X
      * - It can be an image instead, where the red channel is the height
      * - colors is an optional 2D array of Colors or an image, sampled per vertex
      * - images are read through a canvas, so they must be same origin or loaded with crossOrigin set
+     * - pos3D is the center of the map, its grid spans mapSize on X and Z around it, and a full value is height above it
+     * - getHeight, getNormal, getColor and raycast are in world space, with the map's position taken off
+     * - It stays upright and unscaled, its lookups do not turn with it
+     * @extends EngineObject3D
      * @memberof Render3D
      * @example
      * const terrain = new HeightMap(heightImage, vec2(100, 100), 10, colorImage);
-     * new EngineObject3D(vec3(), terrain.buildMesh());
-     * const y = terrain.getHeight(x, z); // stand things on it
+     * const y = terrain.getHeight(x, z); // stand things on it, or give them collideLevel
      */
-    export class HeightMap {
-        /** Create a height map from an array or an image
+    export class HeightMap extends EngineObject3D {
+        /** Create a height map from an array or an image, it draws itself and joins the level's collision
          *  @param {Array<Array<number>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} heights
-         *  @param {Vector2} [size] - World size along X and Z
+         *  @param {Vector2} [mapSize] - World size along X and Z
          *  @param {number} [height] - World height of a full value
-         *  @param {Array<Array<Color>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} [colors] */
-        constructor(heights: Array<Array<number>> | HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | TextureInfo, size?: Vector2, height?: number, colors?: Array<Array<Color>> | HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | TextureInfo);
-        /** @property {Array<Array<number>>} - Heights 0-1 as [row][column], rows along Z */
+         *  @param {Array<Array<Color>>|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|TextureInfo} [colors]
+         *  @param {Vector3} [pos3D] - Center of the map
+         *  @param {boolean} [smooth] - Defaults to render3D.smoothShading */
+        constructor(heights: Array<Array<number>> | HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | TextureInfo, mapSize?: Vector2, height?: number, colors?: Array<Array<Color>> | HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | TextureInfo, pos3D?: Vector3, smooth?: boolean);
+        /** @property {Array<Array<number>>} - Heights 0-1 as [row][column], rows along Z, rebuild() after changing them */
         heights: number[][];
         /** @property {Array<Array<Color>>|undefined} - Vertex colors as [row][column], undefined for white
          *  @type {Array<Array<Color>>|undefined} */
         colors: Array<Array<Color>> | undefined;
         /** @property {Vector2} - World size along X and Z */
-        size: Vector2;
+        mapSize: Vector2;
         /** @property {number} - World height of a full value */
         height: number;
+        /** @property {boolean} - Smooth shading, rebuild() after changing it */
+        smooth: boolean;
         /** Number of rows, along Z
          *  @return {number} */
         get rows(): number;
@@ -8520,10 +8527,17 @@ declare module "littlejsengine" {
          *  @param {Ray3D} ray - From screenToRay, or any ray
          *  @return {number|undefined} */
         raycast(ray: Ray3D): number | undefined;
-        /** Build the terrain mesh, one vertex per sample, centered on the origin
+        /** Build the terrain mesh, one vertex per sample, centered on the map's own origin
          *  @param {boolean} [smooth] - Defaults to render3D.smoothShading
          *  @return {Mesh} */
         buildMesh(smooth?: boolean): Mesh;
+        /** Make the mesh again from the heights and colors, after changing them or smooth */
+        rebuild(): void;
+        /** How far along a ray the surface is, for picking, see raycast
+         *  @param {Ray3D} ray
+         *  @return {number|undefined}
+         *  @ignore */
+        levelRaycast3D(ray: Ray3D): number | undefined;
     }
     /**
      * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else

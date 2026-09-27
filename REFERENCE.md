@@ -1409,10 +1409,13 @@ buildText3D(text, size, depth, font) // extruded glyphs from an ImageFont, the w
 
 // Height map terrain - from a 2D array [row][column] of 0-1 heights or an image's red channel; row 0 is the far edge at
 // -Z, column 0 the left edge at -X
-const terrain = new HeightMap(heights, size=vec2(1), height=1, colors) // heights and colors take the array, an image or
-                                                                      // a canvas
-terrain.buildMesh(smooth)                     // one vertex per sample, centered on the origin
-terrain.getHeight(pos3D) or (x, z)            // world height of the drawn mesh there, to stand things on it
+const terrain = new HeightMap(heights, mapSize=vec2(1), height=1, colors, pos3D=vec3(), smooth) // an EngineObject3D
+        // that draws itself and that objects with collideLevel stand on; heights and colors take the array, an image
+        // or a canvas; pos3D is its center, and it stays upright and unscaled
+terrain.rebuild()                             // make the mesh again after changing heights, colors or smooth
+terrain.buildMesh(smooth)                     // one vertex per sample, centered on its own origin, for other uses
+terrain.getHeight(pos3D) or (x, z)            // world height of the drawn mesh there, to stand things on it; the
+                                              // lookups are in world space, with its position taken off
 terrain.getNormal(pos3D) or (x, z)            // surface normal there, to tilt things to the slope
 terrain.raycast(ray)                          // distance along a ray to where it crosses the ground, or undefined,
                                               // for clicking; exact, a hill the ray only grazes is still hit, and a

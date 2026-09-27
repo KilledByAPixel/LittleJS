@@ -1,5 +1,5 @@
 const terrainSize = vec2(50), terrainHeight = 12, terrainSamples = 48;
-let terrain, ground, ball;
+let terrain, ball;
 
 class Ball extends EngineObject3D
 {
@@ -58,7 +58,6 @@ function gameInit()
     // terrain from the two images
     const [heights, colors] = makeTerrainImages(terrainSamples);
     terrain = new HeightMap(heights, terrainSize, terrainHeight, colors);
-    ground = new EngineObject3D(vec3(), terrain.buildMesh());
 
     // trees on the grass, a trunk and a cone welded into one mesh
     const trunk = buildCylinder(.5, 2, 5), top = buildCone(3, 3.5, 6);
@@ -82,7 +81,8 @@ function gameUpdate()
     if (keyWasPressed('Space')) // space toggles shading
     {
         render3D.smoothShading = !render3D.smoothShading;
-        ground.setMesh(terrain.buildMesh()); // rebuild terrain
+        terrain.smooth = render3D.smoothShading;
+        terrain.rebuild();
     }
     if (mouseWasPressed(2)) // right click moves the ball
     {

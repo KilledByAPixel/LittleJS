@@ -157,7 +157,6 @@ function gameInit()
         colors.push(colorRow);
     }
     terrain = new HeightMap(heights, vec2(terrainSize), terrainHeight, colors);
-    new EngineObject3D(vec3(), terrain.buildMesh());
 
     // a forest sharing one mesh, so all of it is a single draw call
     const tree = new Mesh()

@@ -2200,8 +2200,9 @@ test('lookAt at your own position keeps the rotation, upright sprites survive a 
     const ray = render3D.screenToRay(vec2(), vec2());
     assert.ok(ray.direction.isValid());
     const heightMap = new HeightMap([[0, 0], [0, 0]], vec2(4, 4));
-    heightMap.size = vec2(0, 4); // a size that went bad after construction, where no assert can catch it
+    heightMap.mapSize = vec2(0, 4); // a size that went bad after construction, where no assert can catch it
     assert.equal(heightMap.raycast(new Ray3D(vec3(0, 5, 0), vec3(0, -1, 0))), undefined);
+    heightMap.destroy();
 });
 
 test('a sync2D object with mass takes the 2D gravity, not the 3D one', () =>

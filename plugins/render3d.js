@@ -1812,6 +1812,10 @@ function render3DBindMesh(mesh)
 function render3DTextureOf(tileInfo) { return tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo; }
 
 // where a tile sits in its texture, pulled in slightly at the edges so neighbors do not bleed in
+// the level's solid geometry in 3D, the height maps and voxel maps that objects with collideLevel collide with, as
+// tileCollisionLayers is in 2D; each joins when made and leaves when destroyed
+const render3DLevel = [];
+
 // this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 // the tiles of objects made from a whole TextureInfo, they cover all of it even after the texture is resized

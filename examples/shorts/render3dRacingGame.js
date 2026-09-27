@@ -127,8 +127,7 @@ function gameInit()
         heights.push(heightRow);
         colors.push(colorRow);
     }
-    terrain = new HeightMap(heights, vec2(trackSize), 18, colors);
-    new EngineObject3D(vec3(), terrain.buildMesh(true));
+    terrain = new HeightMap(heights, vec2(trackSize), 18, colors, vec3(), true);
 
     // the road is a ribbon along the center line just above the ground
     const points = [];
