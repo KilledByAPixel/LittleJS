@@ -39,7 +39,7 @@ class LevelEditor
          *  @type {EditorTileCallback|undefined} */
         this.onTile = undefined;
         /** @property {Function|undefined} - Rebuild the level from the map the editor changed, a Restart button
-         *  calls it after closing the editor; without one there is no Restart button
+         *  calls it after switching to play; without one there is no Restart button
          *  @type {(function():void)|undefined} */
         this.onRestart = undefined;
     }
@@ -48,11 +48,22 @@ class LevelEditor
      *  @return {boolean} */
     get isOpen() { return editorIsOpen; }
 
-    /** Open the editor, pausing the game */
-    open() { editorSetOpen(true); }
+    /** Open the editor, pausing the game; until close(), Escape (the debug key) switches between playing and editing */
+    open()
+    {
+        if (!editorSession)
+            editorCameraScale = cameraScale; // a new session starts at the game's zoom, a return keeps the editor's
+        editorSession = true;
+        editorSetOpen(true);
+    }
 
-    /** Close the editor, the game carries on with the changes */
-    close() { editorSetOpen(false); }
+    /** Close the editor and end its session, the game carries on with the changes and Escape opens the debug
+     *  overlay again */
+    close()
+    {
+        editorSession = false;
+        editorSetOpen(false);
+    }
 }
 
 /** The level editor, levelEditor.open() to edit the level, levelEditor.close() to play on with the changes
@@ -60,8 +71,8 @@ class LevelEditor
  *  @memberof Editor */
 const levelEditor = new LevelEditor;
 
-// if the editor is open
-let editorIsOpen = false;
+// if the editor is open, and if it was opened and not exited, while Escape switches between playing and editing
+let editorIsOpen = false, editorSession = false;
 
 // the game's pause and camera from before the editor opened, handed back when it closes
 let editorGameState;
@@ -91,13 +102,15 @@ function editorSetOpen(open)
     if (editorIsOpen)
     {
         editorGameState = {paused, cameraPos: cameraPos.copy(), cameraScale, cameraAngle};
-        editorCameraPos = cameraPos.copy();
-        editorCameraScale = cameraScale;
+        editorCameraPos = cameraPos.copy(); // where the game is, the zoom stays the editor's
         setPaused(true);
         setDebugOverlay(false); // out of the way of the level
+
+        // the layer edited last, when it is still there, or the collision layer
         const layers = editorLayers();
-        editorLayer = layers.find((layer)=> layer.live?.isSolid) ?? layers.filter((layer)=> !layer.isObjects).at(-1);
-        editorObjectLayer = undefined;
+        layers.includes(editorLayer) || (editorLayer = layers.find((layer)=> layer.live?.isSolid) ??
+            layers.filter((layer)=> !layer.isObjects).at(-1));
+        layers.includes(editorObjectLayer) || (editorObjectLayer = undefined);
     }
     else
     {
@@ -1239,7 +1252,7 @@ const editorHelpLines =
     'Left: paint · Shift+Left: line from the last tile',
     'Right click: pick a tile · Right drag: select',
     'Middle drag or Space+drag: pan · Wheel or pinch: zoom',
-    '1-9: layer · 0: play',
+    '1-9: layer · Esc: play and edit · 0: exit the editor',
     'F: fill · Delete: clear the selection',
     'Ctrl+C / X / V: copy, cut, paste · Ctrl+Z / Y: undo, redo',
     'R, Shift+R: turn · M: mirror · E: erase · G: grid · ?: keys',
@@ -1308,8 +1321,9 @@ function editorPanelInit()
 
     editorElement('div', editorPanel, 'font-weight:bold', 'Level Editor');
     const top = row();
-    button(top, 'Play', ()=> levelEditor.close(), '0');
-    const restart = button(top, 'Restart', editorRestart, 'Close the editor and rebuild the level');
+    button(top, 'Play', ()=> editorSetOpen(false), 'Esc, and Esc again comes back to the editor');
+    const restart = button(top, 'Restart', editorRestart, 'Rebuild the level and play it');
+    button(top, 'Exit', ()=> levelEditor.close(), '0, then Esc opens the debug overlay again');
     const undo = row();
     button(undo, 'Undo', ()=> editorUndo(), 'Ctrl+Z');
     button(undo, 'Redo', ()=> editorUndo(true), 'Ctrl+Y');
@@ -1458,9 +1472,22 @@ function editorPaletteDraw(canvas, layer)
     context.strokeRect(selected % columns * cell + 1, (selected / columns | 0) * cell + 1, cell - 2, cell - 2);
 }
 
+// while playing in an editing session, a tag in the corner says how to get back to the editor
+let editorTag;
+function editorTagUpdate()
+{
+    const show = editorSession && !editorIsOpen;
+    if (!show && !editorTag) return;
+    editorTag ||= editorElement('div', document.body, 'position:fixed;bottom:8px;left:8px;padding:4px 8px;' +
+        'background:#111d;color:#eee;font:12px monospace;border-radius:4px;z-index:9999;pointer-events:none');
+    editorTag.textContent = `${debugKey === 'Escape' ? 'Esc' : debugKey}: edit level`;
+    editorTag.style.display = show ? '' : 'none';
+}
+
 // shows or hides the panel, and shows what changed since the last frame
 function editorPanelUpdate()
 {
+    editorTagUpdate();
     if (!editorIsOpen)
     {
         editorPanel && (editorPanel.style.display = 'none');
@@ -1715,10 +1742,18 @@ function editorPropertiesUpdate(box)
 
 function editorUpdate()
 {
+    // in an editing session Escape, the debug key, switches between playing and editing; taken, so the debug
+    // overlay waits till the session ends
+    if (editorSession && debugKey && keyWasPressed(debugKey))
+    {
+        inputClearKey(debugKey);
+        editorSetOpen(!editorIsOpen);
+        return;
+    }
     if (!editorIsOpen) return;
     editorApplyCamera();
 
-    // 0 plays again, the overlay's 0 does it while the overlay is open; cleared so debugKeysAlways
+    // 0 exits the editor, the overlay's 0 does it while the overlay is open; cleared so debugKeysAlways
     // does not toggle it back in the same step
     if (!debugOverlay && keyWasPressed('Digit0'))
     {
@@ -1799,11 +1834,11 @@ function editorUpdate()
     }
 }
 
-// close the editor and have the game rebuild its level from the changed map, when it has a hook for that
+// switch to play and have the game rebuild its level from the changed map, when it has a hook for that
 function editorRestart()
 {
     if (!levelEditor.onRestart) return;
-    levelEditor.close(); // ends a held stroke, and hands back the game's pause and camera
+    editorSetOpen(false); // ends a held stroke, and hands back the game's pause and camera, Escape comes back
     levelEditor.onRestart();
 }
 

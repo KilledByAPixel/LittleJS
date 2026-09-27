@@ -9226,15 +9226,16 @@ declare module "littlejsengine" {
          *  @type {EditorTileCallback|undefined} */
         onTile: EditorTileCallback | undefined;
         /** @property {Function|undefined} - Rebuild the level from the map the editor changed, a Restart button
-         *  calls it after closing the editor; without one there is no Restart button
+         *  calls it after switching to play; without one there is no Restart button
          *  @type {(function():void)|undefined} */
         onRestart: (() => void) | undefined;
         /** True while the editor is open, the game is paused under it
          *  @return {boolean} */
         get isOpen(): boolean;
-        /** Open the editor, pausing the game */
+        /** Open the editor, pausing the game; until close(), Escape (the debug key) switches between playing and editing */
         open(): void;
-        /** Close the editor, the game carries on with the changes */
+        /** Close the editor and end its session, the game carries on with the changes and Escape opens the debug
+         *  overlay again */
         close(): void;
     }
     export {};

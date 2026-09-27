@@ -964,3 +964,49 @@ test('isOpen can not be set, only open() and close() change it', async () =>
     run('levelEditor.open()');
     assert.deepEqual([...run('[levelEditor.isOpen, paused]')], [true, true]);
 });
+
+// an editing session: Escape switches between playing and editing until the editor is exited
+
+test('once the editor is opened, Escape switches between playing and editing, not the debug overlay', async () =>
+{
+    const engine = await loadGame();
+    engine.run('levelEditor.open()');
+    press(engine, 'Escape');
+    assert.deepEqual([...engine.run('[levelEditor.isOpen, paused, debugOverlay]')], [false, false, false]);
+    press(engine, 'Escape');
+    assert.deepEqual([...engine.run('[levelEditor.isOpen, paused, debugOverlay]')], [true, true, false]);
+});
+
+test('Exit, or 0 while editing, ends the session, and Escape opens the debug overlay again', async () =>
+{
+    const engine = await loadGame();
+    engine.run('levelEditor.open(); levelEditor.close()');
+    press(engine, 'Escape');
+    assert.deepEqual([...engine.run('[levelEditor.isOpen, debugOverlay]')], [false, true]);
+    press(engine, 'Escape'); // the overlay closes
+    engine.run('levelEditor.open()');
+    press(engine, 'Digit0');
+    assert.equal(engine.run('levelEditor.isOpen'), false);
+    press(engine, 'Escape');
+    assert.deepEqual([...engine.run('[levelEditor.isOpen, debugOverlay]')], [false, true]);
+});
+
+test('coming back to the editor keeps its layer and zoom, and centers on the game camera', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + `levelEditor.open(); editorLayer = editorLayerRecord(layers[0]); editorCameraScale = 50;`);
+    press(engine, 'Escape');
+    engine.run('setCameraPos(vec2(7, 8))');
+    press(engine, 'Escape');
+    assert.deepEqual([...engine.run(`[editorLayer === editorLayerRecord(layers[0]), editorCameraScale,
+        editorCameraPos.x, editorCameraPos.y]`)], [true, 50, 7, 8]);
+});
+
+test('Restart plays on in the session, Escape comes back to the editor', async () =>
+{
+    const engine = await loadGame();
+    engine.run('var restarts = 0; levelEditor.onRestart = ()=> ++restarts; levelEditor.open(); editorRestart();');
+    assert.deepEqual([...engine.run('[levelEditor.isOpen, restarts]')], [false, 1]);
+    press(engine, 'Escape');
+    assert.equal(engine.run('levelEditor.isOpen'), true);
+});
