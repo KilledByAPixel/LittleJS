@@ -95,7 +95,7 @@ function loadLevelData()
     }
 
     // the level editor (Esc then 0) paints tiles with the same rules
-    LJS.setEditorTileCallback((tileLayer, pos, tileData)=> setupTile(tileLayer, pos, tileData, false));
+    LJS.levelEditor.onTile = (tileLayer, pos, tileData)=> setupTile(tileLayer, pos, tileData, false);
 }
 
 // set up a cell's collision and look from its tile, when the level loads and when the level editor paints it;

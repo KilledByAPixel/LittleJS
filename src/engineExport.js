@@ -34,7 +34,7 @@ export
     debugKey,
     debugKeysAlways,
     debugTweakables,
-    editMode,
+    levelEditor,
 
     // Debug
     ASSERT,
@@ -172,8 +172,6 @@ export
     setDebugKey,
     setDebugKeysAlways,
     setDebugTweakables,
-    setEditMode,
-    setEditorTileCallback,
     setDebugOverlay,
 
     // Math

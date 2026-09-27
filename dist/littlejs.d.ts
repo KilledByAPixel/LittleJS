@@ -89,6 +89,10 @@ declare module "littlejsengine" {
      */
     export type ParticleCollideCallback = (particle: Particle, tileData: number, pos: Vector2) => boolean;
     /**
+     * - What the game does when the level editor paints a tile
+     */
+    export type EditorTileCallback = (layer: TileLayer, pos: Vector2, tile: number | undefined) => any;
+    /**
      * LittleJS - The Tiny Fast JavaScript Game Engine
      * MIT License - Copyright 2021 Frank Force
      *
@@ -307,19 +311,10 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Debug */
     export let debugTweakables: boolean;
-    /**
-     * LittleJS Level Editor
-     * - Paint the game's tile layers while it is paused, then keep playing with the changes
-     * - Press 0 while the debug overlay is open to edit, 0 again to play, or call setEditMode
-     * - Edits the Tiled map the game loaded, saves it back as Tiled JSON, and autosaves every change
-     * - Debug builds only, the release build has stubs for its names in engineRelease.js and none of its code
-     * @namespace Editor
-     */
-    /** True while the editor is open, the game is paused under it, setEditMode(enable=true)
-     *  @type {boolean}
-     *  @default
+    /** The level editor, levelEditor.open() to edit the level, levelEditor.close() to play on with the changes
+     *  @type {LevelEditor}
      *  @memberof Editor */
-    export let editMode: boolean;
+    export const levelEditor: LevelEditor;
     /** Asserts if the expression is false, does nothing in release builds
      *  Halts execution if the assert fails and throws an error
      *  @param {*} assert - any value, the assert fails when it is falsy
@@ -1012,20 +1007,6 @@ declare module "littlejsengine" {
      *  @param {boolean} [show]
      *  @memberof Debug */
     export function setDebugTweakables(show?: boolean): void;
-    /** Open or close the editor, the game is paused while it is open and carries on with the changes after
-     *  - Does nothing in release builds
-     *  @param {boolean} [enable]
-     *  @memberof Editor */
-    export function setEditMode(enable?: boolean): void;
-    /** Set what the game does when the editor paints a tile, like setting its collision or its look the way the
-     *  game does when it loads the level; without one, the collision layer gets collision 1 where there is a tile
-     *  - Called with the layer, the cell's layer position, and the tile, undefined for an empty cell
-     *  - Does nothing in release builds
-     *  @param {function(TileLayer, Vector2, number|undefined):void} [callback]
-     *  @memberof Editor
-     *  @example
-     *  setEditorTileCallback((layer, pos, tile)=> layer.setCollisionData(pos, tile === ladderTile ? -1 : tile ? 1 : 0)); */
-    export function setEditorTileCallback(callback?: (arg0: TileLayer, arg1: Vector2, arg2: number | undefined) => void): void;
     /** Open or close the debug overlay from code, as the debug key does; does nothing in release builds
      *  @param {boolean} [show]
      *  @memberof Debug */
@@ -9188,4 +9169,47 @@ declare module "littlejsengine" {
      *  }
      *  @memberof TextureSheets */
     export function spritesReady(): Promise<any>;
+    /**
+     * LittleJS Level Editor
+     * - Paint the game's tile layers while it is paused, then keep playing with the changes
+     * - Press 0 while the debug overlay is open to edit, 0 again to play, or call levelEditor.open() and close()
+     * - Edits the Tiled map the game loaded, saves it back as Tiled JSON, and autosaves every change
+     * - Debug builds only, the release build has stubs for its names in engineRelease.js and none of its code
+     * @namespace Editor
+     */
+    /**
+     *  @callback EditorTileCallback - What the game does when the level editor paints a tile
+     *  @param {TileLayer} layer - The layer painted
+     *  @param {Vector2} pos - The cell's position in the layer
+     *  @param {number|undefined} tile - The tile painted, undefined when erased
+     *  @memberof Editor
+     */
+    /**
+     * The level editor, open it to pause the game and edit its level, close it to play on with the changes
+     * - One of it, levelEditor, 0 on the debug overlay opens and closes it too
+     * - In release builds levelEditor is a stub that never opens, and its hooks are never called
+     * @memberof Editor
+     * @example
+     * levelEditor.onRestart = ()=> loadLevel(); // adds a Restart button that rebuilds the level
+     * levelEditor.onTile = (layer, pos, tile)=> layer.setCollisionData(pos, tile === ladderTile ? -1 : tile ? 1 : 0);
+     */
+    class LevelEditor {
+        /** @property {EditorTileCallback|undefined} - What the game does when the editor paints a tile, like
+         *  setting its collision or its look the way the game does when it loads the level; without one, the
+         *  collision layer gets collision 1 where there is a tile
+         *  @type {EditorTileCallback|undefined} */
+        onTile: EditorTileCallback | undefined;
+        /** @property {Function|undefined} - Rebuild the level from the map the editor changed, a Restart button
+         *  calls it after closing the editor; without one there is no Restart button
+         *  @type {(function():void)|undefined} */
+        onRestart: (() => void) | undefined;
+        /** True while the editor is open, the game is paused under it
+         *  @return {boolean} */
+        get isOpen(): boolean;
+        /** Open the editor, pausing the game */
+        open(): void;
+        /** Close the editor, the game carries on with the changes */
+        close(): void;
+    }
+    export {};
 }

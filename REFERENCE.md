@@ -1800,9 +1800,11 @@ tweakEngineDefaults()      // Add gravity, timeScale, cameraScale and soundVolum
 - Debug builds only, release builds have none of its code
 
 ```javascript
-editMode = false           // Is the editor open? setEditMode(enable=true)
-setEditorTileCallback(callback) // What the game does with a painted tile, like set its collision,
-                           // called with (layer, layerPos, tile), tile undefined when erased
+levelEditor.isOpen         // Is the editor open? read only
+levelEditor.open()         // Open the editor, pausing the game; close() plays on with the changes
+levelEditor.onTile = (layer, layerPos, tile)=> {} // What the game does with a painted tile, like set its
+                           // collision, tile undefined when erased
+levelEditor.onRestart = ()=> {} // Rebuild the level, adds a Restart button
 ```
 
 ## LittleJS Debugging System

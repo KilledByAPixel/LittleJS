@@ -779,7 +779,6 @@ let debugWatermark = 0;
 let debugKey = '';
 let debugKeysAlways = false;
 let debugTweakables = false;
-let editMode = false;
 let debugClearCount = 0;
 const debug = 0;
 const debugOverlay = 0;
@@ -818,8 +817,7 @@ function tweak(){}
 function tweakButton(){}
 function tweakDivider(){}
 function tweakEngineDefaults(){}
-function setEditMode(){}
-function setEditorTileCallback(){}
+const levelEditor = {isOpen: false, open(){}, close(){}, onTile: undefined, onRestart: undefined};
 function editorMapRestore(map){ return map; }
 function editorMapLoaded(){}
 function editorJSONFetched(){}

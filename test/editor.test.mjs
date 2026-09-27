@@ -51,13 +51,13 @@ test('0 on the overlay opens the editor and pauses the game, 0 again gives back 
     const { run } = engine;
     run('setCameraPos(vec2(5, 6)); setCameraScale(40); setDebugOverlay(true)');
     press(engine, 'Digit0');
-    assert.equal(run('editMode'), true);
+    assert.equal(run('levelEditor.isOpen'), true);
     assert.equal(run('paused'), true);
     assert.equal(run('debugOverlay'), false, 'the overlay closes so the level can be seen');
     run('editorCameraPos = vec2(1, 1); editorCameraScale = 10; engineStep()');
     assert.deepEqual([...run('[cameraPos.x, cameraPos.y, cameraScale]')], [1, 1, 10], 'the editor has its own view');
     press(engine, 'Digit0'); // the overlay is closed, the editor takes the key itself
-    assert.equal(run('editMode'), false);
+    assert.equal(run('levelEditor.isOpen'), false);
     assert.equal(run('paused'), false);
     assert.deepEqual([...run('[cameraPos.x, cameraPos.y, cameraScale]')], [5, 6, 40]);
 });
@@ -65,7 +65,7 @@ test('0 on the overlay opens the editor and pauses the game, 0 again gives back 
 test('a game paused before the editor opened stays paused after it closes', async () =>
 {
     const { run } = await loadGame();
-    run('setPaused(true); setEditMode(true); setEditMode(false)');
+    run('setPaused(true); levelEditor.open(); levelEditor.close()');
     assert.equal(run('paused'), true);
 });
 
@@ -74,9 +74,9 @@ test('with debugKeysAlways, 0 toggles the editor once, not open and closed in th
     const engine = await loadGame();
     engine.run('setDebugKeysAlways(true)');
     press(engine, 'Digit0');
-    assert.equal(engine.run('editMode'), true);
+    assert.equal(engine.run('levelEditor.isOpen'), true);
     press(engine, 'Digit0');
-    assert.equal(engine.run('editMode'), false);
+    assert.equal(engine.run('levelEditor.isOpen'), false);
 });
 
 test('release builds have no editor or tweakables code, only their stubs', () =>
@@ -88,9 +88,9 @@ test('release builds have no editor or tweakables code, only their stubs', () =>
         assert.ok(!source.includes('Nothing to tweak'), file + ' has tweakables code');
     }
     const { run } = loadEngine({}, '', 'littlejs.release.js');
-    run(`setEditMode(true); let speed = 1; tweak('speed'); tweakButton('a', ()=> {}); tweakDivider();
-        tweakEngineDefaults();`);
-    assert.equal(run('editMode'), false);
+    run(`levelEditor.open(); levelEditor.onTile = ()=> {}; levelEditor.onRestart = ()=> {};
+        let speed = 1; tweak('speed'); tweakButton('a', ()=> {}); tweakDivider(); tweakEngineDefaults();`);
+    assert.equal(run('levelEditor.isOpen'), false);
 });
 
 // a map with a group, an object layer between the tile layers, and flip bits; front is the collision layer,
@@ -170,8 +170,8 @@ test('a tile callback takes over from the default collision', async () =>
     const { run } = await loadGame();
     const seen = run(mapCode + `
         const calls = [];
-        setEditorTileCallback((layer, pos, tile)=> { calls.push([layer === layers[2], pos.x, pos.y, tile]);
-            layer.setCollisionData(pos, -1); });
+        levelEditor.onTile = (layer, pos, tile)=> { calls.push([layer === layers[2], pos.x, pos.y, tile]);
+            layer.setCollisionData(pos, -1); };
         editorPaint(front, vec2(1, 1), editorTileToGid(8));
         editorPaint(front, vec2(2, 1), 0);
         editorStrokeEnd();
@@ -314,7 +314,7 @@ test('a click paints the cell under the mouse on the selected layer, and letting
 {
     const engine = await loadGame();
     const { run, handlers } = engine;
-    run(mapCode + `setEditMode(true); editorLayer = front; editorBrush = editorStampTile(editorTileToGid(6));
+    run(mapCode + `levelEditor.open(); editorLayer = front; editorBrush = editorStampTile(editorTileToGid(6));
         editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;`);
     // vmEngine's canvas is 1000 square at the origin, so the middle of the screen is the camera, cell (1, 0)
     const target = { tagName: 'CANVAS', closest: ()=> null };
@@ -330,7 +330,7 @@ test('a fast drag paints every cell between, not only where the mouse was each s
 {
     const engine = await loadGame();
     const { run } = engine;
-    run(mapCode + `setEditMode(true); editorLayer = front;
+    run(mapCode + `levelEditor.open(); editorLayer = front;
         editorPaintLine(front, vec2(0, 0)); editorPaintLine(front, vec2(2, 1)); editorStrokeEnd();`);
     const painted = run('[vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(2, 1)].map((p)=> layers[2].getData(p).tile)');
     assert.equal([...painted].filter((t)=> t === 0).length, 3, 'three cells on a line of two steps across');
@@ -339,7 +339,7 @@ test('a fast drag paints every cell between, not only where the mouse was each s
 test('R turns the brush, M mirrors it as seen on screen, and a pick takes a placed tile into the brush', async () =>
 {
     const engine = await loadGame();
-    engine.run(mapCode + 'setEditMode(true); editorLayer = front;');
+    engine.run(mapCode + 'levelEditor.open(); editorLayer = front;');
     typed(engine, 'r');
     typed(engine, 'm');
     // a quarter turn then a mirror is Tiled's turn then horizontal flip: the tile turned the other way, mirrored
@@ -355,14 +355,14 @@ test('R turns the brush, M mirrors it as seen on screen, and a pick takes a plac
 test('the selected layer starts as the collision layer', async () =>
 {
     const { run } = await loadGame();
-    run(mapCode + 'setEditMode(true)');
+    run(mapCode + 'levelEditor.open()');
     assert.equal(run('editorLayer === front'), true);
 });
 
 test('Ctrl+Z undoes, Ctrl+Shift+Z and Ctrl+Y redo, found by the key label, so an AZERTY Z undoes too', async () =>
 {
     const engine = await loadGame();
-    engine.run(mapCode + `setEditMode(true); editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();`);
+    engine.run(mapCode + `levelEditor.open(); editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();`);
     typed(engine, 'z', { ctrl: true, code: 'KeyW' }); // the Z of an AZERTY keyboard sits where QWERTY has W
     assert.equal(engine.run('frontData[3]'), 0);
     typed(engine, 'Z', { ctrl: true, shift: true, code: 'KeyW' });
@@ -376,7 +376,7 @@ test('a quick click, down and up before the next step, still paints its cell', a
 {
     const engine = await loadGame();
     const { run, handlers } = engine;
-    run(mapCode + `setEditMode(true); editorLayer = front; editorBrush = editorStampTile(editorTileToGid(6));
+    run(mapCode + `levelEditor.open(); editorLayer = front; editorBrush = editorStampTile(editorTileToGid(6));
         editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;`);
     const target = { tagName: 'CANVAS', closest: ()=> null };
     handlers.mousedown({ button: 0, x: 500, y: 500, target, cancelable: false });
@@ -443,7 +443,7 @@ test('painting a ghost with the tile it shows puts the tile back', async () =>
 // the mouse on the canvas at a cell of the test map, with the camera on cell (1, 0) at 100 pixels a cell
 const canvas = { tagName: 'CANVAS', closest: ()=> null };
 const at = (x, y)=> ({ button: 0, x: 500 + (x - 1) * 100, y: 500 - y * 100, target: canvas, cancelable: false });
-const editCode = mapCode + `setEditMode(true); editorLayer = front; editorBrush = editorStampTile(editorTileToGid(6));
+const editCode = mapCode + `levelEditor.open(); editorLayer = front; editorBrush = editorStampTile(editorTileToGid(6));
     editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;`;
 
 test('a drag that leaves the layer and comes back in does not paint across the gap', async () =>
@@ -532,7 +532,7 @@ test('mirroring a tile is Tiled\'s horizontal flip for every turn and mirror', a
 test('E and the palette Erase slot give the Erase brush, and a palette tile keeps the brush turn', async () =>
 {
     const engine = await loadGame();
-    engine.run(mapCode + `setEditMode(true); editorLayer = front;
+    engine.run(mapCode + `levelEditor.open(); editorLayer = front;
         editorBrush = editorStampTile(editorTileToGid(3, 2, true));`);
     engine.run('editorPalettePick(4)');
     assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrushTile())')),
@@ -548,10 +548,10 @@ test('E and the palette Erase slot give the Erase brush, and a palette tile keep
 test('a shortcut typed into a text field, with AltGr, or with the editor closed is left alone', async () =>
 {
     const engine = await loadGame();
-    engine.run(mapCode + `setEditMode(true); var before = editorBrush;`);
+    engine.run(mapCode + `levelEditor.open(); var before = editorBrush;`);
     typed(engine, 'r', { target: '{ closest: ()=> ({}) }' }); // inside an input
     typed(engine, 'r', { ctrl: true, alt: true }); // AltGr reports Ctrl and Alt
-    engine.run('setEditMode(false)');
+    engine.run('levelEditor.close()');
     typed(engine, 'r');
     assert.equal(engine.run('editorBrush === before'), true);
 });
@@ -559,7 +559,7 @@ test('a shortcut typed into a text field, with AltGr, or with the editor closed 
 test('the wheel zooms by how far it moved and toward the mouse, and a pinch zooms too', async () =>
 {
     const { run } = await loadGame();
-    run(mapCode + `setEditMode(true); editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;
+    run(mapCode + `levelEditor.open(); editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;
         mousePosScreen = vec2(700, 500);`); // one cell right of the middle
     const wheel = (deltaY, ctrlKey=false)=> run(`var before = screenToWorld(mousePosScreen);
         editorOnWheel({ deltaY: ${deltaY}, deltaMode: 0, ctrlKey: ${ctrlKey}, target: undefined });
@@ -576,7 +576,7 @@ test('1 to 9 pick layers from the back, the key is taken so debugKeysAlways leav
     + 'does not carry across', async () =>
 {
     const engine = await loadGame();
-    engine.run(mapCode + `setEditMode(true); setDebugKeysAlways(true); editorLastCell = vec2(0, 0);`);
+    engine.run(mapCode + `levelEditor.open(); setDebugKeysAlways(true); editorLastCell = vec2(0, 0);`);
     press(engine, 'Digit1');
     assert.equal(engine.run('editorLayer === editorLayerRecord(layers[0])'), true);
     assert.equal(engine.run('debugPhysics'), false);
@@ -590,7 +590,7 @@ test('1 to 9 pick layers from the back, the key is taken so debugKeysAlways leav
 test('G toggles the grid and ? the list of keys', async () =>
 {
     const engine = await loadGame();
-    engine.run(mapCode + 'setEditMode(true)');
+    engine.run(mapCode + 'levelEditor.open()');
     typed(engine, 'g');
     typed(engine, '?', { shift: true });
     assert.deepEqual([...engine.run('[editorGrid, editorHelp]')], [false, true]);
@@ -703,7 +703,7 @@ test('F fills the selection with the brush, a stamp repeating from its bottom le
 test('F without a selection floods the cells joined to the one under the mouse that match it exactly', async () =>
 {
     const engine = await loadGame();
-    engine.run(mapCode + `setEditMode(true); editorLayer = front;
+    engine.run(mapCode + `levelEditor.open(); editorLayer = front;
         frontData.splice(0, 6, 0, editorTileToGid(3, 1), 3, 0, 0, 0); layers = tileLayersLoad(map, undefined, 0, 2);
         editorHover = vec2(0, 0); editorBrush = editorStampTile(editorTileToGid(7));`);
     typed(engine, 'f'); // floods the empty cells joined to (0, 0): all four, not the two tiles
@@ -801,7 +801,7 @@ test('the brush label names the Erase brush, a turned and mirrored tile, and a s
 test('a checkbox or slider with focus, as a tweak leaves, does not take the editor shortcuts', async () =>
 {
     const engine = await loadGame();
-    engine.run(mapCode + `setEditMode(true); editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();
+    engine.run(mapCode + `levelEditor.open(); editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();
         var checkbox = { tagName: 'INPUT', type: 'checkbox' }; checkbox.closest = ()=> checkbox;`);
     typed(engine, 'z', { ctrl: true, target: 'checkbox' });
     assert.equal(engine.run('frontData[3]'), 0, 'undone');
@@ -813,7 +813,7 @@ test('a checkbox or slider with focus, as a tweak leaves, does not take the edit
 test('on a layout without Latin letters the shortcuts go by key position', async () =>
 {
     const engine = await loadGame();
-    engine.run(mapCode + `setEditMode(true); editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();`);
+    engine.run(mapCode + `levelEditor.open(); editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();`);
     typed(engine, 'я', { ctrl: true, code: 'KeyZ' }); // the Z key of a Russian keyboard
     assert.equal(engine.run('frontData[3]'), 0);
 });
@@ -892,7 +892,7 @@ test('a selection goes with its layer when the game loads the map again, and Ctr
 {
     const storage = makeStorage();
     const engine = await reload(storage);
-    engine.run(`setEditMode(true); editorLayer = front; var before = editorBrush;
+    engine.run(`levelEditor.open(); editorLayer = front; var before = editorBrush;
         editorSelection = editorArea(vec2(0, 0), vec2(1, 0));
         engineObjectsDestroy(); var copy = JSON.parse(JSON.stringify(map)); editorJSONFetched('${mapKey}', copy);
         layers = tileLayersLoad(copy, undefined, 0, 2);`);
@@ -941,4 +941,26 @@ test('an autosave that does not fit in storage says so', async () =>
     const fine = await loadGame();
     fine.run(mapCode + 'editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorStrokeEnd();');
     assert.equal(fine.run('editorSaveFailed'), false);
+});
+
+// the levelEditor singleton
+
+test('Restart closes the editor, ends a held stroke as its own undo, then calls the game\'s hook', async () =>
+{
+    const { run } = await loadGame();
+    run(editCode + `var restarts = 0, openWhenCalled;
+        levelEditor.onRestart = ()=> { ++restarts; openWhenCalled = levelEditor.isOpen; };
+        editorPaint(front, vec2(0, 0), editorTileToGid(1)); editorRestart();`);
+    assert.deepEqual([...run('[restarts, openWhenCalled, levelEditor.isOpen, editorUndoList.length]')], [1, false, false, 1]);
+    run('levelEditor.onRestart = undefined; levelEditor.open(); editorRestart()');
+    assert.equal(run('levelEditor.isOpen'), true, 'no hook, nothing happens');
+});
+
+test('isOpen can not be set, only open() and close() change it', async () =>
+{
+    const { run } = await loadGame();
+    run('levelEditor.isOpen = true');
+    assert.deepEqual([...run('[levelEditor.isOpen, paused]')], [false, false]);
+    run('levelEditor.open()');
+    assert.deepEqual([...run('[levelEditor.isOpen, paused]')], [true, true]);
 });

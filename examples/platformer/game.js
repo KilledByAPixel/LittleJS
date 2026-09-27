@@ -71,6 +71,9 @@ async function gameInit()
     };
 
     loadLevel();
+
+    // the level editor's Restart button (Esc then 0) rebuilds the level with its changes
+    LJS.levelEditor.onRestart = loadLevel;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

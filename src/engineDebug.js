@@ -324,7 +324,7 @@ function debugUpdate()
         if (keyWasPressed('Digit9'))
             debugTweakables = !debugTweakables;
         if (keyWasPressed('Digit0'))
-            setEditMode(!editMode);
+            levelEditor.isOpen ? levelEditor.close() : levelEditor.open();
     }
     if (debugVideoCaptureIsActive())
     {
@@ -682,7 +682,7 @@ function debugRender()
             debugContext.fillText('8: Toggle Video Capture', x, y += h);
             debugContext.fillStyle = debugTweakables ? '#f00' : '#fff';
             debugContext.fillText('9: Tweakables', x, y += h);
-            debugContext.fillStyle = editMode ? '#f00' : '#fff';
+            debugContext.fillStyle = levelEditor.isOpen ? '#f00' : '#fff';
             debugContext.fillText('0: Edit Level', x, y += h);
             debugContext.fillStyle = '#fff';
 

@@ -1,7 +1,7 @@
 /**
  * LittleJS Level Editor
  * - Paint the game's tile layers while it is paused, then keep playing with the changes
- * - Press 0 while the debug overlay is open to edit, 0 again to play, or call setEditMode
+ * - Press 0 while the debug overlay is open to edit, 0 again to play, or call levelEditor.open() and close()
  * - Edits the Tiled map the game loaded, saves it back as Tiled JSON, and autosaves every change
  * - Debug builds only, the release build has stubs for its names in engineRelease.js and none of its code
  * @namespace Editor
@@ -10,13 +10,58 @@
 'use strict';
 
 ///////////////////////////////////////////////////////////////////////////////
-// edit mode
+// the level editor
 
-/** True while the editor is open, the game is paused under it, setEditMode(enable=true)
- *  @type {boolean}
- *  @default
+/**
+ *  @callback EditorTileCallback - What the game does when the level editor paints a tile
+ *  @param {TileLayer} layer - The layer painted
+ *  @param {Vector2} pos - The cell's position in the layer
+ *  @param {number|undefined} tile - The tile painted, undefined when erased
+ *  @memberof Editor
+ */
+
+/**
+ * The level editor, open it to pause the game and edit its level, close it to play on with the changes
+ * - One of it, levelEditor, 0 on the debug overlay opens and closes it too
+ * - In release builds levelEditor is a stub that never opens, and its hooks are never called
+ * @memberof Editor
+ * @example
+ * levelEditor.onRestart = ()=> loadLevel(); // adds a Restart button that rebuilds the level
+ * levelEditor.onTile = (layer, pos, tile)=> layer.setCollisionData(pos, tile === ladderTile ? -1 : tile ? 1 : 0);
+ */
+class LevelEditor
+{
+    constructor()
+    {
+        /** @property {EditorTileCallback|undefined} - What the game does when the editor paints a tile, like
+         *  setting its collision or its look the way the game does when it loads the level; without one, the
+         *  collision layer gets collision 1 where there is a tile
+         *  @type {EditorTileCallback|undefined} */
+        this.onTile = undefined;
+        /** @property {Function|undefined} - Rebuild the level from the map the editor changed, a Restart button
+         *  calls it after closing the editor; without one there is no Restart button
+         *  @type {(function():void)|undefined} */
+        this.onRestart = undefined;
+    }
+
+    /** True while the editor is open, the game is paused under it
+     *  @return {boolean} */
+    get isOpen() { return editorIsOpen; }
+
+    /** Open the editor, pausing the game */
+    open() { editorSetOpen(true); }
+
+    /** Close the editor, the game carries on with the changes */
+    close() { editorSetOpen(false); }
+}
+
+/** The level editor, levelEditor.open() to edit the level, levelEditor.close() to play on with the changes
+ *  @type {LevelEditor}
  *  @memberof Editor */
-let editMode = false;
+const levelEditor = new LevelEditor;
+
+// if the editor is open
+let editorIsOpen = false;
 
 // the game's pause and camera from before the editor opened, handed back when it closes
 let editorGameState;
@@ -38,15 +83,12 @@ let editorAllLayers = false;
 // the grid drawn over the layer, G, and the list of keys in the panel, ?
 let editorGrid = true, editorHelp = false;
 
-/** Open or close the editor, the game is paused while it is open and carries on with the changes after
- *  - Does nothing in release builds
- *  @param {boolean} [enable]
- *  @memberof Editor */
-function setEditMode(enable=true)
+// open or close the editor, the game is paused while it is open and carries on with the changes after
+function editorSetOpen(open)
 {
-    if (!debug || editMode === !!enable) return;
-    editMode = !!enable;
-    if (editMode)
+    if (!debug || editorIsOpen === !!open) return;
+    editorIsOpen = !!open;
+    if (editorIsOpen)
     {
         editorGameState = {paused, cameraPos: cameraPos.copy(), cameraScale, cameraAngle};
         editorCameraPos = cameraPos.copy();
@@ -104,18 +146,6 @@ function editorGidToTile(gid)
 // so a game that loads the same map object again, as a restart does, gets the changes
 const editorMapList = [];
 
-// the game's rules for a painted tile, set by setEditorTileCallback
-let editorTileCallback;
-
-/** Set what the game does when the editor paints a tile, like setting its collision or its look the way the
- *  game does when it loads the level; without one, the collision layer gets collision 1 where there is a tile
- *  - Called with the layer, the cell's layer position, and the tile, undefined for an empty cell
- *  - Does nothing in release builds
- *  @param {function(TileLayer, Vector2, number|undefined):void} [callback]
- *  @memberof Editor
- *  @example
- *  setEditorTileCallback((layer, pos, tile)=> layer.setCollisionData(pos, tile === ladderTile ? -1 : tile ? 1 : 0)); */
-function setEditorTileCallback(callback) { editorTileCallback = callback; }
 
 // the tile layers' data arrays of a map in the order tileLayersLoad makes them, groups flattened
 function editorTileLayerData(layers, list=[])
@@ -411,8 +441,8 @@ function editorSetCell(layer, pos, gid)
     }
     const t = editorGidToTile(gid);
     live.setData(pos, t ? new TileLayerData(t.tile, t.direction, t.mirror, color) : new TileLayerData, true);
-    if (editorTileCallback)
-        editorTileCallback(live, pos.copy(), t?.tile);
+    if (levelEditor.onTile)
+        levelEditor.onTile(live, pos.copy(), t?.tile);
     else if (live instanceof TileCollisionLayer && live.isSolid)
         live.setCollisionData(pos, gid ? 1 : 0); // as tileLayersLoad gives it
     return before;
@@ -815,10 +845,12 @@ function editorPanelInit()
 
     editorElement('div', editorPanel, 'font-weight:bold', 'Level Editor');
     const top = row();
-    button(top, 'Play', ()=> setEditMode(false), '0');
-    button(top, 'Undo', ()=> editorUndo(), 'Ctrl+Z');
-    button(top, 'Redo', ()=> editorUndo(true), 'Ctrl+Y');
-    button(top, 'Keys', ()=> editorHelp = !editorHelp, 'Every control, ?');
+    button(top, 'Play', ()=> levelEditor.close(), '0');
+    const restart = button(top, 'Restart', editorRestart, 'Close the editor and rebuild the level');
+    const undo = row();
+    button(undo, 'Undo', ()=> editorUndo(), 'Ctrl+Z');
+    button(undo, 'Redo', ()=> editorUndo(true), 'Ctrl+Y');
+    button(undo, 'Keys', ()=> editorHelp = !editorHelp, 'Every control, ?');
 
     // a file that changed under its autosave
     const pending = editorElement('div', editorPanel, 'padding:4px;margin:4px 0;background:#630;border-radius:3px');
@@ -860,7 +892,7 @@ function editorPanelInit()
         editorElement('div', help, 'margin:2px 0', line);
     button(help, 'Close', ()=> editorHelp = false, '?');
 
-    editorPanelParts = {pending, layerRow, allLayers, palette, brush, status, storage, hint, help, layers: undefined};
+    editorPanelParts = {restart, pending, layerRow, allLayers, palette, brush, status, storage, hint, help, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -935,7 +967,7 @@ function editorPaletteDraw(canvas, layer)
 // shows or hides the panel, and shows what changed since the last frame
 function editorPanelUpdate()
 {
-    if (!editMode)
+    if (!editorIsOpen)
     {
         editorPanel && (editorPanel.style.display = 'none');
         return;
@@ -963,6 +995,7 @@ function editorPanelUpdate()
     p.hint.textContent = editorHint();
     p.help.style.display = editorHelp ? '' : 'none';
     p.storage.style.display = editorSaveFailed ? '' : 'none';
+    p.restart.style.display = levelEditor.onRestart ? '' : 'none';
     p.pending.style.display = editorLayer?.record.pending ? '' : 'none';
 
     // the palette, drawn again when the layer or the brush changed, a change makes a new brush
@@ -1018,7 +1051,7 @@ function editorIsTextField(target)
 // a character; a letter that is not a Latin one, on a Cyrillic or Greek keyboard, goes by the key's position
 function editorOnKeyDown(e)
 {
-    if (!editMode || e.repeat || e.altKey || editorIsTextField(e.target)) return;
+    if (!editorIsOpen || e.repeat || e.altKey || editorIsTextField(e.target)) return;
     let key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (key.length === 1 && !/[a-z?]/.test(key))
         key = e.code?.match(/^Key([A-Z])$/)?.[1].toLowerCase() ?? key;
@@ -1031,7 +1064,7 @@ function editorOnKeyDown(e)
 // leaves alone
 function editorOnWheel(e)
 {
-    if (!editMode || editorIsTextField(e.target)) return;
+    if (!editorIsOpen || editorIsTextField(e.target)) return;
     const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
     editorZoom(Math.exp(-pixels * (e.ctrlKey ? .01 : .002)));
 }
@@ -1052,7 +1085,7 @@ function editorZoom(factor)
 
 function editorUpdate()
 {
-    if (!editMode) return;
+    if (!editorIsOpen) return;
     editorApplyCamera();
 
     // 0 plays again, the overlay's 0 does it while the overlay is open; cleared so debugKeysAlways
@@ -1060,7 +1093,7 @@ function editorUpdate()
     if (!debugOverlay && keyWasPressed('Digit0'))
     {
         inputClearKey('Digit0');
-        setEditMode(false);
+        levelEditor.close();
         return;
     }
 
@@ -1137,15 +1170,23 @@ function editorUpdate()
     }
 }
 
+// close the editor and have the game rebuild its level from the changed map, when it has a hook for that
+function editorRestart()
+{
+    if (!levelEditor.onRestart) return;
+    levelEditor.close(); // ends a held stroke, and hands back the game's pause and camera
+    levelEditor.onRestart();
+}
+
 // called by the engine before the camera goes to WebGL, so the level is drawn with the editor's view, a game may move
 // the camera from gameUpdatePost, which runs while paused
-function editorPreRender() { editMode && editorApplyCamera(); }
+function editorPreRender() { editorIsOpen && editorApplyCamera(); }
 
 // the layer's edge, a grid when zoomed in, the map's tiles the layer does not show, and the brush under the mouse
 function editorRender()
 {
     headlessMode || editorPanelUpdate();
-    if (!editMode || headlessMode) return;
+    if (!editorIsOpen || headlessMode) return;
     const layer = editorLayer;
     if (!layer || layer.live.destroyed) return;
     const {live, source} = layer, {x: width, y: height} = live.size;
