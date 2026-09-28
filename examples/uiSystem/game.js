@@ -19,6 +19,9 @@ const setMenuVisible =(visible)=> uiMenu.visible = visible;
 LJS.setCanvasFixedSize(vec2(1920, 1080)); // 1080p
 LJS.setCanvasPixelated(false);
 
+// each tile in tiles.png has a 1 pixel border, which stops texture bleeding
+LJS.setTileDefaultPadding(1);
+
 function createUI()
 {
     LJS.uiSystem.defaultSoundPress = new LJS.Sound([.5,0,220]);

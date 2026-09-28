@@ -1,4 +1,7 @@
-import { engineInit, drawText, drawTile, tile, vec2 } from 'littlejsengine';
+import { engineInit, drawText, drawTile, tile, vec2, setTileDefaultPadding } from 'littlejsengine';
+
+// each tile in tiles.png has a 1 pixel border, which stops texture bleeding
+setTileDefaultPadding(1);
 
 function gameInit() {
     // called once after the engine starts up

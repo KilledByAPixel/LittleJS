@@ -9,8 +9,27 @@
 
 // show the LittleJS splash screen
 setShowSplashScreen(true);
-// fix texture bleeding by shrinking tile slightly
-setTileDefaultBleed(.5);
+// each tile in tiles.png has a 1 pixel border, which stops texture bleeding
+setTileDefaultPadding(1);
+
+// the level, one character a cell: # is a block, a space is empty
+const levelMap = `
+################################
+#                              #
+#                              #
+#   #####            #####     #
+#                              #
+#                              #
+#          ##########          #
+#                              #
+#                              #
+#  ####                  ####  #
+#                              #
+#                              #
+#        ####      ####        #
+#                              #
+#                              #
+################################`;
 
 // sound effects
 const sound_click = new Sound([1,.5]);
@@ -25,27 +44,19 @@ let particleEmitter;
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    // create tile collision and visible tile layer
-    const pos = vec2();
-    const tileLayer = new TileCollisionLayer(pos, vec2(32,16));
-
-    // get level data from the tiles image
-    // read it on the offscreen work canvas, the main canvas is sized to the
-    // window so reading back from it would clip and clear what is drawn
-    const tileImage = textureInfos[0].image;
-    workReadCanvas.width = tileImage.width;
-    workReadCanvas.height = tileImage.height;
-    workReadContext.drawImage(tileImage,0,0);
-    const imageData = workReadContext.getImageData(0,0,tileImage.width,tileImage.height).data;
-    for (pos.x = tileLayer.size.x; pos.x--;)
-    for (pos.y = tileLayer.size.y; pos.y--;)
+    // create tile collision and visible tile layer from the level map
+    const rows = levelMap.trim().split('\n');
+    const levelSize = vec2(rows[0].length, rows.length);
+    const tileLayer = new TileCollisionLayer(vec2(), levelSize);
+    for (let x = levelSize.x; x--;)
+    for (let y = levelSize.y; y--;)
     {
-        // check if this pixel is set
-        const i = pos.x + tileImage.width*(15 + tileLayer.size.y - pos.y);
-        if (!imageData[4*i])
+        // the first row of the map is the top of the level
+        if (rows[levelSize.y - 1 - y][x] != '#')
             continue;
-        
+
         // set tile data
+        const pos = vec2(x, y);
         const tileIndex = 1;
         const direction = randInt(4)
         const mirror = randBool();
@@ -120,11 +131,11 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    // draw a grey square in the background
-    drawRect(vec2(16,8), vec2(20,14), hsl(0,0,.6));
-    
-    // draw the logo as a tile
-    drawTile(vec2(21,5), vec2(4.5), tile(3,128));
+    // draw a grey square in the background, inside the walls
+    drawRect(vec2(16,8), vec2(30,14), hsl(0,0,.6));
+
+    // draw the logo as a tile, standing on the floor
+    drawTile(vec2(26,3.25), vec2(4.5), tile(3,128));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

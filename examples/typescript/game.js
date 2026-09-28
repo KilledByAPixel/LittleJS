@@ -9,8 +9,26 @@ import * as LJS from '../../dist/littlejs.esm.js';
 const { tile, vec2, hsl } = LJS;
 // show the LittleJS splash screen
 LJS.setShowSplashScreen(true);
-// fix texture bleeding by shrinking tile slightly
-LJS.setTileDefaultBleed(.5);
+// each tile in tiles.png has a 1 pixel border, which stops texture bleeding
+LJS.setTileDefaultPadding(1);
+// the level, one character a cell: # is a block, a space is empty
+const levelMap = `
+################################
+#                              #
+#                              #
+#   #####            #####     #
+#                              #
+#                              #
+#          ##########          #
+#                              #
+#                              #
+#  ####                  ####  #
+#                              #
+#                              #
+#        ####      ####        #
+#                              #
+#                              #
+################################`;
 // sound effects
 const sound_click = new LJS.Sound([1, .5]);
 // medals
@@ -20,24 +38,17 @@ LJS.medalsInit('Hello World');
 let particleEmitter;
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit() {
-    // create tile collision and visible tile layer
-    const pos = vec2();
-    const tileLayer = new LJS.TileCollisionLayer(pos, vec2(32, 16));
-    // get level data from the tiles image
-    // read it on the offscreen work canvas, the main canvas is sized to the
-    // window so reading back from it would clip and clear what is drawn
-    const tileImage = LJS.textureInfos[0].image;
-    LJS.workReadCanvas.width = tileImage.width;
-    LJS.workReadCanvas.height = tileImage.height;
-    LJS.workReadContext.drawImage(tileImage, 0, 0);
-    const imageData = LJS.workReadContext.getImageData(0, 0, tileImage.width, tileImage.height).data;
-    for (pos.x = tileLayer.size.x; pos.x--;)
-        for (pos.y = tileLayer.size.y; pos.y--;) {
-            // check if this pixel is set
-            const i = pos.x + tileImage.width * (15 + tileLayer.size.y - pos.y);
-            if (!imageData[4 * i])
+    // create tile collision and visible tile layer from the level map
+    const rows = levelMap.trim().split('\n');
+    const levelSize = vec2(rows[0].length, rows.length);
+    const tileLayer = new LJS.TileCollisionLayer(vec2(), levelSize);
+    for (let x = levelSize.x; x--;)
+        for (let y = levelSize.y; y--;) {
+            // the first row of the map is the top of the level
+            if (rows[levelSize.y - 1 - y][x] != '#')
                 continue;
             // set tile data
+            const pos = vec2(x, y);
             const tileIndex = 1;
             const direction = LJS.randInt(4);
             const mirror = !LJS.randInt(2);
@@ -89,10 +100,10 @@ function gameUpdatePost() {
 }
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender() {
-    // draw a grey square in the background
-    LJS.drawRect(vec2(16, 8), vec2(20, 14), hsl(0, 0, .6));
-    // draw the logo as a tile
-    LJS.drawTile(vec2(21, 5), vec2(4.5), tile(3, 128));
+    // draw a grey square in the background, inside the walls
+    LJS.drawRect(vec2(16, 8), vec2(30, 14), hsl(0, 0, .6));
+    // draw the logo as a tile, standing on the floor
+    LJS.drawTile(vec2(26, 3.25), vec2(4.5), tile(3, 128));
 }
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost() {

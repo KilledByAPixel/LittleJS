@@ -10,6 +10,9 @@
 // show the LittleJS splash screen
 setShowSplashScreen(true);
 
+// each tile in tiles.png has a 1 pixel border, which stops texture bleeding
+setTileDefaultPadding(1);
+
 // sound effects
 const sound_click = new Sound([1,.5]);
 

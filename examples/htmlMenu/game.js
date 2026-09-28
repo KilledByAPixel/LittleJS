@@ -12,6 +12,9 @@
 import * as LJS from '../../dist/littlejs.esm.js';
 const {vec2, hsl, tile} = LJS;
 
+// each tile in tiles.png has a 1 pixel border, which stops texture bleeding
+LJS.setTileDefaultPadding(1);
+
 // sound effects
 const sound_click = new LJS.Sound([1,.5]);
 
