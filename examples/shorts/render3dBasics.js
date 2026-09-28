@@ -7,11 +7,10 @@ function gameInit()
     render3D.setSky(hsl(.6,.5,.4), hsl(.6,.5,.8));
     render3D.shadows = true;
     render3D.ambientColor = hsl(.6,.2,.3);
-    render3D.smoothShading = true;
     new CameraControl3D(vec3(0,1,0), 15, .3);
 
     // a checkerboard floor
-    const checker = (x, z)=> hsl(.6, .1, (x+z)&1 ? .5 : .4);
+    const checker = (x, z)=> hsl(.6, .1, (x+z)/2&1 ? .5 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(30), 15, checker));
 
     // extruded text from the engine font
