@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { render3D, Render3DPlugin, HeightMap, VoxelMap, EngineObject3D, Ray3D, TextureInfo, TileInfo, vec2, vec3,
-    engineObjectsUpdate }
+    engineObjectsUpdate, engineObjectsCollect3D, FirstPersonCamera3D }
     from '../dist/littlejs.esm.js';
 import { loadEngine, keyEvent } from './vmEngine.mjs';
 
@@ -133,21 +133,21 @@ test('each face shows its own tile, a {top, side, bottom} type picks one for eac
     map.destroy();
 });
 
-test('setting a block builds only its chunk, and the chunk beside it when it is on the edge', () =>
+test('setting a block builds its chunk, and a chunk beside it only when a block there touches it', () =>
 {
     const map = new VoxelMap(vec3(), vec3(40, 16, 16)), built = [];
     const buildChunk = map.buildChunk.bind(map);
     map.buildChunk = (index)=> { built.push(index); buildChunk(index); };
-    map.setVoxel(vec3(5, 5, 5), 1);
-    map.buildChunks();
-    assert.deepEqual(built, [0]);
-    built.length = 0;
-    map.setVoxel(vec3(15, 5, 5), 1);
-    map.buildChunks();
-    assert.deepEqual(built.sort(), [0, 1]);
+    const set = (cell)=> { built.length = 0; map.setVoxel(cell, 1); map.buildChunks(); return built.sort(); };
+    assert.deepEqual(set(vec3(5, 5, 5)), [0]);
+    assert.deepEqual(set(vec3(15, 5, 5)), [0], 'on the edge, but only air across it');
+    assert.deepEqual(set(vec3(16, 6, 6)), [0, 1], 'diagonally beside the last one, whose corner shading it changes');
     built.length = 0;
     map.buildChunks();
     assert.deepEqual(built, [], 'nothing changed, nothing built');
+    map.ambientOcclusion = false;
+    assert.deepEqual(set(vec3(15, 7, 7)), [0], 'with no corner shading only a block face to face counts');
+    assert.deepEqual(set(vec3(15, 6, 6)), [0, 1], 'face to face with the one across the edge');
     map.destroy();
 });
 
@@ -387,4 +387,23 @@ test('a block set in a body\'s lower half pushes it up onto the block, one at it
     near(point.pos3D.y, 4, 2e-3, 'a point in a new block stands on it');
     render3D.gravity = vec3();
     body.destroy(); point.destroy(); map.destroy();
+});
+
+test('a VoxelMap and the child that draws its blending blocks are not things a query near its corner finds', () =>
+{
+    const map = new VoxelMap(vec3(), vec3(8));
+    const found = engineObjectsCollect3D(vec3(.2), 1).filter(o=> o === map || o.parent === map);
+    assert.deepEqual(found, []);
+    map.destroy();
+});
+
+test('a FirstPersonCamera3D puts the camera eyeHeight above its position, toward the top of its body', () =>
+{
+    const camera = new FirstPersonCamera3D(vec3(1, 2, 3));
+    camera.lockPointer = false;
+    camera.eyeHeight = .6;
+    camera.update();
+    const eye = render3D.camera.pos;
+    assert.deepEqual([eye.x, eye.y, eye.z].map(v=> Math.round(v * 1e6) / 1e6), [1, 2.6, 3]);
+    camera.destroy();
 });

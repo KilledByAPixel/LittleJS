@@ -8662,11 +8662,12 @@ declare module "littlejsengine" {
          *  @param {number} index
          *  @ignore */
         buildChunk(index: number): void;
-        /** The TileInfo of a tile index, counted from the map's first tile as a TileLayer counts them
+        /** The uvs of a tile's corners, top left, bottom left, top right, bottom right, the tile counted from the map's
+         *  first tile as a TileLayer counts them; kept, and shared by every face that shows it
          *  @param {number} index
-         *  @return {TileInfo}
+         *  @return {Array<Vector2>}
          *  @ignore */
-        tileOf(index: number): TileInfo;
+        tileUVs(index: number): Array<Vector2>;
         /** Whether a box hits a block that stops the object, see EngineObject3D.collideWithVoxel
          *  @param {Vector3} pos - Center of the box in the world
          *  @param {Vector3} size
@@ -8826,6 +8827,9 @@ declare module "littlejsengine" {
         /** @property {number} - Speed of a jump in world units a frame, 0 for none; Space or gamepad button 0 jumps
          *  while it stands on something, a height map or voxel map it collides with, see collideLevel */
         jumpSpeed: number;
+        /** @property {number} - How far above its position the eye is, in its own space, so with a size3D the eye can
+         *  sit toward the top of the body instead of its middle */
+        eyeHeight: number;
     }
     /**
      * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter

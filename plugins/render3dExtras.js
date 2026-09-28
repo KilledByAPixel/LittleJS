@@ -775,6 +775,9 @@ class FirstPersonCamera3D extends EngineObject3D
         /** @property {number} - Speed of a jump in world units a frame, 0 for none; Space or gamepad button 0 jumps
          *  while it stands on something, a height map or voxel map it collides with, see collideLevel */
         this.jumpSpeed = 0;
+        /** @property {number} - How far above its position the eye is, in its own space, so with a size3D the eye can
+         *  sit toward the top of the body instead of its middle */
+        this.eyeHeight = 0;
     }
 
     /** Move by velocity3D, and fall by render3D.gravity unless flying, called automatically each frame */
@@ -814,10 +817,10 @@ class FirstPersonCamera3D extends EngineObject3D
         if (this.jumpSpeed && !this.fly && this.groundObject && (keyWasPressed('Space') || gamepadWasPressed(0)))
             this.velocity3D.y = this.jumpSpeed;
 
-        // the camera sits at the eye, where this frame's physics left it, looking the way it does in its parent's
-        // space, since a child's velocity3D moves it in that space too
+        // the camera sits at the eye, eyeHeight above where this frame's physics left it, looking the way it does in
+        // its parent's space, since a child's velocity3D moves it in that space too
         const rotation = vec3(this.pitch, this.yaw, 0);
-        render3D.camera.pos = this.getWorldPos3D();
+        render3D.camera.pos = render3DObjectMatrix(this).transformPoint(vec3(0, this.eyeHeight, 0));
         render3D.camera.rotation = this.parent instanceof EngineObject3D ?
             this.parent.getMatrix().multiply(Matrix4.rotation(rotation)).getRotation() : rotation;
     }

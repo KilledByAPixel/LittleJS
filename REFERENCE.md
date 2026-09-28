@@ -1073,6 +1073,7 @@ new FirstPersonCamera3D(pos3D, yaw, pitch) // mouse look and WASD or arrows to m
                                // lockPointer, and fly to move the way it looks instead of walking level; give it a
                                // size3D and setCollision() to walk into solids, destroy it to hand the camera back
 camera.jumpSpeed = 0           // above 0, Space or gamepad button 0 jumps while it stands on a height map or voxel map
+camera.eyeHeight = 0           // how far above its position the eye is, toward the top of its size3D body
 render3D.camera.follow(target, offset, percent=1) // chase camera: ease toward target + offset and look at it, percent
                                                   // is how far it moves each call, so call it every frame, from
                                                   // gameUpdatePost once the target has moved

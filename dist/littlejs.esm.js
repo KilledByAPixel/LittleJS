@@ -26703,6 +26703,9 @@ class FirstPersonCamera3D extends EngineObject3D
         /** @property {number} - Speed of a jump in world units a frame, 0 for none; Space or gamepad button 0 jumps
          *  while it stands on something, a height map or voxel map it collides with, see collideLevel */
         this.jumpSpeed = 0;
+        /** @property {number} - How far above its position the eye is, in its own space, so with a size3D the eye can
+         *  sit toward the top of the body instead of its middle */
+        this.eyeHeight = 0;
     }
 
     /** Move by velocity3D, and fall by render3D.gravity unless flying, called automatically each frame */
@@ -26742,10 +26745,10 @@ class FirstPersonCamera3D extends EngineObject3D
         if (this.jumpSpeed && !this.fly && this.groundObject && (keyWasPressed('Space') || gamepadWasPressed(0)))
             this.velocity3D.y = this.jumpSpeed;
 
-        // the camera sits at the eye, where this frame's physics left it, looking the way it does in its parent's
-        // space, since a child's velocity3D moves it in that space too
+        // the camera sits at the eye, eyeHeight above where this frame's physics left it, looking the way it does in
+        // its parent's space, since a child's velocity3D moves it in that space too
         const rotation = vec3(this.pitch, this.yaw, 0);
-        render3D.camera.pos = this.getWorldPos3D();
+        render3D.camera.pos = render3DObjectMatrix(this).transformPoint(vec3(0, this.eyeHeight, 0));
         render3D.camera.rotation = this.parent instanceof EngineObject3D ?
             this.parent.getMatrix().multiply(Matrix4.rotation(rotation)).getRotation() : rotation;
     }
@@ -27715,6 +27718,14 @@ const RENDER3D_VOXEL_FACES = [
 // the shade of a corner by how many solid blocks crowd it, from 0, closed in, to 3, open
 const RENDER3D_VOXEL_SHADES = [.55, .7, .85, 1].map(v=> Object.freeze(rgb(v, v, v)));
 
+// each face's corners about a cell's center, as render3DQuadAxes gives them: top left, bottom left, top right, bottom
+// right; then the sides of the face each corner is toward, for its shading, and the corners in strip order, or split
+// along the other diagonal
+const RENDER3D_VOXEL_CORNERS = RENDER3D_VOXEL_FACES.map(([normal, right, up])=>
+    render3DQuadAxes(normal.scale(.5), right.scale(.5), up.scale(.5)));
+const RENDER3D_VOXEL_CORNER_SIDES = [[-1, 1], [-1, -1], [1, 1], [1, -1]];
+const RENDER3D_VOXEL_ORDER = [0, 1, 2, 3], RENDER3D_VOXEL_FLIPPED = [1, 3, 0, 2];
+
 /** What VoxelMap.raycast finds: how far along the ray, the block's cell and type, and the normal of the face it comes in
  *  through
  *  @typedef {{distance: number, cell: Vector3, normal: Vector3, type: number}} VoxelHit
@@ -27770,10 +27781,11 @@ class VoxelMap extends EngineObject3D
         this.chunksChanged = new Set;
         /** @type {Array<{faces: Array<number>, seeThrough: boolean, transparent: boolean}|undefined>} */
         this.blockTypes = [];
-        this.tiles = new Map; // tile index to its TileInfo
+        this.tiles = new Map; // tile index to the uvs of its corners
 
         // the transparent blocks draw in the transparent stage, blended and sorted, through a child that draws them
         const glass = new EngineObject3D;
+        glass.size3D = vec3(); // not a thing to collect either
         glass.transparent = true;
         glass.render3D = ()=> this.renderChunks(true);
         this.addChild(glass);
@@ -27813,11 +27825,14 @@ class VoxelMap extends EngineObject3D
         const i = x + s.x * (y + s.y * z);
         if (this.data[i] === type) return;
         this.data[i] = type;
-        // its chunk and those of the cells around it, whose faces and corner shading it can change
+        // its chunk, and the chunks of the blocks around it: face to face it can show or hide their faces, and with
+        // corner shading on, the blocks all around it take shade from it
+        this.markChunk(x, y, z);
         for (let dz = -1; dz <= 1; ++dz)
         for (let dy = -1; dy <= 1; ++dy)
         for (let dx = -1; dx <= 1; ++dx)
-            this.markChunk(x + dx, y + dy, z + dz);
+            if ((this.ambientOcclusion || abs(dx) + abs(dy) + abs(dz) === 1) && this.voxelAt(x + dx, y + dy, z + dz))
+                this.markChunk(x + dx, y + dy, z + dz);
     }
 
     /** Mark the chunk holding a cell as changed, a cell outside the map has none
@@ -27862,6 +27877,7 @@ class VoxelMap extends EngineObject3D
     /** Build every chunk again, after changing data directly or ambientOcclusion */
     rebuild()
     {
+        this.tiles.clear(); // the tile uvs too, the texture may have changed
         const c = this.chunkCount;
         for (let i = c.x * c.y * c.z; i--;)
             this.chunksChanged.add(i);
@@ -27880,20 +27896,22 @@ class VoxelMap extends EngineObject3D
      *  @ignore */
     buildChunk(index)
     {
-        const c = this.chunkCount, n = RENDER3D_VOXEL_CHUNK, s = this.mapSize;
+        const c = this.chunkCount, n = RENDER3D_VOXEL_CHUNK, s = this.mapSize, data = this.data;
         const x0 = index % c.x * n, y0 = floor(index / c.x) % c.y * n, z0 = floor(index / (c.x * c.y)) * n;
         const x1 = min(x0 + n, s.x), y1 = min(y0 + n, s.y), z1 = min(z0 + n, s.z);
         const center = vec3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
-        const opaque = new Mesh, transparent = new Mesh;
+        const opaque = new Mesh, transparent = new Mesh, ao = this.ambientOcclusion;
         // a block that shades a corner, the see-through ones let the light by
         const solid = (x, y, z)=> { const t = this.voxelAt(x, y, z); return t && !this.blockType(t).seeThrough ? 1 : 0; };
+        const points = [], uvs = [], colors = [], shade = []; // one face at a time, addStrip copies them out
         for (let z = z0; z < z1; ++z)
         for (let y = y0; y < y1; ++y)
         for (let x = x0; x < x1; ++x)
         {
-            const type = this.voxelAt(x, y, z);
+            const type = data[x + s.x * (y + s.y * z)];
             if (!type) continue;
             const block = this.blockType(type), mesh = block.transparent ? transparent : opaque;
+            const cx = x + .5 - center.x, cy = y + .5 - center.y, cz = z + .5 - center.z;
             for (let f = 0; f < 6; ++f)
             {
                 // a face shows toward an empty cell, or a see-through block of another type
@@ -27901,28 +27919,28 @@ class VoxelMap extends EngineObject3D
                 const bx = x + normal.x, by = y + normal.y, bz = z + normal.z, next = this.voxelAt(bx, by, bz);
                 if (next && (next === type || !this.blockType(next).seeThrough)) continue;
 
-                // its corners as a strip, top left, bottom left, top right, bottom right, around the chunk's center
-                const middle = vec3(x + .5 - center.x, y + .5 - center.y, z + .5 - center.z).add(normal.scale(.5));
-                const corners = render3DQuadAxes(middle, right.scale(.5), up.scale(.5));
-                const rect = render3DGetTileUVs(this.tileOf(block.faces[f])); // a shared rect, read it here
-                const uvs = RENDER3D_QUAD_UVS.map(q=> vec2(rect.x + q.x * rect.w, rect.y + q.y * rect.h));
-                let order = [0, 1, 2, 3], colors = [WHITE, WHITE, WHITE, WHITE];
-                if (this.ambientOcclusion)
+                // each corner darkened by the solid blocks beside it on the face's side, the usual voxel shading
+                for (let k = 0; k < 4; ++k)
                 {
-                    // each corner darkened by the solid blocks beside it on the face's side, the usual voxel shading
-                    const shade = [[-1, 1], [-1, -1], [1, 1], [1, -1]].map(([r, u])=>
-                    {
-                        const side1 = solid(bx + right.x * r, by + right.y * r, bz + right.z * r);
-                        const side2 = solid(bx + up.x * u, by + up.y * u, bz + up.z * u);
-                        const corner = solid(bx + right.x * r + up.x * u, by + right.y * r + up.y * u, bz + right.z * r + up.z * u);
-                        return side1 && side2 ? 0 : 3 - side1 - side2 - corner;
-                    });
-                    colors = shade.map(k=> RENDER3D_VOXEL_SHADES[k]);
-                    // split the quad along the diagonal that keeps the shading even, the other one shows a seam
-                    if (shade[0] + shade[3] > shade[1] + shade[2])
-                        order = [1, 3, 0, 2];
+                    const [r, u] = RENDER3D_VOXEL_CORNER_SIDES[k];
+                    const side1 = ao && solid(bx + right.x * r, by + right.y * r, bz + right.z * r);
+                    const side2 = ao && solid(bx + up.x * u, by + up.y * u, bz + up.z * u);
+                    const corner = ao && solid(bx + right.x * r + up.x * u, by + right.y * r + up.y * u, bz + right.z * r + up.z * u);
+                    shade[k] = side1 && side2 ? 0 : 3 - +side1 - +side2 - +corner;
                 }
-                mesh.addStrip(order.map(i=> corners[i]), normal, order.map(i=> uvs[i]), order.map(i=> colors[i]));
+
+                // its corners as a strip around the chunk's center, split along the diagonal that keeps the shading
+                // even, the other one shows a seam
+                const corners = RENDER3D_VOXEL_CORNERS[f], quad = this.tileUVs(block.faces[f]);
+                const order = shade[0] + shade[3] > shade[1] + shade[2] ? RENDER3D_VOXEL_FLIPPED : RENDER3D_VOXEL_ORDER;
+                for (let k = 0; k < 4; ++k)
+                {
+                    const i = order[k], p = corners[i];
+                    points[k] = vec3(cx + p.x, cy + p.y, cz + p.z);
+                    uvs[k] = quad[i];
+                    colors[k] = ao ? RENDER3D_VOXEL_SHADES[shade[i]] : WHITE;
+                }
+                mesh.addStrip(points, normal, uvs, colors);
             }
         }
         this.chunkMeshes[index]?.dispose();
@@ -27932,19 +27950,22 @@ class VoxelMap extends EngineObject3D
         this.chunkCenters[index] = center;
     }
 
-    /** The TileInfo of a tile index, counted from the map's first tile as a TileLayer counts them
+    /** The uvs of a tile's corners, top left, bottom left, top right, bottom right, the tile counted from the map's
+     *  first tile as a TileLayer counts them; kept, and shared by every face that shows it
      *  @param {number} index
-     *  @return {TileInfo}
+     *  @return {Array<Vector2>}
      *  @ignore */
-    tileOf(index)
+    tileUVs(index)
     {
-        let t = this.tiles.get(index);
-        if (!t)
+        let uvs = this.tiles.get(index);
+        if (!uvs)
         {
             const first = this.tileInfo;
-            this.tiles.set(index, t = first.columns ? first.frame(index) : first.index(index));
+            const rect = render3DGetTileUVs(first.columns ? first.frame(index) : first.index(index)); // a shared rect
+            uvs = RENDER3D_QUAD_UVS.map(q=> Object.freeze(vec2(rect.x + q.x * rect.w, rect.y + q.y * rect.h)));
+            this.tiles.set(index, uvs);
         }
-        return t;
+        return uvs;
     }
 
     /** Whether a box hits a block that stops the object, see EngineObject3D.collideWithVoxel

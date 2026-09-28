@@ -63,6 +63,7 @@ function gameInit()
     player.setCollision();
     player.size3D = vec3(.5, 1.5, .5);
     player.jumpSpeed = .2;
+    player.eyeHeight = .6; // near the top of the body
 
     // outline block under the crosshair
     render3D.onRenderTransparent = ()=> hit && render3D.drawBox(
