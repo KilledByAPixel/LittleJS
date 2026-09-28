@@ -519,6 +519,9 @@ function setCode(code, filename)
             buttonFullscreen.onclick = ()=> iframeContent.toggleFullscreen();
         }
 
+        // the tile sheet has a 1 pixel border around each tile, set before the short runs so it can change it
+        iframeContent.setTileDefaultPadding(1);
+
         // create a script element that overrides the default functions
         const overrideScript = iframeDocument.createElement('script');
         iframeDocument.body.appendChild(overrideScript);

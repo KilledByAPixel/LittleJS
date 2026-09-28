@@ -12,8 +12,9 @@ async function gameInit()
     spriteTile = loadSprite('tiles.png');
 
     // load the same image again split into 16x16 frames
+    // each has a 1 pixel border in the image, the last argument skips it
     // this is a 16x16 grid, frames wrap down to the next row automatically
-    animTile = loadSprite('tiles.png', vec2(16));
+    animTile = loadSprite('tiles.png', vec2(16), undefined, 1);
 
     // wait for both images to finish packing
     await spritesReady();

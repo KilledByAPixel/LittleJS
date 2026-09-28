@@ -42,7 +42,8 @@ function gameInit()
     render3D.setSky();
     render3D.gravity = vec3(0, -.01, 0);
     setDrawScreenSpace(true); // the only 2D drawing is the hud
-    map = new VoxelMap(vec3(), vec3(50), tile(0, 16, makeTiles()));
+    const sheet = tile(0, 16, makeTiles(), 0); // made with no padding
+    map = new VoxelMap(vec3(), vec3(50), sheet);
     map.setBlockType(1, {top:0, side:1, bottom:2});
     for (let i = 5; i < 8; ++i)
         map.setBlockType(i, i, {seeThrough: i==5, transparent: i>5});

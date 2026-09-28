@@ -8,12 +8,12 @@ async function gameInit()
 {
     // the json usually comes from a file, inline here to keep it self contained
     atlas = loadAtlas('tiles.png', {frames: {
-        'spin_0.png': {frame: {x:0,   y:0,   w:16, h:16}},
-        'spin_1.png': {frame: {x:16, y:0,   w:16, h:16}},
-        'spin_2.png': {frame: {x:32,   y:0, w:16, h:16}},
-        'spin_3.png': {frame: {x:48, y:0, w:16, h:16}},
-        'circle.png': {frame: {x:0,   y:128, w:128, h:128}},
-        'train.png':  {frame: {x:128, y:128, w:128, h:128}},
+        'spin_0.png': {frame: {x:1,   y:1,   w:16,  h:16}},
+        'spin_1.png': {frame: {x:19,  y:1,   w:16,  h:16}},
+        'spin_2.png': {frame: {x:37,  y:1,   w:16,  h:16}},
+        'spin_3.png': {frame: {x:55,  y:1,   w:16,  h:16}},
+        'circle.png': {frame: {x:1,   y:131, w:128, h:128}},
+        'train.png':  {frame: {x:131, y:131, w:128, h:128}},
     }});
 
     // wait for the atlas to finish packing

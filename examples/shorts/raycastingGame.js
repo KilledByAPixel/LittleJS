@@ -1,5 +1,4 @@
 let playerPos = vec2(), playerAngle = 0;
-setTileDefaultBleed(0);
 
 // a simple function to create the level
 const levelTest = (p)=> (floor(p.x)**3&floor(p.y)**2)%30>5;
@@ -50,7 +49,8 @@ function gameRender()
         const w = 15;
         const maxDistance = 50;
         const pos = vec2(), endPos = vec2(), size = vec2(.15);
-        const tileInfo = new TileInfo(vec2(), vec2(0,16));
+        const wall = tile(10).pos; // the brick tile, a column at a time
+        const tileInfo = new TileInfo(wall.copy(), vec2(1,16));
         const normal = vec2(), light = vec2().setAngle(2);
         const color = hsl();
         for (pos.x=-w; pos.x<w; pos.x+=.1)
@@ -65,7 +65,7 @@ function gameRender()
 
             // get texture coordinate
             const t = mod(p.x+p.y, 1);
-            tileInfo.pos.x = 161 + 14*t;
+            tileInfo.pos.x = wall.x + 1 + 14*t;
 
             // apply fog and lighting
             const d = p.distance(playerPos)/maxDistance;
