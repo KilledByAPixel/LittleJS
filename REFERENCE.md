@@ -246,7 +246,7 @@ Timer.valueOf()                       // Get how long since elapsed, 0 if not se
 
 ```javascript
 // Drawing functions
-// Most also accept optional trailing params: useWebGL=glEnable, screenSpace=false, context
+// Most also accept optional trailing params: useWebGL=glEnable, screenSpace=drawScreenSpace, context
 // Canvas2D draws (text, useWebGL=false) go to a canvas above every WebGL draw, whatever order they are drawn in
 drawTile(pos, size, tileInfo, color=WHITE, angle=0, mirror, additiveColor)
 drawRect(pos, size, color=WHITE, angle=0)
@@ -260,7 +260,7 @@ drawEllipse(pos, size=(1,1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK)
 drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
 drawEllipseGradient(pos, size=(1,1), colorInner=WHITE, colorOuter=CLEAR_WHITE, angle=0)
 drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHITE)
-drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, context)
+drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=drawScreenSpace, context)
 
 // Text functions
 drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font, fontStyle, maxWidth, angle=0)
@@ -349,6 +349,8 @@ tilesPixelated = true         // Disable filtering for crisper pixel art, when f
                               // and upload premultiplied, so smooth edges do not darken
 showSplashScreen = false      // Show the LittleJS splash screen on startup
 glEnable = true               // Enable fast WebGL rendering
+drawScreenSpace = false       // What screenSpace defaults to in the draw and debug functions; turn it on for a HUD or
+                              // a 3D game's 2D drawing, the engine's own world drawing stays in world space
 
 // Tile sheet settings
 tileDefaultSize = (16,16) // Default size of tiles in pixels
@@ -643,7 +645,7 @@ CanvasLayer(pos, size, angle=0, renderOrder=0, canvasSize=(512,512), useWebGL=tr
 CanvasLayer.canvas          // The canvas used by this layer
 CanvasLayer.context         // The 2D context of the canvas, read it back with context.getImageData(...)
 CanvasLayer.updateWebGL()   // Creates or updates WebGL texture
-CanvasLayer.draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=false, context)
+CanvasLayer.draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=drawScreenSpace, context)
                             // Draw the layer centered at pos
 
 // LittleJS Layer System
@@ -1769,7 +1771,7 @@ drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveC
 
 // TileSlice — a tile kept as a box style: slices 9 is a nine-slice, 3 a three-slice, 1 the whole tile stretched
 new TileSlice(tileInfo, slices=9, borderSize, extraSpace) // borderSize and extraSpace default to the draw's own
-slice.draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=false, context)
+slice.draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 slice.drawScreen(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=false, context)
 
 // Crescent — moon-phase shape (percent: 0=new, .25=first quarter, .5=full, .75=last quarter)

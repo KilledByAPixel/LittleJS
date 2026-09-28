@@ -2130,7 +2130,7 @@ class Box2dPlugin
         const raycastResults = [];
         box2d.world.RayCast(raycastCallback, box2dTemp(start), box2dTemp(end, 1));
         raycastResults.sort((a,b)=> a.fraction - b.fraction); // Box2D reports them in its tree's order
-        debugRaycast && debugLine(start, end, raycastResults.length ? '#f00' : '#00f', .02);
+        debugRaycast && debugLine(start, end, raycastResults.length ? '#f00' : '#00f', .02, 0, false);
         return raycastResults;
     }
 
@@ -2170,7 +2170,7 @@ class Box2dPlugin
 
         let queryObjects = [];
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, size, queryObjects.length ? '#f00' : '#00f');
+        debugRaycast && debugRect(pos, size, queryObjects.length ? '#f00' : '#00f', 0, 0, false, false);
         return queryObjects;
     }
 
@@ -2202,7 +2202,7 @@ class Box2dPlugin
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, size, queryObject ? '#f00' : '#00f');
+        debugRaycast && debugRect(pos, size, queryObject ? '#f00' : '#00f', 0, 0, false, false);
         return queryObject;
     }
 
@@ -2217,7 +2217,7 @@ class Box2dPlugin
         const radius2 = (diameter/2)**2;
         const results = box2d.objects.filter(o=> !o.destroyed && o.body && o.pos.distanceSquared(pos) < radius2 &&
             (includeSensors || o.getFixtureList().some(fixture=> !fixture.IsSensor())));
-        debugRaycast && debugCircle(pos, diameter, results.length ? '#f00' : '#00f');
+        debugRaycast && debugCircle(pos, diameter, results.length ? '#f00' : '#00f', 0, false, false);
         return results;
     }
 
@@ -2271,7 +2271,7 @@ class Box2dPlugin
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f');
+        debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f', 0, 0, false, false);
         return queryObject;
     }
 
@@ -2468,33 +2468,33 @@ async function box2dInit()
             color = getDebugColor(color);
             point1 = box2d.vec2FromPointer(point1);
             point2 = box2d.vec2FromPointer(point2);
-            drawLine(point1, point2, debugLineWidth, color, vec2(), 0, false);
+            drawLine(point1, point2, debugLineWidth, color, vec2(), 0, false, false);
         };
         debugDraw.DrawPolygon = function(vertices, vertexCount, color)
         {
             color = getDebugColor(color);
             const points = getPointsList(vertices, vertexCount);
-            drawPoly(points, CLEAR_WHITE, debugLineWidth, color, vec2(), 0, false);
+            drawPoly(points, CLEAR_WHITE, debugLineWidth, color, vec2(), 0, false, false);
         };
         debugDraw.DrawSolidPolygon = function(vertices, vertexCount, color)
         {
             color = getDebugColor(color);
             const points = getPointsList(vertices, vertexCount);
-            drawPoly(points, color, 0, color, vec2(), 0, false);
+            drawPoly(points, color, 0, color, vec2(), 0, false, false);
         };
         debugDraw.DrawCircle = function(center, radius, color)
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
-            drawCircle(center, radius*2, CLEAR_WHITE, debugLineWidth, color, false);
+            drawCircle(center, radius*2, CLEAR_WHITE, debugLineWidth, color, false, false);
         };
         debugDraw.DrawSolidCircle = function(center, radius, axis, color)
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
             axis = box2d.vec2FromPointer(axis).scale(radius);
-            drawCircle(center, radius*2, color, debugLineWidth, color, false);
-            drawLine(vec2(), axis, debugLineWidth, color, center, 0, false);
+            drawCircle(center, radius*2, color, debugLineWidth, color, false, false);
+            drawLine(vec2(), axis, debugLineWidth, color, center, 0, false, false);
         };
         debugDraw.DrawTransform = function(transform)
         {
@@ -2503,8 +2503,8 @@ async function box2dInit()
             const angle = -transform.get_q().GetAngle();
             const p1 = vec2(1,0), c1 = rgb(.75,0,0,.8);
             const p2 = vec2(0,1), c2 = rgb(0,.75,0,.8);
-            drawLine(vec2(), p1, debugLineWidth, c1, pos, angle, false);
-            drawLine(vec2(), p2, debugLineWidth, c2, pos, angle, false);
+            drawLine(vec2(), p1, debugLineWidth, c1, pos, angle, false, false);
+            drawLine(vec2(), p2, debugLineWidth, c2, pos, angle, false, false);
         }
             
         debugDraw.AppendFlags(box2d.instance.b2Draw.e_shapeBit);

@@ -229,9 +229,9 @@ class PathFinder
             if (this.debug && this.debugTime > 0)
             {
                 if (!walkable)
-                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, 0.25), this.debugTime);
+                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, 0.25), this.debugTime, 0, false, false);
                 else if (cost > 0)
-                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, min(0.2, cost * 0.05)), this.debugTime);
+                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, min(0.2, cost * 0.05)), this.debugTime, 0, false, false);
             }
         }
     }
@@ -320,7 +320,7 @@ class PathFinder
             current.isClosed = true;
 
             if (this.debug && this.debugTime > 0)
-                debugRect(current.posWorld, PATHFINDER_TILE_VEC, rgb(1, 1, 1, 0.05), this.debugTime);
+                debugRect(current.posWorld, PATHFINDER_TILE_VEC, rgb(1, 1, 1, 0.05), this.debugTime, 0, false, false);
 
             // Expand all 8 neighbors.
             for (let dy = -1; dy <= 1; ++dy)
@@ -428,7 +428,7 @@ class PathFinder
             {
                 // 45° angle — middle node is off the straight line. Drop it.
                 if (this.debug && this.debugTime > 0)
-                    debugCircle(node.posWorld, 0.3, rgb(0.5, 0, 0.5, 0.5), this.debugTime);
+                    debugCircle(node.posWorld, 0.3, rgb(0.5, 0, 0.5, 0.5), this.debugTime, false, false);
                 path.splice(i, 1);
                 i = max(1, i - 1);
                 continue;
@@ -437,7 +437,7 @@ class PathFinder
             {
                 // 90° corner. Check the alternative-diagonal cell.
                 if (this.debug && this.debugTime > 0)
-                    debugCircle(node.posWorld, 0.3, rgb(1, 0, 0, 0.5), this.debugTime);
+                    debugCircle(node.posWorld, 0.3, rgb(1, 0, 0, 0.5), this.debugTime, false, false);
 
                 let sx, sy;
                 if (prev.pos.y === node.pos.y && next.pos.x === node.pos.x)
@@ -459,7 +459,7 @@ class PathFinder
                 // middle node to whichever of two candidate cells is closer
                 // to prev-of-prev, and only if the corner cut is also clear.
                 if (this.debug && this.debugTime > 0)
-                    debugCircle(node.posWorld, 0.3, rgb(1, 1, 0, 0.5), this.debugTime);
+                    debugCircle(node.posWorld, 0.3, rgb(1, 1, 0, 0.5), this.debugTime, false, false);
 
                 const prevPrev = i >= 2 ? path[i - 2] : prev;
                 let s1x, s1y, s2x, s2y;
@@ -503,7 +503,7 @@ class PathFinder
             {
                 // Straight line or a 1-cell bump.
                 if (this.debug && this.debugTime > 0)
-                    debugCircle(node.posWorld, 0.3, rgb(0, 1, 0, 0.5), this.debugTime);
+                    debugCircle(node.posWorld, 0.3, rgb(0, 1, 0, 0.5), this.debugTime, false, false);
 
                 if (stepDx === stepDxNext && stepDy === stepDyNext)
                 {
@@ -772,11 +772,11 @@ class PathFinder
         if (this.debug && this.debugTime > 0 && result.length > 0)
         {
             for (let i = 1; i < result.length; ++i)
-                debugLine(result[i - 1], result[i], RED, 0.1, this.debugTime);
+                debugLine(result[i - 1], result[i], RED, 0.1, this.debugTime, false);
             for (const p of result)
-                debugCircle(p, 0.5, rgb(1, 0, 0, 0.3), this.debugTime);
-            debugCircle(result[0], 0.5, rgb(0, 1, 0, 0.5), this.debugTime);
-            debugCircle(result[result.length - 1], 0.5, rgb(0, 1, 0, 0.5), this.debugTime);
+                debugCircle(p, 0.5, rgb(1, 0, 0, 0.3), this.debugTime, false, false);
+            debugCircle(result[0], 0.5, rgb(0, 1, 0, 0.5), this.debugTime, false, false);
+            debugCircle(result[result.length - 1], 0.5, rgb(0, 1, 0, 0.5), this.debugTime, false, false);
         }
 
         return result;

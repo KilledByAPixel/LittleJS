@@ -292,7 +292,7 @@ class EngineObject
                     }
                     engineObjectsCollidePairAdd(this, o);
 
-                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
+                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00', undefined, false);
                     continue;
                 }
                 if (wasOverlapping)
@@ -307,7 +307,7 @@ class EngineObject
                         o.velocity = o.velocity.subtract(velocity);
                     engineObjectsCollidePairAdd(this, o);
 
-                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
+                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00', undefined, false);
                     continue;
                 }
 
@@ -372,7 +372,7 @@ class EngineObject
                         this.velocity.x = o.velocity.x - (this.velocity.x - o.velocity.x) * restitution;
                 }
                 engineObjectsCollidePairAdd(this, o, true);
-                debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
+                debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f', undefined, false);
             }
         }
         if (this.collideLevel)
@@ -401,7 +401,7 @@ class EngineObject
                         if (abs(y - this.pos.y) < maxMove && !tileCollisionTest(vec2(this.pos.x, y), this.size, this))
                         {
                             this.pos.y = y;
-                            debugPhysics && debugRect(this.pos, this.size, '#ff0');
+                            debugPhysics && debugRect(this.pos, this.size, '#ff0', 0, 0, false, false);
                             return;
                         }
 
@@ -436,7 +436,7 @@ class EngineObject
                         // bounce velocity
                         this.velocity.y *= -restitution;
                     }
-                    debugPhysics && debugRect(this.pos, this.size, '#f00');
+                    debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
                 }
             }
         }
@@ -449,7 +449,7 @@ class EngineObject
     render()
     {
         // default object render
-        drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
+        drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor, glEnable, false);
     }
 
     /** Optional hook called during the light system plugin's lightmap pass to draw this object's lightmap contribution. Does nothing by default. */
@@ -667,9 +667,9 @@ class EngineObject
         // show object info for debugging
         const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
         const color = rgb(this.collideLevel?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);
-        debugRect(this.pos, size, color, 0, hasPhysics ? 0 : this.angle, hasPhysics); // collision ignores the angle
+        debugRect(this.pos, size, color, 0, hasPhysics ? 0 : this.angle, hasPhysics, false); // collision ignores the angle
         if (this.parent)
-            debugRect(this.pos, size.scale(.8), rgb(1,1,1,.5), 0, this.angle);
-        this.parent && debugLine(this.pos, this.parent.pos, rgb(1,1,1,.5), .5);
+            debugRect(this.pos, size.scale(.8), rgb(1,1,1,.5), 0, this.angle, false, false);
+        this.parent && debugLine(this.pos, this.parent.pos, rgb(1,1,1,.5), .5, 0, false);
     }
 }

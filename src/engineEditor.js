@@ -2085,7 +2085,7 @@ function editorDrawBox(center, size, color, width)
 {
     const half = size.scale(.5), corners = [vec2(-1, -1), vec2(1, -1), vec2(1, 1), vec2(-1, 1)]
         .map((c)=> center.add(c.multiply(half)));
-    corners.forEach((c, i)=> drawLine(c, corners[(i + 1) % 4], width, color));
+    corners.forEach((c, i)=> drawLine(c, corners[(i + 1) % 4], width, color, undefined, 0, glEnable, false));
 }
 
 // an object type's icon, or a box with its name when it has none
@@ -2093,10 +2093,10 @@ function editorDrawObjectIcon(name, pos, size, alpha)
 {
     const tileInfo = objectLayersTypes.get(name)?.tileInfo;
     if (tileInfo)
-        drawTile(pos, size, tileInfo, hsl(0, 0, 1, alpha));
+        drawTile(pos, size, tileInfo, hsl(0, 0, 1, alpha), 0, undefined, undefined, glEnable, false);
     else
     {
-        drawRect(pos, size, hsl(0, 0, 0, alpha * .6));
+        drawRect(pos, size, hsl(0, 0, 0, alpha * .6), undefined, undefined, false);
         drawText(name ?? '?', pos, min(size.x, size.y) * .3, hsl(0, 0, 1, alpha));
     }
 }
@@ -2367,7 +2367,7 @@ function editorRender()
         const t = editorGidToTile(source.data[x + (height - 1 - y) * width]);
         if (t && live.getData(vec2(x, y)).tile === undefined)
             drawTile(live.pos.add(vec2(x + .5, y + .5)), vec2(1), editorTileInfo(live, t.tile), ghost,
-                t.direction * PI/2, t.mirror);
+                t.direction * PI/2, t.mirror, undefined, glEnable, false);
     }
 
     // a grid once the cells are big enough to see one
@@ -2375,16 +2375,16 @@ function editorRender()
     if (editorGrid && editorCameraScale >= 12)
     {
         for (let x = x0; x <= x1; ++x)
-            drawLine(pos.add(vec2(x, y0)), pos.add(vec2(x, y1)), thin, line);
+            drawLine(pos.add(vec2(x, y0)), pos.add(vec2(x, y1)), thin, line, undefined, 0, glEnable, false);
         for (let y = y0; y <= y1; ++y)
-            drawLine(pos.add(vec2(x0, y)), pos.add(vec2(x1, y)), thin, line);
+            drawLine(pos.add(vec2(x0, y)), pos.add(vec2(x1, y)), thin, line, undefined, 0, glEnable, false);
     }
 
     // the layer's edge
     const outline = (a, b, color, width)=>
     {
         const corners = [vec2(a.x, a.y), vec2(b.x, a.y), vec2(b.x, b.y), vec2(a.x, b.y)];
-        corners.forEach((c, i)=> drawLine(pos.add(c), pos.add(corners[(i + 1) % 4]), width, color));
+        corners.forEach((c, i)=> drawLine(pos.add(c), pos.add(corners[(i + 1) % 4]), width, color, undefined, 0, glEnable, false));
     };
     outline(vec2(), size, hsl(.55, 1, .6, .8), thin * 2);
 
@@ -2394,7 +2394,7 @@ function editorRender()
     const last = editorLastPlaced, shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
     if (shift && editorHover && last?.layer === layer && !mouseIsDown(0))
         drawLine(live.pos.add(last.pos).add(vec2(.5)), live.pos.add(editorHover).add(vec2(.5)), thin * 2,
-            hsl(.55, 1, .6, .6));
+            hsl(.55, 1, .6, .6), undefined, 0, glEnable, false);
 
     // the brush where it would paint, the Erase brush's cells in red
     if (editorHover)
@@ -2406,11 +2406,11 @@ function editorRender()
             const gid = grid[x + y * w], t = editorGidToTile(gid);
             const center = live.pos.add(editorHover).add(vec2(x + .5, y + .5));
             if (t)
-                drawTile(center, vec2(1), editorTileInfo(live, t.tile), hsl(0, 0, 1, .7), t.direction * PI/2, t.mirror);
+                drawTile(center, vec2(1), editorTileInfo(live, t.tile), hsl(0, 0, 1, .7), t.direction * PI/2, t.mirror, undefined, glEnable, false);
             else if (gid === 0)
-                drawRect(center, vec2(1), hsl(0, 1, .5, .3));
+                drawRect(center, vec2(1), hsl(0, 1, .5, .3), undefined, undefined, false);
         }
-        drawRect(live.pos.add(editorHover).add(vec2(w / 2, h / 2)), vec2(w, h), hsl(.55, 1, .6, .25));
+        drawRect(live.pos.add(editorHover).add(vec2(w / 2, h / 2)), vec2(w, h), hsl(.55, 1, .6, .25), undefined, undefined, false);
     }
     editorObjectLayer && editorRenderObjects(thin);
 }

@@ -237,7 +237,7 @@ class TileSlice
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
      *  @param {boolean} [screenSpace] - Are pos and size in screen space?
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
-    draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=false, context)
+    draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
     {
         if (screenSpace) // with the screen space defaults for the border and spacing
             return this.drawScreen(pos, size, color, additiveColor, angle, useWebGL, context);
@@ -320,7 +320,7 @@ function drawSliceSnapped(pos, size, borderSize, pieceTile, color, additiveColor
  *  @param {boolean} [screenSpace] - Use screen space coordinates
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
-function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
+function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     // build local-space points and let drawPoly apply pos/angle so screen space works
     const points = getCrescentPoints(vec2(), size, percent, 0, invert);

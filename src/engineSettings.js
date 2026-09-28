@@ -144,6 +144,14 @@ let engineManualStep = false;
  *  @memberof Settings */
 let glEnable = true;
 
+/** Draw in screen space by default: what the screenSpace parameter of the draw and debug functions defaults to, so a
+ *  heads up display, or a 3D game that only draws 2D on the screen, can turn it on and leave the flag out; the engine
+ *  says its own space when it draws, so objects, tile layers and particles stay in world space either way
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let drawScreenSpace = false;
+
 /** How many sided poly to use when drawing circles and ellipses with WebGL
  *  @type {number}
  *  @default
@@ -543,6 +551,11 @@ function setEngineManualStep(enable=true)
         engineScheduleFrame();
     }
 }
+
+/** Set whether the draw and debug functions draw in screen space when a call leaves screenSpace out
+ *  @param {boolean} screenSpace
+ *  @memberof Settings */
+function setDrawScreenSpace(screenSpace) { drawScreenSpace = screenSpace; }
 
 /** Set if WebGL rendering is enabled
  *  @param {boolean} enable

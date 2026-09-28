@@ -101,7 +101,7 @@ function LOG(...output) { console.log(...output); }
  *  @param {boolean} [fill]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, screenSpace=false)
+function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, screenSpace=drawScreenSpace)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -125,7 +125,7 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, s
  *  @param {boolean} [fill]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screenSpace=false)
+function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screenSpace=drawScreenSpace)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isArray(points), 'points must be an array');
@@ -150,7 +150,7 @@ function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screen
  *  @param {boolean} [fill]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=false)
+function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=drawScreenSpace)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size), 'size must be a number');
@@ -172,7 +172,7 @@ function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=f
  *  @param {number} [angle]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugPoint(pos, color, time, angle, screenSpace=false)
+function debugPoint(pos, color, time, angle, screenSpace=drawScreenSpace)
 { debugRect(pos, undefined, color, time, angle, false, screenSpace); }
 
 /** Draw a debug line in world space
@@ -183,7 +183,7 @@ function debugPoint(pos, color, time, angle, screenSpace=false)
  *  @param {number} [time]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugLine(posA, posB, color, width=.1, time=0, screenSpace=false)
+function debugLine(posA, posB, color, width=.1, time=0, screenSpace=drawScreenSpace)
 {
     ASSERT(isVector2(posA), 'posA must be a vec2');
     ASSERT(isVector2(posB), 'posB must be a vec2');
@@ -205,7 +205,7 @@ function debugLine(posA, posB, color, width=.1, time=0, screenSpace=false)
  *  @param {number} [time]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=false)
+function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=drawScreenSpace)
 {
     ASSERT(isVector2(posA), 'posA must be a vec2');
     ASSERT(isVector2(posB), 'posB must be a vec2');
@@ -233,7 +233,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=false)
  *  @param {string} [font]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace', screenSpace=false)
+function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace', screenSpace=drawScreenSpace)
 {
     ASSERT(isStringLike(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -396,9 +396,9 @@ function debugTileLayers(layers)
     {
         const isCollision = layer instanceof TileCollisionLayer, size = layer.size, pos = layer.pos;
         const color = isCollision ? '#f80' : '#0cf';
-        debugRect(pos.add(size.scale(.5)), size, color);
+        debugRect(pos.add(size.scale(.5)), size, color, 0, 0, false, false);
         const label = 'layer ' + (layers.indexOf(layer) + 1) + ', ' + size.x + 'x' + size.y + ', renderOrder ' + layer.renderOrder + (isCollision ? ', collision' : '');
-        debugText(label, pos.add(vec2(size.x / 2, size.y + .4)), .6, color);
+        debugText(label, pos.add(vec2(size.x / 2, size.y + .4)), .6, color, 0, 0, 'monospace', false);
         if (!isCollision) continue;
 
         const x0 = max(0, floor(cameraPos.x - reach - pos.x)), x1 = min(size.x, ceil(cameraPos.x + reach - pos.x));
@@ -409,8 +409,8 @@ function debugTileLayers(layers)
             const data = layer.collisionData[y * size.x + x];
             if (!data) continue;
             const center = vec2(pos.x + x + .5, pos.y + y + .5), tint = hsl(data * .17 % 1, 1, .6, .8);
-            debugRect(center, vec2(.9), tint);
-            showValues && debugText(data, center, .5, tint);
+            debugRect(center, vec2(.9), tint, 0, 0, false, false);
+            showValues && debugText(data, center, .5, tint, 0, 0, 'monospace', false);
         }
     }
 }
@@ -477,9 +477,9 @@ function debugRender()
             const stickScale = 1;
             const buttonScale = .2;
             const cornerPos = cameraPos.add(vec2(-stickScale*2, ((gamepadConnectedCount-1)/2-i)*stickScale*3));
-            debugText(i, cornerPos.add(vec2(-stickScale, stickScale)), 1);
+            debugText(i, cornerPos.add(vec2(-stickScale, stickScale)), 1, WHITE, 0, 0, 'monospace', false);
             if (i === gamepadPrimary)
-                debugText('Main', cornerPos.add(vec2(-stickScale*2, 0)),1, '#0f0');
+                debugText('Main', cornerPos.add(vec2(-stickScale*2, 0)),1, '#0f0', 0, 0, 'monospace', false);
 
             // read analog sticks
             const stickCount = gamepadStickCount(i); // none after an inputClear this frame
@@ -490,10 +490,10 @@ function debugRender()
                 const stick = gamepadStick(j, i);
                 const drawPos = cornerPos.add(vec2(j*stickScale*2, 0));
                 const stickPos = drawPos.add(stick.scale(stickScale));
-                debugCircle(drawPos, stickScale*2, '#fff7',0,true);
-                debugLine(drawPos, stickPos, '#f00');
-                debugText(j, drawPos, .3);
-                debugPoint(stickPos, '#f00');
+                debugCircle(drawPos, stickScale*2, '#fff7',0,true, false);
+                debugLine(drawPos, stickPos, '#f00', .1, 0, false);
+                debugText(j, drawPos, .3, WHITE, 0, 0, 'monospace', false);
+                debugPoint(stickPos, '#f00', undefined, undefined, false);
             }
 
             const buttonCount = inputData[i+1].length;
@@ -501,8 +501,8 @@ function debugRender()
             {
                 const drawPos = cornerPos.add(vec2(j*buttonScale*2, -stickScale-buttonScale*2));
                 const pressed = gamepadIsDown(j, i);
-                debugCircle(drawPos, buttonScale*2, pressed ? '#f00' : '#fff7', 0, true);
-                debugText(j, drawPos, .3);
+                debugCircle(drawPos, buttonScale*2, pressed ? '#f00' : '#fff7', 0, true, false);
+                debugText(j, drawPos, .3, WHITE, 0, 0, 'monospace', false);
             }
         }
     }
@@ -512,7 +512,7 @@ function debugRender()
     {
         // draw red rectangle around screen
         const cameraSize = getCameraSize();
-        debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008');
+        debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008', 0, 0, false, false);
 
         // mouse pick
         let bestDistance = Infinity;
@@ -539,7 +539,7 @@ function debugRender()
         if (tileCollisionTest(mousePos))
         {
             // show the collision tile under the mouse, on its layer's own grid
-            drawRect(debugTileCellCenter(mousePos), vec2(1), rgb(1,1,0,.5), 0, false);
+            drawRect(debugTileCellCenter(mousePos), vec2(1), rgb(1,1,0,.5), 0, false, false);
         }
     }
 
@@ -623,8 +623,8 @@ function debugRender()
     if (debugObject)
     {
         const raycastHitPos = tileCollisionRaycast(debugObject.pos, mousePos);
-        raycastHitPos && drawRect(debugTileCellCenter(raycastHitPos), vec2(1), rgb(0,1,1,.3), 0, false);
-        drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5), undefined, undefined, false);
+        raycastHitPos && drawRect(debugTileCellCenter(raycastHitPos), vec2(1), rgb(0,1,1,.3), 0, false, false);
+        drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5), undefined, undefined, false, false);
 
         let debugText = 'mouse pos = ' + mousePos;
         if (tileCollisionLayers.length)

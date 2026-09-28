@@ -609,6 +609,13 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let glEnable: boolean;
+    /** Draw in screen space by default: what the screenSpace parameter of the draw and debug functions defaults to, so a
+     *  heads up display, or a 3D game that only draws 2D on the screen, can turn it on and leave the flag out; the engine
+     *  says its own space when it draws, so objects, tile layers and particles stay in world space either way
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let drawScreenSpace: boolean;
     /** How many sided poly to use when drawing circles and ellipses with WebGL
      *  @type {number}
      *  @default
@@ -858,6 +865,10 @@ declare module "littlejsengine" {
      *  @param {boolean} enable
      *  @memberof Settings */
     export function setGLEnable(enable: boolean): void;
+    /** Set whether the draw and debug functions draw in screen space when a call leaves screenSpace out
+     *  @param {boolean} screenSpace
+     *  @memberof Settings */
+    export function setDrawScreenSpace(screenSpace: boolean): void;
     /** Set default size of tiles in pixels
      *  @param {Vector2} size
      *  @memberof Settings */
@@ -2207,7 +2218,7 @@ declare module "littlejsengine" {
      *  @param {boolean}  [mirror] - Is image flipped along the Y axis?
      *  @param {Color}    [additiveColor] - Additive color to be applied if any
      *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
-     *  @param {boolean}  [screenSpace=false] - Are the pos and size are in screen space?
+     *  @param {boolean}  [screenSpace=drawScreenSpace] - Are the pos and size are in screen space?
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
      *  @memberof Draw */
     export function drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2243,7 +2254,7 @@ declare module "littlejsengine" {
      *  @param {number}   [angle=0] - Angle to rotate by
      *  @param {Color}    [additiveColor] - Additive color to be applied if any
      *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
-     *  @param {boolean}  [screenSpace=false] - Are pos and size in screen space?
+     *  @param {boolean}  [screenSpace=drawScreenSpace] - Are pos and size in screen space?
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
      *  @memberof Draw */
     export function drawTextureWrapped(pos: Vector2, size: Vector2, wrapCount: Vector2, texture?: TextureInfo | number, color?: Color, angle?: number, additiveColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2362,7 +2373,7 @@ declare module "littlejsengine" {
      *  @param {number}   [angle]
      *  @param {boolean}  [mirror]
      *  @param {Canvas2DDrawFunction} [drawFunction] - Needed, marked optional only because the ones before it are
-     *  @param {boolean}  [screenSpace=false]
+     *  @param {boolean}  [screenSpace=drawScreenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
     export function drawCanvas2D(pos: Vector2, size: Vector2, angle?: number, mirror?: boolean, drawFunction?: Canvas2DDrawFunction, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;

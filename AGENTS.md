@@ -207,6 +207,7 @@ drawEllipse(pos, size, color)           // filled ellipse
 - **An instance divisor stays on a slot only while its array is enabled** - in Firefox, a plain draw that reads a constant attribute through a slot whose divisor is set makes the next instanced draw on that slot read garbage; Chrome does not care, so test the 3D plugin in Firefox too. `render3DDrawInstanced` sets the divisors with the arrays and clears both after
 - **Canvas2D and WebGL line ends differ on purpose** - the main canvas strokes with round caps and joins (set in `engineUpdateCanvas`), which look better, suit text, and stop sharp corners spiking far out; WebGL outlines use square ends and mitered joins for speed. Don't "fix" either to match the other
 - **A Shader on a 2D untextured draw does nothing** - `drawRect` carries its color in the additive slot with a zero tint, so the snippet's output multiplies away; draw a white tile instead
+- **Engine and plugin draws pass screenSpace themselves** - the draw and debug functions default it to the game's `drawScreenSpace` setting, so a call in `src/` or `plugins/` that leaves it out would move to the screen when a game turns the setting on; pass `false` for world space, and [test/screenSpace.test.mjs](test/screenSpace.test.mjs) fails on a call that leaves it out
 
 ## Developer workflows
 

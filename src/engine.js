@@ -754,11 +754,11 @@ function engineObjectsRaycast(start, end, objects=engineObjects)
     {
         if (o.collideRaycast && !o.destroyed && isIntersecting(start, end, o.pos, o.size))
         {
-            debugRaycast && debugRect(o.pos, o.size, '#f00');
+            debugRaycast && debugRect(o.pos, o.size, '#f00', 0, 0, false, false);
             hitObjects.push(o);
         }
     }
 
-    debugRaycast && debugLine(start, end, hitObjects.length ? '#f00' : '#00f', .02);
+    debugRaycast && debugLine(start, end, hitObjects.length ? '#f00' : '#00f', .02, 0, false);
     return hitObjects;
 }

@@ -377,13 +377,13 @@ class Sound
         if (debug && debugSound && pos)
         {
             // visualize where positioned sounds play and their falloff range
-            debugCircle(pos, .5, '#0ff', .5, true);
+            debugCircle(pos, .5, '#0ff', .5, true, false);
             if (this.range)
             {
-                debugCircle(pos, 2*this.range, '#0ff', .5);            // silent radius
-                debugCircle(pos, 2*this.range*this.taper, '#0ff', .5); // full volume radius
+                debugCircle(pos, 2*this.range, '#0ff', .5, false, false);            // silent radius
+                debugCircle(pos, 2*this.range*this.taper, '#0ff', .5, false, false); // full volume radius
             }
-            debugText('vol '+volume.toFixed(2)+' pitch '+rate.toFixed(2), pos, .5, '#0ff', .5);
+            debugText('vol '+volume.toFixed(2)+' pitch '+rate.toFixed(2), pos, .5, '#0ff', .5, 0, 'monospace', false);
         }
 
         return instance;

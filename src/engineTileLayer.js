@@ -435,7 +435,7 @@ class CanvasLayer extends EngineObject
     // Render the layer, called automatically by the engine
     render()
     {
-        this.draw(this.pos, this.size, this.color, this.angle, this.mirror, this.additiveColor);
+        this.draw(this.pos, this.size, this.color, this.angle, this.mirror, this.additiveColor, false);
     }
 
     /** Draw this canvas layer centered in world space
@@ -447,7 +447,7 @@ class CanvasLayer extends EngineObject
     *  @param {Color}   [additiveColor] - Additive color to be applied if any
     *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to */
-    draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=false, context)
+    draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=drawScreenSpace, context)
     {
         // the canvas may have been resized since, updateWebGL only refreshes the size for WebGL
         const t = this.textureInfo, c = this.canvas;
@@ -593,7 +593,7 @@ class TileLayer extends CanvasLayer
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
-        this.draw(pos, size, this.color, this.angle, this.mirror, this.additiveColor);
+        this.draw(pos, size, this.color, this.angle, this.mirror, this.additiveColor, false);
     }
 
     /** Called after this layer is redrawn, does nothing by default */
@@ -736,7 +736,7 @@ class TileLayer extends CanvasLayer
     angle=0, mirror, additiveColor)
     {
         const drawPos = pos.add(size.scale(.5));
-        drawTile(drawPos, size, tileInfo, color, angle, mirror, additiveColor, this.isUsingWebGL);
+        drawTile(drawPos, size, tileInfo, color, angle, mirror, additiveColor, this.isUsingWebGL, false);
     }
 
     /** Draw a rectangle in layer space
@@ -872,7 +872,7 @@ class TileCollisionLayer extends TileLayer
             const tileInfo = new TileInfo(vec2(x*cellPixels.x, textureHeight - (y+1)*cellPixels.y),
                 vec2(count*cellPixels.x, cellPixels.y), this.textureInfo, 0, 0);
             const pos = vec2(this.pos.x + (x + count/2)*cellWorld.x, this.pos.y + (y + .5)*cellWorld.y);
-            drawTile(pos, vec2(count*cellWorld.x, cellWorld.y), tileInfo, this.color, 0, false, undefined, useWebGL);
+            drawTile(pos, vec2(count*cellWorld.x, cellWorld.y), tileInfo, this.color, 0, false, undefined, useWebGL, false);
             x = end;
         }
     }
@@ -985,11 +985,11 @@ class TileCollisionLayer extends TileLayer
         if (debugRaycast && hitPos)
         {
             const tilePos = hitPos.floor().add(vec2(.5));
-            debugRect(tilePos, vec2(1), '#f008');
-            debugLine(posStart, posEnd, '#00f', .02);
-            debugLine(posStart, hitPos, '#f00', .02);
-            debugPoint(hitPos, '#0f0');
-            normal && debugLine(hitPos, hitPos.add(normal), '#ff0', .02);
+            debugRect(tilePos, vec2(1), '#f008', 0, 0, false, false);
+            debugLine(posStart, posEnd, '#00f', .02, 0, false);
+            debugLine(posStart, hitPos, '#f00', .02, 0, false);
+            debugPoint(hitPos, '#0f0', undefined, undefined, false);
+            normal && debugLine(hitPos, hitPos.add(normal), '#ff0', .02, 0, false);
         }
         return hitPos;
     }

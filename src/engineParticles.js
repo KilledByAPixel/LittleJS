@@ -251,9 +251,9 @@ class ParticleEmitter extends EngineObject
         {
             // show emitter bounds
             if (this.emitCircle)
-                debugCircle(this.pos, this.emitSize.x, '#0f0');
+                debugCircle(this.pos, this.emitSize.x, '#0f0', 0, false, false);
             else
-                debugRect(this.pos, this.emitSize, '#0f0', 0, this.angle);
+                debugRect(this.pos, this.emitSize, '#0f0', 0, this.angle, false, false);
         }
     }
 
@@ -507,7 +507,7 @@ class Particle
                     this.velocity.y *= -hitRestitution;
                     this.velocity.x *= hitFriction;
                 }
-                debugPhysics && debugRect(this.pos, this.size, '#f00');
+                debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
             }
         }
 
@@ -577,8 +577,8 @@ class Particle
                 angle = atan2(velocity.x, velocity.y);
             }
         }
-        drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
+        drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror, undefined, glEnable, false);
         additive && setAdditiveBlendMode(false);
-        debugParticles && debugRect(pos, size, '#f005', 0, angle);
+        debugParticles && debugRect(pos, size, '#f005', 0, angle, false, false);
     }
 }

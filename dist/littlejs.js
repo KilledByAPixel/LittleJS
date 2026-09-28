@@ -757,12 +757,12 @@ function engineObjectsRaycast(start, end, objects=engineObjects)
     {
         if (o.collideRaycast && !o.destroyed && isIntersecting(start, end, o.pos, o.size))
         {
-            debugRaycast && debugRect(o.pos, o.size, '#f00');
+            debugRaycast && debugRect(o.pos, o.size, '#f00', 0, 0, false, false);
             hitObjects.push(o);
         }
     }
 
-    debugRaycast && debugLine(start, end, hitObjects.length ? '#f00' : '#00f', .02);
+    debugRaycast && debugLine(start, end, hitObjects.length ? '#f00' : '#00f', .02, 0, false);
     return hitObjects;
 }
 /**
@@ -866,7 +866,7 @@ function LOG(...output) { console.log(...output); }
  *  @param {boolean} [fill]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, screenSpace=false)
+function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, screenSpace=drawScreenSpace)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -890,7 +890,7 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, s
  *  @param {boolean} [fill]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screenSpace=false)
+function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screenSpace=drawScreenSpace)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isArray(points), 'points must be an array');
@@ -915,7 +915,7 @@ function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screen
  *  @param {boolean} [fill]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=false)
+function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=drawScreenSpace)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size), 'size must be a number');
@@ -937,7 +937,7 @@ function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=f
  *  @param {number} [angle]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugPoint(pos, color, time, angle, screenSpace=false)
+function debugPoint(pos, color, time, angle, screenSpace=drawScreenSpace)
 { debugRect(pos, undefined, color, time, angle, false, screenSpace); }
 
 /** Draw a debug line in world space
@@ -948,7 +948,7 @@ function debugPoint(pos, color, time, angle, screenSpace=false)
  *  @param {number} [time]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugLine(posA, posB, color, width=.1, time=0, screenSpace=false)
+function debugLine(posA, posB, color, width=.1, time=0, screenSpace=drawScreenSpace)
 {
     ASSERT(isVector2(posA), 'posA must be a vec2');
     ASSERT(isVector2(posB), 'posB must be a vec2');
@@ -970,7 +970,7 @@ function debugLine(posA, posB, color, width=.1, time=0, screenSpace=false)
  *  @param {number} [time]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=false)
+function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=drawScreenSpace)
 {
     ASSERT(isVector2(posA), 'posA must be a vec2');
     ASSERT(isVector2(posB), 'posB must be a vec2');
@@ -998,7 +998,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=false)
  *  @param {string} [font]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace', screenSpace=false)
+function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace', screenSpace=drawScreenSpace)
 {
     ASSERT(isStringLike(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -1161,9 +1161,9 @@ function debugTileLayers(layers)
     {
         const isCollision = layer instanceof TileCollisionLayer, size = layer.size, pos = layer.pos;
         const color = isCollision ? '#f80' : '#0cf';
-        debugRect(pos.add(size.scale(.5)), size, color);
+        debugRect(pos.add(size.scale(.5)), size, color, 0, 0, false, false);
         const label = 'layer ' + (layers.indexOf(layer) + 1) + ', ' + size.x + 'x' + size.y + ', renderOrder ' + layer.renderOrder + (isCollision ? ', collision' : '');
-        debugText(label, pos.add(vec2(size.x / 2, size.y + .4)), .6, color);
+        debugText(label, pos.add(vec2(size.x / 2, size.y + .4)), .6, color, 0, 0, 'monospace', false);
         if (!isCollision) continue;
 
         const x0 = max(0, floor(cameraPos.x - reach - pos.x)), x1 = min(size.x, ceil(cameraPos.x + reach - pos.x));
@@ -1174,8 +1174,8 @@ function debugTileLayers(layers)
             const data = layer.collisionData[y * size.x + x];
             if (!data) continue;
             const center = vec2(pos.x + x + .5, pos.y + y + .5), tint = hsl(data * .17 % 1, 1, .6, .8);
-            debugRect(center, vec2(.9), tint);
-            showValues && debugText(data, center, .5, tint);
+            debugRect(center, vec2(.9), tint, 0, 0, false, false);
+            showValues && debugText(data, center, .5, tint, 0, 0, 'monospace', false);
         }
     }
 }
@@ -1242,9 +1242,9 @@ function debugRender()
             const stickScale = 1;
             const buttonScale = .2;
             const cornerPos = cameraPos.add(vec2(-stickScale*2, ((gamepadConnectedCount-1)/2-i)*stickScale*3));
-            debugText(i, cornerPos.add(vec2(-stickScale, stickScale)), 1);
+            debugText(i, cornerPos.add(vec2(-stickScale, stickScale)), 1, WHITE, 0, 0, 'monospace', false);
             if (i === gamepadPrimary)
-                debugText('Main', cornerPos.add(vec2(-stickScale*2, 0)),1, '#0f0');
+                debugText('Main', cornerPos.add(vec2(-stickScale*2, 0)),1, '#0f0', 0, 0, 'monospace', false);
 
             // read analog sticks
             const stickCount = gamepadStickCount(i); // none after an inputClear this frame
@@ -1255,10 +1255,10 @@ function debugRender()
                 const stick = gamepadStick(j, i);
                 const drawPos = cornerPos.add(vec2(j*stickScale*2, 0));
                 const stickPos = drawPos.add(stick.scale(stickScale));
-                debugCircle(drawPos, stickScale*2, '#fff7',0,true);
-                debugLine(drawPos, stickPos, '#f00');
-                debugText(j, drawPos, .3);
-                debugPoint(stickPos, '#f00');
+                debugCircle(drawPos, stickScale*2, '#fff7',0,true, false);
+                debugLine(drawPos, stickPos, '#f00', .1, 0, false);
+                debugText(j, drawPos, .3, WHITE, 0, 0, 'monospace', false);
+                debugPoint(stickPos, '#f00', undefined, undefined, false);
             }
 
             const buttonCount = inputData[i+1].length;
@@ -1266,8 +1266,8 @@ function debugRender()
             {
                 const drawPos = cornerPos.add(vec2(j*buttonScale*2, -stickScale-buttonScale*2));
                 const pressed = gamepadIsDown(j, i);
-                debugCircle(drawPos, buttonScale*2, pressed ? '#f00' : '#fff7', 0, true);
-                debugText(j, drawPos, .3);
+                debugCircle(drawPos, buttonScale*2, pressed ? '#f00' : '#fff7', 0, true, false);
+                debugText(j, drawPos, .3, WHITE, 0, 0, 'monospace', false);
             }
         }
     }
@@ -1277,7 +1277,7 @@ function debugRender()
     {
         // draw red rectangle around screen
         const cameraSize = getCameraSize();
-        debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008');
+        debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008', 0, 0, false, false);
 
         // mouse pick
         let bestDistance = Infinity;
@@ -1304,7 +1304,7 @@ function debugRender()
         if (tileCollisionTest(mousePos))
         {
             // show the collision tile under the mouse, on its layer's own grid
-            drawRect(debugTileCellCenter(mousePos), vec2(1), rgb(1,1,0,.5), 0, false);
+            drawRect(debugTileCellCenter(mousePos), vec2(1), rgb(1,1,0,.5), 0, false, false);
         }
     }
 
@@ -1388,8 +1388,8 @@ function debugRender()
     if (debugObject)
     {
         const raycastHitPos = tileCollisionRaycast(debugObject.pos, mousePos);
-        raycastHitPos && drawRect(debugTileCellCenter(raycastHitPos), vec2(1), rgb(0,1,1,.3), 0, false);
-        drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5), undefined, undefined, false);
+        raycastHitPos && drawRect(debugTileCellCenter(raycastHitPos), vec2(1), rgb(0,1,1,.3), 0, false, false);
+        drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5), undefined, undefined, false, false);
 
         let debugText = 'mouse pos = ' + mousePos;
         if (tileCollisionLayers.length)
@@ -3383,6 +3383,14 @@ let engineManualStep = false;
  *  @memberof Settings */
 let glEnable = true;
 
+/** Draw in screen space by default: what the screenSpace parameter of the draw and debug functions defaults to, so a
+ *  heads up display, or a 3D game that only draws 2D on the screen, can turn it on and leave the flag out; the engine
+ *  says its own space when it draws, so objects, tile layers and particles stay in world space either way
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let drawScreenSpace = false;
+
 /** How many sided poly to use when drawing circles and ellipses with WebGL
  *  @type {number}
  *  @default
@@ -3782,6 +3790,11 @@ function setEngineManualStep(enable=true)
         engineScheduleFrame();
     }
 }
+
+/** Set whether the draw and debug functions draw in screen space when a call leaves screenSpace out
+ *  @param {boolean} screenSpace
+ *  @memberof Settings */
+function setDrawScreenSpace(screenSpace) { drawScreenSpace = screenSpace; }
 
 /** Set if WebGL rendering is enabled
  *  @param {boolean} enable
@@ -4321,7 +4334,7 @@ class EngineObject
                     }
                     engineObjectsCollidePairAdd(this, o);
 
-                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
+                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00', undefined, false);
                     continue;
                 }
                 if (wasOverlapping)
@@ -4336,7 +4349,7 @@ class EngineObject
                         o.velocity = o.velocity.subtract(velocity);
                     engineObjectsCollidePairAdd(this, o);
 
-                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
+                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00', undefined, false);
                     continue;
                 }
 
@@ -4401,7 +4414,7 @@ class EngineObject
                         this.velocity.x = o.velocity.x - (this.velocity.x - o.velocity.x) * restitution;
                 }
                 engineObjectsCollidePairAdd(this, o, true);
-                debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
+                debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f', undefined, false);
             }
         }
         if (this.collideLevel)
@@ -4430,7 +4443,7 @@ class EngineObject
                         if (abs(y - this.pos.y) < maxMove && !tileCollisionTest(vec2(this.pos.x, y), this.size, this))
                         {
                             this.pos.y = y;
-                            debugPhysics && debugRect(this.pos, this.size, '#ff0');
+                            debugPhysics && debugRect(this.pos, this.size, '#ff0', 0, 0, false, false);
                             return;
                         }
 
@@ -4465,7 +4478,7 @@ class EngineObject
                         // bounce velocity
                         this.velocity.y *= -restitution;
                     }
-                    debugPhysics && debugRect(this.pos, this.size, '#f00');
+                    debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
                 }
             }
         }
@@ -4478,7 +4491,7 @@ class EngineObject
     render()
     {
         // default object render
-        drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
+        drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor, glEnable, false);
     }
 
     /** Optional hook called during the light system plugin's lightmap pass to draw this object's lightmap contribution. Does nothing by default. */
@@ -4696,10 +4709,10 @@ class EngineObject
         // show object info for debugging
         const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
         const color = rgb(this.collideLevel?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);
-        debugRect(this.pos, size, color, 0, hasPhysics ? 0 : this.angle, hasPhysics); // collision ignores the angle
+        debugRect(this.pos, size, color, 0, hasPhysics ? 0 : this.angle, hasPhysics, false); // collision ignores the angle
         if (this.parent)
-            debugRect(this.pos, size.scale(.8), rgb(1,1,1,.5), 0, this.angle);
-        this.parent && debugLine(this.pos, this.parent.pos, rgb(1,1,1,.5), .5);
+            debugRect(this.pos, size.scale(.8), rgb(1,1,1,.5), 0, this.angle, false, false);
+        this.parent && debugLine(this.pos, this.parent.pos, rgb(1,1,1,.5), .5, 0, false);
     }
 }
 /**
@@ -5164,11 +5177,11 @@ class Shader
  *  @param {boolean}  [mirror] - Is image flipped along the Y axis?
  *  @param {Color}    [additiveColor] - Additive color to be applied if any
  *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
- *  @param {boolean}  [screenSpace=false] - Are the pos and size are in screen space?
+ *  @param {boolean}  [screenSpace=drawScreenSpace] - Are the pos and size are in screen space?
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
-    angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace=false, context)
+    angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -5275,7 +5288,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=false, context)
+function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -5339,11 +5352,11 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, an
  *  @param {number}   [angle=0] - Angle to rotate by
  *  @param {Color}    [additiveColor] - Additive color to be applied if any
  *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
- *  @param {boolean}  [screenSpace=false] - Are pos and size in screen space?
+ *  @param {boolean}  [screenSpace=drawScreenSpace] - Are pos and size in screen space?
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
-    angle=0, additiveColor, useWebGL=glEnable, screenSpace=false, context)
+    angle=0, additiveColor, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -5433,7 +5446,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context)
+function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isArray(points), 'points must be an array');
     ASSERT(isNumber(width), 'width must be a number');
@@ -5490,7 +5503,7 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context)
+function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
@@ -5514,7 +5527,7 @@ function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWeb
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0, useWebGL=glEnable, screenSpace=false, context)
+function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isVector2(size), 'size must be a vec2');
     ASSERT(isNumber(sides), 'sides must be a number');
@@ -5543,7 +5556,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
+function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context=undefined)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isArray(points), 'points must be an array');
@@ -5603,7 +5616,7 @@ const drawEllipseRings = new Map;
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
+function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -5677,7 +5690,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
+function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isNumber(size), 'size must be a number');
     drawEllipse(pos, vec2(size), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context);
@@ -5697,7 +5710,7 @@ let drawEllipseGradientOffset = 0;
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=false, context)
+function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -5773,7 +5786,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHITE, useWebGL=glEnable, screenSpace=false, context)
+function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHITE, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isNumber(size), 'size must be a number');
     drawEllipseGradient(pos, vec2(size), colorInner, colorOuter, 0, useWebGL, screenSpace, context);
@@ -5794,10 +5807,10 @@ function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHIT
  *  @param {number}   [angle]
  *  @param {boolean}  [mirror]
  *  @param {Canvas2DDrawFunction} [drawFunction] - Needed, marked optional only because the ones before it are
- *  @param {boolean}  [screenSpace=false]
+ *  @param {boolean}  [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, context=drawContext)
+function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=drawScreenSpace, context=drawContext)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -8309,13 +8322,13 @@ class Sound
         if (debug && debugSound && pos)
         {
             // visualize where positioned sounds play and their falloff range
-            debugCircle(pos, .5, '#0ff', .5, true);
+            debugCircle(pos, .5, '#0ff', .5, true, false);
             if (this.range)
             {
-                debugCircle(pos, 2*this.range, '#0ff', .5);            // silent radius
-                debugCircle(pos, 2*this.range*this.taper, '#0ff', .5); // full volume radius
+                debugCircle(pos, 2*this.range, '#0ff', .5, false, false);            // silent radius
+                debugCircle(pos, 2*this.range*this.taper, '#0ff', .5, false, false); // full volume radius
             }
-            debugText('vol '+volume.toFixed(2)+' pitch '+rate.toFixed(2), pos, .5, '#0ff', .5);
+            debugText('vol '+volume.toFixed(2)+' pitch '+rate.toFixed(2), pos, .5, '#0ff', .5, 0, 'monospace', false);
         }
 
         return instance;
@@ -9388,7 +9401,7 @@ class CanvasLayer extends EngineObject
     // Render the layer, called automatically by the engine
     render()
     {
-        this.draw(this.pos, this.size, this.color, this.angle, this.mirror, this.additiveColor);
+        this.draw(this.pos, this.size, this.color, this.angle, this.mirror, this.additiveColor, false);
     }
 
     /** Draw this canvas layer centered in world space
@@ -9400,7 +9413,7 @@ class CanvasLayer extends EngineObject
     *  @param {Color}   [additiveColor] - Additive color to be applied if any
     *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to */
-    draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=false, context)
+    draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=drawScreenSpace, context)
     {
         // the canvas may have been resized since, updateWebGL only refreshes the size for WebGL
         const t = this.textureInfo, c = this.canvas;
@@ -9546,7 +9559,7 @@ class TileLayer extends CanvasLayer
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
-        this.draw(pos, size, this.color, this.angle, this.mirror, this.additiveColor);
+        this.draw(pos, size, this.color, this.angle, this.mirror, this.additiveColor, false);
     }
 
     /** Called after this layer is redrawn, does nothing by default */
@@ -9689,7 +9702,7 @@ class TileLayer extends CanvasLayer
     angle=0, mirror, additiveColor)
     {
         const drawPos = pos.add(size.scale(.5));
-        drawTile(drawPos, size, tileInfo, color, angle, mirror, additiveColor, this.isUsingWebGL);
+        drawTile(drawPos, size, tileInfo, color, angle, mirror, additiveColor, this.isUsingWebGL, false);
     }
 
     /** Draw a rectangle in layer space
@@ -9825,7 +9838,7 @@ class TileCollisionLayer extends TileLayer
             const tileInfo = new TileInfo(vec2(x*cellPixels.x, textureHeight - (y+1)*cellPixels.y),
                 vec2(count*cellPixels.x, cellPixels.y), this.textureInfo, 0, 0);
             const pos = vec2(this.pos.x + (x + count/2)*cellWorld.x, this.pos.y + (y + .5)*cellWorld.y);
-            drawTile(pos, vec2(count*cellWorld.x, cellWorld.y), tileInfo, this.color, 0, false, undefined, useWebGL);
+            drawTile(pos, vec2(count*cellWorld.x, cellWorld.y), tileInfo, this.color, 0, false, undefined, useWebGL, false);
             x = end;
         }
     }
@@ -9938,11 +9951,11 @@ class TileCollisionLayer extends TileLayer
         if (debugRaycast && hitPos)
         {
             const tilePos = hitPos.floor().add(vec2(.5));
-            debugRect(tilePos, vec2(1), '#f008');
-            debugLine(posStart, posEnd, '#00f', .02);
-            debugLine(posStart, hitPos, '#f00', .02);
-            debugPoint(hitPos, '#0f0');
-            normal && debugLine(hitPos, hitPos.add(normal), '#ff0', .02);
+            debugRect(tilePos, vec2(1), '#f008', 0, 0, false, false);
+            debugLine(posStart, posEnd, '#00f', .02, 0, false);
+            debugLine(posStart, hitPos, '#f00', .02, 0, false);
+            debugPoint(hitPos, '#0f0', undefined, undefined, false);
+            normal && debugLine(hitPos, hitPos.add(normal), '#ff0', .02, 0, false);
         }
         return hitPos;
     }
@@ -10198,9 +10211,9 @@ class ParticleEmitter extends EngineObject
         {
             // show emitter bounds
             if (this.emitCircle)
-                debugCircle(this.pos, this.emitSize.x, '#0f0');
+                debugCircle(this.pos, this.emitSize.x, '#0f0', 0, false, false);
             else
-                debugRect(this.pos, this.emitSize, '#0f0', 0, this.angle);
+                debugRect(this.pos, this.emitSize, '#0f0', 0, this.angle, false, false);
         }
     }
 
@@ -10454,7 +10467,7 @@ class Particle
                     this.velocity.y *= -hitRestitution;
                     this.velocity.x *= hitFriction;
                 }
-                debugPhysics && debugRect(this.pos, this.size, '#f00');
+                debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
             }
         }
 
@@ -10524,9 +10537,9 @@ class Particle
                 angle = atan2(velocity.x, velocity.y);
             }
         }
-        drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
+        drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror, undefined, glEnable, false);
         additive && setAdditiveBlendMode(false);
-        debugParticles && debugRect(pos, size, '#f005', 0, angle);
+        debugParticles && debugRect(pos, size, '#f005', 0, angle, false, false);
     }
 }
 /**
@@ -18239,7 +18252,7 @@ class Box2dPlugin
         const raycastResults = [];
         box2d.world.RayCast(raycastCallback, box2dTemp(start), box2dTemp(end, 1));
         raycastResults.sort((a,b)=> a.fraction - b.fraction); // Box2D reports them in its tree's order
-        debugRaycast && debugLine(start, end, raycastResults.length ? '#f00' : '#00f', .02);
+        debugRaycast && debugLine(start, end, raycastResults.length ? '#f00' : '#00f', .02, 0, false);
         return raycastResults;
     }
 
@@ -18279,7 +18292,7 @@ class Box2dPlugin
 
         let queryObjects = [];
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, size, queryObjects.length ? '#f00' : '#00f');
+        debugRaycast && debugRect(pos, size, queryObjects.length ? '#f00' : '#00f', 0, 0, false, false);
         return queryObjects;
     }
 
@@ -18311,7 +18324,7 @@ class Box2dPlugin
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, size, queryObject ? '#f00' : '#00f');
+        debugRaycast && debugRect(pos, size, queryObject ? '#f00' : '#00f', 0, 0, false, false);
         return queryObject;
     }
 
@@ -18326,7 +18339,7 @@ class Box2dPlugin
         const radius2 = (diameter/2)**2;
         const results = box2d.objects.filter(o=> !o.destroyed && o.body && o.pos.distanceSquared(pos) < radius2 &&
             (includeSensors || o.getFixtureList().some(fixture=> !fixture.IsSensor())));
-        debugRaycast && debugCircle(pos, diameter, results.length ? '#f00' : '#00f');
+        debugRaycast && debugCircle(pos, diameter, results.length ? '#f00' : '#00f', 0, false, false);
         return results;
     }
 
@@ -18380,7 +18393,7 @@ class Box2dPlugin
 
         let queryObject;
         box2d.world.QueryAABB(queryCallback, aabb);
-        debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f');
+        debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f', 0, 0, false, false);
         return queryObject;
     }
 
@@ -18577,33 +18590,33 @@ async function box2dInit()
             color = getDebugColor(color);
             point1 = box2d.vec2FromPointer(point1);
             point2 = box2d.vec2FromPointer(point2);
-            drawLine(point1, point2, debugLineWidth, color, vec2(), 0, false);
+            drawLine(point1, point2, debugLineWidth, color, vec2(), 0, false, false);
         };
         debugDraw.DrawPolygon = function(vertices, vertexCount, color)
         {
             color = getDebugColor(color);
             const points = getPointsList(vertices, vertexCount);
-            drawPoly(points, CLEAR_WHITE, debugLineWidth, color, vec2(), 0, false);
+            drawPoly(points, CLEAR_WHITE, debugLineWidth, color, vec2(), 0, false, false);
         };
         debugDraw.DrawSolidPolygon = function(vertices, vertexCount, color)
         {
             color = getDebugColor(color);
             const points = getPointsList(vertices, vertexCount);
-            drawPoly(points, color, 0, color, vec2(), 0, false);
+            drawPoly(points, color, 0, color, vec2(), 0, false, false);
         };
         debugDraw.DrawCircle = function(center, radius, color)
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
-            drawCircle(center, radius*2, CLEAR_WHITE, debugLineWidth, color, false);
+            drawCircle(center, radius*2, CLEAR_WHITE, debugLineWidth, color, false, false);
         };
         debugDraw.DrawSolidCircle = function(center, radius, axis, color)
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
             axis = box2d.vec2FromPointer(axis).scale(radius);
-            drawCircle(center, radius*2, color, debugLineWidth, color, false);
-            drawLine(vec2(), axis, debugLineWidth, color, center, 0, false);
+            drawCircle(center, radius*2, color, debugLineWidth, color, false, false);
+            drawLine(vec2(), axis, debugLineWidth, color, center, 0, false, false);
         };
         debugDraw.DrawTransform = function(transform)
         {
@@ -18612,8 +18625,8 @@ async function box2dInit()
             const angle = -transform.get_q().GetAngle();
             const p1 = vec2(1,0), c1 = rgb(.75,0,0,.8);
             const p2 = vec2(0,1), c2 = rgb(0,.75,0,.8);
-            drawLine(vec2(), p1, debugLineWidth, c1, pos, angle, false);
-            drawLine(vec2(), p2, debugLineWidth, c2, pos, angle, false);
+            drawLine(vec2(), p1, debugLineWidth, c1, pos, angle, false, false);
+            drawLine(vec2(), p2, debugLineWidth, c2, pos, angle, false, false);
         }
             
         debugDraw.AppendFlags(box2d.instance.b2Draw.e_shapeBit);
@@ -18861,7 +18874,7 @@ class TileSlice
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
      *  @param {boolean} [screenSpace] - Are pos and size in screen space?
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
-    draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=false, context)
+    draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
     {
         if (screenSpace) // with the screen space defaults for the border and spacing
             return this.drawScreen(pos, size, color, additiveColor, angle, useWebGL, context);
@@ -18944,7 +18957,7 @@ function drawSliceSnapped(pos, size, borderSize, pieceTile, color, additiveColor
  *  @param {boolean} [screenSpace] - Use screen space coordinates
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
-function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
+function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     // build local-space points and let drawPoly apply pos/angle so screen space works
     const points = getCrescentPoints(vec2(), size, percent, 0, invert);
@@ -20362,9 +20375,9 @@ class PathFinder
             if (this.debug && this.debugTime > 0)
             {
                 if (!walkable)
-                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, 0.25), this.debugTime);
+                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, 0.25), this.debugTime, 0, false, false);
                 else if (cost > 0)
-                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, min(0.2, cost * 0.05)), this.debugTime);
+                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, min(0.2, cost * 0.05)), this.debugTime, 0, false, false);
             }
         }
     }
@@ -20453,7 +20466,7 @@ class PathFinder
             current.isClosed = true;
 
             if (this.debug && this.debugTime > 0)
-                debugRect(current.posWorld, PATHFINDER_TILE_VEC, rgb(1, 1, 1, 0.05), this.debugTime);
+                debugRect(current.posWorld, PATHFINDER_TILE_VEC, rgb(1, 1, 1, 0.05), this.debugTime, 0, false, false);
 
             // Expand all 8 neighbors.
             for (let dy = -1; dy <= 1; ++dy)
@@ -20561,7 +20574,7 @@ class PathFinder
             {
                 // 45° angle — middle node is off the straight line. Drop it.
                 if (this.debug && this.debugTime > 0)
-                    debugCircle(node.posWorld, 0.3, rgb(0.5, 0, 0.5, 0.5), this.debugTime);
+                    debugCircle(node.posWorld, 0.3, rgb(0.5, 0, 0.5, 0.5), this.debugTime, false, false);
                 path.splice(i, 1);
                 i = max(1, i - 1);
                 continue;
@@ -20570,7 +20583,7 @@ class PathFinder
             {
                 // 90° corner. Check the alternative-diagonal cell.
                 if (this.debug && this.debugTime > 0)
-                    debugCircle(node.posWorld, 0.3, rgb(1, 0, 0, 0.5), this.debugTime);
+                    debugCircle(node.posWorld, 0.3, rgb(1, 0, 0, 0.5), this.debugTime, false, false);
 
                 let sx, sy;
                 if (prev.pos.y === node.pos.y && next.pos.x === node.pos.x)
@@ -20592,7 +20605,7 @@ class PathFinder
                 // middle node to whichever of two candidate cells is closer
                 // to prev-of-prev, and only if the corner cut is also clear.
                 if (this.debug && this.debugTime > 0)
-                    debugCircle(node.posWorld, 0.3, rgb(1, 1, 0, 0.5), this.debugTime);
+                    debugCircle(node.posWorld, 0.3, rgb(1, 1, 0, 0.5), this.debugTime, false, false);
 
                 const prevPrev = i >= 2 ? path[i - 2] : prev;
                 let s1x, s1y, s2x, s2y;
@@ -20636,7 +20649,7 @@ class PathFinder
             {
                 // Straight line or a 1-cell bump.
                 if (this.debug && this.debugTime > 0)
-                    debugCircle(node.posWorld, 0.3, rgb(0, 1, 0, 0.5), this.debugTime);
+                    debugCircle(node.posWorld, 0.3, rgb(0, 1, 0, 0.5), this.debugTime, false, false);
 
                 if (stepDx === stepDxNext && stepDy === stepDyNext)
                 {
@@ -20905,11 +20918,11 @@ class PathFinder
         if (this.debug && this.debugTime > 0 && result.length > 0)
         {
             for (let i = 1; i < result.length; ++i)
-                debugLine(result[i - 1], result[i], RED, 0.1, this.debugTime);
+                debugLine(result[i - 1], result[i], RED, 0.1, this.debugTime, false);
             for (const p of result)
-                debugCircle(p, 0.5, rgb(1, 0, 0, 0.3), this.debugTime);
-            debugCircle(result[0], 0.5, rgb(0, 1, 0, 0.5), this.debugTime);
-            debugCircle(result[result.length - 1], 0.5, rgb(0, 1, 0, 0.5), this.debugTime);
+                debugCircle(p, 0.5, rgb(1, 0, 0, 0.3), this.debugTime, false, false);
+            debugCircle(result[0], 0.5, rgb(0, 1, 0, 0.5), this.debugTime, false, false);
+            debugCircle(result[result.length - 1], 0.5, rgb(0, 1, 0, 0.5), this.debugTime, false, false);
         }
 
         return result;
@@ -31568,7 +31581,7 @@ function editorDrawBox(center, size, color, width)
 {
     const half = size.scale(.5), corners = [vec2(-1, -1), vec2(1, -1), vec2(1, 1), vec2(-1, 1)]
         .map((c)=> center.add(c.multiply(half)));
-    corners.forEach((c, i)=> drawLine(c, corners[(i + 1) % 4], width, color));
+    corners.forEach((c, i)=> drawLine(c, corners[(i + 1) % 4], width, color, undefined, 0, glEnable, false));
 }
 
 // an object type's icon, or a box with its name when it has none
@@ -31576,10 +31589,10 @@ function editorDrawObjectIcon(name, pos, size, alpha)
 {
     const tileInfo = objectLayersTypes.get(name)?.tileInfo;
     if (tileInfo)
-        drawTile(pos, size, tileInfo, hsl(0, 0, 1, alpha));
+        drawTile(pos, size, tileInfo, hsl(0, 0, 1, alpha), 0, undefined, undefined, glEnable, false);
     else
     {
-        drawRect(pos, size, hsl(0, 0, 0, alpha * .6));
+        drawRect(pos, size, hsl(0, 0, 0, alpha * .6), undefined, undefined, false);
         drawText(name ?? '?', pos, min(size.x, size.y) * .3, hsl(0, 0, 1, alpha));
     }
 }
@@ -31850,7 +31863,7 @@ function editorRender()
         const t = editorGidToTile(source.data[x + (height - 1 - y) * width]);
         if (t && live.getData(vec2(x, y)).tile === undefined)
             drawTile(live.pos.add(vec2(x + .5, y + .5)), vec2(1), editorTileInfo(live, t.tile), ghost,
-                t.direction * PI/2, t.mirror);
+                t.direction * PI/2, t.mirror, undefined, glEnable, false);
     }
 
     // a grid once the cells are big enough to see one
@@ -31858,16 +31871,16 @@ function editorRender()
     if (editorGrid && editorCameraScale >= 12)
     {
         for (let x = x0; x <= x1; ++x)
-            drawLine(pos.add(vec2(x, y0)), pos.add(vec2(x, y1)), thin, line);
+            drawLine(pos.add(vec2(x, y0)), pos.add(vec2(x, y1)), thin, line, undefined, 0, glEnable, false);
         for (let y = y0; y <= y1; ++y)
-            drawLine(pos.add(vec2(x0, y)), pos.add(vec2(x1, y)), thin, line);
+            drawLine(pos.add(vec2(x0, y)), pos.add(vec2(x1, y)), thin, line, undefined, 0, glEnable, false);
     }
 
     // the layer's edge
     const outline = (a, b, color, width)=>
     {
         const corners = [vec2(a.x, a.y), vec2(b.x, a.y), vec2(b.x, b.y), vec2(a.x, b.y)];
-        corners.forEach((c, i)=> drawLine(pos.add(c), pos.add(corners[(i + 1) % 4]), width, color));
+        corners.forEach((c, i)=> drawLine(pos.add(c), pos.add(corners[(i + 1) % 4]), width, color, undefined, 0, glEnable, false));
     };
     outline(vec2(), size, hsl(.55, 1, .6, .8), thin * 2);
 
@@ -31877,7 +31890,7 @@ function editorRender()
     const last = editorLastPlaced, shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
     if (shift && editorHover && last?.layer === layer && !mouseIsDown(0))
         drawLine(live.pos.add(last.pos).add(vec2(.5)), live.pos.add(editorHover).add(vec2(.5)), thin * 2,
-            hsl(.55, 1, .6, .6));
+            hsl(.55, 1, .6, .6), undefined, 0, glEnable, false);
 
     // the brush where it would paint, the Erase brush's cells in red
     if (editorHover)
@@ -31889,11 +31902,11 @@ function editorRender()
             const gid = grid[x + y * w], t = editorGidToTile(gid);
             const center = live.pos.add(editorHover).add(vec2(x + .5, y + .5));
             if (t)
-                drawTile(center, vec2(1), editorTileInfo(live, t.tile), hsl(0, 0, 1, .7), t.direction * PI/2, t.mirror);
+                drawTile(center, vec2(1), editorTileInfo(live, t.tile), hsl(0, 0, 1, .7), t.direction * PI/2, t.mirror, undefined, glEnable, false);
             else if (gid === 0)
-                drawRect(center, vec2(1), hsl(0, 1, .5, .3));
+                drawRect(center, vec2(1), hsl(0, 1, .5, .3), undefined, undefined, false);
         }
-        drawRect(live.pos.add(editorHover).add(vec2(w / 2, h / 2)), vec2(w, h), hsl(.55, 1, .6, .25));
+        drawRect(live.pos.add(editorHover).add(vec2(w / 2, h / 2)), vec2(w, h), hsl(.55, 1, .6, .25), undefined, undefined, false);
     }
     editorObjectLayer && editorRenderObjects(thin);
 }
