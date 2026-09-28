@@ -9,8 +9,8 @@
 
 'use strict';
 
-// pull in edges to prevent bleeding from neighboring tiles
-setTileDefaultBleed(.5);
+// each tile in tiles.png has a 1 pixel border, which stops texture bleeding
+setTileDefaultPadding(1);
 
 const terrainSize = 600, terrainHeight = 24, orbCount = 40;
 const soundCollect = new Sound([,,,.02,,.5,,3,,-50,40,,.05]);
