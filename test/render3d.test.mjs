@@ -618,10 +618,11 @@ test('render3D.smoothShading sets the default for the builders', () =>
     const cylinder = [[1, -1], [1, 1]];
     render3D.smoothShading = true;
     assert.equal(buildLathe(cylinder, 8, undefined, false).vertexCount, 2 * 9 + 2);   // one ribbon
-    assert.equal(buildGrid(vec2(2), 2).vertexCount, 2 * (2 * 3 + 2)); // one ribbon per row
+    const hills = (x, z)=> x * z; // a flat grid is flat shaded either way, terrain follows the setting
+    assert.equal(buildGrid(vec2(2), 2, undefined, hills).vertexCount, 2 * (2 * 3 + 2)); // one ribbon per row
     render3D.smoothShading = false;
     assert.equal(buildLathe(cylinder, 8, undefined, false).vertexCount, 8 * 6);       // one strip per quad
-    assert.equal(buildGrid(vec2(2), 2).vertexCount, 4 * 6);         // one strip per cell
+    assert.equal(buildGrid(vec2(2), 2, undefined, hills).vertexCount, 4 * 6);         // one strip per cell
     // an explicit argument wins over the default
     assert.equal(buildLathe(cylinder, 8, true, false).vertexCount, 2 * 9 + 2);
 });
@@ -3419,4 +3420,26 @@ test('parseOBJ keeps faces with negative indices apart once more vertices are de
     // the same vertex spelled by position and relatively is still one vertex
     const same = parseOBJ(['v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'v 1 1 0', 'f 1 2 3', 'f -3 -1 -2'].join('\n'), true);
     assert.equal(same.vertexCount, 4, 'shared corners stay shared');
+});
+
+test('a flat buildGrid is flat shaded whatever render3D.smoothShading says, so a checkerboard stays crisp', () =>
+{
+    // each triangle of a crisp checkerboard has one color at all three corners
+    const checker = (x, z)=> (Math.floor(x) + Math.floor(z)) & 1 ? RED : WHITE;
+    const crisp = (mesh)=>
+    {
+        const {vertices, indices} = mesh.getTriangles();
+        for (let i = 0; i < indices.length; i += 3)
+        {
+            const [a, b, c] = [0, 1, 2].map(k=> mesh.colors[vertices[indices[i + k]]]);
+            if (a !== b || b !== c) return false;
+        }
+        return true;
+    };
+    const smooth = render3D.smoothShading;
+    render3D.smoothShading = true;
+    assert.ok(crisp(buildGrid(vec2(4), 4, checker)), 'a flat floor keeps one color a cell');
+    assert.ok(!crisp(buildGrid(vec2(4), 4, checker, (x, z)=> x * z / 10)), 'terrain still takes the smooth default');
+    assert.ok(!crisp(buildGrid(vec2(4), 4, checker, undefined, true)), 'and smooth asked for is smooth');
+    render3D.smoothShading = smooth;
 });

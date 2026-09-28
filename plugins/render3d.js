@@ -3106,14 +3106,16 @@ function buildBox(size=1, bevel=0, bevelSegments=1)
  * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
  * @param {Color|function(number, number): Color} [color] - One Color for the whole grid, or (x, z) => Color
  * @param {function(number, number): number} [heightFunction] - (x, z) => y, default flat
- * @param {boolean} [smooth] - Defaults to render3D.smoothShading
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading with a heightFunction; a flat grid is flat shaded,
+ *   since its light is even anyway and smoothing would only blend its cell colors
  * @return {Mesh}
  * @memberof Render3D
  * @example
  * const ground = buildGrid(vec2(20), 10, (x, z)=> (floor(x / 2) + floor(z / 2)) & 1 ? GRAY : WHITE); // 2 unit checks
  */
-function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth=render3D?.smoothShading)
+function buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth=heightFunction && render3D?.smoothShading)
 {
+    heightFunction ||= ()=> 0;
     size = render3DSize2(size);
     segments = render3DSize2(segments);
     ASSERT(segments.x > 0 && segments.y > 0 && segments.x % 1 === 0 && segments.y % 1 === 0, 'grid segments must be whole numbers above zero');

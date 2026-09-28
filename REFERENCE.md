@@ -1404,7 +1404,8 @@ buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth) // XZ plane; 
                                                                     // height is (x, z)=> y; doubleSided, turn it
                                                                     // off for ground only seen from above
 // color is a Color or (x, z)=> Color, where x and z are positions on the mesh itself with (0, 0) at its center; it is
-// called per vertex when smooth and once per cell center when flat, so a checker needs cell sized steps: with
+// called per vertex when smooth and once per cell center when flat, so a checker needs cell sized steps; a grid with
+// no heightFunction is flat shaded unless smooth is passed, smoothing would only blend its cell colors; with
 // buildGrid(vec2(30), 15) the cells are 2 units, so (x, z)=> (floor(x/2) + floor(z/2)) & 1 ? GRAY : WHITE
 buildLoft(stations) // a hull from diamond shaped cross sections, the stations: [[z, width, top, bottom, sideHeight],
                     // ...] nose first at the largest z, always flat; sideHeight is 0 to 1, where the side corners sit
