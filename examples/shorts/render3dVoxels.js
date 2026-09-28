@@ -41,6 +41,7 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky();
     render3D.gravity = vec3(0, -.01, 0);
+    setDrawScreenSpace(true); // the only 2D drawing is the hud
     map = new VoxelMap(vec3(), vec3(50), tile(0, 16, makeTiles()));
     map.setBlockType(1, {top:0, side:1, bottom:2});
     for (let i = 5; i < 8; ++i)
@@ -97,8 +98,8 @@ function gameRenderPost()
 {
     // crosshair and the selected block
     const center = mainCanvasSize.scale(.5);
-    drawRect(center, vec2(2,20), WHITE, 0, true, true);
-    drawRect(center, vec2(20,2), WHITE, 0, true, true);
+    drawRect(center, vec2(2,20));
+    drawRect(center, vec2(20,2));
     const selectedName = selected + ' ' + names[selected-1];
     drawTextScreen(selectedName, vec2(center.x, mainCanvasSize.y - 40), 40);
 }
