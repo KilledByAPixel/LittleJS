@@ -348,63 +348,63 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Debug */
     export const debugPointSize: number;
-    /** Draw a debug rectangle in world space
+    /** Draw a debug rectangle in world space, or on the screen with screenSpace
      *  @param {Vector2} pos
      *  @param {Vector2} [size=vec2(0)]
      *  @param {Color|string} [color]
      *  @param {number} [time]
      *  @param {number} [angle]
      *  @param {boolean} [fill]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @memberof Debug */
     export function debugRect(pos: Vector2, size?: Vector2, color?: Color | string, time?: number, angle?: number, fill?: boolean, screenSpace?: boolean): void;
-    /** Draw a debug poly in world space
+    /** Draw a debug poly in world space, or on the screen with screenSpace
      *  @param {Vector2} pos
      *  @param {Array<Vector2>} points
      *  @param {Color|string} [color]
      *  @param {number} [time]
      *  @param {number} [angle]
      *  @param {boolean} [fill]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @memberof Debug */
     export function debugPoly(pos: Vector2, points: Array<Vector2>, color?: Color | string, time?: number, angle?: number, fill?: boolean, screenSpace?: boolean): void;
-    /** Draw a debug circle in world space
+    /** Draw a debug circle in world space, or on the screen with screenSpace
      *  @param {Vector2} pos
      *  @param {number} [size] - diameter
      *  @param {Color|string} [color]
      *  @param {number} [time]
      *  @param {boolean} [fill]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @memberof Debug */
     export function debugCircle(pos: Vector2, size?: number, color?: Color | string, time?: number, fill?: boolean, screenSpace?: boolean): void;
-    /** Draw a debug point in world space
+    /** Draw a debug point in world space, or on the screen with screenSpace
      *  @param {Vector2} pos
      *  @param {Color|string} [color]
      *  @param {number} [time]
      *  @param {number} [angle]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @memberof Debug */
     export function debugPoint(pos: Vector2, color?: Color | string, time?: number, angle?: number, screenSpace?: boolean): void;
-    /** Draw a debug line in world space
+    /** Draw a debug line in world space, or on the screen with screenSpace
      *  @param {Vector2} posA
      *  @param {Vector2} posB
      *  @param {Color|string} [color]
      *  @param {number} [width]
      *  @param {number} [time]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @memberof Debug */
     export function debugLine(posA: Vector2, posB: Vector2, color?: Color | string, width?: number, time?: number, screenSpace?: boolean): void;
-    /** Draw a debug combined axis aligned bounding box in world space
+    /** Draw a debug combined axis aligned bounding box in world space, or on the screen with screenSpace
      *  @param {Vector2} posA
      *  @param {Vector2} sizeA
      *  @param {Vector2} posB
      *  @param {Vector2} sizeB
      *  @param {Color|string} [color]
      *  @param {number} [time]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @memberof Debug */
     export function debugOverlap(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB: Vector2, color?: Color | string, time?: number, screenSpace?: boolean): void;
-    /** Draw debug text in world space
+    /** Draw debug text in world space, or on the screen with screenSpace
      *  @param {string|number} text
      *  @param {Vector2} pos
      *  @param {number} [size]
@@ -412,7 +412,7 @@ declare module "littlejsengine" {
      *  @param {number} [time]
      *  @param {number} [angle]
      *  @param {string} [font]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @memberof Debug */
     export function debugText(text: string | number, pos: Vector2, size?: number, color?: Color | string, time?: number, angle?: number, font?: string, screenSpace?: boolean): void;
     /** Clear all debug primitives in the list
@@ -610,8 +610,11 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export let glEnable: boolean;
     /** Draw in screen space by default: what the screenSpace parameter of the draw and debug functions defaults to, so a
-     *  heads up display, or a 3D game that only draws 2D on the screen, can turn it on and leave the flag out; the engine
-     *  says its own space when it draws, so objects, tile layers and particles stay in world space either way
+     *  heads up display, or a 3D game that only draws 2D on the screen, can turn it on and leave the flag out
+     *  - The engine says its own space when it draws, so objects, tile layers and particles stay in world space, but a
+     *    game's own draws follow it, a render() override included: turn it on around the hud, or pass false there
+     *  - Sizes and widths keep their defaults, which are world sized, so pass them in pixels
+     *  - drawText has no screenSpace and stays in world space, drawTextScreen is the one for the screen
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -2228,7 +2231,7 @@ declare module "littlejsengine" {
      *  @param {Color}   [color=WHITE]
      *  @param {number}  [angle]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2239,7 +2242,7 @@ declare module "littlejsengine" {
      *  @param {Color}   [colorBottom=CLEAR_WHITE]
      *  @param {number}  [angle]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawRectGradient(pos: Vector2, size?: Vector2, colorTop?: Color, colorBottom?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2266,7 +2269,7 @@ declare module "littlejsengine" {
      *  @param {Vector2} [pos=vec2()] - Offset to apply
      *  @param {number}  [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawLineList(points: Array<Vector2>, width?: number, color?: Color, wrap?: boolean, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2278,7 +2281,7 @@ declare module "littlejsengine" {
      *  @param {Vector2} [pos=vec2()] - Offset to apply
      *  @param {number}  [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawLine(posA: Vector2, posB: Vector2, width?: number, color?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2292,7 +2295,7 @@ declare module "littlejsengine" {
      *  @param {Vector2} [pos=vec2()] - Offset to apply
      *  @param {number}  [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawPoly(points: Array<Vector2>, color?: Color, lineWidth?: number, lineColor?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2305,7 +2308,7 @@ declare module "littlejsengine" {
      *  @param {Color}   [lineColor=BLACK]
      *  @param {number}  [angle]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawRegularPoly(pos: Vector2, size?: Vector2, sides?: number, color?: Color, lineWidth?: number, lineColor?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2317,7 +2320,7 @@ declare module "littlejsengine" {
      *  @param {number}  [lineWidth]
      *  @param {Color}   [lineColor=BLACK]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawEllipse(pos: Vector2, size?: Vector2, color?: Color, angle?: number, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2328,7 +2331,7 @@ declare module "littlejsengine" {
      *  @param {number}  [lineWidth=0]
      *  @param {Color}   [lineColor=BLACK]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawCircle(pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2342,7 +2345,7 @@ declare module "littlejsengine" {
      *  @param {Color}   [colorOuter=CLEAR_WHITE]
      *  @param {number}  [angle]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawEllipseGradient(pos: Vector2, size?: Vector2, colorInner?: Color, colorOuter?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -2355,7 +2358,7 @@ declare module "littlejsengine" {
      *  @param {Color}   [colorInner=WHITE]
      *  @param {Color}   [colorOuter=CLEAR_WHITE]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace]
+     *  @param {boolean} [screenSpace=drawScreenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawCircleGradient(pos: Vector2, size?: number, colorInner?: Color, colorOuter?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -3667,7 +3670,7 @@ declare module "littlejsengine" {
         *  @param {number}  [angle] - Angle to rotate by
         *  @param {boolean} [mirror] - If true image is flipped along the Y axis
         *  @param {Color}   [additiveColor] - Additive color to be applied if any
-        *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
+        *  @param {boolean} [screenSpace=drawScreenSpace] - If true the pos and size are in screen space
         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to */
         draw(pos: Vector2, size?: Vector2, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
         /** Create WebGL texture if necessary and copy layer canvas to it */
@@ -6422,12 +6425,14 @@ declare module "littlejsengine" {
      *  @param {Vector2} size - World space size
      *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample the nine-slice from
      *  @param {Color} [color] - Color to modulate with
-     *  @param {number} [borderSize] - Rendered thickness of the border sections
+     *  @param {number} [borderSize] - Rendered thickness of the border sections, 1 in world space and 32 pixels in
+     *    screen space by default
      *  @param {Color} [additiveColor] - Additive color
-     *  @param {number} [extraSpace] - Extra spacing adjustment
+     *  @param {number} [extraSpace] - Extra spacing adjustment, .05 in world space and 2 pixels in screen space by
+     *    default
      *  @param {number} [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
-     *  @param {boolean} [screenSpace] - Use screen space coordinates
+     *  @param {boolean} [screenSpace=drawScreenSpace] - Use screen space coordinates
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
     export function drawNineSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -6462,12 +6467,14 @@ declare module "littlejsengine" {
      *  @param {Vector2} size - World space size
      *  @param {TileInfo} startTile - First of 3 consecutive tiles (corner, side, center) for the three-slice
      *  @param {Color} [color] - Color to modulate with
-     *  @param {number} [borderSize] - Rendered thickness of the border sections
+     *  @param {number} [borderSize] - Rendered thickness of the border sections, 1 in world space and 32 pixels in
+     *    screen space by default
      *  @param {Color} [additiveColor] - Additive color
-     *  @param {number} [extraSpace] - Extra spacing adjustment
+     *  @param {number} [extraSpace] - Extra spacing adjustment, .05 in world space and 2 pixels in screen space by
+     *    default
      *  @param {number} [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
-     *  @param {boolean} [screenSpace] - Use screen space coordinates
+     *  @param {boolean} [screenSpace=drawScreenSpace] - Use screen space coordinates
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
     export function drawThreeSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -6522,7 +6529,7 @@ declare module "littlejsengine" {
          *  @param {Color} [additiveColor] - Additive color
          *  @param {number} [angle] - Angle to rotate by
          *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
-         *  @param {boolean} [screenSpace] - Are pos and size in screen space?
+         *  @param {boolean} [screenSpace=drawScreenSpace] - Are pos and size in screen space?
          *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
         draw(pos: Vector2, size: Vector2, color?: Color, additiveColor?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
         /** Draw it as a box in screen space, with the 2D context by default, on top of what WebGL drew, like drawTextScreen
@@ -6548,7 +6555,7 @@ declare module "littlejsengine" {
      *  @param {number}  [lineWidth] - Outline width, 0 for no outline
      *  @param {Color}   [lineColor] - Outline color
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
-     *  @param {boolean} [screenSpace] - Use screen space coordinates
+     *  @param {boolean} [screenSpace=drawScreenSpace] - Use screen space coordinates
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
     export function drawCrescent(pos: Vector2, size?: number, percent?: number, color?: Color, angle?: number, invert?: boolean, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -8411,7 +8418,7 @@ declare module "littlejsengine" {
      * @param {Color|function(number, number): Color} [color] - One Color for the whole grid, or (x, z) => Color
      * @param {function(number, number): number} [heightFunction] - (x, z) => y, default flat
      * @param {boolean} [smooth] - Defaults to render3D.smoothShading with a heightFunction; a flat grid is flat shaded,
-     *   since its light is even anyway and smoothing would only blend its cell colors
+     *   since its light is even anyway and smoothing would only blend its cell colors; pass smooth to blend a gradient
      * @return {Mesh}
      * @memberof Render3D
      * @example
@@ -8690,7 +8697,7 @@ declare module "littlejsengine" {
         /** Keep an object out of the blocks, one axis at a time as 2D tiles do, called by the engine for each object with
          *  collideLevel; a sphere collides as its box, and one moving more than about a cell a frame can pass through
          *  - One already in blocks, as when a block is set on it, is pushed up to stand on those in its lower half when
-         *    there is room, or else left free to move out, only kept from sinking
+         *    there is room, or else left free to move out of them, but not into any it is not in already
          *  @param {EngineObject3D} o
          *  @param {Vector3} oldPos - Where it was before it moved
          *  @ignore */
@@ -8840,7 +8847,8 @@ declare module "littlejsengine" {
          *  while it stands on something, a height map or voxel map it collides with, see collideLevel */
         jumpSpeed: number;
         /** @property {number} - How far above its position the eye is, in its own space, so with a size3D the eye can
-         *  sit toward the top of the body instead of its middle */
+         *  sit toward the top of the body instead of its middle; keep it under half the body's height, or the eye is
+         *  outside the body and sees through a ceiling it stands under */
         eyeHeight: number;
     }
     /**

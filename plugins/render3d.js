@@ -3107,7 +3107,7 @@ function buildBox(size=1, bevel=0, bevelSegments=1)
  * @param {Color|function(number, number): Color} [color] - One Color for the whole grid, or (x, z) => Color
  * @param {function(number, number): number} [heightFunction] - (x, z) => y, default flat
  * @param {boolean} [smooth] - Defaults to render3D.smoothShading with a heightFunction; a flat grid is flat shaded,
- *   since its light is even anyway and smoothing would only blend its cell colors
+ *   since its light is even anyway and smoothing would only blend its cell colors; pass smooth to blend a gradient
  * @return {Mesh}
  * @memberof Render3D
  * @example

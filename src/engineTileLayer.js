@@ -445,7 +445,7 @@ class CanvasLayer extends EngineObject
     *  @param {number}  [angle] - Angle to rotate by
     *  @param {boolean} [mirror] - If true image is flipped along the Y axis
     *  @param {Color}   [additiveColor] - Additive color to be applied if any
-    *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
+    *  @param {boolean} [screenSpace=drawScreenSpace] - If true the pos and size are in screen space
     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to */
     draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=drawScreenSpace, context)
     {

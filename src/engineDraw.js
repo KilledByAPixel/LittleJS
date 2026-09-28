@@ -555,7 +555,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
@@ -570,7 +570,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {Color}   [colorBottom=CLEAR_WHITE]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -728,7 +728,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
  *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -785,7 +785,7 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
  *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -809,7 +809,7 @@ function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWeb
  *  @param {Color}   [lineColor=BLACK]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -838,7 +838,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
  *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context=undefined)
@@ -898,7 +898,7 @@ const drawEllipseRings = new Map;
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -972,7 +972,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -992,7 +992,7 @@ let drawEllipseGradientOffset = 0;
  *  @param {Color}   [colorOuter=CLEAR_WHITE]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -1068,7 +1068,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
  *  @param {Color}   [colorInner=WHITE]
  *  @param {Color}   [colorOuter=CLEAR_WHITE]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHITE, useWebGL=glEnable, screenSpace=drawScreenSpace, context)

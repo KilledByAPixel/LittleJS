@@ -776,7 +776,8 @@ class FirstPersonCamera3D extends EngineObject3D
          *  while it stands on something, a height map or voxel map it collides with, see collideLevel */
         this.jumpSpeed = 0;
         /** @property {number} - How far above its position the eye is, in its own space, so with a size3D the eye can
-         *  sit toward the top of the body instead of its middle */
+         *  sit toward the top of the body instead of its middle; keep it under half the body's height, or the eye is
+         *  outside the body and sees through a ceiling it stands under */
         this.eyeHeight = 0;
     }
 

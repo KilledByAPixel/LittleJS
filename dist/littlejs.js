@@ -857,14 +857,14 @@ function ASSERT(assert, ...output)
  *  @memberof Debug */
 function LOG(...output) { console.log(...output); }
 
-/** Draw a debug rectangle in world space
+/** Draw a debug rectangle in world space, or on the screen with screenSpace
  *  @param {Vector2} pos
  *  @param {Vector2} [size=vec2(0)]
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {number} [angle]
  *  @param {boolean} [fill]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, screenSpace=drawScreenSpace)
 {
@@ -881,14 +881,14 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, s
     debugPrimitives.push({pos:pos.copy(), size:size.copy(), color, timer, angle, fill, screenSpace});
 }
 
-/** Draw a debug poly in world space
+/** Draw a debug poly in world space, or on the screen with screenSpace
  *  @param {Vector2} pos
  *  @param {Array<Vector2>} points
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {number} [angle]
  *  @param {boolean} [fill]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screenSpace=drawScreenSpace)
 {
@@ -907,13 +907,13 @@ function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screen
     debugPrimitives.push({pos, points, color, timer, angle, fill, screenSpace});
 }
 
-/** Draw a debug circle in world space
+/** Draw a debug circle in world space, or on the screen with screenSpace
  *  @param {Vector2} pos
  *  @param {number} [size] - diameter
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {boolean} [fill]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=drawScreenSpace)
 {
@@ -930,23 +930,23 @@ function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=d
     debugPrimitives.push({pos, size, color, timer, angle:0, fill, screenSpace});
 }
 
-/** Draw a debug point in world space
+/** Draw a debug point in world space, or on the screen with screenSpace
  *  @param {Vector2} pos
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {number} [angle]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugPoint(pos, color, time, angle, screenSpace=drawScreenSpace)
 { debugRect(pos, undefined, color, time, angle, false, screenSpace); }
 
-/** Draw a debug line in world space
+/** Draw a debug line in world space, or on the screen with screenSpace
  *  @param {Vector2} posA
  *  @param {Vector2} posB
  *  @param {Color|string} [color]
  *  @param {number} [width]
  *  @param {number} [time]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugLine(posA, posB, color, width=.1, time=0, screenSpace=drawScreenSpace)
 {
@@ -961,14 +961,14 @@ function debugLine(posA, posB, color, width=.1, time=0, screenSpace=drawScreenSp
     debugRect(posA.add(halfDelta), size, color, time, angle, true, screenSpace);
 }
 
-/** Draw a debug combined axis aligned bounding box in world space
+/** Draw a debug combined axis aligned bounding box in world space, or on the screen with screenSpace
  *  @param {Vector2} posA
  *  @param {Vector2} sizeA
  *  @param {Vector2} posB
  *  @param {Vector2} sizeB
  *  @param {Color|string} [color]
  *  @param {number} [time]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=drawScreenSpace)
 {
@@ -988,7 +988,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=drawScr
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color, time, 0, false, screenSpace);
 }
 
-/** Draw debug text in world space
+/** Draw debug text in world space, or on the screen with screenSpace
  *  @param {string|number} text
  *  @param {Vector2} pos
  *  @param {number} [size]
@@ -996,7 +996,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=drawScr
  *  @param {number} [time]
  *  @param {number} [angle]
  *  @param {string} [font]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace', screenSpace=drawScreenSpace)
 {
@@ -3384,8 +3384,11 @@ let engineManualStep = false;
 let glEnable = true;
 
 /** Draw in screen space by default: what the screenSpace parameter of the draw and debug functions defaults to, so a
- *  heads up display, or a 3D game that only draws 2D on the screen, can turn it on and leave the flag out; the engine
- *  says its own space when it draws, so objects, tile layers and particles stay in world space either way
+ *  heads up display, or a 3D game that only draws 2D on the screen, can turn it on and leave the flag out
+ *  - The engine says its own space when it draws, so objects, tile layers and particles stay in world space, but a
+ *    game's own draws follow it, a render() override included: turn it on around the hud, or pass false there
+ *  - Sizes and widths keep their defaults, which are world sized, so pass them in pixels
+ *  - drawText has no screenSpace and stays in world space, drawTextScreen is the one for the screen
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -5270,7 +5273,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
@@ -5285,7 +5288,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {Color}   [colorBottom=CLEAR_WHITE]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -5443,7 +5446,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
  *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -5500,7 +5503,7 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
  *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -5524,7 +5527,7 @@ function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWeb
  *  @param {Color}   [lineColor=BLACK]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -5553,7 +5556,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
  *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context=undefined)
@@ -5613,7 +5616,7 @@ const drawEllipseRings = new Map;
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -5687,7 +5690,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -5707,7 +5710,7 @@ let drawEllipseGradientOffset = 0;
  *  @param {Color}   [colorOuter=CLEAR_WHITE]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -5783,7 +5786,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
  *  @param {Color}   [colorInner=WHITE]
  *  @param {Color}   [colorOuter=CLEAR_WHITE]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHITE, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -9411,7 +9414,7 @@ class CanvasLayer extends EngineObject
     *  @param {number}  [angle] - Angle to rotate by
     *  @param {boolean} [mirror] - If true image is flipped along the Y axis
     *  @param {Color}   [additiveColor] - Additive color to be applied if any
-    *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
+    *  @param {boolean} [screenSpace=drawScreenSpace] - If true the pos and size are in screen space
     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to */
     draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=drawScreenSpace, context)
     {
@@ -18681,16 +18684,21 @@ function drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, a
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample the nine-slice from
  *  @param {Color} [color] - Color to modulate with
- *  @param {number} [borderSize] - Rendered thickness of the border sections
+ *  @param {number} [borderSize] - Rendered thickness of the border sections, 1 in world space and 32 pixels in
+ *    screen space by default
  *  @param {Color} [additiveColor] - Additive color
- *  @param {number} [extraSpace] - Extra spacing adjustment
+ *  @param {number} [extraSpace] - Extra spacing adjustment, .05 in world space and 2 pixels in screen space by
+ *    default
  *  @param {number} [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
- *  @param {boolean} [screenSpace] - Use screen space coordinates
+ *  @param {boolean} [screenSpace=drawScreenSpace] - Use screen space coordinates
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
-function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
+function drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
+    // the border and spacing defaults are in the units of the space it draws in
+    borderSize ??= screenSpace ? 32 : 1;
+    extraSpace ??= screenSpace ? 2 : .05;
     if (!size.x || !size.y) return; // nothing to draw, the spacing must not make a sliver of it
     if (color && color.a < 1)
         extraSpace = 0; // see through, the overlap that hides a seam would draw twice and show brighter
@@ -18769,16 +18777,21 @@ function drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, 
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - First of 3 consecutive tiles (corner, side, center) for the three-slice
  *  @param {Color} [color] - Color to modulate with
- *  @param {number} [borderSize] - Rendered thickness of the border sections
+ *  @param {number} [borderSize] - Rendered thickness of the border sections, 1 in world space and 32 pixels in
+ *    screen space by default
  *  @param {Color} [additiveColor] - Additive color
- *  @param {number} [extraSpace] - Extra spacing adjustment
+ *  @param {number} [extraSpace] - Extra spacing adjustment, .05 in world space and 2 pixels in screen space by
+ *    default
  *  @param {number} [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
- *  @param {boolean} [screenSpace] - Use screen space coordinates
+ *  @param {boolean} [screenSpace=drawScreenSpace] - Use screen space coordinates
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
-function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
+function drawThreeSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
+    // the border and spacing defaults are in the units of the space it draws in
+    borderSize ??= screenSpace ? 32 : 1;
+    extraSpace ??= screenSpace ? 2 : .05;
     if (!size.x || !size.y) return; // nothing to draw, the spacing must not make a sliver of it
     if (color && color.a < 1)
         extraSpace = 0; // see through, the overlap that hides a seam would draw twice and show brighter
@@ -18872,7 +18885,7 @@ class TileSlice
      *  @param {Color} [additiveColor] - Additive color
      *  @param {number} [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
-     *  @param {boolean} [screenSpace] - Are pos and size in screen space?
+     *  @param {boolean} [screenSpace=drawScreenSpace] - Are pos and size in screen space?
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
     draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
     {
@@ -18954,7 +18967,7 @@ function drawSliceSnapped(pos, size, borderSize, pieceTile, color, additiveColor
  *  @param {number}  [lineWidth] - Outline width, 0 for no outline
  *  @param {Color}   [lineColor] - Outline color
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
- *  @param {boolean} [screenSpace] - Use screen space coordinates
+ *  @param {boolean} [screenSpace=drawScreenSpace] - Use screen space coordinates
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
 function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
@@ -24976,7 +24989,7 @@ function buildBox(size=1, bevel=0, bevelSegments=1)
  * @param {Color|function(number, number): Color} [color] - One Color for the whole grid, or (x, z) => Color
  * @param {function(number, number): number} [heightFunction] - (x, z) => y, default flat
  * @param {boolean} [smooth] - Defaults to render3D.smoothShading with a heightFunction; a flat grid is flat shaded,
- *   since its light is even anyway and smoothing would only blend its cell colors
+ *   since its light is even anyway and smoothing would only blend its cell colors; pass smooth to blend a gradient
  * @return {Mesh}
  * @memberof Render3D
  * @example
@@ -26719,7 +26732,8 @@ class FirstPersonCamera3D extends EngineObject3D
          *  while it stands on something, a height map or voxel map it collides with, see collideLevel */
         this.jumpSpeed = 0;
         /** @property {number} - How far above its position the eye is, in its own space, so with a size3D the eye can
-         *  sit toward the top of the body instead of its middle */
+         *  sit toward the top of the body instead of its middle; keep it under half the body's height, or the eye is
+         *  outside the body and sees through a ceiling it stands under */
         this.eyeHeight = 0;
     }
 
@@ -27776,7 +27790,7 @@ class VoxelMap extends EngineObject3D
         ASSERT(tileInfo instanceof TileInfo, 'tileInfo must be a TileInfo, the first tile of the sheet');
         /** @property {Vector3} - Cells along X, Y and Z */
         this.mapSize = mapSize.floor();
-        /** @property {TileInfo} - The sheet's first tile */
+        /** @property {TileInfo} - The sheet's first tile, rebuild() after changing it or resizing its texture */
         this.tileInfo = tileInfo;
         /** @property {Uint8Array} - The block type of each cell, x + mapSize.x * (y + mapSize.y * z), 0 empty; call
          *  rebuild() after changing it directly */
@@ -28016,7 +28030,7 @@ class VoxelMap extends EngineObject3D
     /** Keep an object out of the blocks, one axis at a time as 2D tiles do, called by the engine for each object with
      *  collideLevel; a sphere collides as its box, and one moving more than about a cell a frame can pass through
      *  - One already in blocks, as when a block is set on it, is pushed up to stand on those in its lower half when
-     *    there is room, or else left free to move out, only kept from sinking
+     *    there is room, or else left free to move out of them, but not into any it is not in already
      *  @param {EngineObject3D} o
      *  @param {Vector3} oldPos - Where it was before it moved
      *  @ignore */
@@ -28036,12 +28050,36 @@ class VoxelMap extends EngineObject3D
                     top = y + 1;
             const up = top === undefined ? undefined : vec3(oldPos.x, m.y + top + half + epsilon, oldPos.z);
             if (up && !this.boxBlocked(up, size, o))
+            {
                 p.set(up.x, up.y, up.z);
-            else if (p.y < oldPos.y)
-                p.y = oldPos.y;
-            else return;
-            v.y = max(v.y, 0);
-            o.groundObject = this;
+                v.y = max(v.y, 0);
+                o.groundObject = this;
+                return;
+            }
+
+            // or else free to move out, each axis alone, stopped only by a block it would enter that it is not in
+            // already: the cells its leading face passes into beyond those the box reached
+            const tiny = 1e-9, place = oldPos.copy();
+            for (const axis of ['y', 'x', 'z'])
+            {
+                const move = p[axis] - place[axis], halfSize = size[axis] / 2, corner = m[axis];
+                if (!move) continue;
+                const lead = (at)=> move > 0 ? ceil(at + halfSize - corner - tiny) - 1 : floor(at - halfSize - corner + tiny);
+                const from = lead(place[axis]), to = lead(p[axis]);
+                const first = min(from, to) + (move > 0 ? 1 : 0), last = max(from, to) - (move > 0 ? 0 : 1);
+                const slab = place.copy(), slabSize = size.copy();
+                slab[axis] = corner + (first + last + 1) / 2, slabSize[axis] = last - first + 1;
+                if (from === to || !this.boxBlocked(slab, slabSize, o))
+                    place[axis] = p[axis];
+                else
+                {
+                    // stopped; a fall stopped by a block under it stands on it
+                    if (axis === 'y' && move < 0)
+                        o.groundObject = this;
+                    v[axis] = 0;
+                }
+            }
+            p.set(place.x, place.y, place.z);
             return;
         }
 

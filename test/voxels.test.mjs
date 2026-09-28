@@ -407,3 +407,32 @@ test('a FirstPersonCamera3D puts the camera eyeHeight above its position, toward
     assert.deepEqual([eye.x, eye.y, eye.z].map(v=> Math.round(v * 1e6) / 1e6), [1, 2.6, 3]);
     camera.destroy();
 });
+
+test('a body stuck in a block moves out of it but not into new ones, through no wall and up no ceiling', () =>
+{
+    const map = floorMap();
+    for (let x = 10; x < 14; ++x) // a wall 4 blocks thick and tall, world x 2 to 6, y 3 to 7
+    for (let y = 1; y < 5; ++y)
+    for (let z = 7; z < 10; ++z)
+        map.setVoxel(vec3(x, y, z), 3);
+    const body = new EngineObject3D(vec3(1.5, 3.75, .5));
+    body.size3D = vec3(.5, 1.5, .5);
+    body.setCollision(false, false);
+    body.mass = 1;
+    render3D.gravity = vec3(0, -.01, 0);
+    step(10);
+    map.setVoxel(vec3(9, 2, 8), 3); // at its head, world x 1 to 2, y 4 to 5
+    for (let i = 0; i < 60; ++i) { body.velocity3D.x = .1; step(1); }
+    assert.ok(body.pos3D.x + .25 <= 2 + 1e-6, 'stopped at the wall, x ' + body.pos3D.x);
+    near(body.pos3D.y, 3.75, 2e-3, 'still on the floor');
+
+    const climber = new EngineObject3D(vec3(4, 3.75, .5)); // made inside the wall
+    climber.size3D = vec3(.5, 1.5, .5);
+    climber.setCollision(false, false);
+    climber.mass = 1;
+    let highest = 0; // it may move within the cells it is in, its top up to 5, but not into the ones above
+    for (let i = 0; i < 60; ++i) { climber.groundObject && (climber.velocity3D.y = .2); step(1); highest = Math.max(highest, climber.pos3D.y); }
+    assert.ok(highest <= 5 - .75 + 1e-6, 'did not jump up through the wall, y ' + highest);
+    render3D.gravity = vec3();
+    body.destroy(); climber.destroy(); map.destroy();
+});

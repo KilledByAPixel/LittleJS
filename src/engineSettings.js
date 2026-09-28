@@ -145,8 +145,11 @@ let engineManualStep = false;
 let glEnable = true;
 
 /** Draw in screen space by default: what the screenSpace parameter of the draw and debug functions defaults to, so a
- *  heads up display, or a 3D game that only draws 2D on the screen, can turn it on and leave the flag out; the engine
- *  says its own space when it draws, so objects, tile layers and particles stay in world space either way
+ *  heads up display, or a 3D game that only draws 2D on the screen, can turn it on and leave the flag out
+ *  - The engine says its own space when it draws, so objects, tile layers and particles stay in world space, but a
+ *    game's own draws follow it, a render() override included: turn it on around the hud, or pass false there
+ *  - Sizes and widths keep their defaults, which are world sized, so pass them in pixels
+ *  - drawText has no screenSpace and stays in world space, drawTextScreen is the one for the screen
  *  @type {boolean}
  *  @default
  *  @memberof Settings */

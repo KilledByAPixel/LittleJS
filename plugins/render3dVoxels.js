@@ -69,7 +69,7 @@ class VoxelMap extends EngineObject3D
         ASSERT(tileInfo instanceof TileInfo, 'tileInfo must be a TileInfo, the first tile of the sheet');
         /** @property {Vector3} - Cells along X, Y and Z */
         this.mapSize = mapSize.floor();
-        /** @property {TileInfo} - The sheet's first tile */
+        /** @property {TileInfo} - The sheet's first tile, rebuild() after changing it or resizing its texture */
         this.tileInfo = tileInfo;
         /** @property {Uint8Array} - The block type of each cell, x + mapSize.x * (y + mapSize.y * z), 0 empty; call
          *  rebuild() after changing it directly */
@@ -309,7 +309,7 @@ class VoxelMap extends EngineObject3D
     /** Keep an object out of the blocks, one axis at a time as 2D tiles do, called by the engine for each object with
      *  collideLevel; a sphere collides as its box, and one moving more than about a cell a frame can pass through
      *  - One already in blocks, as when a block is set on it, is pushed up to stand on those in its lower half when
-     *    there is room, or else left free to move out, only kept from sinking
+     *    there is room, or else left free to move out of them, but not into any it is not in already
      *  @param {EngineObject3D} o
      *  @param {Vector3} oldPos - Where it was before it moved
      *  @ignore */
@@ -329,12 +329,36 @@ class VoxelMap extends EngineObject3D
                     top = y + 1;
             const up = top === undefined ? undefined : vec3(oldPos.x, m.y + top + half + epsilon, oldPos.z);
             if (up && !this.boxBlocked(up, size, o))
+            {
                 p.set(up.x, up.y, up.z);
-            else if (p.y < oldPos.y)
-                p.y = oldPos.y;
-            else return;
-            v.y = max(v.y, 0);
-            o.groundObject = this;
+                v.y = max(v.y, 0);
+                o.groundObject = this;
+                return;
+            }
+
+            // or else free to move out, each axis alone, stopped only by a block it would enter that it is not in
+            // already: the cells its leading face passes into beyond those the box reached
+            const tiny = 1e-9, place = oldPos.copy();
+            for (const axis of ['y', 'x', 'z'])
+            {
+                const move = p[axis] - place[axis], halfSize = size[axis] / 2, corner = m[axis];
+                if (!move) continue;
+                const lead = (at)=> move > 0 ? ceil(at + halfSize - corner - tiny) - 1 : floor(at - halfSize - corner + tiny);
+                const from = lead(place[axis]), to = lead(p[axis]);
+                const first = min(from, to) + (move > 0 ? 1 : 0), last = max(from, to) - (move > 0 ? 0 : 1);
+                const slab = place.copy(), slabSize = size.copy();
+                slab[axis] = corner + (first + last + 1) / 2, slabSize[axis] = last - first + 1;
+                if (from === to || !this.boxBlocked(slab, slabSize, o))
+                    place[axis] = p[axis];
+                else
+                {
+                    // stopped; a fall stopped by a block under it stands on it
+                    if (axis === 'y' && move < 0)
+                        o.groundObject = this;
+                    v[axis] = 0;
+                }
+            }
+            p.set(place.x, place.y, place.z);
             return;
         }
 

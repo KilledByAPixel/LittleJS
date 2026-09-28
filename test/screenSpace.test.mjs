@@ -56,10 +56,31 @@ test('no engine or plugin call leaves screenSpace to the default, so the setting
         const before = s.slice(s.lastIndexOf('\n', m.index) + 1, m.index), list = callArgs(s, m.index + m[0].length);
         if (/function\s*$/.test(before) || /^\s*(\*|\/\/)/.test(before) || /^\s*\{/.test(s.slice(list.close + 1)))
             continue;
-        if (list.length <= index)
+        if (list.length <= index || list[index] === 'undefined')
             missing.push(`${file}:${s.slice(0, m.index).split('\n').length} ${name}`);
     }
     assert.deepEqual(missing, [], 'these calls should pass screenSpace, false for world space');
+});
+
+test('every screenSpace parameter defaults to drawScreenSpace, so a function or method that reads it sees the setting', () =>
+{
+    // a function or method, and its screenSpace parameter as written; drawRect only hands it on to drawTile, and the
+    // setter's is the new setting
+    const forwards = ['drawRect', 'setDrawScreenSpace'], wrong = [];
+    for (const dir of ['src', 'plugins'])
+    for (const f of fs.readdirSync(dir).filter(f=> f.endsWith('.js')))
+    {
+        const s = fs.readFileSync(dir + '/' + f, 'utf8').replace(/\r\n/g, '\n');
+        for (const m of s.matchAll(/^(?:function (\w+)|    (\w+))\(/gm))
+        {
+            const params = callArgs(s, m.index + m[0].length);
+            if (!/^\s*\{/.test(s.slice(params.close + 1))) continue; // a call, not a definition
+            const param = params.find(p=> p.split('=')[0].trim() === 'screenSpace'), name = m[1] || m[2];
+            if (param && param !== 'screenSpace=drawScreenSpace' && !forwards.includes(name))
+                wrong.push(`${dir}/${f}:${s.slice(0, m.index).split('\n').length} ${name} ${param}`);
+        }
+    }
+    assert.deepEqual(wrong, []);
 });
 
 test('drawScreenSpace moves a game\'s draws to screen space, while objects and canvas layers stay in world space', () =>
@@ -82,4 +103,28 @@ test('drawScreenSpace moves a game\'s draws to screen space, while objects and c
         return JSON.stringify({game, seen});
     })()`);
     assert.deepEqual(JSON.parse(result), {game: true, seen: [false, false]});
+});
+
+test('with drawScreenSpace on, a nine or three slice draws as it does in screen space, with the screen border sizes', () =>
+{
+    const { run } = loadEngine();
+    const result = run(`(()=>
+    {
+        // where each piece lands and how it is turned, for a slice drawn each way
+        const pieces = [], draw = drawTile;
+        drawTile = (...a)=> { pieces.push([a[0].x, a[0].y, a[1].x, a[1].y, a[2].pos.x, a[2].pos.y, a[4], a[8]]); };
+        const tile = new TileInfo(vec2(), vec2(16)), pos = vec2(200), size = vec2(120, 90);
+        const drawn = (f)=> { pieces.length = 0; f(); return JSON.stringify(pieces); };
+        const same = [drawNineSlice, drawThreeSlice].map(slice=>
+        {
+            setDrawScreenSpace(true);
+            const setting = drawn(()=> slice(pos, size, tile, WHITE, undefined, undefined, undefined, .3));
+            setDrawScreenSpace(false);
+            const explicit = drawn(()=> slice(pos, size, tile, WHITE, 32, undefined, 2, .3, glEnable, true));
+            return setting === explicit || setting + ' != ' + explicit;
+        });
+        drawTile = draw;
+        return JSON.stringify(same);
+    })()`);
+    assert.deepEqual(JSON.parse(result), [true, true]);
 });

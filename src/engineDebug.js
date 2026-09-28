@@ -92,14 +92,14 @@ function ASSERT(assert, ...output)
  *  @memberof Debug */
 function LOG(...output) { console.log(...output); }
 
-/** Draw a debug rectangle in world space
+/** Draw a debug rectangle in world space, or on the screen with screenSpace
  *  @param {Vector2} pos
  *  @param {Vector2} [size=vec2(0)]
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {number} [angle]
  *  @param {boolean} [fill]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, screenSpace=drawScreenSpace)
 {
@@ -116,14 +116,14 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, s
     debugPrimitives.push({pos:pos.copy(), size:size.copy(), color, timer, angle, fill, screenSpace});
 }
 
-/** Draw a debug poly in world space
+/** Draw a debug poly in world space, or on the screen with screenSpace
  *  @param {Vector2} pos
  *  @param {Array<Vector2>} points
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {number} [angle]
  *  @param {boolean} [fill]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screenSpace=drawScreenSpace)
 {
@@ -142,13 +142,13 @@ function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screen
     debugPrimitives.push({pos, points, color, timer, angle, fill, screenSpace});
 }
 
-/** Draw a debug circle in world space
+/** Draw a debug circle in world space, or on the screen with screenSpace
  *  @param {Vector2} pos
  *  @param {number} [size] - diameter
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {boolean} [fill]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=drawScreenSpace)
 {
@@ -165,23 +165,23 @@ function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=d
     debugPrimitives.push({pos, size, color, timer, angle:0, fill, screenSpace});
 }
 
-/** Draw a debug point in world space
+/** Draw a debug point in world space, or on the screen with screenSpace
  *  @param {Vector2} pos
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {number} [angle]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugPoint(pos, color, time, angle, screenSpace=drawScreenSpace)
 { debugRect(pos, undefined, color, time, angle, false, screenSpace); }
 
-/** Draw a debug line in world space
+/** Draw a debug line in world space, or on the screen with screenSpace
  *  @param {Vector2} posA
  *  @param {Vector2} posB
  *  @param {Color|string} [color]
  *  @param {number} [width]
  *  @param {number} [time]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugLine(posA, posB, color, width=.1, time=0, screenSpace=drawScreenSpace)
 {
@@ -196,14 +196,14 @@ function debugLine(posA, posB, color, width=.1, time=0, screenSpace=drawScreenSp
     debugRect(posA.add(halfDelta), size, color, time, angle, true, screenSpace);
 }
 
-/** Draw a debug combined axis aligned bounding box in world space
+/** Draw a debug combined axis aligned bounding box in world space, or on the screen with screenSpace
  *  @param {Vector2} posA
  *  @param {Vector2} sizeA
  *  @param {Vector2} posB
  *  @param {Vector2} sizeB
  *  @param {Color|string} [color]
  *  @param {number} [time]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=drawScreenSpace)
 {
@@ -223,7 +223,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=drawScr
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color, time, 0, false, screenSpace);
 }
 
-/** Draw debug text in world space
+/** Draw debug text in world space, or on the screen with screenSpace
  *  @param {string|number} text
  *  @param {Vector2} pos
  *  @param {number} [size]
@@ -231,7 +231,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=drawScr
  *  @param {number} [time]
  *  @param {number} [angle]
  *  @param {string} [font]
- *  @param {boolean} [screenSpace]
+ *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @memberof Debug */
 function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace', screenSpace=drawScreenSpace)
 {

@@ -350,7 +350,9 @@ tilesPixelated = true         // Disable filtering for crisper pixel art, when f
 showSplashScreen = false      // Show the LittleJS splash screen on startup
 glEnable = true               // Enable fast WebGL rendering
 drawScreenSpace = false       // What screenSpace defaults to in the draw and debug functions; turn it on for a HUD or
-                              // a 3D game's 2D drawing, the engine's own world drawing stays in world space
+                              // a 3D game's 2D drawing; the engine's own drawing stays in world space, but a game's
+                              // render() overrides follow it too; sizes and widths are still world sized by default,
+                              // so pass pixels; drawText stays in world space, drawTextScreen draws on the screen
 
 // Tile sheet settings
 tileDefaultSize = (16,16) // Default size of tiles in pixels
@@ -1405,7 +1407,7 @@ buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth) // XZ plane; 
                                                                     // off for ground only seen from above
 // color is a Color or (x, z)=> Color, where x and z are positions on the mesh itself with (0, 0) at its center; it is
 // called per vertex when smooth and once per cell center when flat, so a checker needs cell sized steps; a grid with
-// no heightFunction is flat shaded unless smooth is passed, smoothing would only blend its cell colors; with
+// no heightFunction is flat shaded unless smooth is passed, pass it for a color gradient to blend; with
 // buildGrid(vec2(30), 15) the cells are 2 units, so (x, z)=> (floor(x/2) + floor(z/2)) & 1 ? GRAY : WHITE
 buildLoft(stations) // a hull from diamond shaped cross sections, the stations: [[z, width, top, bottom, sideHeight],
                     // ...] nose first at the largest z, always flat; sideHeight is 0 to 1, where the side corners sit
@@ -1763,11 +1765,11 @@ newgrounds.resendUnlocks()           // advanced: send the ones whose request di
 
 ```javascript
 // Nine-slice — 3x3 tile grid scaled to fit
-drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
+drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 
 // Three-slice — 1x3 tile strip (corner / side / center) rotated around the box
-drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
+drawThreeSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 
 // TileSlice — a tile kept as a box style: slices 9 is a nine-slice, 3 a three-slice, 1 the whole tile stretched
@@ -1875,6 +1877,7 @@ debugLine(posA, posB, color, width=.1, time)                // Draw debug line
 debugPoly(pos, points, color=WHITE, time=0, angle=0, fill)  // Draw debug polygon
 debugText(text, pos, size=1, color=WHITE, time=0, angle=0)  // Draw debug text
 debugOverlap(pA, sA, pB, sB, color) // Draw a debug overlap between two boxes
+// each debug draw also takes screenSpace after the params above, defaulting to drawScreenSpace
 debugClear()                     // Clear all debug primitives
 debugScreenshot()                // Save a screenshot at the end of this frame
 debugShowErrors()                // Show full page error message when an error occurs

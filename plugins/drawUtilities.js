@@ -44,16 +44,21 @@ function drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, a
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample the nine-slice from
  *  @param {Color} [color] - Color to modulate with
- *  @param {number} [borderSize] - Rendered thickness of the border sections
+ *  @param {number} [borderSize] - Rendered thickness of the border sections, 1 in world space and 32 pixels in
+ *    screen space by default
  *  @param {Color} [additiveColor] - Additive color
- *  @param {number} [extraSpace] - Extra spacing adjustment
+ *  @param {number} [extraSpace] - Extra spacing adjustment, .05 in world space and 2 pixels in screen space by
+ *    default
  *  @param {number} [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
- *  @param {boolean} [screenSpace] - Use screen space coordinates
+ *  @param {boolean} [screenSpace=drawScreenSpace] - Use screen space coordinates
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
-function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
+function drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
+    // the border and spacing defaults are in the units of the space it draws in
+    borderSize ??= screenSpace ? 32 : 1;
+    extraSpace ??= screenSpace ? 2 : .05;
     if (!size.x || !size.y) return; // nothing to draw, the spacing must not make a sliver of it
     if (color && color.a < 1)
         extraSpace = 0; // see through, the overlap that hides a seam would draw twice and show brighter
@@ -132,16 +137,21 @@ function drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, 
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - First of 3 consecutive tiles (corner, side, center) for the three-slice
  *  @param {Color} [color] - Color to modulate with
- *  @param {number} [borderSize] - Rendered thickness of the border sections
+ *  @param {number} [borderSize] - Rendered thickness of the border sections, 1 in world space and 32 pixels in
+ *    screen space by default
  *  @param {Color} [additiveColor] - Additive color
- *  @param {number} [extraSpace] - Extra spacing adjustment
+ *  @param {number} [extraSpace] - Extra spacing adjustment, .05 in world space and 2 pixels in screen space by
+ *    default
  *  @param {number} [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
- *  @param {boolean} [screenSpace] - Use screen space coordinates
+ *  @param {boolean} [screenSpace=drawScreenSpace] - Use screen space coordinates
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
-function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
+function drawThreeSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
+    // the border and spacing defaults are in the units of the space it draws in
+    borderSize ??= screenSpace ? 32 : 1;
+    extraSpace ??= screenSpace ? 2 : .05;
     if (!size.x || !size.y) return; // nothing to draw, the spacing must not make a sliver of it
     if (color && color.a < 1)
         extraSpace = 0; // see through, the overlap that hides a seam would draw twice and show brighter
@@ -235,7 +245,7 @@ class TileSlice
      *  @param {Color} [additiveColor] - Additive color
      *  @param {number} [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
-     *  @param {boolean} [screenSpace] - Are pos and size in screen space?
+     *  @param {boolean} [screenSpace=drawScreenSpace] - Are pos and size in screen space?
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use */
     draw(pos, size, color=WHITE, additiveColor, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
     {
@@ -317,7 +327,7 @@ function drawSliceSnapped(pos, size, borderSize, pieceTile, color, additiveColor
  *  @param {number}  [lineWidth] - Outline width, 0 for no outline
  *  @param {Color}   [lineColor] - Outline color
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
- *  @param {boolean} [screenSpace] - Use screen space coordinates
+ *  @param {boolean} [screenSpace=drawScreenSpace] - Use screen space coordinates
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas context to use
  *  @memberof DrawUtilities */
 function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
