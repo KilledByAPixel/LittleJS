@@ -94,13 +94,13 @@ function loadLevelData()
         tileLayer.redraw();
     }
 
-    // the objects of the level's object layer, each type with its marker tile as an icon for the level editor;
+    // the objects of the level's object layer, each type with its sprite as an icon for the level editor;
     // an old map with marker tiles still works, the loop above makes those
-    const icon = (index)=> tile(index, 16, 1);
-    LJS.objectLayersAddType('PlayerStart', (pos)=> playerStartPos = pos, {}, icon(tileLookup.player));
-    LJS.objectLayersAddType('Crate', GameObjects.Crate, {}, icon(tileLookup.crate));
-    LJS.objectLayersAddType('Enemy', GameObjects.Enemy, {}, icon(tileLookup.enemy));
-    LJS.objectLayersAddType('Coin', GameObjects.Coin, {}, icon(tileLookup.coin));
+    const sprites = Game.spriteAtlas;
+    LJS.objectLayersAddType('PlayerStart', (pos)=> playerStartPos = pos, {}, sprites.player);
+    LJS.objectLayersAddType('Crate', GameObjects.Crate, {}, sprites.crate);
+    LJS.objectLayersAddType('Enemy', GameObjects.Enemy, {}, sprites.enemy);
+    LJS.objectLayersAddType('Coin', GameObjects.Coin, {}, sprites.coin);
     LJS.objectLayersLoad(tileMapData);
 
     // the level editor (Esc then 0) paints tiles with the same rules
@@ -108,7 +108,7 @@ function loadLevelData()
 }
 
 // set up a cell's collision and look from its tile, when the level loads and when the level editor paints it;
-// object tiles become objects when the level loads, the editor shows them faded until then
+// the marker tiles of an old map become objects when the level loads, they are blank in the sheet now
 function setupTile(tileLayer, pos, tileData, spawnObjects)
 {
     if (tileData >= tileLookup.player)

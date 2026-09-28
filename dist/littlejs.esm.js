@@ -31455,9 +31455,12 @@ function editorPanelUpdate()
         p.layers = layers;
         p.layerRow.replaceChildren(...layers.map((layer, i)=>
         {
-            const b = editorElement('button', undefined, 'flex:1;min-width:28px;padding:3px;cursor:pointer',
-                i < 9 ? String(i + 1) : '·');
-            b.title = `${(layer.isObjects ? layer.name : layer.source.name) || 'Layer ' + (i + 1)} (${layer.record.fileName})`;
+            // its number key and name, cut short when the row runs out of room, the whole name in its tooltip
+            const name = layer.isObjects ? layer.name : layer.source.name;
+            const b = editorElement('button', undefined, 'flex:1;min-width:28px;padding:3px;cursor:pointer;' +
+                'white-space:nowrap;overflow:hidden;text-overflow:ellipsis', (i < 9 ? String(i + 1) : '·') +
+                (name ? ' ' + name : ''));
+            b.title = `${name || 'Layer ' + (i + 1)} (${layer.record.fileName})`;
             b.onclick = ()=> { editorSelectLayer(layer); b.blur(); };
             return b;
         }));
