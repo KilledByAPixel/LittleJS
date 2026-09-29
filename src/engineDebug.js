@@ -684,6 +684,14 @@ function debugRender()
             debugContext.fillText('9: Tweakables', x, y += h);
             debugContext.fillStyle = levelEditor.isOpen ? '#f00' : '#fff';
             debugContext.fillText('0: Edit Level', x, y += h);
+            for (const line of debugOverlayKeys)
+            {
+                // a key a debug plugin added, when it has something to say
+                const key = line();
+                if (!key) continue;
+                debugContext.fillStyle = key.on ? '#f00' : '#fff';
+                debugContext.fillText(key.text, x, y += h);
+            }
             debugContext.fillStyle = '#fff';
 
             let keysPressed = '';
@@ -919,6 +927,9 @@ function debugProtectConstant(obj)
 let inputCaptureOn = false;      // something has taken the keyboard and mouse
 let inputCaptureReading = false; // it is reading them now
 let inputCaptureDeltaScreen, inputCaptureWheel = 0; // this update's mouse movement and wheel, for it alone
+
+// the keys debug plugins add to the overlay's list, each a function that gives {text, on} or nothing to show
+const debugOverlayKeys = [];
 
 // take the keyboard and mouse from the game, or hand them back
 function inputCapture(on=true)

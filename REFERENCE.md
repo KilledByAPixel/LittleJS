@@ -1891,6 +1891,9 @@ levelEditor.paletteTiles = [0, 1, 10] // The tiles the palette shows, in order; 
   collision values on screen, and the tiles under the mouse; pressing 2 again steps through the layers one at a time,
   then off), 3 particles, 4 raycasts, 5 gamepads, 6 sound, 7 screenshot, 8 video capture, 9 tweakables panel,
   0 level editor
+- C, while the overlay is open, is a free camera for a 3D game: the mouse looks once captured or with the right
+  button held, WASD and QE fly, Shift is faster and the wheel sets the speed; the game runs on and reads no keys or
+  mouse until C or Escape
 - +/- keys apply time scale to update while the overlay is open
 - setDebugKeysAlways(true) lets the number and +/- keys work with the overlay closed, for a game that does not use them
 - Debug primitive rendering system

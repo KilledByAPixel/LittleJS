@@ -1868,6 +1868,7 @@ function render3DFrustumPlanes(matrix)
 function render3DPreRender()
 {
     const r = render3D;
+    editor3DCameraBegin(); // debug builds draw with the free camera or the 3D editor's, the game's is back after
     r.updateMatrices();
     r.shadowMapDrawn = false;
     render3DRenderPass(false);
@@ -1877,6 +1878,7 @@ function render3DPreRender()
 function render3DRender()
 {
     render3DRenderPass(true);
+    editor3DCameraEnd();
 }
 
 // one 3D pass for the objects of a layer: take over the gl state, draw the shadow map once a frame and the stages, hand

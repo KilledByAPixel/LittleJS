@@ -70,3 +70,7 @@ function debugSphere3D(){}
 function debugLine3D(){}
 function debugPoint3D(){}
 function render3DRenderDebug(){}
+
+// the free camera and the 3D level editor are debug only
+function editor3DCameraBegin(){}
+function editor3DCameraEnd(){}
