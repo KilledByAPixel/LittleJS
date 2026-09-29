@@ -8639,7 +8639,9 @@ declare module "littlejsengine" {
         /** Create a voxel map, it draws itself and joins the level's collision
          *  @param {Vector3} [pos3D] - Its corner
          *  @param {Vector3} [mapSize] - Cells along X, Y and Z
-         *  @param {TileInfo} [tileInfo] - The sheet's first tile, as for a TileLayer, a block's type counts tiles from it */
+         *  @param {TileInfo} [tileInfo] - The sheet's first tile, as for a TileLayer, a block's type counts tiles from it;
+         *    give the tiles a border of their own edge pixels, 2 or more, and that padding, or the blurred mipmaps of the
+         *    distance blend each tile with the ones beside it and show seams along the block edges */
         constructor(pos3D?: Vector3, mapSize?: Vector3, tileInfo?: TileInfo);
         /** @property {Vector3} - Cells along X, Y and Z */
         mapSize: Vector3;

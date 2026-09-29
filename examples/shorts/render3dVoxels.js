@@ -1,10 +1,11 @@
 const names = ['Grass','Dirt','Stone','Wood','Leaves','Water','Glass'];
 let map, player, hit, selected = 1;
 
-// draw block textures into a small tile sheet, 16 pixels each
+// draw block textures into a small tile sheet, 16 pixels each, with a
+// 2 pixel border of each tile's edge so the mipmaps do not blend tiles
 function makeTiles()
 {
-    const context = createCanvasContext(128, 16);
+    const context = createCanvasContext(8*20, 20);
     const colors = [hsl(.3,.6,.45), hsl(.1,.4,.35), hsl(.1,.4,.35),
         hsl(0,0,.5), hsl(.1,.5,.3), hsl(.3,.6,.35), hsl(.6,.8,.5,.6),
         hsl(.55,.3,.9,.3)];
@@ -16,8 +17,11 @@ function makeTiles()
         if (i == 1 && y < 4 + rand(2)) color = colors[0]; // grass edge
         if (i == 5 && rand() < .3) color = CLEAR_BLACK;   // leaf holes
         if (i == 7 && !(x%15 && y%15)) color = WHITE;     // glass rim
+        // an edge pixel also fills the border beside it
+        const left = x ? 0 : 2, top = y ? 0 : 2;
+        const w = 1 + left + (x < 15 ? 0 : 2), h = 1 + top + (y < 15 ? 0 : 2);
         context.fillStyle = color.toString();
-        context.fillRect(i*16 + x, y, 1, 1);
+        context.fillRect(i*20 + 2 + x - left, 2 + y - top, w, h);
     }
     return new TextureInfo(context.canvas);
 }
@@ -42,7 +46,7 @@ function gameInit()
     render3D.setSky();
     render3D.gravity = vec3(0, -.01, 0);
     setDrawScreenSpace(true); // the only 2D drawing is the hud
-    const sheet = tile(0, 16, makeTiles(), 0); // made with no padding
+    const sheet = tile(0, 16, makeTiles(), 2); // 2 pixel borders
     map = new VoxelMap(vec3(), vec3(50), sheet);
     map.setBlockType(1, {top:0, side:1, bottom:2});
     for (let i = 5; i < 8; ++i)
