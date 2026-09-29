@@ -86,7 +86,9 @@ test('a switch while paused enters at once and updates after the unpause', ()=>
     LJS.setScene(logScene('f'));
     assert.deepEqual(log, ['e2 leave', 'f enter']);
     clearLog();
+    const ticks0 = ticks;
     LJS.engineStep();
+    assert.equal(ticks, ticks0 + 1); // the frozen tick ran
     assert.deepEqual(log, []);
     LJS.setPaused(false);
     LJS.engineStep();

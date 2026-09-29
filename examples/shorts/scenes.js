@@ -27,13 +27,13 @@ class Ball extends EngineObject
     update()
     {
         super.update();
-        const paddleX = gameScene.paddleX;
-        if (this.pos.y < 1.5 && abs(this.pos.x - paddleX) < 3)
+        const {x, y} = this.pos; // caught while it overlaps the paddle
+        if (y < 1.5 && y > .5 && abs(x - gameScene.paddleX) < 3)
         {
-            ++score; // caught
+            ++score;
             this.destroy();
         }
-        else if (this.pos.y < -1)
+        else if (y < -1)
         {
             this.destroy();
             if (!--lives)
