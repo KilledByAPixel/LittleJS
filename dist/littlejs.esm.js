@@ -23033,8 +23033,10 @@ class Render3DPlugin
     drawQuad(a, b, c, d, tileInfo, color=WHITE)
     {
         if (this.transparentQueue) // the queue replays later, so it keeps copies of what a caller may reuse
+        {
             a = a.copy(), b = b.copy(), c = c.copy(), d = d.copy();
             color = isArray(color) ? color.map(k=> k.copy()) : color.copy();
+        }
         this.drawStrip(render3DQuadStrip(a, b, c, d), render3DFaceNormal(a, b, c, d), RENDER3D_QUAD_UVS,
             render3DQuadValues(color), tileInfo);
     }
