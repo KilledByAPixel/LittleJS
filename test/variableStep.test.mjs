@@ -118,6 +118,23 @@ test('a particle emitter emits the same count per second in the fixed and variab
     assert.ok(Math.abs(emitted(true) - 60) <= 1, 'variable');
 });
 
+test('a 3D particle trail keeps its storage while timeDelta varies', ()=>
+{
+    new LJS.Render3DPlugin;
+    LJS.setEngineVariableStep(true);
+    runFrames(144, 30);
+    const e = new LJS.ParticleEmitter3D(LJS.vec3(), 0, 0, 60, 0, undefined,
+        LJS.WHITE, LJS.WHITE, LJS.WHITE, LJS.WHITE, 1);
+    e.trailTime = .1;
+    runFrames(144, 5);
+    const trailData = e.trailData;
+    assert.equal(e.trailMax, 6); // trailTime * frameRate points
+    runFrames(72, 5); // frames twice as long, so twice the timeDelta
+    assert.equal(e.trailMax, 6);
+    assert.equal(e.trailData, trailData, 'the trails did not start over');
+    e.destroy();
+});
+
 // last, it turns manual step on for the rest of the file
 test('engineStep in the variable step runs one update of 1/60 per frame', ()=>
 {

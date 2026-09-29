@@ -1517,7 +1517,7 @@ new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileIn
 // randomness on speed, size and life
 // an emitter with an emitTime destroys itself once its last particle is gone, so a burst is fire and forget
 // untextured particles are soft round dots, textured ones are billboards of the tile
-emitter.trailTime = .2 // 0 by default; draw each particle as a ribbon along its last .2 seconds instead, the texture stretches along
+emitter.trailTime = .2 // 0 by default; draw each particle as a ribbon along its last .2 seconds instead (trailTime * 60 updates with engineVariableStep), the texture stretches along
                        // it
 // scale3D on the emitter, its own or a parent's, grows the whole effect: spawn area, sizes, speed and fall
 emitter.angleSpeed = .05; emitter.angleDamping = 1 // tumble each particle in the camera plane, either way from a random

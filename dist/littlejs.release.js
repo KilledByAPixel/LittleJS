@@ -26202,7 +26202,8 @@ class ParticleEmitter3D extends EngineObject3D
         this.randomness = randomness;
         /** @property {boolean} - Additive blending */
         this.additive = additive;
-        /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards */
+        /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards;
+         *  with engineVariableStep it keeps trailTime * frameRate updates of path */
         this.trailTime = 0;
         /** @property {number} - Radians per frame each particle turns in the camera plane, either way; 0 is no spin */
         this.angleSpeed = 0;
@@ -26247,8 +26248,9 @@ class ParticleEmitter3D extends EngineObject3D
         else if (!this.particleCount)
             this.destroy();
 
-        // the trail storage follows trailTime, a change starts every trail over
-        const trailMax = this.trailTime ? max(1, round(this.trailTime / timeDelta)) : 0;
+        // the trail storage follows trailTime at the fixed rate, a change starts every trail over, so a varying
+        // timeDelta can not; with engineVariableStep a trail keeps that many updates
+        const trailMax = this.trailTime ? max(1, round(this.trailTime * frameRate)) : 0;
         if (trailMax !== this.trailMax)
         {
             this.trailMax = trailMax;

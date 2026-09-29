@@ -9008,7 +9008,8 @@ declare module "littlejsengine" {
         fadeRate: number;
         /** @property {number} - Extra randomness applied to speed, size and life */
         randomness: number;
-        /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards */
+        /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards;
+         *  with engineVariableStep it keeps trailTime * frameRate updates of path */
         trailTime: number;
         /** @property {number} - Radians per frame each particle turns in the camera plane, either way; 0 is no spin */
         angleSpeed: number;
