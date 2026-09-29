@@ -1668,6 +1668,7 @@ Right button                             // look, and WASD and QE fly while it i
 Wheel · Middle drag or Space+drag · Alt+drag · F      // zoom, pan, orbit, frame the selection
 // Playing
 Esc                                      // play and edit
+Restart · Reset to file                  // panel buttons: rebuild with your edits, or go back to the file
 levelEditor.onRestart = loadLevel        // the same hooks as the 2D editor
 levelEditor.onPlayFrom = (pos3D)=> {}
 levelEditor.use3D = undefined            // true or false picks the 3D or the 2D editor

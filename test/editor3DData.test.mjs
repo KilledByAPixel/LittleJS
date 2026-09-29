@@ -384,6 +384,32 @@ test('3D: a reload of the file Save wrote drops the autosave, and edits made aft
     assert.deepEqual(json(engine.run, '[list()[1].pos[0], list()[2].pos[2]]'), [3, 5], 'the edit since the save');
 });
 
+test('Reset to file puts the level back as its file has it, as one undo, with nothing left to recover', async ()=>
+{
+    const storage = makeStorage();
+    const engine = await loadGame({ localStorage: storage });
+    engine.run(fileCode + 'move(2, vec3(3, 1.5, 0)); editor3DStrokeEnd(); editor3DRevert()');
+    assert.deepEqual(json(engine.run, 'list()[1].pos'), [1, 1.5, 0]);
+    near(engine.run('live(2).pos3D.x'), 1, 'the game object moves back too');
+    assert.deepEqual(JSON.parse(storage.items['LittleJS editor 3D /game/']), {}, 'the file as it is, nothing to keep');
+    engine.run('editor3DUndo()');
+    assert.deepEqual(json(engine.run, 'list()[1].pos'), [3, 1.5, 0], 'it can be undone');
+});
+
+test('Reset to file drops edits waiting for a changed file, and does nothing when it is already the file', async ()=>
+{
+    const storage = makeStorage();
+    let engine = await loadGame({ localStorage: storage });
+    engine.run(fileCode + 'move(2, vec3(3, 1.5, 0)); editor3DStrokeEnd();');
+    engine = await loadGame({ localStorage: storage });
+    engine.run(fileCode.replace('[0, 2, 3]', '[0, 2, 9]'));
+    assert.equal(engine.run('!!editor3DRecords.get(level).pending'), true);
+    engine.run('editor3DRevert()');
+    assert.equal(engine.run('!!editor3DRecords.get(level).pending'), false);
+    assert.deepEqual(JSON.parse(storage.items['LittleJS editor 3D /game/']), {});
+    assert.equal(engine.run('editor3DUndoList.length'), 0, 'already the file, nothing to undo');
+});
+
 test('a level the game loads twice is not given its autosave twice', async ()=>
 {
     const storage = makeStorage();

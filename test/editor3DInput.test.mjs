@@ -139,6 +139,32 @@ test('G turns the grid snap off, then Ctrl turns it on for a drag', async ()=>
     assert.deepEqual(json(run, 'list()[0].pos'), [1.5, .5, .5]);
 });
 
+// the handles as the editor draws them: the meshes drawn, and which way each points
+function drawnHandles(run, tool)
+{
+    return json(run, `(()=>
+    {
+        editor3DSelection.add(1); editor3DTool = '${tool}';
+        const drawMesh = render3D.drawMesh, drawBox = render3D.drawBox, cones = [];
+        let boxes = 0;
+        render3D.drawMesh = (mesh, matrix)=> mesh === editor3DConeMesh() && cones.push(matrix.transformDirection(vec3(0, 1, 0)).normalize());
+        render3D.drawBox = ()=> ++boxes;
+        try { editor3DWithView(editor3DDraw); }
+        finally { render3D.drawMesh = drawMesh, render3D.drawBox = drawBox; }
+        return {cones: cones.map((d)=> [d.x, d.y, d.z].map((v)=> Math.round(v))), boxes};
+    })()`);
+}
+
+test('the move arrows end in cones pointing along their axes, the scale handles in boxes', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    const move = drawnHandles(run, 'move');
+    assert.deepEqual(move.cones.sort(), [[0, 0, 1], [0, 1, 0], [1, 0, 0]]);
+    const scale = drawnHandles(run, 'scale');
+    assert.deepEqual(scale.cones, [], 'no cones to scale with');
+    assert.ok(scale.boxes >= 4, 'a box on each axis and one in the middle');
+});
+
 test('dragging the Y arrow lifts, and the square between X and Y moves along both', async ()=>
 {
     const engine = await loadGame(), { run } = engine;

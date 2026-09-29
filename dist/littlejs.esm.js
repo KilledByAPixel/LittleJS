@@ -33760,6 +33760,19 @@ function editor3DDropPending()
     editor3DAutosave();
 }
 
+// Reset to file: put the level back as its file has it, or as Save last wrote it, as one undo; edits waiting for a
+// file that changed are dropped, and a level already as its file has it is left alone
+function editor3DRevert()
+{
+    const record = editor3DRecords.get(editor3DLevel);
+    if (!record) return false;
+    record.pending = undefined;
+    if (editor3DSame(editor3DObjects(), record.original))
+        return editor3DAutosave(), false;
+    editor3DChange((list)=> { list.length = 0; list.push(...editor3DCopy(record.original)); });
+    editor3DStrokeEnd();
+}
+
 // save the level as JSON: where the browser lets a page write files, Chrome and Edge, to a file picked once and
 // written again on each Save after, or picked again with Save As; elsewhere as a download; a file of the level's
 // own name that was written is the file from then on, for the autosave; resolves to how it saved, undefined when
@@ -34311,6 +34324,7 @@ const editor3DHelpLines =
     'Wheel: zoom · Middle drag or Space+drag: pan · Alt+drag: orbit · F: frame the selection',
     'Pick a type, then click to place it, Shift+click keeps placing',
     'Delete · Ctrl+C / X / V: copy, cut, paste · Ctrl+D: duplicate · Ctrl+Z / Y: undo, redo',
+    'Reset to file: the level as its file has it, Restart keeps your edits, Undo brings them back',
     'Esc: play and edit · 0: exit the editor · ?: keys',
 ];
 
@@ -34431,6 +34445,10 @@ function editor3DDrawGrid()
     }
 }
 
+// the cone a move arrow ends in, standing on Y, made the first time one is drawn
+let editor3DCone;
+const editor3DConeMesh = ()=> editor3DCone ||= buildCone(1, 1, 12);
+
 // the editor's drawing in the 3D pass: the grid, a marker for what has nothing to see, the collision shape of
 // what is solid and turned or selected, the selection, the brush where it would go, and the handles
 function editor3DDraw()
@@ -34480,11 +34498,18 @@ function editor3DDraw()
         }
         else if (kind === 'scaleAll')
             r.drawBox(center, tip * 1.4, lit ? color : WHITE);
+        else if (kind === 'arrow')
+        {
+            // a move arrow ends in a cone pointing along it, which says move this way, where scale has a box
+            r.drawLine(points[0], points[1], width, color);
+            const turn = axis === 'x' ? vec3(0, 0, -PI / 2) : axis === 'z' ? vec3(PI / 2, 0, 0) : undefined;
+            const at = points[1].add(handle.direction.scale(tip));
+            r.drawMesh(editor3DConeMesh(), buildMatrix(at, turn, vec3(tip * 1.4, tip * 2, tip * 1.4)), undefined, color);
+        }
         else
         {
             r.drawLine(points[0], points[1], width, color);
-            r.drawBox(points[1], tip, color, kind === 'scale' ?
-                editor3DRotation(editor3DSelected()[0]).scale(PI / 180) : undefined);
+            r.drawBox(points[1], tip, color, editor3DRotation(editor3DSelected()[0]).scale(PI / 180));
         }
     }
 }
@@ -34601,6 +34626,8 @@ function editor3DPanelInit()
         'Save, to the file picked the first time, or a download');
     const saveAs = button(file, 'Save As', ()=> editor3DSave(true).then(saved(saveAs, 'Save As')),
         'Save As, to a file picked again');
+    button(file, 'Reset to file', ()=> editor3DRevert(),
+        'Put the level back as its file has it, or as Save last wrote it; Undo brings the edits back');
     /** @type {any} */ (globalThis).showSaveFilePicker || (saveAs.style.display = 'none');
     const playFrom = check(panel, 'Play from mouse', (on)=> editor3DPlayFromMouse = on,
         'Escape starts play with the player at the mouse, Play at the middle of the view');
