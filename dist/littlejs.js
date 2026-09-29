@@ -1792,6 +1792,11 @@ let inputCaptureOn = false;      // something has taken the keyboard and mouse
 let inputCaptureReading = false; // it is reading them now
 let inputCaptureDeltaScreen, inputCaptureWheel = 0; // this update's mouse movement and wheel, for it alone
 
+// the game let go of a captured mouse itself, with pointerLockExit, since the debug tools last looked: a capture
+// that is lost without it is the browser's doing, which is how Chrome takes Escape
+let inputLockLetGo = false;
+function inputLockExit() { inputLockLetGo = true; }
+
 // the keys debug plugins add to the overlay's list, each a function that gives {text, on} or nothing to show
 const debugOverlayKeys = [];
 
@@ -7172,7 +7177,10 @@ function pointerLockRequest()
 /** Request to unlock the pointer
  *  @memberof Input */
 function pointerLockExit()
-{ document.exitPointerLock?.(); }
+{
+    inputLockExit(); // debug builds: the free camera and the 3D editor tell this from Escape
+    document.exitPointerLock?.();
+}
 
 /** Check if pointer is locked (true if locked)
  *  @return {boolean}
@@ -28575,7 +28583,8 @@ const level3DBaseScale = new WeakMap;
  *  - The name is a string because minified builds rename classes
  *  - A class, or any function with a prototype, is made with new make(pos3D, properties); an arrow function is
  *    called as make(pos3D, properties), for what is not an object, like a player start
- *  - properties is the defaults with the object's own values over them, and each is also set on what was made
+ *  - properties is the defaults with the object's own values over them, and each of the type's own is also set on
+ *    what was made; a property the type has no default for is in properties and is not set
  *  - Give a class a constructor of its own that takes the position: one that hands every argument on to
  *    EngineObject3D would hand it the properties as its mesh
  *  - An EngineObject3D then gets the object's rotation, and its scale times the scale it was made with
@@ -28619,7 +28628,9 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *    the default, and properties holds what differs from the type's defaults
  *  - A Color property is a #rrggbb or #rrggbbaa string, a Vector2 or Vector3 an array, as the default says
  *  - An object whose type was not added is skipped, with a warning in debug builds
- *  - What a file written by hand gets wrong uses the default
+ *  - What a file written by hand gets wrong uses the default: a value that is not of its default's type
+ *  - An object its type can not make is skipped with an error in debug builds, where asserts throw, and the rest
+ *    of the level is made
  *  @param {Object} level - The level, the level editor edits this same object
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */
@@ -28647,7 +28658,8 @@ function level3DVector(value, fallback)
 }
 
 // the defaults of an object's type, a Color or vector copied for each object, then its own properties over them,
-// each read as its default is; one the file got wrong keeps the default
+// each read as its default is; one the file got wrong, a value not of its default's type, keeps the default, and
+// one the type has no default for is kept as it is
 function level3DProperties(type, object)
 {
     const properties = {}, own = object.properties;
@@ -28663,7 +28675,7 @@ function level3DProperties(type, object)
         else if (isVector2(d))
             isArray(value) && value.length === 2 && value.every((v)=> isNumber(v)) &&
                 (properties[key] = vec2(value[0], value[1]));
-        else
+        else if (d === undefined || typeof value === typeof d)
             properties[key] = value;
     }
     return properties;
@@ -28680,7 +28692,19 @@ function level3DMake(object)
         return;
     }
     const pos = level3DVector(object.pos, vec3()), properties = level3DProperties(type, object);
-    const {make} = type, result = make.prototype ? new make(pos, properties) : make(pos, properties);
+    const {make} = type, count = engineObjects.length;
+    let result;
+    try { result = make.prototype ? new make(pos, properties) : make(pos, properties); }
+    catch (error)
+    {
+        // a value the type can not be made with: in debug builds, where asserts throw, the object is skipped with
+        // what it made so far, so the rest of the level loads and the level editor can put the value right
+        if (!debug) throw error;
+        console.error(`level3DLoad: ${object.type} ${object.id} could not be made, skipped:`, error);
+        for (const o of engineObjects.slice(count))
+            o.destroy();
+        return;
+    }
     if (!result || typeof result !== 'object') return;
     if (result instanceof EngineObject3D)
     {
@@ -28688,7 +28712,11 @@ function level3DMake(object)
         result.rotation3D = level3DVector(object.rotation, vec3()).scale(PI / 180);
         result.scale3D = result.scale3D.multiply(level3DVector(object.scale, vec3(1)));
     }
-    return Object.assign(result, properties);
+
+    // the type's own properties are set on it, one the type has no default for could be a field of the engine's
+    for (const key in type.defaults)
+        result[key] = properties[key];
+    return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -32719,6 +32747,16 @@ function editor3DCameraEnd()
     render3D.updateMatrices();
 }
 
+// if a captured mouse was let go of by the browser since the last look, as Chrome does on Escape, and not by the
+// game with pointerLockExit
+function editor3DLostLock(locked)
+{
+    const lost = editor3DWasLocked && !locked && !inputLockLetGo;
+    editor3DWasLocked = locked;
+    inputLockLetGo = false;
+    return lost;
+}
+
 // C turns the free camera on while the debug keys work, the level editor has its own view
 function editor3DFreeCameraKey()
 {
@@ -32731,15 +32769,14 @@ function editor3DFreeCameraKey()
 // takes Escape for that and may not send the key; the mouse looks while it is captured or the right button is held
 function editor3DFreeCameraUpdate(seconds)
 {
-    const locked = pointerLockIsActive();
-    if (keyWasPressed('KeyC') || debugKey && keyWasPressed(debugKey) || editor3DWasLocked && !locked)
+    const locked = pointerLockIsActive(), lostLock = editor3DLostLock(locked);
+    if (keyWasPressed('KeyC') || debugKey && keyWasPressed(debugKey) || lostLock)
     {
         inputClearKey('KeyC');
         debugKey && inputClearKey(debugKey);
         editor3DSetFreeCamera(false);
         return;
     }
-    editor3DWasLocked = locked;
     editor3DFlySpeed = clamp(editor3DFlySpeed * Math.exp(-inputCaptureWheel * .2), .01, 10);
     const look = locked || mouseIsDown(2);
     editor3DFly(editor3DCamera, editor3DFlyKeys(), look ? inputCaptureDeltaScreen : vec2(), seconds,
@@ -32838,6 +32875,15 @@ function editor3DSurface(ray, ignore=new Set)
 // where a box of a size stands with its bottom on a point
 function editor3DRest(point, size) { return vec3(point.x, point.y + size.y / 2, point.z); }
 
+// the height of the middle of a box that lands at a place across the ground: dropped from its own height over a
+// height, onto what is under it, so it climbs a step as tall as itself and no more; with nothing under it, it
+// stands at that height
+function editor3DLand(x, z, height, size, ignore)
+{
+    const landed = editor3DDrop(vec3(x, height + size.y * 1.5 + .01, z), size, ignore);
+    return landed ? landed.y : height + size.y / 2;
+}
+
 // where a box lands dropped straight down from its bottom onto what is under it, undefined with nothing there
 function editor3DDrop(pos, size, ignore=new Set)
 {
@@ -32856,8 +32902,9 @@ let editor3DLevel;
 // what the game made for each object of the level, by the object's id
 const editor3DInstances = new Map;
 
-// what the editor keeps for each level: {fileName, key, original, hash, pending, fileHandle}, the file it came
-// from, the file's objects and their hash for the autosave, and an autosave waiting for a file that changed
+// what the editor keeps for each level: {fileName, key, original, hash, pending, fileHandle, undo, redo}, the file
+// it came from, the file's objects and their hash for the autosave, an autosave waiting for a file that changed,
+// and its undo and redo lists
 const editor3DRecords = new WeakMap;
 
 // if the editor is open, and if it was opened and not exited, while Escape switches between playing and editing
@@ -32870,7 +32917,7 @@ const editor3DSelection = new Set; // the ids of the selected objects
 let editor3DBrush;
 /** @type {Array<Object>|undefined} - The copied objects */
 let editor3DClipboard;
-const editor3DUndoList = [], editor3DRedoList = []; // each entry the object list before and after an edit
+let editor3DUndoList = [], editor3DRedoList = []; // the level's, each entry its object list before and after an edit
 /** @type {{before: Array<Object>}|undefined} - The edit being made, a drag is one */
 let editor3DStroke;
 
@@ -32927,17 +32974,39 @@ function editor3DHash(text)
 // puts in the edits it autosaved for the file, or keeps them waiting when the file changed since
 function editor3DLevelLoaded(level)
 {
+    if (editor3DLevel !== level)
+    {
+        // another level, the selection and the edit being made were the last one's
+        editor3DSelection.clear();
+        editor3DStroke = undefined;
+    }
     editor3DLevel = level;
     editor3DInstances.clear();
-    isArray(level.objects) && editor3DFixIds(level.objects);
-    if (editor3DRecords.has(level)) return; // loaded again, as a restart does, its edits are in it
+    if (isArray(level.objects))
+    {
+        // an entry that is not an object is dropped, in place, a game may keep the list
+        for (let i = level.objects.length; i--;)
+            level.objects[i] && typeof level.objects[i] === 'object' || level.objects.splice(i, 1);
+        editor3DFixIds(level.objects);
+    }
+    const known = editor3DRecords.get(level);
+    if (known)
+    {
+        // loaded again, as a restart does: its edits are in it, and its undo is its own
+        editor3DUndoList = known.undo;
+        editor3DRedoList = known.redo;
+        return;
+    }
+
+    // a level from a file goes by the file, one made in code by its objects as they were loaded, so each has an
+    // autosave of its own
     const url = editorFetchedURLs.get(level)?.split(/[?#]/)[0];
     const original = editor3DCopy(editor3DObjects()), hash = editor3DHash(JSON.stringify(original));
-    const record = {fileName: url ? url.split('/').pop() : 'level3D.json', key: url ?? 'level', original, hash,
-        pending: undefined, fileHandle: undefined};
+    const record = {fileName: url ? url.split('/').pop() : 'level3D.json', key: url ?? 'level #' + hash, original,
+        hash, pending: undefined, fileHandle: undefined, undo: [], redo: []};
     editor3DRecords.set(level, record);
-    editor3DUndoList.length = editor3DRedoList.length = 0;
-    editor3DSelection.clear();
+    editor3DUndoList = record.undo;
+    editor3DRedoList = record.redo;
     const saved = editor3DSaves()[record.key];
     if (saved?.hash === hash && isArray(saved.objects))
         level.objects = editor3DCopy(saved.objects);
@@ -33423,6 +33492,13 @@ function editor3DHandleAt(screenPos)
         // a ring seen edge on is a line on screen and the mouse's ray runs along its plane, it can not be dragged
         const {points, center} = handle, toward = center.subtract(editor3DCamera.pos).normalize();
         if (handle.kind === 'ring' && abs(handle.axes.axis.dot(toward)) < .15) continue;
+
+        // an arrow or scale handle seen end on is a dot over the object, which is left for the object's body
+        if (points.length === 2)
+        {
+            const a = render3D.worldToScreen(points[0]), b = render3D.worldToScreen(points[1]);
+            if (a && b && a.distance(b) < 12) continue;
+        }
         let distance = Infinity;
         if (points.length === 1)
         {
@@ -33438,26 +33514,44 @@ function editor3DHandleAt(screenPos)
     return nearest;
 }
 
-// the object of the level a ray hits first: what the game made for it, or a unit box where it made nothing to hit,
-// like a light or a player start; its id
+// the object of the level a ray hits first: what the game made for it or a part attached to that, or a unit box
+// where it made nothing to hit, like a light or a player start; its id
 function editor3DPickAt(ray)
 {
     let nearest, id;
     for (const object of editor3DObjects())
     {
-        const made = editor3DInstances.get(object.id);
-        const solid = made instanceof EngineObject3D && !made.destroyed && (made.mesh || made.tileInfo);
-        const distance = solid ? render3DRaycastObject(ray, made) : raycastBox(ray, editor3DPos(object), vec3(1));
+        const parts = editor3DVisible(object) ? editor3DParts(editor3DInstances.get(object.id)) : [];
+        let distance = parts.length ? undefined : raycastBox(ray, editor3DPos(object), vec3(1));
+        for (const part of parts)
+        {
+            const d = render3DRaycastObject(ray, part);
+            if (d !== undefined && (distance === undefined || d < distance))
+                distance = d;
+        }
         if (distance !== undefined && (nearest === undefined || distance < nearest))
             nearest = distance, id = object.id;
     }
     return id;
 }
 
-// what the game made for the selected objects, left out when the selection looks for a surface to stand on
+// what the game made for an object and the parts attached to it, its children and theirs
+function editor3DParts(made, parts=[])
+{
+    if (made instanceof EngineObject && !made.destroyed)
+    {
+        parts.push(made);
+        for (const child of made.children)
+            editor3DParts(child, parts);
+    }
+    return parts;
+}
+
+// what the game made for the selected objects, with their parts, left out when the selection looks for a surface
+// to stand on
 function editor3DSelectedInstances()
 {
-    return new Set(editor3DSelected().map((o)=> editor3DInstances.get(o.id)).filter((made)=> made));
+    return new Set(editor3DSelected().flatMap((o)=> editor3DParts(editor3DInstances.get(o.id))));
 }
 
 // where each selected object is, as a drag starts from
@@ -33505,12 +33599,13 @@ function editor3DPress(mouse, ray, shift)
         editor3DSelection.add(id);
     }
 
-    // a drag of its body: along what is under the mouse, from where that was at the press, or level at its height
-    const ignore = editor3DSelectedInstances(), pos = editor3DPos(editor3DObject(id));
-    const under = editor3DSurface(ray, ignore) ?? pos;
-    editor3DDrag = {kind: 'body', id, from, moving: false, ignore, start: editor3DDragStart(),
-        offset: vec3(pos.x - under.x, 0, pos.z - under.z),
-        level: editor3DPlanePoint(ray, pos, EDITOR3D_UP) ?? pos};
+    // a drag of its body moves it level, at its height, so it stays under the mouse; seen from the side, where the
+    // mouse's ray runs along that plane, it moves across the view instead, in the upright plane facing it
+    const pos = editor3DPos(editor3DObject(id)), forward = editor3DCamera.getForward();
+    const side = abs(ray.direction.y) < .2 && vec3(forward.x, 0, forward.z).normalize();
+    const normal = side && side.lengthSquared() ? side : EDITOR3D_UP;
+    editor3DDrag = {kind: 'body', id, from, moving: false, ignore: editor3DSelectedInstances(), normal,
+        start: editor3DDragStart(), level: editor3DPlanePoint(ray, pos, normal) ?? pos};
 }
 
 // place an object of a type where a ray lands, standing on what is there, snapped, selected, as one undo
@@ -33521,9 +33616,10 @@ function editor3DPlaceAt(type, ray)
     editor3DStrokeEnd();
     const id = editor3DPlace(type, point);
     if (id === undefined) return;
-    const size = editor3DSize(editor3DObject(id)), rest = editor3DRest(point, size);
-    const snapped = editor3DSnapPos(rest, size, editor3DGrid ? editor3DMoveStep : 0);
-    editor3DChange((list)=> editor3DSetTransform(list.find((o)=> o.id === id), vec3(snapped.x, rest.y, snapped.z)));
+    const size = editor3DSize(editor3DObject(id)), ignore = new Set(editor3DParts(editor3DInstances.get(id)));
+    const snapped = editor3DSnapPos(editor3DRest(point, size), size, editor3DGrid ? editor3DMoveStep : 0);
+    const y = editor3DLand(snapped.x, snapped.z, point.y, size, ignore);
+    editor3DChange((list)=> editor3DSetTransform(list.find((o)=> o.id === id), vec3(snapped.x, y, snapped.z)));
     editor3DStrokeEnd();
 }
 
@@ -33553,19 +33649,15 @@ function editor3DDragTo(drag, mouse, ray, snap)
         if (!point || !grab) return;
         move = vec3(1).subtract(handle.direction).multiply(snapTo(was.pos.add(point.subtract(grab))));
     }
-    else if (kind === 'body' && editor3DGroundSnap)
-    {
-        const point = editor3DSurface(ray, drag.ignore);
-        if (!point) return;
-        const across = snapTo(vec3(point.x + drag.offset.x, was.pos.y, point.z + drag.offset.z));
-        move = vec3(across.x, point.y + size.y / 2 - was.pos.y, across.z);
-    }
     else if (kind === 'body')
     {
-        const point = editor3DPlanePoint(ray, drag.level, EDITOR3D_UP);
+        // level under the mouse, and with ground snap it lands on what is under it there, from where it started
+        const point = editor3DPlanePoint(ray, drag.level, drag.normal);
         if (!point) return;
         const across = snapTo(was.pos.add(point.subtract(drag.level)));
-        move = vec3(across.x, 0, across.z);
+        const y = editor3DGroundSnap ? editor3DLand(was.pos.x + across.x, was.pos.z + across.z,
+            was.pos.y - size.y / 2, size, drag.ignore) : was.pos.y;
+        move = vec3(across.x, y - was.pos.y, across.z);
     }
     else if (kind === 'ring')
     {
@@ -33685,7 +33777,8 @@ function editor3DPasteAtMouse()
     const first = copied[0], was = editor3DPos(first);
     const snapped = editor3DSnapPos(was.add(vec3(point.x - center.x, 0, point.z - center.z)), editor3DSize(first),
         editor3DGrid ? editor3DMoveStep : 0, editor3DTurned(first));
-    return editor3DPaste(vec3(snapped.x - was.x, point.y - bottom, snapped.z - was.z));
+    const land = editor3DLand(snapped.x, snapped.z, point.y, editor3DSize(first)) - editor3DSize(first).y / 2;
+    return editor3DPaste(vec3(snapped.x - was.x, land - bottom, snapped.z - was.z));
 }
 
 // the keys by their position on the keyboard, each called with whether Shift is held; the tool keys are the ones
@@ -34280,8 +34373,7 @@ function editor3DUpdate()
 
     // playing in an editing session, Escape, the debug key, goes back to the editor; taken, so the debug overlay
     // waits till the session ends; a captured mouse the browser let go of is Escape too, Chrome keeps that key
-    const locked = pointerLockIsActive(), lostLock = editor3DWasLocked && !locked;
-    editor3DWasLocked = locked;
+    const lostLock = editor3DLostLock(pointerLockIsActive());
     if (editor3DSession && (lostLock || debugKey && keyWasPressed(debugKey)))
     {
         debugKey && inputClearKey(debugKey);

@@ -111,3 +111,15 @@ test('playing in a session, a captured mouse the browser let go of goes back to 
     step(engine);
     assert.equal(run('editor3DIsOpen'), false, 'no session, the lock is the game\'s own business');
 });
+
+test('a captured mouse the game let go of itself does not go back to editing', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    run('editor3DSetOpen(false); document.pointerLockElement = mainCanvas');
+    step(engine);
+    run('pointerLockExit(); document.pointerLockElement = undefined'); // as a player destroyed on a restart does
+    step(engine);
+    assert.equal(run('editor3DIsOpen'), false);
+    step(engine);
+    assert.equal(run('editor3DIsOpen'), false);
+});

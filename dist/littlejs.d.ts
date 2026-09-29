@@ -9406,7 +9406,8 @@ declare module "littlejsengine" {
      *  - The name is a string because minified builds rename classes
      *  - A class, or any function with a prototype, is made with new make(pos3D, properties); an arrow function is
      *    called as make(pos3D, properties), for what is not an object, like a player start
-     *  - properties is the defaults with the object's own values over them, and each is also set on what was made
+     *  - properties is the defaults with the object's own values over them, and each of the type's own is also set on
+     *    what was made; a property the type has no default for is in properties and is not set
      *  - Give a class a constructor of its own that takes the position: one that hands every argument on to
      *    EngineObject3D would hand it the properties as its mesh
      *  - An EngineObject3D then gets the object's rotation, and its scale times the scale it was made with
@@ -9436,7 +9437,9 @@ declare module "littlejsengine" {
      *    the default, and properties holds what differs from the type's defaults
      *  - A Color property is a #rrggbb or #rrggbbaa string, a Vector2 or Vector3 an array, as the default says
      *  - An object whose type was not added is skipped, with a warning in debug builds
-     *  - What a file written by hand gets wrong uses the default
+     *  - What a file written by hand gets wrong uses the default: a value that is not of its default's type
+     *  - An object its type can not make is skipped with an error in debug builds, where asserts throw, and the rest
+     *    of the level is made
      *  @param {Object} level - The level, the level editor edits this same object
      *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
      *  @memberof Level3D */

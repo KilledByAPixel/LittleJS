@@ -928,6 +928,11 @@ let inputCaptureOn = false;      // something has taken the keyboard and mouse
 let inputCaptureReading = false; // it is reading them now
 let inputCaptureDeltaScreen, inputCaptureWheel = 0; // this update's mouse movement and wheel, for it alone
 
+// the game let go of a captured mouse itself, with pointerLockExit, since the debug tools last looked: a capture
+// that is lost without it is the browser's doing, which is how Chrome takes Escape
+let inputLockLetGo = false;
+function inputLockExit() { inputLockLetGo = true; }
+
 // the keys debug plugins add to the overlay's list, each a function that gives {text, on} or nothing to show
 const debugOverlayKeys = [];
 

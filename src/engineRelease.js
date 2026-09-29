@@ -63,6 +63,7 @@ function editorObjectMade(){}
 // the input capture of the free camera and the 3D editor
 function inputCaptureHides(){ return false; }
 function inputCaptureMouse(){}
+function inputLockExit(){}
 
 // the 3D debug draws are debug only too
 function debugBox3D(){}

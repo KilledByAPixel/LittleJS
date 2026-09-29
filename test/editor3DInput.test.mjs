@@ -162,17 +162,18 @@ test('several selected objects move together by a handle at their middle', async
     assert.equal(run('editor3DUndoList.length'), 1);
 });
 
-test('a drag on an object\'s body slides it along what is under the mouse with ground snap on', async ()=>
+test('a drag on an object\'s body moves it under the mouse, and with ground snap it lands on what is there', async ()=>
 {
     const engine = await loadGame(), { run } = engine;
     key(engine, 'KeyQ'); // the Select tool, no handles in the way
-    // from the first box onto the top of the second: the mouse ray meets the second box's front, where the
-    // first rests on the height there, and then the ground
+    // from the first box to where the second is, three units along X: it climbs onto it, a step as tall as itself
     drag(engine, [500, 500], [500 + 3 * unit, 500]);
     assert.deepEqual(json(run, 'selected()'), [1]);
-    const pos = json(run, 'list()[0].pos');
-    assert.ok(pos[0] > 2.5 && pos[0] < 4.5, 'over the second box, at ' + pos);
+    assert.deepEqual(json(run, 'list()[0].pos'), [3.5, 1.5, .5]);
     assert.equal(run('editor3DUndoList.length'), 1);
+    // and on past it, back down to the ground
+    drag(engine, [500 + 3 * unit, 500 - unit], [500 + 5 * unit, 500 - unit]);
+    assert.deepEqual(json(run, 'list()[0].pos'), [5.5, .5, .5]);
 });
 
 test('with ground snap off a body drag moves level at the object\'s height', async ()=>
@@ -452,4 +453,39 @@ test('a press over the panel is the panel\'s', async ()=>
     run('editor3DMouseOnPanel = true');
     click(engine, 500, 500);
     assert.deepEqual(json(run, 'selected()'), []);
+});
+
+test('an object with parts of its own is picked by a part, and does not land on them when dragged', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    run(`class Turret extends EngineObject3D
+        {
+            constructor(pos)
+            {
+                super(pos, render3D.boxMesh);
+                this.barrel = new EngineObject3D(vec3(0, 1, 0), render3D.boxMesh);
+                this.addChild(this.barrel);
+            }
+        }
+        level3DAddType('Turret', Turret);
+        editor3DPlace('Turret', vec3(.5, .5, 4.5)); editor3DStrokeEnd(); editor3DSelection.clear();
+        editor3DUndoList.length = 0; editor3DTool = 'select';
+        editor3DCamera.pos = vec3(.5, 1.5, 14.5)`); // level with the barrel, 10 in front of the turret
+    click(engine, 500, 500);
+    assert.deepEqual(json(run, 'selected()'), [4], 'a click on the barrel');
+    drag(engine, [500, 500 + unit], [500 + 2 * unit, 500 + unit]); // by the body, two units along X
+    const pos = json(run, 'list()[3].pos');
+    assert.deepEqual([pos[0], pos[1]], [2.5, .5], 'it stayed on the ground');
+});
+
+test('an arrow seen end on is not taken, the object under it can be dragged', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    run('editor3DCamera.pos = vec3(.5, 10.5, .5); editor3DCamera.rotation = vec3(-PI / 2, 0, 0)');
+    click(engine, 500, 500);
+    assert.deepEqual([...run('[selected()[0], editor3DTool]')], [1, 'move']);
+    assert.equal(run('editor3DWithView(()=> editor3DHandleAt(vec2(500, 500)))'), undefined);
+    run('editor3DGroundSnap = false');
+    drag(engine, [500, 500], [500 + unit, 500 + 2 * unit]);
+    assert.deepEqual(json(run, 'list()[0].pos'), [1.5, .5, 2.5]);
 });

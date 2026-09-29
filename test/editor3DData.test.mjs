@@ -311,3 +311,67 @@ test('the release build has stubs for the loader\'s hooks and no editor', ()=>
     assert.doesNotThrow(()=> run('editor3DLevelLoaded({}); editor3DObjectMade({}, {})'));
     assert.deepEqual([...run('[typeof editor3DChange, levelEditor.use3D, levelEditor.isOpen]')], ['undefined', undefined, false]);
 });
+
+// two levels made in code, not fetched from files
+const twoLevels = `
+    var levelA = { objects: [{ id: 1, type: 'Box', pos: [0, .5, 0] }] };
+    var levelB = { objects: [{ id: 1, type: 'Sphere', pos: [5, .5, 0] }, { id: 2, type: 'Sphere', pos: [7, .5, 0] }] };
+    var move = (id, pos)=> editor3DChange((l)=> editor3DSetTransform(l.find((o)=> o.id === id), pos));`;
+
+test('levels made in code each keep an autosave of their own', async ()=>
+{
+    const storage = makeStorage();
+    let engine = await loadGame({ localStorage: storage });
+    engine.run(twoLevels + `level3DLoad(levelA); move(1, vec3(2, .5, 0)); editor3DStrokeEnd();
+        engineObjectsDestroy(); level3DLoad(levelB)`);
+    assert.equal(engine.run('!!editor3DRecords.get(levelB).pending'), false, 'the other level\'s edits are not its');
+    assert.equal(engine.run('move(2, vec3(9, .5, 0))'), true, 'it can be edited');
+    engine.run('editor3DStrokeEnd()');
+    engine = await loadGame({ localStorage: storage });
+    engine.run(twoLevels + 'level3DLoad(levelA)');
+    assert.deepEqual(json(engine.run, 'levelA.objects[0].pos'), [2, .5, 0]);
+    engine.run('engineObjectsDestroy(); level3DLoad(levelB)');
+    assert.deepEqual(json(engine.run, 'levelB.objects.map((o)=> [o.type, o.pos[0]])'), [['Sphere', 5], ['Sphere', 9]]);
+});
+
+test('undo belongs to the level it was made on', async ()=>
+{
+    const { run } = await loadGame();
+    run(twoLevels + `level3DLoad(levelA); move(1, vec3(2, .5, 0)); editor3DStrokeEnd();
+        editor3DSelection.add(1);
+        engineObjectsDestroy(); level3DLoad(levelB); move(2, vec3(9, .5, 0)); editor3DStrokeEnd()`);
+    assert.equal(run('editor3DSelection.size'), 0, 'the selection was the other level\'s');
+    assert.equal(run('editor3DUndoList.length'), 1);
+    run('engineObjectsDestroy(); level3DLoad(levelA); editor3DUndo()');
+    assert.deepEqual(json(run, 'levelA.objects'), [{ id: 1, type: 'Box', pos: [0, .5, 0] }]);
+    assert.equal(run('editor3DUndo()'), false, 'and nothing of the other level\'s to undo');
+    run('engineObjectsDestroy(); level3DLoad(levelB); editor3DUndo()');
+    assert.deepEqual(json(run, 'levelB.objects[1].pos'), [7, .5, 0]);
+});
+
+test('a value its type can not be made with leaves the object out, and undo brings it back', async ()=>
+{
+    const errors = [];
+    const { run } = await loadGame({ console: { ...console, error: (...text)=> errors.push(text.join(' ')) } });
+    run(`var level = { objects: [{ id: 1, type: 'Light', pos: [0, 3, 0] }] }; level3DLoad(level);
+        var light = editor3DInstances.get(1)`);
+    assert.equal(run(`editor3DChange((l)=> editor3DSetProperty(l[0], 'radius', -1, 5))`), true);
+    run('editor3DStrokeEnd()');
+    assert.equal(errors.length, 1);
+    assert.deepEqual([...run('[light.destroyed, editor3DInstances.get(1), editor3DUndoList.length]')], [true, undefined, 1]);
+    run('editor3DUndo()');
+    assert.deepEqual([...run('[editor3DInstances.get(1).radius, level.objects[0].properties]')], [5, undefined]);
+    // and a level that has such a value still loads, with the editor open on it
+    run(`var bad = { objects: [{ id: 1, type: 'Light', pos: [0, 3, 0], properties: { radius: -1 } },
+        { id: 2, type: 'Box', pos: [0, .5, 0] }] }; var made = level3DLoad(bad); levelEditor.open()`);
+    assert.deepEqual([...run('[made.length, editor3DIsOpen, editor3DObjects().length]')], [1, true, 2]);
+});
+
+test('entries of a level that are not objects are dropped when the editor takes it', async ()=>
+{
+    const { run } = await loadGame();
+    run(`var level = { objects: [null, { id: 1, type: 'Box', pos: [0, .5, 0] }, 5, 'x'] }; level3DLoad(level);
+        levelEditor.open(); engineStep(2)`);
+    assert.deepEqual(json(run, 'level.objects'), [{ id: 1, type: 'Box', pos: [0, .5, 0] }]);
+    assert.equal(run('editor3DIsOpen'), true);
+});

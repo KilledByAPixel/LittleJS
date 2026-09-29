@@ -421,7 +421,10 @@ function pointerLockRequest()
 /** Request to unlock the pointer
  *  @memberof Input */
 function pointerLockExit()
-{ document.exitPointerLock?.(); }
+{
+    inputLockExit(); // debug builds: the free camera and the 3D editor tell this from Escape
+    document.exitPointerLock?.();
+}
 
 /** Check if pointer is locked (true if locked)
  *  @return {boolean}

@@ -166,3 +166,61 @@ test('adding a name again replaces it, a built-in one too', ()=>
     assert.ok(box instanceof MyBox);
     box.destroy();
 });
+
+// errors while a function runs, so an expected one does not print
+function errors(run)
+{
+    const error = console.error, list = [];
+    console.error = (...text)=> list.push(text.join(' '));
+    try { run(); }
+    finally { console.error = error; }
+    return list;
+}
+
+test('a number, boolean or string of the wrong type in a file uses the default', ()=>
+{
+    const [crate, box, light] = level3DLoad({ objects: [
+        { id: 1, type: 'Crate', pos: [0, 0, 0], properties: { health: '5', label: 7 } },
+        { id: 2, type: 'Cylinder', pos: [0, 0, 0], properties: { tile: '3', solid: 'no' } },
+        { id: 3, type: 'Light', pos: [0, 0, 0], properties: { radius: 'big', intensity: null } }] });
+    assert.deepEqual([crate.health, crate.label], [3, 'crate']);
+    assert.equal(box.collideSolidObjects, true);
+    assert.equal(box.tileInfo, undefined);
+    assert.deepEqual([light.radius, light.intensity], [5, 1]);
+    [crate, box, light].forEach((o)=> o.destroy());
+});
+
+test('a property the type does not have goes to the constructor and is not set on the object', ()=>
+{
+    const [crate] = level3DLoad({ objects: [{ id: 1, type: 'Crate', pos: [1, 2, 3],
+        properties: { pos3D: 'here', mass: 'heavy', note: 'mine' } }] });
+    nearVec(crate.pos3D, 1, 2, 3);
+    assert.equal(crate.mass, 0);
+    assert.equal(crate.note, undefined);
+    assert.equal(crate.madeWith.note, 'mine');
+    crate.destroy();
+});
+
+test('an object its type can not make is skipped with an error, and the rest are made', ()=>
+{
+    class Picky extends EngineObject3D
+    {
+        constructor(pos, properties)
+        {
+            super(pos);
+            if (properties.size < 0) throw new Error('no such size');
+        }
+    }
+    level3DAddType('Picky', Picky, { size: 1 });
+    let made;
+    const list = errors(()=> made = level3DLoad({ objects: [
+        { id: 1, type: 'Picky', pos: [0, 0, 0], properties: { size: -1 } },
+        { id: 2, type: 'Light', pos: [0, 0, 0], properties: { radius: -1 } },
+        { id: 3, type: 'Picky', pos: [0, 0, 0] }] }));
+    assert.equal(made.length, 1);
+    assert.ok(made[0] instanceof Picky);
+    assert.equal(list.length, 2);
+    assert.match(list[0], /Picky/);
+    assert.match(list[1], /Light/);
+    made[0].destroy();
+});

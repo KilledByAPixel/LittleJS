@@ -25,7 +25,8 @@ const level3DBaseScale = new WeakMap;
  *  - The name is a string because minified builds rename classes
  *  - A class, or any function with a prototype, is made with new make(pos3D, properties); an arrow function is
  *    called as make(pos3D, properties), for what is not an object, like a player start
- *  - properties is the defaults with the object's own values over them, and each is also set on what was made
+ *  - properties is the defaults with the object's own values over them, and each of the type's own is also set on
+ *    what was made; a property the type has no default for is in properties and is not set
  *  - Give a class a constructor of its own that takes the position: one that hands every argument on to
  *    EngineObject3D would hand it the properties as its mesh
  *  - An EngineObject3D then gets the object's rotation, and its scale times the scale it was made with
@@ -69,7 +70,9 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *    the default, and properties holds what differs from the type's defaults
  *  - A Color property is a #rrggbb or #rrggbbaa string, a Vector2 or Vector3 an array, as the default says
  *  - An object whose type was not added is skipped, with a warning in debug builds
- *  - What a file written by hand gets wrong uses the default
+ *  - What a file written by hand gets wrong uses the default: a value that is not of its default's type
+ *  - An object its type can not make is skipped with an error in debug builds, where asserts throw, and the rest
+ *    of the level is made
  *  @param {Object} level - The level, the level editor edits this same object
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */
@@ -97,7 +100,8 @@ function level3DVector(value, fallback)
 }
 
 // the defaults of an object's type, a Color or vector copied for each object, then its own properties over them,
-// each read as its default is; one the file got wrong keeps the default
+// each read as its default is; one the file got wrong, a value not of its default's type, keeps the default, and
+// one the type has no default for is kept as it is
 function level3DProperties(type, object)
 {
     const properties = {}, own = object.properties;
@@ -113,7 +117,7 @@ function level3DProperties(type, object)
         else if (isVector2(d))
             isArray(value) && value.length === 2 && value.every((v)=> isNumber(v)) &&
                 (properties[key] = vec2(value[0], value[1]));
-        else
+        else if (d === undefined || typeof value === typeof d)
             properties[key] = value;
     }
     return properties;
@@ -130,7 +134,19 @@ function level3DMake(object)
         return;
     }
     const pos = level3DVector(object.pos, vec3()), properties = level3DProperties(type, object);
-    const {make} = type, result = make.prototype ? new make(pos, properties) : make(pos, properties);
+    const {make} = type, count = engineObjects.length;
+    let result;
+    try { result = make.prototype ? new make(pos, properties) : make(pos, properties); }
+    catch (error)
+    {
+        // a value the type can not be made with: in debug builds, where asserts throw, the object is skipped with
+        // what it made so far, so the rest of the level loads and the level editor can put the value right
+        if (!debug) throw error;
+        console.error(`level3DLoad: ${object.type} ${object.id} could not be made, skipped:`, error);
+        for (const o of engineObjects.slice(count))
+            o.destroy();
+        return;
+    }
     if (!result || typeof result !== 'object') return;
     if (result instanceof EngineObject3D)
     {
@@ -138,7 +154,11 @@ function level3DMake(object)
         result.rotation3D = level3DVector(object.rotation, vec3()).scale(PI / 180);
         result.scale3D = result.scale3D.multiply(level3DVector(object.scale, vec3(1)));
     }
-    return Object.assign(result, properties);
+
+    // the type's own properties are set on it, one the type has no default for could be a field of the engine's
+    for (const key in type.defaults)
+        result[key] = properties[key];
+    return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
