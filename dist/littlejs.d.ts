@@ -7533,24 +7533,27 @@ declare module "littlejsengine" {
      */
     export function buildMatrix(pos?: Vector3, rotation?: Vector3, scale?: Vector3, matrix?: Matrix4): Matrix4;
     /**
-     * Check if a point is inside an axis aligned box, boundary is inclusive
+     * Check if a point is inside a box, boundary is inclusive
      * @param {Vector3} point
      * @param {Vector3} pos - Center of the box
      * @param {Vector3} size - Full size of the box
+     * @param {Vector3} [rotation] - How the box is turned, upright when left out
      * @return {boolean}
      * @memberof Math3D
      */
-    export function isPointInBox3D(point: Vector3, pos: Vector3, size: Vector3): boolean;
+    export function isPointInBox3D(point: Vector3, pos: Vector3, size: Vector3, rotation?: Vector3): boolean;
     /**
-     * Check if two axis aligned boxes are overlapping, touching edges do not overlap
+     * Check if two boxes are overlapping, touching edges do not overlap
      * @param {Vector3} posA
      * @param {Vector3} sizeA - Full size of box A
      * @param {Vector3} posB
      * @param {Vector3} [sizeB] - Full size of box B, zero for a point
+     * @param {Vector3} [rotationA] - How box A is turned, upright when left out
+     * @param {Vector3} [rotationB] - How box B is turned
      * @return {boolean}
      * @memberof Math3D
      */
-    export function isOverlapping3D(posA: Vector3, sizeA: Vector3, posB: Vector3, sizeB?: Vector3): boolean;
+    export function isOverlapping3D(posA: Vector3, sizeA: Vector3, posB: Vector3, sizeB?: Vector3, rotationA?: Vector3, rotationB?: Vector3): boolean;
     /**
      * Returns the vector to move sphere A by so it no longer overlaps sphere B, or undefined
      * @param {Vector3} posA
@@ -7562,15 +7565,16 @@ declare module "littlejsengine" {
      */
     export function collideSphereSphere(posA: Vector3, radiusA: number, posB: Vector3, radiusB: number): Vector3 | undefined;
     /**
-     * Returns the vector to move a sphere out of an axis aligned box, or undefined
+     * Returns the vector to move a sphere out of a box, or undefined
      * @param {Vector3} pos - Sphere center
      * @param {number} radius
      * @param {Vector3} boxPos
      * @param {Vector3} boxSize - Full size of the box
+     * @param {Vector3} [boxRotation] - How the box is turned, upright when left out
      * @return {Vector3|undefined}
      * @memberof Math3D
      */
-    export function collideSphereBox(pos: Vector3, radius: number, boxPos: Vector3, boxSize: Vector3): Vector3 | undefined;
+    export function collideSphereBox(pos: Vector3, radius: number, boxPos: Vector3, boxSize: Vector3, boxRotation?: Vector3): Vector3 | undefined;
     /**
      * Returns the vector to move a sphere back inside an axis aligned box, or undefined when it is all inside
      * - The inside out twin of collideSphereBox, for keeping things in a room or an arena
@@ -7597,14 +7601,17 @@ declare module "littlejsengine" {
     /**
      * Returns the vector to move box A by so it no longer overlaps box B, the shortest way out, or undefined
      * - The 3D twin of collideBoxBox
+     * - Turned boxes are tested by the separating axis test, the push is along the direction they overlap least on
      * @param {Vector3} posA
      * @param {Vector3} sizeA - Full size of box A
      * @param {Vector3} posB
      * @param {Vector3} sizeB - Full size of box B
+     * @param {Vector3} [rotationA] - How box A is turned, upright when left out
+     * @param {Vector3} [rotationB] - How box B is turned
      * @return {Vector3|undefined}
      * @memberof Math3D
      */
-    export function collideBoxBox3D(posA: Vector3, sizeA: Vector3, posB: Vector3, sizeB: Vector3): Vector3 | undefined;
+    export function collideBoxBox3D(posA: Vector3, sizeA: Vector3, posB: Vector3, sizeB: Vector3, rotationA?: Vector3, rotationB?: Vector3): Vector3 | undefined;
     /**
      * Returns the distance along the ray to the first intersection with a sphere, or undefined
      * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
@@ -7627,16 +7634,17 @@ declare module "littlejsengine" {
      */
     export function raycastPlane(ray: Ray3D, planePos: Vector3, planeNormal: Vector3): number | undefined;
     /**
-     * Returns the distance along the ray to the first intersection with an axis aligned box, or undefined
+     * Returns the distance along the ray to the first intersection with a box, or undefined
      * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
      * - A ray starting inside the box is already there, so it gets back 0
      * @param {Ray3D} ray
      * @param {Vector3} pos - Center of the box
      * @param {Vector3} size - Full size of the box
+     * @param {Vector3} [rotation] - How the box is turned, upright when left out
      * @return {number|undefined}
      * @memberof Math3D
      */
-    export function raycastBox(ray: Ray3D, pos: Vector3, size: Vector3): number | undefined;
+    export function raycastBox(ray: Ray3D, pos: Vector3, size: Vector3, rotation?: Vector3): number | undefined;
     /**
      * LittleJS 3D Rendering Plugin
      * - Adds a 3D scene that draws into the same WebGL canvas as the 2D game

@@ -21180,36 +21180,62 @@ class Ray3D
 
 ///////////////////////////////////////////////////////////////////////////////
 // 3D collision helpers, none of them change anything that is passed in
-// Boxes sit centered on pos and take a full size, like drawRect
+// Boxes sit centered on pos and take a full size, like drawRect, upright unless given a rotation, an Euler vec3 like
+// rotation3D, which turns them about their center
 // Cylinders stand up the Y axis, centered on pos, with a full height
 // Names that could be mistaken for 2D functions get a 3D suffix
 
+// whether a rotation turns anything, a missing one does not
+const isTurned3D = (rotation)=> !!rotation && !!(rotation.x || rotation.y || rotation.z);
+
+// a turned box's three unit axes, the columns of its rotation
+function boxAxes3D(rotation)
+{
+    const m = buildMatrix(undefined, rotation).m;
+    return [vec3(m[0], m[1], m[2]), vec3(m[4], m[5], m[6]), vec3(m[8], m[9], m[10])];
+}
+
+// a point in a turned box's own space, from its center, and a vector from that space back to the world's
+function boxLocal3D(point, pos, axes)
+{
+    const d = point.subtract(pos);
+    return vec3(d.dot(axes[0]), d.dot(axes[1]), d.dot(axes[2]));
+}
+const boxWorld3D = (v, axes)=> axes[0].scale(v.x).add(axes[1].scale(v.y)).add(axes[2].scale(v.z));
+
 /**
- * Check if a point is inside an axis aligned box, boundary is inclusive
+ * Check if a point is inside a box, boundary is inclusive
  * @param {Vector3} point
  * @param {Vector3} pos - Center of the box
  * @param {Vector3} size - Full size of the box
+ * @param {Vector3} [rotation] - How the box is turned, upright when left out
  * @return {boolean}
  * @memberof Math3D
  */
-function isPointInBox3D(point, pos, size)
+function isPointInBox3D(point, pos, size, rotation)
 {
+    if (isTurned3D(rotation))
+        return isPointInBox3D(boxLocal3D(point, pos, boxAxes3D(rotation)), vec3(), size);
     return abs(point.x - pos.x) <= size.x/2 &&
         abs(point.y - pos.y) <= size.y/2 &&
         abs(point.z - pos.z) <= size.z/2;
 }
 
 /**
- * Check if two axis aligned boxes are overlapping, touching edges do not overlap
+ * Check if two boxes are overlapping, touching edges do not overlap
  * @param {Vector3} posA
  * @param {Vector3} sizeA - Full size of box A
  * @param {Vector3} posB
  * @param {Vector3} [sizeB] - Full size of box B, zero for a point
+ * @param {Vector3} [rotationA] - How box A is turned, upright when left out
+ * @param {Vector3} [rotationB] - How box B is turned
  * @return {boolean}
  * @memberof Math3D
  */
-function isOverlapping3D(posA, sizeA, posB, sizeB=vec3())
+function isOverlapping3D(posA, sizeA, posB, sizeB=vec3(), rotationA, rotationB)
 {
+    if (isTurned3D(rotationA) || isTurned3D(rotationB))
+        return !!collideBoxBox3D(posA, sizeA, posB, sizeB, rotationA, rotationB);
     const d = posA.subtract(posB);
     return abs(d.x) < (sizeA.x + sizeB.x)/2 &&
         abs(d.y) < (sizeA.y + sizeB.y)/2 &&
@@ -21238,16 +21264,24 @@ function collideSphereSphere(posA, radiusA, posB, radiusB)
 }
 
 /**
- * Returns the vector to move a sphere out of an axis aligned box, or undefined
+ * Returns the vector to move a sphere out of a box, or undefined
  * @param {Vector3} pos - Sphere center
  * @param {number} radius
  * @param {Vector3} boxPos
  * @param {Vector3} boxSize - Full size of the box
+ * @param {Vector3} [boxRotation] - How the box is turned, upright when left out
  * @return {Vector3|undefined}
  * @memberof Math3D
  */
-function collideSphereBox(pos, radius, boxPos, boxSize)
+function collideSphereBox(pos, radius, boxPos, boxSize, boxRotation)
 {
+    if (isTurned3D(boxRotation))
+    {
+        // in the box's own space it is upright, and the push goes back out turned
+        const axes = boxAxes3D(boxRotation);
+        const push = collideSphereBox(boxLocal3D(pos, boxPos, axes), radius, vec3(), boxSize);
+        return push && boxWorld3D(push, axes);
+    }
     const h = boxSize.scale(.5);
     const closest = vec3(
         clamp(pos.x, boxPos.x - h.x, boxPos.x + h.x),
@@ -21335,15 +21369,20 @@ function collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinde
 /**
  * Returns the vector to move box A by so it no longer overlaps box B, the shortest way out, or undefined
  * - The 3D twin of collideBoxBox
+ * - Turned boxes are tested by the separating axis test, the push is along the direction they overlap least on
  * @param {Vector3} posA
  * @param {Vector3} sizeA - Full size of box A
  * @param {Vector3} posB
  * @param {Vector3} sizeB - Full size of box B
+ * @param {Vector3} [rotationA] - How box A is turned, upright when left out
+ * @param {Vector3} [rotationB] - How box B is turned
  * @return {Vector3|undefined}
  * @memberof Math3D
  */
-function collideBoxBox3D(posA, sizeA, posB, sizeB)
+function collideBoxBox3D(posA, sizeA, posB, sizeB, rotationA, rotationB)
 {
+    if (isTurned3D(rotationA) || isTurned3D(rotationB))
+        return collideOrientedBoxes3D(posA, sizeA, boxAxes3D(rotationA), posB, sizeB, boxAxes3D(rotationB));
     const d = posA.subtract(posB);
     const overlapX = (sizeA.x + sizeB.x)/2 - abs(d.x);
     const overlapY = (sizeA.y + sizeB.y)/2 - abs(d.y);
@@ -21351,6 +21390,33 @@ function collideBoxBox3D(posA, sizeA, posB, sizeB)
     if (overlapX <= 0 || overlapY <= 0 || overlapZ <= 0)
         return undefined;
     return pushOutAxis3D(d, overlapX, overlapY, overlapZ);
+}
+
+// the shortest push to move box A out of box B by the separating axis test: each box's three face directions and
+// the nine across an edge of each; a gap on any of them is no touch, and the push is along the least overlap, from
+// B to A; an edge direction has to overlap clearly less to win, so a box lying on another leaves by the face
+function collideOrientedBoxes3D(posA, sizeA, axesA, posB, sizeB, axesB)
+{
+    const d = posA.subtract(posB), ha = sizeA.scale(.5), hb = sizeB.scale(.5);
+    const reach = (h, axes, n)=> h.x * abs(axes[0].dot(n)) + h.y * abs(axes[1].dot(n)) + h.z * abs(axes[2].dot(n));
+    let push, least = Infinity;
+    const separated = (axis, weight)=>
+    {
+        const lengthSquared = axis.lengthSquared();
+        if (lengthSquared < 1e-12) return false; // parallel edges give no direction to test
+        const n = axis.scale(lengthSquared ** -.5), along = d.dot(n);
+        const overlap = reach(ha, axesA, n) + reach(hb, axesB, n) - abs(along);
+        if (overlap <= 0) return true;
+        if (overlap * weight < least)
+            least = overlap * weight, push = n.scale(along < 0 ? -overlap : overlap);
+        return false;
+    };
+    for (const axis of [...axesA, ...axesB])
+        if (separated(axis, 1)) return;
+    for (const a of axesA)
+    for (const b of axesB)
+        if (separated(a.cross(b), 1.05)) return;
+    return push;
 }
 
 /**
@@ -21401,17 +21467,25 @@ function raycastPlane(ray, planePos, planeNormal)
 }
 
 /**
- * Returns the distance along the ray to the first intersection with an axis aligned box, or undefined
+ * Returns the distance along the ray to the first intersection with a box, or undefined
  * - The hit is ray.getPosition(distance), a direction that is not unit length scales the distance
  * - A ray starting inside the box is already there, so it gets back 0
  * @param {Ray3D} ray
  * @param {Vector3} pos - Center of the box
  * @param {Vector3} size - Full size of the box
+ * @param {Vector3} [rotation] - How the box is turned, upright when left out
  * @return {number|undefined}
  * @memberof Math3D
  */
-function raycastBox(ray, pos, size)
+function raycastBox(ray, pos, size, rotation)
 {
+    if (isTurned3D(rotation))
+    {
+        // the ray in the box's own space, where the box is upright; turning keeps the distances
+        const axes = boxAxes3D(rotation), d = ray.direction;
+        const direction = vec3(d.dot(axes[0]), d.dot(axes[1]), d.dot(axes[2]));
+        return raycastBox(new Ray3D(boxLocal3D(ray.origin, pos, axes), direction), vec3(), size);
+    }
     const {origin, direction} = ray;
     const h = size.scale(.5);
     const boxMin = pos.subtract(h), boxMax = pos.add(h);
