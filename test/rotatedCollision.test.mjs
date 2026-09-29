@@ -1,6 +1,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, EngineObject3D, engineObjects, engineObjectsUpdate, collideBoxBox3D, vec3, PI }
+import { render3D, Render3DPlugin, EngineObject3D, engineObjects, engineObjectsUpdate, engineObjectsCollect3D,
+    collideBoxBox3D, vec3, PI }
     from '../dist/littlejs.esm.js';
 
 // 3D solid collision follows rotation: a turned box collides as the box you see, and a push within the upper
@@ -168,4 +169,17 @@ test('a box on a moving platform is carried along with it', ()=>
     const lag = rider.pos3D.x - platform.pos3D.x;
     step(60);
     near(rider.pos3D.x - platform.pos3D.x, lag, 1e-9, 'carried, not slipping');
+});
+
+// queries
+
+test('collect finds a turned object by the box you see, not the upright box around it', ()=>
+{
+    const diamond = box(vec3(), vec3(2), vec3(0, degrees(45), 0)); // corners on X and Z at 1.414
+    const collect = (pos, size)=> engineObjectsCollect3D(pos, size, [diamond]).length;
+    assert.equal(collect(vec3(.95, 0, .95), vec3(.1)), 0, 'in the upright corner, outside the turned box');
+    assert.equal(collect(vec3(1.3, 0, 0), vec3(.1)), 1, 'past the upright face, inside the turned box');
+    assert.equal(collect(vec3(.95, 0, .95), .1), 0, 'a sphere the same');
+    assert.equal(collect(vec3(1.3, 0, 0), .1), 1);
+    assert.equal(collect(vec3(1.3, 0, 0), 0), 1, 'a point too');
 });

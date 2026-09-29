@@ -8155,8 +8155,8 @@ declare module "littlejsengine" {
      * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D,
      *   which is the one way those 2D fields reach a 3D object
      * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D
-     * - The solid box is axis aligned in the world, rotation3D is ignored like angle is in 2D, so give a turned wall a
-     *   size3D along the world axes
+     * - The solid box turns with rotation3D, so a turned wall or a ramp collides as it looks; resting on one no steeper
+     *   than groundAngle stands there
      * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
      * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
      * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
@@ -9324,8 +9324,8 @@ declare module "littlejsengine" {
     }
     /**
      * Collect the EngineObject3D objects whose boxes overlap a sphere or a box, the 3D twin of engineObjectsCollect
-     * - Boxes are axis aligned around the world position, rotation3D is ignored; lights, emitters and trails have no size
-     *   and are never collected
+     * - Each object is its size3D box at its world position, turned as it is turned; lights, emitters and trails have no
+     *   size and are never collected
      * @param {Vector3} pos - Center of the area
      * @param {Vector3|number} size - Diameter of a sphere if a number, 0 for a point, full size of a box if a Vector3
      * @param {Array<EngineObject>} [objects] - Defaults to every object

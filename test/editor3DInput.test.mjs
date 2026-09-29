@@ -165,6 +165,26 @@ test('the move arrows end in cones pointing along their axes, the scale handles 
     assert.ok(scale.boxes >= 4, 'a box on each axis and one in the middle');
 });
 
+test('the collision box is drawn for the selected solid object only, turned with it', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    const solids = (select)=> json(run, `(()=>
+    {
+        editor3DSelection.clear(); ${select}
+        editor3DChange((l)=> l[1].rotation = [0, 30, 0]); editor3DStrokeEnd();
+        const drawWire = editor3DDrawWire, wires = [];
+        editor3DDrawWire = (matrix, color)=> color === EDITOR3D_SOLID_COLOR &&
+            wires.push(matrix.getRotation().y * 180 / PI);
+        try { editor3DWithView(editor3DDraw); }
+        finally { editor3DDrawWire = drawWire; }
+        return wires;
+    })()`);
+    assert.deepEqual(solids(''), [], 'a turned box that is not selected shows none');
+    const turned = solids('editor3DSelection.add(2)');
+    assert.equal(turned.length, 1);
+    assert.ok(Math.abs(turned[0] - 30) < 1e-4, 'turned with the object, ' + turned[0]);
+});
+
 test('dragging the Y arrow lifts, and the square between X and Y moves along both', async ()=>
 {
     const engine = await loadGame(), { run } = engine;

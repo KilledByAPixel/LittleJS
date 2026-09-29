@@ -1029,24 +1029,25 @@ m.determinant()                 // of the rotation and scale part: negative when
 buildMatrix(pos, rotation, scale, out)         // translate * rotate * scale, any arg optional; out is written into
                                                // instead of a new matrix, for a loop that builds many each frame
 
-// Collision - boxes are axis aligned and centered with full size, spheres and cylinders take a radius, cylinders stand
-// on Y
-isPointInBox3D(point, pos, size)               // true if point is in the box, boundary inclusive
-isOverlapping3D(posA, sizeA, posB, sizeB)      // box vs box, touching edges do not overlap; no sizeB tests a point
+// Collision - boxes are centered with full size, upright unless given a rotation, an Euler vec3 like rotation3D;
+// spheres and cylinders take a radius, cylinders stand on Y
+isPointInBox3D(point, pos, size, rotation)     // true if point is in the box, boundary inclusive
+isOverlapping3D(posA, sizeA, posB, sizeB, rotationA, rotationB) // box vs box, touching edges do not overlap; no sizeB
+                                               // tests a point
 collideSphereSphere(posA, radiusA, posB, radiusB)          // push A out of B, or undefined
-collideSphereBox(pos, radius, boxPos, boxSize)             // push a sphere out of a box, or undefined
+collideSphereBox(pos, radius, boxPos, boxSize, boxRotation) // push a sphere out of a box, or undefined
 collideSphereInBox(pos, radius, boxPos, boxSize)           // push a sphere back inside a box, for rooms and arenas
 collideSphereCylinder(pos, radius, cylinderPos, cylinderRadius, cylinderHeight) // push a sphere out of a cylinder,
                                                                                 // or undefined
-collideBoxBox3D(posA, sizeA, posB, sizeB)      // push A out of B the shortest way, or undefined; the 3D twin of
-                                               // collideBoxBox
+collideBoxBox3D(posA, sizeA, posB, sizeB, rotationA, rotationB) // push A out of B the shortest way, or undefined;
+                                               // the 3D twin of collideBoxBox, turned boxes by the separating axis test
 // raycasts return the distance t where the hit is ray.getPosition(t), so scale direction and t scales too
 new Ray3D(origin, direction)                   // a start and a direction, what screenToRay returns
 ray.getPosition(distance)                      // the point a distance along it, distance is what the raycasts return
 raycastSphere(ray, pos, radius)                // distance t to the sphere, or undefined; a ray that starts
                                                // inside a sphere or a box is already there and gets back 0
 raycastPlane(ray, planePos, planeNormal)       // distance t to the plane, or undefined
-raycastBox(ray, pos, size)                     // distance t to the box, or undefined
+raycastBox(ray, pos, size, rotation)           // distance t to the box, or undefined
 ```
 
 ## LittleJS 3D Rendering
@@ -1245,7 +1246,8 @@ new EngineObject3D(pos3D, mesh, tileInfo, color) // a tileInfo with no mesh draw
                                                  // tile covering it, so obj.tileInfo is always a TileInfo as it is in 2D
 obj.pos3D obj.rotation3D obj.scale3D // Vector3, rotation is (pitch, yaw, roll); change them in place or assign new ones
 obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engine before update, like the 2D physics,
-                                   // no super.update() needed; angleVelocity3D is not damped, angleDamping is 2D only
+                                   // no super.update() needed; damping and angleDamping slow them as in 2D, and
+                                   // clampSpeed keeps each axis of velocity3D within objectMaxSpeed
 obj.updatePhysics()                // moves it and pushes it out of solids; bounce off anything else in update, which
                                    // runs once every object has moved, so the fix lands before the frame draws
 obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gravity, gravityScale and damping act on
@@ -1267,16 +1269,20 @@ obj.setCollision(solids, isSolid, level) // the same flags as in 2D, but the col
                                         // the raycast half is 2D only and defaults off here;
                                         // a sync2D object collides in 2D instead, against the 2D size, so set that
                                         // as well as size3D; a child rides with its parent so it sits solid collision
-                                        // out, the same rule as in 2D; the solid box is axis aligned in the world,
-                                        // rotation3D is ignored as angle is in 2D, so give a turned wall a size3D
-                                        // along the world axes
+                                        // out, the same rule as in 2D; the solid box turns with rotation3D, so a
+                                        // turned wall or a ramp collides as it looks, but against height maps and
+                                        // voxel maps an object is still its upright box
 obj.collideAsSphere3D = true              // collide as the sphere that fits size3D instead of the box, false by default
 obj.collideWithObject(object, push)     // called when it touches a solid object, both objects are asked and either
                                         // returning false leaves the push and the bounce to you; push is what it
                                         // takes to move this one clear, it is undefined in 2D
 obj.collideWithVoxel(type, cell)        // asked by a VoxelMap whether a block stops it, true by default; return false
                                         // to pass through, as for water
-obj.groundObject                        // the height map or voxel map it stands on this frame, undefined in the air
+obj.groundObject                        // what it stands on this frame, a height map, a voxel map or a solid,
+                                        // undefined in the air; sliding on it slows by friction, the less grippy of
+                                        // the two, relative to it, so a moving platform carries what rides it
+obj.groundAngle = PI/4                  // the steepest slope it stands on, in radians: resting on a solid within
+                                        // this of flat holds it still, steeper it slides down; a player climbs more
 obj.softShadow = 2                      // 0 by default; a soft shadow of that diameter under the object on
                                         // render3D.softShadowHeight; scale3D and a parent's scale grow it, so set it
                                         // for the unscaled object
@@ -1286,7 +1292,7 @@ obj.upright = true                      // a sprite stands on world up instead o
 obj.sync2D = true // false by default; copy the 2D pos and angle into pos3D and rotation3D each frame; the 2D physics only run for a
                   // sync2D object, so set its mass to have them move it
 // these inherited EngineObject fields are 2D only and do nothing on a 3D object: angle, angleVelocity,
-// angleDamping, additiveColor, drawSize, mirror, clampSpeed, friction; sync2D is the one way in
+// additiveColor, drawSize, mirror; sync2D is the one way in
 obj.mesh obj.tileInfo obj.color         // what to draw and how
 obj.setMesh(mesh)                       // draw a different mesh and free the GPU buffer of the one it replaces, for
                                         // text and terrain built again as things change; a mesh another object is

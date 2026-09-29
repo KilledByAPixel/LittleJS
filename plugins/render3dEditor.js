@@ -1428,7 +1428,7 @@ let editor3DCone;
 const editor3DConeMesh = ()=> editor3DCone ||= buildCone(1, 1, 12);
 
 // the editor's drawing in the 3D pass: the grid, a marker for what has nothing to see, the collision shape of
-// what is solid and turned or selected, the selection, the brush where it would go, and the handles
+// what is solid and selected, the selection, the brush where it would go, and the handles
 function editor3DDraw()
 {
     const r = render3D;
@@ -1438,11 +1438,12 @@ function editor3DDraw()
         const made = editor3DVisible(object), selected = editor3DSelection.has(object.id);
         made || editor3DDrawWire(editor3DBoxMatrix(object), EDITOR3D_MARKER_COLOR, 1.5);
         selected && editor3DDrawWire(editor3DBoxMatrix(object), EDITOR3D_SELECT_COLOR, 2.5);
-        if (made?.collideSolidObjects && !made.parent && (selected || editor3DTurned(object)))
+        if (made?.collideSolidObjects && !made.parent && selected)
         {
+            // what it collides as, which turns with it, where its size3D is not its mesh's
             const shape = render3DSolidShape(made), color = EDITOR3D_SOLID_COLOR;
             if (shape.size)
-                editor3DDrawWire(buildMatrix(shape.pos, undefined, shape.size), color, 1.5);
+                editor3DDrawWire(buildMatrix(shape.pos, shape.rotation, shape.size), color, 1.5);
             else
                 for (const [across, along] of [['x', 'y'], ['y', 'z'], ['z', 'x']])
                     editor3DDrawRing(shape.pos, EDITOR3D_AXES[across], EDITOR3D_AXES[along], shape.radius, color, 1.5);
