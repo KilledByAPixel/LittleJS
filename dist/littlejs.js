@@ -20390,7 +20390,9 @@ function tweenUpdate(gameDelta, realDelta)
     for (let i = list.length; i--;)
     {
         const t = list[i];
-        if (!t.active || t.activePass === pass) continue; // stopped, or started again by a callback this update
+        // stopped, or started again by a callback this update, or during an update a callback ran inside it, which
+        // counts on from this one
+        if (!t.active || t.activePass >= pass) continue;
         let dt;
         if (enginePath)
         {
@@ -20414,7 +20416,7 @@ function tweenUpdate(gameDelta, realDelta)
             // Completion: fire end value, remove from active, start the next iteration
             // of a loop or pingPong, or when there is none it has completed, fire onComplete
             t.callback(t.interp(0));
-            if (!t.active || t.activePass === pass)
+            if (!t.active || t.activePass >= pass)
                 continue; // stopped or restarted by its own callback, the run it was on ends without completing
             tweenDeactivate(t);
             const next = t.thenCallback;

@@ -646,3 +646,50 @@ test('a vector tween overshoots with its easing like a number tween does, a colo
     assert.equal(v.x, 10); assert.equal(v3.x, 10);
     tweenStopAll();
 });
+
+test('a tween restarted after a nested tweenUpdate keeps running, and completes only when that run ends', () =>
+{
+    tweenStopAll();
+    let restarted = false, completions = 0;
+    const values = [];
+    const tween = new Tween((value)=>
+    {
+        values.push(value);
+        if (value === 1 && !restarted)
+        {
+            restarted = true;
+            tweenUpdate(0); // a nested update moves the pass count on
+            tween.restart();
+        }
+    }, 0, 1, 1).then(()=> ++completions);
+    tweenUpdate(1);
+    assert.equal(tween.isActive(), true, 'the restart holds');
+    assert.equal(completions, 0, 'the run it ended does not complete');
+    tweenUpdate(.5);
+    assert.deepEqual(values, [0, 1, 0, .5]);
+    tweenUpdate(.5);
+    assert.equal(completions, 1, 'the restarted run completes');
+    tweenStopAll();
+});
+
+test('a nested tweenUpdate then a restart of a tween still waiting in the outer update leaves it for the next', () =>
+{
+    tweenStopAll();
+    const values = [];
+    // made first, so the outer update, walking newest first, reaches it after the other's callback
+    const other = new Tween((value)=> values.push(value), 0, 1, 1);
+    let done = false;
+    new Tween((value)=>
+    {
+        if (done || !value) return; // not the start value it is made with
+        done = true;
+        tweenUpdate(0);
+        other.restart();
+    }, 0, 1, 1);
+    values.length = 0;
+    tweenUpdate(.5);
+    assert.deepEqual(values, [0], 'restarted to its start, and not moved again by the outer update');
+    tweenUpdate(.5);
+    assert.deepEqual(values, [0, .5], 'the next update moves it');
+    tweenStopAll();
+});
