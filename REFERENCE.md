@@ -1625,6 +1625,27 @@ Box, Sphere, Cylinder   // color, tile (-1 for none), solid (true); 1 unit acros
 Light                   // color, radius (5), intensity (1)
 ```
 
+### 3D level editor
+Debug builds only. `0` on the debug overlay opens it for a level loaded with `level3DLoad`, the game pauses under it.
+
+```javascript
+// Tools, the keys Unity, Unreal and Godot use
+Q select · W move · E rotate · R scale   // drag a handle, or the object itself
+G                                        // grid snap, Ctrl flips it for a drag; steps are in the panel
+End                                      // drop the selection to the ground
+// Selecting and editing
+Left click, Shift+click, left drag from empty space   // select, add or take away, box select
+Delete · Ctrl+C / X / V · Ctrl+D · Ctrl+Z / Y         // Ctrl+D duplicates
+// The camera
+Right button                             // look, and WASD and QE fly while it is held, Shift faster
+Wheel · Middle drag or Space+drag · Alt+drag · F      // zoom, pan, orbit, frame the selection
+// Playing
+Esc                                      // play and edit
+levelEditor.onRestart = loadLevel        // the same hooks as the 2D editor
+levelEditor.onPlayFrom = (pos3D)=> {}
+levelEditor.use3D = undefined            // true or false picks the 3D or the 2D editor
+```
+
 ## LittleJS Three.js Integration
 - Optional plugin that renders a three.js scene on a canvas behind the LittleJS canvas
 - You load three.js yourself (import map or bundler) and pass the module in
