@@ -135,12 +135,15 @@ test('normalMapFromHeight makes a wrapping TextureInfo of the size, with no canv
     assert.deepEqual([t.size.x, t.size.y], [8, 4]);
 });
 
-test('setSky keeps its colors for the reflections', ()=>
+test('the renderer keeps its sky colors and map bindings to itself, no public fields for them', ()=>
 {
-    const top = rgb(1, 0, 0), horizon = rgb(0, 1, 0), bottom = rgb(0, 0, 1);
-    render3D.setSky(top, horizon, bottom, 0);
-    assert.deepEqual(render3D.skyColors.map((c)=> [c.r, c.g, c.b]), [[1, 0, 0], [0, 1, 0], [0, 0, 1]]);
-    top.r = .5; // copies, the caller's colors stay theirs
-    assert.equal(render3D.skyColors[0].r, 1);
-    render3D.sky.dispose(); render3D.sky = undefined;
+    assert.ok(!('skyColors' in render3D), 'a reflection reads them from the sky being drawn');
+    assert.ok(!('boundMaps' in render3D));
+});
+
+test('an emissiveMapColor set to undefined draws as white and does not throw', ()=>
+{
+    assert.equal(flushesAfter(()=> render3D.emissiveMapColor = undefined), 0, 'the same as the white before it');
+    render3D.emissiveMapColor = undefined;
+    assert.equal(flushesAfter(()=> render3D.emissiveMapColor = rgb(1, 0, 0)), 1, 'and splits from red');
 });

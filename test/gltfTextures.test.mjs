@@ -133,7 +133,7 @@ test('a material\'s normal and emissive textures reach its part and the object c
         return JSON.stringify({color: id(p.textureInfo), normal: id(p.normalMap), scale: p.normalScale,
             emissive: id(p.emissiveMap), factor: [p.emissiveMapColor.r, p.emissiveMapColor.g, p.emissiveMapColor.b],
             object: [o.normalMap === p.normalMap, o.normalScale, o.emissiveMap === p.emissiveMap,
-                o.emissiveMapColor === p.emissiveMapColor]});
+                o.emissiveMapColor !== p.emissiveMapColor && o.emissiveMapColor.g === p.emissiveMapColor.g]});
     })`));
     assert.ok(seen.color && seen.normal && seen.emissive, 'three textures');
     assert.notEqual(seen.normal, seen.color);

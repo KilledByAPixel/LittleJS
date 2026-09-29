@@ -1186,7 +1186,6 @@ render3D.specular = 0                 // Phong highlight strength, the shiny spo
 render3D.shininess = 16               // the highlight's exponent, 4 broad like rubber, 100 sharp like polished metal
 render3D.normalMap render3D.normalScale render3D.reflectivity render3D.emissiveMap render3D.emissiveMapColor
                                       // the material, set from each object's fields of the same names
-render3D.skyColors                    // the top, horizon and bottom colors setSky was given, which reflections show
 render3D.receiveShadow = true         // false keeps the next draws out of the shadow map's darkening
 render3D.shader = undefined           // a Shader for the next draws, set from each object's shader; with emissive 1
                                       // the snippet's color is final, so it can light itself from these 3D names:
@@ -1294,7 +1293,8 @@ obj.normalMap = textureInfo             // bumps and grooves that catch the ligh
                                         // no tangents needed, any mesh with uvs works; normalMapFromHeight makes one
 obj.normalScale = 1                     // how strongly it bends the surface, 0 turns it off
 obj.reflectivity = .5                   // 0 by default, 1 a mirror of the sky; more at a glancing angle (Fresnel);
-                                        // shows the setSky colors, or the ambient ones with no sky; not the scene
+                                        // shows the colors of render3D.sky from setSky or buildSky, or the ambient
+                                        // ones with no sky; not the scene
 obj.emissiveMap = textureInfo           // where it glows, added on top of the lit surface so it shows in the dark
 obj.emissiveMapColor = WHITE            // multiplies the emissive map
 obj.castShadow = false                  // true by default, false keeps it out of the shadow map; sprites and cut out

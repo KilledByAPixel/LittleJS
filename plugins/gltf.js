@@ -274,7 +274,7 @@ class GLTFObject extends EngineObject3D
             o.pixelated = part.pixelated;
             o.emissive = part.unlit ? 1 : 0;
             o.normalMap = part.normalMap, o.normalScale = part.normalScale;
-            o.emissiveMap = part.emissiveMap, o.emissiveMapColor = part.emissiveMapColor;
+            o.emissiveMap = part.emissiveMap, o.emissiveMapColor = part.emissiveMapColor.copy(); // its own, as color is
             const rest = model.nodeTree?.restPose?.[part.node];
             if (rest)
             {

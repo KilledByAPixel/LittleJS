@@ -87,7 +87,7 @@ function render3DCaptureBatchState()
         cullBackFaces: r.cullBackFaces, mirrored: r.mirrored, lighting: r.lighting, emissive: r.emissive,
         receiveShadow: r.receiveShadow, specular: r.specular, pixelated: r.pixelated, shader: r.shader,
         normalMap: r.normalMap, normalScale: r.normalScale, shininess: r.shininess, reflectivity: r.reflectivity,
-        emissiveMap: r.emissiveMap, emissiveMapColor: r.emissiveMapColor?.copy()}; // a copy, the caller may change it
+        emissiveMap: r.emissiveMap, emissiveMapColor: (r.emissiveMapColor || WHITE).copy()}; // the caller may change it
 }
 
 // put a captured draw state back, written out the same way; the transparent stage does this for every queued draw
@@ -111,8 +111,11 @@ function render3DStateChanged(s)
         || r.specular !== s.specular || r.pixelated !== s.pixelated || r.shader !== s.shader
         || r.normalMap !== s.normalMap || r.normalScale !== s.normalScale || r.shininess !== s.shininess
         || r.reflectivity !== s.reflectivity || r.emissiveMap !== s.emissiveMap
-        || r.emissiveMapColor.r !== s.emissiveMapColor.r || r.emissiveMapColor.g !== s.emissiveMapColor.g
-        || r.emissiveMapColor.b !== s.emissiveMapColor.b;
+        || render3DColorChanged(r.emissiveMapColor || WHITE, s.emissiveMapColor);
+}
+
+// whether two colors differ in their rgb, for the batch key's emissiveMapColor
+function render3DColorChanged(a, b) { return a.r !== b.r || a.g !== b.g || a.b !== b.b;
 }
 
 // whether a sphere is inside the view, or the shadow map's box during the shadow pass, without a vector
@@ -531,12 +534,6 @@ class Render3DPlugin
         /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything
          *  @type {Mesh|undefined} */
         this.sky = undefined;
-        /** @property {Array<Color>|undefined} - The top, horizon and bottom colors setSky was given, which a
-         *  reflection shows; with none it shows the ambient colors
-         *  @type {Array<Color>|undefined} */
-        this.skyColors = undefined;
-        // what the material map units have bound, see render3DBindMap
-        this.boundMaps = [];
         /** @property {boolean} - Draw the 3D scene on top of the 2D scene instead of under it */
         this.renderAfter2D = false;
         /** @property {boolean} - Draw see through things far to near so they blend correctly */
@@ -1069,8 +1066,7 @@ class Render3DPlugin
     }
 
     /** Build a sky dome, set it as the sky, and light the scene by it: the fog takes the horizon color, and the
-     *  ambient light comes from the top color above and the bottom color below, both at the ambient strength; the
-     *  colors are kept in skyColors for reflections
+     *  ambient light comes from the top color above and the bottom color below, both at the ambient strength
      *  @param {Color} [topColor] - Straight up
      *  @param {Color} [horizonColor] - Level with the camera
      *  @param {Color} [bottomColor] - Straight down, defaults to the horizon color
@@ -1080,7 +1076,6 @@ class Render3DPlugin
     {
         this.sky?.dispose();
         this.sky = buildSky(topColor, horizonColor, bottomColor);
-        this.skyColors = [topColor.copy(), horizonColor.copy(), bottomColor.copy()];
         this.fogColor = horizonColor.copy();
         this.ambientColor = topColor.scale(ambient, 1);
         this.ambientGroundColor = bottomColor.scale(ambient, 1);
@@ -1794,13 +1789,13 @@ function render3DSetMaterialUniforms(state)
     const r = render3D, loaded = (map)=> render3DTextureOf(map)?.glTexture ? map : undefined;
     const normalMap = state.normalScale ? loaded(state.normalMap) : undefined, emissiveMap = loaded(state.emissiveMap);
     render3DUniform4f('materialParams', normalMap ? state.normalScale : 0, state.shininess, state.reflectivity, 0);
-    const ec = state.emissiveMapColor;
+    const ec = state.emissiveMapColor || WHITE;
     emissiveMap ? render3DUniform4f('emissiveTint', ec.r, ec.g, ec.b, 1) : render3DUniform4f('emissiveTint', 0, 0, 0, 0);
     render3DBindMap(2, normalMap, state);
     render3DBindMap(3, emissiveMap, state);
     if (state.reflectivity > 0)
     {
-        const sky = r.sky && r.skyColors, a = r.ambientColor, g = r.ambientGroundColor || a;
+        const sky = r.sky && render3DSkyColors.get(r.sky), a = r.ambientColor, g = r.ambientGroundColor || a;
         const top = sky ? sky[0] : a, bottom = sky ? sky[2] : g;
         render3DUniform4f('skyTop', top.r, top.g, top.b, 1);
         render3DUniform4f('skyBottom', bottom.r, bottom.g, bottom.b, 1);
@@ -1809,11 +1804,14 @@ function render3DSetMaterialUniforms(state)
     }
 }
 
-// bind a material map to its unit, or white for none, only when it or its filtering changed since the last draw;
-// render3D.boundMaps holds what each unit has, index 2 and 3 the maps and 4 and 5 whether each is pixelated
+// what each material map unit has bound, index 2 and 3 the maps and 4 and 5 whether each is pixelated, forgotten at
+// the start and end of each pass
+let render3DBoundMaps = [];
+
+// bind a material map to its unit, or white for none, only when it or its filtering changed since the last draw
 function render3DBindMap(unit, map, state)
 {
-    const bound = render3D.boundMaps, pixelated = !!map && state.pixelated;
+    const bound = render3DBoundMaps, pixelated = !!map && state.pixelated;
     if (bound[unit] === map && bound[unit + 2] === pixelated) return;
     bound[unit] = map, bound[unit + 2] = pixelated;
     render3DBindTexture(map, state, unit);
@@ -2039,14 +2037,7 @@ function render3DRenderPass(after2D)
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture || null);
     // the material maps' units start white, a 2D plugin may have left its own textures there
-    for (const unit of [2, 3])
-    {
-        gl.activeTexture(gl.TEXTURE0 + unit);
-        gl.bindTexture(gl.TEXTURE_2D, r.whiteTexture);
-        gl.bindSampler(unit, null);
-    }
-    gl.activeTexture(gl.TEXTURE0);
-    r.boundMaps = []; // what is bound is not known to the cache, the first draw binds its maps
+    render3DSetMapUnits(r.whiteTexture);
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT);
 
@@ -2074,19 +2065,28 @@ function render3DRenderPass(after2D)
         gl.depthMask(true);
         gl.frontFace(gl.CCW);
         gl.bindSampler(0, null); // back to the textures' own filtering for 2D
-        for (const unit of [2, 3]) // the material maps leave no texture or sampler behind for 2D
-        {
-            gl.activeTexture(gl.TEXTURE0 + unit);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-            gl.bindSampler(unit, null);
-        }
-        gl.activeTexture(gl.TEXTURE0);
+        render3DSetMapUnits(null); // the material maps leave no texture or sampler behind for 2D
         if (glActiveTexture)
             gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
         // ARRAY_BUFFER is not part of VAO state in WebGL2, so bindVertexArray alone would not restore it
         gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer);
         glSetInstancedMode(true);
     }
+}
+
+// put a texture on both material map units with no sampler, white at the start of the pass and none at its end, and
+// forget what the map cache thought was bound; unit 0 is active after
+function render3DSetMapUnits(texture)
+{
+    const gl = glContext;
+    for (const unit of [2, 3])
+    {
+        gl.activeTexture(gl.TEXTURE0 + unit);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.bindSampler(unit, null);
+    }
+    gl.activeTexture(gl.TEXTURE0);
+    render3DBoundMaps = [];
 }
 
 // create the shadow map depth texture and framebuffer at a size, or keep them when the size matches
@@ -3352,8 +3352,13 @@ function buildSky(topColor=hsl(.6, .8, .55), horizonColor=hsl(.6, 1, .9), bottom
     // a sphere turned inside out so it is seen from within, each point colored by how high it is
     const mesh = buildSphere(2, sides, rings, true).flipNormals();
     mesh.colors = mesh.points.map(p=> p.y < 0 ? horizonColor.lerp(bottomColor, -p.y) : horizonColor.lerp(topColor, p.y));
+    render3DSkyColors.set(mesh, [topColor.copy(), horizonColor.copy(), bottomColor.copy()]);
     return mesh;
 }
+
+// the top, horizon and bottom colors of each sky dome buildSky made, which a reflection shows while that dome is
+// render3D.sky, whether setSky set it or the game did
+const render3DSkyColors = new WeakMap;
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
