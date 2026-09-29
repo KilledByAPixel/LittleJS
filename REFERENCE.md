@@ -1524,6 +1524,11 @@ new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileIn
 // randomness on speed, size and life
 // an emitter with an emitTime destroys itself once its last particle is gone, so a burst is fire and forget
 // untextured particles are soft round dots, textured ones are billboards of the tile
+emitter.collideLevel = false // particles hit the height maps and voxel maps, bounce by restitution, slide by friction
+emitter.particleCreateCallback / particleUpdateCallback / particleCollideCallback / particleDestroyCallback
+                       // as in 2D, each given a Particle3D {pos, velocity, age, lifeTime, emitter, destroy()}, one object
+                       // the emitter reuses, so copy what you keep; the collide callback gets (particle, level, pos) and
+                       // returns true to stop the particle there
 emitter.trailTime = .2 // 0 by default; draw each particle as a ribbon along its last .2 seconds instead (trailTime * 60 updates with engineVariableStep), the texture stretches along
                        // it
 // scale3D on the emitter, its own or a parent's, grows the whole effect: spawn area, sizes, speed and fall

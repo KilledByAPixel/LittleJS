@@ -59,21 +59,19 @@ function gameInit()
     );
     rain.rotation3D.x = PI; // it emits along its own up, so aim it down
     rain.trailTime = .1;
+
+    // a drop that reaches the water starts a ring there and ends
+    rain.particleUpdateCallback = (p)=>
+    {
+        if (p.pos.y > 0)
+            return;
+        drop(p.pos.x, p.pos.z, .03);
+        p.destroy();
+    };
 }
 
 function gameUpdate()
 {
-    // a drop that reached the water starts a ring and ends there
-    const data = rain.particleData;
-    for (let i = rain.particleCount; i--;)
-    {
-        const k = i*21; // 21 numbers a particle, its position first
-        if (data[k+1] > 0)
-            continue;
-        drop(data[k], data[k+2], .03);
-        data[k+17] = data[k+16]; // its age is its life, it is gone
-    }
-
     if (mouseWasPressed(2)) // right click drops a stone
     {
         const p = render3D.screenToGround(mousePosScreen);

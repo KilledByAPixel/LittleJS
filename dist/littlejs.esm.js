@@ -26884,6 +26884,22 @@ class HeightMap extends EngineObject3D
      *  @ignore */
     levelRaycast3D(ray) { return this.raycast(ray); }
 
+    /** Where a short move goes under the surface, for a particle's move in one frame: the part of the move made
+     *  before it, 0 to 1, and the surface normal there; undefined when it stays above, starts under, or is off the map
+     *  @param {Vector3} from
+     *  @param {Vector3} to
+     *  @return {{distance: number, normal: Vector3}|undefined}
+     *  @ignore */
+    levelSegment3D(from, to)
+    {
+        const m = this.pos3D, size = this.mapSize;
+        if (abs(to.x - m.x) > size.x / 2 || abs(to.z - m.z) > size.y / 2) return; // off the map
+        const a = from.y - this.getHeight(from.x, from.z), b = to.y - this.getHeight(to.x, to.z);
+        if (a < 0 || b >= 0) return; // above all the way, or under from the start
+        const distance = a / (a - b);
+        return {distance, normal: this.getNormal(from.x + (to.x - from.x) * distance, from.z + (to.z - from.z) * distance)};
+    }
+
     /** Keep an object above the ground, called by the engine for each object with collideLevel
      *  @param {EngineObject3D} o
      *  @param {Vector3} oldPos - Where it was before it moved
@@ -27143,6 +27159,37 @@ class FirstPersonCamera3D extends EngineObject3D
 const RENDER3D_PARTICLE_FLOATS = 21;
 // the position, color and size of the particle being drawn, shared by every emitter so the draw loop makes no objects
 const render3DParticlePos = vec3(), render3DParticleColor = new Color, render3DParticleSize = vec2();
+// where a particle was and is, for the level collision
+const render3DParticleFrom = vec3(), render3DParticleTo = vec3();
+
+/**
+ * A particle as a ParticleEmitter3D's callbacks see it: one object the emitter reuses, set from the particle for each
+ * call and written back after it, so copy what you keep
+ * @typedef {Object} Particle3D
+ * @property {ParticleEmitter3D} emitter - The emitter it is in
+ * @property {Vector3} pos - Where it is, change it to move it
+ * @property {Vector3} velocity - How far it moves each frame
+ * @property {number} age - Seconds it has lived
+ * @property {number} lifeTime - Seconds it lives
+ * @property {boolean} destroyed - Set by destroy
+ * @property {function(): void} destroy - End it this update, the destroy callback gets it
+ * @memberof Render3D
+ */
+
+/**
+ * @callback Particle3DCallback - A function a ParticleEmitter3D calls with one of its particles
+ * @param {Particle3D} particle
+ * @memberof Render3D
+ */
+
+/**
+ * @callback Particle3DCollideCallback - Decides whether a particle stops where it hits the level, a filter as in 2D
+ * @param {Particle3D} particle
+ * @param {EngineObject3D} level - The HeightMap or VoxelMap it hit
+ * @param {Vector3} pos - Where it hit
+ * @return {boolean|void} - true to stop it there; a callback that returns nothing lets it pass through
+ * @memberof Render3D
+ */
 
 /**
  * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
@@ -27156,6 +27203,10 @@ const render3DParticlePos = vec3(), render3DParticleColor = new Color, render3DP
  * - gravity here is its own number added to velocity y each frame: it is neither the engine's 2D
  *   gravity nor render3D.gravity, so an effect keeps its own fall wherever it is used
  * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
+ * - Callbacks as the 2D emitter's: particleCreateCallback, particleUpdateCallback, particleCollideCallback and
+ *   particleDestroyCallback, each given a Particle3D, one object the emitter reuses for every particle and call
+ * - collideLevel, off by default, has particles hit the height maps and voxel maps, bouncing by restitution and
+ *   sliding by friction
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -27245,6 +27296,26 @@ class ParticleEmitter3D extends EngineObject3D
         this.trailData = undefined;
         /** @property {number} - Trail points kept per particle, from trailTime */
         this.trailMax = 0;
+        /** @property {boolean} - Particles hit the level, the height maps and voxel maps, bouncing by restitution and
+         *  sliding along by friction; off by default, it tests each particle's move against the level every frame */
+        this.collideLevel = false;
+        /** @property {Particle3DCallback|undefined} - Called with each particle as it is made
+         *  @type {Particle3DCallback|undefined} */
+        this.particleCreateCallback = undefined;
+        /** @property {Particle3DCallback|undefined} - Called with each particle each update, after it moves
+         *  @type {Particle3DCallback|undefined} */
+        this.particleUpdateCallback = undefined;
+        /** @property {Particle3DCollideCallback|undefined} - Decides if a particle stops where it hits the level,
+         *  with collideLevel on; a callback that returns nothing lets it through
+         *  @type {Particle3DCollideCallback|undefined} */
+        this.particleCollideCallback = undefined;
+        /** @property {Particle3DCallback|undefined} - Called with each particle as it goes, its life over or destroyed
+         *  @type {Particle3DCallback|undefined} */
+        this.particleDestroyCallback = undefined;
+        /** @property {Particle3D} - The particle the callbacks get, one object for every particle and call
+         *  @type {Particle3D} */
+        this.particleView = {emitter: this, pos: vec3(), velocity: vec3(), age: 0, lifeTime: 0, destroyed: false,
+            destroy() { this.destroyed = true; }};
         /** @property {Vector3|undefined} - Where the emitter was at its last update, for when its parent is destroyed
          *  @type {Vector3|undefined} */
         this.worldPos3D = undefined;
@@ -27288,6 +27359,8 @@ class ParticleEmitter3D extends EngineObject3D
         // move the particles and drop the dead ones, all in the typed array: this runs for every particle every frame
         const F = RENDER3D_PARTICLE_FLOATS, data = this.particleData, trail = this.trailData;
         const damping = this.damping, gravity = this.gravity * scale, angleDamping = this.angleDamping; // a bigger effect has to fall faster to keep the same arc
+        const collideLevel = this.collideLevel && render3DLevel.length;
+        const updateCallback = this.particleUpdateCallback, destroyCallback = this.particleDestroyCallback;
         for (let i = this.particleCount; i--;)
         {
             // damped first and gravity added after, the order the 2D particle uses, so the same
@@ -27296,6 +27369,7 @@ class ParticleEmitter3D extends EngineObject3D
             const vx = data[k+3] *= damping, vy = data[k+4] = data[k+4] * damping + gravity, vz = data[k+5] *= damping;
             data[k] += vx, data[k+1] += vy, data[k+2] += vz;
             data[k+18] += data[k+19] *= angleDamping;
+            collideLevel && this.particleCollide(k, data[k] - vx, data[k+1] - vy, data[k+2] - vz);
             const t = i * trailMax * 3;
             if (trailMax)
             {
@@ -27307,9 +27381,11 @@ class ParticleEmitter3D extends EngineObject3D
                 trail[j] = data[k], trail[j+1] = data[k+1], trail[j+2] = data[k+2];
                 data[k+20] = n + 1;
             }
+            updateCallback && this.particleCall(updateCallback, k);
             if ((data[k+17] += timeDelta) >= data[k+16])
             {
                 // dead: the last particle takes its slot, trail and all, order does not matter
+                destroyCallback && this.particleCall(destroyCallback, k);
                 const last = --this.particleCount, kl = last * F;
                 if (i !== last)
                 {
@@ -27376,6 +27452,50 @@ class ParticleEmitter3D extends EngineObject3D
         data[k+18] = this.angleSpeed ? rand(2*PI) : 0;
         data[k+19] = this.angleSpeed ? this.angleSpeed * random() * randSign() : 0;
         data[k+20] = 0; // trail points
+        this.particleCreateCallback && this.particleCall(this.particleCreateCallback, k);
+    }
+
+    // call a particle callback with the particle at k: the emitter's one Particle3D is set from its numbers, and
+    // what the callback changes is written back; a particle it destroys has lived its life, the update removes it
+    particleCall(callback, k, level, pos)
+    {
+        const data = this.particleData, view = this.particleView;
+        view.pos.set(data[k], data[k+1], data[k+2]);
+        view.velocity.set(data[k+3], data[k+4], data[k+5]);
+        view.age = data[k+17], view.lifeTime = data[k+16], view.destroyed = false;
+        const result = callback(view, level, pos);
+        data[k] = view.pos.x, data[k+1] = view.pos.y, data[k+2] = view.pos.z;
+        data[k+3] = view.velocity.x, data[k+4] = view.velocity.y, data[k+5] = view.velocity.z;
+        if (view.destroyed)
+            data[k+17] = max(data[k+17], data[k+16] - timeDelta); // aged past its life this update
+        return result;
+    }
+
+    // stop the particle at k where its last move went into the level, from where it was: back at the surface, a hair
+    // off it, its speed into it turned around by restitution and its speed along it kept by friction, unless the
+    // collide callback lets it through; one that starts inside is let go, as a 2D one is
+    particleCollide(k, x, y, z)
+    {
+        const data = this.particleData, from = render3DParticleFrom.set(x, y, z);
+        const to = render3DParticleTo.set(data[k], data[k+1], data[k+2]);
+        let hit, level;
+        for (const l of render3DLevel)
+        {
+            const h = l.destroyed ? undefined : l.levelSegment3D(from, to);
+            if (h && (!hit || h.distance < hit.distance))
+                hit = h, level = l;
+        }
+        if (!hit) return;
+        const point = from.lerp(to, hit.distance);
+        const callback = this.particleCollideCallback;
+        if (callback && (!this.particleCall(callback, k, level, point.copy()) || this.particleView.destroyed))
+            return; // let through, or destroyed by the callback
+
+        const n = hit.normal, v = vec3(data[k+3], data[k+4], data[k+5]), into = n.scale(v.dot(n));
+        const restitution = max(this.restitution, level.restitution), friction = max(this.friction, level.friction);
+        const out = v.subtract(into).scale(friction).subtract(into.scale(restitution)), p = point.add(n.scale(1e-3));
+        data[k] = p.x, data[k+1] = p.y, data[k+2] = p.z;
+        data[k+3] = out.x, data[k+4] = out.y, data[k+5] = out.z;
     }
 
     /** Draw the particles, as flat squares or as streaks when trailTime is set
@@ -28529,6 +28649,18 @@ class VoxelMap extends EngineObject3D
      *  @return {number|undefined}
      *  @ignore */
     levelRaycast3D(ray) { return this.raycast(ray)?.distance; }
+
+    /** Where a short move goes into a block, for a particle's move in one frame: the part of the move made before it,
+     *  0 to 1, and the normal of the face it comes in through; undefined when it hits none, or starts inside one
+     *  @param {Vector3} from
+     *  @param {Vector3} to
+     *  @return {{distance: number, normal: Vector3}|undefined}
+     *  @ignore */
+    levelSegment3D(from, to)
+    {
+        const hit = this.raycast(new Ray3D(from, to.subtract(from)), 1);
+        return hit && hit.distance > 0 ? {distance: hit.distance, normal: hit.normal} : undefined;
+    }
 
     /** Keeps an eye on its placement, called automatically each frame */
     update()

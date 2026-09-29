@@ -465,6 +465,18 @@ class VoxelMap extends EngineObject3D
      *  @ignore */
     levelRaycast3D(ray) { return this.raycast(ray)?.distance; }
 
+    /** Where a short move goes into a block, for a particle's move in one frame: the part of the move made before it,
+     *  0 to 1, and the normal of the face it comes in through; undefined when it hits none, or starts inside one
+     *  @param {Vector3} from
+     *  @param {Vector3} to
+     *  @return {{distance: number, normal: Vector3}|undefined}
+     *  @ignore */
+    levelSegment3D(from, to)
+    {
+        const hit = this.raycast(new Ray3D(from, to.subtract(from)), 1);
+        return hit && hit.distance > 0 ? {distance: hit.distance, normal: hit.normal} : undefined;
+    }
+
     /** Keeps an eye on its placement, called automatically each frame */
     update()
     {

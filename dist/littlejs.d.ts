@@ -114,6 +114,48 @@ declare module "littlejsengine" {
         renderPost?: () => void;
     };
     /**
+     * A particle as a ParticleEmitter3D's callbacks see it: one object the emitter reuses, set from the particle for each
+     * call and written back after it, so copy what you keep
+     */
+    export type Particle3D = {
+        /**
+         * - The emitter it is in
+         */
+        emitter: ParticleEmitter3D;
+        /**
+         * - Where it is, change it to move it
+         */
+        pos: Vector3;
+        /**
+         * - How far it moves each frame
+         */
+        velocity: Vector3;
+        /**
+         * - Seconds it has lived
+         */
+        age: number;
+        /**
+         * - Seconds it lives
+         */
+        lifeTime: number;
+        /**
+         * - Set by destroy
+         */
+        destroyed: boolean;
+        /**
+         * - End it this update, the destroy callback gets it
+         */
+        destroy: () => void;
+    };
+    /**
+     * - A function a ParticleEmitter3D calls with one of its particles
+     */
+    export type Particle3DCallback = (particle: Particle3D) => any;
+    /**
+     * - Decides whether a particle stops where it hits the level, a filter as in 2D
+     */
+    export type Particle3DCollideCallback = (particle: Particle3D, level: EngineObject3D, pos: Vector3) => boolean | void;
+    /**
      * What VoxelMap.raycast finds: how far along the ray, the block's cell and type, and the normal of the face it comes in
      * through
      */
@@ -8707,6 +8749,16 @@ declare module "littlejsengine" {
          *  @return {number|undefined}
          *  @ignore */
         levelRaycast3D(ray: Ray3D): number | undefined;
+        /** Where a short move goes under the surface, for a particle's move in one frame: the part of the move made
+         *  before it, 0 to 1, and the surface normal there; undefined when it stays above, starts under, or is off the map
+         *  @param {Vector3} from
+         *  @param {Vector3} to
+         *  @return {{distance: number, normal: Vector3}|undefined}
+         *  @ignore */
+        levelSegment3D(from: Vector3, to: Vector3): {
+            distance: number;
+            normal: Vector3;
+        };
         /** Keep an object above the ground, called by the engine for each object with collideLevel
          *  @param {EngineObject3D} o
          *  @param {Vector3} oldPos - Where it was before it moved
@@ -8852,6 +8904,16 @@ declare module "littlejsengine" {
          *  @return {number|undefined}
          *  @ignore */
         levelRaycast3D(ray: Ray3D): number | undefined;
+        /** Where a short move goes into a block, for a particle's move in one frame: the part of the move made before it,
+         *  0 to 1, and the normal of the face it comes in through; undefined when it hits none, or starts inside one
+         *  @param {Vector3} from
+         *  @param {Vector3} to
+         *  @return {{distance: number, normal: Vector3}|undefined}
+         *  @ignore */
+        levelSegment3D(from: Vector3, to: Vector3): {
+            distance: number;
+            normal: Vector3;
+        } | undefined;
         /** Draw the chunks, each at its center, with the whole texture so each face shows its own tile
          *  @param {boolean} transparent
          *  @ignore */
@@ -8989,6 +9051,32 @@ declare module "littlejsengine" {
         eyeHeight: number;
     }
     /**
+     * A particle as a ParticleEmitter3D's callbacks see it: one object the emitter reuses, set from the particle for each
+     * call and written back after it, so copy what you keep
+     * @typedef {Object} Particle3D
+     * @property {ParticleEmitter3D} emitter - The emitter it is in
+     * @property {Vector3} pos - Where it is, change it to move it
+     * @property {Vector3} velocity - How far it moves each frame
+     * @property {number} age - Seconds it has lived
+     * @property {number} lifeTime - Seconds it lives
+     * @property {boolean} destroyed - Set by destroy
+     * @property {function(): void} destroy - End it this update, the destroy callback gets it
+     * @memberof Render3D
+     */
+    /**
+     * @callback Particle3DCallback - A function a ParticleEmitter3D calls with one of its particles
+     * @param {Particle3D} particle
+     * @memberof Render3D
+     */
+    /**
+     * @callback Particle3DCollideCallback - Decides whether a particle stops where it hits the level, a filter as in 2D
+     * @param {Particle3D} particle
+     * @param {EngineObject3D} level - The HeightMap or VoxelMap it hit
+     * @param {Vector3} pos - Where it hit
+     * @return {boolean|void} - true to stop it there; a callback that returns nothing lets it pass through
+     * @memberof Render3D
+     */
+    /**
      * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
      * - Each particle is a flat square facing the camera, with a soft round dot when no tile is given
      * - Set trailTime to draw each particle as a streak along where it has been, for sparks
@@ -9000,6 +9088,10 @@ declare module "littlejsengine" {
      * - gravity here is its own number added to velocity y each frame: it is neither the engine's 2D
      *   gravity nor render3D.gravity, so an effect keeps its own fall wherever it is used
      * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
+     * - Callbacks as the 2D emitter's: particleCreateCallback, particleUpdateCallback, particleCollideCallback and
+     *   particleDestroyCallback, each given a Particle3D, one object the emitter reuses for every particle and call
+     * - collideLevel, off by default, has particles hit the height maps and voxel maps, bouncing by restitution and
+     *   sliding by friction
      * @extends EngineObject3D
      * @memberof Render3D
      * @example
@@ -9074,12 +9166,30 @@ declare module "littlejsengine" {
         trailData: Float32Array | undefined;
         /** @property {number} - Trail points kept per particle, from trailTime */
         trailMax: number;
+        /** @property {Particle3DCallback|undefined} - Called with each particle as it is made
+         *  @type {Particle3DCallback|undefined} */
+        particleCreateCallback: Particle3DCallback | undefined;
+        /** @property {Particle3DCallback|undefined} - Called with each particle each update, after it moves
+         *  @type {Particle3DCallback|undefined} */
+        particleUpdateCallback: Particle3DCallback | undefined;
+        /** @property {Particle3DCollideCallback|undefined} - Decides if a particle stops where it hits the level,
+         *  with collideLevel on; a callback that returns nothing lets it through
+         *  @type {Particle3DCollideCallback|undefined} */
+        particleCollideCallback: Particle3DCollideCallback | undefined;
+        /** @property {Particle3DCallback|undefined} - Called with each particle as it goes, its life over or destroyed
+         *  @type {Particle3DCallback|undefined} */
+        particleDestroyCallback: Particle3DCallback | undefined;
+        /** @property {Particle3D} - The particle the callbacks get, one object for every particle and call
+         *  @type {Particle3D} */
+        particleView: Particle3D;
         /** @property {Vector3|undefined} - Where the emitter was at its last update, for when its parent is destroyed
          *  @type {Vector3|undefined} */
         worldPos3D: Vector3 | undefined;
         emitTimeBuffer: number;
         /** Spawn one particle now */
         emitParticle(): void;
+        particleCall(callback: any, k: any, level: any, pos: any): any;
+        particleCollide(k: any, x: any, y: any, z: any): void;
     }
     /**
      * Trail3D - A ribbon through where the object has been, thinning and fading with age
