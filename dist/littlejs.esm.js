@@ -22299,9 +22299,11 @@ function render3DCanDraw()
 }
 
 // the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
-// the three functions below write them out by hand for speed, so a new field goes in all four
+// the three functions below write them out by hand for speed, so a new field goes in all four; emissiveMapColor is
+// compared by its values, so two objects with equal colors batch
 const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting',
-    'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader'];
+    'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader', 'normalMap', 'normalScale', 'shininess',
+    'reflectivity', 'emissiveMap', 'emissiveMapColor'];
 
 // a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out so the
 // compare below stays a handful of direct reads, it runs for every instance drawn
@@ -22310,7 +22312,9 @@ function render3DCaptureBatchState()
     const r = render3D;
     return {blend: r.blend, additive: r.additive, depthTest: r.depthTest, depthWrite: r.depthWrite,
         cullBackFaces: r.cullBackFaces, mirrored: r.mirrored, lighting: r.lighting, emissive: r.emissive,
-        receiveShadow: r.receiveShadow, specular: r.specular, pixelated: r.pixelated, shader: r.shader};
+        receiveShadow: r.receiveShadow, specular: r.specular, pixelated: r.pixelated, shader: r.shader,
+        normalMap: r.normalMap, normalScale: r.normalScale, shininess: r.shininess, reflectivity: r.reflectivity,
+        emissiveMap: r.emissiveMap, emissiveMapColor: r.emissiveMapColor};
 }
 
 // put a captured draw state back, written out the same way; the transparent stage does this for every queued draw
@@ -22319,7 +22323,9 @@ function render3DApplyBatchState(s)
     const r = render3D;
     r.blend = s.blend, r.additive = s.additive, r.depthTest = s.depthTest, r.depthWrite = s.depthWrite,
     r.cullBackFaces = s.cullBackFaces, r.mirrored = s.mirrored, r.lighting = s.lighting, r.emissive = s.emissive,
-    r.receiveShadow = s.receiveShadow, r.specular = s.specular, r.pixelated = s.pixelated, r.shader = s.shader;
+    r.receiveShadow = s.receiveShadow, r.specular = s.specular, r.pixelated = s.pixelated, r.shader = s.shader,
+    r.normalMap = s.normalMap, r.normalScale = s.normalScale, r.shininess = s.shininess,
+    r.reflectivity = s.reflectivity, r.emissiveMap = s.emissiveMap, r.emissiveMapColor = s.emissiveMapColor;
 }
 
 // true when the current draw state differs from a captured one, so a pending batch must flush first
@@ -22329,7 +22335,11 @@ function render3DStateChanged(s)
     return r.blend !== s.blend || r.additive !== s.additive || r.depthTest !== s.depthTest
         || r.depthWrite !== s.depthWrite || r.cullBackFaces !== s.cullBackFaces || r.mirrored !== s.mirrored
         || r.lighting !== s.lighting || r.emissive !== s.emissive || r.receiveShadow !== s.receiveShadow
-        || r.specular !== s.specular || r.pixelated !== s.pixelated || r.shader !== s.shader;
+        || r.specular !== s.specular || r.pixelated !== s.pixelated || r.shader !== s.shader
+        || r.normalMap !== s.normalMap || r.normalScale !== s.normalScale || r.shininess !== s.shininess
+        || r.reflectivity !== s.reflectivity || r.emissiveMap !== s.emissiveMap
+        || r.emissiveMapColor.r !== s.emissiveMapColor.r || r.emissiveMapColor.g !== s.emissiveMapColor.g
+        || r.emissiveMapColor.b !== s.emissiveMapColor.b;
 }
 
 // whether a sphere is inside the view, or the shadow map's box during the shadow pass, without a vector
@@ -22435,6 +22445,15 @@ function render3DSetObjectState(o)
     r.emissive = emissive;
     r.additive = !!o?.additive;
     r.specular = o?.specular || 0;
+    const shininess = o?.shininess ?? 16, reflectivity = o?.reflectivity || 0;
+    ASSERT(isNumber(shininess) && shininess > 0, 'shininess must be a number above 0', shininess);
+    ASSERT(isNumber(reflectivity) && reflectivity >= 0 && reflectivity <= 1, 'reflectivity must be 0 to 1', reflectivity);
+    r.shininess = shininess;
+    r.reflectivity = reflectivity;
+    r.normalMap = o?.normalMap || undefined;
+    r.normalScale = o?.normalScale ?? 1;
+    r.emissiveMap = o?.emissiveMap || undefined;
+    r.emissiveMapColor = o?.emissiveMapColor || WHITE;
     r.receiveShadow = !o || o.receiveShadow;
     r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
     r.pixelated = !!o?.pixelated;
@@ -22704,8 +22723,23 @@ class Render3DPlugin
         this.cullBackFaces = false;
         this.mirrored = false;
         /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
-         *  1 adds a light's full color at its brightest; its size is fixed */
+         *  1 adds a light's full color at its brightest; shininess sets its size */
         this.specular = 0;
+        /** @property {number} - The highlight's exponent, how small and sharp it is: 4 is broad like rubber, 100 sharp
+         *  like polished metal; set from each object's shininess */
+        this.shininess = 16;
+        /** @property {TextureInfo|undefined} - Normal map for the next draws, set from each object's normalMap
+         *  @type {TextureInfo|undefined} */
+        this.normalMap = undefined;
+        /** @property {number} - How strongly the normal map bends the surface, set from each object's normalScale */
+        this.normalScale = 1;
+        /** @property {number} - How much the surface reflects the sky, 0 to 1, set from each object's reflectivity */
+        this.reflectivity = 0;
+        /** @property {TextureInfo|undefined} - Emissive map for the next draws, set from each object's emissiveMap
+         *  @type {TextureInfo|undefined} */
+        this.emissiveMap = undefined;
+        /** @property {Color} - Multiplies the emissive map, set from each object's emissiveMapColor */
+        this.emissiveMapColor = WHITE;
         /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined
          *  draws with the plugin's own
          *  @type {Shader|undefined} */
@@ -25551,8 +25585,27 @@ class EngineObject3D extends EngineObject
          *  lamps and glowing things, between is partly self lit, and above 1 is brighter than its color, for bloom */
         this.emissive = 0;
         /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
-         *  1 adds a light's full color at its brightest; its size is fixed */
+         *  1 adds a light's full color at its brightest; shininess sets its size */
         this.specular = 0;
+        /** @property {number} - The highlight's exponent, how small and sharp it is: 4 is broad like rubber, 16 the
+         *  default, 100 sharp like polished metal; shows only with specular above 0 */
+        this.shininess = 16;
+        /** @property {TextureInfo|undefined} - A normal map that bends the surface at each texel so it catches the
+         *  light like bumps and grooves, green pointing up the image as OpenGL and glTF have it; read at the color
+         *  texture's coordinates, see normalMapFromHeight to make one in code
+         *  @type {TextureInfo|undefined} */
+        this.normalMap = undefined;
+        /** @property {number} - How strongly the normal map bends the surface, 0 turns it off, as glTF's scale */
+        this.normalScale = 1;
+        /** @property {number} - How much it reflects the sky, 0 none and 1 a mirror of it; the edges seen at a
+         *  glancing angle reflect more either way, as water and glass do */
+        this.reflectivity = 0;
+        /** @property {TextureInfo|undefined} - A texture of where it glows, added on top of the lit surface so it
+         *  shows in the dark, like lit windows; read at the color texture's coordinates
+         *  @type {TextureInfo|undefined} */
+        this.emissiveMap = undefined;
+        /** @property {Color} - Multiplies the emissive map, as glTF's emissiveFactor */
+        this.emissiveMapColor = WHITE;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures
          *  cast their outline, an object faded below half its alpha casts nothing, a see through one casts only when
          *  textured, and additive objects never cast */

@@ -7704,8 +7704,23 @@ declare module "littlejsengine" {
         cullBackFaces: boolean;
         mirrored: boolean;
         /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
-         *  1 adds a light's full color at its brightest; its size is fixed */
+         *  1 adds a light's full color at its brightest; shininess sets its size */
         specular: number;
+        /** @property {number} - The highlight's exponent, how small and sharp it is: 4 is broad like rubber, 100 sharp
+         *  like polished metal; set from each object's shininess */
+        shininess: number;
+        /** @property {TextureInfo|undefined} - Normal map for the next draws, set from each object's normalMap
+         *  @type {TextureInfo|undefined} */
+        normalMap: TextureInfo | undefined;
+        /** @property {number} - How strongly the normal map bends the surface, set from each object's normalScale */
+        normalScale: number;
+        /** @property {number} - How much the surface reflects the sky, 0 to 1, set from each object's reflectivity */
+        reflectivity: number;
+        /** @property {TextureInfo|undefined} - Emissive map for the next draws, set from each object's emissiveMap
+         *  @type {TextureInfo|undefined} */
+        emissiveMap: TextureInfo | undefined;
+        /** @property {Color} - Multiplies the emissive map, set from each object's emissiveMapColor */
+        emissiveMapColor: Color;
         /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined
          *  draws with the plugin's own
          *  @type {Shader|undefined} */
@@ -8161,8 +8176,27 @@ declare module "littlejsengine" {
         /** @property {boolean} - Additive blending, in the transparent stage */
         additive: boolean;
         /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
-         *  1 adds a light's full color at its brightest; its size is fixed */
+         *  1 adds a light's full color at its brightest; shininess sets its size */
         specular: number;
+        /** @property {number} - The highlight's exponent, how small and sharp it is: 4 is broad like rubber, 16 the
+         *  default, 100 sharp like polished metal; shows only with specular above 0 */
+        shininess: number;
+        /** @property {TextureInfo|undefined} - A normal map that bends the surface at each texel so it catches the
+         *  light like bumps and grooves, green pointing up the image as OpenGL and glTF have it; read at the color
+         *  texture's coordinates, see normalMapFromHeight to make one in code
+         *  @type {TextureInfo|undefined} */
+        normalMap: TextureInfo | undefined;
+        /** @property {number} - How strongly the normal map bends the surface, 0 turns it off, as glTF's scale */
+        normalScale: number;
+        /** @property {number} - How much it reflects the sky, 0 none and 1 a mirror of it; the edges seen at a
+         *  glancing angle reflect more either way, as water and glass do */
+        reflectivity: number;
+        /** @property {TextureInfo|undefined} - A texture of where it glows, added on top of the lit surface so it
+         *  shows in the dark, like lit windows; read at the color texture's coordinates
+         *  @type {TextureInfo|undefined} */
+        emissiveMap: TextureInfo | undefined;
+        /** @property {Color} - Multiplies the emissive map, as glTF's emissiveFactor */
+        emissiveMapColor: Color;
         /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls
          *  around corners */
         collideAsSphere3D: boolean;
