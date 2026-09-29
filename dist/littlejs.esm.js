@@ -1775,6 +1775,45 @@ function debugProtectConstant(obj)
     // freeze the object to prevent adding new properties
     return Object.freeze(obj);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Input capture: the free camera and the 3D level editor take the keyboard and mouse, so the game under them reads
+// every key and mouse button as up, and no mouse movement or wheel; gamepads are left to the game
+
+let inputCaptureOn = false;      // something has taken the keyboard and mouse
+let inputCaptureReading = false; // it is reading them now
+let inputCaptureDeltaScreen, inputCaptureWheel = 0; // this update's mouse movement and wheel, for it alone
+
+// take the keyboard and mouse from the game, or hand them back
+function inputCapture(on=true)
+{
+    inputCaptureOn = !!on;
+    inputCaptureDeltaScreen = vec2();
+    inputCaptureWheel = 0;
+}
+
+// read the input as the one that took it, keyIsDown and the rest work as always inside read
+function inputCaptureRead(read)
+{
+    const was = inputCaptureReading;
+    inputCaptureReading = true;
+    try { return read(); }
+    finally { inputCaptureReading = was; }
+}
+
+// if a read of the keyboard and mouse, device 0, is the game's while they are taken
+function inputCaptureHides(device) { return inputCaptureOn && !inputCaptureReading && !device; }
+
+// called first in inputUpdate: the mouse movement and wheel go to the one that took the input
+function inputCaptureMouse()
+{
+    if (!inputCaptureOn) return;
+    inputCaptureDeltaScreen = mouseDeltaScreen;
+    inputCaptureWheel = mouseWheel;
+    mouseDeltaScreen = vec2();
+    mouseWheel = 0;
+}
+
 /**
  * LittleJS Math Classes and Functions
  * - Comprehensive math utilities for game development
@@ -6893,7 +6932,7 @@ function keyIsDown(key, device=0)
     ASSERT(isStringLike(key), 'key must be a number or string');
     ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
-    return !!(inputData[device]?.[key] & 1);
+    return !!(inputData[device]?.[key] & 1) && !inputCaptureHides(device);
 }
 
 /** Returns true if device key was pressed this frame
@@ -6906,7 +6945,7 @@ function keyWasPressed(key, device=0)
     ASSERT(isStringLike(key), 'key must be a number or string');
     ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
-    return !!(inputData[device]?.[key] & 2);
+    return !!(inputData[device]?.[key] & 2) && !inputCaptureHides(device);
 }
 
 /** Returns true if device key was released this frame
@@ -6919,7 +6958,7 @@ function keyWasReleased(key, device=0)
     ASSERT(isStringLike(key), 'key must be a number or string');
     ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
-    return !!(inputData[device]?.[key] & 4);
+    return !!(inputData[device]?.[key] & 4) && !inputCaptureHides(device);
 }
 
 /** Returns input vector from arrow keys or WASD if enabled
@@ -7439,6 +7478,7 @@ function inputInit()
 
 function inputUpdate()
 {
+    inputCaptureMouse(); // debug builds: the free camera or the 3D editor may have the mouse
     if (headlessMode) return;
 
     // clear input when lost focus (prevent stuck keys)

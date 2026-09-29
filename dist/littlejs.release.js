@@ -924,6 +924,10 @@ function editorJSONFetched(){}
 function editorPreRender(){}
 function editorObjectMade(){}
 
+// the input capture of the free camera and the 3D editor
+function inputCaptureHides(){ return false; }
+function inputCaptureMouse(){}
+
 // the 3D debug draws are debug only too
 function debugBox3D(){}
 function debugSphere3D(){}
@@ -6049,7 +6053,7 @@ function keyIsDown(key, device=0)
     false&&ASSERT(isStringLike(key), 'key must be a number or string');
     false&&ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
-    return !!(inputData[device]?.[key] & 1);
+    return !!(inputData[device]?.[key] & 1) && !inputCaptureHides(device);
 }
 
 /** Returns true if device key was pressed this frame
@@ -6062,7 +6066,7 @@ function keyWasPressed(key, device=0)
     false&&ASSERT(isStringLike(key), 'key must be a number or string');
     false&&ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
-    return !!(inputData[device]?.[key] & 2);
+    return !!(inputData[device]?.[key] & 2) && !inputCaptureHides(device);
 }
 
 /** Returns true if device key was released this frame
@@ -6075,7 +6079,7 @@ function keyWasReleased(key, device=0)
     false&&ASSERT(isStringLike(key), 'key must be a number or string');
     false&&ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
     false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
-    return !!(inputData[device]?.[key] & 4);
+    return !!(inputData[device]?.[key] & 4) && !inputCaptureHides(device);
 }
 
 /** Returns input vector from arrow keys or WASD if enabled
@@ -6595,6 +6599,7 @@ function inputInit()
 
 function inputUpdate()
 {
+    inputCaptureMouse(); // debug builds: the free camera or the 3D editor may have the mouse
     if (headlessMode) return;
 
     // clear input when lost focus (prevent stuck keys)

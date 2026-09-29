@@ -60,6 +60,10 @@ function editorJSONFetched(){}
 function editorPreRender(){}
 function editorObjectMade(){}
 
+// the input capture of the free camera and the 3D editor
+function inputCaptureHides(){ return false; }
+function inputCaptureMouse(){}
+
 // the 3D debug draws are debug only too
 function debugBox3D(){}
 function debugSphere3D(){}
