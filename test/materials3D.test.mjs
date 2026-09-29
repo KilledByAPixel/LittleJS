@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, EngineObject3D, engineObjects, TextureInfo, normalMapFromHeight, vec2, vec3, rgb,
-    WHITE } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, EngineObject3D, engineObjects, TextureInfo, Mesh, normalMapFromHeight, vec2, vec3,
+    rgb, WHITE } from '../dist/littlejs.esm.js';
 
 // materials: a normal map, shininess, sky reflections and an emissive map, set on an object and carried to the
 // draws as draw state, so draws that differ in any of them batch apart
@@ -90,6 +90,34 @@ test('a change to any material field splits the batch, equal values do not', ()=
     assert.equal(flushesAfter(()=> render3D.emissiveMap = map), 1);
     assert.equal(flushesAfter(()=> render3D.emissiveMapColor = rgb(1, 0, 0)), 1);
     assert.equal(flushesAfter(()=> render3D.shininess = 16), 0, 'the same value');
+});
+
+test('a Color changed in place between draws still splits the batch', ()=>
+{
+    const glow = rgb(1, 0, 0);
+    render3D.emissiveMapColor = glow;
+    assert.equal(flushesAfter(()=> { glow.r = 0; render3D.emissiveMapColor = glow; }), 1);
+});
+
+test('the sky draws with no emissive map, whatever a callback left set', ()=>
+{
+    let seen;
+    const drawMesh = render3D.drawMesh;
+    render3D.drawMesh = ()=> seen = render3D.emissiveMap;
+    render3D.sky = new Mesh;
+    render3D.emissiveMap = map;
+    try
+    {
+        render3D.drawSky();
+        assert.equal(seen, undefined);
+        assert.equal(render3D.emissiveMap, map, 'put back after');
+    }
+    finally
+    {
+        render3D.drawMesh = drawMesh;
+        render3D.sky = undefined;
+        render3D.emissiveMap = undefined;
+    }
 });
 
 test('emissiveMapColor batches by its values, not by which Color it is', ()=>

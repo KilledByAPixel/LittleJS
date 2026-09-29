@@ -156,10 +156,16 @@ test('an emissiveFactor with no texture glows all over; a black one is no emissi
     assert.equal(await run2('parseGLTF(gltfJSON).then(model=> model.parts[0].emissiveMap)'), undefined);
 });
 
+test('an emissiveTexture with no emissiveFactor does not glow, the factor defaults to black as glTF says', async () =>
+{
+    const {run} = textureEngine(materialJSON({emissiveTexture: {index: 2}}));
+    assert.equal(await run('parseGLTF(gltfJSON).then(model=> model.parts[0].emissiveMap)'), undefined);
+});
+
 test('the normal and emissive textures are freed by dispose', async () =>
 {
     const {run, counts} = textureEngine(materialJSON({pbrMetallicRoughness: {baseColorTexture: {index: 0}},
-        normalTexture: {index: 1}, emissiveTexture: {index: 2}}));
+        normalTexture: {index: 1}, emissiveTexture: {index: 2}, emissiveFactor: [1, 1, 1]}));
     await run('parseGLTF(gltfJSON).then(model=> model.dispose())');
     assert.equal(counts.created, 3);
     assert.equal(counts.deleted, counts.created);

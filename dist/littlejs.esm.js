@@ -22314,7 +22314,7 @@ function render3DCaptureBatchState()
         cullBackFaces: r.cullBackFaces, mirrored: r.mirrored, lighting: r.lighting, emissive: r.emissive,
         receiveShadow: r.receiveShadow, specular: r.specular, pixelated: r.pixelated, shader: r.shader,
         normalMap: r.normalMap, normalScale: r.normalScale, shininess: r.shininess, reflectivity: r.reflectivity,
-        emissiveMap: r.emissiveMap, emissiveMapColor: r.emissiveMapColor};
+        emissiveMap: r.emissiveMap, emissiveMapColor: r.emissiveMapColor?.copy()}; // a copy, the caller may change it
 }
 
 // put a captured draw state back, written out the same way; the transparent stage does this for every queued draw
@@ -23274,7 +23274,8 @@ class Render3DPlugin
         // a far plane at Infinity has no midpoint, so put it a long way out instead
         const {near, far} = this.camera;
         const radius = far == Infinity ? near * 1e4 : (near + far) / 2;
-        render3DWithState({lighting: false, blend: false, depthTest: false, depthWrite: false, fogEnd: 0, shader: undefined}, ()=>
+        render3DWithState({lighting: false, blend: false, depthTest: false, depthWrite: false, fogEnd: 0, shader: undefined,
+            emissiveMap: undefined}, ()=>
             this.drawMesh(this.sky, buildMatrix(this.camera.pos, undefined, vec3(radius))));
     }
 
@@ -23733,7 +23734,7 @@ function render3DFragmentSource(fragmentCode)
         // the normal map's normal here, in the frame that the position and texture coordinate change along across the
         // screen, so a mesh needs no tangents; green points up the image and v runs down it, so up is -v;
         // a mesh with no texture coordinates has no frame and keeps its own normal
-        'vec3 bump(vec3 n){' +
+        'vec3 normalMapNormal(vec3 n){' +
         'vec3 p1=dFdx(P),p2=dFdy(P);vec2 t1=dFdx(T),t2=dFdy(T);' +
         'vec3 a=cross(p2,n),b=cross(n,p1),u=a*t1.x+b*t2.x,v=a*t1.y+b*t2.y;' +
         'float k=max(dot(u,u),dot(v,v));' +
@@ -23751,7 +23752,7 @@ function render3DFragmentSource(fragmentCode)
         'if(e<1.){' +
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
-        'if(materialParams.x!=0.)n=bump(n);' +
+        'if(materialParams.x!=0.)n=normalMapNormal(n);' +
         'float nl=dot(n,-lightDir.xyz);' +
         'float s=shadow();' +
         // the ambient: one color, or blended from the ground color below to the sky color above by the way the face points
@@ -24013,10 +24014,12 @@ function render3DBindTexture(tileInfo, state=render3D, unit=0)
 
 // the material's uniforms and maps for a draw: the normal map on unit 2 and the emissive map on unit 3, white when
 // unused and bound only when they change, and the sky a reflection shows, the colors setSky was given or the
-// ambient ones; with nothing set every part of it is skipped in the shader
+// ambient ones; with nothing set every part of it is skipped in the shader, and a map with no GL texture yet, or
+// one freed, counts as none, since the white texture in its place would bend every normal or light the surface
 function render3DSetMaterialUniforms(state)
 {
-    const r = render3D, normalMap = state.normalScale ? state.normalMap : undefined, emissiveMap = state.emissiveMap;
+    const r = render3D, loaded = (map)=> render3DTextureOf(map)?.glTexture ? map : undefined;
+    const normalMap = state.normalScale ? loaded(state.normalMap) : undefined, emissiveMap = loaded(state.emissiveMap);
     render3DUniform4f('materialParams', normalMap ? state.normalScale : 0, state.shininess, state.reflectivity, 0);
     const ec = state.emissiveMapColor;
     emissiveMap ? render3DUniform4f('emissiveTint', ec.r, ec.g, ec.b, 1) : render3DUniform4f('emissiveTint', 0, 0, 0, 0);
@@ -29828,12 +29831,13 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     part.pixelated = json.samplers?.[texture?.sampler]?.magFilter === 9728; // NEAREST
     part.unlit = !!material.extensions?.KHR_materials_unlit;
 
-    // the normal and emissive maps, read at the base color texture's uvs; an emissive factor with no texture glows
-    // all over, one of zeros, the default, is no glow at all
+    // the normal and emissive maps, read at the base color texture's uvs; the emissive texture is multiplied by the
+    // factor, which is black by default as the format says, so a texture alone does not glow; a factor with no
+    // texture glows all over
     const normalRef = material.normalTexture, emissiveRef = material.emissiveTexture;
     part.normalMap = normalRef && textures[normalRef.index];
     part.normalScale = normalRef?.scale ?? 1;
-    const [er, eg, eb] = material.emissiveFactor || (emissiveRef ? [1, 1, 1] : [0, 0, 0]);
+    const [er, eg, eb] = material.emissiveFactor || [0, 0, 0];
     if (er || eg || eb)
     {
         part.emissiveMap = emissiveRef ? textures[emissiveRef.index] : gltfWhiteTexture();
@@ -30471,7 +30475,8 @@ function render3DRenderDebug()
     render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.clearCount === debugClearCount);
     if (!debugVideoCaptureIsActive()) // hidden from a video capture like the 2D ones, but they still expire
     {
-        render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
+        render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined,
+            emissiveMap: undefined}, ()=>
         {
             for (const p of render3DDebugPrimitives)
                 p.draw();

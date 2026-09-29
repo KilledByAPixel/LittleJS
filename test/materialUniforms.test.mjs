@@ -19,6 +19,7 @@ test('the source has each part, and shininess replaces the fixed 16', ()=>
     for (const part of ['normalTex', 'emissiveTex', 'materialParams', 'emissiveTint', 'skyTop', 'dFdx'])
         assert.ok(source.includes(part), part);
     assert.ok(!source.includes(',16.)'), 'no fixed exponent left');
+    assert.ok(!/vec3 bump\(/.test(source), 'the helper has a name a snippet is unlikely to use');
     assert.equal(run('render3DFragmentSource("void mainImage(out vec4 c, vec2 uv){c=vec4(1);}")')
         .includes('normalTex'), true, 'a Shader snippet gets the same lighting');
 });
@@ -33,19 +34,28 @@ test('with nothing set every part is skipped and the units are white', ()=>
 
 test('a normal map sends its scale and is bound to unit 2; scale 0 is off and never bound', ()=>
 {
-    let {sent, bound} = send('render3D.normalMap = {tag: "n"}; render3D.normalScale = .5');
+    let {sent, bound} = send('render3D.normalMap = {tag: "n", glTexture: {}}; render3D.normalScale = .5');
     assert.equal(sent.materialParams[0], .5);
     assert.deepEqual(bound, ['n', null]);
-    ({sent, bound} = send('render3D.normalMap = {tag: "n"}; render3D.normalScale = 0'));
+    ({sent, bound} = send('render3D.normalMap = {tag: "n", glTexture: {}}; render3D.normalScale = 0'));
     assert.equal(sent.materialParams[0], 0);
     assert.deepEqual(bound, [null, null]);
 });
 
 test('an emissive map sends its color and is bound to unit 3', ()=>
 {
-    const {sent, bound} = send('render3D.emissiveMap = {tag: "e"}; render3D.emissiveMapColor = rgb(1, .5, 0)');
+    const {sent, bound} = send(
+        'render3D.emissiveMap = {tag: "e", glTexture: {}}; render3D.emissiveMapColor = rgb(1, .5, 0)');
     assert.deepEqual(sent.emissiveTint, [1, .5, 0, 1]);
     assert.deepEqual(bound, [null, 'e']);
+});
+
+test('a map with no GL texture, not made yet or freed, draws as no map rather than as the white texture', ()=>
+{
+    const {sent, bound} = send('render3D.normalMap = {tag: "n"}; render3D.emissiveMap = {tag: "e"}');
+    assert.equal(sent.materialParams[0], 0, 'white would lean every normal');
+    assert.deepEqual(sent.emissiveTint, [0, 0, 0, 0], 'white would light the whole surface');
+    assert.deepEqual(bound, [null, null]);
 });
 
 test('shininess and reflectivity reach the shader', ()=>

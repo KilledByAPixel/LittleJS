@@ -753,12 +753,13 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     part.pixelated = json.samplers?.[texture?.sampler]?.magFilter === 9728; // NEAREST
     part.unlit = !!material.extensions?.KHR_materials_unlit;
 
-    // the normal and emissive maps, read at the base color texture's uvs; an emissive factor with no texture glows
-    // all over, one of zeros, the default, is no glow at all
+    // the normal and emissive maps, read at the base color texture's uvs; the emissive texture is multiplied by the
+    // factor, which is black by default as the format says, so a texture alone does not glow; a factor with no
+    // texture glows all over
     const normalRef = material.normalTexture, emissiveRef = material.emissiveTexture;
     part.normalMap = normalRef && textures[normalRef.index];
     part.normalScale = normalRef?.scale ?? 1;
-    const [er, eg, eb] = material.emissiveFactor || (emissiveRef ? [1, 1, 1] : [0, 0, 0]);
+    const [er, eg, eb] = material.emissiveFactor || [0, 0, 0];
     if (er || eg || eb)
     {
         part.emissiveMap = emissiveRef ? textures[emissiveRef.index] : gltfWhiteTexture();
