@@ -1971,9 +1971,10 @@ declare module "littlejsengine" {
          * Create a TextureInfo, called automatically by the engine
          * @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
          * @param {boolean} [useWebGL] - Should use WebGL if available?
-         * @param {boolean} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)?
+         * @param {boolean|Array<number>} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)? Or the WebGL
+         *   modes across and down, like [gl.CLAMP_TO_EDGE, gl.MIRRORED_REPEAT], as a glTF sampler gives them
          */
-        constructor(image: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, useWebGL?: boolean, wrap?: boolean);
+        constructor(image: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, useWebGL?: boolean, wrap?: boolean | Array<number>);
         /** @property {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} - image source */
         image: OffscreenCanvas | ImageBitmap | HTMLCanvasElement | HTMLImageElement;
         /** @property {Vector2} - size of the image */
@@ -1983,8 +1984,10 @@ declare module "littlejsengine" {
         /** @property {WebGLTexture|undefined} - WebGL texture
          *  @type {WebGLTexture|undefined} */
         glTexture: WebGLTexture | undefined;
-        /** @property {boolean} - true for REPEAT wrap mode, false for CLAMP_TO_EDGE */
-        wrap: boolean;
+        /** @property {boolean|Array<number>} - true for REPEAT wrap mode, false for CLAMP_TO_EDGE, or the WebGL modes
+         *  across and down
+         *  @type {boolean|Array<number>} */
+        wrap: boolean | Array<number>;
         /** Creates the WebGL texture, updates if already created */
         createWebGLTexture(): void;
         /** Destroys the WebGL texture */
@@ -1993,8 +1996,9 @@ declare module "littlejsengine" {
          * @return {boolean} */
         hasWebGL(): boolean;
         /** Set the wrap mode for this texture
-         *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE */
-        setWrap(wrap?: boolean): void;
+         *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across
+         *    and down */
+        setWrap(wrap?: boolean | Array<number>): void;
     }
     /** Load a texture at a specific index after engineInit, the images passed to engineInit load this way
      *  @param {number} textureIndex - Index to store the texture at, an unused one
@@ -2563,12 +2567,13 @@ declare module "littlejsengine" {
      *  @param {WebGLTexture} texture
      *  @memberof WebGL */
     export function glSetTexture(texture: WebGLTexture): void;
-    /** Set the wrap mode (REPEAT or CLAMP_TO_EDGE) on an existing WebGL texture
+    /** Set the wrap mode on an existing WebGL texture
      *  Flushes the current batch only if the texture is the active one
      *  @param {WebGLTexture} texture
-     *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
+     *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across and
+     *    down, like [gl.CLAMP_TO_EDGE, gl.MIRRORED_REPEAT]
      *  @memberof WebGL */
-    export function glSetTextureWrap(texture: WebGLTexture, wrap?: boolean): void;
+    export function glSetTextureWrap(texture: WebGLTexture, wrap?: boolean | Array<number>): void;
     /** Compile WebGL shader of the given type, will throw errors if in debug mode
      *  @param {string} source
      *  @param {number} type
@@ -2584,10 +2589,10 @@ declare module "littlejsengine" {
     /** Create WebGL texture from an image and init the texture settings
      *  Restores the active texture when done
      *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} [image]
-     *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
+     *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across and down
      *  @return {WebGLTexture}
      *  @memberof WebGL */
-    export function glCreateTexture(image?: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, wrap?: boolean): WebGLTexture;
+    export function glCreateTexture(image?: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, wrap?: boolean | Array<number>): WebGLTexture;
     /** Deletes a WebGL texture
      *  @param {WebGLTexture} [texture]
      *  @memberof WebGL */
@@ -7640,8 +7645,8 @@ declare module "littlejsengine" {
         vao: WebGLVertexArrayObject | undefined;
         /** @type {WebGLTexture|undefined} */
         whiteTexture: WebGLTexture | undefined;
-        /** @type {Array<WebGLSampler>} */
-        samplers: Array<WebGLSampler>;
+        /** @type {Map<number, WebGLSampler>} */
+        samplers: Map<number, WebGLSampler>;
         /** @type {string|undefined} */
         samplerKey: string | undefined;
         /** @type {WebGLTexture|undefined} */

@@ -309,7 +309,8 @@ TextureInfo.image       // Image source
 TextureInfo.size        // Size of the image
 TextureInfo.glTexture   // WebGL texture
 TextureInfo.wrap        // Whether texture is set to REPEAT (true) or CLAMP_TO_EDGE
-TextureInfo.setWrap(wrap=true) // Enable or disable wrapping for this texture
+TextureInfo.setWrap(wrap=true) // Enable or disable wrapping for this texture, or give the WebGL modes across and
+                               // down, like [gl.CLAMP_TO_EDGE, gl.MIRRORED_REPEAT]
 await loadTexture(textureIndex, src) // Load an image after engineInit into textureInfos[textureIndex], for tile(i, size, textureIndex);
                                      // resolves to the TextureInfo, and an image that fails to load logs a warning
 

@@ -420,7 +420,7 @@ async function parseGLTF(data, baseUrl='')
             // those use has it set to 1; decoded as stored for that, and a jpeg has no alpha to set
             const opaque = opaqueTextures.has(index) && blob.type !== 'image/jpeg';
             const bitmap = opaque ? await createImageBitmap(blob, {premultiplyAlpha: 'none'}).then(gltfOpaqueImage) : await createImageBitmap(blob);
-            return new TextureInfo(bitmap, true, sampler.wrapS !== 33071); // CLAMP_TO_EDGE
+            return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497]); // REPEAT by default
         }
         catch (e) { LOG('glTF image not loaded', e); }
     }));
@@ -460,27 +460,44 @@ async function parseGLTF(data, baseUrl='')
         for (const child of node.children || [])
             visit(child, matrix, index, rest);
     };
-    const scene = json.scenes?.[json.scene ?? 0];
-    if (scene)
-        (scene.nodes || []).forEach(i=> visit(i)); // a scene may be empty
-    else if (json.nodes)
+    let animations;
+    try
     {
-        // no scene: every node that is not another's child is a root
-        const children = new Set(json.nodes.flatMap(n=> n.children || []));
-        json.nodes.forEach((n, i)=> children.has(i) || visit(i));
+        const scene = json.scenes?.[json.scene ?? 0];
+        if (scene)
+            (scene.nodes || []).forEach(i=> visit(i)); // a scene may be empty
+        else if (json.nodes)
+        {
+            // no scene: every node that is not another's child is a root
+            const children = new Set(json.nodes.flatMap(n=> n.children || []));
+            json.nodes.forEach((n, i)=> children.has(i) || visit(i));
+        }
+
+        // the animations: each channel that moves a node's translation, rotation or scale, with its keys; morph
+        // weights are not read, and a node given as a matrix cannot be animated, the format says
+        animations = (json.animations || []).map((animation, i)=> new GLTFAnimation(animation.name || 'animation ' + i,
+            animation.channels.filter(c=> c.target.node !== undefined &&
+                ['translation', 'rotation', 'scale'].includes(c.target.path) && !json.nodes[c.target.node].matrix).map(c=>
+            {
+                const sampler = animation.samplers[c.sampler];
+                return {node: c.target.node, path: c.target.path, interpolation: sampler.interpolation || 'LINEAR',
+                    times: gltfAccessor(json, buffers, sampler.input).data,
+                    values: gltfAccessor(json, buffers, sampler.output).data,
+                    components: c.target.path === 'rotation' ? 4 : 3};
+            })));
+    }
+    catch (error)
+    {
+        // a file that fails partway leaves no model to dispose, so the textures it made go now
+        for (const texture of textures)
+            texture?.destroyWebGLTexture();
+        throw error;
     }
 
-    // the animations: each channel that moves a node's translation, rotation or scale, with its keys; morph
-    // weights are not read, and a node given as a matrix cannot be animated, the format says
-    const animations = (json.animations || []).map((animation, i)=> new GLTFAnimation(animation.name || 'animation ' + i,
-        animation.channels.filter(c=> c.target.node !== undefined && ['translation', 'rotation', 'scale'].includes(c.target.path)
-            && !json.nodes[c.target.node].matrix).map(c=>
-        {
-            const sampler = animation.samplers[c.sampler];
-            return {node: c.target.node, path: c.target.path, interpolation: sampler.interpolation || 'LINEAR',
-                times: gltfAccessor(json, buffers, sampler.input).data, values: gltfAccessor(json, buffers, sampler.output).data,
-                components: c.target.path === 'rotation' ? 4 : 3};
-        })));
+    // a texture none of the parts draws with, another scene's, goes now too, since dispose finds them by the parts
+    const used = new Set(parts.map(p=> p.textureInfo));
+    for (const texture of textures)
+        texture && !used.has(texture) && texture.destroyWebGLTexture();
     return new GLTFModel(parts, animations, {nodes: json.nodes, parents, restInverse, restPose});
 }
 

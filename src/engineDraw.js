@@ -257,7 +257,8 @@ class TextureInfo
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
      * @param {boolean} [useWebGL] - Should use WebGL if available?
-     * @param {boolean} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)?
+     * @param {boolean|Array<number>} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)? Or the WebGL
+     *   modes across and down, like [gl.CLAMP_TO_EDGE, gl.MIRRORED_REPEAT], as a glTF sampler gives them
      */
     constructor(image, useWebGL=true, wrap=false)
     {
@@ -270,7 +271,9 @@ class TextureInfo
         /** @property {WebGLTexture|undefined} - WebGL texture
          *  @type {WebGLTexture|undefined} */
         this.glTexture = undefined;
-        /** @property {boolean} - true for REPEAT wrap mode, false for CLAMP_TO_EDGE */
+        /** @property {boolean|Array<number>} - true for REPEAT wrap mode, false for CLAMP_TO_EDGE, or the WebGL modes
+         *  across and down
+         *  @type {boolean|Array<number>} */
         this.wrap = wrap;
         useWebGL && this.createWebGLTexture();
     }
@@ -295,7 +298,8 @@ class TextureInfo
     hasWebGL() { return !!this.glTexture; }
 
     /** Set the wrap mode for this texture
-     *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE */
+     *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across
+     *    and down */
     setWrap(wrap=true)
     {
         this.wrap = wrap;

@@ -571,8 +571,8 @@ class Render3DPlugin
         this.vao = undefined;
         /** @type {WebGLTexture|undefined} */
         this.whiteTexture = undefined; // 1x1 white for untextured draws
-        /** @type {Array<WebGLSampler>} */
-        this.samplers = [];            // how textures are filtered in 3D, clamped and wrapping, see render3DInitGL
+        /** @type {Map<number, WebGLSampler>} */
+        this.samplers = new Map;      // how textures are filtered in 3D, by wrap and hard edge, see render3DSampler
         /** @type {string|undefined} */
         this.samplerKey = undefined;   // the settings the samplers were made for, they are rebuilt when it changes
         /** @type {WebGLTexture|undefined} */
@@ -1589,7 +1589,7 @@ function render3DInitGL()
     // are on
     r.whiteTexture = glCreateTexture();
 
-    r.samplers = [];
+    r.samplers = new Map;
     r.samplerKey = undefined;
     render3DUpdateShadowMap(1);
 
@@ -1606,7 +1606,7 @@ function render3DContextLost()
         shader.program3D = undefined; // compiled again by the next draw
     r.lightCount = 0;
     r.instanceBuffers = [];
-    r.samplers = [];
+    r.samplers = new Map;
     r.samplerKey = undefined;
     render3DClearInstances();
     r.shadowFramebuffer = r.shadowTexture = undefined;
@@ -1652,33 +1652,40 @@ function render3DAttrib4f(location, x, y, z, w)
 }
 
 // textures in 3D shrink into the distance far more than sprites do, so the pass samples them through their mipmaps;
-// a sampler sets the filtering for the 3D pass only and leaves the engine's textures as they are for 2D, one for
-// clamped textures and one for wrapping ones, rebuilt when the settings change
+// a sampler sets the filtering for the 3D pass only and leaves the engine's textures as they are for 2D; they are
+// made as textures need them, and all dropped when the settings change
 function render3DUpdateSamplers()
 {
-    const gl = glContext, r = render3D, key = tilesPixelated + ' ' + r.anisotropy;
+    const r = render3D, key = tilesPixelated + ' ' + r.anisotropy;
     if (r.samplerKey === key) return;
     r.samplerKey = key;
-    for (const sampler of r.samplers)
-        gl.deleteSampler(sampler); // the set being replaced, a lost context empties this first
+    for (const sampler of r.samplers.values())
+        glContext.deleteSampler(sampler); // the set being replaced, a lost context empties this first
+    r.samplers.clear();
+}
+
+// the sampler for a texture's wrap modes, smooth or hard edged, made the first time it is needed
+function render3DSampler(wrap, pixelated)
+{
+    const gl = glContext, r = render3D, [wrapS, wrapT] = glWrapModes(wrap);
+    const key = wrapS * 1e5 + wrapT * 2 + (pixelated ? 1 : 0); // the modes are 5 digit numbers
+    let sampler = r.samplers.get(key);
+    if (sampler) return sampler;
+    sampler = gl.createSampler();
+    const sharp = pixelated || tilesPixelated;
+    gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, sharp ? gl.NEAREST : gl.LINEAR);
+    gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, pixelated ? gl.NEAREST
+        : tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
+    gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrapS);
+    gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrapT);
     const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
-    // four samplers: clamped and wrapping, each smooth or hard edged
-    r.samplers = [false, true].flatMap(pixelated=> [gl.CLAMP_TO_EDGE, gl.REPEAT].map(wrap=>
+    if (anisotropy && !pixelated)
     {
-        const sampler = gl.createSampler();
-        const sharp = pixelated || tilesPixelated;
-        gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, sharp ? gl.NEAREST : gl.LINEAR);
-        gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, pixelated ? gl.NEAREST
-            : tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
-        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrap);
-        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrap);
-        if (anisotropy && !pixelated)
-        {
-            const most = gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-            gl.samplerParameterf(sampler, anisotropy.TEXTURE_MAX_ANISOTROPY_EXT, clamp(r.anisotropy, 1, most));
-        }
-        return sampler;
-    }));
+        const most = gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+        gl.samplerParameterf(sampler, anisotropy.TEXTURE_MAX_ANISOTROPY_EXT, clamp(r.anisotropy, 1, most));
+    }
+    r.samplers.set(key, sampler);
+    return sampler;
 }
 
 // bind the texture of a tile or texture, white when there is none or it is not loaded, with the 3D sampler that
@@ -1692,7 +1699,7 @@ function render3DBindTexture(tileInfo, state=render3D)
     if (texture === r.whiteTexture || !r.mipmaps && !state.pixelated)
         return gl.bindSampler(0, null); // the texture's own filtering, as in 2D; the white texel needs no mipmaps
                                         // or anisotropy, and filtering it that way costs every untextured fragment
-    gl.bindSampler(0, r.samplers[(textureInfo?.wrap ? 1 : 0) + (state.pixelated ? 2 : 0)]);
+    gl.bindSampler(0, render3DSampler(textureInfo?.wrap, state.pixelated));
     glUpdateMipmaps(texture); // drawn into since its mipmaps were made
     if (!state.pixelated && !glMipmappedTextures.has(texture)) // a hard edged draw never reads them
     {

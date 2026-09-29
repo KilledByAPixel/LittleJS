@@ -387,10 +387,17 @@ function glUpdateMipmaps(texture)
     glContext.generateMipmap(glContext.TEXTURE_2D);
 }
 
-/** Set the wrap mode (REPEAT or CLAMP_TO_EDGE) on an existing WebGL texture
+// a texture's wrap as its two WebGL modes, across and down: true repeats both and false clamps both, or a pair of
+// modes as a glTF sampler gives them; the pairs are WebGL's fixed values, shared so a draw makes no array
+const glWrapRepeat = Object.freeze([10497, 10497]), glWrapClamp = Object.freeze([33071, 33071]);
+function glWrapModes(wrap)
+{ return isArray(wrap) ? wrap : wrap ? glWrapRepeat : glWrapClamp; }
+
+/** Set the wrap mode on an existing WebGL texture
  *  Flushes the current batch only if the texture is the active one
  *  @param {WebGLTexture} texture
- *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
+ *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across and
+ *    down, like [gl.CLAMP_TO_EDGE, gl.MIRRORED_REPEAT]
  *  @memberof WebGL */
 function glSetTextureWrap(texture, wrap=true)
 {
@@ -403,9 +410,9 @@ function glSetTextureWrap(texture, wrap=true)
     else
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
 
-    const wrapMode = wrap ? glContext.REPEAT : glContext.CLAMP_TO_EDGE;
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapMode);
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapMode);
+    const [wrapS, wrapT] = glWrapModes(wrap);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapS);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapT);
 
     if (!isCurrent && glActiveTexture)
         glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
@@ -480,7 +487,7 @@ function glShaderProgram(shader)
 /** Create WebGL texture from an image and init the texture settings
  *  Restores the active texture when done
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} [image]
- *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
+ *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across and down
  *  @return {WebGLTexture}
  *  @memberof WebGL */
 function glCreateTexture(image, wrap=false)
@@ -512,9 +519,9 @@ function glCreateTexture(image, wrap=false)
     const minFilter = mipMap ? glContext.LINEAR_MIPMAP_LINEAR : magFilter;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, magFilter);
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, minFilter);
-    const wrapMode = wrap ? glContext.REPEAT : glContext.CLAMP_TO_EDGE;
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapMode);
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapMode);
+    const [wrapS, wrapT] = glWrapModes(wrap);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapS);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapT);
     if (mipMap)
     {
         glContext.generateMipmap(glContext.TEXTURE_2D);

@@ -4975,7 +4975,8 @@ class TextureInfo
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
      * @param {boolean} [useWebGL] - Should use WebGL if available?
-     * @param {boolean} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)?
+     * @param {boolean|Array<number>} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)? Or the WebGL
+     *   modes across and down, like [gl.CLAMP_TO_EDGE, gl.MIRRORED_REPEAT], as a glTF sampler gives them
      */
     constructor(image, useWebGL=true, wrap=false)
     {
@@ -4988,7 +4989,9 @@ class TextureInfo
         /** @property {WebGLTexture|undefined} - WebGL texture
          *  @type {WebGLTexture|undefined} */
         this.glTexture = undefined;
-        /** @property {boolean} - true for REPEAT wrap mode, false for CLAMP_TO_EDGE */
+        /** @property {boolean|Array<number>} - true for REPEAT wrap mode, false for CLAMP_TO_EDGE, or the WebGL modes
+         *  across and down
+         *  @type {boolean|Array<number>} */
         this.wrap = wrap;
         useWebGL && this.createWebGLTexture();
     }
@@ -5013,7 +5016,8 @@ class TextureInfo
     hasWebGL() { return !!this.glTexture; }
 
     /** Set the wrap mode for this texture
-     *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE */
+     *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across
+     *    and down */
     setWrap(wrap=true)
     {
         this.wrap = wrap;
@@ -10932,10 +10936,17 @@ function glUpdateMipmaps(texture)
     glContext.generateMipmap(glContext.TEXTURE_2D);
 }
 
-/** Set the wrap mode (REPEAT or CLAMP_TO_EDGE) on an existing WebGL texture
+// a texture's wrap as its two WebGL modes, across and down: true repeats both and false clamps both, or a pair of
+// modes as a glTF sampler gives them; the pairs are WebGL's fixed values, shared so a draw makes no array
+const glWrapRepeat = Object.freeze([10497, 10497]), glWrapClamp = Object.freeze([33071, 33071]);
+function glWrapModes(wrap)
+{ return isArray(wrap) ? wrap : wrap ? glWrapRepeat : glWrapClamp; }
+
+/** Set the wrap mode on an existing WebGL texture
  *  Flushes the current batch only if the texture is the active one
  *  @param {WebGLTexture} texture
- *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
+ *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across and
+ *    down, like [gl.CLAMP_TO_EDGE, gl.MIRRORED_REPEAT]
  *  @memberof WebGL */
 function glSetTextureWrap(texture, wrap=true)
 {
@@ -10948,9 +10959,9 @@ function glSetTextureWrap(texture, wrap=true)
     else
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
 
-    const wrapMode = wrap ? glContext.REPEAT : glContext.CLAMP_TO_EDGE;
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapMode);
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapMode);
+    const [wrapS, wrapT] = glWrapModes(wrap);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapS);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapT);
 
     if (!isCurrent && glActiveTexture)
         glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
@@ -11025,7 +11036,7 @@ function glShaderProgram(shader)
 /** Create WebGL texture from an image and init the texture settings
  *  Restores the active texture when done
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} [image]
- *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
+ *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across and down
  *  @return {WebGLTexture}
  *  @memberof WebGL */
 function glCreateTexture(image, wrap=false)
@@ -11057,9 +11068,9 @@ function glCreateTexture(image, wrap=false)
     const minFilter = mipMap ? glContext.LINEAR_MIPMAP_LINEAR : magFilter;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, magFilter);
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, minFilter);
-    const wrapMode = wrap ? glContext.REPEAT : glContext.CLAMP_TO_EDGE;
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapMode);
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapMode);
+    const [wrapS, wrapT] = glWrapModes(wrap);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapS);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapT);
     if (mipMap)
     {
         glContext.generateMipmap(glContext.TEXTURE_2D);
@@ -22461,8 +22472,8 @@ class Render3DPlugin
         this.vao = undefined;
         /** @type {WebGLTexture|undefined} */
         this.whiteTexture = undefined; // 1x1 white for untextured draws
-        /** @type {Array<WebGLSampler>} */
-        this.samplers = [];            // how textures are filtered in 3D, clamped and wrapping, see render3DInitGL
+        /** @type {Map<number, WebGLSampler>} */
+        this.samplers = new Map;      // how textures are filtered in 3D, by wrap and hard edge, see render3DSampler
         /** @type {string|undefined} */
         this.samplerKey = undefined;   // the settings the samplers were made for, they are rebuilt when it changes
         /** @type {WebGLTexture|undefined} */
@@ -23479,7 +23490,7 @@ function render3DInitGL()
     // are on
     r.whiteTexture = glCreateTexture();
 
-    r.samplers = [];
+    r.samplers = new Map;
     r.samplerKey = undefined;
     render3DUpdateShadowMap(1);
 
@@ -23496,7 +23507,7 @@ function render3DContextLost()
         shader.program3D = undefined; // compiled again by the next draw
     r.lightCount = 0;
     r.instanceBuffers = [];
-    r.samplers = [];
+    r.samplers = new Map;
     r.samplerKey = undefined;
     render3DClearInstances();
     r.shadowFramebuffer = r.shadowTexture = undefined;
@@ -23542,33 +23553,40 @@ function render3DAttrib4f(location, x, y, z, w)
 }
 
 // textures in 3D shrink into the distance far more than sprites do, so the pass samples them through their mipmaps;
-// a sampler sets the filtering for the 3D pass only and leaves the engine's textures as they are for 2D, one for
-// clamped textures and one for wrapping ones, rebuilt when the settings change
+// a sampler sets the filtering for the 3D pass only and leaves the engine's textures as they are for 2D; they are
+// made as textures need them, and all dropped when the settings change
 function render3DUpdateSamplers()
 {
-    const gl = glContext, r = render3D, key = tilesPixelated + ' ' + r.anisotropy;
+    const r = render3D, key = tilesPixelated + ' ' + r.anisotropy;
     if (r.samplerKey === key) return;
     r.samplerKey = key;
-    for (const sampler of r.samplers)
-        gl.deleteSampler(sampler); // the set being replaced, a lost context empties this first
+    for (const sampler of r.samplers.values())
+        glContext.deleteSampler(sampler); // the set being replaced, a lost context empties this first
+    r.samplers.clear();
+}
+
+// the sampler for a texture's wrap modes, smooth or hard edged, made the first time it is needed
+function render3DSampler(wrap, pixelated)
+{
+    const gl = glContext, r = render3D, [wrapS, wrapT] = glWrapModes(wrap);
+    const key = wrapS * 1e5 + wrapT * 2 + (pixelated ? 1 : 0); // the modes are 5 digit numbers
+    let sampler = r.samplers.get(key);
+    if (sampler) return sampler;
+    sampler = gl.createSampler();
+    const sharp = pixelated || tilesPixelated;
+    gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, sharp ? gl.NEAREST : gl.LINEAR);
+    gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, pixelated ? gl.NEAREST
+        : tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
+    gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrapS);
+    gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrapT);
     const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
-    // four samplers: clamped and wrapping, each smooth or hard edged
-    r.samplers = [false, true].flatMap(pixelated=> [gl.CLAMP_TO_EDGE, gl.REPEAT].map(wrap=>
+    if (anisotropy && !pixelated)
     {
-        const sampler = gl.createSampler();
-        const sharp = pixelated || tilesPixelated;
-        gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, sharp ? gl.NEAREST : gl.LINEAR);
-        gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, pixelated ? gl.NEAREST
-            : tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
-        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrap);
-        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrap);
-        if (anisotropy && !pixelated)
-        {
-            const most = gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-            gl.samplerParameterf(sampler, anisotropy.TEXTURE_MAX_ANISOTROPY_EXT, clamp(r.anisotropy, 1, most));
-        }
-        return sampler;
-    }));
+        const most = gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+        gl.samplerParameterf(sampler, anisotropy.TEXTURE_MAX_ANISOTROPY_EXT, clamp(r.anisotropy, 1, most));
+    }
+    r.samplers.set(key, sampler);
+    return sampler;
 }
 
 // bind the texture of a tile or texture, white when there is none or it is not loaded, with the 3D sampler that
@@ -23582,7 +23600,7 @@ function render3DBindTexture(tileInfo, state=render3D)
     if (texture === r.whiteTexture || !r.mipmaps && !state.pixelated)
         return gl.bindSampler(0, null); // the texture's own filtering, as in 2D; the white texel needs no mipmaps
                                         // or anisotropy, and filtering it that way costs every untextured fragment
-    gl.bindSampler(0, r.samplers[(textureInfo?.wrap ? 1 : 0) + (state.pixelated ? 2 : 0)]);
+    gl.bindSampler(0, render3DSampler(textureInfo?.wrap, state.pixelated));
     glUpdateMipmaps(texture); // drawn into since its mipmaps were made
     if (!state.pixelated && !glMipmappedTextures.has(texture)) // a hard edged draw never reads them
     {
@@ -28625,7 +28643,7 @@ async function parseGLTF(data, baseUrl='')
             // those use has it set to 1; decoded as stored for that, and a jpeg has no alpha to set
             const opaque = opaqueTextures.has(index) && blob.type !== 'image/jpeg';
             const bitmap = opaque ? await createImageBitmap(blob, {premultiplyAlpha: 'none'}).then(gltfOpaqueImage) : await createImageBitmap(blob);
-            return new TextureInfo(bitmap, true, sampler.wrapS !== 33071); // CLAMP_TO_EDGE
+            return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497]); // REPEAT by default
         }
         catch (e) { LOG('glTF image not loaded', e); }
     }));
@@ -28665,27 +28683,44 @@ async function parseGLTF(data, baseUrl='')
         for (const child of node.children || [])
             visit(child, matrix, index, rest);
     };
-    const scene = json.scenes?.[json.scene ?? 0];
-    if (scene)
-        (scene.nodes || []).forEach(i=> visit(i)); // a scene may be empty
-    else if (json.nodes)
+    let animations;
+    try
     {
-        // no scene: every node that is not another's child is a root
-        const children = new Set(json.nodes.flatMap(n=> n.children || []));
-        json.nodes.forEach((n, i)=> children.has(i) || visit(i));
+        const scene = json.scenes?.[json.scene ?? 0];
+        if (scene)
+            (scene.nodes || []).forEach(i=> visit(i)); // a scene may be empty
+        else if (json.nodes)
+        {
+            // no scene: every node that is not another's child is a root
+            const children = new Set(json.nodes.flatMap(n=> n.children || []));
+            json.nodes.forEach((n, i)=> children.has(i) || visit(i));
+        }
+
+        // the animations: each channel that moves a node's translation, rotation or scale, with its keys; morph
+        // weights are not read, and a node given as a matrix cannot be animated, the format says
+        animations = (json.animations || []).map((animation, i)=> new GLTFAnimation(animation.name || 'animation ' + i,
+            animation.channels.filter(c=> c.target.node !== undefined &&
+                ['translation', 'rotation', 'scale'].includes(c.target.path) && !json.nodes[c.target.node].matrix).map(c=>
+            {
+                const sampler = animation.samplers[c.sampler];
+                return {node: c.target.node, path: c.target.path, interpolation: sampler.interpolation || 'LINEAR',
+                    times: gltfAccessor(json, buffers, sampler.input).data,
+                    values: gltfAccessor(json, buffers, sampler.output).data,
+                    components: c.target.path === 'rotation' ? 4 : 3};
+            })));
+    }
+    catch (error)
+    {
+        // a file that fails partway leaves no model to dispose, so the textures it made go now
+        for (const texture of textures)
+            texture?.destroyWebGLTexture();
+        throw error;
     }
 
-    // the animations: each channel that moves a node's translation, rotation or scale, with its keys; morph
-    // weights are not read, and a node given as a matrix cannot be animated, the format says
-    const animations = (json.animations || []).map((animation, i)=> new GLTFAnimation(animation.name || 'animation ' + i,
-        animation.channels.filter(c=> c.target.node !== undefined && ['translation', 'rotation', 'scale'].includes(c.target.path)
-            && !json.nodes[c.target.node].matrix).map(c=>
-        {
-            const sampler = animation.samplers[c.sampler];
-            return {node: c.target.node, path: c.target.path, interpolation: sampler.interpolation || 'LINEAR',
-                times: gltfAccessor(json, buffers, sampler.input).data, values: gltfAccessor(json, buffers, sampler.output).data,
-                components: c.target.path === 'rotation' ? 4 : 3};
-        })));
+    // a texture none of the parts draws with, another scene's, goes now too, since dispose finds them by the parts
+    const used = new Set(parts.map(p=> p.textureInfo));
+    for (const texture of textures)
+        texture && !used.has(texture) && texture.destroyWebGLTexture();
     return new GLTFModel(parts, animations, {nodes: json.nodes, parents, restInverse, restPose});
 }
 
@@ -30034,7 +30069,8 @@ async function editorRememberedFile(record)
 const editorFileKey = (record)=> (globalThis.location?.pathname ?? '') + ' ' + record.key;
 
 // a map as a file Save wrote is the file from then on: Reset to file goes back to it, the autosave keeps only the
-// edits since, and a reload of it has nothing to apply; a download can not say it replaced the file, so it does not
+// edits since, and a reload of it has nothing to apply; a download can not say it replaced the file, so it does not,
+// and neither does a file of another name, a copy, since the game still loads the one it came from
 function editorSetBaseline(record, written)
 {
     if (record.synthetic) return; // a layer made in code has no file to load it from
@@ -30069,7 +30105,9 @@ async function editorSave(record, pickAgain=false)
             const writable = await record.fileHandle.createWritable();
             await writable.write(text);
             await writable.close();
-            editorSetBaseline(record, JSON.parse(text));
+            // the browser gives the picked file's name but not its folder, so the name is what says it is the map's
+            if (record.fileHandle.name === record.fileName)
+                editorSetBaseline(record, JSON.parse(text));
             return 'written';
         }
         catch (error)
