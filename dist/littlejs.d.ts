@@ -7303,6 +7303,10 @@ declare module "littlejsengine" {
         /** Returns the translation part of this matrix
          *  @return {Vector3} */
         getTranslation(): Vector3;
+        /** Returns the determinant of the rotation and scale part: negative when the matrix mirrors, 0 when it flattens a
+         *  shape and has no inverse
+         *  @return {number} */
+        determinant(): number;
         /** Returns the scale part of this matrix, the length of each axis; a mirroring matrix shows as a negative x
          *  @return {Vector3} */
         getScale(): Vector3;

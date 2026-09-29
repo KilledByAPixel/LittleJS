@@ -534,14 +534,22 @@ class Matrix4
      *  @return {Vector3} */
     getTranslation() { return new Vector3(this.m[12], this.m[13], this.m[14]); }
 
+    /** Returns the determinant of the rotation and scale part: negative when the matrix mirrors, 0 when it flattens a
+     *  shape and has no inverse
+     *  @return {number} */
+    determinant()
+    {
+        const m = this.m;
+        return m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]);
+    }
+
     /** Returns the scale part of this matrix, the length of each axis; a mirroring matrix shows as a negative x
      *  @return {Vector3} */
     getScale()
     {
         const m = this.m;
         const x = hypot(m[0], m[1], m[2]), y = hypot(m[4], m[5], m[6]), z = hypot(m[8], m[9], m[10]);
-        const mirrored = m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]) < 0;
-        return new Vector3(mirrored ? -x : x, y, z);
+        return new Vector3(this.determinant() < 0 ? -x : x, y, z);
     }
 
     /** Returns the rotation part of this matrix as vec3(pitch, yaw, roll), the angles Matrix4.rotation builds it from

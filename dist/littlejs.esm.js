@@ -21514,14 +21514,22 @@ class Matrix4
      *  @return {Vector3} */
     getTranslation() { return new Vector3(this.m[12], this.m[13], this.m[14]); }
 
+    /** Returns the determinant of the rotation and scale part: negative when the matrix mirrors, 0 when it flattens a
+     *  shape and has no inverse
+     *  @return {number} */
+    determinant()
+    {
+        const m = this.m;
+        return m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]);
+    }
+
     /** Returns the scale part of this matrix, the length of each axis; a mirroring matrix shows as a negative x
      *  @return {Vector3} */
     getScale()
     {
         const m = this.m;
         const x = hypot(m[0], m[1], m[2]), y = hypot(m[4], m[5], m[6]), z = hypot(m[8], m[9], m[10]);
-        const mirrored = m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]) < 0;
-        return new Vector3(mirrored ? -x : x, y, z);
+        return new Vector3(this.determinant() < 0 ? -x : x, y, z);
     }
 
     /** Returns the rotation part of this matrix as vec3(pitch, yaw, roll), the angles Matrix4.rotation builds it from
@@ -22040,11 +22048,8 @@ function render3DMatrix(matrix)
 function render3DNormalMatrix(matrix) { return matrix.copy().invert().transpose(); }
 
 // whether a matrix mirrors, its determinant negative, so what it moves reads the other way round
-function render3DMirrors(m) { return render3DDeterminant(m) < 0; }
+function render3DMirrors(matrix) { return matrix.determinant() < 0; }
 
-// the determinant of a matrix's 3x3 part, 0 when it flattens a shape and has no inverse
-function render3DDeterminant(m)
-{ return m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]); }
 
 // a column of a matrix as a direction: 0 is the right axis, 4 up, 8 back
 function render3DAxis(m, i) { return vec3(m[i], m[i+1], m[i+2]); }
@@ -22690,7 +22695,7 @@ class Render3DPlugin
         // determinant, turns the winding around so the other one is its front
         const cullBackFaces = this.cullBackFaces, mirrored = this.mirrored;
         this.cullBackFaces = !mesh.doubleSided;
-        this.mirrored = render3DMirrors(m);
+        this.mirrored = render3DMirrors(matrix);
         // the stage draws the batch at its end
         if (!this.blend && this.depthTest && (mesh.instanced ?? this.instancing))
             render3DInstance(mesh, matrix, tileInfo, color);
@@ -23967,6 +23972,18 @@ function render3DWorldSize(o, m)
     return vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
 }
 
+// the surface normal of a height function at x, z, from the slope across a cell each way, clamped to the edges so a
+// border sample leans the same as its neighbor; buildGrid and HeightMap both light their slopes by it, and it makes
+// one vector, a big terrain has millions of vertices
+function render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ)
+{
+    const x0 = max(x - ex, -halfX), x1 = min(x + ex, halfX), z0 = max(z - ez, -halfZ), z1 = min(z + ez, halfZ);
+    const dx = (heightFunction(x1, z) - heightFunction(x0, z)) / (x1 - x0 || 1);
+    const dz = (heightFunction(x, z1) - heightFunction(x, z0)) / (z1 - z0 || 1);
+    const s = 1 / hypot(dx, 1, dz);
+    return vec3(-dx * s, s, -dz * s);
+}
+
 // the half axes of a camera facing quad of a size turned by an angle, right then up, in one shared array
 // so a particle costs no vectors; read it before calling again
 const render3DBillboardAxesScratch = new Float64Array(6);
@@ -24306,7 +24323,7 @@ class Mesh
     combine(mesh, matrix=RENDER3D_IDENTITY, color=WHITE)
     {
         matrix = render3DMatrix(matrix); // most parts only need moving into place
-        const normalMatrix = render3DNormalMatrix(matrix), mirrors = render3DMirrors(matrix.m);
+        const normalMatrix = render3DNormalMatrix(matrix), mirrors = render3DMirrors(matrix);
         let part = mesh, order;
         if (this.indices || mesh.indices)
         {
@@ -24422,7 +24439,7 @@ class Mesh
             // a mesh built by hand may have no normals yet, and then there is nothing to turn
             this.normals[i] &&= normalMatrix.transformDirection(this.normals[i]).normalize();
         }
-        render3DMirrors(matrix.m) && render3DFlipWinding(this); // a mirror would leave the faces pointing in
+        render3DMirrors(matrix) && render3DFlipWinding(this); // a mirror would leave the faces pointing in
         this.dirty = true;
         return this;
     }
@@ -25004,23 +25021,17 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth=heigh
     const px = (i)=> i * cellX - halfX, pz = (j)=> j * cellZ - halfZ;
     const colorAt = /** @type {function(number, number): Color} */ (color);
     const cellColor = (i, j)=> !color ? WHITE : isColor(color) ? /** @type {Color} */ (color) : colorAt(px(i), pz(j));
-    // a big terrain has millions of vertices, so each one is made once, shared by the rows above and below it,
-    // and its slope normal is worked out in numbers, the same normal render3DSlopeNormal gives
+    // a big terrain has millions of vertices, so each one is made once, shared by the rows above and below it
     const row = (j)=>
     {
         const points = [], normals = [], uvs = [], colors = [], z = pz(j);
-        const z0 = max(z - ez, -halfZ), z1 = min(z + ez, halfZ);
         for (let i = 0; i <= segmentsX; ++i)
         {
             const x = px(i);
             points.push(vec3(x, heightFunction(x, z), z));
             uvs.push(vec2(i / segmentsX, j / segmentsZ));
             if (!smooth) continue;
-            const x0 = max(x - ex, -halfX), x1 = min(x + ex, halfX);
-            const dx = (heightFunction(x1, z) - heightFunction(x0, z)) / (x1 - x0 || 1);
-            const dz = (heightFunction(x, z1) - heightFunction(x, z0)) / (z1 - z0 || 1);
-            const s = 1 / hypot(dx, 1, dz);
-            normals.push(vec3(-dx * s, s, -dz * s));
+            normals.push(render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ));
             colors.push(cellColor(i, j));
         }
         return {points, normals, uvs, colors};
@@ -25623,7 +25634,7 @@ function render3DRaycastObject(ray, o)
     // the sphere is a quick reject, a mesh is hit where the ray meets its box in its own space, since a wide floor's
     // sphere reaches far above it; the direction is not made unit length, so the distance holds in the world;
     // a mesh flattened to nothing on an axis has no inverse, it is hit as a disc like a sprite
-    if (!render3DDeterminant(matrix.m)) return render3DRaycastDisc(ray, center, radius);
+    if (!matrix.determinant()) return render3DRaycastDisc(ray, center, radius);
     const inverse = matrix.copy().invert(), bounds = mesh.bounds || mesh.getBounds();
     const local = new Ray3D(inverse.transformPoint(ray.origin), inverse.transformDirection(ray.direction));
     const hit = raycastBox(local, bounds.min.add(bounds.max).scale(.5), bounds.max.subtract(bounds.min));
@@ -25955,15 +25966,6 @@ class DirectionalLight3D extends Light3D
 // gap between lines of 3D text, as a share of the character height; flat text can let lines touch
 // the way the 2D font does, but extruded glyphs seen from an angle then overlap the line below
 const RENDER3D_TEXT_LEADING = 1.3;
-
-// surface normal from the slope of a height function, sampled half a cell each way but kept inside the half sizes
-function render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ)
-{
-    const x0 = max(x - ex, -halfX), x1 = min(x + ex, halfX), z0 = max(z - ez, -halfZ), z1 = min(z + ez, halfZ);
-    const dx = (heightFunction(x1, z) - heightFunction(x0, z)) / (x1 - x0 || 1);
-    const dz = (heightFunction(x, z1) - heightFunction(x, z0)) / (z1 - z0 || 1);
-    return vec3(-dx, 1, -dz).normalize();
-}
 
 // let go of the parent but stay where the object was in the world, which removeChild keeps by itself; a destroyed
 // parent has already let go, so the position remembered by the last update stands in

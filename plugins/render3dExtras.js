@@ -14,15 +14,6 @@
 // the way the 2D font does, but extruded glyphs seen from an angle then overlap the line below
 const RENDER3D_TEXT_LEADING = 1.3;
 
-// surface normal from the slope of a height function, sampled half a cell each way but kept inside the half sizes
-function render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ)
-{
-    const x0 = max(x - ex, -halfX), x1 = min(x + ex, halfX), z0 = max(z - ez, -halfZ), z1 = min(z + ez, halfZ);
-    const dx = (heightFunction(x1, z) - heightFunction(x0, z)) / (x1 - x0 || 1);
-    const dz = (heightFunction(x, z1) - heightFunction(x, z0)) / (z1 - z0 || 1);
-    return vec3(-dx, 1, -dz).normalize();
-}
-
 // let go of the parent but stay where the object was in the world, which removeChild keeps by itself; a destroyed
 // parent has already let go, so the position remembered by the last update stands in
 function render3DDetach(o)

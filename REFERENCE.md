@@ -991,6 +991,7 @@ m.translate(v) m.rotate(euler) m.scale(v)      // append a transform, returns se
 m.invert() m.transpose()       // in place, return self
 m.copy() m.transformPoint(v) m.transformDirection(v) m.getTranslation() // or v.transform(m), v.transformDirection(m)
 m.getScale() m.getRotation()   // the scale and the vec3(pitch, yaw, roll) back out of a transform, a mirror is a negative x
+m.determinant()                 // of the rotation and scale part: negative when it mirrors, 0 when it flattens
 buildMatrix(pos, rotation, scale, out)         // translate * rotate * scale, any arg optional; out is written into
                                                // instead of a new matrix, for a loop that builds many each frame
 
