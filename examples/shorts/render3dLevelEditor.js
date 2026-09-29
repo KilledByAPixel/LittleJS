@@ -49,6 +49,7 @@ function loadLevel()
     player = new FirstPersonCamera3D(playerStart, 0, 0);
     player.size3D = vec3(.6, 1.6, .6); // a body, so the boxes stop it
     player.eyeHeight = .6;
+    player.jumpSpeed = .2;
     player.setCollision();
     score = 0;
 }
