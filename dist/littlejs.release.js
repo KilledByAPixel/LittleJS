@@ -3066,8 +3066,8 @@ function setEngineVariableStep(enable=true)
 {
     if (engineVariableStep && !enable)
     {
-        // fixed time goes on one fixed step after the last update, and timeDelta is the fixed step again
-        timeFixedStart = time + 1 / frameRate;
+        // fixed time goes on one fixed step after the last update, if one ran, and timeDelta is the fixed step again
+        timeFixedStart = frame ? time + 1 / frameRate : time;
         frameFixedStart = frame;
         timeDelta = 1 / frameRate;
         frameTimeBufferMS = engineManualStep ? -.5e3 / frameRate : 0;
