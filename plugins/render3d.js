@@ -4025,7 +4025,17 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
         // a turned box is tested as turned, its axes read off the matrix, its columns with the scale taken out
         const turned = !testCenters && !render3DIsSprite(o) && (m[1] || m[2] || m[4] || m[6] || m[8] || m[9]);
         const axis = (i)=> vec3(m[i], m[i+1], m[i+2]).normalize();
-        const axes = turned ? [axis(0), axis(4), axis(8)] : undefined;
+        let axes = turned ? [axis(0), axis(4), axis(8)] : undefined;
+        if (axes && (abs(axes[0].dot(axes[1])) > 1e-6 || abs(axes[0].dot(axes[2])) > 1e-6 ||
+            abs(axes[1].dot(axes[2])) > 1e-6))
+        {
+            // a turned child of an unevenly scaled parent is sheared, its edges no longer square, which the box
+            // tests do not take; the upright box around it stands in, which may take a little more but never misses
+            const e = axes.map((a, i)=> a.scale(i ? i > 1 ? worldSize.z / 2 : worldSize.y / 2 : worldSize.x / 2));
+            const reach = (c)=> 2 * (abs(e[0][c]) + abs(e[1][c]) + abs(e[2][c]));
+            worldSize.set(reach('x'), reach('y'), reach('z'));
+            axes = undefined;
+        }
         let hit;
         if (box && axes)
             hit = !!collideOrientedBoxes3D(pos, box, BOX_WORLD_AXES, center, worldSize, axes);

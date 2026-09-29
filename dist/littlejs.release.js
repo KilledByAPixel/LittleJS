@@ -25572,7 +25572,17 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
         // a turned box is tested as turned, its axes read off the matrix, its columns with the scale taken out
         const turned = !testCenters && !render3DIsSprite(o) && (m[1] || m[2] || m[4] || m[6] || m[8] || m[9]);
         const axis = (i)=> vec3(m[i], m[i+1], m[i+2]).normalize();
-        const axes = turned ? [axis(0), axis(4), axis(8)] : undefined;
+        let axes = turned ? [axis(0), axis(4), axis(8)] : undefined;
+        if (axes && (abs(axes[0].dot(axes[1])) > 1e-6 || abs(axes[0].dot(axes[2])) > 1e-6 ||
+            abs(axes[1].dot(axes[2])) > 1e-6))
+        {
+            // a turned child of an unevenly scaled parent is sheared, its edges no longer square, which the box
+            // tests do not take; the upright box around it stands in, which may take a little more but never misses
+            const e = axes.map((a, i)=> a.scale(i ? i > 1 ? worldSize.z / 2 : worldSize.y / 2 : worldSize.x / 2));
+            const reach = (c)=> 2 * (abs(e[0][c]) + abs(e[1][c]) + abs(e[2][c]));
+            worldSize.set(reach('x'), reach('y'), reach('z'));
+            axes = undefined;
+        }
         let hit;
         if (box && axes)
             hit = !!collideOrientedBoxes3D(pos, box, BOX_WORLD_AXES, center, worldSize, axes);
@@ -26876,6 +26886,18 @@ const render3DParticlePos = vec3(), render3DParticleColor = new Color, render3DP
 // where a particle was and is, for the level collision
 const render3DParticleFrom = vec3(), render3DParticleTo = vec3();
 
+// the emitters inside a particle callback now, whose nested calls each get a view of their own
+const render3DParticlesCalling = new Set;
+
+// a particle as a ParticleEmitter3D's callbacks see it, set from the particle for each call
+/** @param {ParticleEmitter3D} emitter
+ *  @return {Particle3D} */
+function render3DParticleView(emitter)
+{
+    return {emitter, pos: vec3(), velocity: vec3(), age: 0, lifeTime: 0, destroyed: false,
+        destroy() { this.destroyed = true; }};
+}
+
 /**
  * A particle as a ParticleEmitter3D's callbacks see it: one object the emitter reuses, set from the particle for each
  * call and written back after it, so copy what you keep
@@ -27028,8 +27050,7 @@ class ParticleEmitter3D extends EngineObject3D
         this.particleDestroyCallback = undefined;
         /** @property {Particle3D} - The particle the callbacks get, one object for every particle and call
          *  @type {Particle3D} */
-        this.particleView = {emitter: this, pos: vec3(), velocity: vec3(), age: 0, lifeTime: 0, destroyed: false,
-            destroy() { this.destroyed = true; }};
+        this.particleView = render3DParticleView(this);
         /** @property {Vector3|undefined} - Where the emitter was at its last update, for when its parent is destroyed
          *  @type {Vector3|undefined} */
         this.worldPos3D = undefined;
@@ -27071,7 +27092,10 @@ class ParticleEmitter3D extends EngineObject3D
         }
 
         // move the particles and drop the dead ones, all in the typed array: this runs for every particle every frame
-        const F = RENDER3D_PARTICLE_FLOATS, data = this.particleData, trail = this.trailData;
+        // a callback can emit, which grows the arrays when they are full, so they are read again after each one
+        const F = RENDER3D_PARTICLE_FLOATS;
+        let data = this.particleData, trail = this.trailData;
+        const reread = ()=> { data = this.particleData, trail = this.trailData; };
         const damping = this.damping, gravity = this.gravity * scale, angleDamping = this.angleDamping; // a bigger effect has to fall faster to keep the same arc
         const collideLevel = this.collideLevel && render3DLevel.length;
         const updateCallback = this.particleUpdateCallback, destroyCallback = this.particleDestroyCallback;
@@ -27083,7 +27107,7 @@ class ParticleEmitter3D extends EngineObject3D
             const vx = data[k+3] *= damping, vy = data[k+4] = data[k+4] * damping + gravity, vz = data[k+5] *= damping;
             data[k] += vx, data[k+1] += vy, data[k+2] += vz;
             data[k+18] += data[k+19] *= angleDamping;
-            collideLevel && this.particleCollide(k, data[k] - vx, data[k+1] - vy, data[k+2] - vz);
+            collideLevel && (this.particleCollide(k, data[k] - vx, data[k+1] - vy, data[k+2] - vz), reread());
             const t = i * trailMax * 3;
             if (trailMax)
             {
@@ -27095,11 +27119,11 @@ class ParticleEmitter3D extends EngineObject3D
                 trail[j] = data[k], trail[j+1] = data[k+1], trail[j+2] = data[k+2];
                 data[k+20] = n + 1;
             }
-            updateCallback && this.particleCall(updateCallback, k);
+            updateCallback && (this.particleCall(updateCallback, k), reread());
             if ((data[k+17] += timeDelta) >= data[k+16])
             {
                 // dead: the last particle takes its slot, trail and all, order does not matter
-                destroyCallback && this.particleCall(destroyCallback, k);
+                destroyCallback && (this.particleCall(destroyCallback, k), reread());
                 const last = --this.particleCount, kl = last * F;
                 if (i !== last)
                 {
@@ -27173,15 +27197,23 @@ class ParticleEmitter3D extends EngineObject3D
     // what the callback changes is written back; a particle it destroys has lived its life, the update removes it
     particleCall(callback, k, level, pos)
     {
-        const data = this.particleData, view = this.particleView;
+        // a callback that emits runs the create callback inside itself, which gets a view of its own so this one
+        // keeps its particle; what the callback changes is written to the arrays as they are after it, since an
+        // emit into a full emitter grows them
+        const nested = render3DParticlesCalling.has(this);
+        const view = nested ? render3DParticleView(this) : this.particleView, data = this.particleData;
         view.pos.set(data[k], data[k+1], data[k+2]);
         view.velocity.set(data[k+3], data[k+4], data[k+5]);
         view.age = data[k+17], view.lifeTime = data[k+16], view.destroyed = false;
-        const result = callback(view, level, pos);
-        data[k] = view.pos.x, data[k+1] = view.pos.y, data[k+2] = view.pos.z;
-        data[k+3] = view.velocity.x, data[k+4] = view.velocity.y, data[k+5] = view.velocity.z;
+        render3DParticlesCalling.add(this);
+        let result;
+        try { result = callback(view, level, pos); }
+        finally { nested || render3DParticlesCalling.delete(this); }
+        const out = this.particleData;
+        out[k] = view.pos.x, out[k+1] = view.pos.y, out[k+2] = view.pos.z;
+        out[k+3] = view.velocity.x, out[k+4] = view.velocity.y, out[k+5] = view.velocity.z;
         if (view.destroyed)
-            data[k+17] = max(data[k+17], data[k+16] - timeDelta); // aged past its life this update
+            out[k+17] = max(out[k+17], out[k+16] - timeDelta); // aged past its life this update
         return result;
     }
 
@@ -27190,7 +27222,8 @@ class ParticleEmitter3D extends EngineObject3D
     // collide callback lets it through; one that starts inside is let go, as a 2D one is
     particleCollide(k, x, y, z)
     {
-        const data = this.particleData, from = render3DParticleFrom.set(x, y, z);
+        let data = this.particleData;
+        const from = render3DParticleFrom.set(x, y, z);
         const to = render3DParticleTo.set(data[k], data[k+1], data[k+2]);
         let hit, level;
         for (const l of render3DLevel)
@@ -27204,6 +27237,7 @@ class ParticleEmitter3D extends EngineObject3D
         const callback = this.particleCollideCallback;
         if (callback && (!this.particleCall(callback, k, level, point.copy()) || this.particleView.destroyed))
             return; // let through, or destroyed by the callback
+        data = this.particleData; // as the callback left it, an emit may have grown it
 
         const n = hit.normal, v = vec3(data[k+3], data[k+4], data[k+5]), into = n.scale(v.dot(n));
         const restitution = max(this.restitution, level.restitution), friction = max(this.friction, level.friction);

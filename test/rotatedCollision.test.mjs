@@ -1,7 +1,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { render3D, Render3DPlugin, EngineObject3D, engineObjects, engineObjectsUpdate, engineObjectsCollect3D,
-    collideBoxBox3D, TextureInfo, vec3, PI }
+    collideBoxBox3D, TextureInfo, buildBox, vec3, PI }
     from '../dist/littlejs.esm.js';
 
 // 3D solid collision follows rotation: a turned box collides as the box you see, and a push within the upper
@@ -277,4 +277,20 @@ test('a sprite collides and is collected as its upright box, its rotation turns 
     sprite.size3D = vec3(2);
     sprite.rotation3D = vec3(0, 0, degrees(45));
     assert.equal(engineObjectsCollect3D(vec3(.95, .95, 0), vec3(.1), [sprite]).length, 1, 'in its upright corner');
+});
+
+test('collect finds a turned child of an unevenly scaled parent by a sphere inside it, sheared as it is', ()=>
+{
+    const parent = new EngineObject3D(vec3());
+    parent.scale3D = vec3(4, 1, 1);
+    const child = new EngineObject3D(vec3(), buildBox(vec3(2)));
+    child.size3D = vec3(2);
+    child.rotation3D.z = PI / 4;
+    parent.addChild(child);
+    const inside = child.getMatrix().transformPoint(vec3(.9, -.9, 0));
+    assert.equal(engineObjectsCollect3D(inside, 0, [child]).length, 1, 'a point');
+    assert.equal(engineObjectsCollect3D(inside, .2, [child]).length, 1, 'a sphere around the same point');
+    assert.equal(engineObjectsCollect3D(inside, vec3(.2), [child]).length, 1, 'a box there');
+    assert.equal(engineObjectsCollect3D(vec3(20, 0, 0), .2, [child]).length, 0, 'far off it is not collected');
+    parent.destroy();
 });

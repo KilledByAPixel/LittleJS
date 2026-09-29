@@ -179,3 +179,69 @@ test('a particle lands on top of a voxel block and bounces off its side', ()=>
     map.destroy();
     e.destroy(true);
 });
+
+// review 3: a callback that emits can grow the arrays under the update, and runs the create callback inside itself
+
+test('a callback that emits when the emitter is full keeps what every particle was given, and ages them all', ()=>
+{
+    for (const start of [63, 64]) // 64 fills the first arrays, one more grows them
+    {
+        const e = makeEmitter(vec3(0, 5, 0));
+        for (let i = start; i--;) e.emitParticle();
+        let first = true;
+        e.particleUpdateCallback = (p)=>
+        {
+            if (first) { first = false; e.emitParticle(); }
+            p.pos.x = 123;
+        };
+        e.update();
+        assert.equal(e.particleCount, start + 1);
+        for (let i = 0; i < start; ++i)
+        {
+            const p = particle(e, i);
+            near(p.pos.x, 123, `particle ${i} of ${start} kept its move`);
+            near(p.age, 1/60, `particle ${i} of ${start} aged`);
+        }
+        e.destroy(true);
+    }
+});
+
+test('a particle made inside another\'s callback gets its own view, the one being updated keeps its values', ()=>
+{
+    const e = makeEmitter(vec3(0, 5, 0));
+    e.emitParticle();
+    e.particleCreateCallback = (p)=> { p.pos.y = 7; };
+    let first = true;
+    e.particleUpdateCallback = (p)=>
+    {
+        if (first) { first = false; e.emitParticle(); }
+        p.pos.x = 3;
+    };
+    e.update();
+    const updated = particle(e, 0), made = particle(e, 1);
+    near(updated.pos.x, 3);
+    near(updated.pos.y, 5, 'not the made one\'s 7');
+    near(made.pos.y, 7);
+    e.destroy(true);
+});
+
+test('a destroy callback that emits while the arrays grow leaves every particle whole, trails and all', ()=>
+{
+    const e = makeEmitter(vec3(0, 5, 0));
+    e.particleTime = 1/60 * .5; // gone in the first update
+    e.trailTime = 3/60;
+    e.update(); // the trail storage is made
+    for (let i = 64; i--;) e.emitParticle();
+    e.particleTime = 10;
+    e.particleDestroyCallback = ()=> { e.emitParticle(); };
+    e.update();
+    assert.equal(e.particleCount, 64, 'each one that went made one');
+    for (let i = 0; i < 64; ++i)
+    {
+        const p = particle(e, i);
+        near(p.life, 10, 'the new ones, moved into the slots of the ones that went');
+        near(p.pos.y, 5);
+        assert.equal(p.age, 0);
+    }
+    e.destroy(true);
+});
