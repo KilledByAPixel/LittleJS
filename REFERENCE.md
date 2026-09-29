@@ -1906,6 +1906,7 @@ levelEditor.onTile = (layer, layerPos, tile)=> {} // What the game does with a p
 levelEditor.onRestart = ()=> {} // Rebuild the level, adds a Restart button
 levelEditor.onPlayFrom = (pos)=> {} // Put the player at pos, adds Play from mouse to the Advanced section
 levelEditor.paletteTiles = [0, 1, 10] // The tiles the palette shows, in order; undefined shows the whole sheet
+levelEditor.use3D = undefined  // true opens the 3D level editor, false the 2D one; undefined the 3D one with a 3D level
 ```
 
 ## LittleJS Debugging System

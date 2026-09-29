@@ -917,7 +917,7 @@ function tweakButton(){}
 function tweakDivider(){}
 function tweakEngineDefaults(){}
 const levelEditor = {isOpen: false, open(){}, close(){}, onTile: undefined, onRestart: undefined, onPlayFrom: undefined,
-    paletteTiles: undefined};
+    paletteTiles: undefined, use3D: undefined};
 function editorMapRestore(map){ return map; }
 function editorMapLoaded(){}
 function editorJSONFetched(){}

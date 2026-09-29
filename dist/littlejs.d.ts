@@ -9692,6 +9692,10 @@ declare module "littlejsengine" {
          *  sprites and art that are not level tiles; undefined shows every tile of the sheet
          *  @type {Array<number>|undefined} */
         paletteTiles: Array<number> | undefined;
+        /** @property {boolean|undefined} - Which level editor opens: true the 3D one, false the 2D one, undefined the
+         *  3D one when a level was loaded with level3DLoad and there is a Render3DPlugin
+         *  @type {boolean|undefined} */
+        use3D: boolean | undefined;
         /** True while the editor is open, the game is paused under it
          *  @return {boolean} */
         get isOpen(): boolean;

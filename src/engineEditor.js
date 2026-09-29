@@ -61,6 +61,10 @@ class LevelEditor
          *  sprites and art that are not level tiles; undefined shows every tile of the sheet
          *  @type {Array<number>|undefined} */
         this.paletteTiles = undefined;
+        /** @property {boolean|undefined} - Which level editor opens: true the 3D one, false the 2D one, undefined the
+         *  3D one when a level was loaded with level3DLoad and there is a Render3DPlugin
+         *  @type {boolean|undefined} */
+        this.use3D = undefined;
     }
 
     /** True while the editor is open, the game is paused under it
