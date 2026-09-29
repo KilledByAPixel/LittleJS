@@ -3603,9 +3603,10 @@ class EngineObject
         // bail if a collision callback destroyed us mid-frame
         if (this.destroyed) return;
 
-        if (this.clampSpeed)
+        // limit max speed to prevent missing collisions, only for what collides: with solids, or with tiles while it
+        // has a mass, which tile collision needs; anything else moves as fast as it is told
+        if (this.clampSpeed && enablePhysicsSolver && (this.collideSolidObjects || this.collideLevel && this.mass))
         {
-            // limit max speed to prevent missing collisions
             this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
             this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
         }
@@ -25143,9 +25144,10 @@ class EngineObject3D extends EngineObject
         // object's is the 2D physics'
         const ground = this.groundObject;
         this.sync2D || (this.groundObject = undefined);
-        if (this.clampSpeed && !this.sync2D)
+        if (this.clampSpeed && !this.sync2D && (this.collideSolidObjects || this.collideLevel && this.mass))
         {
-            // each axis within objectMaxSpeed, as in 2D, so a fast object does not pass through a thin wall
+            // each axis within objectMaxSpeed, as in 2D, so a fast object does not pass through a thin wall; only
+            // for what collides, anything else moves as fast as it is told
             const v = this.velocity3D, s = objectMaxSpeed;
             v.x = clamp(v.x, -s, s), v.y = clamp(v.y, -s, s), v.z = clamp(v.z, -s, s);
         }

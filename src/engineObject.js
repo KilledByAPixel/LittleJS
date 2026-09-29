@@ -188,9 +188,10 @@ class EngineObject
         // bail if a collision callback destroyed us mid-frame
         if (this.destroyed) return;
 
-        if (this.clampSpeed)
+        // limit max speed to prevent missing collisions, only for what collides: with solids, or with tiles while it
+        // has a mass, which tile collision needs; anything else moves as fast as it is told
+        if (this.clampSpeed && enablePhysicsSolver && (this.collideSolidObjects || this.collideLevel && this.mass))
         {
-            // limit max speed to prevent missing collisions
             this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
             this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
         }

@@ -3596,9 +3596,10 @@ class EngineObject3D extends EngineObject
         // object's is the 2D physics'
         const ground = this.groundObject;
         this.sync2D || (this.groundObject = undefined);
-        if (this.clampSpeed && !this.sync2D)
+        if (this.clampSpeed && !this.sync2D && (this.collideSolidObjects || this.collideLevel && this.mass))
         {
-            // each axis within objectMaxSpeed, as in 2D, so a fast object does not pass through a thin wall
+            // each axis within objectMaxSpeed, as in 2D, so a fast object does not pass through a thin wall; only
+            // for what collides, anything else moves as fast as it is told
             const v = this.velocity3D, s = objectMaxSpeed;
             v.x = clamp(v.x, -s, s), v.y = clamp(v.y, -s, s), v.z = clamp(v.z, -s, s);
         }

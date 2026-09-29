@@ -621,8 +621,9 @@ EngineObject.velocity      // Velocity of the object, world units per frame
 EngineObject.angleVelocity // Angular velocity of the object, radians per frame
 EngineObject.groundObject  // What it stands on this frame, a tile layer or an object, undefined in the air; a
                            // moving platform carries its rider through velocity.x, so a controller adds to it
-EngineObject.clampSpeed    // Clamp velocity to objectMaxSpeed, true by default; false for fast bullets that do not
-                           // collide, since each axis is clamped on its own, which bends a fast diagonal
+EngineObject.clampSpeed    // Hold each axis of velocity to objectMaxSpeed while it collides, with solids or with tiles
+                           // while it has a mass, so it can not pass through a thin wall; true by default, false for
+                           // a fast bullet that collides; what does not collide moves as fast as it is told
 EngineObject.parent / children // Set by addChild, a child is placed by its parent and sits out solid collision
 
 // Engine Object settings
@@ -1253,7 +1254,7 @@ new EngineObject3D(pos3D, mesh, tileInfo, color) // a tileInfo with no mesh draw
 obj.pos3D obj.rotation3D obj.scale3D // Vector3, rotation is (pitch, yaw, roll); change them in place or assign new ones
 obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engine before update, like the 2D physics,
                                    // no super.update() needed; damping and angleDamping slow them as in 2D, and
-                                   // clampSpeed keeps each axis of velocity3D within objectMaxSpeed
+                                   // clampSpeed keeps each axis of velocity3D within objectMaxSpeed while it collides
 obj.updatePhysics()                // moves it and pushes it out of solids; bounce off anything else in update, which
                                    // runs once every object has moved, so the fix lands before the frame draws
 obj.mass = 1 // objects start with no mass and are not pulled; with a mass render3D.gravity and gravityScale act on
