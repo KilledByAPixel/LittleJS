@@ -9414,6 +9414,8 @@ declare module "littlejsengine" {
      *   GLTFObject that createObject makes; a skinned character's walk is not read
      * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too,
      *   and a KHR_materials_unlit material comes in emissive, its own color with no shading
+     * - A material's normal map and emissive map load too, with its normal scale and emissive factor, read at the base
+     *   color texture's uvs; roughness, metalness and occlusion maps are not loaded
      * - The base color texture reads the uv set its texCoord names, moved by KHR_texture_transform as gltfpack and
      *   Blender write it
      * - An OPAQUE material, the default, ignores its texture's alpha as the format says: a texture only such materials
@@ -9456,6 +9458,17 @@ declare module "littlejsengine" {
         /** @property {boolean} - The material is unlit (KHR_materials_unlit), its own color with no shading; the object
          *  createObject makes draws it with emissive 1 */
         unlit: boolean;
+        /** @property {TextureInfo|undefined} - The material's normal map, drawn with the base color texture's uvs
+         *  @type {TextureInfo|undefined} */
+        normalMap: TextureInfo | undefined;
+        /** @property {number} - The normal map's strength, its scale in the file */
+        normalScale: number;
+        /** @property {TextureInfo|undefined} - The material's emissive map, or a white texture when it has an
+         *  emissiveFactor and no texture, so it glows all over
+         *  @type {TextureInfo|undefined} */
+        emissiveMap: TextureInfo | undefined;
+        /** @property {Color} - The emissiveFactor, which multiplies the emissive map */
+        emissiveMapColor: Color;
     }
     /**
      * GLTFObject - A model as an object with a child per part, which plays the model's animations

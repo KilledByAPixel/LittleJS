@@ -21,12 +21,12 @@ const triangle = {
     materials: [{pbrMetallicRoughness: {baseColorTexture: {index: 0}}}],
 };
 
-// an engine whose textures are counted as they are made and deleted
-function textureEngine(json)
+// an engine whose textures are counted as they are made and deleted, with any other globals a test needs
+function textureEngine(json, globals={})
 {
     const counts = {created: 0, deleted: 0};
     const engine = loadEngine({atob, Response, Blob, gltfJSON: json, counts,
-        createImageBitmap: async ()=> ({width: 8, height: 8})});
+        createImageBitmap: async ()=> ({width: 8, height: 8}), ...globals});
     engine.run(`glContext = {}; glCreateTexture = ()=> ({id: ++counts.created}); glDeleteTexture = ()=> ++counts.deleted;`);
     return {...engine, counts};
 }
@@ -108,4 +108,59 @@ test('a TextureInfo made with true or false wrap still repeats or clamps both ax
     run('glContext = gl; glSetTextureData = ()=> {};');
     run('new TextureInfo({width: 8, height: 8}, true, true); new TextureInfo({width: 8, height: 8}, true, false)');
     assert.deepEqual(gl.wraps, [[WRAP_S, REPEAT], [WRAP_T, REPEAT], [WRAP_S, CLAMP], [WRAP_T, CLAMP]]);
+});
+
+// a textured triangle whose material has a normal map and an emissive map, three images so each is its own texture
+function materialJSON(material)
+{
+    const json = structuredClone(triangle);
+    json.scene = 1;
+    // jpeg, so the base color texture skips the opaque decode, which needs a real gl to read back
+    json.images = [0, 1, 2].map(()=> ({uri: 'data:image/jpeg;base64,AA=='}));
+    json.textures = [{source: 0}, {source: 1}, {source: 2}];
+    json.materials = [material];
+    return json;
+}
+
+test('a material\'s normal and emissive textures reach its part and the object createObject makes', async () =>
+{
+    const {run} = textureEngine(materialJSON({pbrMetallicRoughness: {baseColorTexture: {index: 0}},
+        normalTexture: {index: 1, scale: .5}, emissiveTexture: {index: 2}, emissiveFactor: [1, .5, 0]}));
+    const seen = JSON.parse(await run(`parseGLTF(gltfJSON).then(model=>
+    {
+        const p = model.parts[0], o = model.createObject(vec3()).parts[0];
+        const id = (t)=> t && t.glTexture && t.glTexture.id;
+        return JSON.stringify({color: id(p.textureInfo), normal: id(p.normalMap), scale: p.normalScale,
+            emissive: id(p.emissiveMap), factor: [p.emissiveMapColor.r, p.emissiveMapColor.g, p.emissiveMapColor.b],
+            object: [o.normalMap === p.normalMap, o.normalScale, o.emissiveMap === p.emissiveMap,
+                o.emissiveMapColor === p.emissiveMapColor]});
+    })`));
+    assert.ok(seen.color && seen.normal && seen.emissive, 'three textures');
+    assert.notEqual(seen.normal, seen.color);
+    assert.equal(seen.scale, .5);
+    assert.equal(seen.factor[0], 1);
+    assert.ok(Math.abs(seen.factor[1] - 0.735) < .01, 'the factor is linear, brought to sRGB like the base color');
+    assert.deepEqual(seen.object, [true, .5, true, true]);
+});
+
+test('an emissiveFactor with no texture glows all over; a black one is no emissive map', async () =>
+{
+    // the white texture it glows with is drawn on a canvas, a stand-in here
+    const OffscreenCanvas = class { constructor(w, h) { this.width = w; this.height = h; }
+        getContext() { return {fillRect() {}}; } };
+    const {run} = textureEngine(materialJSON({emissiveFactor: [0, 1, 0]}), {OffscreenCanvas});
+    const glows = await run(`parseGLTF(gltfJSON).then(model=> !!model.parts[0].emissiveMap &&
+        model.parts[0].emissiveMapColor.g === 1)`);
+    assert.equal(glows, true);
+    const {run: run2} = textureEngine(materialJSON({emissiveFactor: [0, 0, 0]}));
+    assert.equal(await run2('parseGLTF(gltfJSON).then(model=> model.parts[0].emissiveMap)'), undefined);
+});
+
+test('the normal and emissive textures are freed by dispose', async () =>
+{
+    const {run, counts} = textureEngine(materialJSON({pbrMetallicRoughness: {baseColorTexture: {index: 0}},
+        normalTexture: {index: 1}, emissiveTexture: {index: 2}}));
+    await run('parseGLTF(gltfJSON).then(model=> model.dispose())');
+    assert.equal(counts.created, 3);
+    assert.equal(counts.deleted, counts.created);
 });

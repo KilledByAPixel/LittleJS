@@ -28197,6 +28197,8 @@ level3DAddType('Light', function(pos, properties)
  *   GLTFObject that createObject makes; a skinned character's walk is not read
  * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too,
  *   and a KHR_materials_unlit material comes in emissive, its own color with no shading
+ * - A material's normal map and emissive map load too, with its normal scale and emissive factor, read at the base
+ *   color texture's uvs; roughness, metalness and occlusion maps are not loaded
  * - The base color texture reads the uv set its texCoord names, moved by KHR_texture_transform as gltfpack and
  *   Blender write it
  * - An OPAQUE material, the default, ignores its texture's alpha as the format says: a texture only such materials
@@ -28243,6 +28245,17 @@ class GLTFPart
         /** @property {boolean} - The material is unlit (KHR_materials_unlit), its own color with no shading; the object
          *  createObject makes draws it with emissive 1 */
         this.unlit = false;
+        /** @property {TextureInfo|undefined} - The material's normal map, drawn with the base color texture's uvs
+         *  @type {TextureInfo|undefined} */
+        this.normalMap = undefined;
+        /** @property {number} - The normal map's strength, its scale in the file */
+        this.normalScale = 1;
+        /** @property {TextureInfo|undefined} - The material's emissive map, or a white texture when it has an
+         *  emissiveFactor and no texture, so it glows all over
+         *  @type {TextureInfo|undefined} */
+        this.emissiveMap = undefined;
+        /** @property {Color} - The emissiveFactor, which multiplies the emissive map */
+        this.emissiveMapColor = WHITE;
     }
 }
 
@@ -28388,8 +28401,8 @@ class GLTFModel
         for (const part of this.parts)
             part.mesh.dispose();
         this.mesh.dispose();
-        for (const textureInfo of new Set(this.parts.map(p=> p.textureInfo)))
-            textureInfo?.destroyWebGLTexture();
+        for (const textureInfo of new Set(this.parts.flatMap(p=> [p.textureInfo, p.normalMap, p.emissiveMap])))
+            textureInfo !== gltfWhiteTextureInfo && textureInfo?.destroyWebGLTexture(); // the white one is shared
     }
 
     /** Make an object at a position with a child per part, so each keeps its own texture, color and blending, and
@@ -28447,6 +28460,8 @@ class GLTFObject extends EngineObject3D
             o.transparent = part.transparent;
             o.pixelated = part.pixelated;
             o.emissive = part.unlit ? 1 : 0;
+            o.normalMap = part.normalMap, o.normalScale = part.normalScale;
+            o.emissiveMap = part.emissiveMap, o.emissiveMapColor = part.emissiveMapColor;
             const rest = model.nodeTree?.restPose?.[part.node];
             if (rest)
             {
@@ -28583,13 +28598,15 @@ async function parseGLTF(data, baseUrl='')
         return gltfFetch(buffer.uri, baseUrl).then(r=> r.arrayBuffer());
     }));
 
-    // the textures, decoded together first; none without WebGL, and a failed image only logs; only the base color
-    // textures are drawn with, so the normal, roughness and other maps are not loaded at all
-    const baseColorTextures = new Set((json.materials || []).map(m=> m.pbrMetallicRoughness?.baseColorTexture?.index));
+    // the textures, decoded together first; none without WebGL, and a failed image only logs; the base color, normal
+    // and emissive textures are drawn with, the roughness and occlusion maps are not loaded at all
+    const usedTextures = new Set((json.materials || []).flatMap(m=> [m.pbrMetallicRoughness?.baseColorTexture?.index,
+        m.normalTexture?.index, m.emissiveTexture?.index]));
+    const normalTextures = new Set((json.materials || []).map(m=> m.normalTexture?.index));
     const opaqueTextures = gltfOpaqueTextures(json);
     const textures = await Promise.all((json.textures || []).map(async (texture, index)=>
     {
-        if (!glContext || typeof createImageBitmap == 'undefined' || !baseColorTextures.has(index)) return;
+        if (!glContext || typeof createImageBitmap == 'undefined' || !usedTextures.has(index)) return;
         try
         {
             // a WebP or AVIF image is named by its extension, the browser decodes those like any other
@@ -28606,7 +28623,11 @@ async function parseGLTF(data, baseUrl='')
             // an OPAQUE material ignores its texture's alpha, which the 3D pass would cut holes by, so a texture only
             // those use has it set to 1; decoded as stored for that, and a jpeg has no alpha to set
             const opaque = opaqueTextures.has(index) && blob.type !== 'image/jpeg';
-            const bitmap = opaque ? await createImageBitmap(blob, {premultiplyAlpha: 'none'}).then(gltfOpaqueImage) : await createImageBitmap(blob);
+            // a normal map is directions, not colors, so it is decoded as stored; one a material also uses as a
+            // color, an odd file, is decoded that way too
+            const bitmap = normalTextures.has(index) ?
+                await createImageBitmap(blob, {colorSpaceConversion: 'none', premultiplyAlpha: 'none'}) :
+                opaque ? await createImageBitmap(blob, {premultiplyAlpha: 'none'}).then(gltfOpaqueImage) : await createImageBitmap(blob);
             return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497]); // REPEAT by default
         }
         catch (e) { false&&LOG('glTF image not loaded', e); }
@@ -28682,7 +28703,7 @@ async function parseGLTF(data, baseUrl='')
     }
 
     // a texture none of the parts draws with, another scene's, goes now too, since dispose finds them by the parts
-    const used = new Set(parts.map(p=> p.textureInfo));
+    const used = new Set(parts.flatMap(p=> [p.textureInfo, p.normalMap, p.emissiveMap]));
     for (const texture of textures)
         texture && !used.has(texture) && texture.destroyWebGLTexture();
     return new GLTFModel(parts, animations, {nodes: json.nodes, parents, restInverse, restPose});
@@ -28918,7 +28939,31 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
         textureRef ? textures[textureRef.index] : undefined, blend || transmission > 0);
     part.pixelated = json.samplers?.[texture?.sampler]?.magFilter === 9728; // NEAREST
     part.unlit = !!material.extensions?.KHR_materials_unlit;
+
+    // the normal and emissive maps, read at the base color texture's uvs; an emissive factor with no texture glows
+    // all over, one of zeros, the default, is no glow at all
+    const normalRef = material.normalTexture, emissiveRef = material.emissiveTexture;
+    part.normalMap = normalRef && textures[normalRef.index];
+    part.normalScale = normalRef?.scale ?? 1;
+    const [er, eg, eb] = material.emissiveFactor || (emissiveRef ? [1, 1, 1] : [0, 0, 0]);
+    if (er || eg || eb)
+    {
+        part.emissiveMap = emissiveRef ? textures[emissiveRef.index] : gltfWhiteTexture();
+        part.emissiveMapColor = rgb(gltfSRGB(er), gltfSRGB(eg), gltfSRGB(eb));
+    }
     return part;
+}
+
+// a 1 by 1 white texture, the emissive map of a material that glows all over with no texture; made once and never
+// freed, like the engine's own white texture, undefined without WebGL
+let gltfWhiteTextureInfo;
+function gltfWhiteTexture()
+{
+    if (gltfWhiteTextureInfo || !glContext || typeof OffscreenCanvas == 'undefined') return gltfWhiteTextureInfo;
+    const context = createCanvasContext(1);
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, 1, 1);
+    return gltfWhiteTextureInfo = new TextureInfo(context.canvas);
 }
 
 // a glTF color factor or vertex color is linear, where the renderer works in sRGB like the textures, so it is
