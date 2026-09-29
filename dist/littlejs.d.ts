@@ -8236,6 +8236,9 @@ declare module "littlejsengine" {
         /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls
          *  around corners */
         collideAsSphere3D: boolean;
+        /** @property {number} - The steepest slope it stands on, in radians from level, PI/4 by default: resting on
+         *  a solid within this of flat sets groundObject and holds it still, steeper it slides down */
+        groundAngle: number;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         receiveShadow: boolean;
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D

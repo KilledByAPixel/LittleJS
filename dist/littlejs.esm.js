@@ -25882,6 +25882,9 @@ class EngineObject3D extends EngineObject
         /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls
          *  around corners */
         this.collideAsSphere3D = false;
+        /** @property {number} - The steepest slope it stands on, in radians from level, PI/4 by default: resting on
+         *  a solid within this of flat sets groundObject and holds it still, steeper it slides down */
+        this.groundAngle = PI / 4;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
@@ -25912,10 +25915,14 @@ class EngineObject3D extends EngineObject
             'a sync2D object collides in 2D, so give it a 2D size as well as a size3D', this.size);
         if (this.sync2D)
             super.updatePhysics();
+        // what it stands on is found again each frame, by the level and by the solids it rests on; a sync2D
+        // object's is the 2D physics'
+        const ground = this.groundObject;
+        this.sync2D || (this.groundObject = undefined);
         // a moving object keeps out of the level, the height maps and voxel maps, from where it was before it moved
         const oldPos = this.collideLevel && this.mass && !this.sync2D ? this.pos3D.copy() : undefined;
         render3DMove(this);
-        oldPos && render3DCollideLevel(this, oldPos);
+        oldPos && render3DCollideLevel(this, oldPos, ground);
         // the engine only runs this for objects that own where they are, a child rides along with its parent
         if (this.collideSolidObjects && !this.sync2D)
             render3DCollideSolid(this);
@@ -26153,10 +26160,9 @@ function render3DMove(o)
 }
 
 // keep an object that moved out of the level's solid geometry, clearing what it stood on for the level to set again
-function render3DCollideLevel(o, oldPos)
+// ground is what it stood on last frame, which a height map keeps it on going down a slope
+function render3DCollideLevel(o, oldPos, ground)
 {
-    const ground = o.groundObject;
-    o.groundObject = undefined;
     for (const level of render3DLevel)
         level.destroyed || level.levelCollide3D(o, oldPos, level === ground);
 }
@@ -26173,7 +26179,9 @@ function render3DSolidShape(o)
     const kx = abs(k.x), ky = abs(k.y), kz = abs(k.z);
     if (o.collideAsSphere3D)
         return {pos: o.pos3D.copy(), radius: max(s.x, s.y, s.z) / 2 * max(kx, ky, kz)};
-    return {pos: o.pos3D.copy(), size: vec3(s.x * kx, s.y * ky, s.z * kz)};
+    // a turned box keeps its rotation, a solid is never a child so it is the world's; an upright one has none
+    const rotation = isTurned3D(o.rotation3D) ? o.rotation3D.copy() : undefined;
+    return {pos: o.pos3D.copy(), size: vec3(s.x * kx, s.y * ky, s.z * kz), rotation};
 }
 
 // how far a solid shape can reach from its own center, for a quick reject before the exact test
@@ -26192,14 +26200,14 @@ function render3DSolidReach(o)
 function render3DSolidPush(a, b)
 {
     if (!a.size) // a is a sphere
-        return b.size ? collideSphereBox(a.pos, a.radius, b.pos, b.size)
+        return b.size ? collideSphereBox(a.pos, a.radius, b.pos, b.size, b.rotation)
             : collideSphereSphere(a.pos, a.radius, b.pos, b.radius);
     if (!b.size) // only b is, so push b out of a and turn it around
     {
-        const push = collideSphereBox(b.pos, b.radius, a.pos, a.size);
+        const push = collideSphereBox(b.pos, b.radius, a.pos, a.size, a.rotation);
         return push && push.scale(-1);
     }
-    return collideBoxBox3D(a.pos, a.size, b.pos, b.size);
+    return collideBoxBox3D(a.pos, a.size, b.pos, b.size, a.rotation, b.rotation);
 }
 
 // push a solid object out of the solids before it in the engine's list of them, so each pair is resolved once:
@@ -26225,13 +26233,22 @@ function render3DCollideSolid(a)
         if (dx*dx + dy*dy + dz*dz > reach*reach)
             continue;
 
-        const push = render3DSolidPush(shapeA, render3DSolidShape(b));
+        let push = render3DSolidPush(shapeA, render3DSolidShape(b));
         if (!push) continue;
 
         // both objects hear about it, and either one can take the touch over
         const resolveA = a.collideWithObject(b, push);
         const resolveB = b.collideWithObject(a, push.scale(-1));
         if (!resolveA || !resolveB) continue;
+
+        // standing: a push within the upper one's groundAngle of straight up means it rests on the lower one, and
+        // it is lifted straight off, as far as it takes to leave the surface, so it does not creep down a slope
+        const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
+        if (up >= cos(a.groundAngle) || -up >= cos(b.groundAngle))
+        {
+            up > 0 ? a.groundObject = b : b.groundObject = a;
+            push = vec3(0, lengthSquared / push.y, 0);
+        }
 
         // heavier objects move less, mass 0 stays put; then bounce apart when moving toward each other
         const total = a.mass + b.mass;
