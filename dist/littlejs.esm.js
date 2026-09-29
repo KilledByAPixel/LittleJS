@@ -21925,7 +21925,6 @@ const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
 const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
 const RENDER3D_SHADOW_COLOR = Object.freeze(hsl(0, 0, 0, .5));
 const RENDER3D_IDENTITY = new Matrix4; // never modified
-const RENDER3D_DEBUG_WIDTH = .05; // line width of the debug primitives
 let render3DShadowCut; // the cut last sent to the shadow shader, see render3DSetDrawUniforms
 ///////////////////////////////////////////////////////////////////////////////
 // Private helpers
@@ -22600,11 +22599,9 @@ class Render3DPlugin
      *  @return {SoundInstance|undefined} - undefined when out of range or sound is off */
     playSound(sound, pos3D, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false)
     {
-        // keep in step with Sound.play, only the pan differs
+        // the 3D range fade and pan, Sound.play with no position does the rest
         ASSERT(sound instanceof Sound, 'sound must be a Sound');
         ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
-        if (!soundEnable || headlessMode) return;
-        if (!sound.sampleBuffer && !sound._sampleChannels) return; // still loading
         const offset = pos3D.subtract(this.camera.pos), range = sound.range;
         if (range)
         {
@@ -22615,9 +22612,9 @@ class Render3DPlugin
             if (distance > taperRange)
                 volume *= percent(distance, range, taperRange);
         }
-        const pan = offset.normalize().dot(this.cameraRight);
-        const rate = pitch + pitch * sound.randomness * randomnessScale * rand(-1, 1);
-        return new SoundInstance(sound, volume, rate, pan, loop, paused);
+        const instance = sound.play(undefined, volume, pitch, randomnessScale, loop, paused);
+        instance?.setPan(offset.normalize().dot(this.cameraRight));
+        return instance;
     }
 
     /** Play a sound on a loop at a 3D position, the same as playSound with loop on
@@ -22662,8 +22659,7 @@ class Render3DPlugin
         }
         if (!render3DCanDraw()) return;
         if (this.shadowPass && !this.lighting) return; // unlit things cast no shadow
-        if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== this.contextGeneration)
-            mesh.upload();
+        render3DMeshUpload(mesh);
         if (!mesh.bufferCount) return;
         const m = matrix.m;
         if (this.frustumCulling && !render3DSphereVisible(m[12], m[13], m[14], mesh.radius * render3DMaxStretch(m)))
@@ -22677,10 +22673,8 @@ class Render3DPlugin
             render3DInstance(mesh, matrix, tileInfo, color);
         else
         {
-            // a draw that is not depth tested goes over what is already drawn, so the batches drawn before it go
-            // first, or they would draw at the end of the stage and cover it whatever its render order
             this.flush();
-            this.depthTest || this.shadowPass || render3DFlushInstances();
+            render3DFlushBeforeOverlay();
             render3DSetDrawUniforms(matrix, tileInfo, color);
             render3DBindMesh(mesh);
             glContext.drawElements(glContext.TRIANGLES, mesh.bufferCount, mesh.indexType, 0);
@@ -22962,7 +22956,8 @@ class Render3DPlugin
             return this.queueTransparent(p, ()=> this.drawBillboard(p, s, tileInfo, c, angle, upright));
         }
 
-        // the particle path: the quad's six stream vertices written straight in with no vectors made, unlit
+        // the quad's six stream vertices written straight in with no vectors made, unlit, for sprites, and for
+        // particles when instancing is off
         const lit = this.lighting;
         this.lighting = this.shadowPass && lit; // unlit on screen, in the shadow map the object's flag decides
         let uvRect;
@@ -23134,106 +23129,6 @@ function render3DDrawSoftDisc(radius, color, sides, normal, pointAt)
         }
         render3D.drawStripUnlit(points, normal, undefined, colors);
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Debug primitives, drawn on top of the 3D scene like the 2D debug functions, only in debug builds
-
-let render3DDebugPrimitives = []; // each keeps the debugClear count it was made under, a debugClear since drops it
-
-// draw the live debug primitives with depth test off so they show through walls, drop the expired ones
-function render3DRenderDebug()
-{
-    if (!render3DDebugPrimitives.length) return;
-    render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.clearCount === debugClearCount);
-    if (!debugVideoCaptureIsActive()) // hidden from a video capture like the 2D ones, but they still expire
-    {
-        render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
-        {
-            for (const p of render3DDebugPrimitives)
-                p.draw();
-        });
-    }
-    render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.timer < 0); // a Timer compares as negative until it elapses
-}
-
-// record a debug draw for a time
-function render3DDebugPush(duration, draw)
-{
-    ASSERT(isNumber(duration), 'duration must be a number');
-    debug && glEnable && render3D?.program &&
-        render3DDebugPrimitives.push({timer: new Timer(duration, true), draw, clearCount: debugClearCount}); // real time, like 2D
-}
-
-/** Draw a debug wireframe box
- *  @param {Vector3} pos - Center
- *  @param {Vector3|number} [size] - Full size, a number for a cube
- *  @param {Color} [color]
- *  @param {number} [time] - How long to show it, 0 is one frame
- *  @param {Vector3} [rotation] - vec3(pitch, yaw, roll)
- *  @memberof Render3D */
-function debugBox3D(pos, size=1, color=WHITE, time=0, rotation)
-{
-    const matrix = buildMatrix(pos, rotation, render3DSize3(size));
-    const corner = (i)=> matrix.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
-    render3DDebugPush(time, ()=>
-    {
-        for (let i = 0; i < 8; ++i)
-        for (const bit of [1, 2, 4])
-            if (!(i & bit))
-                render3D.drawLine(corner(i), corner(i | bit), RENDER3D_DEBUG_WIDTH, color);
-    });
-}
-
-/** Draw a debug wireframe sphere as three rings
- *  @param {Vector3} pos - Center
- *  @param {number} [size] - Diameter
- *  @param {Color} [color]
- *  @param {number} [time] - How long to show it, 0 is one frame
- *  @memberof Render3D */
-function debugSphere3D(pos, size=1, color=WHITE, time=0)
-{
-    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
-    const circle = render3DCircle(24), r = size / 2;
-    render3DDebugPush(time, ()=>
-    {
-        for (const ring of [(c, s)=> vec3(c, s, 0), (c, s)=> vec3(c, 0, s), (c, s)=> vec3(0, c, s)])
-        {
-            const points = [];
-            for (let i = 0; i <= 24; ++i)
-                points.push(pos.add(ring(circle[i*2], circle[i*2 + 1]).scale(r)));
-            render3D.drawRibbon(points, RENDER3D_DEBUG_WIDTH, undefined, color);
-        }
-    });
-}
-
-/** Draw a debug line
- *  @param {Vector3} posA
- *  @param {Vector3} posB
- *  @param {Color} [color]
- *  @param {number} [width]
- *  @param {number} [time] - How long to show it, 0 is one frame
- *  @memberof Render3D */
-function debugLine3D(posA, posB, color=WHITE, width=RENDER3D_DEBUG_WIDTH, time=0)
-{
-    posA = posA.copy(), posB = posB.copy(); // where they are now, a timed one stays put when the ends move
-    render3DDebugPush(time, ()=> render3D.drawLine(posA, posB, width, color));
-}
-
-/** Draw a debug point as a small cross of three lines
- *  @param {Vector3} pos
- *  @param {Color} [color]
- *  @param {number} [time] - How long to show it, 0 is one frame
- *  @param {number} [size] - Length of the cross
- *  @memberof Render3D */
-function debugPoint3D(pos, color=WHITE, time=0, size=.2)
-{
-    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
-    render3DDebugPush(time, ()=>
-    {
-        for (const axis of [vec3(size / 2, 0, 0), vec3(0, size / 2, 0), vec3(0, 0, size / 2)])
-            render3D.drawLine(pos.subtract(axis), pos.add(axis), RENDER3D_DEBUG_WIDTH, color);
-    });
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -23698,6 +23593,20 @@ function render3DTextureOf(tileInfo) { return tileInfo instanceof TileInfo ? til
 // tileCollisionLayers is in 2D; each joins when made and leaves when destroyed
 const render3DLevel = [];
 
+// take one of the level's parts out of it, when it is destroyed
+function render3DLevelLeave(o)
+{
+    const i = render3DLevel.indexOf(o);
+    i >= 0 && render3DLevel.splice(i, 1);
+}
+
+// the level's parts are looked up in world space, so they stay upright and unscaled at the root
+function render3DLevelAssertPlaced(o)
+{
+    ASSERT(!o.parent && !o.rotation3D.lengthSquared() && o.scale3D.x === 1 && o.scale3D.y === 1 && o.scale3D.z === 1,
+        'a height map or voxel map stays upright and unscaled at the root, its lookups are in world space');
+}
+
 // this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 // the tiles of objects made from a whole TextureInfo, they cover all of it even after the texture is resized
@@ -23982,17 +23891,37 @@ function render3DBeginStrip(count, tileInfo)
     if (r.streamCount && (textureInfo !== r.streamTileInfo || render3DStateChanged(r.streamState)
         || r.streamCount + count > RENDER3D_MAX_STREAM_VERTS))
         r.flush();
-    if (!r.depthTest && !r.shadowPass && r.instanceMeshes.length)
-    {
-        // as in drawMesh, what was drawn before goes under it, a stream open with the same state included,
-        // so each such strip splits the batches: one draw per object for meshes each with an overlay
-        r.flush();
-        render3DFlushInstances();
-    }
+    render3DFlushBeforeOverlay();
     if (!r.streamCount)
         r.streamState = render3DCaptureBatchState();
     r.streamTileInfo = textureInfo;
     return render3DGetTileUVs(tileInfo);
+}
+
+// a draw that is not depth tested goes over what is already drawn, so the batches drawn before it go first, or they
+// would draw at the end of the stage and cover it whatever its render order; a stream open with the same state is
+// drawn too, so each such draw splits the batches: one draw per object for meshes each with an overlay
+function render3DFlushBeforeOverlay()
+{
+    const r = render3D;
+    if (r.depthTest || r.shadowPass || !r.instanceMeshes.length) return;
+    r.flush();
+    render3DFlushInstances();
+}
+
+// upload a mesh that is new, changed, or from before the context was lost
+function render3DMeshUpload(mesh)
+{
+    if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== render3D.contextGeneration)
+        mesh.upload();
+}
+
+// an object's size3D in the world, grown by its scale and its parents', the size its sprite is drawn at and that
+// collecting, picking and collision measure it at
+function render3DWorldSize(o, m)
+{
+    const s = o.size3D;
+    return vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
 }
 
 // the half axes of a camera facing quad of a size turned by an angle, right then up, in one shared array
@@ -25087,29 +25016,9 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth=heigh
  */
 function buildSky(topColor=hsl(.6, .8, .55), horizonColor=hsl(.6, 1, .9), bottomColor=horizonColor, sides=16, rings=8)
 {
-    const mesh = new Mesh;
-    const point = (i, a)=>
-    {
-        const e = i / rings * PI - PI/2;
-        return vec3(sin(a) * cos(e), sin(e), cos(a) * cos(e));
-    };
-    const color = (i)=>
-    {
-        const y = point(i, 0).y;
-        return y < 0 ? horizonColor.lerp(bottomColor, -y) : horizonColor.lerp(topColor, y);
-    };
-    for (let i = 0; i < rings; ++i)
-    {
-        // bottom point then top point per column, the reverse of the lathe, so the front faces inward
-        const points = [], colors = [];
-        for (let j = 0; j <= sides; ++j)
-        {
-            const a = j / sides * 2 * PI;
-            points.push(point(i, a), point(i + 1, a));
-            colors.push(color(i), color(i + 1));
-        }
-        mesh.addStrip(points, undefined, undefined, colors);
-    }
+    // a sphere turned inside out so it is seen from within, each point colored by how high it is
+    const mesh = buildSphere(2, sides, rings, true).flipNormals();
+    mesh.colors = mesh.points.map(p=> p.y < 0 ? horizonColor.lerp(bottomColor, -p.y) : horizonColor.lerp(topColor, p.y));
     return mesh;
 }
 
@@ -25405,12 +25314,10 @@ class EngineObject3D extends EngineObject
             render3D.drawMesh(this.mesh, matrix, this.tileInfo, this.color);
         else if (this.tileInfo)
         {
-            // a sprite: size3D grown by its own scale and its parents', the same world size the
-            // collect, pick and solid collision helpers measure it at
-            const m = matrix.m;
-            render3D.drawBillboard(vec3(m[12], m[13], m[14]),
-                vec2(this.size3D.x * hypot(m[0], m[1], m[2]), this.size3D.y * hypot(m[4], m[5], m[6])),
-                this.tileInfo, this.color, this.rotation3D.z, this.upright);
+            // a sprite, at the world size the collect, pick and solid collision helpers measure it at
+            const m = matrix.m, size = render3DWorldSize(this, m);
+            render3D.drawBillboard(vec3(m[12], m[13], m[14]), vec2(size.x, size.y), this.tileInfo, this.color,
+                this.rotation3D.z, this.upright);
         }
     }
 }
@@ -25597,7 +25504,7 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
         const m = render3DObjectMatrix(o).m, s = o.size3D; // the box in world space, scaled by the object and its parents
         if (!(s.x || s.y || s.z)) continue;
         const center = vec3(m[12], m[13], m[14]);
-        const worldSize = testCenters ? vec3() : vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
+        const worldSize = testCenters ? vec3() : render3DWorldSize(o, m);
         let hit;
         if (box)
             hit = isOverlapping3D(pos, box, center, worldSize);
@@ -25657,8 +25564,7 @@ function render3DRaycastObject(ray, o)
 // as it was last drawn; where the ray meets its plane, inside its half axes
 function render3DRaycastSprite(ray, o, matrix)
 {
-    const m = matrix.m, center = matrix.getTranslation();
-    const size = vec2(o.size3D.x * hypot(m[0], m[1], m[2]), o.size3D.y * hypot(m[4], m[5], m[6]));
+    const center = matrix.getTranslation(), worldSize = render3DWorldSize(o, matrix.m), size = vec2(worldSize.x, worldSize.y);
     if (!(size.x > 0 && size.y > 0)) return; // nothing to hit
     if (!ray.direction.lengthSquared()) // a ray of no length is where it starts
         return render3DRaycastDisc(ray, center, hypot(size.x, size.y) / 2);
@@ -25837,8 +25743,7 @@ class InstancedMesh3D extends EngineObject3D
             return r.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
         if (!mesh || !this.count || !render3DCanDraw()) return;
         if (r.shadowPass && !r.lighting) return; // unlit things cast no shadow
-        if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== r.contextGeneration)
-            mesh.upload();
+        render3DMeshUpload(mesh);
         if (!mesh.bufferCount) return;
         this.radius = this.reach + mesh.radius * this.maxScale; // the mesh may have grown since
         if (r.frustumCulling && !render3DSphereVisible(0, 0, 0, this.radius)) return;
@@ -25871,7 +25776,7 @@ class InstancedMesh3D extends EngineObject3D
 
         // one draw under the object's state, the mesh setting the culling as drawMesh does
         r.flush();
-        r.depthTest || r.shadowPass || render3DFlushInstances(); // as in drawMesh, what was drawn before goes under it
+        render3DFlushBeforeOverlay(); // as in drawMesh, what was drawn before goes under it
         const cullBackFaces = r.cullBackFaces, tileInfo = this.tileInfo;
         r.cullBackFaces = !mesh.doubleSided;
         render3DDrawInstanced(mesh, this.buffer, this.count, render3DTextureOf(tileInfo), r);
@@ -26564,16 +26469,14 @@ class HeightMap extends EngineObject3D
     update()
     {
         super.update();
-        ASSERT(!this.parent && !this.rotation3D.lengthSquared() && this.scale3D.x === 1 && this.scale3D.y === 1 &&
-            this.scale3D.z === 1, 'a HeightMap stays upright and unscaled at the root, its lookups do not turn with it');
+        render3DLevelAssertPlaced(this);
     }
 
     /** Destroy the map, it leaves the level's collision
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        const i = render3DLevel.indexOf(this);
-        i >= 0 && render3DLevel.splice(i, 1);
+        render3DLevelLeave(this);
         super.destroy(immediate);
     }
 }
@@ -27051,8 +26954,7 @@ class ParticleEmitter3D extends EngineObject3D
         let data, textureInfo, uv, lit;
         if (instanced)
         {
-            if (!quad.buffer || quad.dirty || quad.contextGeneration !== r.contextGeneration)
-                quad.upload();
+            render3DMeshUpload(quad);
             textureInfo = render3DTextureOf(texture);
             uv = render3DGetTileUVs(texture);
             lit = r.lighting;
@@ -28188,8 +28090,7 @@ class VoxelMap extends EngineObject3D
     update()
     {
         super.update();
-        ASSERT(!this.parent && !this.rotation3D.lengthSquared() && this.scale3D.x === 1 && this.scale3D.y === 1 &&
-            this.scale3D.z === 1, 'a VoxelMap stays upright and unscaled at the root, its cells are world units from its corner');
+        render3DLevelAssertPlaced(this);
     }
 
     /** Draw the solid and see-through blocks, the transparent ones draw through its child */
@@ -28214,8 +28115,7 @@ class VoxelMap extends EngineObject3D
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        const i = render3DLevel.indexOf(this);
-        i >= 0 && render3DLevel.splice(i, 1);
+        render3DLevelLeave(this);
         for (const mesh of [...this.chunkMeshes, ...this.chunkTransparentMeshes])
             mesh?.dispose();
         super.destroy(immediate);
@@ -29535,6 +29435,114 @@ function tweakElement(tag, parent, style='', text='')
 // plugin
 
 debug && engineAddPlugin(undefined, tweakRender);
+
+/*
+ * LittleJS 3D Debug Plugin
+ * - debugBox3D, debugSphere3D, debugLine3D and debugPoint3D, drawn on top of the 3D scene like the 2D debug functions
+ * - Debug builds only, like the 2D ones: engineRelease.js has empty stubs for these, so release builds carry none of it
+ * - Goes after the Render3D plugin, part of its Render3D namespace
+ */
+
+///////////////////////////////////////////////////////////////////////////////
+
+const RENDER3D_DEBUG_WIDTH = .05; // line width of the debug primitives
+
+let render3DDebugPrimitives = []; // each keeps the debugClear count it was made under, a debugClear since drops it
+
+// draw the live debug primitives with depth test off so they show through walls, drop the expired ones
+function render3DRenderDebug()
+{
+    if (!render3DDebugPrimitives.length) return;
+    render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.clearCount === debugClearCount);
+    if (!debugVideoCaptureIsActive()) // hidden from a video capture like the 2D ones, but they still expire
+    {
+        render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
+        {
+            for (const p of render3DDebugPrimitives)
+                p.draw();
+        });
+    }
+    render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.timer < 0); // a Timer compares as negative until it elapses
+}
+
+// record a debug draw for a time
+function render3DDebugPush(duration, draw)
+{
+    ASSERT(isNumber(duration), 'duration must be a number');
+    debug && glEnable && render3D?.program &&
+        render3DDebugPrimitives.push({timer: new Timer(duration, true), draw, clearCount: debugClearCount}); // real time, like 2D
+}
+
+/** Draw a debug wireframe box
+ *  @param {Vector3} pos - Center
+ *  @param {Vector3|number} [size] - Full size, a number for a cube
+ *  @param {Color} [color]
+ *  @param {number} [time] - How long to show it, 0 is one frame
+ *  @param {Vector3} [rotation] - vec3(pitch, yaw, roll)
+ *  @memberof Render3D */
+function debugBox3D(pos, size=1, color=WHITE, time=0, rotation)
+{
+    const matrix = buildMatrix(pos, rotation, render3DSize3(size));
+    const corner = (i)=> matrix.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
+    render3DDebugPush(time, ()=>
+    {
+        for (let i = 0; i < 8; ++i)
+        for (const bit of [1, 2, 4])
+            if (!(i & bit))
+                render3D.drawLine(corner(i), corner(i | bit), RENDER3D_DEBUG_WIDTH, color);
+    });
+}
+
+/** Draw a debug wireframe sphere as three rings
+ *  @param {Vector3} pos - Center
+ *  @param {number} [size] - Diameter
+ *  @param {Color} [color]
+ *  @param {number} [time] - How long to show it, 0 is one frame
+ *  @memberof Render3D */
+function debugSphere3D(pos, size=1, color=WHITE, time=0)
+{
+    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
+    const circle = render3DCircle(24), r = size / 2;
+    render3DDebugPush(time, ()=>
+    {
+        for (const ring of [(c, s)=> vec3(c, s, 0), (c, s)=> vec3(c, 0, s), (c, s)=> vec3(0, c, s)])
+        {
+            const points = [];
+            for (let i = 0; i <= 24; ++i)
+                points.push(pos.add(ring(circle[i*2], circle[i*2 + 1]).scale(r)));
+            render3D.drawRibbon(points, RENDER3D_DEBUG_WIDTH, undefined, color);
+        }
+    });
+}
+
+/** Draw a debug line
+ *  @param {Vector3} posA
+ *  @param {Vector3} posB
+ *  @param {Color} [color]
+ *  @param {number} [width]
+ *  @param {number} [time] - How long to show it, 0 is one frame
+ *  @memberof Render3D */
+function debugLine3D(posA, posB, color=WHITE, width=RENDER3D_DEBUG_WIDTH, time=0)
+{
+    posA = posA.copy(), posB = posB.copy(); // where they are now, a timed one stays put when the ends move
+    render3DDebugPush(time, ()=> render3D.drawLine(posA, posB, width, color));
+}
+
+/** Draw a debug point as a small cross of three lines
+ *  @param {Vector3} pos
+ *  @param {Color} [color]
+ *  @param {number} [time] - How long to show it, 0 is one frame
+ *  @param {number} [size] - Length of the cross
+ *  @memberof Render3D */
+function debugPoint3D(pos, color=WHITE, time=0, size=.2)
+{
+    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
+    render3DDebugPush(time, ()=>
+    {
+        for (const axis of [vec3(size / 2, 0, 0), vec3(0, size / 2, 0), vec3(0, 0, size / 2)])
+            render3D.drawLine(pos.subtract(axis), pos.add(axis), RENDER3D_DEBUG_WIDTH, color);
+    });
+}
 
 /**
  * LittleJS Level Editor

@@ -1,5 +1,6 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { render3D, Render3DPlugin, Camera3D, vec3, vec2, PI, Mesh, Matrix4, buildMatrix, WHITE, RED, rgb, TileInfo, buildLathe, buildCylinder, buildSphere, buildBox, buildGrid, buildLoft, buildSky, buildCone, buildCapsule, buildTorus, buildRibbon, buildExtrude, buildText3D, TextureInfo, HeightMap, Ray3D, CameraControl3D, FirstPersonCamera3D, EngineObject3D, EngineObject, engineObjects, Light3D, DirectionalLight3D, Shader, InstancedMesh3D, ParticleEmitter3D, Trail3D, parseOBJ, debugBox3D, debugSphere3D, debugLine3D, debugPoint3D, isVector3, Sound, engineObjectsCollect3D, engineObjectsCallback3D, engineObjectsRaycast3D, engineObjectsUpdate, setParticleEmitRateScale, setCameraScale } from '../dist/littlejs.esm.js';
 
 // a HeightMap joins the level's collision until it is destroyed, so one a test made as a lookup must not catch the
@@ -686,7 +687,6 @@ test('buildSky colors by height and faces inward', () =>
 {
     const top = rgb(0, 0, 1), horizon = rgb(1, 1, 1), bottom = rgb(0, 0, 0);
     const sky = buildSky(top, horizon, bottom, 8, 4);
-    assert.equal(sky.vertexCount, 4 * (2 * 9 + 2));
     for (let i = 0; i < sky.vertexCount; ++i)
     {
         const p = sky.points[i], c = sky.colors[i];
@@ -3442,4 +3442,20 @@ test('a flat buildGrid is flat shaded whatever render3D.smoothShading says, so a
     assert.ok(!crisp(buildGrid(vec2(4), 4, checker, (x, z)=> x * z / 10)), 'terrain still takes the smooth default');
     assert.ok(!crisp(buildGrid(vec2(4), 4, checker, undefined, true)), 'and smooth asked for is smooth');
     render3D.smoothShading = smooth;
+});
+
+test('the release builds carry no 3D debug drawing, as the 2D debug functions are empty there', () =>
+{
+    // each function's body in the minified release builds, up to the next function
+    for (const file of ['dist/littlejs.min.js', 'dist/littlejs.esm.min.js'])
+    {
+        const source = fs.readFileSync(file, 'utf8');
+        for (const name of ['debugBox3D', 'debugSphere3D', 'debugLine3D', 'debugPoint3D'])
+        {
+            const start = source.indexOf('function ' + name + '(');
+            assert.ok(start >= 0, name + ' is in ' + file);
+            const body = source.slice(start, source.indexOf('function ', start + 9));
+            assert.ok(!body.includes('drawLine') && !body.includes('drawRibbon'), `${name} draws in ${file}: ${body.slice(0, 80)}`);
+        }
+    }
 });

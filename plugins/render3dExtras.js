@@ -608,16 +608,14 @@ class HeightMap extends EngineObject3D
     update()
     {
         super.update();
-        ASSERT(!this.parent && !this.rotation3D.lengthSquared() && this.scale3D.x === 1 && this.scale3D.y === 1 &&
-            this.scale3D.z === 1, 'a HeightMap stays upright and unscaled at the root, its lookups do not turn with it');
+        render3DLevelAssertPlaced(this);
     }
 
     /** Destroy the map, it leaves the level's collision
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        const i = render3DLevel.indexOf(this);
-        i >= 0 && render3DLevel.splice(i, 1);
+        render3DLevelLeave(this);
         super.destroy(immediate);
     }
 }
@@ -1095,8 +1093,7 @@ class ParticleEmitter3D extends EngineObject3D
         let data, textureInfo, uv, lit;
         if (instanced)
         {
-            if (!quad.buffer || quad.dirty || quad.contextGeneration !== r.contextGeneration)
-                quad.upload();
+            render3DMeshUpload(quad);
             textureInfo = render3DTextureOf(texture);
             uv = render3DGetTileUVs(texture);
             lit = r.lighting;

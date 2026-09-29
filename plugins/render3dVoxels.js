@@ -467,8 +467,7 @@ class VoxelMap extends EngineObject3D
     update()
     {
         super.update();
-        ASSERT(!this.parent && !this.rotation3D.lengthSquared() && this.scale3D.x === 1 && this.scale3D.y === 1 &&
-            this.scale3D.z === 1, 'a VoxelMap stays upright and unscaled at the root, its cells are world units from its corner');
+        render3DLevelAssertPlaced(this);
     }
 
     /** Draw the solid and see-through blocks, the transparent ones draw through its child */
@@ -493,8 +492,7 @@ class VoxelMap extends EngineObject3D
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        const i = render3DLevel.indexOf(this);
-        i >= 0 && render3DLevel.splice(i, 1);
+        render3DLevelLeave(this);
         for (const mesh of [...this.chunkMeshes, ...this.chunkTransparentMeshes])
             mesh?.dispose();
         super.destroy(immediate);

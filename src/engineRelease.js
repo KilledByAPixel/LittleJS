@@ -58,3 +58,10 @@ function editorMapLoaded(){}
 function editorJSONFetched(){}
 function editorPreRender(){}
 function editorObjectMade(){}
+
+// the 3D debug draws are debug only too
+function debugBox3D(){}
+function debugSphere3D(){}
+function debugLine3D(){}
+function debugPoint3D(){}
+function render3DRenderDebug(){}

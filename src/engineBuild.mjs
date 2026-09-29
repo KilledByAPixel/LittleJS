@@ -61,6 +61,7 @@ const enginePluginFiles =
 const engineDebugFiles =
 [
     `${PLUGIN_FOLDER}/tweakables.js`,
+    `${PLUGIN_FOLDER}/render3dDebug.js`,
     `${SOURCE_FOLDER}/engineEditor.js`,
 ];
 const engineExtraFiles =
