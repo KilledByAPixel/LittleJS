@@ -181,6 +181,11 @@ export
     debugLine3D,
     debugPoint3D,
 
+    // 3D Level
+    level3DAddType,
+    level3DAddMesh,
+    level3DLoad,
+
     // Three.js
     threeJS,
     ThreeJSPlugin,

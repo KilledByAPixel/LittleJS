@@ -74,3 +74,5 @@ function render3DRenderDebug(){}
 // the free camera and the 3D level editor are debug only
 function editor3DCameraBegin(){}
 function editor3DCameraEnd(){}
+function editor3DLevelLoaded(){}
+function editor3DObjectMade(){}

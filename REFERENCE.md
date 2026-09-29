@@ -1602,6 +1602,29 @@ geometry.dispose()                        // optional here, a collected mesh fre
                                           // frees it now, and setMesh frees the mesh it replaces
 ```
 
+## LittleJS 3D Levels
+- A 3D level is a list of objects as plain JSON, simple enough to write by hand
+- Box, Sphere, Cylinder and Light are built in, to block out and light a level with no code
+- A game names its own types, as objectLayersAddType does in 2D
+- The 3D level editor, in debug builds, edits the level a game loaded: 0 on the debug overlay
+
+```javascript
+level3DAddType(name, make, defaults={}, tileInfo) // A type by name: a class made with new make(pos3D, properties),
+                                                  // or an arrow function called with them, like a player start
+level3DAddMesh(name, mesh, tileInfo, color=WHITE) // A static prop type of a mesh, with color and solid properties
+level3DLoad(level)                                // Make every object of a level, returns what was made
+
+// A level, rotation in degrees, and rotation, scale and properties left out when they are the default
+{"littlejs3D": 1, "objects": [
+    {"id": 1, "type": "Box", "pos": [0, 0.5, 0], "scale": [4, 1, 4], "properties": {"color": "#88aa55"}},
+    {"id": 2, "type": "Crate", "pos": [2, 1.5, 1], "rotation": [0, 45, 0], "properties": {"health": 5}},
+    {"id": 3, "type": "PlayerStart", "pos": [0, 2, 3]}]}
+
+// Built-in types and their properties
+Box, Sphere, Cylinder   // color, tile (-1 for none), solid (true); 1 unit across, the scale is the size
+Light                   // color, radius (5), intensity (1)
+```
+
 ## LittleJS Three.js Integration
 - Optional plugin that renders a three.js scene on a canvas behind the LittleJS canvas
 - You load three.js yourself (import map or bundler) and pass the module in

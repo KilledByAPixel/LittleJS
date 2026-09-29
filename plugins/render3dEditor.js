@@ -136,6 +136,28 @@ function editor3DFreeCameraUpdate(seconds)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// the level
+
+/** @type {Object|undefined} - The level being edited, the one given to level3DLoad last */
+let editor3DLevel;
+
+// what the game made for each object of the level, by the object's id
+const editor3DInstances = new Map;
+
+// called by level3DLoad before it makes the objects: the editor takes the level
+function editor3DLevelLoaded(level)
+{
+    editor3DLevel = level;
+    editor3DInstances.clear();
+}
+
+// called by level3DLoad for each object, with what its type made
+function editor3DObjectMade(object, made)
+{
+    made && typeof made === 'object' && editor3DInstances.set(object.id, made);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // plugin
 
 function editor3DUpdate()

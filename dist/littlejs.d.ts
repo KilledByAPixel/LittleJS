@@ -9402,6 +9402,45 @@ declare module "littlejsengine" {
      *  @param {number} [size] - Length of the cross
      *  @memberof Render3D */
     export function debugPoint3D(pos: Vector3, color?: Color, time?: number, size?: number): void;
+    /** Add a type of object, so level3DLoad makes one wherever a level has an object of that type
+     *  - The name is a string because minified builds rename classes
+     *  - A class, or any function with a prototype, is made with new make(pos3D, properties); an arrow function is
+     *    called as make(pos3D, properties), for what is not an object, like a player start
+     *  - properties is the defaults with the object's own values over them, and each is also set on what was made
+     *  - Give a class a constructor of its own that takes the position: one that hands every argument on to
+     *    EngineObject3D would hand it the properties as its mesh
+     *  - An EngineObject3D then gets the object's rotation, and its scale times the scale it was made with
+     *  - Adding a name again replaces it, Box, Sphere, Cylinder and Light too
+     *  @param {string} name - The type the objects have in the level
+     *  @param {Function} make - A class made at each object's position, or a function called with it
+     *  @param {Object} [defaults] - Properties of each one made, the level editor shows inputs for them
+     *  @param {TileInfo} [tileInfo] - An icon for the level editor
+     *  @memberof Level3D
+     *  @example
+     *  level3DAddType('Crate', Crate, {health: 3});
+     *  level3DAddType('PlayerStart', (pos)=> playerStart = pos); */
+    export function level3DAddType(name: string, make: Function, defaults?: any, tileInfo?: TileInfo): void;
+    /** Add a type that is a mesh and nothing more, a static prop with no class to write, for a built mesh or a model
+     *  - Each object has a color and a solid property, solid collides as the box around the mesh
+     *  @param {string} name - The type the objects have in the level
+     *  @param {Mesh} mesh - Shared by every object of the type
+     *  @param {TileInfo} [tileInfo] - Its texture
+     *  @param {Color} [color] - Its color, an object's own color property goes over it
+     *  @memberof Level3D
+     *  @example
+     *  level3DAddMesh('Tree', treeMesh, tile(4)); */
+    export function level3DAddMesh(name: string, mesh: Mesh, tileInfo?: TileInfo, color?: Color): void;
+    /** Make the objects of a level, each from the type added for its name
+     *  - The level is an object: {littlejs3D: 1, objects: [{id, type, pos: [x, y, z]}, ...]}, and {} is a new one
+     *  - rotation is pitch, yaw and roll in degrees, scale is a number for each axis, both left out when they are
+     *    the default, and properties holds what differs from the type's defaults
+     *  - A Color property is a #rrggbb or #rrggbbaa string, a Vector2 or Vector3 an array, as the default says
+     *  - An object whose type was not added is skipped, with a warning in debug builds
+     *  - What a file written by hand gets wrong uses the default
+     *  @param {Object} level - The level, the level editor edits this same object
+     *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
+     *  @memberof Level3D */
+    export function level3DLoad(level: any): Array<any>;
     /**
      * LittleJS Three.js Plugin
      * - Renders a three.js scene on a canvas behind the LittleJS canvases
