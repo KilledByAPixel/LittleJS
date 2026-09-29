@@ -769,6 +769,24 @@ options.paused       // Start in paused state (default false)
 tweenStopAll()                 // Stop every active tween (e.g. on level reset)
 ```
 
+## LittleJS Scene System
+- A game's states, like a title, the game and game over, as scene objects
+- `setScene` leaves the current scene, destroys every object that is not persistent, and enters the next
+- Pause is the engine's `paused`: a scene's update stops with gameUpdate, its render hooks keep drawing
+- See the Scenes short and the Box2D example
+
+```javascript
+setScene(scene)      // Leave the current scene, clear objects, enter scene; the current one restarts it
+getScene()           // The current scene, or undefined
+
+// A scene is any object, every hook is optional
+scene.enter()        // After the old scene left and the objects were cleared
+scene.leave()        // Before the objects are cleared, while the scene is still current
+scene.update()       // Each update after gameUpdate, not while paused
+scene.render()       // Before gameRender, under the objects
+scene.renderPost()   // After gameRenderPost, over everything, while paused too
+```
+
 ## LittleJS PathFinding System
 - A* pathfinding on a grid
 - Works with a TileCollisionLayer or a bare grid with custom walkability

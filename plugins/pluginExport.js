@@ -103,6 +103,10 @@ export
     tweenUpdate,
     Ease,
 
+    // Scene System
+    setScene,
+    getScene,
+
     // Path Finding
     PathFinder,
     PathFinderNode,

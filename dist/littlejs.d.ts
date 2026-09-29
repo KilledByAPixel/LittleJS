@@ -89,6 +89,31 @@ declare module "littlejsengine" {
      */
     export type ParticleCollideCallback = (particle: Particle, tileData: number, pos: Vector2) => boolean;
     /**
+     * A scene, any object with the hooks it needs, each optional and called as a method so this is the scene
+     */
+    export type Scene = {
+        /**
+         * - Called when the scene starts, after the old one left and the objects were destroyed
+         */
+        enter?: () => void;
+        /**
+         * - Called before the next scene starts, while the scene is current and its objects are still there
+         */
+        leave?: () => void;
+        /**
+         * - Called each update after gameUpdate, not while paused
+         */
+        update?: () => void;
+        /**
+         * - Called before gameRender, to draw under the objects
+         */
+        render?: () => void;
+        /**
+         * - Called after gameRenderPost, to draw over everything, while paused too
+         */
+        renderPost?: () => void;
+    };
+    /**
      * What VoxelMap.raycast finds: how far along the ray, the block's cell and type, and the normal of the face it comes in
      * through
      */
@@ -6788,6 +6813,16 @@ declare module "littlejsengine" {
         function PIECEWISE(...fns: ((arg0: number) => number)[]): (arg0: number) => number;
         function BEZIER(x1: number, y1: number, x2: number, y2: number): (arg0: number) => number;
     }
+    /** Leave the current scene, destroy every object that is not persistent, and enter the next scene
+     *  - Setting the current scene again restarts it, and no scene leaves the game with none
+     *  - The switch happens at once, it can be called from anywhere but a scene's leave
+     *  @param {Scene} [scene] - The scene to enter
+     *  @memberof SceneSystem */
+    export function setScene(scene?: Scene): void;
+    /** Get the current scene
+     *  @return {Scene|undefined}
+     *  @memberof SceneSystem */
+    export function getScene(): Scene | undefined;
     /** Grid pathfinder using A* with two optional smoothing passes.
      *  @memberof PathFinding
      *  @example
