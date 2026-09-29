@@ -23,12 +23,13 @@ frameRate             // Fixed frame rate for updates (60)
 frame                 // Current update frame
 time                  // Game time since start in seconds (stops when paused)
 timeReal              // Real time since start in seconds (keeps running when paused; the debug speed keys scale it)
-timeDelta             // Time between updates (1/60)
-timeScale = 1         // Game speed, more or fewer fixed updates per second; timeDelta stays 1/60
+timeDelta             // Seconds the update covers: 1/60, or the display frame's time with engineVariableStep
+timeScale = 1         // Game speed, more or fewer fixed updates per second; with engineVariableStep it scales timeDelta
 paused                // Is the game paused? (set with setPaused)
 headlessMode = false  // Run without rendering for testing/servers (set before engineInit)
 engineManualStep      // Advance only via engineStep, default false; can be turned on and off while running
 engineStep(frames=1)  // Advance the engine manually, needs engineManualStep
+engineVariableStep    // One update per display frame, default false; velocity, gravity and other per-frame values are not scaled
 ```
 
 ### Headless testing

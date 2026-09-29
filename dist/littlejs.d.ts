@@ -171,11 +171,12 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Engine */
     export const frameRate: number;
-    /** How many seconds each frame lasts, engine uses a fixed time step
+    /** How many seconds the update covers: 1/60 with the fixed time step, or with engineVariableStep the time of the
+     *  display frame it runs on, times timeScale; while paused it keeps the last update's
      *  @type {number}
      *  @default 1/60
      *  @memberof Engine */
-    export const timeDelta: number;
+    export let timeDelta: number;
     /** Array containing all engine objects
      *  @type {Array<EngineObject>}
      *  @memberof Engine */
@@ -568,6 +569,14 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let engineManualStep: boolean;
+    /** Run one update per display frame with timeDelta the time it covers, in place of fixed updates at frameRate
+     *  - Per-frame values are not scaled: velocity, gravity, damping and particle speeds act once per update, so a
+     *    game that turns this on scales its own movement by timeDelta
+     *  - Values in seconds follow real time as they are: time, timers, particle emit rate and life, animation, Box2D
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let engineVariableStep: boolean;
     /** Default size of tiles in pixels
      *  @type {Vector2}
      *  @default Vector2(16,16)
@@ -889,6 +898,11 @@ declare module "littlejsengine" {
      *  @param {boolean} [enable]
      *  @memberof Settings */
     export function setEngineManualStep(enable?: boolean): void;
+    /** Set if the engine runs one update per display frame with timeDelta the time it covers
+     *  Can be set before engineInit or while running; turned off it goes back to fixed updates at frameRate
+     *  @param {boolean} [enable]
+     *  @memberof Settings */
+    export function setEngineVariableStep(enable?: boolean): void;
     /** Set if WebGL rendering is enabled
      *  @param {boolean} enable
      *  @memberof Settings */

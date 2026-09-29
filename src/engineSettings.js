@@ -135,6 +135,15 @@ let headlessMode = false;
  *  @memberof Settings */
 let engineManualStep = false;
 
+/** Run one update per display frame with timeDelta the time it covers, in place of fixed updates at frameRate
+ *  - Per-frame values are not scaled: velocity, gravity, damping and particle speeds act once per update, so a
+ *    game that turns this on scales its own movement by timeDelta
+ *  - Values in seconds follow real time as they are: time, timers, particle emit rate and life, animation, Box2D
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let engineVariableStep = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
 
@@ -553,6 +562,23 @@ function setEngineManualStep(enable=true)
         frameTimeLastMS = performance.now();
         engineScheduleFrame();
     }
+}
+
+/** Set if the engine runs one update per display frame with timeDelta the time it covers
+ *  Can be set before engineInit or while running; turned off it goes back to fixed updates at frameRate
+ *  @param {boolean} [enable]
+ *  @memberof Settings */
+function setEngineVariableStep(enable=true)
+{
+    if (engineVariableStep && !enable)
+    {
+        // fixed time goes on one fixed step after the last update, and timeDelta is the fixed step again
+        timeFixedStart = time + 1 / frameRate;
+        frameFixedStart = frame;
+        timeDelta = 1 / frameRate;
+        frameTimeBufferMS = engineManualStep ? -.5e3 / frameRate : 0;
+    }
+    engineVariableStep = enable;
 }
 
 /** Set whether the draw and debug functions draw in screen space when a call leaves screenSpace out

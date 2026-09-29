@@ -43,11 +43,12 @@ const engineVersion = '1.20.0';
  *  @memberof Engine */
 const frameRate = 60;
 
-/** How many seconds each frame lasts, engine uses a fixed time step
+/** How many seconds the update covers: 1/60 with the fixed time step, or with engineVariableStep the time of the
+ *  display frame it runs on, times timeScale; while paused it keeps the last update's
  *  @type {number}
  *  @default 1/60
  *  @memberof Engine */
-const timeDelta = 1/frameRate;
+let timeDelta = 1/frameRate;
 
 /** Array containing all engine objects
  *  @type {Array<EngineObject>}
@@ -135,6 +136,9 @@ function engineSmoothDelta(deltaMS)
     frameDeltaCarryAverageMS += (frameDeltaCarryMS - frameDeltaCarryAverageMS) / 32;
     return smoothMS;
 }
+
+// where the fixed step's time counts from, moved when the variable step hands back so time goes on from there
+let timeFixedStart = 0, frameFixedStart = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
 let engineFrameScheduled = false; // a frame of the loop is asked for and has not run yet
@@ -294,32 +298,59 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         timeReal += frameTimeDeltaMS * debugScale / 1e3;
         const combinedScale = timeScale * debugScale;
         frameTimeDeltaMS *= combinedScale;
-        // paused or a time scale of 0 is frozen: it ticks on unscaled time, so the update rate stays fixed instead of
-        // following however fast the display refreshes, and gameUpdatePost and input still run to leave it
-        const frozen = paused || !combinedScale;
-        frameTimeBufferMS += frozen ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
-        frameTimeBufferMS = min(frameTimeBufferMS, 50 * (frozen ? 1 : max(1, combinedScale))); // clamp min framerate
-
-        // apply time delta smoothing, improves smoothness of framerate in some browsers
-        let wasUpdated = false, deltaSmooth = 0;
-        if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
+        let wasUpdated = false;
+        if (engineVariableStep)
         {
-            // force at least one update each frame since it is waiting for refresh
-            deltaSmooth = frameTimeBufferMS;
-            frameTimeBufferMS = 0;
+            // one update for the frame with timeDelta the time it covers, per-frame values are the game's to scale
+            if (frameTimeDeltaUnscaledMS > 0)
+            {
+                // frozen stands still as in the fixed step, and timeDelta keeps the last update's
+                const frozenTick = paused || !combinedScale;
+                if (!frozenTick)
+                {
+                    timeDelta = min(frameTimeDeltaUnscaledMS, 50) * combinedScale / 1e3; // clamp min framerate
+                    time += timeDelta;
+                    ++frame;
+                }
+                engineTick(frozenTick);
+            }
+        }
+        else
+        {
+            // paused or a time scale of 0 is frozen: it ticks on unscaled time, so the update rate stays fixed instead
+            // of following however fast the display refreshes, and gameUpdatePost and input still run to leave it
+            const frozen = paused || !combinedScale;
+            frameTimeBufferMS += frozen ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
+            frameTimeBufferMS = min(frameTimeBufferMS, 50 * (frozen ? 1 : max(1, combinedScale))); // clamp min framerate
+
+            // apply time delta smoothing, improves smoothness of framerate in some browsers
+            let deltaSmooth = 0;
+            if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
+            {
+                // force at least one update each frame since it is waiting for refresh
+                deltaSmooth = frameTimeBufferMS;
+                frameTimeBufferMS = 0;
+            }
+
+            // update multiple frames if necessary in case of slow framerate
+            for (; frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
+            {
+                // read again each tick, so a pause set by the game stops the rest of this frame's catch-up ticks
+                const frozenTick = paused || !(timeScale * debugScale);
+
+                // increment frame and update time, frozen does not advance time
+                if (!frozenTick)
+                    time = timeFixedStart + (frame++ - frameFixedStart) / frameRate;
+                engineTick(frozenTick);
+            }
+
+            // add the time smoothing back in
+            frameTimeBufferMS += deltaSmooth;
         }
 
-        // update multiple frames if necessary in case of slow framerate
-        for (; frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
+        // one tick of the loop: update game and objects, when frozen update everything except them
+        function engineTick(frozenTick)
         {
-            // read again each tick, so a pause set by the game stops the rest of this frame's catch-up ticks
-            const frozenTick = paused || !(timeScale * debugScale);
-
-            // increment frame and update time, frozen does not advance time
-            if (!frozenTick)
-                time = frame++ / frameRate;
-
-            // update game and objects, when frozen update everything except them
             wasUpdated = true;
             engineUpdateCanvas();
             inputUpdate();
@@ -345,9 +376,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (debugVideoCaptureIsActive())
                 renderFrame();
         }
-
-        // add the time smoothing back in
-        frameTimeBufferMS += deltaSmooth;
 
         // manual step turned on by this frame's updates, set the buffer the loop and smoothing just moved again
         if (engineManualStep && !manualStepAtStart)
@@ -2573,6 +2601,15 @@ let headlessMode = false;
  *  @memberof Settings */
 let engineManualStep = false;
 
+/** Run one update per display frame with timeDelta the time it covers, in place of fixed updates at frameRate
+ *  - Per-frame values are not scaled: velocity, gravity, damping and particle speeds act once per update, so a
+ *    game that turns this on scales its own movement by timeDelta
+ *  - Values in seconds follow real time as they are: time, timers, particle emit rate and life, animation, Box2D
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let engineVariableStep = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
 
@@ -2991,6 +3028,23 @@ function setEngineManualStep(enable=true)
         frameTimeLastMS = performance.now();
         engineScheduleFrame();
     }
+}
+
+/** Set if the engine runs one update per display frame with timeDelta the time it covers
+ *  Can be set before engineInit or while running; turned off it goes back to fixed updates at frameRate
+ *  @param {boolean} [enable]
+ *  @memberof Settings */
+function setEngineVariableStep(enable=true)
+{
+    if (engineVariableStep && !enable)
+    {
+        // fixed time goes on one fixed step after the last update, and timeDelta is the fixed step again
+        timeFixedStart = time + 1 / frameRate;
+        frameFixedStart = frame;
+        timeDelta = 1 / frameRate;
+        frameTimeBufferMS = engineManualStep ? -.5e3 / frameRate : 0;
+    }
+    engineVariableStep = enable;
 }
 
 /** Set whether the draw and debug functions draw in screen space when a call leaves screenSpace out
