@@ -110,3 +110,62 @@ test('a groundObject goes when the object leaves what it stood on', ()=>
     step(2);
     assert.equal(crate.groundObject, undefined);
 });
+
+// the 2D physics settings, in 3D
+
+test('angleDamping slows angleVelocity3D each frame, and damping slows an object with no mass', ()=>
+{
+    render3D.gravity = vec3();
+    const spinner = new EngineObject3D(vec3());
+    spinner.angleVelocity3D = vec3(0, .1, 0);
+    spinner.angleDamping = .9;
+    spinner.velocity3D = vec3(.1, 0, 0);
+    spinner.damping = .9;
+    step();
+    near(spinner.angleVelocity3D.y, .09);
+    near(spinner.rotation3D.y, .09, 1e-9, 'damped, then turned by it, as in 2D');
+    near(spinner.velocity3D.x, .09);
+});
+
+test('clampSpeed keeps each axis of velocity3D within objectMaxSpeed, off it lets it go', ()=>
+{
+    render3D.gravity = vec3();
+    const fast = box(vec3(0, 50, 0), vec3(1), undefined, 1);
+    fast.velocity3D = vec3(3, -5, 2);
+    step();
+    assert.deepEqual([fast.velocity3D.x, fast.velocity3D.y, fast.velocity3D.z], [1, -1, 1]);
+    fast.clampSpeed = false;
+    fast.velocity3D = vec3(3, -5, 2);
+    step();
+    assert.deepEqual([fast.velocity3D.x, fast.velocity3D.y, fast.velocity3D.z], [3, -5, 2]);
+});
+
+test('a box sliding on a floor slows by friction, the less grippy of the two', ()=>
+{
+    const floor = box(vec3(), vec3(20, 1, 20));
+    const slider = box(vec3(0, 1, 0), vec3(1), undefined, 1);
+    step(3);
+    assert.equal(slider.groundObject, floor);
+    slider.velocity3D = vec3(.1, 0, .05);
+    step();
+    near(slider.velocity3D.x, .08, 1e-9, 'kept by .8, the default friction');
+    near(slider.velocity3D.z, .04, 1e-9);
+    slider.friction = 1; // ice on its side, the floor's .8 is grippier, and the less grippy wins
+    step();
+    near(slider.velocity3D.x, .08, 1e-9);
+});
+
+test('a box on a moving platform is carried along with it', ()=>
+{
+    const platform = box(vec3(), vec3(6, 1, 6));
+    platform.velocity3D = vec3(.02, 0, 0); // no mass, it moves by its velocity and nothing moves it
+    const rider = box(vec3(0, 1, 0), vec3(1), undefined, 1);
+    step(120);
+    assert.equal(rider.groundObject, platform);
+    near(rider.velocity3D.x, .02, 1e-4, 'at the platform\'s speed');
+    // it starts at rest, lands, and catches up by friction, .12 behind by then, and keeps its place from there
+    near(rider.pos3D.x - platform.pos3D.x, -.12, .005, 'still over the middle of it');
+    const lag = rider.pos3D.x - platform.pos3D.x;
+    step(60);
+    near(rider.pos3D.x - platform.pos3D.x, lag, 1e-9, 'carried, not slipping');
+});

@@ -8149,8 +8149,8 @@ declare module "littlejsengine" {
      * - velocity3D is added to pos3D each frame, along with render3D.gravity and damping once it has a mass
      * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
      * - The 2D pos and velocity are still there but nothing draws them
-     * - These inherited fields are 2D only and do nothing here: angle, angleVelocity, angleDamping,
-     *   additiveColor, drawSize, mirror, clampSpeed, friction and groundObject
+     * - These inherited fields are 2D only and do nothing here: angle, angleVelocity, additiveColor, drawSize and mirror;
+     *   damping, angleDamping, clampSpeed, friction and groundObject work as in 2D, on velocity3D and angleVelocity3D
      * - The inherited shader works here as in 2D, and with emissive at 1 its snippet does its own lighting
      * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D,
      *   which is the one way those 2D fields reach a 3D object
@@ -8190,7 +8190,7 @@ declare module "littlejsengine" {
         /** @property {Vector3} - Added to pos3D each frame by the engine before update, like the 2D velocity, no super
          *  call needed; damping and render3D.gravity act on it once the object has a mass */
         velocity3D: Vector3;
-        /** @property {Vector3} - Added to rotation3D each frame by the engine before update, angleDamping is 2D only */
+        /** @property {Vector3} - Added to rotation3D each frame by the engine before update, slowed by angleDamping */
         angleVelocity3D: Vector3;
         /** @property {Mesh|undefined} - Mesh to draw
          *  @type {Mesh|undefined} */

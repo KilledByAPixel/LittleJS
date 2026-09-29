@@ -25768,8 +25768,8 @@ const render3DSkyColors = new WeakMap;
  * - velocity3D is added to pos3D each frame, along with render3D.gravity and damping once it has a mass
  * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
  * - The 2D pos and velocity are still there but nothing draws them
- * - These inherited fields are 2D only and do nothing here: angle, angleVelocity, angleDamping,
- *   additiveColor, drawSize, mirror, clampSpeed, friction and groundObject
+ * - These inherited fields are 2D only and do nothing here: angle, angleVelocity, additiveColor, drawSize and mirror;
+ *   damping, angleDamping, clampSpeed, friction and groundObject work as in 2D, on velocity3D and angleVelocity3D
  * - The inherited shader works here as in 2D, and with emissive at 1 its snippet does its own lighting
  * - Set sync2D for a 2D game with 3D looks, pos and angle then drive pos3D and rotation3D,
  *   which is the one way those 2D fields reach a 3D object
@@ -25823,7 +25823,7 @@ class EngineObject3D extends EngineObject
         /** @property {Vector3} - Added to pos3D each frame by the engine before update, like the 2D velocity, no super
          *  call needed; damping and render3D.gravity act on it once the object has a mass */
         this.velocity3D = vec3();
-        /** @property {Vector3} - Added to rotation3D each frame by the engine before update, angleDamping is 2D only */
+        /** @property {Vector3} - Added to rotation3D each frame by the engine before update, slowed by angleDamping */
         this.angleVelocity3D = vec3();
         /** @property {Mesh|undefined} - Mesh to draw
          *  @type {Mesh|undefined} */
@@ -25919,9 +25919,24 @@ class EngineObject3D extends EngineObject
         // object's is the 2D physics'
         const ground = this.groundObject;
         this.sync2D || (this.groundObject = undefined);
+        if (this.clampSpeed && !this.sync2D)
+        {
+            // each axis within objectMaxSpeed, as in 2D, so a fast object does not pass through a thin wall
+            const v = this.velocity3D, s = objectMaxSpeed;
+            v.x = clamp(v.x, -s, s), v.y = clamp(v.y, -s, s), v.z = clamp(v.z, -s, s);
+        }
         // a moving object keeps out of the level, the height maps and voxel maps, from where it was before it moved
         const oldPos = this.collideLevel && this.mass && !this.sync2D ? this.pos3D.copy() : undefined;
         render3DMove(this);
+        if (ground && this.mass && !this.sync2D)
+        {
+            // sliding on what it stood on slows by friction, the less grippy of the two, relative to that one's own
+            // speed so a moving platform carries it, as in 2D
+            const friction = max(this.friction, ground.friction), v = this.velocity3D;
+            const moving = ground instanceof EngineObject3D ? ground.velocity3D : undefined;
+            const gx = moving?.x ?? 0, gz = moving?.z ?? 0;
+            v.x = gx + (v.x - gx) * friction, v.z = gz + (v.z - gz) * friction;
+        }
         oldPos && render3DCollideLevel(this, oldPos, ground);
         // the engine only runs this for objects that own where they are, a child rides along with its parent
         if (this.collideSolidObjects && !this.sync2D)
@@ -26143,20 +26158,21 @@ function render3DObjectMatrix(o)
     return o.worldMatrix;
 }
 
-// move an object by its 3D velocities, an object with mass falling with render3D.gravity and slowing by its damping
+// move an object by its 3D velocities, each slowed by its damping, an object with mass falling with render3D.gravity
 function render3DMove(o)
 {
     // the vectors change in place, as the 2D object's do: this runs for every object every frame
-    const p = o.pos3D, v = o.velocity3D, r = o.rotation3D, a = o.angleVelocity3D;
+    const p = o.pos3D, v = o.velocity3D, r = o.rotation3D, a = o.angleVelocity3D, d = o.damping, e = o.angleDamping;
+    // damped first and gravity added after, the order EngineObject.updatePhysics uses,
+    // so the same mass, damping and gravity fall the same way in both
+    v.x *= d, v.y *= d, v.z *= d;
     if (o.mass && !o.sync2D) // a 2D driven object gets the 2D gravity instead
     {
-        // damped first and gravity added after, the order EngineObject.updatePhysics uses,
-        // so the same mass, damping and gravity fall the same way in both
-        const g = render3D.gravity, s = o.gravityScale, d = o.damping;
-        v.x = v.x * d + g.x * s, v.y = v.y * d + g.y * s, v.z = v.z * d + g.z * s;
+        const g = render3D.gravity, s = o.gravityScale;
+        v.x += g.x * s, v.y += g.y * s, v.z += g.z * s;
     }
     p.x += v.x, p.y += v.y, p.z += v.z;
-    r.x += a.x, r.y += a.y, r.z += a.z;
+    r.x += a.x *= e, r.y += a.y *= e, r.z += a.z *= e;
 }
 
 // keep an object that moved out of the level's solid geometry, clearing what it stood on for the level to set again
