@@ -1182,7 +1182,11 @@ render3D.emissive = 0                 // how much a surface lights itself, set f
 render3D.additive = false             // additive blending in the transparent stage
 render3D.specular = 0                 // Phong highlight strength, the shiny spot where the sun and each
                                       // Light3D reflect: 1 adds a light's full color at its peak, more burns
-                                      // out; the size of the spot is fixed
+                                      // out; shininess sets the size of the spot
+render3D.shininess = 16               // the highlight's exponent, 4 broad like rubber, 100 sharp like polished metal
+render3D.normalMap render3D.normalScale render3D.reflectivity render3D.emissiveMap render3D.emissiveMapColor
+                                      // the material, set from each object's fields of the same names
+render3D.skyColors                    // the top, horizon and bottom colors setSky was given, which reflections show
 render3D.receiveShadow = true         // false keeps the next draws out of the shadow map's darkening
 render3D.shader = undefined           // a Shader for the next draws, set from each object's shader; with emissive 1
                                       // the snippet's color is final, so it can light itself from these 3D names:
@@ -1284,6 +1288,15 @@ obj.additive = true                     // additive blending, implies the transp
 obj.emissive = 1                        // 0 by default; how much it lights itself: 0 lit, 1 its own color for lamps and glowing
                                         // things, between partly self lit, above 1 brighter for bloom; still casts
 obj.specular = .5                       // highlight strength, 0 is none and 1 is full, as render3D.specular; 0 by default
+obj.shininess = 100                     // 16 by default; the highlight's exponent, higher is smaller and sharper
+obj.normalMap = textureInfo             // bumps and grooves that catch the light, read at the color texture's uvs;
+                                        // green points up the image (OpenGL and glTF), flip the green of a DirectX one;
+                                        // no tangents needed, any mesh with uvs works; normalMapFromHeight makes one
+obj.normalScale = 1                     // how strongly it bends the surface, 0 turns it off
+obj.reflectivity = .5                   // 0 by default, 1 a mirror of the sky; more at a glancing angle (Fresnel);
+                                        // shows the setSky colors, or the ambient ones with no sky; not the scene
+obj.emissiveMap = textureInfo           // where it glows, added on top of the lit surface so it shows in the dark
+obj.emissiveMapColor = WHITE            // multiplies the emissive map
 obj.castShadow = false                  // true by default, false keeps it out of the shadow map; sprites and cut out
                                         // textures cast their outline, an object faded below half its alpha casts
                                         // nothing, a see through one casts only when textured, additive never casts
@@ -1492,7 +1505,10 @@ model.parts                          // one GLTFPart per primitive of every node
                                      // textureInfo when the material has one and WebGL is on, transparent for a
                                      // blending material or glass (KHR_materials_transmission), which comes in
                                      // as a faint tint of its color, and unlit for KHR_materials_unlit; the uvs
-                                     // are the set the texture's texCoord names, moved by KHR_texture_transform
+                                     // are the set the texture's texCoord names, moved by KHR_texture_transform;
+                                     // normalMap and normalScale from normalTexture, emissiveMap and
+                                     // emissiveMapColor from emissiveTexture and emissiveFactor, read at the base
+                                     // color texture's uvs
 model.mesh, model.textureInfo        // everything as one Mesh tinted by its materials, and its texture when every
                                      // part uses the same one; a model mixing plain and textured parts, or using
                                      // several textures or unlit parts, draws right through createObject
@@ -1582,6 +1598,10 @@ new THREE.InstancedMesh(geometry, m, n)   // new InstancedMesh3D(mesh, n) with s
 material.color, material.map              // obj.color, and a TileInfo or TextureInfo as obj.tileInfo
 material.side = THREE.DoubleSide          // mesh.doubleSided = true
 material.emissiveIntensity                // obj.emissive
+material.normalMap, normalScale           // obj.normalMap, obj.normalScale (a number, three.js takes a Vector2)
+material.shininess (MeshPhongMaterial)    // obj.shininess, with obj.specular the strength
+material.envMap, reflectivity             // obj.reflectivity, which reflects the sky's colors, not an environment map
+material.emissiveMap, emissive            // obj.emissiveMap, obj.emissiveMapColor
 material.transparent, blending            // obj.transparent, obj.additive
 new THREE.ShaderMaterial({fragmentShader}) // obj.shader = new Shader(code), a mainImage snippet the engine wraps;
                                           // set emissive = 1 for the snippet to do its own lighting
