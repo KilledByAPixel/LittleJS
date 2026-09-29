@@ -338,7 +338,50 @@ test('a save that finishes after another level loaded updates the level it saved
     assert.equal(engine.run('editor3DRecords.get(level).original[1].pos[0]'), 3, 'the saved level is baselined');
     assert.equal(engine.run('editor3DRecords.get(other).original[0].pos[0]'), 9, 'the other is left as loaded');
     const saves = JSON.parse(storage.items['LittleJS editor 3D /game/']);
-    assert.equal(saves['levels/room.json'], undefined, 'the saved level has nothing left to recover');
+    assert.equal(saves['levels/room.json']?.objects[1].pos[0], 3, 'the saved level keeps what it wrote until a reload');
+});
+
+// review-2 F2: the browser gives a picked file's name and not its folder, so a Save can not tell the file the game
+// loads from a copy of the same name elsewhere; the autosave stays until a reload shows the file has the edits
+const savedFile = fileCode.replace('pos: [1, 1.5, 0]', 'pos: [3, 1.5, 0]'); // the file with the crate moved to 3
+
+async function saveGame(storage, handle)
+{
+    const engine = await loadGame({ localStorage: storage, showSaveFilePicker: async ()=> handle });
+    engine.run(fileCode + `editorFileStore = {get: async ()=> undefined, set: async ()=> {}};
+        move(2, vec3(3, 1.5, 0)); editor3DStrokeEnd();`);
+    handle.finish();
+    assert.equal(await engine.run('editor3DSave(true)'), 'written');
+    return engine;
+}
+
+test('3D Save As to a file of the same name in another folder is a copy: the level the game loads gets its edits back',
+    async ()=>
+{
+    const storage = makeStorage();
+    await saveGame(storage, slowHandle('room.json'));
+    const engine = await loadGame({ localStorage: storage });
+    engine.run(fileCode); // the original file, unchanged
+    assert.equal(engine.run('!!editor3DRecords.get(level).pending'), false, 'nothing to ask');
+    assert.equal(engine.run('list()[1].pos[0]'), 3, 'the edit comes back');
+});
+
+test('3D: a reload of the file Save wrote drops the autosave, and edits made after the save come back', async ()=>
+{
+    let storage = makeStorage();
+    await saveGame(storage, slowHandle('room.json'));
+    let engine = await loadGame({ localStorage: storage });
+    engine.run(savedFile);
+    assert.equal(engine.run('!!editor3DRecords.get(level).pending'), false);
+    assert.deepEqual(JSON.parse(storage.items['LittleJS editor 3D /game/']), {}, 'the file has every edit');
+
+    storage = makeStorage();
+    engine = await saveGame(storage, slowHandle('room.json'));
+    engine.run('move(3, vec3(0, 2, 5)); editor3DStrokeEnd()');
+    engine = await loadGame({ localStorage: storage });
+    engine.run(savedFile);
+    assert.equal(engine.run('!!editor3DRecords.get(level).pending'), false, 'nothing to ask');
+    assert.deepEqual(json(engine.run, '[list()[1].pos[0], list()[2].pos[2]]'), [3, 5], 'the edit since the save');
 });
 
 test('a level the game loads twice is not given its autosave twice', async ()=>

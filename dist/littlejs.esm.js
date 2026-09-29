@@ -30832,7 +30832,7 @@ function editorMapRestore(map)
     if (!saved) return map;
     // an autosave from before the map's shape was in the hash matches on its tiles and objects, and one from before
     // objects were matches on its tiles; one of a resized map is resized to first
-    const sameFile = saved.hash === record.hash || !saved.width &&
+    const sameFile = saved.hash === record.hash || saved.savedHash === record.hash || !saved.width &&
         (saved.hash === editorMapHash(data, objects) || !saved.objects && saved.hash === editorMapHash(data));
     if ((saved.width ?? map.width) === map.width && (saved.height ?? map.height) === map.height &&
         editorSameData(saved.layers, data) && editorSameData(saved.objects ?? [], objects))
@@ -30985,15 +30985,17 @@ async function editorRememberedFile(record)
 }
 const editorFileKey = (record)=> (globalThis.location?.pathname ?? '') + ' ' + record.key;
 
-// a map as a file Save wrote is the file from then on: Reset to file goes back to it, the autosave keeps only the
-// edits since, and a reload of it has nothing to apply; a download can not say it replaced the file, so it does not,
-// and neither does a file of another name, a copy, since the game still loads the one it came from
+// a map as a file Save wrote is the file from then on: Reset to file goes back to it, and a reload of it has nothing
+// to apply; a download can not say it replaced the file, so it does not, and neither does a file of another name, a
+// copy, since the game still loads the one it came from; the browser gives a picked file's name and not its folder,
+// so a file of the same name may be a copy too, and the autosave stays, with the hash of the file the game loads and
+// of the file written, until a reload shows which one the game loads
 function editorSetBaseline(record, written)
 {
     if (record.synthetic) return; // a layer made in code has no file to load it from
     const data = editorTileLayerData(written.layers);
     const objects = editorObjectGroups(written.layers).map((group)=> group.objects ?? []);
-    Object.assign(record, {original: data, originalObjects: objects, hash: editorMapHash(data, objects,
+    Object.assign(record, {original: data, originalObjects: objects, savedHash: editorMapHash(data, objects,
         editorMapLayout(written)), originalSize: {width: written.width, height: written.height}});
     record.pending || editorAutosave(record); // edits waiting to be applied keep their autosave
 }
@@ -31106,11 +31108,12 @@ function editorAutosave(record)
     while (kept.length > original.length && !kept.at(-1).length)
         kept.pop(); // an Objects layer the editor made, empty again, is not an edit
     const size = record.originalSize, sameSize = map.width === size.width && map.height === size.height;
-    if (sameSize && editorSameData(data, record.original) && editorSameData(kept, original))
+    // the map as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it
+    if (sameSize && editorSameData(data, record.original) && editorSameData(kept, original) && !record.savedHash)
         delete saves[record.key];
     else
-        saves[record.key] = {hash: record.hash, width: map.width, height: map.height, layers: data, objects,
-            nextobjectid: map.nextobjectid};
+        saves[record.key] = {hash: record.hash, savedHash: record.savedHash, width: map.width, height: map.height,
+            layers: data, objects, nextobjectid: map.nextobjectid};
     editorWriteSaves(saves);
 }
 
@@ -33393,8 +33396,11 @@ function editor3DLevelLoaded(level)
     editor3DRecords.set(level, record);
     editor3DUndoList = record.undo;
     editor3DRedoList = record.redo;
+    // an autosave the file already has, from a Save, goes; one of this file, or of the file a Save wrote, comes back
     const saved = editor3DSaves()[record.key];
-    if (saved?.hash === hash && isArray(saved.objects))
+    if (saved && isArray(saved.objects) && editor3DSame(saved.objects, original))
+        editor3DAutosave(level);
+    else if ((saved?.hash === hash || saved?.savedHash === hash) && isArray(saved.objects))
         level.objects = editor3DCopy(saved.objects);
     else if (saved)
         record.pending = saved;
@@ -33719,10 +33725,12 @@ function editor3DAutosave(level=editor3DLevel)
     const record = editor3DRecords.get(level);
     if (!record || record.pending) return; // edits waiting to be applied keep their autosave
     const saves = editor3DSaves(), objects = isArray(level.objects) ? level.objects : [];
-    if (editor3DSame(objects, record.original))
+    // the level as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it,
+    // since the browser gives a picked file's name and not its folder, and a file of the same name may be a copy
+    if (editor3DSame(objects, record.original) && !record.savedHash)
         delete saves[record.key];
     else
-        saves[record.key] = {hash: record.hash, objects: editor3DCopy(objects)};
+        saves[record.key] = {hash: record.hash, savedHash: record.savedHash, objects: editor3DCopy(objects)};
     try
     {
         localStorage.setItem(editor3DSaveName(), JSON.stringify(saves));
@@ -33790,7 +33798,7 @@ async function editor3DSave(pickAgain=false)
             if (record.fileHandle.name === record.fileName)
             {
                 record.original = written;
-                record.hash = editor3DHash(JSON.stringify(written));
+                record.savedHash = editor3DHash(JSON.stringify(written));
                 editor3DAutosave(level);
             }
             return 'written';

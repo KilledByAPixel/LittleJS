@@ -374,8 +374,11 @@ function editor3DLevelLoaded(level)
     editor3DRecords.set(level, record);
     editor3DUndoList = record.undo;
     editor3DRedoList = record.redo;
+    // an autosave the file already has, from a Save, goes; one of this file, or of the file a Save wrote, comes back
     const saved = editor3DSaves()[record.key];
-    if (saved?.hash === hash && isArray(saved.objects))
+    if (saved && isArray(saved.objects) && editor3DSame(saved.objects, original))
+        editor3DAutosave(level);
+    else if ((saved?.hash === hash || saved?.savedHash === hash) && isArray(saved.objects))
         level.objects = editor3DCopy(saved.objects);
     else if (saved)
         record.pending = saved;
@@ -700,10 +703,12 @@ function editor3DAutosave(level=editor3DLevel)
     const record = editor3DRecords.get(level);
     if (!record || record.pending) return; // edits waiting to be applied keep their autosave
     const saves = editor3DSaves(), objects = isArray(level.objects) ? level.objects : [];
-    if (editor3DSame(objects, record.original))
+    // the level as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it,
+    // since the browser gives a picked file's name and not its folder, and a file of the same name may be a copy
+    if (editor3DSame(objects, record.original) && !record.savedHash)
         delete saves[record.key];
     else
-        saves[record.key] = {hash: record.hash, objects: editor3DCopy(objects)};
+        saves[record.key] = {hash: record.hash, savedHash: record.savedHash, objects: editor3DCopy(objects)};
     try
     {
         localStorage.setItem(editor3DSaveName(), JSON.stringify(saves));
@@ -771,7 +776,7 @@ async function editor3DSave(pickAgain=false)
             if (record.fileHandle.name === record.fileName)
             {
                 record.original = written;
-                record.hash = editor3DHash(JSON.stringify(written));
+                record.savedHash = editor3DHash(JSON.stringify(written));
                 editor3DAutosave(level);
             }
             return 'written';

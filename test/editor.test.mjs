@@ -1487,9 +1487,36 @@ test('after Save, Reset to file goes back to what was saved, and a save of the f
     const engine = await pickerGame(picker, storage);
     engine.run('editorPaint(front, vec2(0, 1), editorTileToGid(4)); editorStrokeEnd();');
     await engine.run('editorSave(front.record)');
-    assert.equal(saved(storage), undefined, 'the file has every edit');
     engine.run('editorPaint(front, vec2(1, 1), editorTileToGid(5)); editorStrokeEnd(); editorRevert(front.record);');
     assert.deepEqual([...engine.run('frontData')], [5, 0, 3, 0, 0, 0]);
+});
+
+// review-2 F2: the browser gives a picked file's name and not its folder, so a Save can not tell the file the game
+// loads from a copy of the same name elsewhere; the autosave stays until a reload shows the file has the edits
+
+test('Save As to a file of the same name in another folder is a copy too: the map the game loads gets its edits back',
+    async () =>
+{
+    const picker = filePicker(), storage = makeStorage();
+    const first = await pickerGame(picker, storage);
+    first.run('editorPaint(front, vec2(0, 1), editorTileToGid(4)); editorStrokeEnd();');
+    assert.equal(await first.run('editorSave(front.record, true)'), 'written');
+    assert.equal(writtenFront(picker)[0], 5, 'the copy has the edit');
+    assert.ok(saved(storage), 'the autosave stays until a reload shows the file has the edit');
+    const second = await pickerGame(picker, storage); // the original file, unchanged
+    assert.equal(second.run('front.record.pending'), undefined, 'nothing to ask, it is the file the edits were on');
+    assert.equal(second.run('frontData[0]'), 5, 'the edit comes back');
+});
+
+test('a reload of the file Save wrote drops the autosave with nothing to ask', async () =>
+{
+    const picker = filePicker(), storage = makeStorage();
+    const first = await pickerGame(picker, storage);
+    first.run('editorPaint(front, vec2(0, 1), editorTileToGid(4)); editorStrokeEnd();');
+    await first.run('editorSave(front.record)');
+    const second = await pickerGame(picker, storage, writtenFront(picker));
+    assert.equal(second.run('front.record.pending'), undefined);
+    assert.equal(saved(storage), undefined, 'the file has every edit, nothing left to keep');
 });
 
 test('an edit made while Save is writing is kept as an edit the file does not have', async () =>
