@@ -980,6 +980,9 @@ class LavaTile extends EngineObject {
 - Optional plugin that applies a full screen WebGL shader to the rendered output
 - Shadertoy style uniforms: iTime, iResolution, iChannel0 (the frame just drawn), and iChannel1 (the previous
   frame's output) when feedbackTexture is set, for trails and echoes
+- With render3D.depthTexture on, iChannel2 is the 3D depth, and sceneDepth(uv) gives the distance from the camera
+  along its view in world units, uv 0 to 1 across the screen, for ambient occlusion, fog and outlines; only the solid
+  objects of the default 3D layer are in it
 - See `examples/shorts/postProcess.js` for a demo
 
 ```javascript
@@ -1170,6 +1173,8 @@ new DirectionalLight3D(pos3D, color, intensity=1) // a Light3D that shines from 
 
 // Shadows - one shadow map from the sun; lit opaque objects and draws on the default side of the 2D scene
 // cast and receive
+render3D.depthTexture = true // off by default and free when off; draws the solid objects' depth from the camera
+                             // for PostProcessPlugin, which reads it with sceneDepth(uv); one more draw, depth only
 render3D.shadows = true // off by default and free when off, soft shadows (drawSoftShadow) still work alongside
 render3D.shadowMapSize = 1024         // pixels across the shadow map, rebuilt when it changes
 render3D.shadowRange = 40             // world size the map covers around shadowCenter, smaller is sharper

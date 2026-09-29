@@ -93,18 +93,7 @@ class PostProcessPlugin
                 'gl_Position=vec4(p+p-1.,1,1);'+ // set position
                 '}'                              // end of shader
                 ,
-                '#version 300 es\n' +            // specify GLSL ES version
-                'precision highp float;'+        // use highp for accuracy
-                'uniform sampler2D iChannel0;'+  // input texture
-                'uniform sampler2D iChannel1;'+  // the previous frame's output, when feedbackTexture is set
-                'uniform vec3 iResolution;'+     // size of output texture
-                'uniform float iTime;'+          // time
-                'out vec4 c;'+                   // out color
-                '\n' + shaderCode + '\n'+        // insert custom shader code
-                'void main(){'+                  // shader entry point
-                'mainImage(c,gl_FragCoord.xy);'+ // call post process function
-                'c.a=1.;'+                       // always use full alpha
-                '}'                              // end of shader
+                postProcessFragmentSource(shaderCode)
             );
 
             // setup VAO for post processing
@@ -192,10 +181,20 @@ class PostProcessPlugin
                 glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
             }
 
+            // the 3D depth, when render3D draws it, on the third texture unit, with what sceneDepth needs to read it
+            const depth = typeof render3D != 'undefined' && render3D?.depthTexture ? render3D : undefined;
+            glContext.activeTexture(glContext.TEXTURE2);
+            glContext.bindTexture(glContext.TEXTURE_2D, depth?.cameraDepthTexture || null);
+            glContext.activeTexture(glContext.TEXTURE0);
+            const camera = depth?.camera;
+            camera && glContext.uniform3f(glUniformLocation(postProcess.shader, 'iDepthRange'), camera.near,
+                camera.far == Infinity ? 0 : camera.far, camera.orthographic ? 1 : 0);
+
             // set uniforms and draw
             const uniformLocation = (name)=>glUniformLocation(postProcess.shader, name);
             glContext.uniform1i(uniformLocation('iChannel0'), 0);
             glContext.uniform1i(uniformLocation('iChannel1'), 1);
+            glContext.uniform1i(uniformLocation('iChannel2'), 2);
             glContext.uniform1f(uniformLocation('iTime'), time);
             glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
@@ -206,6 +205,11 @@ class PostProcessPlugin
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
                 glContext.activeTexture(glContext.TEXTURE0);
             }
+
+            // the depth leaves the third unit for whatever draws next
+            glContext.activeTexture(glContext.TEXTURE2);
+            glContext.bindTexture(glContext.TEXTURE_2D, null);
+            glContext.activeTexture(glContext.TEXTURE0);
 
             // restore defaults so subsequent dynamic texture uploads aren't flipped or premultiplied
             glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, false);
@@ -222,6 +226,31 @@ class PostProcessPlugin
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// the fragment shader of the post process pass around its mainImage snippet: the frame on iChannel0, the last output
+// on iChannel1 with a feedback texture, and the 3D depth on iChannel2 when render3D.depthTexture is on, read with
+// sceneDepth(uv), the distance from the camera along its view in world units, uv 0 to 1 across the screen
+function postProcessFragmentSource(shaderCode)
+{
+    return '#version 300 es\n' +        // specify GLSL ES version
+        'precision highp float;'+        // use highp for accuracy
+        'uniform sampler2D iChannel0;'+  // input texture
+        'uniform sampler2D iChannel1;'+  // the previous frame's output, when feedbackTexture is set
+        'uniform sampler2D iChannel2;'+  // the 3D depth, when render3D.depthTexture is on
+        'uniform vec3 iResolution;'+     // size of output texture
+        'uniform float iTime;'+          // time
+        'uniform vec3 iDepthRange;'+     // the camera's near, its far or 0 for none, and 1 when orthographic
+        'out vec4 c;'+                   // out color
+        // the depth texture's value back to a distance, as the camera's projection put it there
+        'float sceneDepth(vec2 uv){'+
+        'float d=texture(iChannel2,uv).r*2.-1.,n=iDepthRange.x,f=iDepthRange.y;'+
+        'return iDepthRange.z>0.?(d*(f-n)+f+n)/2.:f>0.?2.*n*f/(f+n-d*(f-n)):2.*n/(1.-d);}'+
+        '\n' + shaderCode + '\n'+        // insert custom shader code
+        'void main(){'+                  // shader entry point
+        'mainImage(c,gl_FragCoord.xy);'+ // call post process function
+        'c.a=1.;'+                       // always use full alpha
+        '}';                             // end of shader
+}
 
 /**
  * Shader code for a bloom effect, the bright parts of the image blurred back over it

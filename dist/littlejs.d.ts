@@ -7709,6 +7709,10 @@ declare module "littlejsengine" {
         /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for
          *  flat faces */
         smoothShading: boolean;
+        /** @property {boolean} - Draw the camera's depth into a texture each frame for post processing:
+         *  PostProcessPlugin hands it to its shader as iChannel2, read with sceneDepth(uv); off by default and free
+         *  when off, on it draws the solid objects of the default layer once more, depth only */
+        depthTexture: boolean;
         /** @property {boolean} - Cast real shadows from the sun, off by default and free when off */
         shadows: boolean;
         /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
@@ -7847,6 +7851,13 @@ declare module "littlejsengine" {
         /** @type {WebGLFramebuffer|undefined} */
         shadowFramebuffer: WebGLFramebuffer | undefined;
         shadowTextureSize: number;
+        /** @type {WebGLTexture|undefined} */
+        cameraDepthTexture: WebGLTexture | undefined;
+        /** @type {WebGLFramebuffer|undefined} */
+        cameraDepthFramebuffer: WebGLFramebuffer | undefined;
+        cameraDepthWidth: number;
+        cameraDepthHeight: number;
+        depthPass: boolean;
         contextGeneration: number;
         uniforms: Map<any, any>;
         /** @type {Object<string, Array<number>>} */

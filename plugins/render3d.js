@@ -121,7 +121,7 @@ function render3DColorChanged(a, b) { return a.r !== b.r || a.g !== b.g || a.b !
 // whether a sphere is inside the view, or the shadow map's box during the shadow pass, without a vector
 function render3DSphereVisible(x, y, z, radius)
 {
-    const planes = render3D.shadowPass ? render3D.shadowPlanes : render3D.frustumPlanes;
+    const planes = render3D.shadowPass && !render3D.depthPass ? render3D.shadowPlanes : render3D.frustumPlanes;
     for (let i = 0; i < planes.length; ++i)
     {
         const p = planes[i];
@@ -463,6 +463,11 @@ class Render3DPlugin
          *  flat faces */
         this.smoothShading = false;
 
+        /** @property {boolean} - Draw the camera's depth into a texture each frame for post processing:
+         *  PostProcessPlugin hands it to its shader as iChannel2, read with sceneDepth(uv); off by default and free
+         *  when off, on it draws the solid objects of the default layer once more, depth only */
+        this.depthTexture = false;
+
         // shadows
         /** @property {boolean} - Cast real shadows from the sun, off by default and free when off */
         this.shadows = false;
@@ -617,6 +622,13 @@ class Render3DPlugin
         /** @type {WebGLFramebuffer|undefined} */
         this.shadowFramebuffer = undefined;
         this.shadowTextureSize = 0;
+        /** @type {WebGLTexture|undefined} */
+        this.cameraDepthTexture = undefined; // the camera's depth, drawn when depthTexture is on
+        /** @type {WebGLFramebuffer|undefined} */
+        this.cameraDepthFramebuffer = undefined;
+        this.cameraDepthWidth = 0;
+        this.cameraDepthHeight = 0;
+        this.depthPass = false; // drawing the camera's depth, a shadow pass seen from the camera
         this.contextGeneration = 0;  // counts context losses, a mesh uploaded under an older one uploads again
         this.uniforms = new Map;     // uniform locations by program
         /** @type {Object<string, Array<number>>} */
@@ -1677,6 +1689,8 @@ function render3DContextLost()
     render3DClearInstances();
     r.shadowFramebuffer = r.shadowTexture = undefined;
     r.shadowTextureSize = 0;
+    r.cameraDepthFramebuffer = r.cameraDepthTexture = undefined;
+    r.cameraDepthWidth = r.cameraDepthHeight = 0;
     r.streamCount = 0;
     ++r.contextGeneration; // every uploaded mesh is stale now, the soft dot is a TextureInfo the engine restores
 }
@@ -2050,6 +2064,8 @@ function render3DRenderPass(after2D)
             render3DRenderShadowMap();
             r.shadowMapDrawn = true;
         }
+        // the camera's depth for post processing, from the default layer
+        r.depthTexture && isDefault && render3DRenderDepth();
         render3DUseProgram(r.program); // after the shadow map, so the light matrix it sends is this frame's
         r.renderStages(objects, isDefault);
     }
@@ -2162,6 +2178,65 @@ function render3DRenderShadowMap()
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture);
         gl.activeTexture(gl.TEXTURE0);
+    }
+}
+
+// the camera's depth texture and its framebuffer at a size, made again when the canvas changes size; depth values
+// are not filtered, so it is read texel by texel
+function render3DUpdateCameraDepth(width, height)
+{
+    const gl = glContext, r = render3D;
+    if (r.cameraDepthTexture && r.cameraDepthWidth === width && r.cameraDepthHeight === height) return;
+    r.cameraDepthTexture && gl.deleteTexture(r.cameraDepthTexture);
+    r.cameraDepthFramebuffer && gl.deleteFramebuffer(r.cameraDepthFramebuffer);
+    const texture = r.cameraDepthTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, width, height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    const framebuffer = r.cameraDepthFramebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, texture, 0);
+    gl.drawBuffers([gl.NONE]); // depth only
+    gl.readBuffer(gl.NONE);
+    ASSERT(gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE, 'camera depth framebuffer is incomplete');
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    r.cameraDepthWidth = width, r.cameraDepthHeight = height;
+}
+
+// draw the camera's depth for post processing: the solid objects from the camera with the shadow map's depth only
+// shader, into a texture the size of the canvas; what is see through is cut by its alpha as it is for shadows
+function render3DRenderDepth()
+{
+    const gl = glContext, r = render3D, width = glCanvas.width, height = glCanvas.height;
+    render3DUpdateCameraDepth(width, height);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, r.cameraDepthFramebuffer);
+    gl.viewport(0, 0, width, height);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(r.shadowShader);
+    gl.uniformMatrix4fv(render3DUniform('viewProj', r.shadowShader), false, r.viewProjection.m);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+    gl.disable(gl.CULL_FACE);
+
+    r.shadowPass = r.depthPass = true;
+    try
+    {
+        const solids = render3DLayerObjects(!!r.renderAfter2D).filter(o=> !o.additive && (!o.transparent || o.tileInfo));
+        render3DDrawObjects(solids);
+        r.onRenderOpaque?.();
+        r.flush();
+        render3DFlushInstances();
+    }
+    finally
+    {
+        r.shadowPass = r.depthPass = false;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, width, height);
     }
 }
 
