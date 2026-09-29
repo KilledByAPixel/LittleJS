@@ -295,6 +295,52 @@ test('a file that changed under its autosave waits for Apply or Drop', async ()=
     assert.deepEqual(JSON.parse(storage.items['LittleJS editor 3D /game/']), {});
 });
 
+// a file handle whose write waits until the test lets it finish, as a slow disk or a permission prompt does
+function slowHandle(name)
+{
+    const handle = { name, written: undefined };
+    handle.started = new Promise((resolve)=> handle.start = resolve);
+    handle.waiting = new Promise((resolve)=> handle.finish = resolve);
+    handle.createWritable = async ()=> ({ close: async ()=> {},
+        write: async (text)=> { handle.written = JSON.parse(text); handle.start(); await handle.waiting; } });
+    return handle;
+}
+
+test('a save takes what it wrote as saved, so an edit made while it writes stays in the autosave', async ()=>
+{
+    const storage = makeStorage(), handle = slowHandle('room.json');
+    let engine = await loadGame({ localStorage: storage, showSaveFilePicker: async ()=> handle });
+    engine.run(fileCode + `editorFileStore = {get: async ()=> undefined, set: async ()=> {}};
+        move(2, vec3(3, 1.5, 0)); editor3DStrokeEnd();`);
+    const saving = engine.run('editor3DSave(true)');
+    await handle.started;
+    engine.run('move(2, vec3(4, 1.5, 0)); editor3DStrokeEnd()');
+    handle.finish();
+    assert.equal(await saving, 'written');
+    assert.equal(handle.written.objects[1].pos[0], 3, 'the file has the edit made before the save');
+    assert.equal(engine.run('editor3DRecords.get(level).original[1].pos[0]'), 3, 'and that is what is saved');
+    const saved = JSON.parse(storage.items['LittleJS editor 3D /game/'])['levels/room.json'];
+    assert.equal(saved?.objects[1].pos[0], 4, 'the edit made during the write is kept to recover');
+});
+
+test('a save that finishes after another level loaded updates the level it saved', async ()=>
+{
+    const storage = makeStorage(), handle = slowHandle('room.json');
+    let engine = await loadGame({ localStorage: storage, showSaveFilePicker: async ()=> handle });
+    engine.run(fileCode + `editorFileStore = {get: async ()=> undefined, set: async ()=> {}};
+        move(2, vec3(3, 1.5, 0)); editor3DStrokeEnd();`);
+    const saving = engine.run('editor3DSave(true)');
+    await handle.started;
+    engine.run(`var other = { littlejs3D: 1, objects: [{ id: 1, type: 'Box', pos: [9, 0, 0] }] };
+        level3DLoad(other);`);
+    handle.finish();
+    await saving;
+    assert.equal(engine.run('editor3DRecords.get(level).original[1].pos[0]'), 3, 'the saved level is baselined');
+    assert.equal(engine.run('editor3DRecords.get(other).original[0].pos[0]'), 9, 'the other is left as loaded');
+    const saves = JSON.parse(storage.items['LittleJS editor 3D /game/']);
+    assert.equal(saves['levels/room.json'], undefined, 'the saved level has nothing left to recover');
+});
+
 test('a level the game loads twice is not given its autosave twice', async ()=>
 {
     const storage = makeStorage();

@@ -695,11 +695,11 @@ const editor3DSaves = ()=> readSaveData(editor3DSaveName(), {});
 let editor3DSaveFailed = false;
 
 // remember the level's objects, or forget them when they are back to the file
-function editor3DAutosave()
+function editor3DAutosave(level=editor3DLevel)
 {
-    const record = editor3DRecords.get(editor3DLevel);
+    const record = editor3DRecords.get(level);
     if (!record || record.pending) return; // edits waiting to be applied keep their autosave
-    const saves = editor3DSaves(), objects = editor3DObjects();
+    const saves = editor3DSaves(), objects = isArray(level.objects) ? level.objects : [];
     if (editor3DSame(objects, record.original))
         delete saves[record.key];
     else
@@ -742,7 +742,11 @@ async function editor3DSave(pickAgain=false)
     const level = editor3DLevel, record = editor3DRecords.get(level);
     if (!record) return;
     editor3DStrokeEnd();
-    const text = editor3DLevelJSON(level), picker = /** @type {any} */ (globalThis).showSaveFilePicker;
+    // what is written, kept as it is now: the level can change while the file is picked and written, and those
+    // edits are not in the file, so they stay in the autosave; the level and record are this one's, whichever is
+    // open by then
+    const text = editor3DLevelJSON(level), written = editor3DCopy(JSON.parse(text).objects);
+    const picker = /** @type {any} */ (globalThis).showSaveFilePicker;
     const fileKey = (globalThis.location?.pathname ?? '') + ' 3D ' + record.key;
     if (picker)
     {
@@ -766,9 +770,9 @@ async function editor3DSave(pickAgain=false)
             await writable.close();
             if (record.fileHandle.name === record.fileName)
             {
-                record.original = editor3DCopy(editor3DObjects());
-                record.hash = editor3DHash(JSON.stringify(record.original));
-                editor3DAutosave();
+                record.original = written;
+                record.hash = editor3DHash(JSON.stringify(written));
+                editor3DAutosave(level);
             }
             return 'written';
         }
