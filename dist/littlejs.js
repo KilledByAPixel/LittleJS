@@ -95,6 +95,46 @@ function setPaused(isPaused=true) { paused = isPaused; }
 
 // Engine internal variables
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
+
+// delta smoothing, after Time Delta Smoothing by Frank Force (2013): a frame is on screen for whole display frames,
+// so each delta is rounded to them and the rest is carried to the next, keeping the total real time; the frame
+// length is estimated from recent frames and kept internal, since the browser does not say what it is
+const frameDeltaHistory = [];
+let frameIntervalMS = 1e3 / 60, frameDeltaCarryMS = 0, frameDeltaCarryAverageMS = 0;
+function engineSmoothDelta(deltaMS)
+{
+    if (!(deltaMS > 0)) return 0;
+    if (deltaMS < 250) // a gap from a hidden tab is not a display frame
+    {
+        frameDeltaHistory.push(deltaMS);
+        frameDeltaHistory.length > 64 && frameDeltaHistory.shift();
+
+        // how many frames each delta held, counted in the last estimate, or in the median of the last 16 when the
+        // two differ by a quarter, as after the window moves to a display with another refresh rate; the frame length
+        // is the least squares slope of time over frames held, so jitter and whole ms timestamps average out
+        const recent = frameDeltaHistory.slice(-16).sort((a, b)=> a - b);
+        const median = recent[recent.length >> 1], count = frameDeltaHistory.length;
+        const unitMS = abs(median - frameIntervalMS) < frameIntervalMS / 4 ? frameIntervalMS : median;
+        let timeMS = 0, frames = 0, sumF = 0, sumT = 0, sumFF = 0, sumFT = 0;
+        for (const d of frameDeltaHistory)
+        {
+            timeMS += d;
+            frames += max(1, round(d / unitMS));
+            sumF += frames, sumT += timeMS, sumFF += frames * frames, sumFT += frames * timeMS;
+        }
+        const spread = count * sumFF - sumF * sumF;
+        frameIntervalMS = spread ? (count * sumFT - sumF * sumT) / spread : median;
+    }
+
+    // whole frames, 0 for one that came early or 2 after one was missed, the carry stays within half a frame; a
+    // little of its slow average is paid each frame, so jitter can not hold it at half a frame and flip every frame
+    const pullMS = frameDeltaCarryAverageMS / 32;
+    frameDeltaCarryMS += deltaMS;
+    const smoothMS = round((frameDeltaCarryMS - pullMS) / frameIntervalMS) * frameIntervalMS + pullMS;
+    frameDeltaCarryMS -= smoothMS;
+    frameDeltaCarryAverageMS += (frameDeltaCarryMS - frameDeltaCarryAverageMS) / 32;
+    return smoothMS;
+}
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
 let engineFrameScheduled = false; // a frame of the loop is asked for and has not run yet
@@ -239,6 +279,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         frameTimeLastMS = frameTimeMS;
         if (debug || debugWatermark)
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
+        // the time the frame will be on screen, in whole display frames; engineStep's steps are exact already
+        if (!manualStepAtStart)
+            frameTimeDeltaMS = engineSmoothDelta(frameTimeDeltaMS);
         audioUpdateVolume();
         // the time keys work while the debug overlay is open, or always when debugKeysAlways is set
         const debugKeys = debug && (debugOverlay || debugKeysAlways);
