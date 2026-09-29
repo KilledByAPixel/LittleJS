@@ -25765,7 +25765,7 @@ const render3DSkyColors = new WeakMap;
  * EngineObject3D - An EngineObject with a 3D transform and a mesh
  * - Set pos3D, rotation3D and scale3D instead of the 2D pos, size and angle
  * - Gets update, children, timers, destroy and renderOrder from EngineObject
- * - velocity3D is added to pos3D each frame, along with render3D.gravity and damping once it has a mass
+ * - velocity3D is added to pos3D each frame, slowed by damping, and render3D.gravity pulls it once it has a mass
  * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
  * - The 2D pos and velocity are still there but nothing draws them
  * - These inherited fields are 2D only and do nothing here: angle, angleVelocity, additiveColor, drawSize and mirror;
@@ -25915,6 +25915,8 @@ class EngineObject3D extends EngineObject
             'a sync2D object collides in 2D, so give it a 2D size as well as a size3D', this.size);
         if (this.sync2D)
             super.updatePhysics();
+        ASSERT(isNumber(this.groundAngle) && this.groundAngle >= 0 && this.groundAngle < PI / 2,
+            'groundAngle must be 0 to less than PI/2, a slope from level', this.groundAngle);
         // what it stands on is found again each frame, by the level and by the solids it rests on; a sync2D
         // object's is the 2D physics'
         const ground = this.groundObject;
@@ -26162,7 +26164,9 @@ function render3DObjectMatrix(o)
 function render3DMove(o)
 {
     // the vectors change in place, as the 2D object's do: this runs for every object every frame
-    const p = o.pos3D, v = o.velocity3D, r = o.rotation3D, a = o.angleVelocity3D, d = o.damping, e = o.angleDamping;
+    // a sync2D object's damping is the 2D physics', its 3D velocities are its own to set
+    const p = o.pos3D, v = o.velocity3D, r = o.rotation3D, a = o.angleVelocity3D;
+    const d = o.sync2D ? 1 : o.damping, e = o.sync2D ? 1 : o.angleDamping;
     // damped first and gravity added after, the order EngineObject.updatePhysics uses,
     // so the same mass, damping and gravity fall the same way in both
     v.x *= d, v.y *= d, v.z *= d;
@@ -26195,8 +26199,9 @@ function render3DSolidShape(o)
     const kx = abs(k.x), ky = abs(k.y), kz = abs(k.z);
     if (o.collideAsSphere3D)
         return {pos: o.pos3D.copy(), radius: max(s.x, s.y, s.z) / 2 * max(kx, ky, kz)};
-    // a turned box keeps its rotation, a solid is never a child so it is the world's; an upright one has none
-    const rotation = isTurned3D(o.rotation3D) ? o.rotation3D.copy() : undefined;
+    // a turned box keeps its rotation, a solid is never a child so it is the world's; an upright one has none, and
+    // neither does a sprite, whose rotation turns how it faces the camera, not its box
+    const rotation = !render3DIsSprite(o) && isTurned3D(o.rotation3D) ? o.rotation3D.copy() : undefined;
     return {pos: o.pos3D.copy(), size: vec3(s.x * kx, s.y * ky, s.z * kz), rotation};
 }
 
@@ -26226,6 +26231,19 @@ function render3DSolidPush(a, b)
     return collideBoxBox3D(a.pos, a.size, b.pos, b.size, a.rotation, b.rotation);
 }
 
+// a sprite, a tile with no mesh, which faces the camera however it is turned
+const render3DIsSprite = (o)=> !o.mesh && !!o.tileInfo;
+
+// whether a push leaves a box by one of its faces, along one of its axes, not by an edge or a corner; a sphere has
+// no face to stand on
+function render3DOnFace(push, shape)
+{
+    if (!shape.size) return false;
+    const n = push.normalize(), axes = shape.rotation ? boxAxes3D(shape.rotation) : [vec3(1, 0, 0), vec3(0, 1, 0),
+        vec3(0, 0, 1)];
+    return max(abs(n.dot(axes[0])), abs(n.dot(axes[1])), abs(n.dot(axes[2]))) > 1 - 1e-6;
+}
+
 // push a solid object out of the solids before it in the engine's list of them, so each pair is resolved once:
 // the ones after it update later and test against it then, and an object that is not in the list yet, because it
 // turned collision on this frame, tests them all itself and is not tested back
@@ -26249,7 +26267,8 @@ function render3DCollideSolid(a)
         if (dx*dx + dy*dy + dz*dz > reach*reach)
             continue;
 
-        let push = render3DSolidPush(shapeA, render3DSolidShape(b));
+        const shapeB = render3DSolidShape(b);
+        let push = render3DSolidPush(shapeA, shapeB);
         if (!push) continue;
 
         // both objects hear about it, and either one can take the touch over
@@ -26257,13 +26276,17 @@ function render3DCollideSolid(a)
         const resolveB = b.collideWithObject(a, push.scale(-1));
         if (!resolveA || !resolveB) continue;
 
-        // standing: a push within the upper one's groundAngle of straight up means it rests on the lower one, and
-        // it is lifted straight off, as far as it takes to leave the surface, so it does not creep down a slope
+        // standing: resting on a box's face within the upper one's groundAngle of level holds it there, the push
+        // turned straight up, as far as it takes to leave the surface, so it does not creep down a ramp; only what
+        // moves stands, and a sphere, an edge or a corner is nothing to stand on, what rests there rolls off
         const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
-        if (up >= cos(a.groundAngle) || -up >= cos(b.groundAngle))
+        const aStands = up > 0 && a.mass && up >= cos(a.groundAngle) && render3DOnFace(push, shapeB);
+        const bStands = up < 0 && b.mass && -up >= cos(b.groundAngle) && render3DOnFace(push, shapeA);
+        if (aStands || bStands)
         {
-            up > 0 ? a.groundObject = b : b.groundObject = a;
-            push = vec3(0, lengthSquared / push.y, 0);
+            aStands ? a.groundObject = b : b.groundObject = a;
+            if (push.x || push.z) // one straight up already is used as it is
+                push = vec3(0, lengthSquared / push.y, 0);
         }
 
         // heavier objects move less, mass 0 stays put; then bounce apart when moving toward each other
@@ -26310,7 +26333,7 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
         const center = vec3(m[12], m[13], m[14]);
         const worldSize = testCenters ? vec3() : render3DWorldSize(o, m);
         // a turned box is tested as turned, its world rotation read off the matrix only when it has one
-        const turned = !testCenters && (m[1] || m[2] || m[4] || m[6] || m[8] || m[9]);
+        const turned = !testCenters && !render3DIsSprite(o) && (m[1] || m[2] || m[4] || m[6] || m[8] || m[9]);
         const rotation = turned ? render3DObjectMatrix(o).getRotation() : undefined;
         let hit;
         if (box)
@@ -27539,7 +27562,7 @@ class FirstPersonCamera3D extends EngineObject3D
         /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
         this.lockPointer = true;
         /** @property {number} - Speed of a jump in world units a frame, 0 for none; Space or gamepad button 0 jumps
-         *  while it stands on something, a height map or voxel map it collides with, see collideLevel */
+         *  while it stands on something, a height map, a voxel map or a solid, see groundObject */
         this.jumpSpeed = 0;
         /** @property {number} - How far above its position the eye is, in its own space, so with a size3D the eye can
          *  sit toward the top of the body instead of its middle; keep it under half the body's height, or the eye is

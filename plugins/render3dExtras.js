@@ -826,7 +826,7 @@ class FirstPersonCamera3D extends EngineObject3D
         /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
         this.lockPointer = true;
         /** @property {number} - Speed of a jump in world units a frame, 0 for none; Space or gamepad button 0 jumps
-         *  while it stands on something, a height map or voxel map it collides with, see collideLevel */
+         *  while it stands on something, a height map, a voxel map or a solid, see groundObject */
         this.jumpSpeed = 0;
         /** @property {number} - How far above its position the eye is, in its own space, so with a size3D the eye can
          *  sit toward the top of the body instead of its middle; keep it under half the body's height, or the eye is

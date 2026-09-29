@@ -1,7 +1,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { render3D, Render3DPlugin, EngineObject3D, engineObjects, engineObjectsUpdate, engineObjectsCollect3D,
-    collideBoxBox3D, vec3, PI }
+    collideBoxBox3D, TextureInfo, vec3, PI }
     from '../dist/littlejs.esm.js';
 
 // 3D solid collision follows rotation: a turned box collides as the box you see, and a push within the upper
@@ -182,4 +182,99 @@ test('collect finds a turned object by the box you see, not the upright box arou
     assert.equal(collect(vec3(.95, 0, .95), .1), 0, 'a sphere the same');
     assert.equal(collect(vec3(1.3, 0, 0), .1), 1);
     assert.equal(collect(vec3(1.3, 0, 0), 0), 1, 'a point too');
+});
+
+// the final review's fixes
+
+// a ball, static unless given a mass
+function ball(pos, size, mass=0)
+{
+    const o = box(pos, vec3(size), undefined, mass);
+    o.collideAsSphere3D = true;
+    return o;
+}
+
+test('a ball dropped off center on a ball rolls off it, a sphere is nothing to stand on', ()=>
+{
+    ball(vec3(), 1);
+    const dropped = ball(vec3(.15, 2, 0), 1, 1);
+    step(300);
+    assert.ok(dropped.pos3D.y < .5, 'fell past it, ' + dropped.pos3D.y);
+});
+
+test('a ball over the edge of a box rolls off, the edge is nothing to stand on', ()=>
+{
+    box(vec3(), vec3(2));
+    const dropped = ball(vec3(1.2, 3, 0), 1, 1);
+    step(300);
+    assert.ok(dropped.pos3D.y < 1, 'fell off the edge, ' + dropped.pos3D.y);
+});
+
+test('a crate on a ramp still stands, a flat face is something to stand on', ()=>
+{
+    const ramp = box(vec3(), vec3(6, 1, 6), vec3(0, 0, degrees(20)));
+    const crate = box(vec3(0, 2.5, 0), vec3(1), undefined, 1);
+    step(200);
+    assert.equal(crate.groundObject, ramp);
+});
+
+test('a box rising into a sloped static ceiling slides along it, a static object stands on nothing', ()=>
+{
+    render3D.gravity = vec3();
+    const ceiling = box(vec3(0, 3, 0), vec3(6, 1, 6), vec3(0, 0, degrees(30)));
+    const riser = box(vec3(0, 1, 0), vec3(1), undefined, 1);
+    riser.velocity3D = vec3(0, .05, 0);
+    step(100);
+    assert.equal(ceiling.groundObject, undefined);
+    assert.equal(riser.groundObject, undefined);
+    assert.ok(Math.abs(riser.pos3D.x) > .2, 'slid along the ceiling, ' + riser.pos3D.x);
+});
+
+test('a push along a level wall never counts as standing, and a groundAngle of 90 degrees asserts', ()=>
+{
+    render3D.gravity = vec3();
+    box(vec3(3, 0, 0), vec3(1, 6, 6));
+    const mover = box(vec3(1, 0, 0), vec3(1), undefined, 1);
+    mover.groundAngle = degrees(89);
+    mover.velocity3D = vec3(.1, 0, 0);
+    step(30);
+    assert.ok(Number.isFinite(mover.pos3D.y) && mover.pos3D.y === 0, 'stopped at the wall, not thrown');
+    mover.groundAngle = PI / 2;
+    assert.throws(()=> step(), 'a debug assert');
+});
+
+test('a push that is straight up already is used as it is, so an upright stack moves as it always did', ()=>
+{
+    render3D.gravity = vec3();
+    // a sinking that rounds differently through the straight up turn, y * y / y is not always y
+    // the push is the overlap, (1 + 1) / 2 less how far apart the centers are; find one where the rounding shows
+    const overlap = (s)=> 1 - Math.abs(1 - s), landed = (s, y)=> (1 - s) + y;
+    let sink = .01;
+    while (landed(sink, overlap(sink)) === landed(sink, overlap(sink) ** 2 / overlap(sink))) sink += .000137;
+    const floor = box(vec3(), vec3(10, 1, 10));
+    const crate = box(vec3(0, 1 - sink, 0), vec3(1), undefined, 1);
+    const expected = crate.pos3D.y + collideBoxBox3D(crate.pos3D, crate.size3D, floor.pos3D, floor.size3D).y;
+    step();
+    assert.equal(crate.pos3D.y, expected);
+});
+
+test('a sync2D object\'s velocity3D and angleVelocity3D are left to it, not damped', ()=>
+{
+    render3D.gravity = vec3();
+    const synced = new EngineObject3D(vec3());
+    synced.sync2D = true;
+    synced.damping = synced.angleDamping = .5;
+    synced.velocity3D = vec3(0, 0, .1);
+    synced.angleVelocity3D = vec3(.1, 0, 0);
+    step();
+    near(synced.velocity3D.z, .1, 1e-12);
+    near(synced.angleVelocity3D.x, .1, 1e-12);
+});
+
+test('a sprite collides and is collected as its upright box, its rotation turns how it faces', ()=>
+{
+    const sprite = new EngineObject3D(vec3(), undefined, TextureInfo ? new TextureInfo(undefined, false) : undefined);
+    sprite.size3D = vec3(2);
+    sprite.rotation3D = vec3(0, 0, degrees(45));
+    assert.equal(engineObjectsCollect3D(vec3(.95, .95, 0), vec3(.1), [sprite]).length, 1, 'in its upright corner');
 });

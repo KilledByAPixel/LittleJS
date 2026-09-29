@@ -1112,7 +1112,8 @@ new FirstPersonCamera3D(pos3D, yaw, pitch) // mouse look and WASD or arrows to m
                                // so it takes over without a jump; fields for moveSpeed, lookSpeed, pitchRange,
                                // lockPointer, and fly to move the way it looks instead of walking level; give it a
                                // size3D and setCollision() to walk into solids, destroy it to hand the camera back
-camera.jumpSpeed = 0           // above 0, Space or gamepad button 0 jumps while it stands on a height map or voxel map
+camera.jumpSpeed = 0           // above 0, Space or gamepad button 0 jumps while it stands on something: a height map,
+                               // a voxel map or a solid, see groundObject
 camera.eyeHeight = 0           // how far above its position the eye is, toward the top of its size3D body
 render3D.camera.follow(target, offset, percent=1) // chase camera: ease toward target + offset and look at it, percent
                                                   // is how far it moves each call, so call it every frame, from
@@ -1250,8 +1251,9 @@ obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engin
                                    // clampSpeed keeps each axis of velocity3D within objectMaxSpeed
 obj.updatePhysics()                // moves it and pushes it out of solids; bounce off anything else in update, which
                                    // runs once every object has moved, so the fix lands before the frame draws
-obj.mass = 1 // objects start with no mass and stay put; with a mass render3D.gravity, gravityScale and damping act on
-             // velocity3D, damped first and gravity added after as in 2D, and damping is 1 by default for no slowing
+obj.mass = 1 // objects start with no mass and are not pulled; with a mass render3D.gravity and gravityScale act on
+             // velocity3D; damping slows every object, damped first and gravity added after as in 2D, and damping is
+             // 1 by default for no slowing
 obj.size3D                              // full size for engineObjectsCollect3D, solid collision and
                                         // sprites, which it also picks by, a mesh is picked by its own box;
                                         // starts at the size of the mesh's box, 1 with no mesh; the box is
@@ -1281,8 +1283,9 @@ obj.collideWithVoxel(type, cell)        // asked by a VoxelMap whether a block s
 obj.groundObject                        // what it stands on this frame, a height map, a voxel map or a solid,
                                         // undefined in the air; sliding on it slows by friction, the less grippy of
                                         // the two, relative to it, so a moving platform carries what rides it
-obj.groundAngle = PI/4                  // the steepest slope it stands on, in radians: resting on a solid within
-                                        // this of flat holds it still, steeper it slides down; a player climbs more
+obj.groundAngle = PI/4                  // the steepest slope it stands on, in radians under PI/2: resting on a
+                                        // box's face within this of flat holds it still, steeper it slides down, and
+                                        // a sphere, an edge or a corner is nothing to stand on; a player climbs more
 obj.softShadow = 2                      // 0 by default; a soft shadow of that diameter under the object on
                                         // render3D.softShadowHeight; scale3D and a parent's scale grow it, so set it
                                         // for the unscaled object

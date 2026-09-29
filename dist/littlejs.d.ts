@@ -8146,7 +8146,7 @@ declare module "littlejsengine" {
      * EngineObject3D - An EngineObject with a 3D transform and a mesh
      * - Set pos3D, rotation3D and scale3D instead of the 2D pos, size and angle
      * - Gets update, children, timers, destroy and renderOrder from EngineObject
-     * - velocity3D is added to pos3D each frame, along with render3D.gravity and damping once it has a mass
+     * - velocity3D is added to pos3D each frame, slowed by damping, and render3D.gravity pulls it once it has a mass
      * - Objects face -Z, the same way the camera does, so lookAt turns them to face a point
      * - The 2D pos and velocity are still there but nothing draws them
      * - These inherited fields are 2D only and do nothing here: angle, angleVelocity, additiveColor, drawSize and mirror;
@@ -9131,7 +9131,7 @@ declare module "littlejsengine" {
         /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
         lockPointer: boolean;
         /** @property {number} - Speed of a jump in world units a frame, 0 for none; Space or gamepad button 0 jumps
-         *  while it stands on something, a height map or voxel map it collides with, see collideLevel */
+         *  while it stands on something, a height map, a voxel map or a solid, see groundObject */
         jumpSpeed: number;
         /** @property {number} - How far above its position the eye is, in its own space, so with a size3D the eye can
          *  sit toward the top of the body instead of its middle; keep it under half the body's height, or the eye is
