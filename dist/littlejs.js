@@ -24420,18 +24420,26 @@ function render3DStripTriangles(count, remap, place)
 }
 
 // a mesh's packed vertex data for the GPU, one vertex per entry of a layout, which is the strip index of each,
-// written into data when given, the buffer an earlier call returned for the same layout
+// written into data when given, the buffer an earlier call returned for the same layout; it measures the mesh's
+// radius and box as it goes, as computeRadius does, over the vertices once instead of every strip entry
 function render3DMeshVertexData(mesh, vertices, data=new ArrayBuffer(vertices.length * RENDER3D_VERTEX_BYTES))
 {
     const count = vertices.length;
     const floats = new Float32Array(data), ints = new Uint32Array(data);
+    let r = 0, x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
     for (let j = 0; j < count; ++j)
     {
         // a hand built mesh may leave normals, uvs and colors empty
         const i = vertices[j], p = mesh.points[i], uv = mesh.uvs[i] || RENDER3D_DEFAULT_UV;
-        render3DWriteVertex(floats, ints, j * RENDER3D_VERTEX_FLOATS, p.x, p.y, p.z,
+        const x = p.x, y = p.y, z = p.z;
+        render3DWriteVertex(floats, ints, j * RENDER3D_VERTEX_FLOATS, x, y, z,
             mesh.normals[i] || RENDER3D_DEFAULT_NORMAL, uv.x, uv.y, (mesh.colors[i] || WHITE).rgbaInt());
+        r = max(r, x*x + y*y + z*z);
+        x0 = min(x0, x), y0 = min(y0, y), z0 = min(z0, z);
+        x1 = max(x1, x), y1 = max(y1, y), z1 = max(z1, z);
     }
+    mesh.radius = r ** .5;
+    mesh.bounds = count ? {min: vec3(x0, y0, z0), max: vec3(x1, y1, z1)} : {min: vec3(), max: vec3()};
     return data;
 }
 
@@ -24943,8 +24951,8 @@ class Mesh
      *  @return {Mesh} */
     upload()
     {
-        this.computeRadius();
-        if (!render3D?.program || !glContext) return this;
+        // the packing below measures the radius and box, with nothing to pack to they are measured here
+        if (!render3D?.program || !glContext) return this.computeRadius(), this;
         const gl = glContext, layout = this.vertexLayout;
         // no layout when dynamicDraw was turned on after an upload, the next upload makes one
         if (this.dynamicDraw && layout && this.buffer && this.contextGeneration === render3D.contextGeneration)
