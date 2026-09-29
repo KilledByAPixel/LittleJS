@@ -1015,12 +1015,12 @@ test('Restart plays on in the session, Escape comes back to the editor', async (
 // what was written, its files asking for permission again after a reload, which is given or not
 function filePicker()
 {
-    const picker = { picks: 0, written: [], abort: false, permission: 'granted' };
+    const picker = { picks: 0, written: [], abort: false, permission: 'granted', name: undefined }; // name: the pick
     picker.showSaveFilePicker = async (options)=>
     {
         ++picker.picks;
         if (picker.abort) throw { name: 'AbortError' };
-        return { name: options.suggestedName, createWritable: async ()=>
+        return { name: picker.name ?? options.suggestedName, createWritable: async ()=>
             ({ write: async (text)=> picker.written.push(text), close: async ()=> {} }),
             queryPermission: async ()=> 'prompt', requestPermission: async ()=> picker.permission };
     };
@@ -1453,6 +1453,19 @@ test('after Save, edits made since come back on a reload of the saved file, with
     const second = await pickerGame(picker, storage, writtenFront(picker));
     assert.equal(second.run('front.record.pending'), undefined);
     assert.deepEqual([...second.run('frontData')], [5, 6, 3, 0, 0, 0]);
+});
+
+test('Save As to a file of another name is a copy: the map the game loads keeps its autosave', async () =>
+{
+    const picker = filePicker(), storage = makeStorage();
+    const first = await pickerGame(picker, storage);
+    first.run('editorPaint(front, vec2(0, 1), editorTileToGid(4)); editorStrokeEnd();');
+    picker.name = 'copy.json';
+    assert.equal(await first.run('editorSave(front.record, true)'), 'written');
+    assert.equal(writtenFront(picker)[0], 5, 'the copy has the edit');
+    assert.ok(saved(storage), 'the autosave stays, the file the game loads is unchanged');
+    const second = await pickerGame(picker, storage); // loads the original file again
+    assert.equal(second.run('frontData[0]'), 5, 'the edit comes back');
 });
 
 test('after Save, Reset to file goes back to what was saved, and a save of the file as it is drops the autosave',

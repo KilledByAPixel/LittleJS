@@ -407,7 +407,8 @@ async function editorRememberedFile(record)
 const editorFileKey = (record)=> (globalThis.location?.pathname ?? '') + ' ' + record.key;
 
 // a map as a file Save wrote is the file from then on: Reset to file goes back to it, the autosave keeps only the
-// edits since, and a reload of it has nothing to apply; a download can not say it replaced the file, so it does not
+// edits since, and a reload of it has nothing to apply; a download can not say it replaced the file, so it does not,
+// and neither does a file of another name, a copy, since the game still loads the one it came from
 function editorSetBaseline(record, written)
 {
     if (record.synthetic) return; // a layer made in code has no file to load it from
@@ -442,7 +443,9 @@ async function editorSave(record, pickAgain=false)
             const writable = await record.fileHandle.createWritable();
             await writable.write(text);
             await writable.close();
-            editorSetBaseline(record, JSON.parse(text));
+            // the browser gives the picked file's name but not its folder, so the name is what says it is the map's
+            if (record.fileHandle.name === record.fileName)
+                editorSetBaseline(record, JSON.parse(text));
             return 'written';
         }
         catch (error)
