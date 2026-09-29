@@ -531,6 +531,12 @@ class Render3DPlugin
         /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything
          *  @type {Mesh|undefined} */
         this.sky = undefined;
+        /** @property {Array<Color>|undefined} - The top, horizon and bottom colors setSky was given, which a
+         *  reflection shows; with none it shows the ambient colors
+         *  @type {Array<Color>|undefined} */
+        this.skyColors = undefined;
+        // what the material map units have bound, see render3DBindMap
+        this.boundMaps = [];
         /** @property {boolean} - Draw the 3D scene on top of the 2D scene instead of under it */
         this.renderAfter2D = false;
         /** @property {boolean} - Draw see through things far to near so they blend correctly */
@@ -1062,7 +1068,8 @@ class Render3DPlugin
     }
 
     /** Build a sky dome, set it as the sky, and light the scene by it: the fog takes the horizon color, and the
-     *  ambient light comes from the top color above and the bottom color below, both at the ambient strength
+     *  ambient light comes from the top color above and the bottom color below, both at the ambient strength; the
+     *  colors are kept in skyColors for reflections
      *  @param {Color} [topColor] - Straight up
      *  @param {Color} [horizonColor] - Level with the camera
      *  @param {Color} [bottomColor] - Straight down, defaults to the horizon color
@@ -1072,6 +1079,7 @@ class Render3DPlugin
     {
         this.sky?.dispose();
         this.sky = buildSky(topColor, horizonColor, bottomColor);
+        this.skyColors = [topColor.copy(), horizonColor.copy(), bottomColor.copy()];
         this.fogColor = horizonColor.copy();
         this.ambientColor = topColor.scale(ambient, 1);
         this.ambientGroundColor = bottomColor.scale(ambient, 1);
@@ -1468,7 +1476,9 @@ const RENDER3D_SNIPPET_NAMES =
 // uniforms: lightDir (xyz the way the sunlight travels, w = emissive, 1 or more skips the lighting),
 //   lightColor (the sun's rgb, a = specular), ambientFog (rgb, a = fogEnd), fogColor (rgb, a = fogStart),
 //   cameraPos, tex, shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
-//   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive)
+//   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive),
+//   materialParams (x = normal map scale, 0 skips it, y = shininess, z = reflectivity), emissiveTint (rgb, a = the
+//   emissive map is on), skyTop, skyHorizon, skyBottom (what a reflection shows), normalTex, emissiveTex
 function render3DFragmentSource(fragmentCode)
 {
     return '#version 300 es\n' +
@@ -1477,7 +1487,8 @@ function render3DFragmentSource(fragmentCode)
         'uniform vec4 extraLights[' + RENDER3D_MAX_LIGHTS + '],extraLightColors[' + RENDER3D_MAX_LIGHTS + '];' +
         'uniform int extraLightCount;' +
         'uniform vec3 cameraPos;' +
-        'uniform sampler2D tex;' +
+        'uniform vec4 materialParams,emissiveTint,skyTop,skyHorizon,skyBottom;' +
+        'uniform sampler2D tex,normalTex,emissiveTex;' +
         'uniform bool premultipliedTexture;' + // is the texture a render target, which holds premultiplied color
         'uniform highp sampler2DShadow shadowMap;' +
         'in vec3 P,N;in vec2 T,L;in vec4 C,S;' +
@@ -1492,6 +1503,17 @@ function render3DFragmentSource(fragmentCode)
         'for(int x=-1;x<=1;++x)for(int y=-1;y<=1;++y)' +
         's+=texture(shadowMap,vec3(q.xy+vec2(x,y)*shadowParams.z,q.z));' +
         'return s/9.;}' +
+        // the normal map's normal here, in the frame that the position and texture coordinate change along across the
+        // screen, so a mesh needs no tangents; green points up the image and v runs down it, so up is -v;
+        // a mesh with no texture coordinates has no frame and keeps its own normal
+        'vec3 bump(vec3 n){' +
+        'vec3 p1=dFdx(P),p2=dFdy(P);vec2 t1=dFdx(T),t2=dFdy(T);' +
+        'vec3 a=cross(p2,n),b=cross(n,p1),u=a*t1.x+b*t2.x,v=a*t1.y+b*t2.y;' +
+        'float k=max(dot(u,u),dot(v,v));' +
+        'if(k<=0.)return n;' +
+        'vec3 m=texture(normalTex,T).xyz*2.-1.;' +
+        'm.xy*=materialParams.x;' +
+        'return normalize((u*m.x-v*m.y)*inversesqrt(k)+n*m.z);}' +
         (fragmentCode ? RENDER3D_SNIPPET_NAMES + fragmentCode + '\n' : '') +
         'void main(){' +
         (fragmentCode ? 'vec4 t;mainImage(t,T);' : 'vec4 t=texture(tex,T);') +
@@ -1502,6 +1524,7 @@ function render3DFragmentSource(fragmentCode)
         'if(e<1.){' +
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
+        'if(materialParams.x!=0.)n=bump(n);' +
         'float nl=dot(n,-lightDir.xyz);' +
         'float s=shadow();' +
         // the ambient: one color, or blended from the ground color below to the sky color above by the way the face points
@@ -1520,15 +1543,24 @@ function render3DFragmentSource(fragmentCode)
         'float ln=dot(n,v);' +
         'vec3 lc=extraLightColors[i].rgb*extraLightColors[i].a*a*a;' +
         'l+=lc*max(0.,ln);' +
-        'if(lightColor.a>0.)sp+=lc*pow(max(dot(reflect(-v,n),eye),0.),16.)*step(0.,ln);' +
+        'if(lightColor.a>0.)sp+=lc*pow(max(dot(reflect(-v,n),eye),0.),materialParams.y)*step(0.,ln);' +
         '}' +
         'c.rgb*=l*(1.-e)+e;' + // lit, blended toward its own color by how emissive it is
         // specular: the sun's only where its light hits and out of shadow, then the Light3D highlights,
         // skipped entirely when the strength is zero
         'if(lightColor.a>0.){' +
         'vec3 r=reflect(lightDir.xyz,n);' +
-        'c.rgb+=lightColor.rgb*pow(max(dot(r,eye),0.),16.)*lightColor.a*step(0.,nl)*s*(1.-e)+sp*lightColor.a*(1.-e);' +
+        'c.rgb+=lightColor.rgb*pow(max(dot(r,eye),0.),materialParams.y)*lightColor.a*step(0.,nl)*s*(1.-e)+sp*lightColor.a*(1.-e);' +
+        '}' +
+        // the sky along the reflected view, more at a glancing angle (Schlick's Fresnel); sky light, so the sun's
+        // shadow does not dim it
+        'if(materialParams.z>0.){' +
+        'vec3 w=normalize(P-cameraPos),q=reflect(w,n);' +
+        'float f=materialParams.z+(1.-materialParams.z)*pow(1.-max(dot(n,-w),0.),5.);' +
+        'c.rgb=mix(c.rgb,q.y>0.?mix(skyHorizon.rgb,skyTop.rgb,q.y):mix(skyHorizon.rgb,skyBottom.rgb,-q.y),f);' +
         '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
+        // the emissive map adds its light on top, lit or not
+        'if(emissiveTint.a>0.)c.rgb+=texture(emissiveTex,T).rgb*emissiveTint.rgb;' +
         'if(ambientFog.a>0.){' +
         'float z=distance(cameraPos,P);' +
         'c.rgb=mix(c.rgb,shadowParams.w<0.?vec3(0):fogColor.rgb,smoothstep(fogColor.a,ambientFog.a,z));' +
@@ -1555,6 +1587,8 @@ function render3DUseProgram(program)
     gl.uniformMatrix4fv(render3DUniform('lightViewProj'), false, r.shadowMatrix.m);
     gl.uniform1i(render3DUniform('tex'), 0);
     gl.uniform1i(render3DUniform('shadowMap'), 1);
+    gl.uniform1i(render3DUniform('normalTex'), 2);
+    gl.uniform1i(render3DUniform('emissiveTex'), 3);
     const c = r.camera.pos;
     gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
     gl.uniform1i(render3DUniform('extraLightCount'), r.lightCount);
@@ -1725,23 +1759,61 @@ function render3DSampler(wrap, pixelated)
 }
 
 // bind the texture of a tile or texture, white when there is none or it is not loaded, with the 3D sampler that
-// matches its wrap mode; the first time a texture is used in 3D it gets its mipmaps
-function render3DBindTexture(tileInfo, state=render3D)
+// matches its wrap mode; the first time a texture is used in 3D it gets its mipmaps; on unit 0, the color texture,
+// or another unit, the material maps, after which unit 0 is active again
+function render3DBindTexture(tileInfo, state=render3D, unit=0)
 {
     const gl = glContext, r = render3D;
     const textureInfo = render3DTextureOf(tileInfo);
     const texture = textureInfo?.glTexture || r.whiteTexture;
+    unit && gl.activeTexture(gl.TEXTURE0 + unit);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     if (texture === r.whiteTexture || !r.mipmaps && !state.pixelated)
-        return gl.bindSampler(0, null); // the texture's own filtering, as in 2D; the white texel needs no mipmaps
-                                        // or anisotropy, and filtering it that way costs every untextured fragment
-    gl.bindSampler(0, render3DSampler(textureInfo?.wrap, state.pixelated));
-    glUpdateMipmaps(texture); // drawn into since its mipmaps were made
-    if (!state.pixelated && !glMipmappedTextures.has(texture)) // a hard edged draw never reads them
+        gl.bindSampler(unit, null); // the texture's own filtering, as in 2D; the white texel needs no mipmaps
+                                    // or anisotropy, and filtering it that way costs every untextured fragment
+    else
     {
-        glMipmappedTextures.add(texture); // the core makes them again when the texture changes
-        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindSampler(unit, render3DSampler(textureInfo?.wrap, state.pixelated));
+        glUpdateMipmaps(texture); // drawn into since its mipmaps were made
+        if (!state.pixelated && !glMipmappedTextures.has(texture)) // a hard edged draw never reads them
+        {
+            glMipmappedTextures.add(texture); // the core makes them again when the texture changes
+            gl.generateMipmap(gl.TEXTURE_2D);
+        }
     }
+    unit && gl.activeTexture(gl.TEXTURE0);
+}
+
+// the material's uniforms and maps for a draw: the normal map on unit 2 and the emissive map on unit 3, white when
+// unused and bound only when they change, and the sky a reflection shows, the colors setSky was given or the
+// ambient ones; with nothing set every part of it is skipped in the shader
+function render3DSetMaterialUniforms(state)
+{
+    const r = render3D, normalMap = state.normalScale ? state.normalMap : undefined, emissiveMap = state.emissiveMap;
+    render3DUniform4f('materialParams', normalMap ? state.normalScale : 0, state.shininess, state.reflectivity, 0);
+    const ec = state.emissiveMapColor;
+    emissiveMap ? render3DUniform4f('emissiveTint', ec.r, ec.g, ec.b, 1) : render3DUniform4f('emissiveTint', 0, 0, 0, 0);
+    render3DBindMap(2, normalMap, state);
+    render3DBindMap(3, emissiveMap, state);
+    if (state.reflectivity > 0)
+    {
+        const sky = r.sky && r.skyColors, a = r.ambientColor, g = r.ambientGroundColor || a;
+        const top = sky ? sky[0] : a, bottom = sky ? sky[2] : g;
+        render3DUniform4f('skyTop', top.r, top.g, top.b, 1);
+        render3DUniform4f('skyBottom', bottom.r, bottom.g, bottom.b, 1);
+        sky ? render3DUniform4f('skyHorizon', sky[1].r, sky[1].g, sky[1].b, 1) :
+            render3DUniform4f('skyHorizon', (a.r + g.r) / 2, (a.g + g.g) / 2, (a.b + g.b) / 2, 1);
+    }
+}
+
+// bind a material map to its unit, or white for none, only when it or its filtering changed since the last draw;
+// render3D.boundMaps holds what each unit has, index 2 and 3 the maps and 4 and 5 whether each is pixelated
+function render3DBindMap(unit, map, state)
+{
+    const bound = render3D.boundMaps, pixelated = !!map && state.pixelated;
+    if (bound[unit] === map && bound[unit + 2] === pixelated) return;
+    bound[unit] = map, bound[unit + 2] = pixelated;
+    render3DBindTexture(map, state, unit);
 }
 
 // send a vec4 uniform of the main shader only when its value changed since the last send
@@ -1881,6 +1953,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     // a render target's texture holds premultiplied color, the blend writes it that way, so the shader undoes it
     const textureInfo = render3DTextureOf(tileInfo);
     render3DUniform1i('premultipliedTexture', +!!(textureInfo?.glTexture && glPremultipliedTextures.has(textureInfo.glTexture)));
+    render3DSetMaterialUniforms(state);
 }
 
 // the six flat sides of the camera's visible box, each as [x, y, z, w] facing inward
@@ -1962,7 +2035,15 @@ function render3DRenderPass(after2D)
     // may have left its own texture, which fails every draw; the shadow map goes back there even with shadows off
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture || null);
+    // the material maps' units start white, a 2D plugin may have left its own textures there
+    for (const unit of [2, 3])
+    {
+        gl.activeTexture(gl.TEXTURE0 + unit);
+        gl.bindTexture(gl.TEXTURE_2D, r.whiteTexture);
+        gl.bindSampler(unit, null);
+    }
     gl.activeTexture(gl.TEXTURE0);
+    r.boundMaps = []; // what is bound is not known to the cache, the first draw binds its maps
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT);
 
@@ -1990,6 +2071,13 @@ function render3DRenderPass(after2D)
         gl.depthMask(true);
         gl.frontFace(gl.CCW);
         gl.bindSampler(0, null); // back to the textures' own filtering for 2D
+        for (const unit of [2, 3]) // the material maps leave no texture or sampler behind for 2D
+        {
+            gl.activeTexture(gl.TEXTURE0 + unit);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+            gl.bindSampler(unit, null);
+        }
+        gl.activeTexture(gl.TEXTURE0);
         if (glActiveTexture)
             gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
         // ARRAY_BUFFER is not part of VAO state in WebGL2, so bindVertexArray alone would not restore it

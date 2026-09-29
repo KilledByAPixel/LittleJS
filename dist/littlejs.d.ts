@@ -7737,6 +7737,11 @@ declare module "littlejsengine" {
         /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything
          *  @type {Mesh|undefined} */
         sky: Mesh | undefined;
+        /** @property {Array<Color>|undefined} - The top, horizon and bottom colors setSky was given, which a
+         *  reflection shows; with none it shows the ambient colors
+         *  @type {Array<Color>|undefined} */
+        skyColors: Array<Color> | undefined;
+        boundMaps: any[];
         /** @property {boolean} - Draw the 3D scene on top of the 2D scene instead of under it */
         renderAfter2D: boolean;
         /** @property {boolean} - Draw see through things far to near so they blend correctly */
@@ -7967,7 +7972,8 @@ declare module "littlejsengine" {
         /** Rebuild the light's view projection around the shadow center, called automatically each frame shadows are on */
         updateShadowMatrix(): void;
         /** Build a sky dome, set it as the sky, and light the scene by it: the fog takes the horizon color, and the
-         *  ambient light comes from the top color above and the bottom color below, both at the ambient strength
+         *  ambient light comes from the top color above and the bottom color below, both at the ambient strength; the
+         *  colors are kept in skyColors for reflections
          *  @param {Color} [topColor] - Straight up
          *  @param {Color} [horizonColor] - Level with the camera
          *  @param {Color} [bottomColor] - Straight down, defaults to the horizon color

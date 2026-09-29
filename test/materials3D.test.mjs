@@ -106,3 +106,13 @@ test('normalMapFromHeight makes a wrapping TextureInfo of the size, with no canv
     assert.equal(t.wrap, true);
     assert.deepEqual([t.size.x, t.size.y], [8, 4]);
 });
+
+test('setSky keeps its colors for the reflections', ()=>
+{
+    const top = rgb(1, 0, 0), horizon = rgb(0, 1, 0), bottom = rgb(0, 0, 1);
+    render3D.setSky(top, horizon, bottom, 0);
+    assert.deepEqual(render3D.skyColors.map((c)=> [c.r, c.g, c.b]), [[1, 0, 0], [0, 1, 0], [0, 0, 1]]);
+    top.r = .5; // copies, the caller's colors stay theirs
+    assert.equal(render3D.skyColors[0].r, 1);
+    render3D.sky.dispose(); render3D.sky = undefined;
+});
