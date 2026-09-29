@@ -7,6 +7,25 @@
 'use strict';
 
 ///////////////////////////////////////////////////////////////////////////////
+// the default loading screen: Loading over a bar across the middle, filled by the part of the loads done
+function drawLoadingScreen(progress)
+{
+    const x = mainContext, w = mainCanvasSize.x, h = mainCanvasSize.y;
+    const barWidth = min(w * .6, 400), barHeight = 12, left = (w - barWidth) / 2, top = h / 2;
+    x.save();
+    x.fillStyle = '#000';
+    x.fillRect(0, 0, w, h);
+    x.fillStyle = x.strokeStyle = '#fff';
+    x.font = '28px ' + fontDefault;
+    x.textAlign = 'center';
+    x.textBaseline = 'bottom';
+    x.fillText('Loading', w / 2, top - 16);
+    x.lineWidth = 2;
+    x.strokeRect(left, top, barWidth, barHeight);
+    x.fillRect(left, top, barWidth * clamp(progress), barHeight);
+    x.restore();
+}
+
 function drawEngineLogo(t)
 {
     const blackAndWhite = 0;

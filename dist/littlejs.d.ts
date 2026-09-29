@@ -8,6 +8,10 @@ declare module "littlejsengine" {
      */
     export type GameInitCallback = () => void | Promise<void>;
     /**
+     * - Draws the loading screen on mainContext, each frame while the game loads
+     */
+    export type LoadingScreenCallback = (progress: number) => any;
+    /**
      * - Update or render function for the game
      */
     export type GameCallback = () => any;
@@ -258,6 +262,11 @@ declare module "littlejsengine" {
      * @memberof Engine
      */
     /**
+     * @callback LoadingScreenCallback - Draws the loading screen on mainContext, each frame while the game loads
+     * @param {number} progress - The part of the loads done, 0 to 1
+     * @memberof Engine
+     */
+    /**
      * @callback GameCallback - Update or render function for the game
      * @memberof Engine
      */
@@ -352,6 +361,15 @@ declare module "littlejsengine" {
      *  @param {PluginCallback} [preRender] - Called after the canvas is cleared and before gameRender
      *  @memberof Engine */
     export function engineAddPlugin(update?: PluginCallback, render?: PluginCallback, glContextLost?: PluginCallback, glContextRestored?: PluginCallback, preRender?: PluginCallback): void;
+    /** Add something the game loads to what startup waits for: while engineInit and gameInit run, the game loop starts
+     *  once it is done, and the loading screen counts it; images from loadTexture and sounds from files are added on
+     *  their own, and a load that fails counts as done; after startup it does nothing
+     *  @param {Promise<any>} promise
+     *  @return {Promise<any>} - The same promise
+     *  @example
+     *  async function gameInit() { level = await engineAddLoad(fetchJSON('level.json')); }
+     *  @memberof Engine */
+    export function engineAddLoad(promise: Promise<any>): Promise<any>;
     /**
      * LittleJS Debug System
      * - Press Esc to toggle debug overlay with object picking
@@ -600,6 +618,12 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let showSplashScreen: boolean;
+    /** The loading screen, drawn after the splash while the images, gameInit and what they load are loading, once that
+     *  takes more than half a second: a function given the part done, 0 to 1, or undefined for none, which leaves the
+     *  screen blank; the default says Loading over a bar
+     *  @type {LoadingScreenCallback|undefined}
+     *  @memberof Settings */
+    export let loadingScreen: LoadingScreenCallback | undefined;
     /** Disables all rendering, audio, and input for servers, must be set before engineInit
      *  @type {boolean}
      *  @default
@@ -930,6 +954,10 @@ declare module "littlejsengine" {
      *  @param {boolean} show
      *  @memberof Settings */
     export function setShowSplashScreen(show: boolean): void;
+    /** Set the loading screen, drawn after the splash while the game loads, once that takes more than half a second
+     *  @param {LoadingScreenCallback} [callback] - Draws on mainContext given the part done, 0 to 1; undefined for none
+     *  @memberof Settings */
+    export function setLoadingScreen(callback?: LoadingScreenCallback): void;
     /** Set to disable rendering, audio, and input for servers, must be set before engineInit
      *  @param {boolean} headless
      *  @memberof Settings */

@@ -122,6 +122,13 @@ let fontDefault = 'arial';
  *  @memberof Settings */
 let showSplashScreen = false;
 
+/** The loading screen, drawn after the splash while the images, gameInit and what they load are loading, once that
+ *  takes more than half a second: a function given the part done, 0 to 1, or undefined for none, which leaves the
+ *  screen blank; the default says Loading over a bar
+ *  @type {LoadingScreenCallback|undefined}
+ *  @memberof Settings */
+let loadingScreen = drawLoadingScreen;
+
 /** Disables all rendering, audio, and input for servers, must be set before engineInit
  *  @type {boolean}
  *  @default
@@ -538,6 +545,11 @@ function setFontDefault(font) { fontDefault = font; }
  *  @param {boolean} show
  *  @memberof Settings */
 function setShowSplashScreen(show) { showSplashScreen = show; }
+
+/** Set the loading screen, drawn after the splash while the game loads, once that takes more than half a second
+ *  @param {LoadingScreenCallback} [callback] - Draws on mainContext given the part done, 0 to 1; undefined for none
+ *  @memberof Settings */
+function setLoadingScreen(callback) { loadingScreen = callback; }
 
 /** Set to disable rendering, audio, and input for servers, must be set before engineInit
  *  @param {boolean} headless

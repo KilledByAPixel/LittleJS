@@ -281,8 +281,8 @@ class Sound
             // load the audio file, a URL object as bundlers give works like its string;
             // report failures rather than leaving an unhandled rejection, the sound just stays unloaded and silent
             const filename = asset + '';
-            this.loadSound(filename).catch(e=>
-                LOG('Sound load failed for', filename, '-', e.message));
+            engineAddLoad(this.loadSound(filename).catch(e=>
+                LOG('Sound load failed for', filename, '-', e.message))); // startup waits for it
         }
     }
 

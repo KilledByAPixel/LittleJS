@@ -1309,7 +1309,7 @@ async function loadTexture(textureIndex, src)
     const image = new Image;
     if (src)
     {
-        await new Promise(resolve =>
+        await engineAddLoad(new Promise(resolve => // startup waits for it
         {
             image.onload = resolve;
             image.onerror = ()=>
@@ -1319,7 +1319,7 @@ async function loadTexture(textureIndex, src)
             };
             image.crossOrigin = 'anonymous';
             image.src = src;
-        });
+        }));
     }
     
     return textureInfos[textureIndex] = new TextureInfo(image);

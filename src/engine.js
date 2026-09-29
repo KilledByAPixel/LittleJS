@@ -179,6 +179,9 @@ function engineObjectsCollidePairAdd(asker, other, resolve=false)
     others.set(other, resolve);
 }
 let engineInitialized = false; // engineInit ran, with or without a canvas
+// the loads startup waits for, each counted for the loading screen, and how many are done; undefined once the game
+// loop starts
+let engineLoads, engineLoadsDone = 0;
 let engineObjectsUpdateCount = 0; // passes of engineObjectsUpdate so far, how a child knows it moved this pass
 const engineChildStack = []; // the children being updated, taken off the live lists so one leaving does not skip the next
 let showEngineVersion = true;
@@ -228,9 +231,66 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
 ///////////////////////////////////////////////////////////////////////////////
 // Main Engine Functions
 
+/** Add something the game loads to what startup waits for: while engineInit and gameInit run, the game loop starts
+ *  once it is done, and the loading screen counts it; images from loadTexture and sounds from files are added on
+ *  their own, and a load that fails counts as done; after startup it does nothing
+ *  @param {Promise<any>} promise
+ *  @return {Promise<any>} - The same promise
+ *  @example
+ *  async function gameInit() { level = await engineAddLoad(fetchJSON('level.json')); }
+ *  @memberof Engine */
+function engineAddLoad(promise)
+{
+    if (engineLoads)
+    {
+        engineLoads.push(promise);
+        const done = ()=> { ++engineLoadsDone; };
+        promise.then(done, done);
+    }
+    return promise;
+}
+
+// wait for every load, the ones added while waiting too, drawing the loading screen each frame meanwhile
+async function engineWaitForLoads()
+{
+    let waiting = true;
+    const start = performance.now();
+    const drawFrame = ()=>
+    {
+        if (!waiting) return;
+        engineLoadingScreenDraw((performance.now() - start) / 1e3);
+        setTimeout(drawFrame, 16);
+    };
+    headlessMode || drawFrame();
+    try
+    {
+        for (let count; count !== engineLoads.length;)
+        {
+            count = engineLoads.length;
+            await Promise.allSettled(engineLoads);
+        }
+    }
+    finally { waiting = false; }
+}
+
+// one frame of the loading screen, once loading has taken half a second, so a fast load never shows it; input
+// while it shows is dropped, as it is under the splash
+function engineLoadingScreenDraw(elapsed)
+{
+    if (headlessMode || !loadingScreen || elapsed < .5) return;
+    inputClear();
+    engineUpdateCanvas();
+    loadingScreen(engineLoadsDone / engineLoads.length);
+}
+
 /**
  * @callback GameInitCallback - Called after the engine starts, can be async
  * @return {void|Promise<void>}
+ * @memberof Engine
+ */
+/**
+ * @callback LoadingScreenCallback - Draws the loading screen on mainContext, each frame while the game loads
+ * @param {number} progress - The part of the loads done, 0 to 1
  * @memberof Engine
  */
 /**
@@ -267,6 +327,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // double-register listeners / double-add canvases on a second call
     if (engineInitialized) return;
     engineInitialized = true;
+    engineLoads = [], engineLoadsDone = 0;
     ASSERT(isArray(imageSources), 'pass in images as array');
 
     // allow passing in empty functions
@@ -460,7 +521,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     }
 
     // skip setup if headless
-    if (headlessMode) return startEngine();
+    if (headlessMode) return startEngine([]);
 
     // ensure body exists for minimal HTML where the script runs before <body> is parsed
     if (!document.body)
@@ -538,14 +599,19 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         promises.push(splash);
     }
 
-    // wait for all the promises to finish
-    await Promise.all(promises);
-    return startEngine();
+    // the splash first, the images load under it, then the loading screen for the rest
+    showSplashScreen && await promises.at(-1);
+    return startEngine(promises);
 
-    async function startEngine()
+    // gameInit runs once the images are in, and the game loop starts once it and everything loaded while it ran are
+    // done, the loading screen showing in the meantime; an error in gameInit reaches the caller
+    async function startEngine(images)
     {
-        // wait for gameInit to load
-        await gameInit();
+        const init = (async ()=> { await Promise.all(images); await gameInit(); })();
+        engineAddLoad(init);
+        await engineWaitForLoads();
+        engineLoads = undefined;
+        await init;
         engineUpdateInternal = engineUpdate; // engineStep only runs once the game is set up
         engineManualStep || engineUpdate();
     }

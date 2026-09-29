@@ -26,6 +26,7 @@ export
     engineObjectsCallback,
     engineObjectsRaycast,
     engineAddPlugin,
+    engineAddLoad,
 
     // Globals
     debug,
@@ -70,6 +71,7 @@ export
     canvasPixelRatio,
     fontDefault,
     showSplashScreen,
+    loadingScreen,
     headlessMode,
     engineManualStep,
     engineVariableStep,
@@ -130,6 +132,7 @@ export
     getCanvasPixelRatio,
     setFontDefault,
     setShowSplashScreen,
+    setLoadingScreen,
     setHeadlessMode,
     setEngineManualStep,
     setEngineVariableStep,

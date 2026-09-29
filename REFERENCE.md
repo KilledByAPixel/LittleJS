@@ -15,6 +15,10 @@ To start LittleJS, you need to create a few functions and pass them to engineIni
 // Start up LittleJS engine with your callback functions
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 // a rootElement keeps its inline styles and holds the canvas, which is still sized from the window
+// startup: the splash if it is on, then gameInit once the images are in, and the game loop once gameInit and
+// everything loaded while it ran are done; the loading screen shows if that takes more than half a second
+engineAddLoad(promise)  // wait for this too, and count it on the loading screen; images from loadTexture and sounds
+                        // from files are added on their own, a failed load counts as done; after startup does nothing
 
 // Engine globals
 engineName            // Name of the engine: 'LittleJS'
@@ -357,6 +361,9 @@ canvasPixelated = false       // Use nearest neighbor canvas scaling for more pi
 tilesPixelated = true         // Disable filtering for crisper pixel art, when false textures get mipmaps at any size
                               // and upload premultiplied, so smooth edges do not darken
 showSplashScreen = false      // Show the LittleJS splash screen on startup
+loadingScreen                 // Drawn after the splash while the game loads, if that takes over half a second:
+                              // setLoadingScreen((progress)=> ...) draws your own on mainContext, progress 0 to 1,
+                              // setLoadingScreen() for none; the default says Loading over a bar
 glEnable = true               // Enable fast WebGL rendering
 drawScreenSpace = false       // What screenSpace defaults to in the draw and debug functions; turn it on for a HUD or
                               // a 3D game's 2D drawing; the engine's own drawing stays in world space, but a game's

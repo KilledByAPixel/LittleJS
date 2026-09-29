@@ -182,6 +182,9 @@ function engineObjectsCollidePairAdd(asker, other, resolve=false)
     others.set(other, resolve);
 }
 let engineInitialized = false; // engineInit ran, with or without a canvas
+// the loads startup waits for, each counted for the loading screen, and how many are done; undefined once the game
+// loop starts
+let engineLoads, engineLoadsDone = 0;
 let engineObjectsUpdateCount = 0; // passes of engineObjectsUpdate so far, how a child knows it moved this pass
 const engineChildStack = []; // the children being updated, taken off the live lists so one leaving does not skip the next
 let showEngineVersion = true;
@@ -231,9 +234,66 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
 ///////////////////////////////////////////////////////////////////////////////
 // Main Engine Functions
 
+/** Add something the game loads to what startup waits for: while engineInit and gameInit run, the game loop starts
+ *  once it is done, and the loading screen counts it; images from loadTexture and sounds from files are added on
+ *  their own, and a load that fails counts as done; after startup it does nothing
+ *  @param {Promise<any>} promise
+ *  @return {Promise<any>} - The same promise
+ *  @example
+ *  async function gameInit() { level = await engineAddLoad(fetchJSON('level.json')); }
+ *  @memberof Engine */
+function engineAddLoad(promise)
+{
+    if (engineLoads)
+    {
+        engineLoads.push(promise);
+        const done = ()=> { ++engineLoadsDone; };
+        promise.then(done, done);
+    }
+    return promise;
+}
+
+// wait for every load, the ones added while waiting too, drawing the loading screen each frame meanwhile
+async function engineWaitForLoads()
+{
+    let waiting = true;
+    const start = performance.now();
+    const drawFrame = ()=>
+    {
+        if (!waiting) return;
+        engineLoadingScreenDraw((performance.now() - start) / 1e3);
+        setTimeout(drawFrame, 16);
+    };
+    headlessMode || drawFrame();
+    try
+    {
+        for (let count; count !== engineLoads.length;)
+        {
+            count = engineLoads.length;
+            await Promise.allSettled(engineLoads);
+        }
+    }
+    finally { waiting = false; }
+}
+
+// one frame of the loading screen, once loading has taken half a second, so a fast load never shows it; input
+// while it shows is dropped, as it is under the splash
+function engineLoadingScreenDraw(elapsed)
+{
+    if (headlessMode || !loadingScreen || elapsed < .5) return;
+    inputClear();
+    engineUpdateCanvas();
+    loadingScreen(engineLoadsDone / engineLoads.length);
+}
+
 /**
  * @callback GameInitCallback - Called after the engine starts, can be async
  * @return {void|Promise<void>}
+ * @memberof Engine
+ */
+/**
+ * @callback LoadingScreenCallback - Draws the loading screen on mainContext, each frame while the game loads
+ * @param {number} progress - The part of the loads done, 0 to 1
  * @memberof Engine
  */
 /**
@@ -270,6 +330,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // double-register listeners / double-add canvases on a second call
     if (engineInitialized) return;
     engineInitialized = true;
+    engineLoads = [], engineLoadsDone = 0;
     ASSERT(isArray(imageSources), 'pass in images as array');
 
     // allow passing in empty functions
@@ -463,7 +524,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     }
 
     // skip setup if headless
-    if (headlessMode) return startEngine();
+    if (headlessMode) return startEngine([]);
 
     // ensure body exists for minimal HTML where the script runs before <body> is parsed
     if (!document.body)
@@ -541,14 +602,19 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         promises.push(splash);
     }
 
-    // wait for all the promises to finish
-    await Promise.all(promises);
-    return startEngine();
+    // the splash first, the images load under it, then the loading screen for the rest
+    showSplashScreen && await promises.at(-1);
+    return startEngine(promises);
 
-    async function startEngine()
+    // gameInit runs once the images are in, and the game loop starts once it and everything loaded while it ran are
+    // done, the loading screen showing in the meantime; an error in gameInit reaches the caller
+    async function startEngine(images)
     {
-        // wait for gameInit to load
-        await gameInit();
+        const init = (async ()=> { await Promise.all(images); await gameInit(); })();
+        engineAddLoad(init);
+        await engineWaitForLoads();
+        engineLoads = undefined;
+        await init;
         engineUpdateInternal = engineUpdate; // engineStep only runs once the game is set up
         engineManualStep || engineUpdate();
     }
@@ -3515,6 +3581,13 @@ let fontDefault = 'arial';
  *  @memberof Settings */
 let showSplashScreen = false;
 
+/** The loading screen, drawn after the splash while the images, gameInit and what they load are loading, once that
+ *  takes more than half a second: a function given the part done, 0 to 1, or undefined for none, which leaves the
+ *  screen blank; the default says Loading over a bar
+ *  @type {LoadingScreenCallback|undefined}
+ *  @memberof Settings */
+let loadingScreen = drawLoadingScreen;
+
 /** Disables all rendering, audio, and input for servers, must be set before engineInit
  *  @type {boolean}
  *  @default
@@ -3931,6 +4004,11 @@ function setFontDefault(font) { fontDefault = font; }
  *  @param {boolean} show
  *  @memberof Settings */
 function setShowSplashScreen(show) { showSplashScreen = show; }
+
+/** Set the loading screen, drawn after the splash while the game loads, once that takes more than half a second
+ *  @param {LoadingScreenCallback} [callback] - Draws on mainContext given the part done, 0 to 1; undefined for none
+ *  @memberof Settings */
+function setLoadingScreen(callback) { loadingScreen = callback; }
 
 /** Set to disable rendering, audio, and input for servers, must be set before engineInit
  *  @param {boolean} headless
@@ -6207,7 +6285,7 @@ async function loadTexture(textureIndex, src)
     const image = new Image;
     if (src)
     {
-        await new Promise(resolve =>
+        await engineAddLoad(new Promise(resolve => // startup waits for it
         {
             image.onload = resolve;
             image.onerror = ()=>
@@ -6217,7 +6295,7 @@ async function loadTexture(textureIndex, src)
             };
             image.crossOrigin = 'anonymous';
             image.src = src;
-        });
+        }));
     }
     
     return textureInfos[textureIndex] = new TextureInfo(image);
@@ -8502,8 +8580,8 @@ class Sound
             // load the audio file, a URL object as bundlers give works like its string;
             // report failures rather than leaving an unhandled rejection, the sound just stays unloaded and silent
             const filename = asset + '';
-            this.loadSound(filename).catch(e=>
-                LOG('Sound load failed for', filename, '-', e.message));
+            engineAddLoad(this.loadSound(filename).catch(e=>
+                LOG('Sound load failed for', filename, '-', e.message))); // startup waits for it
         }
     }
 
@@ -11986,6 +12064,25 @@ function glPolyStrip(points)
  */
 
 ///////////////////////////////////////////////////////////////////////////////
+// the default loading screen: Loading over a bar across the middle, filled by the part of the loads done
+function drawLoadingScreen(progress)
+{
+    const x = mainContext, w = mainCanvasSize.x, h = mainCanvasSize.y;
+    const barWidth = min(w * .6, 400), barHeight = 12, left = (w - barWidth) / 2, top = h / 2;
+    x.save();
+    x.fillStyle = '#000';
+    x.fillRect(0, 0, w, h);
+    x.fillStyle = x.strokeStyle = '#fff';
+    x.font = '28px ' + fontDefault;
+    x.textAlign = 'center';
+    x.textBaseline = 'bottom';
+    x.fillText('Loading', w / 2, top - 16);
+    x.lineWidth = 2;
+    x.strokeRect(left, top, barWidth, barHeight);
+    x.fillRect(left, top, barWidth * clamp(progress), barHeight);
+    x.restore();
+}
+
 function drawEngineLogo(t)
 {
     const blackAndWhite = 0;
