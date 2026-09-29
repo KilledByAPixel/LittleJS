@@ -303,6 +303,13 @@ animation.tileInfo      // the frame to draw now, read it in update or before a 
 animation.frame         // its index, 0 to frameCount-1
 animation.isDone        // true once a play has run through
 animation.speed = 1     // rate multiplier, set before starting
+animation.play(onEnd)   // onEnd is called once when the play ends, on the first read after it
+
+// Sprite Animator - a character's animations by name and the one showing now
+const hero = new SpriteAnimator({idle, walk, attack}) // clips are SpriteAnimations in their own modes, first shows
+hero.set('walk')        // show a clip, starting over only when it changes or a play of it has ended
+hero.set('attack', ()=> hero.set('idle')) // with a callback for when a play clip ends
+hero.tileInfo           // the frame to draw now; also hero.frame, hero.isDone, hero.name, hero.clip
 
 // Texture Info Object
 TextureInfo(image, useWebGL=true, wrap=false) // Created automatically for each image

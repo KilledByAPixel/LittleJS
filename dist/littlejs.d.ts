@@ -2050,7 +2050,9 @@ declare module "littlejsengine" {
      * - Driven by the engine time like a Timer, so it pauses with the game and needs no update call
      * - Read tileInfo each frame for the frame to draw, from an object's update or before a drawTile
      * - loop, play and pingPong each start over from the first frame; stop holds the current one
+     * - play(onEnd) calls onEnd once the play ends, on the first read after it, since there is no update to call it
      * - Frames follow each other along the row, as tileInfo.frame counts them
+     * - SpriteAnimator switches between a character's animations by name
      * @example
      * const walk = new SpriteAnimation(tile(0, 16), 4, .1); // four frames, a tenth of a second each
      * const attack = new SpriteAnimation(tile(4, 16), 3, .05).play(); // once, then holds the last frame
@@ -2078,19 +2080,23 @@ declare module "littlejsengine" {
         /** @property {number|undefined} - The frame held by stop, undefined while running
          *  @type {number|undefined} */
         heldFrame: number | undefined;
+        /** @property {(function():void)|undefined} - Called once when a play ends, on the first read after it
+         *  @type {(function():void)|undefined} */
+        onEnd: (() => void) | undefined;
         /** Start over from the first frame and repeat forever
          *  @return {SpriteAnimation} */
         loop(): SpriteAnimation;
         /** Start over from the first frame, run through once and hold the last frame, last to first at a negative speed
+         *  @param {function():void} [onEnd] - Called once when it ends, on the first read of it after that
          *  @return {SpriteAnimation} */
-        play(): SpriteAnimation;
+        play(onEnd?: () => void): SpriteAnimation;
         /** Start over from the first frame and run there and back forever
          *  @return {SpriteAnimation} */
         pingPong(): SpriteAnimation;
         /** Hold the current frame
          *  @return {SpriteAnimation} */
         stop(): SpriteAnimation;
-        /** Start over from the first frame in a mode
+        /** Start over from the first frame in a mode, with no end callback
          *  @param {string} [mode] - 'loop', 'once' or 'pingPong', the current mode when left out
          *  @return {SpriteAnimation} */
         restart(mode?: string): SpriteAnimation;
@@ -2103,7 +2109,52 @@ declare module "littlejsengine" {
         /** The tile of the frame showing now
          *  @return {TileInfo} */
         get tileInfo(): TileInfo;
-        /** True once a play has shown its last frame for its time
+        /** True once a play has shown its last frame for its time, the first read after that calls onEnd
+         *  @return {boolean} */
+        get isDone(): boolean;
+    }
+    /**
+     * SpriteAnimator - A character's animations by name, like idle, walk and attack, and the one showing now
+     * - Each clip is a SpriteAnimation and keeps its own mode, loop, play or pingPong
+     * - set starts a clip over only when it changes or a play of it has ended, so it can be called every update
+     * - Read tileInfo each frame for the frame to draw, as with a SpriteAnimation
+     * @example
+     * const hero = new SpriteAnimator({
+     *     idle:   new SpriteAnimation(tile(0, 16), 2, .4),
+     *     walk:   new SpriteAnimation(tile(2, 16), 4, .1),
+     *     attack: new SpriteAnimation(tile(6, 16), 3, .05).play(),
+     * });
+     * hero.set('attack', ()=> hero.set('idle')); // back to idle when the attack ends
+     * // in update: this.tileInfo = hero.tileInfo;
+     * @memberof Draw
+     */
+    export class SpriteAnimator {
+        /** Create an animator from its clips, showing the first one
+         *  @param {Object<string, SpriteAnimation>} clips - The clips by name */
+        constructor(clips: {
+            [x: string]: SpriteAnimation;
+        });
+        /** @property {Object<string, SpriteAnimation>} - The clips by name */
+        clips: {
+            [x: string]: SpriteAnimation;
+        };
+        /** @property {string} - The name of the clip showing now */
+        name: string;
+        /** Show a clip, starting it over in its own mode unless it is showing and has not ended
+         *  @param {string} name - The clip's name
+         *  @param {function():void} [onEnd] - Called once when a play clip ends, as with SpriteAnimation.play
+         *  @return {SpriteAnimator} */
+        set(name: string, onEnd?: () => void): SpriteAnimator;
+        /** The clip showing now
+         *  @return {SpriteAnimation} */
+        get clip(): SpriteAnimation;
+        /** The tile of the frame showing now
+         *  @return {TileInfo} */
+        get tileInfo(): TileInfo;
+        /** The frame of the clip showing now
+         *  @return {number} */
+        get frame(): number;
+        /** True once the clip showing now is a play that has ended
          *  @return {boolean} */
         get isDone(): boolean;
     }

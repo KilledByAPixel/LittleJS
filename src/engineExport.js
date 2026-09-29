@@ -270,6 +270,7 @@ export
     TextureInfo,
     loadTexture,
     SpriteAnimation,
+    SpriteAnimator,
     Shader,
     mainCanvas,
     mainContext,

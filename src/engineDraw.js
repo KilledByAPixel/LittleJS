@@ -313,7 +313,9 @@ class TextureInfo
  * - Driven by the engine time like a Timer, so it pauses with the game and needs no update call
  * - Read tileInfo each frame for the frame to draw, from an object's update or before a drawTile
  * - loop, play and pingPong each start over from the first frame; stop holds the current one
+ * - play(onEnd) calls onEnd once the play ends, on the first read after it, since there is no update to call it
  * - Frames follow each other along the row, as tileInfo.frame counts them
+ * - SpriteAnimator switches between a character's animations by name
  * @example
  * const walk = new SpriteAnimation(tile(0, 16), 4, .1); // four frames, a tenth of a second each
  * const attack = new SpriteAnimation(tile(4, 16), 3, .05).play(); // once, then holds the last frame
@@ -345,6 +347,9 @@ class SpriteAnimation
         /** @property {number|undefined} - The frame held by stop, undefined while running
          *  @type {number|undefined} */
         this.heldFrame = undefined;
+        /** @property {(function():void)|undefined} - Called once when a play ends, on the first read after it
+         *  @type {(function():void)|undefined} */
+        this.onEnd = undefined;
     }
 
     /** Start over from the first frame and repeat forever
@@ -352,8 +357,14 @@ class SpriteAnimation
     loop() { return this.restart('loop'); }
 
     /** Start over from the first frame, run through once and hold the last frame, last to first at a negative speed
+     *  @param {function():void} [onEnd] - Called once when it ends, on the first read of it after that
      *  @return {SpriteAnimation} */
-    play() { return this.restart('once'); }
+    play(onEnd)
+    {
+        this.restart('once');
+        this.onEnd = onEnd;
+        return this;
+    }
 
     /** Start over from the first frame and run there and back forever
      *  @return {SpriteAnimation} */
@@ -363,7 +374,7 @@ class SpriteAnimation
      *  @return {SpriteAnimation} */
     stop() { this.heldFrame = this.frame; return this; }
 
-    /** Start over from the first frame in a mode
+    /** Start over from the first frame in a mode, with no end callback
      *  @param {string} [mode] - 'loop', 'once' or 'pingPong', the current mode when left out
      *  @return {SpriteAnimation} */
     restart(mode=this.mode)
@@ -371,6 +382,7 @@ class SpriteAnimation
         this.mode = mode;
         this.startTime = time;
         this.heldFrame = undefined;
+        this.onEnd = undefined;
         return this;
     }
 
@@ -382,6 +394,7 @@ class SpriteAnimation
      *  @return {number} */
     get frame()
     {
+        this.isDone; // a read after a play ends calls onEnd, which may start it over
         if (this.heldFrame !== undefined)
             return this.heldFrame;
         const n = this.frameCount, f = floor(this.elapsedFrames);
@@ -397,9 +410,81 @@ class SpriteAnimation
      *  @return {TileInfo} */
     get tileInfo() { return this.firstTile.frame(this.frame); }
 
-    /** True once a play has shown its last frame for its time
+    /** True once a play has shown its last frame for its time, the first read after that calls onEnd
      *  @return {boolean} */
-    get isDone() { return this.mode == 'once' && this.heldFrame === undefined && abs(this.elapsedFrames) >= this.frameCount; }
+    get isDone()
+    {
+        const done = this.mode == 'once' && this.heldFrame === undefined && abs(this.elapsedFrames) >= this.frameCount;
+        if (done && this.onEnd)
+        {
+            const onEnd = this.onEnd;
+            this.onEnd = undefined; // once, and it can start a new play with a callback of its own
+            onEnd();
+        }
+        return done;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * SpriteAnimator - A character's animations by name, like idle, walk and attack, and the one showing now
+ * - Each clip is a SpriteAnimation and keeps its own mode, loop, play or pingPong
+ * - set starts a clip over only when it changes or a play of it has ended, so it can be called every update
+ * - Read tileInfo each frame for the frame to draw, as with a SpriteAnimation
+ * @example
+ * const hero = new SpriteAnimator({
+ *     idle:   new SpriteAnimation(tile(0, 16), 2, .4),
+ *     walk:   new SpriteAnimation(tile(2, 16), 4, .1),
+ *     attack: new SpriteAnimation(tile(6, 16), 3, .05).play(),
+ * });
+ * hero.set('attack', ()=> hero.set('idle')); // back to idle when the attack ends
+ * // in update: this.tileInfo = hero.tileInfo;
+ * @memberof Draw
+ */
+class SpriteAnimator
+{
+    /** Create an animator from its clips, showing the first one
+     *  @param {Object<string, SpriteAnimation>} clips - The clips by name */
+    constructor(clips)
+    {
+        const names = Object.keys(clips);
+        ASSERT(names.length > 0, 'an animator needs at least one clip');
+        /** @property {Object<string, SpriteAnimation>} - The clips by name */
+        this.clips = clips;
+        /** @property {string} - The name of the clip showing now */
+        this.name = names[0];
+    }
+
+    /** Show a clip, starting it over in its own mode unless it is showing and has not ended
+     *  @param {string} name - The clip's name
+     *  @param {function():void} [onEnd] - Called once when a play clip ends, as with SpriteAnimation.play
+     *  @return {SpriteAnimator} */
+    set(name, onEnd)
+    {
+        ASSERT(this.clips[name], 'no clip named ' + name);
+        if (name == this.name && !this.clip.isDone)
+            return this;
+        this.name = name;
+        this.clip.restart();
+        this.clip.onEnd = onEnd;
+        return this;
+    }
+
+    /** The clip showing now
+     *  @return {SpriteAnimation} */
+    get clip() { return this.clips[this.name]; }
+
+    /** The tile of the frame showing now
+     *  @return {TileInfo} */
+    get tileInfo() { return this.clip.tileInfo; }
+
+    /** The frame of the clip showing now
+     *  @return {number} */
+    get frame() { return this.clip.frame; }
+
+    /** True once the clip showing now is a play that has ended
+     *  @return {boolean} */
+    get isDone() { return this.clip.isDone; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
