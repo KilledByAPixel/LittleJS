@@ -38,6 +38,7 @@ function gameInit()
     water = new EngineObject3D(vec3(), mesh);
     water.transparent = true;
     water.specular = 1;
+    water.reflectivity = .3; // the sky in it, more toward the horizon
 
     // the grid uses each vertex in several places of its strips, its
     // keys say which cell each one is
