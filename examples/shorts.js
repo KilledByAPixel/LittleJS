@@ -68,6 +68,7 @@ const exampleList =
     new ExampleInfo('Save / Load', 'save.js', 'Persist data to local storage', false, 'localstorage, persistence, readSaveData, writeSaveData'),
     new ExampleInfo('Medals', 'medals.js', 'Achievement system', false, 'unlock, achievements, newgrounds'),
     new ExampleInfo('Tween', 'tween.js', 'Number, Vector2 and Color tweens with easing', false, 'animation, easing, lerp, pingpong, interpolation'),
+    new ExampleInfo('Scenes', 'scenes.js', 'A title, the game and game over, switched with setScene', false, 'scene, state, menu, pause, game over, persistent'),
     new ExampleInfo('Nine Slice', 'nineSlice.js', 'Scalable UI panels', false, 'three slice, stretch, corners, text, tiles'),
     new ExampleInfo('Crescent', 'crescent.js', 'Moon phase crescent shapes', false, 'moon, phase, polygon, draw, circle, lunar'),
     new ExampleInfo('UI System', 'uiSystem.js', 'Buttons, sliders and checkboxes', false, 'objects, widgets, interactive'),
