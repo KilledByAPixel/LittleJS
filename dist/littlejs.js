@@ -32698,10 +32698,16 @@ function editor3DCameraBegin()
     const r = render3D, camera = editor3DGameCamera = r.camera;
     r.camera = editor3DCamera;
 
-    // where the game is looking from, a box turned its way and a line along its view
-    const color = hsl(.15, 1, .6);
-    debugBox3D(camera.pos, vec3(.5, .5, .8), color, 0, camera.rotation);
-    debugLine3D(camera.pos, camera.pos.add(camera.getForward().scale(2)), color);
+    // where the game is looking from, a box turned its way and a line along its view; the editor has enough to show
+    if (editor3DFreeCamera)
+    {
+        const color = hsl(.15, 1, .6);
+        debugBox3D(camera.pos, vec3(.5, .5, .8), color, 0, camera.rotation);
+        debugLine3D(camera.pos, camera.pos.add(camera.getForward().scale(2)), color);
+    }
+
+    // the editor's own drawing, in this frame's 3D pass
+    editor3DIsOpen && render3DDebugPush(0, editor3DDraw);
 }
 
 // called by the 3D pass after the frame: the game's camera is back, with its matrices, for the game's next update
@@ -33802,6 +33808,464 @@ if (debug && globalThis.document?.addEventListener)
     });
 
 ///////////////////////////////////////////////////////////////////////////////
+// what the panel does to the level, and what it says
+
+// the help, every control
+const editor3DHelpLines =
+[
+    'Left: select · Shift+Left: add or take away · Left drag from empty space: box select',
+    'Q select · W move · E rotate · R scale: drag a handle, or the object itself',
+    'G: grid snap, Ctrl flips it for a drag · End: drop to the ground',
+    'Right button: look, and WASD and QE fly while it is held, Shift faster',
+    'Wheel: zoom · Middle drag or Space+drag: pan · Alt+drag: orbit · F: frame the selection',
+    'Pick a type, then click to place it, Shift+click keeps placing',
+    'Delete · Ctrl+C / X / V: copy, cut, paste · Ctrl+D: duplicate · Ctrl+Z / Y: undo, redo',
+    'Esc: play and edit · 0: exit the editor · ?: keys',
+];
+
+// the hint line, for what is held and what is selected
+function editor3DHint()
+{
+    if (editor3DRecords.get(editor3DLevel)?.pending)
+        return 'The level file changed: apply your edits or drop them';
+    if (editor3DDrag)
+        return editor3DDrag.kind === 'box' ? 'Let go to select what is inside' :
+            'Esc or right click puts it back · Ctrl flips the snap';
+    if (inputCaptureRead(()=> mouseIsDown(2)))
+        return 'WASD and QE fly · Shift faster · the wheel sets the speed';
+    if (editor3DBrush)
+        return `Click to place a ${editor3DBrush} · Shift keeps placing · Q puts it down`;
+    if (editor3DSelection.size)
+        return 'Drag a handle or the object · W move · E rotate · R scale · End drops it';
+    return 'Click to select · pick a type to place · the right button looks · ? keys';
+}
+
+// if the properties box has an input for a default's type
+const editor3DPropertyEditable = (value)=> ['number', 'boolean', 'string'].includes(typeof value) ||
+    isColor(value) || isVector2(value) || isVector3(value);
+
+// set the position, rotation in degrees or scale of the one selected object, from the panel, as one undo
+function editor3DSetSelectedTransform(field, value)
+{
+    const selected = editor3DSelected(), id = selected[0]?.id;
+    if (selected.length !== 1 || !isVector3(value)) return false;
+    editor3DStrokeEnd();
+    editor3DChange((list)=> editor3DSetTransform(list.find((o)=> o.id === id), field === 'pos' ? value : undefined,
+        field === 'rotation' ? value : undefined, field === 'scale' ? value : undefined));
+    editor3DStrokeEnd();
+    return true;
+}
+
+// set a property of the one selected object, from the panel, as one undo; the value has the type of its default
+function editor3DSetSelectedProperty(name, value)
+{
+    const selected = editor3DSelected(), id = selected[0]?.id;
+    const defaults = selected[0] && level3DTypes.get(selected[0].type)?.defaults;
+    const d = defaults && Object.hasOwn(defaults, name) ? defaults[name] : undefined;
+    const sameType = isColor(d) ? isColor(value) : isVector3(d) ? isVector3(value) :
+        isVector2(d) ? isVector2(value) : typeof value === typeof d;
+    if (selected.length !== 1 || !editor3DPropertyEditable(d) || !sameType) return false;
+    editor3DStrokeEnd();
+    editor3DChange((list)=> editor3DSetProperty(list.find((o)=> o.id === id), name, value, d));
+    editor3DStrokeEnd();
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// what the editor draws
+
+const EDITOR3D_AXIS_COLORS = {x: hsl(0, .9, .55), y: hsl(.33, .9, .45), z: hsl(.6, .9, .6)};
+const EDITOR3D_SELECT_COLOR = hsl(.15, 1, .6), EDITOR3D_MARKER_COLOR = hsl(.55, 1, .7);
+const EDITOR3D_SOLID_COLOR = hsl(.08, 1, .55);
+
+// a width in world units that shows as a number of pixels at a point
+function editor3DPixels(point, pixels) { return editor3DScreenScale(point) / mainCanvasSize.y * pixels; }
+
+// the 12 edges of the unit box a matrix places
+function editor3DDrawWire(matrix, color, pixels=2)
+{
+    const corner = (i)=> matrix.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
+    const width = editor3DPixels(matrix.getTranslation(), pixels);
+    for (let i = 0; i < 8; ++i)
+    for (const bit of [1, 2, 4])
+        i & bit || render3D.drawLine(corner(i), corner(i | bit), width, color);
+}
+
+// a ring around a point across two axes
+function editor3DDrawRing(center, across, along, radius, color, pixels=2)
+{
+    const points = [];
+    for (let i = 0; i <= 32; ++i)
+    {
+        const a = i / 32 * PI * 2;
+        points.push(center.add(across.scale(cos(a) * radius)).add(along.scale(sin(a) * radius)));
+    }
+    render3D.drawRibbon(points, editor3DPixels(center, pixels), undefined, color);
+}
+
+// what the game made for an object, when it has something to see and click
+function editor3DVisible(object)
+{
+    const made = editor3DInstances.get(object.id);
+    return made instanceof EngineObject3D && !made.destroyed && (made.mesh || made.tileInfo) ? made : undefined;
+}
+
+// the box around an object as a matrix: around its mesh where it is, turned and sized as it is, a unit box for a
+// marker
+function editor3DBoxMatrix(object)
+{
+    const made = editor3DVisible(object), bounds = made?.mesh && (made.mesh.bounds || made.mesh.getBounds());
+    if (!made)
+        return buildMatrix(editor3DPos(object));
+    const matrix = render3DObjectMatrix(made).copy();
+    return bounds ? matrix.multiply(buildMatrix(bounds.min.add(bounds.max).scale(.5), undefined,
+        bounds.max.subtract(bounds.min))) : matrix.multiply(buildMatrix(vec3(), undefined, made.size3D));
+}
+
+// the ground grid at height 0 around where the camera is, a line each unit and a stronger one each 10, fading
+// with distance; drawn with the depth test so the level hides it, and a hair over 0 so a floor there does not
+function editor3DDrawGrid()
+{
+    const camera = editor3DCamera.pos, reach = 40, y = .01;
+    const x0 = round(camera.x), z0 = round(camera.z);
+    for (let i = -reach; i <= reach; ++i)
+    for (const across of [false, true])
+    {
+        const at = (across ? z0 : x0) + i, strong = at % 10 === 0;
+        if (!strong && abs(i) > reach / 2) continue;
+        const fade = 1 - abs(i) / (strong ? reach : reach / 2);
+        const a = across ? vec3(x0 - reach, y, at) : vec3(at, y, z0 - reach);
+        const b = across ? vec3(x0 + reach, y, at) : vec3(at, y, z0 + reach);
+        render3D.drawLine(a, b, strong ? .04 : .02, hsl(0, 0, 1, (strong ? .35 : .15) * fade));
+    }
+}
+
+// the editor's drawing in the 3D pass: the grid, a marker for what has nothing to see, the collision shape of
+// what is solid and turned or selected, the selection, the brush where it would go, and the handles
+function editor3DDraw()
+{
+    const r = render3D;
+    render3DWithState({depthTest: true}, editor3DDrawGrid);
+    for (const object of editor3DObjects())
+    {
+        const made = editor3DVisible(object), selected = editor3DSelection.has(object.id);
+        made || editor3DDrawWire(editor3DBoxMatrix(object), EDITOR3D_MARKER_COLOR, 1.5);
+        selected && editor3DDrawWire(editor3DBoxMatrix(object), EDITOR3D_SELECT_COLOR, 2.5);
+        if (made?.collideSolidObjects && !made.parent && (selected || editor3DTurned(object)))
+        {
+            const shape = render3DSolidShape(made), color = EDITOR3D_SOLID_COLOR;
+            if (shape.size)
+                editor3DDrawWire(buildMatrix(shape.pos, undefined, shape.size), color, 1.5);
+            else
+                for (const [across, along] of [['x', 'y'], ['y', 'z'], ['z', 'x']])
+                    editor3DDrawRing(shape.pos, EDITOR3D_AXES[across], EDITOR3D_AXES[along], shape.radius, color, 1.5);
+        }
+    }
+
+    // the brush, a box where a click would place it
+    const point = editor3DBrush && !editor3DMouseOnPanel && !editor3DDrag && editor3DMousePoint();
+    if (point)
+    {
+        const snapped = editor3DSnapPos(editor3DRest(point, vec3(1)), vec3(1), editor3DGrid ? editor3DMoveStep : 0);
+        editor3DDrawWire(buildMatrix(vec3(snapped.x, point.y + .5, snapped.z)), hsl(0, 0, 1, .7));
+    }
+
+    // the handles, the one under the mouse or being dragged in the selection's color
+    for (const handle of editor3DHandles())
+    {
+        const {kind, axis, center, length, points} = handle;
+        const taken = (editor3DDrag?.handle ?? editor3DHover);
+        const lit = taken && taken.kind === kind && taken.axis === axis;
+        const color = lit ? EDITOR3D_SELECT_COLOR : EDITOR3D_AXIS_COLORS[axis[0]] ?? WHITE;
+        const width = editor3DPixels(center, lit ? 4 : 3), tip = length * .1;
+        if (kind === 'ring')
+            r.drawRibbon(points, width, undefined, color);
+        else if (kind === 'plane')
+        {
+            // a flat square across its two axes, in the color of the axis it does not move along
+            const size = vec3(tip * 1.6).subtract(handle.direction.scale(tip * 1.5));
+            r.drawBox(points[0], size, lit ? color : EDITOR3D_AXIS_COLORS['xyz'.replace(axis[0], '')
+                .replace(axis[1], '')].scale(1, .7));
+        }
+        else if (kind === 'scaleAll')
+            r.drawBox(center, tip * 1.4, lit ? color : WHITE);
+        else
+        {
+            r.drawLine(points[0], points[1], width, color);
+            r.drawBox(points[1], tip, color, kind === 'scale' ?
+                editor3DRotation(editor3DSelected()[0]).scale(PI / 180) : undefined);
+        }
+    }
+}
+
+// the editor's drawing on the 2D layer: the name of each marker, and the box being dragged out to select with
+function editor3DDrawLabels()
+{
+    for (const object of editor3DObjects())
+    {
+        if (editor3DVisible(object)) continue;
+        const at = render3D.worldToScreen(editor3DPos(object));
+        at && drawTextScreen(object.type + '', at, 14, WHITE, 3, BLACK);
+    }
+    const drag = editor3DDrag;
+    if (drag?.kind === 'box')
+    {
+        const {from: a, to: b} = drag, corners = [a, vec2(b.x, a.y), b, vec2(a.x, b.y)];
+        corners.forEach((c, i)=> drawLine(c, corners[(i + 1) % 4], 2, EDITOR3D_SELECT_COLOR, undefined, 0, glEnable, true));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// the panel, in the look of the 2D level editor's, made the first time the editor opens
+
+let editor3DPanel, editor3DPanelParts;
+
+function editor3DPanelInit()
+{
+    const panel = editor3DPanel = editorElement('div', document.body,
+        'position:fixed;top:8px;left:8px;width:260px;max-height:calc(100% - 16px);overflow-y:auto;' +
+        'box-sizing:border-box;padding:8px;background:#111d;color:#eee;font:12px monospace;' +
+        'border-radius:4px;z-index:9999;user-select:none');
+
+    // a click or touch on the panel is not the level's, a mouse up still goes on so a drag can let go
+    for (const type of ['mousedown','wheel','touchstart','touchmove','touchend','touchcancel'])
+        panel.addEventListener(type, (e)=> e.stopPropagation());
+    panel.addEventListener('mouseenter', ()=> editor3DMouseOnPanel = true);
+    panel.addEventListener('mouseleave', ()=> editor3DMouseOnPanel = false);
+
+    const box = 'margin:4px 0;padding:4px;background:#222;border-radius:3px';
+    const row = (parent=panel)=> editorElement('div', parent, 'display:flex;gap:4px;margin:4px 0;flex-wrap:wrap');
+    const button = (parent, text, onclick, title='')=>
+    {
+        const b = editorElement('button', parent, 'flex:1;padding:3px;cursor:pointer', text);
+        b.onclick = (e)=> { onclick(e); b.blur(); }; // the keys go back to the editor
+        b.title = title;
+        return b;
+    };
+    const check = (parent, text, onchange, title='')=>
+    {
+        const label = editorElement('label', parent, 'display:flex;gap:6px;align-items:center;margin:2px 0');
+        const input = editorElement('input', label);
+        input.type = 'checkbox';
+        input.onchange = ()=> { onchange(input.checked); input.blur(); };
+        editorElement('span', label, '', text);
+        label.title = title;
+        return input;
+    };
+    const choice = (parent, text, values, onchange)=>
+    {
+        const label = editorElement('label', parent, 'display:flex;gap:3px;align-items:center;flex:1');
+        editorElement('span', label, '', text);
+        const select = editorElement('select', label, 'flex:1;background:#333;color:#eee');
+        for (const value of values)
+            editorElement('option', select, '', value + '').value = value + '';
+        select.onchange = ()=> { onchange(parseFloat(select.value)); select.blur(); };
+        return select;
+    };
+
+    editorElement('div', panel, 'font-weight:bold', '3D Level Editor');
+    const top = row();
+    button(top, 'Play', ()=> editor3DPlay(editor3DViewPoint()), 'Esc, and Esc again comes back to the editor');
+    const restart = button(top, 'Restart', editor3DRestart, 'Rebuild the level and play it');
+    button(top, 'Exit', ()=> levelEditor.close(), '0, then Esc opens the debug overlay again');
+    const undo = row();
+    button(undo, 'Undo', ()=> editor3DUndo(), 'Ctrl+Z');
+    button(undo, 'Redo', ()=> editor3DUndo(true), 'Ctrl+Y');
+    button(undo, 'Keys', ()=> editor3DHelp = !editor3DHelp, 'Every control, ?');
+
+    // a file that changed under its autosave
+    const pending = editorElement('div', panel, 'padding:4px;margin:4px 0;background:#630;border-radius:3px');
+    editorElement('div', pending, '', 'The level file changed since your autosaved edits');
+    const pendingRow = editorElement('div', pending, 'display:flex;gap:4px;margin-top:4px');
+    button(pendingRow, 'Apply edits', ()=> editor3DApplyPending());
+    button(pendingRow, 'Drop them', ()=> editor3DDropPending());
+
+    // the tools, and the snapping
+    const tools = row(), toolButtons = {};
+    for (const [tool, text, key] of [['select', 'Select', 'Q'], ['move', 'Move', 'W'], ['rotate', 'Rotate', 'E'],
+        ['scale', 'Scale', 'R']])
+        toolButtons[tool] = button(tools, text, ()=>
+        {
+            editor3DTool = tool;
+            tool === 'select' && (editor3DBrush = undefined);
+        }, key);
+    const snap = editorElement('div', panel, box);
+    const grid = check(snap, 'Grid snap', (on)=> editor3DGrid = on, 'G, and Ctrl flips it for a drag');
+    const steps = row(snap);
+    const moveStep = choice(steps, 'Move', [1, .5, .25], (v)=> editor3DMoveStep = v);
+    const rotateStep = choice(steps, 'Turn', [15, 45, 90], (v)=> editor3DRotateStep = v);
+    const scaleStep = choice(steps, 'Size', [1, .5, .25], (v)=> editor3DScaleStep = v);
+    const ground = check(snap, 'Ground snap', (on)=> editor3DGroundSnap = on,
+        'A drag of an object slides it along what is under the mouse');
+
+    // the types, a click picks one up to place, made again when types are added
+    editorElement('div', panel, 'color:#aaa;margin-top:4px', 'Place');
+    const types = row();
+    const properties = editorElement('div', panel, box);
+
+    const file = row();
+    // Save says so for a moment when it saved, Save As shows where a page can write files
+    const saved = (b, label)=> (result)=> result && (b.textContent = 'Saved', setTimeout(()=> b.textContent = label, 1e3));
+    const save = button(file, 'Save', ()=> editor3DSave().then(saved(save, 'Save')),
+        'Save, to the file picked the first time, or a download');
+    const saveAs = button(file, 'Save As', ()=> editor3DSave(true).then(saved(saveAs, 'Save As')),
+        'Save As, to a file picked again');
+    /** @type {any} */ (globalThis).showSaveFilePicker || (saveAs.style.display = 'none');
+    const playFrom = check(panel, 'Play from mouse', (on)=> editor3DPlayFromMouse = on,
+        'Escape starts play with the player at the mouse, Play at the middle of the view');
+
+    const storage = editorElement('div', panel, 'color:#f86;margin-top:4px',
+        'Autosave failed, storage is full: Save to a file');
+    const hint = editorElement('div', panel, 'color:#8ab;margin-top:4px');
+    const help = editorElement('div', panel, 'color:#aaa;margin-top:4px;border-top:1px solid #444;padding-top:4px');
+    for (const line of editor3DHelpLines)
+        editorElement('div', help, 'margin:2px 0', line);
+    button(help, 'Close', ()=> editor3DHelp = false, '?');
+
+    editor3DPanelParts = {restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, types,
+        properties, playFrom, storage, hint, help, typeNames: ''};
+}
+
+// show the panel as the editor is now
+function editor3DPanelUpdate()
+{
+    if (!editor3DIsOpen)
+    {
+        editor3DPanel && (editor3DPanel.style.display = 'none');
+        return;
+    }
+    editor3DPanel || editor3DPanelInit();
+    editor3DPanel.style.display = '';
+    const p = editor3DPanelParts, lit = '2px solid #4af';
+    p.restart.style.display = levelEditor.onRestart ? '' : 'none';
+    p.pending.style.display = editor3DRecords.get(editor3DLevel)?.pending ? '' : 'none';
+    for (const tool in p.toolButtons)
+        p.toolButtons[tool].style.outline = tool === editor3DTool ? lit : '';
+    p.grid.checked = editor3DGrid;
+    p.ground.checked = editor3DGroundSnap;
+    p.moveStep.value = editor3DMoveStep + '';
+    p.rotateStep.value = editor3DRotateStep + '';
+    p.scaleStep.value = editor3DScaleStep + '';
+    p.playFrom.checked = editor3DPlayFromMouse;
+    p.playFrom.parentElement.style.display = levelEditor.onPlayFrom ? 'flex' : 'none';
+    p.storage.style.display = editor3DSaveFailed ? '' : 'none';
+    p.hint.textContent = editor3DHint();
+    p.help.style.display = editor3DHelp ? '' : 'none';
+
+    // a button for each type, made again when the types changed
+    const names = [...level3DTypes.keys()], typeNames = names.join('\n');
+    if (p.typeNames !== typeNames)
+    {
+        p.typeNames = typeNames;
+        p.types.replaceChildren(...names.map((name)=>
+        {
+            const b = editorElement('button', undefined, 'padding:3px 6px;cursor:pointer', name);
+            b.onclick = ()=> { editor3DBrush = editor3DBrush === name ? undefined : name; b.blur(); };
+            return b;
+        }));
+    }
+    names.forEach((name, i)=> p.types.children[i].style.outline = name === editor3DBrush ? lit : '');
+    editor3DPropertiesUpdate(p.properties);
+}
+
+// the properties box: the position, rotation and scale of the one selected object and an input for each default
+// of its type, made again when the selection or the object changes, but not while one of its inputs is typed in
+function editor3DPropertiesUpdate(box)
+{
+    const selected = editor3DSelected(), object = selected.length === 1 && selected[0];
+    const type = object && level3DTypes.get(object.type);
+    const key = object ? JSON.stringify(object) : selected.length ? selected.length + ' objects' : '';
+    box.style.display = key ? '' : 'none';
+    if (box.dataset.key === key || box.contains(document.activeElement)) return;
+    box.dataset.key = key;
+    box.replaceChildren();
+    if (!object)
+    {
+        key && editorElement('div', box, 'color:#aaa', key + ' selected');
+        return;
+    }
+    editorElement('div', box, 'color:#aaa;margin-bottom:2px', `${object.type} ${object.id}`);
+    const field = 'background:#222;color:#eee';
+    const line = (name)=>
+    {
+        const row = editorElement('label', box, 'display:flex;gap:4px;align-items:center;margin:2px 0');
+        editorElement('span', row, 'flex:1', name);
+        return row;
+    };
+
+    // the numbers of a vector, set together once every one of them reads as a number
+    const numbers = (name, value, set)=>
+    {
+        const row = line(name), axes = isVector3(value) ? 'xyz' : 'xy', inputs = [];
+        for (const axis of axes)
+        {
+            const input = editorElement('input', row, field + ';width:' + (axes.length > 2 ? 46 : 52) + 'px');
+            input.type = 'number';
+            input.step = 'any';
+            input.value = editor3DRound(value[axis]) + '';
+            input.onchange = ()=>
+            {
+                const v = inputs.map((i)=> parseFloat(i.value));
+                if (v.every((n)=> isNumber(n)))
+                    set(axes.length > 2 ? vec3(v[0], v[1], v[2]) : vec2(v[0], v[1]));
+                else
+                    inputs.forEach((i, k)=> i.value = editor3DRound(value[axes[k]]) + '');
+                input.blur();
+            };
+            inputs.push(input);
+        }
+    };
+    numbers('pos', editor3DPos(object), (v)=> editor3DSetSelectedTransform('pos', v));
+    numbers('rotation', editor3DRotation(object), (v)=> editor3DSetSelectedTransform('rotation', v));
+    numbers('scale', editor3DScale(object), (v)=> editor3DSetSelectedTransform('scale', v));
+    if (!type) return;
+
+    const values = level3DProperties(type, object);
+    for (const [name, defaultValue] of Object.entries(type.defaults))
+    {
+        const value = values[name];
+        if (isVector3(defaultValue) || isVector2(defaultValue))
+        {
+            numbers(name, value, (v)=> editor3DSetSelectedProperty(name, v));
+            continue;
+        }
+        const input = editorElement('input', line(name), field + ';width:110px');
+        const set = (v)=> { editor3DSetSelectedProperty(name, v); input.blur(); };
+        if (typeof defaultValue === 'boolean')
+        {
+            input.type = 'checkbox';
+            input.checked = !!value;
+            input.onchange = ()=> set(input.checked);
+        }
+        else if (isColor(defaultValue))
+        {
+            input.type = 'color';
+            input.value = value.toString(false);
+            input.onchange = ()=> { const color = new Color().setHex(input.value); color.a = value.a; set(color); };
+        }
+        else if (typeof defaultValue === 'number')
+        {
+            input.type = 'number';
+            input.step = 'any';
+            input.value = value + '';
+            input.onchange = ()=> { const v = parseFloat(input.value); isNumber(v) && set(v); };
+        }
+        else if (typeof defaultValue === 'string')
+        {
+            input.type = 'text';
+            input.value = (value ?? '') + '';
+            input.onchange = ()=> set(input.value);
+        }
+        else
+        {
+            // a type it has no input for, an array say, shown as it is
+            input.readOnly = true;
+            input.value = value + '';
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // plugin
 
 function editor3DUpdate()
@@ -33815,10 +34279,12 @@ function editor3DUpdate()
         return inputCaptureRead(()=> editor3DWithView(()=> editor3DEditorUpdate(seconds)));
 
     // playing in an editing session, Escape, the debug key, goes back to the editor; taken, so the debug overlay
-    // waits till the session ends
-    if (editor3DSession && debugKey && keyWasPressed(debugKey))
+    // waits till the session ends; a captured mouse the browser let go of is Escape too, Chrome keeps that key
+    const locked = pointerLockIsActive(), lostLock = editor3DWasLocked && !locked;
+    editor3DWasLocked = locked;
+    if (editor3DSession && (lostLock || debugKey && keyWasPressed(debugKey)))
     {
-        inputClearKey(debugKey);
+        debugKey && inputClearKey(debugKey);
         editor3DSetOpen(true);
         return;
     }
@@ -33827,9 +34293,12 @@ function editor3DUpdate()
 
 function editor3DRender()
 {
-    if (headlessMode || !editor3DFreeCamera) return;
-    drawTextScreen('Free camera · C or Esc to leave', vec2(mainCanvasSize.x / 2, mainCanvasSize.y - 30), 20, WHITE, 4,
-        BLACK);
+    if (headlessMode) return;
+    editor3DPanelUpdate();
+    if (editor3DFreeCamera)
+        drawTextScreen('Free camera · C or Esc to leave', vec2(mainCanvasSize.x / 2, mainCanvasSize.y - 30), 20, WHITE,
+            4, BLACK);
+    editor3DIsOpen && editor3DDrawLabels();
 }
 
 debug && engineAddPlugin(editor3DUpdate, editor3DRender);
