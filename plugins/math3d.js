@@ -748,12 +748,7 @@ function collideSphereSphere(posA, radiusA, posB, radiusB)
 function collideSphereBox(pos, radius, boxPos, boxSize, boxRotation)
 {
     if (isTurned3D(boxRotation))
-    {
-        // in the box's own space it is upright, and the push goes back out turned
-        const axes = boxAxes3D(boxRotation);
-        const push = collideSphereBox(boxLocal3D(pos, boxPos, axes), radius, vec3(), boxSize);
-        return push && boxWorld3D(push, axes);
-    }
+        return collideSphereOrientedBox3D(pos, radius, boxPos, boxSize, boxAxes3D(boxRotation));
     const h = boxSize.scale(.5);
     const closest = vec3(
         clamp(pos.x, boxPos.x - h.x, boxPos.x + h.x),
@@ -863,6 +858,17 @@ function collideBoxBox3D(posA, sizeA, posB, sizeB, rotationA, rotationB)
         return undefined;
     return pushOutAxis3D(d, overlapX, overlapY, overlapZ);
 }
+
+// the push to move a sphere out of a box turned to these axes: in the box's own space it is upright, and the push
+// goes back out turned
+function collideSphereOrientedBox3D(pos, radius, boxPos, boxSize, axes)
+{
+    const push = collideSphereBox(boxLocal3D(pos, boxPos, axes), radius, vec3(), boxSize);
+    return push && boxWorld3D(push, axes);
+}
+
+// the world's axes, for an upright box among turned ones
+const BOX_WORLD_AXES = Object.freeze([vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)]);
 
 // the shortest push to move box A out of box B by the separating axis test: each box's three face directions and
 // the nine across an edge of each; a gap on any of them is no touch, and the push is along the least overlap, from

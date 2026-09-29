@@ -22164,12 +22164,7 @@ function collideSphereSphere(posA, radiusA, posB, radiusB)
 function collideSphereBox(pos, radius, boxPos, boxSize, boxRotation)
 {
     if (isTurned3D(boxRotation))
-    {
-        // in the box's own space it is upright, and the push goes back out turned
-        const axes = boxAxes3D(boxRotation);
-        const push = collideSphereBox(boxLocal3D(pos, boxPos, axes), radius, vec3(), boxSize);
-        return push && boxWorld3D(push, axes);
-    }
+        return collideSphereOrientedBox3D(pos, radius, boxPos, boxSize, boxAxes3D(boxRotation));
     const h = boxSize.scale(.5);
     const closest = vec3(
         clamp(pos.x, boxPos.x - h.x, boxPos.x + h.x),
@@ -22279,6 +22274,17 @@ function collideBoxBox3D(posA, sizeA, posB, sizeB, rotationA, rotationB)
         return undefined;
     return pushOutAxis3D(d, overlapX, overlapY, overlapZ);
 }
+
+// the push to move a sphere out of a box turned to these axes: in the box's own space it is upright, and the push
+// goes back out turned
+function collideSphereOrientedBox3D(pos, radius, boxPos, boxSize, axes)
+{
+    const push = collideSphereBox(boxLocal3D(pos, boxPos, axes), radius, vec3(), boxSize);
+    return push && boxWorld3D(push, axes);
+}
+
+// the world's axes, for an upright box among turned ones
+const BOX_WORLD_AXES = Object.freeze([vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)]);
 
 // the shortest push to move box A out of box B by the separating axis test: each box's three face directions and
 // the nine across an edge of each; a gap on any of them is no touch, and the push is along the least overlap, from
@@ -26199,10 +26205,23 @@ function render3DSolidShape(o)
     const kx = abs(k.x), ky = abs(k.y), kz = abs(k.z);
     if (o.collideAsSphere3D)
         return {pos: o.pos3D.copy(), radius: max(s.x, s.y, s.z) / 2 * max(kx, ky, kz)};
-    // a turned box keeps its rotation, a solid is never a child so it is the world's; an upright one has none, and
+    // a turned box has its axes, a solid is never a child so its rotation is the world's; an upright one has none, and
     // neither does a sprite, whose rotation turns how it faces the camera, not its box
-    const rotation = !render3DIsSprite(o) && isTurned3D(o.rotation3D) ? o.rotation3D.copy() : undefined;
-    return {pos: o.pos3D.copy(), size: vec3(s.x * kx, s.y * ky, s.z * kz), rotation};
+    const axes = !render3DIsSprite(o) && isTurned3D(o.rotation3D) ? render3DSolidAxes(o) : undefined;
+    return {pos: o.pos3D.copy(), size: vec3(s.x * kx, s.y * ky, s.z * kz), axes};
+}
+
+// a turned solid's three axes, worked out when its rotation changes and kept until then, so the pairs it is tested
+// against each frame do not each work them out again
+const render3DSolidAxesCache = new WeakMap;
+function render3DSolidAxes(o)
+{
+    const r = o.rotation3D, kept = render3DSolidAxesCache.get(o);
+    if (kept && kept.x === r.x && kept.y === r.y && kept.z === r.z)
+        return kept.axes;
+    const axes = boxAxes3D(r);
+    render3DSolidAxesCache.set(o, {x: r.x, y: r.y, z: r.z, axes});
+    return axes;
 }
 
 // how far a solid shape can reach from its own center, for a quick reject before the exact test
@@ -26220,15 +26239,18 @@ function render3DSolidReach(o)
 // what it takes to move shape a clear of shape b, whichever pair of shapes they are, or undefined for no touch
 function render3DSolidPush(a, b)
 {
+    // a turned box is tested by its kept axes, the upright pairs as they always were
+    const sphereBox = (sphere, box)=> box.axes ? collideSphereOrientedBox3D(sphere.pos, sphere.radius, box.pos,
+        box.size, box.axes) : collideSphereBox(sphere.pos, sphere.radius, box.pos, box.size);
     if (!a.size) // a is a sphere
-        return b.size ? collideSphereBox(a.pos, a.radius, b.pos, b.size, b.rotation)
-            : collideSphereSphere(a.pos, a.radius, b.pos, b.radius);
+        return b.size ? sphereBox(a, b) : collideSphereSphere(a.pos, a.radius, b.pos, b.radius);
     if (!b.size) // only b is, so push b out of a and turn it around
     {
-        const push = collideSphereBox(b.pos, b.radius, a.pos, a.size, a.rotation);
+        const push = sphereBox(b, a);
         return push && push.scale(-1);
     }
-    return collideBoxBox3D(a.pos, a.size, b.pos, b.size, a.rotation, b.rotation);
+    return a.axes || b.axes ? collideOrientedBoxes3D(a.pos, a.size, a.axes ?? BOX_WORLD_AXES, b.pos, b.size,
+        b.axes ?? BOX_WORLD_AXES) : collideBoxBox3D(a.pos, a.size, b.pos, b.size);
 }
 
 // a sprite, a tile with no mesh, which faces the camera however it is turned
@@ -26239,8 +26261,7 @@ const render3DIsSprite = (o)=> !o.mesh && !!o.tileInfo;
 function render3DOnFace(push, shape)
 {
     if (!shape.size) return false;
-    const n = push.normalize(), axes = shape.rotation ? boxAxes3D(shape.rotation) : [vec3(1, 0, 0), vec3(0, 1, 0),
-        vec3(0, 0, 1)];
+    const n = push.normalize(), axes = shape.axes ?? BOX_WORLD_AXES;
     return max(abs(n.dot(axes[0])), abs(n.dot(axes[1])), abs(n.dot(axes[2]))) > 1 - 1e-6;
 }
 
@@ -26332,14 +26353,17 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
         if (!(s.x || s.y || s.z)) continue;
         const center = vec3(m[12], m[13], m[14]);
         const worldSize = testCenters ? vec3() : render3DWorldSize(o, m);
-        // a turned box is tested as turned, its world rotation read off the matrix only when it has one
+        // a turned box is tested as turned, its axes read off the matrix, its columns with the scale taken out
         const turned = !testCenters && !render3DIsSprite(o) && (m[1] || m[2] || m[4] || m[6] || m[8] || m[9]);
-        const rotation = turned ? render3DObjectMatrix(o).getRotation() : undefined;
+        const axis = (i)=> vec3(m[i], m[i+1], m[i+2]).normalize();
+        const axes = turned ? [axis(0), axis(4), axis(8)] : undefined;
         let hit;
-        if (box)
-            hit = isOverlapping3D(pos, box, center, worldSize, undefined, rotation);
-        else if (rotation)
-            hit = !!collideSphereBox(pos, radiusSquared ** .5, center, worldSize, rotation);
+        if (box && axes)
+            hit = !!collideOrientedBoxes3D(pos, box, BOX_WORLD_AXES, center, worldSize, axes);
+        else if (box)
+            hit = isOverlapping3D(pos, box, center, worldSize);
+        else if (axes)
+            hit = !!collideSphereOrientedBox3D(pos, radiusSquared ** .5, center, worldSize, axes);
         else
         {
             // a sphere against the nearest point of the box
@@ -34740,7 +34764,7 @@ function editor3DDraw()
             // what it collides as, which turns with it, where its size3D is not its mesh's
             const shape = render3DSolidShape(made), color = EDITOR3D_SOLID_COLOR;
             if (shape.size)
-                editor3DDrawWire(buildMatrix(shape.pos, shape.rotation, shape.size), color, 1.5);
+                editor3DDrawWire(buildMatrix(shape.pos, shape.axes && made.rotation3D, shape.size), color, 1.5);
             else
                 for (const [across, along] of [['x', 'y'], ['y', 'z'], ['z', 'x']])
                     editor3DDrawRing(shape.pos, EDITOR3D_AXES[across], EDITOR3D_AXES[along], shape.radius, color, 1.5);

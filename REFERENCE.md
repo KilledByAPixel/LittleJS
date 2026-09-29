@@ -1276,8 +1276,10 @@ obj.setCollision(solids, isSolid, level) // the same flags as in 2D, but the col
                                         // voxel maps an object is still its upright box
 obj.collideAsSphere3D = true              // collide as the sphere that fits size3D instead of the box, false by default
 obj.collideWithObject(object, push)     // called when it touches a solid object, both objects are asked and either
-                                        // returning false leaves the push and the bounce to you; push is what it
-                                        // takes to move this one clear, it is undefined in 2D
+                                        // returning false leaves the push and the bounce to you; push is the
+                                        // shortest way to move this one clear, along the surface's normal, so it
+                                        // says which way what it touched faces; when it stands there the engine
+                                        // lifts it straight up instead; push is undefined in 2D
 obj.collideWithVoxel(type, cell)        // asked by a VoxelMap whether a block stops it, true by default; return false
                                         // to pass through, as for water
 obj.groundObject                        // what it stands on this frame, a height map, a voxel map or a solid,

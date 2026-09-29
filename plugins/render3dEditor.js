@@ -1443,7 +1443,7 @@ function editor3DDraw()
             // what it collides as, which turns with it, where its size3D is not its mesh's
             const shape = render3DSolidShape(made), color = EDITOR3D_SOLID_COLOR;
             if (shape.size)
-                editor3DDrawWire(buildMatrix(shape.pos, shape.rotation, shape.size), color, 1.5);
+                editor3DDrawWire(buildMatrix(shape.pos, shape.axes && made.rotation3D, shape.size), color, 1.5);
             else
                 for (const [across, along] of [['x', 'y'], ['y', 'z'], ['z', 'x']])
                     editor3DDrawRing(shape.pos, EDITOR3D_AXES[across], EDITOR3D_AXES[along], shape.radius, color, 1.5);
