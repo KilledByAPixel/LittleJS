@@ -24321,7 +24321,8 @@ class EngineObject3D extends EngineObject
         // the edges, so this is always a TileInfo like the 2D one and the object stays an EngineObject
         if (tileInfo instanceof TextureInfo)
             render3DWholeTiles.add(tileInfo = new TileInfo(vec2(), tileInfo.size, tileInfo, 0, 0));
-        super(vec2(), vec2(), tileInfo, 0, color);
+        // the 2D pos starts where the object is, so turning on sync2D keeps it there
+        super(vec2(pos3D.x, pos3D.y), vec2(), tileInfo, 0, color);
         false&&ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
         false&&ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
         this.mass = 0; // static: no 2D physics, and no 3D gravity until a mass is set

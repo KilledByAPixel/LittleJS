@@ -479,7 +479,7 @@ test('EngineObject3D extends EngineObject and has a 3D transform', () =>
     assert.equal(o.color.r, 1);
     assert.equal(o.color.g, 0);
     assert.equal(o.transparent, false);
-    near(o.pos.x, 0); near(o.pos.y, 0); // 2D pos unused
+    near(o.pos.x, 1); near(o.pos.y, 2); // 2D pos starts at pos3D, for sync2D
     o.destroy();
     assert.ok(o.destroyed);
 });
@@ -953,7 +953,7 @@ test('EngineObject3D moves in updatePhysics like 2D, a child in updateTransforms
     nearVec(o.pos3D, 1, 2, 3); // a top level object does not move here
     o.updatePhysics();
     nearVec(o.pos3D, 1.1, 2, 2.9);
-    near(o.pos.x, 0); // the 2D body is untouched
+    near(o.pos.x, 1); // the 2D body is untouched, still where it started
     assert.equal(o.mass, 0);
     const child = new EngineObject3D(vec3(0, 0, 1));
     o.addChild(child);
@@ -3458,4 +3458,13 @@ test('the release builds carry no 3D debug drawing, as the 2D debug functions ar
             assert.ok(!body.includes('drawLine') && !body.includes('drawRibbon'), `${name} draws in ${file}: ${body.slice(0, 80)}`);
         }
     }
+});
+
+test('an EngineObject3D starts its 2D pos at its pos3D, so turning on sync2D keeps it where it was made', () =>
+{
+    const o = new EngineObject3D(vec3(3, 4, 5));
+    o.sync2D = true;
+    o.updateTransforms();
+    nearVec(o.pos3D, 3, 4, 5);
+    o.destroy();
 });

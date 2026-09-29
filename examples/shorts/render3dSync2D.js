@@ -21,7 +21,6 @@ function makeBody(pos, size, mesh, color)
 {
     const body = new EngineObject3D(vec3(pos.x, pos.y), mesh, undefined, color);
     body.sync2D = true;  // pos and angle drive pos3D and rotation3D
-    body.pos = pos;      // the 2D position the physics moves
     body.size = size;    // the 2D box it collides as
     body.scale3D = vec3(size.x, size.y, size.x);
     body.mass = 1;       // so the 2D physics moves it
