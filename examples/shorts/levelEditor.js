@@ -50,6 +50,7 @@ class Coin extends EngineObject
     constructor(pos)
     {
         super(pos, vec2(.8), tile(6), 0, hsl(.15, 1, .5));
+        this.mass = 0; // static, it stays where it was placed
         this.value = 1;
     }
 
