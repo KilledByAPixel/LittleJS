@@ -7500,8 +7500,9 @@ declare module "littlejsengine" {
         sunColor: Color;
         /** @property {Color} - Ambient light color, from above when ambientGroundColor is set */
         ambientColor: Color;
-        /** @property {Color|undefined} - Ambient light from below: set, the ambient blends from this on faces pointing down
-         *  to ambientColor on faces pointing up, the way a sky and a ground light a scene; setSky sets both from its colors
+        /** @property {Color|undefined} - Ambient light from below: set, the ambient blends from this on faces pointing
+         *  down to ambientColor on faces pointing up, the way a sky and a ground light a scene; setSky sets both from
+         *  its colors
          *  @type {Color|undefined} */
         ambientGroundColor: Color | undefined;
         /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined
@@ -7511,19 +7512,23 @@ declare module "littlejsengine" {
         fogStart: number;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
         fogEnd: number;
-        /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale; sync2D objects use the 2D gravity */
+        /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its
+         *  gravityScale; sync2D objects use the 2D gravity */
         gravity: Vector3;
-        /** @property {number|HeightMap|function(number, number): number} - Floor for objects with a softShadow: a height, a HeightMap, or (x, z) => y
+        /** @property {number|HeightMap|function(number, number): number} - Floor for objects with a softShadow: a
+         *  height, a HeightMap, or (x, z) => y
          *  @type {number|HeightMap|function(number, number): number} */
         softShadowHeight: number | HeightMap | ((arg0: number, arg1: number) => number);
-        /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for flat faces */
+        /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for
+         *  flat faces */
         smoothShading: boolean;
         /** @property {boolean} - Cast real shadows from the sun, off by default and free when off */
         shadows: boolean;
         /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
         shadowMapSize: number;
-        /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper; it is a square
-         *  facing the light, so it turns as the light does, and about 1.5 times an area's width covers it from any angle */
+        /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper; it is a
+         *  square facing the light, so it turns as the light does, and about 1.5 times an area's width covers it from
+         *  any angle */
         shadowRange: number;
         /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera
          *  @type {Vector3|undefined} */
@@ -7547,12 +7552,15 @@ declare module "littlejsengine" {
         depthWrite: boolean;
         cullBackFaces: boolean;
         mirrored: boolean;
-        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
+         *  1 adds a light's full color at its brightest; its size is fixed */
         specular: number;
-        /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined draws with the plugin's own
+        /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined
+         *  draws with the plugin's own
          *  @type {Shader|undefined} */
         shader: Shader | undefined;
-        /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
+        /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay
+         *  lit inside a shadow */
         receiveShadow: boolean;
         /** @property {Function|undefined} - Draw solid world here, it runs again for shadows so only draw in it
          *  @type {Function|undefined} */
@@ -7569,11 +7577,14 @@ declare module "littlejsengine" {
         sortTransparent: boolean;
         /** @property {boolean} - Skip meshes whose bounding sphere is outside the view */
         frustumCulling: boolean;
-        /** @property {boolean} - Draw every use of a mesh in the opaque stage as one instanced call, mesh.instanced overrides it per mesh */
+        /** @property {boolean} - Draw every use of a mesh in the opaque stage as one instanced call, mesh.instanced
+         *  overrides it per mesh */
         instancing: boolean;
-        /** @property {boolean} - Sample textures through mipmaps so they do not shimmer in the distance, false uses each texture's own filtering like 2D */
+        /** @property {boolean} - Sample textures through mipmaps so they do not shimmer in the distance, false uses
+         *  each texture's own filtering like 2D */
         mipmaps: boolean;
-        /** @property {boolean} - Draw state: keep texture pixels hard edged, no mipmaps and no blending between them, set per object by pixelated */
+        /** @property {boolean} - Draw state: keep texture pixels hard edged, no mipmaps and no blending between them,
+         *  set per object by pixelated */
         pixelated: boolean;
         /** @property {number} - Anisotropic filtering for textures seen at an angle, 1 to 16, 1 is off; needs mipmaps */
         anisotropy: number;
@@ -7587,8 +7598,8 @@ declare module "littlejsengine" {
         planeMesh: Mesh;
         /** @property {Mesh} - The same square seen and lit from both sides, for signs, cards and leaves */
         planeMeshDoubleSided: Mesh;
-        /** @property {Mesh} - A square of size 1 facing +Z with the tile across it, the corners in the order drawBillboard
-         *  writes them; a ParticleEmitter3D draws its particles as instances of it, each with its own matrix */
+        /** @property {Mesh} - A square of size 1 facing +Z with the tile across it, the corners in the order
+         *  drawBillboard writes them; a ParticleEmitter3D draws its particles as instances of it, each with its own matrix */
         billboardMesh: Mesh;
         /** @property {boolean} - True while the 3D pass is running, 3D draws are only valid then */
         isRendering: boolean;
@@ -7707,7 +7718,8 @@ declare module "littlejsengine" {
             object: EngineObject3D;
             distance: number;
         } | undefined;
-        /** Play a sound at a 3D position, quieter with distance from the camera and panned by its side, like Sound.play with a 2D position
+        /** Play a sound at a 3D position, quieter with distance from the camera and panned by its side, like Sound.play
+         *  with a 2D position
          *  @param {Sound} sound
          *  @param {Vector3} pos3D
          *  @param {number} [volume]
@@ -7774,13 +7786,15 @@ declare module "littlejsengine" {
          *  @param {Array<EngineObject3D>} objects
          *  @param {boolean} [isDefault] */
         renderStages(objects: Array<EngineObject3D>, isDefault?: boolean): void;
-        /** Queue a draw for the transparent stage, replayed far to near with the current draw state, or draw it now when sorting is off
+        /** Queue a draw for the transparent stage, replayed far to near with the current draw state, or draw it now when
+         *  sorting is off
          *  - The draw runs later, so it should hold copies of any values the caller may change before then
          *  @param {Vector3} pos - Where the draw is, for sorting
          *  @param {function(): void} draw
          *  @return {void} */
         queueTransparent(pos: Vector3, draw: () => void): void;
-        /** Draw the queued transparent draws far to near with the state each was drawn under, called automatically at the end of the transparent stage */
+        /** Draw the queued transparent draws far to near with the state each was drawn under, called automatically at the
+         *  end of the transparent stage */
         flushTransparentQueue(): void;
         /** Draw render3D.sky around the camera, unlit, unfogged and behind everything, called automatically by the pass */
         drawSky(): void;
@@ -7847,7 +7861,8 @@ declare module "littlejsengine" {
          *  @param {number|Array<number>} [width] - Full width, one for all or one per point
          *  @param {TileInfo|TextureInfo} [tileInfo]
          *  @param {Color|Array<Color>} [color] - One for all or one per point
-         *  @param {Vector3|Array<Vector3>} [side] - Direction across the ribbon, one for all or one per point, default faces the camera */
+         *  @param {Vector3|Array<Vector3>} [side] - Direction across the ribbon, one for all or one per point, default
+         *    faces the camera */
         drawRibbon(points: Array<Vector3>, width?: number | Array<number>, tileInfo?: TileInfo | TextureInfo, color?: Color | Array<Color>, side?: Vector3 | Array<Vector3>): void;
         /** Draw a disc that fades to transparent at the rim, unlit, for glows, puffs and sky dots
          *  @param {Vector3} pos - Center
@@ -7861,7 +7876,8 @@ declare module "littlejsengine" {
          *  - Draw it from onRenderTransparent or from a transparent object
          *  @param {Vector3} pos - Position of the thing casting the shadow
          *  @param {number} [size] - Diameter
-         *  @param {number|HeightMap|function(number, number): number} [floorHeight] - Height of the ground, a HeightMap, or (x, z) => y to follow terrain
+         *  @param {number|HeightMap|function(number, number): number} [floorHeight] - Height of the ground, a HeightMap, or
+         *    (x, z) => y to follow terrain
          *  @param {Color} [color]
          *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground
          *  @return {void} */
@@ -7958,17 +7974,19 @@ declare module "littlejsengine" {
         /** Create a 3D object and add it to the object list
          *  @param {Vector3} [pos3D] - World space position
          *  @param {Mesh} [mesh] - Mesh to draw, undefined draws nothing
-         *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile; a whole TextureInfo becomes the tile that covers it
+         *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile; a whole TextureInfo becomes
+         *    the tile that covers it
          *  @param {Color} [color] - Tint */
         constructor(pos3D?: Vector3, mesh?: Mesh, tileInfo?: TileInfo | TextureInfo, color?: Color);
         /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
         pos3D: Vector3;
-        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, local to the parent when attached to an EngineObject3D */
+        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, local to the parent when attached to an
+         *  EngineObject3D */
         rotation3D: Vector3;
         /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
         scale3D: Vector3;
-        /** @property {Vector3} - Added to pos3D each frame by the engine before update, like the 2D velocity, no super call needed;
-         *  damping and render3D.gravity act on it once the object has a mass */
+        /** @property {Vector3} - Added to pos3D each frame by the engine before update, like the 2D velocity, no super
+         *  call needed; damping and render3D.gravity act on it once the object has a mass */
         velocity3D: Vector3;
         /** @property {Vector3} - Added to rotation3D each frame by the engine before update, angleDamping is 2D only */
         angleVelocity3D: Vector3;
@@ -7976,23 +7994,26 @@ declare module "littlejsengine" {
          *  @type {Mesh|undefined} */
         mesh: Mesh | undefined;
         size3D: Vector3;
-        /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none;
-         *  scale3D and a parent's scale grow it, so set it once for the unscaled object */
+        /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for
+         *  none; scale3D and a parent's scale grow it, so set it once for the unscaled object */
         softShadow: number;
         /** @property {boolean} - A sprite stands on world up instead of tilting toward the camera */
         upright: boolean;
         /** @property {boolean} - Keep this object's texture pixels hard edged, for pixel art that should not blur or bleed */
         pixelated: boolean;
-        /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D looks;
-         *  set mass to use 2D physics, and pos3D.z stays yours to set or move with velocity3D.z */
+        /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D
+         *  looks; set mass to use 2D physics, and pos3D.z stays yours to set or move with velocity3D.z */
         sync2D: boolean;
-        /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off; on for a sprite */
+        /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off;
+         *  on for a sprite */
         transparent: boolean;
         /** @property {boolean} - Additive blending, in the transparent stage */
         additive: boolean;
-        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
+         *  1 adds a light's full color at its brightest; its size is fixed */
         specular: number;
-        /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls around corners */
+        /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls
+         *  around corners */
         collideAsSphere3D: boolean;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         receiveShadow: boolean;
@@ -8028,7 +8049,8 @@ declare module "littlejsengine" {
          *  @return {Vector3} */
         getUp3D(): Vector3;
         /** Returns a copy of the object's world transform, the parent's included when attached to an EngineObject3D
-         *  - The object keeps its matrix and rebuilds it only when its position, rotation or scale changed, so this is cheap to call
+         *  - The object keeps its matrix and rebuilds it only when its position, rotation or scale changed, so this is
+         *    cheap to call
          *  @return {Matrix4} */
         getMatrix(): Matrix4;
         /** Turn the object so its -Z axis points at a world space target, sets pitch and yaw and clears roll
@@ -8083,26 +8105,29 @@ declare module "littlejsengine" {
         indexType: number;
         /** @property {boolean} - The mesh changed and needs uploading again, set it yourself if you edit the arrays */
         dirty: boolean;
-        /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call, undefined follows render3D.instancing
+        /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call,
+         *  undefined follows render3D.instancing
          *  @type {boolean|undefined} */
         instanced: boolean | undefined;
         /** @property {boolean} - Draw both sides, each lit as the side that is seen; off skips the faces pointing away,
          *  which is faster and right for closed shapes, the open builders like buildGrid and buildRibbon turn it on */
         doubleSided: boolean;
-        /** @property {boolean} - The values change often but the shape never does, for a water surface or a cloth: set once,
-         *  the mesh keeps its GPU layout and a dirty upload only rewrites the vertices into the buffer it has; the strip
-         *  must keep the same points in the same order, a new point count asserts; the layout is decided by the first
-         *  upload, so strip entries equal then stay one vertex and triangles with no area then stay dropped, set
-         *  vertexKeys or give it distinct values at the start, not a flat grid of one color or points all in one place */
+        /** @property {boolean} - The values change often but the shape never does, for a water surface or a cloth: set
+         *  once, the mesh keeps its GPU layout and a dirty upload only rewrites the vertices into the buffer it has;
+         *  the strip must keep the same points in the same order, a new point count asserts; the layout is decided by
+         *  the first upload, so strip entries equal then stay one vertex and triangles with no area then stay dropped,
+         *  set vertexKeys or give it distinct values at the start, not a flat grid of one color or points all in one place */
         dynamicDraw: boolean;
-        /** @property {Array<number>|undefined} - The mesh as an indexed triangle list instead of a strip: the arrays hold each vertex
-         *  once and this says how they join, three vertex numbers per triangle, counter clockwise seen from the front like a
-         *  strip's first triangle; addTriangles and the loaders fill it, toIndexed turns a strip mesh into this form
+        /** @property {Array<number>|undefined} - The mesh as an indexed triangle list instead of a strip: the arrays
+         *  hold each vertex once and this says how they join, three vertex numbers per triangle, counter clockwise seen
+         *  from the front like a strip's first triangle; addTriangles and the loaders fill it, toIndexed turns a strip
+         *  mesh into this form
          *  @type {Array<number>|undefined} */
         indices: Array<number> | undefined;
-        /** @property {Int32Array|undefined} - Which strip entries are one vertex, set by a builder that knows, one whole number
-         *  per entry with equal numbers meaning the same vertex; upload skips its search for them, then drops the keys, since
-         *  an edit after that may tell the entries apart; adding geometry or recomputing normals drops them too
+        /** @property {Int32Array|undefined} - Which strip entries are one vertex, set by a builder that knows, one
+         *  whole number per entry with equal numbers meaning the same vertex; upload skips its search for them, then
+         *  drops the keys, since an edit after that may tell the entries apart; adding geometry or recomputing normals
+         *  drops them too
          *  @type {Int32Array|undefined} */
         vertexKeys: Int32Array | undefined;
         /** @type {{vertices: Array<number>, pointCount: number, data: ArrayBuffer}|undefined} */
@@ -8292,8 +8317,8 @@ declare module "littlejsengine" {
         /** @property {Float32Array} - The per instance values the shader reads, 24 floats each: the matrix, the color
          *  and the uv rect; edit it directly and call markDirty for the instances changed */
         instanceData: Float32Array;
-        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for culling;
-         *  from the farthest instance and the largest scale, and the mesh's size when it draws */
+        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for
+         *  culling; from the farthest instance and the largest scale, and the mesh's size when it draws */
         radius: number;
         reach: number;
         maxScale: number;
@@ -8457,7 +8482,8 @@ declare module "littlejsengine" {
      * - set it as render3D.sky and the pass draws it around the camera behind everything
      * @param {Color} [topColor] - Straight up
      * @param {Color} [horizonColor] - Level with the camera
-     * @param {Color} [bottomColor] - Straight down, what a camera looking at the ground sees past its edge; defaults to the horizon color
+     * @param {Color} [bottomColor] - Straight down, what a camera looking at the ground sees past its edge; defaults to the
+     *   horizon color
      * @param {number} [sides] - Around
      * @param {number} [rings] - Top to bottom
      * @return {Mesh}
