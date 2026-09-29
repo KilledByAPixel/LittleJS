@@ -9019,6 +9019,9 @@ declare module "littlejsengine" {
         /** @property {boolean} - Shine from far away, from its position toward the origin, instead of out from its
          *  position with a falloff; DirectionalLight3D sets it */
         directional: boolean;
+        /** @property {number} - Size of a soft hazy glow drawn over the light, like a lamp at night, 0 for none; it
+         *  is added onto what is behind it, and what is in front of the light hides it */
+        glow: number;
     }
     /**
      * DirectionalLight3D - A Light3D that shines from far away with no falloff, like sunlight

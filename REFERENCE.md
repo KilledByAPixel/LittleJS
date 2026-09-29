@@ -1156,6 +1156,8 @@ render3D.gravity = vec3(0, -.01, 0) // e.g., vec3() by default so nothing falls;
 new Light3D(pos3D, radius, color, intensity=1) // point light, an EngineObject3D; it drops off fast, so a small
                                   // radius wants an intensity above 1; an alpha, intensity or radius of 0 is off
 light.intensity = 2               // brightness, multiplies the color, above 1 is brighter than white
+light.glow = 1                    // a soft hazy glow over the light this big, like a lamp at night; 0 by default,
+                                  // added onto what is behind it, hidden by what is in front
 new DirectionalLight3D(pos3D, color, intensity=1) // a Light3D that shines from far away with no falloff, from its
                                   // position toward the origin like a three.js DirectionalLight; moving it or
                                   // its parent swings the light, so parent it to a sun mesh and it follows

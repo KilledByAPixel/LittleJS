@@ -6,7 +6,9 @@ class Lamp extends EngineObject3D
         this.color = color;
         this.orbitAngle = angle;
         this.emissive = 1; // drawn in its own color so it looks bright
-        this.addChild(new Light3D(vec3(), 6, color, 2)); // follows the lamp
+        const light = new Light3D(vec3(), 6, color, 2);
+        light.glow = 2.5; // a hazy glow around the lamp
+        this.addChild(light); // follows the lamp
     }
     update()
     {

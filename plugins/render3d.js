@@ -4201,10 +4201,24 @@ class Light3D extends EngineObject3D
         /** @property {boolean} - Shine from far away, from its position toward the origin, instead of out from its
          *  position with a falloff; DirectionalLight3D sets it */
         this.directional = false;
+        /** @property {number} - Size of a soft hazy glow drawn over the light, like a lamp at night, 0 for none; it
+         *  is added onto what is behind it, and what is in front of the light hides it */
+        this.glow = 0;
+        this.additive = true; // the glow is added on, in the transparent stage; a light with none draws nothing
     }
 
-    /** Lights draw nothing */
-    render3D() {}
+    /** Draw the glow, soft discs facing the camera, pulled toward it by half its size so a lamp at the light does
+     *  not cut into it, but never past the camera; three faint ones, each smaller, make a haze brightest in the middle */
+    render3D()
+    {
+        if (!(this.glow > 0) || this.directional) return;
+        const r = render3D, c = this.color, pos = render3DObjectMatrix(this).getTranslation();
+        const toCamera = r.camera.pos.subtract(pos), distance = toCamera.length();
+        const at = distance ? pos.add(toCamera.scale(min(this.glow, distance) / 2 / distance)) : pos;
+        const color = rgb(c.r, c.g, c.b, c.a * min(this.intensity, 1) / 3);
+        for (const size of [1, .5, .2])
+            r.drawSoftDisc(at, this.glow * size, color);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
