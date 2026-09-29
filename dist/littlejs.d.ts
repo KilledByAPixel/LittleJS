@@ -9548,6 +9548,10 @@ declare module "littlejsengine" {
          *  section has Play from mouse, which starts play there, Escape at the mouse and Play at the view center
          *  @type {EditorPlayFromCallback|undefined} */
         onPlayFrom: EditorPlayFromCallback | undefined;
+        /** @property {Array<number>|undefined} - The tiles the palette shows, in its order, for a sheet that also holds
+         *  sprites and art that are not level tiles; undefined shows every tile of the sheet
+         *  @type {Array<number>|undefined} */
+        paletteTiles: Array<number> | undefined;
         /** True while the editor is open, the game is paused under it
          *  @return {boolean} */
         get isOpen(): boolean;

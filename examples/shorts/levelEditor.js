@@ -49,7 +49,7 @@ class Coin extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(.8), tile(7), 0, hsl(.15, 1, .5));
+        super(pos, vec2(.8), tile(6), 0, hsl(.15, 1, .5));
         this.value = 1;
     }
 
@@ -82,12 +82,13 @@ function gameInit()
     // the object types, by the names they have in the map, with icons
     objectLayersAddType('PlayerStart', (pos)=> playerStart = pos, {},
         tile(3));
-    objectLayersAddType('Coin', Coin, {value: 1}, tile(7));
+    objectLayersAddType('Coin', Coin, {value: 1}, tile(6));
     loadLevel();
 
     // start in the level editor, its Restart button rebuilds the level,
     // and Play from mouse, in its Advanced section, puts the player there
     levelEditor.onRestart = loadLevel;
+    levelEditor.paletteTiles = [0, 1, 10]; // the level tiles of the sheet
     levelEditor.onPlayFrom = (pos)=>
     {
         player.pos = pos.copy();

@@ -52,7 +52,8 @@ function tweak(){}
 function tweakButton(){}
 function tweakDivider(){}
 function tweakEngineDefaults(){}
-const levelEditor = {isOpen: false, open(){}, close(){}, onTile: undefined, onRestart: undefined, onPlayFrom: undefined};
+const levelEditor = {isOpen: false, open(){}, close(){}, onTile: undefined, onRestart: undefined, onPlayFrom: undefined,
+    paletteTiles: undefined};
 function editorMapRestore(map){ return map; }
 function editorMapLoaded(){}
 function editorJSONFetched(){}

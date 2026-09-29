@@ -107,6 +107,18 @@ const mapCode = `
     var front = editorLayerRecord(layers[2]);
     var frontData = map.layers[2].layers[0].data;`;
 
+test('levelEditor.paletteTiles picks the tiles the palette shows, in its order, and a slot picks its tile',
+    async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode + 'levelEditor.paletteTiles = [0, 6, 10]; editorLayer = front;');
+    assert.deepEqual([...run('editorPaletteTiles(front).map((t)=> t.tile)')], [0, 6, 10]);
+    run('editorPalettePick(2)'); // slot 0 is Erase, then the tiles in the list's order
+    assert.equal(run('editorBrushTile().tile'), 6);
+    run('levelEditor.paletteTiles = undefined');
+    assert.equal(run('editorPaletteTiles(front).length'), 0, 'every tile again, none headless with no image');
+});
+
 test('every Tiled flip comes back as the gid it was loaded from', async () =>
 {
     const { run } = await loadGame();

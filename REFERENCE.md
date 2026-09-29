@@ -1856,6 +1856,7 @@ levelEditor.onTile = (layer, layerPos, tile)=> {} // What the game does with a p
                            // collision, tile undefined when erased
 levelEditor.onRestart = ()=> {} // Rebuild the level, adds a Restart button
 levelEditor.onPlayFrom = (pos)=> {} // Put the player at pos, adds Play from mouse to the Advanced section
+levelEditor.paletteTiles = [0, 1, 10] // The tiles the palette shows, in order; undefined shows the whole sheet
 ```
 
 ## LittleJS Debugging System

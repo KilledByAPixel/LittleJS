@@ -29724,6 +29724,10 @@ class LevelEditor
          *  section has Play from mouse, which starts play there, Escape at the mouse and Play at the view center
          *  @type {EditorPlayFromCallback|undefined} */
         this.onPlayFrom = undefined;
+        /** @property {Array<number>|undefined} - The tiles the palette shows, in its order, for a sheet that also holds
+         *  sprites and art that are not level tiles; undefined shows every tile of the sheet
+         *  @type {Array<number>|undefined} */
+        this.paletteTiles = undefined;
     }
 
     /** True while the editor is open, the game is paused under it
@@ -31031,8 +31035,8 @@ function editorBrushTile()
 // the brush takes the tile in a cell, an empty cell gives the Erase brush
 function editorPick(layer, pos) { editorBrush = editorStampTile(editorGidAt(layer, pos) || 0); }
 
-// a palette slot into the brush: slot 0 is the Erase brush, slot n tile n - 1, keeping a one tile brush's turn; on
-// an object layer slot n is the nth object type
+// a palette slot into the brush: slot 0 is the Erase brush, slot n the palette's nth tile, keeping a one tile
+// brush's turn; on an object layer slot n is the nth object type
 function editorPalettePick(slot)
 {
     if (editorObjectLayer)
@@ -31043,7 +31047,8 @@ function editorPalettePick(slot)
         return;
     }
     const t = editorBrushTile();
-    editorBrush = editorStampTile(slot ? editorTileToGid(slot - 1, t?.direction, t?.mirror) : 0);
+    const tile = slot && (editorPaletteTiles(editorLayer)[slot - 1]?.tile ?? slot - 1); // every tile, in order
+    editorBrush = editorStampTile(slot ? editorTileToGid(tile, t?.direction, t?.mirror) : 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -31462,11 +31467,18 @@ function editorPanelInit()
 // the palette's cell size in pixels and how many to a row
 const editorPaletteCell = 30, editorPaletteColumns = 8;
 
-// a layer's tiles in order, as the tile infos it draws them with, up to the image's edge and without the blank
-// ones at the end, a tile of one flat color; found once for each layer
+// the tiles a layer's palette shows, each its index and the tile info it draws with: the game's
+// levelEditor.paletteTiles, or every tile up to the image's edge without the blank ones at the end, a tile of one
+// flat color; found once for each layer and list
 function editorPaletteTiles(layer)
 {
-    const live = layer?.live, image = live?.tileInfo?.textureInfo?.image;
+    const live = layer?.live, image = live?.tileInfo?.textureInfo?.image, list = levelEditor.paletteTiles;
+    if (list && live)
+    {
+        if (layer.palette?.list !== list)
+            layer.palette = {list, tiles: list.map((tile)=> ({tile, tileInfo: editorTileInfo(live, tile)}))};
+        return layer.palette.tiles;
+    }
     if (!image) return [];
     if (layer.palette?.image === image) return layer.palette.tiles;
 
@@ -31475,7 +31487,7 @@ function editorPaletteTiles(layer)
     {
         const t = editorTileInfo(live, i);
         if (t.pos.x + t.size.x > image.width || t.pos.y + t.size.y > image.height) break;
-        tiles.push(t);
+        tiles.push({tile: i, tileInfo: t});
     }
     try
     {
@@ -31484,7 +31496,8 @@ function editorPaletteTiles(layer)
         context.drawImage(image, 0, 0);
         const blank = (t)=>
         {
-            const pixels = new Uint32Array(context.getImageData(t.pos.x, t.pos.y, t.size.x, t.size.y).data.buffer);
+            const {pos, size} = t.tileInfo, pixels = new Uint32Array(context.getImageData(pos.x, pos.y, size.x,
+                size.y).data.buffer);
             return pixels.every((p)=> p === pixels[0]);
         };
         while (tiles.length > 1 && blank(tiles.at(-1)))
@@ -31544,15 +31557,16 @@ function editorPaletteDraw(canvas, layer)
     context.moveTo(8, 8), context.lineTo(cell - 8, cell - 8);
     context.moveTo(cell - 8, 8), context.lineTo(8, cell - 8);
     context.stroke();
-    tiles.forEach((t, i)=>
+    tiles.forEach(({tileInfo: {pos, size}}, i)=>
     {
         const slot = i + 1, x = slot % columns * cell, y = (slot / columns | 0) * cell;
-        context.drawImage(image, t.pos.x, t.pos.y, t.size.x, t.size.y, x + 2, y + 2, cell - 4, cell - 4);
+        context.drawImage(image, pos.x, pos.y, size.x, size.y, x + 2, y + 2, cell - 4, cell - 4);
     });
 
-    // the brush's slot outlined, when it is one tile or Erase
+    // the brush's slot outlined, when it is one tile the palette shows or Erase
     const t = editorBrushTile(), erase = !t && editorBrush.width === 1 && editorBrush.height === 1 &&
-        editorBrush.grids[0][0] === 0, selected = erase ? 0 : t ? t.tile + 1 : -1;
+        editorBrush.grids[0][0] === 0, shown = t ? tiles.findIndex((p)=> p.tile === t.tile) : -1;
+    const selected = erase ? 0 : shown >= 0 ? shown + 1 : -1;
     if (selected < 0) return;
     context.strokeStyle = '#4af';
     context.strokeRect(selected % columns * cell + 1, (selected / columns | 0) * cell + 1, cell - 2, cell - 2);
