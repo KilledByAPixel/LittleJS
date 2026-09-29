@@ -33171,6 +33171,8 @@ function editor3DSetOpen(open)
     }
     else
     {
+        editor3DDrag = editor3DHover = undefined;
+        editor3DMouseOnPanel = false; // the panel hides, with no mouseleave
         editor3DStrokeEnd();
         editor3DIsOpen = false;
         setPaused(editor3DGamePaused);
@@ -33340,6 +33342,466 @@ async function editor3DSave(pickAgain=false)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// the tools: handles on the selection, dragged with the mouse
+
+const EDITOR3D_HANDLE_SIZE = .15; // a handle's length as a part of the view's height
+const EDITOR3D_HANDLE_REACH = 10; // how many pixels from a handle still grab it
+const EDITOR3D_AXES = {x: vec3(1, 0, 0), y: vec3(0, 1, 0), z: vec3(0, 0, 1)};
+
+let editor3DTool = 'move';     // 'select', 'move', 'rotate' or 'scale'
+let editor3DGrid = true;       // moves, turns and sizes go in steps, Ctrl flips it for a drag
+let editor3DGroundSnap = true; // a body drag slides along what is under the mouse
+let editor3DMoveStep = 1, editor3DRotateStep = 15, editor3DScaleStep = .25; // the rotate step in degrees
+let editor3DHelp = false;      // the keys are shown
+let editor3DMouseOnPanel = false;
+/** @type {any} - The drag being made: {kind, ...}, a 'box' drag has from and to in screen pixels */
+let editor3DDrag;
+/** @type {any} - The handle under the mouse */
+let editor3DHover;
+/** @type {Vector3|undefined} - What an Alt drag orbits around */
+let editor3DOrbitPivot;
+
+// the middle of the selection, where the handles are
+function editor3DSelectionCenter()
+{
+    const selected = editor3DSelected();
+    if (selected.length)
+        return selected.reduce((sum, o)=> sum.add(editor3DPos(o)), vec3()).scale(1 / selected.length);
+}
+
+// the handles of the tool on the selection, each {kind, axis, center, length, direction or axes, points}: Move has
+// an arrow along each world axis and a square between each pair, Rotate a ring for the pitch, yaw and roll of the
+// first selected object, Scale a handle along each of its own axes and a box in the middle for all three
+function editor3DHandles()
+{
+    const center = editor3DSelectionCenter(), tool = editor3DTool, handles = [];
+    if (!center || tool === 'select') return handles;
+    const length = editor3DScreenScale(center) * EDITOR3D_HANDLE_SIZE;
+    const rotation = editor3DRotation(editor3DSelected()[0]).scale(PI / 180), frame = buildMatrix(vec3(), rotation);
+    for (const axis of 'xyz')
+    {
+        if (tool === 'rotate')
+        {
+            const axes = editor3DRingAxes(rotation, axis), points = [];
+            for (let i = 0; i <= 48; ++i)
+            {
+                const a = i / 48 * PI * 2;
+                points.push(center.add(axes.across.scale(cos(a) * length)).add(axes.along.scale(sin(a) * length)));
+            }
+            handles.push({kind: 'ring', axis, center, length, axes, points});
+            continue;
+        }
+
+        // an arrow or scale handle starts a little out from the middle, which is left for the object's body
+        const direction = tool === 'move' ? EDITOR3D_AXES[axis] : frame.transformDirection(EDITOR3D_AXES[axis]);
+        handles.push({kind: tool === 'move' ? 'arrow' : 'scale', axis, center, length, direction,
+            points: [center.add(direction.scale(length * .2)), center.add(direction.scale(length))]});
+        if (tool === 'move')
+        {
+            // the square between the other two axes moves along both
+            const [a, b] = 'xyz'.replace(axis, '');
+            handles.push({kind: 'plane', axis: a + b, center, length, direction,
+                points: [center.add(EDITOR3D_AXES[a].add(EDITOR3D_AXES[b]).scale(length * .35))]});
+        }
+    }
+    tool === 'scale' && handles.push({kind: 'scaleAll', axis: 'xyz', center, length, points: [center]});
+    return handles;
+}
+
+// the handle nearest a screen position, within reach; a square or box is a point and a little easier to take
+function editor3DHandleAt(screenPos)
+{
+    let nearest, reach = EDITOR3D_HANDLE_REACH;
+    for (const handle of editor3DHandles())
+    {
+        // a ring seen edge on is a line on screen and the mouse's ray runs along its plane, it can not be dragged
+        const {points, center} = handle, toward = center.subtract(editor3DCamera.pos).normalize();
+        if (handle.kind === 'ring' && abs(handle.axes.axis.dot(toward)) < .15) continue;
+        let distance = Infinity;
+        if (points.length === 1)
+        {
+            const at = render3D.worldToScreen(points[0]);
+            at && (distance = screenPos.distance(at) - 4);
+        }
+        else
+            for (let i = 1; i < points.length; ++i)
+                distance = min(distance, editor3DSegmentDistance(screenPos, points[i-1], points[i]));
+        if (distance < reach)
+            reach = distance, nearest = handle;
+    }
+    return nearest;
+}
+
+// the object of the level a ray hits first: what the game made for it, or a unit box where it made nothing to hit,
+// like a light or a player start; its id
+function editor3DPickAt(ray)
+{
+    let nearest, id;
+    for (const object of editor3DObjects())
+    {
+        const made = editor3DInstances.get(object.id);
+        const solid = made instanceof EngineObject3D && !made.destroyed && (made.mesh || made.tileInfo);
+        const distance = solid ? render3DRaycastObject(ray, made) : raycastBox(ray, editor3DPos(object), vec3(1));
+        if (distance !== undefined && (nearest === undefined || distance < nearest))
+            nearest = distance, id = object.id;
+    }
+    return id;
+}
+
+// what the game made for the selected objects, left out when the selection looks for a surface to stand on
+function editor3DSelectedInstances()
+{
+    return new Set(editor3DSelected().map((o)=> editor3DInstances.get(o.id)).filter((made)=> made));
+}
+
+// where each selected object is, as a drag starts from
+function editor3DDragStart()
+{
+    return new Map(editor3DSelected().map((o)=>
+        [o.id, {pos: editor3DPos(o), rotation: editor3DRotation(o), scale: editor3DScale(o)}]));
+}
+
+// the left button went down: on a handle it drags it, with a brush it places one, on an object it selects it and
+// may drag it, and on nothing it drags out a box to select with
+function editor3DPress(mouse, ray, shift)
+{
+    const handle = editor3DHandleAt(mouse), from = mouse.copy();
+    if (handle)
+    {
+        const {kind, center, direction, axes} = handle;
+        const grab = kind === 'ring' ? editor3DRingAngle(ray, center, axes) :
+            kind === 'plane' ? editor3DPlanePoint(ray, center, direction) :
+            kind === 'scaleAll' ? 0 : editor3DAxisDistance(ray, center, direction);
+        editor3DDrag = {kind, handle, from, grab, start: editor3DDragStart()};
+        return;
+    }
+    if (editor3DBrush)
+    {
+        editor3DPlaceAt(editor3DBrush, ray);
+        shift || (editor3DBrush = undefined);
+        editor3DTool = 'move';
+        return;
+    }
+    const id = editor3DPickAt(ray);
+    if (id === undefined)
+    {
+        editor3DDrag = {kind: 'box', from, to: from.copy(), shift};
+        return;
+    }
+    if (shift)
+    {
+        editor3DSelection.has(id) ? editor3DSelection.delete(id) : editor3DSelection.add(id);
+        return;
+    }
+    if (!editor3DSelection.has(id))
+    {
+        editor3DSelection.clear();
+        editor3DSelection.add(id);
+    }
+
+    // a drag of its body: along what is under the mouse, from where that was at the press, or level at its height
+    const ignore = editor3DSelectedInstances(), pos = editor3DPos(editor3DObject(id));
+    const under = editor3DSurface(ray, ignore) ?? pos;
+    editor3DDrag = {kind: 'body', id, from, moving: false, ignore, start: editor3DDragStart(),
+        offset: vec3(pos.x - under.x, 0, pos.z - under.z),
+        level: editor3DPlanePoint(ray, pos, EDITOR3D_UP) ?? pos};
+}
+
+// place an object of a type where a ray lands, standing on what is there, snapped, selected, as one undo
+function editor3DPlaceAt(type, ray)
+{
+    const point = editor3DSurface(ray);
+    if (!point) return;
+    editor3DStrokeEnd();
+    const id = editor3DPlace(type, point);
+    if (id === undefined) return;
+    const size = editor3DSize(editor3DObject(id)), rest = editor3DRest(point, size);
+    const snapped = editor3DSnapPos(rest, size, editor3DGrid ? editor3DMoveStep : 0);
+    editor3DChange((list)=> editor3DSetTransform(list.find((o)=> o.id === id), vec3(snapped.x, rest.y, snapped.z)));
+    editor3DStrokeEnd();
+}
+
+// the mouse moved with a drag held: the selection goes from where the drag started to where the mouse says
+function editor3DDragTo(drag, mouse, ray, snap)
+{
+    if (drag.kind === 'box')
+    {
+        drag.to = mouse.copy();
+        return;
+    }
+    if (drag.kind === 'body' && !(drag.moving ||= mouse.distance(drag.from) > 4)) return;
+    const {kind, handle, start, grab} = drag, first = editor3DObject(drag.id ?? [...start.keys()][0]);
+    const was = first && start.get(first.id);
+    if (!was) return;
+    const size = editor3DSize(first), turned = editor3DTurned(first), step = snap ? editor3DMoveStep : 0;
+    const snapTo = (to)=> editor3DSnapPos(to, size, step, turned).subtract(was.pos);
+    let move, turn, factor;
+    if (kind === 'arrow')
+    {
+        const d = editor3DAxisDistance(ray, handle.center, handle.direction) - grab;
+        move = handle.direction.multiply(snapTo(was.pos.add(handle.direction.scale(d)))); // along its axis alone
+    }
+    else if (kind === 'plane')
+    {
+        const point = editor3DPlanePoint(ray, handle.center, handle.direction);
+        if (!point || !grab) return;
+        move = vec3(1).subtract(handle.direction).multiply(snapTo(was.pos.add(point.subtract(grab))));
+    }
+    else if (kind === 'body' && editor3DGroundSnap)
+    {
+        const point = editor3DSurface(ray, drag.ignore);
+        if (!point) return;
+        const across = snapTo(vec3(point.x + drag.offset.x, was.pos.y, point.z + drag.offset.z));
+        move = vec3(across.x, point.y + size.y / 2 - was.pos.y, across.z);
+    }
+    else if (kind === 'body')
+    {
+        const point = editor3DPlanePoint(ray, drag.level, EDITOR3D_UP);
+        if (!point) return;
+        const across = snapTo(was.pos.add(point.subtract(drag.level)));
+        move = vec3(across.x, 0, across.z);
+    }
+    else if (kind === 'ring')
+    {
+        const angle = editor3DRingAngle(ray, handle.center, handle.axes);
+        if (angle === undefined || grab === undefined) return;
+        turn = mod((angle - grab) * 180 / PI + 180, 360) - 180; // the short way around
+    }
+    else if (kind === 'scale')
+    {
+        if (abs(grab) < 1e-6) return;
+        factor = vec3(1);
+        factor[handle.axis] = max(editor3DAxisDistance(ray, handle.center, handle.direction) / grab, .01);
+    }
+    else // the box in the middle sizes all three, right and up is larger
+        factor = vec3(Math.exp((mouse.x - drag.from.x - mouse.y + drag.from.y) / 200));
+
+    editor3DChange((list)=>
+    {
+        for (const object of list)
+        {
+            const s = start.get(object.id);
+            if (!s) continue;
+            if (move)
+                editor3DSetTransform(object, s.pos.add(move));
+            if (turn !== undefined)
+            {
+                const rotation = s.rotation.copy();
+                rotation[handle.axis] = editor3DSnap(rotation[handle.axis] + turn, snap ? editor3DRotateStep : 0);
+                editor3DSetTransform(object, undefined, rotation);
+            }
+            if (factor)
+            {
+                const size = snap ? editor3DScaleStep : 0, least = size || .01;
+                const scale = s.scale.multiply(factor);
+                editor3DSetTransform(object, undefined, undefined, vec3(max(editor3DSnap(scale.x, size), least),
+                    max(editor3DSnap(scale.y, size), least), max(editor3DSnap(scale.z, size), least)));
+            }
+        }
+    });
+}
+
+// the left button went up: a box selects what is inside it, by where each object's middle is on screen, and a
+// press that never moved clears the selection; any other drag is one undo
+function editor3DDragEnd(drag, mouse)
+{
+    editor3DDrag = undefined;
+    if (drag.kind !== 'box')
+        return editor3DStrokeEnd();
+    drag.shift || editor3DSelection.clear();
+    const {from} = drag;
+    if (mouse.distance(from) < 4) return;
+    const low = vec2(min(from.x, mouse.x), min(from.y, mouse.y));
+    const high = vec2(max(from.x, mouse.x), max(from.y, mouse.y));
+    for (const object of editor3DObjects())
+    {
+        const at = render3D.worldToScreen(editor3DPos(object));
+        at && at.x >= low.x && at.x <= high.x && at.y >= low.y && at.y <= high.y &&
+            editor3DSelection.add(object.id);
+    }
+}
+
+// take the drag being made back, with nothing to undo
+function editor3DDragCancel()
+{
+    editor3DDrag = undefined;
+    editor3DStrokeCancel();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// the editor's camera, keys and update
+
+// the surface under a screen position, under the mouse and under the middle of the view, seen through the
+// editor's camera
+function editor3DScreenPoint(screenPos)
+{ return editor3DWithView(()=> editor3DSurface(render3D.screenToRay(screenPos))); }
+function editor3DMousePoint() { return editor3DScreenPoint(mousePosScreen); }
+function editor3DViewPoint() { return editor3DScreenPoint(mainCanvasSize.scale(.5)); }
+
+// move the camera back along its view until the selection is in the middle and fits
+function editor3DFrame()
+{
+    const center = editor3DSelectionCenter(), camera = editor3DCamera;
+    if (!center) return false;
+    const radius = editor3DSelected().reduce((r, o)=>
+        max(r, editor3DPos(o).distance(center) + editor3DSize(o).length() / 2), 0);
+    camera.pos = center.subtract(camera.getForward().scale(max(radius * 2.5, 3)));
+    render3D.updateMatrices();
+}
+
+// drop the selection straight down onto what is under it, each object by itself, as one undo
+function editor3DDropSelection()
+{
+    const ignore = editor3DSelectedInstances();
+    if (!editor3DSelection.size) return false;
+    editor3DStrokeEnd();
+    editor3DChange((list)=>
+    {
+        for (const object of list)
+        {
+            const to = editor3DSelection.has(object.id) &&
+                editor3DDrop(editor3DPos(object), editor3DSize(object), ignore);
+            to && editor3DSetTransform(object, to);
+        }
+    });
+    editor3DStrokeEnd();
+}
+
+// paste the copied objects with their middle under the mouse, the lowest standing on what is there, snapped by
+// the first of them; where they were when the mouse is over nothing
+function editor3DPasteAtMouse()
+{
+    const copied = editor3DClipboard, point = !editor3DMouseOnPanel && editor3DMousePoint();
+    if (!copied?.length) return false;
+    if (!point) return editor3DPaste();
+    const center = copied.reduce((sum, o)=> sum.add(editor3DPos(o)), vec3()).scale(1 / copied.length);
+    const bottom = copied.reduce((low, o)=> min(low, editor3DPos(o).y - editor3DSize(o).y / 2), Infinity);
+    const first = copied[0], was = editor3DPos(first);
+    const snapped = editor3DSnapPos(was.add(vec3(point.x - center.x, 0, point.z - center.z)), editor3DSize(first),
+        editor3DGrid ? editor3DMoveStep : 0, editor3DTurned(first));
+    return editor3DPaste(vec3(snapped.x - was.x, point.y - bottom, snapped.z - was.z));
+}
+
+// the keys by their position on the keyboard, each called with whether Shift is held; the tool keys are the ones
+// Unity, Unreal and Godot use
+/** @type {Object<string, function(boolean=): any>} */
+const editor3DKeys =
+{
+    KeyQ: ()=> { editor3DTool = 'select'; editor3DBrush = undefined; },
+    KeyW: ()=> { editor3DTool = 'move'; },
+    KeyE: ()=> { editor3DTool = 'rotate'; },
+    KeyR: ()=> { editor3DTool = 'scale'; },
+    KeyG: ()=> { editor3DGrid = !editor3DGrid; },
+    KeyF: ()=> editor3DFrame(),
+    End: ()=> editor3DDropSelection(),
+    Delete: ()=> editor3DDelete(),
+    Backspace: ()=> editor3DDelete(),
+    Slash: ()=> { editor3DHelp = !editor3DHelp; },
+};
+/** @type {Object<string, function(boolean=): any>} */
+const editor3DCtrlKeys =
+{
+    KeyZ: (shift)=> editor3DUndo(shift),
+    KeyY: ()=> editor3DUndo(true),
+    KeyC: ()=> editor3DCopySelection(),
+    KeyX: ()=> editor3DCut(),
+    KeyV: ()=> editor3DPasteAtMouse(),
+    KeyD: ()=> editor3DDuplicate(),
+};
+
+// the camera: the right button looks and the keys fly while it is held, the middle button or Space and the left
+// pans, Alt and the left orbits the selection, and the wheel zooms toward what is under the mouse
+function editor3DCameraUpdate(seconds, shift, alt)
+{
+    const camera = editor3DCamera, delta = inputCaptureDeltaScreen, wheel = inputCaptureWheel;
+    const ahead = ()=> camera.pos.add(camera.getForward().scale(10));
+    if (mouseIsDown(2))
+    {
+        editor3DFlySpeed = clamp(editor3DFlySpeed * Math.exp(-wheel * .2), .01, 10);
+        editor3DFly(camera, editor3DFlyKeys(), delta, seconds, shift);
+    }
+    else if (mouseIsDown(1) || keyIsDown('Space') && mouseIsDown(0))
+    {
+        // the scene follows the mouse, at the depth of what is in the middle of the view
+        const perPixel = editor3DScreenScale(editor3DViewPoint() ?? ahead()) / mainCanvasSize.y;
+        camera.pos = camera.pos.subtract(camera.getRight().scale(delta.x * perPixel))
+            .add(camera.getUp().scale(delta.y * perPixel));
+    }
+    else if (alt && mouseIsDown(0))
+    {
+        if (mouseWasPressed(0) || !editor3DOrbitPivot)
+            editor3DOrbitPivot = editor3DSelectionCenter() ?? editor3DViewPoint() ?? ahead();
+        const pivot = editor3DOrbitPivot, distance = camera.pos.distance(pivot);
+        editor3DFly(camera, vec3(), delta, 0);
+        camera.pos = pivot.subtract(camera.getForward().scale(distance));
+    }
+    else if (wheel && !editor3DMouseOnPanel)
+    {
+        // toward what is under the mouse, a part of the way there for each notch, and never through it
+        render3D.updateMatrices();
+        const ray = render3D.screenToRay(mousePosScreen), target = editor3DSurface(ray);
+        const distance = target ? camera.pos.distance(target) : 10;
+        camera.pos = camera.pos.add(ray.direction.scale(min(max(distance * .15, .2) * -wheel, distance - .5)));
+    }
+    render3D.updateMatrices(); // what follows picks and projects through the camera where it is now
+}
+
+// the editor's update, called while it is open with the input readable and render3D looking through its camera
+function editor3DEditorUpdate(seconds)
+{
+    const held = (...codes)=> codes.some((code)=> keyIsDown(code));
+    const shift = held('ShiftLeft', 'ShiftRight'), alt = held('AltLeft', 'AltRight');
+    const ctrl = held('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight');
+    const mouse = mousePosScreen;
+
+    // Escape, the debug key, puts a drag back, or else switches to playing; taken, so the debug overlay stays shut
+    if (debugKey && keyWasPressed(debugKey))
+    {
+        inputClearKey(debugKey);
+        editor3DDrag ? editor3DDragCancel() : editor3DPlay(editor3DMousePoint());
+        return;
+    }
+
+    // 0 exits the editor; cleared, so debugKeysAlways does not open it again in the same step
+    if (keyWasPressed('Digit0'))
+    {
+        inputClearKey('Digit0');
+        editor3DClose();
+        return;
+    }
+
+    editor3DCameraUpdate(seconds, shift, alt);
+    const looking = mouseIsDown(2), cameraDrag = looking || mouseIsDown(1) || keyIsDown('Space') || alt;
+
+    // the keys, which wait for a drag to end, and fly while the right button is held
+    if (!editor3DDrag && !looking)
+        for (const [code, action] of Object.entries(ctrl ? editor3DCtrlKeys : editor3DKeys))
+            keyWasPressed(code) && action(shift);
+
+    // a right press during a drag puts it back
+    if (editor3DDrag && mouseWasPressed(2))
+        return editor3DDragCancel();
+
+    const ray = render3D.screenToRay(mouse), idle = !cameraDrag && !editor3DMouseOnPanel && !editor3DDrag;
+    editor3DHover = idle ? editor3DHandleAt(mouse) : undefined;
+    if (idle && mouseWasPressed(0))
+        editor3DPress(mouse, ray, shift);
+
+    // a quick click, down and up before this step, is a press and its release in one
+    const drag = editor3DDrag;
+    if (drag)
+        mouseIsDown(0) ? editor3DDragTo(drag, mouse, ray, editor3DGrid !== ctrl) : editor3DDragEnd(drag, mouse);
+}
+
+// Ctrl with a letter the editor uses is not the browser's while the editor is open, Ctrl+D would bookmark the page
+if (debug && globalThis.document?.addEventListener)
+    document.addEventListener('keydown', (e)=>
+    {
+        if (editor3DIsOpen && (e.ctrlKey || e.metaKey) && /^Key[ZYCXVD]$/.test(e.code) && !editorIsTextField(e.target))
+            e.preventDefault();
+    });
+
+///////////////////////////////////////////////////////////////////////////////
 // plugin
 
 function editor3DUpdate()
@@ -33348,9 +33810,19 @@ function editor3DUpdate()
     editor3DTimeLast = timeReal;
     if (!render3D) return;
     if (editor3DFreeCamera)
-        inputCaptureRead(()=> editor3DFreeCameraUpdate(seconds));
-    else
-        editor3DFreeCameraKey();
+        return inputCaptureRead(()=> editor3DFreeCameraUpdate(seconds));
+    if (editor3DIsOpen)
+        return inputCaptureRead(()=> editor3DWithView(()=> editor3DEditorUpdate(seconds)));
+
+    // playing in an editing session, Escape, the debug key, goes back to the editor; taken, so the debug overlay
+    // waits till the session ends
+    if (editor3DSession && debugKey && keyWasPressed(debugKey))
+    {
+        inputClearKey(debugKey);
+        editor3DSetOpen(true);
+        return;
+    }
+    editor3DFreeCameraKey();
 }
 
 function editor3DRender()
