@@ -118,6 +118,39 @@ test('a particle emitter emits the same count per second in the fixed and variab
     assert.ok(Math.abs(emitted(true) - 60) <= 1, 'variable');
 });
 
+// run frames of given lengths, listing each that did not run one update with timeDelta its own time
+function runTimed(count, frameMS, check=true)
+{
+    const wrong = [];
+    for (let i = 0; i < count; ++i)
+    {
+        const lengthMS = frameMS();
+        nowMS += lengthMS;
+        const before = updates;
+        deltas.length = 0;
+        rafCallback(nowMS);
+        if (check && (updates - before != 1 || Math.abs(deltas[0] * 1e3 - lengthMS) > .1))
+            wrong.push(i + ': ' + lengthMS.toFixed(2) + ' ms ran ' + (updates - before) + ' with ' +
+                (deltas[0] * 1e3).toFixed(2));
+    }
+    return wrong;
+}
+
+test('with missed frames each timeDelta is the time its frame covered', ()=>
+{
+    LJS.setEngineVariableStep(true);
+    const missed = ()=> (random.float() < .5 ? 2 : 1) * 1e3 / 60;
+    runTimed(120, missed, false);
+    assert.deepEqual(runTimed(600, missed), []);
+});
+
+test('on irregular frame times, like a variable refresh display, each timeDelta is its frame time', ()=>
+{
+    const irregular = ()=> random.float(8, 25);
+    runTimed(120, irregular, false);
+    assert.deepEqual(runTimed(600, irregular), []);
+});
+
 test('a 3D particle trail keeps its storage while timeDelta varies', ()=>
 {
     new LJS.Render3DPlugin;

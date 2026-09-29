@@ -52,6 +52,52 @@ function cadenceBreaks(counts)
     return breaks;
 }
 
+// frames at 60 Hz where a busy game misses some refreshes, each covering 1 or 2 display frames
+function runMissed(missRate, count, jitterMS=0)
+{
+    const counts = [], covered = [];
+    for (let i = count; i--;)
+    {
+        const frames = random.float() < missRate ? 2 : 1;
+        idealMS += frames * 1e3 / 60;
+        const before = updates;
+        rafCallback(idealMS + (jitterMS ? random.float(-jitterMS, jitterMS) : 0));
+        counts.push(updates - before);
+        covered.push(frames);
+    }
+    return { counts, covered };
+}
+
+test('at 60 Hz a busy game that misses frames runs as many updates as each frame covered', ()=>
+{
+    // an update now and then lands one frame off where the fixed step's buffer sits on a boundary, as it always
+    // has; before smoothing, .3 ms of jitter put about a quarter of these frames off
+    for (const missRate of [.3, .5, .6])
+    for (const jitterMS of [0, .3])
+    {
+        runMissed(missRate, 120, jitterMS);
+        const { counts, covered } = runMissed(missRate, 600, jitterMS);
+        const wrong = counts.filter((n, i)=> n != covered[i]).length;
+        assert.ok(wrong <= 12, missRate + ' missed, jitter ' + jitterMS + ': ' + wrong + ' frames off');
+    }
+});
+
+test('a smoothed delta is never negative, so timeReal never runs back', ()=>
+{
+    const { run } = loadEngine();
+    const lowest = run(`
+        const random = new RandomGenerator(5);
+        let now = 1000, last = now, lowest = Infinity;
+        for (let i = 0; i < 3000; ++i)
+        {
+            now += i < 1500 ? 1e3 / 144 + random.float(-1.5, 1.5) : random.float(8, 25);
+            lowest = Math.min(lowest, engineSmoothDelta(now - last));
+            last = now;
+        }
+        lowest`);
+    assert.ok(lowest >= 0, 'lowest ' + lowest);
+});
+
 test('at 60 Hz with jitter and whole ms timestamps each frame runs one update', ()=>
 {
     runFrames(60, 120, 2, true); // settle the estimate
@@ -149,10 +195,10 @@ test('irregular frame times keep the total and never skip two frames in a row', 
 
 test('a three second gap, like a hidden tab, does not upset the cadence after it', ()=>
 {
-    runFrames(144, 120, 1.5);
+    runFrames(144, 120, 1);
     idealMS += 3000;
     runFrames(144, 1);
-    runFrames(144, 120, 1.5);
-    const breaks = cadenceBreaks(runFrames(144, 1200, 1.5));
+    runFrames(144, 120, 1);
+    const breaks = cadenceBreaks(runFrames(144, 1200, 1));
     assert.ok(breaks <= 2, 'cadence breaks ' + breaks);
 });

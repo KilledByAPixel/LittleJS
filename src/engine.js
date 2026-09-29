@@ -98,7 +98,7 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 // so each delta is rounded to them and the rest is carried to the next, keeping the total real time; the frame
 // length is estimated from recent frames and kept internal, since the browser does not say what it is
 const frameDeltaHistory = [];
-let frameIntervalMS = 1e3 / 60, frameDeltaCarryMS = 0, frameDeltaCarryAverageMS = 0;
+let frameIntervalMS = 1e3 / 60, frameDeltaCarryMS = 0, frameDeltaCarryAverageMS = 0, frameDeltaSmoothing = true;
 function engineSmoothDelta(deltaMS)
 {
     if (!(deltaMS > 0)) return 0;
@@ -107,31 +107,57 @@ function engineSmoothDelta(deltaMS)
         frameDeltaHistory.push(deltaMS);
         frameDeltaHistory.length > 64 && frameDeltaHistory.shift();
 
-        // how many frames each delta held, counted in the last estimate, or in the median of the last 16 when the
-        // two differ by a quarter, as after the window moves to a display with another refresh rate; the frame length
-        // is the least squares slope of time over frames held, so jitter and whole ms timestamps average out
+        // the frames each delta held are counted in the last estimate or in the lower quartile of the last 16,
+        // whichever the deltas fit better: the quartile is one frame even when a busy game misses most of them, and
+        // it takes over when the window moves to a display with another refresh rate, or the estimate went wrong
         const recent = frameDeltaHistory.slice(-16).sort((a, b)=> a - b);
-        const median = recent[recent.length >> 1], count = frameDeltaHistory.length;
-        const unitMS = abs(median - frameIntervalMS) < frameIntervalMS / 4 ? frameIntervalMS : median;
-        let timeMS = 0, frames = 0, sumF = 0, sumT = 0, sumFF = 0, sumFT = 0;
-        for (const d of frameDeltaHistory)
-        {
-            timeMS += d;
-            frames += max(1, round(d / unitMS));
-            sumF += frames, sumT += timeMS, sumFF += frames * frames, sumFT += frames * timeMS;
-        }
-        const spread = count * sumFF - sumF * sumF;
-        frameIntervalMS = spread ? (count * sumFT - sumF * sumT) / spread : median;
+        const [lastMS, lastOff] = engineFrameFit(frameIntervalMS);
+        const [quartileMS, quartileOff] = engineFrameFit(recent[recent.length >> 2]);
+        frameIntervalMS = lastOff <= quartileOff ? lastMS : quartileMS;
+
+        // deltas far from whole frames mean the display has no fixed refresh, with a margin so it does not flip
+        frameDeltaSmoothing = min(lastOff, quartileOff) < (frameDeltaSmoothing ? .2 : .12);
+    }
+
+    if (!frameDeltaSmoothing)
+    {
+        // deltas that are not whole frames of one length, like a variable refresh display, are the frame times
+        // as they are, with any carry paid, and smoothing starts over once they fit again
+        const rawMS = deltaMS + frameDeltaCarryMS;
+        frameDeltaCarryMS = min(rawMS, 0);
+        frameDeltaCarryAverageMS = 0;
+        return max(rawMS, 0);
     }
 
     // whole frames, 0 for one that came early or 2 after one was missed, the carry stays within half a frame; a
     // little of its slow average is paid each frame, so jitter can not hold it at half a frame and flip every frame
     const pullMS = frameDeltaCarryAverageMS / 32;
     frameDeltaCarryMS += deltaMS;
-    const smoothMS = round((frameDeltaCarryMS - pullMS) / frameIntervalMS) * frameIntervalMS + pullMS;
+    const frames = round((frameDeltaCarryMS - pullMS) / frameIntervalMS);
+    if (frames < 1)
+        return 0; // the carry keeps it
+    const smoothMS = frames * frameIntervalMS + pullMS;
     frameDeltaCarryMS -= smoothMS;
     frameDeltaCarryAverageMS += (frameDeltaCarryMS - frameDeltaCarryAverageMS) / 32;
     return smoothMS;
+}
+
+// fit the delta history as whole frames of about unitMS: the frame length is the least squares slope of time over
+// frames held, so jitter and whole ms timestamps average out, with how far the deltas are from whole frames
+function engineFrameFit(unitMS)
+{
+    let timeMS = 0, frames = 0, offMS = 0, sumF = 0, sumT = 0, sumFF = 0, sumFT = 0;
+    const count = frameDeltaHistory.length;
+    for (const d of frameDeltaHistory)
+    {
+        const held = max(1, round(d / unitMS));
+        timeMS += d;
+        frames += held;
+        offMS += abs(d - held * unitMS);
+        sumF += frames, sumT += timeMS, sumFF += frames * frames, sumFT += frames * timeMS;
+    }
+    const spread = count * sumFF - sumF * sumF;
+    return [spread ? (count * sumFT - sumF * sumT) / spread : unitMS, offMS / count / unitMS];
 }
 
 // where the fixed step's time counts from, moved when the variable step hands back so time goes on from there
@@ -298,14 +324,16 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         let wasUpdated = false;
         if (engineVariableStep)
         {
-            // one update for the frame with timeDelta the time it covers, per-frame values are the game's to scale
-            if (frameTimeDeltaUnscaledMS > 0)
+            // one update for the frame with timeDelta the time it covers, per-frame values are the game's to scale;
+            // engineStep's frames are exactly 1/60, its first too, which has no frame before it to take a delta from
+            if (frameTimeDeltaUnscaledMS > 0 || manualStepAtStart)
             {
                 // frozen stands still as in the fixed step, and timeDelta keeps the last update's
                 const frozenTick = paused || !combinedScale;
                 if (!frozenTick)
                 {
-                    timeDelta = min(frameTimeDeltaUnscaledMS, 50) * combinedScale / 1e3; // clamp min framerate
+                    timeDelta = manualStepAtStart ? combinedScale / frameRate :
+                        min(frameTimeDeltaUnscaledMS, 50) * combinedScale / 1e3; // clamp min framerate
                     time += timeDelta;
                     ++frame;
                 }
