@@ -101,7 +101,7 @@ declare module "littlejsengine" {
          */
         leave?: () => void;
         /**
-         * - Called each update after gameUpdate, not while paused
+         * - Called each update after gameUpdate, not while paused or at time scale 0
          */
         update?: () => void;
         /**
@@ -109,7 +109,7 @@ declare module "littlejsengine" {
          */
         render?: () => void;
         /**
-         * - Called after gameRenderPost, to draw over everything, while paused too
+         * - Called after gameRenderPost, to draw over the game, while paused too; plugins made after the first setScene draw over it
          */
         renderPost?: () => void;
     };

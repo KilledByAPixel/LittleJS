@@ -15,9 +15,9 @@
  *  @typedef {Object} Scene
  *  @property {function():void} [enter] - Called when the scene starts, after the old one left and the objects were destroyed
  *  @property {function():void} [leave] - Called before the next scene starts, while the scene is current and its objects are still there
- *  @property {function():void} [update] - Called each update after gameUpdate, not while paused
+ *  @property {function():void} [update] - Called each update after gameUpdate, not while paused or at time scale 0
  *  @property {function():void} [render] - Called before gameRender, to draw under the objects
- *  @property {function():void} [renderPost] - Called after gameRenderPost, to draw over everything, while paused too
+ *  @property {function():void} [renderPost] - Called after gameRenderPost, to draw over the game, while paused too; plugins made after the first setScene draw over it
  *  @memberof SceneSystem */
 
 let sceneCurrent, sceneLeaving = false, scenePluginAdded = false;

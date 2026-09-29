@@ -782,9 +782,9 @@ getScene()           // The current scene, or undefined
 // A scene is any object, every hook is optional
 scene.enter()        // After the old scene left and the objects were cleared
 scene.leave()        // Before the objects are cleared, while the scene is still current
-scene.update()       // Each update after gameUpdate, not while paused
+scene.update()       // Each update after gameUpdate, not while paused or at time scale 0
 scene.render()       // Before gameRender, under the objects
-scene.renderPost()   // After gameRenderPost, over everything, while paused too
+scene.renderPost()   // After gameRenderPost, over the game, while paused too; plugins made after the first setScene draw over it
 ```
 
 ## LittleJS PathFinding System
