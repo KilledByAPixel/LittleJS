@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><meta name="description" content="LittleJS is a lightweight HTML5 game engine with fast WebGL rendering, physics, particles, sound, and more!"><meta name="keywords" content="javascript, game engine, html5, webgl, 2d, game development, indie games"><meta name="author" content="Frank Force"><meta property="og:title" content="LittleJS - The Tiny JavaScript Game Engine"><meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound"><meta property="og:type" content="website"><title>Source: src/engineEditor.js</title><!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">src_engineEditor.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="Render3D.VoxelMap.html">VoxelMap</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">src_engineEditor.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
  * LittleJS Level Editor
  * - Paint the game's tile layers while it is paused, then keep playing with the changes
  * - Press 0 while the debug overlay is open to edit, 0 again to play, or call levelEditor.open() and close()
@@ -13,6 +13,12 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 // the level editor
+
+/**
+ *  @callback EditorPlayFromCallback - Puts the player at a world position, for the level editor's Play from mouse
+ *  @param {Vector2} pos - Where to start playing
+ *  @memberof Editor
+ */
 
 /**
  *  @callback EditorRestartCallback - Rebuilds the level from the map the level editor changed
@@ -49,6 +55,10 @@ class LevelEditor
          *  calls it after switching to play; without one there is no Restart button
          *  @type {EditorRestartCallback|undefined} */
         this.onRestart = undefined;
+        /** @property {Function|undefined} - Put the player at a world position; with it, the editor's Advanced
+         *  section has Play from mouse, which starts play there, Escape at the mouse and Play at the view center
+         *  @type {EditorPlayFromCallback|undefined} */
+        this.onPlayFrom = undefined;
     }
 
     /** True while the editor is open, the game is paused under it
@@ -81,11 +91,24 @@ const levelEditor = new LevelEditor;
 // if the editor is open, and if it was opened and not exited, while Escape switches between playing and editing
 let editorIsOpen = false, editorSession = false;
 
+// if switching to play puts the player at the mouse, and if the panel's Advanced section is shown
+let editorPlayFromMouse = false, editorAdvanced = false;
+
+// switch to play in the session, with the player at a position when Play from mouse is on and the game has a hook
+function editorPlay(pos)
+{
+    editorSetOpen(false);
+    editorPlayFromMouse &amp;&amp; pos &amp;&amp; levelEditor.onPlayFrom?.(pos.copy());
+}
+
 // the game's pause and camera from before the editor opened, handed back when it closes
 let editorGameState;
 
 // the editor's own view, so the game's camera is left where the game had it
 let editorCameraPos = vec2(), editorCameraScale = 32;
+
+// the map being edited, the selected object layer's or tile layer's, a level of objects alone has no tile layer
+const editorRecord = ()=> (editorObjectLayer ?? editorLayer)?.record;
 
 // the layer being painted, the cell under the mouse, the last cell of a stroke, the last cell a stamp was
 // placed on, for a Shift line
@@ -94,6 +117,14 @@ let editorLayer, editorHover, editorLastCell, editorLastPlaced;
 // the selected area, cells of the layer being edited from min to max, the right button's press while it is held,
 // and a left press that only cleared a selection, which paints nothing until let go
 let editorSelection, editorRightPress, editorLeftSpent;
+
+// a left drag moving the selection: the layer, the cell pressed and how far it moved, the area and its tiles as
+// they were, and with All Layers the ids of the objects in it, by object layer
+let editorSelectionDrag;
+
+// if the mouse is over the panel, and where it was last on the level, which is where the editor reads it while it is
+// over the panel, so a drag held across it stops at its edge and paints nothing behind it
+let editorMouseOnPanel = false, editorMouseScreen = vec2();
 
 // if selection edits, Delete, Ctrl+C and Ctrl+X, act on every tile layer of the edited layer's map
 let editorAllLayers = false;
@@ -117,13 +148,15 @@ function editorSetOpen(open)
         const layers = editorLayers();
         layers.includes(editorLayer) || (editorLayer = layers.find((layer)=> layer.live?.isSolid) ??
             layers.filter((layer)=> !layer.isObjects).at(-1));
-        layers.includes(editorObjectLayer) || (editorObjectLayer = undefined);
+        layers.includes(editorObjectLayer) || (editorObjectLayer = editorLayer ? undefined :
+            layers.find((layer)=> layer.isObjects)); // a level of objects alone
     }
     else
     {
         editorStrokeEnd();
-        editorSelection = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
+        editorSelection = editorSelectionDrag = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
         editorObjectSelection.clear();
+        editorMouseOnPanel = false; // the panel hides, with no mouseleave
         const state = editorGameState;
         setPaused(state.paused);
         setCameraPos(state.cameraPos);
@@ -169,18 +202,21 @@ function editorGidToTile(gid)
 const editorMapList = [];
 
 
-// the tile layers' data arrays of a map in the order tileLayersLoad makes them, groups flattened
-function editorTileLayerData(layers, list=[])
+// the tile layers of a map's Tiled layers in the order tileLayersLoad makes them, groups flattened
+function editorTileLayers(layers, list=[])
 {
     for (const layer of layers)
     {
         if (layer.type === 'group')
-            editorTileLayerData(layer.layers || [], list);
+            editorTileLayers(layer.layers || [], list);
         else if (!layer.type || layer.type === 'tilelayer')
-            list.push(layer.data);
+            list.push(layer);
     }
     return list;
 }
+
+// the tile layers' data arrays of a map, in the same order
+const editorTileLayerData = (layers)=> editorTileLayers(layers).map((layer)=> layer.data);
 
 // called by tileLayersLoad before it reads a map; a map it has not seen gets a record, and its autosave is copied
 // in when the file is the one it was made over; a file that changed since keeps the autosave pending for the
@@ -204,22 +240,28 @@ function editorMapRestore(map)
     const data = map.layers ? editorTileLayerData(map.layers) : [];
     if (!map.layers || data.some((layer)=> !Array.isArray(layer))) return map;
     const objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
-    const url = editorFetchedURLs.get(map), hash = editorMapHash(data, objects);
+    const url = editorFetchedURLs.get(map), hash = editorMapHash(data, objects, editorMapLayout(map));
     const fileName = url?.split(/[?#]/)[0].split('/').pop() || 'level.json';
     const record = {map, url, fileName, key: editorMapKey(map, url, hash), hash,
-        original: data.map((layer)=> [...layer]), originalObjects: editorObjectsCopy(objects), layers: []};
+        original: data.map((layer)=> [...layer]), originalObjects: editorObjectsCopy(objects),
+        originalSize: {width: map.width, height: map.height}, layers: []};
 
     // a new copy of a map takes over from the one before, and maps whose layers are all gone step aside
-    editorRetire((other)=> other.key === record.key ||
+    editorRetire((other)=> other.key === record.key || editorObjectsGone(other) ||
         other.layers.length &amp;&amp; other.layers.every((layer)=> layer.live.destroyed));
     editorMapList.push(record);
 
     const saved = editorSaves()[record.key];
     if (!saved) return map;
-    if (editorSameData(saved.layers, data) &amp;&amp; editorSameData(saved.objects ?? [], objects))
+    // an autosave from before the map's shape was in the hash matches on its tiles and objects, and one from before
+    // objects were matches on its tiles; one of a resized map is resized to first
+    const sameFile = saved.hash === record.hash || !saved.width &amp;&amp;
+        (saved.hash === editorMapHash(data, objects) || !saved.objects &amp;&amp; saved.hash === editorMapHash(data));
+    if ((saved.width ?? map.width) === map.width &amp;&amp; (saved.height ?? map.height) === map.height &amp;&amp;
+        editorSameData(saved.layers, data) &amp;&amp; editorSameData(saved.objects ?? [], objects))
         editorDiscardPending(record);
-    else if (saved.hash !== record.hash &amp;&amp; !(!saved.objects &amp;&amp; saved.hash === editorMapHash(data)) ||
-        !editorCopyData(data, saved.layers)) // an autosave from before objects were in the hash matches on its tiles
+    else if (!sameFile || !editorResizeMap(map, saved.width ?? map.width, saved.height ?? map.height) ||
+        !editorCopyData(data, saved.layers))
     {
         record.pending = saved;
         console.warn(`LittleJS editor: ${record.fileName} changed since its autosaved edits, ` +
@@ -250,9 +292,9 @@ function editorRetire(isRetired)
     }
     for (const list of [editorUndoList, editorRedoList])
     for (let i = list.length; i--;)
-        list[i].some((entry)=> gone.includes((entry.layer ?? entry.objectLayer).record)) &amp;&amp; list.splice(i, 1);
+        list[i].some((entry)=> gone.includes(editorEntryRecord(entry))) &amp;&amp; list.splice(i, 1);
     if (gone.includes(editorLayer?.record))
-        editorLayer = editorSelection = undefined; // the selection was an area of that layer
+        editorLayer = editorSelection = editorSelectionDrag = undefined; // the selection was an area of that layer
     if (gone.includes(editorObjectLayer?.record))
         editorObjectLayer = undefined;
 }
@@ -318,9 +360,71 @@ function editorJSONFetched(url, json)
 // a map as Tiled JSON, everything it was loaded with kept, the tile data as the editor left it
 function editorMapJSON(record) { return JSON.stringify(record.map); }
 
+// the files picked to save maps to, kept across reloads in IndexedDB by page and map, which is where a browser
+// lets a page keep them; each resolves to undefined when the store can not be used
+let editorFileStore =
+{
+    get: (key)=> editorFileStoreRequest('readonly', (store)=> store.get(key)),
+    set: (key, handle)=> editorFileStoreRequest('readwrite', (store)=> handle ? store.put(handle, key) : store.delete(key)),
+};
+
+// a request on the editor's file store, resolves to its result, or undefined if anything failed
+function editorFileStoreRequest(mode, request)
+{
+    return new Promise((resolve)=>
+    {
+        try
+        {
+            const open = indexedDB.open('LittleJS editor', 1);
+            open.onupgradeneeded = ()=> open.result.createObjectStore('files');
+            open.onerror = ()=> resolve(undefined);
+            open.onsuccess = ()=>
+            {
+                const db = open.result, done = (result)=> { db.close(); resolve(result); };
+                try
+                {
+                    const r = request(db.transaction('files', mode).objectStore('files'));
+                    r.onsuccess = ()=> done(r.result);
+                    r.onerror = ()=> done(undefined);
+                }
+                catch { done(undefined); }
+            };
+        }
+        catch { resolve(undefined); }
+    });
+}
+
+// the file a map was saved to on an earlier page load, when the browser gives permission to write it again
+async function editorRememberedFile(record)
+{
+    const handle = await editorFileStore.get(editorFileKey(record)), mode = {mode: 'readwrite'};
+    try
+    {
+        if (handle &amp;&amp; (await handle.queryPermission(mode) === 'granted' ||
+            await handle.requestPermission(mode) === 'granted'))
+            return handle;
+    }
+    catch { } // a handle that can not ask, the picker instead
+}
+const editorFileKey = (record)=> (globalThis.location?.pathname ?? '') + ' ' + record.key;
+
+// a map as a file Save wrote is the file from then on: Reset to file goes back to it, the autosave keeps only the
+// edits since, and a reload of it has nothing to apply; a download can not say it replaced the file, so it does not,
+// and neither does a file of another name, a copy, since the game still loads the one it came from
+function editorSetBaseline(record, written)
+{
+    if (record.synthetic) return; // a layer made in code has no file to load it from
+    const data = editorTileLayerData(written.layers);
+    const objects = editorObjectGroups(written.layers).map((group)=> group.objects ?? []);
+    Object.assign(record, {original: data, originalObjects: objects, hash: editorMapHash(data, objects,
+        editorMapLayout(written)), originalSize: {width: written.width, height: written.height}});
+    record.pending || editorAutosave(record); // edits waiting to be applied keep their autosave
+}
+
 // save a map as Tiled JSON: where the browser lets a page write files, Chrome and Edge, to a file picked once and
-// written again on each Save after, or picked again with Save As; elsewhere as a download under the name of the
-// file it came from; resolves to how it saved, undefined when the picker was closed
+// written again on each Save after, even after a reload once the browser gives permission, or picked again with
+// Save As; elsewhere as a download under the name of the file it came from; resolves to how it saved, undefined
+// when the picker was closed
 async function editorSave(record, pickAgain=false)
 {
     if (!record) return;
@@ -330,18 +434,27 @@ async function editorSave(record, pickAgain=false)
     {
         try
         {
+            if (!pickAgain &amp;&amp; !record.fileHandle)
+                record.fileHandle = await editorRememberedFile(record);
             if (pickAgain || !record.fileHandle)
+            {
                 record.fileHandle = await picker.call(globalThis, {suggestedName: record.fileName,
                     types: [{description: 'Tiled JSON', accept: {'application/json': ['.json']}}]});
+                editorFileStore.set(editorFileKey(record), record.fileHandle);
+            }
             const writable = await record.fileHandle.createWritable();
             await writable.write(text);
             await writable.close();
+            // the browser gives the picked file's name but not its folder, so the name is what says it is the map's
+            if (record.fileHandle.name === record.fileName)
+                editorSetBaseline(record, JSON.parse(text));
             return 'written';
         }
         catch (error)
         {
             if (error?.name === 'AbortError') return; // the picker was closed, nothing saved
-            record.fileHandle = undefined; // a file it could not write, a download instead
+            record.fileHandle = undefined; // a file it could not write, a download instead, and not kept
+            editorFileStore.set(editorFileKey(record), undefined);
         }
     }
     saveText(text, record.fileName, 'application/json');
@@ -374,20 +487,26 @@ function editorWriteSaves(saves)
 function editorMapKey(map, url, hash)
 { return url?.split(/[?#]/)[0] ?? `${map.width}x${map.height} ` + map.layers.map((layer)=> layer.name).join() + ' #' + hash; }
 
-// a quick hash of a map's tile data and objects, to know when the file changed under its autosave
-function editorMapHash(data, objects=[])
+// a quick hash of a map's tile data, objects and shape, to know when the file changed under its autosave
+function editorMapHash(data, objects=[], layout='')
 {
     let hash = 2166136261;
     for (const layer of data)
     for (const gid of layer)
         hash = Math.imul(hash ^ gid, 16777619);
-    if (objects.length)
-    {
-        const text = JSON.stringify(objects);
-        for (let i = 0; i &lt; text.length; ++i)
-            hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
-    }
+    const text = (objects.length ? JSON.stringify(objects) : '') + layout;
+    for (let i = 0; i &lt; text.length; ++i)
+        hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
     return hash >>> 0;
+}
+
+// a map's shape: its size, tile size, and its tile and object layers by name, in order, so a file whose tiles read
+// the same laid out another way is a changed file
+function editorMapLayout(map)
+{
+    const names = (layers)=> layers.map((layer)=> layer.id + ':' + layer.name).join();
+    return `${map.width}x${map.height} ${map.tilewidth}x${map.tileheight} ` +
+        names(editorTileLayers(map.layers)) + ' | ' + names(editorObjectGroups(map.layers));
 }
 
 const editorSameData = (a, b)=> JSON.stringify(a) === JSON.stringify(b);
@@ -409,18 +528,28 @@ function editorAutosave(record)
     const original = record.originalObjects ?? [], kept = objects.slice();
     while (kept.length > original.length &amp;&amp; !kept.at(-1).length)
         kept.pop(); // an Objects layer the editor made, empty again, is not an edit
-    if (editorSameData(data, record.original) &amp;&amp; editorSameData(kept, original))
+    const size = record.originalSize, sameSize = map.width === size.width &amp;&amp; map.height === size.height;
+    if (sameSize &amp;&amp; editorSameData(data, record.original) &amp;&amp; editorSameData(kept, original))
         delete saves[record.key];
     else
-        saves[record.key] = {hash: record.hash, layers: data, objects, nextobjectid: map.nextobjectid};
+        saves[record.key] = {hash: record.hash, width: map.width, height: map.height, layers: data, objects,
+            nextobjectid: map.nextobjectid};
     editorWriteSaves(saves);
 }
 
 // paint every cell of a map's layers from a list of tile data, the tile layers of the map in order, and set its
-// object layers' objects from a list of them
-function editorPaintData(record, data, objects)
+// object layers' objects from a list of them; data of another size resizes the map, which needs the Restart hook
+function editorPaintData(record, data, objects, width=record.map.width, height=record.map.height)
 {
     editorStrokeEnd();
+    if (width !== record.map.width || height !== record.map.height)
+    {
+        if (!levelEditor.onRestart) return;
+        const before = editorMapSnapshot(record);
+        editorSetMapSnapshot(record, {width, height, layers: data, objects});
+        editorMapChanged(record, before);
+        return;
+    }
     const all = editorTileLayerData(record.map.layers);
     editorBulkEdit(()=>
     {
@@ -436,39 +565,151 @@ function editorPaintData(record, data, objects)
     editorStroke ? editorStrokeEnd() : editorAutosave(record);
 }
 
-// the autosaved edits of a file that changed since, applied as one undo
+// the autosaved edits of a file that changed since, applied as one undo; edits that do not fit the file now are
+// kept waiting, with their autosave, until they are dropped, and it returns false
 function editorApplyPending(record)
 {
     const saved = record?.pending;
-    if (!saved) return;
-    record.pending = undefined;
-    editorPaintData(record, saved.layers, saved.objects);
+    if (!saved) return false;
+    if (!editorPendingFits(record, saved))
+    {
+        record.pendingUnfit = true;
+        console.warn(`LittleJS editor: the autosaved edits to ${record.fileName} do not fit the file now, ` +
+            'they are kept until dropped');
+        return false;
+    }
+    record.pending = record.pendingUnfit = undefined;
+    editorPaintData(record, saved.layers, saved.objects, saved.width, saved.height);
+    return true;
+}
+
+// if autosaved edits fit a map now: as many tile layers, each the size they were saved at, which needs the Restart
+// hook when the map is another size, and no objects in object layers the map no longer has
+function editorPendingFits(record, saved)
+{
+    const map = record.map, data = editorTileLayerData(map.layers), groups = editorObjectGroups(map.layers).length;
+    const width = saved.width ?? map.width, height = saved.height ?? map.height;
+    return (width === map.width &amp;&amp; height === map.height || !!levelEditor.onRestart) &amp;&amp;
+        saved.layers?.length === data.length &amp;&amp; saved.layers.every((layer)=> layer.length === width * height) &amp;&amp;
+        (saved.objects ?? []).every((objects, i)=> i &lt; groups || !objects.length);
 }
 
 // drop the autosaved edits of a file that changed since
 function editorDiscardPending(record)
 {
     if (!record) return;
-    record.pending = undefined;
+    record.pending = record.pendingUnfit = undefined;
     const saves = editorSaves();
     delete saves[record.key];
     editorWriteSaves(saves);
 }
 
-// put every layer back to the file, as one undo
+// put every layer back to the file, its size too, as one undo
 function editorRevert(record)
 {
-    if (!record) return;
-    record.pending = undefined;
-    editorPaintData(record, record.original, record.originalObjects);
+    if (!record || record.synthetic) return; // a layer made in code has no file
+    record.pending = record.pendingUnfit = undefined;
+    const {width, height} = record.originalSize ?? record.map;
+    editorPaintData(record, record.original, record.originalObjects, width, height);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// resizing
+
+// change a map's size in place, at the right and top, so the tiles and objects keep their places from the bottom
+// left; a row added goes at the start of each layer's data, Tiled's rows run from the top, and objects past the new
+// edges are dropped; returns false for a size it can not have
+function editorResizeMap(map, width, height)
+{
+    if (!(width >= 1 &amp;&amp; height >= 1 &amp;&amp; width % 1 === 0 &amp;&amp; height % 1 === 0)) return false;
+    if (width === map.width &amp;&amp; height === map.height) return true;
+    const oldWidth = map.width, added = height - map.height;
+    for (const layer of editorTileLayers(map.layers))
+    {
+        const old = [...layer.data];
+        layer.data.length = 0;
+        for (let row = 0; row &lt; height; ++row)
+        for (let x = 0; x &lt; width; ++x)
+        {
+            const oldRow = row - added;
+            layer.data.push(x &lt; oldWidth &amp;&amp; oldRow >= 0 &amp;&amp; old[x + oldRow * oldWidth] || 0);
+        }
+        layer.width = width;
+        layer.height = height;
+    }
+    // an object on the map before and off it after is dropped, one that was already off it stays
+    const {tilewidth=1, tileheight=1} = map, oldHeight = map.height;
+    const inside = (object, w, h)=> object.x >= 0 &amp;&amp; object.x &lt; w * tilewidth &amp;&amp; object.y > 0 &amp;&amp; object.y &lt;= h * tileheight;
+    for (const group of editorObjectGroups(map.layers))
+    {
+        group.objects &amp;&amp;= group.objects.filter((object)=>
+        {
+            const was = inside(object, oldWidth, oldHeight);
+            object.y += added * tileheight;
+            return !was || inside(object, width, height);
+        });
+    }
+    map.width = width;
+    map.height = height;
+    return true;
+}
+
+// a map's size, tiles and objects, for an undo
+function editorMapSnapshot(record)
+{
+    const map = record.map, objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
+    return editorObjectsCopy({width: map.width, height: map.height, layers: editorTileLayerData(map.layers), objects});
+}
+
+// give a map a size, tiles and objects, the game's Restart hook makes its layers again
+function editorSetMapSnapshot(record, snapshot)
+{
+    const map = record.map;
+    editorResizeMap(map, snapshot.width, snapshot.height);
+    editorCopyData(editorTileLayerData(map.layers), snapshot.layers);
+    editorRestoreObjects(map, snapshot);
+    for (const group of editorObjectGroups(map.layers).slice(snapshot.objects.length))
+        group.objects = []; // an Objects layer the editor made since
+    editorClearSelections();
+}
+
+// the selections go when the map changes size, they are cells and objects of the old one
+function editorClearSelections()
+{
+    editorSelection = editorSelectionDrag = editorLastCell = editorHover = undefined;
+    editorObjectSelection.clear();
+}
+
+// a map changed whole, the undo can put it back; it is autosaved, and the game makes its level again, in the editor
+function editorMapChanged(record, before)
+{
+    const stroke = [{resize: record, before, after: editorMapSnapshot(record)}];
+    editorUndoList.push(stroke);
+    editorRedoList.length = 0;
+    editorChanged(stroke);
+}
+
+// resize a map, as one undo; a game without the Restart hook can not make its layers again, so it can not
+function editorResize(record, width, height)
+{
+    const map = record?.map;
+    if (!map || record.synthetic || record.pending || !levelEditor.onRestart) return false;
+    if (width === map.width &amp;&amp; height === map.height) return false;
+    editorStrokeEnd();
+    const before = editorMapSnapshot(record);
+    if (!editorResizeMap(map, width, height)) return false;
+    editorClearSelections();
+    editorMapChanged(record, before);
+    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // cells and undo
 
 // the strokes that can be undone and redone, each a list of cells with the gid before and after, and of object
-// layers with their objects before and after
+// layers with their objects before and after, or a resize with the map before and after
 const editorUndoList = [], editorRedoList = [];
+const editorEntryRecord = (entry)=> entry.resize ?? (entry.layer ?? entry.objectLayer).record;
 let editorStroke;
 
 // during a big edit, the layers whose cell by cell redraws are held off, with the redraw each had of its own
@@ -531,6 +772,21 @@ function editorStrokeEnd()
     editorStroke = undefined;
 }
 
+// undo the stroke being made, with no undo entry, as if it was never made
+function editorStrokeCancel()
+{
+    const stroke = editorStroke;
+    editorStroke = undefined;
+    if (!stroke) return;
+    editorBulkEdit(()=>
+    {
+        for (const entry of [...stroke].reverse())
+            entry.objectLayer ? editorSetObjects(entry.objectLayer, entry.before) :
+                editorSetCell(entry.layer, entry.pos, entry.before);
+    });
+    editorRedraw(stroke);
+}
+
 // undo the last stroke, or redo the last one undone
 function editorUndo(redo=false)
 {
@@ -542,7 +798,9 @@ function editorUndo(redo=false)
     {
         for (const entry of redo ? stroke : [...stroke].reverse())
         {
-            if (entry.objectLayer)
+            if (entry.resize)
+                editorSetMapSnapshot(entry.resize, redo ? entry.after : entry.before);
+            else if (entry.objectLayer)
                 editorSetObjects(entry.objectLayer, redo ? entry.after : entry.before);
             else
                 editorSetCell(entry.layer, entry.pos, redo ? entry.after : entry.before);
@@ -552,13 +810,20 @@ function editorUndo(redo=false)
 }
 
 // after a change the tile layers it touched draw again whole, so a game's onRedraw decoration sees the new tiles,
-// and the maps it touched are autosaved
+// and the maps it touched are autosaved; a resized map is made again by the game, with the editor staying open
 function editorChanged(stroke)
+{
+    editorRedraw(stroke);
+    for (const record of new Set(stroke.map(editorEntryRecord)))
+        editorAutosave(record);
+    stroke.some((entry)=> entry.resize) &amp;&amp; levelEditor.onRestart?.();
+}
+
+// the tile layers a stroke touched draw again whole
+function editorRedraw(stroke)
 {
     for (const layer of new Set(stroke.filter((entry)=> entry.layer).map((entry)=> entry.layer)))
         layer.live.destroyed || layer.live.redraw();
-    for (const record of new Set(stroke.map((entry)=> (entry.layer ?? entry.objectLayer).record)))
-        editorAutosave(record);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -669,9 +934,12 @@ function editorSetObjects(layer, list)
         }
         else if (made &amp;&amp; !made.destroyed)
         {
-            if ('pos' in made)
+            // only what the edit changed, so moving an object keeps its health and the rest of its state from play
+            if ('pos' in made &amp;&amp; (old.x !== object.x || old.y !== object.y))
                 made.pos = editorObjectPos(record, object);
-            Object.assign(made, objectLayersProperties(type, object));
+            const was = objectLayersProperties(type, old), now = objectLayersProperties(type, object);
+            for (const name in now)
+                editorSameData(was[name], now[name]) || (made[name] = now[name]);
         }
     }
 }
@@ -694,16 +962,18 @@ function editorChangeObjects(layer, change)
 }
 
 // set an object's property as Tiled keeps it, only where it differs from its type's default, a color as #AARRGGBB
+// and a Vector2 as the string x,y
 function editorObjectSetProperty(object, name, value, defaultValue)
 {
     if (Number.isInteger(defaultValue) &amp;&amp; isNumber(value))
         value = round(value); // an integer stays one, as Tiled keeps an int
     const properties = (object.properties ?? []).filter((property)=> property.name !== name);
-    const text = (v)=> isColor(v) ? v.toString() : JSON.stringify(v);
+    const text = (v)=> isColor(v) ? v.toString() : isVector2(v) ? v.x + ',' + v.y : JSON.stringify(v);
     if (text(value) !== text(defaultValue))
     {
         const hex = isColor(value) &amp;&amp; value.toString();
         properties.push(hex ? {name, type: 'color', value: '#' + hex.slice(7, 9) + hex.slice(1, 7)} :
+            isVector2(value) ? {name, type: 'string', value: text(value)} :
             {name, type: typeof value === 'boolean' ? 'bool' : typeof value === 'string' ? 'string' :
             Number.isInteger(defaultValue) ? 'int' : 'float', value});
     }
@@ -740,12 +1010,13 @@ function editorSelectLayer(layer)
 {
     editorStrokeEnd();
     editorLastCell = editorObjectDrag = editorRightPress = editorObjectBox = undefined; // presses stay on their layer
+    editorSelectionDrag = undefined; // a move so far is kept, the stroke ended
     editorObjectSelection.clear();
     if (layer.isObjects)
     {
         editorObjectLayer = layer;
         if (editorLayer?.record !== layer.record)
-            editorLayer = layer.record.layers[0] ?? editorLayer;
+            editorLayer = layer.record.layers[0]; // none for a level of objects alone
     }
     else
     {
@@ -862,7 +1133,7 @@ function editorPasteObjects()
 // Shift adding and Ctrl taking away
 function editorUpdateObjects(space)
 {
-    const layer = editorObjectLayer, record = layer.record, mouse = screenToWorld(mousePosScreen);
+    const layer = editorObjectLayer, record = layer.record, mouse = screenToWorld(editorMouseScreen);
     const snap = editorSnap;
     const shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
     const ctrl = keyIsDown('ControlLeft') || keyIsDown('ControlRight') || keyIsDown('MetaLeft') || keyIsDown('MetaRight');
@@ -935,13 +1206,22 @@ function editorUpdateObjects(space)
 ///////////////////////////////////////////////////////////////////////////////
 // editing
 
-// every tile layer in the game, as the editor's records, in render order, then the object layers of their maps
+// every tile layer in the game, as the editor's records, in render order, then the object layers of their maps, and
+// of the maps the game loaded objects alone from
 function editorLayers()
 {
     const tiles = engineObjects.filter((o)=> o instanceof TileLayer &amp;&amp; !o.destroyed)
         .sort((a, b)=> a.renderOrder - b.renderOrder).map(editorLayerRecord);
-    return [...tiles, ...[...new Set(tiles.map((layer)=> layer.record))].flatMap(editorObjectLayers)];
+    const records = [...new Set(tiles.map((layer)=> layer.record))];
+    for (const record of editorMapList)
+        record.synthetic || record.layers.length || records.includes(record) || records.push(record);
+    return [...tiles, ...records.flatMap(editorObjectLayers)];
 }
+
+// if a map of objects alone has nothing left in the game, the level moved on, a marker that is no game object counts
+// as nothing
+const editorObjectsGone = (record)=> !record.layers.length &amp;&amp;
+    editorObjectLayers(record).every((layer)=> [...layer.instances.values()].every((made)=> !made.destroy || made.destroyed));
 
 // the cell of a layer at a world position, undefined off the layer
 function editorCellAt(live, worldPos)
@@ -1225,12 +1505,9 @@ function editorPlaceStampObjects(layer, cell, stamp)
     });
 }
 
-// the selected area into the brush as a stamp, its empty cells see-through, with All Layers the objects in it too,
-// and the selection cleared so the next click paints it
-function editorCopy()
+// the tiles of an area on the selection layers as a stamp, its empty cells see-through
+function editorSelectionStamp(area)
 {
-    const area = editorSelection;
-    if (!area || !editorLayer) return false;
     const width = area.max.x - area.min.x + 1, height = area.max.y - area.min.y + 1;
     const grids = editorSelectionLayers().map((layer)=>
     {
@@ -1243,12 +1520,77 @@ function editorCopy()
         }
         return grid;
     });
-    const objects = editorAllLayers ? editorAreaObjects(editorLayer, area) : [];
-    if (!objects.length &amp;&amp; grids.every((grid)=> grid.every((gid)=> gid === undefined)))
+    return {width, height, grids};
+}
+
+// the selected area into the brush as a stamp, its empty cells see-through, with All Layers the objects in it too,
+// and the selection cleared so the next click paints it
+function editorCopy()
+{
+    const area = editorSelection;
+    if (!area || !editorLayer) return false;
+    const stamp = editorSelectionStamp(area), objects = editorAllLayers ? editorAreaObjects(editorLayer, area) : [];
+    if (!objects.length &amp;&amp; stamp.grids.every((grid)=> grid.every((gid)=> gid === undefined)))
         return false; // nothing there, the brush stays as it was
-    editorBrush = editorClipboard = objects.length ? {width, height, grids, objects} : {width, height, grids};
+    editorBrush = editorClipboard = objects.length ? {...stamp, objects} : stamp;
     editorSelection = undefined;
     return true;
+}
+
+// start dragging the selection from a cell in it, with All Layers the objects in it go too
+function editorSelectionDragStart(layer, cell)
+{
+    editorStrokeEnd();
+    const area = editorSelection, objects = [];
+    if (editorAllLayers)
+    {
+        const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
+        for (const objectLayer of editorObjectLayers(layer.record))
+        {
+            const ids = new Set(editorObjectsIn(objectLayer, corner, far));
+            ids.size &amp;&amp; objects.push({objectLayer, ids});
+        }
+    }
+    editorSelectionDrag = {layer, start: cell, delta: vec2(), area, stamp: editorSelectionStamp(area), objects};
+}
+
+// move the dragged selection to a cell, as the stroke being made: taken back, then its area cleared and its tiles
+// and objects put down that far from where they were; letting go ends the stroke, one undo
+function editorSelectionDragTo(cell)
+{
+    const drag = editorSelectionDrag, delta = cell.subtract(drag.start), {layer, area, stamp} = drag;
+    if (delta.x === drag.delta.x &amp;&amp; delta.y === drag.delta.y) return;
+    drag.delta = delta;
+    editorStrokeCancel();
+    editorSelection = {min: area.min.add(delta), max: area.max.add(delta)};
+    if (!delta.x &amp;&amp; !delta.y) return; // back where it was, no change
+    editorBulkEdit(()=>
+    {
+        for (const [target] of editorStampTargets(layer, stamp))
+        for (let y = area.min.y; y &lt;= area.max.y; ++y)
+        for (let x = area.min.x; x &lt;= area.max.x; ++x)
+        {
+            const from = vec2(x, y);
+            from.arrayCheck(target.live.size) &amp;&amp; editorPaint(target, from, 0);
+        }
+        editorPaintStamp(layer, editorSelection.min, stamp);
+        for (const {objectLayer, ids} of drag.objects)
+            editorChangeObjects(objectLayer, (list)=>
+            {
+                for (const object of list)
+                    ids.has(object.id) &amp;&amp; editorObjectSetPos(layer.record, object,
+                        editorObjectPos(layer.record, object).add(delta));
+            });
+    });
+    editorStroke &amp;&amp; editorRedraw(editorStroke);
+}
+
+// put the dragged selection back where it was, with nothing to undo
+function editorSelectionDragCancel()
+{
+    editorStrokeCancel();
+    editorSelection = editorSelectionDrag.area;
+    editorSelectionDrag = undefined;
 }
 
 // copy the selected area, then clear it, as one undo
@@ -1280,6 +1622,7 @@ const editorHelpLines =
 [
     'Left: paint · Shift+Left: line from the last tile',
     'Right click: pick a tile · Right drag: select',
+    'Left drag a selection: move it · Esc or right click: put it back',
     'Middle drag or Space+drag: pan · Wheel or pinch: zoom',
     '1-9: layer · Esc: play and edit · 0: exit the editor',
     'F: fill · Delete: clear the selection',
@@ -1295,7 +1638,8 @@ function editorHint()
     if (editorObjectLayer)
         return editorObjectSelection.size ? 'Selection: drag moves · Delete removes · Ctrl+C copy · Ctrl+X cut · click to clear' :
             'Left place / select · drag moves · Right pick / drag select · Delete removes';
-    if (editorSelection) return 'Selection: F fill · Delete clear · Ctrl+C copy · Ctrl+X cut · click to clear';
+    if (editorSelection)
+        return 'Selection: drag moves · F fill · Delete clear · Ctrl+C copy · Ctrl+X cut · click to clear';
     if (keyIsDown('ShiftLeft') || keyIsDown('ShiftRight')) return 'Shift: line from the last tile';
     return 'Left paint · Right pick / drag select · F fill · Space or middle drag pans · ? keys';
 }
@@ -1338,6 +1682,8 @@ function editorPanelInit()
     // a click or touch on the panel is not the game's, a mouse up still goes on so a drag can let go
     for (const type of ['mousedown','wheel','touchstart','touchmove','touchend','touchcancel'])
         editorPanel.addEventListener(type, (e)=> e.stopPropagation());
+    editorPanel.addEventListener('mouseenter', ()=> editorMouseOnPanel = true);
+    editorPanel.addEventListener('mouseleave', ()=> editorMouseOnPanel = false);
 
     const row = ()=> editorElement('div', editorPanel, 'display:flex;gap:4px;margin:4px 0');
     const button = (parent, text, onclick, title='')=>
@@ -1350,7 +1696,7 @@ function editorPanelInit()
 
     editorElement('div', editorPanel, 'font-weight:bold', 'Level Editor');
     const top = row();
-    button(top, 'Play', ()=> editorSetOpen(false), 'Esc, and Esc again comes back to the editor');
+    button(top, 'Play', ()=> editorPlay(editorCameraPos), 'Esc, and Esc again comes back to the editor');
     const restart = button(top, 'Restart', editorRestart, 'Rebuild the level and play it');
     button(top, 'Exit', ()=> levelEditor.close(), '0, then Esc opens the debug overlay again');
     const undo = row();
@@ -1362,8 +1708,10 @@ function editorPanelInit()
     const pending = editorElement('div', editorPanel, 'padding:4px;margin:4px 0;background:#630;border-radius:3px');
     editorElement('div', pending, '', 'The level file changed since your autosaved edits');
     const pendingRow = editorElement('div', pending, 'display:flex;gap:4px;margin-top:4px');
-    button(pendingRow, 'Apply edits', ()=> editorApplyPending(editorLayer?.record));
-    button(pendingRow, 'Drop them', ()=> editorDiscardPending(editorLayer?.record));
+    button(pendingRow, 'Apply edits', ()=> editorApplyPending(editorRecord()));
+    button(pendingRow, 'Drop them', ()=> editorDiscardPending(editorRecord()));
+    const pendingUnfit = editorElement('div', pending, 'color:#fb8;margin-top:4px',
+        'They do not fit the file now, its layers or size changed; they are kept until dropped');
 
     // the layers as numbered buttons, made again when layers come or go, and All Layers
     const layerRow = editorElement('div', editorPanel, 'display:flex;gap:4px;margin:4px 0;flex-wrap:wrap');
@@ -1390,12 +1738,50 @@ function editorPanelInit()
     const file = row();
     // Save says so for a moment when it saved, Save As shows where a page can write files
     const saved = (b, label)=> (result)=> result &amp;&amp; (b.textContent = 'Saved', setTimeout(()=> b.textContent = label, 1e3));
-    const save = button(file, 'Save', ()=> editorSave(editorLayer?.record).then(saved(save, 'Save')),
+    const save = button(file, 'Save', ()=> editorSave(editorRecord()).then(saved(save, 'Save')),
         'Save, to the file picked the first time, or a download');
-    const saveAs = button(file, 'Save As', ()=> editorSave(editorLayer?.record, true).then(saved(saveAs, 'Save As')),
+    const saveAs = button(file, 'Save As', ()=> editorSave(editorRecord(), true).then(saved(saveAs, 'Save As')),
         'Save As, to a file picked again');
     /** @type {any} */ (globalThis).showSaveFilePicker || (saveAs.style.display = 'none');
-    button(file, 'Revert', ()=> editorRevert(editorLayer?.record), 'Back to the file, can be undone');
+
+    // the Advanced section, shown by its heading: Play from mouse, the level's size, Reset to file
+    const advancedToggle = editorElement('button', editorPanel,
+        'width:100%;padding:3px;cursor:pointer;margin-top:4px;text-align:left');
+    advancedToggle.onclick = ()=> { editorAdvanced = !editorAdvanced; advancedToggle.blur(); };
+    const advanced = editorElement('div', editorPanel, 'margin:4px 0;padding:4px;background:#222;border-radius:3px');
+    const playFromLabel = editorElement('label', advanced, 'display:flex;gap:6px;align-items:center;margin:2px 0');
+    playFromLabel.title = 'Escape starts play with the player at the mouse, Play at the view center';
+    const playFrom = editorElement('input', playFromLabel);
+    playFrom.type = 'checkbox';
+    playFrom.onchange = ()=> { editorPlayFromMouse = playFrom.checked; playFrom.blur(); };
+    editorElement('span', playFromLabel, '', 'Play from mouse');
+    const sizeRow = editorElement('div', advanced, 'display:flex;gap:4px;align-items:center;margin:4px 0');
+    sizeRow.title = 'The level grows or shrinks at the right and top, can be undone';
+    editorElement('span', sizeRow, '', 'Size');
+    const sizeInput = ()=>
+    {
+        const input = editorElement('input', sizeRow, 'width:48px;background:#333;color:#eee');
+        input.type = 'number';
+        input.min = input.step = '1';
+        input.onkeydown = (e)=> { e.key === 'Enter' &amp;&amp; resizeLevel(); }; // returning false would block typing
+        return input;
+    };
+    const sizeX = sizeInput();
+    editorElement('span', sizeRow, '', '×');
+    const sizeY = sizeInput();
+    const resize = editorElement('button', sizeRow, 'flex:1;padding:3px;cursor:pointer', 'Resize');
+    const resizeLevel = ()=>
+    {
+        // up to 1000 a side from here, editorResize takes any size from code
+        const size = (input)=> clamp(parseInt(input.value) || 1, 1, 1e3);
+        editorResize(editorRecord(), size(sizeX), size(sizeY));
+        resize.blur(); sizeX.blur(); sizeY.blur(); // the fields show the size again
+    };
+    resize.onclick = resizeLevel;
+    const reset = editorElement('button', advanced, 'width:100%;padding:3px;cursor:pointer;margin-top:4px',
+        'Reset to file');
+    reset.title = 'Put the level back to the file it was loaded from, or last saved to, can be undone';
+    reset.onclick = ()=> { editorRevert(editorRecord()); reset.blur(); };
     const storage = editorElement('div', editorPanel, 'color:#f86;margin-top:4px',
         'Autosave failed, storage is full: Save to a file');
     const status = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;min-height:1em');
@@ -1405,7 +1791,7 @@ function editorPanelInit()
         editorElement('div', help, 'margin:2px 0', line);
     button(help, 'Close', ()=> editorHelp = false, '?');
 
-    editorPanelParts = {restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
+    editorPanelParts = {pendingUnfit, reset, advancedToggle, advanced, playFromLabel, playFrom, sizeRow, sizeX, sizeY, resize, restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -1538,9 +1924,12 @@ function editorPanelUpdate()
         p.layers = layers;
         p.layerRow.replaceChildren(...layers.map((layer, i)=>
         {
-            const b = editorElement('button', undefined, 'flex:1;min-width:28px;padding:3px;cursor:pointer',
-                i &lt; 9 ? String(i + 1) : '·');
-            b.title = `${(layer.isObjects ? layer.name : layer.source.name) || 'Layer ' + (i + 1)} (${layer.record.fileName})`;
+            // its number key and name, cut short when the row runs out of room, the whole name in its tooltip
+            const name = layer.isObjects ? layer.name : layer.source.name;
+            const b = editorElement('button', undefined, 'flex:1;min-width:28px;padding:3px;cursor:pointer;' +
+                'white-space:nowrap;overflow:hidden;text-overflow:ellipsis', (i &lt; 9 ? String(i + 1) : '·') +
+                (name ? ' ' + name : ''));
+            b.title = `${name || 'Layer ' + (i + 1)} (${layer.record.fileName})`;
             b.onclick = ()=> { editorSelectLayer(layer); b.blur(); };
             return b;
         }));
@@ -1553,8 +1942,26 @@ function editorPanelUpdate()
     p.help.style.display = editorHelp ? '' : 'none';
     p.storage.style.display = editorSaveFailed ? '' : 'none';
     p.restart.style.display = levelEditor.onRestart ? '' : 'none';
+    p.advancedToggle.textContent = editorAdvanced ? 'Advanced ▾' : 'Advanced ▸';
+    p.advanced.style.display = editorAdvanced ? '' : 'none';
+    p.playFromLabel.style.display = levelEditor.onPlayFrom ? 'flex' : 'none';
+    p.playFrom.checked = editorPlayFromMouse;
+
+    // the level's size, shown until a field is being typed in; without the Restart hook it can not change
+    const record = editorRecord(), map = record?.map;
+    const canResize = !!levelEditor.onRestart &amp;&amp; !record?.synthetic &amp;&amp; !record?.pending;
+    p.sizeRow.style.display = map ? 'flex' : 'none';
+    if (map &amp;&amp; !p.sizeRow.contains(document.activeElement))
+    {
+        p.sizeX.value = String(map.width);
+        p.sizeY.value = String(map.height);
+    }
+    p.sizeX.disabled = p.sizeY.disabled = p.resize.disabled = !canResize;
+    p.resize.title = canResize ? '' : 'Resizing needs levelEditor.onRestart, to make the level again';
     p.turns.style.display = editorObjectLayer ? 'none' : ''; // the tile brush's, not an object layer's
-    p.pending.style.display = editorLayer?.record.pending ? '' : 'none';
+    p.pending.style.display = record?.pending ? '' : 'none';
+    p.pendingUnfit.style.display = record?.pendingUnfit ? '' : 'none';
+    p.reset.style.display = record?.synthetic ? 'none' : ''; // a layer made in code has no file
 
     // the palette, drawn again when the layer or the brush changed, a change makes a new brush
     const live = editorLayer?.live;
@@ -1612,6 +2019,13 @@ function editorIsTextField(target)
 function editorOnKeyDown(e)
 {
     if (!editorIsOpen || e.repeat || e.altKey || editorIsTextField(e.target)) return;
+    if (editorSelectionDrag &amp;&amp; !(debugKey &amp;&amp; e.code === debugKey))
+    {
+        // a key ends a selection drag where it is, an undo of its own, so Delete or undo acts on what is there;
+        // the debug key, Escape, is left to the update, which puts the selection back
+        editorStrokeEnd();
+        editorSelectionDrag = undefined;
+    }
     let key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (key.length === 1 &amp;&amp; !/[a-z?]/.test(key))
         key = e.code?.match(/^Key([A-Z])$/)?.[1].toLowerCase() ?? key;
@@ -1647,7 +2061,8 @@ function editorZoom(factor)
 function editorSnap(pos) { return editorGrid ? pos.floor().add(vec2(.5)) : pos.copy(); }
 
 // if the properties box has an input for a default's type, a number, boolean, string or Color
-const editorPropertyEditable = (value)=> ['number', 'boolean', 'string'].includes(typeof value) || isColor(value);
+const editorPropertyEditable = (value)=>
+    ['number', 'boolean', 'string'].includes(typeof value) || isColor(value) || isVector2(value);
 
 // set a property of the one selected object, from the properties box, as one undo
 function editorSetSelectedProperty(name, value)
@@ -1655,7 +2070,8 @@ function editorSetSelectedProperty(name, value)
     const selected = editorSelectedObjects(), object = selected[0];
     const type = object &amp;&amp; objectLayersTypes.get(object.type || object.class), defaultValue = type?.defaults[name];
     if (selected.length !== 1 || !editorPropertyEditable(defaultValue) ||
-        (isColor(defaultValue) ? !isColor(value) : typeof value !== typeof defaultValue)) return false;
+        (isColor(defaultValue) ? !isColor(value) : isVector2(defaultValue) ? !isVector2(value) :
+        typeof value !== typeof defaultValue)) return false;
     editorStrokeEnd();
     editorChangeObjects(editorObjectLayer, (list)=>
         editorObjectSetProperty(list.find((o)=> o.id === object.id), name, value, type.defaults[name]));
@@ -1677,7 +2093,7 @@ function editorDrawBox(center, size, color, width)
 {
     const half = size.scale(.5), corners = [vec2(-1, -1), vec2(1, -1), vec2(1, 1), vec2(-1, 1)]
         .map((c)=> center.add(c.multiply(half)));
-    corners.forEach((c, i)=> drawLine(c, corners[(i + 1) % 4], width, color));
+    corners.forEach((c, i)=> drawLine(c, corners[(i + 1) % 4], width, color, undefined, 0, glEnable, false));
 }
 
 // an object type's icon, or a box with its name when it has none
@@ -1685,10 +2101,10 @@ function editorDrawObjectIcon(name, pos, size, alpha)
 {
     const tileInfo = objectLayersTypes.get(name)?.tileInfo;
     if (tileInfo)
-        drawTile(pos, size, tileInfo, hsl(0, 0, 1, alpha));
+        drawTile(pos, size, tileInfo, hsl(0, 0, 1, alpha), 0, undefined, undefined, glEnable, false);
     else
     {
-        drawRect(pos, size, hsl(0, 0, 0, alpha * .6));
+        drawRect(pos, size, hsl(0, 0, 0, alpha * .6), undefined, undefined, false);
         drawText(name ?? '?', pos, min(size.x, size.y) * .3, hsl(0, 0, 1, alpha));
     }
 }
@@ -1763,9 +2179,31 @@ function editorPropertiesUpdate(box)
             input.value = String(value ?? '');
             input.onchange = ()=> set(input.value);
         }
+        else if (isVector2(defaultValue))
+        {
+            // x and y, the row's second input for y
+            const y = editorElement('input', row, 'width:52px;background:#222;color:#eee');
+            input.style.width = '52px';
+            for (const [field, v] of [[input, value.x], [y, value.y]])
+            {
+                field.type = 'number';
+                field.step = 'any';
+                field.value = String(v);
+                field.onchange = ()=>
+                {
+                    // both checked before a vector is made of them, an emptied or half typed field shows its value again
+                    const px = parseFloat(input.value), py = parseFloat(y.value);
+                    if (isNumber(px) &amp;&amp; isNumber(py))
+                        set(vec2(px, py));
+                    else
+                        input.value = String(value.x), y.value = String(value.y);
+                    field.blur();
+                };
+            }
+        }
         else
         {
-            // a type it has no input for, a Vector2 say, shown as it is
+            // a type it has no input for, an array say, shown as it is
             input.readOnly = true;
             input.value = String(value);
         }
@@ -1777,12 +2215,26 @@ function editorPropertiesUpdate(box)
 
 function editorUpdate()
 {
+    // Escape while dragging a selection puts it back, and stays in the editor
+    if (editorSelectionDrag &amp;&amp; debugKey &amp;&amp; keyWasPressed(debugKey))
+    {
+        inputClearKey(debugKey);
+        editorSelectionDragCancel();
+        return;
+    }
+
     // in an editing session Escape, the debug key, switches between playing and editing; taken, so the debug
     // overlay waits till the session ends
     if (editorSession &amp;&amp; debugKey &amp;&amp; keyWasPressed(debugKey))
     {
         inputClearKey(debugKey);
-        editorSetOpen(!editorIsOpen);
+        if (editorIsOpen)
+        {
+            editorApplyCamera(); // the mouse is read through the editor's view
+            editorPlay(screenToWorld(mousePosScreen));
+        }
+        else
+            editorSetOpen(true);
         return;
     }
     if (!editorIsOpen) return;
@@ -1813,10 +2265,18 @@ function editorUpdate()
         editorCameraPos = editorCameraPos.subtract(screenToWorldDelta(mouseDeltaScreen));
     editorApplyCamera();
 
+    editorMouseOnPanel || (editorMouseScreen = mousePosScreen.copy());
     if (editorObjectLayer)
         return editorUpdateObjects(space);
-    const layer = editorLayer?.live.destroyed ? undefined : editorLayer, mouse = screenToWorld(mousePosScreen);
-    editorHover = layer &amp;&amp; editorCellAt(layer.live, mouse);
+    const layer = editorLayer?.live.destroyed ? undefined : editorLayer, mouse = screenToWorld(editorMouseScreen);
+    editorHover = layer &amp;&amp; !editorMouseOnPanel &amp;&amp; editorCellAt(layer.live, mouse); // over the panel, a line starts again
+
+    // a right press while dragging the selection puts it back, and is taken so it does not pick or select
+    if (editorSelectionDrag &amp;&amp; mouseWasPressed(2))
+    {
+        inputClearKey(2);
+        editorSelectionDragCancel();
+    }
 
     // the right button: a click picks the tile under the mouse, or clears the selection off the layer, a drag
     // selects an area; a release within half a cell of the press, or 4 pixels zoomed far out, is a click
@@ -1838,13 +2298,19 @@ function editorUpdate()
     else
         editorRightPress = undefined;
 
-    // the left button paints; the first press with a selection only clears it, Shift draws a line from the
-    // last tile placed; a quick click let go before this step still reads as pressed
+    // the left button paints; a press in the selection drags it, the first press outside it only clears it, Shift
+    // draws a line from the last tile placed; a quick click let go before this step still reads as pressed
     if (mouseWasPressed(0) &amp;&amp; !space &amp;&amp; editorSelection)
     {
-        editorSelection = undefined;
+        const {min: a, max: b} = editorSelection, cell = editorHover;
+        if (cell &amp;&amp; !layer.record.pending &amp;&amp; cell.x >= a.x &amp;&amp; cell.y >= a.y &amp;&amp; cell.x &lt;= b.x &amp;&amp; cell.y &lt;= b.y)
+            editorSelectionDragStart(layer, cell);
+        else
+            editorSelection = undefined;
         editorLeftSpent = true;
     }
+    if (editorSelectionDrag &amp;&amp; layer)
+        editorSelectionDragTo(editorCellClamped(layer.live, mouse));
     const left = mouseIsDown(0) || mouseWasPressed(0);
     if (!editorHover)
         editorLastCell = undefined; // off the layer, coming back in starts the line again
@@ -1864,7 +2330,7 @@ function editorUpdate()
     if (!mouseIsDown(0))
     {
         editorStrokeEnd();
-        editorLastCell = undefined;
+        editorLastCell = editorSelectionDrag = undefined;
         editorLeftSpent = false;
     }
 }
@@ -1881,30 +2347,35 @@ function editorRestart()
 // the camera from gameUpdatePost, which runs while paused
 function editorPreRender() { editorIsOpen &amp;&amp; editorApplyCamera(); }
 
-// the layer's edge, a grid when zoomed in, the map's tiles the layer does not show, and the brush under the mouse
+// the layer's edge, or the map's for a level of objects alone, a grid when zoomed in, the map's tiles the layer does not
+// show, and the brush under the mouse
 function editorRender()
 {
     headlessMode || editorPanelUpdate();
     if (!editorIsOpen || headlessMode) return;
-    const layer = editorLayer;
-    if (!layer || layer.live.destroyed) return;
-    const {live, source} = layer, {x: width, y: height} = live.size;
+    const layer = editorLayer?.live.destroyed ? undefined : editorLayer;
+    if (!layer &amp;&amp; !editorObjectLayer) return;
+
+    // the area drawn, the tile layer's, or for a level of objects alone the map's, where objectLayersLoad puts it
+    const map = editorRecord().map, live = layer?.live, source = layer?.source;
+    const pos = live ? live.pos : vec2(), size = live ? live.size : vec2(map.width, map.height);
+    const {x: width, y: height} = size;
 
     // the cells on screen
-    const low = screenToWorld(vec2(0, mainCanvasSize.y)).subtract(live.pos);
-    const high = screenToWorld(vec2(mainCanvasSize.x, 0)).subtract(live.pos);
+    const low = screenToWorld(vec2(0, mainCanvasSize.y)).subtract(pos);
+    const high = screenToWorld(vec2(mainCanvasSize.x, 0)).subtract(pos);
     const x0 = max(0, floor(low.x)), y0 = max(0, floor(low.y));
     const x1 = min(width, ceil(high.x)), y1 = min(height, ceil(high.y));
 
     // ghosts, cells the map has that the layer does not show: markers a game made objects of, tiles broken in play
     const ghost = hsl(0, 0, 1, .4);
-    for (let x = x0; !editorObjectLayer &amp;&amp; x &lt; x1; ++x)
+    for (let x = x0; live &amp;&amp; !editorObjectLayer &amp;&amp; x &lt; x1; ++x)
     for (let y = y0; y &lt; y1; ++y)
     {
         const t = editorGidToTile(source.data[x + (height - 1 - y) * width]);
         if (t &amp;&amp; live.getData(vec2(x, y)).tile === undefined)
             drawTile(live.pos.add(vec2(x + .5, y + .5)), vec2(1), editorTileInfo(live, t.tile), ghost,
-                t.direction * PI/2, t.mirror);
+                t.direction * PI/2, t.mirror, undefined, glEnable, false);
     }
 
     // a grid once the cells are big enough to see one
@@ -1912,18 +2383,18 @@ function editorRender()
     if (editorGrid &amp;&amp; editorCameraScale >= 12)
     {
         for (let x = x0; x &lt;= x1; ++x)
-            drawLine(live.pos.add(vec2(x, y0)), live.pos.add(vec2(x, y1)), thin, line);
+            drawLine(pos.add(vec2(x, y0)), pos.add(vec2(x, y1)), thin, line, undefined, 0, glEnable, false);
         for (let y = y0; y &lt;= y1; ++y)
-            drawLine(live.pos.add(vec2(x0, y)), live.pos.add(vec2(x1, y)), thin, line);
+            drawLine(pos.add(vec2(x0, y)), pos.add(vec2(x1, y)), thin, line, undefined, 0, glEnable, false);
     }
 
     // the layer's edge
     const outline = (a, b, color, width)=>
     {
         const corners = [vec2(a.x, a.y), vec2(b.x, a.y), vec2(b.x, b.y), vec2(a.x, b.y)];
-        corners.forEach((c, i)=> drawLine(live.pos.add(c), live.pos.add(corners[(i + 1) % 4]), width, color));
+        corners.forEach((c, i)=> drawLine(pos.add(c), pos.add(corners[(i + 1) % 4]), width, color, undefined, 0, glEnable, false));
     };
-    outline(vec2(), live.size, hsl(.55, 1, .6, .8), thin * 2);
+    outline(vec2(), size, hsl(.55, 1, .6, .8), thin * 2);
 
     // the selection, and the line Shift would draw
     if (editorSelection &amp;&amp; !editorObjectLayer)
@@ -1931,7 +2402,7 @@ function editorRender()
     const last = editorLastPlaced, shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
     if (shift &amp;&amp; editorHover &amp;&amp; last?.layer === layer &amp;&amp; !mouseIsDown(0))
         drawLine(live.pos.add(last.pos).add(vec2(.5)), live.pos.add(editorHover).add(vec2(.5)), thin * 2,
-            hsl(.55, 1, .6, .6));
+            hsl(.55, 1, .6, .6), undefined, 0, glEnable, false);
 
     // the brush where it would paint, the Erase brush's cells in red
     if (editorHover)
@@ -1943,11 +2414,11 @@ function editorRender()
             const gid = grid[x + y * w], t = editorGidToTile(gid);
             const center = live.pos.add(editorHover).add(vec2(x + .5, y + .5));
             if (t)
-                drawTile(center, vec2(1), editorTileInfo(live, t.tile), hsl(0, 0, 1, .7), t.direction * PI/2, t.mirror);
+                drawTile(center, vec2(1), editorTileInfo(live, t.tile), hsl(0, 0, 1, .7), t.direction * PI/2, t.mirror, undefined, glEnable, false);
             else if (gid === 0)
-                drawRect(center, vec2(1), hsl(0, 1, .5, .3));
+                drawRect(center, vec2(1), hsl(0, 1, .5, .3), undefined, undefined, false);
         }
-        drawRect(live.pos.add(editorHover).add(vec2(w / 2, h / 2)), vec2(w, h), hsl(.55, 1, .6, .25));
+        drawRect(live.pos.add(editorHover).add(vec2(w / 2, h / 2)), vec2(w, h), hsl(.55, 1, .6, .25), undefined, undefined, false);
     }
     editorObjectLayer &amp;&amp; editorRenderObjects(thin);
 }
@@ -1960,4 +2431,4 @@ if (debug &amp;&amp; globalThis.document?.addEventListener)
     document.addEventListener('keydown', editorOnKeyDown);
     document.addEventListener('wheel', editorOnWheel, {passive: true});
 }
-</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="Render3D.VoxelMap.html">VoxelMap</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

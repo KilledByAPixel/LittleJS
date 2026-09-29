@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><meta name="description" content="LittleJS is a lightweight HTML5 game engine with fast WebGL rendering, physics, particles, sound, and more!"><meta name="keywords" content="javascript, game engine, html5, webgl, 2d, game development, indie games"><meta name="author" content="Frank Force"><meta property="og:title" content="LittleJS - The Tiny JavaScript Game Engine"><meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound"><meta property="og:type" content="website"><title>Source: plugins/render3d.js</title><!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_render3d.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="Render3D.VoxelMap.html">VoxelMap</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_render3d.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
  * LittleJS 3D Rendering Plugin
  * - Adds a 3D scene that draws into the same WebGL canvas as the 2D game
  * - Call new Render3DPlugin() in gameInit, then move render3D.camera and make EngineObject3D objects
@@ -39,13 +39,13 @@ const RENDER3D_VERTEX_INPUTS =
 const RENDER3D_MAX_STREAM_VERTS = 32768;
 const RENDER3D_MAX_LIGHTS = 8; // Light3D objects per frame, the shader loops over this many
 // strip order, frozen, and typed as the plain array the uv parameters take
-const RENDER3D_QUAD_UVS = /** @type {Array&lt;Vector2>} */ (Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv))));
+const RENDER3D_QUAD_UVS = /** @type {Array&lt;Vector2>} */
+    (Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv))));
 const RENDER3D_FULL_UV_RECT = Object.freeze({x:0, y:0, w:1, h:1});
 const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
 const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
 const RENDER3D_SHADOW_COLOR = Object.freeze(hsl(0, 0, 0, .5));
 const RENDER3D_IDENTITY = new Matrix4; // never modified
-const RENDER3D_DEBUG_WIDTH = .05; // line width of the debug primitives
 let render3DShadowCut; // the cut last sent to the shadow shader, see render3DSetDrawUniforms
 ///////////////////////////////////////////////////////////////////////////////
 // Private helpers
@@ -68,13 +68,15 @@ function render3DQuadValues(v) { return isArray(v) ? render3DQuadStrip(...v) : v
 function render3DCanDraw()
 {
     if (!render3D.program) return false;
-    ASSERT(render3D.isRendering, '3D draws are only valid during the 3D pass, draw from an EngineObject3D or render3D.onRenderOpaque');
+    ASSERT(render3D.isRendering,
+        '3D draws are only valid during the 3D pass, draw from an EngineObject3D or render3D.onRenderOpaque');
     return render3D.isRendering;
 }
 
 // the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
 // the three functions below write them out by hand for speed, so a new field goes in all four
-const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting', 'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader'];
+const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting',
+    'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader'];
 
 // a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out so the
 // compare below stays a handful of direct reads, it runs for every instance drawn
@@ -158,14 +160,18 @@ function render3DMatrix(matrix)
 function render3DNormalMatrix(matrix) { return matrix.copy().invert().transpose(); }
 
 // whether a matrix mirrors, its determinant negative, so what it moves reads the other way round
-function render3DMirrors(m) { return render3DDeterminant(m) &lt; 0; }
+function render3DMirrors(matrix) { return matrix.determinant() &lt; 0; }
 
-// the determinant of a matrix's 3x3 part, 0 when it flattens a shape and has no inverse
-function render3DDeterminant(m)
-{ return m[0]*(m[5]*m[10] - m[6]*m[9]) - m[4]*(m[1]*m[10] - m[2]*m[9]) + m[8]*(m[1]*m[6] - m[2]*m[5]); }
 
 // a column of a matrix as a direction: 0 is the right axis, 4 up, 8 back
 function render3DAxis(m, i) { return vec3(m[i], m[i+1], m[i+2]); }
+
+// a matrix turning by angle around a unit axis through the origin, counter clockwise when the axis points at you
+function render3DAxisRotation(axis, angle)
+{
+    const x = vec3(1, 0, 0).rotate(axis, angle), y = vec3(0, 1, 0).rotate(axis, angle), z = vec3(0, 0, 1).rotate(axis, angle);
+    return new Matrix4([x.x, x.y, x.z, 0, y.x, y.y, y.z, 0, z.x, z.y, z.z, 0, 0, 0, 0, 1]);
+}
 
 // the largest axis scale of a matrix, how much it grows a bounding sphere
 function render3DMaxScale(m)
@@ -324,7 +330,10 @@ function render3DClearInstances()
 
 // the live objects drawn on one side of the 2D scene
 function render3DLayerObjects(after2D)
-{ return /** @type {Array&lt;EngineObject3D>} */ (engineObjects.filter(o=> !o.destroyed &amp;&amp; o instanceof EngineObject3D &amp;&amp; render3DIsAfter2D(o) === after2D)); }
+{
+    return /** @type {Array&lt;EngineObject3D>} */ (engineObjects.filter(o=>
+        !o.destroyed &amp;&amp; o instanceof EngineObject3D &amp;&amp; render3DIsAfter2D(o) === after2D));
+}
 
 // the Light3D objects the shader gets this frame: directional lights light the whole scene so they come first,
 // then the point lights nearest the camera
@@ -396,7 +405,8 @@ class Render3DPlugin
     {
         ASSERT(!render3D, 'Render3D plugin already initialized');
         render3D = this;
-        ASSERT(Object.keys(render3DCaptureBatchState()).join() === RENDER3D_STATE_FIELDS.join(), 'the batch state functions must list RENDER3D_STATE_FIELDS');
+        ASSERT(Object.keys(render3DCaptureBatchState()).join() === RENDER3D_STATE_FIELDS.join(),
+            'the batch state functions must list RENDER3D_STATE_FIELDS');
 
         /** @property {Camera3D} - The camera */
         this.camera = new Camera3D;
@@ -410,8 +420,9 @@ class Render3DPlugin
         this.sunColor = WHITE.copy();
         /** @property {Color} - Ambient light color, from above when ambientGroundColor is set */
         this.ambientColor = hsl(0, 0, .3);
-        /** @property {Color|undefined} - Ambient light from below: set, the ambient blends from this on faces pointing down
-         *  to ambientColor on faces pointing up, the way a sky and a ground light a scene; setSky sets both from its colors
+        /** @property {Color|undefined} - Ambient light from below: set, the ambient blends from this on faces pointing
+         *  down to ambientColor on faces pointing up, the way a sky and a ground light a scene; setSky sets both from
+         *  its colors
          *  @type {Color|undefined} */
         this.ambientGroundColor = undefined;
         /** @property {Color|undefined} - Fog color, uses canvasClearColor when undefined
@@ -421,12 +432,15 @@ class Render3DPlugin
         this.fogStart = 0;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
         this.fogEnd = 0;
-        /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its gravityScale; sync2D objects use the 2D gravity */
+        /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its
+         *  gravityScale; sync2D objects use the 2D gravity */
         this.gravity = vec3();
-        /** @property {number|HeightMap|function(number, number): number} - Floor for objects with a softShadow: a height, a HeightMap, or (x, z) => y
+        /** @property {number|HeightMap|function(number, number): number} - Floor for objects with a softShadow: a
+         *  height, a HeightMap, or (x, z) => y
          *  @type {number|HeightMap|function(number, number): number} */
         this.softShadowHeight = 0;
-        /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for flat faces */
+        /** @property {boolean} - Default for every builder's smooth argument: true for smooth vertex normals, false for
+         *  flat faces */
         this.smoothShading = false;
 
         // shadows
@@ -434,8 +448,9 @@ class Render3DPlugin
         this.shadows = false;
         /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
         this.shadowMapSize = 1024;
-        /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper; it is a square
-         *  facing the light, so it turns as the light does, and about 1.5 times an area's width covers it from any angle */
+        /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper; it is a
+         *  square facing the light, so it turns as the light does, and about 1.5 times an area's width covers it from
+         *  any angle */
         this.shadowRange = 40;
         /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera
          *  @type {Vector3|undefined} */
@@ -463,12 +478,15 @@ class Render3DPlugin
         // show from both sides, and whether its transform mirrors it so the other winding is the front
         this.cullBackFaces = false;
         this.mirrored = false;
-        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
+         *  1 adds a light's full color at its brightest; its size is fixed */
         this.specular = 0;
-        /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined draws with the plugin's own
+        /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined
+         *  draws with the plugin's own
          *  @type {Shader|undefined} */
         this.shader = undefined;
-        /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay lit inside a shadow */
+        /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay
+         *  lit inside a shadow */
         this.receiveShadow = true;
 
         // the pass
@@ -487,11 +505,14 @@ class Render3DPlugin
         this.sortTransparent = true;
         /** @property {boolean} - Skip meshes whose bounding sphere is outside the view */
         this.frustumCulling = true;
-        /** @property {boolean} - Draw every use of a mesh in the opaque stage as one instanced call, mesh.instanced overrides it per mesh */
+        /** @property {boolean} - Draw every use of a mesh in the opaque stage as one instanced call, mesh.instanced
+         *  overrides it per mesh */
         this.instancing = true;
-        /** @property {boolean} - Sample textures through mipmaps so they do not shimmer in the distance, false uses each texture's own filtering like 2D */
+        /** @property {boolean} - Sample textures through mipmaps so they do not shimmer in the distance, false uses
+         *  each texture's own filtering like 2D */
         this.mipmaps = true;
-        /** @property {boolean} - Draw state: keep texture pixels hard edged, no mipmaps and no blending between them, set per object by pixelated */
+        /** @property {boolean} - Draw state: keep texture pixels hard edged, no mipmaps and no blending between them,
+         *  set per object by pixelated */
         this.pixelated = false;
         /** @property {number} - Anisotropic filtering for textures seen at an angle, 1 to 16, 1 is off; needs mipmaps */
         this.anisotropy = 4;
@@ -508,9 +529,10 @@ class Render3DPlugin
         this.planeMesh.doubleSided = false;
         /** @property {Mesh} - The same square seen and lit from both sides, for signs, cards and leaves */
         this.planeMeshDoubleSided = buildGrid();
-        /** @property {Mesh} - A square of size 1 facing +Z with the tile across it, the corners in the order drawBillboard
-         *  writes them; a ParticleEmitter3D draws its particles as instances of it, each with its own matrix */
-        this.billboardMesh = new Mesh().addStrip([vec3(-.5, .5, 0), vec3(-.5, -.5, 0), vec3(.5, .5, 0), vec3(.5, -.5, 0)], vec3(0, 0, 1), RENDER3D_QUAD_UVS);
+        /** @property {Mesh} - A square of size 1 facing +Z with the tile across it, the corners in the order
+         *  drawBillboard writes them; a ParticleEmitter3D draws its particles as instances of it, each with its own matrix */
+        this.billboardMesh = new Mesh().addStrip([vec3(-.5, .5, 0), vec3(-.5, -.5, 0), vec3(.5, .5, 0), vec3(.5, -.5, 0)],
+            vec3(0, 0, 1), RENDER3D_QUAD_UVS);
         this.billboardMesh.doubleSided = true;
 
         // read only
@@ -551,8 +573,8 @@ class Render3DPlugin
         this.vao = undefined;
         /** @type {WebGLTexture|undefined} */
         this.whiteTexture = undefined; // 1x1 white for untextured draws
-        /** @type {Array&lt;WebGLSampler>} */
-        this.samplers = [];            // how textures are filtered in 3D, clamped and wrapping, see render3DInitGL
+        /** @type {Map&lt;number, WebGLSampler>} */
+        this.samplers = new Map;      // how textures are filtered in 3D, by wrap and hard edge, see render3DSampler
         /** @type {string|undefined} */
         this.samplerKey = undefined;   // the settings the samplers were made for, they are rebuilt when it changes
         /** @type {WebGLTexture|undefined} */
@@ -655,7 +677,8 @@ class Render3DPlugin
      *  @return {Ray3D} - Starts at the camera with a unit direction, or on the near plane when orthographic */
     screenToRay(screenPos, canvasSize=mainCanvasSize)
     {
-        const width = canvasSize.x || 1, height = canvasSize.y || 1; // a canvas with no size stands in as 1x1, rather than dividing by zero
+        // a canvas with no size stands in as 1x1, rather than dividing by zero
+        const width = canvasSize.x || 1, height = canvasSize.y || 1;
         const aspect = width / height, camera = this.camera;
         // bring the matrices up to date for this canvas, so worldToScreen and this agree on where things are
         this.updateMatrices(aspect);
@@ -702,7 +725,8 @@ class Render3DPlugin
         return nearest;
     }
 
-    /** Play a sound at a 3D position, quieter with distance from the camera and panned by its side, like Sound.play with a 2D position
+    /** Play a sound at a 3D position, quieter with distance from the camera and panned by its side, like Sound.play
+     *  with a 2D position
      *  @param {Sound} sound
      *  @param {Vector3} pos3D
      *  @param {number} [volume]
@@ -713,11 +737,9 @@ class Render3DPlugin
      *  @return {SoundInstance|undefined} - undefined when out of range or sound is off */
     playSound(sound, pos3D, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false)
     {
-        // keep in step with Sound.play, only the pan differs
+        // the 3D range fade and pan, Sound.play with no position does the rest
         ASSERT(sound instanceof Sound, 'sound must be a Sound');
         ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
-        if (!soundEnable || headlessMode) return;
-        if (!sound.sampleBuffer &amp;&amp; !sound._sampleChannels) return; // still loading
         const offset = pos3D.subtract(this.camera.pos), range = sound.range;
         if (range)
         {
@@ -728,9 +750,9 @@ class Render3DPlugin
             if (distance > taperRange)
                 volume *= percent(distance, range, taperRange);
         }
-        const pan = offset.normalize().dot(this.cameraRight);
-        const rate = pitch + pitch * sound.randomness * randomnessScale * rand(-1, 1);
-        return new SoundInstance(sound, volume, rate, pan, loop, paused);
+        const instance = sound.play(undefined, volume, pitch, randomnessScale, loop, paused);
+        instance?.setPan(offset.normalize().dot(this.cameraRight));
+        return instance;
     }
 
     /** Play a sound on a loop at a 3D position, the same as playSound with loop on
@@ -763,7 +785,8 @@ class Render3DPlugin
     drawMesh(mesh, matrix=RENDER3D_IDENTITY, tileInfo, color=WHITE)
     {
         matrix = render3DMatrix(matrix);
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo,
+            'tileInfo must be a TileInfo or TextureInfo, it comes before color');
         ASSERT(isColor(color), 'color must be a Color');
         if (this.capture)
             return void this.capture.combine(mesh, matrix, color);
@@ -775,8 +798,7 @@ class Render3DPlugin
         }
         if (!render3DCanDraw()) return;
         if (this.shadowPass &amp;&amp; !this.lighting) return; // unlit things cast no shadow
-        if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== this.contextGeneration)
-            mesh.upload();
+        render3DMeshUpload(mesh);
         if (!mesh.bufferCount) return;
         const m = matrix.m;
         if (this.frustumCulling &amp;&amp; !render3DSphereVisible(m[12], m[13], m[14], mesh.radius * render3DMaxStretch(m)))
@@ -785,15 +807,14 @@ class Render3DPlugin
         // determinant, turns the winding around so the other one is its front
         const cullBackFaces = this.cullBackFaces, mirrored = this.mirrored;
         this.cullBackFaces = !mesh.doubleSided;
-        this.mirrored = render3DMirrors(m);
-        if (!this.blend &amp;&amp; this.depthTest &amp;&amp; (mesh.instanced ?? this.instancing)) // the stage draws the batch at its end
+        this.mirrored = render3DMirrors(matrix);
+        // the stage draws the batch at its end
+        if (!this.blend &amp;&amp; this.depthTest &amp;&amp; (mesh.instanced ?? this.instancing))
             render3DInstance(mesh, matrix, tileInfo, color);
         else
         {
-            // a draw that is not depth tested goes over what is already drawn, so the batches drawn before it go
-            // first, or they would draw at the end of the stage and cover it whatever its render order
             this.flush();
-            this.depthTest || this.shadowPass || render3DFlushInstances();
+            render3DFlushBeforeOverlay();
             render3DSetDrawUniforms(matrix, tileInfo, color);
             render3DBindMesh(mesh);
             glContext.drawElements(glContext.TRIANGLES, mesh.bufferCount, mesh.indexType, 0);
@@ -828,7 +849,8 @@ class Render3DPlugin
             let x = 0, y = 0, z = 0;
             for (const p of points)
                 x += p.x, y += p.y, z += p.z;
-            return this.queueTransparent(vec3(x, y, z).scale(1 / points.length), ()=> this.drawStrip(points, normals, uvs, colors, tileInfo));
+            return this.queueTransparent(vec3(x, y, z).scale(1 / points.length),
+                ()=> this.drawStrip(points, normals, uvs, colors, tileInfo));
         }
         ASSERT(isArray(points) &amp;&amp; points.length > 2, 'strip needs at least 3 points');
         const n = points.length, count = render3DStripCount(n);
@@ -942,7 +964,8 @@ class Render3DPlugin
         this.depthWrite = true;
     }
 
-    /** Queue a draw for the transparent stage, replayed far to near with the current draw state, or draw it now when sorting is off
+    /** Queue a draw for the transparent stage, replayed far to near with the current draw state, or draw it now when
+     *  sorting is off
      *  - The draw runs later, so it should hold copies of any values the caller may change before then
      *  @param {Vector3} pos - Where the draw is, for sorting
      *  @param {function(): void} draw
@@ -960,7 +983,8 @@ class Render3DPlugin
         this.transparentQueue.push({distance, state: render3DCaptureBatchState(), draw});
     }
 
-    /** Draw the queued transparent draws far to near with the state each was drawn under, called automatically at the end of the transparent stage */
+    /** Draw the queued transparent draws far to near with the state each was drawn under, called automatically at the
+     *  end of the transparent stage */
     flushTransparentQueue()
     {
         const queue = this.transparentQueue;
@@ -1068,14 +1092,16 @@ class Render3DPlugin
     drawBillboard(pos, size=vec2(1), tileInfo, color=WHITE, angle=0, upright=false)
     {
         if (this.capture) // the mesh keeps the color, so it gets its own, the particles reuse theirs
-            return this.drawStripUnlit(render3DBillboardCorners(pos, size, angle, upright), this.cameraBack, RENDER3D_QUAD_UVS, color.copy(), tileInfo);
+            return this.drawStripUnlit(render3DBillboardCorners(pos, size, angle, upright), this.cameraBack,
+                RENDER3D_QUAD_UVS, color.copy(), tileInfo);
         if (this.transparentQueue) // sort by the exact position, a shadow under it sorts by the floor
         {
             const p = pos.copy(), s = size.copy(), c = color.copy(); // copies, the queue replays later
             return this.queueTransparent(p, ()=> this.drawBillboard(p, s, tileInfo, c, angle, upright));
         }
 
-        // the particle path: the quad's six stream vertices written straight in with no vectors made, unlit
+        // the quad's six stream vertices written straight in with no vectors made, unlit, for sprites, and for
+        // particles when instancing is off
         const lit = this.lighting;
         this.lighting = this.shadowPass &amp;&amp; lit; // unlit on screen, in the shadow map the object's flag decides
         let uvRect;
@@ -1108,8 +1134,10 @@ class Render3DPlugin
     drawQuad(a, b, c, d, tileInfo, color=WHITE)
     {
         if (this.transparentQueue) // the queue replays later, so it keeps copies of what a caller may reuse
-            a = a.copy(), b = b.copy(), c = c.copy(), d = d.copy(), color = isArray(color) ? color.map(k=> k.copy()) : color.copy();
-        this.drawStrip(render3DQuadStrip(a, b, c, d), render3DFaceNormal(a, b, c, d), RENDER3D_QUAD_UVS, render3DQuadValues(color), tileInfo);
+            a = a.copy(), b = b.copy(), c = c.copy(), d = d.copy();
+            color = isArray(color) ? color.map(k=> k.copy()) : color.copy();
+        this.drawStrip(render3DQuadStrip(a, b, c, d), render3DFaceNormal(a, b, c, d), RENDER3D_QUAD_UVS,
+            render3DQuadValues(color), tileInfo);
     }
 
     /** Draw a triangle, counter clockwise from outside is the front
@@ -1141,12 +1169,14 @@ class Render3DPlugin
      *  @param {number|Array&lt;number>} [width] - Full width, one for all or one per point
      *  @param {TileInfo|TextureInfo} [tileInfo]
      *  @param {Color|Array&lt;Color>} [color] - One for all or one per point
-     *  @param {Vector3|Array&lt;Vector3>} [side] - Direction across the ribbon, one for all or one per point, default faces the camera */
+     *  @param {Vector3|Array&lt;Vector3>} [side] - Direction across the ribbon, one for all or one per point, default
+     *    faces the camera */
     drawRibbon(points, width=.1, tileInfo, color=WHITE, side)
     {
         const count = points.length;
         ASSERT(count > 1, 'a ribbon needs at least two points');
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo,
+            'tileInfo must be a TileInfo or TextureInfo, it comes before color');
         const strip = [], uvs = tileInfo ? [] : undefined, colors = [], forward = this.cameraForward;
         let across = vec3(1, 0, 0); // kept from the last point where the direction vanishes
         // a loop's two ends take their direction across the join, so they meet edge to edge
@@ -1170,7 +1200,8 @@ class Render3DPlugin
             uvs?.push(vec2(i / (count - 1), 0), vec2(i / (count - 1), 1));
             colors.push(c, c);
         }
-        render3DWithState({lighting: false, cullBackFaces: false}, ()=> this.drawStrip(strip, forward.scale(-1), uvs, colors, tileInfo));
+        render3DWithState({lighting: false, cullBackFaces: false},
+            ()=> this.drawStrip(strip, forward.scale(-1), uvs, colors, tileInfo));
     }
 
     /** Draw a disc that fades to transparent at the rim, unlit, for glows, puffs and sky dots
@@ -1200,7 +1231,8 @@ class Render3DPlugin
      *  - Draw it from onRenderTransparent or from a transparent object
      *  @param {Vector3} pos - Position of the thing casting the shadow
      *  @param {number} [size] - Diameter
-     *  @param {number|HeightMap|function(number, number): number} [floorHeight] - Height of the ground, a HeightMap, or (x, z) => y to follow terrain
+     *  @param {number|HeightMap|function(number, number): number} [floorHeight] - Height of the ground, a HeightMap, or
+     *    (x, z) => y to follow terrain
      *  @param {Color} [color]
      *  @param {number} [lift] - How far above the ground to draw, raise it if the shadow cuts into rough ground
      *  @return {void} */
@@ -1214,7 +1246,8 @@ class Render3DPlugin
         if (this.transparentQueue &amp;&amp; !this.capture) // sort from the floor, under whatever casts it
         {
             const p = pos.copy(), c = color.copy(); // copies, the queue replays later
-            return this.queueTransparent(vec3(p.x, height(p.x, p.z) + lift, p.z), ()=> this.drawSoftShadow(p, size, floorHeight, c, lift));
+            return this.queueTransparent(vec3(p.x, height(p.x, p.z) + lift, p.z),
+                ()=> this.drawSoftShadow(p, size, floorHeight, c, lift));
         }
         render3DDrawSoftDisc(size / 2, color, 16, RENDER3D_DEFAULT_NORMAL, (c, s, r)=>
         {
@@ -1227,7 +1260,8 @@ class Render3DPlugin
 function render3DAssertBlending()
 {
     const r = render3D;
-    ASSERT(r.blend || r.capture || r.shadowPass || !r.isRendering, 'soft discs and shadows need blending: set the object transparent or draw from onRenderTransparent');
+    ASSERT(r.blend || r.capture || r.shadowPass || !r.isRendering,
+        'soft discs and shadows need blending: set the object transparent or draw from onRenderTransparent');
 }
 
 // draw the three rings of a soft disc as unlit strips, pointAt(cos, sin, radius) gives the world point
@@ -1247,106 +1281,6 @@ function render3DDrawSoftDisc(radius, color, sides, normal, pointAt)
         }
         render3D.drawStripUnlit(points, normal, undefined, colors);
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Debug primitives, drawn on top of the 3D scene like the 2D debug functions, only in debug builds
-
-let render3DDebugPrimitives = []; // each keeps the debugClear count it was made under, a debugClear since drops it
-
-// draw the live debug primitives with depth test off so they show through walls, drop the expired ones
-function render3DRenderDebug()
-{
-    if (!render3DDebugPrimitives.length) return;
-    render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.clearCount === debugClearCount);
-    if (!debugVideoCaptureIsActive()) // hidden from a video capture like the 2D ones, but they still expire
-    {
-        render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined}, ()=>
-        {
-            for (const p of render3DDebugPrimitives)
-                p.draw();
-        });
-    }
-    render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.timer &lt; 0); // a Timer compares as negative until it elapses
-}
-
-// record a debug draw for a time
-function render3DDebugPush(duration, draw)
-{
-    ASSERT(isNumber(duration), 'duration must be a number');
-    debug &amp;&amp; glEnable &amp;&amp; render3D?.program &amp;&amp;
-        render3DDebugPrimitives.push({timer: new Timer(duration, true), draw, clearCount: debugClearCount}); // real time, like 2D
-}
-
-/** Draw a debug wireframe box
- *  @param {Vector3} pos - Center
- *  @param {Vector3|number} [size] - Full size, a number for a cube
- *  @param {Color} [color]
- *  @param {number} [time] - How long to show it, 0 is one frame
- *  @param {Vector3} [rotation] - vec3(pitch, yaw, roll)
- *  @memberof Render3D */
-function debugBox3D(pos, size=1, color=WHITE, time=0, rotation)
-{
-    const matrix = buildMatrix(pos, rotation, render3DSize3(size));
-    const corner = (i)=> matrix.transformPoint(vec3(i &amp; 1 ? .5 : -.5, i &amp; 2 ? .5 : -.5, i &amp; 4 ? .5 : -.5));
-    render3DDebugPush(time, ()=>
-    {
-        for (let i = 0; i &lt; 8; ++i)
-        for (const bit of [1, 2, 4])
-            if (!(i &amp; bit))
-                render3D.drawLine(corner(i), corner(i | bit), RENDER3D_DEBUG_WIDTH, color);
-    });
-}
-
-/** Draw a debug wireframe sphere as three rings
- *  @param {Vector3} pos - Center
- *  @param {number} [size] - Diameter
- *  @param {Color} [color]
- *  @param {number} [time] - How long to show it, 0 is one frame
- *  @memberof Render3D */
-function debugSphere3D(pos, size=1, color=WHITE, time=0)
-{
-    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
-    const circle = render3DCircle(24), r = size / 2;
-    render3DDebugPush(time, ()=>
-    {
-        for (const ring of [(c, s)=> vec3(c, s, 0), (c, s)=> vec3(c, 0, s), (c, s)=> vec3(0, c, s)])
-        {
-            const points = [];
-            for (let i = 0; i &lt;= 24; ++i)
-                points.push(pos.add(ring(circle[i*2], circle[i*2 + 1]).scale(r)));
-            render3D.drawRibbon(points, RENDER3D_DEBUG_WIDTH, undefined, color);
-        }
-    });
-}
-
-/** Draw a debug line
- *  @param {Vector3} posA
- *  @param {Vector3} posB
- *  @param {Color} [color]
- *  @param {number} [width]
- *  @param {number} [time] - How long to show it, 0 is one frame
- *  @memberof Render3D */
-function debugLine3D(posA, posB, color=WHITE, width=RENDER3D_DEBUG_WIDTH, time=0)
-{
-    posA = posA.copy(), posB = posB.copy(); // where they are now, a timed one stays put when the ends move
-    render3DDebugPush(time, ()=> render3D.drawLine(posA, posB, width, color));
-}
-
-/** Draw a debug point as a small cross of three lines
- *  @param {Vector3} pos
- *  @param {Color} [color]
- *  @param {number} [time] - How long to show it, 0 is one frame
- *  @param {number} [size] - Length of the cross
- *  @memberof Render3D */
-function debugPoint3D(pos, color=WHITE, time=0, size=.2)
-{
-    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
-    render3DDebugPush(time, ()=>
-    {
-        for (const axis of [vec3(size / 2, 0, 0), vec3(0, size / 2, 0), vec3(0, 0, size / 2)])
-            render3D.drawLine(pos.subtract(axis), pos.add(axis), RENDER3D_DEBUG_WIDTH, color);
-    });
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1390,7 +1324,8 @@ class Camera3D
     getProjectionMatrix(aspect)
     {
         const h = this.orthographic / 2, w = h * aspect;
-        return h ? Matrix4.orthographic(-w, w, -h, h, this.near, this.far) : Matrix4.perspective(this.fov, aspect, this.near, this.far);
+        return h ? Matrix4.orthographic(-w, w, -h, h, this.near, this.far) :
+            Matrix4.perspective(this.fov, aspect, this.near, this.far);
     }
 
     /** Returns the direction the camera looks
@@ -1652,10 +1587,11 @@ function render3DInitGL()
     r.streamCount = 0;
     r.instanceBuffers = [gl.createBuffer(), gl.createBuffer(), gl.createBuffer()];
 
-    // white texture for untextured draws, and a one texel shadow map that keeps the shadow sampler valid until shadows are on
+    // white texture for untextured draws, and a one texel shadow map that keeps the shadow sampler valid until shadows
+    // are on
     r.whiteTexture = glCreateTexture();
 
-    r.samplers = [];
+    r.samplers = new Map;
     r.samplerKey = undefined;
     render3DUpdateShadowMap(1);
 
@@ -1672,7 +1608,7 @@ function render3DContextLost()
         shader.program3D = undefined; // compiled again by the next draw
     r.lightCount = 0;
     r.instanceBuffers = [];
-    r.samplers = [];
+    r.samplers = new Map;
     r.samplerKey = undefined;
     render3DClearInstances();
     r.shadowFramebuffer = r.shadowTexture = undefined;
@@ -1718,33 +1654,40 @@ function render3DAttrib4f(location, x, y, z, w)
 }
 
 // textures in 3D shrink into the distance far more than sprites do, so the pass samples them through their mipmaps;
-// a sampler sets the filtering for the 3D pass only and leaves the engine's textures as they are for 2D, one for
-// clamped textures and one for wrapping ones, rebuilt when the settings change
+// a sampler sets the filtering for the 3D pass only and leaves the engine's textures as they are for 2D; they are
+// made as textures need them, and all dropped when the settings change
 function render3DUpdateSamplers()
 {
-    const gl = glContext, r = render3D, key = tilesPixelated + ' ' + r.anisotropy;
+    const r = render3D, key = tilesPixelated + ' ' + r.anisotropy;
     if (r.samplerKey === key) return;
     r.samplerKey = key;
-    for (const sampler of r.samplers)
-        gl.deleteSampler(sampler); // the set being replaced, a lost context empties this first
+    for (const sampler of r.samplers.values())
+        glContext.deleteSampler(sampler); // the set being replaced, a lost context empties this first
+    r.samplers.clear();
+}
+
+// the sampler for a texture's wrap modes, smooth or hard edged, made the first time it is needed
+function render3DSampler(wrap, pixelated)
+{
+    const gl = glContext, r = render3D, [wrapS, wrapT] = glWrapModes(wrap);
+    const key = wrapS * 1e5 + wrapT * 2 + (pixelated ? 1 : 0); // the modes are 5 digit numbers
+    let sampler = r.samplers.get(key);
+    if (sampler) return sampler;
+    sampler = gl.createSampler();
+    const sharp = pixelated || tilesPixelated;
+    gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, sharp ? gl.NEAREST : gl.LINEAR);
+    gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, pixelated ? gl.NEAREST
+        : tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
+    gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrapS);
+    gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrapT);
     const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
-    // four samplers: clamped and wrapping, each smooth or hard edged
-    r.samplers = [false, true].flatMap(pixelated=> [gl.CLAMP_TO_EDGE, gl.REPEAT].map(wrap=>
+    if (anisotropy &amp;&amp; !pixelated)
     {
-        const sampler = gl.createSampler();
-        const sharp = pixelated || tilesPixelated;
-        gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, sharp ? gl.NEAREST : gl.LINEAR);
-        gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, pixelated ? gl.NEAREST
-            : tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
-        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrap);
-        gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrap);
-        if (anisotropy &amp;&amp; !pixelated)
-        {
-            const most = gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-            gl.samplerParameterf(sampler, anisotropy.TEXTURE_MAX_ANISOTROPY_EXT, clamp(r.anisotropy, 1, most));
-        }
-        return sampler;
-    }));
+        const most = gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+        gl.samplerParameterf(sampler, anisotropy.TEXTURE_MAX_ANISOTROPY_EXT, clamp(r.anisotropy, 1, most));
+    }
+    r.samplers.set(key, sampler);
+    return sampler;
 }
 
 // bind the texture of a tile or texture, white when there is none or it is not loaded, with the 3D sampler that
@@ -1758,7 +1701,7 @@ function render3DBindTexture(tileInfo, state=render3D)
     if (texture === r.whiteTexture || !r.mipmaps &amp;&amp; !state.pixelated)
         return gl.bindSampler(0, null); // the texture's own filtering, as in 2D; the white texel needs no mipmaps
                                         // or anisotropy, and filtering it that way costs every untextured fragment
-    gl.bindSampler(0, r.samplers[(textureInfo?.wrap ? 1 : 0) + (state.pixelated ? 2 : 0)]);
+    gl.bindSampler(0, render3DSampler(textureInfo?.wrap, state.pixelated));
     glUpdateMipmaps(texture); // drawn into since its mipmaps were made
     if (!state.pixelated &amp;&amp; !glMipmappedTextures.has(texture)) // a hard edged draw never reads them
     {
@@ -1807,6 +1750,24 @@ function render3DBindMesh(mesh)
 function render3DTextureOf(tileInfo) { return tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo; }
 
 // where a tile sits in its texture, pulled in slightly at the edges so neighbors do not bleed in
+// the level's solid geometry in 3D, the height maps and voxel maps that objects with collideLevel collide with, as
+// tileCollisionLayers is in 2D; each joins when made and leaves when destroyed
+const render3DLevel = [];
+
+// take one of the level's parts out of it, when it is destroyed
+function render3DLevelLeave(o)
+{
+    const i = render3DLevel.indexOf(o);
+    i >= 0 &amp;&amp; render3DLevel.splice(i, 1);
+}
+
+// the level's parts are looked up in world space, so they stay upright and unscaled at the root
+function render3DLevelAssertPlaced(o)
+{
+    ASSERT(!o.parent &amp;&amp; !o.rotation3D.lengthSquared() &amp;&amp; o.scale3D.x === 1 &amp;&amp; o.scale3D.y === 1 &amp;&amp; o.scale3D.z === 1,
+        'a height map or voxel map stays upright and unscaled at the root, its lookups are in world space');
+}
+
 // this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 // the tiles of objects made from a whole TextureInfo, they cover all of it even after the texture is resized
@@ -1873,13 +1834,15 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     render3DUniform4f('lightColor', lc.r, lc.g, lc.b, state.specular);
     render3DUniform4f('ambientFog', ac.r, ac.g, ac.b, r.fogEnd);
     const gc = r.ambientGroundColor;
-    gc ? render3DUniform4f('ambientGround', gc.r, gc.g, gc.b, 1) : render3DUniform4f('ambientGround', 0, 0, 0, 0); // a is on
+    // its alpha says whether the ground color is on
+    gc ? render3DUniform4f('ambientGround', gc.r, gc.g, gc.b, 1) : render3DUniform4f('ambientGround', 0, 0, 0, 0);
 
     render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogStart);
     // how the fragment shader finishes: 1 drops see through texels and keeps the draw opaque,
     // 0 blends them away instead, and -1 is additive, which has to fade into fog differently
     const blendMode = state.blend ? (state.additive ? -1 : 0) : 1;
-    render3DUniform4f('shadowParams', r.shadows &amp;&amp; r.passIsDefault &amp;&amp; state.receiveShadow ? 1 : 0, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, blendMode);
+    const receives = r.shadows &amp;&amp; r.passIsDefault &amp;&amp; state.receiveShadow ? 1 : 0;
+    render3DUniform4f('shadowParams', receives, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, blendMode);
 
     // a render target's texture holds premultiplied color, the blend writes it that way, so the shader undoes it
     const textureInfo = render3DTextureOf(tileInfo);
@@ -1916,7 +1879,8 @@ function render3DRender()
     render3DRenderPass(true);
 }
 
-// one 3D pass for the objects of a layer: take over the gl state, draw the shadow map once a frame and the stages, hand the state back
+// one 3D pass for the objects of a layer: take over the gl state, draw the shadow map once a frame and the stages, hand
+// the state back
 // the layer matching render3D.renderAfter2D is the default and always runs, the other only when an object asks for it
 function render3DRenderPass(after2D)
 {
@@ -1945,7 +1909,8 @@ function render3DRenderPass(after2D)
     lights.forEach((light, i)=>
     {
         const p = light.directional ? light.getWorldPos3D().normalize() : light.getWorldPos3D();
-        ASSERT(!light.directional || p.lengthSquared(), 'a directional light shines from its position toward the origin, so it cannot sit on the origin');
+        ASSERT(!light.directional || p.lengthSquared(),
+            'a directional light shines from its position toward the origin, so it cannot sit on the origin');
         const c = light.color, k = i * 4;
         positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
         positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
@@ -2021,7 +1986,8 @@ function render3DUpdateShadowMap(size)
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, texture, 0);
     gl.drawBuffers([gl.NONE]); // depth only
     gl.readBuffer(gl.NONE);
-    ASSERT(gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE, 'shadow map framebuffer is incomplete, try a smaller shadowMapSize');
+    ASSERT(gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE,
+        'shadow map framebuffer is incomplete, try a smaller shadowMapSize');
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     r.shadowTextureSize = size;
 }
@@ -2051,7 +2017,8 @@ function render3DRenderShadowMap()
     try
     {
         // see through objects cast only when textured, their alpha cuts the shadow out
-        const casters = render3DLayerObjects(!!r.renderAfter2D).filter(o=> o.castShadow &amp;&amp; !o.additive &amp;&amp; (!o.transparent || o.tileInfo));
+        const casters = render3DLayerObjects(!!r.renderAfter2D).filter(o=>
+            o.castShadow &amp;&amp; !o.additive &amp;&amp; (!o.transparent || o.tileInfo));
         render3DDrawObjects(casters);
         r.onRenderOpaque?.();
         r.flush();
@@ -2091,17 +2058,49 @@ function render3DBeginStrip(count, tileInfo)
     if (r.streamCount &amp;&amp; (textureInfo !== r.streamTileInfo || render3DStateChanged(r.streamState)
         || r.streamCount + count > RENDER3D_MAX_STREAM_VERTS))
         r.flush();
-    if (!r.depthTest &amp;&amp; !r.shadowPass &amp;&amp; r.instanceMeshes.length)
-    {
-        // as in drawMesh, what was drawn before goes under it, a stream open with the same state included,
-        // so each such strip splits the batches: one draw per object for meshes each with an overlay
-        r.flush();
-        render3DFlushInstances();
-    }
+    render3DFlushBeforeOverlay();
     if (!r.streamCount)
         r.streamState = render3DCaptureBatchState();
     r.streamTileInfo = textureInfo;
     return render3DGetTileUVs(tileInfo);
+}
+
+// a draw that is not depth tested goes over what is already drawn, so the batches drawn before it go first, or they
+// would draw at the end of the stage and cover it whatever its render order; a stream open with the same state is
+// drawn too, so each such draw splits the batches: one draw per object for meshes each with an overlay
+function render3DFlushBeforeOverlay()
+{
+    const r = render3D;
+    if (r.depthTest || r.shadowPass || !r.instanceMeshes.length) return;
+    r.flush();
+    render3DFlushInstances();
+}
+
+// upload a mesh that is new, changed, or from before the context was lost
+function render3DMeshUpload(mesh)
+{
+    if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== render3D.contextGeneration)
+        mesh.upload();
+}
+
+// an object's size3D in the world, grown by its scale and its parents', the size its sprite is drawn at and that
+// collecting, picking and collision measure it at
+function render3DWorldSize(o, m)
+{
+    const s = o.size3D;
+    return vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
+}
+
+// the surface normal of a height function at x, z, from the slope across a cell each way, clamped to the edges so a
+// border sample leans the same as its neighbor; buildGrid and HeightMap both light their slopes by it, and it makes
+// one vector, a big terrain has millions of vertices
+function render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ)
+{
+    const x0 = max(x - ex, -halfX), x1 = min(x + ex, halfX), z0 = max(z - ez, -halfZ), z1 = min(z + ez, halfZ);
+    const dx = (heightFunction(x1, z) - heightFunction(x0, z)) / (x1 - x0 || 1);
+    const dz = (heightFunction(x, z1) - heightFunction(x, z0)) / (z1 - z0 || 1);
+    const s = 1 / hypot(dx, 1, dz);
+    return vec3(-dx * s, s, -dz * s);
 }
 
 // the half axes of a camera facing quad of a size turned by an angle, right then up, in one shared array
@@ -2199,7 +2198,8 @@ function render3DMeshVertexData(mesh, vertices, data=new ArrayBuffer(vertices.le
     const floats = new Float32Array(data), ints = new Uint32Array(data);
     for (let j = 0; j &lt; count; ++j)
     {
-        const i = vertices[j], p = mesh.points[i], uv = mesh.uvs[i] || RENDER3D_DEFAULT_UV; // a hand built mesh may leave normals, uvs and colors empty
+        // a hand built mesh may leave normals, uvs and colors empty
+        const i = vertices[j], p = mesh.points[i], uv = mesh.uvs[i] || RENDER3D_DEFAULT_UV;
         render3DWriteVertex(floats, ints, j * RENDER3D_VERTEX_FLOATS, p.x, p.y, p.z,
             mesh.normals[i] || RENDER3D_DEFAULT_NORMAL, uv.x, uv.y, (mesh.colors[i] || WHITE).rgbaInt());
     }
@@ -2301,30 +2301,34 @@ class Mesh
         this.indexType = 0; // gl.UNSIGNED_SHORT, or UNSIGNED_INT past 65535 vertices
         /** @property {boolean} - The mesh changed and needs uploading again, set it yourself if you edit the arrays */
         this.dirty = false;
-        /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call, undefined follows render3D.instancing
+        /** @property {boolean|undefined} - Draw every use of this mesh in the opaque stage as one instanced call,
+         *  undefined follows render3D.instancing
          *  @type {boolean|undefined} */
         this.instanced = undefined;
         /** @property {boolean} - Draw both sides, each lit as the side that is seen; off skips the faces pointing away,
          *  which is faster and right for closed shapes, the open builders like buildGrid and buildRibbon turn it on */
         this.doubleSided = false;
-        /** @property {boolean} - The values change often but the shape never does, for a water surface or a cloth: set once,
-         *  the mesh keeps its GPU layout and a dirty upload only rewrites the vertices into the buffer it has; the strip
-         *  must keep the same points in the same order, a new point count asserts; the layout is decided by the first
-         *  upload, so strip entries equal then stay one vertex and triangles with no area then stay dropped, set
-         *  vertexKeys or give it distinct values at the start, not a flat grid of one color or points all in one place */
+        /** @property {boolean} - The values change often but the shape never does, for a water surface or a cloth: set
+         *  once, the mesh keeps its GPU layout and a dirty upload only rewrites the vertices into the buffer it has;
+         *  the strip must keep the same points in the same order, a new point count asserts; the layout is decided by
+         *  the first upload, so strip entries equal then stay one vertex and triangles with no area then stay dropped,
+         *  set vertexKeys or give it distinct values at the start, not a flat grid of one color or points all in one place */
         this.dynamicDraw = false;
-        /** @property {Array&lt;number>|undefined} - The mesh as an indexed triangle list instead of a strip: the arrays hold each vertex
-         *  once and this says how they join, three vertex numbers per triangle, counter clockwise seen from the front like a
-         *  strip's first triangle; addTriangles and the loaders fill it, toIndexed turns a strip mesh into this form
+        /** @property {Array&lt;number>|undefined} - The mesh as an indexed triangle list instead of a strip: the arrays
+         *  hold each vertex once and this says how they join, three vertex numbers per triangle, counter clockwise seen
+         *  from the front like a strip's first triangle; addTriangles and the loaders fill it, toIndexed turns a strip
+         *  mesh into this form
          *  @type {Array&lt;number>|undefined} */
         this.indices = undefined;
-        /** @property {Int32Array|undefined} - Which strip entries are one vertex, set by a builder that knows, one whole number
-         *  per entry with equal numbers meaning the same vertex; upload skips its search for them, then drops the keys, since
-         *  an edit after that may tell the entries apart; adding geometry or recomputing normals drops them too
+        /** @property {Int32Array|undefined} - Which strip entries are one vertex, set by a builder that knows, one
+         *  whole number per entry with equal numbers meaning the same vertex; upload skips its search for them, then
+         *  drops the keys, since an edit after that may tell the entries apart; adding geometry or recomputing normals
+         *  drops them too
          *  @type {Int32Array|undefined} */
         this.vertexKeys = undefined;
         /** @type {{vertices: Array&lt;number>, pointCount: number, data: ArrayBuffer}|undefined} */
-        this.vertexLayout = undefined; // the strip index of each GPU vertex, the point count and packed data of the last upload, for a dynamicDraw mesh
+        // the strip index of each GPU vertex, the point count and packed data of the last upload, for a dynamicDraw mesh
+        this.vertexLayout = undefined;
         this.instanceCount = 0; // draws waiting in this mesh's batch, with their values, texture and draw state
         /** @type {Float32Array|undefined} */
         this.instanceData = undefined;
@@ -2380,7 +2384,8 @@ class Mesh
      *  @return {Mesh} */
     addTriangles(points, indices, normals, uvs, colors)
     {
-        ASSERT(isArray(points) &amp;&amp; isArray(indices) &amp;&amp; indices.length % 3 === 0, 'addTriangles takes points and three indices per triangle');
+        ASSERT(isArray(points) &amp;&amp; isArray(indices) &amp;&amp; indices.length % 3 === 0,
+            'addTriangles takes points and three indices per triangle');
         ASSERT(indices.every(i=> i >= 0 &amp;&amp; i &lt; points.length &amp;&amp; i % 1 === 0), 'an index points past the vertices given');
         this.toIndexed();
         const offset = this.points.length, normalArray = isArray(normals), uvArray = isArray(uvs), colorArray = isArray(colors);
@@ -2437,7 +2442,7 @@ class Mesh
     combine(mesh, matrix=RENDER3D_IDENTITY, color=WHITE)
     {
         matrix = render3DMatrix(matrix); // most parts only need moving into place
-        const normalMatrix = render3DNormalMatrix(matrix), mirrors = render3DMirrors(matrix.m);
+        const normalMatrix = render3DNormalMatrix(matrix), mirrors = render3DMirrors(matrix);
         let part = mesh, order;
         if (this.indices || mesh.indices)
         {
@@ -2445,9 +2450,11 @@ class Mesh
             this.toIndexed();
             part = mesh.indices ? mesh : new Mesh().combine(mesh).toIndexed();
             const offset = this.points.length, indices = part.indices;
-            // the count read once, a mesh combined with itself grows as it is read; a mirror turns every triangle the other way round
+            // the count read once, a mesh combined with itself grows as it is read; a mirror turns every triangle the
+            // other way round
             for (let t = 0, n = indices.length; t &lt; n; t += 3)
-                this.indices.push(indices[t] + offset, indices[t + (mirrors ? 2 : 1)] + offset, indices[t + (mirrors ? 1 : 2)] + offset);
+                this.indices.push(indices[t] + offset, indices[t + (mirrors ? 2 : 1)] + offset,
+                    indices[t + (mirrors ? 1 : 2)] + offset);
         }
         else if (mirrors &amp;&amp; part.points.length)
         {
@@ -2469,13 +2476,71 @@ class Mesh
         return this;
     }
 
+    /** Returns a new mesh: this one and its mirror image across the plane through the origin facing axis
+     *  - For modeling half a shape against that plane, a part that crosses it overlaps its image
+     *  @param {Vector3} [axis] - Faces the mirror plane, vec3(1,0,0) mirrors across x
+     *  @return {Mesh} */
+    mirror(axis=vec3(1, 0, 0))
+    {
+        ASSERT(isVector3(axis) &amp;&amp; axis.lengthSquared() > 0, 'mirror needs an axis');
+        const n = axis.normalize(), a = -2 * n.x, b = -2 * n.y, c = -2 * n.z;
+        const reflect = new Matrix4([1 + a * n.x, b * n.x, c * n.x, 0, a * n.y, 1 + b * n.y, c * n.y, 0,
+            a * n.z, b * n.z, 1 + c * n.z, 0, 0, 0, 0, 1]);
+        return new Mesh().combine(this).combine(this, reflect); // combine turns the image's faces the right way out
+    }
+
+    /** Returns a new mesh of count copies of this one, each turned further around an axis through the origin
+     *  @param {number} count - Copies, spaced evenly around the whole turn
+     *  @param {Vector3} [axis] - Up by default
+     *  @return {Mesh} */
+    spin(count, axis=vec3(0, 1, 0))
+    {
+        ASSERT(count >= 1 &amp;&amp; count % 1 === 0, 'spin count must be a whole number, 1 or more');
+        ASSERT(isVector3(axis) &amp;&amp; axis.lengthSquared() > 0, 'spin needs an axis');
+        const mesh = new Mesh, unit = axis.normalize();
+        for (let i = 0; i &lt; count; ++i)
+            mesh.combine(this, render3DAxisRotation(unit, i / count * 2 * PI));
+        return mesh;
+    }
+
+    /** Returns a new mesh of everything in this mesh or the other, see subtract
+     *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
+     *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
+     *  @return {Mesh} */
+    union(mesh, matrix) { return render3DMeshCSG(this, mesh, matrix, 0); }
+
+    /** Returns a new mesh of this one with the other cut out of it, CSG with BSP trees
+     *  - Both must be closed, every edge shared by two triangles, as the builders make them apart from the open
+     *    ones like buildGrid and buildRibbon; the result is closed and indexed, and neither mesh changes
+     *  - The faces a cut makes come from the other mesh's surface, turned to face out, with its normals, uvs and
+     *    colors, so a smooth cylinder drills a round hole
+     *  - Parts that overlap must be joined with union to be one solid, not with combine, mirror or spin, which
+     *    leave them overlapping, and CSG then gives a wrong shape
+     *  - Cuts split the triangles near them, so the result has more: a few thousand triangles take tens to a few
+     *    hundred milliseconds, so build shapes this way at load time, not every frame; joining several cutters
+     *    with union and cutting once is quicker than cutting with each in turn
+     *  - Details closer than about 1e-4 are made one, so build a very small part larger and scale it after
+     *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
+     *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
+     *  @return {Mesh}
+     *  @example
+     *  const wall = buildBox(vec3(4, 3, .5)).subtract(buildBox(vec3(1, 2, 1)), vec3(0, -.5, 0)); // a doorway */
+    subtract(mesh, matrix) { return render3DMeshCSG(this, mesh, matrix, 1); }
+
+    /** Returns a new mesh of only what is in both this mesh and the other, see subtract
+     *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
+     *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
+     *  @return {Mesh} */
+    intersect(mesh, matrix) { return render3DMeshCSG(this, mesh, matrix, 2); }
+
     /** Scale every uv, so a whole texture repeats across the mesh when its TextureInfo wraps
      *  @param {Vector2|number} scale - Repeats across and up, a number for both
      *  @return {Mesh} */
     scaleUVs(scale)
     {
         const s = render3DSize2(scale);
-        this.uvs = this.uvs.map(uv=> vec2(uv.x * s.x, uv.y * s.y)); // new vectors, builders share uv objects between faces
+        // new vectors, builders share uv objects between faces
+        this.uvs = this.uvs.map(uv=> vec2(uv.x * s.x, uv.y * s.y));
         this.dirty = true;
         return this;
     }
@@ -2493,7 +2558,7 @@ class Mesh
             // a mesh built by hand may have no normals yet, and then there is nothing to turn
             this.normals[i] &amp;&amp;= normalMatrix.transformDirection(this.normals[i]).normalize();
         }
-        render3DMirrors(matrix.m) &amp;&amp; render3DFlipWinding(this); // a mirror would leave the faces pointing in
+        render3DMirrors(matrix) &amp;&amp; render3DFlipWinding(this); // a mirror would leave the faces pointing in
         this.dirty = true;
         return this;
     }
@@ -2579,10 +2644,12 @@ class Mesh
             if (!smooth)
             {
                 const split = (a)=> this.indices.map(i=> a[i]);
-                this.points = split(this.points), this.normals = split(this.normals), this.uvs = split(this.uvs), this.colors = split(this.colors);
+                this.points = split(this.points), this.normals = split(this.normals);
+                this.uvs = split(this.uvs), this.colors = split(this.colors);
                 this.indices = this.indices.map((_, i)=> i);
             }
-            const points = this.points, indices = this.indices, normals = points.map(()=> RENDER3D_DEFAULT_NORMAL), sums = new Map;
+            const points = this.points, indices = this.indices, sums = new Map;
+            const normals = points.map(()=> RENDER3D_DEFAULT_NORMAL);
             for (let t = 0; t &lt; indices.length; t += 3)
             {
                 const a = points[indices[t]], b = points[indices[t+1]], c = points[indices[t+2]];
@@ -2591,13 +2658,19 @@ class Mesh
                 const normal = cross.normalize();
                 if (!smooth)
                 {
-                    normals[indices[t]] = normals[indices[t+1]] = normals[indices[t+2]] = normal; // its own three corners
+                    // its own three corners
+                    normals[indices[t]] = normals[indices[t+1]] = normals[indices[t+2]] = normal;
                     continue;
                 }
                 for (let j = 0; j &lt; 3; ++j)
-                    render3DAddCornerNormal(sums, points[indices[t+j]], points[indices[t+(j+1)%3]], points[indices[t+(j+2)%3]], normal);
+                    render3DAddCornerNormal(sums, points[indices[t+j]], points[indices[t+(j+1)%3]],
+                        points[indices[t+(j+2)%3]], normal);
             }
-            this.normals = smooth ? points.map(p=> { const s = sums.get(render3DPlaceKey(p)); return s &amp;&amp; s.lengthSquared() ? s.normalize() : RENDER3D_DEFAULT_NORMAL; }) : normals;
+            this.normals = !smooth ? normals : points.map(p=>
+            {
+                const s = sums.get(render3DPlaceKey(p));
+                return s &amp;&amp; s.lengthSquared() ? s.normalize() : RENDER3D_DEFAULT_NORMAL;
+            });
             this.dirty = true;
             return this;
         }
@@ -2649,7 +2722,9 @@ class Mesh
         {
             // the layout of the last upload stands, only the values are written again into the buffer it has,
             // packed into the same memory each time so a mesh uploaded every frame makes no garbage
-            ASSERT(layout.pointCount === this.points.length, 'a dynamicDraw mesh keeps its shape, the same points in the same order; for a new shape make a new mesh or turn dynamicDraw off', this.points.length);
+            ASSERT(layout.pointCount === this.points.length,
+                'a dynamicDraw mesh keeps its shape, the same points in the same order; ' +
+                'for a new shape make a new mesh or turn dynamicDraw off', this.points.length);
             if (layout.pointCount === this.points.length)
             {
                 gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
@@ -2674,7 +2749,8 @@ class Mesh
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, wide ? new Uint32Array(indices) : new Uint16Array(indices), gl.STATIC_DRAW);
         this.contextGeneration = render3D.contextGeneration;
-        render3DMeshBuffers?.register(this, {buffer: this.buffer, indexBuffer: this.indexBuffer, generation: this.contextGeneration}, this);
+        const buffers = {buffer: this.buffer, indexBuffer: this.indexBuffer, generation: this.contextGeneration};
+        render3DMeshBuffers?.register(this, buffers, this);
         gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer); // the engine's 2D batch writes through this binding
         return this;
     }
@@ -2724,7 +2800,8 @@ class Mesh
         const mix = (h, v)=> Math.imul(h ^ v, 0x9e3779b1) >>> 0;
         for (let i = 0; i &lt; count; ++i)
         {
-            const p = this.points[i], n = this.normals[i] || RENDER3D_DEFAULT_NORMAL, uv = this.uvs[i] || RENDER3D_DEFAULT_UV, k = i * 9;
+            const p = this.points[i], n = this.normals[i] || RENDER3D_DEFAULT_NORMAL;
+            const uv = this.uvs[i] || RENDER3D_DEFAULT_UV, k = i * 9;
             const x = values[k] = round(p.x * 1e6), y = values[k+1] = round(p.y * 1e6), z = values[k+2] = round(p.z * 1e6);
             values[k+3] = round(n.x * 1e6), values[k+4] = round(n.y * 1e6), values[k+5] = round(n.z * 1e6);
             values[k+6] = round(uv.x * 1e6), values[k+7] = round(uv.y * 1e6);
@@ -2813,7 +2890,8 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
     };
     // vertex normal: average of the adjacent segment normals, across the seam when the profile is closed,
     // and a closed profile needs no caps
-    const closed = rings > 2 &amp;&amp; abs(profile[0][0] - profile[rings-1][0]) &lt; 1e-9 &amp;&amp; abs(profile[0][1] - profile[rings-1][1]) &lt; 1e-9;
+    const closed = rings > 2 &amp;&amp; abs(profile[0][0] - profile[rings-1][0]) &lt; 1e-9 &amp;&amp;
+        abs(profile[0][1] - profile[rings-1][1]) &lt; 1e-9;
     const segmentLength = (i)=> hypot(profile[i+1][0] - profile[i][0], profile[i+1][1] - profile[i][1]);
     const vertexNormal = (i)=>
     {
@@ -2852,7 +2930,8 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
             const n0 = vertexNormal(i), n1 = vertexNormal(i + 1);
             // a point on the axis is one per column, each drawn by the face beside it, so its normal turns half
             // a side toward the middle of that face; a pole's points along the axis and does not turn
-            const half = PI / sides, turn1 = abs(profile[i + 1][0]) &lt; 1e-9 ? -half : 0, turn0 = abs(profile[i][0]) &lt; 1e-9 ? half : 0;
+            const half = PI / sides;
+            const turn1 = abs(profile[i + 1][0]) &lt; 1e-9 ? -half : 0, turn0 = abs(profile[i][0]) &lt; 1e-9 ? half : 0;
             for (let j = 0; j &lt;= sides; ++j)
             {
                 const a = j / sides * 2 * PI, u = j / sides;
@@ -2919,15 +2998,94 @@ function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
     return buildLathe(profile, sides, smooth);
 }
 
+// a box with its edges cut by a bevel of size t: each face shrunk by t, a strip along each edge around a quarter
+// circle, and an eighth of a sphere at each corner; one segment makes them flat, a chamfer
+function render3DBevelBox(half, t, segments, faces)
+{
+    const mesh = new Mesh, inner = half.subtract(vec3(t)), n = max(1, segments | 0);
+
+    // a triangle facing out, since the box is convex around the origin, flat shaded or with the normals of the
+    // round, and uvs from the face it faces most, as a plain box maps that face
+    const triangle = (a, b, c, na, nb, nc)=>
+    {
+        let normal = b.subtract(a).cross(c.subtract(a));
+        if (normal.lengthSquared() &lt; 1e-20) return; // an edge or face with no size
+        if (normal.dot(a.add(b).add(c)) &lt; 0)
+            [b, c, nb, nc, normal] = [c, b, nc, nb, normal.scale(-1)];
+        normal = normal.normalize();
+        let face = faces[0];
+        for (const f of faces)
+            if (f[0].dot(normal) > face[0].dot(normal))
+                face = f;
+        const [, r, u] = face, hr = abs(half.dot(r)), hu = abs(half.dot(u));
+        const uv = (p)=> vec2(.5 + p.dot(r) / (2 * hr), .5 - p.dot(u) / (2 * hu));
+        mesh.addStrip([a, b, c], n > 1 &amp;&amp; na ? [na, nb, nc] : normal, [uv(a), uv(b), uv(c)]);
+    };
+
+    // the faces, shrunk by the bevel
+    for (const [normal, r, u] of faces)
+    {
+        const [a, b, c, d] = render3DQuadAxes(normal.multiply(half), r.multiply(inner), u.multiply(inner));
+        triangle(a, b, c);
+        triangle(c, b, d);
+    }
+
+    // the edges, each a strip around a quarter circle from one face to the next
+    const axes = [vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)];
+    for (let k = 0; k &lt; 3; ++k)
+    for (const si of [-1, 1])
+    for (const sj of [-1, 1])
+    {
+        const n1 = axes[(k + 1) % 3].scale(si), n2 = axes[(k + 2) % 3].scale(sj);
+        const middle = n1.multiply(inner).add(n2.multiply(inner)), along = axes[k].multiply(inner);
+        const start = middle.subtract(along), end = middle.add(along);
+        const dir = (m)=> n1.scale(cos(m / n * PI / 2)).add(n2.scale(sin(m / n * PI / 2)));
+        for (let m = 0; m &lt; n; ++m)
+        {
+            const d0 = dir(m), d1 = dir(m + 1);
+            const a = start.add(d0.scale(t)), b = end.add(d0.scale(t));
+            const c = start.add(d1.scale(t)), d = end.add(d1.scale(t));
+            triangle(a, b, c, d0, d0, d1);
+            triangle(c, b, d, d1, d0, d1);
+        }
+    }
+
+    // the corners, an eighth of a sphere in rows from one face's axis down to the edge between the other two
+    for (const sx of [-1, 1])
+    for (const sy of [-1, 1])
+    for (const sz of [-1, 1])
+    {
+        const nx = vec3(sx, 0, 0), ny = vec3(0, sy, 0), nz = vec3(0, 0, sz), corner = inner.multiply(vec3(sx, sy, sz));
+        const dir = (i, j)=>
+        {
+            const polar = i / n * PI / 2, around = i ? j / i * PI / 2 : 0;
+            return nz.scale(cos(polar)).add(nx.scale(cos(around) * sin(polar))).add(ny.scale(sin(around) * sin(polar)));
+        };
+        const point = (i, j)=> corner.add(dir(i, j).scale(t));
+        for (let i = 0; i &lt; n; ++i)
+        {
+            for (let j = 0; j &lt;= i; ++j)
+                triangle(point(i, j), point(i + 1, j), point(i + 1, j + 1), dir(i, j), dir(i + 1, j), dir(i + 1, j + 1));
+            for (let j = 0; j &lt; i; ++j)
+                triangle(point(i, j), point(i + 1, j + 1), point(i, j + 1), dir(i, j), dir(i + 1, j + 1), dir(i, j + 1));
+        }
+    }
+    return mesh;
+}
+
 /**
  * Build a box centered on the origin, six flat faces with uvs covering each face
+ * - bevel cuts its edges and corners: 1 segment is a flat chamfer, more round them, and the biggest bevel, half
+ *   the smallest side, rounds a cube into a ball
  * @param {Vector3|number} [size] - Full size, a number for a cube
+ * @param {number} [bevel] - Size of the cut on each edge, clamped to half the smallest side
+ * @param {number} [bevelSegments] - Steps around each edge, 1 for a flat chamfer
  * @return {Mesh}
  * @memberof Render3D
  */
-function buildBox(size=1)
+function buildBox(size=1, bevel=0, bevelSegments=1)
 {
-    const mesh = new Mesh;
+    ASSERT(isNumber(bevel) &amp;&amp; bevel >= 0, 'bevel must be a number, 0 or more');
     const half = render3DSize3(size).scale(.5);
     // each face: normal, right axis, up axis (right cross up = normal)
     const faces = [
@@ -2938,6 +3096,10 @@ function buildBox(size=1)
         [vec3(0, 1, 0),  vec3(1, 0, 0),  vec3(0, 0, -1)],
         [vec3(0, -1, 0), vec3(1, 0, 0),  vec3(0, 0, 1)],
     ];
+    const t = min(bevel, half.x, half.y, half.z);
+    if (t > 0)
+        return render3DBevelBox(half, t, bevelSegments, faces);
+    const mesh = new Mesh;
     for (const [n, r, u] of faces)
     {
         const center = n.multiply(half);
@@ -2957,17 +3119,20 @@ function buildBox(size=1)
  * @param {Vector2|number} [segments] - Cells along X and Z, a number for both
  * @param {Color|function(number, number): Color} [color] - One Color for the whole grid, or (x, z) => Color
  * @param {function(number, number): number} [heightFunction] - (x, z) => y, default flat
- * @param {boolean} [smooth] - Defaults to render3D.smoothShading
+ * @param {boolean} [smooth] - Defaults to render3D.smoothShading with a heightFunction; a flat grid is flat shaded,
+ *   since its light is even anyway and smoothing would only blend its cell colors; pass smooth to blend a gradient
  * @return {Mesh}
  * @memberof Render3D
  * @example
  * const ground = buildGrid(vec2(20), 10, (x, z)=> (floor(x / 2) + floor(z / 2)) &amp; 1 ? GRAY : WHITE); // 2 unit checks
  */
-function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth=render3D?.smoothShading)
+function buildGrid(size=vec2(1), segments=1, color, heightFunction, smooth=heightFunction &amp;&amp; render3D?.smoothShading)
 {
+    heightFunction ||= ()=> 0;
     size = render3DSize2(size);
     segments = render3DSize2(segments);
-    ASSERT(segments.x > 0 &amp;&amp; segments.y > 0 &amp;&amp; segments.x % 1 === 0 &amp;&amp; segments.y % 1 === 0, 'grid segments must be whole numbers above zero');
+    ASSERT(segments.x > 0 &amp;&amp; segments.y > 0 &amp;&amp; segments.x % 1 === 0 &amp;&amp; segments.y % 1 === 0,
+        'grid segments must be whole numbers above zero');
     const mesh = new Mesh;
     const segmentsX = segments.x, segmentsZ = segments.y;
     const cellX = size.x / segmentsX, cellZ = size.y / segmentsZ;
@@ -2975,23 +3140,17 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
     const px = (i)=> i * cellX - halfX, pz = (j)=> j * cellZ - halfZ;
     const colorAt = /** @type {function(number, number): Color} */ (color);
     const cellColor = (i, j)=> !color ? WHITE : isColor(color) ? /** @type {Color} */ (color) : colorAt(px(i), pz(j));
-    // a big terrain has millions of vertices, so each one is made once, shared by the rows above and below it,
-    // and its slope normal is worked out in numbers, the same normal render3DSlopeNormal gives
+    // a big terrain has millions of vertices, so each one is made once, shared by the rows above and below it
     const row = (j)=>
     {
         const points = [], normals = [], uvs = [], colors = [], z = pz(j);
-        const z0 = max(z - ez, -halfZ), z1 = min(z + ez, halfZ);
         for (let i = 0; i &lt;= segmentsX; ++i)
         {
             const x = px(i);
             points.push(vec3(x, heightFunction(x, z), z));
             uvs.push(vec2(i / segmentsX, j / segmentsZ));
             if (!smooth) continue;
-            const x0 = max(x - ex, -halfX), x1 = min(x + ex, halfX);
-            const dx = (heightFunction(x1, z) - heightFunction(x0, z)) / (x1 - x0 || 1);
-            const dz = (heightFunction(x, z1) - heightFunction(x, z0)) / (z1 - z0 || 1);
-            const s = 1 / hypot(dx, 1, dz);
-            normals.push(vec3(-dx * s, s, -dz * s));
+            normals.push(render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ));
             colors.push(cellColor(i, j));
         }
         return {points, normals, uvs, colors};
@@ -3046,7 +3205,8 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
  * - set it as render3D.sky and the pass draws it around the camera behind everything
  * @param {Color} [topColor] - Straight up
  * @param {Color} [horizonColor] - Level with the camera
- * @param {Color} [bottomColor] - Straight down, what a camera looking at the ground sees past its edge; defaults to the horizon color
+ * @param {Color} [bottomColor] - Straight down, what a camera looking at the ground sees past its edge; defaults to the
+ *   horizon color
  * @param {number} [sides] - Around
  * @param {number} [rings] - Top to bottom
  * @return {Mesh}
@@ -3054,29 +3214,9 @@ function buildGrid(size=vec2(1), segments=1, color, heightFunction=()=>0, smooth
  */
 function buildSky(topColor=hsl(.6, .8, .55), horizonColor=hsl(.6, 1, .9), bottomColor=horizonColor, sides=16, rings=8)
 {
-    const mesh = new Mesh;
-    const point = (i, a)=>
-    {
-        const e = i / rings * PI - PI/2;
-        return vec3(sin(a) * cos(e), sin(e), cos(a) * cos(e));
-    };
-    const color = (i)=>
-    {
-        const y = point(i, 0).y;
-        return y &lt; 0 ? horizonColor.lerp(bottomColor, -y) : horizonColor.lerp(topColor, y);
-    };
-    for (let i = 0; i &lt; rings; ++i)
-    {
-        // bottom point then top point per column, the reverse of the lathe, so the front faces inward
-        const points = [], colors = [];
-        for (let j = 0; j &lt;= sides; ++j)
-        {
-            const a = j / sides * 2 * PI;
-            points.push(point(i, a), point(i + 1, a));
-            colors.push(color(i), color(i + 1));
-        }
-        mesh.addStrip(points, undefined, undefined, colors);
-    }
+    // a sphere turned inside out so it is seen from within, each point colored by how high it is
+    const mesh = buildSphere(2, sides, rings, true).flipNormals();
+    mesh.colors = mesh.points.map(p=> p.y &lt; 0 ? horizonColor.lerp(bottomColor, -p.y) : horizonColor.lerp(topColor, p.y));
     return mesh;
 }
 
@@ -3116,28 +3256,32 @@ class EngineObject3D extends EngineObject
     /** Create a 3D object and add it to the object list
      *  @param {Vector3} [pos3D] - World space position
      *  @param {Mesh} [mesh] - Mesh to draw, undefined draws nothing
-     *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile; a whole TextureInfo becomes the tile that covers it
+     *  @param {TileInfo|TextureInfo} [tileInfo] - Texture, mesh uvs map across the tile; a whole TextureInfo becomes
+     *    the tile that covers it
      *  @param {Color} [color] - Tint */
     constructor(pos3D=vec3(), mesh, tileInfo, color=WHITE)
     {
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo, 'tileInfo must be a TileInfo or TextureInfo, it comes before color');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo || tileInfo instanceof TextureInfo,
+            'tileInfo must be a TileInfo or TextureInfo, it comes before color');
         // a whole texture is stored as the tile that covers it, with no padding or bleed to trim
         // the edges, so this is always a TileInfo like the 2D one and the object stays an EngineObject
         if (tileInfo instanceof TextureInfo)
             render3DWholeTiles.add(tileInfo = new TileInfo(vec2(), tileInfo.size, tileInfo, 0, 0));
-        super(vec2(), vec2(), tileInfo, 0, color);
+        // the 2D pos starts where the object is, so turning on sync2D keeps it there
+        super(vec2(pos3D.x, pos3D.y), vec2(), tileInfo, 0, color);
         ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
         ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
         this.mass = 0; // static: no 2D physics, and no 3D gravity until a mass is set
 
         /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
         this.pos3D = pos3D.copy();
-        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, local to the parent when attached to an EngineObject3D */
+        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, local to the parent when attached to an
+         *  EngineObject3D */
         this.rotation3D = vec3();
         /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
         this.scale3D = vec3(1);
-        /** @property {Vector3} - Added to pos3D each frame by the engine before update, like the 2D velocity, no super call needed;
-         *  damping and render3D.gravity act on it once the object has a mass */
+        /** @property {Vector3} - Added to pos3D each frame by the engine before update, like the 2D velocity, no super
+         *  call needed; damping and render3D.gravity act on it once the object has a mass */
         this.velocity3D = vec3();
         /** @property {Vector3} - Added to rotation3D each frame by the engine before update, angleDamping is 2D only */
         this.angleVelocity3D = vec3();
@@ -3151,28 +3295,33 @@ class EngineObject3D extends EngineObject
         // a shared mesh measured since it last changed is not walked again for each object made from it
         const bounds = mesh &amp;&amp; mesh.points.length ? !mesh.dirty &amp;&amp; mesh.bounds || mesh.getBounds() : undefined;
         this.size3D = bounds ? bounds.max.subtract(bounds.min) : vec3(1);
-        /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for none;
-         *  scale3D and a parent's scale grow it, so set it once for the unscaled object */
+        /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for
+         *  none; scale3D and a parent's scale grow it, so set it once for the unscaled object */
         this.softShadow = 0;
         /** @property {boolean} - A sprite stands on world up instead of tilting toward the camera */
         this.upright = false;
         /** @property {boolean} - Keep this object's texture pixels hard edged, for pixel art that should not blur or bleed */
         this.pixelated = false;
-        /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D looks;
-         *  set mass to use 2D physics, and pos3D.z stays yours to set or move with velocity3D.z */
+        /** @property {boolean} - Copy the 2D pos and angle into pos3D and rotation3D each frame, for 2D games with 3D
+         *  looks; set mass to use 2D physics, and pos3D.z stays yours to set or move with velocity3D.z */
         this.sync2D = false;
-        /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off; on for a sprite */
+        /** @property {boolean} - Draw in the transparent stage, blended and sorted far to near with depth writes off;
+         *  on for a sprite */
         this.transparent = !mesh &amp;&amp; !!tileInfo;
         /** @property {boolean} - Additive blending, in the transparent stage */
         this.additive = false;
         /** @property {number} - How much it lights itself: 0 is lit as normal, 1 is its own color with no shading, for
          *  lamps and glowing things, between is partly self lit, and above 1 is brighter than its color, for bloom */
         this.emissive = 0;
-        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and 1 adds a light's full color at its brightest; its size is fixed */
+        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
+         *  1 adds a light's full color at its brightest; its size is fixed */
         this.specular = 0;
-        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures cast their outline, an object faded below half its alpha casts nothing, a see through one casts only when textured, and additive objects never cast */
+        /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures
+         *  cast their outline, an object faded below half its alpha casts nothing, a see through one casts only when
+         *  textured, and additive objects never cast */
         this.castShadow = true;
-        /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls around corners */
+        /** @property {boolean} - Collide as the sphere that fits size3D instead of as the size3D box, so it rolls
+         *  around corners */
         this.collideAsSphere3D = false;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
@@ -3183,7 +3332,8 @@ class EngineObject3D extends EngineObject
          *  scale3D when set, for one they cannot hold like a glTF pose with shear; read every frame it is set
          *  @type {Matrix4|undefined} */
         this.localMatrix = undefined;
-        this.worldMatrix = new Matrix4;  // the world transform, kept up to date by render3DObjectMatrix; getMatrix returns a copy
+        // the world transform, kept up to date by render3DObjectMatrix; getMatrix returns a copy
+        this.worldMatrix = new Matrix4;
         this.matrixBuilt = new Float64Array(9).fill(NaN); // the position, rotation and scale it was built from
         this.matrixVersion = 0;          // counts the rebuilds, so a child knows when its parent's changed
         /** @type {EngineObject3D|undefined} */
@@ -3203,7 +3353,10 @@ class EngineObject3D extends EngineObject
             'a sync2D object collides in 2D, so give it a 2D size as well as a size3D', this.size);
         if (this.sync2D)
             super.updatePhysics();
+        // a moving object keeps out of the level, the height maps and voxel maps, from where it was before it moved
+        const oldPos = this.collideLevel &amp;&amp; this.mass &amp;&amp; !this.sync2D ? this.pos3D.copy() : undefined;
         render3DMove(this);
+        oldPos &amp;&amp; render3DCollideLevel(this, oldPos);
         // the engine only runs this for objects that own where they are, a child rides along with its parent
         if (this.collideSolidObjects &amp;&amp; !this.sync2D)
             render3DCollideSolid(this);
@@ -3241,10 +3394,17 @@ class EngineObject3D extends EngineObject
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
-     *  @param {boolean} [collideTiles] - Tile collision, 2D only so it needs sync2D
+     *  @param {boolean} [collideLevel] - Collide with the level, the height maps and voxel maps, or the 2D tile layers
+     *    for a sync2D object
      *  @param {boolean} [collideRaycast] - Raycasts, 2D only; 3D has render3D.pick and engineObjectsRaycast3D */
-    setCollision(collideSolidObjects=true, isSolid=true, collideTiles=false, collideRaycast=false)
-    { super.setCollision(collideSolidObjects, isSolid, collideTiles, collideRaycast); }
+    setCollision(collideSolidObjects=true, isSolid=true, collideLevel=true, collideRaycast=false)
+    { super.setCollision(collideSolidObjects, isSolid, collideLevel, collideRaycast); }
+
+    /** Called by a VoxelMap to ask whether a block stops this object, a hook to let one through or react to it
+     *  @param {number} type - The block's type, 1 to 255
+     *  @param {Vector3} cell - The block's cell in the map
+     *  @return {boolean} - true to be stopped by it, every block stops it by default */
+    collideWithVoxel(type, cell) { return true; }
 
     /** Returns the world position
      *  @return {Vector3} */
@@ -3263,7 +3423,8 @@ class EngineObject3D extends EngineObject
     getUp3D() { return render3DAxis(render3DObjectMatrix(this).m, 4).normalize(); }
 
     /** Returns a copy of the object's world transform, the parent's included when attached to an EngineObject3D
-     *  - The object keeps its matrix and rebuilds it only when its position, rotation or scale changed, so this is cheap to call
+     *  - The object keeps its matrix and rebuilds it only when its position, rotation or scale changed, so this is
+     *    cheap to call
      *  @return {Matrix4} */
     getMatrix() { return render3DObjectMatrix(this).copy(); }
 
@@ -3355,19 +3516,18 @@ class EngineObject3D extends EngineObject
     render3D()
     {
         // an opaque draw comes out solid however low its alpha is, so a fade with no flag looks like nothing happened
-        ASSERT(this.transparent || this.additive || this.color.a >= 1, 'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', this.color);
+        ASSERT(this.transparent || this.additive || this.color.a >= 1,
+            'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', this.color);
         // the matrix the object keeps, rebuilt only when it moved, the same one for the shadow pass and the main pass
         const matrix = render3DObjectMatrix(this);
         if (this.mesh)
             render3D.drawMesh(this.mesh, matrix, this.tileInfo, this.color);
         else if (this.tileInfo)
         {
-            // a sprite: size3D grown by its own scale and its parents', the same world size the
-            // collect, pick and solid collision helpers measure it at
-            const m = matrix.m;
-            render3D.drawBillboard(vec3(m[12], m[13], m[14]),
-                vec2(this.size3D.x * hypot(m[0], m[1], m[2]), this.size3D.y * hypot(m[4], m[5], m[6])),
-                this.tileInfo, this.color, this.rotation3D.z, this.upright);
+            // a sprite, at the world size the collect, pick and solid collision helpers measure it at
+            const m = matrix.m, size = render3DWorldSize(this, m);
+            render3D.drawBillboard(vec3(m[12], m[13], m[14]), vec2(size.x, size.y), this.tileInfo, this.color,
+                this.rotation3D.z, this.upright);
         }
     }
 }
@@ -3433,6 +3593,15 @@ function render3DMove(o)
     r.x += a.x, r.y += a.y, r.z += a.z;
 }
 
+// keep an object that moved out of the level's solid geometry, clearing what it stood on for the level to set again
+function render3DCollideLevel(o, oldPos)
+{
+    const ground = o.groundObject;
+    o.groundObject = undefined;
+    for (const level of render3DLevel)
+        level.destroyed || level.levelCollide3D(o, oldPos, level === ground);
+}
+
 // where a solid object is in the world and what it collides as: the sphere that fits size3D, or the size3D box,
 // each grown by the object's scale
 // only objects that own where they are take part, so pos3D is already world space, and however the object is
@@ -3486,7 +3655,8 @@ function render3DCollideSolid(a)
     for (const b of engineObjectsCollide)
     {
         if (b === a) break;
-        if (b.destroyed || !(b instanceof EngineObject3D) || b.parent || b.sync2D) continue; // a child is part of its parent
+        // a child is part of its parent
+        if (b.destroyed || !(b instanceof EngineObject3D) || b.parent || b.sync2D) continue;
         if (!a.isSolid &amp;&amp; !b.isSolid) continue; // neither one blocks, so they pass through each other
 
         // the pairs nowhere near each other are almost all of them in a scene of any size, so
@@ -3542,10 +3712,11 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
     for (const o of objects)
     {
         if (!(o instanceof EngineObject3D) || o.destroyed) continue;
-        const m = render3DObjectMatrix(o).m, s = o.size3D; // the box in world space, scaled by the object and its parents
+        // the box in world space, scaled by the object and its parents
+        const m = render3DObjectMatrix(o).m, s = o.size3D;
         if (!(s.x || s.y || s.z)) continue;
         const center = vec3(m[12], m[13], m[14]);
-        const worldSize = testCenters ? vec3() : vec3(s.x * hypot(m[0], m[1], m[2]), s.y * hypot(m[4], m[5], m[6]), s.z * hypot(m[8], m[9], m[10]));
+        const worldSize = testCenters ? vec3() : render3DWorldSize(o, m);
         let hit;
         if (box)
             hit = isOverlapping3D(pos, box, center, worldSize);
@@ -3566,7 +3737,10 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
 // its own space, or a sprite as the quad it draws, not triangle by triangle
 function render3DRaycastObject(ray, o)
 {
-    if (o.destroyed || !(o instanceof EngineObject3D) || !(o.mesh || o.tileInfo)) return;
+    if (o.destroyed || !(o instanceof EngineObject3D)) return;
+    // a height map or voxel map is hit on its surface, not its box
+    if (o instanceof HeightMap || o instanceof VoxelMap) return o.levelRaycast3D(ray);
+    if (!(o.mesh || o.tileInfo)) return;
     if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
     const matrix = render3DObjectMatrix(o), mesh = o.mesh;
     if (!mesh) return render3DRaycastSprite(ray, o, matrix);
@@ -3580,7 +3754,7 @@ function render3DRaycastObject(ray, o)
     // the sphere is a quick reject, a mesh is hit where the ray meets its box in its own space, since a wide floor's
     // sphere reaches far above it; the direction is not made unit length, so the distance holds in the world;
     // a mesh flattened to nothing on an axis has no inverse, it is hit as a disc like a sprite
-    if (!render3DDeterminant(matrix.m)) return render3DRaycastDisc(ray, center, radius);
+    if (!matrix.determinant()) return render3DRaycastDisc(ray, center, radius);
     const inverse = matrix.copy().invert(), bounds = mesh.bounds || mesh.getBounds();
     const local = new Ray3D(inverse.transformPoint(ray.origin), inverse.transformDirection(ray.direction));
     const hit = raycastBox(local, bounds.min.add(bounds.max).scale(.5), bounds.max.subtract(bounds.min));
@@ -3602,8 +3776,7 @@ function render3DRaycastObject(ray, o)
 // as it was last drawn; where the ray meets its plane, inside its half axes
 function render3DRaycastSprite(ray, o, matrix)
 {
-    const m = matrix.m, center = matrix.getTranslation();
-    const size = vec2(o.size3D.x * hypot(m[0], m[1], m[2]), o.size3D.y * hypot(m[4], m[5], m[6]));
+    const center = matrix.getTranslation(), worldSize = render3DWorldSize(o, matrix.m), size = vec2(worldSize.x, worldSize.y);
     if (!(size.x > 0 &amp;&amp; size.y > 0)) return; // nothing to hit
     if (!ray.direction.lengthSquared()) // a ray of no length is where it starts
         return render3DRaycastDisc(ray, center, hypot(size.x, size.y) / 2);
@@ -3700,8 +3873,8 @@ class InstancedMesh3D extends EngineObject3D
         /** @property {Float32Array} - The per instance values the shader reads, 24 floats each: the matrix, the color
          *  and the uv rect; edit it directly and call markDirty for the instances changed */
         this.instanceData = new Float32Array(count * RENDER3D_INSTANCE_FLOATS);
-        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for culling;
-         *  from the farthest instance and the largest scale, and the mesh's size when it draws */
+        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for
+         *  culling; from the farthest instance and the largest scale, and the mesh's size when it draws */
         this.radius = 0;
         this.reach = 0;    // the farthest any instance's position has been from the origin
         this.maxScale = 0; // and the largest scale any instance has had
@@ -3782,8 +3955,7 @@ class InstancedMesh3D extends EngineObject3D
             return r.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
         if (!mesh || !this.count || !render3DCanDraw()) return;
         if (r.shadowPass &amp;&amp; !r.lighting) return; // unlit things cast no shadow
-        if (!mesh.buffer || mesh.dirty || mesh.contextGeneration !== r.contextGeneration)
-            mesh.upload();
+        render3DMeshUpload(mesh);
         if (!mesh.bufferCount) return;
         this.radius = this.reach + mesh.radius * this.maxScale; // the mesh may have grown since
         if (r.frustumCulling &amp;&amp; !render3DSphereVisible(0, 0, 0, this.radius)) return;
@@ -3816,7 +3988,7 @@ class InstancedMesh3D extends EngineObject3D
 
         // one draw under the object's state, the mesh setting the culling as drawMesh does
         r.flush();
-        r.depthTest || r.shadowPass || render3DFlushInstances(); // as in drawMesh, what was drawn before goes under it
+        render3DFlushBeforeOverlay(); // as in drawMesh, what was drawn before goes under it
         const cullBackFaces = r.cullBackFaces, tileInfo = this.tileInfo;
         r.cullBackFaces = !mesh.doubleSided;
         render3DDrawInstanced(mesh, this.buffer, this.count, render3DTextureOf(tileInfo), r);
@@ -3900,4 +4072,4 @@ class DirectionalLight3D extends Light3D
         this.directional = true;
     }
 }
-</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="Render3D.VoxelMap.html">VoxelMap</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

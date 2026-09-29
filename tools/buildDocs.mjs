@@ -99,7 +99,11 @@ console.log(`Docs built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!
 // message is a real problem, and burying it in the expected ones is how tags rot.
 function checkJSDocMessages(output)
 {
-    const lines = output.split(/\r?\n/).map(line => line.trim()).filter(line => line);
+    // a message about a tag whose description runs over several lines runs over as many, so a line that does not
+    // start a message goes back onto the one before it
+    const lines = [];
+    for (const line of output.split(/\r?\n/).map(line => line.trim()).filter(line => line))
+        /^(ERROR|WARNING)\b/.test(line) || !lines.length ? lines.push(line) : lines[lines.length - 1] += ' ' + line;
     const expected = (line)=> /Invalid type expression "(\[|\w+ is |Array<\[|[^"]*\w\?: )/.test(line);
     const unexpected = lines.filter(line => !expected(line));
     if (unexpected.length)
