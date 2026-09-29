@@ -9022,6 +9022,9 @@ declare module "littlejsengine" {
         /** @property {number} - Size of a soft hazy glow drawn over the light, like a lamp at night, 0 for none; it
          *  is added onto what is behind it, and what is in front of the light hides it */
         glow: number;
+        /** @property {number} - How fast the glow fades from its middle: 1 by default, .5 a wide haze, 2 a tight
+         *  bright core */
+        glowFalloff: number;
     }
     /**
      * DirectionalLight3D - A Light3D that shines from far away with no falloff, like sunlight

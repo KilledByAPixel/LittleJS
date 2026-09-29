@@ -4204,6 +4204,9 @@ class Light3D extends EngineObject3D
         /** @property {number} - Size of a soft hazy glow drawn over the light, like a lamp at night, 0 for none; it
          *  is added onto what is behind it, and what is in front of the light hides it */
         this.glow = 0;
+        /** @property {number} - How fast the glow fades from its middle: 1 by default, .5 a wide haze, 2 a tight
+         *  bright core */
+        this.glowFalloff = 1;
         this.additive = true; // the glow is added on, in the transparent stage; a light with none draws nothing
     }
 
@@ -4215,26 +4218,36 @@ class Light3D extends EngineObject3D
         const r = render3D, c = this.color, pos = render3DObjectMatrix(this).getTranslation();
         const toCamera = r.camera.pos.subtract(pos), distance = toCamera.length();
         const at = distance ? pos.add(toCamera.scale(min(this.glow, distance) / 2 / distance)) : pos;
-        r.drawBillboard(at, vec2(this.glow), render3DGlow(), rgb(c.r, c.g, c.b, c.a * min(this.intensity, 1)));
+        const color = rgb(c.r, c.g, c.b, c.a * min(this.intensity, 1));
+        r.drawBillboard(at, vec2(this.glow), render3DGlow(this.glowFalloff), color);
     }
 }
 
-// a soft round glow for the lights, made once from a canvas: a bell from the middle, bright and then fading
-// smoothly, to nothing at the edge; undefined headless or without a canvas
-let render3DGlowTexture;
-function render3DGlow()
+// how strong a light's glow is at a distance from its middle, 0 there to 1 at the edge: a bell, full in the middle
+// and nothing at the edge, fading faster the higher the falloff
+function render3DGlowAlpha(r, falloff)
 {
-    if (render3DGlowTexture || !glContext || typeof OffscreenCanvas == 'undefined') return render3DGlowTexture;
-    const size = 64, context = createCanvasContext(size), steps = 16, edge = Math.exp(-3.5);
+    const k = 3.5 * falloff, edge = Math.exp(-k);
+    return (Math.exp(-k * r * r) - edge) / (1 - edge);
+}
+
+// the soft round glow of the lights, one texture for each falloff, rounded to a tenth so a changing falloff makes
+// only a few, each made once from a canvas; undefined headless or without a canvas
+const render3DGlowTextures = new Map;
+function render3DGlow(falloff=1)
+{
+    ASSERT(isNumber(falloff) && falloff > 0, 'glowFalloff must be a number above 0');
+    const key = max(round(falloff * 10), 1) / 10;
+    let texture = render3DGlowTextures.get(key);
+    if (texture || !glContext || typeof OffscreenCanvas == 'undefined') return texture;
+    const size = 64, context = createCanvasContext(size), steps = 16;
     const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
     for (let i = 0; i <= steps; ++i)
-    {
-        const r = i / steps, alpha = (Math.exp(-3.5 * r * r) - edge) / (1 - edge);
-        gradient.addColorStop(r, 'rgba(255,255,255,' + alpha.toFixed(4) + ')');
-    }
+        gradient.addColorStop(i / steps, 'rgba(255,255,255,' + render3DGlowAlpha(i / steps, key).toFixed(4) + ')');
     context.fillStyle = gradient;
     context.fillRect(0, 0, size, size);
-    return render3DGlowTexture = new TextureInfo(context.canvas);
+    render3DGlowTextures.set(key, texture = new TextureInfo(context.canvas));
+    return texture;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

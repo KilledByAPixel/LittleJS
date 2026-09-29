@@ -69,3 +69,10 @@ test('a directional light has no place to glow from, and a child light glows whe
     near(glow.pos.subtract(vec3(3, 1, 0)).length(), .5);
     lamp.destroy();
 });
+
+test('a light glows with a falloff of 1 by default, and the falloff is how fast it fades from the middle', ()=>
+{
+    const light = new Light3D;
+    assert.equal(light.glowFalloff, 1);
+    light.destroy();
+});
