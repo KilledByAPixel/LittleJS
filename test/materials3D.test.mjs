@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render3D, Render3DPlugin, EngineObject3D, engineObjects, TextureInfo, vec3, rgb, WHITE }
-    from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, EngineObject3D, engineObjects, TextureInfo, normalMapFromHeight, vec2, vec3, rgb,
+    WHITE } from '../dist/littlejs.esm.js';
 
 // materials: a normal map, shininess, sky reflections and an emissive map, set on an object and carried to the
 // draws as draw state, so draws that differ in any of them batch apart
@@ -97,4 +97,12 @@ test('emissiveMapColor batches by its values, not by which Color it is', ()=>
     // the first draw is red, the change sets another red
     render3D.emissiveMapColor = rgb(1, 0, 0);
     assert.equal(flushesAfter(()=> render3D.emissiveMapColor = rgb(1, 0, 0)), 0);
+});
+
+test('normalMapFromHeight makes a wrapping TextureInfo of the size, with no canvas headless', ()=>
+{
+    const t = normalMapFromHeight(vec2(8, 4), ()=> 0);
+    assert.ok(t instanceof TextureInfo);
+    assert.equal(t.wrap, true);
+    assert.deepEqual([t.size.x, t.size.y], [8, 4]);
 });

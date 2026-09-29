@@ -8675,6 +8675,15 @@ declare module "littlejsengine" {
      * @memberof Render3D
      */
     export function buildSky(topColor?: Color, horizonColor?: Color, bottomColor?: Color, sides?: number, rings?: number): Mesh;
+    /** Make a normal map from a height at each pixel, for bumps and grooves with no image file: the slope at each pixel
+     *  from its neighbors' heights, taken around the edges so the map tiles; set it as an object's normalMap
+     *  @param {Vector2} size - In pixels
+     *  @param {function(number, number): number} heightFunction - The height 0 to 1 at a pixel, x across and y down
+     *  @param {number} [strength] - How steep the slopes are: a height change of 1 over one pixel leans the normal
+     *  by strength
+     *  @return {TextureInfo} - Wraps; headless it has no image
+     *  @memberof Render3D */
+    export function normalMapFromHeight(size: Vector2, heightFunction: (arg0: number, arg1: number) => number, strength?: number): TextureInfo;
     /**
      * Turn a sprite into a 3D block model by giving its pixels thickness
      * - A pixel counts as solid when it is more than half opaque

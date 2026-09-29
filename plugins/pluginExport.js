@@ -155,6 +155,7 @@ export
     buildRibbon,
     buildLoft,
     buildSky,
+    normalMapFromHeight,
     buildExtrude,
     buildText3D,
     HeightMap,

@@ -25513,6 +25513,54 @@ function render3DSoftDot()
     return render3DSoftDotTexture = new TextureInfo(context.canvas);
 }
 
+/** Make a normal map from a height at each pixel, for bumps and grooves with no image file: the slope at each pixel
+ *  from its neighbors' heights, taken around the edges so the map tiles; set it as an object's normalMap
+ *  @param {Vector2} size - In pixels
+ *  @param {function(number, number): number} heightFunction - The height 0 to 1 at a pixel, x across and y down
+ *  @param {number} [strength] - How steep the slopes are: a height change of 1 over one pixel leans the normal
+ *  by strength
+ *  @return {TextureInfo} - Wraps; headless it has no image
+ *  @memberof Render3D */
+function normalMapFromHeight(size, heightFunction, strength=1)
+{
+    false&&ASSERT(isVector2(size) && size.x >= 1 && size.y >= 1, 'normalMapFromHeight size must be a Vector2 of pixels');
+    const width = size.x | 0, height = size.y | 0;
+    if (typeof OffscreenCanvas == 'undefined')
+    {
+        // headless, nothing to draw into; the right size so what reads it still works
+        const textureInfo = new TextureInfo(undefined, false, true);
+        textureInfo.size = vec2(width, height), textureInfo.sizeInverse = vec2(1 / width, 1 / height);
+        return textureInfo;
+    }
+    const context = createCanvasContext(width, height);
+    const pixels = render3DNormalMapPixels(width, height, heightFunction, strength);
+    context.putImageData(new ImageData(pixels, width, height), 0, 0);
+    return new TextureInfo(context.canvas, true, true);
+}
+
+// the pixels of a normal map made from heights, rgba with the top row first: each normal leans away from the uphill
+// side, green up the image as OpenGL has it, and a flat height is (128, 128, 255); rounded before they are stored,
+// since the clamped array would round a flat 127.5 to even
+function render3DNormalMapPixels(width, height, heightFunction, strength)
+{
+    const heights = new Float32Array(width * height), pixels = new Uint8ClampedArray(width * height * 4);
+    for (let y = 0; y < height; ++y)
+    for (let x = 0; x < width; ++x)
+        heights[y * width + x] = heightFunction(x, y);
+    const h = (x, y)=> heights[mod(y, height) * width + mod(x, width)];
+    for (let y = 0; y < height; ++y)
+    for (let x = 0; x < width; ++x)
+    {
+        const dx = (h(x+1, y) - h(x-1, y)) / 2 * strength, dy = (h(x, y+1) - h(x, y-1)) / 2 * strength;
+        const k = 1 / hypot(dx, dy, 1), i = (y * width + x) * 4;
+        pixels[i] = round((-dx * k * .5 + .5) * 255);
+        pixels[i+1] = round((dy * k * .5 + .5) * 255);
+        pixels[i+2] = round((k * .5 + .5) * 255);
+        pixels[i+3] = 255;
+    }
+    return pixels;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // The rest of the shape builders: buildLathe, buildSphere, buildBox, buildGrid and buildSky live with the
 // renderer, since it hands those out itself

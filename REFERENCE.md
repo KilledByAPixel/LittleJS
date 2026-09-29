@@ -1441,6 +1441,8 @@ buildLoft(stations) // a hull from diamond shaped cross sections, the stations: 
                     // ...] nose first at the largest z, always flat; sideHeight is 0 to 1, where the side corners sit
                     // between the bottom and the top; the other order would build the hull inside out, so it asserts
 buildSky(topColor, horizonColor, bottomColor, sides, rings) // dome colored by height, set as render3D.sky
+normalMapFromHeight(size, heightFunction, strength=1) // a wrapping normal map TextureInfo made in code, no image:
+                                     // heightFunction(x, y) is 0 to 1 at each pixel, the slope strength times steeper
 buildExtrude(pixels, size, depth) // 3D sprite: each solid pixel of a tileInfo given thickness, like a block model,
                                   // colors kept; or rows of pixels (Color, truthy for white, falsy for empty)
 buildText3D(text, size, depth, font) // extruded glyphs from an ImageFont, the white engine font by default so the
