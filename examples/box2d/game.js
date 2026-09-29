@@ -30,16 +30,19 @@ export let spriteAtlas, groundObject, mouseJoint, repeatSpawnTimer = new LJS.Tim
 const sound_click = new LJS.Sound([.2,.1,,,,.01,,,,,,,,,,,,,,,-500]);
 
 ///////////////////////////////////////////////////////////////////////////////
-function setScene(scene)
+// each demo scene is a scene for the scene system, setScene destroys the old
+// scene's objects and its enter builds the new one
+const demoScenes = [];
+for (let i = 0; i < sceneCount; ++i)
+    demoScenes.push({enter: ()=> loadDemoScene(i)});
+
+function loadDemoScene(scene)
 {
     // setup
     LJS.setCameraPos(vec2(20,10));
     LJS.setGravity(vec2(0,-20));
-
-    // destroy old scene
-    LJS.engineObjectsDestroy();
     mouseJoint = 0;
-    
+
     // create walls
     groundObject = GameObjects.spawnBox(vec2(0,-4), vec2(1e3,8), hsl(0,0,.2), LJS.box2d.bodyTypeStatic);
     GameObjects.spawnBox(vec2(-4, 0), vec2(8,1e3), LJS.BLACK, LJS.box2d.bodyTypeStatic);
@@ -72,7 +75,7 @@ async function gameInit()
 
     // startup the demo
     LJS.setCanvasClearColor(hsl(0,0,.8));
-    setScene(startScene);
+    LJS.setScene(demoScenes[startScene]);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -120,12 +123,12 @@ function gameUpdate()
         GameObjects.explosion(LJS.mousePos);
 
     if (LJS.keyWasPressed('KeyR'))
-        setScene(Scenes.scene); // reset scene
+        LJS.setScene(LJS.getScene()); // restart the scene
     if (LJS.keyWasPressed('ArrowUp') || LJS.keyWasPressed('ArrowDown'))
     {
         // change scene
         const upPressed = LJS.keyWasPressed('ArrowUp');
-        setScene(LJS.mod(Scenes.scene + (upPressed?1:-1), sceneCount));
+        LJS.setScene(demoScenes[LJS.mod(Scenes.scene + (upPressed?1:-1), sceneCount)]);
     }
 }
 
