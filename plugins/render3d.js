@@ -4207,18 +4207,34 @@ class Light3D extends EngineObject3D
         this.additive = true; // the glow is added on, in the transparent stage; a light with none draws nothing
     }
 
-    /** Draw the glow, soft discs facing the camera, pulled toward it by half its size so a lamp at the light does
-     *  not cut into it, but never past the camera; three faint ones, each smaller, make a haze brightest in the middle */
+    /** Draw the glow, a quad facing the camera with a soft round glow on it, pulled toward the camera by half its
+     *  size so a lamp at the light does not cut into it, but never past the camera */
     render3D()
     {
         if (!(this.glow > 0) || this.directional) return;
         const r = render3D, c = this.color, pos = render3DObjectMatrix(this).getTranslation();
         const toCamera = r.camera.pos.subtract(pos), distance = toCamera.length();
         const at = distance ? pos.add(toCamera.scale(min(this.glow, distance) / 2 / distance)) : pos;
-        const color = rgb(c.r, c.g, c.b, c.a * min(this.intensity, 1) / 3);
-        for (const size of [1, .5, .2])
-            r.drawSoftDisc(at, this.glow * size, color);
+        r.drawBillboard(at, vec2(this.glow), render3DGlow(), rgb(c.r, c.g, c.b, c.a * min(this.intensity, 1)));
     }
+}
+
+// a soft round glow for the lights, made once from a canvas: a bell from the middle, bright and then fading
+// smoothly, to nothing at the edge; undefined headless or without a canvas
+let render3DGlowTexture;
+function render3DGlow()
+{
+    if (render3DGlowTexture || !glContext || typeof OffscreenCanvas == 'undefined') return render3DGlowTexture;
+    const size = 64, context = createCanvasContext(size), steps = 16, edge = Math.exp(-3.5);
+    const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    for (let i = 0; i <= steps; ++i)
+    {
+        const r = i / steps, alpha = (Math.exp(-3.5 * r * r) - edge) / (1 - edge);
+        gradient.addColorStop(r, 'rgba(255,255,255,' + alpha.toFixed(4) + ')');
+    }
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, size, size);
+    return render3DGlowTexture = new TextureInfo(context.canvas);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
