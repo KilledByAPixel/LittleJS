@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Render3DPlugin, ParticleEmitter3D, HeightMap, VoxelMap, vec2, vec3, WHITE, PI } from '../dist/littlejs.esm.js';
+import { render3D, Render3DPlugin, ParticleEmitter3D, HeightMap, VoxelMap, vec2, vec3, WHITE, PI } from '../dist/littlejs.esm.js';
 
 // 3D particles as the 2D ones: callbacks when one is made, moves, hits the level and goes, and, opted in, collision
 // with the level's height maps and voxel maps. A particle is numbers in the emitter's array, so a callback gets a
@@ -244,4 +244,26 @@ test('a destroy callback that emits while the arrays grow leaves every particle 
         assert.equal(p.age, 0);
     }
     e.destroy(true);
+});
+
+test('gravityScale adds a share of render3D.gravity to the emitter\'s own fall, grown by its scale', ()=>
+{
+    const saved = render3D.gravity;
+    render3D.gravity = vec3(.001, -.02, .003);
+    try
+    {
+        const e = new ParticleEmitter3D(vec3(), 0, 0, 0, PI, undefined, WHITE, WHITE, WHITE, WHITE, 5, .1, .1, 0, 1, .004);
+        assert.equal(e.gravityScale, 0);
+        e.gravityScale = .5;
+        e.scale3D = vec3(2);
+        e.emitParticle();
+        e.update();
+        const d = e.particleData; // velocity is floats 3 to 5
+        // (own .004 + -.02 * .5) * 2 = -.012 in y; (.001 * .5) * 2 = .001 in x; (.003 * .5) * 2 = .003 in z
+        near(d[3], .001, 'x ' + d[3]);
+        near(d[4], -.012, 'y ' + d[4]);
+        near(d[5], .003, 'z ' + d[5]);
+        e.destroy();
+    }
+    finally { render3D.gravity = saved; }
 });

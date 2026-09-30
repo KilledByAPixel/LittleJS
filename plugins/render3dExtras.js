@@ -950,8 +950,9 @@ function render3DParticleView(emitter)
  * - emitConeAngle spreads them, PI sprays in every direction
  * - Speeds are per frame and sizes are world units, the same as the 2D emitter
  * - scale3D, its own or a parent's, grows the whole effect: the spawn area, the sizes, the speed and the fall
- * - gravity here is its own number added to velocity y each frame: it is neither the engine's 2D
- *   gravity nor render3D.gravity, so an effect keeps its own fall wherever it is used
+ * - gravity here is its own number added to velocity y each frame, so an effect keeps its own fall wherever it is
+ *   used, the same as the 2D emitter's gravity; gravityScale adds a share of render3D.gravity on top, as the 2D
+ *   emitter's gravityScale adds the engine's gravity
  * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
  * - Callbacks as the 2D emitter's: particleCreateCallback, particleUpdateCallback, particleCollideCallback and
  *   particleDestroyCallback, each given a Particle3D, one object the emitter reuses for every particle and call
@@ -981,8 +982,8 @@ class ParticleEmitter3D extends EngineObject3D
      *  @param {number} [sizeEnd] - Particle size at end of life
      *  @param {number} [speed] - Spawn speed in world units per frame
      *  @param {number} [damping] - Per frame velocity multiplier, 1 is none
-     *  @param {number} [gravity] - Per frame change to velocity y, negative pulls down; its own number,
-     *    not render3D.gravity, so the 2D emitter's gravityScale has no equivalent here
+     *  @param {number} [gravity] - Per frame change to velocity y, negative pulls down; its own number, and
+     *    gravityScale adds a share of render3D.gravity on top
      *  @param {number} [fadeRate] - Fraction of life spent fading, half in and half out
      *  @param {number} [randomness] - Extra randomness applied to speed, size and life
      *  @param {boolean} [additive] - Additive blending */
@@ -1023,6 +1024,9 @@ class ParticleEmitter3D extends EngineObject3D
         this.damping = damping;
         /** @property {number} - Per frame change to velocity y, its own number and not render3D.gravity */
         this.gravity = gravity;
+        /** @property {number} - Share of render3D.gravity added each frame on top of its own gravity, 0 by default so
+         *  an effect keeps its own fall wherever it is used; 1 falls with the world, like debris */
+        this.gravityScale = 0;
         /** @property {number} - Fraction of life spent fading, half in and half out */
         this.fadeRate = fadeRate;
         /** @property {number} - Extra randomness applied to speed, size and life */
@@ -1110,7 +1114,11 @@ class ParticleEmitter3D extends EngineObject3D
         const F = RENDER3D_PARTICLE_FLOATS;
         let data = this.particleData, trail = this.trailData;
         const reread = ()=> { data = this.particleData, trail = this.trailData; };
-        const damping = this.damping, gravity = this.gravity * scale, angleDamping = this.angleDamping; // a bigger effect has to fall faster to keep the same arc
+        // its own fall and a share of the world's, grown by the scale: a bigger effect has to fall faster to keep the
+        // same arc
+        const damping = this.damping, angleDamping = this.angleDamping, g = render3D.gravity, share = this.gravityScale;
+        const gravityX = g.x * share * scale, gravityY = (this.gravity + g.y * share) * scale;
+        const gravityZ = g.z * share * scale;
         const collideLevel = this.collideLevel && render3DLevel.length;
         const updateCallback = this.particleUpdateCallback, destroyCallback = this.particleDestroyCallback;
         for (let i = this.particleCount; i--;)
@@ -1118,7 +1126,8 @@ class ParticleEmitter3D extends EngineObject3D
             // damped first and gravity added after, the order the 2D particle uses, so the same
             // damping and gravity give the same arc in both
             const k = i * F;
-            const vx = data[k+3] *= damping, vy = data[k+4] = data[k+4] * damping + gravity, vz = data[k+5] *= damping;
+            const vx = data[k+3] = data[k+3] * damping + gravityX, vy = data[k+4] = data[k+4] * damping + gravityY;
+            const vz = data[k+5] = data[k+5] * damping + gravityZ;
             data[k] += vx, data[k+1] += vy, data[k+2] += vz;
             data[k+18] += data[k+19] *= angleDamping;
             collideLevel && (this.particleCollide(k, data[k] - vx, data[k+1] - vy, data[k+2] - vz), reread());

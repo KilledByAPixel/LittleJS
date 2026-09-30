@@ -1602,6 +1602,7 @@ new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileIn
 // particles shoot out along the emitter's own up axis, so rotation3D aims the spray; emitSize is a sphere diameter or a
 // vec3 box; speeds are per frame, sizes are world units, gravity changes velocity y per frame so it is negative to
 // fall, and it is the emitter's own number rather than render3D.gravity, so an effect falls the same wherever it is used
+emitter3D.gravityScale = 0 // a share of render3D.gravity added on top of its own gravity, 1 falls with the world
 // emitConeAngle is the half angle around that direction, PI is every direction; damping multiplies velocity each frame,
 // 1 by default for no slowing; fadeRate is the fraction of life spent fading, half in and half out; randomness is extra
 // randomness on speed, size and life

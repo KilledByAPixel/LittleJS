@@ -9434,8 +9434,9 @@ declare module "littlejsengine" {
      * - emitConeAngle spreads them, PI sprays in every direction
      * - Speeds are per frame and sizes are world units, the same as the 2D emitter
      * - scale3D, its own or a parent's, grows the whole effect: the spawn area, the sizes, the speed and the fall
-     * - gravity here is its own number added to velocity y each frame: it is neither the engine's 2D
-     *   gravity nor render3D.gravity, so an effect keeps its own fall wherever it is used
+     * - gravity here is its own number added to velocity y each frame, so an effect keeps its own fall wherever it is
+     *   used, the same as the 2D emitter's gravity; gravityScale adds a share of render3D.gravity on top, as the 2D
+     *   emitter's gravityScale adds the engine's gravity
      * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
      * - Callbacks as the 2D emitter's: particleCreateCallback, particleUpdateCallback, particleCollideCallback and
      *   particleDestroyCallback, each given a Particle3D, one object the emitter reuses for every particle and call
@@ -9464,8 +9465,8 @@ declare module "littlejsengine" {
          *  @param {number} [sizeEnd] - Particle size at end of life
          *  @param {number} [speed] - Spawn speed in world units per frame
          *  @param {number} [damping] - Per frame velocity multiplier, 1 is none
-         *  @param {number} [gravity] - Per frame change to velocity y, negative pulls down; its own number,
-         *    not render3D.gravity, so the 2D emitter's gravityScale has no equivalent here
+         *  @param {number} [gravity] - Per frame change to velocity y, negative pulls down; its own number, and
+         *    gravityScale adds a share of render3D.gravity on top
          *  @param {number} [fadeRate] - Fraction of life spent fading, half in and half out
          *  @param {number} [randomness] - Extra randomness applied to speed, size and life
          *  @param {boolean} [additive] - Additive blending */
