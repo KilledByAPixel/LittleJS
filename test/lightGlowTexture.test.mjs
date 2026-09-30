@@ -6,7 +6,7 @@ import { loadEngine } from './vmEngine.mjs';
 // falloff; one texture for each falloff, rounded so a glow that changes its falloff every frame makes only a few
 
 const { run } = loadEngine();
-const alpha = (r, falloff)=> run(`render3DGlowAlpha(${r}, ${falloff})`);
+const alpha = (r, falloff)=> run(`engineGlowAlpha(${r}, ${falloff})`);
 
 test('the glow is full in the middle and nothing at the edge, at any falloff', ()=>
 {
@@ -29,8 +29,8 @@ test('each falloff gets a texture of its own, made once, and close ones share', 
         OffscreenCanvas = class { constructor(w, h) { this.width = w; this.height = h; ++made; }
             getContext() { return { createRadialGradient: ()=> ({ addColorStop() {} }), fillRect() {} }; } };
         glRegisterTextureInfo = ()=> {};`);
-    assert.equal(run('render3DGlow(1) === render3DGlow(1)'), true);
-    assert.equal(run('render3DGlow(1) === render3DGlow(1.01)'), true, 'rounded to a tenth');
-    assert.equal(run('render3DGlow(1) === render3DGlow(2)'), false);
+    assert.equal(run('engineGlowTexture(1) === engineGlowTexture(1)'), true);
+    assert.equal(run('engineGlowTexture(1) === engineGlowTexture(1.01)'), true, 'rounded to a tenth');
+    assert.equal(run('engineGlowTexture(1) === engineGlowTexture(2)'), false);
     assert.equal(run('made'), 2);
 });

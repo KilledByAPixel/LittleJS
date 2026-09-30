@@ -7,10 +7,10 @@ function gameInit()
     // draw the world at full brightness
     canvasClearColor = hsl(0,0,.9);
 
-    // stationary Lights
-    new Light(vec2(-6, 0), 6, RED);
-    new Light(vec2( 0, 4), 4, GREEN);
-    new Light(vec2( 6, 0), 8, BLUE);
+    // stationary Lights, each with a soft glow over it like a lamp
+    new Light(vec2(-6, 0), 6, RED).glow = 3;
+    new Light(vec2( 0, 4), 4, GREEN).glow = 3;
+    new Light(vec2( 6, 0), 8, BLUE).glow = 3;
 
     // a glowing object: renderLight adds light around it to the
     // lightmap, where obj.emissive would only show its own colors
@@ -23,6 +23,7 @@ function gameInit()
 
     // mouse light - scroll wheel adjusts radius
     mouseLight = new Light(vec2(), 4, WHITE);
+    mouseLight.glow = 2;
 }
 
 function gameRender()

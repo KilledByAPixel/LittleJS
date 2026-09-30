@@ -1848,6 +1848,33 @@ class ImageFont
     }
 }
 
+// how strong a light's glow is at a distance from its middle, 0 there to 1 at the edge: a bell, full in the middle
+// and nothing at the edge, fading faster the higher the falloff
+function engineGlowAlpha(r, falloff)
+{
+    const k = 3.5 * falloff, edge = Math.exp(-k);
+    return (Math.exp(-k * r * r) - edge) / (1 - edge);
+}
+
+// the soft round glow of the 2D and 3D lights, one texture for each falloff, rounded to a tenth so a changing falloff
+// makes only a few, each made once from a canvas; undefined headless or without a canvas
+const engineGlowTextures = new Map;
+function engineGlowTexture(falloff=1)
+{
+    ASSERT(isNumber(falloff) && falloff > 0, 'glowFalloff must be a number above 0');
+    const key = max(round(falloff * 10), 1) / 10;
+    let texture = engineGlowTextures.get(key);
+    if (texture || !glContext || typeof OffscreenCanvas == 'undefined') return texture;
+    const size = 64, context = createCanvasContext(size), steps = 16;
+    const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    for (let i = 0; i <= steps; ++i)
+        gradient.addColorStop(i / steps, 'rgba(255,255,255,' + engineGlowAlpha(i / steps, key).toFixed(4) + ')');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, size, size);
+    engineGlowTextures.set(key, texture = new TextureInfo(context.canvas));
+    return texture;
+}
+
 // load engine font, called automatically on startup
 async function imageFontInit()
 {

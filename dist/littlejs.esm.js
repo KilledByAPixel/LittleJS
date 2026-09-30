@@ -6825,6 +6825,33 @@ class ImageFont
     }
 }
 
+// how strong a light's glow is at a distance from its middle, 0 there to 1 at the edge: a bell, full in the middle
+// and nothing at the edge, fading faster the higher the falloff
+function engineGlowAlpha(r, falloff)
+{
+    const k = 3.5 * falloff, edge = Math.exp(-k);
+    return (Math.exp(-k * r * r) - edge) / (1 - edge);
+}
+
+// the soft round glow of the 2D and 3D lights, one texture for each falloff, rounded to a tenth so a changing falloff
+// makes only a few, each made once from a canvas; undefined headless or without a canvas
+const engineGlowTextures = new Map;
+function engineGlowTexture(falloff=1)
+{
+    ASSERT(isNumber(falloff) && falloff > 0, 'glowFalloff must be a number above 0');
+    const key = max(round(falloff * 10), 1) / 10;
+    let texture = engineGlowTextures.get(key);
+    if (texture || !glContext || typeof OffscreenCanvas == 'undefined') return texture;
+    const size = 64, context = createCanvasContext(size), steps = 16;
+    const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    for (let i = 0; i <= steps; ++i)
+        gradient.addColorStop(i / steps, 'rgba(255,255,255,' + engineGlowAlpha(i / steps, key).toFixed(4) + ')');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, size, size);
+    engineGlowTextures.set(key, texture = new TextureInfo(context.canvas));
+    return texture;
+}
+
 // load engine font, called automatically on startup
 async function imageFontInit()
 {
@@ -13520,6 +13547,8 @@ function postProcessTV({noise=.1, scanlines=.5, scanlineSpacing=6, glow=.4, vign
  *   shadow map through renderShadow(), which calls render() by default; obj.castShadow = false keeps it
  *   out (a floor TileLayer, a background), a draw's alpha sets how much light it blocks, and
  *   setShadowTransparent lets its color tint the light
+ * - Set light.glow for a soft hazy glow over a light, like a lamp at night; it is added over the lit scene after the
+ *   lightmap, so it shows in the dark and sits in front of everything there
  * - Must be constructed BEFORE PostProcessPlugin so post-process sees lit pixels
  * @namespace LightSystem
  */
@@ -14032,8 +14061,14 @@ class LightSystemPlugin
             //    is, and any debug text / future draw could sample the lightmap)
             if (glActiveTexture)
                 glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
-            setAdditiveBlendMode(prevAdditive);
             glSetInstancedMode(true);
+
+            // 7. the lights' glows, added over the lit scene so the darkness does not dim them
+            setAdditiveBlendMode();
+            for (const o of engineObjects)
+                o instanceof Light && !o.destroyed && o.renderGlow();
+            glFlush();
+            setAdditiveBlendMode(prevAdditive);
         }
         function lightSystemContextLost()
         {
@@ -14201,6 +14236,14 @@ class Light extends EngineObject
          *  or torch that holds it, or the player carrying it, does not block it; it has to reach past that object's
          *  corners, about half its diagonal and a little more, or dark rays run out from them */
         this.shadowCore = 0;
+        /** @property {number} - Size across of a soft hazy glow drawn over the light, like a lamp at night, 0 for
+         *  none; it is added over the lit scene, in front of everything there */
+        this.glow = 0;
+        /** @property {number} - How fast the glow fades from its middle: 1 by default, .5 a wide haze, 2 a tight
+         *  bright core */
+        this.glowFalloff = 1;
+        /** @type {TileInfo|undefined} */
+        this.glowTileInfo = undefined; // the whole glow texture, kept for the falloff it was made for
     }
 
     /** Lights are invisible in the main render pass — they only contribute
@@ -14213,6 +14256,20 @@ class Light extends EngineObject
     renderLight()
     {
         lightSystem && lightSystem.drawLight(this);
+    }
+
+    /** Draw this light's glow, soft and round, its glow size across and in its color, added over the lit scene;
+     *  called by LightSystemPlugin after the lightmap is applied */
+    renderGlow()
+    {
+        if (!(this.glow > 0)) return;
+        const size = vec2(this.glow);
+        if (!isOnScreen(this.pos, size)) return;
+        const texture = engineGlowTexture(this.glowFalloff);
+        if (!texture) return;
+        if (this.glowTileInfo?.textureInfo !== texture)
+            this.glowTileInfo = new TileInfo(vec2(), texture.size, texture);
+        drawTile(this.pos, size, this.glowTileInfo, this.color, 0, false, undefined, true, false);
     }
 }
 
@@ -27256,35 +27313,8 @@ class Light3D extends EngineObject3D
         const toCamera = r.camera.pos.subtract(pos), distance = toCamera.length();
         const at = distance ? pos.add(toCamera.scale(min(this.glow, distance) / 2 / distance)) : pos;
         const color = rgb(c.r, c.g, c.b, c.a * min(this.intensity, 1));
-        r.drawBillboard(at, vec2(this.glow), render3DGlow(this.glowFalloff), color);
+        r.drawBillboard(at, vec2(this.glow), engineGlowTexture(this.glowFalloff), color);
     }
-}
-
-// how strong a light's glow is at a distance from its middle, 0 there to 1 at the edge: a bell, full in the middle
-// and nothing at the edge, fading faster the higher the falloff
-function render3DGlowAlpha(r, falloff)
-{
-    const k = 3.5 * falloff, edge = Math.exp(-k);
-    return (Math.exp(-k * r * r) - edge) / (1 - edge);
-}
-
-// the soft round glow of the lights, one texture for each falloff, rounded to a tenth so a changing falloff makes
-// only a few, each made once from a canvas; undefined headless or without a canvas
-const render3DGlowTextures = new Map;
-function render3DGlow(falloff=1)
-{
-    ASSERT(isNumber(falloff) && falloff > 0, 'glowFalloff must be a number above 0');
-    const key = max(round(falloff * 10), 1) / 10;
-    let texture = render3DGlowTextures.get(key);
-    if (texture || !glContext || typeof OffscreenCanvas == 'undefined') return texture;
-    const size = 64, context = createCanvasContext(size), steps = 16;
-    const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-    for (let i = 0; i <= steps; ++i)
-        gradient.addColorStop(i / steps, 'rgba(255,255,255,' + render3DGlowAlpha(i / steps, key).toFixed(4) + ')');
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, size, size);
-    render3DGlowTextures.set(key, texture = new TextureInfo(context.canvas));
-    return texture;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

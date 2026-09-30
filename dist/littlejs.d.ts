@@ -4669,6 +4669,8 @@ declare module "littlejsengine" {
      *   shadow map through renderShadow(), which calls render() by default; obj.castShadow = false keeps it
      *   out (a floor TileLayer, a background), a draw's alpha sets how much light it blocks, and
      *   setShadowTransparent lets its color tint the light
+     * - Set light.glow for a soft hazy glow over a light, like a lamp at night; it is added over the lit scene after the
+     *   lightmap, so it shows in the dark and sits in front of everything there
      * - Must be constructed BEFORE PostProcessPlugin so post-process sees lit pixels
      * @namespace LightSystem
      */
@@ -4813,6 +4815,17 @@ declare module "littlejsengine" {
          *  or torch that holds it, or the player carrying it, does not block it; it has to reach past that object's
          *  corners, about half its diagonal and a little more, or dark rays run out from them */
         shadowCore: number;
+        /** @property {number} - Size across of a soft hazy glow drawn over the light, like a lamp at night, 0 for
+         *  none; it is added over the lit scene, in front of everything there */
+        glow: number;
+        /** @property {number} - How fast the glow fades from its middle: 1 by default, .5 a wide haze, 2 a tight
+         *  bright core */
+        glowFalloff: number;
+        /** @type {TileInfo|undefined} */
+        glowTileInfo: TileInfo | undefined;
+        /** Draw this light's glow, soft and round, its glow size across and in its color, added over the lit scene;
+         *  called by LightSystemPlugin after the lightmap is applied */
+        renderGlow(): void;
     }
     /**
      * LittleJS ZzFXM Plugin

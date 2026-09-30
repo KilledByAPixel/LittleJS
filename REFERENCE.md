@@ -973,6 +973,9 @@ new Light(pos, radius, color=WHITE, fadeRange=radius)
 //   radius    number   Total extent in world units
 //   color     Color    Light color; alpha modulates intensity
 //   fadeRange number   Width of the soft edge (0 = hard disc, radius = fully soft blob)
+light.glow = 0          // size across of a soft hazy glow over the light, like a lamp at night, 0 for none; added
+                        // over the lit scene after the lightmap, so it shows in the dark, in front of everything
+light.glowFalloff = 1   // how fast the glow fades from its middle, .5 a wide haze, 2 a tight bright core
 
 // Per-object lightmap contribution hook (on every EngineObject)
 class LavaTile extends EngineObject {

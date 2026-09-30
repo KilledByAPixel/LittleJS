@@ -20,6 +20,8 @@
  *   shadow map through renderShadow(), which calls render() by default; obj.castShadow = false keeps it
  *   out (a floor TileLayer, a background), a draw's alpha sets how much light it blocks, and
  *   setShadowTransparent lets its color tint the light
+ * - Set light.glow for a soft hazy glow over a light, like a lamp at night; it is added over the lit scene after the
+ *   lightmap, so it shows in the dark and sits in front of everything there
  * - Must be constructed BEFORE PostProcessPlugin so post-process sees lit pixels
  * @namespace LightSystem
  */
@@ -534,8 +536,14 @@ class LightSystemPlugin
             //    is, and any debug text / future draw could sample the lightmap)
             if (glActiveTexture)
                 glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
-            setAdditiveBlendMode(prevAdditive);
             glSetInstancedMode(true);
+
+            // 7. the lights' glows, added over the lit scene so the darkness does not dim them
+            setAdditiveBlendMode();
+            for (const o of engineObjects)
+                o instanceof Light && !o.destroyed && o.renderGlow();
+            glFlush();
+            setAdditiveBlendMode(prevAdditive);
         }
         function lightSystemContextLost()
         {
@@ -703,6 +711,14 @@ class Light extends EngineObject
          *  or torch that holds it, or the player carrying it, does not block it; it has to reach past that object's
          *  corners, about half its diagonal and a little more, or dark rays run out from them */
         this.shadowCore = 0;
+        /** @property {number} - Size across of a soft hazy glow drawn over the light, like a lamp at night, 0 for
+         *  none; it is added over the lit scene, in front of everything there */
+        this.glow = 0;
+        /** @property {number} - How fast the glow fades from its middle: 1 by default, .5 a wide haze, 2 a tight
+         *  bright core */
+        this.glowFalloff = 1;
+        /** @type {TileInfo|undefined} */
+        this.glowTileInfo = undefined; // the whole glow texture, kept for the falloff it was made for
     }
 
     /** Lights are invisible in the main render pass — they only contribute
@@ -715,5 +731,19 @@ class Light extends EngineObject
     renderLight()
     {
         lightSystem && lightSystem.drawLight(this);
+    }
+
+    /** Draw this light's glow, soft and round, its glow size across and in its color, added over the lit scene;
+     *  called by LightSystemPlugin after the lightmap is applied */
+    renderGlow()
+    {
+        if (!(this.glow > 0)) return;
+        const size = vec2(this.glow);
+        if (!isOnScreen(this.pos, size)) return;
+        const texture = engineGlowTexture(this.glowFalloff);
+        if (!texture) return;
+        if (this.glowTileInfo?.textureInfo !== texture)
+            this.glowTileInfo = new TileInfo(vec2(), texture.size, texture);
+        drawTile(this.pos, size, this.glowTileInfo, this.color, 0, false, undefined, true, false);
     }
 }

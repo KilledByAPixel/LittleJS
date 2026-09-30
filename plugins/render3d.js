@@ -4565,35 +4565,8 @@ class Light3D extends EngineObject3D
         const toCamera = r.camera.pos.subtract(pos), distance = toCamera.length();
         const at = distance ? pos.add(toCamera.scale(min(this.glow, distance) / 2 / distance)) : pos;
         const color = rgb(c.r, c.g, c.b, c.a * min(this.intensity, 1));
-        r.drawBillboard(at, vec2(this.glow), render3DGlow(this.glowFalloff), color);
+        r.drawBillboard(at, vec2(this.glow), engineGlowTexture(this.glowFalloff), color);
     }
-}
-
-// how strong a light's glow is at a distance from its middle, 0 there to 1 at the edge: a bell, full in the middle
-// and nothing at the edge, fading faster the higher the falloff
-function render3DGlowAlpha(r, falloff)
-{
-    const k = 3.5 * falloff, edge = Math.exp(-k);
-    return (Math.exp(-k * r * r) - edge) / (1 - edge);
-}
-
-// the soft round glow of the lights, one texture for each falloff, rounded to a tenth so a changing falloff makes
-// only a few, each made once from a canvas; undefined headless or without a canvas
-const render3DGlowTextures = new Map;
-function render3DGlow(falloff=1)
-{
-    ASSERT(isNumber(falloff) && falloff > 0, 'glowFalloff must be a number above 0');
-    const key = max(round(falloff * 10), 1) / 10;
-    let texture = render3DGlowTextures.get(key);
-    if (texture || !glContext || typeof OffscreenCanvas == 'undefined') return texture;
-    const size = 64, context = createCanvasContext(size), steps = 16;
-    const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-    for (let i = 0; i <= steps; ++i)
-        gradient.addColorStop(i / steps, 'rgba(255,255,255,' + render3DGlowAlpha(i / steps, key).toFixed(4) + ')');
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, size, size);
-    render3DGlowTextures.set(key, texture = new TextureInfo(context.canvas));
-    return texture;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
