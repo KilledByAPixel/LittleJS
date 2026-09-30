@@ -1262,8 +1262,12 @@ render3D.instancing = true     // every use of a mesh in the opaque stage is one
 new InstancedMesh3D(mesh, count, tileInfo, color) // many copies of a mesh as one draw with their transforms kept on the
                                   // GPU: an instance costs nothing per frame until it changes, for big sets that
                                   // mostly stay put; an EngineObject3D whose flags cover the whole set
-set.setMatrixAt(i, matrix)        // place an instance, in world space, the object's own transform does not move them
-set.setColorAt(i, color)          // color one, they start in the object's color; getMatrixAt(i) reads one back
+set.setTransformAt(i, pos, rotation, scale) // place an instance, in world space, the object's own transform does not
+                                  // move them; buildMatrix's arguments written straight in, the fastest way
+set.setMatrixAt(i, matrix)        // place one by a matrix; getMatrixAt(i) reads one back
+set.setColorAt(i, color)          // color one, they start in the object's color; only changed colors upload
+set.matrixData / set.colorData    // 16 and 8 floats an instance, edit them and call markDirty(i) / markColorDirty(i)
+set.radius = 50                   // fix the culling sphere, which otherwise grows to hold every instance set
 set.count = 500                   // draw the first 500 of the count it was made with
 render3D.renderAfter2D = false // true draws the 3D scene on top of the 2D scene instead of under it; objects that do
                                // not set their own renderAfter2D follow this
@@ -1644,7 +1648,8 @@ parent.attach(child)                      // parent.attach(child), kept where it
 new THREE.BoxGeometry(w, h, d)            // buildBox(vec3(w, h, d)), or render3D.boxMesh with scale3D
 new THREE.SphereGeometry(r)               // buildSphere(r*2), or render3D.sphereMesh with scale3D
 new THREE.PlaneGeometry(w, h)             // render3D.planeMesh with scale3D, lying flat
-new THREE.InstancedMesh(geometry, m, n)   // new InstancedMesh3D(mesh, n) with setMatrixAt and setColorAt, but its
+new THREE.InstancedMesh(geometry, m, n)   // new InstancedMesh3D(mesh, n) with setMatrixAt, or setTransformAt from a
+                                          // position, rotation and scale, and setColorAt; its
                                           // instances are in world space, the object's transform does not move them;
                                           // objects and drawMesh batch by themselves too, rebuilt each frame
 material.color, material.map              // obj.color, and a TileInfo or TextureInfo as obj.tileInfo

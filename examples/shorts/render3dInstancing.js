@@ -26,7 +26,7 @@ function gameInit()
     for (let i = 0; i < shell.count; ++i)
     {
         const pos = randVector3(rand(35, 60)), rotation = randVector3(PI);
-        shell.setMatrixAt(i, buildMatrix(pos, rotation, vec3(.4)));
+        shell.setTransformAt(i, pos, rotation, vec3(.4));
         shell.setColorAt(i, hsl(rand(), .4, .5));
     }
 }

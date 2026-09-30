@@ -8699,20 +8699,22 @@ declare module "littlejsengine" {
      * InstancedMesh3D - Many copies of one mesh drawn as one call, with their transforms kept on the GPU
      * - For big sets that mostly stay put: an instance costs nothing per frame until it changes, so a hundred thousand
      *   trees cost what one tree does; objects and drawMesh batch by themselves too, but rebuild their batch every frame
-     * - setMatrixAt and setColorAt change one instance, and only the changed range uploads before the next draw
+     * - setTransformAt, setMatrixAt and setColorAt change one instance, and only the changed range uploads before the
+     *   next draw; the matrices and the colors are kept apart, so moving instances uploads 64 bytes each
      * - The instances are in world space; the object's own pos3D, rotation3D and scale3D do not move them
-     * - The whole set is culled by one bounding sphere around the origin, and casts and receives shadows like any object
+     * - The whole set is culled by one bounding sphere around the origin, worked out when culling reads it, or set by hand
+     *   with radius; it casts and receives shadows like any object
      * - The object's flags cover the whole set, one emissive, one tileInfo, one shader; only the colors are per instance
      * - A mirrored instance, one with a negative scale, shows its inside unless the mesh is doubleSided
      * - A transparent set draws in one go in the transparent stage, its instances are not sorted against each other;
      *   the set sorts against other transparent draws by the object's position, so put pos3D at its middle
-     * - pick, the raycast and the collect helpers do not see the instances, test them yourself from instanceData
+     * - pick, the raycast and the collect helpers do not see the instances, test them yourself from matrixData
      * @extends EngineObject3D
      * @memberof Render3D
      * @example
      * const forest = new InstancedMesh3D(treeMesh, 1000);
      * for (let i = 0; i < 1000; ++i)
-     *     forest.setMatrixAt(i, buildMatrix(randomGroundPos(), vec3(0, rand(2*PI), 0)));
+     *     forest.setTransformAt(i, randomGroundPos(), vec3(0, rand(2*PI), 0));
      */
     export class InstancedMesh3D extends EngineObject3D {
         /** Create a set of instances of a mesh, each at the origin in the object's color until it is set
@@ -8725,18 +8727,38 @@ declare module "littlejsengine" {
         count: number;
         /** @property {number} - How many instances it was made with */
         maxCount: number;
-        /** @property {Float32Array} - The per instance values the shader reads, 24 floats each: the matrix, the color
-         *  and the uv rect; edit it directly and call markDirty for the instances changed */
-        instanceData: Float32Array;
+        /** @property {Float32Array} - Each instance's matrix, 16 floats, what moving them uploads; edit it directly and
+         *  call markDirty for the instances changed */
+        matrixData: Float32Array;
+        /** @property {Float32Array} - Each instance's color and uv rect, 8 floats, uploaded only when they change; edit
+         *  it directly and call markColorDirty for the instances changed */
+        colorData: Float32Array;
+        /** @property {number} - First instance whose matrix uploads before the next draw */
+        dirtyStart: number;
+        /** @property {number} - One past the last instance whose matrix uploads, nothing when it is not past dirtyStart */
+        dirtyEnd: number;
+        /** @property {number} - First instance whose color uploads before the next draw */
+        colorDirtyStart: number;
+        /** @property {number} - One past the last instance whose color uploads */
+        colorDirtyEnd: number;
         reachSquared: number;
         scaleSquared: number;
-        /** @property {number} - First instance to upload before the next draw */
-        dirtyStart: number;
-        /** @property {number} - One past the last instance to upload, so nothing uploads when it is not past dirtyStart */
-        dirtyEnd: number;
+        boundsStart: number;
+        boundsEnd: number;
+        /** @type {number|undefined} */
+        fixedRadius: number | undefined;
         buffer: WebGLBuffer;
+        /** @type {WebGLBuffer|undefined} */
+        colorBuffer: WebGLBuffer | undefined;
         bufferGeneration: number;
         uvTileInfo: TileInfo | TextureInfo;
+        /** Place an instance by its position, rotation and scale, what buildMatrix takes, written straight in with no
+         *  matrix made; in world space
+         *  @param {number} i
+         *  @param {Vector3} [pos]
+         *  @param {Vector3} [rotation] - Euler angles in radians
+         *  @param {Vector3} [scale] */
+        setTransformAt(i: number, pos?: Vector3, rotation?: Vector3, scale?: Vector3): void;
         /** Place an instance, in world space
          *  @param {number} i
          *  @param {Matrix4} matrix */
@@ -8749,12 +8771,19 @@ declare module "littlejsengine" {
          *  @param {number} i
          *  @param {Color} color */
         setColorAt(i: number, color: Color): void;
-        /** Note that an instance changed, so it uploads before the next draw and the bounds hold it; setMatrixAt and
-         *  setColorAt call this, and so must an edit made straight to instanceData
+        /** Note that an instance's matrix changed, so it uploads before the next draw and the bounds take it in when
+         *  they are read; setTransformAt and setMatrixAt call this, and so must an edit made straight to matrixData
          *  @param {number} i */
         markDirty(i: number): void;
+        /** Note that an instance's color changed, so it uploads before the next draw; setColorAt calls this, and so must
+         *  an edit made straight to colorData
+         *  @param {number} i */
+        markColorDirty(i: number): void;
+        set radius(arg: number);
         /** Radius of the sphere around the origin that holds every instance set so far, for culling: the farthest
-         *  instance, and the mesh's size at the largest scale; it only grows
+         *  instance, and the mesh's size at the largest scale; it only grows, and takes in the instances set since it
+         *  was last read, so with frustum culling off it is never worked out. Set it to fix the sphere, which a big set
+         *  that is culled can use to skip that work, and set it to undefined to go back to the bounds
          *  @return {number} */
         get radius(): number;
     }

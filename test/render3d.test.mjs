@@ -2497,35 +2497,35 @@ test('an InstancedMesh3D starts every instance at the origin in the object color
     assert.ok(set instanceof EngineObject3D);
     assert.equal(set.count, 3);
     assert.equal(set.maxCount, 3);
-    const d = set.instanceData;
-    assert.equal(d.length, 3 * 24);
+    const d = set.matrixData, c = set.colorData;
+    assert.equal(d.length, 3 * 16);
     assert.deepEqual([...d.subarray(0, 16)], [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); // the matrix
-    assert.deepEqual([...d.subarray(16, 20)], [1, 0, 0, 1]); // the color
-    assert.deepEqual([...d.subarray(20, 24)], [0, 0, 1, 1]); // the whole texture
-    assert.deepEqual([...d.subarray(2*24, 2*24 + 16)], [...d.subarray(0, 16)]); // every instance the same
-    assert.equal(set.dirtyStart, 0);
-    assert.equal(set.dirtyEnd, 3);
+    assert.deepEqual([...c.subarray(0, 4)], [1, 0, 0, 1]); // the color
+    assert.deepEqual([...c.subarray(4, 8)], [0, 0, 1, 1]); // the whole texture
+    assert.deepEqual([...d.subarray(2*16, 3*16)], [...d.subarray(0, 16)]); // every instance the same
+    assert.deepEqual([...c.subarray(2*8, 3*8)], [...c.subarray(0, 8)]);
+    assert.deepEqual([set.dirtyStart, set.dirtyEnd, set.colorDirtyStart, set.colorDirtyEnd], [0, 3, 0, 3]);
     assert.throws(()=> new InstancedMesh3D(render3D.boxMesh, 0));
     assert.throws(()=> new InstancedMesh3D(undefined, 3));
     set.destroy();
     engineObjects.length = 0;
 });
 
-test('setMatrixAt and setColorAt write one instance, widen the dirty range and the bounds, and read back', () =>
+test('setMatrixAt and setColorAt write one instance, widen their dirty ranges and the bounds, and read back', () =>
 {
     const set = new InstancedMesh3D(render3D.boxMesh, 4);
-    set.dirtyStart = Infinity, set.dirtyEnd = 0; // as after an upload
+    set.dirtyStart = set.colorDirtyStart = Infinity, set.dirtyEnd = set.colorDirtyEnd = 0; // as after an upload
     const m = buildMatrix(vec3(1, 2, 3), vec3(0, PI/2, 0), vec3(2));
     set.setMatrixAt(2, m);
-    const k = 2 * 24;
-    assert.deepEqual([...set.instanceData.subarray(k, k + 16)], [...m.m]);
+    const k = 2 * 16;
+    assert.deepEqual([...set.matrixData.subarray(k, k + 16)], [...m.m]);
     nearVec(set.getMatrixAt(2).getTranslation(), 1, 2, 3);
     assert.equal(set.dirtyStart, 2);
     assert.equal(set.dirtyEnd, 3);
     set.setColorAt(0, RED);
-    assert.deepEqual([...set.instanceData.subarray(16, 20)], [1, 0, 0, 1]);
-    assert.equal(set.dirtyStart, 0);
-    assert.equal(set.dirtyEnd, 3);
+    assert.deepEqual([...set.colorData.subarray(0, 4)], [1, 0, 0, 1]);
+    assert.deepEqual([set.colorDirtyStart, set.colorDirtyEnd], [0, 1]);
+    assert.deepEqual([set.dirtyStart, set.dirtyEnd], [2, 3], 'the matrices as they were');
     assert.ok(set.radius >= Math.hypot(1, 2, 3), 'the bounding sphere reaches the instance');
     assert.throws(()=> set.setMatrixAt(4, m)); // past the end
     assert.throws(()=> set.setColorAt(-1, RED));
@@ -3398,10 +3398,10 @@ test('picking sees a mesh edit right away, and a direct instance edit grows the 
     o.destroy();
 
     const set = new InstancedMesh3D(buildBox(), 1);
-    set.instanceData[12] = 100; // move the one instance directly, as the docs allow
+    set.matrixData[12] = 100; // move the one instance directly, as the docs allow
     set.markDirty(0);
     assert.ok(set.radius >= 100, 'the bounds reach the moved instance, radius ' + set.radius);
-    set.instanceData[0] = set.instanceData[5] = set.instanceData[10] = 3; // and scale it
+    set.matrixData[0] = set.matrixData[5] = set.matrixData[10] = 3; // and scale it
     set.markDirty(0);
     assert.ok(set.radius >= 100 + 3 * .8, 'and grow with its scale, radius ' + set.radius);
     set.destroy();

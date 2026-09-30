@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Render3DPlugin, InstancedMesh3D, buildBox, buildMatrix, vec3, hsl } from '../dist/littlejs.esm.js';
 
-// an InstancedMesh3D's culling sphere holds every instance set so far: it grows with each set as cheaply as it can,
-// its square roots taken only when the radius is read, and a color change leaves it alone
+// an InstancedMesh3D's culling sphere holds every instance set so far: the instances set since it was last read
+// are taken in when it is read, and a color change leaves it alone
 
 new Render3DPlugin;
 const near = (a, b, message)=> assert.ok(Math.abs(a - b) < 1e-5, message ?? `${a} is not ${b}`);
@@ -21,14 +21,14 @@ test('the radius is the farthest instance plus the mesh at the largest scale, ex
     set.destroy();
 });
 
-test('a color change marks the instance to upload and leaves the bounds alone', ()=>
+test('a color change marks the colors to upload and leaves the bounds alone', ()=>
 {
     const set = new InstancedMesh3D(buildBox(), 4), before = set.radius;
     set.render3D(); // headless it uploads nothing, the dirty range is cleared as after a draw
-    set.dirtyStart = Infinity, set.dirtyEnd = 0;
-    set.instanceData[2 * 24 + 12] = 50; // moved by hand and not marked, which a color change must not read
+    set.colorDirtyStart = Infinity, set.colorDirtyEnd = 0;
+    set.matrixData[2 * 16 + 12] = 50; // moved by hand and not marked, which a color change must not read
     set.setColorAt(2, hsl(0, 1, .5));
-    assert.deepEqual([set.dirtyStart, set.dirtyEnd], [2, 3], 'the one instance uploads');
+    assert.deepEqual([set.colorDirtyStart, set.colorDirtyEnd], [2, 3], 'the one color uploads');
     near(set.radius, before, 'the bounds did not take the unmarked move');
     set.markDirty(2);
     assert.ok(set.radius >= 50, 'marking it takes the move in');

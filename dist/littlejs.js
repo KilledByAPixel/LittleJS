@@ -22020,15 +22020,7 @@ class Matrix4
     static rotation(euler, matrix=new Matrix4)
     {
         ASSERT_VECTOR3_VALID(euler);
-        const cx = cos(euler.x), sx = sin(euler.x);
-        const cy = cos(euler.y), sy = sin(euler.y);
-        const cz = cos(euler.z), sz = sin(euler.z);
-        const m = matrix.m;
-        // R = Ry * Rx * Rz written out, column major, every element set so a reused matrix comes out clean
-        m[0] = cy*cz + sy*sx*sz;  m[1] = cx*sz;  m[2]  = -sy*cz + cy*sx*sz; m[3] = 0;
-        m[4] = -cy*sz + sy*sx*cz; m[5] = cx*cz;  m[6]  = sy*sz + cy*sx*cz;  m[7] = 0;
-        m[8] = sy*cx;             m[9] = -sx;    m[10] = cy*cx;             m[11] = 0;
-        m[12] = m[13] = m[14] = 0; m[15] = 1;
+        matrix4RotationAt(matrix.m, 0, euler);
         return matrix;
     }
 
@@ -22277,23 +22269,47 @@ class Matrix4
  */
 function buildMatrix(pos, rotation, scale, matrix=new Matrix4)
 {
+    ASSERT(matrix instanceof Matrix4, 'the matrix to write into must be a Matrix4');
+    matrix4Compose(matrix.m, 0, pos, rotation, scale);
+    return matrix;
+}
+
+// the rotation matrix of euler angles written into 16 floats of an array at k
+function matrix4RotationAt(m, k, euler)
+{
+    const cx = cos(euler.x), sx = sin(euler.x);
+    const cy = cos(euler.y), sy = sin(euler.y);
+    const cz = cos(euler.z), sz = sin(euler.z);
+    // R = Ry * Rx * Rz written out, column major, every element set so a reused matrix comes out clean
+    m[k]   = cy*cz + sy*sx*sz;  m[k+1] = cx*sz;  m[k+2]  = -sy*cz + cy*sx*sz; m[k+3] = 0;
+    m[k+4] = -cy*sz + sy*sx*cz; m[k+5] = cx*cz;  m[k+6]  = sy*sz + cy*sx*cz;  m[k+7] = 0;
+    m[k+8] = sy*cx;             m[k+9] = -sx;    m[k+10] = cy*cx;             m[k+11] = 0;
+    m[k+12] = m[k+13] = m[k+14] = 0; m[k+15] = 1;
+}
+
+// the transform buildMatrix makes, written into 16 floats of an array at k, so an instance buffer takes it straight in
+function matrix4Compose(m, k, pos, rotation, scale)
+{
     ASSERT(!pos || isVector3(pos), 'pos must be a Vector3', pos);
     ASSERT(!scale || isVector3(scale), 'scale must be a Vector3', scale);
-    ASSERT(matrix instanceof Matrix4, 'the matrix to write into must be a Matrix4');
     // scale the rotation columns and drop the position in, instead of multiplying three matrices
     // an object that is not turned at all is most of a big scene, and identity is what the six
     // trig calls would have worked out to anyway
-    const turned = rotation && (rotation.x || rotation.y || rotation.z), m = matrix.m;
-    turned ? Matrix4.rotation(rotation, matrix) : m.set(matrix4Identity);
+    if (rotation && (rotation.x || rotation.y || rotation.z))
+    {
+        ASSERT_VECTOR3_VALID(rotation);
+        matrix4RotationAt(m, k, rotation);
+    }
+    else
+        m.set(matrix4Identity, k);
     if (scale)
     {
-        m[0] *= scale.x; m[1] *= scale.x; m[2]  *= scale.x;
-        m[4] *= scale.y; m[5] *= scale.y; m[6]  *= scale.y;
-        m[8] *= scale.z; m[9] *= scale.z; m[10] *= scale.z;
+        m[k]   *= scale.x; m[k+1] *= scale.x; m[k+2]  *= scale.x;
+        m[k+4] *= scale.y; m[k+5] *= scale.y; m[k+6]  *= scale.y;
+        m[k+8] *= scale.z; m[k+9] *= scale.z; m[k+10] *= scale.z;
     }
     if (pos)
-        m[12] = pos.x, m[13] = pos.y, m[14] = pos.z;
-    return matrix;
+        m[k+12] = pos.x, m[k+13] = pos.y, m[k+14] = pos.z;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -22701,6 +22717,9 @@ const RENDER3D_VERTEX_BYTES = RENDER3D_VERTEX_FLOATS * 4;
 // uv rect (12); constants for one draw, one per instance for a batch; the shader derives the normal matrix
 const RENDER3D_INSTANCE_FLOATS = 24;
 const RENDER3D_INSTANCE_BYTES = RENDER3D_INSTANCE_FLOATS * 4;
+// an InstancedMesh3D keeps them apart: 16 floats of matrix, and 8 of tint and uv rect uploaded only when they change
+const RENDER3D_MATRIX_FLOATS = 16;
+const RENDER3D_COLOR_FLOATS = 8;
 const RENDER3D_INSTANCE_ATTRIBS = [[4, 4, 0], [5, 4, 16], [6, 4, 32], [7, 4, 48], [11, 4, 64], [12, 4, 80]];
 const RENDER3D_VERTEX_INPUTS =
     'layout(location=0) in vec3 p;layout(location=1) in vec3 n;layout(location=2) in vec2 t;layout(location=3) in vec4 c;' +
@@ -23030,13 +23049,16 @@ function render3DFlushInstances(only)
 // the arrays are turned on with their instance divisor for this one call and both are turned off after: a single
 // draw reads these slots as constant attributes, and in Firefox a draw that reads a constant through a slot whose
 // divisor is set leaves the next batch on that slot reading the wrong values
-function render3DDrawInstanced(mesh, buffer, count, textureInfo, state)
+// colorBuffer holds the tint and uv rect apart from the matrices, as an InstancedMesh3D keeps them
+function render3DDrawInstanced(mesh, buffer, count, textureInfo, state, colorBuffer)
 {
-    const gl = glContext;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    const gl = glContext, matrixBytes = RENDER3D_MATRIX_FLOATS * 4;
     for (const [location, size, offset] of RENDER3D_INSTANCE_ATTRIBS)
     {
-        gl.vertexAttribPointer(location, size, gl.FLOAT, false, RENDER3D_INSTANCE_BYTES, offset);
+        const inColors = colorBuffer && offset >= matrixBytes;
+        const stride = !colorBuffer ? RENDER3D_INSTANCE_BYTES : inColors ? RENDER3D_COLOR_FLOATS * 4 : matrixBytes;
+        gl.bindBuffer(gl.ARRAY_BUFFER, inColors ? colorBuffer : buffer);
+        gl.vertexAttribPointer(location, size, gl.FLOAT, false, stride, inColors ? offset - matrixBytes : offset);
         gl.enableVertexAttribArray(location);
         gl.vertexAttribDivisor(location, 1);
     }
@@ -26944,20 +26966,22 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects, tes
  * InstancedMesh3D - Many copies of one mesh drawn as one call, with their transforms kept on the GPU
  * - For big sets that mostly stay put: an instance costs nothing per frame until it changes, so a hundred thousand
  *   trees cost what one tree does; objects and drawMesh batch by themselves too, but rebuild their batch every frame
- * - setMatrixAt and setColorAt change one instance, and only the changed range uploads before the next draw
+ * - setTransformAt, setMatrixAt and setColorAt change one instance, and only the changed range uploads before the
+ *   next draw; the matrices and the colors are kept apart, so moving instances uploads 64 bytes each
  * - The instances are in world space; the object's own pos3D, rotation3D and scale3D do not move them
- * - The whole set is culled by one bounding sphere around the origin, and casts and receives shadows like any object
+ * - The whole set is culled by one bounding sphere around the origin, worked out when culling reads it, or set by hand
+ *   with radius; it casts and receives shadows like any object
  * - The object's flags cover the whole set, one emissive, one tileInfo, one shader; only the colors are per instance
  * - A mirrored instance, one with a negative scale, shows its inside unless the mesh is doubleSided
  * - A transparent set draws in one go in the transparent stage, its instances are not sorted against each other;
  *   the set sorts against other transparent draws by the object's position, so put pos3D at its middle
- * - pick, the raycast and the collect helpers do not see the instances, test them yourself from instanceData
+ * - pick, the raycast and the collect helpers do not see the instances, test them yourself from matrixData
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
  * const forest = new InstancedMesh3D(treeMesh, 1000);
  * for (let i = 0; i < 1000; ++i)
- *     forest.setMatrixAt(i, buildMatrix(randomGroundPos(), vec3(0, rand(2*PI), 0)));
+ *     forest.setTransformAt(i, randomGroundPos(), vec3(0, rand(2*PI), 0));
  */
 class InstancedMesh3D extends EngineObject3D
 {
@@ -26976,28 +27000,54 @@ class InstancedMesh3D extends EngineObject3D
         this.count = count;
         /** @property {number} - How many instances it was made with */
         this.maxCount = count;
-        /** @property {Float32Array} - The per instance values the shader reads, 24 floats each: the matrix, the color
-         *  and the uv rect; edit it directly and call markDirty for the instances changed */
-        this.instanceData = new Float32Array(count * RENDER3D_INSTANCE_FLOATS);
+        /** @property {Float32Array} - Each instance's matrix, 16 floats, what moving them uploads; edit it directly and
+         *  call markDirty for the instances changed */
+        this.matrixData = new Float32Array(count * RENDER3D_MATRIX_FLOATS);
+        /** @property {Float32Array} - Each instance's color and uv rect, 8 floats, uploaded only when they change; edit
+         *  it directly and call markColorDirty for the instances changed */
+        this.colorData = new Float32Array(count * RENDER3D_COLOR_FLOATS);
+        /** @property {number} - First instance whose matrix uploads before the next draw */
+        this.dirtyStart = 0;
+        /** @property {number} - One past the last instance whose matrix uploads, nothing when it is not past dirtyStart */
+        this.dirtyEnd = count;
+        /** @property {number} - First instance whose color uploads before the next draw */
+        this.colorDirtyStart = 0;
+        /** @property {number} - One past the last instance whose color uploads */
+        this.colorDirtyEnd = count;
         // the farthest any instance's position has been from the origin, and the largest scale any has had, both
-        // squared, so setting an instance takes no square root; see radius
+        // squared, and the instances set since radius last took them in: setting one does no bounds work at all
         this.reachSquared = 0;
         this.scaleSquared = 0;
-        /** @property {number} - First instance to upload before the next draw */
-        this.dirtyStart = 0;
-        /** @property {number} - One past the last instance to upload, so nothing uploads when it is not past dirtyStart */
-        this.dirtyEnd = count;
-        this.buffer = undefined;    // the GPU copy of instanceData
-        this.bufferGeneration = -1; // the context it was made under
-        this.uvTileInfo = tileInfo; // the tile the uv rects were written for
-        const uv = render3DGetTileUVs(tileInfo), data = this.instanceData;
+        this.boundsStart = 0;
+        this.boundsEnd = count;
+        /** @type {number|undefined} */
+        this.fixedRadius = undefined; // a radius set by hand, see radius
+        this.buffer = undefined;      // the GPU copy of matrixData
+        /** @type {WebGLBuffer|undefined} */
+        this.colorBuffer = undefined; // and of colorData
+        this.bufferGeneration = -1;   // the context they were made under
+        this.uvTileInfo = tileInfo;   // the tile the uv rects were written for
+        const uv = render3DGetTileUVs(tileInfo), matrices = this.matrixData, colors = this.colorData;
         for (let i = 0; i < count; ++i)
         {
-            this.setMatrixAt(i, RENDER3D_IDENTITY);
-            const k = i * RENDER3D_INSTANCE_FLOATS;
-            data[k+16] = color.r; data[k+17] = color.g; data[k+18] = color.b; data[k+19] = color.a;
-            data[k+20] = uv.x; data[k+21] = uv.y; data[k+22] = uv.w; data[k+23] = uv.h;
+            matrices.set(RENDER3D_IDENTITY.m, i * RENDER3D_MATRIX_FLOATS);
+            const k = i * RENDER3D_COLOR_FLOATS;
+            colors[k] = color.r; colors[k+1] = color.g; colors[k+2] = color.b; colors[k+3] = color.a;
+            colors[k+4] = uv.x; colors[k+5] = uv.y; colors[k+6] = uv.w; colors[k+7] = uv.h;
         }
+    }
+
+    /** Place an instance by its position, rotation and scale, what buildMatrix takes, written straight in with no
+     *  matrix made; in world space
+     *  @param {number} i
+     *  @param {Vector3} [pos]
+     *  @param {Vector3} [rotation] - Euler angles in radians
+     *  @param {Vector3} [scale] */
+    setTransformAt(i, pos, rotation, scale)
+    {
+        ASSERT(i >= 0 && i < this.maxCount, 'instance index out of range');
+        matrix4Compose(this.matrixData, i * RENDER3D_MATRIX_FLOATS, pos, rotation, scale);
+        this.markDirty(i);
     }
 
     /** Place an instance, in world space
@@ -27006,8 +27056,9 @@ class InstancedMesh3D extends EngineObject3D
     setMatrixAt(i, matrix)
     {
         ASSERT(i >= 0 && i < this.maxCount, 'instance index out of range');
-        const data = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS, m = matrix.m;
-        data.set(m, k);
+        const data = this.matrixData, k = i * RENDER3D_MATRIX_FLOATS, m = matrix.m;
+        for (let j = 0; j < 16; ++j)
+            data[k+j] = m[j]; // for 16 floats a loop beats set's call
         this.markDirty(i);
     }
 
@@ -27017,8 +27068,8 @@ class InstancedMesh3D extends EngineObject3D
     getMatrixAt(i)
     {
         ASSERT(i >= 0 && i < this.maxCount, 'instance index out of range');
-        const k = i * RENDER3D_INSTANCE_FLOATS, matrix = new Matrix4;
-        matrix.m.set(this.instanceData.subarray(k, k + 16));
+        const k = i * RENDER3D_MATRIX_FLOATS, matrix = new Matrix4;
+        matrix.m.set(this.matrixData.subarray(k, k + 16));
         return matrix;
     }
 
@@ -27029,36 +27080,58 @@ class InstancedMesh3D extends EngineObject3D
     {
         ASSERT(i >= 0 && i < this.maxCount, 'instance index out of range');
         ASSERT(isColor(color), 'color must be a Color');
-        const data = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS;
-        data[k+16] = color.r; data[k+17] = color.g; data[k+18] = color.b; data[k+19] = color.a;
-        // a color changes nothing the bounds hold, it only has to upload
-        this.dirtyStart = min(this.dirtyStart, i);
-        this.dirtyEnd = max(this.dirtyEnd, i + 1);
+        const data = this.colorData, k = i * RENDER3D_COLOR_FLOATS;
+        data[k] = color.r; data[k+1] = color.g; data[k+2] = color.b; data[k+3] = color.a;
+        this.markColorDirty(i);
     }
 
-    /** Note that an instance changed, so it uploads before the next draw and the bounds hold it; setMatrixAt and
-     *  setColorAt call this, and so must an edit made straight to instanceData
+    /** Note that an instance's matrix changed, so it uploads before the next draw and the bounds take it in when
+     *  they are read; setTransformAt and setMatrixAt call this, and so must an edit made straight to matrixData
      *  @param {number} i */
     markDirty(i)
     {
-        this.dirtyStart = min(this.dirtyStart, i);
-        this.dirtyEnd = max(this.dirtyEnd, i + 1);
+        if (i < this.dirtyStart) this.dirtyStart = i;
+        if (i >= this.dirtyEnd) this.dirtyEnd = i + 1;
+        if (i < this.boundsStart) this.boundsStart = i;
+        if (i >= this.boundsEnd) this.boundsEnd = i + 1;
+    }
 
-        // the bounds grow to hold where it is now and how big, read back from the matrix it has, squared
-        const d = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS, x = d[k+12], y = d[k+13], z = d[k+14];
-        const reach = x*x + y*y + z*z, scale = render3DMaxStretchSquared(d, k);
-        if (reach > this.reachSquared) this.reachSquared = reach;
-        if (scale > this.scaleSquared) this.scaleSquared = scale;
+    /** Note that an instance's color changed, so it uploads before the next draw; setColorAt calls this, and so must
+     *  an edit made straight to colorData
+     *  @param {number} i */
+    markColorDirty(i)
+    {
+        if (i < this.colorDirtyStart) this.colorDirtyStart = i;
+        if (i >= this.colorDirtyEnd) this.colorDirtyEnd = i + 1;
     }
 
     /** Radius of the sphere around the origin that holds every instance set so far, for culling: the farthest
-     *  instance, and the mesh's size at the largest scale; it only grows
+     *  instance, and the mesh's size at the largest scale; it only grows, and takes in the instances set since it
+     *  was last read, so with frustum culling off it is never worked out. Set it to fix the sphere, which a big set
+     *  that is culled can use to skip that work, and set it to undefined to go back to the bounds
      *  @return {number} */
     get radius()
     {
+        if (this.fixedRadius !== undefined) return this.fixedRadius;
+        if (this.boundsEnd > this.boundsStart)
+        {
+            // the bounds grow to hold where each is now and how big, read back from its matrix, squared
+            const d = this.matrixData;
+            let reachSquared = this.reachSquared, scaleSquared = this.scaleSquared;
+            for (let i = this.boundsStart; i < this.boundsEnd; ++i)
+            {
+                const k = i * RENDER3D_MATRIX_FLOATS, x = d[k+12], y = d[k+13], z = d[k+14];
+                const reach = x*x + y*y + z*z, scale = render3DMaxStretchSquared(d, k);
+                if (reach > reachSquared) reachSquared = reach;
+                if (scale > scaleSquared) scaleSquared = scale;
+            }
+            this.reachSquared = reachSquared, this.scaleSquared = scaleSquared;
+            this.boundsStart = Infinity, this.boundsEnd = 0;
+        }
         const mesh = this.mesh, meshRadius = mesh.radius || mesh.computeRadius(); // the mesh measured once
         return this.reachSquared ** .5 + meshRadius * this.scaleSquared ** .5;
     }
+    set radius(radius) { this.fixedRadius = radius; }
 
     /** Draws every instance as one call, uploading the ones that changed first
      *  @return {void} */
@@ -27077,35 +27150,41 @@ class InstancedMesh3D extends EngineObject3D
         // the uv rect is the object's tile for every instance, rewritten when the tile changes
         if (this.uvTileInfo !== this.tileInfo)
         {
-            const uv = render3DGetTileUVs(this.tileInfo), data = this.instanceData;
-            for (let k = 20; k < data.length; k += RENDER3D_INSTANCE_FLOATS)
+            const uv = render3DGetTileUVs(this.tileInfo), data = this.colorData;
+            for (let k = 4; k < data.length; k += RENDER3D_COLOR_FLOATS)
                 data[k] = uv.x, data[k+1] = uv.y, data[k+2] = uv.w, data[k+3] = uv.h;
             this.uvTileInfo = this.tileInfo;
-            this.dirtyStart = 0, this.dirtyEnd = this.maxCount;
+            this.colorDirtyStart = 0, this.colorDirtyEnd = this.maxCount;
         }
 
-        // the GPU copy: all of it under a fresh context, otherwise just the changed range
+        // the GPU copies: all of each under a fresh context, otherwise just the changed ranges
         if (!this.buffer || this.bufferGeneration !== r.contextGeneration)
         {
-            this.buffer = gl.createBuffer();
             this.bufferGeneration = r.contextGeneration;
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-            gl.bufferData(gl.ARRAY_BUFFER, this.instanceData, gl.DYNAMIC_DRAW);
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer = gl.createBuffer());
+            gl.bufferData(gl.ARRAY_BUFFER, this.matrixData, gl.DYNAMIC_DRAW);
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer = gl.createBuffer());
+            gl.bufferData(gl.ARRAY_BUFFER, this.colorData, gl.DYNAMIC_DRAW);
         }
-        else if (this.dirtyEnd > this.dirtyStart)
+        else
         {
-            const start = this.dirtyStart * RENDER3D_INSTANCE_FLOATS, end = this.dirtyEnd * RENDER3D_INSTANCE_FLOATS;
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-            gl.bufferSubData(gl.ARRAY_BUFFER, start * 4, this.instanceData, start, end - start);
+            const upload = (buffer, data, floats, start, end)=>
+            {
+                if (end <= start) return;
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, start * floats * 4, data, start * floats, (end - start) * floats);
+            };
+            upload(this.buffer, this.matrixData, RENDER3D_MATRIX_FLOATS, this.dirtyStart, this.dirtyEnd);
+            upload(this.colorBuffer, this.colorData, RENDER3D_COLOR_FLOATS, this.colorDirtyStart, this.colorDirtyEnd);
         }
-        this.dirtyStart = Infinity, this.dirtyEnd = 0;
+        this.dirtyStart = this.colorDirtyStart = Infinity, this.dirtyEnd = this.colorDirtyEnd = 0;
 
         // one draw under the object's state, the mesh setting the culling as drawMesh does
         r.flush();
         render3DFlushBeforeOverlay(); // as in drawMesh, what was drawn before goes under it
         const cullBackFaces = r.cullBackFaces, tileInfo = this.tileInfo;
         r.cullBackFaces = !mesh.doubleSided;
-        render3DDrawInstanced(mesh, this.buffer, this.count, render3DTextureOf(tileInfo), r);
+        render3DDrawInstanced(mesh, this.buffer, this.count, render3DTextureOf(tileInfo), r, this.colorBuffer);
         r.cullBackFaces = cullBackFaces;
     }
 
@@ -27114,8 +27193,8 @@ class InstancedMesh3D extends EngineObject3D
     destroy(immediate)
     {
         if (this.buffer && this.bufferGeneration === render3D?.contextGeneration)
-            glContext?.deleteBuffer(this.buffer);
-        this.buffer = undefined;
+            glContext?.deleteBuffer(this.buffer), glContext?.deleteBuffer(this.colorBuffer);
+        this.buffer = this.colorBuffer = undefined;
         super.destroy(immediate);
     }
 }
