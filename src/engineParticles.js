@@ -165,6 +165,13 @@ class ParticleEmitter extends EngineObject
         this.localSpace        = localSpace;
         /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         this.trailScale        = 0;
+        /** @property {number} - Grows the whole effect as each particle is born: the spawn area, the particles' sizes,
+         *  speed and fall, so it looks the same only bigger; 1 is as made, and a particle keeps the scale it was born
+         *  with, so a change never moves the ones already out */
+        this.scale             = 1;
+        /** @property {number} - The effect's own fall, added to each particle's velocity y every frame, on top of the
+         *  world's gravity times gravityScale; an effect that sets its own looks the same in any game */
+        this.gravity           = 0;
         /** @property {ParticleCallback|undefined} - Callback when particle is created
          *  @type {ParticleCallback|undefined} */
         this.particleCreateCallback = undefined;
@@ -251,9 +258,9 @@ class ParticleEmitter extends EngineObject
         {
             // show emitter bounds
             if (this.emitCircle)
-                debugCircle(this.pos, this.emitSize.x, '#0f0', 0, false, false);
+                debugCircle(this.pos, this.emitSize.x * this.scale, '#0f0', 0, false, false);
             else
-                debugRect(this.pos, this.emitSize, '#0f0', 0, this.angle, false, false);
+                debugRect(this.pos, this.emitSize.scale(this.scale), '#0f0', 0, this.angle, false, false);
         }
     }
 
@@ -262,10 +269,11 @@ class ParticleEmitter extends EngineObject
     emitParticle()
     {
         // spawn a particle
+        const scale = this.scale; // grows the spawn area, the sizes and the speed of each particle born
         let pos = this.emitCircle ?            // check if circle emitter
-            randInCircle(this.emitSize.x/2)    // circle emitter
+            randInCircle(this.emitSize.x/2 * scale) // circle emitter
             : vec2(rand(-.5,.5), rand(-.5,.5)) // box emitter
-                .multiply(this.emitSize);
+                .multiply(this.emitSize).scale(scale);
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)
         {
@@ -282,9 +290,9 @@ class ParticleEmitter extends EngineObject
 
         // randomize particle settings
         const particleTime  = randomizeScale(this.particleTime);
-        const sizeStart     = randomizeScale(this.sizeStart);
-        const sizeEnd       = randomizeScale(this.sizeEnd);
-        const speed         = randomizeScale(this.speed);
+        const sizeStart     = randomizeScale(this.sizeStart) * scale;
+        const sizeEnd       = randomizeScale(this.sizeEnd) * scale;
+        const speed         = randomizeScale(this.speed) * scale;
         const angleSpeed    = randomizeScale(this.angleSpeed) * randSign();
         const coneAngle     = rand(this.emitConeAngle, -this.emitConeAngle);
         const colorStart    = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
@@ -419,6 +427,8 @@ class Particle
     {
         /** @property {ParticleEmitter} - The emitter this particle came from */
         this.emitter = emitter;
+        /** @property {number} - The emitter's scale when it was made, which grows its fall */
+        this.scale = emitter.scale ?? 1; // a hand made emitter-like object may have none
         /** @property {Vector2} - Position, world space or local to the emitter when localSpace is set */
         this.pos = pos;
         /** @property {number} - Angle in radians */
@@ -481,7 +491,10 @@ class Particle
         // apply physics; only the tile collision needs where the particle was
         const solve = enablePhysicsSolver && collideLevel;
         const oldX = this.pos.x, oldY = this.pos.y;
-        let gravityX = gravity.x * gravityScale, gravityY = gravity.y * gravityScale;
+        // the world's gravity times gravityScale plus the emitter's own, grown by the particle's scale
+        const fall = this.scale;
+        let gravityX = gravity.x * gravityScale * fall;
+        let gravityY = (gravity.y * gravityScale + (emitter.gravity || 0)) * fall;
         if (emitter.localSpace && emitter.angle)
         {
             // world gravity turned into the emitter's space, the render turns it back

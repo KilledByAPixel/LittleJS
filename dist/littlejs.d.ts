@@ -4145,6 +4145,13 @@ declare module "littlejsengine" {
         localSpace: boolean;
         /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         trailScale: number;
+        /** @property {number} - Grows the whole effect as each particle is born: the spawn area, the particles' sizes,
+         *  speed and fall, so it looks the same only bigger; 1 is as made, and a particle keeps the scale it was born
+         *  with, so a change never moves the ones already out */
+        scale: number;
+        /** @property {number} - The effect's own fall, added to each particle's velocity y every frame, on top of the
+         *  world's gravity times gravityScale; an effect that sets its own looks the same in any game */
+        gravity: number;
         /** @property {ParticleCallback|undefined} - Callback when particle is created
          *  @type {ParticleCallback|undefined} */
         particleCreateCallback: ParticleCallback | undefined;
@@ -4195,6 +4202,8 @@ declare module "littlejsengine" {
         constructor(emitter: ParticleEmitter, pos: Vector2, angle: number, colorStart: Color, colorEnd: Color, lifeTime: number, sizeStart: number, sizeEnd: number, velocity?: Vector2, angleVelocity?: number);
         /** @property {ParticleEmitter} - The emitter this particle came from */
         emitter: ParticleEmitter;
+        /** @property {number} - The emitter's scale when it was made, which grows its fall */
+        scale: number;
         /** @property {Vector2} - Position, world space or local to the emitter when localSpace is set */
         pos: Vector2;
         /** @property {number} - Angle in radians */

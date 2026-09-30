@@ -739,6 +739,8 @@ ParticleEmitter(pos, angle, emitSize, emitTime, emitRate, emitConeAngle, tileInf
 emitter.trailScale / velocityInheritance / restitution / friction / emitCircle // More settings, set after making it
 emitter.particleCreateCallback / particleDestroyCallback / particleCollideCallback // Called with each particle
 emitter.particleUpdateCallback // Called with each particle every update, after it moves
+emitter.scale = 1         // grows the whole effect: spawn area, sizes, speed and fall; each particle keeps its own
+emitter.gravity = 0       // the effect's own fall per frame, added to world gravity times gravityScale
 ParticleEmitter.emitParticle()           // Spawn one particle
 
 // Particle Settings
