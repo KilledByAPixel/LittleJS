@@ -1,51 +1,24 @@
-// the full ParticleEmitter constructor, every setting in one call; for
-// ready made effects in one line see the Particle Effects short
+// particles with the built-in effects: each one line, placed, scaled
+// and moved like any object; the Particle Effects short shows every one,
+// and REFERENCE has the full ParticleEmitter constructor
 
-let cometEmitter;
+let comet;
 
 function gameInit()
 {
-    gravity.y = -.01; // set default gravity
+    // a fire and its smoke, three times the size they are made for
+    particleEffect('fire', vec2(-5,-2), {scale: 3});
+    particleEffect('smoke', vec2(-5,1), {scale: 3});
 
-    // fire
-    new ParticleEmitter(
-        vec2(-5,0), 0,                 // pos, angle
-        2, 0, 200, PI,                 // emitSize, emitTime, rate, cone
-        tile(0),                       // tileInfo
-        hsl(.07,1,.55), hsl(0,1,.55),    // colorStartA, colorStartB
-        hsl(.07,1,.55,0), hsl(0,1,.55,0),// colorEndA, colorEndB
-        .7, 2, 0, .2, .05, // time, sizeStart, sizeEnd, speed, angleSpeed
-        .9, 1, -1, PI, .05,// damp, angleDamp, gravity, particleCone, fade
-        .5, 0, 1, 0        // randomness, collide, additive, colorLinear
-    );
+    // sparks in blue, the hue turned half way around
+    particleEffect('sparks', vec2(5,-2), {scale: 2, hue: .5});
 
-    // smoke
-    new ParticleEmitter(
-        vec2(5,0), 0,                // pos, angle
-        3, 0, 100, PI,               // emitSize, emitTime, rate, cone
-        tile(0),                     // tileInfo
-        hsl(0,0,0,.5), hsl(0,0,1,.5),// colorStartA, colorStartB
-        hsl(0,0,0,0), hsl(0,0,1,0),  // colorEndA, colorEndB
-        1, 1, 5, .2, .01,  // time, sizeStart, sizeEnd, speed, angleSpeed
-        .85, 1, -1, PI, .3,// damp, angleDamp, gravity, particleCone, fade
-        .5, 0, 0, 1        // randomness, collide, additive, colorLinear
-    );
-
-    // comet emitter - position updated each frame in gameUpdate
-    cometEmitter = new ParticleEmitter(
-        vec2(), 0,                   // pos, angle
-        0, 0, 100, PI,               // emitSize, emitTime, rate, cone
-        tile(0),                     // tileInfo
-        hsl(1/6,1,.65,.2), hsl(.07,1,.55,.2),// colorStartA, colorStartB
-        hsl(0,1,.5,0), hsl(.75,1,.5,0),       // colorEndA, colorEndB
-        1, 1, 3, .01, 0,    // time, sizeStart, sizeEnd, speed, angleSpeed
-        .95, 1, .02, PI, .2,// damp, angleDamp, gravity, particleCone, fade
-        .3, 0, 1, 0         // randomness, collide, additive, colorLinear
-    );
+    // a trail that follows the comet, moved each frame in gameUpdate
+    comet = particleEffect('trail', vec2(), {scale: 2});
 }
 
 function gameUpdate()
 {
-    // move comet emitter back and forth so it trails particles
-    cometEmitter.pos = vec2(sin(time)*9, cos(time)-5);
+    // move the comet back and forth so it leaves a trail
+    comet.pos = vec2(sin(time)*9, cos(time)*2 + 4);
 }

@@ -58,15 +58,8 @@ class Goal extends GridObject
         const active = boxAt(this.cell.x, this.cell.y);
         const particlePos = cellPos(this.cell.x, this.cell.y, .5);
         if (active && !this.active)
-            new ParticleEmitter3D(
-                particlePos, .6, .1,              // pos, emitSize, emitTime
-                500, PI, undefined,               // rate, cone, tileInfo
-                litColor, WHITE,                  // colorStartA, colorStartB
-                hsl(0,1,.5,0), hsl(.1,1,.5,0),    // colorEndA, colorEndB
-                .5, .3, 0,                        // time, sizeStart, sizeEnd
-                .1, .95, -.004,                   // speed, damping, gravity
-                .1, .5, true                      // fade, randomness, additive
-            );
+            particleEffect3D('explosion', particlePos, {scale: .6,
+                colorStartA: litColor, colorStartB: WHITE});
         this.active = active;
         this.color = active ? litColor : padColor;
         this.light.color.a = active ? 1 : 0;

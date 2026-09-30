@@ -71,17 +71,8 @@ function buildScoreText()
 
 function endRound()
 {
-    // a burst of debris, then start over
-    new ParticleEmitter3D(
-        player.pos3D,                  // pos
-        1, .1,                         // emitSize, emitTime
-        600, PI, undefined,            // rate, cone, tileInfo
-        hsl(.1,1,.8), hsl(0,1,.5),     // colorStartA, colorStartB
-        hsl(.1,1,.5,0), hsl(0,1,.5,0), // colorEndA, colorEndB
-        1, 1.5, 0,                     // time, sizeStart, sizeEnd
-        .4, .95, -.02,                 // speed, damping, gravity
-        .1, .5, true                   // fade, randomness, additive
-    );
+    // an explosion, then start over
+    particleEffect3D('explosion', player.pos3D, {scale: 2});
     render3D.playSound(soundHit, player.pos3D, 2);
     best = max(best, floor(roundTimer.get()));
     roundTimer.set();

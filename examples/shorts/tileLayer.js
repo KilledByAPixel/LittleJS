@@ -30,19 +30,10 @@ function gameUpdate()
 {
     if (mouseWasPressed(0))
     {
-        // create particle emitter to test the collision
-        const hue = rand();
-        const particleEmitter = new ParticleEmitter(
-            mousePos, 0,
-            0, 0.1, 500, PI,
-            tile(0, 16),
-            hsl(hue,1,.5),   hsl(hue,1,1),
-            hsl(hue,1,.5,0), hsl(hue,1,1,0),
-            2, .2, .2, .2, .05,
-            .99, 1, 1, PI,
-            .05, .8, true
-        );
-        particleEmitter.restitution = .5; // bounce when it collides
-        particleEmitter.trailScale = 2;   // stretch as it moves
+        // a burst of sparks in a random color that bounces off the tiles;
+        // the options replace the effect's own settings for this burst
+        particleEffect('sparks', mousePos, {scale: 2, hue: rand(),
+            emitTime: .1, emitRate: 500, particleTime: 2, gravity: -.01,
+            collideLevel: true, restitution: .5});
     }
 }

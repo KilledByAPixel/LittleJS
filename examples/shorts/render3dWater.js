@@ -47,18 +47,13 @@ function gameInit()
         ()=> new Float32Array(samples));
     now = grid(), last = grid();
 
-    // rain falls straight down, each drop a streak along where it was
-    rain = new ParticleEmitter3D(
-        vec3(0,14,0),                      // pos
-        vec3(poolSize,0,poolSize), 0,      // emitSize, emitTime
-        60, 0, undefined,                  // rate, cone, tileInfo
-        hsl(.6,.4,.9,.5), hsl(.6,.2,1,.3), // colorStartA, colorStartB
-        hsl(.6,.4,.9,.5), hsl(.6,.2,1,.3), // colorEndA, colorEndB
-        2, .05, .05,                       // time, sizeStart, sizeEnd
-        .4, 1, 0,                          // speed, damping, gravity
-        0, .2                              // fade, randomness
-    );
-    rain.rotation3D.x = PI; // it emits along its own up, so aim it down
+    // rain falls straight down, each drop a streak along where it was;
+    // the built-in rain at this short's speed, from a flat area over the
+    // pool, which a rain effect in 3D starts as an upright plane
+    rain = particleEffect3D('rain', vec3(0,14,0), {emitRate: 60,
+        speed: .4, gravity: 0, particleTime: 2, sizeStart: .05,
+        sizeEnd: .05, fadeRate: 0});
+    rain.emitSize = vec3(poolSize,0,poolSize);
     rain.trailTime = .1;
 
     // a drop that reaches the water starts a ring there and ends

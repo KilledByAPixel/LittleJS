@@ -162,7 +162,7 @@ test('the shorts that assigned undeclared globals now declare them, so they run 
         'lightSystem.js': ['mouseLight'],
         'music.js': ['musicPlayer', 'infoText', 'playButton', 'stopButton'],
         'musicPlayer.js': ['musicPlayer', 'playButton', 'stopButton', 'progressBar'],
-        'particles.js': ['cometEmitter'],
+        'particles.js': ['comet'],
         'save.js': ['saveData'],
         'spriteAtlas.js': ['spriteAtlas'],
         'timers.js': ['timerButton', 'timerSlider'],

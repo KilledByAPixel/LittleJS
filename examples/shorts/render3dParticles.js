@@ -15,18 +15,11 @@ function gameInit()
     particleEffect3D('smoke', vec3(-5,3,0), {scale: 2});
     particleEffect3D('sparks', vec3(5,2,0), {scale: 3});
 
-    // an emitter made by hand, a fountain; it emits along its local +Y
-    // so rotation3D aims it
-    fountain = new ParticleEmitter3D(
-        vec3(0,.5,3),                      // pos
-        0, 0,                              // emitSize, emitTime
-        200, .15, undefined,               // rate, cone, tileInfo
-        hsl(.6,1,.6,.8), hsl(0,0,1,.8),    // colorStartA, colorStartB
-        hsl(.6,1,.6,0), hsl(0,0,1,0),      // colorEndA, colorEndB
-        1, .2, .4,                         // time, sizeStart, sizeEnd
-        .25, 1, -.008,                     // speed, damping, gravity
-        .1, .1                             // fade, randomness
-    );
+    // a fountain: splash kept going, its settings replaced by the options;
+    // it emits along its local +Y so rotation3D aims it
+    fountain = particleEffect3D('splash', vec3(0,.5,3), {scale: 2,
+        emitTime: 0, emitRate: 200, emitConeAngle: .15, emitSize: 0,
+        speed: .125, gravity: -.004, particleTime: 1});
 }
 
 function gameUpdate()
