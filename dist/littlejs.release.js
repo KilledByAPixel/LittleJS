@@ -9751,9 +9751,13 @@ class ParticleEmitter extends EngineObject
     render()
     {
         // render all particles, the blend switched once for them all, not around each one
+        // and the tile's draw worked out once for them all, fresh each frame so a tile changed in place draws changed
         this.additive && setAdditiveBlendMode();
+        particleTile = null; // none yet, undefined is the untextured tile
+        particleTileBatch = true;
         for (const particle of this.particles)
             particle.render();
+        particleTileBatch = false;
         this.additive && setAdditiveBlendMode(false);
     }
 
@@ -9779,6 +9783,39 @@ class ParticleEmitter extends EngineObject
 ///////////////////////////////////////////////////////////////////////////////
 // scratch vectors reused by Particle.render and the tile collision to avoid per-frame allocations
 const particleDrawPos = new Vector2, particleDrawSize = new Vector2, particleCollidePos = new Vector2;
+
+// the WebGL draw of the tile particles draw with, what drawTile works out for each sprite: kept while an emitter
+// renders its particles, so each one only writes its own values into the batch
+let particleTile, particleTileBatch = false, particleTileTextured = false, particleTileEmpty = false;
+let particleTileU0 = 0, particleTileV0 = 0, particleTileU1 = 0, particleTileV1 = 0;
+function particleTileSet(tileInfo)
+{
+    particleTile = tileInfo;
+    const textureInfo = tileInfo?.textureInfo;
+    particleTileTextured = !!textureInfo;
+    particleTileEmpty = !!textureInfo && !(tileInfo.size.x && tileInfo.size.y); // like a sprite still loading
+    if (!textureInfo || particleTileEmpty) return;
+
+    false&&ASSERT(!!textureInfo.glTexture, 'texture has no WebGL texture, draw it with useWebGL false');
+    glSetTexture(textureInfo.glTexture); // bound, and its mipmaps brought up to date, once for the emitter
+    const sizeInverse = textureInfo.sizeInverse, bleed = tileInfo.bleed;
+    const x = tileInfo.pos.x * sizeInverse.x;
+    const y = tileInfo.pos.y * sizeInverse.y;
+    const w = tileInfo.size.x * sizeInverse.x;
+    const h = tileInfo.size.y * sizeInverse.y;
+    if (bleed)
+    {
+        const bleedX = sizeInverse.x*bleed;
+        const bleedY = sizeInverse.y*bleed;
+        particleTileU0 = x + bleedX;     particleTileV0 = y + bleedY;
+        particleTileU1 = x - bleedX + w; particleTileV1 = y - bleedY + h;
+    }
+    else
+    {
+        particleTileU0 = x;     particleTileV0 = y;
+        particleTileU1 = x + w; particleTileV1 = y + h;
+    }
+}
 
 // tests if a particle collides with tiles at x, y, through its emitter's collide callback if it has one
 function particleCollideTest(particle, collideCallback, x, y)
@@ -10010,7 +10047,24 @@ class Particle
                 angle = atan2(velocity.x, velocity.y);
             }
         }
-        drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror, undefined, glEnable, false);
+        if (glEnable && !headlessMode)
+        {
+            // straight into the batch, the tile's draw worked out once for the emitter's particles
+            const tileInfo = this.tileInfo;
+            if (!particleTileBatch || tileInfo !== particleTile)
+                particleTileSet(tileInfo);
+            if (!particleTileTextured)
+                glDrawUntextured(pos.x, pos.y, size.x, size.y, angle, this.color.rgbaInt());
+            else if (!particleTileEmpty)
+            {
+                const texture = tileInfo.textureInfo.glTexture;
+                glActiveTexture === texture || glSetTexture(texture); // bound again only if a draw between changed it
+                glDraw(pos.x, pos.y, this.mirror ? -size.x : size.x, size.y, angle,
+                    particleTileU0, particleTileV0, particleTileU1, particleTileV1, this.color.rgbaInt());
+            }
+        }
+        else
+            drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror, undefined, false, false);
         additive && setAdditiveBlendMode(false);
         debugParticles && debugRect(pos, size, '#f005', 0, angle, false, false);
     }

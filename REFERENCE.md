@@ -385,6 +385,13 @@ setBackgroundCanvas(canvas)  // Set a plugin canvas to include when combining
 setCursor(cursorStyle)       // Set the CSS cursor style
 isOnScreen(pos, size)        // Is a world space area visible on screen?
 combineCanvases()            // Combine all canvases onto mainCanvas (for screenshots)
+
+// Very many sprites: drawTile works out the tile's uvs and packs the color on every call, so a game drawing
+// thousands a frame can work those out once and write each sprite into the WebGL batch itself (glEnable only)
+glSetTexture(textureInfo.glTexture) // Bind the sheet the sprites come from, once
+glDraw(x, y, sizeX, sizeY, angle=0, uv0X, uv0Y, uv1X, uv1Y, rgba=-1, rgbaAdditive=0) // One sprite in world space;
+    // uvs are tile pos and pos + size times textureInfo.sizeInverse, a negative sizeX mirrors it,
+    // rgba is color.rgbaInt(), kept from frame to frame while the color holds; the batch flushes itself
 ```
 
 ## LittleJS Audio System

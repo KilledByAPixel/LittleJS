@@ -164,7 +164,7 @@ test('a trail particle at rest still draws, unstretched', () =>
     const { run } = loadEngine();
     const drawn = run(`
         const drawn = [];
-        drawTile = (pos, size)=> drawn.push(size.y);
+        glDrawUntextured = (x, y, sizeX, sizeY)=> drawn.push(sizeY); // particles draw straight into the batch
         const emitter = { trailScale: 2, fadeRate: 0, angle: 0, pos: vec2() };
         const particle = new Particle(emitter, vec2(), 0, WHITE, WHITE, 1, 1, 1, vec2());
         particle.render();
