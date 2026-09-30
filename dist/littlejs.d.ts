@@ -81,6 +81,10 @@ declare module "littlejsengine" {
         object?: any;
     };
     /**
+     * - Called once when a SpriteAnimation's play ends
+     */
+    export type SpriteAnimationEndCallback = () => void;
+    /**
      * - Function called when sound is loaded
      */
     export type SoundLoadCallback = (sound: Sound) => any;
@@ -2116,6 +2120,11 @@ declare module "littlejsengine" {
      *  @memberof Draw */
     export function loadTexture(textureIndex: number, src?: string): Promise<TextureInfo>;
     /**
+     * @callback SpriteAnimationEndCallback - Called once when a SpriteAnimation's play ends
+     * @return {void}
+     * @memberof Draw
+     */
+    /**
      * SpriteAnimation - Steps a tile through its frames over time: looping, once, or there and back
      * - Driven by the engine time like a Timer, so it pauses with the game and needs no update call
      * - Read tileInfo each frame for the frame to draw, from an object's update or before a drawTile
@@ -2150,9 +2159,9 @@ declare module "littlejsengine" {
         /** @property {number|undefined} - The frame held by stop, undefined while running
          *  @type {number|undefined} */
         heldFrame: number | undefined;
-        /** @property {(function():void)|undefined} - Called once when a play ends, on the first read after it
-         *  @type {(function():void)|undefined} */
-        onEnd: (() => void) | undefined;
+        /** @property {SpriteAnimationEndCallback|undefined} - Called once when a play ends, on the first read after it
+         *  @type {SpriteAnimationEndCallback|undefined} */
+        onEnd: SpriteAnimationEndCallback | undefined;
         /** Start over from the first frame and repeat forever
          *  @return {SpriteAnimation} */
         loop(): SpriteAnimation;

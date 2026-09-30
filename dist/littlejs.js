@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.20.0';
+const engineVersion = '1.21.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -5286,6 +5286,12 @@ class TextureInfo
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
+ * @callback SpriteAnimationEndCallback - Called once when a SpriteAnimation's play ends
+ * @return {void}
+ * @memberof Draw
+ */
+
+/**
  * SpriteAnimation - Steps a tile through its frames over time: looping, once, or there and back
  * - Driven by the engine time like a Timer, so it pauses with the game and needs no update call
  * - Read tileInfo each frame for the frame to draw, from an object's update or before a drawTile
@@ -5324,8 +5330,8 @@ class SpriteAnimation
         /** @property {number|undefined} - The frame held by stop, undefined while running
          *  @type {number|undefined} */
         this.heldFrame = undefined;
-        /** @property {(function():void)|undefined} - Called once when a play ends, on the first read after it
-         *  @type {(function():void)|undefined} */
+        /** @property {SpriteAnimationEndCallback|undefined} - Called once when a play ends, on the first read after it
+         *  @type {SpriteAnimationEndCallback|undefined} */
         this.onEnd = undefined;
     }
 
@@ -33475,13 +33481,16 @@ if (debug && globalThis.document?.addEventListener)
 
 const EDITOR3D_LOOK_SPEED = .003; // radians a pixel of mouse movement turns the view
 
-/** @type {Camera3D|undefined} - The camera of the free camera and the editor, made at the first use */
+// the camera of the free camera and the editor, made at the first use
+
+/** @type {Camera3D|undefined} */
 let editor3DCamera;
 let editor3DFreeCamera = false; // the free camera is on
 let editor3DFlySpeed = .2;      // world units flown in a frame of 1/60, the wheel changes it
 let editor3DTimeLast = 0;       // real time of the last update, flying goes by real time so it works while paused
 let editor3DWasLocked = false;  // the mouse was captured last update, a lock that is lost leaves the free camera
-/** @type {Camera3D|undefined} - The game's camera while the editor's is drawn with */
+// the game's camera while the editor's is drawn with
+/** @type {Camera3D|undefined} */
 let editor3DGameCamera;
 
 // if something draws with the editor's camera
@@ -33724,7 +33733,9 @@ function editor3DDrop(pos, size, ignore=new Set)
 // the level: the object the game gave level3DLoad is the source of truth, the editor changes it in place and
 // brings what the game made in line with it
 
-/** @type {Object|undefined} - The level being edited, the one given to level3DLoad last */
+// the level being edited, the one given to level3DLoad last
+
+/** @type {Object|undefined} */
 let editor3DLevel;
 
 // what the game made for each object of the level, by the object's id
@@ -33741,12 +33752,15 @@ let editor3DGamePaused = false;   // the game's pause from before the editor ope
 let editor3DPlayFromMouse = false; // Escape and Play hand the game a position to play from
 
 const editor3DSelection = new Set; // the ids of the selected objects
-/** @type {string|undefined} - The type a click places */
+// the type a click places
+/** @type {string|undefined} */
 let editor3DBrush;
-/** @type {Array<Object>|undefined} - The copied objects */
+// the copied objects
+/** @type {Array<Object>|undefined} */
 let editor3DClipboard;
 let editor3DUndoList = [], editor3DRedoList = []; // the level's, each entry its object list before and after an edit
-/** @type {{before: Array<Object>}|undefined} - The edit being made, a drag is one */
+// the edit being made, a drag is one
+/** @type {{before: Array<Object>}|undefined} */
 let editor3DStroke;
 
 const editor3DCopy = (value)=> JSON.parse(JSON.stringify(value));
@@ -34279,11 +34293,14 @@ let editor3DGroundSnap = true; // a body drag slides along what is under the mou
 let editor3DMoveStep = 1, editor3DRotateStep = 15, editor3DScaleStep = .25; // the rotate step in degrees
 let editor3DHelp = false;      // the keys are shown
 let editor3DMouseOnPanel = false;
-/** @type {any} - The drag being made: {kind, ...}, a 'box' drag has from and to in screen pixels */
+// the drag being made: {kind, ...}, a 'box' drag has from and to in screen pixels
+/** @type {any} */
 let editor3DDrag;
-/** @type {any} - The handle under the mouse */
+// the handle under the mouse
+/** @type {any} */
 let editor3DHover;
-/** @type {Vector3|undefined} - What an Alt drag orbits around */
+// what an Alt drag orbits around
+/** @type {Vector3|undefined} */
 let editor3DOrbitPivot;
 
 // the middle of the selection, where the handles are

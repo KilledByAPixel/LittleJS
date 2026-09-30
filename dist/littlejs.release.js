@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.20.0';
+const engineVersion = '1.21.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -4398,6 +4398,12 @@ class TextureInfo
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
+ * @callback SpriteAnimationEndCallback - Called once when a SpriteAnimation's play ends
+ * @return {void}
+ * @memberof Draw
+ */
+
+/**
  * SpriteAnimation - Steps a tile through its frames over time: looping, once, or there and back
  * - Driven by the engine time like a Timer, so it pauses with the game and needs no update call
  * - Read tileInfo each frame for the frame to draw, from an object's update or before a drawTile
@@ -4436,8 +4442,8 @@ class SpriteAnimation
         /** @property {number|undefined} - The frame held by stop, undefined while running
          *  @type {number|undefined} */
         this.heldFrame = undefined;
-        /** @property {(function():void)|undefined} - Called once when a play ends, on the first read after it
-         *  @type {(function():void)|undefined} */
+        /** @property {SpriteAnimationEndCallback|undefined} - Called once when a play ends, on the first read after it
+         *  @type {SpriteAnimationEndCallback|undefined} */
         this.onEnd = undefined;
     }
 

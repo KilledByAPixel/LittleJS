@@ -1,4 +1,6 @@
-/*
+<!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><meta name="description" content="LittleJS is a lightweight HTML5 game engine with fast WebGL rendering, physics, particles, sound, and more!"><meta name="keywords" content="javascript, game engine, html5, webgl, 2d, game development, indie games"><meta name="author" content="Frank Force"><meta property="og:title" content="LittleJS - The Tiny JavaScript Game Engine"><meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound"><meta property="og:type" content="website"><title>Source: plugins/render3dEditor.js</title><!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimator.html">SpriteAnimator</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="Render3D.VoxelMap.html">VoxelMap</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Level3D.html">Level3D</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="SceneSystem.html">SceneSystem</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_render3dEditor.js</h1></header><article><pre class="prettyprint source lang-js"><code>/*
  * LittleJS 3D Editor Plugin
  * - A free camera to look around any 3D game as it runs, C on the debug overlay
  * - The 3D level editor, for a level loaded with level3DLoad, 0 on the debug overlay
@@ -43,7 +45,7 @@ function editor3DCameraStart()
 // turn the free camera on or off, it needs a Render3DPlugin and takes the keyboard and mouse while it is on
 function editor3DSetFreeCamera(on)
 {
-    on = !!on && !!render3D;
+    on = !!on &amp;&amp; !!render3D;
     if (on === editor3DFreeCamera) return;
     editor3DFreeCamera = on;
     editor3DWasLocked = false;
@@ -53,7 +55,7 @@ function editor3DSetFreeCamera(on)
         pointerLockRequest();
     }
     else
-        pointerLockIsActive() && pointerLockExit();
+        pointerLockIsActive() &amp;&amp; pointerLockExit();
     inputCapture(editor3DViewOn());
 }
 
@@ -105,7 +107,7 @@ function editor3DCameraBegin()
     }
 
     // the editor's own drawing, in this frame's 3D pass
-    editor3DIsOpen && render3DDebugPush(0, editor3DDraw);
+    editor3DIsOpen &amp;&amp; render3DDebugPush(0, editor3DDraw);
 }
 
 // called by the 3D pass after the frame: the game's camera is back, with its matrices, for the game's next update
@@ -121,7 +123,7 @@ function editor3DCameraEnd()
 // game with pointerLockExit
 function editor3DLostLock(locked)
 {
-    const lost = editor3DWasLocked && !locked && !inputLockLetGo;
+    const lost = editor3DWasLocked &amp;&amp; !locked &amp;&amp; !inputLockLetGo;
     editor3DWasLocked = locked;
     inputLockLetGo = false;
     return lost;
@@ -140,10 +142,10 @@ function editor3DFreeCameraKey()
 function editor3DFreeCameraUpdate(seconds)
 {
     const locked = pointerLockIsActive(), lostLock = editor3DLostLock(locked);
-    if (keyWasPressed('KeyC') || debugKey && keyWasPressed(debugKey) || lostLock)
+    if (keyWasPressed('KeyC') || debugKey &amp;&amp; keyWasPressed(debugKey) || lostLock)
     {
         inputClearKey('KeyC');
-        debugKey && inputClearKey(debugKey);
+        debugKey &amp;&amp; inputClearKey(debugKey);
         editor3DSetFreeCamera(false);
         return;
     }
@@ -165,7 +167,7 @@ function editor3DAxisDistance(ray, origin, axis)
     const d = ray.direction, w = origin.subtract(ray.origin);
     const a = axis.dot(axis), b = axis.dot(d), c = d.dot(d), e = axis.dot(w), f = d.dot(w);
     const denominator = a * c - b * b;
-    return abs(denominator) < 1e-9 ? 0 : (b * f - c * e) / denominator;
+    return abs(denominator) &lt; 1e-9 ? 0 : (b * f - c * e) / denominator;
 }
 
 // where a ray meets the plane through a point, undefined when it runs along the plane or away from it
@@ -235,7 +237,7 @@ function editor3DSurface(ray, ignore=new Set)
     {
         if (ignore.has(o)) continue;
         const d = render3DRaycastObject(ray, o);
-        if (d !== undefined && (distance === undefined || d < distance))
+        if (d !== undefined &amp;&amp; (distance === undefined || d &lt; distance))
             distance = d;
     }
     distance ??= raycastPlane(ray, vec3(), EDITOR3D_UP);
@@ -259,7 +261,7 @@ function editor3DDrop(pos, size, ignore=new Set)
 {
     const bottom = vec3(pos.x, pos.y - size.y / 2, pos.z);
     const point = editor3DSurface(new Ray3D(bottom, vec3(0, -1, 0)), ignore);
-    return point && editor3DRest(point, size);
+    return point &amp;&amp; editor3DRest(point, size);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -289,11 +291,11 @@ const editor3DSelection = new Set; // the ids of the selected objects
 /** @type {string|undefined} */
 let editor3DBrush;
 // the copied objects
-/** @type {Array<Object>|undefined} */
+/** @type {Array&lt;Object>|undefined} */
 let editor3DClipboard;
 let editor3DUndoList = [], editor3DRedoList = []; // the level's, each entry its object list before and after an edit
 // the edit being made, a drag is one
-/** @type {{before: Array<Object>}|undefined} */
+/** @type {{before: Array&lt;Object>}|undefined} */
 let editor3DStroke;
 
 const editor3DCopy = (value)=> JSON.parse(JSON.stringify(value));
@@ -323,10 +325,10 @@ function editor3DSize(object)
 // every object gets an id of its own, a whole number: one without, or with one already used, gets a new one
 function editor3DFixIds(objects)
 {
-    const isObject = (o)=> !!o && typeof o === 'object', seen = new Set;
+    const isObject = (o)=> !!o &amp;&amp; typeof o === 'object', seen = new Set;
     let next = 1;
     for (const o of objects)
-        isObject(o) && Number.isInteger(o.id) && (next = max(next, o.id + 1));
+        isObject(o) &amp;&amp; Number.isInteger(o.id) &amp;&amp; (next = max(next, o.id + 1));
     for (const o of objects)
     {
         if (!isObject(o)) continue;
@@ -340,7 +342,7 @@ function editor3DFixIds(objects)
 function editor3DHash(text)
 {
     let hash = 2166136261;
-    for (let i = 0; i < text.length; ++i)
+    for (let i = 0; i &lt; text.length; ++i)
         hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
     return hash >>> 0;
 }
@@ -361,7 +363,7 @@ function editor3DLevelLoaded(level)
     {
         // an entry that is not an object is dropped, in place, a game may keep the list
         for (let i = level.objects.length; i--;)
-            level.objects[i] && typeof level.objects[i] === 'object' || level.objects.splice(i, 1);
+            level.objects[i] &amp;&amp; typeof level.objects[i] === 'object' || level.objects.splice(i, 1);
         editor3DFixIds(level.objects);
     }
     const known = editor3DRecords.get(level);
@@ -384,9 +386,9 @@ function editor3DLevelLoaded(level)
     editor3DRedoList = record.redo;
     // an autosave the file already has, from a Save, goes; one of this file, or of the file a Save wrote, comes back
     const saved = editor3DSaves()[record.key];
-    if (saved && isArray(saved.objects) && editor3DSame(saved.objects, original))
+    if (saved &amp;&amp; isArray(saved.objects) &amp;&amp; editor3DSame(saved.objects, original))
         editor3DAutosave(level);
-    else if ((saved?.hash === hash || saved?.savedHash === hash) && isArray(saved.objects))
+    else if ((saved?.hash === hash || saved?.savedHash === hash) &amp;&amp; isArray(saved.objects))
         level.objects = editor3DCopy(saved.objects);
     else if (saved)
         record.pending = saved;
@@ -395,7 +397,7 @@ function editor3DLevelLoaded(level)
 // called by level3DLoad for each object, with what its type made
 function editor3DObjectMade(object, made)
 {
-    made && typeof made === 'object' && editor3DInstances.set(object.id, made);
+    made &amp;&amp; typeof made === 'object' &amp;&amp; editor3DInstances.set(object.id, made);
 }
 
 // put what the game made for an object where the level has it, and still
@@ -435,9 +437,9 @@ function editor3DSetObjects(list)
     for (const object of objects)
     {
         const old = before.get(object.id), made = editor3DInstances.get(object.id);
-        if (!level3DTypes.has(object.type) || old && editor3DSame(old, object)) continue;
-        const onlyMoved = old && old.type === object.type && editor3DSame(old.properties, object.properties) &&
-            made instanceof EngineObject3D && !made.destroyed;
+        if (!level3DTypes.has(object.type) || old &amp;&amp; editor3DSame(old, object)) continue;
+        const onlyMoved = old &amp;&amp; old.type === object.type &amp;&amp; editor3DSame(old.properties, object.properties) &amp;&amp;
+            made instanceof EngineObject3D &amp;&amp; !made.destroyed;
         onlyMoved ? editor3DPlaceInstance(made, object) : editor3DMakeInstance(object);
     }
 }
@@ -462,7 +464,7 @@ function editor3DStrokeEnd()
     editor3DStroke = undefined;
     if (!stroke || editor3DSame(stroke.before, editor3DObjects())) return;
     editor3DUndoList.push({before: stroke.before, after: editor3DCopy(editor3DObjects())});
-    editor3DUndoList.length > 100 && editor3DUndoList.shift();
+    editor3DUndoList.length > 100 &amp;&amp; editor3DUndoList.shift();
     editor3DRedoList.length = 0;
     editor3DAutosave();
 }
@@ -472,7 +474,7 @@ function editor3DStrokeCancel()
 {
     const stroke = editor3DStroke;
     editor3DStroke = undefined;
-    stroke && editor3DSetObjects(stroke.before);
+    stroke &amp;&amp; editor3DSetObjects(stroke.before);
 }
 
 // undo the last edit, or redo the last one undone; false with none
@@ -492,7 +494,7 @@ function editor3DUndo(redo=false)
 function editor3DSetTransform(object, pos, rotation, scale)
 {
     const list = (v)=> [editor3DRound(v.x), editor3DRound(v.y), editor3DRound(v.z)];
-    pos && (object.pos = list(pos));
+    pos &amp;&amp; (object.pos = list(pos));
     if (rotation)
         list(rotation).some((v)=> v) ? object.rotation = list(rotation) : delete object.rotation;
     if (scale)
@@ -503,7 +505,7 @@ function editor3DSetTransform(object, pos, rotation, scale)
 // string, with its alpha when it has one, and a vector as an array
 function editor3DSetProperty(object, name, value, defaultValue)
 {
-    const encode = (v)=> isColor(v) ? v.toString(v.a < 1) : isVector3(v) ? [v.x, v.y, v.z] :
+    const encode = (v)=> isColor(v) ? v.toString(v.a &lt; 1) : isVector3(v) ? [v.x, v.y, v.z] :
         isVector2(v) ? [v.x, v.y] : v;
     const properties = {...object.properties};
     if (editor3DSame(encode(value), encode(defaultValue)))
@@ -537,7 +539,7 @@ function editor3DDelete()
     editor3DChange((list)=>
     {
         for (let i = list.length; i--;)
-            editor3DSelection.has(list[i].id) && list.splice(i, 1);
+            editor3DSelection.has(list[i].id) &amp;&amp; list.splice(i, 1);
     });
     editor3DStrokeEnd();
 }
@@ -589,7 +591,7 @@ function editor3DDuplicate()
 // the session: opening, playing and closing
 
 // if the level editor is the 3D one: as levelEditor.use3D says, or when a 3D level was loaded
-function editor3DWanted() { return !!render3D && (levelEditor.use3D ?? !!editor3DLevel); }
+function editor3DWanted() { return !!render3D &amp;&amp; (levelEditor.use3D ?? !!editor3DLevel); }
 
 // put every object back where the level has it, and make one the game destroyed again, so what is on screen is
 // what Save writes; a type made by an arrow function made nothing to put back
@@ -599,9 +601,9 @@ function editor3DRestore()
     {
         const type = level3DTypes.get(object.type), made = editor3DInstances.get(object.id);
         if (!type) continue;
-        if (made instanceof EngineObject3D && !made.destroyed)
+        if (made instanceof EngineObject3D &amp;&amp; !made.destroyed)
             editor3DPlaceInstance(made, object);
-        else if (type.make.prototype && (!made || made.destroyed))
+        else if (type.make.prototype &amp;&amp; (!made || made.destroyed))
             editor3DMakeInstance(object);
     }
 }
@@ -652,7 +654,7 @@ function editor3DClose()
 function editor3DPlay(pos)
 {
     editor3DSetOpen(false);
-    editor3DPlayFromMouse && pos && levelEditor.onPlayFrom?.(pos.copy());
+    editor3DPlayFromMouse &amp;&amp; pos &amp;&amp; levelEditor.onPlayFrom?.(pos.copy());
 }
 
 // rebuild the level through the game's hook and play it
@@ -680,7 +682,7 @@ function editor3DJSON(value)
 {
     if (isArray(value))
         return '[' + value.map(editor3DJSON).join(', ') + ']';
-    if (value && typeof value === 'object')
+    if (value &amp;&amp; typeof value === 'object')
         return '{' + Object.entries(value).filter(([, v])=> v !== undefined)
             .map(([key, v])=> JSON.stringify(key) + ': ' + editor3DJSON(v)).join(', ') + '}';
     return JSON.stringify(value) ?? 'null';
@@ -713,7 +715,7 @@ function editor3DAutosave(level=editor3DLevel)
     const saves = editor3DSaves(), objects = isArray(level.objects) ? level.objects : [];
     // the level as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it,
     // since the browser gives a picked file's name and not its folder, and a file of the same name may be a copy
-    if (editor3DSame(objects, record.original) && !record.savedHash)
+    if (editor3DSame(objects, record.original) &amp;&amp; !record.savedHash)
         delete saves[record.key];
     else
         saves[record.key] = {hash: record.hash, savedHash: record.savedHash, objects: editor3DCopy(objects)};
@@ -778,10 +780,10 @@ async function editor3DSave(pickAgain=false)
     {
         try
         {
-            if (!pickAgain && !record.fileHandle)
+            if (!pickAgain &amp;&amp; !record.fileHandle)
             {
                 const handle = await editorFileStore.get(fileKey), mode = {mode: 'readwrite'};
-                if (handle && (await handle.queryPermission(mode) === 'granted' ||
+                if (handle &amp;&amp; (await handle.queryPermission(mode) === 'granted' ||
                     await handle.requestPermission(mode) === 'granted'))
                     record.fileHandle = handle;
             }
@@ -858,7 +860,7 @@ function editor3DHandles()
         if (tool === 'rotate')
         {
             const axes = editor3DRingAxes(rotation, axis), points = [];
-            for (let i = 0; i <= 48; ++i)
+            for (let i = 0; i &lt;= 48; ++i)
             {
                 const a = i / 48 * PI * 2;
                 points.push(center.add(axes.across.scale(cos(a) * length)).add(axes.along.scale(sin(a) * length)));
@@ -879,7 +881,7 @@ function editor3DHandles()
                 points: [center.add(EDITOR3D_AXES[a].add(EDITOR3D_AXES[b]).scale(length * .35))]});
         }
     }
-    tool === 'scale' && handles.push({kind: 'scaleAll', axis: 'xyz', center, length, points: [center]});
+    tool === 'scale' &amp;&amp; handles.push({kind: 'scaleAll', axis: 'xyz', center, length, points: [center]});
     return handles;
 }
 
@@ -891,24 +893,24 @@ function editor3DHandleAt(screenPos)
     {
         // a ring seen edge on is a line on screen and the mouse's ray runs along its plane, it can not be dragged
         const {points, center} = handle, toward = center.subtract(editor3DCamera.pos).normalize();
-        if (handle.kind === 'ring' && abs(handle.axes.axis.dot(toward)) < .15) continue;
+        if (handle.kind === 'ring' &amp;&amp; abs(handle.axes.axis.dot(toward)) &lt; .15) continue;
 
         // an arrow or scale handle seen end on is a dot over the object, which is left for the object's body
         if (points.length === 2)
         {
             const a = render3D.worldToScreen(points[0]), b = render3D.worldToScreen(points[1]);
-            if (a && b && a.distance(b) < 12) continue;
+            if (a &amp;&amp; b &amp;&amp; a.distance(b) &lt; 12) continue;
         }
         let distance = Infinity;
         if (points.length === 1)
         {
             const at = render3D.worldToScreen(points[0]);
-            at && (distance = screenPos.distance(at) - 4);
+            at &amp;&amp; (distance = screenPos.distance(at) - 4);
         }
         else
-            for (let i = 1; i < points.length; ++i)
+            for (let i = 1; i &lt; points.length; ++i)
                 distance = min(distance, editor3DSegmentDistance(screenPos, points[i-1], points[i]));
-        if (distance < reach)
+        if (distance &lt; reach)
             reach = distance, nearest = handle;
     }
     return nearest;
@@ -926,10 +928,10 @@ function editor3DPickAt(ray)
         for (const part of parts)
         {
             const d = render3DRaycastObject(ray, part);
-            if (d !== undefined && (distance === undefined || d < distance))
+            if (d !== undefined &amp;&amp; (distance === undefined || d &lt; distance))
                 distance = d;
         }
-        if (distance !== undefined && (nearest === undefined || distance < nearest))
+        if (distance !== undefined &amp;&amp; (nearest === undefined || distance &lt; nearest))
             nearest = distance, id = object.id;
     }
     return id;
@@ -938,7 +940,7 @@ function editor3DPickAt(ray)
 // what the game made for an object and the parts attached to it, its children and theirs
 function editor3DParts(made, parts=[])
 {
-    if (made instanceof EngineObject && !made.destroyed)
+    if (made instanceof EngineObject &amp;&amp; !made.destroyed)
     {
         parts.push(made);
         for (const child of made.children)
@@ -1002,8 +1004,8 @@ function editor3DPress(mouse, ray, shift)
     // a drag of its body moves it level, at its height, so it stays under the mouse; seen from the side, where the
     // mouse's ray runs along that plane, it moves across the view instead, in the upright plane facing it
     const pos = editor3DPos(editor3DObject(id)), forward = editor3DCamera.getForward();
-    const side = abs(ray.direction.y) < .2 && vec3(forward.x, 0, forward.z).normalize();
-    const normal = side && side.lengthSquared() ? side : EDITOR3D_UP;
+    const side = abs(ray.direction.y) &lt; .2 &amp;&amp; vec3(forward.x, 0, forward.z).normalize();
+    const normal = side &amp;&amp; side.lengthSquared() ? side : EDITOR3D_UP;
     editor3DDrag = {kind: 'body', id, from, moving: false, ignore: editor3DSelectedInstances(), normal,
         start: editor3DDragStart(), level: editor3DPlanePoint(ray, pos, normal) ?? pos};
 }
@@ -1031,9 +1033,9 @@ function editor3DDragTo(drag, mouse, ray, snap)
         drag.to = mouse.copy();
         return;
     }
-    if (drag.kind === 'body' && !(drag.moving ||= mouse.distance(drag.from) > 4)) return;
+    if (drag.kind === 'body' &amp;&amp; !(drag.moving ||= mouse.distance(drag.from) > 4)) return;
     const {kind, handle, start, grab} = drag, first = editor3DObject(drag.id ?? [...start.keys()][0]);
-    const was = first && start.get(first.id);
+    const was = first &amp;&amp; start.get(first.id);
     if (!was) return;
     const size = editor3DSize(first), turned = editor3DTurned(first), step = snap ? editor3DMoveStep : 0;
     const snapTo = (to)=> editor3DSnapPos(to, size, step, turned).subtract(was.pos);
@@ -1067,7 +1069,7 @@ function editor3DDragTo(drag, mouse, ray, snap)
     }
     else if (kind === 'scale')
     {
-        if (abs(grab) < 1e-6) return;
+        if (abs(grab) &lt; 1e-6) return;
         factor = vec3(1);
         factor[handle.axis] = max(editor3DAxisDistance(ray, handle.center, handle.direction) / grab, .01);
     }
@@ -1108,13 +1110,13 @@ function editor3DDragEnd(drag, mouse)
         return editor3DStrokeEnd();
     drag.shift || editor3DSelection.clear();
     const {from} = drag;
-    if (mouse.distance(from) < 4) return;
+    if (mouse.distance(from) &lt; 4) return;
     const low = vec2(min(from.x, mouse.x), min(from.y, mouse.y));
     const high = vec2(max(from.x, mouse.x), max(from.y, mouse.y));
     for (const object of editor3DObjects())
     {
         const at = render3D.worldToScreen(editor3DPos(object));
-        at && at.x >= low.x && at.x <= high.x && at.y >= low.y && at.y <= high.y &&
+        at &amp;&amp; at.x >= low.x &amp;&amp; at.x &lt;= high.x &amp;&amp; at.y >= low.y &amp;&amp; at.y &lt;= high.y &amp;&amp;
             editor3DSelection.add(object.id);
     }
 }
@@ -1157,9 +1159,9 @@ function editor3DDropSelection()
     {
         for (const object of list)
         {
-            const to = editor3DSelection.has(object.id) &&
+            const to = editor3DSelection.has(object.id) &amp;&amp;
                 editor3DDrop(editor3DPos(object), editor3DSize(object), ignore);
-            to && editor3DSetTransform(object, to);
+            to &amp;&amp; editor3DSetTransform(object, to);
         }
     });
     editor3DStrokeEnd();
@@ -1169,7 +1171,7 @@ function editor3DDropSelection()
 // the first of them; where they were when the mouse is over nothing
 function editor3DPasteAtMouse()
 {
-    const copied = editor3DClipboard, point = !editor3DMouseOnPanel && editor3DMousePoint();
+    const copied = editor3DClipboard, point = !editor3DMouseOnPanel &amp;&amp; editor3DMousePoint();
     if (!copied?.length) return false;
     if (!point) return editor3DPaste();
     const center = copied.reduce((sum, o)=> sum.add(editor3DPos(o)), vec3()).scale(1 / copied.length);
@@ -1183,7 +1185,7 @@ function editor3DPasteAtMouse()
 
 // the keys by their position on the keyboard, each called with whether Shift is held; the tool keys are the ones
 // Unity, Unreal and Godot use
-/** @type {Object<string, function(boolean=): any>} */
+/** @type {Object&lt;string, function(boolean=): any>} */
 const editor3DKeys =
 {
     KeyQ: ()=> { editor3DTool = 'select'; editor3DBrush = undefined; },
@@ -1197,7 +1199,7 @@ const editor3DKeys =
     Backspace: ()=> editor3DDelete(),
     Slash: ()=> { editor3DHelp = !editor3DHelp; },
 };
-/** @type {Object<string, function(boolean=): any>} */
+/** @type {Object&lt;string, function(boolean=): any>} */
 const editor3DCtrlKeys =
 {
     KeyZ: (shift)=> editor3DUndo(shift),
@@ -1219,14 +1221,14 @@ function editor3DCameraUpdate(seconds, shift, alt)
         editor3DFlySpeed = clamp(editor3DFlySpeed * Math.exp(-wheel * .2), .01, 10);
         editor3DFly(camera, editor3DFlyKeys(), delta, seconds, shift);
     }
-    else if (mouseIsDown(1) || keyIsDown('Space') && mouseIsDown(0))
+    else if (mouseIsDown(1) || keyIsDown('Space') &amp;&amp; mouseIsDown(0))
     {
         // the scene follows the mouse, at the depth of what is in the middle of the view
         const perPixel = editor3DScreenScale(editor3DViewPoint() ?? ahead()) / mainCanvasSize.y;
         camera.pos = camera.pos.subtract(camera.getRight().scale(delta.x * perPixel))
             .add(camera.getUp().scale(delta.y * perPixel));
     }
-    else if (alt && mouseIsDown(0))
+    else if (alt &amp;&amp; mouseIsDown(0))
     {
         if (mouseWasPressed(0) || !editor3DOrbitPivot)
             editor3DOrbitPivot = editor3DSelectionCenter() ?? editor3DViewPoint() ?? ahead();
@@ -1234,7 +1236,7 @@ function editor3DCameraUpdate(seconds, shift, alt)
         editor3DFly(camera, vec3(), delta, 0);
         camera.pos = pivot.subtract(camera.getForward().scale(distance));
     }
-    else if (wheel && !editor3DMouseOnPanel)
+    else if (wheel &amp;&amp; !editor3DMouseOnPanel)
     {
         // toward what is under the mouse, a part of the way there for each notch, and never through it
         render3D.updateMatrices();
@@ -1254,7 +1256,7 @@ function editor3DEditorUpdate(seconds)
     const mouse = mousePosScreen;
 
     // Escape, the debug key, puts a drag back, or else switches to playing; taken, so the debug overlay stays shut
-    if (debugKey && keyWasPressed(debugKey))
+    if (debugKey &amp;&amp; keyWasPressed(debugKey))
     {
         inputClearKey(debugKey);
         editor3DDrag ? editor3DDragCancel() : editor3DPlay(editor3DMousePoint());
@@ -1273,17 +1275,17 @@ function editor3DEditorUpdate(seconds)
     const looking = mouseIsDown(2), cameraDrag = looking || mouseIsDown(1) || keyIsDown('Space') || alt;
 
     // the keys, which wait for a drag to end, and fly while the right button is held
-    if (!editor3DDrag && !looking)
+    if (!editor3DDrag &amp;&amp; !looking)
         for (const [code, action] of Object.entries(ctrl ? editor3DCtrlKeys : editor3DKeys))
-            keyWasPressed(code) && action(shift);
+            keyWasPressed(code) &amp;&amp; action(shift);
 
     // a right press during a drag puts it back
-    if (editor3DDrag && mouseWasPressed(2))
+    if (editor3DDrag &amp;&amp; mouseWasPressed(2))
         return editor3DDragCancel();
 
-    const ray = render3D.screenToRay(mouse), idle = !cameraDrag && !editor3DMouseOnPanel && !editor3DDrag;
+    const ray = render3D.screenToRay(mouse), idle = !cameraDrag &amp;&amp; !editor3DMouseOnPanel &amp;&amp; !editor3DDrag;
     editor3DHover = idle ? editor3DHandleAt(mouse) : undefined;
-    if (idle && mouseWasPressed(0))
+    if (idle &amp;&amp; mouseWasPressed(0))
         editor3DPress(mouse, ray, shift);
 
     // a quick click, down and up before this step, is a press and its release in one
@@ -1293,10 +1295,10 @@ function editor3DEditorUpdate(seconds)
 }
 
 // Ctrl with a letter the editor uses is not the browser's while the editor is open, Ctrl+D would bookmark the page
-if (debug && globalThis.document?.addEventListener)
+if (debug &amp;&amp; globalThis.document?.addEventListener)
     document.addEventListener('keydown', (e)=>
     {
-        if (editor3DIsOpen && (e.ctrlKey || e.metaKey) && /^Key[ZYCXVD]$/.test(e.code) && !editorIsTextField(e.target))
+        if (editor3DIsOpen &amp;&amp; (e.ctrlKey || e.metaKey) &amp;&amp; /^Key[ZYCXVD]$/.test(e.code) &amp;&amp; !editorIsTextField(e.target))
             e.preventDefault();
     });
 
@@ -1354,8 +1356,8 @@ function editor3DSetSelectedTransform(field, value)
 function editor3DSetSelectedProperty(name, value)
 {
     const selected = editor3DSelected(), id = selected[0]?.id;
-    const defaults = selected[0] && level3DTypes.get(selected[0].type)?.defaults;
-    const d = defaults && Object.hasOwn(defaults, name) ? defaults[name] : undefined;
+    const defaults = selected[0] &amp;&amp; level3DTypes.get(selected[0].type)?.defaults;
+    const d = defaults &amp;&amp; Object.hasOwn(defaults, name) ? defaults[name] : undefined;
     const sameType = isColor(d) ? isColor(value) : isVector3(d) ? isVector3(value) :
         isVector2(d) ? isVector2(value) : typeof value === typeof d;
     if (selected.length !== 1 || !editor3DPropertyEditable(d) || !sameType) return false;
@@ -1378,18 +1380,18 @@ function editor3DPixels(point, pixels) { return editor3DScreenScale(point) / mai
 // the 12 edges of the unit box a matrix places
 function editor3DDrawWire(matrix, color, pixels=2)
 {
-    const corner = (i)=> matrix.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
+    const corner = (i)=> matrix.transformPoint(vec3(i &amp; 1 ? .5 : -.5, i &amp; 2 ? .5 : -.5, i &amp; 4 ? .5 : -.5));
     const width = editor3DPixels(matrix.getTranslation(), pixels);
-    for (let i = 0; i < 8; ++i)
+    for (let i = 0; i &lt; 8; ++i)
     for (const bit of [1, 2, 4])
-        i & bit || render3D.drawLine(corner(i), corner(i | bit), width, color);
+        i &amp; bit || render3D.drawLine(corner(i), corner(i | bit), width, color);
 }
 
 // a ring around a point across two axes
 function editor3DDrawRing(center, across, along, radius, color, pixels=2)
 {
     const points = [];
-    for (let i = 0; i <= 32; ++i)
+    for (let i = 0; i &lt;= 32; ++i)
     {
         const a = i / 32 * PI * 2;
         points.push(center.add(across.scale(cos(a) * radius)).add(along.scale(sin(a) * radius)));
@@ -1401,14 +1403,14 @@ function editor3DDrawRing(center, across, along, radius, color, pixels=2)
 function editor3DVisible(object)
 {
     const made = editor3DInstances.get(object.id);
-    return made instanceof EngineObject3D && !made.destroyed && (made.mesh || made.tileInfo) ? made : undefined;
+    return made instanceof EngineObject3D &amp;&amp; !made.destroyed &amp;&amp; (made.mesh || made.tileInfo) ? made : undefined;
 }
 
 // the box around an object as a matrix: around its mesh where it is, turned and sized as it is, a unit box for a
 // marker
 function editor3DBoxMatrix(object)
 {
-    const made = editor3DVisible(object), bounds = made?.mesh && (made.mesh.bounds || made.mesh.getBounds());
+    const made = editor3DVisible(object), bounds = made?.mesh &amp;&amp; (made.mesh.bounds || made.mesh.getBounds());
     if (!made)
         return buildMatrix(editor3DPos(object));
     const matrix = render3DObjectMatrix(made).copy();
@@ -1422,11 +1424,11 @@ function editor3DDrawGrid()
 {
     const camera = editor3DCamera.pos, reach = 40, y = .01;
     const x0 = round(camera.x), z0 = round(camera.z);
-    for (let i = -reach; i <= reach; ++i)
+    for (let i = -reach; i &lt;= reach; ++i)
     for (const across of [false, true])
     {
         const at = (across ? z0 : x0) + i, strong = at % 10 === 0;
-        if (!strong && abs(i) > reach / 2) continue;
+        if (!strong &amp;&amp; abs(i) > reach / 2) continue;
         const fade = 1 - abs(i) / (strong ? reach : reach / 2);
         const a = across ? vec3(x0 - reach, y, at) : vec3(at, y, z0 - reach);
         const b = across ? vec3(x0 + reach, y, at) : vec3(at, y, z0 + reach);
@@ -1448,13 +1450,13 @@ function editor3DDraw()
     {
         const made = editor3DVisible(object), selected = editor3DSelection.has(object.id);
         made || editor3DDrawWire(editor3DBoxMatrix(object), EDITOR3D_MARKER_COLOR, 1.5);
-        selected && editor3DDrawWire(editor3DBoxMatrix(object), EDITOR3D_SELECT_COLOR, 2.5);
-        if (made?.collideSolidObjects && !made.parent && selected)
+        selected &amp;&amp; editor3DDrawWire(editor3DBoxMatrix(object), EDITOR3D_SELECT_COLOR, 2.5);
+        if (made?.collideSolidObjects &amp;&amp; !made.parent &amp;&amp; selected)
         {
             // what it collides as, which turns with it, where its size3D is not its mesh's
             const shape = render3DSolidShape(made), color = EDITOR3D_SOLID_COLOR;
             if (shape.size)
-                editor3DDrawWire(buildMatrix(shape.pos, shape.axes && made.rotation3D, shape.size), color, 1.5);
+                editor3DDrawWire(buildMatrix(shape.pos, shape.axes &amp;&amp; made.rotation3D, shape.size), color, 1.5);
             else
                 for (const [across, along] of [['x', 'y'], ['y', 'z'], ['z', 'x']])
                     editor3DDrawRing(shape.pos, EDITOR3D_AXES[across], EDITOR3D_AXES[along], shape.radius, color, 1.5);
@@ -1462,7 +1464,7 @@ function editor3DDraw()
     }
 
     // the brush, a box where a click would place it
-    const point = editor3DBrush && !editor3DMouseOnPanel && !editor3DDrag && editor3DMousePoint();
+    const point = editor3DBrush &amp;&amp; !editor3DMouseOnPanel &amp;&amp; !editor3DDrag &amp;&amp; editor3DMousePoint();
     if (point)
     {
         const snapped = editor3DSnapPos(editor3DRest(point, vec3(1)), vec3(1), editor3DGrid ? editor3DMoveStep : 0);
@@ -1474,7 +1476,7 @@ function editor3DDraw()
     {
         const {kind, axis, center, length, points} = handle;
         const taken = (editor3DDrag?.handle ?? editor3DHover);
-        const lit = taken && taken.kind === kind && taken.axis === axis;
+        const lit = taken &amp;&amp; taken.kind === kind &amp;&amp; taken.axis === axis;
         const color = lit ? EDITOR3D_SELECT_COLOR : EDITOR3D_AXIS_COLORS[axis[0]] ?? WHITE;
         const width = editor3DPixels(center, lit ? 4 : 3), tip = length * .1;
         if (kind === 'ring')
@@ -1511,7 +1513,7 @@ function editor3DDrawLabels()
     {
         if (editor3DVisible(object)) continue;
         const at = render3D.worldToScreen(editor3DPos(object));
-        at && drawTextScreen(object.type + '', at, 14, WHITE, 3, BLACK);
+        at &amp;&amp; drawTextScreen(object.type + '', at, 14, WHITE, 3, BLACK);
     }
     const drag = editor3DDrag;
     if (drag?.kind === 'box')
@@ -1593,7 +1595,7 @@ function editor3DPanelInit()
         toolButtons[tool] = button(tools, text, ()=>
         {
             editor3DTool = tool;
-            tool === 'select' && (editor3DBrush = undefined);
+            tool === 'select' &amp;&amp; (editor3DBrush = undefined);
         }, key);
     const snap = editorElement('div', panel, box);
     const grid = check(snap, 'Grid snap', (on)=> editor3DGrid = on, 'G, and Ctrl flips it for a drag');
@@ -1611,7 +1613,7 @@ function editor3DPanelInit()
 
     const file = row();
     // Save says so for a moment when it saved, Save As shows where a page can write files
-    const saved = (b, label)=> (result)=> result && (b.textContent = 'Saved', setTimeout(()=> b.textContent = label, 1e3));
+    const saved = (b, label)=> (result)=> result &amp;&amp; (b.textContent = 'Saved', setTimeout(()=> b.textContent = label, 1e3));
     const save = button(file, 'Save', ()=> editor3DSave().then(saved(save, 'Save')),
         'Save, to the file picked the first time, or a download');
     const saveAs = button(file, 'Save As', ()=> editor3DSave(true).then(saved(saveAs, 'Save As')),
@@ -1639,7 +1641,7 @@ function editor3DPanelUpdate()
 {
     if (!editor3DIsOpen)
     {
-        editor3DPanel && (editor3DPanel.style.display = 'none');
+        editor3DPanel &amp;&amp; (editor3DPanel.style.display = 'none');
         return;
     }
     editor3DPanel || editor3DPanelInit();
@@ -1680,8 +1682,8 @@ function editor3DPanelUpdate()
 // of its type, made again when the selection or the object changes, but not while one of its inputs is typed in
 function editor3DPropertiesUpdate(box)
 {
-    const selected = editor3DSelected(), object = selected.length === 1 && selected[0];
-    const type = object && level3DTypes.get(object.type);
+    const selected = editor3DSelected(), object = selected.length === 1 &amp;&amp; selected[0];
+    const type = object &amp;&amp; level3DTypes.get(object.type);
     const key = object ? JSON.stringify(object) : selected.length ? selected.length + ' objects' : '';
     box.style.display = key ? '' : 'none';
     if (box.dataset.key === key || box.contains(document.activeElement)) return;
@@ -1689,7 +1691,7 @@ function editor3DPropertiesUpdate(box)
     box.replaceChildren();
     if (!object)
     {
-        key && editorElement('div', box, 'color:#aaa', key + ' selected');
+        key &amp;&amp; editorElement('div', box, 'color:#aaa', key + ' selected');
         return;
     }
     editorElement('div', box, 'color:#aaa;margin-bottom:2px', `${object.type} ${object.id}`);
@@ -1756,7 +1758,7 @@ function editor3DPropertiesUpdate(box)
             input.type = 'number';
             input.step = 'any';
             input.value = value + '';
-            input.onchange = ()=> { const v = parseFloat(input.value); isNumber(v) && set(v); };
+            input.onchange = ()=> { const v = parseFloat(input.value); isNumber(v) &amp;&amp; set(v); };
         }
         else if (typeof defaultValue === 'string')
         {
@@ -1789,9 +1791,9 @@ function editor3DUpdate()
     // playing in an editing session, Escape, the debug key, goes back to the editor; taken, so the debug overlay
     // waits till the session ends; a captured mouse the browser let go of is Escape too, Chrome keeps that key
     const lostLock = editor3DLostLock(pointerLockIsActive());
-    if (editor3DSession && (lostLock || debugKey && keyWasPressed(debugKey)))
+    if (editor3DSession &amp;&amp; (lostLock || debugKey &amp;&amp; keyWasPressed(debugKey)))
     {
-        debugKey && inputClearKey(debugKey);
+        debugKey &amp;&amp; inputClearKey(debugKey);
         editor3DSetOpen(true);
         return;
     }
@@ -1805,8 +1807,9 @@ function editor3DRender()
     if (editor3DFreeCamera)
         drawTextScreen('Free camera · C or Esc to leave', vec2(mainCanvasSize.x / 2, mainCanvasSize.y - 30), 20, WHITE,
             4, BLACK);
-    editor3DIsOpen && editor3DDrawLabels();
+    editor3DIsOpen &amp;&amp; editor3DDrawLabels();
 }
 
-debug && engineAddPlugin(editor3DUpdate, editor3DRender);
-debug && debugOverlayKeys.push(()=> render3D && {text: 'C: Free Camera', on: editor3DFreeCamera});
+debug &amp;&amp; engineAddPlugin(editor3DUpdate, editor3DRender);
+debug &amp;&amp; debugOverlayKeys.push(()=> render3D &amp;&amp; {text: 'C: Free Camera', on: editor3DFreeCamera});
+</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioCompressor.html">AudioCompressor</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDelay.html">AudioDelay</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioDistortion.html">AudioDistortion</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioEffect.html">AudioEffect</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioFilter.html">AudioFilter</a></div><div class="sidebar-section-children"><a href="AudioEffects.AudioReverb.html">AudioReverb</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.Shader.html">Shader</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimation.html">SpriteAnimation</a></div><div class="sidebar-section-children"><a href="Draw.SpriteAnimator.html">SpriteAnimator</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="DrawUtilities.TileSlice.html">TileSlice</a></div><div class="sidebar-section-children"><a href="Editor.LevelEditor.html">LevelEditor</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFModel.html">GLTFModel</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFObject.html">GLTFObject</a></div><div class="sidebar-section-children"><a href="GLTF.GLTFPart.html">GLTFPart</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Math3D.Matrix4.html">Matrix4</a></div><div class="sidebar-section-children"><a href="Math3D.Ray3D.html">Ray3D</a></div><div class="sidebar-section-children"><a href="Math3D.Vector3.html">Vector3</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Camera3D.html">Camera3D</a></div><div class="sidebar-section-children"><a href="Render3D.CameraControl3D.html">CameraControl3D</a></div><div class="sidebar-section-children"><a href="Render3D.DirectionalLight3D.html">DirectionalLight3D</a></div><div class="sidebar-section-children"><a href="Render3D.EngineObject3D.html">EngineObject3D</a></div><div class="sidebar-section-children"><a href="Render3D.FirstPersonCamera3D.html">FirstPersonCamera3D</a></div><div class="sidebar-section-children"><a href="Render3D.HeightMap.html">HeightMap</a></div><div class="sidebar-section-children"><a href="Render3D.InstancedMesh3D.html">InstancedMesh3D</a></div><div class="sidebar-section-children"><a href="Render3D.Light3D.html">Light3D</a></div><div class="sidebar-section-children"><a href="Render3D.Mesh.html">Mesh</a></div><div class="sidebar-section-children"><a href="Render3D.ParticleEmitter3D.html">ParticleEmitter3D</a></div><div class="sidebar-section-children"><a href="Render3D.Render3DPlugin.html">Render3DPlugin</a></div><div class="sidebar-section-children"><a href="Render3D.Trail3D.html">Trail3D</a></div><div class="sidebar-section-children"><a href="Render3D.VoxelMap.html">VoxelMap</a></div><div class="sidebar-section-children"><a href="TextureSheets.TextureSheet.html">TextureSheet</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSObject.html">ThreeJSObject</a></div><div class="sidebar-section-children"><a href="ThreeJS.ThreeJSPlugin.html">ThreeJSPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="AudioEffects.html">AudioEffects</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Editor.html">Editor</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="GLTF.html">GLTF</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Level3D.html">Level3D</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Math3D.html">Math3D</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Render3D.html">Render3D</a></div><div class="sidebar-section-children"><a href="SceneSystem.html">SceneSystem</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TextureSheets.html">TextureSheets</a></div><div class="sidebar-section-children"><a href="ThreeJS.html">ThreeJS</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="Tweakables.html">Tweakables</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
