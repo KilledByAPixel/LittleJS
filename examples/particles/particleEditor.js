@@ -842,6 +842,7 @@ function gameInit()
 {
     new Render3DPlugin;
     setGravity(vec2(0, -.01));
+    render3D.gravity = vec3(0, -.01, 0); // gravityScale pulls the same in 3D
     setCameraScale(fitCameraScale());
     setCanvasClearColor(hsl(0, 0, 0));
     buildSettingsPanel();
@@ -866,13 +867,7 @@ function gameUpdate()
     }
 
     if (view3D)
-    {
-        // the camera turns with a drag and zooms with the wheel,
-        // only when they start in the preview
-        camera3D.dragSpeed = dragging ? .01 : 0;
-        camera3D.zoomSpeed = previewHover ? .1 : 0;
-        return;
-    }
+        return; // the camera takes the mouse, in gameUpdatePost
 
     // drag to move the emitter, it goes back to the middle on release
     const pos = dragging ? mousePos.copy() : vec2();
@@ -885,6 +880,15 @@ function gameUpdate()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdatePost()
 {
+    // the 3D camera turns with a drag and zooms with the wheel, only when
+    // they start in the preview; it updates itself unless paused
+    if (view3D)
+    {
+        camera3D.dragSpeed = dragging ? .01 : 0;
+        camera3D.zoomSpeed = previewHover ? .1 : 0;
+        paused && camera3D.update();
+    }
+
     // zoom works while paused too
     if (mouseWheel && previewHover && !view3D)
         setCameraScale(clamp(cameraScale * (1 - sign(mouseWheel)/5), 10, 300));

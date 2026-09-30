@@ -39,3 +39,21 @@ test('particleEffectApply3D takes an effect written by hand', ()=>
     assert.deepEqual([e.emitSize.x, e.emitSize.y, e.emitSize.z], [2, 1, 2]);
     e.destroy();
 });
+
+test('applying an effect to an emitter winding down after destroy keeps it winding down, 2D and 3D', ()=>
+{
+    const { particleEffect, particleEffectApply } = LJS;
+    const flat = particleEffect('fire');
+    for (let i = 0; i < 5; ++i) flat.emitParticle();
+    flat.destroy();
+    particleEffectApply(flat, particleEffectsGet('smoke'));
+    assert.equal(flat.emitTime, -1, '2D stays ended');
+    flat.destroy(true);
+
+    const deep = particleEffect3D('fire');
+    for (let i = 0; i < 5; ++i) deep.emitParticle();
+    deep.destroy();
+    particleEffectApply3D(deep, particleEffectsGet('smoke'));
+    assert.equal(deep.emitTime, -1, '3D stays ended');
+    deep.destroy(true);
+});

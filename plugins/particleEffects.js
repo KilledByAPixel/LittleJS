@@ -455,10 +455,11 @@ function particleEffectTileInfo(s)
 function particleEffectApply(emitter, effect)
 {
     effect = particleEffectSanitize(effect); // an effect written by hand or changed since it was added
-    const s = effect.settings;
+    const s = effect.settings, ended = emitter.emitTime < 0; // destroyed, its last particles going
     for (const setting of particleEffectSettings)
         if (!particleEffectIndirect.includes(setting.name))
             emitter[setting.name] = setting.kind === 'color' ? new Color(...s[setting.name]) : s[setting.name];
+    ended && (emitter.emitTime = -1);
     emitter.emitCircle = !s.emitRect;
     emitter.emitSize = vec2(s.emitSize, s.emitRect ? s.emitHeight : s.emitSize);
     emitter.tileInfo = particleEffectTileInfo(s);
@@ -582,7 +583,8 @@ function particleEffectApply3D(emitter, effect)
     const s = effect.settings, e = emitter;
     // a circle is a sphere and a rectangle a box as deep as it is wide
     e.emitSize = s.emitRect ? vec3(s.emitSize, s.emitHeight, s.emitSize) : s.emitSize;
-    e.emitTime = s.emitTime, e.emitRate = s.emitRate, e.emitConeAngle = s.emitConeAngle;
+    e.emitTime = e.emitTime < 0 ? -1 : s.emitTime; // destroyed, its last particles going, stays so
+    e.emitRate = s.emitRate, e.emitConeAngle = s.emitConeAngle;
     e.tileInfo = particleEffectTileInfo(s);
     for (const name of ['colorStartA', 'colorStartB', 'colorEndA', 'colorEndB'])
         e[name] = new Color(...s[name]);
