@@ -1,3 +1,6 @@
+// the full ParticleEmitter constructor, every setting in one call; for
+// ready made effects in one line see the Particle Effects short
+
 let cometEmitter;
 
 function gameInit()
