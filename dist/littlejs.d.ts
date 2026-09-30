@@ -10216,6 +10216,46 @@ declare module "littlejsengine" {
      *  @return {TileInfo|undefined}
      *  @memberof ParticleEffects */
     export function particleEffectShapeTile(name: string): TileInfo | undefined;
+    /** Play an effect: a 2D emitter set to it, placed, scaled and recolored
+     *  - A continuous effect (fire, a torch) goes until destroyed or given an emitTime, a one-shot ends itself
+     *  - Attach it to an object with addChild to follow it
+     *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
+     *  @param {Vector2} [pos]
+     *  @param {Object} [options]
+     *  @param {number} [options.scale] - Grows the whole effect, the built-ins fit a one unit object at 1
+     *  @param {number} [options.hue] - Turns its colors around the color wheel, 1 is all the way
+     *  @param {number} [options.saturation] - Multiplies its saturation, 0 is grey
+     *  @param {number} [options.angle] - Direction, 0 is up; the effect's own angle when not given
+     *  @return {ParticleEmitter|undefined} - undefined when there is no such effect
+     *  @memberof ParticleEffects */
+    export function particleEffect(nameOrEffect: string | any, pos?: Vector2, options?: {
+        scale?: number;
+        hue?: number;
+        saturation?: number;
+        angle?: number;
+    }): ParticleEmitter | undefined;
+    /** Set a 2D emitter to an effect, live, so a running one keeps its particles
+     *  @param {ParticleEmitter} emitter
+     *  @param {Object} effect
+     *  @memberof ParticleEffects */
+    export function particleEffectApply(emitter: ParticleEmitter, effect: any): void;
+    /** An effect with a 2D emitter's settings, to save, build again, or build in 3D with particleEffect3D; its tile is
+     *  left out, since a hand made emitter's tile is its own texture and not one an effect can name
+     *  @param {ParticleEmitter} emitter
+     *  @param {string} [name]
+     *  @return {Object}
+     *  @memberof ParticleEffects */
+    export function particleEffectFromEmitter(emitter: ParticleEmitter, name?: string): any;
+    /** Add a behavior effects can use by name, or replace one
+     *  @param {string} name
+     *  @param {function(Particle, number): void} update - Pushes a 2D particle, given the strength
+     *  @param {function(Particle3D, number): void} [update3D] - The same for a 3D particle, none leaves 3D alone
+     *  @param {number} [min] - Strength range the designer offers
+     *  @param {number} [max]
+     *  @param {number} [value] - Strength when first added
+     *  @param {string} [description]
+     *  @memberof ParticleEffects */
+    export function particleEffectsAddBehavior(name: string, update: (arg0: Particle, arg1: number) => void, update3D?: (arg0: Particle3D, arg1: number) => void, min?: number, max?: number, value?: number, description?: string): void;
     /**
      * LittleJS Level Editor
      * - Paint the game's tile layers while it is paused, then keep playing with the changes

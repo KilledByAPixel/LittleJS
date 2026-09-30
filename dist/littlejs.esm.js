@@ -30430,6 +30430,165 @@ function particleEffectShapeTile(name)
     return particleEffectShapeTiles.get(name);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// behaviors, the 2D pushes: a distance moved grows with the particle's scale, so a bigger effect moves the same way
+
+{
+    const b = particleEffectBehavior;
+    b('wobble').update = (p, s)=>
+    {
+        p.wobblePhase ??= rand(9); // each particle on its own beat
+        p.velocity.x += s * .003 * p.scale * sin(time*6 + p.wobblePhase);
+    };
+    b('swirl').update = (p, s)=>
+    {
+        // turn the direction of travel a little each frame
+        const a = s * .05, c = cos(a), n = sin(a), v = p.velocity;
+        v.set(v.x*c - v.y*n, v.x*n + v.y*c);
+    };
+    b('turbulence').update = (p, s)=>
+    {
+        p.velocity.x += rand(-1, 1) * s * .005 * p.scale;
+        p.velocity.y += rand(-1, 1) * s * .005 * p.scale;
+    };
+    b('attract').update = (p, s)=>
+    {
+        // pull toward the emitter by the distance, which grows with the scale already
+        const e = p.emitter, x = e.localSpace ? 0 : e.pos.x, y = e.localSpace ? 0 : e.pos.y;
+        p.velocity.x += (x - p.pos.x) * s * .002;
+        p.velocity.y += (y - p.pos.y) * s * .002;
+    };
+    b('orbit').update = (p, s)=>
+    {
+        const e = p.emitter, x = e.localSpace ? 0 : e.pos.x, y = e.localSpace ? 0 : e.pos.y;
+        p.velocity.x -= (p.pos.y - y) * s * .002;
+        p.velocity.y += (p.pos.x - x) * s * .002;
+    };
+    b('wind').update = (p, s)=>
+        p.velocity.x += s * .004 * p.scale * min((time - p.spawnTime) / p.lifeTime, 1);
+    b('stick').update = (p, s)=>
+    {
+        // grip the ground on landing, pair with collideLevel
+        if (!p.groundObject) return;
+        p.velocity.x *= 1 - s;
+        p.angleVelocity *= 1 - s;
+    };
+}
+
+/** Add a behavior effects can use by name, or replace one
+ *  @param {string} name
+ *  @param {function(Particle, number): void} update - Pushes a 2D particle, given the strength
+ *  @param {function(Particle3D, number): void} [update3D] - The same for a 3D particle, none leaves 3D alone
+ *  @param {number} [min] - Strength range the designer offers
+ *  @param {number} [max]
+ *  @param {number} [value] - Strength when first added
+ *  @param {string} [description]
+ *  @memberof ParticleEffects */
+function particleEffectsAddBehavior(name, update, update3D, min=-2, max=2, value=1, description='')
+{
+    const old = particleEffectBehavior(name);
+    old && particleEffectBehaviors.splice(particleEffectBehaviors.indexOf(old), 1);
+    particleEffectBehaviors.push({name, update, update3D, min, max, value, description});
+}
+
+// the update callback that runs an effect's behaviors, in 2D or 3D, undefined when it has none for that
+function particleEffectUpdateCallback(behaviors, is3D)
+{
+    const calls = behaviors.map(b=> [particleEffectBehavior(b.name)?.[is3D ? 'update3D' : 'update'], b.strength])
+        .filter(c=> c[0]);
+    if (calls.length)
+        return (p)=> { for (const [update, strength] of calls) update(p, strength); };
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// 2D effects
+
+// the settings the builders set themselves instead of copying across
+const particleEffectIndirect = ['emitSize', 'emitRect', 'emitHeight', 'tileIndex', 'tileSize', 'tilePadding', 'shape'];
+
+// the tile an effect draws with: its shape, else its tile in texture 0 when that fits, else none
+function particleEffectTileInfo(s)
+{
+    if (s.shape)
+        return particleEffectShapeTile(s.shape);
+    if (s.tileIndex < 0) return;
+    const texture = textureInfos[0], cell = s.tileSize + s.tilePadding*2;
+    if (!texture || !texture.size.x) return;
+    if (s.tileIndex < floor(texture.size.x / cell) * floor(texture.size.y / cell))
+        return tile(s.tileIndex, s.tileSize, 0, s.tilePadding);
+}
+
+/** Set a 2D emitter to an effect, live, so a running one keeps its particles
+ *  @param {ParticleEmitter} emitter
+ *  @param {Object} effect
+ *  @memberof ParticleEffects */
+function particleEffectApply(emitter, effect)
+{
+    const s = effect.settings;
+    for (const setting of particleEffectSettings)
+        if (!particleEffectIndirect.includes(setting.name))
+            emitter[setting.name] = setting.kind === 'color' ? new Color(...s[setting.name]) : s[setting.name];
+    emitter.emitCircle = !s.emitRect;
+    emitter.emitSize = vec2(s.emitSize, s.emitRect ? s.emitHeight : s.emitSize);
+    emitter.tileInfo = particleEffectTileInfo(s);
+    emitter.renderOrder = s.additive ? 1e9 : 0;
+    emitter.particleUpdateCallback = particleEffectUpdateCallback(effect.behaviors);
+}
+
+// an effect from a name or an effect, recolored by the options
+function particleEffectResolve(nameOrEffect, options)
+{
+    const effect = typeof nameOrEffect == 'string' ? particleEffectsGet(nameOrEffect) : nameOrEffect;
+    ASSERT(!!effect, 'no particle effect named ' + nameOrEffect);
+    if (!effect) return;
+    const {hue=0, saturation=1} = options;
+    return hue || saturation != 1 ? particleEffectRecolor(effect, hue, saturation) : effect;
+}
+
+/** Play an effect: a 2D emitter set to it, placed, scaled and recolored
+ *  - A continuous effect (fire, a torch) goes until destroyed or given an emitTime, a one-shot ends itself
+ *  - Attach it to an object with addChild to follow it
+ *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
+ *  @param {Vector2} [pos]
+ *  @param {Object} [options]
+ *  @param {number} [options.scale] - Grows the whole effect, the built-ins fit a one unit object at 1
+ *  @param {number} [options.hue] - Turns its colors around the color wheel, 1 is all the way
+ *  @param {number} [options.saturation] - Multiplies its saturation, 0 is grey
+ *  @param {number} [options.angle] - Direction, 0 is up; the effect's own angle when not given
+ *  @return {ParticleEmitter|undefined} - undefined when there is no such effect
+ *  @memberof ParticleEffects */
+function particleEffect(nameOrEffect, pos=vec2(), options={})
+{
+    const effect = particleEffectResolve(nameOrEffect, options);
+    if (!effect) return;
+    const emitter = new ParticleEmitter(pos.copy());
+    particleEffectApply(emitter, effect);
+    emitter.scale = options.scale ?? 1;
+    if (options.angle !== undefined)
+        emitter.angle = options.angle;
+    return emitter;
+}
+
+/** An effect with a 2D emitter's settings, to save, build again, or build in 3D with particleEffect3D; its tile is
+ *  left out, since a hand made emitter's tile is its own texture and not one an effect can name
+ *  @param {ParticleEmitter} emitter
+ *  @param {string} [name]
+ *  @return {Object}
+ *  @memberof ParticleEffects */
+function particleEffectFromEmitter(emitter, name='Effect')
+{
+    const settings = {};
+    for (const setting of particleEffectSettings)
+        if (!particleEffectIndirect.includes(setting.name) && emitter[setting.name] !== undefined)
+            settings[setting.name] = emitter[setting.name]; // a Color is taken as its channels by the sanitizer
+    settings.emitRect = !emitter.emitCircle;
+    settings.emitSize = emitter.emitSize.x;
+    settings.emitHeight = emitter.emitSize.y;
+    settings.shape = '';
+    settings.tileIndex = -1;
+    return particleEffectSanitize({name, settings});
+}
+
 /**
  * LittleJS glTF Plugin
  * - Loads glTF 2.0 models: a .gltf with its .bin and images beside it, or a .glb with everything in one file
@@ -36833,5 +36992,9 @@ export
     particleEffectsText,
     particleEffectsLoad,
     particleEffectShapeTile,
+    particleEffect,
+    particleEffectApply,
+    particleEffectFromEmitter,
+    particleEffectsAddBehavior,
 }
 

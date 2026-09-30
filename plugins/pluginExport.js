@@ -226,4 +226,8 @@ export
     particleEffectsText,
     particleEffectsLoad,
     particleEffectShapeTile,
+    particleEffect,
+    particleEffectApply,
+    particleEffectFromEmitter,
+    particleEffectsAddBehavior,
 }
