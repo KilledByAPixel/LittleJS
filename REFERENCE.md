@@ -799,7 +799,7 @@ particleEffectFromEmitter(emitter)      // a 2D emitter's settings as an effect,
 particleEffectsAddBehavior(name, update, update3D) // add a behavior effects can name, with 2D and 3D pushes
 particleEffectsAdd(effects)             // add effects to play by name, one of the same name replaces it
 particleEffectsGet(name)                // an effect's data, any case, to change or build by hand
-await particleEffectsLoad(url)          // load a library the particle designer saved, and add its effects
+await particleEffectsLoad(url)          // load the file the particle designer's Save Library wrote, and add its effects
 particleEffectsParse(text)              // a library file's text to effects, particleEffectsText(effects) back
 particleEffectSanitize(raw)             // any input to a whole effect, defaults filled, bad values clamped
 particleEffectRecolor(effect, hue, saturation) // a copy turned around the color wheel and its saturation scaled
