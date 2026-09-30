@@ -22744,22 +22744,49 @@ function render3DCanDraw()
 }
 
 // the draw state fields a batch is drawn under; lights and fog are not captured, they are read live at flush
-// the three functions below write them out by hand for speed, so a new field goes in all four; emissiveMapColor is
-// compared by its values, so two objects with equal colors batch
+// each is an accessor on the plugin over render3D.drawState, and a real change moves render3D.stateVersion, so a
+// batch checks that one number at each draw while the state holds; the three functions below write the fields out
+// by hand for speed, so a new field goes in all four, in drawState and gets an accessor; emissiveMapColor is
+// compared by its rgb, so two objects with equal colors batch
+/** The draw state's values, behind render3D's accessors, and the rgb emissiveMapColor had when it was set
+ *  @typedef {Object} Render3DDrawState
+ *  @property {boolean} blend
+ *  @property {boolean} additive
+ *  @property {boolean} depthTest
+ *  @property {boolean} depthWrite
+ *  @property {boolean} cullBackFaces
+ *  @property {boolean} mirrored
+ *  @property {boolean} lighting
+ *  @property {number} emissive
+ *  @property {boolean} receiveShadow
+ *  @property {number} specular
+ *  @property {boolean} pixelated
+ *  @property {Shader|undefined} shader
+ *  @property {TextureInfo|undefined} normalMap
+ *  @property {number} normalScale
+ *  @property {number} shininess
+ *  @property {number} reflectivity
+ *  @property {TextureInfo|undefined} emissiveMap
+ *  @property {Color} emissiveMapColor
+ *  @property {number} emissiveR
+ *  @property {number} emissiveG
+ *  @property {number} emissiveB
+ *  @memberof Render3D */
 const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting',
     'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader', 'normalMap', 'normalScale', 'shininess',
     'reflectivity', 'emissiveMap', 'emissiveMapColor'];
 
-// a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out so the
-// compare below stays a handful of direct reads, it runs for every instance drawn
+// a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out, and the version
+// it was taken at
 function render3DCaptureBatchState()
 {
-    const r = render3D;
-    return {blend: r.blend, additive: r.additive, depthTest: r.depthTest, depthWrite: r.depthWrite,
-        cullBackFaces: r.cullBackFaces, mirrored: r.mirrored, lighting: r.lighting, emissive: r.emissive,
-        receiveShadow: r.receiveShadow, specular: r.specular, pixelated: r.pixelated, shader: r.shader,
-        normalMap: r.normalMap, normalScale: r.normalScale, shininess: r.shininess, reflectivity: r.reflectivity,
-        emissiveMap: r.emissiveMap, emissiveMapColor: (r.emissiveMapColor || WHITE).copy()}; // the caller may change it
+    const r = render3D, d = r.drawState;
+    return {blend: d.blend, additive: d.additive, depthTest: d.depthTest, depthWrite: d.depthWrite,
+        cullBackFaces: d.cullBackFaces, mirrored: d.mirrored, lighting: d.lighting, emissive: d.emissive,
+        receiveShadow: d.receiveShadow, specular: d.specular, pixelated: d.pixelated, shader: d.shader,
+        normalMap: d.normalMap, normalScale: d.normalScale, shininess: d.shininess, reflectivity: d.reflectivity,
+        emissiveMap: d.emissiveMap, emissiveMapColor: (d.emissiveMapColor || WHITE).copy(), // the caller may change it
+        version: r.stateVersion};
 }
 
 // put a captured draw state back, written out the same way; the transparent stage does this for every queued draw
@@ -22773,21 +22800,23 @@ function render3DApplyBatchState(s)
     r.reflectivity = s.reflectivity, r.emissiveMap = s.emissiveMap, r.emissiveMapColor = s.emissiveMapColor;
 }
 
-// true when the current draw state differs from a captured one, so a pending batch must flush first
+// true when the current draw state differs from a captured one, so a pending batch must flush first; it runs for
+// every instance drawn, so while nothing was set since the capture it checks the version alone
 function render3DStateChanged(s)
 {
     const r = render3D;
-    return r.blend !== s.blend || r.additive !== s.additive || r.depthTest !== s.depthTest
-        || r.depthWrite !== s.depthWrite || r.cullBackFaces !== s.cullBackFaces || r.mirrored !== s.mirrored
-        || r.lighting !== s.lighting || r.emissive !== s.emissive || r.receiveShadow !== s.receiveShadow
-        || r.specular !== s.specular || r.pixelated !== s.pixelated || r.shader !== s.shader
-        || r.normalMap !== s.normalMap || r.normalScale !== s.normalScale || r.shininess !== s.shininess
-        || r.reflectivity !== s.reflectivity || r.emissiveMap !== s.emissiveMap
-        || render3DColorChanged(r.emissiveMapColor || WHITE, s.emissiveMapColor);
-}
-
-// whether two colors differ in their rgb, for the batch key's emissiveMapColor
-function render3DColorChanged(a, b) { return a.r !== b.r || a.g !== b.g || a.b !== b.b;
+    if (s.version === r.stateVersion) return false;
+    const d = r.drawState, c = s.emissiveMapColor;
+    if (d.blend !== s.blend || d.additive !== s.additive || d.depthTest !== s.depthTest
+        || d.depthWrite !== s.depthWrite || d.cullBackFaces !== s.cullBackFaces || d.mirrored !== s.mirrored
+        || d.lighting !== s.lighting || d.emissive !== s.emissive || d.receiveShadow !== s.receiveShadow
+        || d.specular !== s.specular || d.pixelated !== s.pixelated || d.shader !== s.shader
+        || d.normalMap !== s.normalMap || d.normalScale !== s.normalScale || d.shininess !== s.shininess
+        || d.reflectivity !== s.reflectivity || d.emissiveMap !== s.emissiveMap
+        || d.emissiveR !== c.r || d.emissiveG !== c.g || d.emissiveB !== c.b)
+        return true;
+    s.version = r.stateVersion; // set and set back to what it was: the batch goes on, checking the version again
+    return false;
 }
 
 // whether a sphere is inside the view, or the shadow map's box during the shadow pass, without a vector
@@ -22926,10 +22955,11 @@ function render3DDrawObjects(objects)
     render3DSetObjectState();
 }
 
-// add a draw of a mesh to its batch; a batch is one mesh under one texture and draw state, so a change flushes it
+// add a draw of a mesh to its batch; a batch is one mesh under one texture and draw state, so a change flushes it,
+// and under one winding: a mirroring transform, one with a negative determinant, turns it around
 function render3DInstance(mesh, matrix, tileInfo, color)
 {
-    const k = render3DInstanceSlot(mesh, render3DTextureOf(tileInfo)), data = mesh.instanceData;
+    const k = render3DInstanceSlot(mesh, render3DTextureOf(tileInfo), render3DMirrors(matrix)), data = mesh.instanceData;
     data.set(matrix.m, k);
     // the tint; this batch is never blended, so in the shadow pass the depth shader cuts it by its texture alpha
     // alone, a see through caster draws blended instead and is cut by its tint alpha too
@@ -22940,14 +22970,18 @@ function render3DInstance(mesh, matrix, tileInfo, color)
 
 // make room for one more instance of a mesh under a texture and the current draw state, flushing a batch that
 // differs first, and return where its 24 floats go in mesh.instanceData: the matrix, the tint and the uv rect
-function render3DInstanceSlot(mesh, textureInfo)
+// drawMesh passes whether its matrix mirrors, and its batch then culls by the mesh and winds by that at the flush,
+// so it never sets the draw state for them, which would move the state's version at every draw
+function render3DInstanceSlot(mesh, textureInfo, mirrored)
 {
     const r = render3D;
-    if (mesh.instanceCount && (mesh.instanceTextureInfo !== textureInfo || render3DStateChanged(mesh.instanceState)))
+    if (mesh.instanceCount && (mesh.instanceTextureInfo !== textureInfo || mesh.instanceMirrored !== mirrored
+        || render3DStateChanged(mesh.instanceState)))
         render3DFlushInstances(mesh);
     if (!mesh.instanceCount)
     {
         mesh.instanceTextureInfo = textureInfo;
+        mesh.instanceMirrored = mirrored;
         mesh.instanceState = render3DCaptureBatchState();
         r.instanceMeshes.push(mesh);
     }
@@ -22978,7 +23012,10 @@ function render3DFlushInstances(only)
         const buffers = r.instanceBuffers, buffer = buffers[r.instanceBufferIndex = (r.instanceBufferIndex + 1) % buffers.length];
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, mesh.instanceData, gl.DYNAMIC_DRAW, 0, count * RENDER3D_INSTANCE_FLOATS);
-        render3DDrawInstanced(mesh, buffer, count, mesh.instanceTextureInfo, mesh.instanceState);
+        const state = mesh.instanceState;
+        if (mesh.instanceMirrored !== undefined) // a drawMesh batch: culled by its mesh, wound by its matrices
+            state.cullBackFaces = !mesh.doubleSided, state.mirrored = mesh.instanceMirrored;
+        render3DDrawInstanced(mesh, buffer, count, mesh.instanceTextureInfo, state);
     }
     if (!only)
         r.instanceMeshes.length = 0;
@@ -23100,7 +23137,15 @@ class Render3DPlugin
     {
         ASSERT(!render3D, 'Render3D plugin already initialized');
         render3D = this;
-        ASSERT(Object.keys(render3DCaptureBatchState()).join() === RENDER3D_STATE_FIELDS.join(),
+        // the draw state, read at each draw through the accessors below the constructor
+        /** @type {Render3DDrawState} */
+        this.drawState = {blend: false, additive: false, depthTest: true, depthWrite: true, cullBackFaces: false,
+            mirrored: false, lighting: true, emissive: 0, receiveShadow: true, specular: 0, pixelated: false,
+            shader: undefined, normalMap: undefined, normalScale: 1, shininess: 16, reflectivity: 0,
+            emissiveMap: undefined, emissiveMapColor: WHITE, emissiveR: 1, emissiveG: 1, emissiveB: 1};
+        /** @property {number} - Goes up when a draw state field changes, so a batch sees at a glance that none did */
+        this.stateVersion = 0;
+        ASSERT(Object.keys(render3DCaptureBatchState()).join() === [...RENDER3D_STATE_FIELDS, 'version'].join(),
             'the batch state functions must list RENDER3D_STATE_FIELDS');
 
         /** @property {Camera3D} - The camera */
@@ -23160,50 +23205,6 @@ class Render3DPlugin
         /** @property {number} - How much to blur the shadow edges */
         this.shadowSoftness = 1;
 
-        // draw state, read at each draw
-        /** @property {boolean} - Apply lighting, when false draws plain vertex color times texture and casts no shadow;
-         *  off for billboards, lines, ribbons and soft discs, an object sets emissive instead */
-        this.lighting = true;
-        /** @property {number} - How much a surface lights itself, set per object by its emissive */
-        this.emissive = 0;
-        /** @property {boolean} - Additive blending instead of alpha, in the transparent stage */
-        this.additive = false;
-        /** @property {boolean} - Test against the depth buffer, reset to true before each object and callback; a draw
-         *  with it off goes over what was drawn before it and under what is drawn after, by render order, which
-         *  ends the batch of meshes before it, so one per object costs a draw per object */
-        this.depthTest = true;
-        /** @property {boolean} - Write to the depth buffer, owned by the stages: on for opaque, off for transparent */
-        this.depthWrite = true;
-        // batch state set by drawMesh from each mesh: whether its back faces are skipped, off for strips so they
-        // show from both sides, and whether its transform mirrors it so the other winding is the front
-        this.cullBackFaces = false;
-        this.mirrored = false;
-        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
-         *  1 adds a light's full color at its brightest; shininess sets its size */
-        this.specular = 0;
-        /** @property {number} - The highlight's exponent, how small and sharp it is: 4 is broad like rubber, 100 sharp
-         *  like polished metal; set from each object's shininess */
-        this.shininess = 16;
-        /** @property {TextureInfo|undefined} - Normal map for the next draws, set from each object's normalMap
-         *  @type {TextureInfo|undefined} */
-        this.normalMap = undefined;
-        /** @property {number} - How strongly the normal map bends the surface, set from each object's normalScale */
-        this.normalScale = 1;
-        /** @property {number} - How much the surface reflects the sky, 0 to 1, set from each object's reflectivity */
-        this.reflectivity = 0;
-        /** @property {TextureInfo|undefined} - Emissive map for the next draws, set from each object's emissiveMap
-         *  @type {TextureInfo|undefined} */
-        this.emissiveMap = undefined;
-        /** @property {Color} - Multiplies the emissive map, set from each object's emissiveMapColor */
-        this.emissiveMapColor = WHITE;
-        /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined
-         *  draws with the plugin's own
-         *  @type {Shader|undefined} */
-        this.shader = undefined;
-        /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay
-         *  lit inside a shadow */
-        this.receiveShadow = true;
-
         // the pass
         /** @property {Function|undefined} - Draw solid world here, it runs again for shadows so only draw in it
          *  @type {Function|undefined} */
@@ -23226,9 +23227,6 @@ class Render3DPlugin
         /** @property {boolean} - Sample textures through mipmaps so they do not shimmer in the distance, false uses
          *  each texture's own filtering like 2D */
         this.mipmaps = true;
-        /** @property {boolean} - Draw state: keep texture pixels hard edged, no mipmaps and no blending between them,
-         *  set per object by pixelated */
-        this.pixelated = false;
         /** @property {number} - Anisotropic filtering for textures seen at an angle, 1 to 16, 1 is off; needs mipmaps */
         this.anisotropy = 4;
 
@@ -23272,7 +23270,6 @@ class Render3DPlugin
         this.cameraBack = vec3(0, 0, 1); // its opposite, the normal of camera facing draws
 
         // internal state
-        this.blend = false;          // blending on, set by the stages
         /** @type {Array<Array<number>>} */
         this.frustumPlanes = [];     // the view as six inward planes [x, y, z, w]
         /** @type {Array<Array<number>>} */
@@ -23338,6 +23335,116 @@ class Render3DPlugin
         render3DInitGL();
         engineAddPlugin(undefined, render3DRender, render3DContextLost, render3DContextRestored, render3DPreRender);
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Draw state: each field an accessor over drawState, whose setter moves stateVersion only on a real change
+
+    /** Apply lighting, when false draws plain vertex color times texture and casts no shadow;
+     *  off for billboards, lines, ribbons and soft discs, an object sets emissive instead
+     *  @return {boolean} */
+    get lighting() { return this.drawState.lighting; }
+    set lighting(v) { const d = this.drawState; d.lighting === v || (d.lighting = v, ++this.stateVersion); }
+
+    /** How much a surface lights itself, set per object by its emissive
+     *  @return {number} */
+    get emissive() { return this.drawState.emissive; }
+    set emissive(v) { const d = this.drawState; d.emissive === v || (d.emissive = v, ++this.stateVersion); }
+
+    /** Additive blending instead of alpha, in the transparent stage
+     *  @return {boolean} */
+    get additive() { return this.drawState.additive; }
+    set additive(v) { const d = this.drawState; d.additive === v || (d.additive = v, ++this.stateVersion); }
+
+    /** Test against the depth buffer, reset to true before each object and callback; a draw
+     *  with it off goes over what was drawn before it and under what is drawn after, by render order, which
+     *  ends the batch of meshes before it, so one per object costs a draw per object
+     *  @return {boolean} */
+    get depthTest() { return this.drawState.depthTest; }
+    set depthTest(v) { const d = this.drawState; d.depthTest === v || (d.depthTest = v, ++this.stateVersion); }
+
+    /** Write to the depth buffer, owned by the stages: on for opaque, off for transparent
+     *  @return {boolean} */
+    get depthWrite() { return this.drawState.depthWrite; }
+    set depthWrite(v) { const d = this.drawState; d.depthWrite === v || (d.depthWrite = v, ++this.stateVersion); }
+
+    /** Skip back faces, set by drawMesh from each mesh: off for strips so they show from
+     *  both sides
+     *  @return {boolean} */
+    get cullBackFaces() { return this.drawState.cullBackFaces; }
+    set cullBackFaces(v) { const d = this.drawState; d.cullBackFaces === v || (d.cullBackFaces = v, ++this.stateVersion); }
+
+    /** The transform mirrors the draw, so the other winding is the front, set by drawMesh
+     *  from each transform
+     *  @return {boolean} */
+    get mirrored() { return this.drawState.mirrored; }
+    set mirrored(v) { const d = this.drawState; d.mirrored === v || (d.mirrored = v, ++this.stateVersion); }
+
+    /** Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
+     *  1 adds a light's full color at its brightest; shininess sets its size
+     *  @return {number} */
+    get specular() { return this.drawState.specular; }
+    set specular(v) { const d = this.drawState; d.specular === v || (d.specular = v, ++this.stateVersion); }
+
+    /** The highlight's exponent, how small and sharp it is: 4 is broad like rubber, 100 sharp
+     *  like polished metal; set from each object's shininess
+     *  @return {number} */
+    get shininess() { return this.drawState.shininess; }
+    set shininess(v) { const d = this.drawState; d.shininess === v || (d.shininess = v, ++this.stateVersion); }
+
+    /** Normal map for the next draws, set from each object's normalMap
+     *  @return {TextureInfo|undefined} */
+    get normalMap() { return this.drawState.normalMap; }
+    set normalMap(v) { const d = this.drawState; d.normalMap === v || (d.normalMap = v, ++this.stateVersion); }
+
+    /** How strongly the normal map bends the surface, set from each object's normalScale
+     *  @return {number} */
+    get normalScale() { return this.drawState.normalScale; }
+    set normalScale(v) { const d = this.drawState; d.normalScale === v || (d.normalScale = v, ++this.stateVersion); }
+
+    /** How much the surface reflects the sky, 0 to 1, set from each object's reflectivity
+     *  @return {number} */
+    get reflectivity() { return this.drawState.reflectivity; }
+    set reflectivity(v) { const d = this.drawState; d.reflectivity === v || (d.reflectivity = v, ++this.stateVersion); }
+
+    /** Emissive map for the next draws, set from each object's emissiveMap
+     *  @return {TextureInfo|undefined} */
+    get emissiveMap() { return this.drawState.emissiveMap; }
+    set emissiveMap(v) { const d = this.drawState; d.emissiveMap === v || (d.emissiveMap = v, ++this.stateVersion); }
+
+    /** Multiplies the emissive map, set from each object's emissiveMapColor; compared by its rgb, so a Color
+     *  changed in place is seen when it is set again, and undefined is white
+     *  @return {Color} */
+    get emissiveMapColor() { return this.drawState.emissiveMapColor; }
+    set emissiveMapColor(v)
+    {
+        const d = this.drawState, c = v || WHITE;
+        d.emissiveMapColor = v;
+        if (c.r !== d.emissiveR || c.g !== d.emissiveG || c.b !== d.emissiveB)
+            d.emissiveR = c.r, d.emissiveG = c.g, d.emissiveB = c.b, ++this.stateVersion;
+    }
+
+    /** Custom Shader for the next draws, set from each object's shader; undefined draws
+     *  with the plugin's own
+     *  @return {Shader|undefined} */
+    get shader() { return this.drawState.shader; }
+    set shader(v) { const d = this.drawState; d.shader === v || (d.shader = v, ++this.stateVersion); }
+
+    /** Darken by the shadow map when shadows are on, turn it off for things that should
+     *  stay lit inside a shadow
+     *  @return {boolean} */
+    get receiveShadow() { return this.drawState.receiveShadow; }
+    set receiveShadow(v) { const d = this.drawState; d.receiveShadow === v || (d.receiveShadow = v, ++this.stateVersion); }
+
+    /** Keep texture pixels hard edged, no mipmaps and no blending between them, set per
+     *  object by pixelated
+     *  @return {boolean} */
+    get pixelated() { return this.drawState.pixelated; }
+    set pixelated(v) { const d = this.drawState; d.pixelated === v || (d.pixelated = v, ++this.stateVersion); }
+
+    /** Blending on, set by the stages
+     *  @return {boolean} */
+    get blend() { return this.drawState.blend; }
+    set blend(v) { const d = this.drawState; d.blend === v || (d.blend = v, ++this.stateVersion); }
 
     ///////////////////////////////////////////////////////////////////////////
     // Matrices and picking
@@ -23526,15 +23633,15 @@ class Render3DPlugin
         if (this.frustumCulling && !render3DSphereVisible(m[12], m[13], m[14], mesh.radius * render3DMaxStretch(m)))
             return;
         // the mesh says whether its back faces can be skipped, and a mirroring transform, one with a negative
-        // determinant, turns the winding around so the other one is its front
-        const cullBackFaces = this.cullBackFaces, mirrored = this.mirrored;
-        this.cullBackFaces = !mesh.doubleSided;
-        this.mirrored = render3DMirrors(matrix);
-        // the stage draws the batch at its end
+        // determinant, turns the winding around so the other one is its front; the stage draws a batch at its
+        // end, which keys on those itself
         if (!this.blend && this.depthTest && (mesh.instanced ?? this.instancing))
             render3DInstance(mesh, matrix, tileInfo, color);
         else
         {
+            const cullBackFaces = this.cullBackFaces, mirrored = this.mirrored;
+            this.cullBackFaces = !mesh.doubleSided;
+            this.mirrored = render3DMirrors(matrix);
             this.flush();
             render3DFlushBeforeOverlay();
             render3DSetDrawUniforms(matrix, tileInfo, color);
@@ -23542,8 +23649,8 @@ class Render3DPlugin
             glContext.drawElements(glContext.TRIANGLES, mesh.bufferCount, mesh.indexType, 0);
             ++drawCount;
             primitiveCount += mesh.bufferCount / 3;
+            this.cullBackFaces = cullBackFaces, this.mirrored = mirrored;
         }
-        this.cullBackFaces = cullBackFaces, this.mirrored = mirrored;
     }
 
     /** Draw a triangle strip, batched into the stream with the current draw state

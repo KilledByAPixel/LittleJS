@@ -122,6 +122,32 @@ declare module "littlejsengine" {
         renderPost?: () => void;
     };
     /**
+     * The draw state's values, behind render3D's accessors, and the rgb emissiveMapColor had when it was set
+     */
+    export type Render3DDrawState = {
+        blend: boolean;
+        additive: boolean;
+        depthTest: boolean;
+        depthWrite: boolean;
+        cullBackFaces: boolean;
+        mirrored: boolean;
+        lighting: boolean;
+        emissive: number;
+        receiveShadow: boolean;
+        specular: number;
+        pixelated: boolean;
+        shader: Shader | undefined;
+        normalMap: TextureInfo | undefined;
+        normalScale: number;
+        shininess: number;
+        reflectivity: number;
+        emissiveMap: TextureInfo | undefined;
+        emissiveMapColor: Color;
+        emissiveR: number;
+        emissiveG: number;
+        emissiveB: number;
+    };
+    /**
      * A particle as a ParticleEmitter3D's callbacks see it: one object the emitter reuses, set from the particle for each
      * call and written back after it, so copy what you keep
      */
@@ -7784,6 +7810,10 @@ declare module "littlejsengine" {
      * new EngineObject3D(vec3(), buildBox());
      */
     export class Render3DPlugin {
+        /** @type {Render3DDrawState} */
+        drawState: Render3DDrawState;
+        /** @property {number} - Goes up when a draw state field changes, so a batch sees at a glance that none did */
+        stateVersion: number;
         /** @property {Camera3D} - The camera */
         camera: Camera3D;
         /** @property {Vector3} - Direction toward the sun, where its light comes from, like a directional Light3D;
@@ -7835,46 +7865,6 @@ declare module "littlejsengine" {
         shadowBias: number;
         /** @property {number} - How much to blur the shadow edges */
         shadowSoftness: number;
-        /** @property {boolean} - Apply lighting, when false draws plain vertex color times texture and casts no shadow;
-         *  off for billboards, lines, ribbons and soft discs, an object sets emissive instead */
-        lighting: boolean;
-        /** @property {number} - How much a surface lights itself, set per object by its emissive */
-        emissive: number;
-        /** @property {boolean} - Additive blending instead of alpha, in the transparent stage */
-        additive: boolean;
-        /** @property {boolean} - Test against the depth buffer, reset to true before each object and callback; a draw
-         *  with it off goes over what was drawn before it and under what is drawn after, by render order, which
-         *  ends the batch of meshes before it, so one per object costs a draw per object */
-        depthTest: boolean;
-        /** @property {boolean} - Write to the depth buffer, owned by the stages: on for opaque, off for transparent */
-        depthWrite: boolean;
-        cullBackFaces: boolean;
-        mirrored: boolean;
-        /** @property {number} - Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
-         *  1 adds a light's full color at its brightest; shininess sets its size */
-        specular: number;
-        /** @property {number} - The highlight's exponent, how small and sharp it is: 4 is broad like rubber, 100 sharp
-         *  like polished metal; set from each object's shininess */
-        shininess: number;
-        /** @property {TextureInfo|undefined} - Normal map for the next draws, set from each object's normalMap
-         *  @type {TextureInfo|undefined} */
-        normalMap: TextureInfo | undefined;
-        /** @property {number} - How strongly the normal map bends the surface, set from each object's normalScale */
-        normalScale: number;
-        /** @property {number} - How much the surface reflects the sky, 0 to 1, set from each object's reflectivity */
-        reflectivity: number;
-        /** @property {TextureInfo|undefined} - Emissive map for the next draws, set from each object's emissiveMap
-         *  @type {TextureInfo|undefined} */
-        emissiveMap: TextureInfo | undefined;
-        /** @property {Color} - Multiplies the emissive map, set from each object's emissiveMapColor */
-        emissiveMapColor: Color;
-        /** @property {Shader|undefined} - Custom Shader for the next draws, set from each object's shader; undefined
-         *  draws with the plugin's own
-         *  @type {Shader|undefined} */
-        shader: Shader | undefined;
-        /** @property {boolean} - Darken by the shadow map when shadows are on, turn it off for things that should stay
-         *  lit inside a shadow */
-        receiveShadow: boolean;
         /** @property {Function|undefined} - Draw solid world here, it runs again for shadows so only draw in it
          *  @type {Function|undefined} */
         onRenderOpaque: Function | undefined;
@@ -7896,9 +7886,6 @@ declare module "littlejsengine" {
         /** @property {boolean} - Sample textures through mipmaps so they do not shimmer in the distance, false uses
          *  each texture's own filtering like 2D */
         mipmaps: boolean;
-        /** @property {boolean} - Draw state: keep texture pixels hard edged, no mipmaps and no blending between them,
-         *  set per object by pixelated */
-        pixelated: boolean;
         /** @property {number} - Anisotropic filtering for textures seen at an angle, 1 to 16, 1 is off; needs mipmaps */
         anisotropy: number;
         /** @property {Mesh} - A box of size 1 that drawBox uses, for any object that is a box; set the object's scale3D
@@ -7933,7 +7920,6 @@ declare module "littlejsengine" {
         /** @property {Vector3} - Camera forward axis this frame */
         cameraForward: Vector3;
         cameraBack: Vector3;
-        blend: boolean;
         /** @type {Array<Array<number>>} */
         frustumPlanes: Array<Array<number>>;
         /** @type {Array<Array<number>>} */
@@ -7999,6 +7985,89 @@ declare module "littlejsengine" {
             state: any;
             draw: () => void;
         }> | undefined;
+        set lighting(arg: boolean);
+        /** Apply lighting, when false draws plain vertex color times texture and casts no shadow;
+         *  off for billboards, lines, ribbons and soft discs, an object sets emissive instead
+         *  @return {boolean} */
+        get lighting(): boolean;
+        set emissive(arg: number);
+        /** How much a surface lights itself, set per object by its emissive
+         *  @return {number} */
+        get emissive(): number;
+        set additive(arg: boolean);
+        /** Additive blending instead of alpha, in the transparent stage
+         *  @return {boolean} */
+        get additive(): boolean;
+        set depthTest(arg: boolean);
+        /** Test against the depth buffer, reset to true before each object and callback; a draw
+         *  with it off goes over what was drawn before it and under what is drawn after, by render order, which
+         *  ends the batch of meshes before it, so one per object costs a draw per object
+         *  @return {boolean} */
+        get depthTest(): boolean;
+        set depthWrite(arg: boolean);
+        /** Write to the depth buffer, owned by the stages: on for opaque, off for transparent
+         *  @return {boolean} */
+        get depthWrite(): boolean;
+        set cullBackFaces(arg: boolean);
+        /** Skip back faces, set by drawMesh from each mesh: off for strips so they show from
+         *  both sides
+         *  @return {boolean} */
+        get cullBackFaces(): boolean;
+        set mirrored(arg: boolean);
+        /** The transform mirrors the draw, so the other winding is the front, set by drawMesh
+         *  from each transform
+         *  @return {boolean} */
+        get mirrored(): boolean;
+        set specular(arg: number);
+        /** Strength of the highlight where the sun and the Light3D objects reflect, 0 is none and
+         *  1 adds a light's full color at its brightest; shininess sets its size
+         *  @return {number} */
+        get specular(): number;
+        set shininess(arg: number);
+        /** The highlight's exponent, how small and sharp it is: 4 is broad like rubber, 100 sharp
+         *  like polished metal; set from each object's shininess
+         *  @return {number} */
+        get shininess(): number;
+        set normalMap(arg: TextureInfo);
+        /** Normal map for the next draws, set from each object's normalMap
+         *  @return {TextureInfo|undefined} */
+        get normalMap(): TextureInfo;
+        set normalScale(arg: number);
+        /** How strongly the normal map bends the surface, set from each object's normalScale
+         *  @return {number} */
+        get normalScale(): number;
+        set reflectivity(arg: number);
+        /** How much the surface reflects the sky, 0 to 1, set from each object's reflectivity
+         *  @return {number} */
+        get reflectivity(): number;
+        set emissiveMap(arg: TextureInfo);
+        /** Emissive map for the next draws, set from each object's emissiveMap
+         *  @return {TextureInfo|undefined} */
+        get emissiveMap(): TextureInfo;
+        set emissiveMapColor(arg: Color);
+        /** Multiplies the emissive map, set from each object's emissiveMapColor; compared by its rgb, so a Color
+         *  changed in place is seen when it is set again, and undefined is white
+         *  @return {Color} */
+        get emissiveMapColor(): Color;
+        set shader(arg: Shader);
+        /** Custom Shader for the next draws, set from each object's shader; undefined draws
+         *  with the plugin's own
+         *  @return {Shader|undefined} */
+        get shader(): Shader;
+        set receiveShadow(arg: boolean);
+        /** Darken by the shadow map when shadows are on, turn it off for things that should
+         *  stay lit inside a shadow
+         *  @return {boolean} */
+        get receiveShadow(): boolean;
+        set pixelated(arg: boolean);
+        /** Keep texture pixels hard edged, no mipmaps and no blending between them, set per
+         *  object by pixelated
+         *  @return {boolean} */
+        get pixelated(): boolean;
+        set blend(arg: boolean);
+        /** Blending on, set by the stages
+         *  @return {boolean} */
+        get blend(): boolean;
         /** Rebuild the view and projection matrices from the camera, called automatically each frame
          *  @param {number} [aspect] - Width over height, defaults to the main canvas */
         updateMatrices(aspect?: number): void;
