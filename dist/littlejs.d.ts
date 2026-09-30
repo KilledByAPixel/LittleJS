@@ -8714,6 +8714,8 @@ declare module "littlejsengine" {
      *   trees cost what one tree does; objects and drawMesh batch by themselves too, but rebuild their batch every frame
      * - setTransformAt, setMatrixAt and setColorAt change one instance, and only the changed range uploads before the
      *   next draw; the matrices and the colors are kept apart, so moving instances uploads 64 bytes each
+     * - For many instances moving every frame, setTransforms places a run of them from arrays of positions, rotations
+     *   and scales in one loop, the fastest way; or write matrixData directly and call markDirtyRange
      * - The instances are in world space; the object's own pos3D, rotation3D and scale3D do not move them
      * - The whole set is culled by one bounding sphere around the origin, worked out when culling reads it, or set by hand
      *   with radius; it casts and receives shadows like any object
@@ -8772,6 +8774,21 @@ declare module "littlejsengine" {
          *  @param {Vector3} [rotation] - Euler angles in radians
          *  @param {Vector3} [scale] */
         setTransformAt(i: number, pos?: Vector3, rotation?: Vector3, scale?: Vector3): void;
+        /** Place a run of instances from arrays indexed by instance, plain or typed, as a game keeps them: each is placed
+         *  as setTransformAt places it, all in one loop with nothing made, the fastest way to move many every frame;
+         *  in world space
+         *  @param {number} start - First instance
+         *  @param {number} count - How many
+         *  @param {ArrayLike<number>} x - Positions
+         *  @param {ArrayLike<number>} y
+         *  @param {ArrayLike<number>} z
+         *  @param {ArrayLike<number>} [rx] - Euler angles in radians, all three or none for upright
+         *  @param {ArrayLike<number>} [ry]
+         *  @param {ArrayLike<number>} [rz]
+         *  @param {ArrayLike<number>} [sx] - Scales, all three or none for 1
+         *  @param {ArrayLike<number>} [sy]
+         *  @param {ArrayLike<number>} [sz] */
+        setTransforms(start: number, count: number, x: ArrayLike<number>, y: ArrayLike<number>, z: ArrayLike<number>, rx?: ArrayLike<number>, ry?: ArrayLike<number>, rz?: ArrayLike<number>, sx?: ArrayLike<number>, sy?: ArrayLike<number>, sz?: ArrayLike<number>): void;
         /** Place an instance, in world space
          *  @param {number} i
          *  @param {Matrix4} matrix */
@@ -8788,6 +8805,11 @@ declare module "littlejsengine" {
          *  they are read; setTransformAt and setMatrixAt call this, and so must an edit made straight to matrixData
          *  @param {number} i */
         markDirty(i: number): void;
+        /** Note that a run of instances' matrices changed, for code that writes matrixData directly, the lowest level
+         *  way to move many: they upload before the next draw and the bounds take them in when they are read
+         *  @param {number} start - First instance
+         *  @param {number} end - One past the last */
+        markDirtyRange(start: number, end: number): void;
         /** Note that an instance's color changed, so it uploads before the next draw; setColorAt calls this, and so must
          *  an edit made straight to colorData
          *  @param {number} i */

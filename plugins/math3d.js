@@ -606,28 +606,34 @@ function matrix4RotationAt(m, k, euler)
 }
 
 // the transform buildMatrix makes, written into 16 floats of an array at k, so an instance buffer takes it straight in
+// the rotation columns are scaled and the position dropped in, instead of multiplying three matrices, each value
+// worked out whole and stored once; InstancedMesh3D.setTransforms writes the same expressions for many at a time
 function matrix4Compose(m, k, pos, rotation, scale)
 {
     ASSERT(!pos || isVector3(pos), 'pos must be a Vector3', pos);
     ASSERT(!scale || isVector3(scale), 'scale must be a Vector3', scale);
-    // scale the rotation columns and drop the position in, instead of multiplying three matrices
+    const scaleX = scale ? scale.x : 1, scaleY = scale ? scale.y : 1, scaleZ = scale ? scale.z : 1;
     // an object that is not turned at all is most of a big scene, and identity is what the six
     // trig calls would have worked out to anyway
     if (rotation && (rotation.x || rotation.y || rotation.z))
     {
         ASSERT_VECTOR3_VALID(rotation);
-        matrix4RotationAt(m, k, rotation);
+        const cx = cos(rotation.x), sx = sin(rotation.x);
+        const cy = cos(rotation.y), sy = sin(rotation.y);
+        const cz = cos(rotation.z), sz = sin(rotation.z);
+        // R = Ry * Rx * Rz written out, column major, as matrix4RotationAt, each column times its scale
+        m[k]   = (cy*cz + sy*sx*sz) * scaleX;  m[k+1] = cx*sz * scaleX; m[k+2]  = (-sy*cz + cy*sx*sz) * scaleX;
+        m[k+4] = (-cy*sz + sy*sx*cz) * scaleY; m[k+5] = cx*cz * scaleY; m[k+6]  = (sy*sz + cy*sx*cz) * scaleY;
+        m[k+8] = sy*cx * scaleZ;               m[k+9] = -sx * scaleZ;   m[k+10] = cy*cx * scaleZ;
     }
     else
-        m.set(matrix4Identity, k);
-    if (scale)
     {
-        m[k]   *= scale.x; m[k+1] *= scale.x; m[k+2]  *= scale.x;
-        m[k+4] *= scale.y; m[k+5] *= scale.y; m[k+6]  *= scale.y;
-        m[k+8] *= scale.z; m[k+9] *= scale.z; m[k+10] *= scale.z;
+        m[k]   = scaleX; m[k+1] = 0;      m[k+2]  = 0;
+        m[k+4] = 0;      m[k+5] = scaleY; m[k+6]  = 0;
+        m[k+8] = 0;      m[k+9] = 0;      m[k+10] = scaleZ;
     }
-    if (pos)
-        m[k+12] = pos.x, m[k+13] = pos.y, m[k+14] = pos.z;
+    m[k+3] = m[k+7] = m[k+11] = 0; m[k+15] = 1;
+    m[k+12] = pos ? pos.x : 0, m[k+13] = pos ? pos.y : 0, m[k+14] = pos ? pos.z : 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

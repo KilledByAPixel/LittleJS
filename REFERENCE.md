@@ -1267,9 +1267,13 @@ new InstancedMesh3D(mesh, count, tileInfo, color) // many copies of a mesh as on
                                   // mostly stay put; an EngineObject3D whose flags cover the whole set
 set.setTransformAt(i, pos, rotation, scale) // place an instance, in world space, the object's own transform does not
                                   // move them; buildMatrix's arguments written straight in, the fastest way
+set.setTransforms(start, count, x, y, z, rx, ry, rz, sx, sy, sz) // place a run from arrays indexed by instance,
+                                  // plain or typed, in one loop, the fastest way to move many every frame;
+                                  // rotations and scales are optional, all three or none
 set.setMatrixAt(i, matrix)        // place one by a matrix; getMatrixAt(i) reads one back
 set.setColorAt(i, color)          // color one, they start in the object's color; only changed colors upload
-set.matrixData / set.colorData    // 16 and 8 floats an instance, edit them and call markDirty(i) / markColorDirty(i)
+set.matrixData / set.colorData    // 16 and 8 floats an instance, edit them and call markDirty(i) / markColorDirty(i),
+                                  // or markDirtyRange(start, end) for a run of matrices
 set.radius = 50                   // fix the culling sphere, which otherwise grows to hold every instance set
 set.count = 500                   // draw the first 500 of the count it was made with
 render3D.renderAfter2D = false // true draws the 3D scene on top of the 2D scene instead of under it; objects that do

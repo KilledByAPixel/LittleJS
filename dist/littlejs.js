@@ -22348,28 +22348,34 @@ function matrix4RotationAt(m, k, euler)
 }
 
 // the transform buildMatrix makes, written into 16 floats of an array at k, so an instance buffer takes it straight in
+// the rotation columns are scaled and the position dropped in, instead of multiplying three matrices, each value
+// worked out whole and stored once; InstancedMesh3D.setTransforms writes the same expressions for many at a time
 function matrix4Compose(m, k, pos, rotation, scale)
 {
     ASSERT(!pos || isVector3(pos), 'pos must be a Vector3', pos);
     ASSERT(!scale || isVector3(scale), 'scale must be a Vector3', scale);
-    // scale the rotation columns and drop the position in, instead of multiplying three matrices
+    const scaleX = scale ? scale.x : 1, scaleY = scale ? scale.y : 1, scaleZ = scale ? scale.z : 1;
     // an object that is not turned at all is most of a big scene, and identity is what the six
     // trig calls would have worked out to anyway
     if (rotation && (rotation.x || rotation.y || rotation.z))
     {
         ASSERT_VECTOR3_VALID(rotation);
-        matrix4RotationAt(m, k, rotation);
+        const cx = cos(rotation.x), sx = sin(rotation.x);
+        const cy = cos(rotation.y), sy = sin(rotation.y);
+        const cz = cos(rotation.z), sz = sin(rotation.z);
+        // R = Ry * Rx * Rz written out, column major, as matrix4RotationAt, each column times its scale
+        m[k]   = (cy*cz + sy*sx*sz) * scaleX;  m[k+1] = cx*sz * scaleX; m[k+2]  = (-sy*cz + cy*sx*sz) * scaleX;
+        m[k+4] = (-cy*sz + sy*sx*cz) * scaleY; m[k+5] = cx*cz * scaleY; m[k+6]  = (sy*sz + cy*sx*cz) * scaleY;
+        m[k+8] = sy*cx * scaleZ;               m[k+9] = -sx * scaleZ;   m[k+10] = cy*cx * scaleZ;
     }
     else
-        m.set(matrix4Identity, k);
-    if (scale)
     {
-        m[k]   *= scale.x; m[k+1] *= scale.x; m[k+2]  *= scale.x;
-        m[k+4] *= scale.y; m[k+5] *= scale.y; m[k+6]  *= scale.y;
-        m[k+8] *= scale.z; m[k+9] *= scale.z; m[k+10] *= scale.z;
+        m[k]   = scaleX; m[k+1] = 0;      m[k+2]  = 0;
+        m[k+4] = 0;      m[k+5] = scaleY; m[k+6]  = 0;
+        m[k+8] = 0;      m[k+9] = 0;      m[k+10] = scaleZ;
     }
-    if (pos)
-        m[k+12] = pos.x, m[k+13] = pos.y, m[k+14] = pos.z;
+    m[k+3] = m[k+7] = m[k+11] = 0; m[k+15] = 1;
+    m[k+12] = pos ? pos.x : 0, m[k+13] = pos ? pos.y : 0, m[k+14] = pos ? pos.z : 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -27028,6 +27034,8 @@ function engineObjectsCallback3D(pos, size, callback, objects=engineObjects, tes
  *   trees cost what one tree does; objects and drawMesh batch by themselves too, but rebuild their batch every frame
  * - setTransformAt, setMatrixAt and setColorAt change one instance, and only the changed range uploads before the
  *   next draw; the matrices and the colors are kept apart, so moving instances uploads 64 bytes each
+ * - For many instances moving every frame, setTransforms places a run of them from arrays of positions, rotations
+ *   and scales in one loop, the fastest way; or write matrixData directly and call markDirtyRange
  * - The instances are in world space; the object's own pos3D, rotation3D and scale3D do not move them
  * - The whole set is culled by one bounding sphere around the origin, worked out when culling reads it, or set by hand
  *   with radius; it casts and receives shadows like any object
@@ -27110,6 +27118,53 @@ class InstancedMesh3D extends EngineObject3D
         this.markDirty(i);
     }
 
+    /** Place a run of instances from arrays indexed by instance, plain or typed, as a game keeps them: each is placed
+     *  as setTransformAt places it, all in one loop with nothing made, the fastest way to move many every frame;
+     *  in world space
+     *  @param {number} start - First instance
+     *  @param {number} count - How many
+     *  @param {ArrayLike<number>} x - Positions
+     *  @param {ArrayLike<number>} y
+     *  @param {ArrayLike<number>} z
+     *  @param {ArrayLike<number>} [rx] - Euler angles in radians, all three or none for upright
+     *  @param {ArrayLike<number>} [ry]
+     *  @param {ArrayLike<number>} [rz]
+     *  @param {ArrayLike<number>} [sx] - Scales, all three or none for 1
+     *  @param {ArrayLike<number>} [sy]
+     *  @param {ArrayLike<number>} [sz] */
+    setTransforms(start, count, x, y, z, rx, ry, rz, sx, sy, sz)
+    {
+        ASSERT(start >= 0 && count >= 0 && start + count <= this.maxCount, 'instance range out of range');
+        ASSERT(!rx === !ry && !rx === !rz && !sx === !sy && !sx === !sz, 'rotations and scales come in threes');
+        const m = this.matrixData, end = start + count;
+        for (let i = start; i < end; ++i)
+        {
+            // matrix4Compose's expressions, so a run placed here is the same as each placed by setTransformAt
+            const k = i * RENDER3D_MATRIX_FLOATS;
+            const scaleX = sx ? sx[i] : 1, scaleY = sy ? sy[i] : 1, scaleZ = sz ? sz[i] : 1;
+            if (rx)
+            {
+                const cx = cos(rx[i]), sinX = sin(rx[i]);
+                const cy = cos(ry[i]), sinY = sin(ry[i]);
+                const cz = cos(rz[i]), sinZ = sin(rz[i]);
+                m[k]   = (cy*cz + sinY*sinX*sinZ) * scaleX;  m[k+1] = cx*sinZ * scaleX;
+                m[k+2] = (-sinY*cz + cy*sinX*sinZ) * scaleX;
+                m[k+4] = (-cy*sinZ + sinY*sinX*cz) * scaleY; m[k+5] = cx*cz * scaleY;
+                m[k+6] = (sinY*sinZ + cy*sinX*cz) * scaleY;
+                m[k+8] = sinY*cx * scaleZ;                   m[k+9] = -sinX * scaleZ; m[k+10] = cy*cx * scaleZ;
+            }
+            else
+            {
+                m[k]   = scaleX; m[k+1] = 0;      m[k+2]  = 0;
+                m[k+4] = 0;      m[k+5] = scaleY; m[k+6]  = 0;
+                m[k+8] = 0;      m[k+9] = 0;      m[k+10] = scaleZ;
+            }
+            m[k+3] = m[k+7] = m[k+11] = 0; m[k+15] = 1;
+            m[k+12] = x[i], m[k+13] = y[i], m[k+14] = z[i];
+        }
+        count && this.markDirtyRange(start, end);
+    }
+
     /** Place an instance, in world space
      *  @param {number} i
      *  @param {Matrix4} matrix */
@@ -27154,6 +27209,19 @@ class InstancedMesh3D extends EngineObject3D
         if (i >= this.dirtyEnd) this.dirtyEnd = i + 1;
         if (i < this.boundsStart) this.boundsStart = i;
         if (i >= this.boundsEnd) this.boundsEnd = i + 1;
+    }
+
+    /** Note that a run of instances' matrices changed, for code that writes matrixData directly, the lowest level
+     *  way to move many: they upload before the next draw and the bounds take them in when they are read
+     *  @param {number} start - First instance
+     *  @param {number} end - One past the last */
+    markDirtyRange(start, end)
+    {
+        ASSERT(start >= 0 && end <= this.maxCount && start <= end, 'instance range out of range');
+        if (start < this.dirtyStart) this.dirtyStart = start;
+        if (end > this.dirtyEnd) this.dirtyEnd = end;
+        if (start < this.boundsStart) this.boundsStart = start;
+        if (end > this.boundsEnd) this.boundsEnd = end;
     }
 
     /** Note that an instance's color changed, so it uploads before the next draw; setColorAt calls this, and so must
