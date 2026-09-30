@@ -133,7 +133,6 @@ const exampleList =
     new ExampleInfo('Breakout Game', 'breakout', 'Complete breakout game', true, 'objects, physics, score'),
     new ExampleInfo('Platforming Game', 'platformer', 'Platformer with level loading', true, 'jump, world, tiles, pixel art, sprites'),
     new ExampleInfo('Puzzle Game', 'puzzle', 'Match 3 style puzzle game', true, 'match, swap, sprites'),
-    new ExampleInfo('Stress Test', 'stress', 'Performance and music test', true, 'optimization, tiles, sprites'),
     new ExampleInfo('Box2D Plugin', 'box2d', 'Full Box2D physics demo', true, 'objects, bodies, joints'),
     new ExampleInfo('HTML Menus', 'htmlMenu', 'HTML UI integration', true, 'web, browser, overlay, button, slider, textbox'),
     new ExampleInfo('UI System Plugin Demo', 'uiSystem', 'Complete UI system demo', true, 'menu, overlay, button, slider, checkbox'),
