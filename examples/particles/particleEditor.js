@@ -27,6 +27,8 @@ let dragging = false;  // moving the emitter with the mouse
 let draggingLast = false;
 let previewHover = false;
 let pickerDrawn;       // what the tile picker last drew
+let view3D = false;    // the preview shows the effect in 3D
+let camera3D, ground3D; // the 3D view's orbit camera and ground
 const restartTimer = new Timer;
 const rows = {};           // settings rows by name, each with refresh()
 const settingsGroups = {}; // group content elements by name
@@ -374,28 +376,59 @@ function effectChanged()
 function updateCode()
 {
     $('codeText').value = effectToCode(effect, previewOptions,
-        $('expandCheckbox').checked, false);
+        $('expandCheckbox').checked, view3D);
 }
 
 function restartEmitter()
 {
     emitter && emitter.destroy(true);
-    emitter = particleEffect(effect, vec2(), previewOptions);
+    emitter = view3D ?
+        particleEffect3D(effect, vec3(), previewOptions) :
+        particleEffect(effect, vec2(), previewOptions);
     restartTimer.unset();
+}
+
+// switch the preview between 2D and 3D, the effect plays again in it
+function setView3D(on)
+{
+    view3D = on;
+    $('buttonView').textContent = on ? '2D' : '3D';
+    $('flattenLabel').hidden = !on;
+    $('expandCheckbox').disabled = on;
+    $('expandCheckbox').parentElement.title =
+        on ? 'The full constructor is for 2D' : '';
+    if (on)
+    {
+        // an orbit camera and a flat ground 3 below, as the 2D floor
+        camera3D = new CameraControl3D(vec3(), 10, .4);
+        ground3D = new HeightMap([[0, 0], [0, 0]], vec2(40), 1, undefined,
+            vec3(0, -3, 0));
+        ground3D.color = hsl(0, 0, .3);
+    }
+    else
+    {
+        camera3D.destroy();
+        ground3D.destroy();
+        camera3D = ground3D = undefined;
+    }
+    restartEmitter();
+    updateFloor();
+    updateCode();
 }
 
 // the effect on the running preview, recolored as the options say
 function applyPreview()
 {
     const {hue, saturation} = previewOptions;
-    particleEffectApply(emitter, hue || saturation != 1 ?
+    const apply = view3D ? particleEffectApply3D : particleEffectApply;
+    apply(emitter, hue || saturation != 1 ?
         particleEffectRecolor(effect, hue, saturation) : effect);
 }
 
 // a floor to land on while particles collide with tiles, 3 below the emitter
 function updateFloor()
 {
-    const collide = effect.settings.collideLevel;
+    const collide = effect.settings.collideLevel && !view3D;
     if (collide && !floorLayer)
     {
         // a 1 pixel tile keeps the layer's canvas small
@@ -486,7 +519,8 @@ function setupPreviewControls()
     fit();
 
     $('buttonRestart').onclick = ()=> restartEmitter();
-    $('buttonResetZoom').onclick = ()=> setCameraScale(fitCameraScale());
+    $('buttonResetZoom').onclick = ()=> view3D ?
+        camera3D.distance = 10 : setCameraScale(fitCameraScale());
     $('buttonPause').onclick = ()=>
     {
         setPaused(!paused);
@@ -508,6 +542,26 @@ function setupPreviewControls()
             texture.createWebGLTexture();
         }
     };
+
+    // play options: a scale or flatten remakes the emitter, colors apply live
+    const option = (id, name, read, restart)=> $(id).oninput = ()=>
+    {
+        const value = read($(id));
+        if (value === undefined) return;
+        previewOptions[name] = value;
+        restart ? restartEmitter() : applyPreview();
+        updateCode();
+    };
+    const positive = (e)=>
+    {
+        const value = parseFloat(e.value);
+        return isNumber(value) && value > 0 ? value : undefined;
+    };
+    option('scaleInput', 'scale', positive, true);
+    option('hueInput', 'hue', (e)=> parseFloat(e.value));
+    option('saturationInput', 'saturation', (e)=> parseFloat(e.value));
+    option('flattenCheckbox', 'flatten', (e)=> e.checked, true);
+    $('buttonView').onclick = ()=> setView3D(!view3D);
 
     $('expandCheckbox').checked = storageLoad(storageExpandKey) === 'true';
     $('expandCheckbox').oninput = ()=>
@@ -786,6 +840,7 @@ function refreshTexture()
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    new Render3DPlugin;
     setGravity(vec2(0, -.01));
     setCameraScale(fitCameraScale());
     setCanvasClearColor(hsl(0, 0, 0));
@@ -810,6 +865,15 @@ function gameUpdate()
             restartEmitter();
     }
 
+    if (view3D)
+    {
+        // the camera turns with a drag and zooms with the wheel,
+        // only when they start in the preview
+        camera3D.dragSpeed = dragging ? .01 : 0;
+        camera3D.zoomSpeed = previewHover ? .1 : 0;
+        return;
+    }
+
     // drag to move the emitter, it goes back to the middle on release
     const pos = dragging ? mousePos.copy() : vec2();
     if (dragging !== draggingLast)
@@ -822,14 +886,15 @@ function gameUpdate()
 function gameUpdatePost()
 {
     // zoom works while paused too
-    if (mouseWheel && previewHover)
+    if (mouseWheel && previewHover && !view3D)
         setCameraScale(clamp(cameraScale * (1 - sign(mouseWheel)/5), 10, 300));
 
     // debug key 3 toggles the bounds too
     if ($('debugCheckbox').checked !== debugParticles)
         $('debugCheckbox').checked = debugParticles;
 
-    const count = emitter.particles.length + ' particles';
+    const count = (view3D ? emitter.particleCount : emitter.particles.length) +
+        ' particles';
     if ($('particleCount').textContent !== count)
         $('particleCount').textContent = count;
 }

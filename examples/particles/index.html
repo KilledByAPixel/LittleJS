@@ -98,6 +98,8 @@ details.group > div { padding:0 12px 8px; }
 }
 #toolbar .spacer { flex:1; }
 #toolbar label { display:flex; gap:4px; align-items:center; color:var(--dim); }
+#toolbar input[type=range] { width:70px; }
+#toolbar input[type=number] { width:56px; }
 #particleCount { color:var(--dim); min-width:90px; }
 #previewArea { flex:1; min-height:0; position:relative; }
 #codePanel
@@ -166,6 +168,20 @@ details.group > div { padding:0 12px 8px; }
             <button id=buttonRestart>Restart</button>
             <button id=buttonPause>Pause</button>
             <button id=buttonResetZoom>Reset Zoom</button>
+            <button id=buttonView
+                title="Show the effect in 3D, particleEffect3D">3D</button>
+            <label title="Grows the whole effect, options.scale">Scale
+                <input id=scaleInput type=number min=.1 max=10 step=.1
+                    value=1></label>
+            <label title="Turns the colors around the wheel, options.hue">Hue
+                <input id=hueInput type=range min=0 max=1 step=.01
+                    value=0></label>
+            <label title="Multiplies the saturation, options.saturation"
+                >Saturation <input id=saturationInput type=range min=0 max=2
+                    step=.05 value=1></label>
+            <label id=flattenLabel hidden
+                title="Flat across the way it emits, options.flatten">
+                <input id=flattenCheckbox type=checkbox> Flatten</label>
             <span id=particleCount></span>
             <span class=spacer></span>
             <label>Background <select id=backgroundSelect>
