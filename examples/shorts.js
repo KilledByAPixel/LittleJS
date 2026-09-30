@@ -38,6 +38,7 @@ const exampleList =
     new ExampleInfo('Image Font', 'imageFont.js', 'Bitmap fonts, including the built-in one', false, 'text, characters'),
     new ExampleInfo('Particles', 'particles.js', 'Built-in particle effects placed, scaled and moved', false, 'effects, emitter, fire, smoke, sparks, comet, trail, particleEffect'),
     new ExampleInfo('Particle Effects', 'particleEffects.js', 'Every built-in particle effect, one line each', false, 'particles, effects, fire, smoke, explosion, sparks, magic, rain, snow, hue'),
+    new ExampleInfo('Particle Options', 'particleOptions.js', 'One effect, and what each option does to it', false, 'particles, effects, options, scale, hue, saturation, tile, burst'),
     new ExampleInfo('Tile Layer', 'tileLayer.js', 'Tile layer rendering system', false, 'level, map, grid, particles'),
     new ExampleInfo('Low Resolution Output', 'lowRes.js', 'Crisp low resolution rendering', false, 'pixelated, retro, canvasFixedSize, pixel art'),
     new ExampleInfo('Clock', 'clock.js', 'Animated analog clock', false, 'time, rotation, lines, rectangle'),
