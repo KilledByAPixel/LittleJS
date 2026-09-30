@@ -756,7 +756,9 @@ particleEmitRateScale = 1 // Scales particles emit rate
 
 ```javascript
 particleEffect(name, pos, {scale, hue, saturation, angle}) // play an effect, returns its ParticleEmitter; a
-                                        // continuous one goes until destroyed, a one-shot ends itself
+                                        // continuous one goes until destroyed, a one-shot ends itself; any setting
+                                        // in the options replaces the effect's own: {emitTime: .5} for a burst,
+                                        // {emitTime: 0, emitRate: 30} to keep a one-shot going
 particleEffect3D(name, pos3D, {scale, hue, saturation, angle}) // the same effect as a ParticleEmitter3D, angle
                                         // turning it about z; a rectangle area becomes a flat box
 particleEffectsBuiltIn                  // the built-in names: fire, torch, smoke, steam, explosion, sparks, hit,
@@ -802,7 +804,8 @@ particleEffectBehaviors                 // the behaviors an effect can name: wob
                                         // orbit, wind and stick
 particleEffectShapes                    // the shapes the plugin draws: dot, soft, glow, smoke, spark, square,
                                         // triangle, ring, star and plus
-particleEffectShapeTile(name)           // a built-in shape's tile, on a sheet drawn once, undefined headless
+particleEffectShapeTile(name)           // a built-in shape's tile, on a sheet drawn once, undefined headless or
+                                        // without WebGL, where effects draw untextured
 ```
 
 ## LittleJS Tween System

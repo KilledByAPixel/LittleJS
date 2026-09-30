@@ -908,7 +908,7 @@ const render3DParticlesCalling = new Set;
  *  @return {Particle3D} */
 function render3DParticleView(emitter)
 {
-    return {emitter, pos: vec3(), velocity: vec3(), age: 0, lifeTime: 0, destroyed: false,
+    return {emitter, pos: vec3(), velocity: vec3(), age: 0, lifeTime: 0, scale: 1, destroyed: false,
         destroy() { this.destroyed = true; }};
 }
 
@@ -921,6 +921,8 @@ function render3DParticleView(emitter)
  * @property {Vector3} velocity - How far it moves each frame
  * @property {number} age - Seconds it has lived
  * @property {number} lifeTime - Seconds it lives
+ * @property {number} scale - How much the emitter grows its effect, from its scale3D and its parents', as the 2D
+ *   particle's scale
  * @property {boolean} destroyed - Set by destroy
  * @property {function(): void} destroy - End it this update, the destroy callback gets it
  * @memberof Render3D
@@ -1082,6 +1084,8 @@ class ParticleEmitter3D extends EngineObject3D
         const matrix = render3DObjectMatrix(this); // the object's own, read only
         this.worldPos3D = matrix.getTranslation(); // remembered for when the parent is destroyed
         const scale = render3DMaxScale(matrix.m);
+        this.particleView.scale = scale;
+        this.particleView.scale = scale; // the callbacks read it from the view instead of working it out each
 
         // emit until the emit time is up, then wait for the last particle and go away
         if (!this.emitTime || this.getAliveTime() <= this.emitTime)

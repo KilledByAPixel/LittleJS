@@ -10639,8 +10639,8 @@ class ParticleEmitter extends EngineObject
         const scale = this.scale; // grows the spawn area, the sizes and the speed of each particle born
         let pos = this.emitCircle ?            // check if circle emitter
             randInCircle(this.emitSize.x/2 * scale) // circle emitter
-            : vec2(rand(-.5,.5), rand(-.5,.5)) // box emitter
-                .multiply(this.emitSize).scale(scale);
+            : vec2(rand(-.5,.5) * this.emitSize.x * scale, // box emitter, one vector made
+                rand(-.5,.5) * this.emitSize.y * scale);
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)
         {
@@ -28352,7 +28352,7 @@ const render3DParticlesCalling = new Set;
  *  @return {Particle3D} */
 function render3DParticleView(emitter)
 {
-    return {emitter, pos: vec3(), velocity: vec3(), age: 0, lifeTime: 0, destroyed: false,
+    return {emitter, pos: vec3(), velocity: vec3(), age: 0, lifeTime: 0, scale: 1, destroyed: false,
         destroy() { this.destroyed = true; }};
 }
 
@@ -28365,6 +28365,8 @@ function render3DParticleView(emitter)
  * @property {Vector3} velocity - How far it moves each frame
  * @property {number} age - Seconds it has lived
  * @property {number} lifeTime - Seconds it lives
+ * @property {number} scale - How much the emitter grows its effect, from its scale3D and its parents', as the 2D
+ *   particle's scale
  * @property {boolean} destroyed - Set by destroy
  * @property {function(): void} destroy - End it this update, the destroy callback gets it
  * @memberof Render3D
@@ -28526,6 +28528,8 @@ class ParticleEmitter3D extends EngineObject3D
         const matrix = render3DObjectMatrix(this); // the object's own, read only
         this.worldPos3D = matrix.getTranslation(); // remembered for when the parent is destroyed
         const scale = render3DMaxScale(matrix.m);
+        this.particleView.scale = scale;
+        this.particleView.scale = scale; // the callbacks read it from the view instead of working it out each
 
         // emit until the emit time is up, then wait for the last particle and go away
         if (!this.emitTime || this.getAliveTime() <= this.emitTime)
@@ -30299,6 +30303,12 @@ function particleEffectSanitize(raw)
         const strength = isNumber(found.strength) ? clamp(found.strength, b.min, b.max) : b.value;
         behaviors.push({name:b.name, strength});
     }
+
+    // behaviors not known yet stay, a game may add them after the effect is loaded
+    for (const x of list)
+        if (typeof x?.name === 'string' && x.name && !particleEffectBehavior(x.name) &&
+            !behaviors.some(b=> b.name === x.name))
+            behaviors.push({name:x.name, strength: isNumber(x.strength) ? x.strength : 1});
     return {name, settings, behaviors};
 }
 
@@ -30381,7 +30391,8 @@ async function particleEffectsLoad(url)
 
 let particleEffectShapeTiles;
 
-/** The tile of a built-in shape, on a sheet the plugin draws once; undefined headless or without a canvas
+/** The tile of a built-in shape, on a sheet the plugin draws once; undefined headless, without a canvas or without
+ *  WebGL, where an effect draws untextured squares
  *  @param {string} name - One of particleEffectShapes
  *  @return {TileInfo|undefined}
  *  @memberof ParticleEffects */
@@ -30461,8 +30472,8 @@ function particleEffectShapeTile(name)
     const b = particleEffectBehavior;
     b('wobble').update = (p, s)=>
     {
-        p.wobblePhase ??= rand(9); // each particle on its own beat
-        p.velocity.x += s * .003 * p.scale * sin(time*6 + p.wobblePhase);
+        // each particle on its own beat, from its randomized life, so nothing is added to it
+        p.velocity.x += s * .003 * p.scale * sin(time*6 + p.lifeTime * 97 % 9);
     };
     b('swirl').update = (p, s)=>
     {
@@ -30566,13 +30577,20 @@ function particleEffectResolve(nameOrEffect, options)
     const found = typeof nameOrEffect == 'string' ? particleEffectsGet(nameOrEffect) : nameOrEffect;
     ASSERT(!!found, 'no particle effect named ' + nameOrEffect);
     if (!found) return;
+    // any setting in the options replaces the effect's own for this play, emitTime for a burst or a loop
+    const settings = {...found.settings};
+    for (const setting of particleEffectSettings)
+        if (options[setting.name] !== undefined)
+            settings[setting.name] = options[setting.name];
     // sanitized each time, an effect may be written by hand or changed after it was added
-    const effect = particleEffectSanitize(found), {hue=0, saturation=1} = options;
+    const effect = particleEffectSanitize({...found, settings}), {hue=0, saturation=1} = options;
     return hue || saturation != 1 ? particleEffectRecolor(effect, hue, saturation) : effect;
 }
 
 /** Play an effect: a 2D emitter set to it, placed, scaled and recolored
  *  - A continuous effect (fire, a torch) goes until destroyed or given an emitTime, a one-shot ends itself
+ *  - Any setting in the options replaces the effect's own for this play: {emitTime: .5} for a burst of a continuous
+ *    effect, {emitTime: 0, emitRate: 30} to keep a one-shot going, or speed, particleTime and the rest
  *  - Attach it to an object with addChild to follow it
  *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector2} [pos]
@@ -30581,6 +30599,8 @@ function particleEffectResolve(nameOrEffect, options)
  *  @param {number} [options.hue] - Turns its colors around the color wheel, 1 is all the way
  *  @param {number} [options.saturation] - Multiplies its saturation, 0 is grey
  *  @param {number} [options.angle] - Direction, 0 is up; the effect's own angle when not given
+ *  @param {*} [options.settings] - Any effect setting by its name, emitTime, emitRate, speed and the rest, replacing
+ *    the effect's own for this play
  *  @return {ParticleEmitter|undefined} - undefined when there is no such effect
  *  @memberof ParticleEffects */
 function particleEffect(nameOrEffect, pos=vec2(), options={})
@@ -30596,7 +30616,8 @@ function particleEffect(nameOrEffect, pos=vec2(), options={})
 }
 
 /** An effect with a 2D emitter's settings, to save, build again, or build in 3D with particleEffect3D; its tile is
- *  left out, since a hand made emitter's tile is its own texture and not one an effect can name
+ *  left out, since a hand made emitter's tile is its own texture and not one an effect can name, and so is its
+ *  scale, which an effect does not keep: pass it again with options.scale
  *  @param {ParticleEmitter} emitter
  *  @param {string} [name]
  *  @return {Object}
@@ -30622,8 +30643,8 @@ function particleEffectFromEmitter(emitter, name='Effect')
 // randomized lifetime, and distances grow with the emitter's scale
 {
     const b = particleEffectBehavior;
-    const scaleOf = (p)=> render3DMaxScale(render3DObjectMatrix(p.emitter).m);
-    b('wobble').update3D = (p, s)=> p.velocity.x += s * .003 * scaleOf(p) * sin(time*6 + p.lifeTime * 97 % 9);
+    const center = (p)=> p.emitter.worldPos3D || p.emitter.pos3D; // where it was this update
+    b('wobble').update3D = (p, s)=> p.velocity.x += s * .003 * p.scale * sin(time*6 + p.lifeTime * 97 % 9);
     b('swirl').update3D = (p, s)=>
     {
         const a = s * .05, c = cos(a), n = sin(a), v = p.velocity;
@@ -30631,23 +30652,23 @@ function particleEffectFromEmitter(emitter, name='Effect')
     };
     b('turbulence').update3D = (p, s)=>
     {
-        const k = s * .005 * scaleOf(p);
+        const k = s * .005 * p.scale;
         p.velocity.x += rand(-1, 1) * k, p.velocity.y += rand(-1, 1) * k, p.velocity.z += rand(-1, 1) * k;
     };
     b('attract').update3D = (p, s)=>
     {
-        const c = p.emitter.getWorldPos3D();
+        const c = center(p);
         p.velocity.x += (c.x - p.pos.x) * s * .002;
         p.velocity.y += (c.y - p.pos.y) * s * .002;
         p.velocity.z += (c.z - p.pos.z) * s * .002;
     };
     b('orbit').update3D = (p, s)=>
     {
-        const c = p.emitter.getWorldPos3D();
+        const c = center(p);
         p.velocity.x -= (p.pos.y - c.y) * s * .002;
         p.velocity.y += (p.pos.x - c.x) * s * .002;
     };
-    b('wind').update3D = (p, s)=> p.velocity.x += s * .004 * scaleOf(p) * min(p.age / p.lifeTime, 1);
+    b('wind').update3D = (p, s)=> p.velocity.x += s * .004 * p.scale * min(p.age / p.lifeTime, 1);
     // stick has no 3D push: particleEffect3D makes it the friction a particle lands with
 }
 
@@ -30658,7 +30679,8 @@ function particleEffectFromEmitter(emitter, name='Effect')
  *    particle lands with
  *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector3} [pos3D]
- *  @param {Object} [options] - scale, hue, saturation and angle as particleEffect; angle turns it about z, so 0 is up
+ *  @param {Object} [options] - scale, hue, saturation, angle and any setting as particleEffect; angle turns it about z,
+ *    so 0 is up
  *  @return {ParticleEmitter3D|undefined} - undefined when there is no such effect
  *  @memberof ParticleEffects */
 function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})

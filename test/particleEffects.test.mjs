@@ -27,7 +27,8 @@ test('bad input is clamped or dropped, an unknown shape falls back', ()=>
     assert.equal(e.settings.shape, 'soft');
     assert.equal(e.settings.gravity, 0);
     assert.equal(e.settings.junk, undefined);
-    assert.deepEqual(e.behaviors, [{name: 'wobble', strength: 5}]);
+    assert.deepEqual(e.behaviors, [{name: 'wobble', strength: 5}, {name: 'nope', strength: 1}],
+        'an unknown behavior is kept, a game may add it later');
 });
 
 test('a library saved before shapes keeps its tile: tileIndex and no shape means no shape', ()=>

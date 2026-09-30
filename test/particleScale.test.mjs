@@ -77,3 +77,22 @@ test('a local space emitter scales its spawn offsets too', ()=>
     assert.ok(e.particles.some(q=> q.pos.length() > 4));
     e.destroy();
 });
+
+test('a box emitter places each particle without making extra vectors for the scale', ()=>
+{
+    const e = make(2);
+    e.emitCircle = false;
+    e.emitSize = vec2(2, 1);
+    const proto = LJS.Vector2.prototype, scale = proto.scale, multiply = proto.multiply;
+    let calls = 0;
+    proto.scale = function(...a) { ++calls; return scale.apply(this, a); };
+    proto.multiply = function(...a) { ++calls; return multiply.apply(this, a); };
+    try
+    {
+        for (let i = 0; i < 20; ++i) e.emitParticle();
+    }
+    finally { proto.scale = scale, proto.multiply = multiply; }
+    assert.equal(calls, 0);
+    assert.ok(e.particles.every(q=> Math.abs(q.pos.x) <= 2 && Math.abs(q.pos.y) <= 1), 'inside the scaled box');
+    e.destroy();
+});

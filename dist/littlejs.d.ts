@@ -173,6 +173,11 @@ declare module "littlejsengine" {
          */
         lifeTime: number;
         /**
+         * - How much the emitter grows its effect, from its scale3D and its parents', as the 2D
+         * particle's scale
+         */
+        scale: number;
+        /**
          * - Set by destroy
          */
         destroyed: boolean;
@@ -9419,6 +9424,8 @@ declare module "littlejsengine" {
      * @property {Vector3} velocity - How far it moves each frame
      * @property {number} age - Seconds it has lived
      * @property {number} lifeTime - Seconds it lives
+     * @property {number} scale - How much the emitter grows its effect, from its scale3D and its parents', as the 2D
+     *   particle's scale
      * @property {boolean} destroyed - Set by destroy
      * @property {function(): void} destroy - End it this update, the destroy callback gets it
      * @memberof Render3D
@@ -10222,13 +10229,16 @@ declare module "littlejsengine" {
      *  @return {Promise<Array<Object>>} - The effects it had
      *  @memberof ParticleEffects */
     export function particleEffectsLoad(url: string): Promise<Array<any>>;
-    /** The tile of a built-in shape, on a sheet the plugin draws once; undefined headless or without a canvas
+    /** The tile of a built-in shape, on a sheet the plugin draws once; undefined headless, without a canvas or without
+     *  WebGL, where an effect draws untextured squares
      *  @param {string} name - One of particleEffectShapes
      *  @return {TileInfo|undefined}
      *  @memberof ParticleEffects */
     export function particleEffectShapeTile(name: string): TileInfo | undefined;
     /** Play an effect: a 2D emitter set to it, placed, scaled and recolored
      *  - A continuous effect (fire, a torch) goes until destroyed or given an emitTime, a one-shot ends itself
+     *  - Any setting in the options replaces the effect's own for this play: {emitTime: .5} for a burst of a continuous
+     *    effect, {emitTime: 0, emitRate: 30} to keep a one-shot going, or speed, particleTime and the rest
      *  - Attach it to an object with addChild to follow it
      *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
      *  @param {Vector2} [pos]
@@ -10237,6 +10247,8 @@ declare module "littlejsengine" {
      *  @param {number} [options.hue] - Turns its colors around the color wheel, 1 is all the way
      *  @param {number} [options.saturation] - Multiplies its saturation, 0 is grey
      *  @param {number} [options.angle] - Direction, 0 is up; the effect's own angle when not given
+     *  @param {*} [options.settings] - Any effect setting by its name, emitTime, emitRate, speed and the rest, replacing
+     *    the effect's own for this play
      *  @return {ParticleEmitter|undefined} - undefined when there is no such effect
      *  @memberof ParticleEffects */
     export function particleEffect(nameOrEffect: string | any, pos?: Vector2, options?: {
@@ -10244,6 +10256,7 @@ declare module "littlejsengine" {
         hue?: number;
         saturation?: number;
         angle?: number;
+        settings?: any;
     }): ParticleEmitter | undefined;
     /** Play an effect in 3D: a ParticleEmitter3D set to it, placed, scaled and recolored
      *  - The same effect data as particleEffect, so the look carries across: a rectangle spawn area becomes a flat box, a
@@ -10252,7 +10265,8 @@ declare module "littlejsengine" {
      *    particle lands with
      *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
      *  @param {Vector3} [pos3D]
-     *  @param {Object} [options] - scale, hue, saturation and angle as particleEffect; angle turns it about z, so 0 is up
+     *  @param {Object} [options] - scale, hue, saturation, angle and any setting as particleEffect; angle turns it about z,
+     *    so 0 is up
      *  @return {ParticleEmitter3D|undefined} - undefined when there is no such effect
      *  @memberof ParticleEffects */
     export function particleEffect3D(nameOrEffect: string | any, pos3D?: Vector3, options?: any): ParticleEmitter3D | undefined;
@@ -10266,7 +10280,8 @@ declare module "littlejsengine" {
      *  @memberof ParticleEffects */
     export function particleEffectApply(emitter: ParticleEmitter, effect: any): void;
     /** An effect with a 2D emitter's settings, to save, build again, or build in 3D with particleEffect3D; its tile is
-     *  left out, since a hand made emitter's tile is its own texture and not one an effect can name
+     *  left out, since a hand made emitter's tile is its own texture and not one an effect can name, and so is its
+     *  scale, which an effect does not keep: pass it again with options.scale
      *  @param {ParticleEmitter} emitter
      *  @param {string} [name]
      *  @return {Object}

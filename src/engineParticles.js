@@ -272,8 +272,8 @@ class ParticleEmitter extends EngineObject
         const scale = this.scale; // grows the spawn area, the sizes and the speed of each particle born
         let pos = this.emitCircle ?            // check if circle emitter
             randInCircle(this.emitSize.x/2 * scale) // circle emitter
-            : vec2(rand(-.5,.5), rand(-.5,.5)) // box emitter
-                .multiply(this.emitSize).scale(scale);
+            : vec2(rand(-.5,.5) * this.emitSize.x * scale, // box emitter, one vector made
+                rand(-.5,.5) * this.emitSize.y * scale);
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)
         {
