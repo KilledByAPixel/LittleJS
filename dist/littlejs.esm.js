@@ -12999,8 +12999,8 @@ class PostProcessPlugin
         ASSERT(!(includeMainCanvas && feedbackTexture), 'Post process cannot both include main canvas and use feedback texture');
         postProcess = this;
 
-        if (!shaderCode) // default shader pass through
-            shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';
+        /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
+        this.shaderCode = shaderCode || postProcessEffects(); // no code passes the frame through
 
         /** @property {WebGLProgram|undefined} - Shader for post processing
          *  @type {WebGLProgram|undefined} */
@@ -13046,7 +13046,7 @@ class PostProcessPlugin
                 'gl_Position=vec4(p+p-1.,1,1);'+ // set position
                 '}'                              // end of shader
                 ,
-                postProcessFragmentSource(shaderCode)
+                postProcessFragmentSource(postProcess.shaderCode)
             );
 
             // setup VAO for post processing
@@ -13059,6 +13059,10 @@ class PostProcessPlugin
             const pLocation = glContext.getAttribLocation(postProcess.shader, 'p');
             glContext.enableVertexAttribArray(pLocation);
             glContext.vertexAttribPointer(pLocation, 2, glContext.FLOAT, false, vertexByteStride, 0);
+
+            // the engine's own vertex array and buffer back, its next batch is written into the buffer bound
+            glContext.bindVertexArray(glPolyMode ? glPolyVAO : glInstancedVAO);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
         }
         function postProcessContextLost()
         {
@@ -13076,15 +13080,16 @@ class PostProcessPlugin
         {
             if (headlessMode || !glEnable) return;
 
-            // made now if WebGL was off when the plugin was made, or when a lost context came back
+            // clear out the buffer, before anything here binds its own
+            glFlush();
+
+            // made now if WebGL was off when the plugin was made, when a lost context came back, or when
+            // setShaderCode gave it new code
             if (!postProcess.shader)
             {
                 if (glContext.isContextLost()) return;
                 initPostProcess();
             }
-
-            // clear out the buffer
-            glFlush();
 
             // ensure we render to the default framebuffer (in case any earlier
             // caller this frame left a render target bound)
@@ -13176,6 +13181,23 @@ class PostProcessPlugin
             glSetInstancedMode(true);
         }
     }
+
+    /** Shade with new code from the next frame on, to switch effects while the game runs; the shader is made again
+     *  @param {string} [shaderCode] - Shadertoy style mainImage code, postProcessEffects builds it; none passes the
+     *  frame through */
+    setShaderCode(shaderCode)
+    {
+        ASSERT(!shaderCode || typeof shaderCode === 'string', 'shader code must be a string');
+        this.shaderCode = shaderCode || postProcessEffects();
+        if (!this.shader || headlessMode || !glContext) return;
+
+        // what the new shader replaces, made again by the next render
+        glContext.deleteProgram(this.shader);
+        glContext.deleteTexture(this.texture);
+        this.feedbackTexture && glContext.deleteTexture(this.feedbackTexture);
+        glContext.deleteVertexArray(this.vao);
+        this.shader = this.texture = this.feedbackTexture = this.vao = undefined;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -13216,9 +13238,66 @@ function postProcessFragmentSource(shaderCode)
  */
 function postProcessBloomShader(threshold=.6, strength=1, size=6)
 {
-    ASSERT(isNumber(threshold) && isNumber(strength) && isNumber(size), 'bloom settings must be numbers');
-    ASSERT(size > 0, 'bloom size must be above zero');
-    ASSERT(size <= 32, 'a bloom this wide takes a sample every few pixels of every ring, which is hundreds of samples a pixel', size);
+    return postProcessEffects(postProcessGlow(threshold, strength, size));
+}
+
+/**
+ * Set up post processing with a bloom effect, so bright colors and lights glow
+ * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+ * @param {number} [strength] - How much glow to add
+ * @param {number} [size] - How far the glow spreads in pixels
+ * @param {boolean} [includeMainCanvas] - Glow the 2D canvas too, off by default so HUD text stays crisp
+ *   (a HUD drawn with WebGL in gameRenderPost glows either way, draw it with useWebGL=false)
+ * @return {PostProcessPlugin}
+ * @memberof PostProcess
+ * @example
+ * postProcessBloom(); // in gameInit, after any Render3DPlugin
+ */
+function postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=false)
+{ return new PostProcessPlugin(postProcessBloomShader(threshold, strength, size), includeMainCanvas); }
+
+///////////////////////////////////////////////////////////////////////////////
+// Effects: pieces of shader code, each with its settings written in as numbers, that postProcessEffects joins in
+// order into one shader; a piece works on c, the pixel's color, and uv, where it is on the screen from 0 to 1, with p
+// its pixel; one that bends uv or samples the frame, the curve, chromatic and glow, goes before the ones that shade
+
+// a number as GLSL writes it, a float with a point
+const postProcessNumber = (n)=> (ASSERT(isNumber(n), 'effect settings must be numbers', n), n.toFixed(4));
+
+/**
+ * Join effects into one post process shader, in the order given, for PostProcessPlugin or setShaderCode
+ * - Each effect is a piece of shader code on c, the pixel's color, and uv, where it is on the screen from 0 to 1;
+ *   your own code is a piece too, a line of GLSL or many, dropped in where you put it
+ * - Put the ones that bend the picture or sample it first: postProcessCurve, postProcessChromatic, postProcessGlow
+ * @param {...string} effects - The pieces, from the effect functions or your own code
+ * @return {string} - Shadertoy style mainImage code
+ * @example
+ * new PostProcessPlugin(postProcessEffects(
+ *     postProcessScanlines(.5), postProcessVignette(), 'c.rgb *= vec3(1, .9, .8);'));
+ * @memberof PostProcess
+ */
+function postProcessEffects(...effects)
+{
+    ASSERT(effects.every((e)=> typeof e === 'string'), 'each effect is a piece of shader code, a string');
+    return 'void mainImage(out vec4 c, vec2 p)\n{\n' +
+        '    vec2 uv = p / iResolution.xy;\n' +
+        '    c = texture(iChannel0, uv);\n' +
+        effects.map((e)=> '    {\n' + e + '\n    }\n').join('') + '}\n';
+}
+
+/**
+ * Bright parts glow, the bloom as an effect to join with others; postProcessBloom sets up bloom on its own
+ * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+ * @param {number} [strength] - How much glow to add
+ * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes
+ * @return {string}
+ * @memberof PostProcess
+ */
+function postProcessGlow(threshold=.6, strength=1, size=6)
+{
+    ASSERT(isNumber(threshold) && isNumber(strength) && isNumber(size), 'glow settings must be numbers');
+    ASSERT(size > 0, 'glow size must be above zero');
+    ASSERT(size <= 32, 'a glow this wide takes a sample every few pixels of every ring, which is hundreds of samples a pixel', size);
 
     // Taps on three rings over a disc of the given size, one every three pixels or so of each ring
     // so there is no gap wide enough to show. The count follows the ring all the way out: hold it
@@ -13240,30 +13319,127 @@ function postProcessBloomShader(threshold=.6, strength=1, size=6)
             glow += max(vec3(0), texture(iChannel0, uv + vec2(cos(a), sin(a)) * ${radius.toFixed(4)} / iResolution.xy).rgb - ${threshold.toFixed(4)});
         }`;
     }
-    return `
-    void mainImage(out vec4 color, vec2 pixel)
-    {
-        vec2 uv = pixel / iResolution.xy;
-        color = texture(iChannel0, uv);
+    return `        // glow
         vec3 glow = vec3(0);${code}
-        color.rgb += glow * ${(strength / taps).toFixed(6)};
-    }`;
+        c.rgb += glow * ${(strength / taps).toFixed(6)};`;
 }
 
 /**
- * Set up post processing with a bloom effect, so bright colors and lights glow
- * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
- * @param {number} [strength] - How much glow to add
- * @param {number} [size] - How far the glow spreads in pixels
- * @param {boolean} [includeMainCanvas] - Glow the 2D canvas too, off by default so HUD text stays crisp
- *   (a HUD drawn with WebGL in gameRenderPost glows either way, draw it with useWebGL=false)
- * @return {PostProcessPlugin}
+ * Scan lines across the screen, like an old TV
+ * @param {number} [strength] - How dark the lines are, and how bright between them
+ * @param {number} [spacing] - Pixels from one line to the next
+ * @return {string}
  * @memberof PostProcess
- * @example
- * postProcessBloom(); // in gameInit, after any Render3DPlugin
  */
-function postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=false)
-{ return new PostProcessPlugin(postProcessBloomShader(threshold, strength, size), includeMainCanvas); }
+function postProcessScanlines(strength=.5, spacing=6)
+{
+    return `        // scanlines
+        c.rgb *= 1. - ${postProcessNumber(strength)} * cos(p.y * 6.2832 / ${postProcessNumber(spacing)});`;
+}
+
+/**
+ * Static noise over the picture, changing every frame
+ * @param {number} [strength] - How bright the static is
+ * @param {number} [size] - Size of a speck in pixels
+ * @return {string}
+ * @memberof PostProcess
+ */
+function postProcessNoise(strength=.1, size=2)
+{
+    return `        // noise
+        vec2 q = fract((floor(p / ${postProcessNumber(size)}) + mod(iTime * 500., 1e3)) * .3197);
+        c.rgb += ${postProcessNumber(strength)} * fract(1. + sin(51. * q.x + 73. * q.y) * 13753.3);`;
+}
+
+/**
+ * Darken toward the edges and corners
+ * @param {number} [strength] - How dark the corners get, 1 is black
+ * @param {number} [falloff] - How far in it reaches, low darkens most of the screen, high only the corners
+ * @return {string}
+ * @memberof PostProcess
+ */
+function postProcessVignette(strength=1, falloff=3)
+{
+    return `        // vignette
+        vec2 d = uv * 2. - 1.;
+        c.rgb *= 1. - ${postProcessNumber(strength)} * min(1., pow(dot(d, d) / 2., ${postProcessNumber(falloff)}));`;
+}
+
+/**
+ * Bend the picture like the bulged glass of an old TV, black past the corners; put it first
+ * @param {number} [strength] - How much it bends
+ * @return {string}
+ * @memberof PostProcess
+ */
+function postProcessCurve(strength=.1)
+{
+    return `        // curve
+        vec2 d = uv * 2. - 1.;
+        d *= 1. + ${postProcessNumber(strength)} * dot(d, d);
+        uv = d * .5 + .5;
+        c = all(lessThan(abs(d), vec2(1))) ? texture(iChannel0, uv) : vec4(0, 0, 0, 1);`;
+}
+
+/**
+ * Split red and blue apart toward the edges, like a cheap lens; put it before what shades the picture
+ * @param {number} [strength] - How far apart at the edge, as a part of the screen
+ * @return {string}
+ * @memberof PostProcess
+ */
+function postProcessChromatic(strength=.005)
+{
+    return `        // chromatic
+        vec2 d = (uv - .5) * ${postProcessNumber(strength)} * 2.;
+        c.r = texture(iChannel0, uv + d).r;
+        c.b = texture(iChannel0, uv - d).b;`;
+}
+
+/**
+ * Draw lines where the 3D depth jumps, around objects and along their creases; needs render3D.depthTexture on
+ * @param {Color} [color] - The lines' color, its alpha how strong they are
+ * @param {number} [thickness] - How wide the lines are in pixels
+ * @param {number} [threshold] - How big a jump makes a line, as a part of the distance, lower draws more
+ * @return {string}
+ * @memberof PostProcess
+ */
+function postProcessOutline(color=BLACK, thickness=1, threshold=.02)
+{
+    ASSERT(isColor(color), 'outline color must be a Color');
+    const n = postProcessNumber;
+    return `        // outline
+        vec2 o = ${n(thickness)} / iResolution.xy;
+        float d = sceneDepth(uv);
+        float dx = abs(sceneDepth(uv + vec2(o.x, 0)) + sceneDepth(uv - vec2(o.x, 0)) - 2. * d);
+        float dy = abs(sceneDepth(uv + vec2(0, o.y)) + sceneDepth(uv - vec2(0, o.y)) - 2. * d);
+        vec4 line = vec4(${n(color.r)}, ${n(color.g)}, ${n(color.b)}, ${n(color.a)});
+        c.rgb = mix(c.rgb, line.rgb, line.a * step(${n(threshold)}, max(dx, dy) / d));`;
+}
+
+/**
+ * The look of an old TV, as one effect to use alone or join with others: static noise, scan lines, a soft glow and
+ * a vignette, and a bulged screen when curve is set; any setting at 0 leaves that part out
+ * @param {Object} [settings]
+ * @param {number} [settings.noise] - Static noise strength
+ * @param {number} [settings.scanlines] - Scan line strength
+ * @param {number} [settings.scanlineSpacing] - Pixels from one scan line to the next
+ * @param {number} [settings.glow] - Soft glow strength
+ * @param {number} [settings.vignette] - Vignette strength
+ * @param {number} [settings.curve] - How much the screen bulges, 0 by default for flat
+ * @return {string}
+ * @example
+ * new PostProcessPlugin(postProcessEffects(postProcessTV({scanlines: .4, curve: .1})));
+ * @memberof PostProcess
+ */
+function postProcessTV({noise=.1, scanlines=.5, scanlineSpacing=6, glow=.4, vignette=1, curve=0}={})
+{
+    const parts = [];
+    curve && parts.push(postProcessCurve(curve));
+    glow && parts.push(postProcessGlow(0, glow, 2));
+    scanlines && parts.push(postProcessScanlines(scanlines, scanlineSpacing));
+    noise && parts.push(postProcessNoise(noise, 1));
+    vignette && parts.push(postProcessVignette(vignette, 6));
+    return parts.map((part)=> '    {\n' + part + '\n    }').join('\n');
+}
 
 /**
  * LittleJS Light System Plugin
@@ -35736,6 +35912,15 @@ export
     PostProcessPlugin,
     postProcessBloom,
     postProcessBloomShader,
+    postProcessEffects,
+    postProcessGlow,
+    postProcessScanlines,
+    postProcessNoise,
+    postProcessVignette,
+    postProcessCurve,
+    postProcessChromatic,
+    postProcessOutline,
+    postProcessTV,
 
     // Light System
     lightSystem,

@@ -4487,6 +4487,8 @@ declare module "littlejsengine" {
         *  new PostProcessPlugin(shaderCode);
         */
         constructor(shaderCode?: string, includeMainCanvas?: boolean, feedbackTexture?: boolean);
+        /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
+        shaderCode: string;
         /** @property {WebGLProgram|undefined} - Shader for post processing
          *  @type {WebGLProgram|undefined} */
         shader: WebGLProgram | undefined;
@@ -4499,6 +4501,10 @@ declare module "littlejsengine" {
         /** @property {WebGLVertexArrayObject|undefined} - Vertex array object
          *  @type {WebGLVertexArrayObject|undefined} */
         vao: WebGLVertexArrayObject | undefined;
+        /** Shade with new code from the next frame on, to switch effects while the game runs; the shader is made again
+         *  @param {string} [shaderCode] - Shadertoy style mainImage code, postProcessEffects builds it; none passes the
+         *  frame through */
+        setShaderCode(shaderCode?: string): void;
     }
     /**
      * Set up post processing with a bloom effect, so bright colors and lights glow
@@ -4523,6 +4529,98 @@ declare module "littlejsengine" {
      * @memberof PostProcess
      */
     export function postProcessBloomShader(threshold?: number, strength?: number, size?: number): string;
+    /**
+     * Join effects into one post process shader, in the order given, for PostProcessPlugin or setShaderCode
+     * - Each effect is a piece of shader code on c, the pixel's color, and uv, where it is on the screen from 0 to 1;
+     *   your own code is a piece too, a line of GLSL or many, dropped in where you put it
+     * - Put the ones that bend the picture or sample it first: postProcessCurve, postProcessChromatic, postProcessGlow
+     * @param {...string} effects - The pieces, from the effect functions or your own code
+     * @return {string} - Shadertoy style mainImage code
+     * @example
+     * new PostProcessPlugin(postProcessEffects(
+     *     postProcessScanlines(.5), postProcessVignette(), 'c.rgb *= vec3(1, .9, .8);'));
+     * @memberof PostProcess
+     */
+    export function postProcessEffects(...effects: string[]): string;
+    /**
+     * Bright parts glow, the bloom as an effect to join with others; postProcessBloom sets up bloom on its own
+     * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+     * @param {number} [strength] - How much glow to add
+     * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes
+     * @return {string}
+     * @memberof PostProcess
+     */
+    export function postProcessGlow(threshold?: number, strength?: number, size?: number): string;
+    /**
+     * Scan lines across the screen, like an old TV
+     * @param {number} [strength] - How dark the lines are, and how bright between them
+     * @param {number} [spacing] - Pixels from one line to the next
+     * @return {string}
+     * @memberof PostProcess
+     */
+    export function postProcessScanlines(strength?: number, spacing?: number): string;
+    /**
+     * Static noise over the picture, changing every frame
+     * @param {number} [strength] - How bright the static is
+     * @param {number} [size] - Size of a speck in pixels
+     * @return {string}
+     * @memberof PostProcess
+     */
+    export function postProcessNoise(strength?: number, size?: number): string;
+    /**
+     * Darken toward the edges and corners
+     * @param {number} [strength] - How dark the corners get, 1 is black
+     * @param {number} [falloff] - How far in it reaches, low darkens most of the screen, high only the corners
+     * @return {string}
+     * @memberof PostProcess
+     */
+    export function postProcessVignette(strength?: number, falloff?: number): string;
+    /**
+     * Bend the picture like the bulged glass of an old TV, black past the corners; put it first
+     * @param {number} [strength] - How much it bends
+     * @return {string}
+     * @memberof PostProcess
+     */
+    export function postProcessCurve(strength?: number): string;
+    /**
+     * Split red and blue apart toward the edges, like a cheap lens; put it before what shades the picture
+     * @param {number} [strength] - How far apart at the edge, as a part of the screen
+     * @return {string}
+     * @memberof PostProcess
+     */
+    export function postProcessChromatic(strength?: number): string;
+    /**
+     * Draw lines where the 3D depth jumps, around objects and along their creases; needs render3D.depthTexture on
+     * @param {Color} [color] - The lines' color, its alpha how strong they are
+     * @param {number} [thickness] - How wide the lines are in pixels
+     * @param {number} [threshold] - How big a jump makes a line, as a part of the distance, lower draws more
+     * @return {string}
+     * @memberof PostProcess
+     */
+    export function postProcessOutline(color?: Color, thickness?: number, threshold?: number): string;
+    /**
+     * The look of an old TV, as one effect to use alone or join with others: static noise, scan lines, a soft glow and
+     * a vignette, and a bulged screen when curve is set; any setting at 0 leaves that part out
+     * @param {Object} [settings]
+     * @param {number} [settings.noise] - Static noise strength
+     * @param {number} [settings.scanlines] - Scan line strength
+     * @param {number} [settings.scanlineSpacing] - Pixels from one scan line to the next
+     * @param {number} [settings.glow] - Soft glow strength
+     * @param {number} [settings.vignette] - Vignette strength
+     * @param {number} [settings.curve] - How much the screen bulges, 0 by default for flat
+     * @return {string}
+     * @example
+     * new PostProcessPlugin(postProcessEffects(postProcessTV({scanlines: .4, curve: .1})));
+     * @memberof PostProcess
+     */
+    export function postProcessTV({ noise, scanlines, scanlineSpacing, glow, vignette, curve }?: {
+        noise?: number;
+        scanlines?: number;
+        scanlineSpacing?: number;
+        glow?: number;
+        vignette?: number;
+        curve?: number;
+    }): string;
     /**
      * LittleJS Light System Plugin
      * - Adds 2D dynamic lighting to the scene

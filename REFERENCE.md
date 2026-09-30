@@ -984,7 +984,8 @@ class LavaTile extends EngineObject {
 - With render3D.depthTexture on, iChannel2 is the 3D depth, and sceneDepth(uv) gives the distance from the camera
   along its view in world units, uv 0 to 1 across the screen, for ambient occlusion, fog and outlines; only the solid
   objects of the default 3D layer are in it
-- See `examples/shorts/postProcess.js` for a demo
+- See `examples/shorts/postProcess.js` for your own shader code, and `examples/shorts/postEffects.js` for the built in
+  effects
 
 ```javascript
 new PostProcessPlugin(shaderCode, includeMainCanvas=false, feedbackTexture=false) // call in gameInit; with no
@@ -995,6 +996,23 @@ postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=false) // s
                                // is left out so HUD text stays crisp; a wider glow takes more samples to stay smooth,
                                // and past a size of 32 it would take hundreds, so that is as wide as it goes
 postProcessBloomShader(threshold, strength, size) // its shader code, to pass to PostProcessPlugin or build on
+postProcess.setShaderCode(shaderCode) // shade with new code from the next frame, to switch effects while running
+
+// Built in effects: each is a piece of shader code with its settings written in, working on c, the pixel's color,
+// and uv, where it is on the screen from 0 to 1; postProcessEffects joins pieces in order into one shader, and your
+// own GLSL is a piece too; put the ones that bend or sample the picture (curve, chromatic, glow) first
+new PostProcessPlugin(postProcessEffects(postProcessScanlines(.5), postProcessVignette(), 'c.rgb *= vec3(1, .9, .8);'))
+postProcessEffects(...effects)      // one shader from the pieces, none passes the frame through
+postProcessTV({noise, scanlines, scanlineSpacing, glow, vignette, curve}) // an old TV in one piece, curve 0 by
+                                    // default for flat; any setting at 0 leaves that part out
+postProcessScanlines(strength=.5, spacing=6) // lines across the screen, spacing in pixels
+postProcessNoise(strength=.1, size=2)        // static that changes every frame, size of a speck in pixels
+postProcessVignette(strength=1, falloff=3)   // darker toward the corners, a higher falloff only the corners
+postProcessCurve(strength=.1)                // the bulged glass of an old TV, black past the corners
+postProcessChromatic(strength=.005)          // red and blue split apart toward the edges
+postProcessGlow(threshold=.6, strength=1, size=6) // the bloom as a piece
+postProcessOutline(color=BLACK, thickness=1, threshold=.02) // lines where the 3D depth jumps, needs
+                                             // render3D.depthTexture
 ```
 
 ## LittleJS 3D Math

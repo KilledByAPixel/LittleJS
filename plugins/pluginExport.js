@@ -29,6 +29,15 @@ export
     PostProcessPlugin,
     postProcessBloom,
     postProcessBloomShader,
+    postProcessEffects,
+    postProcessGlow,
+    postProcessScanlines,
+    postProcessNoise,
+    postProcessVignette,
+    postProcessCurve,
+    postProcessChromatic,
+    postProcessOutline,
+    postProcessTV,
 
     // Light System
     lightSystem,
