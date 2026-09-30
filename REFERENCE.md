@@ -750,7 +750,7 @@ particleEmitRateScale = 1 // Scales particles emit rate
 - Pauses with the game by default; opt-in real-time mode keeps tweens running while paused
 - Easing curves with looping, ping-pong, and chained completion callbacks
 - Auto-registers via `engineAddPlugin` — no setup needed
-- See `examples/tweenSystem` for a full visual demo
+- See the Tween and Tween Advanced shorts (`examples/shorts/tween.js`, `tweenAdvanced.js`) for demos
 
 ```javascript
 // Tween a property by dot-path (common case)

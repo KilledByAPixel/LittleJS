@@ -68,6 +68,7 @@ const exampleList =
     new ExampleInfo('Save / Load', 'save.js', 'Persist data to local storage', false, 'localstorage, persistence, readSaveData, writeSaveData'),
     new ExampleInfo('Medals', 'medals.js', 'Achievement system', false, 'unlock, achievements, newgrounds'),
     new ExampleInfo('Tween', 'tween.js', 'Number, Vector2 and Color tweens with easing', false, 'animation, easing, lerp, pingpong, interpolation'),
+    new ExampleInfo('Tween Advanced', 'tweenAdvanced.js', 'Every tween feature: chains, loops, easings, real time', false, 'animation, easing, then, loop, pingpong, bezier, pause, useRealTime'),
     new ExampleInfo('Scenes', 'scenes.js', 'A title, the game and game over, switched with setScene', false, 'scene, state, menu, pause, game over, persistent'),
     new ExampleInfo('Nine Slice', 'nineSlice.js', 'Scalable UI panels', false, 'three slice, stretch, corners, text, tiles'),
     new ExampleInfo('Crescent', 'crescent.js', 'Moon phase crescent shapes', false, 'moon, phase, polygon, draw, circle, lunar'),
@@ -136,7 +137,6 @@ const exampleList =
     new ExampleInfo('Box2D Plugin', 'box2d', 'Full Box2D physics demo', true, 'objects, bodies, joints'),
     new ExampleInfo('HTML Menus', 'htmlMenu', 'HTML UI integration', true, 'web, browser, overlay, button, slider, textbox'),
     new ExampleInfo('UI System Plugin Demo', 'uiSystem', 'Complete UI system demo', true, 'menu, overlay, button, slider, checkbox'),
-    new ExampleInfo('Tween System Plugin Demo', 'tweenSystem', 'Easing, looping and ping-pong tweens', true, 'animation, easing'),
     new ExampleInfo('3D Plugin', '3d', 'An island with shadows, lights and bloom', true, 'terrain, heightmap, shadows, lights'),
     new ExampleInfo('Three.js 3D Demo', 'threejs', '3D platformer rendered with Three.js', true, 'camera, mesh, physics'),
 ];
