@@ -764,6 +764,7 @@ particleEffectBehaviors                 // the behaviors an effect can name: wob
                                         // orbit, wind and stick
 particleEffectShapes                    // the shapes the plugin draws: dot, soft, glow, smoke, spark, square,
                                         // triangle, ring, star and plus
+particleEffectShapeTile(name)           // a built-in shape's tile, on a sheet drawn once, undefined headless
 ```
 
 ## LittleJS Tween System

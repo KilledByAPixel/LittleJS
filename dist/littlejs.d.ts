@@ -10211,6 +10211,11 @@ declare module "littlejsengine" {
      *  @return {Promise<Array<Object>>} - The effects it had
      *  @memberof ParticleEffects */
     export function particleEffectsLoad(url: string): Promise<Array<any>>;
+    /** The tile of a built-in shape, on a sheet the plugin draws once; undefined headless or without a canvas
+     *  @param {string} name - One of particleEffectShapes
+     *  @return {TileInfo|undefined}
+     *  @memberof ParticleEffects */
+    export function particleEffectShapeTile(name: string): TileInfo | undefined;
     /**
      * LittleJS Level Editor
      * - Paint the game's tile layers while it is paused, then keep playing with the changes

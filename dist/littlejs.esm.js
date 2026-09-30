@@ -30354,6 +30354,82 @@ async function particleEffectsLoad(url)
     return effects;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// the shape sheet: every shape white on clear in a 32 pixel cell of one canvas, drawn the first time one is asked for
+
+let particleEffectShapeTiles;
+
+/** The tile of a built-in shape, on a sheet the plugin draws once; undefined headless or without a canvas
+ *  @param {string} name - One of particleEffectShapes
+ *  @return {TileInfo|undefined}
+ *  @memberof ParticleEffects */
+function particleEffectShapeTile(name)
+{
+    if (!particleEffectShapeTiles)
+    {
+        if (headlessMode || !glContext || typeof OffscreenCanvas == 'undefined') return;
+        const cell = 32, r = 15, count = particleEffectShapes.length;
+        const context = createCanvasContext(cell * count, cell);
+        context.fillStyle = context.strokeStyle = '#fff';
+        const soft = (x, y, radius, alpha=(t)=> 1 - t)=>
+        {
+            // a round falloff from the middle out
+            const g = context.createRadialGradient(x, y, 0, x, y, radius);
+            for (let i = 0; i <= 8; ++i)
+                g.addColorStop(i/8, 'rgba(255,255,255,' + alpha(i/8).toFixed(3) + ')');
+            context.fillStyle = g;
+            context.beginPath(); context.arc(x, y, radius, 0, 2*PI); context.fill();
+            context.fillStyle = '#fff';
+        };
+        const draw =
+        {
+            dot:      (x, y)=> { context.beginPath(); context.arc(x, y, r, 0, 2*PI); context.fill(); },
+            soft:     (x, y)=> soft(x, y, r),
+            glow:     (x, y)=> soft(x, y, r, (t)=> engineGlowAlpha(t, 1)),
+            smoke:    (x, y)=>
+            {
+                // a lumpy puff of soft circles
+                for (const [dx, dy, dr] of [[-4,-3,9], [4,-2,8], [0,4,9], [-5,5,6], [6,5,6]])
+                    soft(x + dx, y + dy, dr, (t)=> (1 - t) * .7);
+            },
+            spark:    (x, y)=>
+            {
+                // a glow squeezed thin, a streak along the tile's up
+                context.save(); context.translate(x, y); context.scale(.3, 1);
+                soft(0, 0, r, (t)=> engineGlowAlpha(t, .6));
+                context.restore();
+            },
+            square:   (x, y)=> context.fillRect(x - r, y - r, 2*r, 2*r),
+            triangle: (x, y)=>
+            {
+                context.beginPath(); context.moveTo(x, y - r); context.lineTo(x + r, y + r); context.lineTo(x - r, y + r);
+                context.fill();
+            },
+            ring:     (x, y)=>
+            {
+                context.lineWidth = 3;
+                context.beginPath(); context.arc(x, y, r - 2, 0, 2*PI); context.stroke();
+            },
+            star:     (x, y)=>
+            {
+                context.beginPath();
+                for (let i = 0; i < 10; ++i)
+                {
+                    const a = i * PI / 5 - PI/2, d = i % 2 ? r * .45 : r;
+                    context.lineTo(x + cos(a) * d, y + sin(a) * d);
+                }
+                context.fill();
+            },
+            plus:     (x, y)=> { context.fillRect(x - r, y - 4, 2*r, 8); context.fillRect(x - 4, y - r, 8, 2*r); },
+        };
+        particleEffectShapes.forEach((name, i)=> draw[name](i * cell + cell/2, cell/2));
+        const texture = new TextureInfo(context.canvas);
+        particleEffectShapeTiles = new Map(particleEffectShapes.map((name, i)=>
+            [name, new TileInfo(vec2(i * cell + 1, 1), vec2(cell - 2), texture)]));
+    }
+    return particleEffectShapeTiles.get(name);
+}
+
 /**
  * LittleJS glTF Plugin
  * - Loads glTF 2.0 models: a .gltf with its .bin and images beside it, or a .glb with everything in one file
@@ -36756,5 +36832,6 @@ export
     particleEffectsParse,
     particleEffectsText,
     particleEffectsLoad,
+    particleEffectShapeTile,
 }
 

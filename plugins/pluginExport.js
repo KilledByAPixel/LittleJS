@@ -225,4 +225,5 @@ export
     particleEffectsParse,
     particleEffectsText,
     particleEffectsLoad,
+    particleEffectShapeTile,
 }
