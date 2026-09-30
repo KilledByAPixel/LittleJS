@@ -3461,9 +3461,9 @@ declare module "littlejsengine" {
      *  @param {number}  [decay] - Decay time, how long to reach sustain after attack (seconds)
      *  @param {number}  [tremolo] - Trembling effect, rate controlled by repeat time (percent)
      *  @param {number}  [filter] - Filter cutoff frequency, positive for HPF, negative for LPF (Hz)
-     *  @return {Array} - Array of audio samples
+     *  @return {Float32Array} - The audio samples
      *  @memberof Audio */
-    export function zzfxG(volume?: number, randomness?: number, frequency?: number, attack?: number, sustain?: number, release?: number, shape?: number, shapeCurve?: number, slide?: number, deltaSlide?: number, pitchJump?: number, pitchJumpTime?: number, repeatTime?: number, noise?: number, modulation?: number, bitCrush?: number, delay?: number, sustainVolume?: number, decay?: number, tremolo?: number, filter?: number): any[];
+    export function zzfxG(volume?: number, randomness?: number, frequency?: number, attack?: number, sustain?: number, release?: number, shape?: number, shapeCurve?: number, slide?: number, deltaSlide?: number, pitchJump?: number, pitchJumpTime?: number, repeatTime?: number, noise?: number, modulation?: number, bitCrush?: number, delay?: number, sustainVolume?: number, decay?: number, tremolo?: number, filter?: number): Float32Array;
     /**
      * LittleJS Object System
      * - EngineObject is the base class for all game objects
