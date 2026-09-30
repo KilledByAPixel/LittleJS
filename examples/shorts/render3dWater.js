@@ -48,12 +48,11 @@ function gameInit()
     now = grid(), last = grid();
 
     // rain falls straight down, each drop a streak along where it was;
-    // the built-in rain at this short's speed, from a flat area over the
-    // pool, which a rain effect in 3D starts as an upright plane
-    rain = particleEffect3D('rain', vec3(0,14,0), {emitRate: 60,
-        speed: .4, gravity: 0, particleTime: 2, sizeStart: .05,
-        sizeEnd: .05, fadeRate: 0});
-    rain.emitSize = vec3(poolSize,0,poolSize);
+    // the built-in rain at this short's speed, flattened to a sheet of
+    // sky as wide as the pool
+    rain = particleEffect3D('rain', vec3(0,14,0), {flatten: true,
+        emitSize: poolSize, emitRate: 60, speed: .4, gravity: 0,
+        particleTime: 2, sizeStart: .05, sizeEnd: .05, fadeRate: 0});
     rain.trailTime = .1;
 
     // a drop that reaches the water starts a ring there and ends

@@ -759,8 +759,11 @@ particleEffect(name, pos, {scale, hue, saturation, angle}) // play an effect, re
                                         // continuous one goes until destroyed, a one-shot ends itself; any setting
                                         // in the options replaces the effect's own: {emitTime: .5} for a burst,
                                         // {emitTime: 0, emitRate: 30} to keep a one-shot going
-particleEffect3D(name, pos3D, {scale, hue, saturation, angle}) // the same effect as a ParticleEmitter3D, angle
-                                        // turning it about z; a rectangle area becomes a flat box
+particleEffect3D(name, pos3D, {scale, hue, saturation, angle, flatten}) // the same effect as a
+                                        // ParticleEmitter3D, angle turning it about z; a circle area becomes a sphere
+                                        // and a rectangle a box as deep as it is wide, flatten makes them a disc or a
+                                        // sheet across the way it emits
+                                        // both take {tileInfo} to draw the game's own art in place of the shape
 particleEffectsBuiltIn                  // the built-in names: fire, torch, smoke, steam, explosion, sparks, hit,
                                         // dust, debris, sparkle, magic, heal, poison, portal, rain, snow, leaves,
                                         // bubbles, fireflies, trail, muzzle, blood, confetti and splash
@@ -1660,6 +1663,7 @@ model.center().fit(size)             // move the model's bounds onto the origin 
 new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileInfo,
     colorStartA, colorStartB, colorEndA, colorEndB, particleTime, sizeStart, sizeEnd,
     speed, damping, gravity, fadeRate, randomness, additive)
+emitter3D.emitFlat = false // flatten the spawn area across the way it emits: a sphere a disc, a box a flat rectangle
 // particles shoot out along the emitter's own up axis, so rotation3D aims the spray; emitSize is a sphere diameter or a
 // vec3 box; speeds are per frame, sizes are world units, gravity changes velocity y per frame so it is negative to
 // fall, and it is the emitter's own number rather than render3D.gravity, so an effect falls the same wherever it is used

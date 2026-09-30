@@ -494,6 +494,8 @@ function particleEffectResolve(nameOrEffect, options)
  *  @param {number} [options.hue] - Turns its colors around the color wheel, 1 is all the way
  *  @param {number} [options.saturation] - Multiplies its saturation, 0 is grey
  *  @param {number} [options.angle] - Direction, 0 is up; the effect's own angle when not given
+ *  @param {TileInfo|TextureInfo} [options.tileInfo] - The game's own art to draw with in place of the effect's shape,
+ *    tinted by its colors; a whole texture draws as one tile
  *  @param {*} [options.settings] - Any effect setting by its name, emitTime, emitRate, speed and the rest, replacing
  *    the effect's own for this play
  *  @return {ParticleEmitter|undefined} - undefined when there is no such effect
@@ -507,6 +509,9 @@ function particleEffect(nameOrEffect, pos=vec2(), options={})
     emitter.scale = options.scale ?? 1;
     if (options.angle !== undefined)
         emitter.angle = options.angle;
+    const tileInfo = options.tileInfo; // the game's own art in place of the shape, a whole texture as one tile
+    if (tileInfo)
+        emitter.tileInfo = tileInfo instanceof TextureInfo ? new TileInfo(vec2(), tileInfo.size, tileInfo) : tileInfo;
     return emitter;
 }
 
@@ -568,14 +573,15 @@ function particleEffectFromEmitter(emitter, name='Effect')
 }
 
 /** Play an effect in 3D: a ParticleEmitter3D set to it, placed, scaled and recolored
- *  - The same effect data as particleEffect, so the look carries across: a rectangle spawn area becomes a flat box, a
- *    trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
+ *  - The same effect data as particleEffect, so the look carries across: a circle spawn area becomes a sphere and a
+ *    rectangle a box as deep as it is wide, both flat across the way it emits with options.flatten, a disc or a
+ *    sheet; a trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
  *    randomColorLinear, velocityInheritance, localSpace) are left out; the stick behavior becomes the friction a
  *    particle lands with
  *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector3} [pos3D]
- *  @param {Object} [options] - scale, hue, saturation, angle and any setting as particleEffect; angle turns it about z,
- *    so 0 is up
+ *  @param {Object} [options] - scale, hue, saturation, angle, tileInfo and any setting as particleEffect; angle turns it
+ *    about z, so 0 is up; flatten makes the spawn area flat across the way it emits
  *  @return {ParticleEmitter3D|undefined} - undefined when there is no such effect
  *  @memberof ParticleEffects */
 function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
@@ -583,7 +589,8 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
     const effect = particleEffectResolve(nameOrEffect, options);
     if (!effect) return;
     const s = effect.settings, color = (name)=> new Color(...s[name]);
-    const e = new ParticleEmitter3D(pos3D.copy(), s.emitRect ? vec3(s.emitSize, s.emitHeight, 0) : s.emitSize,
+    // a circle is a sphere and a rectangle a box as deep as it is wide, both flat across the way it emits with flatten
+    const e = new ParticleEmitter3D(pos3D.copy(), s.emitRect ? vec3(s.emitSize, s.emitHeight, s.emitSize) : s.emitSize,
         s.emitTime, s.emitRate, s.emitConeAngle, particleEffectTileInfo(s), color('colorStartA'), color('colorStartB'),
         color('colorEndA'), color('colorEndB'), s.particleTime, s.sizeStart, s.sizeEnd, s.speed, s.damping,
         s.gravity, s.fadeRate, s.randomness, s.additive);
@@ -597,6 +604,9 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
     // a 2D emitter at angle a shoots along (sin a, cos a), a z turn r takes up to (-sin r, cos r), so r is -a
     e.rotation3D = vec3(0, 0, -(options.angle ?? s.angle));
     e.scale3D = vec3(options.scale ?? 1);
+    e.emitFlat = !!options.flatten;
+    if (options.tileInfo)
+        e.tileInfo = options.tileInfo;
     e.particleUpdateCallback = particleEffectUpdateCallback(effect.behaviors, true);
     return e;
 }

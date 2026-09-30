@@ -9491,6 +9491,9 @@ declare module "littlejsengine" {
         constructor(pos3D?: Vector3, emitSize?: number | Vector3, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileInfo?: TileInfo | TextureInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, damping?: number, gravity?: number, fadeRate?: number, randomness?: number, additive?: boolean);
         /** @property {number|Vector3} - Spawn area, a number for a sphere diameter or a vec3 for a box */
         emitSize: number | Vector3;
+        /** @property {boolean} - Flatten the spawn area across the way it emits, its own up: a sphere becomes a disc
+         *  and a box a flat rectangle, for rain from a sheet of sky or flames from a patch of ground */
+        emitFlat: boolean;
         /** @property {number} - How long to keep emitting, 0 is forever */
         emitTime: number;
         /** @property {number} - Particles per second, 0 does not emit */
@@ -10247,6 +10250,8 @@ declare module "littlejsengine" {
      *  @param {number} [options.hue] - Turns its colors around the color wheel, 1 is all the way
      *  @param {number} [options.saturation] - Multiplies its saturation, 0 is grey
      *  @param {number} [options.angle] - Direction, 0 is up; the effect's own angle when not given
+     *  @param {TileInfo|TextureInfo} [options.tileInfo] - The game's own art to draw with in place of the effect's shape,
+     *    tinted by its colors; a whole texture draws as one tile
      *  @param {*} [options.settings] - Any effect setting by its name, emitTime, emitRate, speed and the rest, replacing
      *    the effect's own for this play
      *  @return {ParticleEmitter|undefined} - undefined when there is no such effect
@@ -10256,17 +10261,19 @@ declare module "littlejsengine" {
         hue?: number;
         saturation?: number;
         angle?: number;
+        tileInfo?: TileInfo | TextureInfo;
         settings?: any;
     }): ParticleEmitter | undefined;
     /** Play an effect in 3D: a ParticleEmitter3D set to it, placed, scaled and recolored
-     *  - The same effect data as particleEffect, so the look carries across: a rectangle spawn area becomes a flat box, a
-     *    trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
+     *  - The same effect data as particleEffect, so the look carries across: a circle spawn area becomes a sphere and a
+     *    rectangle a box as deep as it is wide, both flat across the way it emits with options.flatten, a disc or a
+     *    sheet; a trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
      *    randomColorLinear, velocityInheritance, localSpace) are left out; the stick behavior becomes the friction a
      *    particle lands with
      *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
      *  @param {Vector3} [pos3D]
-     *  @param {Object} [options] - scale, hue, saturation, angle and any setting as particleEffect; angle turns it about z,
-     *    so 0 is up
+     *  @param {Object} [options] - scale, hue, saturation, angle, tileInfo and any setting as particleEffect; angle turns it
+     *    about z, so 0 is up; flatten makes the spawn area flat across the way it emits
      *  @return {ParticleEmitter3D|undefined} - undefined when there is no such effect
      *  @memberof ParticleEffects */
     export function particleEffect3D(nameOrEffect: string | any, pos3D?: Vector3, options?: any): ParticleEmitter3D | undefined;

@@ -1000,6 +1000,9 @@ class ParticleEmitter3D extends EngineObject3D
 
         /** @property {number|Vector3} - Spawn area, a number for a sphere diameter or a vec3 for a box */
         this.emitSize = emitSize;
+        /** @property {boolean} - Flatten the spawn area across the way it emits, its own up: a sphere becomes a disc
+         *  and a box a flat rectangle, for rain from a sheet of sky or flames from a patch of ground */
+        this.emitFlat = false;
         /** @property {number} - How long to keep emitting, 0 is forever */
         this.emitTime = emitTime;
         /** @property {number} - Particles per second, 0 does not emit */
@@ -1179,10 +1182,18 @@ class ParticleEmitter3D extends EngineObject3D
         // the whole effect grows with the emitter, not just the area the particles start in
         const scale = render3DMaxScale(matrix.m);
 
-        // spawn offset: inside a box or a sphere
-        const size = this.emitSize, box = /** @type {Vector3} */ (size);
-        const offset = isVector3(size) ? vec3(rand(-.5, .5) * box.x, rand(-.5, .5) * box.y, rand(-.5, .5) * box.z)
-            : randInSphere(/** @type {number} */ (size) / 2);
+        // spawn offset: inside a box or a sphere, or flat across the emitter's up, a flat rectangle or a disc
+        const size = this.emitSize, box = /** @type {Vector3} */ (size), flat = this.emitFlat;
+        let offset;
+        if (isVector3(size))
+            offset = vec3(rand(-.5, .5) * box.x, flat ? 0 : rand(-.5, .5) * box.y, rand(-.5, .5) * box.z);
+        else if (flat)
+        {
+            const disc = randInCircle(/** @type {number} */ (size) / 2);
+            offset = vec3(disc.x, 0, disc.y);
+        }
+        else
+            offset = randInSphere(/** @type {number} */ (size) / 2);
 
         // direction inside the cone around local +Y
         const direction = matrix.transformDirection(randVector3(1, this.emitConeAngle)).normalize();

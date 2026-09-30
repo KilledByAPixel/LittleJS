@@ -41,11 +41,11 @@ test('a turned effect shoots the same way in 3D as in 2D', ()=>
     e.destroy();
 });
 
-test('a rectangle emitter becomes a flat box of the same size', ()=>
+test('a rectangle emitter becomes a box as deep as it is wide', ()=>
 {
     const rect = particleEffectSanitize({settings: {emitRect: true, emitSize: 2, emitHeight: .5}});
     const e = particleEffect3D(rect);
-    assert.deepEqual([e.emitSize.x, e.emitSize.y, e.emitSize.z], [2, .5, 0]);
+    assert.deepEqual([e.emitSize.x, e.emitSize.y, e.emitSize.z], [2, .5, 2]);
     e.destroy();
 });
 
