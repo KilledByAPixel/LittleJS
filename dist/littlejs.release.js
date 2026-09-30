@@ -20047,9 +20047,10 @@ function setScene(scene)
 
     if (sceneCurrent)
     {
+        // a leave that throws still lets the next switch through
         sceneLeaving = true;
-        sceneCurrent.leave?.();
-        sceneLeaving = false;
+        try { sceneCurrent.leave?.(); }
+        finally { sceneLeaving = false; }
     }
     engineObjectsDestroy();
     sceneCurrent = scene;
@@ -30329,7 +30330,9 @@ async function loadGLTF(url)
     const response = await fetch(url);
     if (!response.ok)
         throw new Error('loadGLTF failed: ' + url);
-    return parseGLTF(await response.arrayBuffer(), url.slice(0, url.lastIndexOf('/') + 1));
+    // the files beside it are beside where it came from, after any redirect
+    const base = response.url ? new URL('.', response.url).href : url.slice(0, url.lastIndexOf('/') + 1);
+    return parseGLTF(await response.arrayBuffer(), base);
 }
 
 /** Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to

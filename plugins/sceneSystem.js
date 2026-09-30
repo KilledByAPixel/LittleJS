@@ -38,9 +38,10 @@ function setScene(scene)
 
     if (sceneCurrent)
     {
+        // a leave that throws still lets the next switch through
         sceneLeaving = true;
-        sceneCurrent.leave?.();
-        sceneLeaving = false;
+        try { sceneCurrent.leave?.(); }
+        finally { sceneLeaving = false; }
     }
     engineObjectsDestroy();
     sceneCurrent = scene;

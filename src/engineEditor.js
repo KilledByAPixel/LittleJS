@@ -432,12 +432,21 @@ function editorSetBaseline(record, written)
 // save a map as Tiled JSON: where the browser lets a page write files, Chrome and Edge, to a file picked once and
 // written again on each Save after, even after a reload once the browser gives permission, or picked again with
 // Save As; elsewhere as a download under the name of the file it came from; resolves to how it saved, undefined
-// when the picker was closed
+// when the picker was closed; saves of a map run one at a time in the order asked, so the file ends with the last
 async function editorSave(record, pickAgain=false)
 {
     if (!record) return;
     editorStrokeEnd();
-    const text = editorMapJSON(record), picker = /** @type {any} */ (globalThis).showSaveFilePicker;
+    const text = editorMapJSON(record); // the map as it is now, later edits wait for a later save
+    const saved = (async ()=> { await record.saving; return editorSaveText(record, text, pickAgain); })();
+    record.saving = saved.catch(()=> {});
+    return saved;
+}
+
+// write one save of a map, the one before it done
+async function editorSaveText(record, text, pickAgain)
+{
+    const picker = /** @type {any} */ (globalThis).showSaveFilePicker;
     if (picker)
     {
         try

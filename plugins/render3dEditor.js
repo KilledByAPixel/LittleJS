@@ -762,7 +762,7 @@ function editor3DRevert()
 // save the level as JSON: where the browser lets a page write files, Chrome and Edge, to a file picked once and
 // written again on each Save after, or picked again with Save As; elsewhere as a download; a file of the level's
 // own name that was written is the file from then on, for the autosave; resolves to how it saved, undefined when
-// the picker was closed
+// the picker was closed; saves of a level run one at a time in the order asked, so the file ends with the last
 async function editor3DSave(pickAgain=false)
 {
     const level = editor3DLevel, record = editor3DRecords.get(level);
@@ -771,7 +771,16 @@ async function editor3DSave(pickAgain=false)
     // what is written, kept as it is now: the level can change while the file is picked and written, and those
     // edits are not in the file, so they stay in the autosave; the level and record are this one's, whichever is
     // open by then
-    const text = editor3DLevelJSON(level), written = editor3DCopy(JSON.parse(text).objects);
+    const text = editor3DLevelJSON(level);
+    const saved = (async ()=> { await record.saving; return editor3DSaveText(level, record, text, pickAgain); })();
+    record.saving = saved.catch(()=> {});
+    return saved;
+}
+
+// write one save of a level, the one before it done
+async function editor3DSaveText(level, record, text, pickAgain)
+{
+    const written = editor3DCopy(JSON.parse(text).objects);
     const picker = /** @type {any} */ (globalThis).showSaveFilePicker;
     const fileKey = (globalThis.location?.pathname ?? '') + ' 3D ' + record.key;
     if (picker)

@@ -20935,9 +20935,10 @@ function setScene(scene)
 
     if (sceneCurrent)
     {
+        // a leave that throws still lets the next switch through
         sceneLeaving = true;
-        sceneCurrent.leave?.();
-        sceneLeaving = false;
+        try { sceneCurrent.leave?.(); }
+        finally { sceneLeaving = false; }
     }
     engineObjectsDestroy();
     sceneCurrent = scene;
@@ -31217,7 +31218,9 @@ async function loadGLTF(url)
     const response = await fetch(url);
     if (!response.ok)
         throw new Error('loadGLTF failed: ' + url);
-    return parseGLTF(await response.arrayBuffer(), url.slice(0, url.lastIndexOf('/') + 1));
+    // the files beside it are beside where it came from, after any redirect
+    const base = response.url ? new URL('.', response.url).href : url.slice(0, url.lastIndexOf('/') + 1);
+    return parseGLTF(await response.arrayBuffer(), base);
 }
 
 /** Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to
@@ -32774,12 +32777,21 @@ function editorSetBaseline(record, written)
 // save a map as Tiled JSON: where the browser lets a page write files, Chrome and Edge, to a file picked once and
 // written again on each Save after, even after a reload once the browser gives permission, or picked again with
 // Save As; elsewhere as a download under the name of the file it came from; resolves to how it saved, undefined
-// when the picker was closed
+// when the picker was closed; saves of a map run one at a time in the order asked, so the file ends with the last
 async function editorSave(record, pickAgain=false)
 {
     if (!record) return;
     editorStrokeEnd();
-    const text = editorMapJSON(record), picker = /** @type {any} */ (globalThis).showSaveFilePicker;
+    const text = editorMapJSON(record); // the map as it is now, later edits wait for a later save
+    const saved = (async ()=> { await record.saving; return editorSaveText(record, text, pickAgain); })();
+    record.saving = saved.catch(()=> {});
+    return saved;
+}
+
+// write one save of a map, the one before it done
+async function editorSaveText(record, text, pickAgain)
+{
+    const picker = /** @type {any} */ (globalThis).showSaveFilePicker;
     if (picker)
     {
         try
@@ -35555,7 +35567,7 @@ function editor3DRevert()
 // save the level as JSON: where the browser lets a page write files, Chrome and Edge, to a file picked once and
 // written again on each Save after, or picked again with Save As; elsewhere as a download; a file of the level's
 // own name that was written is the file from then on, for the autosave; resolves to how it saved, undefined when
-// the picker was closed
+// the picker was closed; saves of a level run one at a time in the order asked, so the file ends with the last
 async function editor3DSave(pickAgain=false)
 {
     const level = editor3DLevel, record = editor3DRecords.get(level);
@@ -35564,7 +35576,16 @@ async function editor3DSave(pickAgain=false)
     // what is written, kept as it is now: the level can change while the file is picked and written, and those
     // edits are not in the file, so they stay in the autosave; the level and record are this one's, whichever is
     // open by then
-    const text = editor3DLevelJSON(level), written = editor3DCopy(JSON.parse(text).objects);
+    const text = editor3DLevelJSON(level);
+    const saved = (async ()=> { await record.saving; return editor3DSaveText(level, record, text, pickAgain); })();
+    record.saving = saved.catch(()=> {});
+    return saved;
+}
+
+// write one save of a level, the one before it done
+async function editor3DSaveText(level, record, text, pickAgain)
+{
+    const written = editor3DCopy(JSON.parse(text).objects);
     const picker = /** @type {any} */ (globalThis).showSaveFilePicker;
     const fileKey = (globalThis.location?.pathname ?? '') + ' 3D ' + record.key;
     if (picker)
