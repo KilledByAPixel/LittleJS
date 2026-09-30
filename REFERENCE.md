@@ -747,6 +747,25 @@ ParticleEmitter.emitParticle()           // Spawn one particle
 particleEmitRateScale = 1 // Scales particles emit rate
 ```
 
+## LittleJS Particle Effects
+- Ready made effects in one line, 2D and 3D, each tuned around a one unit emitter
+- Effects are plain data, {name, settings, behaviors}, the format the particle designer saves, so a designed library
+  plays by name
+
+```javascript
+particleEffectsAdd(effects)             // add effects to play by name, one of the same name replaces it
+particleEffectsGet(name)                // an effect's data, any case, to change or build by hand
+await particleEffectsLoad(url)          // load a library the particle designer saved, and add its effects
+particleEffectsParse(text)              // a library file's text to effects, particleEffectsText(effects) back
+particleEffectSanitize(raw)             // any input to a whole effect, defaults filled, bad values clamped
+particleEffectRecolor(effect, hue, saturation) // a copy turned around the color wheel and its saturation scaled
+particleEffectSettings                  // every setting an effect has, with particleEffectGroups, the groups
+particleEffectBehaviors                 // the behaviors an effect can name: wobble, swirl, turbulence, attract,
+                                        // orbit, wind and stick
+particleEffectShapes                    // the shapes the plugin draws: dot, soft, glow, smoke, spark, square,
+                                        // triangle, ring, star and plus
+```
+
 ## LittleJS Tween System
 - Animate numbers, Vector2, Color, or any value with a `.lerp(other, percent)` method
 - Pauses with the game by default; opt-in real-time mode keeps tweens running while paused

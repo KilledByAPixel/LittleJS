@@ -10118,6 +10118,100 @@ declare module "littlejsengine" {
      *  @memberof TextureSheets */
     export function spritesReady(): Promise<any>;
     /**
+     * LittleJS Particle Effects Plugin
+     * - Ready made particle effects in one line, particleEffect('fire', pos), and particleEffect3D for 3D
+     * - Every built-in effect is tuned around a one unit emitter; options.scale grows it to fit, options.hue and
+     *   options.saturation recolor it
+     * - Effects are plain data, {name, settings, behaviors}, the format the particle designer saves: load a library the
+     *   designer saved with particleEffectsLoad and play its effects by name
+     * - The built-in effects draw with a sheet of shapes the plugin draws itself, so they need no image
+     * @namespace ParticleEffects
+     */
+    /** The groups the settings are in, in order
+     *  @type {Array<string>}
+     *  @memberof ParticleEffects */
+    export const particleEffectGroups: Array<string>;
+    /** Every setting an effect has: its name, kind (number, checkbox, color or shape), default, the range the designer's
+     *  slider covers (min, max, step), the hard limits a typed value is clamped to, and whether it is set after the
+     *  emitter is made rather than passed to its constructor (extra)
+     *  @type {Array<{group:string, name:string, kind:string, value:any, min:number, max:number, step:number,
+     *  description:string, hardMin:number, hardMax:number, extra:boolean}>}
+     *  @memberof ParticleEffects */
+    export const particleEffectSettings: Array<{
+        group: string;
+        name: string;
+        kind: string;
+        value: any;
+        min: number;
+        max: number;
+        step: number;
+        description: string;
+        hardMin: number;
+        hardMax: number;
+        extra: boolean;
+    }>;
+    /** The behaviors an effect can use, each a push applied to every particle every update, with a 2D and a 3D version
+     *  @type {Array<{name:string, update:Function|undefined, update3D:Function|undefined, min:number, max:number,
+     *  value:number, description:string}>}
+     *  @memberof ParticleEffects */
+    export const particleEffectBehaviors: Array<{
+        name: string;
+        update: Function | undefined;
+        update3D: Function | undefined;
+        min: number;
+        max: number;
+        value: number;
+        description: string;
+    }>;
+    /** Names of the shapes the plugin draws, for an effect's shape setting
+     *  @type {Array<string>}
+     *  @memberof ParticleEffects */
+    export const particleEffectShapes: Array<string>;
+    /** Any input into a whole effect: missing fields take their defaults, bad ones are dropped or clamped
+     *  @param {Object} [raw] - {name, settings, behaviors}, from a library file, the designer or code
+     *  @return {{name:string, settings:Object, behaviors:Array<{name:string, strength:number}>}}
+     *  @memberof ParticleEffects */
+    export function particleEffectSanitize(raw?: any): {
+        name: string;
+        settings: any;
+        behaviors: {
+            name: string;
+            strength: number;
+        }[];
+    };
+    /** A copy of an effect with its four colors turned around the color wheel and their saturation scaled; lightness and
+     *  alpha stay, and grey and white have no hue to turn
+     *  @param {Object} effect
+     *  @param {number} [hue] - How far around the wheel, 1 is all the way
+     *  @param {number} [saturation] - Multiplies the saturation, 0 is grey, clamped to 1
+     *  @return {Object}
+     *  @memberof ParticleEffects */
+    export function particleEffectRecolor(effect: any, hue?: number, saturation?: number): any;
+    /** Add effects to play by name, sanitized; one with the name of an effect already there replaces it
+     *  @param {Array<Object>|Object} effects
+     *  @memberof ParticleEffects */
+    export function particleEffectsAdd(effects: Array<any> | any): void;
+    /** The effect with a name, any case, undefined if there is none
+     *  @param {string} name
+     *  @return {Object|undefined}
+     *  @memberof ParticleEffects */
+    export function particleEffectsGet(name: string): any | undefined;
+    /** A library file, or one effect, into sanitized effects; throws on bad input
+     *  @param {string} text
+     *  @return {Array<Object>}
+     *  @memberof ParticleEffects */
+    export function particleEffectsParse(text: string): Array<any>;
+    /** The text of a library file with these effects, what particleEffectsLoad and the designer read
+     *  @param {Array<Object>} effects
+     *  @return {string}
+     *  @memberof ParticleEffects */
+    export function particleEffectsText(effects: Array<any>): string;
+    /** Load a library file the particle designer saved and add its effects
+     *  @param {string} url
+     *  @return {Promise<Array<Object>>} - The effects it had
+     *  @memberof ParticleEffects */
+    export function particleEffectsLoad(url: string): Promise<Array<any>>;
+    /**
      * LittleJS Level Editor
      * - Paint the game's tile layers while it is paused, then keep playing with the changes
      * - Press 0 while the debug overlay is open to edit, 0 again to play, or call levelEditor.open() and close()

@@ -56,6 +56,7 @@ const enginePluginFiles =
     `${PLUGIN_FOLDER}/render3dExtras.js`,
     `${PLUGIN_FOLDER}/render3dVoxels.js`,
     `${PLUGIN_FOLDER}/render3dLevel.js`,
+    `${PLUGIN_FOLDER}/particleEffects.js`,
     `${PLUGIN_FOLDER}/gltf.js`,
     `${PLUGIN_FOLDER}/threejs.js`,
 ];

@@ -212,4 +212,17 @@ export
     loadAtlas,
     parseAtlas,
     spritesReady,
+
+    // Particle Effects
+    particleEffectGroups,
+    particleEffectSettings,
+    particleEffectBehaviors,
+    particleEffectShapes,
+    particleEffectSanitize,
+    particleEffectRecolor,
+    particleEffectsAdd,
+    particleEffectsGet,
+    particleEffectsParse,
+    particleEffectsText,
+    particleEffectsLoad,
 }
