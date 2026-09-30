@@ -25,6 +25,7 @@ button, select, input[type=text], input[type=number]
     border-radius:4px; padding:3px 6px;
 }
 button { cursor:pointer; }
+[hidden] { display:none !important; }
 button:hover:not(:disabled) { background:var(--buttonHover); }
 button:disabled { opacity:.4; cursor:default; }
 input[type=range]
@@ -77,6 +78,11 @@ details.group > div { padding:0 12px 8px; }
 .stripLabel { color:var(--dim); font-size:11px; }
 .warning { color:hsl(35,90%,60%); font-size:12px; margin:4px 0; }
 .buttons { display:flex; flex-wrap:wrap; gap:4px; margin:6px 0; }
+.row.shapeRow .shapes
+{ grid-column:2 / 4; display:flex; flex-wrap:wrap; gap:3px; }
+.shapes button { padding:2px; min-width:28px; height:28px; }
+.shapes canvas { width:22px; height:22px; display:block; }
+.shapes button.selected { border-color:var(--accent); }
 #tilePicker
 {
     width:100%; image-rendering:pixelated; cursor:crosshair; display:block;
@@ -130,7 +136,9 @@ details.group > div { padding:0 12px 8px; }
         <header>
             <h1>LittleJS Particle Designer</h1>
             <p>Drag in the preview to move the emitter, wheel to zoom.
-                Drop an image to use it as the texture.</p>
+                Drop an image to use it as the texture.
+                Save Library, then particleEffectsLoad('particleEffects.json')
+                in a game plays them by name.</p>
         </header>
         <div id=libraryBar>
             <select id=effectSelect title="Effect to edit"></select>
@@ -143,8 +151,8 @@ details.group > div { padding:0 12px 8px; }
                     title="Add effects from a library file">Import</button>
                 <button id=buttonExportEffect
                     title="Save this effect to a file">Export Effect</button>
-                <button id=buttonExport
-                    title="Save every effect to a file">Export All</button>
+                <button id=buttonExport title="Save every effect, the file
+                    particleEffectsLoad reads">Save Library</button>
                 <button id=buttonPresets
                     title="Add the built in effects again">Add Presets</button>
             </div>
