@@ -346,7 +346,7 @@ function particleEffectShapeTile(name)
             plus:     (x, y)=> { context.fillRect(x - r, y - 4, 2*r, 8); context.fillRect(x - 4, y - r, 8, 2*r); },
         };
         particleEffectShapes.forEach((name, i)=> draw[name](i * cell + cell/2, cell/2));
-        const texture = new TextureInfo(context.canvas);
+        const texture = new TextureInfo(context.canvas, true, false, false); // smooth even in a pixel art game
         particleEffectShapeTiles = new Map(particleEffectShapes.map((name, i)=>
             [name, new TileInfo(vec2((i * cell + 1) * res, res), vec2((cell - 2) * res), texture)]));
     }

@@ -2112,8 +2112,9 @@ declare module "littlejsengine" {
          * @param {boolean} [useWebGL] - Should use WebGL if available?
          * @param {boolean|Array<number>} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)? Or the WebGL
          *   modes across and down, like [gl.CLAMP_TO_EDGE, gl.MIRRORED_REPEAT], as a glTF sampler gives them
+         * @param {boolean} [pixelated] - Hard edged or smooth for this texture alone, undefined follows tilesPixelated
          */
-        constructor(image: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, useWebGL?: boolean, wrap?: boolean | Array<number>);
+        constructor(image: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, useWebGL?: boolean, wrap?: boolean | Array<number>, pixelated?: boolean);
         /** @property {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} - image source */
         image: OffscreenCanvas | ImageBitmap | HTMLCanvasElement | HTMLImageElement;
         /** @property {Vector2} - size of the image */
@@ -2127,6 +2128,10 @@ declare module "littlejsengine" {
          *  across and down
          *  @type {boolean|Array<number>} */
         wrap: boolean | Array<number>;
+        /** @property {boolean|undefined} - Hard edged or smooth for this texture alone, a soft glow in a pixel art
+         *  game or pixel art in a smooth one; undefined follows tilesPixelated
+         *  @type {boolean|undefined} */
+        pixelated: boolean | undefined;
         /** Creates the WebGL texture, updates if already created */
         createWebGLTexture(): void;
         /** Destroys the WebGL texture */
@@ -2138,6 +2143,10 @@ declare module "littlejsengine" {
          *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across
          *    and down */
         setWrap(wrap?: boolean | Array<number>): void;
+        /** Make this texture hard edged or smooth on its own, whatever tilesPixelated says for the rest; it is made again
+         *  with the new filtering
+         *  @param {boolean} [pixelated] - undefined follows tilesPixelated again */
+        setPixelated(pixelated?: boolean): void;
     }
     /** Load a texture at a specific index after engineInit, the images passed to engineInit load this way
      *  @param {number} textureIndex - Index to store the texture at, an unused one
@@ -2785,9 +2794,10 @@ declare module "littlejsengine" {
      *  Restores the active texture when done
      *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} [image]
      *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across and down
+     *  @param {boolean} [pixelated] - Hard edged or smooth, undefined follows tilesPixelated
      *  @return {WebGLTexture}
      *  @memberof WebGL */
-    export function glCreateTexture(image?: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, wrap?: boolean | Array<number>): WebGLTexture;
+    export function glCreateTexture(image?: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, wrap?: boolean | Array<number>, pixelated?: boolean): WebGLTexture;
     /** Deletes a WebGL texture
      *  @param {WebGLTexture} [texture]
      *  @memberof WebGL */
@@ -2795,8 +2805,9 @@ declare module "littlejsengine" {
     /** Set WebGL texture data from an image, restores the active texture when done
      *  @param {WebGLTexture} texture
      *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
+     *  @param {boolean} [pixelated] - Hard edged or smooth, undefined follows tilesPixelated
      *  @memberof WebGL */
-    export function glSetTextureData(texture: WebGLTexture, image: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap): void;
+    export function glSetTextureData(texture: WebGLTexture, image: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, pixelated?: boolean): void;
     /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
      *  @memberof WebGL */
     export function glFlush(): void;

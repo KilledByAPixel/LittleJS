@@ -316,7 +316,9 @@ hero.set('attack', ()=> hero.set('idle')) // with a callback for when a play cli
 hero.tileInfo           // the frame to draw now; also hero.frame, hero.isDone, hero.name, hero.clip
 
 // Texture Info Object
-TextureInfo(image, useWebGL=true, wrap=false) // Created automatically for each image
+TextureInfo(image, useWebGL=true, wrap=false, pixelated) // Created automatically for each image; pixelated makes
+                        // this texture hard edged or smooth on its own, undefined follows tilesPixelated
+TextureInfo.setPixelated(pixelated) // Hard edged or smooth for this texture alone, a soft glow in a pixel art game
 TextureInfo.image       // Image source
 TextureInfo.size        // Size of the image
 TextureInfo.glTexture   // WebGL texture

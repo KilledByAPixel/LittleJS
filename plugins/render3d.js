@@ -1860,18 +1860,19 @@ function render3DUpdateSamplers()
     r.samplers.clear();
 }
 
-// the sampler for a texture's wrap modes, smooth or hard edged, made the first time it is needed
-function render3DSampler(wrap, pixelated)
+// the sampler for a texture's wrap modes, smooth or hard edged, made the first time it is needed; pixelated is the
+// draw's, texturePixelated the texture's own, which a smooth texture in a pixel art game sets false
+function render3DSampler(wrap, pixelated, texturePixelated=tilesPixelated)
 {
     const gl = glContext, r = render3D, [wrapS, wrapT] = glWrapModes(wrap);
-    const key = wrapS * 1e5 + wrapT * 2 + (pixelated ? 1 : 0); // the modes are 5 digit numbers
+    const key = wrapS * 1e5 + wrapT * 4 + (pixelated ? 1 : 0) + (texturePixelated ? 2 : 0); // the modes are 5 digit numbers
     let sampler = r.samplers.get(key);
     if (sampler) return sampler;
     sampler = gl.createSampler();
-    const sharp = pixelated || tilesPixelated;
+    const sharp = pixelated || texturePixelated;
     gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, sharp ? gl.NEAREST : gl.LINEAR);
     gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, pixelated ? gl.NEAREST
-        : tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
+        : texturePixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrapS);
     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrapT);
     const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
@@ -1899,7 +1900,7 @@ function render3DBindTexture(tileInfo, state=render3D, unit=0)
                                     // or anisotropy, and filtering it that way costs every untextured fragment
     else
     {
-        gl.bindSampler(unit, render3DSampler(textureInfo?.wrap, state.pixelated));
+        gl.bindSampler(unit, render3DSampler(textureInfo?.wrap, state.pixelated, textureInfo?.pixelated ?? tilesPixelated));
         glUpdateMipmaps(texture); // drawn into since its mipmaps were made
         if (!state.pixelated && !glMipmappedTextures.has(texture)) // a hard edged draw never reads them
         {

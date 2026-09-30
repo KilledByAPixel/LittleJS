@@ -115,7 +115,7 @@ function glInit(rootElement)
     // startup webgl, and make the textures of any texture infos made before it
     initWebGL();
     for (const info of glTextureInfos)
-        info.glTexture ||= glCreateTexture(info.image, info.wrap);
+        info.glTexture ||= glCreateTexture(info.image, info.wrap, info.pixelated);
 
     // setup context lost and restore handlers
     glCanvas.addEventListener('webglcontextlost', (e)=>
@@ -155,7 +155,7 @@ function glInit(rootElement)
         glPremultipliedTextures = new WeakSet; // the tile layers draw into their new textures again below
         initWebGL();
         for (const info of glTextureInfos)
-            info.glTexture = glCreateTexture(info.image, info.wrap);
+            info.glTexture = glCreateTexture(info.image, info.wrap, info.pixelated);
         pluginList.forEach(plugin=>plugin.glContextRestored?.());
 
         // a tile layer drawn on the GPU only had its tiles in the lost texture, it draws them again
@@ -488,9 +488,10 @@ function glShaderProgram(shader)
  *  Restores the active texture when done
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} [image]
  *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across and down
+ *  @param {boolean} [pixelated] - Hard edged or smooth, undefined follows tilesPixelated
  *  @return {WebGLTexture}
  *  @memberof WebGL */
-function glCreateTexture(image, wrap=false)
+function glCreateTexture(image, wrap=false, pixelated=tilesPixelated)
 {
     if (!glContext) return;
 
@@ -499,10 +500,10 @@ function glCreateTexture(image, wrap=false)
     let mipMap = false;
     if (image?.width)
     {
-        glSetTextureData(texture, image);
+        glSetTextureData(texture, image, pixelated);
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
         // WebGL2 makes mipmaps at any size, a texture that becomes a render target keeps them only at powers of two
-        mipMap = !tilesPixelated;
+        mipMap = !pixelated;
         if (mipMap && !(isPowerOfTwo(image.width) && isPowerOfTwo(image.height)))
             glMipmapsUntilTarget.add(texture);
     }
@@ -515,7 +516,7 @@ function glCreateTexture(image, wrap=false)
     }
 
     // set texture filtering
-    const magFilter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
+    const magFilter = pixelated ? glContext.NEAREST : glContext.LINEAR;
     const minFilter = mipMap ? glContext.LINEAR_MIPMAP_LINEAR : magFilter;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, magFilter);
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, minFilter);
@@ -546,8 +547,9 @@ function glDeleteTexture(texture)
 /** Set WebGL texture data from an image, restores the active texture when done
  *  @param {WebGLTexture} texture
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
+ *  @param {boolean} [pixelated] - Hard edged or smooth, undefined follows tilesPixelated
  *  @memberof WebGL */
-function glSetTextureData(texture, image)
+function glSetTextureData(texture, image, pixelated=tilesPixelated)
 {
     if (!glContext) return;
 
@@ -565,7 +567,7 @@ function glSetTextureData(texture, image)
     }
     // smooth filtering mixes a texel with its see through neighbors, right only for premultiplied color, or the
     // edges go dark; pixel art is sampled a texel at a time, and uploads straight color as it always has
-    const premultiply = !tilesPixelated;
+    const premultiply = !pixelated;
     glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, premultiply);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
     glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
@@ -596,9 +598,9 @@ function glRegisterTextureInfo(textureInfo)
 
     // create or set the texture data
     if (textureInfo.glTexture)
-        glSetTextureData(textureInfo.glTexture, textureInfo.image);
+        glSetTextureData(textureInfo.glTexture, textureInfo.image, textureInfo.pixelated);
     else
-        textureInfo.glTexture = glCreateTexture(textureInfo.image, textureInfo.wrap);
+        textureInfo.glTexture = glCreateTexture(textureInfo.image, textureInfo.wrap, textureInfo.pixelated);
 }
 
 /** Internal: tells WebGL to destroy the glTexture and stop tracking it, TextureInfo calls it

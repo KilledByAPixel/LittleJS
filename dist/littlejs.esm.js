@@ -5236,8 +5236,9 @@ class TextureInfo
      * @param {boolean} [useWebGL] - Should use WebGL if available?
      * @param {boolean|Array<number>} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)? Or the WebGL
      *   modes across and down, like [gl.CLAMP_TO_EDGE, gl.MIRRORED_REPEAT], as a glTF sampler gives them
+     * @param {boolean} [pixelated] - Hard edged or smooth for this texture alone, undefined follows tilesPixelated
      */
-    constructor(image, useWebGL=true, wrap=false)
+    constructor(image, useWebGL=true, wrap=false, pixelated)
     {
         /** @property {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} - image source */
         this.image = image;
@@ -5252,6 +5253,10 @@ class TextureInfo
          *  across and down
          *  @type {boolean|Array<number>} */
         this.wrap = wrap;
+        /** @property {boolean|undefined} - Hard edged or smooth for this texture alone, a soft glow in a pixel art
+         *  game or pixel art in a smooth one; undefined follows tilesPixelated
+         *  @type {boolean|undefined} */
+        this.pixelated = pixelated;
         useWebGL && this.createWebGLTexture();
     }
 
@@ -5281,6 +5286,17 @@ class TextureInfo
     {
         this.wrap = wrap;
         glSetTextureWrap(this.glTexture, wrap);
+    }
+
+    /** Make this texture hard edged or smooth on its own, whatever tilesPixelated says for the rest; it is made again
+     *  with the new filtering
+     *  @param {boolean} [pixelated] - undefined follows tilesPixelated again */
+    setPixelated(pixelated)
+    {
+        this.pixelated = pixelated;
+        if (!this.glTexture) return;
+        this.destroyWebGLTexture();
+        this.createWebGLTexture();
     }
 }
 
@@ -6848,7 +6864,7 @@ function engineGlowTexture(falloff=1)
         gradient.addColorStop(i / steps, 'rgba(255,255,255,' + engineGlowAlpha(i / steps, key).toFixed(4) + ')');
     context.fillStyle = gradient;
     context.fillRect(0, 0, size, size);
-    engineGlowTextures.set(key, texture = new TextureInfo(context.canvas));
+    engineGlowTextures.set(key, texture = new TextureInfo(context.canvas, true, false, false));
     return texture;
 }
 
@@ -11117,7 +11133,7 @@ function glInit(rootElement)
     // startup webgl, and make the textures of any texture infos made before it
     initWebGL();
     for (const info of glTextureInfos)
-        info.glTexture ||= glCreateTexture(info.image, info.wrap);
+        info.glTexture ||= glCreateTexture(info.image, info.wrap, info.pixelated);
 
     // setup context lost and restore handlers
     glCanvas.addEventListener('webglcontextlost', (e)=>
@@ -11157,7 +11173,7 @@ function glInit(rootElement)
         glPremultipliedTextures = new WeakSet; // the tile layers draw into their new textures again below
         initWebGL();
         for (const info of glTextureInfos)
-            info.glTexture = glCreateTexture(info.image, info.wrap);
+            info.glTexture = glCreateTexture(info.image, info.wrap, info.pixelated);
         pluginList.forEach(plugin=>plugin.glContextRestored?.());
 
         // a tile layer drawn on the GPU only had its tiles in the lost texture, it draws them again
@@ -11490,9 +11506,10 @@ function glShaderProgram(shader)
  *  Restores the active texture when done
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} [image]
  *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across and down
+ *  @param {boolean} [pixelated] - Hard edged or smooth, undefined follows tilesPixelated
  *  @return {WebGLTexture}
  *  @memberof WebGL */
-function glCreateTexture(image, wrap=false)
+function glCreateTexture(image, wrap=false, pixelated=tilesPixelated)
 {
     if (!glContext) return;
 
@@ -11501,10 +11518,10 @@ function glCreateTexture(image, wrap=false)
     let mipMap = false;
     if (image?.width)
     {
-        glSetTextureData(texture, image);
+        glSetTextureData(texture, image, pixelated);
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
         // WebGL2 makes mipmaps at any size, a texture that becomes a render target keeps them only at powers of two
-        mipMap = !tilesPixelated;
+        mipMap = !pixelated;
         if (mipMap && !(isPowerOfTwo(image.width) && isPowerOfTwo(image.height)))
             glMipmapsUntilTarget.add(texture);
     }
@@ -11517,7 +11534,7 @@ function glCreateTexture(image, wrap=false)
     }
 
     // set texture filtering
-    const magFilter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
+    const magFilter = pixelated ? glContext.NEAREST : glContext.LINEAR;
     const minFilter = mipMap ? glContext.LINEAR_MIPMAP_LINEAR : magFilter;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, magFilter);
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, minFilter);
@@ -11548,8 +11565,9 @@ function glDeleteTexture(texture)
 /** Set WebGL texture data from an image, restores the active texture when done
  *  @param {WebGLTexture} texture
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
+ *  @param {boolean} [pixelated] - Hard edged or smooth, undefined follows tilesPixelated
  *  @memberof WebGL */
-function glSetTextureData(texture, image)
+function glSetTextureData(texture, image, pixelated=tilesPixelated)
 {
     if (!glContext) return;
 
@@ -11567,7 +11585,7 @@ function glSetTextureData(texture, image)
     }
     // smooth filtering mixes a texel with its see through neighbors, right only for premultiplied color, or the
     // edges go dark; pixel art is sampled a texel at a time, and uploads straight color as it always has
-    const premultiply = !tilesPixelated;
+    const premultiply = !pixelated;
     glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, premultiply);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
     glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
@@ -11598,9 +11616,9 @@ function glRegisterTextureInfo(textureInfo)
 
     // create or set the texture data
     if (textureInfo.glTexture)
-        glSetTextureData(textureInfo.glTexture, textureInfo.image);
+        glSetTextureData(textureInfo.glTexture, textureInfo.image, textureInfo.pixelated);
     else
-        textureInfo.glTexture = glCreateTexture(textureInfo.image, textureInfo.wrap);
+        textureInfo.glTexture = glCreateTexture(textureInfo.image, textureInfo.wrap, textureInfo.pixelated);
 }
 
 /** Internal: tells WebGL to destroy the glTexture and stop tracking it, TextureInfo calls it
@@ -24629,18 +24647,19 @@ function render3DUpdateSamplers()
     r.samplers.clear();
 }
 
-// the sampler for a texture's wrap modes, smooth or hard edged, made the first time it is needed
-function render3DSampler(wrap, pixelated)
+// the sampler for a texture's wrap modes, smooth or hard edged, made the first time it is needed; pixelated is the
+// draw's, texturePixelated the texture's own, which a smooth texture in a pixel art game sets false
+function render3DSampler(wrap, pixelated, texturePixelated=tilesPixelated)
 {
     const gl = glContext, r = render3D, [wrapS, wrapT] = glWrapModes(wrap);
-    const key = wrapS * 1e5 + wrapT * 2 + (pixelated ? 1 : 0); // the modes are 5 digit numbers
+    const key = wrapS * 1e5 + wrapT * 4 + (pixelated ? 1 : 0) + (texturePixelated ? 2 : 0); // the modes are 5 digit numbers
     let sampler = r.samplers.get(key);
     if (sampler) return sampler;
     sampler = gl.createSampler();
-    const sharp = pixelated || tilesPixelated;
+    const sharp = pixelated || texturePixelated;
     gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, sharp ? gl.NEAREST : gl.LINEAR);
     gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, pixelated ? gl.NEAREST
-        : tilesPixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
+        : texturePixelated ? gl.NEAREST_MIPMAP_LINEAR : gl.LINEAR_MIPMAP_LINEAR);
     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrapS);
     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrapT);
     const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
@@ -24668,7 +24687,7 @@ function render3DBindTexture(tileInfo, state=render3D, unit=0)
                                     // or anisotropy, and filtering it that way costs every untextured fragment
     else
     {
-        gl.bindSampler(unit, render3DSampler(textureInfo?.wrap, state.pixelated));
+        gl.bindSampler(unit, render3DSampler(textureInfo?.wrap, state.pixelated, textureInfo?.pixelated ?? tilesPixelated));
         glUpdateMipmaps(texture); // drawn into since its mipmaps were made
         if (!state.pixelated && !glMipmappedTextures.has(texture)) // a hard edged draw never reads them
         {
@@ -30428,7 +30447,7 @@ function particleEffectShapeTile(name)
             plus:     (x, y)=> { context.fillRect(x - r, y - 4, 2*r, 8); context.fillRect(x - 4, y - r, 8, 2*r); },
         };
         particleEffectShapes.forEach((name, i)=> draw[name](i * cell + cell/2, cell/2));
-        const texture = new TextureInfo(context.canvas);
+        const texture = new TextureInfo(context.canvas, true, false, false); // smooth even in a pixel art game
         particleEffectShapeTiles = new Map(particleEffectShapes.map((name, i)=>
             [name, new TileInfo(vec2((i * cell + 1) * res, res), vec2((cell - 2) * res), texture)]));
     }

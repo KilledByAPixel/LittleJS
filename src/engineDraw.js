@@ -259,8 +259,9 @@ class TextureInfo
      * @param {boolean} [useWebGL] - Should use WebGL if available?
      * @param {boolean|Array<number>} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)? Or the WebGL
      *   modes across and down, like [gl.CLAMP_TO_EDGE, gl.MIRRORED_REPEAT], as a glTF sampler gives them
+     * @param {boolean} [pixelated] - Hard edged or smooth for this texture alone, undefined follows tilesPixelated
      */
-    constructor(image, useWebGL=true, wrap=false)
+    constructor(image, useWebGL=true, wrap=false, pixelated)
     {
         /** @property {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} - image source */
         this.image = image;
@@ -275,6 +276,10 @@ class TextureInfo
          *  across and down
          *  @type {boolean|Array<number>} */
         this.wrap = wrap;
+        /** @property {boolean|undefined} - Hard edged or smooth for this texture alone, a soft glow in a pixel art
+         *  game or pixel art in a smooth one; undefined follows tilesPixelated
+         *  @type {boolean|undefined} */
+        this.pixelated = pixelated;
         useWebGL && this.createWebGLTexture();
     }
 
@@ -304,6 +309,17 @@ class TextureInfo
     {
         this.wrap = wrap;
         glSetTextureWrap(this.glTexture, wrap);
+    }
+
+    /** Make this texture hard edged or smooth on its own, whatever tilesPixelated says for the rest; it is made again
+     *  with the new filtering
+     *  @param {boolean} [pixelated] - undefined follows tilesPixelated again */
+    setPixelated(pixelated)
+    {
+        this.pixelated = pixelated;
+        if (!this.glTexture) return;
+        this.destroyWebGLTexture();
+        this.createWebGLTexture();
     }
 }
 
@@ -1871,7 +1887,7 @@ function engineGlowTexture(falloff=1)
         gradient.addColorStop(i / steps, 'rgba(255,255,255,' + engineGlowAlpha(i / steps, key).toFixed(4) + ')');
     context.fillStyle = gradient;
     context.fillRect(0, 0, size, size);
-    engineGlowTextures.set(key, texture = new TextureInfo(context.canvas));
+    engineGlowTextures.set(key, texture = new TextureInfo(context.canvas, true, false, false));
     return texture;
 }
 
