@@ -10244,6 +10244,10 @@ declare module "littlejsengine" {
      *  @return {ParticleEmitter3D|undefined} - undefined when there is no such effect
      *  @memberof ParticleEffects */
     export function particleEffect3D(nameOrEffect: string | any, pos3D?: Vector3, options?: any): ParticleEmitter3D | undefined;
+    /** The names of the built-in effects, in the order a gallery shows them
+     *  @type {Array<string>}
+     *  @memberof ParticleEffects */
+    export const particleEffectsBuiltIn: Array<string>;
     /** Set a 2D emitter to an effect, live, so a running one keeps its particles
      *  @param {ParticleEmitter} emitter
      *  @param {Object} effect

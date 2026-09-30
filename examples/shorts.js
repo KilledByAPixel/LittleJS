@@ -37,6 +37,7 @@ const exampleList =
     new ExampleInfo('Blending', 'blending.js', 'Additive blending and transparency', false, 'alpha, color, tiles, smooth'),
     new ExampleInfo('Image Font', 'imageFont.js', 'Bitmap fonts, including the built-in one', false, 'text, characters'),
     new ExampleInfo('Particles', 'particles.js', 'Particle system', false, 'effects, emitter, physics, fire, smoke, comet'),
+    new ExampleInfo('Particle Effects', 'particleEffects.js', 'Every built-in particle effect, one line each', false, 'particles, effects, fire, smoke, explosion, sparks, magic, rain, snow, hue'),
     new ExampleInfo('Tile Layer', 'tileLayer.js', 'Tile layer rendering system', false, 'level, map, grid, particles'),
     new ExampleInfo('Low Resolution Output', 'lowRes.js', 'Crisp low resolution rendering', false, 'pixelated, retro, canvasFixedSize, pixel art'),
     new ExampleInfo('Clock', 'clock.js', 'Animated analog clock', false, 'time, rotation, lines, rectangle'),

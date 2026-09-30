@@ -578,3 +578,119 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
     e.particleUpdateCallback = particleEffectUpdateCallback(effect.behaviors, true);
     return e;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// the built-in effects, each tuned around a one unit emitter; one-shots have an emitTime and end themselves
+
+/** The names of the built-in effects, in the order a gallery shows them
+ *  @type {Array<string>}
+ *  @memberof ParticleEffects */
+const particleEffectsBuiltIn = [];
+{
+    const add = (name, settings, behaviors=[])=>
+    {
+        particleEffectsBuiltIn.push(name);
+        particleEffectsAdd({name, settings, behaviors});
+    };
+    const clear = (h, s, l)=> hsl(h, s, l, 0);
+
+    // fire
+    add('fire', {emitRate:120, emitSize:.6, emitConeAngle:.3, shape:'glow', particleTime:.8, sizeStart:.7,
+        sizeEnd:.15, speed:.02, angleSpeed:.02, damping:.95, gravity:.003, fadeRate:.3, randomness:.3, additive:true,
+        colorStartA:hsl(.08,1,.6), colorStartB:hsl(.14,1,.65), colorEndA:clear(.02,1,.5), colorEndB:clear(0,1,.3)});
+    add('torch', {emitRate:60, emitSize:.25, emitConeAngle:.2, shape:'glow', particleTime:.6, sizeStart:.45,
+        sizeEnd:.1, speed:.015, angleSpeed:.02, damping:.95, gravity:.003, fadeRate:.3, randomness:.3, additive:true,
+        colorStartA:hsl(.09,1,.6), colorStartB:hsl(.13,1,.7), colorEndA:clear(.03,1,.5), colorEndB:clear(0,1,.35)});
+    add('smoke', {emitRate:25, emitSize:.5, emitConeAngle:.3, shape:'smoke', particleTime:3, sizeStart:.5,
+        sizeEnd:2, speed:.01, angleSpeed:.01, damping:.99, gravity:.0004, fadeRate:.5, randomness:.3,
+        colorStartA:hsl(0,0,.5,.5), colorStartB:hsl(0,0,.3,.5), colorEndA:clear(0,0,.2), colorEndB:clear(0,0,.4)},
+        [{name:'wobble', strength:.5}]);
+    add('steam', {emitRate:30, emitSize:.4, emitConeAngle:.2, shape:'smoke', particleTime:1.5, sizeStart:.3,
+        sizeEnd:1.5, speed:.02, damping:.98, gravity:.0008, fadeRate:.6, randomness:.3,
+        colorStartA:hsl(0,0,1,.4), colorStartB:hsl(.6,.2,.9,.3), colorEndA:clear(0,0,1), colorEndB:clear(.6,.2,.9)},
+        [{name:'wobble', strength:.3}]);
+
+    // impacts
+    add('explosion', {emitRate:600, emitTime:.1, emitSize:.5, shape:'glow', particleTime:.6, sizeStart:1,
+        sizeEnd:.1, speed:.1, damping:.9, fadeRate:.2, randomness:.5, additive:true,
+        colorStartA:hsl(.12,1,.65), colorStartB:hsl(.06,1,.55), colorEndA:clear(0,1,.5), colorEndB:clear(0,0,.3)});
+    add('sparks', {emitRate:100, emitSize:.2, shape:'soft', particleTime:.6, sizeStart:.08, sizeEnd:.04,
+        speed:.07, damping:.96, gravity:-.006, fadeRate:.1, randomness:.4, additive:true, trailScale:3,
+        colorStartA:hsl(.17,1,.9), colorStartB:hsl(.12,1,.65), colorEndA:clear(.07,1,.5), colorEndB:clear(.03,1,.5)});
+    add('hit', {emitRate:400, emitTime:.05, emitSize:.2, shape:'spark', particleTime:.35, sizeStart:.5,
+        sizeEnd:.1, speed:.08, damping:.85, fadeRate:.1, randomness:.4, additive:true, trailScale:2,
+        colorStartA:hsl(0,0,1), colorStartB:hsl(0,1,.7), colorEndA:clear(0,1,.5), colorEndB:clear(0,1,.4)});
+    add('dust', {emitRate:300, emitTime:.05, emitSize:1, emitRect:true, emitHeight:.1, emitConeAngle:1.2,
+        shape:'smoke', particleTime:.8, sizeStart:.3, sizeEnd:.8, speed:.04, damping:.9, gravity:.0005,
+        fadeRate:.5, randomness:.4, colorStartA:hsl(.1,.3,.6,.5), colorStartB:hsl(.08,.2,.5,.5),
+        colorEndA:clear(.1,.3,.6), colorEndB:clear(.08,.2,.5)});
+    add('debris', {emitRate:200, emitTime:.05, emitSize:.5, emitConeAngle:1, shape:'square', particleTime:1.5,
+        sizeStart:.15, sizeEnd:.1, speed:.07, angleSpeed:.2, damping:.99, gravity:-.008, fadeRate:.1,
+        randomness:.5, colorStartA:hsl(.08,.4,.35), colorStartB:hsl(0,0,.4), colorEndA:hsl(.08,.4,.3),
+        colorEndB:hsl(0,0,.35)});
+
+    // pickups and magic
+    add('sparkle', {emitRate:30, emitSize:1, shape:'star', particleTime:.8, sizeStart:.3, sizeEnd:0,
+        speed:.005, angleSpeed:.05, fadeRate:.5, randomness:.3, additive:true,
+        colorStartA:hsl(.14,1,.7), colorStartB:hsl(0,0,1), colorEndA:clear(.14,1,.7), colorEndB:clear(0,0,1)});
+    add('magic', {emitRate:60, emitSize:1, shape:'soft', particleTime:1.5, sizeStart:.25, sizeEnd:0,
+        speed:.015, fadeRate:.3, randomness:.3, additive:true, colorStartA:hsl(.55,1,.65),
+        colorStartB:hsl(.79,1,.65), colorEndA:clear(0,0,1), colorEndB:clear(0,0,1)}, [{name:'swirl', strength:.5}]);
+    add('heal', {emitRate:30, emitSize:.8, emitConeAngle:.2, shape:'plus', particleTime:1.2, sizeStart:.25,
+        sizeEnd:.1, speed:.015, angleSpeed:0, particleConeAngle:0, gravity:.0005, fadeRate:.4, randomness:.3,
+        additive:true, colorStartA:hsl(.33,1,.6), colorStartB:hsl(.3,1,.75), colorEndA:clear(.33,1,.6),
+        colorEndB:clear(.3,1,.75)});
+    add('poison', {emitRate:20, emitSize:.8, shape:'smoke', particleTime:2, sizeStart:.3, sizeEnd:1,
+        speed:.006, gravity:.0002, fadeRate:.6, randomness:.4, colorStartA:hsl(.3,.8,.45,.6),
+        colorStartB:hsl(.8,.6,.45,.6), colorEndA:clear(.3,.8,.4), colorEndB:clear(.8,.6,.4)},
+        [{name:'wobble', strength:.5}]);
+    add('portal', {emitRate:80, emitSize:1, shape:'soft', particleTime:1, sizeStart:.15, sizeEnd:.05,
+        speed:.02, fadeRate:.3, randomness:.3, additive:true, colorStartA:hsl(.75,1,.6),
+        colorStartB:hsl(.6,1,.6), colorEndA:clear(.75,1,.6), colorEndB:clear(.6,1,.6)},
+        [{name:'orbit', strength:1}, {name:'attract', strength:.5}]);
+
+    // weather and ambience, one unit across at scale 1, so scale them to the view
+    add('rain', {emitRate:30, emitSize:1, emitRect:true, emitHeight:.6, angle:PI, emitConeAngle:0,
+        shape:'soft', particleTime:.8, sizeStart:.02, sizeEnd:.02, speed:.03, gravity:-.001, fadeRate:.1,
+        randomness:.2, trailScale:5, colorStartA:hsl(.63,1,.8,.6), colorStartB:hsl(.63,1,.8,.4),
+        colorEndA:hsl(.63,1,.8,.6), colorEndB:hsl(.63,1,.8,.4)});
+    add('snow', {emitRate:6, emitSize:1, emitRect:true, emitHeight:.6, angle:PI, emitConeAngle:.3,
+        shape:'soft', particleTime:4, sizeStart:.05, sizeEnd:.05, speed:.004, damping:.98, gravity:-.0002,
+        fadeRate:.2, randomness:.3, colorStartA:hsl(0,0,1), colorStartB:hsl(.58,1,.9), colorEndA:hsl(0,0,1),
+        colorEndB:hsl(.58,1,.9)}, [{name:'wobble', strength:.15}]);
+    add('leaves', {emitRate:3, emitSize:1, emitRect:true, emitHeight:.2, angle:PI, emitConeAngle:.5,
+        shape:'triangle', particleTime:4, sizeStart:.12, sizeEnd:.12, speed:.003, angleSpeed:.05, damping:.98,
+        gravity:-.0001, fadeRate:.2, randomness:.4, randomColorLinear:false, colorStartA:hsl(.25,.7,.4),
+        colorStartB:hsl(.07,.8,.5), colorEndA:hsl(.08,.6,.35), colorEndB:hsl(.05,.7,.4)},
+        [{name:'wobble', strength:.15}, {name:'wind', strength:.05}]);
+    add('bubbles', {emitRate:8, emitSize:1, emitRect:true, emitHeight:.1, emitConeAngle:.2, shape:'ring',
+        particleTime:2, sizeStart:.1, sizeEnd:.2, speed:.01, gravity:.0003, fadeRate:.2, randomness:.4,
+        colorStartA:hsl(.55,.8,.8,.8), colorStartB:hsl(.5,.6,.9,.6), colorEndA:hsl(.55,.8,.8,.3),
+        colorEndB:hsl(.5,.6,.9,.2)}, [{name:'wobble', strength:.3}]);
+    add('fireflies', {emitRate:3, emitSize:1, shape:'glow', particleTime:3, sizeStart:.15, sizeEnd:.15,
+        speed:.003, damping:.99, fadeRate:.8, randomness:.3, additive:true, colorStartA:hsl(.2,1,.6),
+        colorStartB:hsl(.15,1,.7), colorEndA:hsl(.2,1,.6), colorEndB:hsl(.15,1,.7)},
+        [{name:'turbulence', strength:.3}]);
+
+    // trails and shots
+    add('trail', {emitRate:60, shape:'soft', particleTime:.5, sizeStart:.4, sizeEnd:0, speed:0, angleSpeed:0,
+        fadeRate:.1, randomness:.2, additive:true, colorStartA:hsl(.08,1,.6), colorStartB:hsl(.12,1,.65),
+        colorEndA:clear(.03,1,.5), colorEndB:clear(0,1,.4)});
+    add('muzzle', {emitRate:300, emitTime:.05, emitConeAngle:.3, shape:'glow', particleTime:.2,
+        sizeStart:.5, sizeEnd:.1, speed:.1, damping:.8, fadeRate:.1, randomness:.3, additive:true,
+        colorStartA:hsl(.14,1,.8), colorStartB:hsl(.1,1,.6), colorEndA:clear(.08,1,.5), colorEndB:clear(.05,1,.4)});
+
+    // other
+    add('blood', {emitRate:300, emitTime:.1, emitConeAngle:.8, shape:'dot', particleTime:3, sizeStart:.15,
+        sizeEnd:.1, speed:.09, gravity:-.01, fadeRate:.1, randomness:.4, collideLevel:true, restitution:.1,
+        colorStartA:hsl(0,1,.35), colorStartB:hsl(0,1,.2), colorEndA:hsl(0,1,.25), colorEndB:hsl(0,1,.15)},
+        [{name:'stick', strength:1}]);
+    add('confetti', {emitRate:200, emitTime:.1, emitSize:.2, emitConeAngle:.6, shape:'square', particleTime:3,
+        sizeStart:.1, sizeEnd:.1, speed:.09, angleSpeed:.15, damping:.96, gravity:-.004, fadeRate:.1,
+        randomness:.4, randomColorLinear:false, colorStartA:hsl(0,1,.5), colorStartB:hsl(.6,1,.6),
+        colorEndA:hsl(0,1,.5), colorEndB:hsl(.6,1,.6)}, [{name:'wobble', strength:.3}]);
+    add('splash', {emitRate:300, emitTime:.05, emitSize:.5, emitConeAngle:.6, shape:'soft', particleTime:.7,
+        sizeStart:.12, sizeEnd:.06, speed:.08, gravity:-.008, fadeRate:.2, randomness:.4,
+        colorStartA:hsl(.58,.8,.7,.8), colorStartB:hsl(.55,.6,.85,.8), colorEndA:hsl(.58,.8,.7,.2),
+        colorEndB:hsl(.55,.6,.85,.2)});
+}

@@ -757,6 +757,9 @@ particleEffect(name, pos, {scale, hue, saturation, angle}) // play an effect, re
                                         // continuous one goes until destroyed, a one-shot ends itself
 particleEffect3D(name, pos3D, {scale, hue, saturation, angle}) // the same effect as a ParticleEmitter3D, angle
                                         // turning it about z; a rectangle area becomes a flat box
+particleEffectsBuiltIn                  // the built-in names: fire, torch, smoke, steam, explosion, sparks, hit,
+                                        // dust, debris, sparkle, magic, heal, poison, portal, rain, snow, leaves,
+                                        // bubbles, fireflies, trail, muzzle, blood, confetti and splash
 particleEffectApply(emitter, effect)    // set a live 2D emitter to an effect
 particleEffectFromEmitter(emitter)      // a 2D emitter's settings as an effect, to save or build in 3D
 particleEffectsAddBehavior(name, update, update3D) // add a behavior effects can name, with 2D and 3D pushes

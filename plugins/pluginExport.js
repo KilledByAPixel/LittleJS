@@ -228,6 +228,7 @@ export
     particleEffectShapeTile,
     particleEffect,
     particleEffect3D,
+    particleEffectsBuiltIn,
     particleEffectApply,
     particleEffectFromEmitter,
     particleEffectsAddBehavior,
