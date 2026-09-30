@@ -30589,6 +30589,76 @@ function particleEffectFromEmitter(emitter, name='Effect')
     return particleEffectSanitize({name, settings});
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// 3D effects
+
+// the 3D pushes: a 3D particle is one view object the emitter reuses, so what differs per particle comes from its
+// randomized lifetime, and distances grow with the emitter's scale
+{
+    const b = particleEffectBehavior;
+    const scaleOf = (p)=> render3DMaxScale(render3DObjectMatrix(p.emitter).m);
+    b('wobble').update3D = (p, s)=> p.velocity.x += s * .003 * scaleOf(p) * sin(time*6 + p.lifeTime * 97 % 9);
+    b('swirl').update3D = (p, s)=>
+    {
+        const a = s * .05, c = cos(a), n = sin(a), v = p.velocity;
+        v.set(v.x*c - v.y*n, v.x*n + v.y*c, v.z);
+    };
+    b('turbulence').update3D = (p, s)=>
+    {
+        const k = s * .005 * scaleOf(p);
+        p.velocity.x += rand(-1, 1) * k, p.velocity.y += rand(-1, 1) * k, p.velocity.z += rand(-1, 1) * k;
+    };
+    b('attract').update3D = (p, s)=>
+    {
+        const c = p.emitter.getWorldPos3D();
+        p.velocity.x += (c.x - p.pos.x) * s * .002;
+        p.velocity.y += (c.y - p.pos.y) * s * .002;
+        p.velocity.z += (c.z - p.pos.z) * s * .002;
+    };
+    b('orbit').update3D = (p, s)=>
+    {
+        const c = p.emitter.getWorldPos3D();
+        p.velocity.x -= (p.pos.y - c.y) * s * .002;
+        p.velocity.y += (p.pos.x - c.x) * s * .002;
+    };
+    b('wind').update3D = (p, s)=> p.velocity.x += s * .004 * scaleOf(p) * min(p.age / p.lifeTime, 1);
+    b('stick').update3D = (p, s)=>
+    {
+        // resting after a landing, barely moving up or down, it grips
+        if (abs(p.velocity.y) > .001) return;
+        p.velocity.x *= 1 - s, p.velocity.z *= 1 - s;
+    };
+}
+
+/** Play an effect in 3D: a ParticleEmitter3D set to it, placed, scaled and recolored
+ *  - The same effect data as particleEffect, so the look carries across: a rectangle spawn area becomes a flat box, a
+ *    trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
+ *    randomColorLinear, velocityInheritance, localSpace) are left out
+ *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
+ *  @param {Vector3} [pos3D]
+ *  @param {Object} [options] - scale, hue, saturation and angle as particleEffect; angle turns it about z, so 0 is up
+ *  @return {ParticleEmitter3D|undefined} - undefined when there is no such effect
+ *  @memberof ParticleEffects */
+function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
+{
+    const effect = particleEffectResolve(nameOrEffect, options);
+    if (!effect) return;
+    const s = effect.settings, color = (name)=> new Color(...s[name]);
+    const e = new ParticleEmitter3D(pos3D.copy(), s.emitRect ? vec3(s.emitSize, s.emitHeight, 0) : s.emitSize,
+        s.emitTime, s.emitRate, s.emitConeAngle, particleEffectTileInfo(s), color('colorStartA'), color('colorStartB'),
+        color('colorEndA'), color('colorEndB'), s.particleTime, s.sizeStart, s.sizeEnd, s.speed, s.damping,
+        s.gravity, s.fadeRate, s.randomness, s.additive);
+    e.gravityScale = s.gravityScale;
+    e.angleSpeed = s.angleSpeed, e.angleDamping = s.angleDamping;
+    e.trailTime = s.trailScale / 60; // a stretch of speed times trailScale is a streak of that many frames
+    e.collideLevel = s.collideLevel, e.restitution = s.restitution, e.friction = s.friction;
+    // a 2D emitter at angle a shoots along (sin a, cos a), a z turn r takes up to (-sin r, cos r), so r is -a
+    e.rotation3D = vec3(0, 0, -(options.angle ?? s.angle));
+    e.scale3D = vec3(options.scale ?? 1);
+    e.particleUpdateCallback = particleEffectUpdateCallback(effect.behaviors, true);
+    return e;
+}
+
 /**
  * LittleJS glTF Plugin
  * - Loads glTF 2.0 models: a .gltf with its .bin and images beside it, or a .glb with everything in one file
@@ -36993,6 +37063,7 @@ export
     particleEffectsLoad,
     particleEffectShapeTile,
     particleEffect,
+    particleEffect3D,
     particleEffectApply,
     particleEffectFromEmitter,
     particleEffectsAddBehavior,

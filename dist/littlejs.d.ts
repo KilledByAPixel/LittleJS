@@ -10234,6 +10234,16 @@ declare module "littlejsengine" {
         saturation?: number;
         angle?: number;
     }): ParticleEmitter | undefined;
+    /** Play an effect in 3D: a ParticleEmitter3D set to it, placed, scaled and recolored
+     *  - The same effect data as particleEffect, so the look carries across: a rectangle spawn area becomes a flat box, a
+     *    trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
+     *    randomColorLinear, velocityInheritance, localSpace) are left out
+     *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
+     *  @param {Vector3} [pos3D]
+     *  @param {Object} [options] - scale, hue, saturation and angle as particleEffect; angle turns it about z, so 0 is up
+     *  @return {ParticleEmitter3D|undefined} - undefined when there is no such effect
+     *  @memberof ParticleEffects */
+    export function particleEffect3D(nameOrEffect: string | any, pos3D?: Vector3, options?: any): ParticleEmitter3D | undefined;
     /** Set a 2D emitter to an effect, live, so a running one keeps its particles
      *  @param {ParticleEmitter} emitter
      *  @param {Object} effect

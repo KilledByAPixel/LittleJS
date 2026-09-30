@@ -755,6 +755,8 @@ particleEmitRateScale = 1 // Scales particles emit rate
 ```javascript
 particleEffect(name, pos, {scale, hue, saturation, angle}) // play an effect, returns its ParticleEmitter; a
                                         // continuous one goes until destroyed, a one-shot ends itself
+particleEffect3D(name, pos3D, {scale, hue, saturation, angle}) // the same effect as a ParticleEmitter3D, angle
+                                        // turning it about z; a rectangle area becomes a flat box
 particleEffectApply(emitter, effect)    // set a live 2D emitter to an effect
 particleEffectFromEmitter(emitter)      // a 2D emitter's settings as an effect, to save or build in 3D
 particleEffectsAddBehavior(name, update, update3D) // add a behavior effects can name, with 2D and 3D pushes
