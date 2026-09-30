@@ -8659,11 +8659,8 @@ declare module "littlejsengine" {
         /** @property {Float32Array} - The per instance values the shader reads, 24 floats each: the matrix, the color
          *  and the uv rect; edit it directly and call markDirty for the instances changed */
         instanceData: Float32Array;
-        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for
-         *  culling; from the farthest instance and the largest scale, and the mesh's size when it draws */
-        radius: number;
-        reach: number;
-        maxScale: number;
+        reachSquared: number;
+        scaleSquared: number;
         /** @property {number} - First instance to upload before the next draw */
         dirtyStart: number;
         /** @property {number} - One past the last instance to upload, so nothing uploads when it is not past dirtyStart */
@@ -8687,6 +8684,10 @@ declare module "littlejsengine" {
          *  setColorAt call this, and so must an edit made straight to instanceData
          *  @param {number} i */
         markDirty(i: number): void;
+        /** Radius of the sphere around the origin that holds every instance set so far, for culling: the farthest
+         *  instance, and the mesh's size at the largest scale; it only grows
+         *  @return {number} */
+        get radius(): number;
     }
     /**
      * Spin a flat outline around the Y axis to make a round shape, like a vase or a wheel

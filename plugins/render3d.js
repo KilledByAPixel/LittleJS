@@ -193,7 +193,10 @@ function render3DMaxScale(m)
 // how far a matrix at offset k can move a point that is one unit from its origin, for a bounding sphere: the
 // longest axis when the axes are square to each other, more when they are not, as a turned child under a parent
 // scaled on one axis leaves them; the axes' dot products bound the largest stretch by their largest row sum
-function render3DMaxStretch(m, k=0)
+function render3DMaxStretch(m, k=0) { return render3DMaxStretchSquared(m, k) ** .5; }
+
+// the same, squared, for bounds that grow many times before they are read
+function render3DMaxStretchSquared(m, k=0)
 {
     const xx = m[k]*m[k] + m[k+1]*m[k+1] + m[k+2]*m[k+2];
     const yy = m[k+4]*m[k+4] + m[k+5]*m[k+5] + m[k+6]*m[k+6];
@@ -201,7 +204,7 @@ function render3DMaxStretch(m, k=0)
     const xy = abs(m[k]*m[k+4] + m[k+1]*m[k+5] + m[k+2]*m[k+6]);
     const xz = abs(m[k]*m[k+8] + m[k+1]*m[k+9] + m[k+2]*m[k+10]);
     const yz = abs(m[k+4]*m[k+8] + m[k+5]*m[k+9] + m[k+6]*m[k+10]);
-    return max(xx + xy + xz, yy + xy + yz, zz + xz + yz) ** .5;
+    return max(xx + xy + xz, yy + xy + yz, zz + xz + yz);
 }
 
 // a quad as a strip from its center and half axes, the same corner order as render3DQuadStrip
@@ -4197,11 +4200,10 @@ class InstancedMesh3D extends EngineObject3D
         /** @property {Float32Array} - The per instance values the shader reads, 24 floats each: the matrix, the color
          *  and the uv rect; edit it directly and call markDirty for the instances changed */
         this.instanceData = new Float32Array(count * RENDER3D_INSTANCE_FLOATS);
-        /** @property {number} - Radius of the sphere around the origin that holds every instance set so far, for
-         *  culling; from the farthest instance and the largest scale, and the mesh's size when it draws */
-        this.radius = 0;
-        this.reach = 0;    // the farthest any instance's position has been from the origin
-        this.maxScale = 0; // and the largest scale any instance has had
+        // the farthest any instance's position has been from the origin, and the largest scale any has had, both
+        // squared, so setting an instance takes no square root; see radius
+        this.reachSquared = 0;
+        this.scaleSquared = 0;
         /** @property {number} - First instance to upload before the next draw */
         this.dirtyStart = 0;
         /** @property {number} - One past the last instance to upload, so nothing uploads when it is not past dirtyStart */
@@ -4250,7 +4252,9 @@ class InstancedMesh3D extends EngineObject3D
         ASSERT(isColor(color), 'color must be a Color');
         const data = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS;
         data[k+16] = color.r; data[k+17] = color.g; data[k+18] = color.b; data[k+19] = color.a;
-        this.markDirty(i);
+        // a color changes nothing the bounds hold, it only has to upload
+        this.dirtyStart = min(this.dirtyStart, i);
+        this.dirtyEnd = max(this.dirtyEnd, i + 1);
     }
 
     /** Note that an instance changed, so it uploads before the next draw and the bounds hold it; setMatrixAt and
@@ -4261,12 +4265,20 @@ class InstancedMesh3D extends EngineObject3D
         this.dirtyStart = min(this.dirtyStart, i);
         this.dirtyEnd = max(this.dirtyEnd, i + 1);
 
-        // the bounds grow to hold where it is now and how big, read back from the matrix it has
-        const d = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS;
-        this.reach = max(this.reach, hypot(d[k+12], d[k+13], d[k+14]));
-        this.maxScale = max(this.maxScale, render3DMaxStretch(d, k));
-        const meshRadius = this.mesh.radius || this.mesh.computeRadius(); // measured once, the draw takes a new size up
-        this.radius = this.reach + meshRadius * this.maxScale;
+        // the bounds grow to hold where it is now and how big, read back from the matrix it has, squared
+        const d = this.instanceData, k = i * RENDER3D_INSTANCE_FLOATS, x = d[k+12], y = d[k+13], z = d[k+14];
+        const reach = x*x + y*y + z*z, scale = render3DMaxStretchSquared(d, k);
+        if (reach > this.reachSquared) this.reachSquared = reach;
+        if (scale > this.scaleSquared) this.scaleSquared = scale;
+    }
+
+    /** Radius of the sphere around the origin that holds every instance set so far, for culling: the farthest
+     *  instance, and the mesh's size at the largest scale; it only grows
+     *  @return {number} */
+    get radius()
+    {
+        const mesh = this.mesh, meshRadius = mesh.radius || mesh.computeRadius(); // the mesh measured once
+        return this.reachSquared ** .5 + meshRadius * this.scaleSquared ** .5;
     }
 
     /** Draws every instance as one call, uploading the ones that changed first
@@ -4281,7 +4293,6 @@ class InstancedMesh3D extends EngineObject3D
         if (r.shadowPass && !r.lighting) return; // unlit things cast no shadow
         render3DMeshUpload(mesh);
         if (!mesh.bufferCount) return;
-        this.radius = this.reach + mesh.radius * this.maxScale; // the mesh may have grown since
         if (r.frustumCulling && !render3DSphereVisible(0, 0, 0, this.radius)) return;
 
         // the uv rect is the object's tile for every instance, rewritten when the tile changes
