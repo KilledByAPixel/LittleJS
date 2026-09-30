@@ -230,6 +230,7 @@ export
     particleEffect3D,
     particleEffectsBuiltIn,
     particleEffectApply,
+    particleEffectApply3D,
     particleEffectFromEmitter,
     particleEffectsAddBehavior,
 }

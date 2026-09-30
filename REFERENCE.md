@@ -794,6 +794,7 @@ particleEffectsBuiltIn                  // the built-in names: fire, torch, smok
 'confetti'   // hue 0 and .6, mixed, one-shot
 'splash'     // hue .58, one-shot
 particleEffectApply(emitter, effect)    // set a live 2D emitter to an effect
+particleEffectApply3D(emitter3D, effect) // the same for a ParticleEmitter3D, its particles, place and scale kept
 particleEffectFromEmitter(emitter)      // a 2D emitter's settings as an effect, to save or build in 3D
 particleEffectsAddBehavior(name, update, update3D) // add a behavior effects can name, with 2D and 3D pushes
 particleEffectsAdd(effects)             // add effects to play by name, one of the same name replaces it

@@ -30688,6 +30688,31 @@ function particleEffectFromEmitter(emitter, name='Effect')
     // stick has no 3D push: particleEffect3D makes it the friction a particle lands with
 }
 
+/** Set a 3D emitter to an effect, live, so a running one keeps its particles; its place, scale and flatten stay
+ *  @param {ParticleEmitter3D} emitter
+ *  @param {Object} effect
+ *  @memberof ParticleEffects */
+function particleEffectApply3D(emitter, effect)
+{
+    effect = particleEffectSanitize(effect); // an effect written by hand or changed since it was added
+    const s = effect.settings, e = emitter;
+    // a circle is a sphere and a rectangle a box as deep as it is wide
+    e.emitSize = s.emitRect ? vec3(s.emitSize, s.emitHeight, s.emitSize) : s.emitSize;
+    e.emitTime = s.emitTime, e.emitRate = s.emitRate, e.emitConeAngle = s.emitConeAngle;
+    e.tileInfo = particleEffectTileInfo(s);
+    for (const name of ['colorStartA', 'colorStartB', 'colorEndA', 'colorEndB'])
+        e[name] = new Color(...s[name]);
+    for (const name of ['particleTime', 'sizeStart', 'sizeEnd', 'speed', 'damping', 'gravity', 'fadeRate',
+        'randomness', 'additive', 'gravityScale', 'angleSpeed', 'angleDamping', 'collideLevel', 'restitution'])
+        e[name] = s[name];
+    e.trailTime = s.trailScale / 60; // a stretch of speed times trailScale is a streak of that many frames
+    const stick = effect.behaviors.find(b=> b.name == 'stick'); // in 3D, a grip on landing is less sliding
+    e.friction = stick ? min(s.friction, 1 - stick.strength) : s.friction;
+    // a 2D emitter at angle a shoots along (sin a, cos a), a z turn r takes up to (-sin r, cos r), so r is -a
+    e.rotation3D = vec3(0, 0, -s.angle);
+    e.particleUpdateCallback = particleEffectUpdateCallback(effect.behaviors, true);
+}
+
 /** Play an effect in 3D: a ParticleEmitter3D set to it, placed, scaled and recolored
  *  - The same effect data as particleEffect, so the look carries across: a circle spawn area becomes a sphere and a
  *    rectangle a box as deep as it is wide, both flat across the way it emits with options.flatten, a disc or a
@@ -30704,26 +30729,14 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
 {
     const effect = particleEffectResolve(nameOrEffect, options);
     if (!effect) return;
-    const s = effect.settings, color = (name)=> new Color(...s[name]);
-    // a circle is a sphere and a rectangle a box as deep as it is wide, both flat across the way it emits with flatten
-    const e = new ParticleEmitter3D(pos3D.copy(), s.emitRect ? vec3(s.emitSize, s.emitHeight, s.emitSize) : s.emitSize,
-        s.emitTime, s.emitRate, s.emitConeAngle, particleEffectTileInfo(s), color('colorStartA'), color('colorStartB'),
-        color('colorEndA'), color('colorEndB'), s.particleTime, s.sizeStart, s.sizeEnd, s.speed, s.damping,
-        s.gravity, s.fadeRate, s.randomness, s.additive);
-    e.gravityScale = s.gravityScale;
-    e.angleSpeed = s.angleSpeed, e.angleDamping = s.angleDamping;
-    e.trailTime = s.trailScale / 60; // a stretch of speed times trailScale is a streak of that many frames
-    e.collideLevel = s.collideLevel, e.restitution = s.restitution, e.friction = s.friction;
-    const stick = effect.behaviors.find(b=> b.name == 'stick'); // in 3D, a grip on landing is less sliding
-    if (stick)
-        e.friction = min(e.friction, 1 - stick.strength);
-    // a 2D emitter at angle a shoots along (sin a, cos a), a z turn r takes up to (-sin r, cos r), so r is -a
-    e.rotation3D = vec3(0, 0, -(options.angle ?? s.angle));
+    const e = new ParticleEmitter3D(pos3D.copy());
+    particleEffectApply3D(e, effect);
+    if (options.angle !== undefined)
+        e.rotation3D = vec3(0, 0, -options.angle);
     e.scale3D = vec3(options.scale ?? 1);
-    e.emitFlat = !!options.flatten;
+    e.emitFlat = !!options.flatten; // a sphere a disc, a box a sheet, across the way it emits
     if (options.tileInfo)
         e.tileInfo = options.tileInfo;
-    e.particleUpdateCallback = particleEffectUpdateCallback(effect.behaviors, true);
     return e;
 }
 

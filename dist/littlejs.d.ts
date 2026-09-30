@@ -10286,6 +10286,11 @@ declare module "littlejsengine" {
      *  @param {Object} effect
      *  @memberof ParticleEffects */
     export function particleEffectApply(emitter: ParticleEmitter, effect: any): void;
+    /** Set a 3D emitter to an effect, live, so a running one keeps its particles; its place, scale and flatten stay
+     *  @param {ParticleEmitter3D} emitter
+     *  @param {Object} effect
+     *  @memberof ParticleEffects */
+    export function particleEffectApply3D(emitter: ParticleEmitter3D, effect: any): void;
     /** An effect with a 2D emitter's settings, to save, build again, or build in 3D with particleEffect3D; its tile is
      *  left out, since a hand made emitter's tile is its own texture and not one an effect can name, and so is its
      *  scale, which an effect does not keep: pass it again with options.scale
