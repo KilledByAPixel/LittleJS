@@ -760,6 +760,32 @@ particleEffect3D(name, pos3D, {scale, hue, saturation, angle}) // the same effec
 particleEffectsBuiltIn                  // the built-in names: fire, torch, smoke, steam, explosion, sparks, hit,
                                         // dust, debris, sparkle, magic, heal, poison, portal, rain, snow, leaves,
                                         // bubbles, fireflies, trail, muzzle, blood, confetti and splash
+// each at scale 1 fits a one unit object, with the hue it starts from for options.hue to turn; a one-shot ends
+// itself, a continuous one goes until destroyed
+'fire'       // hue .08, continuous
+'torch'      // hue .09, continuous
+'smoke'      // no hue, grey, continuous
+'steam'      // no hue, white, continuous
+'explosion'  // hue .12, one-shot
+'sparks'     // hue .17, continuous
+'hit'        // hue 0, red, one-shot
+'dust'       // hue .1, one-shot
+'debris'     // hue .08, one-shot
+'sparkle'    // hue .14, continuous
+'magic'      // hue .55 to .79, continuous
+'heal'       // hue .33, continuous
+'poison'     // hue .3 and .8, continuous
+'portal'     // hue .75, continuous
+'rain'       // hue .63, continuous
+'snow'       // no hue, white, continuous
+'leaves'     // hue .25 to .05, continuous
+'bubbles'    // hue .55, continuous
+'fireflies'  // hue .2, continuous
+'trail'      // hue .08, continuous
+'muzzle'     // hue .14, one-shot
+'blood'      // hue 0, red, one-shot
+'confetti'   // hue 0 and .6, mixed, one-shot
+'splash'     // hue .58, one-shot
 particleEffectApply(emitter, effect)    // set a live 2D emitter to an effect
 particleEffectFromEmitter(emitter)      // a 2D emitter's settings as an effect, to save or build in 3D
 particleEffectsAddBehavior(name, update, update3D) // add a behavior effects can name, with 2D and 3D pushes

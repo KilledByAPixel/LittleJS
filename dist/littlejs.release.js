@@ -10011,7 +10011,9 @@ class Particle
                 }
                 if (isBlockedY || !isBlockedX)
                 {
-                    const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
+                    // down is the world's gravity, or the emitter's own fall in a world with none
+                    const down = gravity.y || emitter.gravity || 0;
+                    const wasFalling = this.velocity.y < 0 && down < 0 || this.velocity.y > 0 && down > 0;
                     if (wasFalling)
                         this.groundObject = hitLayer;
 
@@ -29230,7 +29232,7 @@ function particleEffectAddSetting(name, kind, value, min, max, step, description
 }
 
 particleEffectSettingGroup = 'Emitter';
-particleEffectAddSetting('emitRate', 'number', 100, 0, 500, 1,
+particleEffectAddSetting('emitRate', 'number', 100, 0, 500, .1,
     'Particles per second, 0 emits none', 0, 1e4);
 particleEffectAddSetting('emitTime', 'number', 0, 0, 5, .05,
     'Seconds to emit for, 0 is forever', 0, 1e9);
@@ -29402,6 +29404,7 @@ function particleEffectSanitize(raw)
  *  @memberof ParticleEffects */
 function particleEffectRecolor(effect, hue=0, saturation=1)
 {
+    effect = particleEffectSanitize(effect); // colors as channels, whatever it was given
     const settings = {...effect.settings};
     for (const name of ['colorStartA', 'colorStartB', 'colorEndA', 'colorEndB'])
     {
@@ -29467,7 +29470,7 @@ async function particleEffectsLoad(url)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// the shape sheet: every shape white on clear in a 32 pixel cell of one canvas, drawn the first time one is asked for
+// the shape sheet: every shape white on clear in a cell of one canvas, drawn the first time one is asked for
 
 let particleEffectShapeTiles;
 
@@ -29480,8 +29483,10 @@ function particleEffectShapeTile(name)
     if (!particleEffectShapeTiles)
     {
         if (headlessMode || !glContext || typeof OffscreenCanvas == 'undefined') return;
-        const cell = 32, r = 15, count = particleEffectShapes.length;
-        const context = createCanvasContext(cell * count, cell);
+        // drawn at 4 times 32 pixel cells, so a big soft shape stays smooth when textures are pixelated
+        const cell = 32, r = 15, count = particleEffectShapes.length, res = 4;
+        const context = createCanvasContext(cell * count * res, cell * res);
+        context.scale(res, res);
         context.fillStyle = context.strokeStyle = '#fff';
         const soft = (x, y, radius, alpha=(t)=> 1 - t)=>
         {
@@ -29537,7 +29542,7 @@ function particleEffectShapeTile(name)
         particleEffectShapes.forEach((name, i)=> draw[name](i * cell + cell/2, cell/2));
         const texture = new TextureInfo(context.canvas);
         particleEffectShapeTiles = new Map(particleEffectShapes.map((name, i)=>
-            [name, new TileInfo(vec2(i * cell + 1, 1), vec2(cell - 2), texture)]));
+            [name, new TileInfo(vec2((i * cell + 1) * res, res), vec2((cell - 2) * res), texture)]));
     }
     return particleEffectShapeTiles.get(name);
 }
@@ -29636,6 +29641,7 @@ function particleEffectTileInfo(s)
  *  @memberof ParticleEffects */
 function particleEffectApply(emitter, effect)
 {
+    effect = particleEffectSanitize(effect); // an effect written by hand or changed since it was added
     const s = effect.settings;
     for (const setting of particleEffectSettings)
         if (!particleEffectIndirect.includes(setting.name))
@@ -29650,10 +29656,11 @@ function particleEffectApply(emitter, effect)
 // an effect from a name or an effect, recolored by the options
 function particleEffectResolve(nameOrEffect, options)
 {
-    const effect = typeof nameOrEffect == 'string' ? particleEffectsGet(nameOrEffect) : nameOrEffect;
-    false&&ASSERT(!!effect, 'no particle effect named ' + nameOrEffect);
-    if (!effect) return;
-    const {hue=0, saturation=1} = options;
+    const found = typeof nameOrEffect == 'string' ? particleEffectsGet(nameOrEffect) : nameOrEffect;
+    false&&ASSERT(!!found, 'no particle effect named ' + nameOrEffect);
+    if (!found) return;
+    // sanitized each time, an effect may be written by hand or changed after it was added
+    const effect = particleEffectSanitize(found), {hue=0, saturation=1} = options;
     return hue || saturation != 1 ? particleEffectRecolor(effect, hue, saturation) : effect;
 }
 
@@ -29734,18 +29741,14 @@ function particleEffectFromEmitter(emitter, name='Effect')
         p.velocity.y += (p.pos.x - c.x) * s * .002;
     };
     b('wind').update3D = (p, s)=> p.velocity.x += s * .004 * scaleOf(p) * min(p.age / p.lifeTime, 1);
-    b('stick').update3D = (p, s)=>
-    {
-        // resting after a landing, barely moving up or down, it grips
-        if (abs(p.velocity.y) > .001) return;
-        p.velocity.x *= 1 - s, p.velocity.z *= 1 - s;
-    };
+    // stick has no 3D push: particleEffect3D makes it the friction a particle lands with
 }
 
 /** Play an effect in 3D: a ParticleEmitter3D set to it, placed, scaled and recolored
  *  - The same effect data as particleEffect, so the look carries across: a rectangle spawn area becomes a flat box, a
  *    trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
- *    randomColorLinear, velocityInheritance, localSpace) are left out
+ *    randomColorLinear, velocityInheritance, localSpace) are left out; the stick behavior becomes the friction a
+ *    particle lands with
  *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector3} [pos3D]
  *  @param {Object} [options] - scale, hue, saturation and angle as particleEffect; angle turns it about z, so 0 is up
@@ -29764,6 +29767,9 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
     e.angleSpeed = s.angleSpeed, e.angleDamping = s.angleDamping;
     e.trailTime = s.trailScale / 60; // a stretch of speed times trailScale is a streak of that many frames
     e.collideLevel = s.collideLevel, e.restitution = s.restitution, e.friction = s.friction;
+    const stick = effect.behaviors.find(b=> b.name == 'stick'); // in 3D, a grip on landing is less sliding
+    if (stick)
+        e.friction = min(e.friction, 1 - stick.strength);
     // a 2D emitter at angle a shoots along (sin a, cos a), a z turn r takes up to (-sin r, cos r), so r is -a
     e.rotation3D = vec3(0, 0, -(options.angle ?? s.angle));
     e.scale3D = vec3(options.scale ?? 1);

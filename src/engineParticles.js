@@ -548,7 +548,9 @@ class Particle
                 }
                 if (isBlockedY || !isBlockedX)
                 {
-                    const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
+                    // down is the world's gravity, or the emitter's own fall in a world with none
+                    const down = gravity.y || emitter.gravity || 0;
+                    const wasFalling = this.velocity.y < 0 && down < 0 || this.velocity.y > 0 && down > 0;
                     if (wasFalling)
                         this.groundObject = hitLayer;
 

@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadEngine } from './vmEngine.mjs';
 
-// the built-in effects' shapes, drawn once on a canvas: one cell each, with a pixel of space around every shape
+// the built-in effects' shapes, drawn once on a canvas: one cell each, with space around every shape
 
-test('every shape has a tile on one sheet made once, 30 pixels inside its 32 pixel cell', ()=>
+test('every shape has a tile on one sheet made once, drawn at 4 times 32 pixels so it stays smooth when big', ()=>
 {
     const { run } = loadEngine();
     const result = JSON.parse(run(`
@@ -21,8 +21,8 @@ test('every shape has a tile on one sheet made once, 30 pixels inside its 32 pix
     assert.equal(result.made, 1);
     assert.equal(result.count, 10);
     assert.ok(result.same);
-    assert.deepEqual(result.pos, result.pos.map((_, i)=> [i*32 + 1, 1]));
-    assert.ok(result.size.every(s=> s[0] == 30 && s[1] == 30));
+    assert.deepEqual(result.pos, result.pos.map((_, i)=> [(i*32 + 1) * 4, 4]));
+    assert.ok(result.size.every(s=> s[0] == 120 && s[1] == 120));
     assert.ok(result.again && result.unknown);
 });
 

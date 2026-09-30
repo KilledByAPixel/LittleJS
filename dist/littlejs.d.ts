@@ -10237,7 +10237,8 @@ declare module "littlejsengine" {
     /** Play an effect in 3D: a ParticleEmitter3D set to it, placed, scaled and recolored
      *  - The same effect data as particleEffect, so the look carries across: a rectangle spawn area becomes a flat box, a
      *    trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
-     *    randomColorLinear, velocityInheritance, localSpace) are left out
+     *    randomColorLinear, velocityInheritance, localSpace) are left out; the stick behavior becomes the friction a
+     *    particle lands with
      *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
      *  @param {Vector3} [pos3D]
      *  @param {Object} [options] - scale, hue, saturation and angle as particleEffect; angle turns it about z, so 0 is up

@@ -52,7 +52,7 @@ test('a rectangle emitter becomes a flat box of the same size', ()=>
 test('every 3D behavior pushes a 3D particle without throwing', ()=>
 {
     const with3D = LJS.particleEffectBehaviors.filter(b=> b.update3D);
-    assert.ok(with3D.length >= 7, 'every built-in behavior has a 3D push');
+    assert.ok(with3D.length >= 6, 'every built-in behavior but stick, which is landing friction in 3D, has a 3D push');
     for (const b of with3D)
     {
         const e = particleEffect3D(particleEffectSanitize({settings: {emitRate: 0},
