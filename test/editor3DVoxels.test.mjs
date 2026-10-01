@@ -176,3 +176,64 @@ test('picking takes the type of the block under the ray', async ()=>
     run('editor3DVoxelPick(down(3.5, 3.5))');
     assert.equal(run('editor3DBlockType'), 5, 'no block there, the type stays');
 });
+
+test('box fill: a drag fills the rectangle from the press to the mouse, as many layers tall as the height', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withMap) + `editor3DBlockType = 7; editor3DBlockBox = true; editor3DBlockBoxHeight = 2;
+        var drag = editor3DVoxelPress(down(0.5, 0.5), 'place');
+        editor3DVoxelDragTo(drag, down(2.5, 1.5));
+        editor3DStrokeEnd();`);
+    for (let x = 0; x < 3; ++x)
+    for (let z = 0; z < 2; ++z)
+        assert.deepEqual([...run(`[at(${x}, 0, ${z}), at(${x}, 1, ${z})]`)], [x === 1 && z === 1 ? 5 : 7, 7], `${x}, ${z}`);
+    assert.deepEqual([...run('[at(3, 0, 0), at(0, 0, 2), at(0, 2, 0)]')], [0, 0, 0], 'nothing outside the box');
+    assert.equal(run('editor3DUndoList.length'), 1);
+    run('editor3DUndo()');
+    assert.deepEqual([...run('[at(0, 0, 0), at(2, 1, 1), at(1, 0, 1)]')], [0, 0, 5]);
+});
+
+test('box fill follows the mouse: a box dragged smaller takes back what it filled', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withMap) + `editor3DBlockType = 7; editor3DBlockBox = true; editor3DBlockBoxHeight = 1;
+        var drag = editor3DVoxelPress(down(0.5, 0.5), 'place');
+        editor3DVoxelDragTo(drag, down(3.5, 3.5));
+        editor3DVoxelDragTo(drag, down(1.5, 0.5));
+        editor3DStrokeEnd();`);
+    assert.deepEqual([...run('[at(0, 0, 0), at(1, 0, 0), at(2, 0, 0), at(3, 0, 3), at(1, 0, 1)]')], [7, 7, 0, 0, 5]);
+    run(`drag = editor3DVoxelPress(down(3.5, 3.5), 'place'); editor3DVoxelDragTo(drag, down(3.5, 2.5));
+        editor3DVoxelDragTo(drag, down(3.5, 3.5)); editor3DStrokeCancel();`);
+    assert.deepEqual([...run('[at(3, 0, 3), at(3, 0, 2), editor3DUndoList.length]')], [0, 0, 1], 'cancelled, all back');
+});
+
+test('box fill removes and repaints a region too, down from the face pressed, and stops at the map\'s edge', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withMap) + `editor3DBlockType = 7; editor3DBlockBox = true; editor3DBlockBoxHeight = 9;
+        var drag = editor3DVoxelPress(down(0.5, 0.5), 'place'); editor3DVoxelDragTo(drag, down(3.5, 3.5));
+        editor3DStrokeEnd();`);
+    assert.deepEqual([...run('[at(0, 0, 0), at(3, 2, 3), at(2, 2, 1)]')], [7, 7, 7], 'filled to the top, 3 layers');
+    run(`editor3DBlockBoxHeight = 2; editor3DBlockType = 4;
+        drag = editor3DVoxelPress(down(0.5, 0.5), 'paint'); editor3DVoxelDragTo(drag, down(1.5, 0.5));
+        editor3DStrokeEnd();
+        drag = editor3DVoxelPress(down(3.5, 3.5), 'remove'); editor3DVoxelDragTo(drag, down(2.5, 3.5));
+        editor3DStrokeEnd();`);
+    assert.deepEqual([...run('[at(0, 2, 0), at(1, 1, 0), at(0, 0, 0), at(2, 2, 0)]')], [4, 4, 7, 7], 'the top 2 layers repainted');
+    assert.deepEqual([...run('[at(3, 2, 3), at(2, 1, 3), at(3, 0, 3), at(1, 2, 3)]')], [0, 0, 7, 7], 'the top 2 layers removed');
+});
+
+test('resizing a map keeps its blocks where they are in the world, growing and shrinking about its middle', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withMap) + 'editor3DVoxelResize(vec3(8, 5, 8));');
+    assert.deepEqual([json(run, 'level.voxels.pos'), json(run, 'level.voxels.size')], [[-2, 0, -2], [8, 5, 8]]);
+    assert.deepEqual([...run('[at(3, 0, 3), maps().length, editor3DVoxelMap().mapSize.x]')], [5, 1, 8],
+        'the block is 2 cells further in, the same place in the world');
+    assert.equal(run('editor3DUndoList.length'), 1);
+    run('editor3DVoxelResize(vec3(2, 5, 2))');
+    assert.deepEqual([json(run, 'level.voxels.pos'), run('at(0, 0, 0)')], [[1, 0, 1], 5], 'shrunk around it');
+    run('editor3DUndo(); editor3DUndo();');
+    assert.deepEqual([json(run, 'level.voxels.size'), run('at(1, 0, 1)')], [[4, 3, 4], 5]);
+    assert.equal(run('editor3DVoxelResize(vec3(4, 3, 4))'), false, 'the size it has');
+});

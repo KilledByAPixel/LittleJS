@@ -36108,9 +36108,72 @@ function editor3DVoxelPress(ray, mode)
 {
     const target = editor3DVoxelTarget(ray, mode);
     if (!target) return;
-    const {cell, axis, plane} = target;
+    const {cell, axis, plane, side} = target;
+    if (editor3DBlockBox)
+    {
+        // a box grows out from the face when placing, and into the blocks when removing or repainting
+        const drag = {kind: 'blocks', mode, axis, plane, layer: cell[axis], last: cell, start: cell,
+            grow: mode === 'place' ? side : -side, height: max(1, floor(editor3DBlockBoxHeight)),
+            changed: new Map, region: undefined};
+        editor3DVoxelBoxTo(drag, cell);
+        return drag;
+    }
     editor3DVoxelApply(cell, mode);
     return {kind: 'blocks', mode, axis, plane, layer: cell[axis], last: cell};
+}
+
+// a box drag goes on: what it changed so far is put back, then every cell of the box from where it started to a
+// cell of the same layer is changed, as many layers as its height, the part of it inside the map
+function editor3DVoxelBoxTo(drag, cell)
+{
+    const map = editor3DVoxelMap();
+    if (!map) return;
+    for (const [at, type] of drag.changed.values())
+        map.setVoxel(at, type);
+    drag.changed.clear();
+    const lo = vec3(min(drag.start.x, cell.x), min(drag.start.y, cell.y), min(drag.start.z, cell.z));
+    const hi = vec3(max(drag.start.x, cell.x), max(drag.start.y, cell.y), max(drag.start.z, cell.z));
+    const far = drag.layer + drag.grow * (drag.height - 1), axis = drag.axis, s = map.mapSize;
+    lo[axis] = clamp(min(drag.layer, far), 0, s[axis] - 1);
+    hi[axis] = clamp(max(drag.layer, far), 0, s[axis] - 1);
+    for (let z = lo.z; z <= hi.z; ++z)
+    for (let y = lo.y; y <= hi.y; ++y)
+    for (let x = lo.x; x <= hi.x; ++x)
+    {
+        const at = vec3(x, y, z), type = map.getVoxel(at);
+        editor3DVoxelApply(at, drag.mode) && drag.changed.set(x + s.x * (y + s.y * z), [at, type]);
+    }
+    drag.region = {lo, hi};
+    drag.last = cell;
+}
+
+// change the size of the level's map in cells, as one undo: it grows and shrinks about its middle across, and at
+// its top, and its blocks stay where they are in the world, the ones outside the new size gone
+function editor3DVoxelResize(size)
+{
+    const changed = editor3DChangePart('voxels', (voxels)=>
+    {
+        const shape = level3DVoxelsShape(voxels);
+        const to = vec3(floor(size.x), floor(size.y), floor(size.z));
+        if (!shape || to.x < 1 || to.y < 1 || to.z < 1 || to.x * to.y * to.z > LEVEL3D_VOXEL_CELLS) return voxels;
+        const from = shape.size, old = new Uint8Array(from.x * from.y * from.z);
+        level3DVoxelsDecode(voxels.blocks, old);
+        // how far each block moves in cells, so the corner moves the other way and the blocks stay put
+        const dx = floor((to.x - from.x) / 2), dz = floor((to.z - from.z) / 2);
+        const data = new Uint8Array(to.x * to.y * to.z);
+        for (let z = 0; z < from.z; ++z)
+        for (let y = 0; y < min(from.y, to.y); ++y)
+        for (let x = 0; x < from.x; ++x)
+        {
+            const nx = x + dx, nz = z + dz;
+            if (nx >= 0 && nz >= 0 && nx < to.x && nz < to.z)
+                data[nx + to.x * (y + to.y * nz)] = old[x + from.x * (y + from.y * z)];
+        }
+        return {...voxels, pos: [shape.pos.x - dx, shape.pos.y, shape.pos.z - dz], size: [to.x, to.y, to.z],
+            blocks: level3DVoxelsEncode(data)};
+    });
+    editor3DStrokeEnd();
+    return changed;
 }
 
 // a drag of the Blocks tool goes on: every cell of the layer from the last one to the one under the ray
@@ -36118,6 +36181,8 @@ function editor3DVoxelDragTo(drag, ray)
 {
     const cell = editor3DVoxelDragCell(drag, ray), last = drag.last;
     if (!cell) return;
+    if (drag.changed)
+        return editor3DVoxelBoxTo(drag, cell);
     const d = cell.subtract(last), steps = max(abs(d.x), abs(d.y), abs(d.z));
     for (let i = 1; i <= steps; ++i)
         editor3DVoxelApply(vec3(round(last.x + d.x * i / steps), round(last.y + d.y * i / steps),
@@ -36144,12 +36209,12 @@ function editor3DVoxelTarget(ray, mode)
     if (!hit)
     {
         const cell = place ? editor3DVoxelDragCell({axis: 'y', plane: 0, layer: 0}, ray) : undefined;
-        return cell && {cell, axis: 'y', plane: 0};
+        return cell && {cell, axis: 'y', plane: 0, side: 1};
     }
     const n = hit.normal, axis = n.x ? 'x' : n.y ? 'y' : 'z', cell = place ? hit.cell.add(n) : hit.cell;
     if (!editor3DVoxelInside(map, cell)) return;
-    // the face between the block hit and the cell in front of it
-    return {cell, axis, plane: cell[axis] + ((n[axis] > 0) === place ? 0 : 1)};
+    // the face between the block hit and the cell in front of it, and side, the way that face looks along the axis
+    return {cell, axis, plane: cell[axis] + ((n[axis] > 0) === place ? 0 : 1), side: n[axis]};
 }
 
 // end the edit being made: one undo, and the autosave
@@ -36546,6 +36611,8 @@ const EDITOR3D_AXES = {x: vec3(1, 0, 0), y: vec3(0, 1, 0), z: vec3(0, 0, 1)};
 
 let editor3DTool = 'move';     // 'select', 'move', 'rotate', 'scale', 'blocks' or 'terrain'
 let editor3DBlockType = 1;     // the block type the Blocks tool places
+let editor3DBlockBox = false;  // the Blocks tool fills a box: the rectangle dragged, editor3DBlockBoxHeight tall
+let editor3DBlockBoxHeight = 1;
 let editor3DSeconds = 0;       // how long the last step was, for a brush held down
 // where the mouse is on the terrain, for the Terrain tool's brush
 /** @type {Vector3|undefined} */
@@ -36929,6 +36996,7 @@ const editor3DKeys =
     KeyB: ()=> { editor3DTool = 'blocks'; editor3DBrush = undefined; },
     KeyT: ()=> { editor3DTool = 'terrain'; editor3DBrush = undefined; },
     KeyP: ()=> editor3DTool === 'blocks' && editor3DVoxelPick(render3D.screenToRay(mousePosScreen)),
+    KeyX: ()=> editor3DTool === 'blocks' && (editor3DBlockBox = !editor3DBlockBox),
     KeyG: ()=> { editor3DGrid = !editor3DGrid; },
     KeyF: ()=> editor3DFrame(),
     End: ()=> editor3DDropSelection(),
@@ -37069,6 +37137,7 @@ const editor3DHelpLines =
     'Wheel: zoom · Middle drag or Space+drag: pan · Alt+drag: orbit · F: frame the selection',
     'Pick a type, then click to place it, Shift+click keeps placing',
     'B blocks: click or drag places · Shift removes · Ctrl repaints · P picks the type under the mouse',
+    'X box fill: a drag fills the rectangle dragged, as tall as the height in the panel',
     'T terrain: hold to raise the ground · Shift lowers · Ctrl smooths · the brush is in the panel',
     'Delete · Ctrl+C / X / V: copy, cut, paste · Ctrl+D: duplicate · Ctrl+Z / Y: undo, redo',
     'Reset to file: the level as its file has it, Restart keeps your edits, Undo brings them back',
@@ -37091,7 +37160,8 @@ function editor3DHint()
         return editor3DTerrainMap() ? 'Hold to raise the ground · Shift lowers · Ctrl smooths' :
             'Add a terrain in the panel to sculpt it';
     if (editor3DTool === 'blocks')
-        return editor3DVoxelMap() ? 'Click or drag places · Shift removes · Ctrl repaints · P picks a type' :
+        return editor3DVoxelMap() ? (editor3DBlockBox ? 'Drag a box to fill it' : 'Click or drag places') +
+            ' · Shift removes · Ctrl repaints · P picks a type · X box' :
             'Add a block map in the panel to paint blocks';
     if (editor3DSelection.size)
         return 'Drag a handle or the object · W move · E rotate · R scale · End drops it';
@@ -37238,6 +37308,15 @@ function editor3DDraw()
         editor3DDrawRing(editor3DTerrainHover.add(vec3(0, .05, 0)), EDITOR3D_AXES.x, EDITOR3D_AXES.z,
             editor3DTerrainBrush.size / 2, hsl(0, 0, 1, .9), 2.5);
 
+    // the box a box drag fills
+    const region = map && editor3DDrag?.region;
+    if (region)
+    {
+        const size = region.hi.subtract(region.lo).add(vec3(1));
+        editor3DDrawWire(buildMatrix(map.pos3D.add(region.lo).add(size.scale(.5)), undefined, size.add(vec3(.02))),
+            editor3DDrag.mode === 'place' ? hsl(0, 0, 1, .9) : editor3DDrag.mode === 'remove' ? hsl(0, 1, .6) :
+            hsl(.15, 1, .6), 2.5);
+    }
     // the map's edges, to see where it ends
     if (map)
         editor3DDrawWire(buildMatrix(map.pos3D.add(map.mapSize.scale(.5)), undefined, map.mapSize),
@@ -37554,7 +37633,8 @@ function editor3DBlocksUpdate(box)
     box.style.display = shown ? '' : 'none';
     if (!shown) return;
     const first = map?.tileInfo, texture = first?.textureInfo;
-    const key = map ? ['map', editor3DBlockType, texture?.size.x, map.blockTypes.length].join() : 'none';
+    const key = map ? ['map', editor3DBlockType, texture?.size.x, map.blockTypes.length, editor3DBlockBox,
+        map.mapSize].join() : 'none';
     if (box.dataset.key === key || box.contains(document.activeElement)) return;
     box.dataset.key = key;
     box.replaceChildren();
@@ -37615,6 +37695,45 @@ function editor3DBlocksUpdate(box)
         }
         catch {} // an image that can not be drawn or read, the title still says the type
     }
+    // box fill: a drag fills the rectangle dragged, this many layers tall
+    const boxRow = editorElement('label', box, 'display:flex;gap:6px;align-items:center;margin:4px 0 2px');
+    boxRow.title = 'X: a drag fills the whole rectangle from the press to the mouse, Shift clears it, Ctrl repaints';
+    const boxOn = editorElement('input', boxRow);
+    boxOn.type = 'checkbox';
+    boxOn.checked = editor3DBlockBox;
+    boxOn.onchange = ()=> { editor3DBlockBox = boxOn.checked; boxOn.blur(); };
+    editorElement('span', boxRow, 'flex:1', 'Box fill, height');
+    const boxHeight = editorElement('input', boxRow, field);
+    boxHeight.type = 'number';
+    boxHeight.min = '1', boxHeight.max = '256', boxHeight.step = '1';
+    boxHeight.value = editor3DBlockBoxHeight + '';
+    boxHeight.onchange = ()=>
+    {
+        editor3DBlockBoxHeight = clamp(floor(parseFloat(boxHeight.value)) || 1, 1, 256);
+        boxHeight.value = editor3DBlockBoxHeight + '';
+        boxHeight.blur();
+    };
+
+    // the map's size, to change
+    const sizeRow = editorElement('label', box, 'display:flex;gap:4px;align-items:center;margin:2px 0');
+    editorElement('span', sizeRow, 'flex:1', 'Map size');
+    const sizes = ['x', 'y', 'z'].map((axis)=>
+    {
+        const input = editorElement('input', sizeRow, field);
+        input.type = 'number';
+        input.min = '1', input.max = '256', input.step = '1';
+        input.value = map.mapSize[axis] + '';
+        return input;
+    });
+    const resize = editorElement('button', box, 'padding:2px 6px;cursor:pointer;margin-right:4px', 'Resize');
+    resize.title = 'Change the map\'s size, its blocks stay where they are; Undo brings back what was cut off';
+    resize.onclick = ()=>
+    {
+        const [x, y, z] = sizes.map((i)=> clamp(floor(parseFloat(i.value)) || 1, 1, 256));
+        editor3DVoxelResize(vec3(x, y, z));
+        resize.blur();
+    };
+
     const remove = editorElement('button', box, 'margin-top:4px;padding:2px 6px;cursor:pointer', 'Remove map');
     remove.title = 'Take the block map out of the level, Undo brings it back';
     remove.onclick = ()=> { editor3DVoxelRemove(); remove.blur(); };

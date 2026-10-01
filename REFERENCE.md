@@ -1843,8 +1843,9 @@ off leaves the sky, sun, fog and shadows to the game.
 // Tools, the keys Unity, Unreal and Godot use
 Q select · W move · E rotate · R scale   // drag a handle, or the object itself
 B                                        // blocks: click or drag places the type picked in the panel, Shift
-                                         // removes, Ctrl repaints, P picks the type under the mouse; the panel
-                                         // adds the level's block map
+                                         // removes, Ctrl repaints, P picks the type under the mouse; X is box
+                                         // fill, a drag fills the rectangle dragged, as tall as the panel's
+                                         // height; the panel adds the level's block map and resizes it
 T                                        // terrain: hold the mouse to raise the ground under the brush, Shift
                                          // lowers, Ctrl smooths; the panel adds the level's terrain, up to 128
                                          // cells a side, and has the brush's size and strength
