@@ -10189,11 +10189,12 @@ declare module "littlejsengine" {
     export function level3DLoad(level: any): Array<any>;
     /** Add a prefab: a small level, its objects placed about its own origin, to place many times under one name
      *  - It is a type from then on: a level's object of that type, the level editor's Place list and level3DSpawn make
-     *    an instance, a Prefab3D, where every instance of a prefab is the same and follows the prefab
+     *    an instance, a Prefab3D; an instance is made of the prefab as it is then, so the level editor, where a prefab
+     *    changes, makes its instances again
      *  - The prefab is a level as the level editor saves it, {objects: [...]}, so the editor is the prefab editor too;
      *    only its objects are used, and they may be of other prefabs
      *  - With attached true in it the parts are children of the instance and move with it as one body, without
-     *    collision of their own; otherwise each part is an object of its own in the world and collides as one placed
+     *    collision of their own, a prefab inside it too; otherwise each part is an object of its own in the world and collides as one placed
      *    by hand does
      *  - Adding a name again replaces it
      *  @param {string} name - The type its instances have in a level

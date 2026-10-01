@@ -137,3 +137,13 @@ test('level3DSpawn makes a plain type too, turned and sized', ()=>
     assert.equal(box.collideSolidObjects, false);
     box.destroy(true);
 });
+
+test('a prefab inside an attached prefab is attached too, its parts ride along', ()=>
+{
+    level3DAddPrefab('Train', {attached: true, objects: [{id: 1, type: 'House', pos: [0, 0, 5]}]});
+    const train = level3DSpawn('Train', vec3(100, 0, 0));
+    const house = train.parts[0];
+    assert.deepEqual([house.attached, house.parent === train, house.parts[0].parent === house], [true, true, true]);
+    nearVec(house.parts[0].getWorldPos3D(), 102, .5, 5);
+    train.destroy(true);
+});

@@ -391,16 +391,18 @@ function level3DSpawn(type, pos3D=vec3(), rotation3D=vec3(), scale3D=vec3(1), pr
 /** @type {Map<string, {attached: boolean, objects: Array<Object>, fromLevel: boolean}>} */
 const level3DPrefabs = new Map;
 
-// how many prefabs deep an instance being made is, a prefab that holds itself is stopped
-let level3DPrefabDepth = 0;
+// how many prefabs deep an instance being made is, a prefab that holds itself is stopped; and how many of those
+// are attached: a prefab inside an attached one is attached too, or its parts would be left behind in the world
+let level3DPrefabDepth = 0, level3DPrefabAttached = 0;
 
 /** Add a prefab: a small level, its objects placed about its own origin, to place many times under one name
  *  - It is a type from then on: a level's object of that type, the level editor's Place list and level3DSpawn make
- *    an instance, a Prefab3D, where every instance of a prefab is the same and follows the prefab
+ *    an instance, a Prefab3D; an instance is made of the prefab as it is then, so the level editor, where a prefab
+ *    changes, makes its instances again
  *  - The prefab is a level as the level editor saves it, {objects: [...]}, so the editor is the prefab editor too;
  *    only its objects are used, and they may be of other prefabs
  *  - With attached true in it the parts are children of the instance and move with it as one body, without
- *    collision of their own; otherwise each part is an object of its own in the world and collides as one placed
+ *    collision of their own, a prefab inside it too; otherwise each part is an object of its own in the world and collides as one placed
  *    by hand does
  *  - Adding a name again replaces it
  *  @param {string} name - The type its instances have in a level
@@ -476,7 +478,7 @@ class Prefab3D extends EngineObject3D
         /** @property {string} - The prefab it is an instance of */
         this.prefabName = prefabName;
         /** @property {boolean} - Are its parts its children, moving with it as one body */
-        this.attached = !!level3DPrefabs.get(prefabName)?.attached;
+        this.attached = !!level3DPrefabs.get(prefabName)?.attached || level3DPrefabAttached > 0;
         /** @property {Array<any>} - What the prefab's objects made, in the prefab's order */
         this.parts = [];
         this.partObjects = []; // the prefab's object of each part
@@ -521,6 +523,7 @@ class Prefab3D extends EngineObject3D
             return;
         }
         ++level3DPrefabDepth;
+        this.attached && ++level3DPrefabAttached;
         try
         {
             const low = vec3(Infinity), high = vec3(-Infinity);
@@ -545,7 +548,11 @@ class Prefab3D extends EngineObject3D
             if (this.attached && low.x <= high.x)
                 this.size3D = high.subtract(low);
         }
-        finally { --level3DPrefabDepth; }
+        finally
+        {
+            --level3DPrefabDepth;
+            this.attached && --level3DPrefabAttached;
+        }
     }
 
     /** Keep the parts with the handle, called automatically each frame */

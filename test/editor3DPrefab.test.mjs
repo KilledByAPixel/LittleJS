@@ -236,3 +236,77 @@ test('only an instance of a prefab can be opened, and closing the editor steps a
     assert.deepEqual([run('editor3DPrefabStack.length'), run('editor3DLevel === level')], [0, true]);
     assert.deepEqual(json(run, 'level.prefabs.House.objects[1].pos'), [4, 2.5, 0], 'and the edit is kept');
 });
+
+test('redo of Make prefab makes the instance again, and so does undoing a Reset to file', async ()=>
+{
+    const { run } = await loadGame();
+    run(pairCode + `editor3DMakePrefab('Pair'); editor3DUndo(); editor3DUndo(true);`);
+    assert.deepEqual([run('live(3) instanceof Prefab3D'), run('live(3).parts.length')], [true, 2]);
+    run('editor3DRevert(); editor3DUndo();');
+    assert.deepEqual([run('live(3) instanceof Prefab3D'), run('live(3).destroyed')], [true, false]);
+});
+
+test('inside a prefab, Make prefab and Attached wait for the level, and the level\'s prefabs stay as they are', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `editor3DChangePart('prefabs', (p)=> ({...p, Tower: {objects: [{id: 1, type: 'Box'}]}}));
+        editor3DChange((list)=> { list.push({id: 3, type: 'Tower', pos: [0, 0, 40]}); }); editor3DStrokeEnd();
+        editor3DPrefabEnter(1); editor3DSelection.add(1);`);
+    assert.equal(typeof run(`editor3DMakePrefab('Post')`), 'string');
+    assert.equal(run(`editor3DPrefabSetAttached('House', true)`), false);
+    assert.deepEqual([run(`level3DTypes.has('Tower')`), run(`level3DTypes.has('House')`)], [true, true]);
+    run(liftPost + 'editor3DPrefabBack();');
+    assert.deepEqual(json(run, 'level.prefabs.House.objects[1].pos'), [4, 2.5, 0], 'the edit is the level\'s');
+    assert.deepEqual([run(`level3DPrefabs.get('House').fromLevel`), run('live(3) instanceof Prefab3D')], [true, true]);
+});
+
+test('a prefab opened from a level made in code is the prefab, not the level\'s autosave', async ()=>
+{
+    // a level whose objects are what its prefab will hold: about the origin, on the ground, numbered from 1
+    const { run } = await loadGame();
+    run(`var level = { objects: [{ id: 1, type: 'Box', pos: [0, .5, 0] }, { id: 2, type: 'Box', pos: [0, 1.5, 0] }] };
+        level3DLoad(level); editor3DSelection.add(1); editor3DSelection.add(2);
+        editor3DMakePrefab('Stack'); editor3DPrefabEnter();`);
+    assert.deepEqual(json(run, 'editor3DObjects().map((o)=> o.type)'), ['Box', 'Box']);
+    run('editor3DPrefabBack()');
+    assert.deepEqual(json(run, 'level.prefabs.Stack.objects.map((o)=> o.type)'), ['Box', 'Box']);
+});
+
+test('a scene set inside a prefab goes with it, and the level\'s shows again', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `var fog = render3D.fogEnd; editor3DPrefabEnter(1);
+        editor3DChangeScene(()=> ({fog: [5, 77]})); editor3DStrokeEnd();`);
+    assert.equal(run('render3D.fogEnd'), 77);
+    run('editor3DPrefabBack()');
+    assert.deepEqual([run('render3D.fogEnd === fog'), run(`'scene' in level`)], [true, false]);
+});
+
+test('a level the game loads while a prefab is open is not written into the prefab', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `editor3DPrefabEnter(1);
+        var other = { objects: [{ id: 1, type: 'Sphere', pos: [0, 5, 0] }] }; level3DLoad(other);`);
+    assert.equal(run('editor3DPrefabStack.length'), 0, 'the game has moved on');
+    assert.equal(run('editor3DPrefabBack()'), false);
+    assert.deepEqual([run('editor3DLevel === other'), json(run, 'level.prefabs.House.objects.length')], [true, 2]);
+});
+
+test('opening a prefab written without ids and going back with no edit changes nothing', async ()=>
+{
+    const { run } = await loadGame();
+    run(`level3DAddPrefab('Hut', {objects: [{type: 'Box', pos: [0, .5, 0]}]});
+        var level = { objects: [{ id: 1, type: 'Hut', pos: [0, 0, 0] }] }; level3DLoad(level);
+        editor3DPrefabEnter(1); editor3DPrefabBack();`);
+    assert.deepEqual([run('editor3DPrefabDirty.size'), json(run, `level3DPrefabs.get('Hut').objects`)],
+        [0, [{type: 'Box', pos: [0, .5, 0]}]]);
+});
+
+test('the prefab that is open is not placed inside itself', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + 'editor3DPrefabEnter(1);');
+    assert.equal(run(`editor3DPlace('House', vec3())`), undefined);
+    assert.equal(run('editor3DObjects().length'), 2);
+    assert.equal(typeof run(`editor3DPlace('Box', vec3())`), 'number');
+});

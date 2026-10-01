@@ -488,6 +488,12 @@ function editor3DLevelLoaded(level)
         editor3DSelection.clear();
         editor3DStroke = undefined;
     }
+    if (!editor3DPrefabLevels.has(level) && editor3DPrefabStack.length)
+    {
+        // the game loaded a level while a prefab was open: what was open is gone with what it was opened from
+        editor3DPrefabStack.length = 0;
+        editor3DPrefabEdits = {};
+    }
     editor3DLevel = level;
     editor3DInstances.clear();
     if (isArray(level.objects))
@@ -527,7 +533,8 @@ function editor3DLevelLoaded(level)
     editor3DUndoList = record.undo;
     editor3DRedoList = record.redo;
     // an autosave the file already has, from a Save, goes; one of this file, or of the file a Save wrote, comes back
-    const saved = editor3DSaves()[record.key];
+    // a prefab being edited has no autosave, and one of a level with the same objects is not its
+    const saved = editor3DPrefabLevels.has(level) ? undefined : editor3DSaves()[record.key];
     if (saved && isArray(saved.objects) && editor3DSame(saved.objects, original) &&
         editor3DSame(editor3DLevelParts(saved), originalParts))
         editor3DAutosave(level);
@@ -649,6 +656,7 @@ function editor3DSetPart(name, part)
 // when its instance is, so each instance is made again
 function editor3DPrefabsShow()
 {
+    if (editor3DPrefabLevels.has(editor3DLevel)) return; // inside a prefab, the prefabs are the level's
     const prefabs = editor3DLevelPart('prefabs') ?? {};
     for (const [name, prefab] of level3DPrefabs)
     {
@@ -657,8 +665,9 @@ function editor3DPrefabsShow()
         level3DTypes.delete(name);
     }
     level3DPrefabsAdd(prefabs);
+    // every object of a prefab's type, one whose type was not there when the objects were set too
     for (const object of editor3DObjects())
-        editor3DInstances.get(object.id) instanceof Prefab3D && editor3DMakeInstance(object);
+        level3DPrefabs.has(object.type) && editor3DMakeInstance(object);
     editor3DShadowLight();
 }
 
@@ -1176,6 +1185,8 @@ function editor3DSetProperty(object, name, value, defaultValue)
 // add an object of a type at a position, selected; its id, or undefined when the level can not be edited
 function editor3DPlace(type, pos)
 {
+    // a prefab that is open, or one that holds it, would hold itself
+    if (editor3DPrefabStack.some((frame)=> editor3DPrefabHolds(type, frame.name))) return;
     let id;
     const placed = editor3DChange((list)=>
     {
@@ -1222,6 +1233,7 @@ function editor3DMakePrefab(name='')
 {
     const refuse = (why)=> editor3DPrefabMessage = why;
     const selected = editor3DSelected();
+    if (editor3DPrefabStack.length) return refuse('Go back to the level to make a prefab');
     if (!selected.length) return refuse('Select the objects to make a prefab of');
     if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return refuse('The level can not be edited now');
     name = String(name).trim();
@@ -1300,6 +1312,7 @@ function editor3DUnpack()
 // make a prefab of the level's own attached, its parts the children of each instance, or not, as one undo
 function editor3DPrefabSetAttached(name, attached)
 {
+    if (editor3DPrefabStack.length) return false; // a prefab is the level's, set from the level
     editor3DStrokeEnd();
     const changed = editor3DChangePart('prefabs', (prefabs)=>
     {
@@ -1324,7 +1337,7 @@ function editor3DPrefabJSON(name)
 
 // the prefabs opened one inside the other, each with the level it was opened from, its name, the selection there
 // and the ids of that level's objects that had something made for them
-/** @type {Array<{level: Object, name: string, selection: Array<number>, made: Set<number>}>} */
+/** @type {Array<{level: Object, name: string, selection: Array<number>, made: Set<number>, entered?: string}>} */
 const editor3DPrefabStack = [];
 // the levels that are a prefab being edited, they have no autosave of their own
 const editor3DPrefabLevels = new WeakSet;
@@ -1355,13 +1368,15 @@ function editor3DPrefabEnter(id)
     if (!prefab || editor3DRecords.get(from)?.pending) return false;
     editor3DStrokeEnd();
     editor3DDrag = editor3DHover = undefined;
-    editor3DPrefabStack.push({level: from, name: made.prefabName, selection: [...editor3DSelection],
-        made: new Set(editor3DInstances.keys())});
+    const frame = {level: from, name: made.prefabName, selection: [...editor3DSelection],
+        made: new Set(editor3DInstances.keys()), entered: undefined};
+    editor3DPrefabStack.push(frame);
     editor3DPrefabClear();
     const level = {littlejs3D: LEVEL3D_VERSION, ...(prefab.attached ? {attached: true} : {}),
         objects: editor3DCopy(prefab.objects)};
     editor3DPrefabLevels.add(level);
     level3DLoad(level); // the editor takes it as it does any level
+    frame.entered = JSON.stringify(editor3DObjects()); // as the editor has it, an edit is what differs from this
     return true;
 }
 
@@ -1375,7 +1390,7 @@ function editor3DPrefabBack()
     editor3DStrokeEnd();
     editor3DDrag = editor3DHover = undefined;
     const known = level3DPrefabs.get(frame.name);
-    const objects = editor3DCopy(editor3DObjects()), changed = !known || !editor3DSame(objects, known.objects);
+    const objects = editor3DCopy(editor3DObjects()), changed = JSON.stringify(objects) !== frame.entered;
     editor3DPrefabClear();
     if (changed)
     {
@@ -1403,6 +1418,8 @@ function editor3DPrefabBack()
         const type = level3DTypes.get(object.type);
         type && (type.make.prototype || frame.made.has(object.id)) && editor3DMakeInstance(object);
     }
+    editor3DSceneRestore(record.sceneBase);
+    level3DSceneApply(level.scene);
     editor3DVoxelShow();
     editor3DTerrainShow();
     editor3DShadowLight();
@@ -2668,13 +2685,14 @@ function editor3DPanelInit()
 
     const storage = editorElement('div', panel, 'color:#f86;margin-top:4px',
         'Autosave failed, storage is full: Save to a file');
+    const prefabUnsaved = editorElement('div', panel, 'color:#fc6;margin-top:4px');
     const hint = editorElement('div', panel, 'color:#8ab;margin-top:4px');
     const help = editorElement('div', panel, 'color:#aaa;margin-top:4px;border-top:1px solid #444;padding-top:4px');
     for (const line of editor3DHelpLines)
         editorElement('div', help, 'margin:2px 0', line);
     button(help, 'Close', ()=> editor3DHelp = false, '?');
 
-    editor3DPanelParts = {restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox, prefabOpen, prefabName,
+    editor3DPanelParts = {restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox, prefabOpen, prefabName, prefabUnsaved,
         properties, blocks, terrainBox, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
 }
 
@@ -2727,6 +2745,9 @@ function editor3DPanelUpdate()
     editor3DPrefabBoxUpdate(p.prefabBox);
     p.prefabOpen.style.display = editor3DPrefabStack.length ? 'flex' : 'none';
     p.prefabName.textContent = 'Editing prefab ' + editor3DPrefabStack.map((frame)=> frame.name).join(' > ');
+    p.prefabUnsaved.style.display = editor3DPrefabDirty.size ? '' : 'none';
+    p.prefabUnsaved.textContent = 'Edited and not in its file: ' + [...editor3DPrefabDirty].join(', ') +
+        '. Open it with Enter and Save';
     editor3DBlocksUpdate(p.blocks);
     editor3DTerrainBoxUpdate(p.terrainBox);
     p.sceneOn.checked = !!editor3DScene();
@@ -2740,7 +2761,7 @@ function editor3DPrefabBoxUpdate(box)
     const selected = editor3DSelected(), made = selected.length === 1 && editor3DInstances.get(selected[0].id);
     const instance = made instanceof Prefab3D ? made : undefined, prefab = instance && level3DPrefabs.get(instance.prefabName);
     const key = !selected.length ? '' : [selected.length, instance?.prefabName, prefab?.attached, prefab?.fromLevel,
-        editor3DPrefabMessage] + '';
+        editor3DPrefabMessage, editor3DPrefabStack.length] + '';
     box.style.display = key ? '' : 'none';
     if (box.dataset.key === key || box.contains(document.activeElement)) return;
     box.dataset.key = key;
@@ -2765,7 +2786,7 @@ function editor3DPrefabBoxUpdate(box)
             saveText(editor3DPrefabJSON(instance.prefabName), instance.prefabName + '.json', 'application/json');
             save.blur();
         };
-        if (prefab.fromLevel)
+        if (prefab.fromLevel && !editor3DPrefabStack.length)
         {
             const label = editorElement('label', box, 'display:flex;gap:6px;align-items:center;margin:2px 0');
             label.title = 'Its parts are attached to each instance and move with it as one body, with no ' +
