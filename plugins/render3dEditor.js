@@ -1319,6 +1319,99 @@ function editor3DPrefabJSON(name)
     return editor3DLevelJSON({...(prefab.attached ? {attached: true} : {}), objects: prefab.objects});
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Edit prefab: the editor on a prefab alone, the level it came from put away until Back
+
+// the prefabs opened one inside the other, each with the level it was opened from, its name, the selection there
+// and the ids of that level's objects that had something made for them
+/** @type {Array<{level: Object, name: string, selection: Array<number>, made: Set<number>}>} */
+const editor3DPrefabStack = [];
+// the levels that are a prefab being edited, they have no autosave of their own
+const editor3DPrefabLevels = new WeakSet;
+// what was edited in prefabs of the level's own since the level was left, written into it on the way back
+/** @type {Object<string, Object>} */
+let editor3DPrefabEdits = {};
+// the prefabs of the game's own that were edited and are not in a file yet
+const editor3DPrefabDirty = new Set;
+
+// destroy what the level being edited has in the world, its objects' and its maps'
+function editor3DPrefabClear()
+{
+    for (const made of editor3DInstances.values())
+        made?.destroy?.();
+    editor3DInstances.clear();
+    for (const map of [level3DVoxelMap, level3DTerrainMap])
+        map && !map.destroyed && map.destroy();
+}
+
+// open the prefab of an instance, the selected one when none is given, to edit alone: its objects about its own
+// origin, with an undo of its own, and the level it is in put away; false when it is not a prefab's instance
+function editor3DPrefabEnter(id)
+{
+    const selected = editor3DSelected();
+    id ??= selected.length === 1 ? selected[0].id : undefined;
+    const made = editor3DInstances.get(id), from = editor3DLevel;
+    const prefab = made instanceof Prefab3D && level3DPrefabs.get(made.prefabName);
+    if (!prefab || editor3DRecords.get(from)?.pending) return false;
+    editor3DStrokeEnd();
+    editor3DDrag = editor3DHover = undefined;
+    editor3DPrefabStack.push({level: from, name: made.prefabName, selection: [...editor3DSelection],
+        made: new Set(editor3DInstances.keys())});
+    editor3DPrefabClear();
+    const level = {littlejs3D: LEVEL3D_VERSION, ...(prefab.attached ? {attached: true} : {}),
+        objects: editor3DCopy(prefab.objects)};
+    editor3DPrefabLevels.add(level);
+    level3DLoad(level); // the editor takes it as it does any level
+    return true;
+}
+
+// leave the prefab being edited for the level it was opened from: the prefab is what was edited, every instance
+// of it is made again, and back in the level itself what was edited in its own prefabs is one undo; false when
+// no prefab is open
+function editor3DPrefabBack()
+{
+    const frame = editor3DPrefabStack.pop(), edited = editor3DLevel;
+    if (!frame) return false;
+    editor3DStrokeEnd();
+    editor3DDrag = editor3DHover = undefined;
+    const known = level3DPrefabs.get(frame.name);
+    const objects = editor3DCopy(editor3DObjects()), changed = !known || !editor3DSame(objects, known.objects);
+    editor3DPrefabClear();
+    if (changed)
+    {
+        // the prefab as it is now, for whatever is made next; one of the game's own waits to be saved to its file
+        const prefab = known?.attached ? {attached: true, objects} : {objects}, fromLevel = !!known?.fromLevel;
+        level3DPrefabSet(frame.name, prefab, fromLevel);
+        fromLevel ? editor3DPrefabEdits[frame.name] = prefab : editor3DPrefabDirty.add(frame.name);
+    }
+
+    // the level it was opened from is the editor's again, with its own undo
+    const level = editor3DLevel = frame.level, record = editor3DRecords.get(level);
+    editor3DUndoList = record.undo, editor3DRedoList = record.redo;
+    editor3DStroke = undefined;
+    if (!editor3DPrefabStack.length)
+    {
+        // back in the level: its own prefabs that were edited go into it, as one undo
+        const edits = editor3DPrefabEdits;
+        editor3DPrefabEdits = {};
+        Object.keys(edits).length && editor3DChangePart('prefabs', (prefabs={})=> ({...prefabs, ...edits}));
+        editor3DStrokeEnd();
+    }
+    // what the level had in the world is made again: what a class makes, and what else had something made
+    for (const object of editor3DObjects())
+    {
+        const type = level3DTypes.get(object.type);
+        type && (type.make.prototype || frame.made.has(object.id)) && editor3DMakeInstance(object);
+    }
+    editor3DVoxelShow();
+    editor3DTerrainShow();
+    editor3DShadowLight();
+    editor3DSelection.clear();
+    for (const id of frame.selection)
+        editor3DObject(id) && editor3DSelection.add(id);
+    return true;
+}
+
 // remove the selected objects, as one undo
 function editor3DDelete()
 {
@@ -1421,6 +1514,7 @@ function editor3DSetOpen(open)
         editor3DDrag = editor3DHover = undefined;
         editor3DMouseOnPanel = false; // the panel hides, with no mouseleave
         editor3DStrokeEnd();
+        while (editor3DPrefabBack()); // the game plays the level, not a prefab that was open
         editor3DIsOpen = false;
         setPaused(editor3DGamePaused);
     }
@@ -1504,6 +1598,7 @@ function editor3DAutosave(level=editor3DLevel)
 {
     const record = editor3DRecords.get(level);
     if (!record || record.pending) return; // edits waiting to be applied keep their autosave
+    if (editor3DPrefabLevels.has(level)) return; // a prefab being edited is kept by the level it is in
     const saves = editor3DSaves(), objects = isArray(level.objects) ? level.objects : [];
     const parts = editor3DLevelParts(level);
     // the level as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it,
@@ -1569,6 +1664,14 @@ async function editor3DSave(pickAgain=false)
     const level = editor3DLevel, record = editor3DRecords.get(level);
     if (!record) return;
     editor3DStrokeEnd();
+    const open = editor3DPrefabStack[editor3DPrefabStack.length - 1];
+    if (open)
+    {
+        // inside a prefab, Save writes the prefab as a file of its own
+        saveText(editor3DLevelJSON(level), open.name + '.json', 'application/json');
+        editor3DPrefabDirty.delete(open.name);
+        return 'downloaded';
+    }
     // what is written, kept as it is now: the level can change while the file is picked and written, and those
     // edits are not in the file, so they stay in the autosave; the level and record are this one's, whichever is
     // open by then
@@ -2042,7 +2145,8 @@ const editor3DKeys =
     KeyF: ()=> editor3DFrame(),
     End: ()=> editor3DDropSelection(),
     Delete: ()=> editor3DDelete(),
-    Backspace: ()=> editor3DDelete(),
+    Backspace: ()=> editor3DSelection.size ? editor3DDelete() : editor3DPrefabBack(),
+    Enter: ()=> editor3DPrefabEnter(),
     Slash: ()=> { editor3DHelp = !editor3DHelp; },
 };
 /** @type {Object<string, function(boolean=): any>} */
@@ -2183,6 +2287,7 @@ const editor3DHelpLines =
     'T terrain: hold to raise the ground · Shift lowers · Ctrl smooths · X the next brush, flatten and paint',
     'Delete · Ctrl+C / X / V: copy, cut, paste · Ctrl+D: duplicate · Ctrl+Z / Y: undo, redo',
     'Ctrl+G: make the selection a prefab, one thing to place many times · Ctrl+Shift+G: unpack it into its objects',
+    'Enter: open the selected prefab to edit it alone, every instance follows · Backspace with nothing selected: back',
     'Reset to file: the level as its file has it, Restart keeps your edits, Undo brings them back',
     'Esc: play and edit · 0: exit the editor · ?: keys',
 ];
@@ -2525,6 +2630,14 @@ function editor3DPanelInit()
     // prefabs: the selection made one, or the selected instance's own
     const prefabBox = editorElement('div', panel, box);
 
+    // the prefab that is open, and the way back
+    const prefabOpen = editorElement('div', panel, 'padding:4px;margin:4px 0;background:#235;border-radius:3px;' +
+        'display:flex;gap:6px;align-items:center');
+    panel.insertBefore(prefabOpen, panel.firstChild);
+    const prefabName = editorElement('span', prefabOpen, 'flex:1');
+    button(prefabOpen, 'Back', ()=> editor3DPrefabBack(),
+        'Backspace with nothing selected: back to where the prefab was opened from, every instance of it follows');
+
     // the Blocks tool's box: a map to add, or the types to paint with
     const blocks = editorElement('div', panel, box);
 
@@ -2561,7 +2674,7 @@ function editor3DPanelInit()
         editorElement('div', help, 'margin:2px 0', line);
     button(help, 'Close', ()=> editor3DHelp = false, '?');
 
-    editor3DPanelParts = {restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox,
+    editor3DPanelParts = {restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox, prefabOpen, prefabName,
         properties, blocks, terrainBox, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
 }
 
@@ -2612,6 +2725,8 @@ function editor3DPanelUpdate()
     names.forEach((name, i)=> p.typeButtons[i].style.outline = name === editor3DBrush ? lit : '');
     editor3DPropertiesUpdate(p.properties);
     editor3DPrefabBoxUpdate(p.prefabBox);
+    p.prefabOpen.style.display = editor3DPrefabStack.length ? 'flex' : 'none';
+    p.prefabName.textContent = 'Editing prefab ' + editor3DPrefabStack.map((frame)=> frame.name).join(' > ');
     editor3DBlocksUpdate(p.blocks);
     editor3DTerrainBoxUpdate(p.terrainBox);
     p.sceneOn.checked = !!editor3DScene();
@@ -2637,6 +2752,9 @@ function editor3DPrefabBoxUpdate(box)
     {
         const line = row();
         editorElement('span', line, 'flex:1;color:#aaa', 'Prefab ' + instance.prefabName);
+        const open = editorElement('button', line, press, 'Edit');
+        open.title = 'Enter: open the prefab alone to edit it, every instance of it follows';
+        open.onclick = ()=> { editor3DPrefabEnter(); open.blur(); };
         const unpack = editorElement('button', line, press, 'Unpack');
         unpack.title = 'Ctrl+Shift+G: turn this instance into the objects it is made of';
         unpack.onclick = ()=> { editor3DUnpack(); unpack.blur(); };

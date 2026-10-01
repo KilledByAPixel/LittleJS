@@ -160,3 +160,79 @@ test('attached is the prefab\'s, set from the editor as one undo, and the prefab
     assert.equal(run('live(1).attached'), false);
     assert.equal('attached' in JSON.parse(run(`editor3DPrefabJSON('House')`)), false);
 });
+
+// inside the House: lift its post a unit
+const liftPost = `editor3DChange((list)=> editor3DSetTransform(list[1], vec3(4, 2.5, 0))); editor3DStrokeEnd();`;
+
+test('Edit prefab opens a prefab alone, the level it came from put away, and Back brings the level back', async ()=>
+{
+    const storage = makeStorage();
+    const { run } = await loadGame({ localStorage: storage });
+    run(fileCode + 'var house = live(1), box = live(2); editor3DSelection.add(1);');
+    assert.equal(run('editor3DPrefabEnter()'), true);
+    assert.deepEqual([run('editor3DLevel === level'), run('editor3DPrefabStack.length')], [false, 1]);
+    assert.deepEqual(json(run, 'editor3DObjects().map((o)=> o.pos)'), [[2, .5, 0], [4, 1.5, 0]], 'about its own origin');
+    assert.deepEqual([run('house.destroyed'), run('box.destroyed')], [true, true], 'the level is out of the way');
+    assert.deepEqual(json(run, 'live(1).pos3D'), {x: 2, y: .5, z: 0}, 'the prefab\'s own objects are what is there');
+    assert.equal(run('editor3DPrefabBack()'), true);
+    assert.deepEqual([run('editor3DLevel === level'), run('editor3DPrefabStack.length')], [true, 0]);
+    assert.deepEqual([run('live(1) instanceof Prefab3D'), run('live(2).destroyed'), json(run, 'live(1).parts[0].pos3D')],
+        [true, false, {x: 12, y: .5, z: 0}]);
+    assert.deepEqual(json(run, '[...editor3DSelection]'), [1], 'the selection it left with');
+    assert.equal(run('editor3DUndoList.length'), 0, 'nothing changed, nothing to undo');
+    assert.equal(run('editor3DPrefabBack()'), false, 'not inside one');
+    assert.deepEqual(Object.keys(JSON.parse(storage.items['LittleJS editor 3D /game/'] ?? '{}')), [],
+        'a prefab being edited has no autosave of its own');
+});
+
+test('an edit inside a prefab changes every instance, as one undo of the level', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `editor3DChange((list)=> { list.push({id: 3, type: 'House', pos: [0, 0, 30]}); }); editor3DStrokeEnd();
+        editor3DSelection.add(1); editor3DPrefabEnter();` + liftPost);
+    assert.equal(run('editor3DUndoList.length'), 1, 'the prefab has its own undo while it is open');
+    run('editor3DPrefabBack()');
+    assert.deepEqual(json(run, 'level.prefabs.House.objects[1].pos'), [4, 2.5, 0]);
+    assert.deepEqual(json(run, '[live(1).parts[1].pos3D.y, live(3).parts[1].pos3D.y]'), [2.5, 2.5]);
+    assert.equal(run('editor3DUndoList.length'), 2, 'the object added, and the prefab edited');
+    run('editor3DUndo()');
+    assert.deepEqual(json(run, '[level.prefabs.House.objects[1].pos, live(1).parts[1].pos3D.y]'), [[4, 1.5, 0], 1.5]);
+});
+
+test('a prefab inside a prefab is opened from inside it, and Back steps out one at a time', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `editor3DChangePart('prefabs', (p)=> ({...p, Street: {objects: [{id: 1, type: 'House', pos: [0, 0, 5]}]}}));
+        editor3DChange((list)=> { list.push({id: 3, type: 'Street', pos: [0, 0, 50]}); }); editor3DStrokeEnd();
+        editor3DPrefabEnter(3); editor3DPrefabEnter(1);` + liftPost);
+    assert.deepEqual(json(run, 'editor3DPrefabStack.map((frame)=> frame.name)'), ['Street', 'House']);
+    run('editor3DPrefabBack()');
+    assert.deepEqual([run('editor3DPrefabStack.length'), run('live(1).parts[1].pos3D.y')], [1, 2.5],
+        'in the street, its house shows the edit');
+    run('editor3DPrefabBack()');
+    assert.deepEqual(json(run, 'level.prefabs.House.objects[1].pos'), [4, 2.5, 0]);
+    assert.deepEqual(json(run, '[live(1).parts[1].pos3D.y, live(3).parts[0].parts[1].pos3D.y]'), [2.5, 2.5]);
+    assert.equal(run('editor3DUndoList.length'), 2, 'the street added, and what was edited inside, one undo');
+});
+
+test('a prefab the game added is edited the same way, and the game\'s prefab is what changes', async ()=>
+{
+    const { run } = await loadGame();
+    run(`level3DAddPrefab('Shop', ${house});` +fileCode.replace(`type: 'Box', pos: [-20, .5, 0]`, `type: 'Shop', pos: [-20, 0, 0]`) +
+        'editor3DPrefabEnter(2);' + liftPost + 'editor3DPrefabBack();');
+    assert.deepEqual(json(run, `level3DPrefabs.get('Shop').objects[1].pos`), [4, 2.5, 0]);
+    assert.deepEqual([run(`level3DPrefabs.get('Shop').fromLevel`), run(`'Shop' in level.prefabs`)], [false, false]);
+    assert.equal(run('live(2).parts[1].pos3D.y'), 2.5);
+    assert.ok(run('editor3DPrefabDirty.has("Shop")'), 'it waits to be saved to its file');
+});
+
+test('only an instance of a prefab can be opened, and closing the editor steps all the way out', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + 'levelEditor.open();');
+    assert.equal(run('editor3DPrefabEnter(2)'), false, 'a box is not a prefab');
+    assert.equal(run('editor3DPrefabEnter()'), false, 'nothing selected');
+    run('editor3DPrefabEnter(1);' + liftPost + 'levelEditor.close();');
+    assert.deepEqual([run('editor3DPrefabStack.length'), run('editor3DLevel === level')], [0, true]);
+    assert.deepEqual(json(run, 'level.prefabs.House.objects[1].pos'), [4, 2.5, 0], 'and the edit is kept');
+});
