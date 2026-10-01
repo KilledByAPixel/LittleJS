@@ -425,13 +425,13 @@ class LightSystemPlugin
             // an automatic size follows the canvas, so reallocate the lightmap when
             // the canvas changed size, after the flush so the batch keeps its texture
             const size = lightSystem.textureSize;
-            if (lightSystem.textureSizeAuto &&
-                (size.x !== mainCanvasSize.x || size.y !== mainCanvasSize.y))
+            const wantX = glClampTextureSize(mainCanvasSize.x), wantY = glClampTextureSize(mainCanvasSize.y);
+            if (lightSystem.textureSizeAuto && (size.x !== wantX || size.y !== wantY))
             {
-                lightSystem.textureSize = mainCanvasSize.copy();
+                lightSystem.textureSize = vec2(wantX, wantY);
                 glContext.bindTexture(glContext.TEXTURE_2D, lightSystem.texture);
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA,
-                    mainCanvasSize.x, mainCanvasSize.y, 0,
+                    wantX, wantY, 0,
                     glContext.RGBA, glContext.UNSIGNED_BYTE, null);
                 // put back the texture the engine tracks, a draw in renderLight must not sample the lightmap
                 if (glActiveTexture)
@@ -571,8 +571,10 @@ class LightSystemPlugin
         this.shadowMapSize = glClampTextureSize(this.shadowMapSize);
         this.shadowTextureSize = glClampTextureSize(this.shadowTextureSize);
         const size = this.textureSize;
-        if (size)
-            this.textureSize = vec2(glClampTextureSize(size.x), glClampTextureSize(size.y));
+        if (!size) return;
+        const x = glClampTextureSize(size.x), y = glClampTextureSize(size.y);
+        if (x !== size.x || y !== size.y)
+            this.textureSize = vec2(x, y); // only when it is too large, this runs every frame
     }
 
     /** Draw a single Light's falloff blob into the currently bound lightmap.

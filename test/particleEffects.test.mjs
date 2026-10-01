@@ -78,3 +78,11 @@ test('a name with line breaks or control characters becomes one line', ()=>
     assert.equal(particleEffectSanitize({name: 'hot\nfire\r\n\tbig\u0007'}).name, 'hot fire big');
     assert.equal(particleEffectSanitize({name: '\n\n'}).name, 'Effect', 'nothing left is the default');
 });
+
+test('an effect\'s angle wraps around, an emitter pointing left stays pointing left', ()=>
+{
+    const near = (a, b)=> assert.ok(Math.abs(a - b) < 1e-9, a + ' is not ' + b);
+    near(particleEffectSanitize({settings: {angle: Math.PI * 1.5}}).settings.angle, -Math.PI / 2);
+    near(particleEffectSanitize({settings: {angle: -Math.PI * 2.25}}).settings.angle, -Math.PI / 4);
+    near(particleEffectSanitize({settings: {angle: 1}}).settings.angle, 1);
+});

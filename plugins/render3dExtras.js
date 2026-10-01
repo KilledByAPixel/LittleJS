@@ -1080,7 +1080,7 @@ class ParticleEmitter3D extends EngineObject3D
         /** @property {Vector3|undefined} - Where the emitter was at its last update, for when its parent is destroyed
          *  @type {Vector3|undefined} */
         this.worldPos3D = undefined;
-        this.emitTimeBuffer = 0;
+        this.emitTimeBuffer = 1; // the first particle comes at once, as the 2D emitter's does
     }
 
     /** Spawn new particles, move the live ones, and go away when done */
@@ -1097,9 +1097,10 @@ class ParticleEmitter3D extends EngineObject3D
         {
             // a rate of zero is an emitter fed by hand, and the global scale only quiets it,
             // neither is a reason to stop counting down the emit time
-            if (this.emitRate && particleEmitRateScale)
+            const rate = this.emitRate * particleEmitRateScale;
+            if (rate > 0 && rate < Infinity)
             {
-                this.emitTimeBuffer += this.emitRate * particleEmitRateScale * timeDelta;
+                this.emitTimeBuffer += rate * timeDelta;
                 for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
                     this.emitParticle();
             }
@@ -1139,7 +1140,9 @@ class ParticleEmitter3D extends EngineObject3D
             const vz = data[k+5] = data[k+5] * damping + gravityZ;
             data[k] += vx, data[k+1] += vy, data[k+2] += vz;
             data[k+18] += data[k+19] *= angleDamping;
-            collideLevel && (this.particleCollide(k, data[k] - vx, data[k+1] - vy, data[k+2] - vz), reread());
+            // true when its collide callback destroyed it, it has had its last callback but the destroy one
+            const gone = collideLevel && this.particleCollide(k, data[k] - vx, data[k+1] - vy, data[k+2] - vz);
+            collideLevel && reread();
             const t = i * trailMax * 3;
             if (trailMax)
             {
@@ -1151,7 +1154,7 @@ class ParticleEmitter3D extends EngineObject3D
                 trail[j] = data[k], trail[j+1] = data[k+1], trail[j+2] = data[k+2];
                 data[k+20] = n + 1;
             }
-            updateCallback && (this.particleCall(updateCallback, k), reread());
+            updateCallback && !gone && (this.particleCall(updateCallback, k), reread());
             if ((data[k+17] += timeDelta) >= data[k+16])
             {
                 // dead: the last particle takes its slot, trail and all, order does not matter
@@ -1253,13 +1256,14 @@ class ParticleEmitter3D extends EngineObject3D
         out[k] = view.pos.x, out[k+1] = view.pos.y, out[k+2] = view.pos.z;
         out[k+3] = view.velocity.x, out[k+4] = view.velocity.y, out[k+5] = view.velocity.z;
         if (view.destroyed)
-            out[k+17] = max(out[k+17], out[k+16] - timeDelta); // aged past its life this update
+            out[k+17] = max(out[k+17], out[k+16]); // its life lived: a step short of it can round to just under
         return result;
     }
 
     // stop the particle at k where its last move went into the level, from where it was: back at the surface, a hair
     // off it, its speed into it turned around by restitution and its speed along it kept by friction, unless the
-    // collide callback lets it through; one that starts inside is let go, as a 2D one is
+    // collide callback lets it through; one that starts inside is let go, as a 2D one is; true when the callback
+    // destroyed it
     particleCollide(k, x, y, z)
     {
         let data = this.particleData;
@@ -1272,11 +1276,11 @@ class ParticleEmitter3D extends EngineObject3D
             if (h && (!hit || h.distance < hit.distance))
                 hit = h, level = l;
         }
-        if (!hit) return;
+        if (!hit) return false;
         const point = from.lerp(to, hit.distance);
         const callback = this.particleCollideCallback;
         if (callback && (!this.particleCall(callback, k, level, point.copy()) || this.particleView.destroyed))
-            return; // let through, or destroyed by the callback
+            return this.particleView.destroyed; // let through, or destroyed by the callback
         data = this.particleData; // as the callback left it, an emit may have grown it
 
         const n = hit.normal, v = vec3(data[k+3], data[k+4], data[k+5]), into = n.scale(v.dot(n));
@@ -1286,6 +1290,7 @@ class ParticleEmitter3D extends EngineObject3D
         const out = v.subtract(into).scale(friction).subtract(into.scale(restitution)), p = point.add(n.scale(1e-3));
         data[k] = p.x, data[k+1] = p.y, data[k+2] = p.z;
         data[k+3] = out.x, data[k+4] = out.y, data[k+5] = out.z;
+        return false;
     }
 
     /** Draw the particles, as flat squares or as streaks when trailTime is set
@@ -1624,8 +1629,8 @@ class LensFlare3D extends EngineObject3D
         const direction = render3D.sunDirection;
         if (!direction.lengthSquared()) return true;
         const ray = new Ray3D(render3D.camera.pos, direction.normalize());
-        const blockers = engineObjects.filter((o)=> o !== this && o instanceof EngineObject3D && !o.transparent &&
-            !o.additive);
+        const blockers = engineObjects.filter((o)=> o !== this && o instanceof EngineObject3D && !o.destroyed &&
+            !o.transparent && !o.additive);
         // a voxel map says block by block what is see through: glass, water and leaves let the sun by, and the
         // ray goes on to the blocks behind them
         const maps = /** @type {Array<VoxelMap>} */ (typeof VoxelMap == 'undefined' ? [] :
@@ -1633,7 +1638,11 @@ class LensFlare3D extends EngineObject3D
         for (const map of maps)
             if (map.raycast(ray, Infinity, (type)=> !map.blockType(type).seeThrough))
                 return true;
-        return !!render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o)));
+        // an object is hit by its box, and a box the camera is inside, a room, a wide floor or the player's own
+        // body, says nothing of what is in the way: the ray the other way hits it too, and it is left out
+        const back = new Ray3D(ray.origin, ray.direction.scale(-1));
+        const inside = (o)=> !(o instanceof HeightMap) && render3DRaycastObject(back, o) !== undefined;
+        return !!render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o) && !inside(o)));
     }
 
     /** Ease visible toward whether the sun shows, called automatically each frame */

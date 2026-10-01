@@ -107,3 +107,34 @@ test('3D stick grips a particle where it lands on a level, whatever the level\'s
     assert.ok(slide([{name: 'stick', strength: 1}]) < 1e-6, 'stuck where it landed');
     ground.destroy();
 });
+
+test('a 3D emitter makes its first particle at once, as the 2D one does, and an endless rate does not hang it', ()=>
+{
+    const { ParticleEmitter3D, vec3 } = LJS;
+    const slow = new ParticleEmitter3D(vec3(), 0, 0, 3);
+    slow.update();
+    assert.equal(slow.particleCount, 1, 'the first one, not a third of a second later');
+    slow.destroy(true);
+    const endless = new ParticleEmitter3D(vec3(), 0, 0, Infinity);
+    endless.update();
+    assert.equal(endless.particleCount, 0, 'no rate to count particles by');
+    endless.destroy(true);
+});
+
+test('a 3D particle its collide callback destroyed gets no update callback that frame', ()=>
+{
+    const { HeightMap, ParticleEmitter3D, vec2, vec3 } = LJS;
+    const ground = new HeightMap([[0, 0], [0, 0]], vec2(20), 1);
+    const e = new ParticleEmitter3D(vec3(0, 5, 0), 0, 0, 0);
+    e.collideLevel = true;
+    e.emitParticle();
+    const d = e.particleData;
+    d[0] = 0, d[1] = .05, d[2] = 0, d[3] = 0, d[4] = -.2, d[5] = 0;
+    let hits = 0, updatesAfterHit = 0;
+    e.particleCollideCallback = (p)=> { ++hits; p.destroy(); };
+    e.particleUpdateCallback = ()=> { hits && ++updatesAfterHit; };
+    e.update();
+    assert.deepEqual([hits, updatesAfterHit, e.particleCount], [1, 0, 0]);
+    e.destroy(true);
+    ground.destroy();
+});

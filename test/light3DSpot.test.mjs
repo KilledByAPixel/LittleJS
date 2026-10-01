@@ -124,3 +124,24 @@ test('a light\'s glow draws nothing where its texture can not be made', ()=>
         render3D.drawBillboard = ()=> ++draws; glContext = {}; lamp.render3D();`);
     assert.equal(run('draws'), 0, 'no plain square in place of the glow');
 });
+
+test('a spotlight that casts the shadows lights no wider than its shadow map covers', ()=>
+{
+    const run = load();
+    // 86 degrees to each side, wider than a shadow map can look; forward is -z
+    run(coneCode + `var lamp = new Light3D(vec3(), 10); lamp.coneAngle = 1.5; lamp.coneSoftness = 0;
+        var along = (degrees)=> reach(lamp, sin(degrees * PI / 180), 0, -cos(degrees * PI / 180));`);
+    near(run('along(82)'), 1, 'on its own it lights its whole cone');
+    run('render3D.shadowLight = lamp');
+    near(run('along(82)'), 0, 'as the shadow light it stops where its map does');
+    near(run('along(70)'), 1);
+});
+
+test('a shadow light with a tiny radius still has a shadow map that works', ()=>
+{
+    const run = load();
+    run(`var lamp = new Light3D(vec3(0, 1, 0), .02); lamp.coneAngle = .5; render3D.shadowLight = lamp;
+        render3D.updateShadowMatrix();`);
+    assert.ok(run('render3D.shadowDepthBias > 0 && isFinite(render3D.shadowDepthBias)'), 'a bias that is a number');
+    assert.ok(list(run, 'render3D.shadowMatrix.m').every(Number.isFinite), 'and a matrix of numbers');
+});

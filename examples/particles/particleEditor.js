@@ -137,7 +137,7 @@ function refreshUnknownBehaviors()
         remove.title = 'Remove';
         remove.onclick = ()=>
         {
-            effect.behaviors = effect.behaviors.filter(x=> x !== b);
+            effect.behaviors = effect.behaviors.filter(x=> x.name !== b.name);
             refreshAll();
             effectChanged();
         };
@@ -369,7 +369,10 @@ function setBehavior(name, on, strength)
 
     // kept in table order so the export reads the same every time
     const order = (b)=>
-        particleEffectBehaviors.indexOf(effectBehavior(b.name));
+    {
+        const i = particleEffectBehaviors.indexOf(effectBehavior(b.name));
+        return i < 0 ? 1e9 : i; // a game's own, after the ones known
+    };
     effect.behaviors = others.sort((a, b)=> order(a) - order(b));
     refreshAll();
     effectChanged();

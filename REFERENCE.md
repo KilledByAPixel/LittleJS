@@ -1285,7 +1285,8 @@ render3D.shadowMapSize = 1024         // pixels across the shadow map, rebuilt w
 glClampTextureSize(size)              // that fallback, for a texture a game makes by size itself
 render3D.shadowLight = flashlight     // a spotlight, a Light3D with a coneAngle, casts the shadows in place of the
                                       // sun, down its cone as far as its radius; the sun still lights the scene;
-                                      // undefined for the sun; one caster at a time
+                                      // undefined for the sun; one caster at a time; while it casts them its
+                                      // cone is at most 1.35, what its shadow map covers
 render3D.shadowRange = 40             // world size the map covers around shadowCenter, smaller is sharper
                                       // it is a square facing the light, so ~1.5x an area's width covers it
 render3D.shadowCenter = undefined // Vector3 center of the shadowed area, read each frame; undefined follows the camera

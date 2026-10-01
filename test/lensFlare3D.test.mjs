@@ -129,3 +129,13 @@ test('see-through blocks of a voxel map do not hide the sun, the blocks behind t
     assert.equal(run('!!render3D.pick(new Ray3D(vec3(), vec3(0, 0, -1)))'), true, 'picking still finds the glass');
     run('map.destroy()');
 });
+
+test('an object the camera is inside, a room or the player\'s own body, does not hide the sun', ()=>
+{
+    const run = load();
+    run(`var flare = new LensFlare3D; sun(0, 0, -1);
+        var room = new EngineObject3D(vec3(), render3D.boxMesh); room.scale3D = vec3(30); steps(flare, 20);`);
+    assert.equal(run('flare.visible'), 1, 'inside the room');
+    run('room.pos3D = vec3(0, 0, -40); steps(flare, 20);');
+    assert.equal(run('flare.visible'), 0, 'the same box ahead of the camera hides it');
+});

@@ -557,6 +557,24 @@ function editor3DSetObjects(list)
             made instanceof EngineObject3D && !made.destroyed;
         onlyMoved ? editor3DPlaceInstance(made, object) : editor3DMakeInstance(object);
     }
+    editor3DShadowLight();
+}
+
+// the light that casts the shadows is the level's last Light that asks to, as it is after a load, whatever order
+// the edits made them in; a light of the game's own is left alone while no Light of the level asks
+function editor3DShadowLight()
+{
+    if (!render3D) return;
+    let light;
+    for (const object of editor3DObjects())
+    {
+        const made = editor3DInstances.get(object.id);
+        if (object.type === 'Light' && object.properties?.shadows === true && made instanceof Light3D && !made.destroyed)
+            light = made;
+    }
+    const now = render3D.shadowLight;
+    if (light || !now || now.destroyed || [...editor3DInstances.values()].some((made)=> made === now))
+        render3D.shadowLight = light;
 }
 
 // change the level's objects as part of the edit being made: change edits a copy of the list; the changes until
@@ -596,6 +614,11 @@ function editor3DSetParts(parts)
         editor3DSame(parts[name], editor3DLevelPart(name)) || editor3DSetPart(name, parts[name]);
 }
 
+// the stroke being made, started here with the level as it is when there is none: called before the level changes
+/** @return {{before: Array<Object>, parts: Object, painted?: boolean, sculpted?: boolean}} */
+function editor3DStrokeBegin()
+{ return editor3DStroke ||= {before: editor3DCopy(editor3DObjects()), parts: editor3DLevelParts()}; }
+
 // change a part of the level as part of the edit being made, as editor3DChange does its objects: change is given
 // a copy of the part, undefined when the level has none, and returns the new one, or undefined for none; false
 // when nothing changed
@@ -604,7 +627,7 @@ function editor3DChangePart(name, change)
     if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
     const parts = editor3DLevelParts(), after = change(parts[name] && editor3DCopy(parts[name]));
     if (editor3DSame(parts[name], after)) return false;
-    editor3DStroke ||= {before: editor3DCopy(editor3DObjects()), parts};
+    editor3DStrokeBegin();
     editor3DSetPart(name, after);
     return true;
 }
@@ -681,8 +704,7 @@ function editor3DVoxelSet(cell, type)
     const map = editor3DVoxelMap();
     if (!map || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
     if (!editor3DVoxelInside(map, cell) || map.getVoxel(cell) === type) return false;
-    editor3DStroke ||= {before: editor3DCopy(editor3DObjects()), parts: editor3DLevelParts()};
-    editor3DStroke.painted = true;
+    editor3DStrokeBegin().painted = true;
     map.setVoxel(cell, type);
     return true;
 }
@@ -779,7 +801,7 @@ function editor3DTerrainSculpt(point, mode, seconds)
     const c0 = max(0, ceil((point.x - radius - x0) / stepX)), c1 = min(columns - 1, floor((point.x + radius - x0) / stepX));
     const r0 = max(0, ceil((point.z - radius - z0) / stepZ)), r1 = min(rows - 1, floor((point.z + radius - z0) / stepZ));
     // smoothing reads the ground as it was, so the order the samples are done in does not show
-    const old = mode === 'smooth' ? heights.map((row)=> row.slice()) : heights;
+    const old = mode === 'smooth' ? heights.map((row, r)=> r >= r0 - 1 && r <= r1 + 1 ? row.slice() : row) : heights;
     const rate = strength * 10 * seconds; // world units of height at full strength, 10 a second
     let changed = false;
     for (let r = r0; r <= r1; ++r)
@@ -804,8 +826,7 @@ function editor3DTerrainSculpt(point, mode, seconds)
         changed = true;
     }
     if (!changed) return false;
-    editor3DStroke ||= {before: editor3DCopy(editor3DObjects()), parts: editor3DLevelParts()};
-    editor3DStroke.sculpted = true;
+    editor3DStrokeBegin().sculpted = true;
     map.rebuild();
     return true;
 }
@@ -2279,6 +2300,9 @@ function editor3DPanelUpdate()
     editor3DSceneUpdate(p.sceneRows);
 }
 
+// a level's color as a color input takes it, six digits and no alpha, white for one it can not show
+function editor3DInputColor(hex) { return /^#[0-9a-f]{6}/i.test(hex) ? hex.slice(0, 7) : '#ffffff'; }
+
 // the terrain box, shown with the Terrain tool: without a terrain, its size, cells and height and a button to add
 // it; with one, the brush's size and strength, the terrain's color, and a button to take it away
 function editor3DTerrainBoxUpdate(box)
@@ -2340,7 +2364,7 @@ function editor3DTerrainBoxUpdate(box)
         (v)=> editor3DTerrainBrush.strength = v);
     const color = editorElement('input', line('Color'), field + ';width:60px');
     color.type = 'color';
-    color.value = /^#[0-9a-f]{6}/i.test(terrain.color) ? terrain.color.slice(0, 7) : '#ffffff';
+    color.value = editor3DInputColor(terrain.color);
     color.oninput = ()=> editor3DChangePart('terrain', (t)=> ({...t, color: color.value}));
     color.onchange = ()=> { color.oninput(); editor3DStrokeEnd(); color.blur(); };
     const remove = editorElement('button', box, 'margin-top:4px;padding:2px 6px;cursor:pointer', 'Remove terrain');
@@ -2378,7 +2402,7 @@ function editor3DBlocksUpdate(box)
         add.title = 'An empty map of blocks, centered, its bottom on the ground';
         add.onclick = ()=>
         {
-            const [x, y, z] = inputs.map((i)=> clamp(floor(parseFloat(i.value)) || 1, 1, 256));
+            const [x, y, z] = inputs.map((i, k)=> clamp(floor(parseFloat(i.value)) || [32, 16, 32][k], 1, 256));
             editor3DVoxelAdd(vec3(x, y, z));
             add.blur();
         };
@@ -2440,7 +2464,7 @@ function editor3DBlocksUpdate(box)
     // the map's size, to change
     const sizeRow = editorElement('label', box, 'display:flex;gap:4px;align-items:center;margin:2px 0');
     editorElement('span', sizeRow, 'flex:1', 'Map size');
-    const sizes = ['x', 'y', 'z'].map((axis)=>
+    const axes = ['x', 'y', 'z'], sizes = axes.map((axis)=>
     {
         const input = editorElement('input', sizeRow, field);
         input.type = 'number';
@@ -2452,7 +2476,8 @@ function editor3DBlocksUpdate(box)
     resize.title = 'Change the map\'s size, its blocks stay where they are; Undo brings back what was cut off';
     resize.onclick = ()=>
     {
-        const [x, y, z] = sizes.map((i)=> clamp(floor(parseFloat(i.value)) || 1, 1, 256));
+        // a field left empty keeps the size it has
+        const [x, y, z] = sizes.map((i, k)=> clamp(floor(parseFloat(i.value)) || map.mapSize[axes[k]], 1, 256));
         editor3DVoxelResize(vec3(x, y, z));
         resize.blur();
     };
@@ -2507,7 +2532,7 @@ function editor3DSceneUpdate(box)
     {
         const input = editorElement('input', line(name, title), field + ';width:60px');
         input.type = 'color';
-        input.value = /^#[0-9a-f]{6}/i.test(hex) ? hex.slice(0, 7) : '#ffffff';
+        input.value = editor3DInputColor(hex);
         return live(input, ()=> set(input.value));
     };
     const number = (row, v, set)=>
@@ -2520,7 +2545,7 @@ function editor3DSceneUpdate(box)
         input.onchange = ()=>
         {
             const n = parseFloat(input.value);
-            isNumber(n) && n >= 0 && set(n);
+            isNumber(n) && n >= 0 ? set(v = n) : input.value = v + ''; // one not taken shows what it has again
             editor3DStrokeEnd();
             input.blur();
         };
@@ -2554,7 +2579,7 @@ function editor3DSceneUpdate(box)
     const [around, height] = editor3DSunAngles(value('sunDirection'));
     slider('Sun around', 'Where the sun is around the scene, in degrees', 0, 359, 1, around, (v)=>
         change('sunDirection', (now)=> editor3DSunDirection(v, editor3DSunAngles(now)[1])));
-    slider('Sun height', 'How high the sun is over the horizon, in degrees', 5, 90, 1, height, (v)=>
+    slider('Sun height', 'How high the sun is over the horizon, in degrees', 5, 89, 1, height, (v)=>
         change('sunDirection', (now)=> editor3DSunDirection(editor3DSunAngles(now)[0], v)));
     color('Sun color', '', value('sunColor'), (hex)=> change('sunColor', hex));
 

@@ -490,3 +490,20 @@ test('entries of a level that are not objects are dropped when the editor takes 
     assert.deepEqual(json(run, 'level.objects'), [{ id: 1, type: 'Box', pos: [0, .5, 0] }]);
     assert.equal(run('editor3DIsOpen'), true);
 });
+
+test('the level\'s Light that casts the shadows is the last one that asks to, kept in step as they are edited', async ()=>
+{
+    const { run } = await loadGame();
+    run(`var level = { objects: [
+        { id: 1, type: 'Light', pos: [0, 5, 0], properties: { cone: 30, shadows: true } },
+        { id: 2, type: 'Light', pos: [4, 5, 0], properties: { cone: 30, shadows: true } }] };
+        level3DLoad(level);
+        var live = (id)=> editor3DInstances.get(id);`);
+    assert.equal(run('render3D.shadowLight === live(2)'), true, 'the last one made');
+    run('editor3DChange((list)=> { delete list[1].properties.shadows; }); editor3DStrokeEnd();');
+    assert.equal(run('render3D.shadowLight === live(1)'), true, 'the other light casts them now, as after a reload');
+    run('editor3DChange((list)=> { delete list[0].properties.shadows; }); editor3DStrokeEnd();');
+    assert.equal(run('render3D.shadowLight'), undefined, 'none asks, the sun again');
+    run('editor3DUndo()');
+    assert.equal(run('render3D.shadowLight === live(1)'), true);
+});

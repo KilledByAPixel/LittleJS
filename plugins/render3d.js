@@ -433,12 +433,17 @@ function render3DShadowCaster()
         light.intensity > 0 && light.color.a > 0 ? light : undefined;
 }
 
+// the widest cone a shadow map can look down, to each side; the light that casts the shadows lights no wider, or
+// what is past the map's edge would be lit with nothing to shade it
+const RENDER3D_SHADOW_CONE_MAX = 1.35;
+
 // a light's cone as the four numbers the shader gets: the way it shines, scaled so that its dot with the way to
 // a point, less the fourth number, is 0 at the edge of the cone and 1 where its fade starts; a light with no cone
 // gets numbers that make it 1 every way
 function render3DLightCone(light)
 {
-    const angle = light.directional ? 0 : min(light.coneAngle, PI);
+    const widest = light === render3DShadowCaster() ? RENDER3D_SHADOW_CONE_MAX : PI;
+    const angle = light.directional ? 0 : min(light.coneAngle, widest);
     if (!(angle > 0)) return [0, 0, 0, -1];
     const outer = cos(angle), inner = cos(angle * (1 - clamp(light.coneSoftness)));
     const k = 1 / max(inner - outer, 1e-4), forward = light.getForward3D();
@@ -1225,8 +1230,9 @@ class Render3DPlugin
             // a spotlight's map looks down its cone with perspective, from just in front of it out to its radius
             const pos = caster.getWorldPos3D(), forward = caster.getForward3D();
             const up = abs(forward.y) > .99 ? vec3(0, 0, 1) : vec3(0, 1, 0);
-            const far = caster.radius, near = max(far / 500, .02);
-            const fov = min(min(caster.coneAngle, PI) * 2 + .1, 2.8);
+            // the near plane stays in front of the far one however small the light
+            const far = caster.radius, near = min(max(far / 500, .02), far / 2);
+            const fov = min(caster.coneAngle, RENDER3D_SHADOW_CONE_MAX) * 2 + .1;
             this.shadowMatrix = Matrix4.perspective(fov, 1, near, far).multiply(
                 Matrix4.lookAt(pos, pos.add(forward), up).invert());
             this.shadowPlanes = render3DFrustumPlanes(this.shadowMatrix);

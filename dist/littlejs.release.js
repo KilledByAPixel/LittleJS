@@ -13138,13 +13138,13 @@ class LightSystemPlugin
             // an automatic size follows the canvas, so reallocate the lightmap when
             // the canvas changed size, after the flush so the batch keeps its texture
             const size = lightSystem.textureSize;
-            if (lightSystem.textureSizeAuto &&
-                (size.x !== mainCanvasSize.x || size.y !== mainCanvasSize.y))
+            const wantX = glClampTextureSize(mainCanvasSize.x), wantY = glClampTextureSize(mainCanvasSize.y);
+            if (lightSystem.textureSizeAuto && (size.x !== wantX || size.y !== wantY))
             {
-                lightSystem.textureSize = mainCanvasSize.copy();
+                lightSystem.textureSize = vec2(wantX, wantY);
                 glContext.bindTexture(glContext.TEXTURE_2D, lightSystem.texture);
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA,
-                    mainCanvasSize.x, mainCanvasSize.y, 0,
+                    wantX, wantY, 0,
                     glContext.RGBA, glContext.UNSIGNED_BYTE, null);
                 // put back the texture the engine tracks, a draw in renderLight must not sample the lightmap
                 if (glActiveTexture)
@@ -13284,8 +13284,10 @@ class LightSystemPlugin
         this.shadowMapSize = glClampTextureSize(this.shadowMapSize);
         this.shadowTextureSize = glClampTextureSize(this.shadowTextureSize);
         const size = this.textureSize;
-        if (size)
-            this.textureSize = vec2(glClampTextureSize(size.x), glClampTextureSize(size.y));
+        if (!size) return;
+        const x = glClampTextureSize(size.x), y = glClampTextureSize(size.y);
+        if (x !== size.x || y !== size.y)
+            this.textureSize = vec2(x, y); // only when it is too large, this runs every frame
     }
 
     /** Draw a single Light's falloff blob into the currently bound lightmap.
@@ -22389,12 +22391,17 @@ function render3DShadowCaster()
         light.intensity > 0 && light.color.a > 0 ? light : undefined;
 }
 
+// the widest cone a shadow map can look down, to each side; the light that casts the shadows lights no wider, or
+// what is past the map's edge would be lit with nothing to shade it
+const RENDER3D_SHADOW_CONE_MAX = 1.35;
+
 // a light's cone as the four numbers the shader gets: the way it shines, scaled so that its dot with the way to
 // a point, less the fourth number, is 0 at the edge of the cone and 1 where its fade starts; a light with no cone
 // gets numbers that make it 1 every way
 function render3DLightCone(light)
 {
-    const angle = light.directional ? 0 : min(light.coneAngle, PI);
+    const widest = light === render3DShadowCaster() ? RENDER3D_SHADOW_CONE_MAX : PI;
+    const angle = light.directional ? 0 : min(light.coneAngle, widest);
     if (!(angle > 0)) return [0, 0, 0, -1];
     const outer = cos(angle), inner = cos(angle * (1 - clamp(light.coneSoftness)));
     const k = 1 / max(inner - outer, 1e-4), forward = light.getForward3D();
@@ -23181,8 +23188,9 @@ class Render3DPlugin
             // a spotlight's map looks down its cone with perspective, from just in front of it out to its radius
             const pos = caster.getWorldPos3D(), forward = caster.getForward3D();
             const up = abs(forward.y) > .99 ? vec3(0, 0, 1) : vec3(0, 1, 0);
-            const far = caster.radius, near = max(far / 500, .02);
-            const fov = min(min(caster.coneAngle, PI) * 2 + .1, 2.8);
+            // the near plane stays in front of the far one however small the light
+            const far = caster.radius, near = min(max(far / 500, .02), far / 2);
+            const fov = min(caster.coneAngle, RENDER3D_SHADOW_CONE_MAX) * 2 + .1;
             this.shadowMatrix = Matrix4.perspective(fov, 1, near, far).multiply(
                 Matrix4.lookAt(pos, pos.add(forward), up).invert());
             this.shadowPlanes = render3DFrustumPlanes(this.shadowMatrix);
@@ -27777,7 +27785,7 @@ class ParticleEmitter3D extends EngineObject3D
         /** @property {Vector3|undefined} - Where the emitter was at its last update, for when its parent is destroyed
          *  @type {Vector3|undefined} */
         this.worldPos3D = undefined;
-        this.emitTimeBuffer = 0;
+        this.emitTimeBuffer = 1; // the first particle comes at once, as the 2D emitter's does
     }
 
     /** Spawn new particles, move the live ones, and go away when done */
@@ -27794,9 +27802,10 @@ class ParticleEmitter3D extends EngineObject3D
         {
             // a rate of zero is an emitter fed by hand, and the global scale only quiets it,
             // neither is a reason to stop counting down the emit time
-            if (this.emitRate && particleEmitRateScale)
+            const rate = this.emitRate * particleEmitRateScale;
+            if (rate > 0 && rate < Infinity)
             {
-                this.emitTimeBuffer += this.emitRate * particleEmitRateScale * timeDelta;
+                this.emitTimeBuffer += rate * timeDelta;
                 for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
                     this.emitParticle();
             }
@@ -27836,7 +27845,9 @@ class ParticleEmitter3D extends EngineObject3D
             const vz = data[k+5] = data[k+5] * damping + gravityZ;
             data[k] += vx, data[k+1] += vy, data[k+2] += vz;
             data[k+18] += data[k+19] *= angleDamping;
-            collideLevel && (this.particleCollide(k, data[k] - vx, data[k+1] - vy, data[k+2] - vz), reread());
+            // true when its collide callback destroyed it, it has had its last callback but the destroy one
+            const gone = collideLevel && this.particleCollide(k, data[k] - vx, data[k+1] - vy, data[k+2] - vz);
+            collideLevel && reread();
             const t = i * trailMax * 3;
             if (trailMax)
             {
@@ -27848,7 +27859,7 @@ class ParticleEmitter3D extends EngineObject3D
                 trail[j] = data[k], trail[j+1] = data[k+1], trail[j+2] = data[k+2];
                 data[k+20] = n + 1;
             }
-            updateCallback && (this.particleCall(updateCallback, k), reread());
+            updateCallback && !gone && (this.particleCall(updateCallback, k), reread());
             if ((data[k+17] += timeDelta) >= data[k+16])
             {
                 // dead: the last particle takes its slot, trail and all, order does not matter
@@ -27950,13 +27961,14 @@ class ParticleEmitter3D extends EngineObject3D
         out[k] = view.pos.x, out[k+1] = view.pos.y, out[k+2] = view.pos.z;
         out[k+3] = view.velocity.x, out[k+4] = view.velocity.y, out[k+5] = view.velocity.z;
         if (view.destroyed)
-            out[k+17] = max(out[k+17], out[k+16] - timeDelta); // aged past its life this update
+            out[k+17] = max(out[k+17], out[k+16]); // its life lived: a step short of it can round to just under
         return result;
     }
 
     // stop the particle at k where its last move went into the level, from where it was: back at the surface, a hair
     // off it, its speed into it turned around by restitution and its speed along it kept by friction, unless the
-    // collide callback lets it through; one that starts inside is let go, as a 2D one is
+    // collide callback lets it through; one that starts inside is let go, as a 2D one is; true when the callback
+    // destroyed it
     particleCollide(k, x, y, z)
     {
         let data = this.particleData;
@@ -27969,11 +27981,11 @@ class ParticleEmitter3D extends EngineObject3D
             if (h && (!hit || h.distance < hit.distance))
                 hit = h, level = l;
         }
-        if (!hit) return;
+        if (!hit) return false;
         const point = from.lerp(to, hit.distance);
         const callback = this.particleCollideCallback;
         if (callback && (!this.particleCall(callback, k, level, point.copy()) || this.particleView.destroyed))
-            return; // let through, or destroyed by the callback
+            return this.particleView.destroyed; // let through, or destroyed by the callback
         data = this.particleData; // as the callback left it, an emit may have grown it
 
         const n = hit.normal, v = vec3(data[k+3], data[k+4], data[k+5]), into = n.scale(v.dot(n));
@@ -27983,6 +27995,7 @@ class ParticleEmitter3D extends EngineObject3D
         const out = v.subtract(into).scale(friction).subtract(into.scale(restitution)), p = point.add(n.scale(1e-3));
         data[k] = p.x, data[k+1] = p.y, data[k+2] = p.z;
         data[k+3] = out.x, data[k+4] = out.y, data[k+5] = out.z;
+        return false;
     }
 
     /** Draw the particles, as flat squares or as streaks when trailTime is set
@@ -28321,8 +28334,8 @@ class LensFlare3D extends EngineObject3D
         const direction = render3D.sunDirection;
         if (!direction.lengthSquared()) return true;
         const ray = new Ray3D(render3D.camera.pos, direction.normalize());
-        const blockers = engineObjects.filter((o)=> o !== this && o instanceof EngineObject3D && !o.transparent &&
-            !o.additive);
+        const blockers = engineObjects.filter((o)=> o !== this && o instanceof EngineObject3D && !o.destroyed &&
+            !o.transparent && !o.additive);
         // a voxel map says block by block what is see through: glass, water and leaves let the sun by, and the
         // ray goes on to the blocks behind them
         const maps = /** @type {Array<VoxelMap>} */ (typeof VoxelMap == 'undefined' ? [] :
@@ -28330,7 +28343,11 @@ class LensFlare3D extends EngineObject3D
         for (const map of maps)
             if (map.raycast(ray, Infinity, (type)=> !map.blockType(type).seeThrough))
                 return true;
-        return !!render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o)));
+        // an object is hit by its box, and a box the camera is inside, a room, a wide floor or the player's own
+        // body, says nothing of what is in the way: the ray the other way hits it too, and it is left out
+        const back = new Ray3D(ray.origin, ray.direction.scale(-1));
+        const inside = (o)=> !(o instanceof HeightMap) && render3DRaycastObject(back, o) !== undefined;
+        return !!render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o) && !inside(o)));
     }
 
     /** Ease visible toward whether the sun shows, called automatically each frame */
@@ -29911,7 +29928,9 @@ function particleEffectSanitize(raw)
             settings[setting.name] = value === '' || particleEffectShapes.includes(value) ? value : fallback;
         else if (isNumber(value))
         {
-            const clamped = clamp(value, setting.hardMin, setting.hardMax);
+            // an angle past half a turn comes around, a clamp would point it the other way
+            const wraps = setting.name === 'angle' && isFinite(value) && abs(value) > PI;
+            const clamped = clamp(wraps ? mod(value + PI, 2*PI) - PI : value, setting.hardMin, setting.hardMax);
             settings[setting.name] = setting.step >= 1 ? round(clamped) : clamped;
         }
         else
@@ -29990,9 +30009,11 @@ function particleEffectsGet(name) { return particleEffectsByName.get(String(name
  *  @param {string} text
  *  @return {Array<Object>}
  *  @memberof ParticleEffects */
-function particleEffectsParse(text)
+function particleEffectsParse(text) { return particleEffectsFromData(JSON.parse(text)); }
+
+// a library file's data, or one effect's, into sanitized effects
+function particleEffectsFromData(data)
 {
-    const data = JSON.parse(text);
     const list = isArray(data?.effects) ? data.effects : data?.settings ? [data] : undefined;
     if (!list || !list.length)
         throw new Error('no effects in this file');
@@ -30011,7 +30032,7 @@ function particleEffectsText(effects) { return JSON.stringify({version:1, effect
  *  @memberof ParticleEffects */
 async function particleEffectsLoad(url)
 {
-    const effects = particleEffectsParse(JSON.stringify(await fetchJSON(url)));
+    const effects = particleEffectsFromData(await fetchJSON(url));
     particleEffectsAdd(effects);
     return effects;
 }
@@ -30189,7 +30210,13 @@ function particleEffectTileInfo(s)
  *  @memberof ParticleEffects */
 function particleEffectApply(emitter, effect)
 {
-    effect = particleEffectSanitize(effect); // an effect written by hand or changed since it was added
+    // an effect written by hand or changed since it was added
+    particleEffectSet(emitter, particleEffectSanitize(effect));
+}
+
+// set a 2D emitter to an effect that is sanitized already, as a play's is
+function particleEffectSet(emitter, effect)
+{
     const s = effect.settings, ended = emitter.emitTime < 0; // destroyed, its last particles going
     for (const setting of particleEffectSettings)
         if (!particleEffectIndirect.includes(setting.name))
@@ -30240,7 +30267,7 @@ function particleEffect(nameOrEffect, pos=vec2(), options={})
     const effect = particleEffectResolve(nameOrEffect, options);
     if (!effect) return;
     const emitter = new ParticleEmitter(pos.copy());
-    particleEffectApply(emitter, effect);
+    particleEffectSet(emitter, effect);
     emitter.scale = options.scale ?? 1;
     if (options.angle !== undefined)
         emitter.angle = options.angle;
@@ -30304,7 +30331,7 @@ function particleEffectFromEmitter(emitter, name='Effect')
         p.velocity.y += (p.pos.x - c.x) * s * .002;
     };
     b('wind').update3D = (p, s)=> p.velocity.x += s * .004 * p.scale * min(p.age / p.lifeTime, 1);
-    // stick has no 3D push: particleEffect3D makes it the friction a particle lands with
+    // stick has no 3D push: particleEffectApply3D makes it the emitter's stick, its grip on landing
 }
 
 /** Set a 3D emitter to an effect, live, so a running one keeps its particles; its place, scale and flatten stay
@@ -30313,7 +30340,13 @@ function particleEffectFromEmitter(emitter, name='Effect')
  *  @memberof ParticleEffects */
 function particleEffectApply3D(emitter, effect)
 {
-    effect = particleEffectSanitize(effect); // an effect written by hand or changed since it was added
+    // an effect written by hand or changed since it was added
+    particleEffectSet3D(emitter, particleEffectSanitize(effect));
+}
+
+// set a 3D emitter to an effect that is sanitized already, as a play's is
+function particleEffectSet3D(emitter, effect)
+{
     const s = effect.settings, e = emitter;
     // a circle is a sphere and a rectangle a box as deep as it is wide
     e.emitSize = s.emitRect ? vec3(s.emitSize, s.emitHeight, s.emitSize) : s.emitSize;
@@ -30337,8 +30370,8 @@ function particleEffectApply3D(emitter, effect)
  *  - The same effect data as particleEffect, so the look carries across: a circle spawn area becomes a sphere and a
  *    rectangle a box as deep as it is wide, both flat across the way it emits with options.flatten, a disc or a
  *    sheet; a trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
- *    randomColorLinear, velocityInheritance, localSpace) are left out; the stick behavior becomes the friction a
- *    particle lands with
+ *    randomColorLinear, velocityInheritance, localSpace) are left out; the stick behavior becomes the emitter's
+ *    stick, its grip where a particle lands
  *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector3} [pos3D]
  *  @param {Object} [options] - scale, hue, saturation, angle, tileInfo and any setting as particleEffect; angle turns it
@@ -30350,7 +30383,7 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
     const effect = particleEffectResolve(nameOrEffect, options);
     if (!effect) return;
     const e = new ParticleEmitter3D(pos3D.copy());
-    particleEffectApply3D(e, effect);
+    particleEffectSet3D(e, effect);
     if (options.angle !== undefined)
         e.rotation3D = vec3(0, 0, -options.angle);
     e.scale3D = vec3(options.scale ?? 1);

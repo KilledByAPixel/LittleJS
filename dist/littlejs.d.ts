@@ -9609,7 +9609,7 @@ declare module "littlejsengine" {
         /** Spawn one particle now */
         emitParticle(): void;
         particleCall(callback: any, k: any, level: any, pos: any): any;
-        particleCollide(k: any, x: any, y: any, z: any): void;
+        particleCollide(k: any, x: any, y: any, z: any): boolean;
     }
     /**
      * Trail3D - A ribbon through where the object has been, thinning and fading with age
@@ -10415,8 +10415,8 @@ declare module "littlejsengine" {
      *  - The same effect data as particleEffect, so the look carries across: a circle spawn area becomes a sphere and a
      *    rectangle a box as deep as it is wide, both flat across the way it emits with options.flatten, a disc or a
      *    sheet; a trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
-     *    randomColorLinear, velocityInheritance, localSpace) are left out; the stick behavior becomes the friction a
-     *    particle lands with
+     *    randomColorLinear, velocityInheritance, localSpace) are left out; the stick behavior becomes the emitter's
+     *    stick, its grip where a particle lands
      *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
      *  @param {Vector3} [pos3D]
      *  @param {Object} [options] - scale, hue, saturation, angle, tileInfo and any setting as particleEffect; angle turns it

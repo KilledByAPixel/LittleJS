@@ -995,6 +995,7 @@ test('ParticleEmitter3D emits at its rate along its rotated axis and moves parti
     // 600 per second is 10 per frame, cone 0 sends them straight along local +Y
     const e = new ParticleEmitter3D(vec3(5, 0, 0), 0, 0, 600, 0, undefined, RED, RED, WHITE, WHITE, 1, .5, 1, .2, 1, -.01, .1, 0);
     e.rotation3D.z = PI / 2; // local +Y becomes world -X
+    e.emitTimeBuffer = 0; // counted from the rate alone, without the first one an emitter makes at once
     e.update();
     assert.equal(e.particleCount, 10);
     const p = particle(e, 0);
@@ -1024,6 +1025,7 @@ test('ParticleEmitter3D particles die after their life', () =>
 {
     // particles age on the frame they spawn, so a 3 frame life survives two more updates
     const e = new ParticleEmitter3D(vec3(), 0, 0, 60, PI, undefined, WHITE, WHITE, WHITE, WHITE, 3 / 60, 1, 1, 0, 1, 0, .1, 0);
+    e.emitTimeBuffer = 0; // counted from the rate alone, without the first one an emitter makes at once
     e.update(); // spawns 1, age 1
     assert.equal(e.particleCount, 1);
     e.update(); // spawns 1, ages 2 and 1
@@ -1326,6 +1328,7 @@ test('ParticleEmitter3D trailTime keeps a path per particle and draws ribbons', 
     // one particle a frame, straight along +Y, three frames of trail
     const e = new ParticleEmitter3D(vec3(), 0, 0, 60, 0, undefined, WHITE, WHITE, WHITE, WHITE, 10, 1, 1, .1, 1, 0, 0, 0);
     e.trailTime = 3 / 60;
+    e.emitTimeBuffer = 0; // counted from the rate alone, without the first one an emitter makes at once
     for (let i = 4; i--;)
         e.update();
     assert.deepEqual(particles(e).map(p => p.trailCount).sort(), [1, 2, 3, 3]);
@@ -2159,6 +2162,7 @@ test('engineObjectsCollect3D uses the world scale of parented objects', () =>
 test('destroying an emitter or trail lets what is already out finish, like the 2D particles', () =>
 {
     const ship = new EngineObject3D(vec3(5, 0, 0)), emitter = new ParticleEmitter3D(vec3(), 0, 0, 60, PI);
+    emitter.emitTimeBuffer = 0; // counted from the rate alone, without the first one an emitter makes at once
     ship.addChild(emitter);
     emitter.emitParticle(); emitter.emitParticle();
     emitter.update(); // emits one more at 60 a second, and remembers where it is

@@ -4,7 +4,6 @@
 // Effects short shows every built-in effect
 
 let cells;
-const playing = [];
 const replay = new Timer;
 
 // 4 cells across and 2 down, 5 units apart
@@ -28,7 +27,7 @@ function gameInit()
         [{speed: .1, particleTime: .4}, '{speed: .1, particleTime: .4}'],
     ];
     cells.forEach(([options], i)=>
-        playing[i] = particleEffect('fire', cellPos(i), options));
+        particleEffect('fire', cellPos(i), options));
     replay.set(2);
 }
 
@@ -37,7 +36,7 @@ function gameUpdate()
     // the burst ends itself, so it plays again every 2 seconds
     if (replay.elapsed())
     {
-        playing[6] = particleEffect('fire', cellPos(6), cells[6][0]);
+        particleEffect('fire', cellPos(6), cells[6][0]);
         replay.set(2);
     }
 }

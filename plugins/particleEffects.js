@@ -178,7 +178,9 @@ function particleEffectSanitize(raw)
             settings[setting.name] = value === '' || particleEffectShapes.includes(value) ? value : fallback;
         else if (isNumber(value))
         {
-            const clamped = clamp(value, setting.hardMin, setting.hardMax);
+            // an angle past half a turn comes around, a clamp would point it the other way
+            const wraps = setting.name === 'angle' && isFinite(value) && abs(value) > PI;
+            const clamped = clamp(wraps ? mod(value + PI, 2*PI) - PI : value, setting.hardMin, setting.hardMax);
             settings[setting.name] = setting.step >= 1 ? round(clamped) : clamped;
         }
         else
@@ -257,9 +259,11 @@ function particleEffectsGet(name) { return particleEffectsByName.get(String(name
  *  @param {string} text
  *  @return {Array<Object>}
  *  @memberof ParticleEffects */
-function particleEffectsParse(text)
+function particleEffectsParse(text) { return particleEffectsFromData(JSON.parse(text)); }
+
+// a library file's data, or one effect's, into sanitized effects
+function particleEffectsFromData(data)
 {
-    const data = JSON.parse(text);
     const list = isArray(data?.effects) ? data.effects : data?.settings ? [data] : undefined;
     if (!list || !list.length)
         throw new Error('no effects in this file');
@@ -278,7 +282,7 @@ function particleEffectsText(effects) { return JSON.stringify({version:1, effect
  *  @memberof ParticleEffects */
 async function particleEffectsLoad(url)
 {
-    const effects = particleEffectsParse(JSON.stringify(await fetchJSON(url)));
+    const effects = particleEffectsFromData(await fetchJSON(url));
     particleEffectsAdd(effects);
     return effects;
 }
@@ -456,7 +460,13 @@ function particleEffectTileInfo(s)
  *  @memberof ParticleEffects */
 function particleEffectApply(emitter, effect)
 {
-    effect = particleEffectSanitize(effect); // an effect written by hand or changed since it was added
+    // an effect written by hand or changed since it was added
+    particleEffectSet(emitter, particleEffectSanitize(effect));
+}
+
+// set a 2D emitter to an effect that is sanitized already, as a play's is
+function particleEffectSet(emitter, effect)
+{
     const s = effect.settings, ended = emitter.emitTime < 0; // destroyed, its last particles going
     for (const setting of particleEffectSettings)
         if (!particleEffectIndirect.includes(setting.name))
@@ -507,7 +517,7 @@ function particleEffect(nameOrEffect, pos=vec2(), options={})
     const effect = particleEffectResolve(nameOrEffect, options);
     if (!effect) return;
     const emitter = new ParticleEmitter(pos.copy());
-    particleEffectApply(emitter, effect);
+    particleEffectSet(emitter, effect);
     emitter.scale = options.scale ?? 1;
     if (options.angle !== undefined)
         emitter.angle = options.angle;
@@ -571,7 +581,7 @@ function particleEffectFromEmitter(emitter, name='Effect')
         p.velocity.y += (p.pos.x - c.x) * s * .002;
     };
     b('wind').update3D = (p, s)=> p.velocity.x += s * .004 * p.scale * min(p.age / p.lifeTime, 1);
-    // stick has no 3D push: particleEffect3D makes it the friction a particle lands with
+    // stick has no 3D push: particleEffectApply3D makes it the emitter's stick, its grip on landing
 }
 
 /** Set a 3D emitter to an effect, live, so a running one keeps its particles; its place, scale and flatten stay
@@ -580,7 +590,13 @@ function particleEffectFromEmitter(emitter, name='Effect')
  *  @memberof ParticleEffects */
 function particleEffectApply3D(emitter, effect)
 {
-    effect = particleEffectSanitize(effect); // an effect written by hand or changed since it was added
+    // an effect written by hand or changed since it was added
+    particleEffectSet3D(emitter, particleEffectSanitize(effect));
+}
+
+// set a 3D emitter to an effect that is sanitized already, as a play's is
+function particleEffectSet3D(emitter, effect)
+{
     const s = effect.settings, e = emitter;
     // a circle is a sphere and a rectangle a box as deep as it is wide
     e.emitSize = s.emitRect ? vec3(s.emitSize, s.emitHeight, s.emitSize) : s.emitSize;
@@ -604,8 +620,8 @@ function particleEffectApply3D(emitter, effect)
  *  - The same effect data as particleEffect, so the look carries across: a circle spawn area becomes a sphere and a
  *    rectangle a box as deep as it is wide, both flat across the way it emits with options.flatten, a disc or a
  *    sheet; a trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
- *    randomColorLinear, velocityInheritance, localSpace) are left out; the stick behavior becomes the friction a
- *    particle lands with
+ *    randomColorLinear, velocityInheritance, localSpace) are left out; the stick behavior becomes the emitter's
+ *    stick, its grip where a particle lands
  *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector3} [pos3D]
  *  @param {Object} [options] - scale, hue, saturation, angle, tileInfo and any setting as particleEffect; angle turns it
@@ -617,7 +633,7 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
     const effect = particleEffectResolve(nameOrEffect, options);
     if (!effect) return;
     const e = new ParticleEmitter3D(pos3D.copy());
-    particleEffectApply3D(e, effect);
+    particleEffectSet3D(e, effect);
     if (options.angle !== undefined)
         e.rotation3D = vec3(0, 0, -options.angle);
     e.scale3D = vec3(options.scale ?? 1);
