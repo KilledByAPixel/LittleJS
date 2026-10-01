@@ -9,6 +9,8 @@ await LJS.engineInit(()=>{}, ()=>{}, ()=>{}, ()=>{}, ()=>{});
 
 const sheet = new LJS.TextureInfo({ width: 256, height: 16 });
 const first = new LJS.TileInfo(LJS.vec2(), LJS.vec2(16), sheet); // 16 frames in a row
+// reading a getter is what a test is about, the values themselves are not looked at
+const read = (...values)=> values.length;
 const framesOver = (animation, steps)=>
 {
     const seen = [];
@@ -80,7 +82,7 @@ test('play(onEnd) calls it once, on the first read after the play ends', () =>
     assert.equal(ended, 0);
     assert.equal(attack.tileInfo.pos.x, 32); // the read calls it, the last frame still shows
     assert.equal(ended, 1);
-    attack.frame, attack.isDone, attack.tileInfo;
+    read(attack.frame, attack.isDone, attack.tileInfo);
     assert.equal(ended, 1, 'once');
     assert.equal(attack.onEnd, undefined);
 });
@@ -94,7 +96,7 @@ test('loop, pingPong, stop and a play with no function never call onEnd, a new p
     const plain = new LJS.SpriteAnimation(first, 2, .1).play(end).play();
     const held = new LJS.SpriteAnimation(first, 2, .1).play(end).stop();
     LJS.engineStep(30);
-    walk.tileInfo, idle.tileInfo, plain.tileInfo, held.tileInfo;
+    read(walk.tileInfo, idle.tileInfo, plain.tileInfo, held.tileInfo);
     assert.equal(ended, 0);
     let second = 0;
     const attack = new LJS.SpriteAnimation(first, 2, .1).play(end).play(()=> ++second);

@@ -27646,8 +27646,7 @@ class ParticleEmitter3D extends EngineObject3D
         const matrix = render3DObjectMatrix(this); // the object's own, read only
         this.worldPos3D = matrix.getTranslation(); // remembered for when the parent is destroyed
         const scale = render3DMaxScale(matrix.m);
-        this.particleView.scale = scale;
-        this.particleView.scale = scale; // the callbacks read it from the view instead of working it out each
+        this.particleView.scale = scale; // the callbacks read it from the view instead of working it out each time
 
         // emit until the emit time is up, then wait for the last particle and go away
         if (!this.emitTime || this.getAliveTime() <= this.emitTime)

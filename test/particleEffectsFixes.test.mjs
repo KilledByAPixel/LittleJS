@@ -18,10 +18,11 @@ test('3D stick leaves particles in open air moving, it is the friction they land
         emitConeAngle: .8, randomness: 0, particleTime: 5}, behaviors: [{name: 'stick', strength: 1}]}));
     for (let i = 0; i < 100; ++i) e.emitParticle();
     for (let i = 0; i < 30; ++i) e.update();
-    const d = e.particleData, frozen = [];
+    const d = e.particleData;
+    let frozen = 0;
     for (let i = 0; i < e.particleCount; ++i)
-        d[i*21+3] === 0 && d[i*21+5] === 0 && frozen.push(i);
-    assert.equal(frozen.length, 0, frozen.length + ' particles stopped in the air');
+        d[i*21+3] === 0 && d[i*21+5] === 0 && ++frozen;
+    assert.equal(frozen, 0, frozen + ' particles stopped in the air');
     assert.equal(e.friction, 0, 'stick 1 lands with no sliding');
     e.destroy();
 });

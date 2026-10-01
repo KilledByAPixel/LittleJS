@@ -14,7 +14,11 @@ async function loadGame()
     return engine;
 }
 const near = (a, b, message)=> assert.ok(Math.abs(a - b) < 1e-6, message ?? `${a} is not ${b}`);
-const nearList = (a, b)=> { assert.equal(a.length, b.length); a.forEach((v, i)=> near(v, b[i], `${[...a]} is not ${b}`)); };
+const nearList = (a, b, message='')=>
+{
+    assert.equal(a.length, b.length, message);
+    a.forEach((v, i)=> near(v, b[i], `${message && message + ': '}${[...a]} is not ${b}`));
+};
 
 test('a drag along an axis is how far along it the point nearest the mouse ray is', async ()=>
 {
