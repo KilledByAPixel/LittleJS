@@ -7,7 +7,12 @@ let player, playerStart = vec3(0, 2, 6), score = 0;
 // the level as plain data, the editor edits it in place and saves it;
 // a color in a level is a hex string, written here from its hsl
 const color = (h, s, l)=> hsl(h, s, l).toString(false);
-const level = {littlejs3D: 1, objects: [
+// its scene block sets the sky, the sun and the shadows, the editor's
+// Scene box changes them
+const level = {littlejs3D: 1,
+    scene: {sky: [color(.6, .5, .4), color(.6, .5, .8), color(.6, .5, .8)],
+        sunDirection: [-.3, 1, .5], shadows: true},
+    objects: [
     {id: 1, type: 'Box', pos: [0, -.5, 0], scale: [16, 1, 16],
         properties: {color: color(.3, .3, .4)}},
     {id: 2, type: 'Box', pos: [-3.5, 1, -2.5], scale: [1, 2, 5],
@@ -57,7 +62,6 @@ function loadLevel()
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky(hsl(.6, .5, .4), hsl(.6, .5, .8));
     render3D.gravity.y = -.01;
 
     // the object types, by the names they have in the level; Box, Sphere,

@@ -29116,6 +29116,10 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *  - What a file written by hand gets wrong uses the default: a value that is not of its default's type
  *  - An object its type can not make is skipped with an error in debug builds, where asserts throw, and the rest
  *    of the level is made
+ *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
+ *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
+ *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
+ *    leaves out stays as the game set it, and a level with no block changes nothing
  *  @param {Object} level - The level, the level editor edits this same object
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */
@@ -29124,6 +29128,7 @@ function level3DLoad(level)
     false&&ASSERT(!!level && typeof level === 'object', 'a level is an object, {} for a new one');
     false&&ASSERT(!(level.littlejs3D > LEVEL3D_VERSION), 'the level was made by a newer LittleJS');
     editor3DLevelLoaded(level); // debug builds: the 3D editor takes the level, its autosaved edits go in first
+    level3DSceneApply(level.scene);
     const made = [];
     for (const object of isArray(level.objects) ? level.objects : [])
     {
@@ -29133,6 +29138,41 @@ function level3DLoad(level)
         result && made.push(result);
     }
     return made;
+}
+
+// the sky domes levels made, a level's sky takes the place of the one before and disposes it; a dome the game made
+// itself is left whole, for the game to put back
+const level3DSkies = new WeakSet;
+
+// set the scene a level's scene block gives: sky as its top, horizon and bottom colors, with ambient how much of
+// them lights the scene, sunDirection and sunColor, fog as its start and end with fogColor, the horizon without one,
+// and shadows; a setting the block does not have, or has wrong, stays as it is
+function level3DSceneApply(scene)
+{
+    const r = render3D;
+    if (!r || !scene || typeof scene !== 'object') return;
+    const color = (value)=> /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) ? new Color().setHex(value) : undefined;
+    const sky = isArray(scene.sky) && scene.sky.length === 3 ? scene.sky.map(color) : [];
+    if (sky.length && sky.every((c)=> c))
+    {
+        // as setSky does, without disposing a dome that is the game's own
+        const [top, horizon, bottom] = sky, ambient = isNumber(scene.ambient) ? scene.ambient : .5;
+        level3DSkies.has(r.sky) && r.sky.dispose();
+        level3DSkies.add(r.sky = buildSky(top, horizon, bottom));
+        r.fogColor = horizon.copy();
+        r.ambientColor = top.scale(ambient, 1);
+        r.ambientGroundColor = bottom.scale(ambient, 1);
+    }
+    const sun = level3DVector(scene.sunDirection);
+    if (sun && sun.lengthSquared())
+        r.sunDirection = sun;
+    r.sunColor = color(scene.sunColor) || r.sunColor;
+    const fog = scene.fog;
+    if (isArray(fog) && fog.length === 2 && fog.every((v)=> isNumber(v)))
+        r.fogStart = fog[0], r.fogEnd = fog[1];
+    r.fogColor = color(scene.fogColor) || r.fogColor;
+    if (typeof scene.shadows === 'boolean')
+        r.shadows = scene.shadows;
 }
 
 // a vec3 of an array of three numbers, as the file has them, or the fallback

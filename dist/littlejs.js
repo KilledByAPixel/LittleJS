@@ -30004,6 +30004,10 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *  - What a file written by hand gets wrong uses the default: a value that is not of its default's type
  *  - An object its type can not make is skipped with an error in debug builds, where asserts throw, and the rest
  *    of the level is made
+ *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
+ *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
+ *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
+ *    leaves out stays as the game set it, and a level with no block changes nothing
  *  @param {Object} level - The level, the level editor edits this same object
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */
@@ -30012,6 +30016,7 @@ function level3DLoad(level)
     ASSERT(!!level && typeof level === 'object', 'a level is an object, {} for a new one');
     ASSERT(!(level.littlejs3D > LEVEL3D_VERSION), 'the level was made by a newer LittleJS');
     editor3DLevelLoaded(level); // debug builds: the 3D editor takes the level, its autosaved edits go in first
+    level3DSceneApply(level.scene);
     const made = [];
     for (const object of isArray(level.objects) ? level.objects : [])
     {
@@ -30021,6 +30026,41 @@ function level3DLoad(level)
         result && made.push(result);
     }
     return made;
+}
+
+// the sky domes levels made, a level's sky takes the place of the one before and disposes it; a dome the game made
+// itself is left whole, for the game to put back
+const level3DSkies = new WeakSet;
+
+// set the scene a level's scene block gives: sky as its top, horizon and bottom colors, with ambient how much of
+// them lights the scene, sunDirection and sunColor, fog as its start and end with fogColor, the horizon without one,
+// and shadows; a setting the block does not have, or has wrong, stays as it is
+function level3DSceneApply(scene)
+{
+    const r = render3D;
+    if (!r || !scene || typeof scene !== 'object') return;
+    const color = (value)=> /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) ? new Color().setHex(value) : undefined;
+    const sky = isArray(scene.sky) && scene.sky.length === 3 ? scene.sky.map(color) : [];
+    if (sky.length && sky.every((c)=> c))
+    {
+        // as setSky does, without disposing a dome that is the game's own
+        const [top, horizon, bottom] = sky, ambient = isNumber(scene.ambient) ? scene.ambient : .5;
+        level3DSkies.has(r.sky) && r.sky.dispose();
+        level3DSkies.add(r.sky = buildSky(top, horizon, bottom));
+        r.fogColor = horizon.copy();
+        r.ambientColor = top.scale(ambient, 1);
+        r.ambientGroundColor = bottom.scale(ambient, 1);
+    }
+    const sun = level3DVector(scene.sunDirection);
+    if (sun && sun.lengthSquared())
+        r.sunDirection = sun;
+    r.sunColor = color(scene.sunColor) || r.sunColor;
+    const fog = scene.fog;
+    if (isArray(fog) && fog.length === 2 && fog.every((v)=> isNumber(v)))
+        r.fogStart = fog[0], r.fogEnd = fog[1];
+    r.fogColor = color(scene.fogColor) || r.fogColor;
+    if (typeof scene.shadows === 'boolean')
+        r.shadows = scene.shadows;
 }
 
 // a vec3 of an array of three numbers, as the file has them, or the fallback
@@ -35106,9 +35146,10 @@ let editor3DBrush;
 // the copied objects
 /** @type {Array<Object>|undefined} */
 let editor3DClipboard;
-let editor3DUndoList = [], editor3DRedoList = []; // the level's, each entry its object list before and after an edit
-// the edit being made, a drag is one
-/** @type {{before: Array<Object>}|undefined} */
+// the level's, each entry its object list and its scene block before and after an edit
+let editor3DUndoList = [], editor3DRedoList = [];
+// the edit being made, a drag is one: the objects and the scene block as they were before it
+/** @type {{before: Array<Object>, sceneBefore: Object|undefined}|undefined} */
 let editor3DStroke;
 
 const editor3DCopy = (value)=> JSON.parse(JSON.stringify(value));
@@ -35119,6 +35160,77 @@ const editor3DRound = (v)=> round(v * 1e4) / 1e4; // as the file keeps a number
 const editor3DObjects = ()=> isArray(editor3DLevel?.objects) ? editor3DLevel.objects : [];
 const editor3DObject = (id)=> editor3DObjects().find((o)=> o.id === id);
 const editor3DSelected = ()=> editor3DObjects().filter((o)=> editor3DSelection.has(o.id));
+
+// the level's scene block, undefined when it has none, and a copy of one
+function editor3DScene()
+{
+    const scene = editor3DLevel?.scene;
+    return scene && typeof scene === 'object' && !isArray(scene) ? scene : undefined;
+}
+const editor3DSceneCopy = (scene=editor3DScene())=> scene && editor3DCopy(scene);
+
+// what a level's hash covers: its objects, and its scene when it has one, so a level without one hashes as before
+const editor3DContentHash = (objects, scene)=>
+    editor3DHash(JSON.stringify(objects) + (scene ? JSON.stringify(scene) : ''));
+
+// the renderer's settings a scene block can set, as they are now, and put back as they were: what the game set
+// itself shows again when a level's block changes or goes
+function editor3DSceneState()
+{
+    const r = render3D;
+    return {sky: r.sky, ambientColor: r.ambientColor.copy(), ambientGroundColor: r.ambientGroundColor?.copy(),
+        fogStart: r.fogStart, fogEnd: r.fogEnd, fogColor: r.fogColor?.copy(), sunDirection: r.sunDirection.copy(),
+        sunColor: r.sunColor.copy(), shadows: r.shadows};
+}
+function editor3DSceneRestore(state)
+{
+    const r = render3D;
+    if (!r || !state) return;
+    r.sky !== state.sky && level3DSkies.has(r.sky) && r.sky.dispose(); // a dome a level made, not the game's
+    r.sky = state.sky;
+    r.ambientColor = state.ambientColor.copy();
+    r.ambientGroundColor = state.ambientGroundColor?.copy();
+    r.fogStart = state.fogStart, r.fogEnd = state.fogEnd;
+    r.fogColor = state.fogColor?.copy();
+    r.sunDirection = state.sunDirection.copy();
+    r.sunColor = state.sunColor.copy();
+    r.shadows = state.shadows;
+}
+
+// the scene on screen as a block, to start a level's scene from: a sky only when the dome's colors are known
+const editor3DHex = (color)=> new Color(clamp(color.r), clamp(color.g), clamp(color.b)).toString(false);
+function editor3DSceneFromView()
+{
+    const r = render3D, scene = {}, colors = r.sky && render3DSkyColors.get(r.sky);
+    if (colors)
+    {
+        // how much of the top color the ambient light is
+        const top = max(colors[0].r, colors[0].g, colors[0].b);
+        const lit = max(r.ambientColor.r, r.ambientColor.g, r.ambientColor.b);
+        scene.sky = colors.map(editor3DHex);
+        scene.ambient = top ? round(clamp(lit / top) * 100) / 100 : .5;
+    }
+    const sun = r.sunDirection.normalize();
+    scene.sunDirection = [sun.x, sun.y, sun.z].map((v)=> round(v * 1e3) / 1e3);
+    scene.sunColor = editor3DHex(r.sunColor);
+    scene.fog = [editor3DRound(r.fogStart || 0), editor3DRound(r.fogEnd || 0)];
+    scene.fogColor = editor3DHex(r.fogColor || canvasClearColor);
+    scene.shadows = !!r.shadows;
+    return scene;
+}
+
+// the sun's direction as two angles in degrees, for two sliders: around, from +z toward +x, and its height over
+// the horizon; and the direction of two angles, as the file keeps it
+function editor3DSunAngles(direction)
+{
+    const d = level3DVector(direction, vec3(0, 1, 0)).normalize();
+    return [round((atan2(d.x, d.z) * 180 / PI + 360) % 360) % 360, round(Math.asin(clamp(d.y, -1, 1)) * 180 / PI)];
+}
+function editor3DSunDirection(around, height)
+{
+    const a = around * PI / 180, h = height * PI / 180;
+    return [sin(a) * cos(h), sin(h), cos(a) * cos(h)].map((v)=> round(v * 1e3) / 1e3 + 0);
+}
 
 // an object's position, rotation in degrees and scale, the defaults where the level leaves them out
 const editor3DPos = (object)=> level3DVector(object.pos, vec3());
@@ -35191,18 +35303,25 @@ function editor3DLevelLoaded(level)
     // a level from a file goes by the file, one made in code by its objects as they were loaded, so each has an
     // autosave of its own
     const url = editorFetchedURLs.get(level)?.split(/[?#]/)[0];
-    const original = editor3DCopy(editor3DObjects()), hash = editor3DHash(JSON.stringify(original));
+    const original = editor3DCopy(editor3DObjects()), originalScene = editor3DSceneCopy();
+    const hash = editor3DContentHash(original, originalScene);
+    // sceneBase is the scene the game set, taken before the level's own block is applied
     const record = {fileName: url ? url.split('/').pop() : 'level3D.json', key: url ?? 'level #' + hash, original,
-        hash, pending: undefined, fileHandle: undefined, undo: [], redo: []};
+        originalScene, sceneBase: render3D ? editor3DSceneState() : undefined, hash, pending: undefined,
+        fileHandle: undefined, undo: [], redo: []};
     editor3DRecords.set(level, record);
     editor3DUndoList = record.undo;
     editor3DRedoList = record.redo;
     // an autosave the file already has, from a Save, goes; one of this file, or of the file a Save wrote, comes back
     const saved = editor3DSaves()[record.key];
-    if (saved && isArray(saved.objects) && editor3DSame(saved.objects, original))
+    if (saved && isArray(saved.objects) && editor3DSame(saved.objects, original) &&
+        editor3DSame(saved.scene, originalScene))
         editor3DAutosave(level);
     else if ((saved?.hash === hash || saved?.savedHash === hash) && isArray(saved.objects))
+    {
         level.objects = editor3DCopy(saved.objects);
+        saved.scene ? level.scene = editor3DCopy(saved.scene) : delete level.scene;
+    }
     else if (saved)
         record.pending = saved;
 }
@@ -35266,7 +35385,29 @@ function editor3DChange(change)
     change(after);
     if (editor3DSame(before, after)) return false;
     editor3DSetObjects(after);
-    editor3DStroke ||= {before};
+    editor3DStroke ||= {before, sceneBefore: editor3DSceneCopy()};
+    return true;
+}
+
+// make a scene block the level's, or none, and show it: the game's own setup, then what the block sets
+function editor3DSetScene(scene)
+{
+    const level = editor3DLevel;
+    scene ? level.scene = editor3DCopy(scene) : delete level.scene;
+    editor3DSceneRestore(editor3DRecords.get(level)?.sceneBase);
+    level3DSceneApply(level.scene);
+}
+
+// change the level's scene block as part of the edit being made, as editor3DChange does its objects: change is
+// given a copy of the block, undefined when the level has none, and returns the new one, or undefined for none;
+// false when nothing changed
+function editor3DChangeScene(change)
+{
+    if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
+    const before = editor3DSceneCopy(), after = change(editor3DSceneCopy());
+    if (editor3DSame(before, after)) return false;
+    editor3DStroke ||= {before: editor3DCopy(editor3DObjects()), sceneBefore: before};
+    editor3DSetScene(after);
     return true;
 }
 
@@ -35275,8 +35416,10 @@ function editor3DStrokeEnd()
 {
     const stroke = editor3DStroke;
     editor3DStroke = undefined;
-    if (!stroke || editor3DSame(stroke.before, editor3DObjects())) return;
-    editor3DUndoList.push({before: stroke.before, after: editor3DCopy(editor3DObjects())});
+    if (!stroke || editor3DSame(stroke.before, editor3DObjects()) &&
+        editor3DSame(stroke.sceneBefore, editor3DScene())) return;
+    editor3DUndoList.push({before: stroke.before, after: editor3DCopy(editor3DObjects()),
+        sceneBefore: stroke.sceneBefore, sceneAfter: editor3DSceneCopy()});
     editor3DUndoList.length > 100 && editor3DUndoList.shift();
     editor3DRedoList.length = 0;
     editor3DAutosave();
@@ -35287,7 +35430,9 @@ function editor3DStrokeCancel()
 {
     const stroke = editor3DStroke;
     editor3DStroke = undefined;
-    stroke && editor3DSetObjects(stroke.before);
+    if (!stroke) return;
+    editor3DSetObjects(stroke.before);
+    editor3DSame(stroke.sceneBefore, editor3DScene()) || editor3DSetScene(stroke.sceneBefore);
 }
 
 // undo the last edit, or redo the last one undone; false with none
@@ -35298,6 +35443,8 @@ function editor3DUndo(redo=false)
     if (!entry) return false;
     (redo ? editor3DUndoList : editor3DRedoList).push(entry);
     editor3DSetObjects(redo ? entry.after : entry.before);
+    const scene = redo ? entry.sceneAfter : entry.sceneBefore;
+    editor3DSame(scene, editor3DScene()) || editor3DSetScene(scene);
     editor3DAutosave();
     return true;
 }
@@ -35520,18 +35667,20 @@ const editor3DSaves = ()=> readSaveData(editor3DSaveName(), {});
 // if the last autosave did not fit in storage, the panel says so
 let editor3DSaveFailed = false;
 
-// remember the level's objects, or forget them when they are back to the file
+// remember the level's objects and scene, or forget them when they are back to the file
 function editor3DAutosave(level=editor3DLevel)
 {
     const record = editor3DRecords.get(level);
     if (!record || record.pending) return; // edits waiting to be applied keep their autosave
     const saves = editor3DSaves(), objects = isArray(level.objects) ? level.objects : [];
+    const scene = level === editor3DLevel ? editor3DScene() : level.scene;
     // the level as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it,
     // since the browser gives a picked file's name and not its folder, and a file of the same name may be a copy
-    if (editor3DSame(objects, record.original) && !record.savedHash)
+    if (editor3DSame(objects, record.original) && editor3DSame(scene, record.originalScene) && !record.savedHash)
         delete saves[record.key];
     else
-        saves[record.key] = {hash: record.hash, savedHash: record.savedHash, objects: editor3DCopy(objects)};
+        saves[record.key] = {hash: record.hash, savedHash: record.savedHash, objects: editor3DCopy(objects),
+            scene: editor3DSceneCopy(scene)};
     try
     {
         localStorage.setItem(editor3DSaveName(), JSON.stringify(saves));
@@ -35548,6 +35697,7 @@ function editor3DApplyPending()
     record.pending = undefined;
     editor3DFixIds(saved.objects);
     editor3DChange((list)=> { list.length = 0; list.push(...editor3DCopy(saved.objects)); });
+    editor3DChangeScene(()=> editor3DSceneCopy(saved.scene));
     editor3DStrokeEnd();
     editor3DAutosave();
 }
@@ -35568,9 +35718,10 @@ function editor3DRevert()
     const record = editor3DRecords.get(editor3DLevel);
     if (!record) return false;
     record.pending = undefined;
-    if (editor3DSame(editor3DObjects(), record.original))
+    if (editor3DSame(editor3DObjects(), record.original) && editor3DSame(editor3DScene(), record.originalScene))
         return editor3DAutosave(), false;
     editor3DChange((list)=> { list.length = 0; list.push(...editor3DCopy(record.original)); });
+    editor3DChangeScene(()=> editor3DSceneCopy(record.originalScene));
     editor3DStrokeEnd();
 }
 
@@ -35595,7 +35746,7 @@ async function editor3DSave(pickAgain=false)
 // write one save of a level, the one before it done
 async function editor3DSaveText(level, record, text, pickAgain)
 {
-    const written = editor3DCopy(JSON.parse(text).objects);
+    const file = JSON.parse(text), written = editor3DCopy(file.objects), writtenScene = file.scene;
     const picker = /** @type {any} */ (globalThis).showSaveFilePicker;
     const fileKey = (globalThis.location?.pathname ?? '') + ' 3D ' + record.key;
     if (picker)
@@ -35621,7 +35772,8 @@ async function editor3DSaveText(level, record, text, pickAgain)
             if (record.fileHandle.name === record.fileName)
             {
                 record.original = written;
-                record.savedHash = editor3DHash(JSON.stringify(written));
+                record.originalScene = writtenScene;
+                record.savedHash = editor3DContentHash(written, writtenScene);
                 editor3DAutosave(level);
             }
             return 'written';
@@ -36433,6 +36585,15 @@ function editor3DPanelInit()
     const types = row();
     const properties = editorElement('div', panel, box);
 
+    // the scene the level sets: its sky, sun, fog and shadows, or none, the game's own
+    const scene = editorElement('div', panel, box);
+    const sceneOn = check(scene, 'Level sets the scene', (on)=>
+    {
+        editor3DChangeScene(()=> on ? editor3DSceneFromView() : undefined);
+        editor3DStrokeEnd();
+    }, 'The sky, sun, fog and shadows are saved in the level; off leaves them to the game');
+    const sceneRows = editorElement('div', scene);
+
     const file = row();
     // Save says so for a moment when it saved, Save As shows where a page can write files
     const saved = (b, label)=> (result)=> result && (b.textContent = 'Saved', setTimeout(()=> b.textContent = label, 1e3));
@@ -36455,7 +36616,7 @@ function editor3DPanelInit()
     button(help, 'Close', ()=> editor3DHelp = false, '?');
 
     editor3DPanelParts = {restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, types,
-        properties, playFrom, storage, hint, help, typeNames: ''};
+        properties, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
 }
 
 // show the panel as the editor is now
@@ -36498,6 +36659,110 @@ function editor3DPanelUpdate()
     }
     names.forEach((name, i)=> p.types.children[i].style.outline = name === editor3DBrush ? lit : '');
     editor3DPropertiesUpdate(p.properties);
+    p.sceneOn.checked = !!editor3DScene();
+    editor3DSceneUpdate(p.sceneRows);
+}
+
+// the scene box: an input for each setting of the level's scene block, made again when the block changes, but not
+// while one of its inputs is being used; a slider or a color changes the scene as it moves, and is one undo
+function editor3DSceneUpdate(box)
+{
+    const scene = editor3DScene(), key = scene ? JSON.stringify(scene) : '';
+    box.style.display = scene ? '' : 'none';
+    if (box.dataset.key === key || box.contains(document.activeElement)) return;
+    box.dataset.key = key;
+    box.replaceChildren();
+    if (!scene) return;
+
+    // a setting the block leaves out shows as it is on screen
+    const view = editor3DSceneFromView(), value = (name)=> scene[name] ?? view[name];
+    const change = (name, v)=> editor3DChangeScene((s={})=> ({...s, [name]: v}));
+    const field = 'background:#222;color:#eee';
+    const line = (name, title='')=>
+    {
+        const row = editorElement('label', box, 'display:flex;gap:4px;align-items:center;margin:2px 0');
+        editorElement('span', row, 'flex:1', name);
+        row.title = title;
+        return row;
+    };
+    // an input that changes the scene as it moves and ends the edit when let go
+    const live = (input, read)=>
+    {
+        input.oninput = ()=> read();
+        input.onchange = ()=> { read(); editor3DStrokeEnd(); input.blur(); };
+        return input;
+    };
+    const slider = (name, title, min, max, step, v, set)=>
+    {
+        const input = editorElement('input', line(name, title), 'width:120px');
+        input.type = 'range';
+        input.min = min, input.max = max, input.step = step;
+        input.value = v + '';
+        return live(input, ()=> set(parseFloat(input.value)));
+    };
+    const color = (name, title, hex, set)=>
+    {
+        const input = editorElement('input', line(name, title), field + ';width:60px');
+        input.type = 'color';
+        input.value = /^#[0-9a-f]{6}/i.test(hex) ? hex.slice(0, 7) : '#ffffff';
+        return live(input, ()=> set(input.value));
+    };
+    const number = (row, v, set)=>
+    {
+        const input = editorElement('input', row, field + ';width:56px');
+        input.type = 'number';
+        input.step = 'any';
+        input.min = '0';
+        input.value = v + '';
+        input.onchange = ()=>
+        {
+            const n = parseFloat(input.value);
+            isNumber(n) && n >= 0 && set(n);
+            editor3DStrokeEnd();
+            input.blur();
+        };
+        return input;
+    };
+    const toggle = (name, title, on, set)=>
+    {
+        const input = editorElement('input', line(name, title));
+        input.type = 'checkbox';
+        input.checked = on;
+        input.onchange = ()=> { set(input.checked); editor3DStrokeEnd(); input.blur(); };
+    };
+
+    // the sky: three colors and how much of them lights the scene, or no sky
+    const sky = isArray(scene.sky) && scene.sky.length === 3 ? scene.sky : undefined;
+    toggle('Sky', 'A sky dome, and light from it; off leaves the sky to the game', !!sky, (on)=>
+        editor3DChangeScene((s={})=>
+        {
+            const {sky, ambient, ...rest} = s;
+            return on ? {sky: ['#3d9be9', '#ccebff', '#ccebff'], ambient: .5, ...rest} : rest;
+        }));
+    if (sky)
+    {
+        ['Sky top', 'Sky horizon', 'Sky bottom'].forEach((name, i)=> color(name, '', sky[i], (hex)=>
+            change('sky', sky.map((c, k)=> k === i ? hex : c))));
+        slider('Ambient', 'How much of the sky colors lights the scene', 0, 1, .05,
+            isNumber(scene.ambient) ? scene.ambient : .5, (v)=> change('ambient', v));
+    }
+
+    // the sun, as two angles
+    const [around, height] = editor3DSunAngles(value('sunDirection'));
+    slider('Sun around', 'Where the sun is around the scene, in degrees', 0, 359, 1, around, (v)=>
+        change('sunDirection', editor3DSunDirection(v, editor3DSunAngles(value('sunDirection'))[1])));
+    slider('Sun height', 'How high the sun is over the horizon, in degrees', 5, 90, 1, height, (v)=>
+        change('sunDirection', editor3DSunDirection(editor3DSunAngles(value('sunDirection'))[0], v)));
+    color('Sun color', '', value('sunColor'), (hex)=> change('sunColor', hex));
+
+    // the fog, by its distances, an end of 0 for none
+    const fog = isArray(value('fog')) ? value('fog') : [0, 0], fogRow = line('Fog start, end',
+        'Where the fog starts and where it is total, an end of 0 for no fog');
+    number(fogRow, fog[0], (v)=> change('fog', [v, fog[1]]));
+    number(fogRow, fog[1], (v)=> change('fog', [fog[0], v]));
+    color('Fog color', 'The sky\'s horizon color when the level has a sky and no fog color',
+        scene.fogColor ?? (sky ? sky[1] : view.fogColor), (hex)=> change('fogColor', hex));
+    toggle('Shadows', 'The sun casts shadows', !!value('shadows'), (on)=> change('shadows', on));
 }
 
 // the properties box: the position, rotation and scale of the one selected object and an input for each default

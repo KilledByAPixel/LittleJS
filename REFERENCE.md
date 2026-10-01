@@ -1780,6 +1780,17 @@ level3DLoad(level)                                // Make every object of a leve
     {"id": 2, "type": "Crate", "pos": [2, 1.5, 1], "rotation": [0, 45, 0], "properties": {"health": 5}},
     {"id": 3, "type": "PlayerStart", "pos": [0, 2, 3]}]}
 
+// A level can set the scene too, in a scene block beside its objects; level3DLoad applies what the block has, what
+// it leaves out stays as the game set it, and a level with no block changes nothing
+{"littlejs3D": 1,
+ "scene": {"sky": ["#5aa6f0", "#d6ecff", "#d6ecff"], // top, horizon and bottom colors, as render3D.setSky
+           "ambient": 0.5,                            // how much of the sky colors lights the scene
+           "sunDirection": [0.5, 1, 0.3], "sunColor": "#ffffff",
+           "fog": [25, 70], "fogColor": "#d6ecff",    // start and end, an end of 0 for none; the horizon color
+                                                      // when the level has a sky and no fogColor
+           "shadows": true},
+ "objects": []}
+
 // Built-in types and their properties
 Box, Sphere, Cylinder   // color, tile (-1 for none), solid (true); 1 unit across, the scale is the size
 Light                   // color, radius (5), intensity (1)
@@ -1787,6 +1798,8 @@ Light                   // color, radius (5), intensity (1)
 
 ### 3D level editor
 Debug builds only. `0` on the debug overlay opens it for a level loaded with `level3DLoad`, the game pauses under it.
+The panel's Scene box edits the level's scene block: "Level sets the scene" starts one from what is on screen, and
+off leaves the sky, sun, fog and shadows to the game.
 
 ```javascript
 // Tools, the keys Unity, Unreal and Godot use
