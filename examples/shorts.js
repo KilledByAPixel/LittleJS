@@ -264,8 +264,12 @@ function setExample()
     loadFile(example.filename, example.largeExample);
 }
 
+// each load is numbered: a file that arrives after another example was selected is not shown, so the example
+// selected last is the one that shows, whatever order the files come in
+let loadFileCount = 0;
 async function loadFile(filename, largeExample)
 {
+    const load = ++loadFileCount;
     if (codeMirror)
         codeMirror.setOption('readOnly', largeExample);
     else
@@ -299,6 +303,8 @@ async function loadFile(filename, largeExample)
         if (!response.ok)
             throw new Error('Could not load file: ' + filename);
         const text = await response.text();
+        if (load !== loadFileCount)
+            return; // another example was selected while this one loaded
 
         // set the code in both code mirror and textarea
         codeIsJS = true;
@@ -315,7 +321,7 @@ async function loadFile(filename, largeExample)
     }
     catch (error)
     {
-        setErrorMessage(error.message);
+        load === loadFileCount && setErrorMessage(error.message);
     }
 }
 
