@@ -4660,7 +4660,7 @@ class InstancedMesh3D extends EngineObject3D
  * - intensity multiplies the color, above 1 for a light brighter than white
  * - radius is a world distance, so scale3D does not change it
  * - An alpha, an intensity or a radius of 0 switches it off, and a light that is off takes none of those slots
- * - Draws nothing itself, add a glow with drawSoftDisc or a small emissive mesh if it should be seen
+ * - Draws nothing but its glow, when it has one; add a small emissive mesh if the lamp itself should be seen
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -4709,8 +4709,10 @@ class Light3D extends EngineObject3D
         const r = render3D, c = this.color, pos = render3DObjectMatrix(this).getTranslation();
         const toCamera = r.camera.pos.subtract(pos), distance = toCamera.length();
         const at = distance ? pos.add(toCamera.scale(min(this.glow, distance) / 2 / distance)) : pos;
-        const color = rgb(c.r, c.g, c.b, c.a * min(this.intensity, 1));
-        r.drawBillboard(at, vec2(this.glow), engineGlowTexture(this.glowFalloff), color);
+        const color = rgb(c.r, c.g, c.b, c.a * min(this.intensity, 1)), texture = engineGlowTexture(this.glowFalloff);
+        // a browser that can not make the glow's texture draws no glow, not a plain square
+        if (texture || !glContext)
+            r.drawBillboard(at, vec2(this.glow), texture, color);
     }
 }
 
@@ -4720,7 +4722,7 @@ class Light3D extends EngineObject3D
  * - It shines from its position toward the origin, like a three.js DirectionalLight: only the direction to it
  *   counts, so moving it or its parent swings the light around; parent it to a sun in the sky and it follows
  * - It cannot sit on the origin, since that leaves no direction
- * - Like every Light3D it casts no shadow, only the sun, render3D.sunDirection, does
+ * - It casts no shadow: the sun, render3D.sunDirection, does, or a spotlight set as render3D.shadowLight
  * @extends Light3D
  * @memberof Render3D
  * @example

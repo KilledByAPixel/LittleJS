@@ -492,15 +492,14 @@ function particleEffectResolve(nameOrEffect, options)
  *  - Attach it to an object with addChild to follow it
  *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector2} [pos]
- *  @param {Object} [options]
- *  @param {number} [options.scale] - Grows the whole effect, the built-ins fit a one unit object at 1
- *  @param {number} [options.hue] - Turns its colors around the color wheel, 1 is all the way
- *  @param {number} [options.saturation] - Multiplies its saturation, 0 is grey
- *  @param {number} [options.angle] - Direction, 0 is up; the effect's own angle when not given
- *  @param {TileInfo|TextureInfo} [options.tileInfo] - The game's own art to draw with in place of the effect's shape,
- *    tinted by its colors; a whole texture draws as one tile
- *  @param {*} [options.settings] - Any effect setting by its name, emitTime, emitRate, speed and the rest, replacing
- *    the effect's own for this play
+ *  @param {Object} [options] - What to change for this play, each left out when not wanted:
+ *    scale grows the whole effect, the built-ins fit a one unit object at 1;
+ *    hue turns its colors around the color wheel, 1 is all the way;
+ *    saturation multiplies its saturation, 0 is grey;
+ *    angle is its direction, 0 is up, the effect's own angle when not given;
+ *    tileInfo, a TileInfo or a TextureInfo, is the game's own art to draw with in place of the effect's shape,
+ *    tinted by its colors, a whole texture drawn as one tile;
+ *    and any effect setting by its name, emitTime, emitRate, speed and the rest, replaces the effect's own
  *  @return {ParticleEmitter|undefined} - undefined when there is no such effect
  *  @memberof ParticleEffects */
 function particleEffect(nameOrEffect, pos=vec2(), options={})
@@ -594,8 +593,8 @@ function particleEffectApply3D(emitter, effect)
         'randomness', 'additive', 'gravityScale', 'angleSpeed', 'angleDamping', 'collideLevel', 'restitution'])
         e[name] = s[name];
     e.trailTime = s.trailScale / 60; // a stretch of speed times trailScale is a streak of that many frames
-    const stick = effect.behaviors.find(b=> b.name == 'stick'); // in 3D, a grip on landing is less sliding
-    e.friction = stick ? min(s.friction, 1 - stick.strength) : s.friction;
+    e.friction = s.friction;
+    e.stick = effect.behaviors.find(b=> b.name == 'stick')?.strength ?? 0; // in 3D the emitter grips on landing
     // a 2D emitter at angle a shoots along (sin a, cos a), a z turn r takes up to (-sin r, cos r), so r is -a
     e.rotation3D = vec3(0, 0, -s.angle);
     e.particleUpdateCallback = particleEffectUpdateCallback(effect.behaviors, true);

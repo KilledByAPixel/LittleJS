@@ -115,3 +115,12 @@ test('a level\'s Light is a spotlight with a cone, in degrees, aimed by its rota
     assert.equal(run('render3D.shadowLight === made[0]'), true);
     assert.deepEqual([run('made[1].coneAngle'), run('reach(made[1], 9, 9, 9)')], [0, 1], 'a plain light as before');
 });
+
+test('a light\'s glow draws nothing where its texture can not be made', ()=>
+{
+    const run = load();
+    // WebGL is there, and the canvas the glow is drawn on is not
+    run(`var lamp = new Light3D(vec3(0, 5, 0), 10); lamp.glow = 2; var draws = 0;
+        render3D.drawBillboard = ()=> ++draws; glContext = {}; lamp.render3D();`);
+    assert.equal(run('draws'), 0, 'no plain square in place of the glow');
+});

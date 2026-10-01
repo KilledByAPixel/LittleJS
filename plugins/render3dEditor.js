@@ -1094,6 +1094,10 @@ function editor3DRestore()
         else if (type.make.prototype && (!made || made.destroyed))
             editor3DMakeInstance(object);
     }
+    // the blocks and the terrain as the level has them: what play dug, raised or destroyed is not the level's,
+    // and must not be written into it by the next stroke
+    editor3DVoxelShow();
+    editor3DTerrainShow();
 }
 
 // open or close the editor, the session goes on: the game is paused under it and reads no input
@@ -1811,13 +1815,14 @@ function editor3DEditorUpdate(seconds)
     editor3DHover = idle ? editor3DHandleAt(mouse) : undefined;
 
     // the Blocks tool takes the mouse while the level has a map: Shift removes, Ctrl repaints
-    const painting = editor3DTool === 'blocks' && !!editor3DVoxelMap();
+    // a type picked to place is placed, whichever tool is on
+    const painting = editor3DTool === 'blocks' && !editor3DBrush && !!editor3DVoxelMap();
     const mode = shift ? 'remove' : ctrl ? 'paint' : 'place';
     const target = painting && idle ? editor3DVoxelTarget(ray, mode) : undefined;
     editor3DBlockHover = target && {cell: target.cell, mode};
     // the Terrain tool takes it while the level has a terrain: held down it raises the ground, Shift lowers,
     // Ctrl smooths
-    const terrain = editor3DTool === 'terrain' ? editor3DTerrainMap() : undefined;
+    const terrain = editor3DTool === 'terrain' && !editor3DBrush ? editor3DTerrainMap() : undefined;
     const reach = terrain && !cameraDrag && !editor3DMouseOnPanel ? terrain.raycast(ray) : undefined;
     editor3DTerrainHover = reach === undefined ? undefined : ray.getPosition(reach);
     if (painting)

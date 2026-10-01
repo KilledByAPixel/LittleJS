@@ -496,17 +496,29 @@ class SpriteAnimator
      *  @return {SpriteAnimation} */
     get clip() { return this.clips[this.name]; }
 
+    /** The clip showing now, once a clip that has ended has called its onEnd: the callback may switch clips, and a
+     *  read gives the clip it switched to, not the one that ended
+     *  @return {SpriteAnimation}
+     *  @ignore */
+    get settledClip()
+    {
+        // each clip's own isDone calls its onEnd once; a few switches in a row at most
+        for (let i = 4, clip; i-- && clip !== this.clip;)
+            (clip = this.clip).isDone;
+        return this.clip;
+    }
+
     /** The tile of the frame showing now
      *  @return {TileInfo} */
-    get tileInfo() { return this.clip.tileInfo; }
+    get tileInfo() { return this.settledClip.tileInfo; }
 
     /** The frame of the clip showing now
      *  @return {number} */
-    get frame() { return this.clip.frame; }
+    get frame() { return this.settledClip.frame; }
 
     /** True once the clip showing now is a play that has ended
      *  @return {boolean} */
-    get isDone() { return this.clip.isDone; }
+    get isDone() { return this.settledClip.isDone; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

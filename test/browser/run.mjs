@@ -8,7 +8,7 @@
 // every core a Chrome is given, so more Chromes or more tabs do not make it faster, they only take the machine
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir, setPriority, constants } from 'node:os';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,22 +26,50 @@ const lockFile = join(tmpdir(), 'littlejs-smoke.lock');
 try { setPriority(constants.priority.PRIORITY_BELOW_NORMAL); } catch {}
 
 // one run at a time: a second one started while a first is going only doubles the load
+let lockTaken = false;
 function takeLock()
 {
+    let running = 0;
     try
     {
-        const pid = +readFileSync(lockFile, 'utf8');
-        if (pid && pid !== process.pid)
+        // a lock older than a run can be was left by a run that was killed, whoever has its process id now
+        const pid = +readFileSync(lockFile, 'utf8'), age = Date.now() - statSync(lockFile).mtimeMs;
+        if (pid && pid !== process.pid && age < runTimeout + 30e3)
         {
-            process.kill(pid, 0); // throws when no such process is running, a lock left by a run that was killed
-            console.log('browser smoke tests: another run is going (process ' + pid + '), not starting a second');
-            process.exit(1);
+            process.kill(pid, 0); // throws when no such process is running
+            running = pid;
         }
     }
     catch {}
+    if (running)
+    {
+        console.log('browser smoke tests: another run is going (process ' + running + '), not starting a second');
+        process.exit(1);
+    }
     writeFileSync(lockFile, String(process.pid));
+    lockTaken = true;
 }
-const dropLock = ()=> { try { rmSync(lockFile, {force: true}); } catch {} };
+const dropLock = ()=> { try { lockTaken && rmSync(lockFile, {force: true}); } catch {} };
+
+// however the run ends, Chrome goes with it and the lock is given up; set up before Chrome is started, so a run
+// stopped while it starts leaves nothing behind
+let stopChrome, stopped = false;
+function stopAll()
+{
+    if (stopped) return;
+    stopped = true;
+    try { stopChrome?.(); } catch {}
+    dropLock();
+}
+process.on('exit', stopAll);
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'])
+    process.on(signal, ()=> { stopAll(); process.exit(1); });
+setTimeout(()=>
+{
+    console.log('browser smoke tests: stopped, the run took more than ' + runTimeout / 60e3 + ' minutes');
+    stopAll();
+    process.exit(1);
+}, runTimeout).unref();
 
 function findChrome()
 {
@@ -62,15 +90,15 @@ function serve()
         '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg'};
     const server = createServer((request, response)=>
     {
-        const file = normalize(join(root, decodeURIComponent(new URL(request.url, 'http://x').pathname)));
-        if (!file.startsWith(root) || !existsSync(file))
-            return response.writeHead(404).end();
         try
         {
+            const file = normalize(join(root, decodeURIComponent(new URL(request.url, 'http://x').pathname)));
+            if (!file.startsWith(root) || !existsSync(file))
+                return response.writeHead(404).end();
             const data = readFileSync(file);
             response.writeHead(200, {'Content-Type': types[extname(file)] || 'application/octet-stream'}).end(data);
         }
-        catch { response.writeHead(404).end(); } // a folder
+        catch { response.writeHead(404).end(); } // a folder, or a url that does not decode
     });
     return new Promise((resolve)=> server.listen(0, '127.0.0.1', ()=> resolve(server)));
 }
@@ -83,24 +111,34 @@ function startChrome(chrome)
         '--enable-unsafe-swiftshader', '--mute-audio', '--no-first-run', '--disable-background-timer-throttling',
         '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--window-size=1000,700',
         '--remote-debugging-port=0', '--user-data-dir=' + profile, 'about:blank'], {windowsHide: true});
-    const stop = ()=>
+    const stop = stopChrome = ()=>
     {
         child.kill();
         try { rmSync(profile, {recursive: true, force: true, maxRetries: 10, retryDelay: 200}); } catch {}
     };
+    child.stdout.resume(); // nothing is read from it, and it must not fill up
     return new Promise((resolve, reject)=>
     {
-        let text = '';
+        let text = '', connected = false;
         const timer = setTimeout(()=> { stop(); reject(new Error('Chrome did not start')); }, 30e3);
-        child.on('error', reject);
+        child.on('error', (error)=> { clearTimeout(timer); stop(); reject(error); });
         child.stderr.on('data', (data)=>
         {
-            // it says where it listens once it is up
+            // it says where it listens once it is up; what it logs after that is not read, one socket is all
+            if (connected) return;
             const address = (text += data).match(/DevTools listening on (ws:\S+)/)?.[1];
             if (!address) return;
+            connected = true;
             clearTimeout(timer);
             const socket = new WebSocket(address), waiting = new Map;
             let nextId = 0;
+            // a Chrome that is gone answers nothing more: what waits on it fails now, not at the run's time limit
+            socket.onclose = ()=>
+            {
+                for (const wait of waiting.values())
+                    wait.reject(new Error('Chrome closed'));
+                waiting.clear();
+            };
             socket.onmessage = (event)=>
             {
                 const message = JSON.parse(event.data), wait = waiting.get(message.id);
@@ -110,6 +148,8 @@ function startChrome(chrome)
             };
             const send = (method, params={}, sessionId)=> new Promise((resolve, reject)=>
             {
+                if (socket.readyState !== 1)
+                    return reject(new Error('Chrome closed'));
                 waiting.set(++nextId, {resolve, reject});
                 socket.send(JSON.stringify({id: nextId, method, params, sessionId}));
             });
@@ -148,8 +188,7 @@ async function runPage(browser, url, name)
 function shortNames()
 {
     const list = readFileSync(join(root, 'examples/shorts.js'), 'utf8');
-    return [...list.matchAll(/new ExampleInfo\('[^']*', '([\w-]+)\.js'/g)].map((match)=> match[1])
-        .filter((name)=> existsSync(join(root, 'examples/shorts', name + '.js')));
+    return [...list.matchAll(/new ExampleInfo\('[^']*', '([\w-]+)\.js'/g)].map((match)=> match[1]);
 }
 
 // without what it needs the run is skipped, or fails where CI is set
@@ -164,25 +203,6 @@ if (missing)
 takeLock();
 const browser = await startChrome(chrome);
 
-// however the run ends, Chrome goes with it and the lock is given up
-let stopped = false;
-const stopAll = ()=>
-{
-    if (stopped) return;
-    stopped = true;
-    try { browser.stop(); } catch {}
-    dropLock();
-};
-process.on('exit', stopAll);
-for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'])
-    process.on(signal, ()=> { stopAll(); process.exit(1); });
-setTimeout(()=>
-{
-    console.log('browser smoke tests: stopped, the run took more than ' + runTimeout / 60e3 + ' minutes');
-    stopAll();
-    process.exit(1);
-}, runTimeout).unref();
-
 const server = await serve(), base = 'http://127.0.0.1:' + server.address().port + '/test/browser/';
 const only = process.argv.slice(2);
 const jobs = [...pages.map((name)=> [name, base + name + '.html']),
@@ -196,7 +216,10 @@ await Promise.all(Array.from({length: atOnce}, async ()=>
     while (next < jobs.length)
     {
         const index = next++, [name, url] = jobs[index];
-        results[index] = await runPage(browser, url, name);
+        const short = name.startsWith('short ') && name.slice(6);
+        results[index] = short && !existsSync(join(root, 'examples/shorts', short + '.js')) ?
+            {name, checks: [{name: 'its file is there', ok: false, detail: 'examples/shorts/' + short + '.js'}]} :
+            await runPage(browser, url, name);
     }
 }));
 stopAll();

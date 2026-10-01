@@ -48,3 +48,8 @@ const voxelHit = voxels.raycast(new Ray3D(vec3(), vec3(1, 0, 0)));
 voxelHit?.cell.add(voxelHit.normal);
 // @ts-expect-error
 voxels.raycast(new Ray3D(vec3(), vec3(0, 1, 0))).distance;
+
+// particle effect options take any effect setting beside scale, hue and the rest
+import { particleEffect, particleEffect3D } from 'littlejsengine';
+particleEffect('fire', vec2(), {scale: 2, hue: .3, emitTime: .5, speed: .1});
+particleEffect3D('fire', vec3(), {flatten: true, emitRate: 30});

@@ -1058,6 +1058,9 @@ class ParticleEmitter3D extends EngineObject3D
         /** @property {boolean} - Particles hit the level, the height maps and voxel maps, bouncing by restitution and
          *  sliding along by friction; off by default, it tests each particle's move against the level every frame */
         this.collideLevel = false;
+        /** @property {number} - How much a particle grips where it lands, 0 to 1: its speed along the surface is
+         *  cut by this much on each hit, on top of the friction, 1 stops it there */
+        this.stick = 0;
         /** @property {Particle3DCallback|undefined} - Called with each particle as it is made
          *  @type {Particle3DCallback|undefined} */
         this.particleCreateCallback = undefined;
@@ -1277,7 +1280,9 @@ class ParticleEmitter3D extends EngineObject3D
         data = this.particleData; // as the callback left it, an emit may have grown it
 
         const n = hit.normal, v = vec3(data[k+3], data[k+4], data[k+5]), into = n.scale(v.dot(n));
-        const restitution = max(this.restitution, level.restitution), friction = max(this.friction, level.friction);
+        // the larger friction of the two, as objects take it, then the emitter's own grip, which a level can not undo
+        const restitution = max(this.restitution, level.restitution);
+        const friction = max(this.friction, level.friction) * (1 - clamp(this.stick));
         const out = v.subtract(into).scale(friction).subtract(into.scale(restitution)), p = point.add(n.scale(1e-3));
         data[k] = p.x, data[k+1] = p.y, data[k+2] = p.z;
         data[k+3] = out.x, data[k+4] = out.y, data[k+5] = out.z;

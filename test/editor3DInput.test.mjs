@@ -535,3 +535,19 @@ test('an arrow seen end on is not taken, the object under it can be dragged', as
     drag(engine, [500, 500], [500 + unit, 500 + 2 * unit]);
     assert.deepEqual(json(run, 'list()[0].pos'), [1.5, .5, 2.5]);
 });
+
+test('a type picked to place is placed, with the Blocks or the Terrain tool on too', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    run(`editor3DCamera.pos = vec3(.5, 10.5, .5); editor3DCamera.rotation = vec3(-PI / 2, 0, 0);
+        editor3DVoxelAdd(vec3(16, 4, 16)); editor3DTerrainAdd(vec2(32), 8, 4);
+        var blocks = ()=> editor3DVoxelMap().data.reduce((n, v)=> n + (v ? 1 : 0), 0);`);
+    for (const tool of ['blocks', 'terrain'])
+    {
+        const count = run('list().length');
+        run(`editor3DTool = '${tool}'; editor3DBrush = 'Box'`);
+        click(engine, 500 - 3 * unit, 500 + 2 * unit);
+        assert.equal(run('list().length'), count + 1, tool + ': the Box is placed');
+        assert.equal(run('blocks()'), 0, tool + ': and no block is painted');
+    }
+});

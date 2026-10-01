@@ -4585,17 +4585,29 @@ class SpriteAnimator
      *  @return {SpriteAnimation} */
     get clip() { return this.clips[this.name]; }
 
+    /** The clip showing now, once a clip that has ended has called its onEnd: the callback may switch clips, and a
+     *  read gives the clip it switched to, not the one that ended
+     *  @return {SpriteAnimation}
+     *  @ignore */
+    get settledClip()
+    {
+        // each clip's own isDone calls its onEnd once; a few switches in a row at most
+        for (let i = 4, clip; i-- && clip !== this.clip;)
+            (clip = this.clip).isDone;
+        return this.clip;
+    }
+
     /** The tile of the frame showing now
      *  @return {TileInfo} */
-    get tileInfo() { return this.clip.tileInfo; }
+    get tileInfo() { return this.settledClip.tileInfo; }
 
     /** The frame of the clip showing now
      *  @return {number} */
-    get frame() { return this.clip.frame; }
+    get frame() { return this.settledClip.frame; }
 
     /** True once the clip showing now is a play that has ended
      *  @return {boolean} */
-    get isDone() { return this.clip.isDone; }
+    get isDone() { return this.settledClip.isDone; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -26604,7 +26616,7 @@ class InstancedMesh3D extends EngineObject3D
  * - intensity multiplies the color, above 1 for a light brighter than white
  * - radius is a world distance, so scale3D does not change it
  * - An alpha, an intensity or a radius of 0 switches it off, and a light that is off takes none of those slots
- * - Draws nothing itself, add a glow with drawSoftDisc or a small emissive mesh if it should be seen
+ * - Draws nothing but its glow, when it has one; add a small emissive mesh if the lamp itself should be seen
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -26653,8 +26665,10 @@ class Light3D extends EngineObject3D
         const r = render3D, c = this.color, pos = render3DObjectMatrix(this).getTranslation();
         const toCamera = r.camera.pos.subtract(pos), distance = toCamera.length();
         const at = distance ? pos.add(toCamera.scale(min(this.glow, distance) / 2 / distance)) : pos;
-        const color = rgb(c.r, c.g, c.b, c.a * min(this.intensity, 1));
-        r.drawBillboard(at, vec2(this.glow), engineGlowTexture(this.glowFalloff), color);
+        const color = rgb(c.r, c.g, c.b, c.a * min(this.intensity, 1)), texture = engineGlowTexture(this.glowFalloff);
+        // a browser that can not make the glow's texture draws no glow, not a plain square
+        if (texture || !glContext)
+            r.drawBillboard(at, vec2(this.glow), texture, color);
     }
 }
 
@@ -26664,7 +26678,7 @@ class Light3D extends EngineObject3D
  * - It shines from its position toward the origin, like a three.js DirectionalLight: only the direction to it
  *   counts, so moving it or its parent swings the light around; parent it to a sun in the sky and it follows
  * - It cannot sit on the origin, since that leaves no direction
- * - Like every Light3D it casts no shadow, only the sun, render3D.sunDirection, does
+ * - It casts no shadow: the sun, render3D.sunDirection, does, or a spotlight set as render3D.shadowLight
  * @extends Light3D
  * @memberof Render3D
  * @example
@@ -27741,6 +27755,9 @@ class ParticleEmitter3D extends EngineObject3D
         /** @property {boolean} - Particles hit the level, the height maps and voxel maps, bouncing by restitution and
          *  sliding along by friction; off by default, it tests each particle's move against the level every frame */
         this.collideLevel = false;
+        /** @property {number} - How much a particle grips where it lands, 0 to 1: its speed along the surface is
+         *  cut by this much on each hit, on top of the friction, 1 stops it there */
+        this.stick = 0;
         /** @property {Particle3DCallback|undefined} - Called with each particle as it is made
          *  @type {Particle3DCallback|undefined} */
         this.particleCreateCallback = undefined;
@@ -27960,7 +27977,9 @@ class ParticleEmitter3D extends EngineObject3D
         data = this.particleData; // as the callback left it, an emit may have grown it
 
         const n = hit.normal, v = vec3(data[k+3], data[k+4], data[k+5]), into = n.scale(v.dot(n));
-        const restitution = max(this.restitution, level.restitution), friction = max(this.friction, level.friction);
+        // the larger friction of the two, as objects take it, then the emitter's own grip, which a level can not undo
+        const restitution = max(this.restitution, level.restitution);
+        const friction = max(this.friction, level.friction) * (1 - clamp(this.stick));
         const out = v.subtract(into).scale(friction).subtract(into.scale(restitution)), p = point.add(n.scale(1e-3));
         data[k] = p.x, data[k+1] = p.y, data[k+2] = p.z;
         data[k+3] = out.x, data[k+4] = out.y, data[k+5] = out.z;
@@ -30206,15 +30225,14 @@ function particleEffectResolve(nameOrEffect, options)
  *  - Attach it to an object with addChild to follow it
  *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector2} [pos]
- *  @param {Object} [options]
- *  @param {number} [options.scale] - Grows the whole effect, the built-ins fit a one unit object at 1
- *  @param {number} [options.hue] - Turns its colors around the color wheel, 1 is all the way
- *  @param {number} [options.saturation] - Multiplies its saturation, 0 is grey
- *  @param {number} [options.angle] - Direction, 0 is up; the effect's own angle when not given
- *  @param {TileInfo|TextureInfo} [options.tileInfo] - The game's own art to draw with in place of the effect's shape,
- *    tinted by its colors; a whole texture draws as one tile
- *  @param {*} [options.settings] - Any effect setting by its name, emitTime, emitRate, speed and the rest, replacing
- *    the effect's own for this play
+ *  @param {Object} [options] - What to change for this play, each left out when not wanted:
+ *    scale grows the whole effect, the built-ins fit a one unit object at 1;
+ *    hue turns its colors around the color wheel, 1 is all the way;
+ *    saturation multiplies its saturation, 0 is grey;
+ *    angle is its direction, 0 is up, the effect's own angle when not given;
+ *    tileInfo, a TileInfo or a TextureInfo, is the game's own art to draw with in place of the effect's shape,
+ *    tinted by its colors, a whole texture drawn as one tile;
+ *    and any effect setting by its name, emitTime, emitRate, speed and the rest, replaces the effect's own
  *  @return {ParticleEmitter|undefined} - undefined when there is no such effect
  *  @memberof ParticleEffects */
 function particleEffect(nameOrEffect, pos=vec2(), options={})
@@ -30308,8 +30326,8 @@ function particleEffectApply3D(emitter, effect)
         'randomness', 'additive', 'gravityScale', 'angleSpeed', 'angleDamping', 'collideLevel', 'restitution'])
         e[name] = s[name];
     e.trailTime = s.trailScale / 60; // a stretch of speed times trailScale is a streak of that many frames
-    const stick = effect.behaviors.find(b=> b.name == 'stick'); // in 3D, a grip on landing is less sliding
-    e.friction = stick ? min(s.friction, 1 - stick.strength) : s.friction;
+    e.friction = s.friction;
+    e.stick = effect.behaviors.find(b=> b.name == 'stick')?.strength ?? 0; // in 3D the emitter grips on landing
     // a 2D emitter at angle a shoots along (sin a, cos a), a z turn r takes up to (-sin r, cos r), so r is -a
     e.rotation3D = vec3(0, 0, -s.angle);
     e.particleUpdateCallback = particleEffectUpdateCallback(effect.behaviors, true);

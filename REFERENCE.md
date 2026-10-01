@@ -1244,8 +1244,8 @@ render3D.isSphereVisible(center, radius) // the same is-it-on-screen test drawMe
 
 // Lights and fog, read at each draw
 render3D.sunDirection = vec3(-.3, 1, .5) // toward the sun, where its light comes from, like a directional Light3D;
-                                         // any length, it is normalized for you; the sun is the one light that
-                                         // casts shadows
+                                         // any length, it is normalized for you; the sun casts the shadows, or
+                                         // a spotlight set as render3D.shadowLight
 render3D.sunColor = hsl(.08, 1, .95) // e.g., WHITE by default
 render3D.ambientColor = hsl(0, 0, .3)  // from above once ambientGroundColor is set
 render3D.ambientGroundColor = undefined // set, ambient blends from it on faces pointing down to ambientColor on
@@ -1272,9 +1272,10 @@ new DirectionalLight3D(pos3D, color, intensity=1) // a Light3D that shines from 
                                   // its parent swings the light, so parent it to a sun mesh and it follows
 // 8 lights reach the shader each frame: every directional light first, then the point lights nearest the camera;
 // a light switched off by its alpha, intensity or radius is left out so it cannot take a slot from one that is on;
-// none of them cast shadows, only the sun does; each makes its own highlight when specular is set
+// they cast no shadows, the sun does, or one spotlight set as render3D.shadowLight; each makes its own highlight
+// when specular is set
 
-// Shadows - one shadow map from the sun; lit opaque objects and draws on the default side of the 2D scene
+// Shadows - one shadow map, from the sun or from render3D.shadowLight; lit opaque objects and draws on the default side of the 2D scene
 // cast and receive
 render3D.depthTexture = true // off by default and free when off; draws the solid objects' depth from the camera
                              // for PostProcessPlugin, which reads it with sceneDepth(uv); one more draw, depth only
@@ -1676,6 +1677,7 @@ model.center().fit(size)             // move the model's bounds onto the origin 
 new ParticleEmitter3D(pos3D, emitSize, emitTime, emitRate, emitConeAngle, tileInfo,
     colorStartA, colorStartB, colorEndA, colorEndB, particleTime, sizeStart, sizeEnd,
     speed, damping, gravity, fadeRate, randomness, additive)
+emitter3D.stick = 0        // how much a particle grips where it lands, 0 to 1, on top of the friction; 1 stops it
 emitter3D.emitFlat = false // flatten the spawn area across the way it emits: a sphere a disc, a box a flat rectangle
 // particles shoot out along the emitter's own up axis, so rotation3D aims the spray; emitSize is a sphere diameter or a
 // vec3 box; speeds are per frame, sizes are world units, gravity changes velocity y per frame so it is negative to
@@ -1701,7 +1703,7 @@ emitter.emitParticle()  // fire one particle now, on top of the emit rate
 emitter.particleCount   // how many are alive; they live in emitter.particleData, 21 floats each, owned by the
                         // emitter and drawn as one instanced batch of render3D.billboardMesh, so nothing else touches them
 
-// Trails - a ribbon through where the object has been, parent it to something that moves
+// Lens flare - light in the lens when the sun is in view
 new LensFlare3D(size=1, count=7, intensity=1, saturation=1, color) // the sun's lens flare, the old kind: a glow at
                                   // the sun and a row of discs and rings along the line through the middle of the
                                   // screen; it fades as the sun leaves the screen or goes behind something
@@ -1712,6 +1714,7 @@ flare.elements = [{at: .5, size: .1, color: hsl(.6,1,.6,.3), shape: 'disc'}] // 
                                   // glow, disc or ring
 flare.visible                     // how much of the sun shows, 0 to 1, eased over fadeTime, to read; what is not
                                   // see through hides it, flare.occlusion = false turns that off
+// Trails - a ribbon through where the object has been, parent it to something that moves
 new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over
                                                                          // lifeTime seconds; Infinity keeps every
                                                                          // sample at full width, a path that only

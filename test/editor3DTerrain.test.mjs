@@ -124,3 +124,10 @@ test('a level with no terrain has nothing to sculpt', async ()=>
     run(fileCode());
     assert.equal(run(`editor3DTerrainSculpt(vec3(0, 0, 0), 'raise', 1)`), false);
 });
+
+test('opening the editor puts the terrain back as the level has it', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withTerrain) + 'editor3DTerrainMap().heights[4][4] = 1; editor3DRestore();');
+    near(run('h(4, 4)'), .2);
+});

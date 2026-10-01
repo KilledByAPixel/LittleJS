@@ -2267,6 +2267,11 @@ declare module "littlejsengine" {
         /** The clip showing now
          *  @return {SpriteAnimation} */
         get clip(): SpriteAnimation;
+        /** The clip showing now, once a clip that has ended has called its onEnd: the callback may switch clips, and a
+         *  read gives the clip it switched to, not the one that ended
+         *  @return {SpriteAnimation}
+         *  @ignore */
+        get settledClip(): SpriteAnimation;
         /** The tile of the frame showing now
          *  @return {TileInfo} */
         get tileInfo(): TileInfo;
@@ -9322,7 +9327,7 @@ declare module "littlejsengine" {
      * - intensity multiplies the color, above 1 for a light brighter than white
      * - radius is a world distance, so scale3D does not change it
      * - An alpha, an intensity or a radius of 0 switches it off, and a light that is off takes none of those slots
-     * - Draws nothing itself, add a glow with drawSoftDisc or a small emissive mesh if it should be seen
+     * - Draws nothing but its glow, when it has one; add a small emissive mesh if the lamp itself should be seen
      * @extends EngineObject3D
      * @memberof Render3D
      * @example
@@ -9360,7 +9365,7 @@ declare module "littlejsengine" {
      * - It shines from its position toward the origin, like a three.js DirectionalLight: only the direction to it
      *   counts, so moving it or its parent swings the light around; parent it to a sun in the sky and it follows
      * - It cannot sit on the origin, since that leaves no direction
-     * - Like every Light3D it casts no shadow, only the sun, render3D.sunDirection, does
+     * - It casts no shadow: the sun, render3D.sunDirection, does, or a spotlight set as render3D.shadowLight
      * @extends Light3D
      * @memberof Render3D
      * @example
@@ -9578,6 +9583,9 @@ declare module "littlejsengine" {
         trailData: Float32Array | undefined;
         /** @property {number} - Trail points kept per particle, from trailTime */
         trailMax: number;
+        /** @property {number} - How much a particle grips where it lands, 0 to 1: its speed along the surface is
+         *  cut by this much on each hit, on top of the friction, 1 stops it there */
+        stick: number;
         /** @property {Particle3DCallback|undefined} - Called with each particle as it is made
          *  @type {Particle3DCallback|undefined} */
         particleCreateCallback: Particle3DCallback | undefined;
@@ -10392,25 +10400,17 @@ declare module "littlejsengine" {
      *  - Attach it to an object with addChild to follow it
      *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
      *  @param {Vector2} [pos]
-     *  @param {Object} [options]
-     *  @param {number} [options.scale] - Grows the whole effect, the built-ins fit a one unit object at 1
-     *  @param {number} [options.hue] - Turns its colors around the color wheel, 1 is all the way
-     *  @param {number} [options.saturation] - Multiplies its saturation, 0 is grey
-     *  @param {number} [options.angle] - Direction, 0 is up; the effect's own angle when not given
-     *  @param {TileInfo|TextureInfo} [options.tileInfo] - The game's own art to draw with in place of the effect's shape,
-     *    tinted by its colors; a whole texture draws as one tile
-     *  @param {*} [options.settings] - Any effect setting by its name, emitTime, emitRate, speed and the rest, replacing
-     *    the effect's own for this play
+     *  @param {Object} [options] - What to change for this play, each left out when not wanted:
+     *    scale grows the whole effect, the built-ins fit a one unit object at 1;
+     *    hue turns its colors around the color wheel, 1 is all the way;
+     *    saturation multiplies its saturation, 0 is grey;
+     *    angle is its direction, 0 is up, the effect's own angle when not given;
+     *    tileInfo, a TileInfo or a TextureInfo, is the game's own art to draw with in place of the effect's shape,
+     *    tinted by its colors, a whole texture drawn as one tile;
+     *    and any effect setting by its name, emitTime, emitRate, speed and the rest, replaces the effect's own
      *  @return {ParticleEmitter|undefined} - undefined when there is no such effect
      *  @memberof ParticleEffects */
-    export function particleEffect(nameOrEffect: string | any, pos?: Vector2, options?: {
-        scale?: number;
-        hue?: number;
-        saturation?: number;
-        angle?: number;
-        tileInfo?: TileInfo | TextureInfo;
-        settings?: any;
-    }): ParticleEmitter | undefined;
+    export function particleEffect(nameOrEffect: string | any, pos?: Vector2, options?: any): ParticleEmitter | undefined;
     /** Play an effect in 3D: a ParticleEmitter3D set to it, placed, scaled and recolored
      *  - The same effect data as particleEffect, so the look carries across: a circle spawn area becomes a sphere and a
      *    rectangle a box as deep as it is wide, both flat across the way it emits with options.flatten, a disc or a

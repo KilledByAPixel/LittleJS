@@ -159,3 +159,33 @@ test('SpriteAnimator set of a play clip that has ended starts it over, one still
     assert.equal(hero.frame, 0);
     assert.equal(hero.isDone, false);
 });
+
+test('SpriteAnimator: the read that ends a clip gives the clip its callback switched to', () =>
+{
+    // attack is three tiles from x 64, idle starts at x 0; each getter is the first read after the attack ends
+    const make = ()=>
+    {
+        const hero = new LJS.SpriteAnimator({
+            idle:   new LJS.SpriteAnimation(first, 2, .1),
+            attack: new LJS.SpriteAnimation(first.frame(4), 3, .1).play(),
+        });
+        hero.set('attack', ()=> hero.set('idle'));
+        return hero;
+    };
+    const byTile = make(), byFrame = make(), byDone = make();
+    LJS.engineStep(30); // past the attack's end, with no read in between
+    assert.equal(byTile.tileInfo.pos.x, 0, 'the idle tile, not the last attack tile');
+    assert.equal(byTile.name, 'idle');
+    assert.equal(byFrame.frame, 0);
+    assert.equal(byDone.isDone, false, 'idle loops, it is not done');
+    assert.equal(byDone.name, 'idle');
+});
+
+test('SpriteAnimator: a clip that ends with no callback still reads as done, on its last frame', () =>
+{
+    const hero = new LJS.SpriteAnimator({ attack: new LJS.SpriteAnimation(first.frame(4), 3, .1).play() });
+    hero.set('attack');
+    LJS.engineStep(30);
+    assert.equal(hero.isDone, true);
+    assert.equal(hero.tileInfo.pos.x, 96);
+});

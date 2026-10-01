@@ -237,3 +237,14 @@ test('resizing a map keeps its blocks where they are in the world, growing and s
     assert.deepEqual([json(run, 'level.voxels.size'), run('at(1, 0, 1)')], [[4, 3, 4], 5]);
     assert.equal(run('editor3DVoxelResize(vec3(4, 3, 4))'), false, 'the size it has');
 });
+
+test('opening the editor puts the block map back as the level has it, what play changed or destroyed', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withMap) + 'editor3DVoxelMap().setVoxel(vec3(0, 0, 0), 9); editor3DRestore();');
+    assert.deepEqual([...run('[at(0, 0, 0), at(1, 0, 1)]')], [0, 5], 'a block the game placed in play is gone');
+    run('editor3DVoxelSet(vec3(2, 0, 2), 7); editor3DStrokeEnd();');
+    assert.deepEqual(json(run, 'level.voxels.blocks'), [13, 0, 1, 5, 12, 0, 1, 7, 21, 0], 'and is not in the level');
+    run('level3DVoxelMap.destroy(); editor3DRestore();');
+    assert.deepEqual([...run('[maps().length, at(2, 0, 2)]')], [1, 7], 'a map the game destroyed is made again');
+});

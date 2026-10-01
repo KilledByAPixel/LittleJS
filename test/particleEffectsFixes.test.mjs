@@ -23,7 +23,7 @@ test('3D stick leaves particles in open air moving, it is the friction they land
     for (let i = 0; i < e.particleCount; ++i)
         d[i*21+3] === 0 && d[i*21+5] === 0 && ++frozen;
     assert.equal(frozen, 0, frozen + ' particles stopped in the air');
-    assert.equal(e.friction, 0, 'stick 1 lands with no sliding');
+    assert.equal(e.stick, 1, 'stick 1 grips where it lands');
     e.destroy();
 });
 
@@ -84,4 +84,26 @@ test('REFERENCE says each built-in effect\'s starting hue and whether it is a on
         assert.match(line, /hue [.0-9]+|no hue/, name + ' says its hue');
         assert.match(line, oneShot ? /one-shot/ : /continuous/, name + (oneShot ? ' is a one-shot' : ' is continuous'));
     }
+});
+
+test('3D stick grips a particle where it lands on a level, whatever the level\'s own friction', ()=>
+{
+    const { HeightMap, particleEffect3D, vec2, vec3 } = LJS;
+    const ground = new HeightMap([[0, 0], [0, 0]], vec2(20), 1);
+    // a particle falling and moving sideways, landed, and how fast it still slides
+    const slide = (behaviors)=>
+    {
+        const e = particleEffect3D({settings: {collideLevel: true, emitRate: 0, speed: 0, particleTime: 5,
+            damping: 1, restitution: 0}, behaviors}, vec3(0, 5, 0));
+        e.emitParticle();
+        const d = e.particleData;
+        d[0] = 0, d[1] = .3, d[2] = 0, d[3] = .05, d[4] = -.1, d[5] = 0;
+        for (let i = 0; i < 8; ++i) e.update();
+        const speed = Math.abs(e.particleData[3]);
+        e.destroy(true);
+        return speed;
+    };
+    assert.ok(slide([]) > .01, 'with no stick it slides on');
+    assert.ok(slide([{name: 'stick', strength: 1}]) < 1e-6, 'stuck where it landed');
+    ground.destroy();
 });
