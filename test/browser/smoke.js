@@ -40,10 +40,13 @@ function checkPixel(name, x, y, color, tolerance)
 // no WebGL error since the last check
 function checkGLError(name='no WebGL error') { const error = glContext.getError(); check(name, !error, error); }
 
-// write the result for the runner
+// write the result for the runner; a page opened with ?post sends it to its server too, for a browser that is
+// not driven through DevTools, Firefox
 function smokeDone()
 {
-    document.getElementById('result').textContent = JSON.stringify({checks: smokeChecks});
+    const result = JSON.stringify({checks: smokeChecks});
+    document.getElementById('result').textContent = result;
+    location.search.includes('post') && fetch('/smoke-result', {method: 'POST', body: result});
 }
 
 // run a page's checks, anything thrown is a failed check

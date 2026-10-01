@@ -1234,6 +1234,8 @@ render3D.screenToGround(screenPos, groundHeight=0, canvasSize) // where that ray
                                                    // undefined; terrain has HeightMap.raycast
 render3D.pick(screenPos or ray, objects)           // {object, distance} of the nearest object hit, the box of its mesh
                                                    // or a sprite's size3D; a screen position goes through screenToRay
+render3D.soundDefaultRange = 100      // how far a sound with no range of its own is heard in 3D, the 2D
+                                      // soundDefaultRange is 40; a Sound made with a range keeps it
 render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop, paused) // like sound.play(pos): quieter with
                                                 // distance from the camera, panned by side
 render3D.playSoundLoop(sound, pos3D, volume, pitch, randomnessScale) // the same on a loop; its volume and pan
@@ -1258,6 +1260,10 @@ render3D.gravity = vec3(0, -.01, 0) // e.g., vec3() by default so nothing falls;
 new Light3D(pos3D, radius, color, intensity=1) // point light, an EngineObject3D; it drops off fast, so a small
                                   // radius wants an intensity above 1; an alpha, intensity or radius of 0 is off
 light.intensity = 2               // brightness, multiplies the color, above 1 is brighter than white
+light.coneAngle = .5              // a spotlight: the angle in radians from its forward out to the edge of its
+                                  // cone, 0 by default for a light that shines every way; it shines along its
+                                  // own forward, so rotation3D or what it is attached to aims it
+light.coneSoftness = .2           // how much of the cone is its fading edge: 0 a hard edge, 1 fading from the middle
 light.glow = 1                    // a soft hazy glow over the light this big, like a lamp at night; 0 by default,
                                   // added onto what is behind it, hidden by what is in front
 light.glowFalloff = 1             // how fast the glow fades from its middle, .5 a wide haze, 2 a tight bright core
@@ -1276,6 +1282,9 @@ render3D.shadows = true // off by default and free when off, soft shadows (drawS
 render3D.shadowMapSize = 1024         // pixels across the shadow map, rebuilt when it changes; a size the device
                                       // does not have falls back to the largest it has, glMaxTextureSize
 glClampTextureSize(size)              // that fallback, for a texture a game makes by size itself
+render3D.shadowLight = flashlight     // a spotlight, a Light3D with a coneAngle, casts the shadows in place of the
+                                      // sun, down its cone as far as its radius; the sun still lights the scene;
+                                      // undefined for the sun; one caster at a time
 render3D.shadowRange = 40             // world size the map covers around shadowCenter, smaller is sharper
                                       // it is a square facing the light, so ~1.5x an area's width covers it
 render3D.shadowCenter = undefined // Vector3 center of the shadowed area, read each frame; undefined follows the camera
@@ -1746,6 +1755,9 @@ new THREE.HemisphereLight(sky, ground)    // render3D.ambientColor and ambientGr
 new THREE.DirectionalLight(color)         // new DirectionalLight3D(pos3D, color), it shines from its position the
                                           // same way; or render3D.sunDirection and sunColor, the one that shadows
 new THREE.PointLight(color, i, distance)  // new Light3D(pos3D, radius, color, intensity)
+new THREE.SpotLight(color, i, d, angle, penumbra) // a Light3D with coneAngle = angle and coneSoftness = penumbra,
+                                          // aimed by rotation3D instead of a target; render3D.shadowLight = light
+                                          // for its castShadow
 light.castShadow, light.shadow.camera     // render3D.shadows, shadowRange and shadowCenter
 scene.fog = new THREE.Fog(c, near, far)   // render3D.setFog(near, far, c)
 scene.background                          // render3D.setSky(topColor, horizonColor, bottomColor)
@@ -1808,7 +1820,8 @@ level3DVoxelSetup(tileInfo, (map)=> {})           // The sheet a level's block m
 
 // Built-in types and their properties
 Box, Sphere, Cylinder   // color, tile (-1 for none), solid (true); 1 unit across, the scale is the size
-Light                   // color, radius (5), intensity (1)
+Light                   // color, radius (5), intensity (1); cone (0), degrees from its forward to the edge of
+                        // its beam, makes it a spotlight aimed by its rotation, softness (.2), shadows (false)
 ```
 
 ### 3D level editor

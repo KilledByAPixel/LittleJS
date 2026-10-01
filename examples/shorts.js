@@ -112,7 +112,7 @@ const exampleList =
     new ExampleInfo('3D Sync 2D', 'render3dSync2D.js', 'A 2D platformer with 2D physics, drawn in 3D', false, 'sync2D, 2D physics, platformer, tile collision, crates'),
     new ExampleInfo('3D Voxels', 'render3dVoxels.js', 'Walk, jump, dig and build in a voxel world', false, 'voxel, blocks, minecraft, first person, jump, VoxelMap'),
     new ExampleInfo('3D Collision', 'render3dCollision.js', 'Solid objects, bouncing and picking', false, 'solid, sphere, box, cylinder, picking'),
-    new ExampleInfo('3D First Person', 'render3dFirstPerson.js', 'Walk a maze with mouse look and WASD', false, 'first person, camera, maze'),
+    new ExampleInfo('3D First Person', 'render3dFirstPerson.js', 'Walk a maze with mouse look, WASD and a flashlight', false, 'first person, camera, maze, flashlight, spotlight, shadows, night'),
     new ExampleInfo('3D Lights', 'render3dLights.js', 'Colored point lights and a directional fill', false, 'light, point light, Light3D, DirectionalLight3D'),
     new ExampleInfo('3D Particles', 'render3dParticles.js', 'Fire, smoke, sparks and a fountain', false, 'particles, emitter, additive'),
     new ExampleInfo('3D Water', 'render3dWater.js', 'Rain on a pool, waves from a cellular automaton', false, 'water, waves, ripple, rain, cellular automaton, dynamicDraw, trails, particles'),

@@ -3205,6 +3205,9 @@ declare module "littlejsengine" {
         constructor(asset?: string | URL | any[], randomness?: number, range?: number, taper?: number, onloadCallback?: SoundLoadCallback);
         /** @property {number} - World space max range of sound */
         range: number;
+        /** @property {boolean} - No range was given, so it got soundDefaultRange; played in 3D such a sound is heard
+         *  to render3D.soundDefaultRange instead, which is further */
+        rangeIsDefault: boolean;
         /** @property {number} - At what percentage of range should it start tapering */
         taper: number;
         /** @property {number} - How much to randomize frequency each time sound plays
@@ -7904,8 +7907,16 @@ declare module "littlejsengine" {
         depthTexture: boolean;
         /** @property {boolean} - Cast real shadows from the sun, off by default and free when off */
         shadows: boolean;
+        /** @property {number} - How far a sound played with playSound is heard when it was made with no range of
+         *  its own, in world units; further than the 2D soundDefaultRange, a 3D world is bigger */
+        soundDefaultRange: number;
         /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
         shadowMapSize: number;
+        /** @property {Light3D|undefined} - A spotlight, a Light3D with a coneAngle, to cast the shadows in place
+         *  of the sun, a flashlight in the dark: the shadow map looks down its cone, as far as its radius, and the
+         *  sun still lights the scene but casts none; undefined for the sun, as is a light that is off or has no cone
+         *  @type {Light3D|undefined} */
+        shadowLight: Light3D | undefined;
         /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper; it is a
          *  square facing the light, so it turns as the light does, and about 1.5 times an area's width covers it from
          *  any angle */
@@ -8013,6 +8024,9 @@ declare module "littlejsengine" {
         passIsDefault: boolean;
         lightPositions: Float32Array;
         lightColors: Float32Array;
+        lightCones: Float32Array;
+        shadowLightIndex: number;
+        shadowDepthBias: number;
         /** @type {WebGLBuffer|undefined} */
         streamBuffer: WebGLBuffer | undefined;
         /** @type {Array<WebGLBuffer>} */
@@ -8160,7 +8174,8 @@ declare module "littlejsengine" {
             distance: number;
         } | undefined;
         /** Play a sound at a 3D position, quieter with distance from the camera and panned by its side, like Sound.play
-         *  with a 2D position
+         *  with a 2D position; a sound made with no range of its own is heard to soundDefaultRange, 100, and one given
+         *  a range keeps it
          *  @param {Sound} sound
          *  @param {Vector3} pos3D
          *  @param {number} [volume]
@@ -9295,7 +9310,10 @@ declare module "littlejsengine" {
     /**
      * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
      * - A point light: it lights what is near it and fades out by its radius, DirectionalLight3D shines from far away
-     * - Only the sun, render3D.sunDirection, casts shadows; these light and make highlights without one
+     * - A coneAngle makes it a spotlight: it shines along its own forward, turned by rotation3D or by what it is
+     *   attached to, inside the cone, fading over the part of it coneSoftness says
+     * - The sun, render3D.sunDirection, casts the shadows; a spotlight can cast them in its place, see
+     *   render3D.shadowLight; the other lights light and make highlights without one
      * - Only the 8 lights nearest the camera are used each frame
      * - radius is where the light fades out, and it fades fast, so a small radius wants a higher intensity
      * - intensity multiplies the color, above 1 for a light brighter than white
@@ -9321,6 +9339,12 @@ declare module "littlejsengine" {
         /** @property {boolean} - Shine from far away, from its position toward the origin, instead of out from its
          *  position with a falloff; DirectionalLight3D sets it */
         directional: boolean;
+        /** @property {number} - Makes it a spotlight: the angle in radians from its forward out to the edge of its
+         *  cone, so the beam is twice this across; 0 for a light that shines every way */
+        coneAngle: number;
+        /** @property {number} - How much of the cone is its fading edge: 0 a hard edge, .2 by default, the outer
+         *  fifth, 1 fading all the way from the middle of the beam */
+        coneSoftness: number;
         /** @property {number} - Size of a soft hazy glow drawn over the light, like a lamp at night, 0 for none; it
          *  is added onto what is behind it, and what is in front of the light hides it */
         glow: number;

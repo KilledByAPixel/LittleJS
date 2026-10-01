@@ -415,9 +415,34 @@ function render3DCollectLights()
         for (const light of lights)
             distances.set(light, light.directional ? -1 : light.getWorldPos3D().distanceSquared(cameraPos));
         lights.sort((a, b)=> distances.get(a) - distances.get(b));
+        // the light that casts the shadows keeps a slot however far it is, in place of the farthest
+        const caster = render3DShadowCaster();
+        if (caster && lights.indexOf(caster) >= RENDER3D_MAX_LIGHTS)
+            lights[RENDER3D_MAX_LIGHTS - 1] = caster;
         lights.length = RENDER3D_MAX_LIGHTS;
     }
     return lights;
+}
+
+// the spotlight that casts the shadows in place of the sun: render3D.shadowLight while it is a light that is on
+// and has a cone, undefined for the sun
+function render3DShadowCaster()
+{
+    const light = render3D.shadowLight;
+    return light && !light.destroyed && !light.directional && light.coneAngle > 0 && light.radius > 0 &&
+        light.intensity > 0 && light.color.a > 0 ? light : undefined;
+}
+
+// a light's cone as the four numbers the shader gets: the way it shines, scaled so that its dot with the way to
+// a point, less the fourth number, is 0 at the edge of the cone and 1 where its fade starts; a light with no cone
+// gets numbers that make it 1 every way
+function render3DLightCone(light)
+{
+    const angle = light.directional ? 0 : min(light.coneAngle, PI);
+    if (!(angle > 0)) return [0, 0, 0, -1];
+    const outer = cos(angle), inner = cos(angle * (1 - clamp(light.coneSoftness)));
+    const k = 1 / max(inner - outer, 1e-4), forward = light.getForward3D();
+    return [forward.x * k, forward.y * k, forward.z * k, outer * k];
 }
 
 // unit circle directions for a number of sides, [cos, sin, cos, sin, ...] including the closing point, cached
@@ -525,8 +550,16 @@ class Render3DPlugin
         // shadows
         /** @property {boolean} - Cast real shadows from the sun, off by default and free when off */
         this.shadows = false;
+        /** @property {number} - How far a sound played with playSound is heard when it was made with no range of
+         *  its own, in world units; further than the 2D soundDefaultRange, a 3D world is bigger */
+        this.soundDefaultRange = 100;
         /** @property {number} - Size of the shadow map in pixels, bigger is sharper and slower */
         this.shadowMapSize = 1024;
+        /** @property {Light3D|undefined} - A spotlight, a Light3D with a coneAngle, to cast the shadows in place
+         *  of the sun, a flashlight in the dark: the shadow map looks down its cone, as far as its radius, and the
+         *  sun still lights the scene but casts none; undefined for the sun, as is a light that is off or has no cone
+         *  @type {Light3D|undefined} */
+        this.shadowLight = undefined;
         /** @property {number} - World size the shadow map covers around shadowCenter, smaller is sharper; it is a
          *  square facing the light, so it turns as the light does, and about 1.5 times an area's width covers it from
          *  any angle */
@@ -643,6 +676,9 @@ class Render3DPlugin
         this.passIsDefault = true;   // the running pass is the default layer, the only one shadowed
         this.lightPositions = new Float32Array(RENDER3D_MAX_LIGHTS * 4); // Light3D uniforms, filled each pass
         this.lightColors = new Float32Array(RENDER3D_MAX_LIGHTS * 4);
+        this.lightCones = new Float32Array(RENDER3D_MAX_LIGHTS * 4); // each light's cone, see render3DLightCone
+        this.shadowLightIndex = -1;  // which of the lights sent casts the shadows, -1 for the sun
+        this.shadowDepthBias = 0;    // the bias as the shadow lookup takes it, set with the shadow matrix
 
         // the stream of immediate mode draws
         /** @type {WebGLBuffer|undefined} */
@@ -889,7 +925,8 @@ class Render3DPlugin
     }
 
     /** Play a sound at a 3D position, quieter with distance from the camera and panned by its side, like Sound.play
-     *  with a 2D position
+     *  with a 2D position; a sound made with no range of its own is heard to soundDefaultRange, 100, and one given
+     *  a range keeps it
      *  @param {Sound} sound
      *  @param {Vector3} pos3D
      *  @param {number} [volume]
@@ -903,7 +940,9 @@ class Render3DPlugin
         // the 3D range fade and pan, Sound.play with no position does the rest
         ASSERT(sound instanceof Sound, 'sound must be a Sound');
         ASSERT(isVector3(pos3D), 'pos3D must be a vec3');
-        const offset = pos3D.subtract(this.camera.pos), range = sound.range;
+        // a sound with no range of its own is heard further in 3D than in 2D
+        const offset = pos3D.subtract(this.camera.pos);
+        const range = sound.rangeIsDefault ? this.soundDefaultRange : sound.range;
         if (range)
         {
             const distance = offset.length();
@@ -1180,6 +1219,23 @@ class Render3DPlugin
     /** Rebuild the light's view projection around the shadow center, called automatically each frame shadows are on */
     updateShadowMatrix()
     {
+        const caster = render3DShadowCaster();
+        if (caster)
+        {
+            // a spotlight's map looks down its cone with perspective, from just in front of it out to its radius
+            const pos = caster.getWorldPos3D(), forward = caster.getForward3D();
+            const up = abs(forward.y) > .99 ? vec3(0, 0, 1) : vec3(0, 1, 0);
+            const far = caster.radius, near = max(far / 500, .02);
+            const fov = min(min(caster.coneAngle, PI) * 2 + .1, 2.8);
+            this.shadowMatrix = Matrix4.perspective(fov, 1, near, far).multiply(
+                Matrix4.lookAt(pos, pos.add(forward), up).invert());
+            this.shadowPlanes = render3DFrustumPlanes(this.shadowMatrix);
+            // depth is not even with perspective: the lookup divides this by the distance squared, which makes
+            // the bias the same distance in the world near the light and far from it
+            this.shadowDepthBias = this.shadowBias * far * far * near / (far - near);
+            return;
+        }
+        this.shadowDepthBias = this.shadowBias; // the sun's map is flat, its depth even
         ASSERT(this.shadowRange > 0, 'shadowRange must be positive');
         const range = this.shadowRange > 0 ? this.shadowRange : 1, half = range / 2;
         const toSun = this.sunDirection.normalize();
@@ -1609,6 +1665,7 @@ function render3DFragmentSource(fragmentCode)
         'precision highp float;' +
         'uniform vec4 lightDir,lightColor,ambientFog,ambientGround,fogColor,shadowParams;' +
         'uniform vec4 extraLights[' + RENDER3D_MAX_LIGHTS + '],extraLightColors[' + RENDER3D_MAX_LIGHTS + '];' +
+        'uniform vec4 extraLightCones[' + RENDER3D_MAX_LIGHTS + '];' +
         'uniform int extraLightCount;' +
         'uniform vec3 cameraPos;' +
         'uniform vec4 materialParams,emissiveTint,skyTop,skyHorizon,skyBottom;' +
@@ -1617,12 +1674,14 @@ function render3DFragmentSource(fragmentCode)
         'uniform highp sampler2DShadow shadowMap;' +
         'in vec3 P,N;in vec2 T,L;in vec4 C,S;' +
         'out vec4 o;' +
-        // the sun shadow at this fragment, 0 to 1: the light's depth map with a 3x3 blur, outside the map is lit
+        // the shadow at this fragment, 0 to 1: the light's depth map with a 3x3 blur, outside the map is lit; the
+        // sun's map is flat and S.w is 1, a spotlight's has perspective and S.w is the distance from it, where the
+        // bias shrinks by its square to stay the same distance in the world
         'float shadow(){' +
-        'if(shadowParams.x<=0.)return 1.;' +
+        'if(shadowParams.x<=0.||S.w<=0.)return 1.;' +
         'vec3 q=S.xyz/S.w*.5+.5;' +
         'if(any(greaterThanEqual(abs(q-.5),vec3(.5))))return 1.;' +
-        'q.z-=shadowParams.y;' +
+        'q.z-=shadowParams.y/(S.w*S.w);' +
         'float s=0.;' +
         'for(int x=-1;x<=1;++x)for(int y=-1;y<=1;++y)' +
         's+=texture(shadowMap,vec3(q.xy+vec2(x,y)*shadowParams.z,q.z));' +
@@ -1650,7 +1709,9 @@ function render3DFragmentSource(fragmentCode)
         'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
         'if(materialParams.x!=0.)n=normalMapNormal(n);' +
         'float nl=dot(n,-lightDir.xyz);' +
-        'float s=shadow();' +
+        // the shadow is the sun's, or one spotlight's: shadowParams.x is 1 for the sun, 2 and up for that Light3D
+        'float sh=shadow(),s=shadowParams.x<1.5?sh:1.;' +
+        'int si=int(shadowParams.x+.5)-2;' +
         // the ambient: one color, or blended from the ground color below to the sky color above by the way the face points
         'vec3 l=(ambientGround.a>0.?mix(ambientGround.rgb,ambientFog.rgb,n.y*.5+.5):ambientFog.rgb)+lightColor.rgb*max(nl,0.)*s;' +
         // the Light3D objects: a point light falls off with distance, a directional one does not and carries the
@@ -1666,6 +1727,11 @@ function render3DFragmentSource(fragmentCode)
         'v/=max(d,1e-6);' +
         'float ln=dot(n,v);' +
         'vec3 lc=extraLightColors[i].rgb*extraLightColors[i].a*a*a;' +
+        // a spotlight's cone: full where its fade starts, nothing at its edge, smooth between; 1 with no cone
+        'vec4 K=extraLightCones[i];' +
+        'float k=clamp(dot(K.xyz,-v)-K.w,0.,1.);' +
+        'lc*=k*k*(3.-2.*k);' +
+        'if(i==si)lc*=sh;' +
         'l+=lc*max(0.,ln);' +
         'if(lightColor.a>0.)sp+=lc*pow(max(dot(reflect(-v,n),eye),0.),materialParams.y)*step(0.,ln);' +
         '}' +
@@ -1720,6 +1786,7 @@ function render3DUseProgram(program)
     {
         gl.uniform4fv(render3DUniform('extraLights'), r.lightPositions, 0, r.lightCount * 4);
         gl.uniform4fv(render3DUniform('extraLightColors'), r.lightColors, 0, r.lightCount * 4);
+        gl.uniform4fv(render3DUniform('extraLightCones'), r.lightCones, 0, r.lightCount * 4);
     }
     if (program !== r.program)
     {
@@ -2080,7 +2147,9 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     // 0 blends them away instead, and -1 is additive, which has to fade into fog differently
     const blendMode = state.blend ? (state.additive ? -1 : 0) : 1;
     const receives = r.shadows && r.passIsDefault && state.receiveShadow ? 1 : 0;
-    render3DUniform4f('shadowParams', receives, r.shadowBias, r.shadowSoftness / r.shadowTextureSize, blendMode);
+    // 1 the sun's shadow, 2 and up the shadow of that Light3D, the spotlight that casts them
+    const shadowOf = receives && r.shadowLightIndex >= 0 ? 2 + r.shadowLightIndex : receives;
+    render3DUniform4f('shadowParams', shadowOf, r.shadowDepthBias, r.shadowSoftness / r.shadowTextureSize, blendMode);
 
     // a render target's texture holds premultiplied color, the blend writes it that way, so the shader undoes it
     const textureInfo = render3DTextureOf(tileInfo);
@@ -2146,6 +2215,8 @@ function render3DRenderPass(after2D)
     // gathered before the gl state is taken over, so an assert here leaves nothing to hand back
     const lights = render3DCollectLights();
     r.lightCount = lights.length;
+    const caster = render3DShadowCaster();
+    r.shadowLightIndex = caster ? lights.indexOf(caster) : -1;
     const positions = r.lightPositions, colors = r.lightColors;
     lights.forEach((light, i)=>
     {
@@ -2156,6 +2227,7 @@ function render3DRenderPass(after2D)
         positions[k] = p.x, positions[k+1] = p.y, positions[k+2] = p.z;
         positions[k+3] = light.directional ? -1 : max(0, light.radius); // a negative radius marks a direction
         colors[k] = c.r, colors[k+1] = c.g, colors[k+2] = c.b, colors[k+3] = c.a * light.intensity;
+        r.lightCones.set(render3DLightCone(light), k);
     });
 
     // take over the gl state
@@ -4579,7 +4651,10 @@ class InstancedMesh3D extends EngineObject3D
 /**
  * Light3D - A light that is an EngineObject3D, so it can move, follow a parent or be destroyed like anything else
  * - A point light: it lights what is near it and fades out by its radius, DirectionalLight3D shines from far away
- * - Only the sun, render3D.sunDirection, casts shadows; these light and make highlights without one
+ * - A coneAngle makes it a spotlight: it shines along its own forward, turned by rotation3D or by what it is
+ *   attached to, inside the cone, fading over the part of it coneSoftness says
+ * - The sun, render3D.sunDirection, casts the shadows; a spotlight can cast them in its place, see
+ *   render3D.shadowLight; the other lights light and make highlights without one
  * - Only the 8 lights nearest the camera are used each frame
  * - radius is where the light fades out, and it fades fast, so a small radius wants a higher intensity
  * - intensity multiplies the color, above 1 for a light brighter than white
@@ -4611,6 +4686,12 @@ class Light3D extends EngineObject3D
         /** @property {boolean} - Shine from far away, from its position toward the origin, instead of out from its
          *  position with a falloff; DirectionalLight3D sets it */
         this.directional = false;
+        /** @property {number} - Makes it a spotlight: the angle in radians from its forward out to the edge of its
+         *  cone, so the beam is twice this across; 0 for a light that shines every way */
+        this.coneAngle = 0;
+        /** @property {number} - How much of the cone is its fading edge: 0 a hard edge, .2 by default, the outer
+         *  fifth, 1 fading all the way from the middle of the beam */
+        this.coneSoftness = .2;
         /** @property {number} - Size of a soft hazy glow drawn over the light, like a lamp at night, 0 for none; it
          *  is added onto what is behind it, and what is in front of the light hides it */
         this.glow = 0;

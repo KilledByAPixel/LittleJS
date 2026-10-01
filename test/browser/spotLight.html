@@ -1,0 +1,61 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: spotlight</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// a spotlight, a Light3D with a cone, lights the ground inside its cone and not outside it, and as
+// render3D.shadowLight it casts the shadow of a box in its beam
+// seen from 12 above looking straight down: the view is 13.86 units across at the ground, so a place x there is
+// at .5 + x / 13.86 across the canvas; the light is 6 up, its cone 3.3 units wide at the ground, fading from 2.5
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 0));
+    let lamp;
+    await engineInit(()=>
+    {
+        new Render3DPlugin;
+        // no light but the lamp's
+        render3D.sunColor = rgb(0, 0, 0);
+        render3D.ambientColor = rgb(0, 0, 0);
+        render3D.camera.pos = vec3(0, 12, 0);
+        render3D.camera.rotation = vec3(-PI / 2, 0, 0);
+
+        new EngineObject3D(vec3(), buildGrid(vec2(40), 1)); // the ground
+        // a box in the beam: from above it hides the ground out to x 1.67, and its shadow from the lamp falls
+        // on the ground from x .7 to 2.77, so the ground at x 1.9 is seen and in its shadow
+        const box = new EngineObject3D(vec3(.8, 3, 0), buildBox());
+        box.scale3D = vec3(.8);
+
+        lamp = new Light3D(vec3(0, 6, 0), 20, rgb(1, 1, 1), 2);
+        lamp.coneAngle = .5;
+        lamp.rotation3D = vec3(-PI / 2, 0, 0); // looking down
+    }, ()=> {}, ()=> {}, ()=> {}, ()=> {});
+
+    const ground = (x)=> smokePixel(.5 + x / 13.86, .5)[0]; // how bright the ground is at x, on the middle row
+    engineStep(2);
+    check('the ground under the spotlight is lit', ground(0) > 150, ground(0));
+    check('and inside its cone to one side', ground(-2.2) > 100, ground(-2.2));
+    check('the ground outside its cone is dark', ground(-5.5) < 20, ground(-5.5));
+    check('with the shadows the sun\'s, the box casts none from the lamp', ground(1.9) > 80, ground(1.9));
+
+    render3D.shadows = true;
+    render3D.shadowLight = lamp;
+    engineStep(2);
+    check('as the shadow light, the lamp casts the box\'s shadow', ground(1.9) < 25, ground(1.9));
+    check('the same place on the other side, with no box, is lit', ground(-1.9) > 100, ground(-1.9));
+    check('the ground beside the shadow stays lit', ground(-2.2) > 100 && ground(0) > 150, [ground(-2.2), ground(0)]);
+    check('the ground outside the cone stays dark', ground(-5.5) < 20, ground(-5.5));
+
+    lamp.coneAngle = 0;
+    engineStep(2);
+    check('with no cone it is a point light again, lighting past the cone', ground(-5.5) > 30, ground(-5.5));
+    checkGLError();
+});
+</script>

@@ -1,4 +1,5 @@
-// walk a small maze with a first person camera
+// walk a small maze with a first person camera; at night the player's
+// flashlight, a spotlight, lights the way and casts the shadows
 const mazeData =
 [
     '##########',
@@ -15,7 +16,7 @@ const mazeData =
 ];
 const mazeSize = vec2(mazeData[0].length, mazeData.length);
 const cellSize = 2, wallHeight = 3, eyeHeight = 1.5;
-let player;
+let player, flashlight, night = true;
 
 // the world position of a maze cell, at a height
 const cellPos = (x, z, y)=> vec3(
@@ -24,9 +25,6 @@ const cellPos = (x, z, y)=> vec3(
 function gameInit()
 {
     new Render3DPlugin;
-    render3D.setSky(hsl(.6,.5,.5), hsl(.6,.4,.8));
-    render3D.setFog(8, 30);
-    render3D.ambientColor = hsl(.6,.2,.4);
     render3D.shadows = true;
     render3D.shadowCenter = vec3();
     render3D.shadowRange = mazeSize.y*cellSize*1.5;
@@ -63,10 +61,32 @@ function gameInit()
     player.size3D = vec3(1);
     player.collideAsSphere3D = true;
     player.setCollision();
+
+    // the flashlight: a light with a cone is a spotlight, coneSoftness is
+    // how much of the cone is its fading edge
+    flashlight = new Light3D(vec3(), 25, hsl(.13,.4,.9), 3);
+    flashlight.coneAngle = .45;
+    flashlight.coneSoftness = .6;
+    setNight(night);
+}
+
+// night: a dark sky, and the flashlight casts the shadows in place of
+// the sun; day: the sun does, and the flashlight is off
+function setNight(on)
+{
+    night = on;
+    const sky = on ? .08 : .5;
+    render3D.setSky(hsl(.6,.5,sky), hsl(.6,.4,sky*1.6));
+    render3D.setFog(8, 30);
+    render3D.ambientColor = hsl(.6,.2,on ? .06 : .4);
+    render3D.sunColor = hsl(.6,.2,on ? .05 : 1);
+    render3D.shadowLight = on ? flashlight : undefined;
+    flashlight.intensity = on ? 3 : 0;
 }
 
 function gameUpdate()
 {
+    keyWasPressed('KeyN') && setNight(!night); // N is night and day
     if (keyWasPressed('KeyF')) // F toggles flying
     {
         player.fly = !player.fly;
@@ -75,9 +95,19 @@ function gameUpdate()
     }
 }
 
+function gameUpdatePost()
+{
+    // the flashlight shines the way the camera looks, held in a hand to the
+    // right and a little down: a light at the eye would hide its own shadows
+    const hand = render3D.cameraRight.scale(.4).add(vec3(0, -.3, 0));
+    flashlight.pos3D = render3D.camera.pos.add(hand);
+    flashlight.rotation3D = render3D.camera.rotation.copy();
+}
+
 function gameRenderPost()
 {
     const mode = player.fly ? 'flying' : 'walking';
-    const text = `click: look / WASD: move / F: fly (${mode})`;
-    drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
+    const text = `click: look / WASD: move / F: fly (${mode}) / N: night`;
+    const color = night ? WHITE : BLACK;
+    drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, color);
 }

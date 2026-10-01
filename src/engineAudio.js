@@ -220,9 +220,12 @@ class Sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
      *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
      */
-    constructor(asset, randomness, range=soundDefaultRange, taper=soundDefaultTaper, onloadCallback)
+    constructor(asset, randomness, range, taper=soundDefaultTaper, onloadCallback)
     {
         if (!soundEnable || headlessMode) return;
+        const rangeIsDefault = range === undefined;
+        if (rangeIsDefault)
+            range = soundDefaultRange;
 
         ASSERT(!asset || isArray(asset) || isStringLike(asset), 'asset must be a file name or zzfx array');
         ASSERT(randomness === undefined || isNumber(randomness), 'randomness must be a number');
@@ -232,6 +235,9 @@ class Sound
 
         /** @property {number} - World space max range of sound */
         this.range = range;
+        /** @property {boolean} - No range was given, so it got soundDefaultRange; played in 3D such a sound is heard
+         *  to render3D.soundDefaultRange instead, which is further */
+        this.rangeIsDefault = rangeIsDefault;
         /** @property {number} - At what percentage of range should it start tapering */
         this.taper = taper;
         /** @property {number} - How much to randomize frequency each time sound plays
