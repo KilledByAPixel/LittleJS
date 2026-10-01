@@ -116,6 +116,10 @@ export
     setScene,
     getScene,
 
+    // Parallax
+    ParallaxLayer,
+    parallaxMountains,
+
     // Path Finding
     PathFinder,
     PathFinderNode,

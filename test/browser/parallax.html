@@ -1,0 +1,46 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: parallax layers</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// a parallax layer draws the image its function drew, repeats it across the view, and follows the camera by its
+// parallax; the view is 8 units across, a unit 16 pixels, and the image is 4 units wide: red on its left half and
+// green on its right, so across the view the colors go in bands 2 units wide
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 1));
+    const pixel = (x, y)=> smokePixel(.5 + x / 8, .5 + y / 8);
+    let layer;
+    await engineInit(()=>
+    {
+        setCameraScale(16);
+        layer = new ParallaxLayer(vec2(), vec2(4, 2), .5, 0, (context, size)=>
+        {
+            context.fillStyle = '#f00'; context.fillRect(0, 0, size.x / 2, size.y);
+            context.fillStyle = '#0f0'; context.fillRect(size.x / 2, 0, size.x / 2, size.y);
+        }, vec2(64, 32));
+    }, ()=> {}, ()=> {}, ()=> {}, ()=> {});
+
+    engineStep(3);
+    const check3 = (name, [r, g, b], test)=> check(name, test(r, g, b), [r, g, b]);
+    const red = (r, g, b)=> r > 200 && g < 50 && b < 50, green = (r, g, b)=> g > 200 && r < 50 && b < 50;
+    check3('the layer draws its image', pixel(-1, 0), red);
+    check3('a copy beside it reaches the edge of the view', pixel(-3, 0), green);
+    check3('the copies meet with no gap', pixel(2, 0), (r, g, b)=> b < 50);
+    check3('above it shows what is behind', pixel(-1, 2), (r, g, b)=> b > 200 && r < 50 && g < 50);
+
+    // the camera goes 2 units right and the layer 1 with it: on the screen the bands shift 1 unit left, so the
+    // place that was red half a unit left of the middle is green now
+    cameraPos = vec2(2, 0);
+    engineStep(1);
+    check3('it follows the camera by its parallax', pixel(-.5, 0), green);
+    checkGLError();
+});
+</script>

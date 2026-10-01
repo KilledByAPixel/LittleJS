@@ -1,72 +1,36 @@
+// three ranges of mountains from the parallax plugin: each follows the
+// camera by its own amount and repeats across the view, so the far ones
+// pass slowly; the camera drifts along and the mouse looks around
+
 function gameInit()
 {
-    // create parallax layers
-    const levelColor = hsl(rand(), .5, .5);
-    for (let i=3; i--;)
+    canvasClearColor = hsl(.6,.4,.8);
+    cameraScale = 24;
+
+    // the far layers are lighter and higher, follow the camera more,
+    // and draw first
+    const hue = rand();
+    for (let i = 3; i--;)
     {
-        const topColor = levelColor.mutate(.3);
-        const bottomColor = levelColor.subtract(CLEAR_WHITE).mutate(.3);
-        new ParallaxLayer(topColor, bottomColor, i);
+        const far = i/2;
+        const top = hsl(hue, .4, .35 + far*.3);
+        const bottom = hsl(hue, .5, .15 + far*.2);
+        new ParallaxLayer(vec2(0, far*4 - 4), vec2(40, 20), .3 + far*.5,
+            -1 - i, parallaxMountains(top, bottom));
     }
 }
 
-class ParallaxLayer extends CanvasLayer
+function gameUpdate()
 {
-    constructor(topColor, bottomColor, depth) 
-    {
-        const renderOrder = depth;
-        const canvasSize = vec2(512, 256);
-        super(vec2(), vec2(), 0, renderOrder, canvasSize);
-        this.depth = depth;
+    const look = mousePosScreen.subtract(mainCanvasSize.scale(.5));
+    cameraPos = vec2(time*4 + look.x*.02, -look.y*.005);
+}
 
-        // create a gradient for the mountains
-        const w = canvasSize.x, h = canvasSize.y;
-        for (let i = h; i--;)
-        {
-            // draw a 1 pixel gradient line on the left side
-            const p = i/h;
-            this.context.fillStyle = topColor.lerp(bottomColor, p);
-            this.context.fillRect(0, i, 1, 1);
-        }
-
-        // draw random mountains
-        const pointiness = .2;  // how pointy the mountains are
-        const levelness = .005; // how much the mountains level out
-        const slopeRange = 1;   // max slope of the mountains
-        const startGroundLevel = h/2;
-        let y = startGroundLevel;
-        let groundSlope = rand(-slopeRange, slopeRange);
-        for (let x=w; x--;)
-        {
-            // pull slope towards start ground level
-            y += groundSlope -= (y-startGroundLevel)*levelness;
-
-            // randomly change slope
-            if (rand() < pointiness)
-                groundSlope = rand(-slopeRange, slopeRange);
-
-            // draw 1 pixel wide vertical slice of mountain
-            this.context.drawImage(this.canvas, 0,0,1,h,x,y,1,h-y);
-        }
-
-        // remove gradient sliver from left side
-        this.context.clearRect(0,0,1,h);
-    
-        // make WebGL texture
-        this.updateWebGL();
-    }
-
-    render()
-    {
-        const canvasSize = vec2(this.canvas.width, this.canvas.height);
-        const viewerPos = mousePos;
-        const depth = this.depth
-        const distance = 3 + depth;
-        const parallax = vec2(.2, .05).scale(depth**2+1);
-        const cameraDeltaFromCenter = viewerPos.multiply(parallax);
-        const positionOffset = vec2(0, 4-depth*3);
-        this.pos = cameraDeltaFromCenter.add(positionOffset)
-        this.size = canvasSize.scale(distance/cameraScale);
-        super.render();
-    }
+function gameRender()
+{
+    // the world itself, ground and posts 5 units apart, for comparison
+    drawRect(vec2(cameraPos.x, -28), vec2(1e3, 40), hsl(.3,.4,.25));
+    const first = floor(cameraPos.x/5 - 10)*5;
+    for (let x = first; x < first + 105; x += 5)
+        drawRect(vec2(x, -7), vec2(.4, 2), hsl(.08,.5,.3));
 }

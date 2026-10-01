@@ -7154,6 +7154,78 @@ declare module "littlejsengine" {
      *  @return {Scene|undefined}
      *  @memberof SceneSystem */
     export function getScene(): Scene | undefined;
+    /**
+     * LittleJS Parallax Plugin
+     * - A background layer that follows the camera by a part of its movement, so it looks far away
+     * - Repeats across the view, so a level of any width has a background
+     * - Draws mountains by default, or anything a game draws into it
+     * @namespace Parallax
+     */
+    /**
+     * A background layer with parallax: an image that follows the camera by a part of its movement and repeats across
+     * the view, drawn once into a canvas by a function, mountains when none is given
+     * - A far layer has a parallax near 1 and a low renderOrder, a near one a smaller parallax and a higher renderOrder
+     * - The image should meet itself at its left and right edges to repeat without a seam, as the mountains do
+     * @memberof Parallax
+     * @extends CanvasLayer
+     * @example
+     * // three ranges of mountains, the far ones lighter and slower
+     * for (let i = 3; i--;)
+     *     new ParallaxLayer(vec2(0, i*2), vec2(40, 20), .9 - i*.2, -1e3 + i,
+     *         parallaxMountains(hsl(.6, .3, .7 - i*.2), hsl(.6, .5, .2), i));
+     *
+     * // or draw your own image into the layer
+     * new ParallaxLayer(vec2(), vec2(40, 20), .5, -1e3, (context, size)=>
+     * {
+     *     context.fillStyle = '#fff';
+     *     context.fillRect(size.x/2 - 20, size.y/2 - 20, 40, 40);
+     * });
+     */
+    export class ParallaxLayer extends CanvasLayer {
+        /** Create a parallax layer and draw its image
+         *  @param {Vector2} [pos] - Where the middle of the image is in the world when the camera is there too
+         *  @param {Vector2} [size] - World size of one copy of the image
+         *  @param {number|Vector2} [parallax] - How much of the camera's movement it follows, 0 stays with the world
+         *    and 1 with the screen, a Vector2 to follow x and y by different amounts
+         *  @param {number} [renderOrder] - Low to draw behind the game, far layers lowest
+         *  @param {function(OffscreenCanvasRenderingContext2D, Vector2, ParallaxLayer): void} [drawFunction] - Draws
+         *    the image, given the canvas context, its size in pixels and the layer; mountains when not given
+         *  @param {Vector2} [canvasSize] - Size of the image in pixels */
+        constructor(pos?: Vector2, size?: Vector2, parallax?: number | Vector2, renderOrder?: number, drawFunction?: (arg0: OffscreenCanvasRenderingContext2D, arg1: Vector2, arg2: ParallaxLayer) => void, canvasSize?: Vector2);
+        /** @property {Vector2} - How much of the camera's movement it follows on each axis, 0 stays with the world
+         *  and 1 with the screen */
+        parallax: Vector2;
+        /** @property {boolean} - Repeat the image across the view, left and right */
+        wrapX: boolean;
+        /** @property {boolean} - Repeat the image up and down the view */
+        wrapY: boolean;
+        /** @property {number} - How much the camera's zoom changes its size on the screen: 1 like the world, 0 not
+         *  at all, the same on the screen at any zoom as it is at zoomScale */
+        zoomFollow: number;
+        /** @property {number} - The camera scale its size is given for, used when zoomFollow is under 1 */
+        zoomScale: number;
+        /** @property {function(OffscreenCanvasRenderingContext2D, Vector2, ParallaxLayer): void} - Draws the
+         *  image, redraw() after changing it */
+        drawFunction: (arg0: OffscreenCanvasRenderingContext2D, arg1: Vector2, arg2: ParallaxLayer) => void;
+        /** Draw the image again with drawFunction, after changing it or what it draws from */
+        redraw(): void;
+        zoomFactor(): number;
+        /** World size one copy of the image is drawn at now, its size unless zoomFollow is under 1
+         *  @return {Vector2} */
+        getDrawSize(): Vector2;
+        /** Where each copy of the image is drawn now, in the world: one place, or with wrapping every place that
+         *  shows in the view
+         *  @return {Array<Vector2>} */
+        getDrawPositions(): Array<Vector2>;
+    }
+    /** A draw function for a ParallaxLayer: a range of mountains across the image, shaded from the color of their
+     *  peaks down to the color of their feet, that repeats with no seam
+     *  @param {Color} [topColor] - Color at the peaks
+     *  @param {Color} [bottomColor] - Color at the bottom of the image
+     *  @param {number} [seed] - The same seed gives the same mountains, random when not given
+     *  @return {function(OffscreenCanvasRenderingContext2D, Vector2): void}
+     *  @memberof Parallax */
+    export function parallaxMountains(topColor?: Color, bottomColor?: Color, seed?: number): (arg0: OffscreenCanvasRenderingContext2D, arg1: Vector2) => void;
     /** Grid pathfinder using A* with two optional smoothing passes.
      *  @memberof PathFinding
      *  @example

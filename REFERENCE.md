@@ -877,6 +877,32 @@ scene.render()       // Before gameRender, under the objects
 scene.renderPost()   // After gameRenderPost, over the game, while paused too; plugins made after the first setScene draw over it
 ```
 
+## LittleJS Parallax
+- A background layer that follows the camera by a part of its movement and repeats across the view
+- Draws mountains by default, or anything a game draws into its canvas
+- See the Parallax short and the platformer example
+
+```javascript
+new ParallaxLayer(pos, size=vec2(32,16), parallax=.5, renderOrder=-1e3, drawFunction, canvasSize=vec2(512,256))
+                           // a CanvasLayer; pos is where the image's middle is when the camera is there too,
+                           // size the world size of one copy; parallax is how much of the camera's movement it
+                           // follows, 0 with the world, 1 with the screen, a Vector2 for x and y apart
+drawFunction(context, canvasSize, layer) // draws the image once, parallaxMountains() when not given; an image
+                           // that meets itself at its left and right edges repeats with no seam
+parallaxMountains(topColor, bottomColor, seed) // a draw function: a range of mountains that repeats with no seam,
+                           // shaded from its peaks to its feet; the same seed gives the same range
+layer.wrapX = true         // repeat across the view; wrapY = false, up and down too
+layer.zoomFollow = 1       // how much the camera's zoom changes its size on screen, 0 keeps it the size it has at
+layer.zoomScale            // this camera scale, the cameraScale when it was made
+layer.redraw()             // draw the image again, after changing layer.drawFunction or what it draws from
+layer.getDrawPositions()   // where each copy is drawn now in the world; getDrawSize() the size of one
+
+// three ranges, the far ones lighter, higher and slower
+for (let i = 3; i--;)
+    new ParallaxLayer(vec2(0, i*2), vec2(40, 20), .3 + i*.25, -1e3 - i,
+        parallaxMountains(hsl(.6, .3, .4 + i*.15), hsl(.6, .5, .2)));
+```
+
 ## LittleJS PathFinding System
 - A* pathfinding on a grid
 - Works with a TileCollisionLayer or a bare grid with custom walkability

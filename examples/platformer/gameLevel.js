@@ -49,13 +49,26 @@ export function buildLevel()
     // create sky object with gradient background and stars
     sky = new GameEffects.Sky;
 
-    // create parallax layers
+    // create parallax layers of mountains, the nearer ones bigger, lower
+    // and shifting more as the camera crosses the level
+    const center = levelSize.scale(.5);
+    const zoom = 4*16; // the camera scale the sizes are for
     for (let i=3; i--;)
     {
-        const pos = levelSize.scale(.5);
         const topColor = levelColor.mutate(.2).lerp(sky.skyColor, .8 - i*.15);
         const bottomColor = levelColor.subtract(LJS.CLEAR_WHITE).mutate(.2);
-        new GameEffects.ParallaxLayer(pos, topColor, bottomColor, i );
+
+        // how many pixels it has shifted when the camera is at the level's edge
+        const shift = vec2(150, 30).scale(i**2+1);
+        const parallax = vec2(1 - shift.x/(center.x*zoom), 1 - shift.y/(center.y*zoom));
+        const pos = center.add(vec2(0, (2-i)/(1-parallax.y)));
+        const size = vec2(512, 256).scale((4+i)/zoom);
+        const layer = new LJS.ParallaxLayer(pos, size, parallax, i - 3e3,
+            LJS.parallaxMountains(topColor, bottomColor));
+
+        // the mountains stay the same size on screen when the camera zooms
+        layer.zoomFollow = 0;
+        layer.zoomScale = zoom;
     }
 }
 
