@@ -1879,8 +1879,10 @@ prefab.parts                                      // what its objects made, obje
 prefab.placeParts()                               // or at once; destroying the handle destroys them
 {"attached": true, "objects": [...]}              // an attached prefab's parts are the handle's children: one body
                                                   // that moves together, its parts with no collision of their own,
-                                                  // a prefab inside it attached too, and its size3D the size of
-                                                  // the box around them, for a vehicle or a creature
+                                                  // a prefab inside it attached too; its handle is at the middle
+                                                  // of the box around them and its size3D is that box, so
+prefab.setCollision()                             // makes the body solid where it is seen, a vehicle or a creature
+prefab.originOffset                               // from the prefab's origin to that handle, in the prefab's space
 {"prefabs": {"Tower": {"objects": [...]}}, "objects": [{"type": "Tower", "pos": [5, 0, 5]}]} // a level's own
                                                   // prefabs, added when it loads; one the game added keeps its place
 // an instance sized unevenly that holds turned parts is as near as boxes can be, a turned box can not be sheared

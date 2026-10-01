@@ -449,8 +449,8 @@ function editor3DPrefabBox(made)
 // a prefab's instance how far its origin is from the middle of its parts, as it is turned and sized now
 function editor3DBoxOffset(object)
 {
-    const made = editor3DInstances.get(object.id), box = editor3DPrefabBox(made);
-    return box ? box.pos.subtract(made.pos3D) : vec3();
+    const box = editor3DPrefabBox(editor3DInstances.get(object.id));
+    return box ? box.pos.subtract(editor3DPos(object)) : vec3();
 }
 
 // every object gets an id of its own, a whole number: one without, or with one already used, gets a new one
@@ -564,7 +564,7 @@ function editor3DPlaceInstance(made, object)
     made.scale3D = (level3DBaseScale.get(made) ?? vec3(1)).multiply(editor3DScale(object));
     made.velocity3D = vec3();
     made.angleVelocity3D = vec3();
-    made instanceof Prefab3D && made.placeParts(); // its parts go with it
+    made instanceof Prefab3D && made.placeAt(editor3DPos(object)); // by its origin, and its parts go with it
 }
 
 // make an object's game object, again when it has one
@@ -1185,8 +1185,7 @@ function editor3DSetProperty(object, name, value, defaultValue)
 // add an object of a type at a position, selected; its id, or undefined when the level can not be edited
 function editor3DPlace(type, pos)
 {
-    // a prefab that is open, or one that holds it, would hold itself
-    if (editor3DPrefabStack.some((frame)=> editor3DPrefabHolds(type, frame.name))) return;
+    if (editor3DPrefabSelf(type)) return; // it would hold itself
     let id;
     const placed = editor3DChange((list)=>
     {
@@ -1217,6 +1216,23 @@ function editor3DWorldBox(object, low=vec3(Infinity), high=vec3(-Infinity))
             low[k] = min(low[k], p[k]), high[k] = max(high[k], p[k]);
     }
     return {low, high};
+}
+
+// is a type the prefab being edited, or one that holds it: a prefab that is open, or one the game made of the
+// level being edited itself, as a prefab maker does; placed there it would hold itself
+function editor3DPrefabSelf(type)
+{
+    const names = editor3DPrefabStack.map((frame)=> frame.name);
+    for (const [name, prefab] of level3DPrefabs)
+        prefab.source === editor3DLevel && names.push(name);
+    return names.some((name)=> editor3DPrefabHolds(type, name));
+}
+
+// the types the Place list has, the plain ones and then the prefabs
+function editor3DPlaceNames()
+{
+    const all = [...level3DTypes.keys()].filter((name)=> !editor3DPrefabSelf(name));
+    return [...all.filter((name)=> !level3DPrefabs.has(name)), ...all.filter((name)=> level3DPrefabs.has(name))];
 }
 
 // does a type hold a prefab, itself or through the prefabs it holds
@@ -1291,9 +1307,12 @@ function editor3DUnpack()
         for (const instance of instances)
         {
             const made = editor3DInstances.get(instance.id);
+            // by the level's own place of it, its origin, which is not where an attached one's handle is
+            const origin = {pos3D: editor3DPos(instance), rotation3D: editor3DRotation(instance).scale(PI / 180),
+                scale3D: editor3DScale(instance)};
             for (const part of level3DPrefabs.get(made.prefabName)?.objects ?? [])
             {
-                const at = level3DPrefabPartTransform(made, part), object = {...editor3DCopy(part), id: id++};
+                const at = level3DPrefabPartTransform(origin, part), object = {...editor3DCopy(part), id: id++};
                 editor3DSetTransform(object, at.pos, at.rotation.scale(180 / PI), at.scale);
                 list.push(object);
                 added.push(object.id);
@@ -1611,11 +1630,26 @@ const editor3DSaves = ()=> readSaveData(editor3DSaveName(), {});
 let editor3DSaveFailed = false;
 
 // remember the level's objects and parts, or forget them when they are back to the file
-function editor3DAutosave(level=editor3DLevel)
+function editor3DAutosave(level=editor3DLevel, known)
 {
-    const record = editor3DRecords.get(level);
+    // a prefab being edited is kept with the level it is in, as that level would be on going back: its own
+    // prefabs with what is open, and what was edited on the way, in them
+    if (editor3DPrefabLevels.has(level))
+    {
+        const root = editor3DPrefabStack[0]?.level, edits = {...editor3DPrefabEdits};
+        editor3DPrefabStack.forEach((frame, i)=>
+        {
+            const open = editor3DPrefabStack[i + 1]?.level ?? editor3DLevel, known = level3DPrefabs.get(frame.name);
+            const objects = isArray(open.objects) ? editor3DCopy(open.objects) : [];
+            if (known?.fromLevel && JSON.stringify(objects) !== frame.entered)
+                edits[frame.name] = known.attached ? {attached: true, objects} : {objects};
+        });
+        if (root && Object.keys(edits).length)
+            editor3DAutosave({...root, prefabs: {...editor3DLevelPart('prefabs', root), ...edits}}, editor3DRecords.get(root));
+        return;
+    }
+    const record = known ?? editor3DRecords.get(level);
     if (!record || record.pending) return; // edits waiting to be applied keep their autosave
-    if (editor3DPrefabLevels.has(level)) return; // a prefab being edited is kept by the level it is in
     const saves = editor3DSaves(), objects = isArray(level.objects) ? level.objects : [];
     const parts = editor3DLevelParts(level);
     // the level as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it,
@@ -2724,8 +2758,8 @@ function editor3DPanelUpdate()
     p.help.style.display = editor3DHelp ? '' : 'none';
 
     // a button for each type, made again when the types changed
-    const all = [...level3DTypes.keys()], plain = all.filter((name)=> !level3DPrefabs.has(name));
-    const prefabs = all.filter((name)=> level3DPrefabs.has(name)), names = [...plain, ...prefabs];
+    const names = editor3DPlaceNames(), plain = names.filter((name)=> !level3DPrefabs.has(name));
+    const prefabs = names.slice(plain.length);
     const typeNames = plain.join('\n') + '\n\n' + prefabs.join('\n');
     if (p.typeNames !== typeNames)
     {

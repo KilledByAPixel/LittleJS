@@ -71,6 +71,10 @@ test('an attached prefab\'s parts are children of the handle, with no collision 
     assert.deepEqual(made.parts.map((p)=> p.collideSolidObjects), [false, false]);
     nearVec(made.parts[0].getWorldPos3D(), 10, .5, -2);
     nearVec(made.size3D, 4.5, 2, 1); // the box around a wall from 0 to 4 and a post from 3.5 to 4.5, up to 2
+    // the handle is the middle of that box, as an object's place is the middle of its body, so it is solid where
+    // it is seen; the prefab's origin, where it was spawned, is where its parts are measured from
+    nearVec(made.originOffset, 2.25, 1, 0);
+    nearVec(made.pos3D, 10, 1, -2.25);
     made.destroy(true);
 });
 

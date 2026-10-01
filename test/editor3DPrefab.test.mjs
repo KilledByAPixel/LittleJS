@@ -310,3 +310,42 @@ test('the prefab that is open is not placed inside itself', async ()=>
     assert.equal(run('editor3DObjects().length'), 2);
     assert.equal(typeof run(`editor3DPlace('Box', vec3())`), 'number');
 });
+
+test('an attached prefab is where it was: its box, its place in the level and what unpacking it gives', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + 'var box = JSON.stringify(editor3DPrefabBox(live(1)));' + `editor3DPrefabSetAttached('House', true);`);
+    assert.equal(run('JSON.stringify(editor3DPrefabBox(live(1))) === box'), true, 'nothing moved on screen');
+    assert.deepEqual(json(run, 'live(1).pos3D'), {x: 12.25, y: 1, z: 0}, 'the handle is the middle of its body');
+    assert.deepEqual(json(run, '[list()[0].pos, editor3DBoxOffset(list()[0])]'), [[10, 0, 0], {x: 2.25, y: 1, z: 0}],
+        'and the level still has it by its origin');
+    run('editor3DChange((list)=> editor3DSetTransform(list[0], vec3(0, 0, 0))); editor3DStrokeEnd();');
+    assert.deepEqual(json(run, 'live(1).parts[0].getWorldPos3D()'), {x: 2, y: .5, z: 0}, 'moved, by its origin');
+    run('editor3DSelection.add(1); editor3DUnpack();');
+    assert.deepEqual(json(run, 'list().filter((o)=> o.id > 2).map((o)=> o.pos)'), [[2, .5, 0], [4, 1.5, 0]]);
+});
+
+test('a prefab made of the level being edited is not placed in it, nor is one that holds it', async ()=>
+{
+    const { run } = await loadGame();
+    run(`var level = { objects: [{ id: 1, type: 'Box', pos: [0, .5, 0] }] }; level3DLoad(level);
+        level3DAddPrefab('Me', level); level3DAddPrefab('Wrap', {objects: [{type: 'Me'}]});
+        level3DAddPrefab('Other', {objects: [{type: 'Box'}]});`);
+    assert.deepEqual([run(`editor3DPlace('Me', vec3())`), run(`editor3DPlace('Wrap', vec3())`)], [undefined, undefined]);
+    assert.equal(typeof run(`editor3DPlace('Other', vec3())`), 'number');
+    assert.deepEqual(json(run, 'editor3DPlaceNames()'), ['Box', 'Sphere', 'Cylinder', 'Light', 'Other']);
+});
+
+test('a prefab being edited is autosaved with its level, as the level would be on going back', async ()=>
+{
+    const storage = makeStorage();
+    let engine = await loadGame({ localStorage: storage });
+    engine.run(fileCode + 'editor3DPrefabEnter(1);' + liftPost);
+    const saved = JSON.parse(storage.items['LittleJS editor 3D /game/'])['levels/town.json'];
+    assert.deepEqual(saved.prefabs.House.objects[1].pos, [4, 2.5, 0]);
+    assert.deepEqual(saved.objects.map((o)=> o.type), ['House', 'Box'], 'the level\'s objects, not the prefab\'s');
+    // the page is loaded again while the prefab was open: the edit is in the level
+    engine = await loadGame({ localStorage: storage });
+    engine.run(fileCode);
+    assert.deepEqual(json(engine.run, '[level.prefabs.House.objects[1].pos, live(1).parts[1].pos3D.y]'), [[4, 2.5, 0], 2.5]);
+});

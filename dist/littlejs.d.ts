@@ -10194,7 +10194,8 @@ declare module "littlejsengine" {
      *  - The prefab is a level as the level editor saves it, {objects: [...]}, so the editor is the prefab editor too;
      *    only its objects are used, and they may be of other prefabs
      *  - With attached true in it the parts are children of the instance and move with it as one body, without
-     *    collision of their own, a prefab inside it too; otherwise each part is an object of its own in the world and collides as one placed
+     *    collision of their own, a prefab inside it too; its handle is at the middle of the box around them and its
+     *    size3D is that box, so setCollision makes the body solid where it is seen; otherwise each part is an object of its own in the world and collides as one placed
      *    by hand does
      *  - Adding a name again replaces it
      *  @param {string} name - The type its instances have in a level
@@ -10244,9 +10245,17 @@ declare module "littlejsengine" {
         attached: boolean;
         /** @property {Array<any>} - What the prefab's objects made, in the prefab's order */
         parts: any[];
+        /** @property {Vector3} - From the prefab's origin to the handle, in the prefab's own space: nothing for
+         *  separate parts, and for an attached prefab the middle of the box around its parts, where its handle
+         *  is, as an object's place is the middle of its body */
+        originOffset: Vector3;
         partObjects: any[];
         partsPlaced: string;
         partsMade: boolean;
+        /** Put the instance with its prefab's origin at a place, turned and sized as the handle is: where a level's
+         *  object or level3DSpawn says it goes; the handle of an attached prefab is then at the middle of its body
+         *  @param {Vector3} pos3D */
+        placeAt(pos3D: Vector3): void;
         /** Put the parts where the handle is now, making them the first time; called by the handle's update when it
          *  has moved, turned or changed size */
         placeParts(): void;

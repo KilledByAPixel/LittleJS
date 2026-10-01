@@ -30028,7 +30028,7 @@ function level3DMakeAt(object, pos, rotation, scale)
     for (const key in type.defaults)
         result[key] = properties[key];
     // a prefab's instance makes its parts now that it is where it goes
-    result instanceof Prefab3D && result.placeParts();
+    result instanceof Prefab3D && result.placeAt(pos);
     return result;
 }
 
@@ -30053,9 +30053,10 @@ function level3DSpawn(type, pos3D=vec3(), rotation3D=vec3(), scale3D=vec3(1), pr
 ///////////////////////////////////////////////////////////////////////////////
 // prefabs: a prefab is a small level, a list of objects about its own origin, placed many times
 
-// the prefabs by name: how an instance is built, its objects, and fromLevel, true for one a level's own prefabs
-// block added, which one the game adds takes the place of
-/** @type {Map<string, {attached: boolean, objects: Array<Object>, fromLevel: boolean}>} */
+// the prefabs by name: how an instance is built, its objects, fromLevel, true for one a level's own prefabs
+// block added, which one the game adds takes the place of, and source, the object it was added from, which the
+// level editor knows a level that is a prefab by
+/** @type {Map<string, {attached: boolean, objects: Array<Object>, fromLevel: boolean, source: Object}>} */
 const level3DPrefabs = new Map;
 
 // how many prefabs deep an instance being made is, a prefab that holds itself is stopped; and how many of those
@@ -30069,7 +30070,8 @@ let level3DPrefabDepth = 0, level3DPrefabAttached = 0;
  *  - The prefab is a level as the level editor saves it, {objects: [...]}, so the editor is the prefab editor too;
  *    only its objects are used, and they may be of other prefabs
  *  - With attached true in it the parts are children of the instance and move with it as one body, without
- *    collision of their own, a prefab inside it too; otherwise each part is an object of its own in the world and collides as one placed
+ *    collision of their own, a prefab inside it too; its handle is at the middle of the box around them and its
+ *    size3D is that box, so setCollision makes the body solid where it is seen; otherwise each part is an object of its own in the world and collides as one placed
  *    by hand does
  *  - Adding a name again replaces it
  *  @param {string} name - The type its instances have in a level
@@ -30088,7 +30090,8 @@ function level3DPrefabSet(name, prefab, fromLevel)
     name = String(name);
     const objects = isArray(prefab?.objects) ? prefab.objects.filter((o)=> o && typeof o === 'object') : [];
     // a copy, what the game or the editor does to its own afterwards does not change the instances made later
-    level3DPrefabs.set(name, {attached: !!prefab?.attached, objects: JSON.parse(JSON.stringify(objects)), fromLevel});
+    level3DPrefabs.set(name, {attached: !!prefab?.attached, objects: JSON.parse(JSON.stringify(objects)), fromLevel,
+        source: prefab});
     // a class of its own, so the level editor makes its instances again as it does a class's
     level3DTypes.set(name, {make: class extends Prefab3D { constructor(pos) { super(pos, name); } }, defaults: {},
         tileInfo: undefined});
@@ -30148,9 +30151,25 @@ class Prefab3D extends EngineObject3D
         this.attached = !!level3DPrefabs.get(prefabName)?.attached || level3DPrefabAttached > 0;
         /** @property {Array<any>} - What the prefab's objects made, in the prefab's order */
         this.parts = [];
+        /** @property {Vector3} - From the prefab's origin to the handle, in the prefab's own space: nothing for
+         *  separate parts, and for an attached prefab the middle of the box around its parts, where its handle
+         *  is, as an object's place is the middle of its body */
+        this.originOffset = vec3();
         this.partObjects = []; // the prefab's object of each part
         this.partsPlaced = ''; // where the handle was when its parts were last placed, undefined parts not made
         this.partsMade = false;
+    }
+
+    /** Put the instance with its prefab's origin at a place, turned and sized as the handle is: where a level's
+     *  object or level3DSpawn says it goes; the handle of an attached prefab is then at the middle of its body
+     *  @param {Vector3} pos3D */
+    placeAt(pos3D)
+    {
+        this.pos3D = pos3D.copy();
+        this.placeParts();
+        const o = this.originOffset;
+        if (o.x || o.y || o.z)
+            this.pos3D = buildMatrix(pos3D, this.rotation3D, this.scale3D).transformPoint(o);
     }
 
     /** Put the parts where the handle is now, making them the first time; called by the handle's update when it
@@ -30193,7 +30212,7 @@ class Prefab3D extends EngineObject3D
         this.attached && ++level3DPrefabAttached;
         try
         {
-            const low = vec3(Infinity), high = vec3(-Infinity);
+            const low = vec3(Infinity), high = vec3(-Infinity), children = [];
             for (const object of prefab.objects)
             {
                 const local = {pos: level3DVector(object.pos, vec3()), scale: level3DVector(object.scale, vec3(1)),
@@ -30206,14 +30225,24 @@ class Prefab3D extends EngineObject3D
                 if (!this.attached || !(part instanceof EngineObject3D)) continue;
                 // a child rides with its parent and has no collision of its own
                 part.setCollision(false, false, false);
-                this.addChild(part);
+                children.push(part);
+                // its place is its middle, a prefab inside this one too by now
                 const half = part.size3D.multiply(part.scale3D).scale(.5);
                 for (const k of ['x', 'y', 'z'])
-                    low[k] = min(low[k], local.pos[k] - abs(half[k])), high[k] = max(high[k], local.pos[k] + abs(half[k]));
+                    low[k] = min(low[k], part.pos3D[k] - abs(half[k])), high[k] = max(high[k], part.pos3D[k] + abs(half[k]));
             }
-            // an attached instance is as big as the box around its parts, for a game that makes it solid
-            if (this.attached && low.x <= high.x)
+            // an attached instance is the box around its parts, its handle at the middle of it as an object's
+            // place is the middle of its body, so a game that makes it solid has it solid where it is seen
+            if (children.length)
+            {
                 this.size3D = high.subtract(low);
+                this.originOffset = low.add(high).scale(.5);
+            }
+            for (const part of children)
+            {
+                part.pos3D = part.pos3D.subtract(this.originOffset);
+                this.addChild(part);
+            }
         }
         finally
         {
