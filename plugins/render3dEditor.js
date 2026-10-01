@@ -688,6 +688,47 @@ function editor3DVoxelDragCell(drag, ray)
     return editor3DVoxelInside(map, cell) ? cell : undefined;
 }
 
+// what the Blocks tool does to a cell: place puts the current type in an empty one, paint gives a block the
+// current type, remove empties it
+function editor3DVoxelApply(cell, mode)
+{
+    const map = editor3DVoxelMap(), has = map ? map.getVoxel(cell) : 0;
+    return mode === 'place' ? !has && editor3DVoxelSet(cell, editor3DBlockType) :
+        mode === 'paint' ? !!has && editor3DVoxelSet(cell, editor3DBlockType) :
+        editor3DVoxelSet(cell, 0);
+}
+
+// a press of the Blocks tool: the cell under the ray is changed, and what a drag needs to go on from it on the
+// same layer; undefined with no cell there
+function editor3DVoxelPress(ray, mode)
+{
+    const target = editor3DVoxelTarget(ray, mode);
+    if (!target) return;
+    const {cell, axis, plane} = target;
+    editor3DVoxelApply(cell, mode);
+    return {kind: 'blocks', mode, axis, plane, layer: cell[axis], last: cell};
+}
+
+// a drag of the Blocks tool goes on: every cell of the layer from the last one to the one under the ray
+function editor3DVoxelDragTo(drag, ray)
+{
+    const cell = editor3DVoxelDragCell(drag, ray), last = drag.last;
+    if (!cell) return;
+    const d = cell.subtract(last), steps = max(abs(d.x), abs(d.y), abs(d.z));
+    for (let i = 1; i <= steps; ++i)
+        editor3DVoxelApply(vec3(round(last.x + d.x * i / steps), round(last.y + d.y * i / steps),
+            round(last.z + d.z * i / steps)), drag.mode);
+    drag.last = cell;
+}
+
+// make the type of the block under a ray the one to place; false with no block there
+function editor3DVoxelPick(ray)
+{
+    const hit = editor3DVoxelMap()?.raycast(ray);
+    if (!hit) return false;
+    editor3DBlockType = hit.type;
+}
+
 // the cell a click is for: to place, the empty cell against the face the ray hits, or the one standing on the
 // map's floor where it hits no block; otherwise the block it hits; with the axis the face is across and the plane
 // of the face, for a drag to stay on; undefined with no such cell
@@ -1097,7 +1138,11 @@ const EDITOR3D_HANDLE_SIZE = .15; // a handle's length as a part of the view's h
 const EDITOR3D_HANDLE_REACH = 10; // how many pixels from a handle still grab it
 const EDITOR3D_AXES = {x: vec3(1, 0, 0), y: vec3(0, 1, 0), z: vec3(0, 0, 1)};
 
-let editor3DTool = 'move';     // 'select', 'move', 'rotate' or 'scale'
+let editor3DTool = 'move';     // 'select', 'move', 'rotate', 'scale' or 'blocks'
+let editor3DBlockType = 1;     // the block type the Blocks tool places
+// the cell the Blocks tool would change, for its outline: {cell, mode}
+/** @type {{cell: Vector3, mode: string}|undefined} */
+let editor3DBlockHover;
 let editor3DGrid = true;       // moves, turns and sizes go in steps, Ctrl flips it for a drag
 let editor3DGroundSnap = true; // a body drag slides along what is under the mouse
 let editor3DMoveStep = 1, editor3DRotateStep = 15, editor3DScaleStep = .25; // the rotate step in degrees
@@ -1127,7 +1172,7 @@ function editor3DSelectionCenter()
 function editor3DHandles()
 {
     const center = editor3DSelectionCenter(), tool = editor3DTool, handles = [];
-    if (!center || tool === 'select') return handles;
+    if (!center || tool === 'select' || tool === 'blocks') return handles;
     const length = editor3DScreenScale(center) * EDITOR3D_HANDLE_SIZE;
     const rotation = editor3DRotation(editor3DSelected()[0]).scale(PI / 180), frame = buildMatrix(vec3(), rotation);
     for (const axis of 'xyz')
@@ -1303,6 +1348,8 @@ function editor3DPlaceAt(type, ray)
 // the mouse moved with a drag held: the selection goes from where the drag started to where the mouse says
 function editor3DDragTo(drag, mouse, ray, snap)
 {
+    if (drag.kind === 'blocks')
+        return editor3DVoxelDragTo(drag, ray);
     if (drag.kind === 'box')
     {
         drag.to = mouse.copy();
@@ -1467,6 +1514,8 @@ const editor3DKeys =
     KeyW: ()=> { editor3DTool = 'move'; },
     KeyE: ()=> { editor3DTool = 'rotate'; },
     KeyR: ()=> { editor3DTool = 'scale'; },
+    KeyB: ()=> { editor3DTool = 'blocks'; editor3DBrush = undefined; },
+    KeyP: ()=> editor3DTool === 'blocks' && editor3DVoxelPick(render3D.screenToRay(mousePosScreen)),
     KeyG: ()=> { editor3DGrid = !editor3DGrid; },
     KeyF: ()=> editor3DFrame(),
     End: ()=> editor3DDropSelection(),
@@ -1560,7 +1609,15 @@ function editor3DEditorUpdate(seconds)
 
     const ray = render3D.screenToRay(mouse), idle = !cameraDrag && !editor3DMouseOnPanel && !editor3DDrag;
     editor3DHover = idle ? editor3DHandleAt(mouse) : undefined;
-    if (idle && mouseWasPressed(0))
+
+    // the Blocks tool takes the mouse while the level has a map: Shift removes, Ctrl repaints
+    const painting = editor3DTool === 'blocks' && !!editor3DVoxelMap();
+    const mode = shift ? 'remove' : ctrl ? 'paint' : 'place';
+    const target = painting && idle ? editor3DVoxelTarget(ray, mode) : undefined;
+    editor3DBlockHover = target && {cell: target.cell, mode};
+    if (painting)
+        idle && mouseWasPressed(0) && (editor3DDrag = editor3DVoxelPress(ray, mode));
+    else if (idle && mouseWasPressed(0))
         editor3DPress(mouse, ray, shift);
 
     // a quick click, down and up before this step, is a press and its release in one
@@ -1589,6 +1646,7 @@ const editor3DHelpLines =
     'Right button: look, and WASD and QE fly while it is held, Shift faster',
     'Wheel: zoom · Middle drag or Space+drag: pan · Alt+drag: orbit · F: frame the selection',
     'Pick a type, then click to place it, Shift+click keeps placing',
+    'B blocks: click or drag places · Shift removes · Ctrl repaints · P picks the type under the mouse',
     'Delete · Ctrl+C / X / V: copy, cut, paste · Ctrl+D: duplicate · Ctrl+Z / Y: undo, redo',
     'Reset to file: the level as its file has it, Restart keeps your edits, Undo brings them back',
     'Esc: play and edit · 0: exit the editor · ?: keys',
@@ -1606,6 +1664,9 @@ function editor3DHint()
         return 'WASD and QE fly · Shift faster · the wheel sets the speed';
     if (editor3DBrush)
         return `Click to place a ${editor3DBrush} · Shift keeps placing · Q puts it down`;
+    if (editor3DTool === 'blocks')
+        return editor3DVoxelMap() ? 'Click or drag places · Shift removes · Ctrl repaints · P picks a type' :
+            'Add a block map in the panel to paint blocks';
     if (editor3DSelection.size)
         return 'Drag a handle or the object · W move · E rotate · R scale · End drops it';
     return 'Click to select · pick a type to place · the right button looks · ? keys';
@@ -1738,6 +1799,19 @@ function editor3DDraw()
         }
     }
 
+    // the cell the Blocks tool would change: white to place, red to remove, yellow to repaint
+    const map = editor3DTool === 'blocks' && !editor3DMouseOnPanel ? editor3DVoxelMap() : undefined;
+    if (map && editor3DBlockHover && !editor3DDrag)
+    {
+        const {cell, mode} = editor3DBlockHover;
+        editor3DDrawWire(buildMatrix(map.pos3D.add(cell).add(vec3(.5)), undefined, vec3(1.02)),
+            mode === 'place' ? hsl(0, 0, 1, .9) : mode === 'remove' ? hsl(0, 1, .6) : hsl(.15, 1, .6), 2.5);
+    }
+    // the map's edges, to see where it ends
+    if (map)
+        editor3DDrawWire(buildMatrix(map.pos3D.add(map.mapSize.scale(.5)), undefined, map.mapSize),
+            hsl(.55, .6, .6, .5), 1);
+
     // the brush, a box where a click would place it
     const point = editor3DBrush && !editor3DMouseOnPanel && !editor3DDrag && editor3DMousePoint();
     if (point)
@@ -1866,11 +1940,11 @@ function editor3DPanelInit()
     // the tools, and the snapping
     const tools = row(), toolButtons = {};
     for (const [tool, text, key] of [['select', 'Select', 'Q'], ['move', 'Move', 'W'], ['rotate', 'Rotate', 'E'],
-        ['scale', 'Scale', 'R']])
+        ['scale', 'Scale', 'R'], ['blocks', 'Blocks', 'B']])
         toolButtons[tool] = button(tools, text, ()=>
         {
             editor3DTool = tool;
-            tool === 'select' && (editor3DBrush = undefined);
+            (tool === 'select' || tool === 'blocks') && (editor3DBrush = undefined);
         }, key);
     const snap = editorElement('div', panel, box);
     const grid = check(snap, 'Grid snap', (on)=> editor3DGrid = on, 'G, and Ctrl flips it for a drag');
@@ -1885,6 +1959,9 @@ function editor3DPanelInit()
     editorElement('div', panel, 'color:#aaa;margin-top:4px', 'Place');
     const types = row();
     const properties = editorElement('div', panel, box);
+
+    // the Blocks tool's box: a map to add, or the types to paint with
+    const blocks = editorElement('div', panel, box);
 
     // the scene the level sets: its sky, sun, fog and shadows, or none, the game's own
     const scene = editorElement('div', panel, box);
@@ -1917,7 +1994,7 @@ function editor3DPanelInit()
     button(help, 'Close', ()=> editor3DHelp = false, '?');
 
     editor3DPanelParts = {restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, types,
-        properties, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
+        properties, blocks, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
 }
 
 // show the panel as the editor is now
@@ -1960,8 +2037,83 @@ function editor3DPanelUpdate()
     }
     names.forEach((name, i)=> p.types.children[i].style.outline = name === editor3DBrush ? lit : '');
     editor3DPropertiesUpdate(p.properties);
+    editor3DBlocksUpdate(p.blocks);
     p.sceneOn.checked = !!editor3DScene();
     editor3DSceneUpdate(p.sceneRows);
+}
+
+// the blocks box, shown with the Blocks tool: without a map, its size and a button to add it; with one, a tile
+// for each block type to paint with, and a button to take the map away; made again when what it shows changes
+function editor3DBlocksUpdate(box)
+{
+    const map = editor3DVoxelMap(), shown = editor3DTool === 'blocks';
+    box.style.display = shown ? '' : 'none';
+    if (!shown) return;
+    const first = map?.tileInfo, texture = first?.textureInfo;
+    const key = map ? ['map', editor3DBlockType, texture?.size.x, map.blockTypes.length].join() : 'none';
+    if (box.dataset.key === key || box.contains(document.activeElement)) return;
+    box.dataset.key = key;
+    box.replaceChildren();
+    const field = 'background:#222;color:#eee;width:46px';
+    if (!map)
+    {
+        const row = editorElement('label', box, 'display:flex;gap:4px;align-items:center;margin:2px 0');
+        editorElement('span', row, 'flex:1', 'Map size');
+        const inputs = [32, 16, 32].map((n)=>
+        {
+            const input = editorElement('input', row, field);
+            input.type = 'number';
+            input.min = '1', input.max = '256', input.step = '1';
+            input.value = n + '';
+            return input;
+        });
+        const add = editorElement('button', box, 'width:100%;padding:3px;cursor:pointer', 'Add block map');
+        add.title = 'An empty map of blocks, centered, its bottom on the ground';
+        add.onclick = ()=>
+        {
+            const [x, y, z] = inputs.map((i)=> clamp(floor(parseFloat(i.value)) || 1, 1, 256));
+            editor3DVoxelAdd(vec3(x, y, z));
+            add.blur();
+        };
+        return;
+    }
+
+    // the tiles of the sheet, a type shows the tile of its side; a click picks the type
+    const image = texture?.image, padding = first.padding || 0;
+    const cell = first.size.add(vec2(padding * 2));
+    const count = texture && cell.x && cell.y ? floor(texture.size.x / cell.x) * floor(texture.size.y / cell.y) : 0;
+    const types = [];
+    for (let type = 1; type < 256 && types.length < 96; ++type)
+        (type < count || map.blockTypes[type]) && types.push(type);
+    types.includes(editor3DBlockType) || types.push(editor3DBlockType);
+    const grid = editorElement('div', box, 'display:flex;flex-wrap:wrap;gap:2px');
+    for (const type of types)
+    {
+        const canvas = editorElement('canvas', grid, 'width:26px;height:26px;cursor:pointer;background:#444;' +
+            'image-rendering:pixelated;outline:' + (type === editor3DBlockType ? '2px solid #4af' : 'none'));
+        canvas.width = canvas.height = 26;
+        canvas.title = 'Block ' + type;
+        canvas.onclick = ()=> editor3DBlockType = type;
+        // the tile of its side; read without map.blockType, which would make every type one the map has
+        const index = map.blockTypes[type]?.faces[0] ?? type;
+        const tile = first.columns ? first.frame(index) : first.index(index);
+        const context = canvas.getContext('2d');
+        context.imageSmoothingEnabled = false;
+        try
+        {
+            image && context.drawImage(image, tile.pos.x, tile.pos.y, tile.size.x, tile.size.y, 0, 0, 26, 26);
+            // a tile with nothing on it is left out, unless it is the type picked, one in use or one the game set up
+            const pixels = context.getImageData(0, 0, 26, 26).data;
+            let blank = !!image;
+            for (let i = 3; blank && i < pixels.length; i += 4)
+                blank = !pixels[i];
+            blank && type !== editor3DBlockType && !map.blockTypes[type] && canvas.remove();
+        }
+        catch {} // an image that can not be drawn or read, the title still says the type
+    }
+    const remove = editorElement('button', box, 'margin-top:4px;padding:2px 6px;cursor:pointer', 'Remove map');
+    remove.title = 'Take the block map out of the level, Undo brings it back';
+    remove.onclick = ()=> { editor3DVoxelRemove(); remove.blur(); };
 }
 
 // the scene box: an input for each setting of the level's scene block, made again when the block changes, but not

@@ -1811,6 +1811,9 @@ off leaves the sky, sun, fog and shadows to the game.
 ```javascript
 // Tools, the keys Unity, Unreal and Godot use
 Q select · W move · E rotate · R scale   // drag a handle, or the object itself
+B                                        // blocks: click or drag places the type picked in the panel, Shift
+                                         // removes, Ctrl repaints, P picks the type under the mouse; the panel
+                                         // adds the level's block map
 G                                        // grid snap, Ctrl flips it for a drag; steps are in the panel
 End                                      // drop the selection to the ground
 // Selecting and editing

@@ -135,3 +135,44 @@ test('a level with no map has no cell to paint, and the release build has no edi
     assert.equal(run('editor3DVoxelSet(vec3(0, 0, 0), 2)'), false);
     assert.equal(run(`editor3DVoxelTarget(down(1, 1), 'place')`), undefined);
 });
+
+test('a press places a block and a drag draws a row of them on the same layer, as one undo', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withMap) + `editor3DBlockType = 7;
+        var drag = editor3DVoxelPress(down(3.5, 2.5), 'place');
+        editor3DVoxelDragTo(drag, down(0.5, 2.5));
+        editor3DVoxelDragTo(drag, down(0.5, 3.5));
+        editor3DStrokeEnd();`);
+    assert.deepEqual([...run('[at(3, 0, 2), at(2, 0, 2), at(1, 0, 2), at(0, 0, 2), at(0, 0, 3), at(1, 0, 3)]')],
+        [7, 7, 7, 7, 7, 0]);
+    assert.equal(run('editor3DUndoList.length'), 1);
+    assert.equal(run('at(1, 0, 1)'), 5, 'a block already there is left as it is');
+});
+
+test('removing takes the blocks of the layer the press was on, repainting changes their type', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withMap) + `editor3DBlockType = 7;
+        for (let x = 0; x < 4; ++x) editor3DVoxelSet(vec3(x, 0, 1), 5);
+        editor3DVoxelSet(vec3(2, 1, 1), 5);
+        editor3DStrokeEnd();
+        var paint = editor3DVoxelPress(down(0.5, 1.5), 'paint');
+        editor3DVoxelDragTo(paint, down(1.5, 1.5));
+        editor3DStrokeEnd();
+        var drag = editor3DVoxelPress(down(3.5, 1.5), 'remove');
+        editor3DVoxelDragTo(drag, down(2.5, 1.5));
+        editor3DStrokeEnd();`);
+    assert.deepEqual([...run('[at(0, 0, 1), at(1, 0, 1), at(2, 0, 1), at(3, 0, 1), at(2, 1, 1)]')], [7, 7, 0, 0, 5],
+        'the block above the layer stays, the drag passed under it');
+    assert.equal(run(`editor3DVoxelPress(down(3.5, 3.5), 'remove')`), undefined, 'nothing there to remove');
+});
+
+test('picking takes the type of the block under the ray', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withMap) + 'editor3DBlockType = 1; editor3DVoxelPick(down(1.5, 1.5));');
+    assert.equal(run('editor3DBlockType'), 5);
+    run('editor3DVoxelPick(down(3.5, 3.5))');
+    assert.equal(run('editor3DBlockType'), 5, 'no block there, the type stays');
+});

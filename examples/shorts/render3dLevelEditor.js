@@ -1,6 +1,6 @@
 // a small 3D level that starts in the 3D level editor: place boxes, lights
-// and coins, then press Play or Escape to walk around, and Escape again
-// to go back to editing; the level is autosaved as you go
+// and coins, paint blocks, then press Play or Escape to walk around, and
+// Escape again to go back to editing; the level is autosaved as you go
 
 let player, playerStart = vec3(0, 2, 6), score = 0;
 
@@ -12,6 +12,10 @@ const color = (h, s, l)=> hsl(h, s, l).toString(false);
 const level = {littlejs3D: 1,
     scene: {sky: [color(.6, .5, .4), color(.6, .5, .8), color(.6, .5, .8)],
         sunDirection: [-.3, 1, .5], shadows: true},
+    // a map of blocks, 16 by 8 by 16 cells, painted with the Blocks tool
+    // (B): its blocks are runs of a count and a type, here a low wall
+    voxels: {pos: [-8, 0, -8], size: [16, 8, 16],
+        blocks: [258, 0, 4, 10, 12, 0, 4, 10, 1770, 0]},
     objects: [
     {id: 1, type: 'Box', pos: [0, -.5, 0], scale: [16, 1, 16],
         properties: {color: color(.3, .3, .4)}},
