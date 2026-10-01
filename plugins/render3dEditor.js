@@ -309,7 +309,7 @@ const editor3DSelected = ()=> editor3DObjects().filter((o)=> editor3DSelection.h
 
 // the parts of a level beside its objects that the editor edits: its scene block and its map of blocks; each is
 // undone, autosaved, reset and saved as the objects are
-const editor3DLevelPartNames = ['scene', 'voxels', 'terrain'];
+const editor3DLevelPartNames = ['scene', 'voxels', 'terrain', 'prefabs'];
 
 // the last copy made of each part, as its text and the copy: a part that has not changed since is not copied
 // again, so undo steps share one copy of a terrain until it is sculpted; a copy is never changed
@@ -413,10 +413,44 @@ const editor3DTurned = (object)=> editor3DRotation(object).lengthSquared() > 0;
 // the size of an object's box: what the game made for it says, a marker is 1 unit
 function editor3DSize(object)
 {
-    const made = editor3DInstances.get(object.id);
+    const made = editor3DInstances.get(object.id), box = editor3DPrefabBox(made);
+    if (box) return box.size;
     if (!(made instanceof EngineObject3D) || !(made.mesh || made.tileInfo)) return vec3(1);
     const s = made.size3D, k = made.scale3D;
     return vec3(s.x * abs(k.x), s.y * abs(k.y), s.z * abs(k.z));
+}
+
+// the box around a prefab's instance in the world, the boxes of its parts together, as its middle and its size;
+// undefined for anything else, or an instance with nothing to see
+function editor3DPrefabBox(made)
+{
+    if (!(made instanceof Prefab3D) || made.destroyed) return;
+    const low = vec3(Infinity), high = vec3(-Infinity);
+    for (const part of editor3DParts(made))
+    {
+        if (!(part instanceof EngineObject3D) || !(part.mesh || part.tileInfo)) continue;
+        const bounds = part.mesh && (part.mesh.bounds || part.mesh.getBounds());
+        const matrix = render3DObjectMatrix(part).copy().multiply(bounds ?
+            buildMatrix(bounds.min.add(bounds.max).scale(.5), undefined, bounds.max.subtract(bounds.min)) :
+            buildMatrix(vec3(), undefined, part.size3D));
+        for (let i = 8; i--;)
+        {
+            const p = matrix.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
+            for (const k of ['x', 'y', 'z'])
+                low[k] = min(low[k], p[k]), high[k] = max(high[k], p[k]);
+        }
+    }
+    // to the nearest part of the file's numbers, so a box worked out through a matrix reads as it was written
+    const tidy = (v)=> vec3(editor3DRound(v.x), editor3DRound(v.y), editor3DRound(v.z));
+    return low.x <= high.x ? {pos: tidy(low.add(high).scale(.5)), size: tidy(high.subtract(low))} : undefined;
+}
+
+// from an object's place to the middle of its box: nothing for a plain object, whose place is its middle, and for
+// a prefab's instance how far its origin is from the middle of its parts, as it is turned and sized now
+function editor3DBoxOffset(object)
+{
+    const made = editor3DInstances.get(object.id), box = editor3DPrefabBox(made);
+    return box ? box.pos.subtract(made.pos3D) : vec3();
 }
 
 // every object gets an id of its own, a whole number: one without, or with one already used, gets a new one
@@ -523,6 +557,7 @@ function editor3DPlaceInstance(made, object)
     made.scale3D = (level3DBaseScale.get(made) ?? vec3(1)).multiply(editor3DScale(object));
     made.velocity3D = vec3();
     made.angleVelocity3D = vec3();
+    made instanceof Prefab3D && made.placeParts(); // its parts go with it
 }
 
 // make an object's game object, again when it has one
@@ -603,8 +638,28 @@ function editor3DSetPart(name, part)
     }
     else if (name === 'voxels')
         editor3DVoxelShow();
-    else
+    else if (name === 'terrain')
         editor3DTerrainShow();
+    else
+        editor3DPrefabsShow();
+}
+
+// bring the prefab types in line with the level's own prefabs, and make every instance again: a prefab the level
+// no longer has is no longer a type, one it has is added as level3DLoad adds it, and what a prefab makes is made
+// when its instance is, so each instance is made again
+function editor3DPrefabsShow()
+{
+    const prefabs = editor3DLevelPart('prefabs') ?? {};
+    for (const [name, prefab] of level3DPrefabs)
+    {
+        if (!prefab.fromLevel || prefabs[name]) continue;
+        level3DPrefabs.delete(name);
+        level3DTypes.delete(name);
+    }
+    level3DPrefabsAdd(prefabs);
+    for (const object of editor3DObjects())
+        editor3DInstances.get(object.id) instanceof Prefab3D && editor3DMakeInstance(object);
+    editor3DShadowLight();
 }
 
 // make the level's parts these, the ones that differ
@@ -1583,6 +1638,10 @@ function editor3DParts(made, parts=[])
         parts.push(made);
         for (const child of made.children)
             editor3DParts(child, parts);
+        // a prefab's instance and its parts are one thing, the ones that are not its children too
+        if (made instanceof Prefab3D)
+            for (const part of made.parts)
+                part?.parent === made || editor3DParts(part, parts);
     }
     return parts;
 }
@@ -1656,10 +1715,13 @@ function editor3DPlaceAt(type, ray)
     editor3DStrokeEnd();
     const id = editor3DPlace(type, point);
     if (id === undefined) return;
-    const size = editor3DSize(editor3DObject(id)), ignore = new Set(editor3DParts(editor3DInstances.get(id)));
+    const object = editor3DObject(id), size = editor3DSize(object), offset = editor3DBoxOffset(object);
+    const ignore = new Set(editor3DParts(editor3DInstances.get(id)));
     const snapped = editor3DSnapPos(editor3DRest(point, size), size, editor3DGrid ? editor3DMoveStep : 0);
     const y = editor3DLand(snapped.x, snapped.z, point.y, size, ignore);
-    editor3DChange((list)=> editor3DSetTransform(list.find((o)=> o.id === id), vec3(snapped.x, y, snapped.z)));
+    // the box stands there, and the object's place is where that puts it
+    const to = vec3(snapped.x, y, snapped.z).subtract(offset);
+    editor3DChange((list)=> editor3DSetTransform(list.find((o)=> o.id === id), to));
     editor3DStrokeEnd();
 }
 
@@ -1680,7 +1742,8 @@ function editor3DDragTo(drag, mouse, ray, snap)
     const was = first && start.get(first.id);
     if (!was) return;
     const size = editor3DSize(first), turned = editor3DTurned(first), step = snap ? editor3DMoveStep : 0;
-    const snapTo = (to)=> editor3DSnapPos(to, size, step, turned).subtract(was.pos);
+    const offset = editor3DBoxOffset(first); // snapping and landing go by its box
+    const snapTo = (to)=> editor3DSnapPos(to.add(offset), size, step, turned).subtract(offset).subtract(was.pos);
     let move, turn, factor;
     if (kind === 'arrow')
     {
@@ -1703,8 +1766,8 @@ function editor3DDragTo(drag, mouse, ray, snap)
         const point = editor3DPlanePoint(ray, drag.level, drag.normal);
         if (!point) return;
         const across = snapTo(was.pos.add(point.subtract(drag.level)));
-        const y = editor3DGroundSnap ? editor3DLand(was.pos.x + across.x, was.pos.z + across.z,
-            was.pos.y - size.y / 2, size, drag.ignore) : was.pos.y;
+        const y = editor3DGroundSnap ? editor3DLand(was.pos.x + offset.x + across.x, was.pos.z + offset.z + across.z,
+            was.pos.y + offset.y - size.y / 2, size, drag.ignore) - offset.y : was.pos.y;
         move = vec3(across.x, y - was.pos.y, across.z);
     }
     else if (kind === 'ring')
@@ -1805,9 +1868,9 @@ function editor3DDropSelection()
     {
         for (const object of list)
         {
-            const to = editor3DSelection.has(object.id) &&
-                editor3DDrop(editor3DPos(object), editor3DSize(object), ignore);
-            to && editor3DSetTransform(object, to);
+            const offset = editor3DBoxOffset(object), to = editor3DSelection.has(object.id) &&
+                editor3DDrop(editor3DPos(object).add(offset), editor3DSize(object), ignore);
+            to && editor3DSetTransform(object, to.subtract(offset));
         }
     });
     editor3DStrokeEnd();
@@ -1821,8 +1884,9 @@ function editor3DPasteAtMouse()
     if (!copied?.length) return false;
     if (!point) return editor3DPaste();
     const center = copied.reduce((sum, o)=> sum.add(editor3DPos(o)), vec3()).scale(1 / copied.length);
-    const bottom = copied.reduce((low, o)=> min(low, editor3DPos(o).y - editor3DSize(o).y / 2), Infinity);
-    const first = copied[0], was = editor3DPos(first);
+    const bottom = copied.reduce((low, o)=>
+        min(low, editor3DPos(o).y + editor3DBoxOffset(o).y - editor3DSize(o).y / 2), Infinity);
+    const first = copied[0], was = editor3DPos(first).add(editor3DBoxOffset(first)); // the middle of its box
     const snapped = editor3DSnapPos(was.add(vec3(point.x - center.x, 0, point.z - center.z)), editor3DSize(first),
         editor3DGrid ? editor3DMoveStep : 0, editor3DTurned(first));
     const land = editor3DLand(snapped.x, snapped.z, point.y, editor3DSize(first)) - editor3DSize(first).y / 2;
@@ -2085,7 +2149,8 @@ function editor3DDrawRing(center, across, along, radius, color, pixels=2)
 function editor3DVisible(object)
 {
     const made = editor3DInstances.get(object.id);
-    return made instanceof EngineObject3D && !made.destroyed && (made.mesh || made.tileInfo) ? made : undefined;
+    return made instanceof EngineObject3D && !made.destroyed && (made.mesh || made.tileInfo || editor3DPrefabBox(made)) ?
+        made : undefined;
 }
 
 // the box around an object as a matrix: around its mesh where it is, turned and sized as it is, a unit box for a
@@ -2095,6 +2160,9 @@ function editor3DBoxMatrix(object)
     const made = editor3DVisible(object), bounds = made?.mesh && (made.mesh.bounds || made.mesh.getBounds());
     if (!made)
         return buildMatrix(editor3DPos(object));
+    const box = editor3DPrefabBox(made);
+    if (box)
+        return buildMatrix(box.pos, undefined, box.size);
     const matrix = render3DObjectMatrix(made).copy();
     return bounds ? matrix.multiply(buildMatrix(bounds.min.add(bounds.max).scale(.5), undefined,
         bounds.max.subtract(bounds.min))) : matrix.multiply(buildMatrix(vec3(), undefined, made.size3D));
@@ -2390,18 +2458,23 @@ function editor3DPanelUpdate()
     p.help.style.display = editor3DHelp ? '' : 'none';
 
     // a button for each type, made again when the types changed
-    const names = [...level3DTypes.keys()], typeNames = names.join('\n');
+    const all = [...level3DTypes.keys()], plain = all.filter((name)=> !level3DPrefabs.has(name));
+    const prefabs = all.filter((name)=> level3DPrefabs.has(name)), names = [...plain, ...prefabs];
+    const typeNames = plain.join('\n') + '\n\n' + prefabs.join('\n');
     if (p.typeNames !== typeNames)
     {
         p.typeNames = typeNames;
-        p.types.replaceChildren(...names.map((name)=>
+        p.typeButtons = names.map((name)=>
         {
             const b = editorElement('button', undefined, 'padding:3px 6px;cursor:pointer', name);
             b.onclick = ()=> { editor3DBrush = editor3DBrush === name ? undefined : name; b.blur(); };
             return b;
-        }));
+        });
+        const label = editorElement('span', undefined, 'color:#aaa;width:100%', 'Prefabs');
+        p.types.replaceChildren(...p.typeButtons.slice(0, plain.length), ...(prefabs.length ? [label] : []),
+            ...p.typeButtons.slice(plain.length));
     }
-    names.forEach((name, i)=> p.types.children[i].style.outline = name === editor3DBrush ? lit : '');
+    names.forEach((name, i)=> p.typeButtons[i].style.outline = name === editor3DBrush ? lit : '');
     editor3DPropertiesUpdate(p.properties);
     editor3DBlocksUpdate(p.blocks);
     editor3DTerrainBoxUpdate(p.terrainBox);
