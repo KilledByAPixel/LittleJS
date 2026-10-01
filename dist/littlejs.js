@@ -37060,6 +37060,136 @@ function editor3DPlace(type, pos)
     return id;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// prefabs: a selection made one, an instance made objects again, and a prefab's own settings
+
+// what the panel says about the last prefab action that was refused
+let editor3DPrefabMessage = '';
+
+// the box around an object in the world, turned and sized as it is, as its low and high corners
+function editor3DWorldBox(object, low=vec3(Infinity), high=vec3(-Infinity))
+{
+    const matrix = editor3DBoxMatrix(object);
+    for (let i = 8; i--;)
+    {
+        const p = matrix.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
+        for (const k of ['x', 'y', 'z'])
+            low[k] = min(low[k], p[k]), high[k] = max(high[k], p[k]);
+    }
+    return {low, high};
+}
+
+// does a type hold a prefab, itself or through the prefabs it holds
+function editor3DPrefabHolds(type, name, depth=0)
+{
+    return type === name || depth < 8 &&
+        !!level3DPrefabs.get(type)?.objects.some((o)=> editor3DPrefabHolds(o.type, name, depth + 1));
+}
+
+// make the selected objects a prefab of the level's own, about the bottom centre of their box, and put one
+// instance of it where they were, as one undo; a name the level's prefabs have replaces that prefab, and every
+// instance of it changes; true, or why not, which the panel shows
+function editor3DMakePrefab(name='')
+{
+    const refuse = (why)=> editor3DPrefabMessage = why;
+    const selected = editor3DSelected();
+    if (!selected.length) return refuse('Select the objects to make a prefab of');
+    if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return refuse('The level can not be edited now');
+    name = String(name).trim();
+    for (let i = 1; !name; ++i)
+        level3DTypes.has('Prefab ' + i) || (name = 'Prefab ' + i);
+    const known = level3DPrefabs.get(name);
+    if (known ? !known.fromLevel : level3DTypes.has(name))
+        return refuse(name + ' is a type the game added, pick another name');
+    if (selected.some((o)=> editor3DPrefabHolds(o.type, name)))
+        return refuse(name + ' can not hold itself');
+
+    // its origin is the bottom centre of the selection, so an instance stands on the ground
+    const low = vec3(Infinity), high = vec3(-Infinity);
+    for (const object of selected)
+        editor3DWorldBox(object, low, high);
+    const origin = vec3(editor3DRound((low.x + high.x) / 2), editor3DRound(low.y), editor3DRound((low.z + high.z) / 2));
+    const objects = selected.map((object, i)=>
+    {
+        const part = {...editor3DCopy(object), id: i + 1};
+        editor3DSetTransform(part, editor3DPos(object).subtract(origin));
+        return part;
+    });
+    editor3DStrokeEnd();
+    const id = editor3DObjects().reduce((next, o)=> max(next, o.id + 1), 1);
+    const ids = new Set(selected.map((o)=> o.id));
+    // the prefab first, so its type is there when the instance is made
+    editor3DChangePart('prefabs', (prefabs={})=>
+        ({...prefabs, [name]: prefabs[name]?.attached ? {attached: true, objects} : {objects}}));
+    editor3DChange((list)=>
+    {
+        for (let i = list.length; i--;)
+            ids.has(list[i].id) && list.splice(i, 1);
+        const instance = {id, type: name};
+        editor3DSetTransform(instance, origin);
+        list.push(instance);
+    });
+    editor3DStrokeEnd();
+    editor3DSelection.clear();
+    editor3DSelection.add(id);
+    editor3DPrefabMessage = '';
+    return true;
+}
+
+// turn the selected instances of prefabs into the objects they are made of, where they are, as one undo; false
+// with none selected
+function editor3DUnpack()
+{
+    const instances = editor3DSelected().filter((o)=> editor3DInstances.get(o.id) instanceof Prefab3D);
+    if (!instances.length) return false;
+    editor3DStrokeEnd();
+    const added = [];
+    const changed = editor3DChange((list)=>
+    {
+        let id = list.reduce((next, o)=> max(next, o.id + 1), 1);
+        for (const instance of instances)
+        {
+            const made = editor3DInstances.get(instance.id);
+            for (const part of level3DPrefabs.get(made.prefabName)?.objects ?? [])
+            {
+                const at = level3DPrefabPartTransform(made, part), object = {...editor3DCopy(part), id: id++};
+                editor3DSetTransform(object, at.pos, at.rotation.scale(180 / PI), at.scale);
+                list.push(object);
+                added.push(object.id);
+            }
+            list.splice(list.findIndex((o)=> o.id === instance.id), 1);
+        }
+    });
+    editor3DStrokeEnd();
+    if (!changed) return false;
+    editor3DSelection.clear();
+    for (const id of added)
+        editor3DSelection.add(id);
+    return true;
+}
+
+// make a prefab of the level's own attached, its parts the children of each instance, or not, as one undo
+function editor3DPrefabSetAttached(name, attached)
+{
+    editor3DStrokeEnd();
+    const changed = editor3DChangePart('prefabs', (prefabs)=>
+    {
+        if (!prefabs?.[name]) return prefabs;
+        const {attached: was, ...rest} = prefabs[name];
+        return {...prefabs, [name]: attached ? {attached: true, ...rest} : rest};
+    });
+    editor3DStrokeEnd();
+    return changed;
+}
+
+// a prefab as its own file has it, a level file of its objects, to load with level3DLoadPrefab
+function editor3DPrefabJSON(name)
+{
+    const prefab = level3DPrefabs.get(name);
+    if (!prefab) return '';
+    return editor3DLevelJSON({...(prefab.attached ? {attached: true} : {}), objects: prefab.objects});
+}
+
 // remove the selected objects, as one undo
 function editor3DDelete()
 {
@@ -37795,6 +37925,7 @@ const editor3DCtrlKeys =
     KeyX: ()=> editor3DCut(),
     KeyV: ()=> editor3DPasteAtMouse(),
     KeyD: ()=> editor3DDuplicate(),
+    KeyG: (shift)=> shift ? editor3DUnpack() : editor3DMakePrefab() === true,
 };
 
 // the camera: the right button looks and the keys fly while it is held, the middle button or Space and the left
@@ -37902,7 +38033,7 @@ function editor3DEditorUpdate(seconds)
 if (debug && globalThis.document?.addEventListener)
     document.addEventListener('keydown', (e)=>
     {
-        if (editor3DIsOpen && (e.ctrlKey || e.metaKey) && /^Key[ZYCXVD]$/.test(e.code) && !editorIsTextField(e.target))
+        if (editor3DIsOpen && (e.ctrlKey || e.metaKey) && /^Key[ZYCXVDG]$/.test(e.code) && !editorIsTextField(e.target))
             e.preventDefault();
     });
 
@@ -37922,6 +38053,7 @@ const editor3DHelpLines =
     'X box fill: a drag fills the rectangle dragged, as tall as the height in the panel',
     'T terrain: hold to raise the ground · Shift lowers · Ctrl smooths · X the next brush, flatten and paint',
     'Delete · Ctrl+C / X / V: copy, cut, paste · Ctrl+D: duplicate · Ctrl+Z / Y: undo, redo',
+    'Ctrl+G: make the selection a prefab, one thing to place many times · Ctrl+Shift+G: unpack it into its objects',
     'Reset to file: the level as its file has it, Restart keeps your edits, Undo brings them back',
     'Esc: play and edit · 0: exit the editor · ?: keys',
 ];
@@ -38261,6 +38393,9 @@ function editor3DPanelInit()
     const types = row();
     const properties = editorElement('div', panel, box);
 
+    // prefabs: the selection made one, or the selected instance's own
+    const prefabBox = editorElement('div', panel, box);
+
     // the Blocks tool's box: a map to add, or the types to paint with
     const blocks = editorElement('div', panel, box);
 
@@ -38297,7 +38432,7 @@ function editor3DPanelInit()
         editorElement('div', help, 'margin:2px 0', line);
     button(help, 'Close', ()=> editor3DHelp = false, '?');
 
-    editor3DPanelParts = {restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types,
+    editor3DPanelParts = {restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox,
         properties, blocks, terrainBox, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
 }
 
@@ -38347,10 +38482,62 @@ function editor3DPanelUpdate()
     }
     names.forEach((name, i)=> p.typeButtons[i].style.outline = name === editor3DBrush ? lit : '');
     editor3DPropertiesUpdate(p.properties);
+    editor3DPrefabBoxUpdate(p.prefabBox);
     editor3DBlocksUpdate(p.blocks);
     editor3DTerrainBoxUpdate(p.terrainBox);
     p.sceneOn.checked = !!editor3DScene();
     editor3DSceneUpdate(p.sceneRows);
+}
+
+// the prefab box, shown with a selection: a name and a button to make it a prefab, and for one selected instance
+// its prefab's name, Unpack, Export, and for a prefab of the level's own whether it is attached
+function editor3DPrefabBoxUpdate(box)
+{
+    const selected = editor3DSelected(), made = selected.length === 1 && editor3DInstances.get(selected[0].id);
+    const instance = made instanceof Prefab3D ? made : undefined, prefab = instance && level3DPrefabs.get(instance.prefabName);
+    const key = !selected.length ? '' : [selected.length, instance?.prefabName, prefab?.attached, prefab?.fromLevel,
+        editor3DPrefabMessage] + '';
+    box.style.display = key ? '' : 'none';
+    if (box.dataset.key === key || box.contains(document.activeElement)) return;
+    box.dataset.key = key;
+    box.replaceChildren();
+    if (!key) return;
+    const field = 'background:#222;color:#eee', press = 'padding:2px 6px;cursor:pointer';
+    const row = ()=> editorElement('div', box, 'display:flex;gap:4px;align-items:center;margin:2px 0;flex-wrap:wrap');
+    if (prefab)
+    {
+        const line = row();
+        editorElement('span', line, 'flex:1;color:#aaa', 'Prefab ' + instance.prefabName);
+        const unpack = editorElement('button', line, press, 'Unpack');
+        unpack.title = 'Ctrl+Shift+G: turn this instance into the objects it is made of';
+        unpack.onclick = ()=> { editor3DUnpack(); unpack.blur(); };
+        const save = editorElement('button', line, press, 'Export');
+        save.title = 'Save the prefab as a file of its own, to load with level3DLoadPrefab';
+        save.onclick = ()=>
+        {
+            saveText(editor3DPrefabJSON(instance.prefabName), instance.prefabName + '.json', 'application/json');
+            save.blur();
+        };
+        if (prefab.fromLevel)
+        {
+            const label = editorElement('label', box, 'display:flex;gap:6px;align-items:center;margin:2px 0');
+            label.title = 'Its parts are attached to each instance and move with it as one body, with no ' +
+                'collision of their own; off, each part is an object of its own and solid';
+            const attached = editorElement('input', label);
+            attached.type = 'checkbox';
+            attached.checked = prefab.attached;
+            attached.onchange = ()=> { editor3DPrefabSetAttached(instance.prefabName, attached.checked); attached.blur(); };
+            editorElement('span', label, '', 'Attached, one body');
+        }
+    }
+    const line = row();
+    const name = editorElement('input', line, field + ';flex:1;min-width:60px');
+    name.placeholder = 'prefab name';
+    const make = editorElement('button', line, press, 'Make prefab');
+    make.title = 'Ctrl+G: the selection becomes one thing to place many times, kept in the level';
+    make.onclick = ()=> { editor3DMakePrefab(name.value); make.blur(); };
+    name.onkeydown = (e)=> { e.key === 'Enter' && (editor3DMakePrefab(name.value), name.blur()); };
+    editor3DPrefabMessage && editorElement('div', box, 'color:#f86', editor3DPrefabMessage);
 }
 
 // a level's color as a color input takes it, six digits and no alpha, white for one it can not show

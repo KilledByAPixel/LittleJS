@@ -1914,6 +1914,9 @@ End                                      // drop the selection to the ground
 // Selecting and editing
 Left click, Shift+click, left drag from empty space   // select, add or take away, box select
 Delete · Ctrl+C / X / V · Ctrl+D · Ctrl+Z / Y         // Ctrl+D duplicates
+Ctrl+G · Ctrl+Shift+G                    // make the selection a prefab, kept in the level's prefabs block, with
+                                         // one instance where it was; unpack an instance into its objects; the
+                                         // panel names it, exports it to a file and sets it attached
 // The camera
 Right button                             // look, and WASD and QE fly while it is held, Shift faster
 Wheel · Middle drag or Space+drag · Alt+drag · F      // zoom, pan, orbit, frame the selection
