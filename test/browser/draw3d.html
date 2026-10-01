@@ -7,7 +7,8 @@
 'use strict';
 
 // the 3D plugin's shaders compile and its draws reach the screen: an object in its own color, a lit object, an
-// instanced set, a ground with shadows on, 3D particles, and a 2D draw over them all
+// instanced set, a ground with the sun's shadow of a box on it, an object with a Shader of its own, a block of a
+// voxel map, a height map, 3D particles, and a 2D draw over them all
 // the camera is at z 10 looking at the origin, the view 11.5 units across at the origin, so a place (x, y) there is
 // at (.5 + x / 11.5, .5 + y / 11.5) of the canvas
 smokeRun(async ()=>
@@ -23,6 +24,7 @@ smokeRun(async ()=>
         setCameraScale(1);
         new Render3DPlugin;
         render3D.shadows = true;
+        render3D.sunDirection = vec3(0, 1, .2); // nearly overhead, the shadows fall a little away from the camera
 
         const own = new EngineObject3D(vec3(), buildBox(), undefined, rgb(1, 0, 0));
         own.scale3D = vec3(2);
@@ -39,6 +41,24 @@ smokeRun(async ()=>
         new EngineObject3D(vec3(0, -3.5, 0), buildGrid(vec2(40), 1)); // the ground, seen from just above
 
         particleEffect3D('fire', vec3(3, 2.5, 0), {scale: 3});
+
+        // an object with a Shader of its own, magenta whatever its color
+        const shaded = new EngineObject3D(vec3(0, 3.2, 0), buildBox(), undefined, rgb(1, 1, 1));
+        shaded.scale3D = vec3(1.5);
+        shaded.emissive = 1;
+        shaded.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = vec4(1., 0., 1., 1.); }');
+
+        // one block of a voxel map, cyan from a texture, and a height map, a yellow ramp that faces the camera
+        const canvas = new OffscreenCanvas(16, 16), context = canvas.getContext('2d');
+        context.fillStyle = '#0ff';
+        context.fillRect(0, 0, 16, 16);
+        const voxels = new VoxelMap(vec3(5, -1, -.5), vec3(1), new TileInfo(vec2(), vec2(16), new TextureInfo(canvas)));
+        voxels.setBlockType(1, 0);
+        voxels.setVoxel(vec3(), 1);
+        voxels.emissive = 1;
+        const ramp = new HeightMap([[1, 1], [0, 0]], vec2(1.5), 1.5, undefined, vec3(-5, -1, 0));
+        ramp.color = rgb(1, 1, 0);
+        ramp.emissive = 1;
     }, ()=> {}, ()=> {}, ()=>
     {
         drawRect(vec2(-24, 24), vec2(8), rgb(1, 1, 0)); // 2D, over the 3D scene
@@ -50,7 +70,14 @@ smokeRun(async ()=>
     pixel('a lit object is lit', at(3, -1), (p)=> p[1] > 40 && p[0] < 40 && p[2] < 40);
     pixel('an instanced set draws its first instance', at(-3, 3), (p)=> smokeNear(p, [0, 0, 255, 255]));
     pixel('and its second', at(-3, 0), (p)=> smokeNear(p, [0, 0, 255, 255]));
-    pixel('the ground draws with shadows on', [.5, .12], (p)=> p[0] > 40 && p[1] > 40 && p[2] > 40);
+    // the ground under the middle box, a little away from the camera, is in its shadow from the sun, and lit
+    // nearer the camera
+    const lit = smokePixel(.5, .12)[0], shadowed = smokePixel(.5, .215)[0];
+    check('the sun lights the ground and casts the shadow of a box on it', lit > 150 && shadowed < lit - 40,
+        [shadowed, lit]);
+    pixel('an object draws with its own Shader', at(0, 3.2), (p)=> smokeNear(p, [255, 0, 255, 255]));
+    pixel('a voxel map draws its block with its tile', at(5.4, -.5), (p)=> smokeNear(p, [0, 255, 255, 255], 40));
+    pixel('a height map draws', at(-5, -.3), (p)=> smokeNear(p, [255, 255, 0, 255], 40));
     pixel('3D particles draw', at(3, 2.7), (p)=> p[0] > 40);
     pixel('a 2D draw goes over the 3D scene', [.125, .875], (p)=> smokeNear(p, [255, 255, 0, 255]));
     pixel('nothing draws where nothing is', [.5, .95], (p)=> smokeNear(p, [0, 0, 0, 255]));

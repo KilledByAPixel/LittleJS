@@ -11,7 +11,8 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-const pages = ['draw2d', 'shaders', 'draw3d', 'spotLight', 'lensFlare', 'editorScene', 'contextLoss'];
+const pages = ['draw2d', 'layers2d', 'canvas2d', 'lights2d', 'shaders', 'draw3d', 'depth3d', 'spotLight', 'lensFlare',
+    'editorScene', 'contextLoss'];
 const pageTimeout = 60e3, atOnce = 4;
 
 function findChrome()

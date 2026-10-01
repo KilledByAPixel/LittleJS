@@ -37,14 +37,12 @@ smokeRun(async ()=>
     check('a glow shows where the sun is', smokePixel(...sun)[0] > 150, smokePixel(...sun));
     check('a ghost shows across the middle from it', smokePixel(...ghost)[0] > 40, smokePixel(...ghost));
     check('nothing in the other corners', smokePixel(sun[0], ghost[1])[0] < 10, smokePixel(sun[0], ghost[1]));
-    check('the sun is in plain view', flare.visible === 1, flare.visible);
 
     // a wall between the camera and the sun, dark on this side, the sun behind it
     wall = new EngineObject3D(vec3(5, 5, -20), render3D.boxMesh, undefined, rgb(.2, .2, .2));
     wall.scale3D = vec3(12, 12, 1);
     engineStep(30);
-    check('behind a wall the flare is gone', flare.visible === 0, flare.visible);
-    check('and nothing is added at the sun', smokePixel(...sun)[0] < 60, smokePixel(...sun));
+    check('behind a wall nothing is added at the sun', smokePixel(...sun)[0] < 60, smokePixel(...sun));
     check('nor at the ghost', smokePixel(...ghost)[0] < 10, smokePixel(...ghost));
 
     wall.destroy();

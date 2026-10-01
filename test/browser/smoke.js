@@ -40,6 +40,15 @@ function checkPixel(name, x, y, color, tolerance)
 // no WebGL error since the last check
 function checkGLError(name='no WebGL error') { const error = glContext.getError(); check(name, !error, error); }
 
+// a sheet of 16 pixel tiles in a row, one plain color each, as a data url to hand engineInit as its image
+function smokeSheet(...colors)
+{
+    const canvas = document.createElement('canvas'), context = canvas.getContext('2d');
+    canvas.width = 16 * colors.length, canvas.height = 16;
+    colors.forEach((color, i)=> { context.fillStyle = color; context.fillRect(i * 16, 0, 16, 16); });
+    return canvas.toDataURL();
+}
+
 // write the result for the runner; a page opened with ?post sends it to its server too, for a browser that is
 // not driven through DevTools, Firefox
 function smokeDone()

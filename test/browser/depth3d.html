@@ -1,0 +1,47 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: the 3D depth texture</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// with render3D.depthTexture on, a post process shader reads how far the scene is with sceneDepth: a box 10 away
+// reads near, a box 30 away reads farther, and where there is nothing it reads far
+// the shader shows the distance as a brightness, 1 at 40 units or more
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 0));
+    await engineInit(()=>
+    {
+        new Render3DPlugin;
+        render3D.depthTexture = true;
+        render3D.camera.pos = vec3();
+        render3D.camera.rotation = vec3();
+        const near = new EngineObject3D(vec3(-3, 0, -10), render3D.boxMesh);
+        near.scale3D = vec3(3);
+        const far = new EngineObject3D(vec3(9, 0, -30), render3D.boxMesh);
+        far.scale3D = vec3(9);
+        new PostProcessPlugin(`
+            void mainImage(out vec4 c, vec2 p)
+            {
+                float d = sceneDepth(p / iResolution.xy);
+                c = vec4(vec3(clamp(d / 40., 0., 1.)), 1.);
+            }`);
+    }, ()=> {}, ()=> {}, ()=> {}, ()=> {});
+
+    engineStep(3);
+    // the near box is at -3 across at 10 away, the far one at 9 across at 30 away, the view's half height .577 of
+    // the distance
+    const at = (x, distance)=> smokePixel(.5 + x / distance / .577 / 2, .5)[0];
+    const near = at(-3, 10), far = at(9, 30), nothing = smokePixel(.5, .95)[0];
+    check('a near box reads near, its front 8.5 away', Math.abs(near - 8.5 / 40 * 255) < 20, near);
+    check('a far box reads farther, its front 25.5 away', Math.abs(far - 25.5 / 40 * 255) < 25, far);
+    check('where nothing is it reads far', nothing > 240, nothing);
+    checkGLError();
+});
+</script>

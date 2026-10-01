@@ -1,0 +1,62 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: tile layers, particles and texture filtering</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// a tile layer draws its tiles where its cells are, a particle emitter draws its particles, and a texture is
+// sampled hard edged or smooth as it was asked to be
+// the view is 8 units across with the origin in the middle, a unit 16 pixels, so a place (x, y) is at
+// (.5 + x / 8, .5 + y / 8) of the canvas; the sheet's tile 0 is red and tile 1 green
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 1));
+    setTilesPixelated(true);
+    const pixel = (x, y)=> smokePixel(.5 + x / 8, .5 + y / 8);
+    let hard, smooth;
+    await engineInit(()=>
+    {
+        setCameraScale(16);
+
+        // a 2 by 2 tile layer at the bottom left: green in its first cell, red in its last, two left empty
+        const layer = new TileLayer(vec2(-4, -4), vec2(2), tile(0, 16));
+        layer.setData(vec2(0, 0), new TileLayerData(1));
+        layer.setData(vec2(1, 1), new TileLayerData(0));
+        layer.redraw();
+
+        // particles of the red tile at the top right, still, opaque and as big as two tiles
+        const white = [1, 1, 1, 1];
+        particleEffect({settings: {shape: '', tileIndex: 0, tileSize: 16, tilePadding: 0, emitRate: 100, speed: 0,
+            sizeStart: 2, sizeEnd: 2, particleTime: 1, fadeRate: 0, angleSpeed: 0, particleConeAngle: 0,
+            randomness: 0, colorStartA: white, colorStartB: white, colorEndA: white, colorEndB: white}}, vec2(2, 2));
+
+        // a texture two pixels wide, black then white, sampled hard edged and smooth
+        const canvas = new OffscreenCanvas(2, 1), context = canvas.getContext('2d');
+        context.fillStyle = '#000'; context.fillRect(0, 0, 1, 1);
+        context.fillStyle = '#fff'; context.fillRect(1, 0, 1, 1);
+        hard = new TileInfo(vec2(), vec2(2, 1), new TextureInfo(canvas, true, false, true));
+        smooth = new TileInfo(vec2(), vec2(2, 1), new TextureInfo(canvas, true, false, false));
+    }, ()=> {}, ()=> {}, ()=>
+    {
+        drawTile(vec2(2, -1.5), vec2(2, 1), hard);
+        drawTile(vec2(2, -3), vec2(2, 1), smooth);
+    }, ()=> {}, [smokeSheet('#f00', '#0f0')]);
+
+    engineStep(20);
+    const check3 = (name, [r, g, b], test)=> check(name, test(r, g, b), [r, g, b]);
+    check3('a tile layer draws its first cell', pixel(-3.5, -3.5), (r, g, b)=> g > 200 && r < 50 && b < 50);
+    check3('and its last', pixel(-2.5, -2.5), (r, g, b)=> r > 200 && g < 50 && b < 50);
+    check3('an empty cell shows what is behind it', pixel(-2.5, -3.5), (r, g, b)=> b > 200 && r < 50 && g < 50);
+    check3('particles draw their tile', pixel(2, 2), (r, g, b)=> r > 200 && g < 60 && b < 60);
+    // a little left of the middle of each, where the hard one is still black and the smooth one is on its way to white
+    check3('a pixelated texture has a hard edge', pixel(1.8, -1.5), (r)=> r < 20);
+    check3('a smooth texture blends across it', pixel(1.8, -3), (r)=> r > 40 && r < 215);
+    checkGLError();
+});
+</script>

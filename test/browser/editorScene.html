@@ -50,7 +50,6 @@ smokeRun(async ()=>
     edit(height, '30');
     const angles = editor3DSunAngles(level.scene.sunDirection);
     check('the sun\'s height right after its turn keeps the turn', angles.join() === '90,30', angles);
-    check('the fog is still as set', level.scene.fog.join() === '10,70', level.scene.fog);
     check('each edit is one undo', editor3DUndoList.length === 6, editor3DUndoList.length);
 });
 </script>

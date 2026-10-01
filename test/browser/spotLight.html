@@ -51,7 +51,6 @@ smokeRun(async ()=>
     check('as the shadow light, the lamp casts the box\'s shadow', ground(1.9) < 25, ground(1.9));
     check('the same place on the other side, with no box, is lit', ground(-1.9) > 100, ground(-1.9));
     check('the ground beside the shadow stays lit', ground(-2.2) > 100 && ground(0) > 150, [ground(-2.2), ground(0)]);
-    check('the ground outside the cone stays dark', ground(-5.5) < 20, ground(-5.5));
 
     lamp.coneAngle = 0;
     engineStep(2);

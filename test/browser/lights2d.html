@@ -1,0 +1,47 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: the 2D light system</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// the 2D light system lights a white scene around a light and leaves the rest dark, and with shadows on an object
+// in the way casts one
+// the view is 8 units across, so a place (x, y) is at (.5 + x / 8, .5 + y / 8) of the canvas; the light is at
+// (-2, 0), an object at (-.5, 0) between it and (1, 0)
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 0));
+    const bright = (x, y)=> smokePixel(.5 + x / 8, .5 + y / 8)[0];
+    let light;
+    await engineInit(()=>
+    {
+        setCameraScale(16);
+        new LightSystemPlugin; // pitch dark where no light reaches
+        light = new Light(vec2(-2, 0), 6, rgb(1, 1, 1));
+        light.castShadow = true;
+        new EngineObject(vec2(-.5, 0), vec2(1), tile(0, 16)); // what casts the shadow
+    }, ()=> {}, ()=> {}, ()=>
+    {
+        drawTile(vec2(), vec2(8), tile(1, 16)); // a white floor over the whole view
+    }, ()=> {}, [smokeSheet('#888', '#fff')]);
+
+    engineStep(3);
+    check('the floor is lit near the light', bright(-2, 1) > 120, bright(-2, 1));
+    check('and dark far from it', bright(3.5, 3.5) < 40, bright(3.5, 3.5));
+    const open = bright(1, 0);
+    check('with shadows off the light goes past the object', open > 40, open);
+
+    lightSystem.shadows = true;
+    engineStep(3);
+    const shadowed = bright(1, 0), beside = bright(-2, 3);
+    check('with shadows on the object casts one', shadowed < open - 25, [shadowed, open]);
+    check('as far from the light the other way it is still lit', beside > shadowed + 25, [beside, shadowed]);
+    checkGLError();
+});
+</script>

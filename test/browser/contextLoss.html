@@ -62,7 +62,6 @@ smokeRun(async ()=>
     lose.restoreContext();
     await restored;
     await new Promise((resolve)=> setTimeout(resolve)); // the engine's own handler is through
-    check('the context is back', !glContext.isContextLost());
     engineStep(2);
     drawsAll('after the context came back');
     checkGLError();

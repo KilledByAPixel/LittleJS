@@ -1,0 +1,39 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: Canvas2D with WebGL off</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// with WebGL off the engine draws the same things on the 2D canvas: the clear color, a rectangle, a tile, text
+// the view is 64 units across, a unit a pixel, so a place (x, y) is at (.5 + x / 64, .5 + y / 64) of the canvas
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    setCanvasClearColor(rgb(0, 0, 1));
+    setGLEnable(false);
+
+    // the color at a place on the main canvas, y up, as smokePixel reads the WebGL one
+    const pixel = (x, y)=>
+        [...mainContext.getImageData((.5 + x / 64) * mainCanvas.width | 0, (.5 - y / 64) * mainCanvas.height | 0, 1, 1).data];
+    await engineInit(()=> setCameraScale(1), ()=> {}, ()=> {}, ()=>
+    {
+        drawRect(vec2(-16, 16), vec2(16), rgb(1, 0, 0));
+        drawTile(vec2(16, 16), vec2(16), tile(1, 16));
+        drawText('X', vec2(16, -16), 24, rgb(1, 1, 0));
+    }, ()=> {}, [smokeSheet('#f00', '#0f0')]);
+    check('WebGL is off', !glEnable);
+    engineStep(2);
+    const near = (name, p, color)=> check(name, smokeNear(p, color), p);
+    near('the clear color shows', pixel(-16, -16), [0, 0, 255, 255]);
+    near('a rectangle draws in its color', pixel(-16, 16), [255, 0, 0, 255]);
+    near('a tile draws its texture', pixel(16, 16), [0, 255, 0, 255]);
+    // somewhere on the X there is yellow, its strokes cross in the middle
+    const middle = pixel(16, -16);
+    check('text draws', middle[0] > 150 && middle[1] > 150 && middle[2] < 100, middle);
+});
+</script>
