@@ -1,0 +1,56 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: the 3D editor's scene box</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<div id=box></div>
+<script>
+'use strict';
+
+// the 3D editor's scene box: a field edited right after another, while the box keeps the focus and so is not made
+// again, changes its own setting and leaves the one edited before as it was set
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setHeadlessMode(true); // only the box is under test, nothing is drawn
+    setEngineManualStep(true);
+    await engineInit(()=> new Render3DPlugin);
+    localStorage.removeItem('LittleJS editor 3D ' + location.pathname);
+    const level = {objects: [], scene: {sky: ['#ff0000', '#00ff00', '#0000ff'], sunDirection: [0, 1, 1], fog: [3, 30]}};
+    level3DLoad(level);
+    const box = document.getElementById('box');
+    editor3DSceneUpdate(box);
+
+    // the inputs of the row with a name, and an edit of one as a person makes it: focused, changed, let go
+    const inputs = (name)=> [...box.querySelectorAll('label')].find((l)=> l.textContent.startsWith(name))
+        .querySelectorAll('input');
+    const edit = (input, value)=>
+    {
+        input.focus();
+        editor3DSceneUpdate(box); // a frame goes by with the box in focus
+        input.value = value;
+        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('change'));
+    };
+
+    const [fogStart, fogEnd] = inputs('Fog start');
+    edit(fogStart, '10');
+    check('fog start is set', level.scene.fog.join() === '10,30', level.scene.fog);
+    edit(fogEnd, '70');
+    check('fog end right after it keeps the start', level.scene.fog.join() === '10,70', level.scene.fog);
+
+    const top = inputs('Sky top')[0], bottom = inputs('Sky bottom')[0];
+    edit(top, '#111111');
+    edit(bottom, '#222222');
+    check('a sky color right after another keeps the first', level.scene.sky.join() === '#111111,#00ff00,#222222',
+        level.scene.sky);
+
+    const around = inputs('Sun around')[0], height = inputs('Sun height')[0];
+    edit(around, '90');
+    edit(height, '30');
+    const angles = editor3DSunAngles(level.scene.sunDirection);
+    check('the sun\'s height right after its turn keeps the turn', angles.join() === '90,30', angles);
+    check('the fog is still as set', level.scene.fog.join() === '10,70', level.scene.fog);
+    check('each edit is one undo', editor3DUndoList.length === 6, editor3DUndoList.length);
+});
+</script>

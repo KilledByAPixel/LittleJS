@@ -2470,7 +2470,11 @@ function editor3DSceneUpdate(box)
 
     // a setting the block leaves out shows as it is on screen
     const view = editor3DSceneFromView(), value = (name)=> scene[name] ?? view[name];
-    const change = (name, v)=> editor3DChangeScene((s={})=> ({...s, [name]: v}));
+    // an input changes the scene as it is when it is used, not as it was when the box was made: the box is not
+    // made again while it has the focus, so a field edited right after another must not put the other one back;
+    // set is given the setting's value now, or what shows for one the block leaves out
+    const change = (name, set)=> editor3DChangeScene((s={})=>
+        ({...s, [name]: typeof set === 'function' ? set(s[name] ?? view[name]) : set}));
     const field = 'background:#222;color:#eee';
     const line = (name, title='')=>
     {
@@ -2536,7 +2540,7 @@ function editor3DSceneUpdate(box)
     if (sky)
     {
         ['Sky top', 'Sky horizon', 'Sky bottom'].forEach((name, i)=> color(name, '', sky[i], (hex)=>
-            change('sky', sky.map((c, k)=> k === i ? hex : c))));
+            change('sky', (now)=> (isArray(now) && now.length === 3 ? now : sky).map((c, k)=> k === i ? hex : c))));
         slider('Ambient', 'How much of the sky colors lights the scene', 0, 1, .05,
             isNumber(scene.ambient) ? scene.ambient : .5, (v)=> change('ambient', v));
     }
@@ -2544,16 +2548,17 @@ function editor3DSceneUpdate(box)
     // the sun, as two angles
     const [around, height] = editor3DSunAngles(value('sunDirection'));
     slider('Sun around', 'Where the sun is around the scene, in degrees', 0, 359, 1, around, (v)=>
-        change('sunDirection', editor3DSunDirection(v, editor3DSunAngles(value('sunDirection'))[1])));
+        change('sunDirection', (now)=> editor3DSunDirection(v, editor3DSunAngles(now)[1])));
     slider('Sun height', 'How high the sun is over the horizon, in degrees', 5, 90, 1, height, (v)=>
-        change('sunDirection', editor3DSunDirection(editor3DSunAngles(value('sunDirection'))[0], v)));
+        change('sunDirection', (now)=> editor3DSunDirection(editor3DSunAngles(now)[0], v)));
     color('Sun color', '', value('sunColor'), (hex)=> change('sunColor', hex));
 
     // the fog, by its distances, an end of 0 for none
     const fog = isArray(value('fog')) ? value('fog') : [0, 0], fogRow = line('Fog start, end',
         'Where the fog starts and where it is total, an end of 0 for no fog');
-    number(fogRow, fog[0], (v)=> change('fog', [v, fog[1]]));
-    number(fogRow, fog[1], (v)=> change('fog', [fog[0], v]));
+    const fogNow = (now)=> isArray(now) && now.length === 2 ? now : fog;
+    number(fogRow, fog[0], (v)=> change('fog', (now)=> [v, fogNow(now)[1]]));
+    number(fogRow, fog[1], (v)=> change('fog', (now)=> [fogNow(now)[0], v]));
     color('Fog color', 'The sky\'s horizon color when the level has a sky and no fog color',
         scene.fogColor ?? (sky ? sky[1] : view.fogColor), (hex)=> change('fogColor', hex));
     toggle('Shadows', 'The sun casts shadows', !!value('shadows'), (on)=> change('shadows', on));
