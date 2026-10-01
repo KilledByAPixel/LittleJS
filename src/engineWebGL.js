@@ -26,6 +26,19 @@ let glCanvas;
  *  @memberof WebGL */
 let glContext;
 
+/** The largest texture this device makes, in pixels across, 0 until WebGL starts; at least 2048 with WebGL2
+ *  @type {number}
+ *  @memberof WebGL */
+let glMaxTextureSize = 0;
+
+/** A texture size this device can make: the size asked for, or the largest it supports when that is smaller
+ *  - The engine sizes the textures it makes itself through this, the shadow maps and the like, so a size a device
+ *    does not have falls back instead of failing
+ *  @param {number} size - Pixels across
+ *  @return {number}
+ *  @memberof WebGL */
+function glClampTextureSize(size) { return glMaxTextureSize ? min(size, glMaxTextureSize) : size; }
+
 /** Should WebGL be setup with anti-aliasing? must be set before calling engineInit
  *  @type {boolean}
  *  @memberof WebGL */
@@ -165,6 +178,8 @@ function glInit(rootElement)
 
     function initWebGL()
     {
+        glMaxTextureSize = glContext.getParameter(glContext.MAX_TEXTURE_SIZE) | 0;
+
         // setup instanced rendering shader program
         glShader = glCreateProgram(gl_VERTEX_SOURCE,
             '#version 300 es\n' +     // specify GLSL ES version

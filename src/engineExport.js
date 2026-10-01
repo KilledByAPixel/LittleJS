@@ -335,6 +335,8 @@ export
     glFlush,
     glCopyToContext,
     glSetAntialias,
+    glMaxTextureSize,
+    glClampTextureSize,
     glDraw,
     glDrawUntextured,
     glDrawPointsTransform,

@@ -2227,6 +2227,7 @@ function render3DUpdateShadowMap(size)
 {
     const gl = glContext, r = render3D;
     ASSERT(size > 0, 'shadowMapSize must be positive');
+    size = glClampTextureSize(size); // a size the device does not have falls back to the largest it has
     if (r.shadowTexture && r.shadowTextureSize === size) return;
     r.shadowTexture && gl.deleteTexture(r.shadowTexture);
     r.shadowFramebuffer && gl.deleteFramebuffer(r.shadowFramebuffer);

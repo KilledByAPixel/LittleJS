@@ -2825,6 +2825,17 @@ declare module "littlejsengine" {
      *  @param {boolean} [antialias]
      *  @memberof WebGL */
     export function glSetAntialias(antialias?: boolean): void;
+    /** The largest texture this device makes, in pixels across, 0 until WebGL starts; at least 2048 with WebGL2
+     *  @type {number}
+     *  @memberof WebGL */
+    export let glMaxTextureSize: number;
+    /** A texture size this device can make: the size asked for, or the largest it supports when that is smaller
+     *  - The engine sizes the textures it makes itself through this, the shadow maps and the like, so a size a device
+     *    does not have falls back instead of failing
+     *  @param {number} size - Pixels across
+     *  @return {number}
+     *  @memberof WebGL */
+    export function glClampTextureSize(size: number): number;
     /** Add a sprite to the gl draw list, used by all gl draw functions
      *  @param {number} x
      *  @param {number} y
@@ -4793,6 +4804,9 @@ declare module "littlejsengine" {
         shadowMapWorldSize: number;
         shadowMapSizeAllocated: number;
         shadowTextureSizeAllocated: number;
+        /** Bring the sizes of the textures it makes down to what the device can make: shadowMapSize, shadowTextureSize
+         *  and a textureSize given by hand; called before they are made, so a size too big falls back instead of failing */
+        clampTextureSizes(): void;
         /** Draw a single Light's falloff blob into the currently bound lightmap.
          *  Called by Light.renderLight() during the plugin's render pass.
          *  @param {Light} light */

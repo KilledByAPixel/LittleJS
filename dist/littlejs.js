@@ -11044,6 +11044,19 @@ let glCanvas;
  *  @memberof WebGL */
 let glContext;
 
+/** The largest texture this device makes, in pixels across, 0 until WebGL starts; at least 2048 with WebGL2
+ *  @type {number}
+ *  @memberof WebGL */
+let glMaxTextureSize = 0;
+
+/** A texture size this device can make: the size asked for, or the largest it supports when that is smaller
+ *  - The engine sizes the textures it makes itself through this, the shadow maps and the like, so a size a device
+ *    does not have falls back instead of failing
+ *  @param {number} size - Pixels across
+ *  @return {number}
+ *  @memberof WebGL */
+function glClampTextureSize(size) { return glMaxTextureSize ? min(size, glMaxTextureSize) : size; }
+
 /** Should WebGL be setup with anti-aliasing? must be set before calling engineInit
  *  @type {boolean}
  *  @memberof WebGL */
@@ -11183,6 +11196,8 @@ function glInit(rootElement)
 
     function initWebGL()
     {
+        glMaxTextureSize = glContext.getParameter(glContext.MAX_TEXTURE_SIZE) | 0;
+
         // setup instanced rendering shader program
         glShader = glCreateProgram(gl_VERTEX_SOURCE,
             '#version 300 es\n' +     // specify GLSL ES version
@@ -13718,6 +13733,7 @@ class LightSystemPlugin
             // again on a context restore, the canvas may have changed since
             if (lightSystem.textureSizeAuto)
                 lightSystem.textureSize = mainCanvasSize.copy();
+            lightSystem.clampTextureSizes();
 
             // allocate the lightmap texture with null data at textureSize
             lightSystem.texture = glContext.createTexture();
@@ -13909,6 +13925,7 @@ class LightSystemPlugin
             const ls = lightSystem;
 
             // make the resources the first time, and again when a size changed
+            ls.clampTextureSizes();
             if (!ls.shadowMap || ls.shadowMapSize !== ls.shadowMapSizeAllocated
                 || ls.shadowTextureSize !== ls.shadowTextureSizeAllocated)
             {
@@ -14120,6 +14137,17 @@ class LightSystemPlugin
             initLightSystem();
             LOG('LightSystemPlugin: WebGL context restored');
         }
+    }
+
+    /** Bring the sizes of the textures it makes down to what the device can make: shadowMapSize, shadowTextureSize
+     *  and a textureSize given by hand; called before they are made, so a size too big falls back instead of failing */
+    clampTextureSizes()
+    {
+        this.shadowMapSize = glClampTextureSize(this.shadowMapSize);
+        this.shadowTextureSize = glClampTextureSize(this.shadowTextureSize);
+        const size = this.textureSize;
+        if (size)
+            this.textureSize = vec2(glClampTextureSize(size.x), glClampTextureSize(size.y));
     }
 
     /** Draw a single Light's falloff blob into the currently bound lightmap.
@@ -25017,6 +25045,7 @@ function render3DUpdateShadowMap(size)
 {
     const gl = glContext, r = render3D;
     ASSERT(size > 0, 'shadowMapSize must be positive');
+    size = glClampTextureSize(size); // a size the device does not have falls back to the largest it has
     if (r.shadowTexture && r.shadowTextureSize === size) return;
     r.shadowTexture && gl.deleteTexture(r.shadowTexture);
     r.shadowFramebuffer && gl.deleteFramebuffer(r.shadowFramebuffer);

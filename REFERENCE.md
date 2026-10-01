@@ -1007,7 +1007,8 @@ lightSystem.ambientColor  = rgb(0, 0, 0)      // Color of unlit areas
 
 // Shadows: once a frame every object draws black into a shadow map, and each light's rays stop at them
 lightSystem.shadows          = false  // on for shadows; off costs nothing
-lightSystem.shadowMapSize    = 1024   // pixels across the shadow map, a square of world around the camera
+lightSystem.shadowMapSize    = 1024   // pixels across the shadow map, a square of world around the camera; this
+                                      // and the other sizes fall back to the largest texture the device makes
 lightSystem.shadowMapScale   = 2      // how many views the map spans, so casters just off screen still cast in;
                                       // raise it when lights reach further than a view past the screen
 lightSystem.shadowTextureSize = 256   // pixels across each light's own shadow texture, larger is sharper; a gap
@@ -1272,7 +1273,9 @@ new DirectionalLight3D(pos3D, color, intensity=1) // a Light3D that shines from 
 render3D.depthTexture = true // off by default and free when off; draws the solid objects' depth from the camera
                              // for PostProcessPlugin, which reads it with sceneDepth(uv); one more draw, depth only
 render3D.shadows = true // off by default and free when off, soft shadows (drawSoftShadow) still work alongside
-render3D.shadowMapSize = 1024         // pixels across the shadow map, rebuilt when it changes
+render3D.shadowMapSize = 1024         // pixels across the shadow map, rebuilt when it changes; a size the device
+                                      // does not have falls back to the largest it has, glMaxTextureSize
+glClampTextureSize(size)              // that fallback, for a texture a game makes by size itself
 render3D.shadowRange = 40             // world size the map covers around shadowCenter, smaller is sharper
                                       // it is a square facing the light, so ~1.5x an area's width covers it
 render3D.shadowCenter = undefined // Vector3 center of the shadowed area, read each frame; undefined follows the camera
