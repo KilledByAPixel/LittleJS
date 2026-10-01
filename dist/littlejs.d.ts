@@ -9644,6 +9644,91 @@ declare module "littlejsengine" {
         worldPos3D: Vector3;
     }
     /**
+     * LensFlare3D - The sun's lens flare, the old kind: a glow at the sun and a row of discs and rings of different
+     * sizes along the line from the sun through the middle of the screen
+     * - Make one and it shows, over the 3D scene and under what the game draws after, a HUD; destroy it to take it away
+     * - It follows render3D.sunDirection, and fades out as the sun leaves the screen or goes behind something
+     * - flareSize, count, intensity and saturation set its look, seed picks another arrangement, and its color tints it,
+     *   with the sun's own color; or give it elements of your own
+     * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read
+     * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
+     *   through, each as the box around its mesh, see render3D.pick; turn it off with occlusion
+     * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
+     * @extends EngineObject3D
+     * @memberof Render3D
+     * @example
+     * new LensFlare3D;                // the sun flares
+     * new LensFlare3D(1.5, 10, .7, 0); // bigger, 10 ghosts, dimmer, all one color
+     */
+    export class LensFlare3D extends EngineObject3D {
+        /** Create the sun's lens flare
+         *  @param {number} [size] - Scales every part of it, 1 by default
+         *  @param {number} [count] - How many ghosts there are along the line, besides the glow at the sun
+         *  @param {number} [intensity] - How bright it is
+         *  @param {number} [saturation] - How colorful the ghosts are, 0 for all the flare's own color, 1 a rainbow
+         *  @param {Color} [color] - Tints the whole flare, with the sun's color */
+        constructor(size?: number, count?: number, intensity?: number, saturation?: number, color?: Color);
+        /** @property {number} - Scales every part of the flare */
+        flareSize: number;
+        /** @property {number} - How many ghosts there are along the line, besides the glow at the sun */
+        count: number;
+        /** @property {number} - How bright it is */
+        intensity: number;
+        /** @property {number} - How colorful the ghosts are, 0 for all the flare's own color, 1 a rainbow */
+        saturation: number;
+        /** @property {number} - Picks the arrangement of the ghosts, another seed is another flare */
+        seed: number;
+        /** @property {Array<{at: number, size: number, color: Color, shape: string}>|undefined} - The parts of the
+         *  flare, to set your own in place of the ones made from count, seed and saturation: at is where along the
+         *  line, 0 the sun, 1 the middle of the screen, 2 as far past it; size is across, as a part of the screen's
+         *  height; shape is glow, disc or ring
+         *  @type {Array<{at: number, size: number, color: Color, shape: string}>|undefined} */
+        elements: {
+            at: number;
+            size: number;
+            color: Color;
+            shape: string;
+        }[];
+        /** @property {boolean} - Fade out when something is between the camera and the sun */
+        occlusion: boolean;
+        /** @property {number} - Seconds the flare takes to fade out or in when the sun is hidden or shows again */
+        fadeTime: number;
+        /** @property {number} - How much of the sun shows, 0 hidden or behind the camera to 1 in plain view, eased */
+        visible: number;
+        madeKey: string;
+        /** @type {Array<{at: number, size: number, color: Color, shape: string}>} */
+        made: {
+            at: number;
+            size: number;
+            color: Color;
+            shape: string;
+        }[];
+        /** The parts of the flare: the elements set by hand, or the ones made from count, seed and saturation, a glow
+         *  and a core at the sun and the ghosts, made again when one of those changes
+         *  @return {Array<{at: number, size: number, color: Color, shape: string}>} */
+        getElements(): Array<{
+            at: number;
+            size: number;
+            color: Color;
+            shape: string;
+        }>;
+        /** Where the sun is on the screen, in pixels like mousePosScreen, undefined when it is behind the camera
+         *  @return {Vector2|undefined} */
+        getSunScreenPos(): Vector2 | undefined;
+        /** The parts of the flare as they are drawn now: each one's place on the screen, its size in pixels and its
+         *  color, dimmed by how much of the sun shows; empty when there is nothing to draw
+         *  @return {Array<{pos: Vector2, size: number, color: Color, shape: string}>} */
+        getScreenElements(): Array<{
+            pos: Vector2;
+            size: number;
+            color: Color;
+            shape: string;
+        }>;
+        /** Is something between the camera and the sun: the level, or an object that is not see through
+         *  @return {boolean} */
+        isSunHidden(): boolean;
+    }
+    /**
      * Collect the EngineObject3D objects whose boxes overlap a sphere or a box, the 3D twin of engineObjectsCollect
      * - Each object is its size3D box at its world position, turned as it is turned; lights, emitters and trails have no
      *   size and are never collected

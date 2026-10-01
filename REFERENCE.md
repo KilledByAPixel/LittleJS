@@ -1702,6 +1702,16 @@ emitter.particleCount   // how many are alive; they live in emitter.particleData
                         // emitter and drawn as one instanced batch of render3D.billboardMesh, so nothing else touches them
 
 // Trails - a ribbon through where the object has been, parent it to something that moves
+new LensFlare3D(size=1, count=7, intensity=1, saturation=1, color) // the sun's lens flare, the old kind: a glow at
+                                  // the sun and a row of discs and rings along the line through the middle of the
+                                  // screen; it fades as the sun leaves the screen or goes behind something
+flare.flareSize = 1.5             // scales every part; count is how many ghosts, intensity how bright, saturation
+                                  // how colorful, 0 all its own color; seed picks another arrangement
+flare.elements = [{at: .5, size: .1, color: hsl(.6,1,.6,.3), shape: 'disc'}] // or parts of your own: at 0 the sun,
+                                  // 1 the middle, 2 as far past it; size a part of the screen's height; shape
+                                  // glow, disc or ring
+flare.visible                     // how much of the sun shows, 0 to 1, eased over fadeTime, to read; what is not
+                                  // see through hides it, flare.occlusion = false turns that off
 new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over
                                                                          // lifeTime seconds; Infinity keeps every
                                                                          // sample at full width, a path that only

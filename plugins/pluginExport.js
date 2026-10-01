@@ -175,6 +175,7 @@ export
     FirstPersonCamera3D,
     ParticleEmitter3D,
     Trail3D,
+    LensFlare3D,
     engineObjectsCollect3D,
     engineObjectsCallback3D,
     engineObjectsRaycast3D,

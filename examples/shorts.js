@@ -113,6 +113,7 @@ const exampleList =
     new ExampleInfo('3D Voxels', 'render3dVoxels.js', 'Walk, jump, dig and build in a voxel world', false, 'voxel, blocks, minecraft, first person, jump, VoxelMap'),
     new ExampleInfo('3D Collision', 'render3dCollision.js', 'Solid objects, bouncing and picking', false, 'solid, sphere, box, cylinder, picking'),
     new ExampleInfo('3D First Person', 'render3dFirstPerson.js', 'Walk a maze with mouse look, WASD and a flashlight', false, 'first person, camera, maze, flashlight, spotlight, shadows, night'),
+    new ExampleInfo('3D Lens Flare', 'render3dLensFlare.js', 'The sun flares across the screen and hides behind pillars', false, 'lens flare, sun, glow, ghosts, occlusion'),
     new ExampleInfo('3D Lights', 'render3dLights.js', 'Colored point lights and a directional fill', false, 'light, point light, Light3D, DirectionalLight3D'),
     new ExampleInfo('3D Particles', 'render3dParticles.js', 'Fire, smoke, sparks and a fountain', false, 'particles, emitter, additive'),
     new ExampleInfo('3D Water', 'render3dWater.js', 'Rain on a pool, waves from a cellular automaton', false, 'water, waves, ripple, rain, cellular automaton, dynamicDraw, trails, particles'),

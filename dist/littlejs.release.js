@@ -28138,6 +28138,195 @@ class Trail3D extends EngineObject3D
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// lens flare
+
+// the shapes a flare is made of, white on clear on one smooth texture made the first time it is asked for: a soft
+// glow, a flat disc with a brighter rim, and a ring; undefined headless or without a canvas
+let render3DFlareTiles;
+function render3DFlareTile(shape)
+{
+    if (!render3DFlareTiles)
+    {
+        if (headlessMode || !glContext || typeof OffscreenCanvas == 'undefined') return;
+        const cell = 128, shapes = ['glow', 'disc', 'ring'], context = createCanvasContext(cell * shapes.length, cell);
+        // each shape is how see-through it is from its middle out
+        const alpha =
+        {
+            glow: (t)=> engineGlowAlpha(t, 1),
+            disc: (t)=> t < .8 ? .4 + .1 * t : t < .92 ? .48 + (t - .8) * 3 : (1 - t) / .08 * .84,
+            ring: (t)=> max(0, 1 - abs(t - .86) / .12),
+        };
+        shapes.forEach((shape, i)=>
+        {
+            const x = i * cell + cell / 2, y = cell / 2, r = cell / 2 - 2, steps = 32;
+            const gradient = context.createRadialGradient(x, y, 0, x, y, r);
+            for (let k = 0; k <= steps; ++k)
+                gradient.addColorStop(k / steps, 'rgba(255,255,255,' + clamp(alpha[shape](k / steps)).toFixed(4) + ')');
+            context.fillStyle = gradient;
+            context.beginPath();
+            context.arc(x, y, r, 0, 2 * PI);
+            context.fill();
+        });
+        const texture = new TextureInfo(context.canvas, true, false, false); // smooth even in a pixel art game
+        render3DFlareTiles = new Map(shapes.map((shape, i)=>
+            [shape, new TileInfo(vec2(i * cell, 0), vec2(cell), texture)]));
+    }
+    return render3DFlareTiles.get(shape) || render3DFlareTiles.get('glow');
+}
+
+/**
+ * LensFlare3D - The sun's lens flare, the old kind: a glow at the sun and a row of discs and rings of different
+ * sizes along the line from the sun through the middle of the screen
+ * - Make one and it shows, over the 3D scene and under what the game draws after, a HUD; destroy it to take it away
+ * - It follows render3D.sunDirection, and fades out as the sun leaves the screen or goes behind something
+ * - flareSize, count, intensity and saturation set its look, seed picks another arrangement, and its color tints it,
+ *   with the sun's own color; or give it elements of your own
+ * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read
+ * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
+ *   through, each as the box around its mesh, see render3D.pick; turn it off with occlusion
+ * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * new LensFlare3D;                // the sun flares
+ * new LensFlare3D(1.5, 10, .7, 0); // bigger, 10 ghosts, dimmer, all one color
+ */
+class LensFlare3D extends EngineObject3D
+{
+    /** Create the sun's lens flare
+     *  @param {number} [size] - Scales every part of it, 1 by default
+     *  @param {number} [count] - How many ghosts there are along the line, besides the glow at the sun
+     *  @param {number} [intensity] - How bright it is
+     *  @param {number} [saturation] - How colorful the ghosts are, 0 for all the flare's own color, 1 a rainbow
+     *  @param {Color} [color] - Tints the whole flare, with the sun's color */
+    constructor(size=1, count=7, intensity=1, saturation=1, color=WHITE)
+    {
+        super(vec3(), undefined, undefined, color);
+        this.size3D = vec3(); // not a thing to pick or collect
+        /** @property {number} - Scales every part of the flare */
+        this.flareSize = size;
+        /** @property {number} - How many ghosts there are along the line, besides the glow at the sun */
+        this.count = count;
+        /** @property {number} - How bright it is */
+        this.intensity = intensity;
+        /** @property {number} - How colorful the ghosts are, 0 for all the flare's own color, 1 a rainbow */
+        this.saturation = saturation;
+        /** @property {number} - Picks the arrangement of the ghosts, another seed is another flare */
+        this.seed = 1;
+        /** @property {Array<{at: number, size: number, color: Color, shape: string}>|undefined} - The parts of the
+         *  flare, to set your own in place of the ones made from count, seed and saturation: at is where along the
+         *  line, 0 the sun, 1 the middle of the screen, 2 as far past it; size is across, as a part of the screen's
+         *  height; shape is glow, disc or ring
+         *  @type {Array<{at: number, size: number, color: Color, shape: string}>|undefined} */
+        this.elements = undefined;
+        /** @property {boolean} - Fade out when something is between the camera and the sun */
+        this.occlusion = true;
+        /** @property {number} - Seconds the flare takes to fade out or in when the sun is hidden or shows again */
+        this.fadeTime = .15;
+        /** @property {number} - How much of the sun shows, 0 hidden or behind the camera to 1 in plain view, eased */
+        this.visible = 1;
+        this.renderOrder = 1e9; // over the game's sprites, it is light in the lens
+        this.madeKey = '';
+        /** @type {Array<{at: number, size: number, color: Color, shape: string}>} */
+        this.made = [];
+    }
+
+    /** The parts of the flare: the elements set by hand, or the ones made from count, seed and saturation, a glow
+     *  and a core at the sun and the ghosts, made again when one of those changes
+     *  @return {Array<{at: number, size: number, color: Color, shape: string}>} */
+    getElements()
+    {
+        if (this.elements) return this.elements;
+        const key = [this.count, this.seed, this.saturation].join();
+        if (key !== this.madeKey)
+        {
+            const random = new RandomGenerator(this.seed * 7919 + 1), s = clamp(this.saturation);
+            const made = this.made = [
+                {at: 0, size: .7, color: hsl(0, 0, 1, .5), shape: 'glow'},
+                {at: 0, size: .25, color: hsl(0, 0, 1, .9), shape: 'glow'}];
+            for (let i = 0; i < this.count; ++i)
+            {
+                // spread along the line, each a place of its own, the far ones bigger
+                const at = (i + random.float(.2, .8)) / max(this.count, 1) * 1.9 + .2;
+                const pick = random.float(), shape = pick < .5 ? 'disc' : pick < .8 ? 'ring' : 'glow';
+                made.push({at, size: random.float(.04, .1) * (1 + at), shape,
+                    color: hsl(random.float(), s * .9, .6, random.float(.15, .4))});
+            }
+            this.madeKey = key;
+        }
+        return this.made;
+    }
+
+    /** Where the sun is on the screen, in pixels like mousePosScreen, undefined when it is behind the camera
+     *  @return {Vector2|undefined} */
+    getSunScreenPos()
+    {
+        const direction = render3D.sunDirection;
+        if (!direction.lengthSquared()) return;
+        return render3D.worldToScreen(render3D.camera.pos.add(direction.normalize(100)));
+    }
+
+    /** The parts of the flare as they are drawn now: each one's place on the screen, its size in pixels and its
+     *  color, dimmed by how much of the sun shows; empty when there is nothing to draw
+     *  @return {Array<{pos: Vector2, size: number, color: Color, shape: string}>} */
+    getScreenElements()
+    {
+        const sun = this.getSunScreenPos(), center = mainCanvasSize.scale(.5);
+        if (!sun || !center.x || !center.y) return [];
+        // it fades as the sun leaves the screen, gone when it is a third of the screen past the edge
+        const off = max(abs(sun.x - center.x) / center.x, abs(sun.y - center.y) / center.y);
+        const strength = this.visible * clamp((1.3 - off) / .5) * this.intensity;
+        if (!(strength > 0)) return [];
+        const tint = this.color.multiply(render3D.sunColor), height = mainCanvasSize.y * this.flareSize;
+        return this.getElements().map((e)=>
+        {
+            const c = e.color.multiply(tint);
+            // along the line and past the middle, a lerp would stop there
+            return {pos: sun.add(center.subtract(sun).scale(e.at)), size: e.size * height, shape: e.shape,
+                color: rgb(c.r, c.g, c.b, c.a * strength)};
+        });
+    }
+
+    /** Is something between the camera and the sun: the level, or an object that is not see through
+     *  @return {boolean} */
+    isSunHidden()
+    {
+        const direction = render3D.sunDirection;
+        if (!direction.lengthSquared()) return true;
+        const blockers = engineObjects.filter((o)=> o !== this && o instanceof EngineObject3D && !o.transparent &&
+            !o.additive);
+        return !!render3D.pick(new Ray3D(render3D.camera.pos, direction.normalize()), blockers);
+    }
+
+    /** Ease visible toward whether the sun shows, called automatically each frame */
+    update()
+    {
+        super.update();
+        const shows = !!this.getSunScreenPos() && !(this.occlusion && this.isSunHidden());
+        const step = this.fadeTime > 0 ? timeDelta / this.fadeTime : 1;
+        this.visible = clamp(this.visible + (shows ? step : -step));
+    }
+
+    /** Draw the flare over the 3D scene, added onto it, called automatically in the 2D pass */
+    render()
+    {
+        if (headlessMode || !glEnable) return;
+        const elements = this.getScreenElements();
+        if (!elements.length) return;
+        setAdditiveBlendMode(true);
+        for (const e of elements)
+        {
+            const tileInfo = render3DFlareTile(e.shape);
+            tileInfo && drawTile(e.pos, vec2(e.size), tileInfo, e.color, 0, false, undefined, true, true);
+        }
+        setAdditiveBlendMode(false);
+    }
+
+    /** A flare has nothing to draw in the 3D pass */
+    render3D() {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // OBJ meshes
 
 /**

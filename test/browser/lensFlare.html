@@ -1,0 +1,55 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: lens flare</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// the sun's lens flare shows as a glow where the sun is and a ghost across the middle of the screen from it, and
+// fades out when a wall goes between the camera and the sun
+// the camera is at the origin looking down -z, the sun up and to the right of the middle of the screen
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 0));
+    let flare, wall;
+    await engineInit(()=>
+    {
+        new Render3DPlugin;
+        render3D.camera.pos = vec3();
+        render3D.camera.rotation = vec3();
+        render3D.ambientColor = rgb(0, 0, 0);
+        render3D.sunDirection = vec3(.25, .25, -1);
+
+        // one white ghost, as far past the middle as the sun is from it
+        flare = new LensFlare3D;
+        flare.elements = [{at: 0, size: .3, color: rgb(1, 1, 1, 1), shape: 'glow'},
+            {at: 2, size: .2, color: rgb(1, 1, 1, 1), shape: 'disc'}];
+    }, ()=> {}, ()=> {}, ()=> {}, ()=> {});
+
+    // the sun is at (.25, .25) of the way out from the middle at a distance of 1, the screen's half height is .577
+    const out = .25 / .577 / 2, sun = [.5 + out, .5 + out], ghost = [.5 - out, .5 - out];
+    engineStep(3);
+    check('a glow shows where the sun is', smokePixel(...sun)[0] > 150, smokePixel(...sun));
+    check('a ghost shows across the middle from it', smokePixel(...ghost)[0] > 40, smokePixel(...ghost));
+    check('nothing in the other corners', smokePixel(sun[0], ghost[1])[0] < 10, smokePixel(sun[0], ghost[1]));
+    check('the sun is in plain view', flare.visible === 1, flare.visible);
+
+    // a wall between the camera and the sun, dark on this side, the sun behind it
+    wall = new EngineObject3D(vec3(5, 5, -20), render3D.boxMesh, undefined, rgb(.2, .2, .2));
+    wall.scale3D = vec3(12, 12, 1);
+    engineStep(30);
+    check('behind a wall the flare is gone', flare.visible === 0, flare.visible);
+    check('and nothing is added at the sun', smokePixel(...sun)[0] < 60, smokePixel(...sun));
+    check('nor at the ghost', smokePixel(...ghost)[0] < 10, smokePixel(...ghost));
+
+    wall.destroy();
+    engineStep(30);
+    check('the wall gone, the flare is back', smokePixel(...sun)[0] > 150, smokePixel(...sun));
+    checkGLError();
+});
+</script>
