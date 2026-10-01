@@ -1,0 +1,59 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: 3D</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// the 3D plugin's shaders compile and its draws reach the screen: an object in its own color, a lit object, an
+// instanced set, a ground with shadows on, 3D particles, and a 2D draw over them all
+// the camera is at z 10 looking at the origin, the view 11.5 units across at the origin, so a place (x, y) there is
+// at (.5 + x / 11.5, .5 + y / 11.5) of the canvas
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    setCanvasClearColor(rgb(0, 0, 0));
+    const at = (x, y)=> [.5 + x / 11.5, .5 + y / 11.5];
+    await engineInit(()=>
+    {
+        setCameraScale(1);
+        new Render3DPlugin;
+        render3D.shadows = true;
+
+        const own = new EngineObject3D(vec3(), buildBox(), undefined, rgb(1, 0, 0));
+        own.scale3D = vec3(2);
+        own.emissive = 1; // its own color, no lighting
+
+        const lit = new EngineObject3D(vec3(3, -1, 0), buildBox(), undefined, rgb(0, 1, 0));
+        lit.scale3D = vec3(2);
+
+        const set = new InstancedMesh3D(buildBox(), 2, undefined, rgb(0, 0, 1));
+        set.emissive = 1;
+        set.setTransformAt(0, vec3(-3, 3, 0), vec3(), vec3(2));
+        set.setTransformAt(1, vec3(-3, 0, 0), vec3(), vec3(2));
+
+        new EngineObject3D(vec3(0, -3.5, 0), buildGrid(vec2(40), 1)); // the ground, seen from just above
+
+        particleEffect3D('fire', vec3(3, 2.5, 0), {scale: 3});
+    }, ()=> {}, ()=> {}, ()=>
+    {
+        drawRect(vec2(-24, 24), vec2(8), rgb(1, 1, 0)); // 2D, over the 3D scene
+    }, ()=> {});
+    check('the 3D shaders compiled', !!render3D.program);
+    engineStep(30); // the particles get going
+    const pixel = (name, [x, y], test)=> { const p = smokePixel(x, y); check(name, test(p), p); };
+    pixel('an emissive object draws its color', at(0, 0), (p)=> smokeNear(p, [255, 0, 0, 255]));
+    pixel('a lit object is lit', at(3, -1), (p)=> p[1] > 40 && p[0] < 40 && p[2] < 40);
+    pixel('an instanced set draws its first instance', at(-3, 3), (p)=> smokeNear(p, [0, 0, 255, 255]));
+    pixel('and its second', at(-3, 0), (p)=> smokeNear(p, [0, 0, 255, 255]));
+    pixel('the ground draws with shadows on', [.5, .12], (p)=> p[0] > 40 && p[1] > 40 && p[2] > 40);
+    pixel('3D particles draw', at(3, 2.7), (p)=> p[0] > 40);
+    pixel('a 2D draw goes over the 3D scene', [.125, .875], (p)=> smokeNear(p, [255, 255, 0, 255]));
+    pixel('nothing draws where nothing is', [.5, .95], (p)=> smokeNear(p, [0, 0, 0, 255]));
+    checkGLError();
+});
+</script>

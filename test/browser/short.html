@@ -1,0 +1,62 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: a short</title>
+<!-- a short run the way examples/shorts/base.html runs it, short.html?short=helloWorld, for 10 frames, on a canvas
+     half the size each way so the software renderer keeps up -->
+<base href=../../examples/shorts/>
+<script src=../../dist/littlejs.js></script>
+<script src=../../dist/box2d.wasm.js></script>
+<script src=../../test/browser/smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// the settings of examples/shorts/base.html
+canvasFixedSize = vec2(480, 270);
+tileDefaultBleed = .5;
+canvasPixelated = false;
+debugWatermark = false;
+showEngineVersion = false;
+showSplashScreen = false;
+
+// a short overrides the ones it uses
+function gameInit() {}
+function gameUpdate() {}
+function gameUpdatePost() {}
+function gameRender() {}
+function gameRenderPost() {}
+function glCanEnable() { return glCanBeEnabled; }
+
+const smokeShort = new URLSearchParams(location.search).get('short') || '';
+if (/^[\w-]+$/.test(smokeShort))
+    document.write('<script src="' + smokeShort + '.js"><\/script>');
+</script>
+<script>
+'use strict';
+{
+    const frames = 10;
+    let finished = false, rendered = 0; // frames drawn, the engine's own count stops while a short is paused
+    const finish = (ok)=>
+    {
+        if (finished) return;
+        finished = true;
+        check('ran ' + frames + ' frames', ok, rendered);
+        ok && glEnable && checkGLError();
+        smokeDone();
+    };
+    // stepped by hand, a frame at a time with a moment between for what a short loads; a frame that throws
+    // is caught by the page's error check and the count stops short
+    setEngineManualStep(true);
+    setTimeout(()=> finish(false), 45e3); // stuck loading
+    engineInit(()=> gameInit(), ()=> gameUpdate(), ()=> gameUpdatePost(), ()=> gameRender(),
+        ()=> { gameRenderPost(); ++rendered; }, ['tiles.png']).then(async ()=>
+    {
+        for (let i = 0; i < frames && !finished; ++i)
+        {
+            try { engineStep(); }
+            catch (e) { check('no error', false, String(e?.message || e)); break; }
+            await new Promise((resolve)=> setTimeout(resolve, 5));
+        }
+        finish(rendered >= frames);
+    });
+}
+</script>

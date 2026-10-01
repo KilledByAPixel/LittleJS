@@ -1,0 +1,70 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: WebGL context loss</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// the WebGL context is lost and comes back: 2D draws, a texture and the 3D plugin all draw again as before
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    setCanvasClearColor(rgb(0, 0, 0));
+    let texture;
+    await engineInit(()=>
+    {
+        setCameraScale(1);
+        const canvas = new OffscreenCanvas(8, 8), context = canvas.getContext('2d');
+        context.fillStyle = '#0f0';
+        context.fillRect(0, 0, 8, 8);
+        texture = new TextureInfo(canvas);
+
+        new Render3DPlugin;
+        const box = new EngineObject3D(vec3(), buildBox(), undefined, rgb(0, 0, 1));
+        box.scale3D = vec3(2);
+        box.emissive = 1;
+    }, ()=> {}, ()=> {}, ()=>
+    {
+        drawRect(vec2(-24, 24), vec2(8), rgb(1, 0, 0));
+        drawTile(vec2(24, 24), vec2(8), new TileInfo(vec2(), vec2(8), texture));
+    }, ()=> {});
+
+    const drawsAll = (when)=>
+    {
+        checkPixel('a rectangle draws ' + when, .125, .875, [255, 0, 0, 255]);
+        checkPixel('a texture draws ' + when, .875, .875, [0, 255, 0, 255]);
+        checkPixel('a 3D object draws ' + when, .5, .5, [0, 0, 255, 255]);
+    };
+    engineStep();
+    drawsAll('at first');
+
+    const lose = glContext.getExtension('WEBGL_lose_context');
+    check('the context can be lost on purpose', !!lose);
+    // an event of the canvas, or a failed check when it does not come
+    const event = (name)=> new Promise((resolve, reject)=>
+    {
+        glCanvas.addEventListener(name, resolve, {once: true});
+        setTimeout(()=> reject(name + ' never came'), 3e3);
+    });
+    const lost = event('webglcontextlost');
+    lose.loseContext();
+    await lost;
+    // the browser allows a restore only once the lost event is through, a task later
+    await new Promise((resolve)=> setTimeout(resolve));
+    engineStep(2); // frames with no context go by without an error
+    check('the context is lost', glContext.isContextLost());
+
+    const restored = event('webglcontextrestored');
+    lose.restoreContext();
+    await restored;
+    await new Promise((resolve)=> setTimeout(resolve)); // the engine's own handler is through
+    check('the context is back', !glContext.isContextLost());
+    engineStep(2);
+    drawsAll('after the context came back');
+    checkGLError();
+});
+</script>

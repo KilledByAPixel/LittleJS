@@ -23,3 +23,5 @@ jobs:
       - name: Check the committed bundles match the source
         run: git diff --exit-code -- dist/littlejs.js dist/littlejs.esm.js
       - run: npm test
+      # real WebGL in the runner's own Chrome, headless with the software renderer
+      - run: npm run test:browser

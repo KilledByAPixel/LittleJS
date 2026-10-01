@@ -1,0 +1,53 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: shaders</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// a custom Shader on a 2D object compiles and gives its color, and a post process shader with feedback gets the frame
+// before in iChannel1: its red builds up over the frames, 64, 96, 112, while green and blue pass the scene through
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    setCanvasClearColor(rgb(0, 0, 0));
+    await engineInit(()=>
+    {
+        setCameraScale(1);
+        const canvas = new OffscreenCanvas(8, 8), context = canvas.getContext('2d');
+        context.fillStyle = '#fff';
+        context.fillRect(0, 0, 8, 8);
+        const white = new TileInfo(vec2(), vec2(8), new TextureInfo(canvas));
+
+        // the right half is an object with a Shader that makes it cyan
+        const object = new EngineObject(vec2(16, 0), vec2(32, 64), white);
+        object.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = vec4(0., 1., 1., 1.); }');
+
+        new PostProcessPlugin(`
+            void mainImage(out vec4 c, vec2 p)
+            {
+                vec2 uv = p / iResolution.xy;
+                c = texture(iChannel0, uv);
+                c.r = .25 + .5 * texture(iChannel1, uv).r;
+                c.a = 1.;
+            }`, false, true);
+    }, ()=> {}, ()=> {}, ()=> {}, ()=> {});
+
+    const reds = [];
+    for (let i = 0; i < 3; ++i)
+    {
+        engineStep();
+        reds.push(smokePixel(.25, .5)[0]);
+    }
+    check('post process feedback builds up over frames', reds.every((red, i)=> Math.abs(red - [64, 96, 112][i]) < 4),
+        reds);
+    const shaded = smokePixel(.75, .5), plain = smokePixel(.25, .5);
+    check('a Shader on a 2D object gives its color', shaded[1] > 230 && shaded[2] > 230, shaded);
+    check('the rest of the scene passes through', plain[1] < 25 && plain[2] < 25, plain);
+    checkGLError();
+});
+</script>
