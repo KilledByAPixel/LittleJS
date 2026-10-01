@@ -153,7 +153,6 @@ LittleJS comes with several demos both for learning and using as starter project
 - [3D Example](https://killedbyapixel.github.io/LittleJS/examples/3d/) - The 3D plugin in one scene: terrain, shadows, lights, sprites, particles and bloom
 - [3D Racing Game](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Racing%20Game) - Built-in 3D plugin: terrain, shadows and a chase camera in one short file
 - [Three.js Platformer](https://killedbyapixel.github.io/LittleJS/examples/threejs/) - 3D platformer with LittleJS gameplay and Three.js rendering
-- [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Sprite rendering benchmark and music system demo
 - [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
 
 ## Builds
