@@ -222,6 +222,7 @@ drawEllipse(pos, size, color)           // filled ellipse
 - **Don't modify constant colors** - `WHITE`, `BLACK`, `RED`, etc. are frozen; use `.copy()` first
 - **Time variables are global** - `time`, `frame` update automatically each frame
 - **Fixed 60 FPS timestep** - Physics runs at 60 FPS regardless of display refresh rate. `setEngineVariableStep(true)` opts into one update per display frame with `timeDelta` the frame's time; per-frame values (velocity, gravity, damping, particle speeds) are not scaled, while values in seconds follow real time. Each frame's delta is first smoothed to whole display frames (`engineSmoothDelta`, after Frank's "Time Delta Smoothing"), from an internal frame estimate that is never exposed; deltas that do not fit whole frames of one length, like a variable refresh display, pass through as they are
+- **A second finger is a pinch, not a second press** - with `touchPinchWheel` on (the default) two fingers turn `mouseWheel` by `touchPinch`, the mouse is between them and the button the first finger pressed lets go; a game with its own use for two fingers calls `setTouchPinchWheel(false)`
 - **WebGL is enabled by default** - Set `glEnable = false` before `engineInit()` for Canvas2D only
 - **Tile coordinates are bottom-left origin** - Y increases upward in world space
 - **Every export must appear in REFERENCE.md** - [test/reference.test.mjs](test/reference.test.mjs) fails on a name that is exported but not mentioned, so a new API comes with its REFERENCE line

@@ -502,7 +502,12 @@ mousePos                              // World space mouse position
 mousePosScreen                        // Screen space mouse position
 mouseDelta                            // World space mouse movement delta
 mouseDeltaScreen                      // Screen space mouse movement delta
-mouseWheel                            // Delta mouse wheel this frame    
+mouseWheel                            // Delta mouse wheel this frame, a touch pinch turns it too
+touchPinch                            // Pinch of two fingers this frame in wheel units: apart is negative like
+                                      // the wheel up, 1 for every 50 pixels; the mouse is between the fingers
+touchPinchWheel = true                // Add touchPinch to mouseWheel? A second finger then lets go of the button
+                                      // the first pressed; setTouchPinchWheel(false) leaves the first finger the
+                                      // mouse, for a game with its own use for two fingers
 mouseIsDown(button)                   // Is mouse button down?
 mouseWasPressed(button)               // Was mouse button pressed this frame?
 mouseWasReleased(button)              // Was mouse button released this frame?

@@ -3772,6 +3772,15 @@ let touchGamepadEnable = false;
  *  @memberof Settings */
 let touchGamepadPassthrough = false;
 
+/** True if a pinch of two fingers turns the mouse wheel: touchPinch is added to mouseWheel, so what zooms with
+ *  the wheel zooms with a pinch, the mouse is between the two fingers, and a second finger lets go of the button
+ *  the first pressed, since a pinch is not a drag; turn it off for a game with its own use for two fingers, the
+ *  first finger stays the mouse and touchPinch can still be read
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let touchPinchWheel = true;
+
 /** Size of center button if touch gamepad should have start button in the center
  *  - Prevents activating when pressed near virtual stick or face buttons
  *  - When the game is paused, any touch will press the button
@@ -4166,6 +4175,11 @@ function setTouchInputEnable(enable) { touchInputEnable = enable; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
+
+/** Set if a pinch of two fingers turns the mouse wheel
+ *  @param {boolean} enable
+ *  @memberof Settings */
+function setTouchPinchWheel(enable) { touchPinchWheel = enable; }
 
 /** Set if touches outside the gamepad controls should still drive mouse/touch input
  *  @param {boolean} passthrough
@@ -6934,6 +6948,13 @@ let mouseDeltaScreen = vec2();
  *  @memberof Input */
 let mouseWheel = 0;
 
+/** Touch pinch delta this frame, in the mouse wheel's units: two fingers moving apart are negative, as the wheel
+ *  turned up is, and moving together positive, 1 for every 50 pixels; added to mouseWheel while touchPinchWheel
+ *  is on, so a game that zooms with the wheel zooms with a pinch
+ *  @type {number}
+ *  @memberof Input */
+let touchPinch = 0;
+
 /** True if mouse was inside the document window, set to false when mouse leaves
  *  @type {boolean}
  *  @memberof Input */
@@ -7022,6 +7043,7 @@ function inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearRe
 const inputWASDToArrow = {KeyW:'ArrowUp', KeyS:'ArrowDown', KeyA:'ArrowLeft', KeyD:'ArrowRight'};
 const inputArrowToWASD = {ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', ArrowRight:'KeyD'};
 const inputKeysHeld = new Set; // the keys physically down, since an arrow's slot is shared with its alias
+let inputPinch; // the two fingers pinching and how far apart they were, undefined with no pinch
 let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, cleared with the input so only a new touch presses
 let inputLastTouchTime = -1e9; // when a touch event last came, the mouse events a browser makes from a tap follow it
 
@@ -7064,6 +7086,7 @@ function inputClear()
         if (!i || inputData[i]) inputData[i] = [];
     inputKeysHeld.clear();
     inputWasTouching = 0;
+    inputPinch = undefined;
     // release the touch gamepad, a finger still on it has to lift before it can take a control again
     touchGamepadPointerRole.clear();
     touchGamepadButtons.length = 0;
@@ -7591,19 +7614,52 @@ function inputInit()
                     const pressTouch = !inputWasTouching && e.type == 'touchstart' &&
                         [...e.changedTouches].find(t=> !isGamepadTouch(t));
                     const touch = pressTouch || gameTouches[0];
+                    let pos = vec2(touch.clientX, touch.clientY);
+
+                    // two fingers pinch: how far they moved together or apart is the touch screen's wheel, a
+                    // click for every 50 pixels, and the mouse is between them, the place to zoom about; with
+                    // touchPinchWheel off the pinch is only measured, and the first finger is the mouse as ever
+                    const pinching = touching > 1 && touchPinchWheel;
+                    if (touching > 1)
+                    {
+                        const [a, b] = gameTouches, key = a.identifier + ' ' + b.identifier;
+                        const distance = hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+                        if (inputPinch && inputPinch.key === key)
+                        {
+                            const delta = (inputPinch.distance - distance) / 50;
+                            touchPinch += delta;
+                            if (touchPinchWheel)
+                                mouseWheel += delta;
+                        }
+                        inputPinch = {key, distance}; // other fingers start it over, with no jump
+                        if (pinching)
+                            pos = vec2((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+                    }
+                    else
+                        inputPinch = undefined;
 
                     // set event pos and pass it along
-                    const pos = vec2(touch.clientX, touch.clientY);
                     const mousePosScreenLast = mousePosScreen;
                     mousePosScreen = mouseEventToScreen(pos);
-                    if (inputWasTouching && touch.identifier === inputTouchIdentifier)
+                    if (pinching)
+                    {
+                        // a pinch is not a press or a drag, the finger that pressed lets go
+                        if (inputData[0][button] & 1)
+                            inputData[0][button] = inputData[0][button] & 2 | 4;
+                    }
+                    else if (inputWasTouching && touch.identifier === inputTouchIdentifier)
                         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
                     else if (pressTouch)
                         inputData[0][button] = 3;
-                    inputTouchIdentifier = touch.identifier;
+                    // the finger left after a pinch moves the mouse from where it is, with no jump and no press
+                    inputTouchIdentifier = pinching ? undefined : touch.identifier;
                 }
-                else if (inputWasTouching && (inputData[0][button] & 1))
-                    inputData[0][button] = inputData[0][button] & 2 | 4; // released only if it was pressed
+                else
+                {
+                    inputPinch = undefined;
+                    if (inputWasTouching && (inputData[0][button] & 1))
+                        inputData[0][button] = inputData[0][button] & 2 | 4; // released only if it was pressed
+                }
 
                 // set was touching
                 inputWasTouching = touching;
@@ -7862,7 +7918,7 @@ function inputUpdatePost()
     for (const deviceInputData of inputData)
     for (const i in deviceInputData)
         deviceInputData[i] &= 1;
-    mouseWheel = 0;
+    mouseWheel = touchPinch = 0;
     mouseDelta = vec2();
     mouseDeltaScreen = vec2();
 }
@@ -38551,6 +38607,7 @@ export
     touchInputEnable,
     touchGamepadEnable,
     touchGamepadPassthrough,
+    touchPinchWheel,
     touchGamepadCenterButtonSize,
     touchGamepadButtonCount,
     touchGamepadLeftStick,
@@ -38612,6 +38669,7 @@ export
     setInputWASDEmulateDirection,
     setTouchGamepadEnable,
     setTouchGamepadPassthrough,
+    setTouchPinchWheel,
     setTouchGamepadCenterButtonSize,
     setTouchGamepadButtonCount,
     setTouchGamepadLeftStick,
@@ -38815,6 +38873,7 @@ export
     mouseDelta,
     mouseDeltaScreen,
     mouseWheel,
+    touchPinch,
     mouseInWindow,
     isUsingGamepad,
     lastInputDevice,

@@ -313,6 +313,15 @@ let touchGamepadEnable = false;
  *  @memberof Settings */
 let touchGamepadPassthrough = false;
 
+/** True if a pinch of two fingers turns the mouse wheel: touchPinch is added to mouseWheel, so what zooms with
+ *  the wheel zooms with a pinch, the mouse is between the two fingers, and a second finger lets go of the button
+ *  the first pressed, since a pinch is not a drag; turn it off for a game with its own use for two fingers, the
+ *  first finger stays the mouse and touchPinch can still be read
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let touchPinchWheel = true;
+
 /** Size of center button if touch gamepad should have start button in the center
  *  - Prevents activating when pressed near virtual stick or face buttons
  *  - When the game is paused, any touch will press the button
@@ -707,6 +716,11 @@ function setTouchInputEnable(enable) { touchInputEnable = enable; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
+
+/** Set if a pinch of two fingers turns the mouse wheel
+ *  @param {boolean} enable
+ *  @memberof Settings */
+function setTouchPinchWheel(enable) { touchPinchWheel = enable; }
 
 /** Set if touches outside the gamepad controls should still drive mouse/touch input
  *  @param {boolean} passthrough

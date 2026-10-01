@@ -806,6 +806,14 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let touchGamepadPassthrough: boolean;
+    /** True if a pinch of two fingers turns the mouse wheel: touchPinch is added to mouseWheel, so what zooms with
+     *  the wheel zooms with a pinch, the mouse is between the two fingers, and a second finger lets go of the button
+     *  the first pressed, since a pinch is not a drag; turn it off for a game with its own use for two fingers, the
+     *  first finger stays the mouse and touchPinch can still be read
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let touchPinchWheel: boolean;
     /** Size of center button if touch gamepad should have start button in the center
      *  - Prevents activating when pressed near virtual stick or face buttons
      *  - When the game is paused, any touch will press the button
@@ -1096,6 +1104,10 @@ declare module "littlejsengine" {
      *  @param {boolean} passthrough
      *  @memberof Settings */
     export function setTouchGamepadPassthrough(passthrough: boolean): void;
+    /** Set if a pinch of two fingers turns the mouse wheel
+     *  @param {boolean} enable
+     *  @memberof Settings */
+    export function setTouchPinchWheel(enable: boolean): void;
     /** Set if touch gamepad should have start button in the center
      *  - Set size to enable the center button
      *  - When the game is paused, any touch will press the button
@@ -3003,6 +3015,12 @@ declare module "littlejsengine" {
      *  @type {number}
      *  @memberof Input */
     export let mouseWheel: number;
+    /** Touch pinch delta this frame, in the mouse wheel's units: two fingers moving apart are negative, as the wheel
+     *  turned up is, and moving together positive, 1 for every 50 pixels; added to mouseWheel while touchPinchWheel
+     *  is on, so a game that zooms with the wheel zooms with a pinch
+     *  @type {number}
+     *  @memberof Input */
+    export let touchPinch: number;
     /** True if mouse was inside the document window, set to false when mouse leaves
      *  @type {boolean}
      *  @memberof Input */
