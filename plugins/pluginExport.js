@@ -200,6 +200,10 @@ export
     level3DAddType,
     level3DAddMesh,
     level3DLoad,
+    level3DAddPrefab,
+    level3DLoadPrefab,
+    level3DSpawn,
+    Prefab3D,
     level3DVoxelSetup,
 
     // Three.js

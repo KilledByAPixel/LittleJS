@@ -10177,6 +10177,8 @@ declare module "littlejsengine" {
      *    height, how tall a full height is, color, and heights, rows of 0 to 1 from -z to +z, each from -x to +x; it
      *    is made a HeightMap, returned with what else was made; paint, when it has it, colors its samples: colors, a
      *    list, and cells, runs of a count and a color along the rows, 0 for the terrain's own and 1 the list's first
+     *  - A level may hold prefabs of its own, in a prefabs block, each by its name as level3DAddPrefab takes it; they
+     *    are added before its objects are made, one the game added itself keeps its place
      *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
      *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
      *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
@@ -10185,6 +10187,71 @@ declare module "littlejsengine" {
      *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
      *  @memberof Level3D */
     export function level3DLoad(level: any): Array<any>;
+    /** Add a prefab: a small level, its objects placed about its own origin, to place many times under one name
+     *  - It is a type from then on: a level's object of that type, the level editor's Place list and level3DSpawn make
+     *    an instance, a Prefab3D, where every instance of a prefab is the same and follows the prefab
+     *  - The prefab is a level as the level editor saves it, {objects: [...]}, so the editor is the prefab editor too;
+     *    only its objects are used, and they may be of other prefabs
+     *  - With attached true in it the parts are children of the instance and move with it as one body, without
+     *    collision of their own; otherwise each part is an object of its own in the world and collides as one placed
+     *    by hand does
+     *  - Adding a name again replaces it
+     *  @param {string} name - The type its instances have in a level
+     *  @param {Object} prefab - {objects, attached}
+     *  @memberof Level3D
+     *  @example
+     *  level3DAddPrefab('Tower', {objects: [{type: 'Box', pos: [0, 1, 0], scale: [2, 2, 2]},
+     *      {type: 'Cylinder', pos: [0, 3, 0]}]});
+     *  level3DLoad({objects: [{type: 'Tower', pos: [5, 0, 5]}, {type: 'Tower', pos: [-5, 0, 5], rotation: [0, 45, 0]}]}); */
+    export function level3DAddPrefab(name: string, prefab: any): void;
+    /** Load a prefab from a file the level editor saved and add it
+     *  @param {string} name - The type its instances have in a level
+     *  @param {string} url
+     *  @return {Promise<void>}
+     *  @memberof Level3D */
+    export function level3DLoadPrefab(name: string, url: string): Promise<void>;
+    /** Make one object of a type added with level3DAddType, level3DAddMesh or level3DAddPrefab, from code, with no
+     *  level: a prefab's instance, or a plain type
+     *  @param {string} type - The type's name
+     *  @param {Vector3} [pos3D]
+     *  @param {Vector3} [rotation3D] - In radians, as an object has it
+     *  @param {Vector3} [scale3D] - Times the scale the type makes it with
+     *  @param {Object} [properties] - Over the type's defaults
+     *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type
+     *  @memberof Level3D
+     *  @example
+     *  level3DAddPrefab('House', await fetchJSON('house.json'));
+     *  level3DSpawn('House', vec3(10, 0, 0), vec3(0, PI/2, 0)); */
+    export function level3DSpawn(type: string, pos3D?: Vector3, rotation3D?: Vector3, scale3D?: Vector3, properties?: any): any;
+    /**
+     * An instance of a prefab, what a prefab's type makes: a handle with no shape of its own, and its parts, what the
+     * prefab's objects made
+     * - Parts of a prefab that is not attached are objects of their own in the world: moving, turning or sizing the
+     *   handle puts them where it now says with its next update, or call placeParts; destroying it destroys them
+     * - Parts of an attached prefab are its children and move with it as one body
+     * @extends EngineObject3D
+     * @memberof Level3D
+     */
+    export class Prefab3D extends EngineObject3D {
+        /** Create an instance of a prefab, made by its type: place one with a level or level3DSpawn
+         *  @param {Vector3} [pos3D]
+         *  @param {string} [prefabName] - A prefab added with level3DAddPrefab */
+        constructor(pos3D?: Vector3, prefabName?: string);
+        /** @property {string} - The prefab it is an instance of */
+        prefabName: string;
+        /** @property {boolean} - Are its parts its children, moving with it as one body */
+        attached: boolean;
+        /** @property {Array<any>} - What the prefab's objects made, in the prefab's order */
+        parts: any[];
+        partObjects: any[];
+        partsPlaced: string;
+        partsMade: boolean;
+        /** Put the parts where the handle is now, making them the first time; called by the handle's update when it
+         *  has moved, turned or changed size */
+        placeParts(): void;
+        placeKey(): string;
+        makeParts(): void;
+    }
     /** How a level's block map is made: the sheet its blocks show tiles of, and a function to set it up
      *  - A level's voxels block makes a VoxelMap when the level loads, with texture 0 and the default tile size unless
      *    a sheet is given here; a block's type shows that tile of the sheet on every face

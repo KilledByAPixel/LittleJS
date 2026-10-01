@@ -1866,6 +1866,24 @@ level3DVoxelSetup(tileInfo, (map)=> {})           // The sheet a level's block m
 {"littlejs3D": 1, "terrain": {"pos": [0, -3.2, 0], "size": [64, 64], "height": 16, "color": "#6a9955",
     "heights": [[0.2, 0.2, 0.2], [0.2, 0.5, 0.2], [0.2, 0.2, 0.2]]}, "objects": []}
 
+// Prefabs - a prefab is a small level, objects about its own origin, placed many times under one name; every
+// instance follows the prefab. The level editor saves one as it saves a level, so it is the prefab editor too
+level3DAddPrefab(name, prefab)                    // Add {objects: [...]} as a type; its objects may be of other prefabs
+await level3DLoadPrefab(name, url)                // Fetch a prefab file and add it
+level3DSpawn(type, pos3D, rotation3D, scale3D, properties) // Make one object of any type from code, a prefab's
+                                                  // instance or a plain type; rotation in radians
+prefab = new Prefab3D                             // what a prefab's type makes, a handle that draws nothing:
+prefab.parts                                      // what its objects made, objects of their own in the world where
+                                                  // the handle's place, turn and size put them, solid as if placed
+                                                  // by hand; move the handle and they follow with its next update,
+prefab.placeParts()                               // or at once; destroying the handle destroys them
+{"attached": true, "objects": [...]}              // an attached prefab's parts are the handle's children: one body
+                                                  // that moves together, its parts with no collision of their own
+                                                  // and its size3D the box around them, for a vehicle or a creature
+{"prefabs": {"Tower": {"objects": [...]}}, "objects": [{"type": "Tower", "pos": [5, 0, 5]}]} // a level's own
+                                                  // prefabs, added when it loads; one the game added keeps its place
+// an instance sized unevenly that holds turned parts is as near as boxes can be, a turned box can not be sheared
+
 // Built-in types and their properties
 Box, Sphere, Cylinder   // color, tile (-1 for none), solid (true); 1 unit across, the scale is the size
 Light                   // color, radius (5), intensity (1); cone (0), degrees from its forward to the edge of

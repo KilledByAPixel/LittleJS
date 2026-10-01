@@ -30635,6 +30635,8 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *    height, how tall a full height is, color, and heights, rows of 0 to 1 from -z to +z, each from -x to +x; it
  *    is made a HeightMap, returned with what else was made; paint, when it has it, colors its samples: colors, a
  *    list, and cells, runs of a count and a color along the rows, 0 for the terrain's own and 1 the list's first
+ *  - A level may hold prefabs of its own, in a prefabs block, each by its name as level3DAddPrefab takes it; they
+ *    are added before its objects are made, one the game added itself keeps its place
  *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
  *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
  *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
@@ -30647,6 +30649,7 @@ function level3DLoad(level)
     ASSERT(!!level && typeof level === 'object', 'a level is an object, {} for a new one');
     ASSERT(!(level.littlejs3D > LEVEL3D_VERSION), 'the level was made by a newer LittleJS');
     editor3DLevelLoaded(level); // debug builds: the 3D editor takes the level, its autosaved edits go in first
+    level3DPrefabsAdd(level.prefabs);
     level3DSceneApply(level.scene);
     const made = [], map = level3DVoxelMap = level3DVoxelsMake(level.voxels);
     map && made.push(map);
@@ -30873,13 +30876,21 @@ function level3DProperties(type, object)
 // nothing
 function level3DMake(object)
 {
+    return level3DMakeAt(object, level3DVector(object.pos, vec3()),
+        level3DVector(object.rotation, vec3()).scale(PI / 180), level3DVector(object.scale, vec3(1)));
+}
+
+// make a level object's game object at a place, a rotation in radians and a scale, its own as level3DMake gives
+// them or the ones a prefab's instance puts it at
+function level3DMakeAt(object, pos, rotation, scale)
+{
     const type = level3DTypes.get(object.type);
     if (!type)
     {
         debug && console.warn(`level3DLoad: no type added for ${object.type}, skipped`);
         return;
     }
-    const pos = level3DVector(object.pos, vec3()), properties = level3DProperties(type, object);
+    const properties = level3DProperties(type, object);
     const {make} = type, count = engineObjects.length;
     let result;
     try { result = make.prototype ? new make(pos, properties) : make(pos, properties); }
@@ -30897,14 +30908,221 @@ function level3DMake(object)
     if (result instanceof EngineObject3D)
     {
         level3DBaseScale.set(result, result.scale3D.copy());
-        result.rotation3D = level3DVector(object.rotation, vec3()).scale(PI / 180);
-        result.scale3D = result.scale3D.multiply(level3DVector(object.scale, vec3(1)));
+        result.rotation3D = rotation.copy();
+        result.scale3D = result.scale3D.multiply(scale);
     }
 
     // the type's own properties are set on it, one the type has no default for could be a field of the engine's
     for (const key in type.defaults)
         result[key] = properties[key];
+    // a prefab's instance makes its parts now that it is where it goes
+    result instanceof Prefab3D && result.placeParts();
     return result;
+}
+
+/** Make one object of a type added with level3DAddType, level3DAddMesh or level3DAddPrefab, from code, with no
+ *  level: a prefab's instance, or a plain type
+ *  @param {string} type - The type's name
+ *  @param {Vector3} [pos3D]
+ *  @param {Vector3} [rotation3D] - In radians, as an object has it
+ *  @param {Vector3} [scale3D] - Times the scale the type makes it with
+ *  @param {Object} [properties] - Over the type's defaults
+ *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type
+ *  @memberof Level3D
+ *  @example
+ *  level3DAddPrefab('House', await fetchJSON('house.json'));
+ *  level3DSpawn('House', vec3(10, 0, 0), vec3(0, PI/2, 0)); */
+function level3DSpawn(type, pos3D=vec3(), rotation3D=vec3(), scale3D=vec3(1), properties)
+{
+    ASSERT(isVector3(pos3D) && isVector3(rotation3D) && isVector3(scale3D), 'pos3D, rotation3D and scale3D are vec3');
+    return level3DMakeAt(properties ? {type, properties} : {type}, pos3D.copy(), rotation3D, scale3D);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// prefabs: a prefab is a small level, a list of objects about its own origin, placed many times
+
+// the prefabs by name: how an instance is built, its objects, and fromLevel, true for one a level's own prefabs
+// block added, which one the game adds takes the place of
+/** @type {Map<string, {attached: boolean, objects: Array<Object>, fromLevel: boolean}>} */
+const level3DPrefabs = new Map;
+
+// how many prefabs deep an instance being made is, a prefab that holds itself is stopped
+let level3DPrefabDepth = 0;
+
+/** Add a prefab: a small level, its objects placed about its own origin, to place many times under one name
+ *  - It is a type from then on: a level's object of that type, the level editor's Place list and level3DSpawn make
+ *    an instance, a Prefab3D, where every instance of a prefab is the same and follows the prefab
+ *  - The prefab is a level as the level editor saves it, {objects: [...]}, so the editor is the prefab editor too;
+ *    only its objects are used, and they may be of other prefabs
+ *  - With attached true in it the parts are children of the instance and move with it as one body, without
+ *    collision of their own; otherwise each part is an object of its own in the world and collides as one placed
+ *    by hand does
+ *  - Adding a name again replaces it
+ *  @param {string} name - The type its instances have in a level
+ *  @param {Object} prefab - {objects, attached}
+ *  @memberof Level3D
+ *  @example
+ *  level3DAddPrefab('Tower', {objects: [{type: 'Box', pos: [0, 1, 0], scale: [2, 2, 2]},
+ *      {type: 'Cylinder', pos: [0, 3, 0]}]});
+ *  level3DLoad({objects: [{type: 'Tower', pos: [5, 0, 5]}, {type: 'Tower', pos: [-5, 0, 5], rotation: [0, 45, 0]}]}); */
+function level3DAddPrefab(name, prefab) { level3DPrefabSet(name, prefab, false); }
+
+// add a prefab, the game's or a level's own
+function level3DPrefabSet(name, prefab, fromLevel)
+{
+    ASSERT(!!prefab && typeof prefab === 'object', 'a prefab is an object, {objects: [...]}');
+    name = String(name);
+    const objects = isArray(prefab?.objects) ? prefab.objects.filter((o)=> o && typeof o === 'object') : [];
+    // a copy, what the game or the editor does to its own afterwards does not change the instances made later
+    level3DPrefabs.set(name, {attached: !!prefab?.attached, objects: JSON.parse(JSON.stringify(objects)), fromLevel});
+    // a class of its own, so the level editor makes its instances again as it does a class's
+    level3DTypes.set(name, {make: class extends Prefab3D { constructor(pos) { super(pos, name); } }, defaults: {},
+        tileInfo: undefined});
+}
+
+// add a level's own prefabs, each unless the game added one of that name or it is a plain type's name
+function level3DPrefabsAdd(prefabs)
+{
+    if (!prefabs || typeof prefabs !== 'object' || isArray(prefabs)) return;
+    for (const name in prefabs)
+    {
+        const known = level3DPrefabs.get(name);
+        if (known ? !known.fromLevel : level3DTypes.has(name)) continue;
+        prefabs[name] && typeof prefabs[name] === 'object' && level3DPrefabSet(name, prefabs[name], true);
+    }
+}
+
+/** Load a prefab from a file the level editor saved and add it
+ *  @param {string} name - The type its instances have in a level
+ *  @param {string} url
+ *  @return {Promise<void>}
+ *  @memberof Level3D */
+async function level3DLoadPrefab(name, url) { level3DAddPrefab(name, await fetchJSON(url)); }
+
+// where an instance puts one of its prefab's objects: the object's own place, turn and size inside the instance's
+function level3DPrefabPartTransform(instance, object)
+{
+    const pos = level3DVector(object.pos, vec3()), scale = level3DVector(object.scale, vec3(1));
+    const rotation = level3DVector(object.rotation, vec3()).scale(PI / 180);
+    // the two turns one after the other; the sizes multiply along each axis, which is exact for an instance sized
+    // evenly or a part that is not turned, and as near as a box can be otherwise
+    const turn = buildMatrix(vec3(), instance.rotation3D).multiply(buildMatrix(vec3(), rotation));
+    return {pos: buildMatrix(instance.pos3D, instance.rotation3D, instance.scale3D).transformPoint(pos),
+        rotation: turn.getRotation(), scale: scale.multiply(instance.scale3D)};
+}
+
+/**
+ * An instance of a prefab, what a prefab's type makes: a handle with no shape of its own, and its parts, what the
+ * prefab's objects made
+ * - Parts of a prefab that is not attached are objects of their own in the world: moving, turning or sizing the
+ *   handle puts them where it now says with its next update, or call placeParts; destroying it destroys them
+ * - Parts of an attached prefab are its children and move with it as one body
+ * @extends EngineObject3D
+ * @memberof Level3D
+ */
+class Prefab3D extends EngineObject3D
+{
+    /** Create an instance of a prefab, made by its type: place one with a level or level3DSpawn
+     *  @param {Vector3} [pos3D]
+     *  @param {string} [prefabName] - A prefab added with level3DAddPrefab */
+    constructor(pos3D, prefabName='')
+    {
+        super(pos3D);
+        /** @property {string} - The prefab it is an instance of */
+        this.prefabName = prefabName;
+        /** @property {boolean} - Are its parts its children, moving with it as one body */
+        this.attached = !!level3DPrefabs.get(prefabName)?.attached;
+        /** @property {Array<any>} - What the prefab's objects made, in the prefab's order */
+        this.parts = [];
+        this.partObjects = []; // the prefab's object of each part
+        this.partsPlaced = ''; // where the handle was when its parts were last placed, undefined parts not made
+        this.partsMade = false;
+    }
+
+    /** Put the parts where the handle is now, making them the first time; called by the handle's update when it
+     *  has moved, turned or changed size */
+    placeParts()
+    {
+        if (this.destroyed) return;
+        this.partsMade ||= (this.makeParts(), true);
+        this.partsPlaced = this.placeKey();
+        if (this.attached) return; // children follow by themselves
+        this.parts.forEach((part, i)=>
+        {
+            if (!(part instanceof EngineObject3D)) return; // what a function made is where it was made
+            const to = level3DPrefabPartTransform(this, this.partObjects[i]);
+            part.pos3D = to.pos;
+            part.rotation3D = to.rotation;
+            part.scale3D = (level3DBaseScale.get(part) ?? vec3(1)).multiply(to.scale);
+            part instanceof Prefab3D && part.placeParts();
+        });
+    }
+
+    // the handle's place, turn and size as one text, to tell when it has changed
+    placeKey()
+    {
+        const p = this.pos3D, r = this.rotation3D, s = this.scale3D;
+        return [p.x, p.y, p.z, r.x, r.y, r.z, s.x, s.y, s.z].join();
+    }
+
+    // make the parts, each where the instance puts it, or attached at its own place inside the instance
+    makeParts()
+    {
+        const prefab = level3DPrefabs.get(this.prefabName);
+        if (!prefab) return;
+        if (level3DPrefabDepth >= 8)
+        {
+            debug && console.error(`level3DLoad: the prefab ${this.prefabName} holds itself, left out there`);
+            return;
+        }
+        ++level3DPrefabDepth;
+        try
+        {
+            const low = vec3(Infinity), high = vec3(-Infinity);
+            for (const object of prefab.objects)
+            {
+                const local = {pos: level3DVector(object.pos, vec3()), scale: level3DVector(object.scale, vec3(1)),
+                    rotation: level3DVector(object.rotation, vec3()).scale(PI / 180)};
+                const at = this.attached ? local : level3DPrefabPartTransform(this, object);
+                const part = level3DMakeAt(object, at.pos, at.rotation, at.scale);
+                if (!part || typeof part !== 'object') continue;
+                this.parts.push(part);
+                this.partObjects.push(object);
+                if (!this.attached || !(part instanceof EngineObject3D)) continue;
+                // a child rides with its parent and has no collision of its own
+                part.setCollision(false, false, false);
+                this.addChild(part);
+                const half = part.size3D.multiply(part.scale3D).scale(.5);
+                for (const k of ['x', 'y', 'z'])
+                    low[k] = min(low[k], local.pos[k] - abs(half[k])), high[k] = max(high[k], local.pos[k] + abs(half[k]));
+            }
+            // an attached instance is as big as the box around its parts, for a game that makes it solid
+            if (this.attached && low.x <= high.x)
+                this.size3D = high.subtract(low);
+        }
+        finally { --level3DPrefabDepth; }
+    }
+
+    /** Keep the parts with the handle, called automatically each frame */
+    update()
+    {
+        super.update();
+        if (!this.attached && this.partsPlaced !== this.placeKey())
+            this.placeParts();
+    }
+
+    /** Destroy the instance and its parts
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        if (this.destroyed) return;
+        for (const part of this.parts)
+            part.parent === this || part.destroy?.(immediate); // children go with their parent
+        super.destroy(immediate);
+    }
+
+    /** A prefab's instance has nothing of its own to draw */
+    render3D() {}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
