@@ -130,14 +130,14 @@ function effectEmitterCode(effect, options)
         (v + (i < last ? ',' : '')).padEnd(37) + '// ' + name).join('\n') +
         '\n);\n';
 
-    // settings set after it is made
+    // settings set after it is made; a colliding effect sets its friction
+    // and bounce always, a new emitter takes the game's object defaults
+    const always = s.collideLevel ? ['friction', 'restitution'] : [];
     for (const x of particleEffectSettings)
-        if (x.extra && s[x.name] !== x.value)
+        if (x.extra && (s[x.name] !== x.value || always.includes(x.name)))
             code += `emitter.${x.name} = ${value(x.name)};\n`;
     if (options.scale != 1)
         code += `emitter.scale = ${effectNumber(options.scale)};\n`;
-    if (s.additive)
-        code += 'emitter.renderOrder = 1e9; // glows over the rest\n';
 
     // behaviors, each the plugin's own push written out
     const behaviors =

@@ -158,7 +158,9 @@ function particleEffectColor(value)
  *  @memberof ParticleEffects */
 function particleEffectSanitize(raw)
 {
-    const name = typeof raw?.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 60) : 'Effect';
+    // one line of text, line breaks and control characters made spaces
+    const text = typeof raw?.name === 'string' ? raw.name.replace(/[\x00-\x1f\x7f]+/g, ' ').trim() : '';
+    const name = text ? text.slice(0, 60) : 'Effect';
     const input = raw?.settings && typeof raw.settings === 'object' ? {...raw.settings} : {};
     input.collideLevel ??= input.collideTiles; // its name before 1.20
     // a library saved before shapes names its tile and no shape, it keeps its tile

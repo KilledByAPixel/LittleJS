@@ -72,3 +72,9 @@ test('a library round trips, and a loaded effect replaces one of the same name',
     assert.equal(particleEffectsGet('FIRE').settings.emitRate, 7, 'names match regardless of case');
     assert.throws(()=> particleEffectsParse('{}'));
 });
+
+test('a name with line breaks or control characters becomes one line', ()=>
+{
+    assert.equal(particleEffectSanitize({name: 'hot\nfire\r\n\tbig\u0007'}).name, 'hot fire big');
+    assert.equal(particleEffectSanitize({name: '\n\n'}).name, 'Effect', 'nothing left is the default');
+});

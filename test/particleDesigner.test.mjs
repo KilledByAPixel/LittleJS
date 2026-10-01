@@ -84,3 +84,25 @@ test('effectTileFits: shapes always fit, a tile must be on texture 0', ()=>
     assert.equal(run(`effectTileFits({shape: 'soft', tileIndex: 1e4, tileSize: 16, tilePadding: 0})`), true);
     assert.equal(run(`effectTileFits({shape: '', tileIndex: -1, tileSize: 16, tilePadding: 0})`), true);
 });
+
+test('the expanded code sets friction and restitution on a colliding effect, whatever the game\'s defaults', ()=>
+{
+    const effect = `particleEffectSanitize({settings: {collideLevel: true}})`;
+    const text = code(effect, plain, true);
+    const made = run(`(()=>
+    {
+        setObjectDefaultFriction(0), setObjectDefaultRestitution(.5);
+        const e = (()=> { ${text}; return emitter; })();
+        setObjectDefaultFriction(.8), setObjectDefaultRestitution(0);
+        const values = [e.friction, e.restitution];
+        e.destroy();
+        return values;
+    })()`);
+    assert.deepEqual([...made], [.8, 0]);
+    assert.ok(!code(`particleEffectSanitize({})`, plain, true).includes('friction'), 'not when it does not collide');
+});
+
+test('the expanded code leaves renderOrder to the constructor', ()=>
+{
+    assert.ok(!code(`particleEffectsGet('fire')`, plain, true).includes('renderOrder'));
+});

@@ -110,6 +110,40 @@ function buildSettingsPanel()
     for (const behavior of particleEffectBehaviors)
         rows['behavior_' + behavior.name] =
             makeBehaviorRow(settingsGroups.Behaviors, behavior);
+    makeElement('div', settingsGroups.Behaviors).id = 'unknownBehaviors';
+}
+
+// behaviors a game added that the designer does not know: kept in the
+// effect and saved, not previewed, each with a button to remove it
+let unknownShown;
+function refreshUnknownBehaviors()
+{
+    const unknown = effect.behaviors.filter(b=> !effectBehavior(b.name));
+    const shown = JSON.stringify(unknown);
+    if (shown === unknownShown)
+        return; // only remade when they change, not on every slider tick
+    unknownShown = shown;
+    const box = $('unknownBehaviors');
+    box.replaceChildren();
+    for (const b of unknown)
+    {
+        const row = makeElement('div', box, 'row');
+        makeElement('label', row).textContent = b.name;
+        const strength = makeElement('span', row);
+        strength.textContent = String(b.strength);
+        strength.style.gridColumn = 'span 2';
+        const remove = makeElement('button', row, 'reset');
+        remove.textContent = '✕';
+        remove.title = 'Remove';
+        remove.onclick = ()=>
+        {
+            effect.behaviors = effect.behaviors.filter(x=> x !== b);
+            refreshAll();
+            effectChanged();
+        };
+        makeElement('div', row, 'hint').textContent =
+            "Your game's own behavior, kept and saved, not previewed";
+    }
 }
 
 // a row with a label, a hint under it and a reset button,
@@ -362,6 +396,7 @@ function refreshAll()
         row.style.opacity = effectNeeds[name](s) ? '' : .5;
     }
     refreshTexture();
+    refreshUnknownBehaviors();
 }
 
 // after any edit: the live emitter, the floor, the code and storage
