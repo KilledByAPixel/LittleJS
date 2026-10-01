@@ -12388,7 +12388,9 @@ class PostProcessPlugin
 
             if (feedbackTexture)
             {
-                // keep this frame's output for the next one, then hand the first texture unit back to the engine
+                // keep this frame's output for the next one, in the feedback texture still bound to the second
+                // unit, then hand the first texture unit back to the engine
+                glContext.activeTexture(glContext.TEXTURE1);
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
                 glContext.activeTexture(glContext.TEXTURE0);
             }
@@ -30334,8 +30336,12 @@ async function loadGLTF(url)
     const response = await fetch(url);
     if (!response.ok)
         throw new Error('loadGLTF failed: ' + url);
-    // the files beside it are beside where it came from, after any redirect
-    const base = response.url ? new URL('.', response.url).href : url.slice(0, url.lastIndexOf('/') + 1);
+    // the files beside it are beside where it came from, after any redirect; a blob or data url has nothing
+    // beside it, and a model in one is whole, or parsed with parseGLTF and a base of its own
+    const from = response.url || url;
+    let base = '';
+    if (!/^(blob|data):/i.test(from))
+        base = response.url ? new URL('.', from).href : from.slice(0, from.lastIndexOf('/') + 1);
     return parseGLTF(await response.arrayBuffer(), base);
 }
 

@@ -206,7 +206,9 @@ class PostProcessPlugin
 
             if (feedbackTexture)
             {
-                // keep this frame's output for the next one, then hand the first texture unit back to the engine
+                // keep this frame's output for the next one, in the feedback texture still bound to the second
+                // unit, then hand the first texture unit back to the engine
+                glContext.activeTexture(glContext.TEXTURE1);
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
                 glContext.activeTexture(glContext.TEXTURE0);
             }

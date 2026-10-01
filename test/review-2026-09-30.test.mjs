@@ -92,3 +92,45 @@ async function saveInOrder(is3D)
 
 test('2D editor saves that overlap write in the order they were asked', ()=> saveInOrder(false));
 test('3D editor saves that overlap write in the order they were asked', ()=> saveInOrder(true));
+
+// pass 2: the feedback texture gets the frame, and loadGLTF takes blob and data urls
+
+test('a self-contained glTF loads from a blob url and from a data url', async ()=>
+{
+    const text = JSON.stringify({asset: {version: '2.0'}, scenes: [{nodes: []}], scene: 0});
+    const { run } = loadEngine({ArrayBuffer, TextDecoder, fetch});
+    const blobUrl = URL.createObjectURL(new Blob([text], {type: 'model/gltf+json'}));
+    try { assert.ok(await run(`loadGLTF('${blobUrl}')`)); }
+    finally { URL.revokeObjectURL(blobUrl); }
+    const dataUrl = 'data:model/gltf+json;base64,' + Buffer.from(text).toString('base64');
+    assert.ok(await run(`loadGLTF('${dataUrl}')`));
+});
+
+test('post process feedback: the frame drawn is kept in the feedback texture, not the scene texture', ()=>
+{
+    // a gl that knows which unit is active and what is bound to each, and notes where each upload lands
+    const uploads = [];
+    let unit = 0, made = 0, drawn = false;
+    const bound = {};
+    const gl = new Proxy({
+        TEXTURE0: 33984, TEXTURE1: 33985, TEXTURE2: 33986,
+        createTexture: ()=> ({texture: ++made}),
+        activeTexture: (u)=> unit = u - 33984,
+        bindTexture: (target, texture)=> bound[unit] = texture,
+        texImage2D: ()=> uploads.push({unit, texture: bound[unit], afterDraw: drawn}),
+        drawArrays: ()=> drawn = true,
+        getShaderParameter: ()=> true, getProgramParameter: ()=> true, isContextLost: ()=> false,
+    }, {get: (target, key)=> key in target ? target[key] : ()=> ({})});
+    const { run } = loadEngine({gl});
+    run(`setHeadlessMode(false); engineInitialized = true; glEnable = true; glContext = gl;
+        glCanvas = mainCanvas = {width: 4, height: 4};
+        new PostProcessPlugin('void mainImage(out vec4 c, vec2 p) { c = vec4(1); }', false, true);`);
+    drawn = false, uploads.length = 0;
+    run('pluginList.at(-1).render()');
+    const feedback = run('postProcess.feedbackTexture'), scene = run('postProcess.texture');
+    const kept = uploads.filter((u)=> u.afterDraw);
+    assert.equal(kept.length, 1, 'one upload after the draw');
+    assert.equal(kept[0].texture, feedback, 'it lands in the feedback texture');
+    assert.ok(uploads.some((u)=> !u.afterDraw && u.texture === scene), 'the scene texture got the canvas');
+    assert.equal(unit, 0, 'and the first unit is active again for the engine');
+});
