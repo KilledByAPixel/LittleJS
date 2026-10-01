@@ -3,17 +3,45 @@
 // Chrome is found in the usual places or from CHROME_PATH and driven over its DevTools socket with Node's WebSocket
 // (Node 22); without either the run is skipped, or fails when CI is set
 // each page runs its checks, reads real pixels, and writes {checks: [{name, ok, detail}]} into <pre id=result>
+// it is kept light on the machine it runs on, which someone may be working at: one Chrome, a few tabs at a time,
+// at a low priority, one run at a time, and a run that takes too long is stopped; the software renderer takes
+// every core a Chrome is given, so more Chromes or more tabs do not make it faster, they only take the machine
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir, setPriority, constants } from 'node:os';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const pages = ['draw2d', 'layers2d', 'canvas2d', 'lights2d', 'shaders', 'draw3d', 'depth3d', 'spotLight', 'lensFlare',
     'editorScene', 'contextLoss'];
+// one Chrome, and this many tabs of it at a time: measured, 4, 6 and 8 take the same 55 seconds, since every tab
+// draws through the one GPU process, and 12 or more are slower; do not raise it, and never start a second Chrome
 const pageTimeout = 60e3, atOnce = 4;
+const runTimeout = 5 * 60e3; // the whole run, a minute on a quiet machine: past this something is wrong
+const lockFile = join(tmpdir(), 'littlejs-smoke.lock');
+
+// below what a person at the machine is doing, and Chrome and its processes start at the same priority
+try { setPriority(constants.priority.PRIORITY_BELOW_NORMAL); } catch {}
+
+// one run at a time: a second one started while a first is going only doubles the load
+function takeLock()
+{
+    try
+    {
+        const pid = +readFileSync(lockFile, 'utf8');
+        if (pid && pid !== process.pid)
+        {
+            process.kill(pid, 0); // throws when no such process is running, a lock left by a run that was killed
+            console.log('browser smoke tests: another run is going (process ' + pid + '), not starting a second');
+            process.exit(1);
+        }
+    }
+    catch {}
+    writeFileSync(lockFile, String(process.pid));
+}
+const dropLock = ()=> { try { rmSync(lockFile, {force: true}); } catch {} };
 
 function findChrome()
 {
@@ -133,7 +161,28 @@ if (missing)
     console.log('browser smoke tests: ' + missing + (process.env.CI ? '' : '; skipped'));
     process.exit(process.env.CI ? 1 : 0);
 }
+takeLock();
 const browser = await startChrome(chrome);
+
+// however the run ends, Chrome goes with it and the lock is given up
+let stopped = false;
+const stopAll = ()=>
+{
+    if (stopped) return;
+    stopped = true;
+    try { browser.stop(); } catch {}
+    dropLock();
+};
+process.on('exit', stopAll);
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'])
+    process.on(signal, ()=> { stopAll(); process.exit(1); });
+setTimeout(()=>
+{
+    console.log('browser smoke tests: stopped, the run took more than ' + runTimeout / 60e3 + ' minutes');
+    stopAll();
+    process.exit(1);
+}, runTimeout).unref();
+
 const server = await serve(), base = 'http://127.0.0.1:' + server.address().port + '/test/browser/';
 const only = process.argv.slice(2);
 const jobs = [...pages.map((name)=> [name, base + name + '.html']),
@@ -150,7 +199,7 @@ await Promise.all(Array.from({length: atOnce}, async ()=>
         results[index] = await runPage(browser, url, name);
     }
 }));
-browser.stop();
+stopAll();
 server.close();
 for (const {name, checks} of results)
     for (const check of checks)
