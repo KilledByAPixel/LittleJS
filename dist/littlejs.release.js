@@ -29116,6 +29116,9 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *  - What a file written by hand gets wrong uses the default: a value that is not of its default's type
  *  - An object its type can not make is skipped with an error in debug builds, where asserts throw, and the rest
  *    of the level is made
+ *  - A level may hold a map of blocks, in a voxels block: pos, its corner, size, its cells along x, y and z, and
+ *    blocks, runs of a count and a type along x, then y, then z; it is made a VoxelMap, the first of what is
+ *    returned, see level3DVoxelSetup for its sheet
  *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
  *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
  *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
@@ -29129,7 +29132,8 @@ function level3DLoad(level)
     false&&ASSERT(!(level.littlejs3D > LEVEL3D_VERSION), 'the level was made by a newer LittleJS');
     editor3DLevelLoaded(level); // debug builds: the 3D editor takes the level, its autosaved edits go in first
     level3DSceneApply(level.scene);
-    const made = [];
+    const made = [], map = level3DVoxelMap = level3DVoxelsMake(level.voxels);
+    map && made.push(map);
     for (const object of isArray(level.objects) ? level.objects : [])
     {
         if (!object || typeof object !== 'object') continue;
@@ -29138,6 +29142,81 @@ function level3DLoad(level)
         result && made.push(result);
     }
     return made;
+}
+
+// the sheet a level's block map is made with, and what sets each one up, see level3DVoxelSetup; and the map the
+// level loaded last made, the one the 3D editor paints
+let level3DVoxelTiles, level3DVoxelSetupMap, level3DVoxelMap;
+
+/** How a level's block map is made: the sheet its blocks show tiles of, and a function to set it up
+ *  - A level's voxels block makes a VoxelMap when the level loads, with texture 0 and the default tile size unless
+ *    a sheet is given here; a block's type shows that tile of the sheet on every face
+ *  - setup is called with each map a level makes, to give block types their own faces or make them see-through
+ *  - Call it before level3DLoad; with no arguments the defaults are back
+ *  @param {TileInfo} [tileInfo] - The sheet's first tile, as for a VoxelMap
+ *  @param {function(VoxelMap): void} [setup]
+ *  @example
+ *  level3DVoxelSetup(tile(0, 16, 1), (map)=> map.setBlockType(1, {top: 0, side: 1, bottom: 2})); // grass
+ *  @memberof Level3D */
+function level3DVoxelSetup(tileInfo, setup)
+{
+    level3DVoxelTiles = tileInfo;
+    level3DVoxelSetupMap = setup;
+}
+
+// the most cells a level's map may have, 256 each way
+const LEVEL3D_VOXEL_CELLS = 2 ** 24;
+
+// a map's blocks as the file keeps them, runs of a count and a type, cell by cell in the map's own order
+function level3DVoxelsEncode(data)
+{
+    const blocks = [];
+    for (let i = 0; i < data.length;)
+    {
+        let end = i + 1;
+        while (end < data.length && data[end] === data[i]) ++end;
+        blocks.push(end - i, data[i]);
+        i = end;
+    }
+    return blocks;
+}
+
+// runs into a map's cells: what they do not reach is empty, a type that is not 0 to 255 is empty, and a run that
+// is not two numbers ends them
+function level3DVoxelsDecode(blocks, data)
+{
+    data.fill(0);
+    if (!isArray(blocks)) return;
+    for (let i = 0, cell = 0; i + 1 < blocks.length && cell < data.length; i += 2)
+    {
+        const count = blocks[i], type = blocks[i + 1];
+        if (!isNumber(count) || !isNumber(type) || count < 0) return;
+        const end = min(cell + floor(count), data.length);
+        data.fill(type >= 0 && type <= 255 && type % 1 === 0 ? type : 0, cell, end);
+        cell = end;
+    }
+}
+
+// the corner and the size in cells of a level's voxels block, undefined when it is not one a map can be made of
+function level3DVoxelsShape(voxels)
+{
+    if (!voxels || typeof voxels !== 'object') return;
+    const size = level3DVector(voxels.size);
+    if (!size || [size.x, size.y, size.z].some((n)=> n < 1 || n % 1) ||
+        size.x * size.y * size.z > LEVEL3D_VOXEL_CELLS) return;
+    return {pos: level3DVector(voxels.pos, vec3()), size};
+}
+
+// the VoxelMap of a level's voxels block, undefined when it has none or it is wrong
+function level3DVoxelsMake(voxels)
+{
+    const shape = level3DVoxelsShape(voxels);
+    if (!shape || typeof VoxelMap == 'undefined') return;
+    const map = new VoxelMap(shape.pos, shape.size, level3DVoxelTiles || tile());
+    level3DVoxelsDecode(voxels.blocks, map.data);
+    level3DVoxelSetupMap?.(map);
+    map.rebuild();
+    return map;
 }
 
 // the sky domes levels made, a level's sky takes the place of the one before and disposes it; a dome the game made

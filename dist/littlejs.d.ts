@@ -9934,6 +9934,9 @@ declare module "littlejsengine" {
      *  - What a file written by hand gets wrong uses the default: a value that is not of its default's type
      *  - An object its type can not make is skipped with an error in debug builds, where asserts throw, and the rest
      *    of the level is made
+     *  - A level may hold a map of blocks, in a voxels block: pos, its corner, size, its cells along x, y and z, and
+     *    blocks, runs of a count and a type along x, then y, then z; it is made a VoxelMap, the first of what is
+     *    returned, see level3DVoxelSetup for its sheet
      *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
      *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
      *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
@@ -9942,6 +9945,17 @@ declare module "littlejsengine" {
      *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
      *  @memberof Level3D */
     export function level3DLoad(level: any): Array<any>;
+    /** How a level's block map is made: the sheet its blocks show tiles of, and a function to set it up
+     *  - A level's voxels block makes a VoxelMap when the level loads, with texture 0 and the default tile size unless
+     *    a sheet is given here; a block's type shows that tile of the sheet on every face
+     *  - setup is called with each map a level makes, to give block types their own faces or make them see-through
+     *  - Call it before level3DLoad; with no arguments the defaults are back
+     *  @param {TileInfo} [tileInfo] - The sheet's first tile, as for a VoxelMap
+     *  @param {function(VoxelMap): void} [setup]
+     *  @example
+     *  level3DVoxelSetup(tile(0, 16, 1), (map)=> map.setBlockType(1, {top: 0, side: 1, bottom: 2})); // grass
+     *  @memberof Level3D */
+    export function level3DVoxelSetup(tileInfo?: TileInfo, setup?: (arg0: VoxelMap) => void): void;
     /**
      * LittleJS Three.js Plugin
      * - Renders a three.js scene on a canvas behind the LittleJS canvases

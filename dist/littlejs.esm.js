@@ -30004,6 +30004,9 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *  - What a file written by hand gets wrong uses the default: a value that is not of its default's type
  *  - An object its type can not make is skipped with an error in debug builds, where asserts throw, and the rest
  *    of the level is made
+ *  - A level may hold a map of blocks, in a voxels block: pos, its corner, size, its cells along x, y and z, and
+ *    blocks, runs of a count and a type along x, then y, then z; it is made a VoxelMap, the first of what is
+ *    returned, see level3DVoxelSetup for its sheet
  *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
  *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
  *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
@@ -30017,7 +30020,8 @@ function level3DLoad(level)
     ASSERT(!(level.littlejs3D > LEVEL3D_VERSION), 'the level was made by a newer LittleJS');
     editor3DLevelLoaded(level); // debug builds: the 3D editor takes the level, its autosaved edits go in first
     level3DSceneApply(level.scene);
-    const made = [];
+    const made = [], map = level3DVoxelMap = level3DVoxelsMake(level.voxels);
+    map && made.push(map);
     for (const object of isArray(level.objects) ? level.objects : [])
     {
         if (!object || typeof object !== 'object') continue;
@@ -30026,6 +30030,81 @@ function level3DLoad(level)
         result && made.push(result);
     }
     return made;
+}
+
+// the sheet a level's block map is made with, and what sets each one up, see level3DVoxelSetup; and the map the
+// level loaded last made, the one the 3D editor paints
+let level3DVoxelTiles, level3DVoxelSetupMap, level3DVoxelMap;
+
+/** How a level's block map is made: the sheet its blocks show tiles of, and a function to set it up
+ *  - A level's voxels block makes a VoxelMap when the level loads, with texture 0 and the default tile size unless
+ *    a sheet is given here; a block's type shows that tile of the sheet on every face
+ *  - setup is called with each map a level makes, to give block types their own faces or make them see-through
+ *  - Call it before level3DLoad; with no arguments the defaults are back
+ *  @param {TileInfo} [tileInfo] - The sheet's first tile, as for a VoxelMap
+ *  @param {function(VoxelMap): void} [setup]
+ *  @example
+ *  level3DVoxelSetup(tile(0, 16, 1), (map)=> map.setBlockType(1, {top: 0, side: 1, bottom: 2})); // grass
+ *  @memberof Level3D */
+function level3DVoxelSetup(tileInfo, setup)
+{
+    level3DVoxelTiles = tileInfo;
+    level3DVoxelSetupMap = setup;
+}
+
+// the most cells a level's map may have, 256 each way
+const LEVEL3D_VOXEL_CELLS = 2 ** 24;
+
+// a map's blocks as the file keeps them, runs of a count and a type, cell by cell in the map's own order
+function level3DVoxelsEncode(data)
+{
+    const blocks = [];
+    for (let i = 0; i < data.length;)
+    {
+        let end = i + 1;
+        while (end < data.length && data[end] === data[i]) ++end;
+        blocks.push(end - i, data[i]);
+        i = end;
+    }
+    return blocks;
+}
+
+// runs into a map's cells: what they do not reach is empty, a type that is not 0 to 255 is empty, and a run that
+// is not two numbers ends them
+function level3DVoxelsDecode(blocks, data)
+{
+    data.fill(0);
+    if (!isArray(blocks)) return;
+    for (let i = 0, cell = 0; i + 1 < blocks.length && cell < data.length; i += 2)
+    {
+        const count = blocks[i], type = blocks[i + 1];
+        if (!isNumber(count) || !isNumber(type) || count < 0) return;
+        const end = min(cell + floor(count), data.length);
+        data.fill(type >= 0 && type <= 255 && type % 1 === 0 ? type : 0, cell, end);
+        cell = end;
+    }
+}
+
+// the corner and the size in cells of a level's voxels block, undefined when it is not one a map can be made of
+function level3DVoxelsShape(voxels)
+{
+    if (!voxels || typeof voxels !== 'object') return;
+    const size = level3DVector(voxels.size);
+    if (!size || [size.x, size.y, size.z].some((n)=> n < 1 || n % 1) ||
+        size.x * size.y * size.z > LEVEL3D_VOXEL_CELLS) return;
+    return {pos: level3DVector(voxels.pos, vec3()), size};
+}
+
+// the VoxelMap of a level's voxels block, undefined when it has none or it is wrong
+function level3DVoxelsMake(voxels)
+{
+    const shape = level3DVoxelsShape(voxels);
+    if (!shape || typeof VoxelMap == 'undefined') return;
+    const map = new VoxelMap(shape.pos, shape.size, level3DVoxelTiles || tile());
+    level3DVoxelsDecode(voxels.blocks, map.data);
+    level3DVoxelSetupMap?.(map);
+    map.rebuild();
+    return map;
 }
 
 // the sky domes levels made, a level's sky takes the place of the one before and disposes it; a dome the game made
@@ -35146,10 +35225,11 @@ let editor3DBrush;
 // the copied objects
 /** @type {Array<Object>|undefined} */
 let editor3DClipboard;
-// the level's, each entry its object list and its scene block before and after an edit
+// the level's, each entry its object list and its parts, the scene and the blocks, before and after an edit
 let editor3DUndoList = [], editor3DRedoList = [];
-// the edit being made, a drag is one: the objects and the scene block as they were before it
-/** @type {{before: Array<Object>, sceneBefore: Object|undefined}|undefined} */
+// the edit being made, a drag is one: the objects and the parts as they were before it, and painted when blocks
+// were set in the game's map and are not in the level yet
+/** @type {{before: Array<Object>, parts: Object, painted?: boolean}|undefined} */
 let editor3DStroke;
 
 const editor3DCopy = (value)=> JSON.parse(JSON.stringify(value));
@@ -35161,17 +35241,33 @@ const editor3DObjects = ()=> isArray(editor3DLevel?.objects) ? editor3DLevel.obj
 const editor3DObject = (id)=> editor3DObjects().find((o)=> o.id === id);
 const editor3DSelected = ()=> editor3DObjects().filter((o)=> editor3DSelection.has(o.id));
 
-// the level's scene block, undefined when it has none, and a copy of one
-function editor3DScene()
-{
-    const scene = editor3DLevel?.scene;
-    return scene && typeof scene === 'object' && !isArray(scene) ? scene : undefined;
-}
-const editor3DSceneCopy = (scene=editor3DScene())=> scene && editor3DCopy(scene);
+// the parts of a level beside its objects that the editor edits: its scene block and its map of blocks; each is
+// undone, autosaved, reset and saved as the objects are
+const editor3DLevelPartNames = ['scene', 'voxels'];
 
-// what a level's hash covers: its objects, and its scene when it has one, so a level without one hashes as before
-const editor3DContentHash = (objects, scene)=>
-    editor3DHash(JSON.stringify(objects) + (scene ? JSON.stringify(scene) : ''));
+// a part of a level, undefined when it has none
+function editor3DLevelPart(name, level=editor3DLevel)
+{
+    const part = level?.[name];
+    return part && typeof part === 'object' && !isArray(part) ? part : undefined;
+}
+
+// a copy of every part a level has, {} for a level with none
+function editor3DLevelParts(level=editor3DLevel)
+{
+    const parts = {};
+    for (const name of editor3DLevelPartNames)
+    {
+        const part = editor3DLevelPart(name, level);
+        part && (parts[name] = editor3DCopy(part));
+    }
+    return parts;
+}
+const editor3DScene = ()=> editor3DLevelPart('scene');
+
+// what a level's hash covers: its objects, and the parts it has, so a level with none hashes as before
+const editor3DContentHash = (objects, parts)=> editor3DHash(JSON.stringify(objects) +
+    editor3DLevelPartNames.map((name)=> parts[name] ? JSON.stringify(parts[name]) : '').join(''));
 
 // the renderer's settings a scene block can set, as they are now, and put back as they were: what the game set
 // itself shows again when a level's block changes or goes
@@ -35291,6 +35387,14 @@ function editor3DLevelLoaded(level)
             level.objects[i] && typeof level.objects[i] === 'object' || level.objects.splice(i, 1);
         editor3DFixIds(level.objects);
     }
+    // its blocks as the editor writes them, so the same map always reads the same, however the file wrote its runs
+    const voxels = editor3DLevelPart('voxels', level), shape = level3DVoxelsShape(voxels);
+    if (shape)
+    {
+        const data = new Uint8Array(shape.size.x * shape.size.y * shape.size.z);
+        level3DVoxelsDecode(voxels.blocks, data);
+        voxels.blocks = level3DVoxelsEncode(data);
+    }
     const known = editor3DRecords.get(level);
     if (known)
     {
@@ -35303,11 +35407,11 @@ function editor3DLevelLoaded(level)
     // a level from a file goes by the file, one made in code by its objects as they were loaded, so each has an
     // autosave of its own
     const url = editorFetchedURLs.get(level)?.split(/[?#]/)[0];
-    const original = editor3DCopy(editor3DObjects()), originalScene = editor3DSceneCopy();
-    const hash = editor3DContentHash(original, originalScene);
+    const original = editor3DCopy(editor3DObjects()), originalParts = editor3DLevelParts();
+    const hash = editor3DContentHash(original, originalParts);
     // sceneBase is the scene the game set, taken before the level's own block is applied
     const record = {fileName: url ? url.split('/').pop() : 'level3D.json', key: url ?? 'level #' + hash, original,
-        originalScene, sceneBase: render3D ? editor3DSceneState() : undefined, hash, pending: undefined,
+        originalParts, sceneBase: render3D ? editor3DSceneState() : undefined, hash, pending: undefined,
         fileHandle: undefined, undo: [], redo: []};
     editor3DRecords.set(level, record);
     editor3DUndoList = record.undo;
@@ -35315,12 +35419,15 @@ function editor3DLevelLoaded(level)
     // an autosave the file already has, from a Save, goes; one of this file, or of the file a Save wrote, comes back
     const saved = editor3DSaves()[record.key];
     if (saved && isArray(saved.objects) && editor3DSame(saved.objects, original) &&
-        editor3DSame(saved.scene, originalScene))
+        editor3DSame(editor3DLevelParts(saved), originalParts))
         editor3DAutosave(level);
     else if ((saved?.hash === hash || saved?.savedHash === hash) && isArray(saved.objects))
     {
+        // before level3DLoad makes anything, so the scene and the map are made with the edits in them
+        const parts = editor3DLevelParts(saved);
         level.objects = editor3DCopy(saved.objects);
-        saved.scene ? level.scene = editor3DCopy(saved.scene) : delete level.scene;
+        for (const name of editor3DLevelPartNames)
+            parts[name] ? level[name] = parts[name] : delete level[name];
     }
     else if (saved)
         record.pending = saved;
@@ -35385,30 +35492,153 @@ function editor3DChange(change)
     change(after);
     if (editor3DSame(before, after)) return false;
     editor3DSetObjects(after);
-    editor3DStroke ||= {before, sceneBefore: editor3DSceneCopy()};
+    editor3DStroke ||= {before, parts: editor3DLevelParts()};
     return true;
 }
 
-// make a scene block the level's, or none, and show it: the game's own setup, then what the block sets
-function editor3DSetScene(scene)
+// make a part the level's, or take it away, and show it: for the scene the game's own setup, then what the block
+// sets; for the blocks the game's map, brought in line
+function editor3DSetPart(name, part)
 {
     const level = editor3DLevel;
-    scene ? level.scene = editor3DCopy(scene) : delete level.scene;
-    editor3DSceneRestore(editor3DRecords.get(level)?.sceneBase);
-    level3DSceneApply(level.scene);
+    part ? level[name] = editor3DCopy(part) : delete level[name];
+    if (name === 'scene')
+    {
+        editor3DSceneRestore(editor3DRecords.get(level)?.sceneBase);
+        level3DSceneApply(level.scene);
+    }
+    else
+        editor3DVoxelShow();
 }
 
-// change the level's scene block as part of the edit being made, as editor3DChange does its objects: change is
-// given a copy of the block, undefined when the level has none, and returns the new one, or undefined for none;
-// false when nothing changed
-function editor3DChangeScene(change)
+// make the level's parts these, the ones that differ
+function editor3DSetParts(parts)
+{
+    for (const name of editor3DLevelPartNames)
+        editor3DSame(parts[name], editor3DLevelPart(name)) || editor3DSetPart(name, parts[name]);
+}
+
+// change a part of the level as part of the edit being made, as editor3DChange does its objects: change is given
+// a copy of the part, undefined when the level has none, and returns the new one, or undefined for none; false
+// when nothing changed
+function editor3DChangePart(name, change)
 {
     if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
-    const before = editor3DSceneCopy(), after = change(editor3DSceneCopy());
-    if (editor3DSame(before, after)) return false;
-    editor3DStroke ||= {before: editor3DCopy(editor3DObjects()), sceneBefore: before};
-    editor3DSetScene(after);
+    const parts = editor3DLevelParts(), after = change(parts[name] && editor3DCopy(parts[name]));
+    if (editor3DSame(parts[name], after)) return false;
+    editor3DStroke ||= {before: editor3DCopy(editor3DObjects()), parts};
+    editor3DSetPart(name, after);
     return true;
+}
+const editor3DChangeScene = (change)=> editor3DChangePart('scene', change);
+
+///////////////////////////////////////////////////////////////////////////////
+// the level's map of blocks: the level's voxels block is the source of truth, the game's VoxelMap follows it;
+// painting sets blocks in the game's map as it goes, and the stroke's end writes them into the level
+
+// the game's map of the level's blocks, undefined when the level has none
+function editor3DVoxelMap()
+{
+    const map = level3DVoxelMap;
+    return map && !map.destroyed && editor3DLevelPart('voxels') ? map : undefined;
+}
+
+// bring the game's map in line with the level's voxels block: made, made again when its place or size changed,
+// its cells set, or destroyed with the block gone
+function editor3DVoxelShow()
+{
+    const voxels = editor3DLevelPart('voxels'), shape = level3DVoxelsShape(voxels);
+    let map = level3DVoxelMap && !level3DVoxelMap.destroyed ? level3DVoxelMap : undefined;
+    const sameVector = (a, b)=> a.x === b.x && a.y === b.y && a.z === b.z;
+    if (map && !(shape && sameVector(map.pos3D, shape.pos) && sameVector(map.mapSize, shape.size)))
+    {
+        map.destroy();
+        map = level3DVoxelMap = undefined;
+    }
+    if (!shape) return;
+    if (!map)
+    {
+        level3DVoxelMap = level3DVoxelsMake(voxels);
+        return;
+    }
+    level3DVoxelsDecode(voxels.blocks, map.data);
+    map.rebuild();
+}
+
+// write the game's map into the level, as a stroke of painting ends
+function editor3DVoxelStore()
+{
+    const map = editor3DVoxelMap(), voxels = editor3DLevelPart('voxels');
+    map && voxels && (voxels.blocks = level3DVoxelsEncode(map.data));
+}
+
+// give the level an empty map of a size in cells, centered on the origin with its bottom on the ground, as one undo
+function editor3DVoxelAdd(size=vec3(32, 16, 32))
+{
+    const changed = editor3DChangePart('voxels', ()=> ({pos: [-floor(size.x / 2), 0, -floor(size.z / 2)],
+        size: [size.x, size.y, size.z], blocks: [size.x * size.y * size.z, 0]}));
+    editor3DStrokeEnd();
+    return changed;
+}
+
+// take the level's map away, as one undo
+function editor3DVoxelRemove()
+{
+    const changed = editor3DChangePart('voxels', ()=> undefined);
+    editor3DStrokeEnd();
+    return changed;
+}
+
+// is a cell in a map
+function editor3DVoxelInside(map, cell)
+{
+    const s = map.mapSize;
+    return cell.x >= 0 && cell.y >= 0 && cell.z >= 0 && cell.x < s.x && cell.y < s.y && cell.z < s.z;
+}
+
+// set a block as part of the edit being made, 0 for none: in the game's map now, in the level when the stroke
+// ends; false when it is that already, or there is no such cell
+function editor3DVoxelSet(cell, type)
+{
+    const map = editor3DVoxelMap();
+    if (!map || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
+    if (!editor3DVoxelInside(map, cell) || map.getVoxel(cell) === type) return false;
+    editor3DStroke ||= {before: editor3DCopy(editor3DObjects()), parts: editor3DLevelParts()};
+    editor3DStroke.painted = true;
+    map.setVoxel(cell, type);
+    return true;
+}
+
+// the cell a ray picks on a layer of the map: drag has the axis the layer is across, the plane the ray is met
+// with, in cells from the map's corner, and the layer, the cell's place along the axis; undefined off the map
+function editor3DVoxelDragCell(drag, ray)
+{
+    const map = editor3DVoxelMap(), axis = drag.axis, along = ray.direction[axis];
+    if (!map || !along) return;
+    const distance = (map.pos3D[axis] + drag.plane - ray.origin[axis]) / along;
+    if (distance < 0) return;
+    const p = ray.getPosition(distance).subtract(map.pos3D), cell = vec3(floor(p.x), floor(p.y), floor(p.z));
+    cell[axis] = drag.layer;
+    return editor3DVoxelInside(map, cell) ? cell : undefined;
+}
+
+// the cell a click is for: to place, the empty cell against the face the ray hits, or the one standing on the
+// map's floor where it hits no block; otherwise the block it hits; with the axis the face is across and the plane
+// of the face, for a drag to stay on; undefined with no such cell
+function editor3DVoxelTarget(ray, mode)
+{
+    const map = editor3DVoxelMap();
+    if (!map) return;
+    const place = mode === 'place', hit = map.raycast(ray);
+    if (!hit)
+    {
+        const cell = place ? editor3DVoxelDragCell({axis: 'y', plane: 0, layer: 0}, ray) : undefined;
+        return cell && {cell, axis: 'y', plane: 0};
+    }
+    const n = hit.normal, axis = n.x ? 'x' : n.y ? 'y' : 'z', cell = place ? hit.cell.add(n) : hit.cell;
+    if (!editor3DVoxelInside(map, cell)) return;
+    // the face between the block hit and the cell in front of it
+    return {cell, axis, plane: cell[axis] + ((n[axis] > 0) === place ? 0 : 1)};
 }
 
 // end the edit being made: one undo, and the autosave
@@ -35416,10 +35646,12 @@ function editor3DStrokeEnd()
 {
     const stroke = editor3DStroke;
     editor3DStroke = undefined;
-    if (!stroke || editor3DSame(stroke.before, editor3DObjects()) &&
-        editor3DSame(stroke.sceneBefore, editor3DScene())) return;
+    if (!stroke) return;
+    stroke.painted && editor3DVoxelStore(); // the blocks painted go into the level
+    const parts = editor3DLevelParts();
+    if (editor3DSame(stroke.before, editor3DObjects()) && editor3DSame(stroke.parts, parts)) return;
     editor3DUndoList.push({before: stroke.before, after: editor3DCopy(editor3DObjects()),
-        sceneBefore: stroke.sceneBefore, sceneAfter: editor3DSceneCopy()});
+        partsBefore: stroke.parts, partsAfter: parts});
     editor3DUndoList.length > 100 && editor3DUndoList.shift();
     editor3DRedoList.length = 0;
     editor3DAutosave();
@@ -35432,7 +35664,8 @@ function editor3DStrokeCancel()
     editor3DStroke = undefined;
     if (!stroke) return;
     editor3DSetObjects(stroke.before);
-    editor3DSame(stroke.sceneBefore, editor3DScene()) || editor3DSetScene(stroke.sceneBefore);
+    stroke.painted && editor3DVoxelShow(); // the level never had them, the game's map goes back to it
+    editor3DSetParts(stroke.parts);
 }
 
 // undo the last edit, or redo the last one undone; false with none
@@ -35443,8 +35676,7 @@ function editor3DUndo(redo=false)
     if (!entry) return false;
     (redo ? editor3DUndoList : editor3DRedoList).push(entry);
     editor3DSetObjects(redo ? entry.after : entry.before);
-    const scene = redo ? entry.sceneAfter : entry.sceneBefore;
-    editor3DSame(scene, editor3DScene()) || editor3DSetScene(scene);
+    editor3DSetParts(redo ? entry.partsAfter : entry.partsBefore);
     editor3DAutosave();
     return true;
 }
@@ -35667,20 +35899,20 @@ const editor3DSaves = ()=> readSaveData(editor3DSaveName(), {});
 // if the last autosave did not fit in storage, the panel says so
 let editor3DSaveFailed = false;
 
-// remember the level's objects and scene, or forget them when they are back to the file
+// remember the level's objects and parts, or forget them when they are back to the file
 function editor3DAutosave(level=editor3DLevel)
 {
     const record = editor3DRecords.get(level);
     if (!record || record.pending) return; // edits waiting to be applied keep their autosave
     const saves = editor3DSaves(), objects = isArray(level.objects) ? level.objects : [];
-    const scene = level === editor3DLevel ? editor3DScene() : level.scene;
+    const parts = editor3DLevelParts(level);
     // the level as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it,
     // since the browser gives a picked file's name and not its folder, and a file of the same name may be a copy
-    if (editor3DSame(objects, record.original) && editor3DSame(scene, record.originalScene) && !record.savedHash)
+    if (editor3DSame(objects, record.original) && editor3DSame(parts, record.originalParts) && !record.savedHash)
         delete saves[record.key];
     else
         saves[record.key] = {hash: record.hash, savedHash: record.savedHash, objects: editor3DCopy(objects),
-            scene: editor3DSceneCopy(scene)};
+            ...parts};
     try
     {
         localStorage.setItem(editor3DSaveName(), JSON.stringify(saves));
@@ -35697,7 +35929,9 @@ function editor3DApplyPending()
     record.pending = undefined;
     editor3DFixIds(saved.objects);
     editor3DChange((list)=> { list.length = 0; list.push(...editor3DCopy(saved.objects)); });
-    editor3DChangeScene(()=> editor3DSceneCopy(saved.scene));
+    const parts = editor3DLevelParts(saved);
+    for (const name of editor3DLevelPartNames)
+        editor3DChangePart(name, ()=> parts[name]);
     editor3DStrokeEnd();
     editor3DAutosave();
 }
@@ -35718,10 +35952,11 @@ function editor3DRevert()
     const record = editor3DRecords.get(editor3DLevel);
     if (!record) return false;
     record.pending = undefined;
-    if (editor3DSame(editor3DObjects(), record.original) && editor3DSame(editor3DScene(), record.originalScene))
+    if (editor3DSame(editor3DObjects(), record.original) && editor3DSame(editor3DLevelParts(), record.originalParts))
         return editor3DAutosave(), false;
     editor3DChange((list)=> { list.length = 0; list.push(...editor3DCopy(record.original)); });
-    editor3DChangeScene(()=> editor3DSceneCopy(record.originalScene));
+    for (const name of editor3DLevelPartNames)
+        editor3DChangePart(name, ()=> record.originalParts[name] && editor3DCopy(record.originalParts[name]));
     editor3DStrokeEnd();
 }
 
@@ -35746,7 +35981,7 @@ async function editor3DSave(pickAgain=false)
 // write one save of a level, the one before it done
 async function editor3DSaveText(level, record, text, pickAgain)
 {
-    const file = JSON.parse(text), written = editor3DCopy(file.objects), writtenScene = file.scene;
+    const file = JSON.parse(text), written = editor3DCopy(file.objects), writtenParts = editor3DLevelParts(file);
     const picker = /** @type {any} */ (globalThis).showSaveFilePicker;
     const fileKey = (globalThis.location?.pathname ?? '') + ' 3D ' + record.key;
     if (picker)
@@ -35772,8 +36007,8 @@ async function editor3DSaveText(level, record, text, pickAgain)
             if (record.fileHandle.name === record.fileName)
             {
                 record.original = written;
-                record.originalScene = writtenScene;
-                record.savedHash = editor3DContentHash(written, writtenScene);
+                record.originalParts = writtenParts;
+                record.savedHash = editor3DContentHash(written, writtenParts);
                 editor3DAutosave(level);
             }
             return 'written';
@@ -37524,6 +37759,7 @@ export
     level3DAddType,
     level3DAddMesh,
     level3DLoad,
+    level3DVoxelSetup,
 
     // Three.js
     threeJS,

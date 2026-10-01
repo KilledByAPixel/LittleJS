@@ -1773,6 +1773,8 @@ level3DAddType(name, make, defaults={}, tileInfo) // A type by name: a class mad
                                                   // or an arrow function called with them, like a player start
 level3DAddMesh(name, mesh, tileInfo, color=WHITE) // A static prop type of a mesh, with color and solid properties
 level3DLoad(level)                                // Make every object of a level, returns what was made
+level3DVoxelSetup(tileInfo, (map)=> {})           // The sheet a level's block map uses, and a function to set each
+                                                  // map up, its block types' faces; texture 0 without it
 
 // A level, rotation in degrees, and rotation, scale and properties left out when they are the default
 {"littlejs3D": 1, "objects": [
@@ -1790,6 +1792,11 @@ level3DLoad(level)                                // Make every object of a leve
                                                       // when the level has a sky and no fogColor
            "shadows": true},
  "objects": []}
+
+// A level can hold a map of blocks, made a VoxelMap when it loads: its corner, its size in cells, and its blocks
+// as runs of a count and a type, along x, then y, then z; here one row of 32 blocks of type 1 along x, the rest
+// empty; the 3D level editor's Blocks tool paints it
+{"littlejs3D": 1, "voxels": {"pos": [-16, 0, -16], "size": [32, 16, 32], "blocks": [32, 1, 16352, 0]}, "objects": []}
 
 // Built-in types and their properties
 Box, Sphere, Cylinder   // color, tile (-1 for none), solid (true); 1 unit across, the scale is the size

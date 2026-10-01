@@ -195,6 +195,7 @@ export
     level3DAddType,
     level3DAddMesh,
     level3DLoad,
+    level3DVoxelSetup,
 
     // Three.js
     threeJS,
