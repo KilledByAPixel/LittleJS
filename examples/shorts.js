@@ -319,6 +319,24 @@ async function loadFile(filename, largeExample)
     }
 }
 
+// go to the example before or after this one, in the list as the search has it, past the headings and around its
+// ends, so a phone, where the list is a picker, can go through them by a button
+function stepExample(direction)
+{
+    const options = selectExample.options, count = options.length;
+    let i = selectExample.selectedIndex;
+    for (let n = count; n--;)
+    {
+        i = (i + direction + count) % count;
+        if (!options[i].disabled)
+            break;
+    }
+    if (!count || options[i].disabled)
+        return; // nothing matches the search
+    selectExample.selectedIndex = i;
+    setExample();
+}
+
 function filterExamples(reset=0)
 {
     if (reset)
@@ -799,6 +817,8 @@ textareaCode.addEventListener('input', codeInput);
 inputSearch.addEventListener('input', ()=> filterExamples());
 inputSearch.addEventListener('keydown', e=> { if (e.key === 'Escape') filterExamples(1); });
 buttonRestart.addEventListener('click', restartCode);
+buttonPrev.addEventListener('click', ()=> stepExample(-1));
+buttonNext.addEventListener('click', ()=> stepExample(1));
 selectExample.addEventListener('change', setExample);
 
 ///////////////////////////////////////////////////////////////////////////////

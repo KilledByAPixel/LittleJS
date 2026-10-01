@@ -551,3 +551,21 @@ test('a type picked to place is placed, with the Blocks or the Terrain tool on t
         assert.equal(run('blocks()'), 0, tool + ': and no block is painted');
     }
 });
+
+test('with own axes on, L, the Move arrows follow the object\'s turn and a drag moves along its own axis', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    click(engine, 500, 500);
+    run('editor3DChange((list)=> { list[0].rotation = [0, 0, 90]; }); editor3DStrokeEnd();');
+    const arrow = ()=> json(run, `editor3DHandles().find((h)=> h.kind === 'arrow' && h.axis === 'x').direction`);
+    assert.deepEqual([arrow().x, arrow().y], [1, 0], 'along the world\'s x');
+    run('editor3DKeys.KeyL()');
+    assert.equal(run('editor3DLocalAxes'), true);
+    const d = arrow();
+    near(d.x, 0); near(Math.abs(d.y), 1, 'the box\'s own x, which its turn made the world\'s y');
+    // from on the arrow, a unit along it; the screen's y goes down
+    drag(engine, [500, 500 - d.y * 100], [500, 500 - d.y * (100 + unit)]);
+    const pos = json(run, 'list()[0].pos');
+    near(pos[0], .5); near(pos[1], .5 + Math.sign(d.y)); near(pos[2], .5);
+    assert.equal(run('editor3DHandles().filter((h)=> h.kind === \'plane\').length'), 3);
+});

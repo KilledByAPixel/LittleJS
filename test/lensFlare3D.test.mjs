@@ -139,3 +139,52 @@ test('an object the camera is inside, a room or the player\'s own body, does not
     run('room.pos3D = vec3(0, 0, -40); steps(flare, 20);');
     assert.equal(run('flare.visible'), 0, 'the same box ahead of the camera hides it');
 });
+
+// a flare of a red lamp 10 ahead of the camera, the sun off to the side
+const lampCode = `sun(1, 0, 0); var lamp = new Light3D(vec3(0, 0, -10), 10, rgb(1, 0, 0));
+    var flare = new LensFlare3D; flare.light = lamp;`;
+
+test('a flare with a light is that light\'s: at its place on the screen, in its color, whatever the sun does', ()=>
+{
+    const run = load();
+    run(lampCode);
+    const at = json(run, 'flare.getSunScreenPos()');
+    near(at.x, 500); near(at.y, 500);
+    const first = json(run, 'flare.getScreenElements()[0]');
+    assert.deepEqual([first.color.r > 0, first.color.g, first.color.b], [true, 0, 0]);
+    run('lamp.pos3D = vec3(0, 0, 10)');
+    assert.equal(run('flare.getScreenElements().length'), 0, 'behind the camera');
+});
+
+test('a light\'s flare is smaller from farther than the light reaches, and goes with the light', ()=>
+{
+    const run = load();
+    run(lampCode);
+    const size = run('shown(flare)[0][2]');
+    run('lamp.radius = 5');
+    near(run('shown(flare)[0][2]'), size / 2, 'twice as far as it reaches, half the size');
+    run('lamp.pos3D = vec3(0, 0, -3)');
+    near(run('shown(flare)[0][2]'), size, 'no bigger up close');
+    run('lamp.destroy(); steps(flare, 20);');
+    assert.deepEqual([run('flare.visible'), run('flare.getScreenElements().length')], [0, 0]);
+});
+
+test('a light\'s flare is hidden by what is in front of the light, not by what is behind it or the lamp around it', ()=>
+{
+    const run = load();
+    run(lampCode + `var box = new EngineObject3D(vec3(0, 0, -20), render3D.boxMesh); steps(flare, 20);`);
+    assert.equal(run('flare.visible'), 1, 'a box behind the light');
+    run('box.pos3D = vec3(0, 0, -10); steps(flare, 20);');
+    assert.equal(run('flare.visible'), 1, 'the lamp the light is in');
+    run('box.pos3D = vec3(0, 0, -5); steps(flare, 20);');
+    assert.equal(run('flare.visible'), 0, 'a box in front of it');
+});
+
+test('a spotlight\'s flare shows from inside its beam only', ()=>
+{
+    const run = load();
+    run(lampCode + 'lamp.coneAngle = .5;'); // it shines down -z, away from the camera
+    assert.equal(run('flare.getScreenElements().length'), 0);
+    run('lamp.rotation3D = vec3(0, PI, 0)');
+    assert.ok(run('flare.getScreenElements().length') > 0, 'turned to shine at the camera');
+});

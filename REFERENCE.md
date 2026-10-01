@@ -1715,6 +1715,9 @@ flare.elements = [{at: .5, size: .1, color: hsl(.6,1,.6,.3), shape: 'disc'}] // 
                                   // glow, disc or ring
 flare.visible                     // how much of the sun shows, 0 to 1, eased over fadeTime, to read; what is not
                                   // see through hides it, flare.occlusion = false turns that off
+flare.light = lamp                // the flare of a Light3D in place of the sun's: at the light, in its color,
+                                  // smaller from farther than its radius, hidden by what is in front of it; a
+                                  // spotlight's shows from inside its beam only
 // Trails - a ribbon through where the object has been, parent it to something that moves
 new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over
                                                                          // lifeTime seconds; Infinity keeps every
@@ -1851,9 +1854,13 @@ B                                        // blocks: click or drag places the typ
                                          // fill, a drag fills the rectangle dragged, as tall as the panel's
                                          // height; the panel adds the level's block map and resizes it
 T                                        // terrain: hold the mouse to raise the ground under the brush, Shift
-                                         // lowers, Ctrl smooths; the panel adds the level's terrain, up to 128
+                                         // lowers, Ctrl smooths; X goes to the next brush: flatten, to the height
+                                         // pressed, and paint, a color on the ground, Shift takes it off, saved
+                                         // as "paint": {"colors": [...], "cells": [count, color, ...]}, 0 for
+                                         // the terrain's own color; the panel adds the level's terrain, up to 128
                                          // cells a side, and has the brush's size and strength
 G                                        // grid snap, Ctrl flips it for a drag; steps are in the panel
+L                                        // own axes: the Move handles follow the object's turn, not the world
 End                                      // drop the selection to the ground
 // Selecting and editing
 Left click, Shift+click, left drag from empty space   // select, add or take away, box select

@@ -28259,6 +28259,11 @@ class LensFlare3D extends EngineObject3D
          *  height; shape is glow, disc or ring
          *  @type {Array<{at: number, size: number, color: Color, shape: string}>|undefined} */
         this.elements = undefined;
+        /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
+         *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
+         *  in front of the light, and a spotlight's shows from inside its beam only
+         *  @type {Light3D|undefined} */
+        this.light = undefined;
         /** @property {boolean} - Fade out when something is between the camera and the sun */
         this.occlusion = true;
         /** @property {number} - Seconds the flare takes to fade out or in when the sun is hidden or shows again */
@@ -28297,13 +28302,30 @@ class LensFlare3D extends EngineObject3D
         return this.made;
     }
 
-    /** Where the sun is on the screen, in pixels like mousePosScreen, undefined when it is behind the camera
+    // what the flare is of, seen from the camera: the way to it, how far it is, Infinity for the sun, and a point
+    // to find it on the screen by; undefined with no sun direction, or a light that is gone or at the camera
+    flareSource()
+    {
+        const camera = render3D.camera.pos, light = this.light;
+        if (!light)
+        {
+            const sun = render3D.sunDirection;
+            if (!sun.lengthSquared()) return;
+            const direction = sun.normalize();
+            return {direction, distance: Infinity, pos: camera.add(direction.scale(100))};
+        }
+        if (light.destroyed) return;
+        const pos = light.getWorldPos3D(), offset = pos.subtract(camera), distance = offset.length();
+        return distance ? {direction: offset.scale(1 / distance), distance, pos} : undefined;
+    }
+
+    /** Where the sun, or the flare's light, is on the screen, in pixels like mousePosScreen, undefined when it is
+     *  behind the camera
      *  @return {Vector2|undefined} */
     getSunScreenPos()
     {
-        const direction = render3D.sunDirection;
-        if (!direction.lengthSquared()) return;
-        return render3D.worldToScreen(render3D.camera.pos.add(direction.normalize(100)));
+        const source = this.flareSource();
+        return source && render3D.worldToScreen(source.pos);
     }
 
     /** The parts of the flare as they are drawn now: each one's place on the screen, its size in pixels and its
@@ -28317,7 +28339,19 @@ class LensFlare3D extends EngineObject3D
         const off = max(abs(sun.x - center.x) / center.x, abs(sun.y - center.y) / center.y);
         const strength = this.visible * clamp((1.3 - off) / .5) * this.intensity;
         if (!(strength > 0)) return [];
-        const tint = this.color.multiply(render3D.sunColor), height = mainCanvasSize.y * this.flareSize;
+        let tint = this.color.multiply(render3D.sunColor), height = mainCanvasSize.y * this.flareSize;
+        const light = this.light, source = light && this.flareSource();
+        if (light)
+        {
+            if (!source) return [];
+            // a light's flare is the light's color, as bright as the light up to 1, and only from inside its cone
+            const cone = render3DLightCone(light), d = source.direction;
+            const inCone = clamp(-(cone[0] * d.x + cone[1] * d.y + cone[2] * d.z) - cone[3]);
+            const c = light.color, bright = c.a * clamp(light.intensity) * inCone;
+            if (!(bright > 0)) return [];
+            tint = this.color.multiply(rgb(c.r, c.g, c.b, bright));
+            height *= min(1, light.radius / source.distance); // smaller from farther than it reaches
+        }
         return this.getElements().map((e)=>
         {
             const c = e.color.multiply(tint);
@@ -28327,13 +28361,14 @@ class LensFlare3D extends EngineObject3D
         });
     }
 
-    /** Is something between the camera and the sun: the level, or an object that is not see through
+    /** Is something between the camera and the sun, or the flare's light: the level, or an object that is not see
+     *  through
      *  @return {boolean} */
     isSunHidden()
     {
-        const direction = render3D.sunDirection;
-        if (!direction.lengthSquared()) return true;
-        const ray = new Ray3D(render3D.camera.pos, direction.normalize());
+        const source = this.flareSource();
+        if (!source) return true;
+        const ray = new Ray3D(render3D.camera.pos, source.direction), reach = source.distance;
         const blockers = engineObjects.filter((o)=> o !== this && o instanceof EngineObject3D && !o.destroyed &&
             !o.transparent && !o.additive);
         // a voxel map says block by block what is see through: glass, water and leaves let the sun by, and the
@@ -28341,13 +28376,17 @@ class LensFlare3D extends EngineObject3D
         const maps = /** @type {Array<VoxelMap>} */ (typeof VoxelMap == 'undefined' ? [] :
             blockers.filter((o)=> o instanceof VoxelMap));
         for (const map of maps)
-            if (map.raycast(ray, Infinity, (type)=> !map.blockType(type).seeThrough))
+            if (map.raycast(ray, reach, (type)=> !map.blockType(type).seeThrough))
                 return true;
         // an object is hit by its box, and a box the camera is inside, a room, a wide floor or the player's own
-        // body, says nothing of what is in the way: the ray the other way hits it too, and it is left out
-        const back = new Ray3D(ray.origin, ray.direction.scale(-1));
-        const inside = (o)=> !(o instanceof HeightMap) && render3DRaycastObject(back, o) !== undefined;
-        return !!render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o) && !inside(o)));
+        // body, says nothing of what is in the way: the ray the other way hits it too, and it is left out; so is
+        // one the light is inside, its lamp
+        const backward = ray.direction.scale(-1), back = new Ray3D(ray.origin, backward);
+        const lamp = this.light && [new Ray3D(source.pos, ray.direction), new Ray3D(source.pos, backward)];
+        const hits = (r, o)=> render3DRaycastObject(r, o) !== undefined;
+        const around = (o)=> !(o instanceof HeightMap) && (hits(back, o) || lamp && hits(lamp[0], o) && hits(lamp[1], o));
+        const hit = render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o) && !around(o)));
+        return !!hit && hit.distance < reach;
     }
 
     /** Ease visible toward whether the sun shows, called automatically each frame */
@@ -29477,7 +29516,8 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *    returned, see level3DVoxelSetup for its sheet
  *  - A level may hold a terrain, in a terrain block: pos, its center, size, its size in the world along x and z,
  *    height, how tall a full height is, color, and heights, rows of 0 to 1 from -z to +z, each from -x to +x; it
- *    is made a HeightMap, returned with what else was made
+ *    is made a HeightMap, returned with what else was made; paint, when it has it, colors its samples: colors, a
+ *    list, and cells, runs of a count and a color along the rows, 0 for the terrain's own and 1 the list's first
  *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
  *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
  *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
@@ -29600,14 +29640,49 @@ function level3DTerrainShape(terrain)
         height: isNumber(terrain.height) && terrain.height > 0 ? terrain.height : 1, heights};
 }
 
+// a hex color of a level as a Color, undefined when it is not one
+function level3DHexColor(hex)
+{ return /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(hex) ? new Color().setHex(hex) : undefined; }
+
+// the paint of a level's terrain block, for a terrain of so many samples: its colors as they are written and a
+// color for each sample, row after row, 0 for none and 1 the first of the colors; undefined when it has none or
+// it does not fit the terrain
+function level3DTerrainPaint(terrain, samples)
+{
+    const paint = terrain?.paint, colors = paint?.colors, runs = paint?.cells;
+    if (!isArray(colors) || !isArray(runs) || colors.length > 255 || !colors.every(level3DHexColor)) return;
+    const cells = new Uint8Array(samples);
+    let at = 0;
+    for (let i = 0; i < runs.length; i += 2)
+    {
+        const count = runs[i], color = runs[i + 1];
+        if (!(count > 0 && count % 1 === 0 && color >= 0 && color % 1 === 0) || color > colors.length ||
+            at + count > samples) return;
+        cells.fill(color, at, at += count);
+    }
+    return at === samples ? {colors: colors.slice(), cells} : undefined;
+}
+
+// give a terrain's map the colors of its block: its own color over the whole of it, or with paint a color for
+// each sample, the terrain's own where it is not painted; the caller builds the map again
+function level3DTerrainSetColors(map, terrain, paint=level3DTerrainPaint(terrain, map.rows * map.columns))
+{
+    const base = level3DHexColor(terrain.color) || WHITE;
+    map.color = base, map.colors = undefined;
+    if (!paint || !paint.cells.some((v)=> v)) return;
+    const palette = [base, ...paint.colors.map(level3DHexColor)];
+    map.color = WHITE;
+    map.colors = map.heights.map((row, r)=> row.map((v, c)=> palette[paint.cells[r * map.columns + c]] || base));
+}
+
 // the HeightMap of a level's terrain block, undefined when it has none or it is wrong
 function level3DTerrainMake(terrain)
 {
     const shape = level3DTerrainShape(terrain);
     if (!shape || typeof HeightMap == 'undefined') return;
     const map = new HeightMap(shape.heights, shape.size, shape.height, undefined, shape.pos);
-    if (/^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(terrain.color))
-        map.color = new Color().setHex(terrain.color);
+    level3DTerrainSetColors(map, terrain);
+    map.colors && map.rebuild();
     return map;
 }
 

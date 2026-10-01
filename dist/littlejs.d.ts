@@ -9700,6 +9700,11 @@ declare module "littlejsengine" {
             color: Color;
             shape: string;
         }[];
+        /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
+         *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
+         *  in front of the light, and a spotlight's shows from inside its beam only
+         *  @type {Light3D|undefined} */
+        light: Light3D | undefined;
         /** @property {boolean} - Fade out when something is between the camera and the sun */
         occlusion: boolean;
         /** @property {number} - Seconds the flare takes to fade out or in when the sun is hidden or shows again */
@@ -9723,7 +9728,13 @@ declare module "littlejsengine" {
             color: Color;
             shape: string;
         }>;
-        /** Where the sun is on the screen, in pixels like mousePosScreen, undefined when it is behind the camera
+        flareSource(): {
+            direction: Vector3;
+            distance: number;
+            pos: Vector3;
+        };
+        /** Where the sun, or the flare's light, is on the screen, in pixels like mousePosScreen, undefined when it is
+         *  behind the camera
          *  @return {Vector2|undefined} */
         getSunScreenPos(): Vector2 | undefined;
         /** The parts of the flare as they are drawn now: each one's place on the screen, its size in pixels and its
@@ -9735,7 +9746,8 @@ declare module "littlejsengine" {
             color: Color;
             shape: string;
         }>;
-        /** Is something between the camera and the sun: the level, or an object that is not see through
+        /** Is something between the camera and the sun, or the flare's light: the level, or an object that is not see
+         *  through
          *  @return {boolean} */
         isSunHidden(): boolean;
     }
@@ -10073,7 +10085,8 @@ declare module "littlejsengine" {
      *    returned, see level3DVoxelSetup for its sheet
      *  - A level may hold a terrain, in a terrain block: pos, its center, size, its size in the world along x and z,
      *    height, how tall a full height is, color, and heights, rows of 0 to 1 from -z to +z, each from -x to +x; it
-     *    is made a HeightMap, returned with what else was made
+     *    is made a HeightMap, returned with what else was made; paint, when it has it, colors its samples: colors, a
+     *    list, and cells, runs of a count and a color along the rows, 0 for the terrain's own and 1 the list's first
      *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
      *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
      *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block

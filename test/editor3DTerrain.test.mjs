@@ -131,3 +131,78 @@ test('opening the editor puts the terrain back as the level has it', async ()=>
     run(fileCode(withTerrain) + 'editor3DTerrainMap().heights[4][4] = 1; editor3DRestore();');
     near(run('h(4, 4)'), .2);
 });
+
+// the paint of a 9 by 9 terrain with the 9 samples around its middle painted the first color
+const middlePaint = [30, 0, 3, 1, 6, 0, 3, 1, 6, 0, 3, 1, 30, 0];
+const hexAt = (row, column)=> `editor3DTerrainMap().colors[${row}][${column}].toString(false)`;
+
+test('flatten brings the ground under the brush toward a height, most in its middle', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withTerrain));
+    assert.equal(run(`editor3DTerrainSculpt(vec3(0, 0, 0), 'flatten', .1, .5)`), true);
+    near(run('h(4, 4)'), .35, 'half way there in the middle');
+    near(run('h(4, 5)'), .275, 'a quarter of the way half way out');
+    near(run('h(0, 0)'), .2);
+    assert.equal(run(`editor3DTerrainSculpt(vec3(3, 0, 3), 'flatten', 1, .2)`), false, 'ground at that height stays');
+});
+
+test('the paint brush colors the ground under it, saved in the level as a list of colors and runs', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withTerrain) + `editor3DTerrainBrush.color = '#ff0000';`);
+    assert.equal(run('editor3DTerrainMap().colors'), undefined, 'no paint yet');
+    assert.equal(run('editor3DTerrainPaintAt(vec3(0, 0, 0))'), true);
+    assert.equal(run(hexAt(4, 4)), '#ff0000');
+    assert.equal(run(hexAt(4, 6)), '#ffffff', 'the edge of the brush keeps the terrain\'s color, white with none set');
+    assert.equal(run('editor3DTerrainPaintAt(vec3(0, 0, 0))'), false, 'painted already');
+    assert.equal(json(run, 'level.terrain.paint'), null, 'the level has it when the stroke ends');
+    run('editor3DStrokeEnd()');
+    assert.deepEqual(json(run, 'level.terrain.paint'), {colors: ['#ff0000'], cells: middlePaint});
+    assert.ok(run('editor3DLevelJSON()').includes('"paint": {"colors": ["#ff0000"]'));
+    run('editor3DUndo()');
+    assert.deepEqual([json(run, 'level.terrain.paint'), run('editor3DTerrainMap().colors')], [null, undefined]);
+    run('editor3DUndo(true)');
+    assert.equal(run(hexAt(4, 4)), '#ff0000');
+});
+
+test('a second color joins the list, erasing takes paint off, and a color no longer used leaves the list', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withTerrain) + `editor3DTerrainBrush.color = '#ff0000'; editor3DTerrainPaintAt(vec3(0, 0, 0));
+        editor3DTerrainBrush.size = 1; editor3DTerrainBrush.color = '#0000ff';
+        editor3DTerrainPaintAt(vec3(0, 0, 0)); editor3DStrokeEnd();`);
+    assert.deepEqual(json(run, 'level.terrain.paint'), {colors: ['#ff0000', '#0000ff'],
+        cells: [30, 0, 3, 1, 6, 0, 1, 1, 1, 2, 1, 1, 6, 0, 3, 1, 30, 0]});
+    run('editor3DTerrainBrush.size = 4; editor3DTerrainPaintAt(vec3(0, 0, 0), true); editor3DStrokeEnd();');
+    assert.equal(json(run, 'level.terrain.paint'), null, 'all of it erased, no paint to keep');
+    assert.equal(run('editor3DTerrainMap().colors'), undefined);
+});
+
+test('a level\'s painted terrain loads with its colors over the terrain\'s own, and paint that does not fit is left out', async ()=>
+{
+    const { run } = await loadGame();
+    const painted = withTerrain.replace('height: 10,',
+        `height: 10, color: '#00ff00', paint: {colors: ['#ff0000'], cells: ${JSON.stringify(middlePaint)}},`);
+    run(fileCode(painted));
+    assert.deepEqual([run(hexAt(4, 4)), run(hexAt(0, 0)), run('editor3DTerrainMap().color.toString(false)')],
+        ['#ff0000', '#00ff00', '#ffffff']);
+    const { run: other } = await loadGame();
+    other(fileCode(withTerrain.replace('height: 10,', `height: 10, paint: {colors: ['#ff0000'], cells: [5, 1]},`)));
+    assert.equal(other('editor3DTerrainMap().colors'), undefined);
+});
+
+test('the Terrain tool\'s X goes around its brushes, and a press with the flatten brush takes the height pressed', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode(withTerrain) + `editor3DTool = 'terrain';`);
+    assert.equal(run('editor3DTerrainBrush.mode'), 'sculpt');
+    run('editor3DKeys.KeyX()');
+    assert.equal(run('editor3DTerrainBrush.mode'), 'flatten');
+    assert.deepEqual({...run(`editor3DTerrainPress(vec3(0, 3, 0), false, false)`)},
+        {kind: 'terrain', mode: 'flatten', level: .5});
+    run('editor3DKeys.KeyX()');
+    assert.deepEqual({...run(`editor3DTerrainPress(vec3(0, 0, 0), true, false)`)}, {kind: 'terrain', mode: 'erase'});
+    run('editor3DKeys.KeyX()');
+    assert.deepEqual({...run(`editor3DTerrainPress(vec3(0, 0, 0), true, false)`)}, {kind: 'terrain', mode: 'lower'});
+});

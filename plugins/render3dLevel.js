@@ -78,7 +78,8 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *    returned, see level3DVoxelSetup for its sheet
  *  - A level may hold a terrain, in a terrain block: pos, its center, size, its size in the world along x and z,
  *    height, how tall a full height is, color, and heights, rows of 0 to 1 from -z to +z, each from -x to +x; it
- *    is made a HeightMap, returned with what else was made
+ *    is made a HeightMap, returned with what else was made; paint, when it has it, colors its samples: colors, a
+ *    list, and cells, runs of a count and a color along the rows, 0 for the terrain's own and 1 the list's first
  *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
  *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
  *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
@@ -201,14 +202,49 @@ function level3DTerrainShape(terrain)
         height: isNumber(terrain.height) && terrain.height > 0 ? terrain.height : 1, heights};
 }
 
+// a hex color of a level as a Color, undefined when it is not one
+function level3DHexColor(hex)
+{ return /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(hex) ? new Color().setHex(hex) : undefined; }
+
+// the paint of a level's terrain block, for a terrain of so many samples: its colors as they are written and a
+// color for each sample, row after row, 0 for none and 1 the first of the colors; undefined when it has none or
+// it does not fit the terrain
+function level3DTerrainPaint(terrain, samples)
+{
+    const paint = terrain?.paint, colors = paint?.colors, runs = paint?.cells;
+    if (!isArray(colors) || !isArray(runs) || colors.length > 255 || !colors.every(level3DHexColor)) return;
+    const cells = new Uint8Array(samples);
+    let at = 0;
+    for (let i = 0; i < runs.length; i += 2)
+    {
+        const count = runs[i], color = runs[i + 1];
+        if (!(count > 0 && count % 1 === 0 && color >= 0 && color % 1 === 0) || color > colors.length ||
+            at + count > samples) return;
+        cells.fill(color, at, at += count);
+    }
+    return at === samples ? {colors: colors.slice(), cells} : undefined;
+}
+
+// give a terrain's map the colors of its block: its own color over the whole of it, or with paint a color for
+// each sample, the terrain's own where it is not painted; the caller builds the map again
+function level3DTerrainSetColors(map, terrain, paint=level3DTerrainPaint(terrain, map.rows * map.columns))
+{
+    const base = level3DHexColor(terrain.color) || WHITE;
+    map.color = base, map.colors = undefined;
+    if (!paint || !paint.cells.some((v)=> v)) return;
+    const palette = [base, ...paint.colors.map(level3DHexColor)];
+    map.color = WHITE;
+    map.colors = map.heights.map((row, r)=> row.map((v, c)=> palette[paint.cells[r * map.columns + c]] || base));
+}
+
 // the HeightMap of a level's terrain block, undefined when it has none or it is wrong
 function level3DTerrainMake(terrain)
 {
     const shape = level3DTerrainShape(terrain);
     if (!shape || typeof HeightMap == 'undefined') return;
     const map = new HeightMap(shape.heights, shape.size, shape.height, undefined, shape.pos);
-    if (/^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(terrain.color))
-        map.color = new Color().setHex(terrain.color);
+    level3DTerrainSetColors(map, terrain);
+    map.colors && map.rebuild();
     return map;
 }
 
