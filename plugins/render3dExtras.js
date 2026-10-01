@@ -1618,9 +1618,17 @@ class LensFlare3D extends EngineObject3D
     {
         const direction = render3D.sunDirection;
         if (!direction.lengthSquared()) return true;
+        const ray = new Ray3D(render3D.camera.pos, direction.normalize());
         const blockers = engineObjects.filter((o)=> o !== this && o instanceof EngineObject3D && !o.transparent &&
             !o.additive);
-        return !!render3D.pick(new Ray3D(render3D.camera.pos, direction.normalize()), blockers);
+        // a voxel map says block by block what is see through: glass, water and leaves let the sun by, and the
+        // ray goes on to the blocks behind them
+        const maps = /** @type {Array<VoxelMap>} */ (typeof VoxelMap == 'undefined' ? [] :
+            blockers.filter((o)=> o instanceof VoxelMap));
+        for (const map of maps)
+            if (map.raycast(ray, Infinity, (type)=> !map.blockType(type).seeThrough))
+                return true;
+        return !!render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o)));
     }
 
     /** Ease visible toward whether the sun shows, called automatically each frame */

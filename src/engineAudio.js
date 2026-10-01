@@ -233,10 +233,9 @@ class Sound
         ASSERT(isNumber(range), 'range must be a number');
         ASSERT(isNumber(taper), 'taper must be a number');
 
-        /** @property {number} - World space max range of sound */
         this.range = range;
         /** @property {boolean} - No range was given, so it got soundDefaultRange; played in 3D such a sound is heard
-         *  to render3D.soundDefaultRange instead, which is further */
+         *  to render3D.soundDefaultRange instead, which is further; setting range makes it false */
         this.rangeIsDefault = rangeIsDefault;
         /** @property {number} - At what percentage of range should it start tapering */
         this.taper = taper;
@@ -290,6 +289,15 @@ class Sound
             engineAddLoad(this.loadSound(filename).catch(e=>
                 LOG('Sound load failed for', filename, '-', e.message))); // startup waits for it
         }
+    }
+
+    /** World space max range of sound, 0 for no limit; a range that is set is the sound's own, in 3D too
+     *  @type {number} */
+    get range() { return this.rangeValue; }
+    set range(range)
+    {
+        this.rangeValue = range;
+        this.rangeIsDefault = false;
     }
 
     /** Sample data for each channel

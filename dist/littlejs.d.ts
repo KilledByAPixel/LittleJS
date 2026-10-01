@@ -3203,10 +3203,12 @@ declare module "littlejsengine" {
          *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
          */
         constructor(asset?: string | URL | any[], randomness?: number, range?: number, taper?: number, onloadCallback?: SoundLoadCallback);
-        /** @property {number} - World space max range of sound */
-        range: number;
+        set range(arg: number);
+        /** World space max range of sound, 0 for no limit; a range that is set is the sound's own, in 3D too
+         *  @type {number} */
+        get range(): number;
         /** @property {boolean} - No range was given, so it got soundDefaultRange; played in 3D such a sound is heard
-         *  to render3D.soundDefaultRange instead, which is further */
+         *  to render3D.soundDefaultRange instead, which is further; setting range makes it false */
         rangeIsDefault: boolean;
         /** @property {number} - At what percentage of range should it start tapering */
         taper: number;
@@ -3241,6 +3243,7 @@ declare module "littlejsengine" {
          *  playing a sound detaches the buffer's own channel arrays.
          *  @return {Array<Array<number>|Float32Array>|undefined} */
         get sampleChannels(): (number[] | Float32Array)[];
+        rangeValue: number;
         /** Move this sound's samples into an audio buffer that every play can share
          *  Does nothing if there is already a buffer or no samples to build one from */
         buildSampleBuffer(): void;

@@ -111,3 +111,21 @@ test('what is see-through does not hide the sun, and the test can be turned off'
     run('flare.occlusion = false; steps(flare, 20);');
     assert.equal(run('flare.visible'), 1);
 });
+
+test('see-through blocks of a voxel map do not hide the sun, the blocks behind them do', ()=>
+{
+    const run = load();
+    // a row of blocks along the way to the sun: glass in front, a place for a stone block behind it
+    run(`var flare = new LensFlare3D; sun(0, 0, -1);
+        var map = new VoxelMap(vec3(-.5, -.5, -8), vec3(1, 1, 4), new TileInfo(vec2(), vec2(16), new TextureInfo(undefined, false)));
+        map.setBlockType(1, 0, {transparent: true});
+        map.setBlockType(2, 0, {seeThrough: true});
+        map.setVoxel(vec3(0, 0, 3), 1); map.setVoxel(vec3(0, 0, 2), 2);
+        steps(flare, 20);`);
+    assert.equal(run('flare.isSunHidden()'), false);
+    assert.equal(run('flare.visible'), 1, 'glass and leaves let the sun through');
+    run('map.setVoxel(vec3(0, 0, 0), 3); steps(flare, 20);');
+    assert.equal(run('flare.visible'), 0, 'a solid block behind them hides it');
+    assert.equal(run('!!render3D.pick(new Ray3D(vec3(), vec3(0, 0, -1)))'), true, 'picking still finds the glass');
+    run('map.destroy()');
+});

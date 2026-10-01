@@ -37,3 +37,17 @@ test('a sound given a range keeps it in 3D', ()=>
     run('var all = sound(.1, 0);');
     assert.equal(run('heard(all, 5000)'), 1, 'a range of 0 is heard everywhere, as in 2D');
 });
+
+test('a range set after the sound is made is its range in 3D too', ()=>
+{
+    const run = load();
+    run('var s = sound(); s.range = 5;');
+    assert.deepEqual([run('s.range'), run('s.rangeIsDefault')], [5, false]);
+    assert.equal(run('heard(s, 50)'), undefined, 'out of its own range, though inside the 3D default');
+    run('s.range = 200');
+    assert.ok(run('heard(s, 150)') > 0, 'heard past the 3D default');
+    run('s.range = 0');
+    assert.equal(run('heard(s, 5000)'), 1, 'a range of 0 is heard everywhere');
+    run('var plain = sound();');
+    assert.equal(run('heard(plain, 60)'), 1, 'a sound left alone still has the 3D default');
+});
