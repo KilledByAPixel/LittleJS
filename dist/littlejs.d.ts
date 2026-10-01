@@ -10316,13 +10316,13 @@ declare module "littlejsengine" {
         extra: boolean;
     }>;
     /** The behaviors an effect can use, each a push applied to every particle every update, with a 2D and a 3D version
-     *  @type {Array<{name:string, update:Function|undefined, update3D:Function|undefined, min:number, max:number,
+     *  @type {Array<{name:string, update:(Function|undefined), update3D:(Function|undefined), min:number, max:number,
      *  value:number, description:string}>}
      *  @memberof ParticleEffects */
     export const particleEffectBehaviors: Array<{
         name: string;
-        update: Function | undefined;
-        update3D: Function | undefined;
+        update: (Function | undefined);
+        update3D: (Function | undefined);
         min: number;
         max: number;
         value: number;

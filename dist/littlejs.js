@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.21.0';
+const engineVersion = '1.22.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -30706,7 +30706,7 @@ particleEffectAddSetting('tilePadding', 'number', 1, 0, 8, 1,
     'Pixels of padding around each tile', 0, 64);
 
 /** The behaviors an effect can use, each a push applied to every particle every update, with a 2D and a 3D version
- *  @type {Array<{name:string, update:Function|undefined, update3D:Function|undefined, min:number, max:number,
+ *  @type {Array<{name:string, update:(Function|undefined), update3D:(Function|undefined), min:number, max:number,
  *  value:number, description:string}>}
  *  @memberof ParticleEffects */
 const particleEffectBehaviors =
