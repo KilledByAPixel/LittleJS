@@ -76,6 +76,9 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *  - A level may hold a map of blocks, in a voxels block: pos, its corner, size, its cells along x, y and z, and
  *    blocks, runs of a count and a type along x, then y, then z; it is made a VoxelMap, the first of what is
  *    returned, see level3DVoxelSetup for its sheet
+ *  - A level may hold a terrain, in a terrain block: pos, its center, size, its size in the world along x and z,
+ *    height, how tall a full height is, color, and heights, rows of 0 to 1 from -z to +z, each from -x to +x; it
+ *    is made a HeightMap, returned with what else was made
  *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
  *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
  *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
@@ -91,6 +94,8 @@ function level3DLoad(level)
     level3DSceneApply(level.scene);
     const made = [], map = level3DVoxelMap = level3DVoxelsMake(level.voxels);
     map && made.push(map);
+    const terrain = level3DTerrainMap = level3DTerrainMake(level.terrain);
+    terrain && made.push(terrain);
     for (const object of isArray(level.objects) ? level.objects : [])
     {
         if (!object || typeof object !== 'object') continue;
@@ -173,6 +178,37 @@ function level3DVoxelsMake(voxels)
     level3DVoxelsDecode(voxels.blocks, map.data);
     level3DVoxelSetupMap?.(map);
     map.rebuild();
+    return map;
+}
+
+// the terrain the level loaded last made, the one the 3D editor sculpts, and the most samples it may have a side
+let level3DTerrainMap;
+const LEVEL3D_TERRAIN_SAMPLES = 129;
+
+// what a level's terrain block is made with: its center, its size in the world along x and z, how tall a full
+// height is, and its heights as rows of 0 to 1, a copy, each row as long as the first; undefined when it is not
+// one a HeightMap can be made of
+function level3DTerrainShape(terrain)
+{
+    if (!terrain || typeof terrain !== 'object') return;
+    const size = terrain.size, rows = terrain.heights, n = LEVEL3D_TERRAIN_SAMPLES;
+    if (!isArray(size) || size.length !== 2 || !size.every((v)=> isNumber(v) && v > 0)) return;
+    if (!isArray(rows) || rows.length < 2 || rows.length > n || !isArray(rows[0])) return;
+    const columns = rows[0].length;
+    if (columns < 2 || columns > n || !rows.every((row)=> isArray(row) && row.length === columns)) return;
+    const heights = rows.map((row)=> row.map((v)=> isNumber(v) ? clamp(v) : 0));
+    return {pos: level3DVector(terrain.pos, vec3()), size: vec2(size[0], size[1]),
+        height: isNumber(terrain.height) && terrain.height > 0 ? terrain.height : 1, heights};
+}
+
+// the HeightMap of a level's terrain block, undefined when it has none or it is wrong
+function level3DTerrainMake(terrain)
+{
+    const shape = level3DTerrainShape(terrain);
+    if (!shape || typeof HeightMap == 'undefined') return;
+    const map = new HeightMap(shape.heights, shape.size, shape.height, undefined, shape.pos);
+    if (/^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(terrain.color))
+        map.color = new Color().setHex(terrain.color);
     return map;
 }
 

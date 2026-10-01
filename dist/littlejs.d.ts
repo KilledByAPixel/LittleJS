@@ -9951,6 +9951,9 @@ declare module "littlejsengine" {
      *  - A level may hold a map of blocks, in a voxels block: pos, its corner, size, its cells along x, y and z, and
      *    blocks, runs of a count and a type along x, then y, then z; it is made a VoxelMap, the first of what is
      *    returned, see level3DVoxelSetup for its sheet
+     *  - A level may hold a terrain, in a terrain block: pos, its center, size, its size in the world along x and z,
+     *    height, how tall a full height is, color, and heights, rows of 0 to 1 from -z to +z, each from -x to +x; it
+     *    is made a HeightMap, returned with what else was made
      *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
      *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
      *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block

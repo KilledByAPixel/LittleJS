@@ -1801,6 +1801,11 @@ level3DVoxelSetup(tileInfo, (map)=> {})           // The sheet a level's block m
 // empty; the 3D level editor's Blocks tool paints it
 {"littlejs3D": 1, "voxels": {"pos": [-16, 0, -16], "size": [32, 16, 32], "blocks": [32, 1, 16352, 0]}, "objects": []}
 
+// A level can hold a terrain, made a HeightMap when it loads: its center, its size in the world, how tall a full
+// height is, its color, and its heights, rows of 0 to 1; the 3D level editor's Terrain tool sculpts it
+{"littlejs3D": 1, "terrain": {"pos": [0, -3.2, 0], "size": [64, 64], "height": 16, "color": "#6a9955",
+    "heights": [[0.2, 0.2, 0.2], [0.2, 0.5, 0.2], [0.2, 0.2, 0.2]]}, "objects": []}
+
 // Built-in types and their properties
 Box, Sphere, Cylinder   // color, tile (-1 for none), solid (true); 1 unit across, the scale is the size
 Light                   // color, radius (5), intensity (1)
@@ -1817,6 +1822,9 @@ Q select · W move · E rotate · R scale   // drag a handle, or the object itse
 B                                        // blocks: click or drag places the type picked in the panel, Shift
                                          // removes, Ctrl repaints, P picks the type under the mouse; the panel
                                          // adds the level's block map
+T                                        // terrain: hold the mouse to raise the ground under the brush, Shift
+                                         // lowers, Ctrl smooths; the panel adds the level's terrain, up to 128
+                                         // cells a side, and has the brush's size and strength
 G                                        // grid snap, Ctrl flips it for a drag; steps are in the panel
 End                                      // drop the selection to the ground
 // Selecting and editing

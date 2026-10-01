@@ -295,7 +295,7 @@ let editor3DClipboard;
 let editor3DUndoList = [], editor3DRedoList = [];
 // the edit being made, a drag is one: the objects and the parts as they were before it, and painted when blocks
 // were set in the game's map and are not in the level yet
-/** @type {{before: Array<Object>, parts: Object, painted?: boolean}|undefined} */
+/** @type {{before: Array<Object>, parts: Object, painted?: boolean, sculpted?: boolean}|undefined} */
 let editor3DStroke;
 
 const editor3DCopy = (value)=> JSON.parse(JSON.stringify(value));
@@ -309,7 +309,12 @@ const editor3DSelected = ()=> editor3DObjects().filter((o)=> editor3DSelection.h
 
 // the parts of a level beside its objects that the editor edits: its scene block and its map of blocks; each is
 // undone, autosaved, reset and saved as the objects are
-const editor3DLevelPartNames = ['scene', 'voxels'];
+const editor3DLevelPartNames = ['scene', 'voxels', 'terrain'];
+
+// the last copy made of each part, as its text and the copy: a part that has not changed since is not copied
+// again, so undo steps share one copy of a terrain until it is sculpted; a copy is never changed
+/** @type {Object<string, {text: string, part: Object}>} */
+const editor3DPartCopies = {};
 
 // a part of a level, undefined when it has none
 function editor3DLevelPart(name, level=editor3DLevel)
@@ -318,14 +323,19 @@ function editor3DLevelPart(name, level=editor3DLevel)
     return part && typeof part === 'object' && !isArray(part) ? part : undefined;
 }
 
-// a copy of every part a level has, {} for a level with none
+// a copy of every part a level has, {} for a level with none; the copies are shared, see editor3DPartCopies, so
+// what is given is copied again before it is changed or made a level's own
 function editor3DLevelParts(level=editor3DLevel)
 {
     const parts = {};
     for (const name of editor3DLevelPartNames)
     {
         const part = editor3DLevelPart(name, level);
-        part && (parts[name] = editor3DCopy(part));
+        if (!part) continue;
+        const text = JSON.stringify(part);
+        if (editor3DPartCopies[name]?.text !== text)
+            editor3DPartCopies[name] = {text, part: JSON.parse(text)};
+        parts[name] = editor3DPartCopies[name].part;
     }
     return parts;
 }
@@ -493,7 +503,7 @@ function editor3DLevelLoaded(level)
         const parts = editor3DLevelParts(saved);
         level.objects = editor3DCopy(saved.objects);
         for (const name of editor3DLevelPartNames)
-            parts[name] ? level[name] = parts[name] : delete level[name];
+            parts[name] ? level[name] = editor3DCopy(parts[name]) : delete level[name];
     }
     else if (saved)
         record.pending = saved;
@@ -573,8 +583,10 @@ function editor3DSetPart(name, part)
         editor3DSceneRestore(editor3DRecords.get(level)?.sceneBase);
         level3DSceneApply(level.scene);
     }
-    else
+    else if (name === 'voxels')
         editor3DVoxelShow();
+    else
+        editor3DTerrainShow();
 }
 
 // make the level's parts these, the ones that differ
@@ -688,6 +700,116 @@ function editor3DVoxelDragCell(drag, ray)
     return editor3DVoxelInside(map, cell) ? cell : undefined;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// the level's terrain: the level's terrain block is the source of truth, the game's HeightMap follows it;
+// sculpting changes the game's map as it goes, and the stroke's end writes its heights into the level
+
+// the brush: its size across in world units, and how strong it is, 0 to 1
+const editor3DTerrainBrush = {size: 8, strength: .5};
+
+// the game's map of the level's terrain, undefined when the level has none
+function editor3DTerrainMap()
+{
+    const map = level3DTerrainMap;
+    return map && !map.destroyed && editor3DLevelPart('terrain') ? map : undefined;
+}
+
+// bring the game's map in line with the level's terrain block: made, made again when its place or shape changed,
+// its heights and color set, or destroyed with the block gone
+function editor3DTerrainShow()
+{
+    const terrain = editor3DLevelPart('terrain'), shape = level3DTerrainShape(terrain);
+    let map = level3DTerrainMap && !level3DTerrainMap.destroyed ? level3DTerrainMap : undefined;
+    const fits = map && shape && map.pos3D.distance(shape.pos) === 0 && map.mapSize.distance(shape.size) === 0 &&
+        map.height === shape.height && map.rows === shape.heights.length && map.columns === shape.heights[0].length;
+    if (map && !fits)
+    {
+        map.destroy();
+        map = level3DTerrainMap = undefined;
+    }
+    if (!shape) return;
+    if (!map)
+    {
+        level3DTerrainMap = level3DTerrainMake(terrain);
+        return;
+    }
+    map.heights = shape.heights;
+    map.color = /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(terrain.color) ? new Color().setHex(terrain.color) : WHITE;
+    map.rebuild();
+}
+
+// write the game's map into the level, as a stroke of sculpting ends, its heights to a thousandth
+function editor3DTerrainStore()
+{
+    const map = editor3DTerrainMap(), terrain = editor3DLevelPart('terrain');
+    map && terrain && (terrain.heights = map.heights.map((row)=> row.map((v)=> round(v * 1e3) / 1e3)));
+}
+
+// give the level a flat terrain, as one undo: its size in the world, how many cells a side, and how tall a full
+// height is; it starts a fifth of the way up with its surface on the ground, so it can be dug as well as raised
+function editor3DTerrainAdd(size=vec2(64), cells=64, height=16)
+{
+    const samples = clamp(floor(cells), 1, LEVEL3D_TERRAIN_SAMPLES - 1) + 1;
+    const changed = editor3DChangePart('terrain', ()=> ({pos: [0, editor3DRound(-height * .2), 0],
+        size: [size.x, size.y], height, color: '#6a9955',
+        heights: Array.from({length: samples}, ()=> Array(samples).fill(.2))}));
+    editor3DStrokeEnd();
+    return changed;
+}
+
+// take the level's terrain away, as one undo
+function editor3DTerrainRemove()
+{
+    const changed = editor3DChangePart('terrain', ()=> undefined);
+    editor3DStrokeEnd();
+    return changed;
+}
+
+// sculpt the ground around a point for some seconds, as part of the edit being made: raise, lower or smooth it
+// under the brush, a soft circle, most in its middle and nothing at its edge; in the game's map now, in the level
+// when the stroke ends; false when nothing changed
+function editor3DTerrainSculpt(point, mode, seconds)
+{
+    const map = editor3DTerrainMap();
+    if (!map || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
+    const {size, strength} = editor3DTerrainBrush, radius = size / 2, heights = map.heights;
+    const rows = map.rows, columns = map.columns;
+    const stepX = map.mapSize.x / (columns - 1), stepZ = map.mapSize.y / (rows - 1);
+    const x0 = map.pos3D.x - map.mapSize.x / 2, z0 = map.pos3D.z - map.mapSize.y / 2;
+    const c0 = max(0, ceil((point.x - radius - x0) / stepX)), c1 = min(columns - 1, floor((point.x + radius - x0) / stepX));
+    const r0 = max(0, ceil((point.z - radius - z0) / stepZ)), r1 = min(rows - 1, floor((point.z + radius - z0) / stepZ));
+    // smoothing reads the ground as it was, so the order the samples are done in does not show
+    const old = mode === 'smooth' ? heights.map((row)=> row.slice()) : heights;
+    const rate = strength * 10 * seconds; // world units of height at full strength, 10 a second
+    let changed = false;
+    for (let r = r0; r <= r1; ++r)
+    for (let c = c0; c <= c1; ++c)
+    {
+        const distance = hypot(x0 + c * stepX - point.x, z0 + r * stepZ - point.z);
+        if (distance >= radius) continue;
+        const falloff = .5 + .5 * cos(PI * distance / radius), h = heights[r][c];
+        let v;
+        if (mode === 'smooth')
+        {
+            // toward the average of the samples beside it
+            let sum = 0, count = 0;
+            for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]])
+                old[r + dr]?.[c + dc] !== undefined && (sum += old[r + dr][c + dc], ++count);
+            v = h + (sum / count - h) * min(1, rate * falloff);
+        }
+        else
+            v = clamp(h + (mode === 'lower' ? -1 : 1) * rate * falloff / map.height);
+        if (v === h) continue;
+        heights[r][c] = v;
+        changed = true;
+    }
+    if (!changed) return false;
+    editor3DStroke ||= {before: editor3DCopy(editor3DObjects()), parts: editor3DLevelParts()};
+    editor3DStroke.sculpted = true;
+    map.rebuild();
+    return true;
+}
+
 // what the Blocks tool does to a cell: place puts the current type in an empty one, paint gives a block the
 // current type, remove empties it
 function editor3DVoxelApply(cell, mode)
@@ -755,6 +877,7 @@ function editor3DStrokeEnd()
     editor3DStroke = undefined;
     if (!stroke) return;
     stroke.painted && editor3DVoxelStore(); // the blocks painted go into the level
+    stroke.sculpted && editor3DTerrainStore(); // and the ground sculpted
     const parts = editor3DLevelParts();
     if (editor3DSame(stroke.before, editor3DObjects()) && editor3DSame(stroke.parts, parts)) return;
     editor3DUndoList.push({before: stroke.before, after: editor3DCopy(editor3DObjects()),
@@ -772,6 +895,7 @@ function editor3DStrokeCancel()
     if (!stroke) return;
     editor3DSetObjects(stroke.before);
     stroke.painted && editor3DVoxelShow(); // the level never had them, the game's map goes back to it
+    stroke.sculpted && editor3DTerrainShow();
     editor3DSetParts(stroke.parts);
 }
 
@@ -1138,8 +1262,12 @@ const EDITOR3D_HANDLE_SIZE = .15; // a handle's length as a part of the view's h
 const EDITOR3D_HANDLE_REACH = 10; // how many pixels from a handle still grab it
 const EDITOR3D_AXES = {x: vec3(1, 0, 0), y: vec3(0, 1, 0), z: vec3(0, 0, 1)};
 
-let editor3DTool = 'move';     // 'select', 'move', 'rotate', 'scale' or 'blocks'
+let editor3DTool = 'move';     // 'select', 'move', 'rotate', 'scale', 'blocks' or 'terrain'
 let editor3DBlockType = 1;     // the block type the Blocks tool places
+let editor3DSeconds = 0;       // how long the last step was, for a brush held down
+// where the mouse is on the terrain, for the Terrain tool's brush
+/** @type {Vector3|undefined} */
+let editor3DTerrainHover;
 // the cell the Blocks tool would change, for its outline: {cell, mode}
 /** @type {{cell: Vector3, mode: string}|undefined} */
 let editor3DBlockHover;
@@ -1172,7 +1300,7 @@ function editor3DSelectionCenter()
 function editor3DHandles()
 {
     const center = editor3DSelectionCenter(), tool = editor3DTool, handles = [];
-    if (!center || tool === 'select' || tool === 'blocks') return handles;
+    if (!center || tool === 'select' || tool === 'blocks' || tool === 'terrain') return handles;
     const length = editor3DScreenScale(center) * EDITOR3D_HANDLE_SIZE;
     const rotation = editor3DRotation(editor3DSelected()[0]).scale(PI / 180), frame = buildMatrix(vec3(), rotation);
     for (const axis of 'xyz')
@@ -1350,6 +1478,8 @@ function editor3DDragTo(drag, mouse, ray, snap)
 {
     if (drag.kind === 'blocks')
         return editor3DVoxelDragTo(drag, ray);
+    if (drag.kind === 'terrain')
+        return editor3DTerrainHover && editor3DTerrainSculpt(editor3DTerrainHover, drag.mode, editor3DSeconds);
     if (drag.kind === 'box')
     {
         drag.to = mouse.copy();
@@ -1515,6 +1645,7 @@ const editor3DKeys =
     KeyE: ()=> { editor3DTool = 'rotate'; },
     KeyR: ()=> { editor3DTool = 'scale'; },
     KeyB: ()=> { editor3DTool = 'blocks'; editor3DBrush = undefined; },
+    KeyT: ()=> { editor3DTool = 'terrain'; editor3DBrush = undefined; },
     KeyP: ()=> editor3DTool === 'blocks' && editor3DVoxelPick(render3D.screenToRay(mousePosScreen)),
     KeyG: ()=> { editor3DGrid = !editor3DGrid; },
     KeyF: ()=> editor3DFrame(),
@@ -1574,6 +1705,7 @@ function editor3DCameraUpdate(seconds, shift, alt)
 // the editor's update, called while it is open with the input readable and render3D looking through its camera
 function editor3DEditorUpdate(seconds)
 {
+    editor3DSeconds = seconds;
     const held = (...codes)=> codes.some((code)=> keyIsDown(code));
     const shift = held('ShiftLeft', 'ShiftRight'), alt = held('AltLeft', 'AltRight');
     const ctrl = held('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight');
@@ -1615,8 +1747,16 @@ function editor3DEditorUpdate(seconds)
     const mode = shift ? 'remove' : ctrl ? 'paint' : 'place';
     const target = painting && idle ? editor3DVoxelTarget(ray, mode) : undefined;
     editor3DBlockHover = target && {cell: target.cell, mode};
+    // the Terrain tool takes it while the level has a terrain: held down it raises the ground, Shift lowers,
+    // Ctrl smooths
+    const terrain = editor3DTool === 'terrain' ? editor3DTerrainMap() : undefined;
+    const reach = terrain && !cameraDrag && !editor3DMouseOnPanel ? terrain.raycast(ray) : undefined;
+    editor3DTerrainHover = reach === undefined ? undefined : ray.getPosition(reach);
     if (painting)
         idle && mouseWasPressed(0) && (editor3DDrag = editor3DVoxelPress(ray, mode));
+    else if (terrain)
+        idle && mouseWasPressed(0) && editor3DTerrainHover &&
+            (editor3DDrag = {kind: 'terrain', mode: shift ? 'lower' : ctrl ? 'smooth' : 'raise'});
     else if (idle && mouseWasPressed(0))
         editor3DPress(mouse, ray, shift);
 
@@ -1647,6 +1787,7 @@ const editor3DHelpLines =
     'Wheel: zoom · Middle drag or Space+drag: pan · Alt+drag: orbit · F: frame the selection',
     'Pick a type, then click to place it, Shift+click keeps placing',
     'B blocks: click or drag places · Shift removes · Ctrl repaints · P picks the type under the mouse',
+    'T terrain: hold to raise the ground · Shift lowers · Ctrl smooths · the brush is in the panel',
     'Delete · Ctrl+C / X / V: copy, cut, paste · Ctrl+D: duplicate · Ctrl+Z / Y: undo, redo',
     'Reset to file: the level as its file has it, Restart keeps your edits, Undo brings them back',
     'Esc: play and edit · 0: exit the editor · ?: keys',
@@ -1664,6 +1805,9 @@ function editor3DHint()
         return 'WASD and QE fly · Shift faster · the wheel sets the speed';
     if (editor3DBrush)
         return `Click to place a ${editor3DBrush} · Shift keeps placing · Q puts it down`;
+    if (editor3DTool === 'terrain')
+        return editor3DTerrainMap() ? 'Hold to raise the ground · Shift lowers · Ctrl smooths' :
+            'Add a terrain in the panel to sculpt it';
     if (editor3DTool === 'blocks')
         return editor3DVoxelMap() ? 'Click or drag places · Shift removes · Ctrl repaints · P picks a type' :
             'Add a block map in the panel to paint blocks';
@@ -1807,6 +1951,11 @@ function editor3DDraw()
         editor3DDrawWire(buildMatrix(map.pos3D.add(cell).add(vec3(.5)), undefined, vec3(1.02)),
             mode === 'place' ? hsl(0, 0, 1, .9) : mode === 'remove' ? hsl(0, 1, .6) : hsl(.15, 1, .6), 2.5);
     }
+    // the Terrain tool's brush, a ring on the ground
+    if (editor3DTool === 'terrain' && editor3DTerrainHover && editor3DTerrainMap())
+        editor3DDrawRing(editor3DTerrainHover.add(vec3(0, .05, 0)), EDITOR3D_AXES.x, EDITOR3D_AXES.z,
+            editor3DTerrainBrush.size / 2, hsl(0, 0, 1, .9), 2.5);
+
     // the map's edges, to see where it ends
     if (map)
         editor3DDrawWire(buildMatrix(map.pos3D.add(map.mapSize.scale(.5)), undefined, map.mapSize),
@@ -1940,11 +2089,11 @@ function editor3DPanelInit()
     // the tools, and the snapping
     const tools = row(), toolButtons = {};
     for (const [tool, text, key] of [['select', 'Select', 'Q'], ['move', 'Move', 'W'], ['rotate', 'Rotate', 'E'],
-        ['scale', 'Scale', 'R'], ['blocks', 'Blocks', 'B']])
+        ['scale', 'Scale', 'R'], ['blocks', 'Blocks', 'B'], ['terrain', 'Terrain', 'T']])
         toolButtons[tool] = button(tools, text, ()=>
         {
             editor3DTool = tool;
-            (tool === 'select' || tool === 'blocks') && (editor3DBrush = undefined);
+            (tool === 'select' || tool === 'blocks' || tool === 'terrain') && (editor3DBrush = undefined);
         }, key);
     const snap = editorElement('div', panel, box);
     const grid = check(snap, 'Grid snap', (on)=> editor3DGrid = on, 'G, and Ctrl flips it for a drag');
@@ -1962,6 +2111,9 @@ function editor3DPanelInit()
 
     // the Blocks tool's box: a map to add, or the types to paint with
     const blocks = editorElement('div', panel, box);
+
+    // the Terrain tool's box: a terrain to add, or the brush to sculpt with
+    const terrainBox = editorElement('div', panel, box);
 
     // the scene the level sets: its sky, sun, fog and shadows, or none, the game's own
     const scene = editorElement('div', panel, box);
@@ -1994,7 +2146,7 @@ function editor3DPanelInit()
     button(help, 'Close', ()=> editor3DHelp = false, '?');
 
     editor3DPanelParts = {restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, types,
-        properties, blocks, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
+        properties, blocks, terrainBox, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
 }
 
 // show the panel as the editor is now
@@ -2038,8 +2190,78 @@ function editor3DPanelUpdate()
     names.forEach((name, i)=> p.types.children[i].style.outline = name === editor3DBrush ? lit : '');
     editor3DPropertiesUpdate(p.properties);
     editor3DBlocksUpdate(p.blocks);
+    editor3DTerrainBoxUpdate(p.terrainBox);
     p.sceneOn.checked = !!editor3DScene();
     editor3DSceneUpdate(p.sceneRows);
+}
+
+// the terrain box, shown with the Terrain tool: without a terrain, its size, cells and height and a button to add
+// it; with one, the brush's size and strength, the terrain's color, and a button to take it away
+function editor3DTerrainBoxUpdate(box)
+{
+    const map = editor3DTerrainMap(), shown = editor3DTool === 'terrain';
+    box.style.display = shown ? '' : 'none';
+    if (!shown) return;
+    const terrain = editor3DLevelPart('terrain'), key = map ? 'terrain ' + terrain.color : 'none';
+    if (box.dataset.key === key || box.contains(document.activeElement)) return;
+    box.dataset.key = key;
+    box.replaceChildren();
+    const field = 'background:#222;color:#eee';
+    const line = (name, title='')=>
+    {
+        const row = editorElement('label', box, 'display:flex;gap:4px;align-items:center;margin:2px 0');
+        editorElement('span', row, 'flex:1', name);
+        row.title = title;
+        return row;
+    };
+    const number = (name, title, value, most)=>
+    {
+        const input = editorElement('input', line(name, title), field + ';width:60px');
+        input.type = 'number';
+        input.min = '1', input.max = most + '', input.step = '1';
+        input.value = value + '';
+        return input;
+    };
+    if (!map)
+    {
+        const size = number('Size', 'How far across it is in the world, each way', 64, 1024);
+        const cellsRow = line('Cells', 'How many cells a side, more is finer and slower to sculpt');
+        const cells = editorElement('select', cellsRow, field + ';width:68px');
+        for (const n of [32, 64, 128])
+            editorElement('option', cells, '', n + '').value = n + '';
+        cells.value = '64';
+        const height = number('Height', 'How tall its highest ground can be', 16, 1024);
+        const add = editorElement('button', box, 'width:100%;padding:3px;cursor:pointer', 'Add terrain');
+        add.title = 'A flat terrain, centered, its surface on the ground, to raise and dig';
+        add.onclick = ()=>
+        {
+            const read = (input, fallback)=> clamp(parseFloat(input.value) || fallback, 1, 1024);
+            editor3DTerrainAdd(vec2(read(size, 64)), parseInt(cells.value), read(height, 16));
+            add.blur();
+        };
+        return;
+    }
+    const slider = (name, title, min, max, step, value, set)=>
+    {
+        const input = editorElement('input', line(name, title), 'width:120px');
+        input.type = 'range';
+        input.min = min, input.max = max, input.step = step;
+        input.value = value + '';
+        input.oninput = ()=> set(parseFloat(input.value));
+        input.onchange = ()=> input.blur();
+    };
+    slider('Brush size', 'How far across the brush is', 1, 32, .5, editor3DTerrainBrush.size,
+        (v)=> editor3DTerrainBrush.size = v);
+    slider('Strength', 'How fast the brush works', .05, 1, .05, editor3DTerrainBrush.strength,
+        (v)=> editor3DTerrainBrush.strength = v);
+    const color = editorElement('input', line('Color'), field + ';width:60px');
+    color.type = 'color';
+    color.value = /^#[0-9a-f]{6}/i.test(terrain.color) ? terrain.color.slice(0, 7) : '#ffffff';
+    color.oninput = ()=> editor3DChangePart('terrain', (t)=> ({...t, color: color.value}));
+    color.onchange = ()=> { color.oninput(); editor3DStrokeEnd(); color.blur(); };
+    const remove = editorElement('button', box, 'margin-top:4px;padding:2px 6px;cursor:pointer', 'Remove terrain');
+    remove.title = 'Take the terrain out of the level, Undo brings it back';
+    remove.onclick = ()=> { editor3DTerrainRemove(); remove.blur(); };
 }
 
 // the blocks box, shown with the Blocks tool: without a map, its size and a button to add it; with one, a tile
