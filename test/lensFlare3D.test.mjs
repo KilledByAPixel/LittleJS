@@ -257,3 +257,24 @@ test('every shape has a tile in the flare texture, and a name that is not a shap
 {
     assert.deepEqual(json(load(), 'render3DFlareShapes'), ['glow', 'disc', 'ring', 'hex', 'streak', 'star']);
 });
+
+test('the flare of a persistent light stays with it through a scene change', ()=>
+{
+    const run = load();
+    run(`var lamp = new Light3D(vec3(0, 0, -10), 10); lamp.persistent = true; lamp.flare = true;
+        var made = lamp.flare, other = new Light3D(vec3(3, 0, -10), 10); other.flare = true; var gone = other.flare;
+        setScene({});`);
+    assert.deepEqual([run('made.destroyed'), run('lamp.flare === made'), run('engineObjects.includes(made)')],
+        [false, true, true]);
+    assert.deepEqual([run('other.destroyed'), run('gone.destroyed')], [true, true], 'a light that goes takes its flare');
+});
+
+test('a flare destroyed on its own is no longer the flare of its light, and true makes another', ()=>
+{
+    const run = load();
+    run('var lamp = new Light3D(vec3(0, 0, -10), 10); lamp.flare = true; var made = lamp.flare; made.destroy();');
+    assert.equal(run('lamp.flare'), undefined);
+    run('lamp.flare = true');
+    assert.deepEqual([run('lamp.flare instanceof LensFlare3D'), run('lamp.flare !== made'), run('lamp.flare.destroyed')],
+        [true, true, false]);
+});

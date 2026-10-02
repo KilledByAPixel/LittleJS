@@ -1750,8 +1750,9 @@ flare.visible                     // how much of the sun shows, 0 to 1, eased ov
                                   // see through hides it, flare.occlusion = false turns that off
 light.flare = true                // a Light3D's own flare: at the light, in its color, smaller from farther than
                                   // its radius, hidden by what is in front of it, a spotlight's only from inside
-                                  // its beam; light.flare is then its LensFlare3D, or set one of your own; false
-                                  // takes it away, and it goes with the light; a level's Light has flare too
+                                  // its beam; light.flare is then its LensFlare3D, the light's child, or set one
+                                  // of your own, as TypeScript must to change it; false takes it away, and it
+                                  // goes with the light; a level's Light has flare too
 flare.light = lamp                // the same by hand, a flare made on its own and pointed at a light
 // Trails - a ribbon through where the object has been, parent it to something that moves
 new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over

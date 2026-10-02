@@ -56,6 +56,7 @@ particleEffect3D('fire', vec3(), {flatten: true, emitRate: 30});
 
 // a level editor of the game's own: a class with the hooks as methods, and keys, buttons and tools added to it
 import { LevelEditor, levelEditor, setLevelEditor } from 'littlejsengine';
+import { Light3D, LensFlare3D, tile } from 'littlejsengine';
 class GameEditor extends LevelEditor
 {
     constructor()
@@ -85,3 +86,14 @@ class ServerEditor extends LevelEditor
     async onSave(text: string, fileName: string) { return text.length > 0 && fileName.length > 0; }
 }
 setLevelEditor(new ServerEditor);
+
+// a light's flare: the tag, and a flare changed before it is set, which is how strict TypeScript changes one
+const lamp = new Light3D(vec3(), 10);
+lamp.flare = true;
+lamp.flare = false;
+const lampFlare = new LensFlare3D(2, 3);
+lampFlare.shapes = ['hex'];
+lampFlare.elements = [{at: 1, size: vec2(.4, .1), color: hsl(0, 0, 1), tileInfo: tile(0), angle: 1}];
+lamp.flare = lampFlare;
+if (lamp.flare instanceof LensFlare3D)
+    lamp.flare.count = 5;

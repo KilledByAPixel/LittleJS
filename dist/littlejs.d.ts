@@ -9854,9 +9854,12 @@ declare module "littlejsengine" {
         flareObject: LensFlare3D | undefined;
         set flare(arg: boolean | LensFlare3D);
         /** The light's lens flare, undefined for none: set it to true for a flare made for it, or to a LensFlare3D of
-         *  your own, and to false to take it away; the flare is the light's, changed through light.flare.count and the
-         *  like, and destroyed with the light or when another takes its place; it reads back as the LensFlare3D, never
-         *  as true or false, which are in its type only since they can be set
+         *  your own, and to false to take it away
+         *  - The flare is the light's, changed through light.flare.count and the like: it is attached to the light as
+         *    its child, so it stays through a scene change when the light does, and is destroyed with the light or
+         *    when another takes its place
+         *  - It reads back as the LensFlare3D, never as true or false, which are in its type only since they can be
+         *    set; in TypeScript make the flare, change it, and set it: light.flare = new LensFlare3D(2, 3)
          *  @type {LensFlare3D|boolean|undefined} */
         get flare(): boolean | LensFlare3D;
     }
