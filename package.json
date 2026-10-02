@@ -38,8 +38,13 @@
     "src/",
     "plugins/",
     "!plugins/box2d.wasm.*",
+    "!src/engineBuild.mjs",
+    "!**/jsconfig.json",
+    "!**/*.bat",
     "COPYRIGHT.txt",
-    "FAQ.md"
+    "FAQ.md",
+    "REFERENCE.md",
+    "EDITOR.md"
   ],
   "scripts": {
     "build": "node src/engineBuild.mjs",

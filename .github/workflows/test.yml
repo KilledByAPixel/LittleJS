@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+# the job only reads the repo
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -21,7 +25,7 @@ jobs:
       # dist is committed, so fail a push whose bundles were not rebuilt from src;
       # only the concatenated bundles, which no floating tool version can change
       - name: Check the committed bundles match the source
-        run: git diff --exit-code -- dist/littlejs.js dist/littlejs.esm.js
+        run: git diff --exit-code -- dist/littlejs.js dist/littlejs.esm.js dist/littlejs.release.js
       - run: npm test
       # real WebGL in the runner's own Chrome, headless with the software renderer
       - run: npm run test:browser
