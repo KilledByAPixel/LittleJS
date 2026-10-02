@@ -129,7 +129,7 @@ const exampleList =
     new ExampleInfo('3D Instancing', 'render3dInstancing.js', 'Thousands of cubes in one draw call', false, 'instancing, batch, performance, InstancedMesh3D'),
     new ExampleInfo('3D Shaders', 'render3dShaders.js', 'Custom surface and lighting shaders', false, 'shader, Shader, lighting, toon'),
     new ExampleInfo('3D Level Editor', 'render3dLevelEditor.js', 'Place boxes, lights and coins, then walk around', false, 'debug, editor, level, level3DLoad, level3DAddType, handles, snap, free camera'),
-    new ExampleInfo('3D Prefab Maker', 'render3dPrefab.js', 'Build a prefab in the level editor, placed many times as you go', false, 'debug, editor, prefab, level3DAddPrefab, level3DSpawn, level3DLoadPrefab, reuse'),
+    new ExampleInfo('3D Prefab Maker', 'render3dPrefab.js', 'Build a prefab in the level editor and save it for a game to place', false, 'debug, editor, prefab, level3DAddPrefab, level3DLoadPrefab, reuse'),
     new ExampleInfo('3D Dodge Game', 'render3dDodgeGame.js', 'Dodge boxes tumbling in from every side', false, 'chase camera, shadows, sound'),
     new ExampleInfo('3D Racing Game', 'render3dRacingGame.js', 'Race laps around a hilly track', false, 'racing, terrain, chase camera'),
     new ExampleInfo('3D Puzzle Game', 'render3dPuzzleGame.js', 'Sokoban style block pushing puzzle', false, 'orthographic, picking, pads'),
