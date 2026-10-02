@@ -1,13 +1,14 @@
 function gameUpdate()
 {
-    touchGamepadEnable = true;
+    // show the touch gamepad, and let touches outside it move the mouse
+    touchGamepadEnable = touchGamepadPassthrough = true;
     if (isTouchDevice || isUsingGamepad)
     {
         if (isTouchDevice)
         {
             debugText('Touch Gamepad Mode', vec2(0,5));
 
-            // touch input is routed to mouse
+            // a touch outside the gamepad is the mouse
             debugPoint(mousePos, mouseIsDown(0) ? RED : YELLOW, 1);
         }
         else
@@ -68,7 +69,8 @@ Shows what the engine reads from the keyboard, the mouse and a gamepad.
 With a mouse and keyboard: hold Space, hold the arrow keys or WASD, move
 the mouse and press its buttons. Press a button on a gamepad and the
 view changes to its two sticks and sixteen buttons. A touch device gets
-the gamepad view too, for the engine's on screen gamepad.
+the gamepad view too, for the engine's on screen gamepad, and a point
+that follows a touch outside it.
 
 ## How it works
 All of it is in `gameUpdate`, which runs 60 times a second. Input in
@@ -86,7 +88,10 @@ anything it means to ship.
 `isUsingGamepad` is true while a gamepad is the device used last, and
 `isTouchDevice` is true on a device with a touch screen. Setting
 `touchGamepadEnable` turns on the on screen gamepad for touch devices,
-which is then read with the same gamepad functions.
+which is then read with the same gamepad functions. While it is on,
+touches no longer move the mouse, unless `touchGamepadPassthrough` is
+set too: then a touch outside the gamepad's controls is the mouse, as
+it is with no gamepad showing.
 
 ### Gamepad
 - `gamepadStick(i)` returns stick `i` as a vector, y up, its length from

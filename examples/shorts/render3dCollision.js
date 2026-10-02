@@ -47,7 +47,7 @@ function gameInit()
     render3D.gravity.y = -.01;
     new CameraControl3D(vec3(0,1,0), 16, .5, .002);
 
-    // checkerboard floor, built before smooth shading is enabled
+    // checkerboard floor
     const checker = (x, z)=> hsl(0, 0, (x+z)/2&1 ? .5 : .4);
     new EngineObject3D(vec3(), buildGrid(vec2(arenaSize.x), 8, checker));
     render3D.smoothShading = true;

@@ -97,7 +97,7 @@ function gameInit()
     tempoSlider.onChange = ()=>
     {
         tempo = lerp(minTempo, maxTempo, tempoSlider.value);
-        tempo = floor(tempo/10) * 10; // round to nearest 10th
+        tempo = floor(tempo/10) * 10; // round down to a multiple of 10
         tempoSlider.text = `${tempo} BPM`;
     };
     tempoSlider.onChange();

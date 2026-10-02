@@ -37,7 +37,7 @@ function gameUpdate()
         if (rand() < .1)
         {
             trackWidth = randInt(2, 5);
-            trackX = randInt(0, 7-trackWidth);
+            trackX = randInt(8-trackWidth);
         }
         trackGap--;
 
@@ -144,7 +144,7 @@ the track is made as it is needed and never ends.
 - About the first 30 rows are full, a safe place to start.
 - After that a row is track from `trackX` for `trackWidth` cells. Each
   row has one chance in ten to pick a new width of 2 to 4 and a new
-  place for it.
+  place for it, anywhere it fits in the 7 cells.
 - `trackGap` counts down by one each row and a row is only track while
   it is below 0. Setting it to 2, 3 or 4 makes a gap that many rows
   long, and a new gap needs it to be below -8 first, so gaps are never

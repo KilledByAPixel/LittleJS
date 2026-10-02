@@ -8,7 +8,7 @@ function gameRender()
     let s = '';
     for (let i=32; i<128; ++i)
     {
-        if (i%32 == 0)
+        if (i > 32 && i%32 == 0)
             s += '\n';
         s += String.fromCharCode(i);
     }
@@ -35,9 +35,8 @@ breaks are centered around it too.
 
 The loop builds one string of all the characters.
 `String.fromCharCode(i)` is the character with code `i`, and a `'\n'`
-goes in whenever `i` is a multiple of 32, which gives rows of 32
-characters. The first one goes in at 32, so the text starts with an
-empty line. A character with a code outside 32 to 127 is drawn as the
+goes in whenever `i` is a multiple of 32 after the first, which gives
+rows of 32 characters. A character with a code outside 32 to 127 is drawn as the
 font's last one.
 
 A font of your own is `new ImageFont(tileInfo)`, where the tile is the

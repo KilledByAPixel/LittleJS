@@ -3,8 +3,6 @@ class Player extends EngineObject
     constructor(pos)
     {
         super(pos, vec2(2), tile(9), 0, RED);
-        this.damping = 1; // disable damping
-        this.clampSpeed = false; // disable speed clamping
     }
 
     update()
@@ -81,11 +79,10 @@ drawing ask this function, so they always agree.
 
 ### Player
 The bird is tile 9 of the tile sheet, tinted `RED`, two units across.
-It never calls `setCollision`. `damping = 1` has it keep all of its
-velocity each frame, and `clampSpeed = false` asks the engine not to
-hold its speed to `objectMaxSpeed`. Both only say what is already so
-here: 1 is the default `damping`, and the engine puts that limit on
-colliding objects only.
+It never calls `setCollision`, so the engine's own collision leaves it
+alone and the code below does the landing. It keeps all of its velocity
+each frame, since `damping` is 1 by default, and no top speed is put on
+it, since the engine limits the speed of colliding objects only.
 
 The engine has already moved the bird by its velocity and added gravity
 when `update` runs:

@@ -5,7 +5,6 @@ function gameInit()
     uiSystem.defaultCornerRadius = 10;
     uiSystem.defaultShadowColor = BLACK;
     canvasClearColor = hsl(.05,.5,.2);
-    touchGamepadEnable = 1;
 
     // create buttons to demo vibrate() and gamepadVibrate()
     const w = 320, h = 80, gap = 20;
@@ -41,8 +40,8 @@ function gameInit()
 
 /* info
 Six buttons that make things shake: two vibrate the device, as a phone
-can, three rumble a gamepad, and the last stops everything. Click a
-button. Nothing happens where there is no hardware for it, so the
+can, three rumble a gamepad, and the last stops everything. Click or
+tap a button. Nothing happens where there is no hardware for it, so the
 device buttons need a phone and the gamepad ones a connected gamepad
 that can rumble.
 
@@ -72,9 +71,6 @@ takes the number of the gamepad, here 0, a time in milliseconds, and
 how hard to run each of the two motors, from 0 to 1. The strong motor is
 usually the left one and the weak motor the right. The three buttons run
 one, the other, and both. `gamepadVibrateStop(0)` stops gamepad 0.
-
-`touchGamepadEnable` turns on the engine's on screen gamepad for touch
-devices.
 
 ## Try it
 - Change `vibrate(200)` to `vibrate(1000)` for a full second.

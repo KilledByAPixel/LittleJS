@@ -99,7 +99,7 @@ function gameRenderPost()
 }
 
 /* info
-Every tween feature in rows: a property, a callback, a chain, loop,
+Tween features in rows: a property, a callback, a chain, loop,
 pingPong, easing curves, real time, Vector2 and Color. Press P to pause;
 the real time row keeps moving.
 

@@ -65,8 +65,10 @@ function gameInit()
             tree(x, h+1, z);
     }
 
-    player = new FirstPersonCamera3D(vec3(25, 9, 25));
+    // the player starts on a hill, and wades through water
+    player = new FirstPersonCamera3D(vec3(11, 12, 44));
     player.setCollision();
+    player.collideWithVoxel = (type)=> type != 6;
     player.size3D = vec3(.5, 1.5, .5);
     player.jumpSpeed = .2;
     player.eyeHeight = .6; // near the top of the body
@@ -157,8 +159,10 @@ leaves around the top, only into empty cells, which `getVoxel` tells.
 ### The player
 `FirstPersonCamera3D` is a camera that is also an object with a mass.
 `setCollision()` and a `size3D` give it a body half a unit wide and 1.5
-tall, which every block stops, water too, and `render3D.gravity` pulls
-it down.
+tall, and `render3D.gravity` pulls it down. It starts above a hill and
+drops onto it. The map asks an object's `collideWithVoxel(type)` whether
+a block stops it, and the player's says every type but 6, water, so it
+wades through water and stands on the bottom.
 `jumpSpeed` is the upward speed space gives it while it stands on
 something, and `eyeHeight` puts the eye .6 above the body's middle.
 
@@ -184,9 +188,9 @@ bigger than the block being looked at. `setDrawScreenSpace(true)` makes
 - Set `player.jumpSpeed` to `.35` to jump about six blocks high.
 - Reach farther: `map.raycast(ray, 6,` to `map.raycast(ray, 20,`.
 - Start with glass selected: `selected = 1` to `selected = 7`.
+- Walk on water: change `type != 6` to `true`.
 
 ## See also
 3D First Person uses the same camera in a maze of solid objects, and 3D
-Height Map is the other kind of level. To let an object pass through
-some blocks, like water, look up `collideWithVoxel`.
+Height Map is the other kind of level.
 */

@@ -19,8 +19,8 @@ class Player extends EngineObject
     // explode when it collides
     collideWithObject()
     {
-        // don't explode if player is almost still and not tilted
-        if (abs(this.angle) < .2)
+        // don't explode if player is almost still and pointing up
+        if (cos(this.angle) > .98)
         if (this.velocity.length() < .05)
             return true;
 
@@ -81,9 +81,11 @@ falling speed have no such loss: `damping` is 1 unless it is set.
 ### Landing or crashing
 The engine calls `collideWithObject` when the ship touches a solid
 object, and the answer says whether the physics should stop it there.
-The ship is safe when its angle is within .2 radians of upright, about
-11 degrees, and its speed is below .05 units a frame, 3 units a second.
-Then the method returns `true` and the ship rests on the ground.
+The ship is safe when it points up and is slow. `cos(this.angle)` is 1
+when it points straight up, however many times it has turned around,
+and above .98 it is within about .2 radians, 11 degrees, of that. Slow
+is a speed below .05 units a frame, 3 units a second. Then the method
+returns `true` and the ship rests on the ground.
 
 Otherwise the ship destroys itself and `particleEffect('explosion',
 ...)` makes a one-shot burst at its position, 1.5 times the size the

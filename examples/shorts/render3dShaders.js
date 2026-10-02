@@ -30,6 +30,7 @@ function gameInit()
     render3D.setSky(hsl(.6,.5,.4), hsl(.6,.5,.8));
     render3D.ambientColor = hsl(.6,.3,.3);
     render3D.shadows = true;
+    render3D.sunDirection = vec3(.3, 1, -2); // low, behind the wall
     render3D.smoothShading = true;
     new CameraControl3D(vec3(0,1,0), 14, .3, .003);
 
@@ -126,8 +127,10 @@ child of the ring it turns with it.
 ### The scene
 `render3D.smoothShading = true` makes the builders after it give smooth
 normals. `buildSphere(3)` is 3 units across, and `buildTorus(3, 1)` is
-3 across with a tube 1 thick. The wall is a plain box behind the two,
-and the `Light3D` is the one the toon shader reads as `lights[0]`.
+3 across with a tube 1 thick. `render3D.sunDirection` points toward the
+sun, here low and behind the wall, so the wall's shadow falls across
+the floor and the two objects. The `Light3D` is the one the toon shader
+reads as `lights[0]`.
 `gameUpdate` turns every object that has a `shader` by setting the yaw
 of its `rotation3D` from `time`.
 

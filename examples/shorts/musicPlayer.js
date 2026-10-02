@@ -105,9 +105,9 @@ function gameUpdate()
 {
     // disable buttons while loading
     const isDisabled = !musicSound || !musicSound.isLoaded();
-    playButton.disabled  = isDisabled
-    stopButton.disabled  = isDisabled
-    progressBar.disabled = isDisabled
+    playButton.disabled  = isDisabled;
+    stopButton.disabled  = isDisabled;
+    progressBar.disabled = isDisabled;
 
     // update ui
     if (!musicSound)

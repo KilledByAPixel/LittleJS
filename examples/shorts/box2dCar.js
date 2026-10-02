@@ -6,7 +6,7 @@ async function gameInit()
 
     // create edge list for ground
     const edgePoints = [];
-    for (let i=0, y=0, s=0; i<1e3; ++i)
+    for (let i=0, y=0; i<1e3; ++i)
     {   
         y = clamp(y+rand(-1,1),0,5);
         edgePoints.push(vec2(i*5-15, y-8));

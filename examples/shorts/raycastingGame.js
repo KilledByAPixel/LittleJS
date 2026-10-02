@@ -9,7 +9,7 @@ function gameUpdate()
     if (mouseWasPressed(0))
         pointerLockRequest();
     if (keyWasPressed('Escape'))
-        pointerLockExit()
+        pointerLockExit();
     if (pointerLockIsActive() || isTouchDevice)
         playerAngle += mouseDelta.x * .03;
 
@@ -73,7 +73,7 @@ function gameRender()
             size.y = .5/d;
             color.setHSLA(.6, 1-d, .7-d+l*.3);
 
-            // draw the section the wall
+            // draw the section of the wall
             drawTile(pos, size, tileInfo, color);
         }
     }

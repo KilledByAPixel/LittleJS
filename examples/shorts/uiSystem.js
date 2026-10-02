@@ -25,7 +25,7 @@ function gameInit()
     checkbox.onChange = ()=> button1.disabled = checkbox.checked;
     uiMenu.addChild(checkbox);
 
-    // example button
+    // example text input
     const textInput = new UITextInput(vec2(50,0), vec2(300, 80), 'Text Input');
     textInput.textHeight = 60;
     textInput.maxLength = 16;
