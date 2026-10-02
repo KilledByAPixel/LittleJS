@@ -720,7 +720,13 @@ tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw
                                                     // of the layer that gets collision, no tile when no image is loaded
                                                     // Load tile layers from exported data, Tiled flips and turns included;
                                                     // groups are flattened and layer indices count that flat list,
-                                                    // hidden layers load with collision but are not drawn
+                                                    // hidden layers load with collision but are not drawn; a
+                                                    // tileset in the map with a margin or spacing is read where
+                                                    // its tiles are
+tileLayersFromLDtk(ldtk, level=0)                   // A Tiled map of an LDtk level, by index or identifier, to give
+                                                    // tileLayersLoad and objectLayersLoad: its layers bottom first, an
+                                                    // IntGrid layer with no tiles a hidden layer for collision, its
+                                                    // entities objects with their fields as properties
 objectLayersAddType(name, make, defaults={}, tileInfo) // Name a type of object in a Tiled map: a class made
                                                     // with new make(pos), or an arrow function called make(pos),
                                                     // defaults set on what it made; tileInfo is an editor icon

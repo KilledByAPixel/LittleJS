@@ -128,6 +128,10 @@ const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [
  * Load tile layers from exported data
  * - Tiled maps come in as they are, flipped and turned tiles included, from one tileset image (a second tileset's
  *   tiles continue its numbering), finite maps in the CSV or array layer format; layer offsets and parallax are not read
+ * - A tileset kept in the map with a margin or a spacing, a sheet with gaps between its tiles, is read where its
+ *   tiles are, whatever padding the tile info has; one in a file of its own (a tsx) is not read, pass a tile info
+ *   with its padding
+ * - An LDtk level loads through tileLayersFromLDtk, which makes it a map like these
  * - Group layers are flattened in order, each replaced by the layers inside it, so the layer indices
  *   (collisionLayer and the returned array) count that flattened list; a group's tint, opacity and
  *   visibility carry to the layers inside it
@@ -159,6 +163,18 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     // validate the tile map data
     ASSERT(tileMapData.width && tileMapData.height);
     ASSERT(tileMapData.layers && tileMapData.layers.length);
+
+    // a sheet with a margin around its tiles or a spacing between them: the first tile is at the margin and each
+    // cell is a tile and a spacing, which is a padding of half the spacing counted from there, by the tileset's
+    // own count of columns, since the image's width does not say with a spacing that is not all around
+    const tileset = tileMapData.tilesets?.[0];
+    if (tileInfo && tileset && (tileset.margin > 0 || tileset.spacing > 0))
+    {
+        const margin = tileset.margin || 0, spacing = tileset.spacing || 0, size = tileInfo.size;
+        const width = tileInfo.textureInfo?.size.x || 0;
+        const columns = tileset.columns || max(1, floor((width - margin*2 + spacing) / (size.x + spacing)));
+        tileInfo = new TileInfo(vec2(margin), size, tileInfo.textureInfo, spacing / 2, tileInfo.bleed, columns);
+    }
 
     // flatten group layers in order, a group's color and visibility carry to the layers inside it
     /** @type {Array<{dataLayer: Object, color?: Color, visible?: boolean}>} */
@@ -236,6 +252,101 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
 // a color as Tiled writes it, #AARRGGBB, or #RRGGBB
 function tileLayersColor(hex)
 { return new Color().setHex(hex.length === 9 ? '#' + hex.slice(3) + hex.slice(1, 3) : hex); }
+
+// the Tiled property type of an LDtk field type, for the ones Tiled has a property for
+const tileLayersLDtkTypes = {Int: 'int', Float: 'float', Bool: 'bool', String: 'string', Multilines: 'string',
+    Color: 'color', FilePath: 'file'};
+
+/**
+ * Make a Tiled map of a level of an LDtk project, to load with tileLayersLoad and objectLayersLoad
+ * - Each Tiles, AutoLayer and IntGrid layer is a tile layer, the bottom one first as in Tiled, so the last layer
+ *   of the LDtk file is layer 0; where LDtk stacks tiles in a cell the top one is kept
+ * - An IntGrid layer with no tiles is a hidden layer of its values, for collision: pass its index as collisionLayer
+ * - An Entities layer is an object layer: an entity's name is its type for objectLayersAddType, it is placed at
+ *   its middle, and its Int, Float, Bool, String, Color and FilePath fields are its properties (an enum is a string)
+ * - The tileset is the first tile layer's, with its padding and spacing; give tileLayersLoad a tile info of its image
+ * - The level is in the project file (not saved as separate level files), its layers of one grid size; a layer of
+ *   another grid size or another tileset is left out, with a warning in debug builds
+ * - The level editor edits the map this returns, and saves it as a Tiled map
+ * @param {Object} ldtk - The LDtk project, its JSON
+ * @param {number|string} [level] - Which level, by its index or its identifier
+ * @return {Object} - A Tiled map: width, height, tilewidth, tileheight, tilesets and layers
+ * @example
+ * const map = tileLayersFromLDtk(await fetchJSON('world.ldtk'), 'Level_0');
+ * const layers = tileLayersLoad(map, tile(0, 16), 0, 1); // layer 1 is solid
+ * objectLayersLoad(map);
+ * @memberof TileLayers */
+function tileLayersFromLDtk(ldtk, level=0)
+{
+    const levels = ldtk?.levels || [];
+    const data = typeof level === 'string' ? levels.find((l)=> l.identifier === level) : levels[level];
+    ASSERT(data, 'LDtk level not found', level);
+    ASSERT(isArray(data.layerInstances), 'LDtk level has no layers: levels saved as separate files are not read');
+    const instances = data.layerInstances;
+    const tiled = (l)=> l.__type !== 'Entities';
+    const first = instances.find((l)=> tiled(l) && l.__tilesetDefUid != undefined) || instances.find(tiled) || instances[0];
+    const grid = first?.__gridSize || 16;
+    const width = first?.__cWid || ceil(data.pxWid / grid), height = first?.__cHei || ceil(data.pxHei / grid);
+    const map = {width, height, tilewidth: grid, tileheight: grid, orientation: 'orthogonal', renderorder: 'right-down',
+        infinite: false, layers: [], nextlayerid: 1, nextobjectid: 1};
+
+    // the tileset of the first layer that has one, where its tiles are in its image
+    const tileset = (ldtk.defs?.tilesets || []).find((t)=> t.uid === first?.__tilesetDefUid);
+    if (tileset)
+        map.tilesets = [{firstgid: 1, name: String(tileset.relPath || '').replace(/^.*[\\/]/, '').replace(/\.\w+$/, ''),
+            image: tileset.relPath, imagewidth: tileset.pxWid, imageheight: tileset.pxHei,
+            tilewidth: tileset.tileGridSize, tileheight: tileset.tileGridSize, margin: tileset.padding || 0,
+            spacing: tileset.spacing || 0, columns: tileset.__cWid, tilecount: tileset.__cWid * tileset.__cHei}];
+
+    // LDtk lists the top layer first, Tiled the bottom one
+    for (let i = instances.length; i--;)
+    {
+        const instance = instances[i], name = instance.__identifier, id = map.nextlayerid++;
+        if (!tiled(instance))
+        {
+            const objects = (instance.entityInstances || []).map((entity)=>
+            {
+                // an entity is placed by its pivot, an object here by its middle
+                const [pivotX=0, pivotY=0] = entity.__pivot || [], w = entity.width || 0, h = entity.height || 0;
+                const properties = [];
+                for (const field of entity.fieldInstances || [])
+                {
+                    const type = tileLayersLDtkTypes[field.__type] || (/^(Local|Extern)Enum\./.test(field.__type) && 'string');
+                    type && field.__value != undefined && properties.push({name: field.__identifier, type, value: field.__value});
+                }
+                return {id: map.nextobjectid++, name: '', type: entity.__identifier, x: entity.px[0] + (.5 - pivotX) * w,
+                    y: entity.px[1] + (.5 - pivotY) * h, width: w, height: h, rotation: 0, visible: true, properties};
+            });
+            map.layers.push({id, name, type: 'objectgroup', objects, opacity: 1, visible: true, x: 0, y: 0});
+            continue;
+        }
+        const tiles = [...(instance.autoLayerTiles || []), ...(instance.gridTiles || [])];
+        const usable = instance.__gridSize === grid && instance.__cWid === width && instance.__cHei === height &&
+            (!tiles.length || instance.__tilesetDefUid === tileset?.uid);
+        if (!usable)
+        {
+            debug && console.warn(`tileLayersFromLDtk: layer ${name} has another grid or tileset, left out`);
+            continue;
+        }
+        const layerData = new Array(width * height).fill(0);
+        if (tiles.length)
+        {
+            // a tile's place in pixels, its tile in the sheet, and its flips: bit 0 across, bit 1 down, which are
+            // Tiled's two top bits; a later tile in a cell is drawn over an earlier one, so it is the one kept
+            for (const t of tiles)
+            {
+                const x = floor(t.px[0] / grid), y = floor(t.px[1] / grid);
+                if (x >= 0 && x < width && y >= 0 && y < height)
+                    layerData[x + y * width] = (t.t + 1 | (t.f & 1 ? 0x80000000 : 0) | (t.f & 2 ? 0x40000000 : 0)) >>> 0;
+            }
+        }
+        else
+            (instance.intGridCsv || []).forEach((value, k)=> k < layerData.length && (layerData[k] = value));
+        map.layers.push({id, name, type: 'tilelayer', width, height, data: layerData, opacity: instance.__opacity ?? 1,
+            visible: instance.__type === 'IntGrid' && !tiles.length ? false : instance.visible !== false, x: 0, y: 0});
+    }
+    return map;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Object layers

@@ -11,6 +11,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Lens flares have three more shapes, `hex`, `streak` and `star`; `flare.shapes` says what the ghosts are picked from, and `glowSize` and `ghostSize` scale its parts; an element may be a tile of the game's own (`tileInfo`), turned (`angle`) and wider than tall
 - A `DirectionalLight3D` can have a lens flare, far away where it shines from like the sun's
 - 3D picking is triangle accurate: `render3D.pick`, `engineObjectsRaycast3D` and clicks in the 3D level editor hit a mesh on its triangles, not the box around it
+- LDtk levels load: `tileLayersFromLDtk(ldtk, level)` makes a level of an LDtk project a Tiled map for `tileLayersLoad` and `objectLayersLoad`, with its tile, auto and IntGrid layers, its entities as objects and their fields as properties
+- A Tiled tileset with a margin or a spacing, a sheet with gaps between its tiles, is read where its tiles are
 - The 3D Example has lens flares, on the sun and on each orb
 - CHANGELOG.md, and the site's root goes to the example browser
 

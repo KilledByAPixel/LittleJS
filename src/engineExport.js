@@ -419,6 +419,7 @@ export
     tileCollisionTest,
     tileCollisionRaycast,
     tileLayersLoad,
+    tileLayersFromLDtk,
     objectLayersAddType,
     objectLayersLoad,
     TileLayerData,
