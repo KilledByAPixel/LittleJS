@@ -5,25 +5,40 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.24.0 - 2026-10-02
+
+### New Demos
+
+- [3D Lens Flare](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Lens%20Flare) - Now with hexagons, and flares on lamps as well as the sun
+- [Text](https://killedbyapixel.github.io/LittleJS/examples/?example=Text) - What drawText can do: sizes, outlines, alignment, fonts, rows and text placed in pixels
+- [Physics](https://killedbyapixel.github.io/LittleJS/examples/?example=Physics) - The engine's own objects falling, bouncing, sliding and floating, and a sensor
+- [Random](https://killedbyapixel.github.io/LittleJS/examples/?example=Random) - Random numbers, and a seeded generator that gives the same result every time
+
 ### New Changes
 
-- A `Light3D` gets a lens flare of its own with `light.addFlare()`, which returns it; `light.flare` is the flare, and it goes with the light. A level's Light has a `lensFlare` property, and a level's scene block has `lensFlare` for the sun's, both in the 3D level editor
-- Lens flares have three more shapes, `hex`, `streak` and `star`; `flare.shapes` says what the ghosts are picked from, and `glowSize` and `ghostSize` scale its parts; an element may be a tile of the game's own (`tileInfo`), turned (`angle`) and wider than tall
-- A `DirectionalLight3D` can have a lens flare, far away where it shines from like the sun's
+- Every short example has a write-up in the example browser: what it shows, how its code works, things to try in the editor and where to look next, with links to the docs and to other examples
+- Lens flares on lights: `light.addFlare()` gives a `Light3D` a lens flare of its own and returns it, `light.flare` is the flare, and it goes with the light; a `DirectionalLight3D` can have one too, far away like the sun's
+- Lens flares in the 3D level editor: a level's Light has a `lensFlare` property, and the Scene box has a Lens flare checkbox for the sun's, saved in the level's scene block
+- Lens flares have three more shapes, `hex`, `streak` and `star`; `flare.shapes` says what the ghosts are picked from, `glowSize` and `ghostSize` scale its parts, and an element may be a tile of the game's own (`tileInfo`), turned (`angle`) and wider than tall
 - 3D picking is triangle accurate: `render3D.pick`, `engineObjectsRaycast3D` and clicks in the 3D level editor hit a mesh on its triangles, not the box around it
 - LDtk levels load: `tileLayersFromLDtk(ldtk, level)` makes a level of an LDtk project a Tiled map for `tileLayersLoad` and `objectLayersLoad`, with its tile, auto and IntGrid layers, its entities as objects and their fields as properties
 - A Tiled tileset with a margin or a spacing, a sheet with gaps between its tiles, is read where its tiles are
 - The 3D Example has lens flares, on the sun and on each orb
-- CHANGELOG.md, and the site's root goes to the example browser
+- CHANGELOG.md lists what changed in each release, and the site's root goes to the example browser
 
 ### Breaking Changes
 
+- ZzFXM, the tracker music plugin, is removed: it was made for the js13k size limit. A game with a song in that format includes ZzFXM itself and hands its samples to a `Sound`
 - 3D picking hits only the faces that are drawn: a mesh seen from inside is no longer hit unless it is `doubleSided`
 - `LensFlare3D`: `getSunScreenPos` is now `getScreenPos` and `isSunHidden` is now `isHidden`, since a flare may be a light's; `visible` is 0 while the sun is off the screen; a flare pointed at a light is destroyed with it
+- The repository's `dist/` is now the last release, not the latest source: it is committed only for a release, and the site is built from the source
 
 ### Fixes
 
 - A lens flare that is off the screen, or of a light that is off, no longer looks for what hides it every frame
+- Shorts: the lander lands upright after a full turn, the maze reaches its top row and works at even sizes, a pocketed cue ball comes back, the 3D Voxels player floats in water, and more that writing them up turned up
 
 ## 1.23.1 - 2026-10-02
 

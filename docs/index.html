@@ -18,7 +18,7 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <body>
 <header class="top">
 <button class="menu" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.23.1</span></a>
+<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.24.0</span></a>
 <nav class="links"><a href="https://github.com/KilledByAPixel/LittleJS">GitHub</a><a href="https://killedbyapixel.github.io/LittleJS/examples/">Examples</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">Reference</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">FAQ</a></nav>
 <div class="search"><input type="search" placeholder="Search" aria-label="Search"><ul class="results" hidden></ul></div>
 <button class="theme" aria-label="Toggle theme"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.4A6 6 0 0 1 12 3z" fill="currentColor"/></svg></button>
@@ -42,7 +42,7 @@ The code is very clean and well documented with many examples to get you started
 <h3 id="%F0%9F%9A%80-join-the-littlejs-game-jam">🚀 <a href="https://itch.io/jam/littlejs-jam">Join the LittleJS Game Jam</a></h3>
 <p><em>The Third Annual LittleJS Game Jam will take place from Oct 2 to Nov 2! Unleash your creativity and develop amazing games using the LittleJS game engine.</em></p>
 <div align='center' markdown='1'>
-<h2 id="demos-%7C-arcade-%7C-docs-%7C-faq-%7C-trailer-%7C-discord-%7C-ai"><a href="https://killedbyapixel.github.io/LittleJS/examples">Demos</a> | <a href="https://killedbyapixel.github.io/LittleJSArcade">Arcade</a> | <a href="https://killedbyapixel.github.io/LittleJS/docs">Docs</a> | <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">FAQ</a> | <a href="https://youtu.be/chuBzGjv7Ms">Trailer</a> | <a href="https://discord.gg/zb7hcGkyZe">Discord</a>  | <a href="https://github.com/KilledByAPixel/LittleJS-AI">AI</a></h2>
+<h2 id="demos-%7C-arcade-%7C-docs-%7C-reference-%7C-faq-%7C-trailer-%7C-discord-%7C-ai"><a href="https://killedbyapixel.github.io/LittleJS/examples">Demos</a> | <a href="https://killedbyapixel.github.io/LittleJSArcade">Arcade</a> | <a href="https://killedbyapixel.github.io/LittleJS/docs">Docs</a> | <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">Reference</a> | <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">FAQ</a> | <a href="https://youtu.be/chuBzGjv7Ms">Trailer</a> | <a href="https://discord.gg/zb7hcGkyZe">Discord</a>  | <a href="https://github.com/KilledByAPixel/LittleJS-AI">AI</a></h2>
 </div>
 <p><img src="examples/screenshot.jpg" alt="LittleJS Screenshot1"></p>
 <p><img src="examples/screenshot2.jpg" alt="LittleJS Screenshot2"></p>
@@ -142,9 +142,10 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 <li><a href="https://youtu.be/_dXKU0WgAj8">Making Awesome Games With LittleJS</a> - A short talk about LittleJS with some tips on how to use it</li>
 <li><a href="https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial">Tutorial: Breakout</a> - Learn how to make a simple game from scratch</li>
 <li><a href="https://eoinmcgrath.com/little-ski/tutorial.html">Tutorial: Make a ski game</a> - A tutorial by eoinmcg that shows how to make a pixel art style game</li>
-<li><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">LittleJS Quick Reference Sheet</a> - A reference sheet to help you get started</li>
+<li><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">LittleJS Quick Reference Sheet</a> - The whole API in one file, made to be read by people and by AI coding tools</li>
 <li><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/EDITOR.md">Making Your Own Level Editor</a> - How to turn the built in 2D and 3D level editors into an editor for your own game</li>
 <li><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">LittleJS FAQ</a> - Answers to common questions about LittleJS</li>
+<li><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/CHANGELOG.md">Changelog</a> - What changed in each release</li>
 <li><a href="https://github.com/KilledByAPixel/LittleJS/tree/js13k">JS13k Branch</a> - A special branch for size coding events that builds to a 7KB zip</li>
 </ul>
 <h2 id="examples">Examples</h2>
@@ -233,7 +234,7 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 <p><img src="examples/favicon.png" alt="LittleJS pixel-art favicon"></p></article>
 <footer><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></footer>
 </main>
-<aside class="outline"><h3>On this page</h3><ul><li class="d0"><a href="#%F0%9F%9A%82-all-aboard!">🚂 All Aboard!</a></li><li class="d1"><a href="#%F0%9F%9A%80-join-the-littlejs-game-jam">🚀 Join the LittleJS Game Jam</a></li><li class="d0"><a href="#demos-%7C-arcade-%7C-docs-%7C-faq-%7C-trailer-%7C-discord-%7C-ai">Demos | Arcade | Docs | FAQ | Trailer | Discord  | AI</a></li><li class="d0"><a href="#littlejs-features">LittleJS Features</a></li><li class="d1"><a href="#%E2%9C%A8-graphics">✨ Graphics</a></li><li class="d1"><a href="#%F0%9F%A7%8A-littlejs-3d">🧊 LittleJS 3D</a></li><li class="d1"><a href="#%F0%9F%94%8A-audio">🔊 Audio</a></li><li class="d1"><a href="#%F0%9F%8E%AE-input">🎮 Input</a></li><li class="d1"><a href="#%F0%9F%92%A5-physics">💥 Physics</a></li><li class="d1"><a href="#%F0%9F%9A%80-flexibility">🚀 Flexibility</a></li><li class="d1"><a href="#%F0%9F%9B%A0%EF%B8%8F-developer-tools">🛠️ Developer Tools</a></li><li class="d1"><a href="#%F0%9F%A4%96-ai-friendly">🤖 AI Friendly</a></li><li class="d0"><a href="#how-to-use-littlejs">How To Use LittleJS</a></li><li class="d0"><a href="#tutorials">Tutorials</a></li><li class="d0"><a href="#examples">Examples</a></li><li class="d0"><a href="#builds">Builds</a></li><li class="d0"><a href="#games-made-with-littlejs">Games Made With LittleJS</a></li></ul></aside>
+<aside class="outline"><h3>On this page</h3><ul><li class="d0"><a href="#%F0%9F%9A%82-all-aboard!">🚂 All Aboard!</a></li><li class="d1"><a href="#%F0%9F%9A%80-join-the-littlejs-game-jam">🚀 Join the LittleJS Game Jam</a></li><li class="d0"><a href="#demos-%7C-arcade-%7C-docs-%7C-reference-%7C-faq-%7C-trailer-%7C-discord-%7C-ai">Demos | Arcade | Docs | Reference | FAQ | Trailer | Discord  | AI</a></li><li class="d0"><a href="#littlejs-features">LittleJS Features</a></li><li class="d1"><a href="#%E2%9C%A8-graphics">✨ Graphics</a></li><li class="d1"><a href="#%F0%9F%A7%8A-littlejs-3d">🧊 LittleJS 3D</a></li><li class="d1"><a href="#%F0%9F%94%8A-audio">🔊 Audio</a></li><li class="d1"><a href="#%F0%9F%8E%AE-input">🎮 Input</a></li><li class="d1"><a href="#%F0%9F%92%A5-physics">💥 Physics</a></li><li class="d1"><a href="#%F0%9F%9A%80-flexibility">🚀 Flexibility</a></li><li class="d1"><a href="#%F0%9F%9B%A0%EF%B8%8F-developer-tools">🛠️ Developer Tools</a></li><li class="d1"><a href="#%F0%9F%A4%96-ai-friendly">🤖 AI Friendly</a></li><li class="d0"><a href="#how-to-use-littlejs">How To Use LittleJS</a></li><li class="d0"><a href="#tutorials">Tutorials</a></li><li class="d0"><a href="#examples">Examples</a></li><li class="d0"><a href="#builds">Builds</a></li><li class="d0"><a href="#games-made-with-littlejs">Games Made With LittleJS</a></li></ul></aside>
 <script src="docs.js"></script>
 </body>
 </html>

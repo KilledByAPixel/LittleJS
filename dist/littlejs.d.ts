@@ -4269,6 +4269,10 @@ declare module "littlejsengine" {
      * Load tile layers from exported data
      * - Tiled maps come in as they are, flipped and turned tiles included, from one tileset image (a second tileset's
      *   tiles continue its numbering), finite maps in the CSV or array layer format; layer offsets and parallax are not read
+     * - A tileset kept in the map with a margin or a spacing, a sheet with gaps between its tiles, is read where its
+     *   tiles are, whatever padding the tile info has; one in a file of its own (a tsx) is not read, pass a tile info
+     *   with its padding
+     * - An LDtk level loads through tileLayersFromLDtk, which makes it a map like these
      * - Group layers are flattened in order, each replaced by the layers inside it, so the layer indices
      *   (collisionLayer and the returned array) count that flattened list; a group's tint, opacity and
      *   visibility carry to the layers inside it
@@ -4283,6 +4287,26 @@ declare module "littlejsengine" {
      *  @return {Array<TileCollisionLayer>}
      *  @memberof TileLayers */
     export function tileLayersLoad(tileMapData: any, tileInfo?: TileInfo, renderOrder?: number, collisionLayer?: number, draw?: boolean): Array<TileCollisionLayer>;
+    /**
+     * Make a Tiled map of a level of an LDtk project, to load with tileLayersLoad and objectLayersLoad
+     * - Each Tiles, AutoLayer and IntGrid layer is a tile layer, the bottom one first as in Tiled, so the last layer
+     *   of the LDtk file is layer 0; where LDtk stacks tiles in a cell the top one is kept
+     * - An IntGrid layer with no tiles is a hidden layer of its values, for collision: pass its index as collisionLayer
+     * - An Entities layer is an object layer: an entity's name is its type for objectLayersAddType, it is placed at
+     *   its middle, and its Int, Float, Bool, String, Color and FilePath fields are its properties (an enum is a string)
+     * - The tileset is the first tile layer's, with its padding and spacing; give tileLayersLoad a tile info of its image
+     * - The level is in the project file (not saved as separate level files), its layers of one grid size; a layer of
+     *   another grid size or another tileset is left out, with a warning in debug builds
+     * - The level editor edits the map this returns, and saves it as a Tiled map
+     * @param {Object} ldtk - The LDtk project, its JSON
+     * @param {number|string} [level] - Which level, by its index or its identifier
+     * @return {Object} - A Tiled map: width, height, tilewidth, tileheight, tilesets and layers
+     * @example
+     * const map = tileLayersFromLDtk(await fetchJSON('world.ldtk'), 'Level_0');
+     * const layers = tileLayersLoad(map, tile(0, 16), 0, 1); // layer 1 is solid
+     * objectLayersLoad(map);
+     * @memberof TileLayers */
+    export function tileLayersFromLDtk(ldtk: any, level?: number | string): any;
     /** Add a type of object, so objectLayersLoad makes one wherever a map's object layer has an object of that type
      *  - The name is the object's type in Tiled (its class in Tiled 1.9); it is a string because minified builds
      *    rename classes
