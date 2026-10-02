@@ -2218,6 +2218,30 @@ levelEditor.onRestart = ()=> {} // Rebuild the level, adds a Restart button
 levelEditor.onPlayFrom = (pos)=> {} // Put the player at pos, adds Play from mouse to the Advanced section
 levelEditor.paletteTiles = [0, 1, 10] // The tiles the palette shows, in order; undefined shows the whole sheet
 levelEditor.use3D = undefined  // true opens the 3D level editor, false the 2D one; undefined the 3D one with a 3D level
+levelEditor.is3D           // Is the editor in use the 3D one? read only
+
+// Making it your own game's editor, the same calls in the 2D and the 3D editor; see EDITOR.md
+levelEditor.addKey('k', (shift)=> {}, 'K: what it does') // A key of your own: a letter, a name like 'F2', 'ctrl+k'
+levelEditor.addButton('Label', ()=> {}, 'title')         // A button of your own in the panel
+levelEditor.addTool('Name', {key, hint, onPress, onDrag, onRelease, onDraw}) // A tool of your own: while it is on
+                           // the left button is its; each callback gets {pos, cell, ray, shift, ctrl}, and a
+                           // press, drag and release are one undo
+levelEditor.tool           // The name of your tool that is on, undefined for one of the editor's
+levelEditor.onOpen = ()=> {}   onClose   onUpdate   onDraw // Moments the editor calls: opened, closed, each
+                           // frame while open, and while it draws the level, for overlays
+levelEditor.onPanel = (box)=> {}       // Once, when the panel is made: a box in it for your own controls
+levelEditor.onSave = (text, fileName)=> true // Save: return true when you kept the file yourself
+levelEditor.edit3D         // The 3D editor's edit functions: level, objects, selection, selected(), made(id),
+                           // change((list)=> ...), changePart(name, (part)=> ...), strokeEnd(), strokeCancel(),
+                           // place(type, pos3D), setTransform(object, pos3D, rotationDegrees, scale3D),
+                           // setProperty(object, name, value), pos(object), rotation(object), scale(object),
+                           // mousePoint(), undo(redo), toJSON()
+levelEditor.edit2D         // The 2D editor's: map, layer, objects, hover, selection, paint(cell, tile, direction,
+                           // mirror), changeObjects((list)=> ...), strokeEnd(), strokeCancel(), bulk(()=> ...),
+                           // undo(redo), toJSON(); a change is one undo once strokeEnd() is called
+class MyEditor extends LevelEditor { onRestart() {} onDraw() {} } // Or a class of your own, its methods the hooks
+setLevelEditor(new MyEditor)   // Make it the one in use, before the editor opens
+// In release builds LevelEditor takes all of this and calls none of it, so a game needs no guards
 ```
 
 ## LittleJS Debugging System

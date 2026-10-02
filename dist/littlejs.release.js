@@ -982,8 +982,19 @@ function tweak(){}
 function tweakButton(){}
 function tweakDivider(){}
 function tweakEngineDefaults(){}
-const levelEditor = {isOpen: false, open(){}, close(){}, onTile: undefined, onRestart: undefined, onPlayFrom: undefined,
-    paletteTiles: undefined, use3D: undefined};
+class LevelEditor
+{
+    constructor() { this.paletteTiles = this.use3D = this.tool = undefined; }
+    get isOpen() { return false; }
+    get is3D() { return false; }
+    get edit2D() { return undefined; }
+    get edit3D() { return undefined; }
+    open(){} close(){} addKey(){} addButton(){} addTool(){}
+    onTile(){} onRestart(){} onPlayFrom(){} onOpen(){} onClose(){} onUpdate(){} onDraw(){} onPanel(){}
+    onSave(){ return false; }
+}
+let levelEditor = new LevelEditor;
+function setLevelEditor(editor){ levelEditor = editor; }
 function editorMapRestore(map){ return map; }
 function editorMapLoaded(){}
 function editorJSONFetched(){}

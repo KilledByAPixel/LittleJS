@@ -53,3 +53,27 @@ voxels.raycast(new Ray3D(vec3(), vec3(0, 1, 0))).distance;
 import { particleEffect, particleEffect3D } from 'littlejsengine';
 particleEffect('fire', vec2(), {scale: 2, hue: .3, emitTime: .5, speed: .1});
 particleEffect3D('fire', vec3(), {flatten: true, emitRate: 30});
+
+// a level editor of the game's own: a class with the hooks as methods, and keys, buttons and tools added to it
+import { LevelEditor, levelEditor, setLevelEditor } from 'littlejsengine';
+class GameEditor extends LevelEditor
+{
+    constructor()
+    {
+        super();
+        this.addKey('k', (shift)=> shift, 'K: mine');
+        this.addButton('Clear', ()=> {}, 'Clear the level');
+        this.addTool('Zone', {key: 'z', hint: 'Zone', onPress(at) { at.pos; }});
+    }
+    onRestart() {}
+    onDraw() {}
+    onSave(text: string, fileName: string) { return text.length > 0 && fileName.length > 0; }
+}
+setLevelEditor(new GameEditor);
+levelEditor.onRestart = ()=> {};
+levelEditor.onPlayFrom = (pos)=> pos;
+levelEditor.edit3D?.strokeEnd();
+levelEditor.edit2D.paint(vec2(), 5);
+const editing: boolean = levelEditor.isOpen && levelEditor.is3D;
+// @ts-expect-error
+levelEditor.addKey('k');

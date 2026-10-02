@@ -36,6 +36,8 @@ export
     debugKeysAlways,
     debugTweakables,
     levelEditor,
+    LevelEditor,
+    setLevelEditor,
 
     // Debug
     ASSERT,

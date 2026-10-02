@@ -33479,31 +33479,52 @@ function debugPoint3D(pos, color=WHITE, time=0, size=.2)
  */
 
 /**
+ *  @typedef {Object} EditorToolAt - What the level editor gives the callbacks of a tool of the game's own
+ *  @property {any} pos - Where the mouse is in the level: a Vector2 in the 2D editor; in the 3D one a Vector3 on
+ *    the level or the ground, undefined when the mouse is over the panel
+ *  @property {Vector2|undefined} cell - 2D: the tile cell under the mouse on the selected tile layer
+ *  @property {any} ray - 3D: the mouse's Ray3D
+ *  @property {boolean} shift - Is Shift held
+ *  @property {boolean} ctrl - Is Ctrl held
+ *  @memberof Editor
+ */
+
+/**
+ *  @typedef {Object} EditorTool - A tool of the game's own for the level editor, see LevelEditor.addTool
+ *  @property {string} [key] - The key that picks it, as addKey spells one
+ *  @property {string} [hint] - The hint line while it is on
+ *  @property {function(EditorToolAt): any} [onPress] - The left button went down in the level; returning false
+ *    says the press was not the tool's
+ *  @property {function(EditorToolAt): any} [onDrag] - Each frame it is held
+ *  @property {function(EditorToolAt): any} [onRelease] - It was let go
+ *  @property {function(EditorToolAt): any} [onDraw] - Each frame the tool is on, to draw its cursor or preview
+ *  @memberof Editor
+ */
+
+/**
  * The level editor, open it to pause the game and edit its level, close it to play on with the changes
  * - One of it, levelEditor, 0 on the debug overlay opens and closes it too
- * - In release builds levelEditor is a stub that never opens, and its hooks are never called
+ * - A game makes it its own: it sets the hooks, adds keys, panel buttons and tools, or extends this class and
+ *   gives its own with setLevelEditor; the same calls work in the 2D editor and the 3D one, see EDITOR.md
+ * - In release builds LevelEditor is a stub that never opens: what a game adds is taken and never called
  * @memberof Editor
  * @example
  * levelEditor.onRestart = ()=> loadLevel(); // adds a Restart button that rebuilds the level
  * levelEditor.onTile = (layer, pos, tile)=> layer.setCollisionData(pos, tile === ladderTile ? -1 : tile ? 1 : 0);
+ * levelEditor.addKey('k', ()=> clearEnemies(), 'K: clear the enemies');
+ *
+ * // or as a class of the game's own
+ * class MyEditor extends LevelEditor
+ * {
+ *     onRestart() { loadLevel(); }
+ *     onDraw() { drawSpawnZones(); }
+ * }
+ * setLevelEditor(new MyEditor);
  */
 class LevelEditor
 {
     constructor()
     {
-        /** @property {EditorTileCallback|undefined} - What the game does when the editor paints a tile, like
-         *  setting its collision or its look the way the game does when it loads the level; without one, the
-         *  collision layer gets collision 1 where there is a tile
-         *  @type {EditorTileCallback|undefined} */
-        this.onTile = undefined;
-        /** @property {Function|undefined} - Rebuild the level from the map the editor changed, a Restart button
-         *  calls it after switching to play; without one there is no Restart button
-         *  @type {EditorRestartCallback|undefined} */
-        this.onRestart = undefined;
-        /** @property {Function|undefined} - Put the player at a world position; with it, the editor's Advanced
-         *  section has Play from mouse, which starts play there, Escape at the mouse and Play at the view center
-         *  @type {EditorPlayFromCallback|undefined} */
-        this.onPlayFrom = undefined;
         /** @property {Array<number>|undefined} - The tiles the palette shows, in its order, for a sheet that also holds
          *  sprites and art that are not level tiles; undefined shows every tile of the sheet
          *  @type {Array<number>|undefined} */
@@ -33512,15 +33533,121 @@ class LevelEditor
          *  3D one when a level was loaded with level3DLoad and there is a Render3DPlugin
          *  @type {boolean|undefined} */
         this.use3D = undefined;
+        /** @property {string|undefined} - The tool of the game's own that is on, one added with addTool, undefined
+         *  while a tool of the editor's is
+         *  @type {string|undefined} */
+        this.tool = undefined;
+        // what the game added: its keys by how they are spelled, its panel buttons and its tools by name
+        /** @type {Object<string, {action: function(boolean): any, help: string|undefined, warned: boolean}>} */
+        this.keys = {};
+        /** @type {Array<{label: string, onClick: Function, title: string}>} */
+        this.buttons = [];
+        /** @type {Object<string, EditorTool>} */
+        this.tools = {};
     }
+
+    /** What the game does when the 2D editor paints a tile, like setting its collision or its look the way the
+     *  game does when it loads the level; set it or override it, without one the collision layer gets collision 1
+     *  where there is a tile
+     *  @param {TileLayer} layer - The layer painted
+     *  @param {Vector2} pos - The cell's position in the layer
+     *  @param {number|undefined} tile - The tile painted, undefined when erased */
+    onTile(layer, pos, tile) {}
+
+    /** Rebuild the level from what the editor changed; set it or override it and the editor has a Restart button,
+     *  which calls it after switching to play */
+    onRestart() {}
+
+    /** Put the player at a position, a Vector2 in the 2D editor and a Vector3 in the 3D one; set it or override it
+     *  and the editor has Play from mouse, which starts play there
+     *  @param {any} pos */
+    onPlayFrom(pos) {}
+
+    /** Called when the editor opens, to set or override */
+    onOpen() {}
+
+    /** Called when the editor closes and the game plays on, to set or override */
+    onClose() {}
+
+    /** Called each frame while the editor is open, to set or override */
+    onUpdate() {}
+
+    /** Called while the editor draws the level, to draw overlays of the game's own in it, to set or override */
+    onDraw() {}
+
+    /** Called once when the editor's panel is made, with a box in it for the game's own controls, to set or override
+     *  @param {HTMLElement} element */
+    onPanel(element) {}
+
+    /** Called by Save with the text of the file and its name; return true when the game kept it itself, and the
+     *  editor writes no file, to set or override
+     *  @param {string} text
+     *  @param {string} fileName
+     *  @return {boolean|void} */
+    onSave(text, fileName) { return false; }
 
     /** True while the editor is open, the game is paused under it
      *  @return {boolean} */
-    get isOpen() { return editorIsOpen; }
+    get isOpen() { return editorIsOpen || !!editorOther?.isOpen(); }
+
+    /** True when the editor in use is the 3D one, as use3D says or since a 3D level was loaded
+     *  @return {boolean} */
+    get is3D() { return !!editorOther?.wanted(); }
+
+    /** The 2D editor's edit functions, for a key, a button or a tool of the game's own: map, the Tiled map; layer,
+     *  the selected TileLayer; objects, a copy of the selected object layer's; hover, the cell under the mouse;
+     *  selection, the selected objects' ids; paint(cell, tile, direction, mirror), a tile index, -1 erases;
+     *  changeObjects((list)=> ...); strokeEnd() and strokeCancel(); bulk(()=> ...); undo(redo); toJSON()
+     *  @return {Object} */
+    get edit2D() { return editorEdit2D; }
+
+    /** The 3D editor's edit functions, undefined without the 3D plugins: level; objects; selection, a Set of ids;
+     *  selected(); made(id); change((list)=> ...); changePart(name, (part)=> ...); strokeEnd() and strokeCancel();
+     *  place(type, pos3D); setTransform(object, pos3D, rotationDegrees, scale3D); setProperty(object, name, value);
+     *  pos(object), rotation(object) and scale(object); mousePoint(); undo(redo); toJSON()
+     *  @return {Object|undefined} */
+    get edit3D() { return editorOther?.edit; }
+
+    /** Add a key of the game's own to the editor, the 2D and the 3D one
+     *  @param {string} key - A letter or digit, 'k', or a key's name, 'Delete' or 'F2'; 'ctrl+k' with Ctrl or Cmd
+     *  @param {function(boolean): any} action - Called with whether Shift is held; returning false says it did
+     *    nothing, and the key is left to the browser
+     *  @param {string} [helpLine] - A line for the editor's help */
+    addKey(key, action, helpLine)
+    {
+        ASSERT(typeof action == 'function', 'a key needs an action');
+        this.keys[editorKeySpelling(key)] = {action, help: helpLine, warned: false};
+        this === levelEditor && editorKeyClashes();
+    }
+
+    /** Add a button of the game's own to the editor's panel
+     *  @param {string} label
+     *  @param {Function} onClick
+     *  @param {string} [title] - What it says when the mouse is over it */
+    addButton(label, onClick, title='') { this.buttons.push({label, onClick, title}); }
+
+    /** Add a tool of the game's own: a button in the panel by its name, and while it is on the left button in the
+     *  level is its, not the editor's own tools'
+     *  - Each callback is given {pos, cell, ray, shift, ctrl}: pos is where the mouse is in the level, a Vector2 in
+     *    2D and a Vector3 on the level or the ground in 3D; cell is the tile under it in 2D; ray is the mouse's
+     *    in 3D
+     *  - What the callbacks change through edit2D or edit3D is one undo: the editor ends the stroke at the release,
+     *    and takes it back when the right button or Escape ends the press
+     *  @param {string} name
+     *  @param {EditorTool} tool - {key, hint, onPress, onDrag, onRelease, onDraw}, each optional; onPress returning
+     *    false says the press was not the tool's */
+    addTool(name, tool)
+    {
+        ASSERT(!!tool && typeof tool == 'object', 'a tool is an object of callbacks');
+        this.tools[name] = tool;
+        tool.key && this.addKey(tool.key, ()=> { this.tool = this.tool === name ? undefined : name; });
+    }
 
     /** Open the editor, pausing the game; until close(), Escape (the debug key) switches between playing and editing */
     open()
     {
+        if (editorOther?.wanted())
+            return editorOther.open();
         if (!editorSession)
             editorCameraScale = cameraScale; // a new session starts at the game's zoom, a return keeps the editor's
         editorSession = true;
@@ -33531,6 +33658,8 @@ class LevelEditor
      *  overlay again */
     close()
     {
+        if (editorOther?.active())
+            return editorOther.close();
         editorSession = false;
         editorSetOpen(false);
     }
@@ -33539,7 +33668,98 @@ class LevelEditor
 /** The level editor, levelEditor.open() to edit the level, levelEditor.close() to play on with the changes
  *  @type {LevelEditor}
  *  @memberof Editor */
-const levelEditor = new LevelEditor;
+let levelEditor = new LevelEditor;
+
+/** Make a level editor of the game's own the one in use: an instance of a class that extends LevelEditor, with
+ *  the game's hooks as its methods; set it before the editor opens
+ *  @param {LevelEditor} editor
+ *  @memberof Editor */
+function setLevelEditor(editor)
+{
+    ASSERT(editor instanceof LevelEditor, 'a level editor extends LevelEditor');
+    levelEditor.isOpen && console.warn('setLevelEditor: the editor is open, close it first');
+    levelEditor = editor;
+}
+
+// the other editor, the 3D one, when its plugin is there: it says if it is the one wanted and open, opens and
+// closes, and has its edit functions; the 2D editor is this file
+/** @type {{wanted: function(): boolean, isOpen: function(): boolean, active: function(): boolean, open: Function,
+ *      close: Function, hasKey: function(string, boolean): boolean, edit: Object}|undefined} */
+let editorOther;
+
+// if the game gave a hook: set on the editor, or a method of its own class, not the empty one of LevelEditor
+function editorHas(name)
+{
+    const hook = levelEditor[name];
+    return typeof hook == 'function' && hook !== LevelEditor.prototype[name];
+}
+
+// a key as addKey keeps it: a letter in lower case, a name as it is, 'ctrl+' in front with Ctrl
+function editorKeySpelling(key)
+{
+    const text = String(key).trim(), ctrl = text.toLowerCase().startsWith('ctrl+'), name = ctrl ? text.slice(5) : text;
+    return (ctrl ? 'ctrl+' : '') + (name.length === 1 ? name.toLowerCase() : name);
+}
+
+// say once, for each key of the game's own that is one of the open editor's too, that the game's takes its place:
+// when the editor opens, or when the key is added while it is open, since the 2D and 3D editors' keys differ
+function editorKeyClashes()
+{
+    if (!levelEditor.isOpen) return;
+    for (const [spelled, key] of Object.entries(levelEditor.keys))
+    {
+        const ctrl = spelled.startsWith('ctrl+'), name = spelled.slice(ctrl ? 5 : 0);
+        const clash = levelEditor.is3D ? editorOther.hasKey(name, ctrl) : !!(ctrl ? editorCtrlKeys : editorKeys)[name];
+        if (key.warned || !clash) continue;
+        key.warned = true;
+        console.warn(`levelEditor.addKey: ${spelled} is a key of the editor's, the game's takes its place`);
+    }
+}
+
+// the help lines of the game's own keys
+function editorGameHelpLines()
+{ return Object.values(levelEditor.keys).map((key)=> key.help).filter((line)=> !!line); }
+
+// the tool of the game's own that is on, undefined when there is none
+function editorGameTool() { return levelEditor.tool !== undefined ? levelEditor.tools[levelEditor.tool] : undefined; }
+
+// the game's box of an editor's panel: a row of its tools and its buttons, made again when one was added, the
+// tool that is on lit; and, the first time for a level editor, onPanel is given the box for controls of its own
+const editorGamePanels = new WeakMap;
+function editorGamePanel(box)
+{
+    let state = editorGamePanels.get(box);
+    if (state?.owner !== levelEditor)
+    {
+        box.replaceChildren();
+        state = {owner: levelEditor, row: editorElement('div', box, 'display:flex;gap:4px;margin:4px 0;flex-wrap:wrap'),
+            key: '', buttons: {}};
+        editorGamePanels.set(box, state);
+        levelEditor.onPanel(box);
+    }
+    const tools = Object.keys(levelEditor.tools), key = tools.join('\n') + '\n\n' + levelEditor.buttons.length;
+    if (state.key !== key)
+    {
+        state.key = key;
+        state.buttons = {};
+        const press = 'padding:3px 6px;cursor:pointer';
+        state.row.replaceChildren(...tools.map((name)=>
+        {
+            const b = state.buttons[name] = editorElement('button', undefined, press, name);
+            b.title = levelEditor.tools[name].hint || '';
+            b.onclick = ()=> { levelEditor.tool = levelEditor.tool === name ? undefined : name; b.blur?.(); };
+            return b;
+        }), ...levelEditor.buttons.map((button)=>
+        {
+            const b = editorElement('button', undefined, press, button.label);
+            b.title = button.title;
+            b.onclick = ()=> { button.onClick.call(levelEditor); b.blur?.(); };
+            return b;
+        }));
+    }
+    for (const name of tools)
+        state.buttons[name].style.outline = name === levelEditor.tool ? '2px solid #4af' : '';
+}
 
 // if the editor is open, and if it was opened and not exited, while Escape switches between playing and editing
 let editorIsOpen = false, editorSession = false;
@@ -33551,7 +33771,7 @@ let editorPlayFromMouse = false, editorAdvanced = false;
 function editorPlay(pos)
 {
     editorSetOpen(false);
-    editorPlayFromMouse && pos && levelEditor.onPlayFrom?.(pos.copy());
+    editorPlayFromMouse && pos && editorHas('onPlayFrom') && levelEditor.onPlayFrom(pos.copy());
 }
 
 // the game's pause and camera from before the editor opened, handed back when it closes
@@ -33603,10 +33823,13 @@ function editorSetOpen(open)
             layers.filter((layer)=> !layer.isObjects).at(-1));
         layers.includes(editorObjectLayer) || (editorObjectLayer = editorLayer ? undefined :
             layers.find((layer)=> layer.isObjects)); // a level of objects alone
+        levelEditor.onOpen();
+        editorKeyClashes();
     }
     else
     {
         editorStrokeEnd();
+        editorToolHeld = false;
         editorSelection = editorSelectionDrag = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
         editorObjectSelection.clear();
         editorMouseOnPanel = false; // the panel hides, with no mouseleave
@@ -33615,6 +33838,7 @@ function editorSetOpen(open)
         setCameraPos(state.cameraPos);
         setCameraScale(state.cameraScale);
         setCameraAngle(state.cameraAngle);
+        levelEditor.onClose();
     }
 }
 
@@ -33885,6 +34109,7 @@ async function editorSave(record, pickAgain=false)
     if (!record) return;
     editorStrokeEnd();
     const text = editorMapJSON(record); // the map as it is now, later edits wait for a later save
+    if (levelEditor.onSave(text, record.fileName) === true) return 'kept'; // the game kept it itself
     const saved = (async ()=> { await record.saving; return editorSaveText(record, text, pickAgain); })();
     record.saving = saved.catch(()=> {});
     return saved;
@@ -34009,7 +34234,7 @@ function editorPaintData(record, data, objects, width=record.map.width, height=r
     editorStrokeEnd();
     if (width !== record.map.width || height !== record.map.height)
     {
-        if (!levelEditor.onRestart) return;
+        if (!editorHas('onRestart')) return;
         const before = editorMapSnapshot(record);
         editorSetMapSnapshot(record, {width, height, layers: data, objects});
         editorMapChanged(record, before);
@@ -34054,7 +34279,7 @@ function editorPendingFits(record, saved)
 {
     const map = record.map, data = editorTileLayerData(map.layers), groups = editorObjectGroups(map.layers).length;
     const width = saved.width ?? map.width, height = saved.height ?? map.height;
-    return (width === map.width && height === map.height || !!levelEditor.onRestart) &&
+    return (width === map.width && height === map.height || editorHas('onRestart')) &&
         saved.layers?.length === data.length && saved.layers.every((layer)=> layer.length === width * height) &&
         (saved.objects ?? []).every((objects, i)=> i < groups || !objects.length);
 }
@@ -34158,7 +34383,7 @@ function editorMapChanged(record, before)
 function editorResize(record, width, height)
 {
     const map = record?.map;
-    if (!map || record.synthetic || record.pending || !levelEditor.onRestart) return false;
+    if (!map || record.synthetic || record.pending || !editorHas('onRestart')) return false;
     if (width === map.width && height === map.height) return false;
     editorStrokeEnd();
     const before = editorMapSnapshot(record);
@@ -34212,7 +34437,7 @@ function editorSetCell(layer, pos, gid)
     }
     const t = editorGidToTile(gid);
     live.setData(pos, t ? new TileLayerData(t.tile, t.direction, t.mirror, color) : new TileLayerData, true);
-    if (levelEditor.onTile)
+    if (editorHas('onTile'))
         levelEditor.onTile(live, pos.copy(), t?.tile);
     else if (live instanceof TileCollisionLayer && live.isSolid)
         live.setCollisionData(pos, gid ? 1 : 0); // as tileLayersLoad gives it
@@ -34281,7 +34506,7 @@ function editorChanged(stroke)
     editorRedraw(stroke);
     for (const record of new Set(stroke.map(editorEntryRecord)))
         editorAutosave(record);
-    stroke.some((entry)=> entry.resize) && levelEditor.onRestart?.();
+    stroke.some((entry)=> entry.resize) && editorHas('onRestart') && levelEditor.onRestart();
 }
 
 // the tile layers a stroke touched draw again whole
@@ -34474,6 +34699,7 @@ let editorObjectDrag, editorObjectBox;
 function editorSelectLayer(layer)
 {
     editorStrokeEnd();
+    levelEditor.tool = undefined; // a tool of the game's own is put down
     editorLastCell = editorObjectDrag = editorRightPress = editorObjectBox = undefined; // presses stay on their layer
     editorSelectionDrag = undefined; // a move so far is kept, the stroke ended
     editorObjectSelection.clear();
@@ -35101,6 +35327,7 @@ const editorHelpLines =
 function editorHint()
 {
     if (keyIsDown('Space')) return 'Drag to pan';
+    if (editorGameTool()) return editorGameTool().hint || levelEditor.tool;
     if (editorObjectLayer)
         return editorObjectSelection.size ? 'Selection: drag moves · Delete removes · Ctrl+C copy · Ctrl+X cut · click to clear' :
             'Left place / select · drag moves · Right pick / drag select · Delete removes';
@@ -35169,6 +35396,8 @@ function editorPanelInit()
     button(undo, 'Undo', ()=> editorUndo(), 'Ctrl+Z');
     button(undo, 'Redo', ()=> editorUndo(true), 'Ctrl+Y');
     button(undo, 'Keys', ()=> editorHelp = !editorHelp, 'Every control, ?');
+    // the game's own tools, buttons and controls, near the top where the tools are
+    const game = editorElement('div', editorPanel);
 
     // a file that changed under its autosave
     const pending = editorElement('div', editorPanel, 'padding:4px;margin:4px 0;background:#630;border-radius:3px');
@@ -35255,9 +35484,10 @@ function editorPanelInit()
     const help = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;border-top:1px solid #444;padding-top:4px');
     for (const line of editorHelpLines)
         editorElement('div', help, 'margin:2px 0', line);
+    const gameHelp = editorElement('div', help);
     button(help, 'Close', ()=> editorHelp = false, '?');
 
-    editorPanelParts = {pendingUnfit, reset, advancedToggle, advanced, playFromLabel, playFrom, sizeRow, sizeX, sizeY, resize, restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
+    editorPanelParts = {game, gameHelp, pendingUnfit, reset, advancedToggle, advanced, playFromLabel, playFrom, sizeRow, sizeX, sizeY, resize, restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -35416,15 +35646,15 @@ function editorPanelUpdate()
     p.hint.textContent = editorHint();
     p.help.style.display = editorHelp ? '' : 'none';
     p.storage.style.display = editorSaveFailed ? '' : 'none';
-    p.restart.style.display = levelEditor.onRestart ? '' : 'none';
+    p.restart.style.display = editorHas('onRestart') ? '' : 'none';
     p.advancedToggle.textContent = editorAdvanced ? 'Advanced ▾' : 'Advanced ▸';
     p.advanced.style.display = editorAdvanced ? '' : 'none';
-    p.playFromLabel.style.display = levelEditor.onPlayFrom ? 'flex' : 'none';
+    p.playFromLabel.style.display = editorHas('onPlayFrom') ? 'flex' : 'none';
     p.playFrom.checked = editorPlayFromMouse;
 
     // the level's size, shown until a field is being typed in; without the Restart hook it can not change
     const record = editorRecord(), map = record?.map;
-    const canResize = !!levelEditor.onRestart && !record?.synthetic && !record?.pending;
+    const canResize = editorHas('onRestart') && !record?.synthetic && !record?.pending;
     p.sizeRow.style.display = map ? 'flex' : 'none';
     if (map && !p.sizeRow.contains(document.activeElement))
     {
@@ -35504,7 +35734,9 @@ function editorOnKeyDown(e)
     let key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (key.length === 1 && !/[a-z?]/.test(key))
         key = e.code?.match(/^Key([A-Z])$/)?.[1].toLowerCase() ?? key;
-    const action = (e.ctrlKey || e.metaKey ? editorCtrlKeys : editorKeys)[key];
+    // a key of the game's own first, it takes the place of one of the editor's
+    const ctrl = e.ctrlKey || e.metaKey, own = levelEditor.keys[(ctrl ? 'ctrl+' : '') + key];
+    const action = own ? (shift)=> own.action.call(levelEditor, shift) : (ctrl ? editorCtrlKeys : editorKeys)[key];
     if (action && action(e.shiftKey) !== false)
         e.preventDefault();
 }
@@ -35741,6 +35973,8 @@ function editorUpdate()
     editorApplyCamera();
 
     editorMouseOnPanel || (editorMouseScreen = mousePosScreen.copy());
+    levelEditor.onUpdate();
+    if (editorToolUpdate(space)) return; // a tool of the game's own has the mouse
     if (editorObjectLayer)
         return editorUpdateObjects(space);
     const layer = editorLayer?.live.destroyed ? undefined : editorLayer, mouse = screenToWorld(editorMouseScreen);
@@ -35810,10 +36044,86 @@ function editorUpdate()
     }
 }
 
+// a tool of the game's own: if its press is held, and what was picked in the editor when it was turned on, since
+// picking a layer, a tile or an object type puts the game's tool down
+let editorToolHeld = false, editorToolName, editorToolPicked = [];
+
+// what a tool's callbacks are given: where the mouse is in the level, the cell under it on the selected tile
+// layer, and the keys held
+function editorToolAt()
+{
+    const layer = editorObjectLayer || editorLayer?.live.destroyed ? undefined : editorLayer;
+    const pos = screenToWorld(editorMouseScreen);
+    return {pos, cell: layer && !editorMouseOnPanel ? editorCellAt(layer.live, pos) || undefined : undefined,
+        ray: undefined, shift: keyIsDown('ShiftLeft') || keyIsDown('ShiftRight'),
+        ctrl: keyIsDown('ControlLeft') || keyIsDown('ControlRight')};
+}
+
+// the game's tool, when one is on: the left button is its, a press, a drag and a release one undo, the right
+// button takes a held press back; true when it has the mouse
+function editorToolUpdate(space)
+{
+    const picked = [editorLayer, editorObjectLayer, editorBrush, editorObjectBrush];
+    if (levelEditor.tool !== editorToolName)
+        editorToolName = levelEditor.tool, editorToolPicked = picked; // turned on, or off, by its key or button
+    else if (picked.some((value, i)=> value !== editorToolPicked[i]))
+        levelEditor.tool = editorToolName = undefined; // something of the editor's was picked
+    const tool = editorGameTool();
+    if (!tool)
+    {
+        editorToolHeld = false;
+        return false;
+    }
+    const at = editorToolAt();
+    editorHover = at.cell;
+    if (editorToolHeld && mouseWasPressed(2))
+    {
+        inputClearKey(2);
+        editorStrokeCancel();
+        editorToolHeld = false;
+    }
+    else if (mouseWasPressed(0) && !space && !editorMouseOnPanel)
+        editorToolHeld = tool.onPress?.(at) !== false;
+    else if (editorToolHeld && mouseIsDown(0))
+        tool.onDrag?.(at);
+    if (editorToolHeld && !mouseIsDown(0))
+    {
+        tool.onRelease?.(at);
+        editorStrokeEnd();
+        editorToolHeld = false;
+    }
+    return true;
+}
+
+// the 2D editor's edit functions, what levelEditor.edit2D gives a game's own keys, buttons and tools
+const editorEdit2D =
+{
+    get map() { return editorRecord()?.map; },
+    get layer() { return editorObjectLayer ? undefined : editorLayer?.live; },
+    get objects() { return editorObjectLayer ? editorObjectsCopy(editorObjectList(editorObjectLayer)) : []; },
+    get hover() { return editorHover ? editorHover.copy() : undefined; },
+    get selection() { return editorObjectSelection; },
+    paint(cell, tile, direction=0, mirror=false)
+    {
+        const layer = editorObjectLayer ? undefined : editorLayer, size = layer?.live.size;
+        if (!layer || layer.live.destroyed || layer.record.pending || !isVector2(cell)) return false;
+        const x = floor(cell.x), y = floor(cell.y);
+        if (x < 0 || y < 0 || x >= size.x || y >= size.y) return false;
+        editorPaint(layer, vec2(x, y), tile < 0 ? 0 : editorTileToGid(tile, direction, mirror));
+        return true;
+    },
+    changeObjects(change) { return editorChangeObjects(editorObjectLayer, change); },
+    strokeEnd() { editorStrokeEnd(); },
+    strokeCancel() { editorStrokeCancel(); },
+    bulk(edit) { editorBulkEdit(edit); },
+    undo(redo=false) { return editorUndo(redo); },
+    toJSON() { const record = editorRecord(); return record ? editorMapJSON(record) : ''; },
+};
+
 // switch to play and have the game rebuild its level from the changed map, when it has a hook for that
 function editorRestart()
 {
-    if (!levelEditor.onRestart) return;
+    if (!editorHas('onRestart')) return;
     editorSetOpen(false); // ends a held stroke, and hands back the game's pause and camera, Escape comes back
     levelEditor.onRestart();
 }
@@ -35827,6 +36137,11 @@ function editorPreRender() { editorIsOpen && editorApplyCamera(); }
 function editorRender()
 {
     headlessMode || editorPanelUpdate();
+    if (!headlessMode && editorIsOpen && editorPanelParts)
+    {
+        editorGamePanel(editorPanelParts.game);
+        editorGameHelp(editorPanelParts.gameHelp);
+    }
     if (!editorIsOpen || headlessMode) return;
     const layer = editorLayer?.live.destroyed ? undefined : editorLayer;
     if (!layer && !editorObjectLayer) return;
@@ -35898,7 +36213,24 @@ function editorRender()
     editorObjectLayer && editorRenderObjects(thin);
 }
 
-debug && engineAddPlugin(editorUpdate, editorRender);
+// the game's own drawing in the level, over the editor's: the editor's onDraw, and its tool's while one is on
+function editorRenderGame()
+{
+    if (!editorIsOpen) return;
+    levelEditor.onDraw();
+    editorGameTool()?.onDraw?.(editorToolAt());
+}
+
+// the lines of the game's own keys in a panel's help, made again when they change
+function editorGameHelp(element)
+{
+    const lines = editorGameHelpLines(), key = lines.join('\n');
+    if (element.dataset.key === key) return;
+    element.dataset.key = key;
+    element.replaceChildren(...lines.map((line)=> editorElement('div', undefined, 'margin:2px 0', line)));
+}
+
+debug && engineAddPlugin(editorUpdate, ()=> { editorRender(); editorRenderGame(); });
 
 // the editor's own listeners for letter shortcuts and the wheel, the engine's input reads keys by position
 if (debug && globalThis.document?.addEventListener)
@@ -37461,6 +37793,8 @@ function editor3DSetOpen(open)
         setDebugOverlay(false); // out of the way of the level
         editor3DIsOpen = true;
         editor3DRestore();
+        levelEditor.onOpen();
+        editorKeyClashes();
     }
     else
     {
@@ -37468,8 +37802,10 @@ function editor3DSetOpen(open)
         editor3DMouseOnPanel = false; // the panel hides, with no mouseleave
         editor3DStrokeEnd();
         while (editor3DPrefabBack()); // the game plays the level, not a prefab that was open
+        editor3DToolHeld = false;
         editor3DIsOpen = false;
         setPaused(editor3DGamePaused);
+        levelEditor.onClose();
     }
     inputCapture(editor3DViewOn());
 }
@@ -37493,24 +37829,108 @@ function editor3DClose()
 function editor3DPlay(pos)
 {
     editor3DSetOpen(false);
-    editor3DPlayFromMouse && pos && levelEditor.onPlayFrom?.(pos.copy());
+    editor3DPlayFromMouse && pos && editorHas('onPlayFrom') && levelEditor.onPlayFrom(pos.copy());
 }
 
 // rebuild the level through the game's hook and play it
 function editor3DRestart()
 {
-    if (!levelEditor.onRestart) return;
+    if (!editorHas('onRestart')) return;
     editor3DSetOpen(false);
     levelEditor.onRestart();
 }
 
-// the level editor's open, close and isOpen go to the 3D editor when the game has a 3D level
-if (debug)
+// a key as addKey spells it, as the 3D editor's tables have it, by its position: a letter, a digit, or its name
+function editor3DKeyCode(name)
+{ return name.length !== 1 ? name : name >= '0' && name <= '9' ? 'Digit' + name : 'Key' + name.toUpperCase(); }
+
+// the 3D editor's edit functions, what levelEditor.edit3D gives a game's own keys, buttons and tools
+const editor3DEdit =
 {
-    const open2D = levelEditor.open.bind(levelEditor), close2D = levelEditor.close.bind(levelEditor);
-    levelEditor.open = ()=> editor3DWanted() ? editor3DOpen() : open2D();
-    levelEditor.close = ()=> editor3DIsOpen || editor3DSession ? editor3DClose() : close2D();
-    Object.defineProperty(levelEditor, 'isOpen', {get: ()=> editor3DIsOpen || editorIsOpen});
+    get level() { return editor3DLevel; },
+    get objects() { return editor3DObjects(); },
+    get selection() { return editor3DSelection; },
+    selected() { return editor3DSelected(); },
+    made(id) { return editor3DInstances.get(id); },
+    change(change) { return editor3DChange(change); },
+    changePart(name, change) { return editor3DLevelPartNames.includes(name) && editor3DChangePart(name, change); },
+    strokeEnd() { editor3DStrokeEnd(); },
+    strokeCancel() { editor3DStrokeCancel(); },
+    place(type, pos3D) { return editor3DPlace(type, pos3D); },
+    setTransform(object, pos3D, rotation, scale3D) { editor3DSetTransform(object, pos3D, rotation, scale3D); },
+    setProperty(object, name, value)
+    { editor3DSetProperty(object, name, value, level3DTypes.get(object.type)?.defaults[name]); },
+    pos(object) { return editor3DPos(object); },
+    rotation(object) { return editor3DRotation(object); },
+    scale(object) { return editor3DScale(object); },
+    mousePoint() { return editor3DIsOpen ? editor3DWithView(editor3DMousePoint) : undefined; },
+    undo(redo=false) { return editor3DUndo(redo); },
+    toJSON() { return editor3DLevel ? editor3DLevelJSON() : ''; },
+};
+
+// the level editor's open, close and isOpen go to the 3D editor when the game has a 3D level, and it has the 3D
+// editor's keys and edit functions through this
+if (debug)
+    editorOther = {wanted: editor3DWanted, isOpen: ()=> editor3DIsOpen, active: ()=> editor3DIsOpen || editor3DSession,
+        open: editor3DOpen, close: editor3DClose, edit: editor3DEdit,
+        hasKey: (name, ctrl)=> !!(ctrl ? editor3DCtrlKeys : editor3DKeys)[editor3DKeyCode(name)]};
+
+// pick a tool of the editor's own, which puts a tool of the game's down
+function editor3DPickTool(tool)
+{
+    editor3DTool = tool;
+    levelEditor.tool = undefined;
+}
+
+// a tool of the game's own: if its press is held, and the editor's tool and type to place when it was turned on,
+// since picking one of those puts the game's tool down
+let editor3DToolHeld = false, editor3DToolName, editor3DToolPicked = [];
+
+// what a tool's callbacks are given: where the mouse is on the level or the ground, its ray, and the keys held
+function editor3DToolAt(ray=render3D.screenToRay(mousePosScreen), shift=false, ctrl=false)
+{ return {pos: editor3DMouseOnPanel ? undefined : editor3DSurface(ray), cell: undefined, ray, shift, ctrl}; }
+
+// the game's tool, when one is on: the left button is its, a press, a drag and a release one undo, the right
+// button takes a held press back; true when it has the mouse
+function editor3DToolUpdate(ray, idle, shift, ctrl)
+{
+    const picked = [editor3DTool, editor3DBrush];
+    if (levelEditor.tool !== editor3DToolName)
+        editor3DToolName = levelEditor.tool, editor3DToolPicked = picked; // turned on, or off, by its key or button
+    else if (picked.some((value, i)=> value !== editor3DToolPicked[i]))
+        levelEditor.tool = editor3DToolName = undefined; // a tool or a type of the editor's was picked
+    const tool = editorGameTool();
+    if (!tool)
+    {
+        editor3DToolHeld = false;
+        return false;
+    }
+    const at = editor3DToolAt(ray, shift, ctrl);
+    editor3DHover = undefined;
+    if (editor3DToolHeld && mouseWasPressed(2))
+    {
+        editor3DStrokeCancel();
+        editor3DToolHeld = false;
+    }
+    else if (idle && mouseWasPressed(0))
+        editor3DToolHeld = tool.onPress?.(at) !== false;
+    else if (editor3DToolHeld && mouseIsDown(0))
+        tool.onDrag?.(at);
+    if (editor3DToolHeld && !mouseIsDown(0))
+    {
+        tool.onRelease?.(at);
+        editor3DStrokeEnd();
+        editor3DToolHeld = false;
+    }
+    return true;
+}
+
+// the game's own drawing in the level, in the editor's 3D pass: the editor's onDraw, and its tool's while one is on
+function editor3DDrawGame()
+{
+    if (!editor3DIsOpen) return;
+    levelEditor.onDraw();
+    editorGameTool()?.onDraw?.(editor3DToolAt());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -37645,6 +38065,7 @@ async function editor3DSave(pickAgain=false)
     // edits are not in the file, so they stay in the autosave; the level and record are this one's, whichever is
     // open by then
     const text = editor3DLevelJSON(level);
+    if (levelEditor.onSave(text, record.fileName) === true) return 'kept'; // the game kept it itself
     const saved = (async ()=> { await record.saving; return editor3DSaveText(level, record, text, pickAgain); })();
     record.saving = saved.catch(()=> {});
     return saved;
@@ -37744,7 +38165,7 @@ function editor3DSelectionCenter()
 function editor3DHandles()
 {
     const center = editor3DSelectionCenter(), tool = editor3DTool, handles = [];
-    if (!center || tool === 'select' || tool === 'blocks' || tool === 'terrain') return handles;
+    if (!center || tool === 'select' || tool === 'blocks' || tool === 'terrain' || editorGameTool()) return handles;
     const length = editor3DScreenScale(center) * EDITOR3D_HANDLE_SIZE;
     const rotation = editor3DRotation(editor3DSelected()[0]).scale(PI / 180), frame = buildMatrix(vec3(), rotation);
     for (const axis of 'xyz')
@@ -38100,12 +38521,12 @@ function editor3DPasteAtMouse()
 /** @type {Object<string, function(boolean=): any>} */
 const editor3DKeys =
 {
-    KeyQ: ()=> { editor3DTool = 'select'; editor3DBrush = undefined; },
-    KeyW: ()=> { editor3DTool = 'move'; },
-    KeyE: ()=> { editor3DTool = 'rotate'; },
-    KeyR: ()=> { editor3DTool = 'scale'; },
-    KeyB: ()=> { editor3DTool = 'blocks'; editor3DBrush = undefined; },
-    KeyT: ()=> { editor3DTool = 'terrain'; editor3DBrush = undefined; },
+    KeyQ: ()=> { editor3DPickTool('select'); editor3DBrush = undefined; },
+    KeyW: ()=> { editor3DPickTool('move'); },
+    KeyE: ()=> { editor3DPickTool('rotate'); },
+    KeyR: ()=> { editor3DPickTool('scale'); },
+    KeyB: ()=> { editor3DPickTool('blocks'); editor3DBrush = undefined; },
+    KeyT: ()=> { editor3DPickTool('terrain'); editor3DBrush = undefined; },
     KeyP: ()=> editor3DTool === 'blocks' && editor3DVoxelPick(render3D.screenToRay(mousePosScreen)),
     KeyX: ()=> editor3DTool === 'terrain' ? editor3DTerrainNextBrush() :
         editor3DTool === 'blocks' && (editor3DBlockBox = !editor3DBlockBox),
@@ -38180,7 +38601,13 @@ function editor3DEditorUpdate(seconds)
     if (debugKey && keyWasPressed(debugKey))
     {
         inputClearKey(debugKey);
-        editor3DDrag ? editor3DDragCancel() : editor3DPlay(editor3DMousePoint());
+        if (editor3DToolHeld)
+        {
+            editor3DStrokeCancel(); // a held press of the game's tool is taken back
+            editor3DToolHeld = false;
+        }
+        else
+            editor3DDrag ? editor3DDragCancel() : editor3DPlay(editor3DMousePoint());
         return;
     }
 
@@ -38196,9 +38623,20 @@ function editor3DEditorUpdate(seconds)
     const looking = mouseIsDown(2), cameraDrag = looking || mouseIsDown(1) || keyIsDown('Space') || alt;
 
     // the keys, which wait for a drag to end, and fly while the right button is held
-    if (!editor3DDrag && !looking)
+    if (!editor3DDrag && !looking && !editor3DToolHeld)
+    {
+        // the game's own keys first, each takes the place of the editor's key of the same spelling
+        const taken = new Set;
+        for (const [spelled, key] of Object.entries(levelEditor.keys))
+        {
+            const withCtrl = spelled.startsWith('ctrl+'), code = editor3DKeyCode(spelled.slice(withCtrl ? 5 : 0));
+            if (withCtrl !== ctrl) continue;
+            taken.add(code);
+            keyWasPressed(code) && key.action.call(levelEditor, shift);
+        }
         for (const [code, action] of Object.entries(ctrl ? editor3DCtrlKeys : editor3DKeys))
-            keyWasPressed(code) && action(shift);
+            taken.has(code) || keyWasPressed(code) && action(shift);
+    }
 
     // a right press during a drag puts it back
     if (editor3DDrag && mouseWasPressed(2))
@@ -38206,6 +38644,8 @@ function editor3DEditorUpdate(seconds)
 
     const ray = render3D.screenToRay(mouse), idle = !cameraDrag && !editor3DMouseOnPanel && !editor3DDrag;
     editor3DHover = idle ? editor3DHandleAt(mouse) : undefined;
+    levelEditor.onUpdate();
+    if (editor3DToolUpdate(ray, idle, shift, ctrl)) return; // a tool of the game's own has the mouse
 
     // the Blocks tool takes the mouse while the level has a map: Shift removes, Ctrl repaints
     // a type picked to place is placed, whichever tool is on
@@ -38266,6 +38706,7 @@ function editor3DHint()
 {
     if (editor3DRecords.get(editor3DLevel)?.pending)
         return 'The level file changed: apply your edits or drop them';
+    if (editorGameTool()) return editorGameTool().hint || levelEditor.tool;
     if (editor3DDrag)
         return editor3DDrag.kind === 'box' ? 'Let go to select what is inside' :
             'Esc or right click puts it back · Ctrl flips the snap';
@@ -38487,6 +38928,7 @@ function editor3DDraw()
             r.drawBox(points[1], tip, color, editor3DRotation(editor3DSelected()[0]).scale(PI / 180));
         }
     }
+    editor3DDrawGame();
 }
 
 // the editor's drawing on the 2D layer: the name of each marker, and the box being dragged out to select with
@@ -38577,9 +39019,11 @@ function editor3DPanelInit()
         ['scale', 'Scale', 'R'], ['blocks', 'Blocks', 'B'], ['terrain', 'Terrain', 'T']])
         toolButtons[tool] = button(tools, text, ()=>
         {
-            editor3DTool = tool;
+            editor3DPickTool(tool);
             (tool === 'select' || tool === 'blocks' || tool === 'terrain') && (editor3DBrush = undefined);
         }, key);
+    // the game's own tools, buttons and controls, under the editor's tools
+    const game = editorElement('div', panel);
     const snap = editorElement('div', panel, box);
     const grid = check(snap, 'Grid snap', (on)=> editor3DGrid = on, 'G, and Ctrl flips it for a drag');
     const steps = row(snap);
@@ -38642,9 +39086,10 @@ function editor3DPanelInit()
     const help = editorElement('div', panel, 'color:#aaa;margin-top:4px;border-top:1px solid #444;padding-top:4px');
     for (const line of editor3DHelpLines)
         editorElement('div', help, 'margin:2px 0', line);
+    const gameHelp = editorElement('div', help);
     button(help, 'Close', ()=> editor3DHelp = false, '?');
 
-    editor3DPanelParts = {restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox, prefabOpen, prefabName, prefabUnsaved,
+    editor3DPanelParts = {game, gameHelp, restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox, prefabOpen, prefabName, prefabUnsaved,
         properties, blocks, terrainBox, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
 }
 
@@ -38659,7 +39104,9 @@ function editor3DPanelUpdate()
     editor3DPanel || editor3DPanelInit();
     editor3DPanel.style.display = '';
     const p = editor3DPanelParts, lit = '2px solid #4af';
-    p.restart.style.display = levelEditor.onRestart ? '' : 'none';
+    editorGamePanel(p.game);
+    editorGameHelp(p.gameHelp);
+    p.restart.style.display = editorHas('onRestart') ? '' : 'none';
     p.pending.style.display = editor3DRecords.get(editor3DLevel)?.pending ? '' : 'none';
     for (const tool in p.toolButtons)
         p.toolButtons[tool].style.outline = tool === editor3DTool ? lit : '';
@@ -38670,7 +39117,7 @@ function editor3DPanelUpdate()
     p.rotateStep.value = editor3DRotateStep + '';
     p.scaleStep.value = editor3DScaleStep + '';
     p.playFrom.checked = editor3DPlayFromMouse;
-    p.playFrom.parentElement.style.display = levelEditor.onPlayFrom ? 'flex' : 'none';
+    p.playFrom.parentElement.style.display = editorHas('onPlayFrom') ? 'flex' : 'none';
     p.storage.style.display = editor3DSaveFailed ? '' : 'none';
     p.hint.textContent = editor3DHint();
     p.help.style.display = editor3DHelp ? '' : 'none';
@@ -39244,6 +39691,8 @@ export
     debugKeysAlways,
     debugTweakables,
     levelEditor,
+    LevelEditor,
+    setLevelEditor,
 
     // Debug
     ASSERT,

@@ -217,6 +217,62 @@ declare module "littlejsengine" {
      */
     export type EditorTileCallback = (layer: TileLayer, pos: Vector2, tile: number | undefined) => any;
     /**
+     * - What the level editor gives the callbacks of a tool of the game's own
+     */
+    export type EditorToolAt = {
+        /**
+         * - Where the mouse is in the level: a Vector2 in the 2D editor; in the 3D one a Vector3 on
+         * the level or the ground, undefined when the mouse is over the panel
+         */
+        pos: any;
+        /**
+         * - 2D: the tile cell under the mouse on the selected tile layer
+         */
+        cell: Vector2 | undefined;
+        /**
+         * - 3D: the mouse's Ray3D
+         */
+        ray: any;
+        /**
+         * - Is Shift held
+         */
+        shift: boolean;
+        /**
+         * - Is Ctrl held
+         */
+        ctrl: boolean;
+    };
+    /**
+     * - A tool of the game's own for the level editor, see LevelEditor.addTool
+     */
+    export type EditorTool = {
+        /**
+         * - The key that picks it, as addKey spells one
+         */
+        key?: string;
+        /**
+         * - The hint line while it is on
+         */
+        hint?: string;
+        /**
+         * - The left button went down in the level; returning false
+         * says the press was not the tool's
+         */
+        onPress?: (arg0: EditorToolAt) => any;
+        /**
+         * - Each frame it is held
+         */
+        onDrag?: (arg0: EditorToolAt) => any;
+        /**
+         * - It was let go
+         */
+        onRelease?: (arg0: EditorToolAt) => any;
+        /**
+         * - Each frame the tool is on, to draw its cursor or preview
+         */
+        onDraw?: (arg0: EditorToolAt) => any;
+    };
+    /**
      * LittleJS - The Tiny Fast JavaScript Game Engine
      * MIT License - Copyright 2021 Frank Force
      *
@@ -453,7 +509,185 @@ declare module "littlejsengine" {
     /** The level editor, levelEditor.open() to edit the level, levelEditor.close() to play on with the changes
      *  @type {LevelEditor}
      *  @memberof Editor */
-    export const levelEditor: LevelEditor;
+    export let levelEditor: LevelEditor;
+    /**
+     * LittleJS Level Editor
+     * - Paint the game's tile layers while it is paused, then keep playing with the changes
+     * - Press 0 while the debug overlay is open to edit, 0 again to play, or call levelEditor.open() and close()
+     * - Edits the Tiled map the game loaded, saves it back as Tiled JSON, and autosaves every change
+     * - Debug builds only, the release build has stubs for its names in engineRelease.js and none of its code
+     * @namespace Editor
+     */
+    /**
+     *  @callback EditorPlayFromCallback - Puts the player at a world position, for the level editor's Play from mouse
+     *  @param {Vector2} pos - Where to start playing
+     *  @memberof Editor
+     */
+    /**
+     *  @callback EditorRestartCallback - Rebuilds the level from the map the level editor changed
+     *  @memberof Editor
+     */
+    /**
+     *  @callback EditorTileCallback - What the game does when the level editor paints a tile
+     *  @param {TileLayer} layer - The layer painted
+     *  @param {Vector2} pos - The cell's position in the layer
+     *  @param {number|undefined} tile - The tile painted, undefined when erased
+     *  @memberof Editor
+     */
+    /**
+     *  @typedef {Object} EditorToolAt - What the level editor gives the callbacks of a tool of the game's own
+     *  @property {any} pos - Where the mouse is in the level: a Vector2 in the 2D editor; in the 3D one a Vector3 on
+     *    the level or the ground, undefined when the mouse is over the panel
+     *  @property {Vector2|undefined} cell - 2D: the tile cell under the mouse on the selected tile layer
+     *  @property {any} ray - 3D: the mouse's Ray3D
+     *  @property {boolean} shift - Is Shift held
+     *  @property {boolean} ctrl - Is Ctrl held
+     *  @memberof Editor
+     */
+    /**
+     *  @typedef {Object} EditorTool - A tool of the game's own for the level editor, see LevelEditor.addTool
+     *  @property {string} [key] - The key that picks it, as addKey spells one
+     *  @property {string} [hint] - The hint line while it is on
+     *  @property {function(EditorToolAt): any} [onPress] - The left button went down in the level; returning false
+     *    says the press was not the tool's
+     *  @property {function(EditorToolAt): any} [onDrag] - Each frame it is held
+     *  @property {function(EditorToolAt): any} [onRelease] - It was let go
+     *  @property {function(EditorToolAt): any} [onDraw] - Each frame the tool is on, to draw its cursor or preview
+     *  @memberof Editor
+     */
+    /**
+     * The level editor, open it to pause the game and edit its level, close it to play on with the changes
+     * - One of it, levelEditor, 0 on the debug overlay opens and closes it too
+     * - A game makes it its own: it sets the hooks, adds keys, panel buttons and tools, or extends this class and
+     *   gives its own with setLevelEditor; the same calls work in the 2D editor and the 3D one, see EDITOR.md
+     * - In release builds LevelEditor is a stub that never opens: what a game adds is taken and never called
+     * @memberof Editor
+     * @example
+     * levelEditor.onRestart = ()=> loadLevel(); // adds a Restart button that rebuilds the level
+     * levelEditor.onTile = (layer, pos, tile)=> layer.setCollisionData(pos, tile === ladderTile ? -1 : tile ? 1 : 0);
+     * levelEditor.addKey('k', ()=> clearEnemies(), 'K: clear the enemies');
+     *
+     * // or as a class of the game's own
+     * class MyEditor extends LevelEditor
+     * {
+     *     onRestart() { loadLevel(); }
+     *     onDraw() { drawSpawnZones(); }
+     * }
+     * setLevelEditor(new MyEditor);
+     */
+    export class LevelEditor {
+        /** @property {Array<number>|undefined} - The tiles the palette shows, in its order, for a sheet that also holds
+         *  sprites and art that are not level tiles; undefined shows every tile of the sheet
+         *  @type {Array<number>|undefined} */
+        paletteTiles: Array<number> | undefined;
+        /** @property {boolean|undefined} - Which level editor opens: true the 3D one, false the 2D one, undefined the
+         *  3D one when a level was loaded with level3DLoad and there is a Render3DPlugin
+         *  @type {boolean|undefined} */
+        use3D: boolean | undefined;
+        /** @property {string|undefined} - The tool of the game's own that is on, one added with addTool, undefined
+         *  while a tool of the editor's is
+         *  @type {string|undefined} */
+        tool: string | undefined;
+        /** @type {Object<string, {action: function(boolean): any, help: string|undefined, warned: boolean}>} */
+        keys: {
+            [x: string]: {
+                action: (arg0: boolean) => any;
+                help: string | undefined;
+                warned: boolean;
+            };
+        };
+        /** @type {Array<{label: string, onClick: Function, title: string}>} */
+        buttons: Array<{
+            label: string;
+            onClick: Function;
+            title: string;
+        }>;
+        /** @type {Object<string, EditorTool>} */
+        tools: {
+            [x: string]: EditorTool;
+        };
+        /** What the game does when the 2D editor paints a tile, like setting its collision or its look the way the
+         *  game does when it loads the level; set it or override it, without one the collision layer gets collision 1
+         *  where there is a tile
+         *  @param {TileLayer} layer - The layer painted
+         *  @param {Vector2} pos - The cell's position in the layer
+         *  @param {number|undefined} tile - The tile painted, undefined when erased */
+        onTile(layer: TileLayer, pos: Vector2, tile: number | undefined): void;
+        /** Rebuild the level from what the editor changed; set it or override it and the editor has a Restart button,
+         *  which calls it after switching to play */
+        onRestart(): void;
+        /** Put the player at a position, a Vector2 in the 2D editor and a Vector3 in the 3D one; set it or override it
+         *  and the editor has Play from mouse, which starts play there
+         *  @param {any} pos */
+        onPlayFrom(pos: any): void;
+        /** Called when the editor opens, to set or override */
+        onOpen(): void;
+        /** Called when the editor closes and the game plays on, to set or override */
+        onClose(): void;
+        /** Called each frame while the editor is open, to set or override */
+        onUpdate(): void;
+        /** Called while the editor draws the level, to draw overlays of the game's own in it, to set or override */
+        onDraw(): void;
+        /** Called once when the editor's panel is made, with a box in it for the game's own controls, to set or override
+         *  @param {HTMLElement} element */
+        onPanel(element: HTMLElement): void;
+        /** Called by Save with the text of the file and its name; return true when the game kept it itself, and the
+         *  editor writes no file, to set or override
+         *  @param {string} text
+         *  @param {string} fileName
+         *  @return {boolean|void} */
+        onSave(text: string, fileName: string): boolean | void;
+        /** True while the editor is open, the game is paused under it
+         *  @return {boolean} */
+        get isOpen(): boolean;
+        /** True when the editor in use is the 3D one, as use3D says or since a 3D level was loaded
+         *  @return {boolean} */
+        get is3D(): boolean;
+        /** The 2D editor's edit functions, for a key, a button or a tool of the game's own: map, the Tiled map; layer,
+         *  the selected TileLayer; objects, a copy of the selected object layer's; hover, the cell under the mouse;
+         *  selection, the selected objects' ids; paint(cell, tile, direction, mirror), a tile index, -1 erases;
+         *  changeObjects((list)=> ...); strokeEnd() and strokeCancel(); bulk(()=> ...); undo(redo); toJSON()
+         *  @return {Object} */
+        get edit2D(): any;
+        /** The 3D editor's edit functions, undefined without the 3D plugins: level; objects; selection, a Set of ids;
+         *  selected(); made(id); change((list)=> ...); changePart(name, (part)=> ...); strokeEnd() and strokeCancel();
+         *  place(type, pos3D); setTransform(object, pos3D, rotationDegrees, scale3D); setProperty(object, name, value);
+         *  pos(object), rotation(object) and scale(object); mousePoint(); undo(redo); toJSON()
+         *  @return {Object|undefined} */
+        get edit3D(): any;
+        /** Add a key of the game's own to the editor, the 2D and the 3D one
+         *  @param {string} key - A letter or digit, 'k', or a key's name, 'Delete' or 'F2'; 'ctrl+k' with Ctrl or Cmd
+         *  @param {function(boolean): any} action - Called with whether Shift is held; returning false says it did
+         *    nothing, and the key is left to the browser
+         *  @param {string} [helpLine] - A line for the editor's help */
+        addKey(key: string, action: (arg0: boolean) => any, helpLine?: string): void;
+        /** Add a button of the game's own to the editor's panel
+         *  @param {string} label
+         *  @param {Function} onClick
+         *  @param {string} [title] - What it says when the mouse is over it */
+        addButton(label: string, onClick: Function, title?: string): void;
+        /** Add a tool of the game's own: a button in the panel by its name, and while it is on the left button in the
+         *  level is its, not the editor's own tools'
+         *  - Each callback is given {pos, cell, ray, shift, ctrl}: pos is where the mouse is in the level, a Vector2 in
+         *    2D and a Vector3 on the level or the ground in 3D; cell is the tile under it in 2D; ray is the mouse's
+         *    in 3D
+         *  - What the callbacks change through edit2D or edit3D is one undo: the editor ends the stroke at the release,
+         *    and takes it back when the right button or Escape ends the press
+         *  @param {string} name
+         *  @param {EditorTool} tool - {key, hint, onPress, onDrag, onRelease, onDraw}, each optional; onPress returning
+         *    false says the press was not the tool's */
+        addTool(name: string, tool: EditorTool): void;
+        /** Open the editor, pausing the game; until close(), Escape (the debug key) switches between playing and editing */
+        open(): any;
+        /** Close the editor and end its session, the game carries on with the changes and Escape opens the debug
+         *  overlay again */
+        close(): any;
+    }
+    /** Make a level editor of the game's own the one in use: an instance of a class that extends LevelEditor, with
+     *  the game's hooks as its methods; set it before the editor opens
+     *  @param {LevelEditor} editor
+     *  @memberof Editor */
+    export function setLevelEditor(editor: LevelEditor): void;
     /** Asserts if the expression is false, does nothing in release builds
      *  Halts execution if the assert fails and throws an error
      *  @param {*} assert - any value, the assert fails when it is falsy
@@ -10636,69 +10870,4 @@ declare module "littlejsengine" {
      *  @param {string} [description]
      *  @memberof ParticleEffects */
     export function particleEffectsAddBehavior(name: string, update: (arg0: Particle, arg1: number) => void, update3D?: (arg0: Particle3D, arg1: number) => void, min?: number, max?: number, value?: number, description?: string): void;
-    /**
-     * LittleJS Level Editor
-     * - Paint the game's tile layers while it is paused, then keep playing with the changes
-     * - Press 0 while the debug overlay is open to edit, 0 again to play, or call levelEditor.open() and close()
-     * - Edits the Tiled map the game loaded, saves it back as Tiled JSON, and autosaves every change
-     * - Debug builds only, the release build has stubs for its names in engineRelease.js and none of its code
-     * @namespace Editor
-     */
-    /**
-     *  @callback EditorPlayFromCallback - Puts the player at a world position, for the level editor's Play from mouse
-     *  @param {Vector2} pos - Where to start playing
-     *  @memberof Editor
-     */
-    /**
-     *  @callback EditorRestartCallback - Rebuilds the level from the map the level editor changed
-     *  @memberof Editor
-     */
-    /**
-     *  @callback EditorTileCallback - What the game does when the level editor paints a tile
-     *  @param {TileLayer} layer - The layer painted
-     *  @param {Vector2} pos - The cell's position in the layer
-     *  @param {number|undefined} tile - The tile painted, undefined when erased
-     *  @memberof Editor
-     */
-    /**
-     * The level editor, open it to pause the game and edit its level, close it to play on with the changes
-     * - One of it, levelEditor, 0 on the debug overlay opens and closes it too
-     * - In release builds levelEditor is a stub that never opens, and its hooks are never called
-     * @memberof Editor
-     * @example
-     * levelEditor.onRestart = ()=> loadLevel(); // adds a Restart button that rebuilds the level
-     * levelEditor.onTile = (layer, pos, tile)=> layer.setCollisionData(pos, tile === ladderTile ? -1 : tile ? 1 : 0);
-     */
-    class LevelEditor {
-        /** @property {EditorTileCallback|undefined} - What the game does when the editor paints a tile, like
-         *  setting its collision or its look the way the game does when it loads the level; without one, the
-         *  collision layer gets collision 1 where there is a tile
-         *  @type {EditorTileCallback|undefined} */
-        onTile: EditorTileCallback | undefined;
-        /** @property {Function|undefined} - Rebuild the level from the map the editor changed, a Restart button
-         *  calls it after switching to play; without one there is no Restart button
-         *  @type {EditorRestartCallback|undefined} */
-        onRestart: EditorRestartCallback | undefined;
-        /** @property {Function|undefined} - Put the player at a world position; with it, the editor's Advanced
-         *  section has Play from mouse, which starts play there, Escape at the mouse and Play at the view center
-         *  @type {EditorPlayFromCallback|undefined} */
-        onPlayFrom: EditorPlayFromCallback | undefined;
-        /** @property {Array<number>|undefined} - The tiles the palette shows, in its order, for a sheet that also holds
-         *  sprites and art that are not level tiles; undefined shows every tile of the sheet
-         *  @type {Array<number>|undefined} */
-        paletteTiles: Array<number> | undefined;
-        /** @property {boolean|undefined} - Which level editor opens: true the 3D one, false the 2D one, undefined the
-         *  3D one when a level was loaded with level3DLoad and there is a Render3DPlugin
-         *  @type {boolean|undefined} */
-        use3D: boolean | undefined;
-        /** True while the editor is open, the game is paused under it
-         *  @return {boolean} */
-        get isOpen(): boolean;
-        /** Open the editor, pausing the game; until close(), Escape (the debug key) switches between playing and editing */
-        open(): void;
-        /** Close the editor and end its session, the game carries on with the changes and Escape opens the debug
-         *  overlay again */
-        close(): void;
-    }
-    export {};
 }
