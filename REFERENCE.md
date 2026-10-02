@@ -1754,7 +1754,8 @@ light.addFlare(size, count, intensity, saturation) // gives a Light3D a flare of
 light.flare                       // the light's LensFlare3D, its child, or undefined; set one of your own, and
                                   // destroy it to take it away; it goes with the light; a level's Light has a
                                   // lensFlare property
-flare.light = lamp                // the same by hand, a flare made on its own and pointed at a light
+flare.light = lamp                // the same by hand, a flare made on its own and pointed at a light; it goes when
+                                  // the light does; a DirectionalLight3D's flare is far away, where it shines from
 // Trails - a ribbon through where the object has been, parent it to something that moves
 new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over
                                                                          // lifeTime seconds; Infinity keeps every

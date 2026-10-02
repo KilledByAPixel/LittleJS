@@ -3,7 +3,7 @@
     - A tour of the 3D plugin in one scene
     - Terrain from a height map, shadows, fog and a sky
     - Meshes built from shapes, an instanced forest, sprites and 3D text
-    - Point lights, particles, a trail, bloom and 3D sound
+    - Point lights with lens flares, particles, a trail, bloom and 3D sound
     - Roll the ball with the arrow keys, jump with space, and collect the orbs
 */
 
@@ -87,7 +87,9 @@ class Orb extends EngineObject3D
         this.color = hsl(worldRandom.float(),1,.6);
         this.emissive = 1; // make it appear bright
         this.angleVelocity3D = vec3(.01,.02,0);
-        this.addChild(new Light3D(vec3(), 12, this.color));
+        const light = new Light3D(vec3(), 12, this.color);
+        light.addFlare(.5, 3); // a small lens flare in the orb's color
+        this.addChild(light);
     }
     update()
     {
@@ -137,6 +139,9 @@ function gameInit()
 
     // add cool directional light opposite from the sun
     new DirectionalLight3D(vec3(0,.3,-1), hsl(.55,.4,.3));
+
+    // the sun flares in the lens when the free camera looks up at it
+    new LensFlare3D;
 
     // an island of noise, higher in the middle and sinking at the edges
     const samples = 193, heights = [], colors = [];

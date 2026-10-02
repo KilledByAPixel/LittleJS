@@ -122,7 +122,7 @@ test('see-through blocks of a voxel map do not hide the sun, the blocks behind t
         map.setBlockType(2, 0, {seeThrough: true});
         map.setVoxel(vec3(0, 0, 3), 1); map.setVoxel(vec3(0, 0, 2), 2);
         steps(flare, 20);`);
-    assert.equal(run('flare.isSunHidden()'), false);
+    assert.equal(run('flare.isHidden()'), false);
     assert.equal(run('flare.visible'), 1, 'glass and leaves let the sun through');
     run('map.setVoxel(vec3(0, 0, 0), 3); steps(flare, 20);');
     assert.equal(run('flare.visible'), 0, 'a solid block behind them hides it');
@@ -148,7 +148,7 @@ test('a flare with a light is that light\'s: at its place on the screen, in its 
 {
     const run = load();
     run(lampCode);
-    const at = json(run, 'flare.getSunScreenPos()');
+    const at = json(run, 'flare.getScreenPos()');
     near(at.x, 500); near(at.y, 500);
     const first = json(run, 'flare.getScreenElements()[0]');
     assert.deepEqual([first.color.r > 0, first.color.g, first.color.b], [true, 0, 0]);
@@ -165,8 +165,8 @@ test('a light\'s flare is smaller from farther than the light reaches, and goes 
     near(run('shown(flare)[0][2]'), size / 2, 'twice as far as it reaches, half the size');
     run('lamp.pos3D = vec3(0, 0, -3)');
     near(run('shown(flare)[0][2]'), size, 'no bigger up close');
-    run('lamp.destroy(); steps(flare, 20);');
-    assert.deepEqual([run('flare.visible'), run('flare.getScreenElements().length')], [0, 0]);
+    run('lamp.destroy(); steps(flare, 2);');
+    assert.deepEqual([run('flare.destroyed'), run('flare.getScreenElements().length')], [true, 0]);
 });
 
 test('a light\'s flare is hidden by what is in front of the light, not by what is behind it or the lamp around it', ()=>
@@ -279,4 +279,52 @@ test('a flare destroyed on its own is no longer the flare of its light, and addF
     run('lamp.addFlare()');
     assert.deepEqual([run('lamp.flare instanceof LensFlare3D'), run('lamp.flare !== made'), run('lamp.flare.destroyed')],
         [true, true, false]);
+});
+
+test('a flare that is off the screen sends no ray, and is not visible until it comes back', ()=>
+{
+    const run = load();
+    run(`var flare = new LensFlare3D; var rays = 0, pick = render3D.pick;
+        render3D.pick = function(...args) { ++rays; return pick.apply(this, args); };
+        sun(0, 0, -1); steps(flare, 5);`);
+    assert.deepEqual([run('rays'), run('flare.visible')], [5, 1]);
+    run('rays = 0; sun(3, 0, -1); steps(flare, 20);'); // in front of the camera, far off to the side
+    assert.deepEqual([run('rays'), run('flare.visible')], [0, 0]);
+    run('sun(0, 0, 1); steps(flare, 5);'); // behind the camera
+    assert.equal(run('rays'), 0);
+    run('sun(0, 0, -1); steps(flare, 20);');
+    assert.equal(run('flare.visible'), 1);
+});
+
+test('a light that is off or out of reach of its cone sends no ray either', ()=>
+{
+    const run = load();
+    run(lampCode + `var rays = 0, pick = render3D.pick;
+        render3D.pick = function(...args) { ++rays; return pick.apply(this, args); };
+        lamp.intensity = 0; steps(flare, 5);`);
+    assert.deepEqual([run('rays'), run('flare.getScreenElements().length')], [0, 0]);
+    run('lamp.intensity = 1; lamp.radius = 0; steps(flare, 5);');
+    assert.deepEqual([run('rays'), run('flare.getScreenElements().length')], [0, 0], 'a radius of 0 is off too');
+    run('lamp.radius = 10; lamp.coneAngle = .5; steps(flare, 5);'); // shining away from the camera
+    assert.equal(run('rays'), 0);
+});
+
+test('the flare of a directional light is far away where it shines from, like the sun, in its color', ()=>
+{
+    const run = load();
+    run(`sun(1, 0, 0); var far = new DirectionalLight3D(vec3(.3, .2, -1), rgb(0, 1, 0)); var flare = far.addFlare();
+        render3D.camera.pos = vec3(50, 0, 0); render3D.updateMatrices();`);
+    const at = json(run, 'flare.getScreenPos()');
+    assert.ok(at.x > 600 && at.y < 450, 'right and up, wherever the camera is: ' + JSON.stringify(at));
+    const [first] = json(run, 'flare.getScreenElements()');
+    assert.deepEqual([first.color.r, first.color.g > 0, first.size], [0, true, 700], 'green, and its full size');
+    run('var wall = new EngineObject3D(vec3(50 + 6, 4, -20), render3D.boxMesh); wall.scale3D = vec3(10); steps(flare, 20);');
+    assert.equal(run('flare.visible'), 0, 'hidden by a wall however far the light is');
+});
+
+test('a flare pointed at a light by hand goes when the light does', ()=>
+{
+    const run = load();
+    run(lampCode + 'lamp.destroy(); flare.update();');
+    assert.equal(run('flare.destroyed'), true);
 });

@@ -28503,7 +28503,8 @@ function render3DFlareTile(shape)
  * - flareSize, count, intensity and saturation set its look, seed picks another arrangement, and its color tints it,
  *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
  *   give it elements of your own, which may be tiles of the game's
- * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read
+ * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read; it is 0 while the
+ *   sun is off the screen, where nothing is tested
  * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
  *   through, each on the triangles of its mesh, see render3D.pick; turn it off with occlusion
  * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
@@ -28550,14 +28551,17 @@ class LensFlare3D extends EngineObject3D
         this.elements = undefined;
         /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
          *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
-         *  in front of the light, and a spotlight's shows from inside its beam only
+         *  in front of the light, and a spotlight's shows from inside its beam only; a DirectionalLight3D's is far
+         *  away where it shines from, like the sun's; the flare is destroyed when its light is; light.addFlare
+         *  sets this
          *  @type {Light3D|undefined} */
         this.light = undefined;
         /** @property {boolean} - Fade out when something is between the camera and the sun */
         this.occlusion = true;
         /** @property {number} - Seconds the flare takes to fade out or in when the sun is hidden or shows again */
         this.fadeTime = .15;
-        /** @property {number} - How much of the sun shows, 0 hidden or behind the camera to 1 in plain view, eased */
+        /** @property {number} - How much of the sun shows, 0 hidden, off the screen or behind the camera to 1 in
+         *  plain view, eased */
         this.visible = 1;
         this.renderOrder = 1e9; // over the game's sprites, it is light in the lens
         this.madeKey = '';
@@ -28594,27 +28598,56 @@ class LensFlare3D extends EngineObject3D
         return this.made;
     }
 
-    // what the flare is of, seen from the camera: the way to it, how far it is, Infinity for the sun, and a point
-    // to find it on the screen by; undefined with no sun direction, or a light that is gone or at the camera
+    // what the flare is of, seen from the camera: the way to it, how far it is, Infinity for the sun and for a
+    // directional light, which shines from its place toward the origin, and a point to find it on the screen by;
+    // undefined with no direction, or a light that is gone or at the camera
     flareSource()
     {
         const camera = render3D.camera.pos, light = this.light;
-        if (!light)
+        if (light?.destroyed) return;
+        if (!light || light.directional)
         {
-            const sun = render3D.sunDirection;
-            if (!sun.lengthSquared()) return;
-            const direction = sun.normalize();
+            const from = light ? light.getWorldPos3D() : render3D.sunDirection;
+            if (!from.lengthSquared()) return;
+            const direction = from.normalize();
             return {direction, distance: Infinity, pos: camera.add(direction.scale(100))};
         }
-        if (light.destroyed) return;
         const pos = light.getWorldPos3D(), offset = pos.subtract(camera), distance = offset.length();
         return distance ? {direction: offset.scale(1 / distance), distance, pos} : undefined;
+    }
+
+    // how the flare would show with nothing in the way: where its source is on the screen, how strong it is there,
+    // fading as it leaves the screen, its tint and the height its sizes are parts of; undefined when it would not
+    // show at all, behind the camera, off the screen, or of a light that is off or seen from outside its cone
+    flareLook()
+    {
+        const source = this.flareSource(), center = mainCanvasSize.scale(.5);
+        const sun = source && render3D.worldToScreen(source.pos);
+        if (!sun || !center.x || !center.y) return;
+        // it fades as the sun leaves the screen, gone when it is a third of the screen past the edge
+        const off = max(abs(sun.x - center.x) / center.x, abs(sun.y - center.y) / center.y);
+        const strength = clamp((1.3 - off) / .5) * this.intensity;
+        if (!(strength > 0)) return;
+        let tint = this.color.multiply(render3D.sunColor), height = mainCanvasSize.y * this.flareSize;
+        const light = this.light;
+        if (light)
+        {
+            // a light's flare is the light's color, as bright as the light up to 1, and only from inside its cone
+            const cone = render3DLightCone(light), d = source.direction;
+            const inCone = clamp(-(cone[0] * d.x + cone[1] * d.y + cone[2] * d.z) - cone[3]);
+            const c = light.color, bright = c.a * clamp(light.intensity) * inCone;
+            if (!(bright > 0)) return;
+            tint = this.color.multiply(rgb(c.r, c.g, c.b, bright));
+            if (!light.directional)
+                height *= min(1, light.radius / source.distance); // smaller from farther than it reaches
+        }
+        return height > 0 ? {sun, center, strength, tint, height} : undefined;
     }
 
     /** Where the sun, or the flare's light, is on the screen, in pixels like mousePosScreen, undefined when it is
      *  behind the camera
      *  @return {Vector2|undefined} */
-    getSunScreenPos()
+    getScreenPos()
     {
         const source = this.flareSource();
         return source && render3D.worldToScreen(source.pos);
@@ -28626,25 +28659,9 @@ class LensFlare3D extends EngineObject3D
      *      tileInfo: TileInfo|undefined, angle: number}>} */
     getScreenElements()
     {
-        const sun = this.getSunScreenPos(), center = mainCanvasSize.scale(.5);
-        if (!sun || !center.x || !center.y) return [];
-        // it fades as the sun leaves the screen, gone when it is a third of the screen past the edge
-        const off = max(abs(sun.x - center.x) / center.x, abs(sun.y - center.y) / center.y);
-        const strength = this.visible * clamp((1.3 - off) / .5) * this.intensity;
-        if (!(strength > 0)) return [];
-        let tint = this.color.multiply(render3D.sunColor), height = mainCanvasSize.y * this.flareSize;
-        const light = this.light, source = light && this.flareSource();
-        if (light)
-        {
-            if (!source) return [];
-            // a light's flare is the light's color, as bright as the light up to 1, and only from inside its cone
-            const cone = render3DLightCone(light), d = source.direction;
-            const inCone = clamp(-(cone[0] * d.x + cone[1] * d.y + cone[2] * d.z) - cone[3]);
-            const c = light.color, bright = c.a * clamp(light.intensity) * inCone;
-            if (!(bright > 0)) return [];
-            tint = this.color.multiply(rgb(c.r, c.g, c.b, bright));
-            height *= min(1, light.radius / source.distance); // smaller from farther than it reaches
-        }
+        const look = this.visible > 0 && this.flareLook();
+        if (!look) return [];
+        const {sun, center, tint, height} = look, strength = look.strength * this.visible;
         return this.getElements().map((e)=>
         {
             const c = e.color.multiply(tint);
@@ -28659,7 +28676,7 @@ class LensFlare3D extends EngineObject3D
      *  through, hit on its triangles as render3D.pick hits it, so a mesh the camera is inside hides nothing unless
      *  it is doubleSided
      *  @return {boolean} */
-    isSunHidden()
+    isHidden()
     {
         const source = this.flareSource();
         if (!source) return true;
@@ -28677,7 +28694,7 @@ class LensFlare3D extends EngineObject3D
         // is in
         const lamp = (o)=>
         {
-            if (!this.light || !o.mesh || o instanceof HeightMap) return false;
+            if (!this.light || reach === Infinity || !o.mesh || o instanceof HeightMap) return false;
             const matrix = render3DObjectMatrix(o);
             if (!matrix.determinant()) return false;
             const p = matrix.copy().invert().transformPoint(source.pos), b = o.mesh.bounds || o.mesh.getBounds();
@@ -28688,11 +28705,14 @@ class LensFlare3D extends EngineObject3D
         return !!hit && hit.distance < reach;
     }
 
-    /** Ease visible toward whether the sun shows, called automatically each frame */
+    /** Ease visible toward whether the sun shows, called automatically each frame; a flare that would not show
+     *  wherever the sun is, off the screen or its light off, looks for nothing in the way */
     update()
     {
         super.update();
-        const shows = !!this.getSunScreenPos() && !(this.occlusion && this.isSunHidden());
+        if (this.light?.destroyed)
+            return this.destroy(); // the flare of a light that is gone
+        const shows = !!this.flareLook() && !(this.occlusion && this.isHidden());
         const step = this.fadeTime > 0 ? timeDelta / this.fadeTime : 1;
         this.visible = clamp(this.visible + (shows ? step : -step));
     }

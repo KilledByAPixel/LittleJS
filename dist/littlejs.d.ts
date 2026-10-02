@@ -10182,7 +10182,8 @@ declare module "littlejsengine" {
      * - flareSize, count, intensity and saturation set its look, seed picks another arrangement, and its color tints it,
      *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
      *   give it elements of your own, which may be tiles of the game's
-     * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read
+     * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read; it is 0 while the
+     *   sun is off the screen, where nothing is tested
      * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
      *   through, each on the triangles of its mesh, see render3D.pick; turn it off with occlusion
      * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
@@ -10225,14 +10226,17 @@ declare module "littlejsengine" {
         elements: Array<LensFlareElement> | undefined;
         /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
          *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
-         *  in front of the light, and a spotlight's shows from inside its beam only
+         *  in front of the light, and a spotlight's shows from inside its beam only; a DirectionalLight3D's is far
+         *  away where it shines from, like the sun's; the flare is destroyed when its light is; light.addFlare
+         *  sets this
          *  @type {Light3D|undefined} */
         light: Light3D | undefined;
         /** @property {boolean} - Fade out when something is between the camera and the sun */
         occlusion: boolean;
         /** @property {number} - Seconds the flare takes to fade out or in when the sun is hidden or shows again */
         fadeTime: number;
-        /** @property {number} - How much of the sun shows, 0 hidden or behind the camera to 1 in plain view, eased */
+        /** @property {number} - How much of the sun shows, 0 hidden, off the screen or behind the camera to 1 in
+         *  plain view, eased */
         visible: number;
         madeKey: string;
         /** @type {Array<LensFlareElement>} */
@@ -10246,10 +10250,17 @@ declare module "littlejsengine" {
             distance: number;
             pos: Vector3;
         };
+        flareLook(): {
+            sun: Vector2;
+            center: Vector2;
+            strength: number;
+            tint: Color;
+            height: number;
+        };
         /** Where the sun, or the flare's light, is on the screen, in pixels like mousePosScreen, undefined when it is
          *  behind the camera
          *  @return {Vector2|undefined} */
-        getSunScreenPos(): Vector2 | undefined;
+        getScreenPos(): Vector2 | undefined;
         /** The parts of the flare as they are drawn now: each one's place on the screen, its size in pixels, a vector
          *  when the element's is, and its color, dimmed by how much of the sun shows; empty when there is nothing to draw
          *  @return {Array<{pos: Vector2, size: number|Vector2, color: Color, shape: string|undefined,
@@ -10266,7 +10277,7 @@ declare module "littlejsengine" {
          *  through, hit on its triangles as render3D.pick hits it, so a mesh the camera is inside hides nothing unless
          *  it is doubleSided
          *  @return {boolean} */
-        isSunHidden(): boolean;
+        isHidden(): boolean;
     }
     /**
      * Collect the EngineObject3D objects whose boxes overlap a sphere or a box, the 3D twin of engineObjectsCollect
