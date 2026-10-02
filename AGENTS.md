@@ -73,6 +73,7 @@ Short examples are special:
 - Override hooks: `gameInit()`, `gameUpdate()`, `gameUpdatePost()`, `gameRender()`, `gameRenderPost()`
 - Lines stay within 80 columns, and colors are written with `hsl(...)`, never `rgb(...)`
 - Each short is listed in `examples/shorts.js` with a name, a short description and search keywords
+- A short ends with its write-up, a block comment whose first line is `/* info`, the last thing in the file and its only block comment: markdown (headings, paragraphs, one level lists, code, bold, italic, links) that the example browser takes off the code and shows in the box under the preview (`splitExampleInfo`, `renderExampleInfo` in `examples/shorts.js`). It says what the example shows, then `## How it works`, `## Try it` and `## See also`, as `helloWorld.js` and `pongGame.js` do; what a short is about goes there and not in a comment at its top, and the text can not contain `*/`. Every engine name it mentions is checked in the source, and every Try it edit is run. [test/r5-docs.test.mjs](test/r5-docs.test.mjs) checks the form, [test/exampleBrowser.test.mjs](test/exampleBrowser.test.mjs) the split and the markdown
 
 ## Coding conventions
 
