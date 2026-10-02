@@ -65,7 +65,7 @@ function gameInit()
             tree(x, h+1, z);
     }
 
-    // the player starts on a hill, and wades through water
+    // the player starts on a hill, and water does not stop it
     player = new FirstPersonCamera3D(vec3(11, 12, 44));
     player.setCollision();
     player.collideWithVoxel = (type)=> type != 6;
@@ -83,6 +83,13 @@ function gameUpdate()
     for (let i = 7; i--;)
         if (keyWasPressed('Digit' + (i+1)))
             selected = i + 1;
+
+    // float: in water the player rises to the top, and can jump from it
+    if (map.getVoxel(player.pos3D.floor()) == 6)
+    {
+        player.velocity3D.y = max(player.velocity3D.y, .03);
+        player.groundObject = map;
+    }
 
     // get the block in the middle of the view
     const ray = render3D.screenToRay(mainCanvasSize.scale(.5));
@@ -162,7 +169,11 @@ leaves around the top, only into empty cells, which `getVoxel` tells.
 tall, and `render3D.gravity` pulls it down. It starts above a hill and
 drops onto it. The map asks an object's `collideWithVoxel(type)` whether
 a block stops it, and the player's says every type but 6, water, so it
-wades through water and stands on the bottom.
+can be in water. `gameUpdate` makes it float: while the block at the
+body's middle, `getVoxel` of its position rounded down, is water, the
+player is given a small upward speed, so it rises until its middle is
+at the surface and stays there. Setting `groundObject` lets it jump
+from the water as it does from the ground.
 `jumpSpeed` is the upward speed space gives it while it stands on
 something, and `eyeHeight` puts the eye .6 above the body's middle.
 

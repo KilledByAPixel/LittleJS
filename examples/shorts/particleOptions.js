@@ -1,5 +1,6 @@
 let cells;
 const replay = new Timer;
+const effect = 'fire'; // the effect every cell plays
 
 // 4 cells across and 2 down, 5 units apart
 const cellPos = (i)=> vec2((i % 4 - 1.5) * 5, i < 4 ? 1.5 : -4);
@@ -22,7 +23,7 @@ function gameInit()
         [{speed: .1, particleTime: .4}, '{speed: .1, particleTime: .4}'],
     ];
     cells.forEach(([options], i)=>
-        particleEffect('fire', cellPos(i), options));
+        particleEffect(effect, cellPos(i), options));
     replay.set(2);
 }
 
@@ -31,7 +32,7 @@ function gameUpdate()
     // the burst ends itself, so it plays again every 2 seconds
     if (replay.elapsed())
     {
-        particleEffect('fire', cellPos(6), cells[6][0]);
+        particleEffect(effect, cellPos(6), cells[6][0]);
         replay.set(2);
     }
 }
@@ -43,8 +44,8 @@ function gameRender()
         drawRect(cellPos(i), vec2(1, .2), hsl(0,0,1,.1));
         drawText(text, cellPos(i).add(vec2(0, -1)), .45, hsl(0,0,.85));
     });
-    drawText("particleEffect('fire', pos, options)", vec2(0, 5.2), .6,
-        hsl(.1,.8,.7));
+    drawText(`particleEffect('${effect}', pos, options)`, vec2(0, 5.2),
+        .6, hsl(.1,.8,.7));
 }
 
 /* info
@@ -95,8 +96,8 @@ and its text one unit under it. The last `drawText` is the line across
 the top.
 
 ## Try it
-- Change `'fire'` to `'magic'` in both `particleEffect` calls to see
-  the same options on another effect.
+- Change `'fire'` to `'magic'` at the top to see the same options on
+  another effect.
 - Change the `.6` of `hue` to `.3`, in the options and in its text, for
   a green fire.
 - Change `tile(6)` to `tile(2)`, in the options and in its text, to

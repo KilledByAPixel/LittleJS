@@ -40,7 +40,11 @@ class Ball extends Box2dObject
             hitSound.play(cueBall.pos, this.getHitStrength(), .5);
         }
         if (this.pocketed)
+        {
             this.destroy();
+            if (this == cueBall) // a new cue ball where it started
+                cueBall = new Ball(vec2(-6, 0));
+        }
     }
     render()
     {
@@ -169,8 +173,8 @@ makes its shapes sensors: they report contacts and block nothing. Its
 wider than its sensor, the width of a ball, so a ball is taken about
 when its center passes the edge of the hole.
 
-The cue ball can be pocketed too, and this example does not bring it
-back.
+The cue ball can be pocketed too. When it is, a new one is made where
+the first started and takes its place in `cueBall`.
 
 ## Try it
 - Allow harder hits: `maxHitDistance = 6` to `maxHitDistance = 12`.

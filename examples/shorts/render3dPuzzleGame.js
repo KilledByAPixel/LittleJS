@@ -126,7 +126,7 @@ function gameInit()
 
     // build all the meshes and the level
     wallMesh = buildBox(vec3(.9,.6,.9)).setColor(hsl(.6,.1,.3));
-    blockMesh = buildBox(vec3(.7,1,.7));
+    blockMesh = buildBox(vec3(.7,.8,.7));
     ballMesh = buildSphere(.8);
     padMesh = buildBox(vec3(1,.1,1));
     buildLevel();
