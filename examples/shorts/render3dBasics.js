@@ -59,8 +59,9 @@ the way it draws 2D ones: make an object and it is in the scene.
   straight up to the other at the horizon, and lights the scene by it.
 - `render3D.shadows = true` has the sun cast shadows. They are off by
   default and cost nothing when off.
-- `render3D.ambientColor` is the light that reaches every face, so the
-  sides away from the sun are not black.
+- `render3D.ambientColor` is the soft light from above, which keeps the
+  sides away from the sun from being black. `setSky` took one from the
+  sky's top color, and this line replaces it.
 - `new CameraControl3D(target, distance, pitch)` is a camera that looks
   at a point, here one unit above the floor from 15 units away and .3
   radians above the horizon. It does the dragging and zooming.
@@ -103,6 +104,6 @@ bulb follows because it is the light's child.
   sun and long shadows.
 
 ## See also
-3D Shapes has every mesh builder. 3D Lights, 3D Collision and 3D Drawing
+3D Shapes shows more of the mesh builders. 3D Lights, 3D Collision and 3D Drawing
 each take one part of this further.
 */

@@ -353,7 +353,9 @@ function renderExampleInfo(markdown)
         // code spans are set aside first, so nothing inside one is read as markdown
         const spans = [];
         s = escape(s).replace(/`([^`]+)`/g, (m, code)=> '\0' + (spans.push(code) - 1) + '\0');
-        s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\*([^*]+)\*/g, '<i>$1</i>');
+        // a star opens or closes only against a word's outside, so the stars of a*b and 2 * 3 stay stars
+        s = s.replace(/(?<![\w*])\*\*(?=\S)([^*]+)(?<=\S)\*\*(?![\w*])/g, '<b>$1</b>');
+        s = s.replace(/(?<![\w*])\*(?=\S)([^*]+)(?<=\S)\*(?![\w*])/g, '<i>$1</i>');
         s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, text, url)=>
             /^https?:\/\//.test(url) || !url.includes(':') ?
                 `<a href="${url}" target="_blank" rel="noopener">${text}</a>` : m);

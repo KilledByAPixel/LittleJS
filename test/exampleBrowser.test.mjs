@@ -89,6 +89,8 @@ test('the info markdown becomes html', ()=>
     assert.equal(render('a `x*2` and `y*3` b'), '<p>a <code>x*2</code> and <code>y*3</code> b</p>',
         'a star inside code is not italic');
     assert.equal(render('**bold** and *it*'), '<p><b>bold</b> and <i>it</i></p>');
+    assert.equal(render('(*it*) and a*b times c*d, 2*3*4, 2 * 3 * 4'),
+        '<p>(<i>it</i>) and a*b times c*d, 2*3*4, 2 * 3 * 4</p>', 'a star in the middle of words or sums is a star');
     assert.equal(render('```\nif (a < b)\n    c();\n\n*x*\n```\nAfter'),
         '<pre>if (a &lt; b)\n    c();\n\n*x*</pre><p>After</p>');
     assert.equal(render('[docs](https://x.com/a?b=1) [short](?example=Shapes)'),

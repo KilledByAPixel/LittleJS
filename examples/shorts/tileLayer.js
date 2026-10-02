@@ -80,7 +80,7 @@ a mass. There are none here yet, see Try it.
 
 ## Try it
 - Change `randBool(.7)` to `randBool(.9)` for a sparser level.
-- Set `tileIndex` to another tile of the sheet, from 0 to 11.
+- Set `tileIndex` to another tile of the sheet, from 0 to 13.
 - Take out the `setCollisionData` line: the sparks fall through.
 - Add a box that falls and lands on the tiles, at the end of the click:
   `new EngineObject(mousePos).setCollision();`
