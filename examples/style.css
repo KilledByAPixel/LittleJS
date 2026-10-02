@@ -29,14 +29,16 @@ iframe
 }
 #selectExample
 {
-    flex: 1 1 0;
+    flex-grow: 1;
     min-height: 100px;
 }
 #exampleInfoBox
 {
-    display: none;
-    flex: 1 1 0;
+    /* under the code, a quarter of the column's height */
+    flex: none;
+    height: 25%;
     min-height: 100px;
+    contain: size; /* its text does not count toward the page's height, or a long one would grow the page */
     overflow-y: auto;
     box-sizing: border-box;
     padding: 2px 12px;
@@ -68,7 +70,7 @@ iframe
 @media (max-aspect-ratio: 1/1)
 {
     /* the stacked layout of a narrow window: the box has a height of its own */
-    #exampleInfoBox { flex: none; max-height: 40vh; }
+    #exampleInfoBox { height: auto; max-height: 40vh; contain: none; }
 }
 #divTextareas
 {

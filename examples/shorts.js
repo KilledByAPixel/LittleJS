@@ -1,7 +1,10 @@
 class ExampleInfo
 {
-    constructor(name, filename, description='', largeExample=false, tags='')
+    constructor(name, filename, description='', largeExample=false, tags='', info='')
     {
+        // the write-up for the info box: a short keeps its own in a /* info block at the end of its file,
+        // a full example, which is a folder, has it here
+        this.info = info;
         if (filename && !largeExample)
             filename = 'shorts/' + filename;
         this.name = name;
@@ -18,6 +21,158 @@ class ExampleInfo
             this.selectText += ' (' + this.tags + ')';
     }
 }
+
+// the info box's write-up for each full example, by its folder: markdown, as in a short's /* info block
+const fullExampleInfo =
+{
+starter: `
+The project to copy when you start a game of your own. One page loads
+the engine with a script tag, and \`game.js\` has the game functions that
+\`engineInit\` is given, each with a little in it.
+
+Move the mouse and the sparks follow it, bouncing off the tiles. Click
+to play a sound, change the sparks' colors and unlock a medal. The mouse
+wheel zooms.
+
+## What it shows
+- A level built from a map of text into a \`TileCollisionLayer\`
+- A built-in particle effect, \`particleEffect('sparks', ...)\`, with
+  some of its settings replaced
+- A \`Sound\` made from ZzFX parameters, and a \`Medal\`
+- Drawing in the world in \`gameRender\`, and text over everything in
+  \`gameRenderPost\`
+
+The folder also has a build script that packs the game into a zip.`,
+
+breakout: `
+A complete small game: break every brick with the ball. Click to launch
+a ball and move the paddle with the mouse, a touch or a gamepad. R
+starts again.
+
+## What it shows
+- A game written as ES modules that import the engine,
+  \`import * as LJS from 'littlejs.esm.js'\`, split into a game file and
+  an objects file
+- Paddle, ball, bricks and walls as \`EngineObject\` classes with
+  collision, as in the Pong Game short
+- Sounds and particles when a brick breaks
+- A post processing effect over the whole screen
+- A score drawn with the engine's image font
+
+## See also
+Pong Game is the same idea in a few lines, and Post Effects shows the
+built in screen effects.`,
+
+platformer: `
+A platforming game to build on: run, jump, shoot and throw grenades
+through a level with crates, enemies and ground that can be destroyed.
+
+## Controls
+- Arrow keys move and jump, or a gamepad
+- Z or the left mouse button shoots, C or the middle button throws a
+  grenade, X or the right button dodges
+- The mouse wheel zooms, R restarts the level
+- T drops a crate at the mouse, E an enemy, and M moves the player there
+
+## What it shows
+- A level loaded from a Tiled JSON file into tile layers, with the
+  objects it places
+- A player and enemies built on one character class, with platforming
+  physics and controls
+- Destructible tiles, particles, sounds and a parallax background
+- The level editor: press Escape, then 0, to edit the level and play it
+
+## See also
+The Platformer Game and Level Editor shorts are small versions of two
+parts of this.`,
+
+puzzle: `
+A match three puzzle: drag a tile onto its neighbor to swap them, and
+three or more in a row are cleared. R starts a new board.
+
+## What it shows
+- A board kept as an array, with the swaps and falls timed by \`Timer\`
+- A tile sheet of high resolution art
+- Tiles that fall into place, and particles where they clear
+- The best score kept in local storage
+- Mouse and touch handled by the same code
+
+## See also
+Sliding Puzzle is a smaller game on a grid, and Save / Load shows how
+data is kept.`,
+
+box2d: `
+The Box2D physics plugin in several scenes. Up and down arrows change
+the scene and R restarts it. Drag an object with the left mouse button,
+hold Z or the middle button to drop more, and X or the right button
+makes an explosion.
+
+## What it shows
+- Every type of shape and joint
+- Callbacks when contacts begin and end
+- Raycasts and queries for what is at a point
+- Collision filtering, which says what collides with what
+- Box2D bodies as LittleJS objects
+
+## See also
+The Box2D shorts each take one of these on its own: Box2D Demo, Box2D
+Car, Box2D Pool and Box2D Tile Layer.`,
+
+htmlMenu: `
+A menu made of plain HTML over the game canvas. M opens it, and the
+game is paused while it shows.
+
+## What it shows
+- HTML elements placed over the canvas and shown or hidden by the game
+- Several kinds of input in it, buttons and a slider among them
+- \`setPaused\` to hold the game while the menu is open
+
+Use this way when a game's menus are forms and text, which HTML does
+well. For a menu drawn by the engine itself, see UI System Plugin Demo.`,
+
+uiSystem: `
+A menu made with the UI system plugin, drawn by the engine on the game
+canvas. M shows and hides it, and the game is paused while it shows.
+
+## What it shows
+- Buttons, text, checkboxes, sliders and more, as \`UIObject\` classes
+  placed under a root object
+- A modal window that asks for confirmation
+- Moving through the menu with the keyboard or a gamepad as well as the
+  mouse
+
+## See also
+The UI System, UI Layout and UI Tile Slice shorts each show one part.`,
+
+'3d': `
+A tour of the 3D plugin in one scene: an island to roll a ball around.
+Arrow keys roll the ball, space jumps, and the orbs are there to
+collect. F switches to a free camera to look around.
+
+## What it shows
+- Terrain from a height map, with shadows, fog and a sky
+- Meshes built from shapes, a forest drawn with instancing, sprites and
+  text in 3D
+- Point lights, particles, a trail, bloom and sound placed in 3D
+
+## See also
+The shorts under LittleJS 3D take these one at a time, starting with 3D
+Basics.`,
+
+threejs: `
+A small 3D platformer drawn by three.js, with LittleJS running the
+game. Arrow keys or WASD run and space jumps.
+
+## What it shows
+- The three.js plugin: LittleJS does the input, physics and collision,
+  and three.js draws the scene
+- The 2D world as the ground plane, x and y, with each object keeping a
+  height and a vertical speed of its own for jumping
+- The LittleJS canvas on top, drawing only the text
+
+Use this when a game needs what three.js has. The engine's own 3D
+plugin, shown in 3D Plugin, needs no other library.`,
+};
 
 const exampleList =
 [
@@ -134,15 +289,15 @@ const exampleList =
     new ExampleInfo('3D Racing Game', 'render3dRacingGame.js', 'Race laps around a hilly track', false, 'racing, terrain, chase camera'),
     new ExampleInfo('3D Puzzle Game', 'render3dPuzzleGame.js', 'Sokoban style block pushing puzzle', false, 'orthographic, picking, pads'),
     new ExampleInfo('--- FULL EXAMPLES ---'),
-    new ExampleInfo('Starter', 'starter', 'Clean project template', true, 'base, empty, particles'),
-    new ExampleInfo('Breakout Game', 'breakout', 'Complete breakout game', true, 'objects, physics, score'),
-    new ExampleInfo('Platforming Game', 'platformer', 'Platformer with level loading', true, 'jump, world, tiles, pixel art, sprites'),
-    new ExampleInfo('Puzzle Game', 'puzzle', 'Match 3 style puzzle game', true, 'match, swap, sprites'),
-    new ExampleInfo('Box2D Plugin', 'box2d', 'Full Box2D physics demo', true, 'objects, bodies, joints'),
-    new ExampleInfo('HTML Menus', 'htmlMenu', 'HTML UI integration', true, 'web, browser, overlay, button, slider, textbox'),
-    new ExampleInfo('UI System Plugin Demo', 'uiSystem', 'Complete UI system demo', true, 'menu, overlay, button, slider, checkbox'),
-    new ExampleInfo('3D Plugin', '3d', 'An island with shadows, lights and bloom', true, 'terrain, heightmap, shadows, lights'),
-    new ExampleInfo('Three.js 3D Demo', 'threejs', '3D platformer rendered with Three.js', true, 'camera, mesh, physics'),
+    new ExampleInfo('Starter', 'starter', 'Clean project template', true, 'base, empty, particles', fullExampleInfo['starter']),
+    new ExampleInfo('Breakout Game', 'breakout', 'Complete breakout game', true, 'objects, physics, score', fullExampleInfo['breakout']),
+    new ExampleInfo('Platforming Game', 'platformer', 'Platformer with level loading', true, 'jump, world, tiles, pixel art, sprites', fullExampleInfo['platformer']),
+    new ExampleInfo('Puzzle Game', 'puzzle', 'Match 3 style puzzle game', true, 'match, swap, sprites', fullExampleInfo['puzzle']),
+    new ExampleInfo('Box2D Plugin', 'box2d', 'Full Box2D physics demo', true, 'objects, bodies, joints', fullExampleInfo['box2d']),
+    new ExampleInfo('HTML Menus', 'htmlMenu', 'HTML UI integration', true, 'web, browser, overlay, button, slider, textbox', fullExampleInfo['htmlMenu']),
+    new ExampleInfo('UI System Plugin Demo', 'uiSystem', 'Complete UI system demo', true, 'menu, overlay, button, slider, checkbox', fullExampleInfo['uiSystem']),
+    new ExampleInfo('3D Plugin', '3d', 'An island with shadows, lights and bloom', true, 'terrain, heightmap, shadows, lights', fullExampleInfo['3d']),
+    new ExampleInfo('Three.js 3D Demo', 'threejs', '3D platformer rendered with Three.js', true, 'camera, mesh, physics', fullExampleInfo['threejs']),
 ];
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -262,13 +417,15 @@ function setExample()
     url.searchParams.set('example', example.name);
     window.history.replaceState({}, '', url);
 
-    loadFile(example.filename, example.largeExample);
+    loadFile(example.filename, example.largeExample, example.info || example.description + '.');
 }
 
 // each load is numbered: a file that arrives after another example was selected is not shown, so the example
 // selected last is the one that shows, whatever order the files come in
+// fallbackInfo is what the info box shows for an example with no write-up in its file: a full example's from the
+// list, or a line about a short whose write-up is not written yet, so the box is never empty
 let loadFileCount = 0;
-async function loadFile(filename, largeExample)
+async function loadFile(filename, largeExample, fallbackInfo='')
 {
     const load = ++loadFileCount;
     if (codeMirror)
@@ -281,7 +438,7 @@ async function loadFile(filename, largeExample)
 
     if (largeExample)
     {
-        setExampleInfo(''); // a full example has no info block
+        setExampleInfo(fallbackInfo);
 
         // Show message in code view that full examples can't be edited
         const text = 'Code view not available for large examples.';
@@ -307,7 +464,7 @@ async function loadFile(filename, largeExample)
         const {code: text, info} = splitExampleInfo(await response.text());
         if (load !== loadFileCount)
             return; // another example was selected while this one loaded
-        setExampleInfo(info);
+        setExampleInfo(info || fallbackInfo);
 
         // set the code in both code mirror and textarea
         codeIsJS = true;
@@ -326,13 +483,13 @@ async function loadFile(filename, largeExample)
     {
         if (load !== loadFileCount)
             return;
-        setExampleInfo('');
+        setExampleInfo(fallbackInfo);
         setErrorMessage(error.message);
     }
 }
 
 // a short ends with its write-up: a block comment whose first line is /* info, the last thing in the file.
-// The editor shows the code without it, and the box under the preview shows it. A block that is not last is
+// The editor shows the code without it, and the box under the code shows it. A block that is not last is
 // not one, and the file is shown whole
 function splitExampleInfo(text)
 {
@@ -414,11 +571,10 @@ function renderExampleInfo(markdown)
     return html;
 }
 
-// show an example's info in its box, or hide the box when it has none
+// show an example's info in its box, from its top
 function setExampleInfo(info)
 {
-    exampleInfoBox.innerHTML = info ? renderExampleInfo(info) : '';
-    exampleInfoBox.style.display = info ? 'block' : 'none';
+    exampleInfoBox.innerHTML = renderExampleInfo(info);
     exampleInfoBox.scrollTop = 0;
 }
 
@@ -795,6 +951,14 @@ function readSaveData()
     const saveData = saveDataJSON ? JSON.parse(saveDataJSON) : {};
     selectTheme.value = savedTheme = saveData.theme ?? defaultTheme;
     selectFontSize.value = saveData.fontSize ?? defaultFontSize;
+    checkboxShowInfo.checked = saveData.showInfo ?? true;
+    showExampleInfo();
+}
+
+// the info box shows while Show Info is checked, and the code has its space while it is not
+function showExampleInfo()
+{
+    exampleInfoBox.style.display = checkboxShowInfo.checked ? '' : 'none';
 }
 readSaveData();
 
@@ -806,7 +970,8 @@ function writeSaveData()
     const saveData =
     {
         theme,
-        fontSize
+        fontSize,
+        showInfo: checkboxShowInfo.checked
     };
     const saveDataJSON = JSON.stringify(saveData);
     localStorage.setItem(saveName, saveDataJSON);
@@ -916,6 +1081,12 @@ selectTheme.addEventListener('change', loadTheme);
 selectFontSize.addEventListener('change', loadTheme);
 checkboxLiveEdit.addEventListener('change', writeSaveData);
 checkboxUseStrict.addEventListener('change', restartCode);
+checkboxShowInfo.addEventListener('change', ()=>
+{
+    showExampleInfo();
+    writeSaveData();
+    codeMirror && codeMirror.refresh(); // the code's height changed
+});
 textareaCode.addEventListener('input', codeInput);
 inputSearch.addEventListener('input', ()=> filterExamples());
 inputSearch.addEventListener('keydown', e=> { if (e.key === 'Escape') filterExamples(1); });

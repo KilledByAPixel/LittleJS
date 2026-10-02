@@ -1,7 +1,7 @@
 <!DOCTYPE html><head>
 <title>LittleJS Example Browser</title>
 <link rel=icon type=image/png href=favicon.png>
-<link rel=stylesheet href=style.css?10>
+<link rel=stylesheet href=style.css?11>
 <meta charset=utf-8>
 <meta name='viewport' content='width=device-width, initial-scale=1.0'>
 <!-- meta tags for social media -->
@@ -34,12 +34,14 @@ Theme:
 </select>
 <span class=nowrap><input type=checkbox id=checkboxLiveEdit checked>Live Edit</span>
 <span class=nowrap><input type=checkbox id=checkboxUseStrict>Use Strict</span>
+<span class=nowrap><input type=checkbox id=checkboxShowInfo checked>Show Info</span>
 </div>
 <div id=divTextareas>
 <textarea id=textareaCode spellcheck=false></textarea>
 <textarea id=textareaError readonly spellcheck=false></textarea>
 <textarea id=textareaConsole readonly spellcheck=false></textarea>
 </div>
+<div id=exampleInfoBox></div>
 </div>
 <div id=container2>
 <div style='display:flex;justify-content:center'>
@@ -57,7 +59,6 @@ Theme:
 <span class=nowrap><input type=checkbox id=checkboxWebGL checked>WebGL</span>
 </span>
 </div>
-<div id=exampleInfoBox></div>
 <span id=selectExampleText class=nowrap>Select an example...</span>
 <select id=selectExample size=2></select>
 </div>

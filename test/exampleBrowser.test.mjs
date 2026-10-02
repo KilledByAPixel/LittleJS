@@ -14,7 +14,7 @@ assert.ok(start >= 0 && end > start, 'loadFile is where the test looks for it');
 function load()
 {
     const pending = new Map, loaded = [], errors = [];
-    const exampleInfoBox = {innerHTML: 'OLD', style: {display: 'block'}, scrollTop: 50};
+    const exampleInfoBox = {innerHTML: 'OLD', scrollTop: 50};
     const context = vm.createContext({
         exampleInfoBox,
         codeMirror: undefined, textareaCode: {value: '', disabled: false},
@@ -115,30 +115,35 @@ test('a short shows its code without the info block, and the box shows the info'
     respond('shorts/a.js', 'let a;\n\n/* info\nHello\n*/\n'); await a;
     assert.deepEqual(loaded.map((x)=> x.text), ['let a;\n']);
     assert.equal(context.textareaCode.value, 'let a;\n');
-    assert.deepEqual([exampleInfoBox.innerHTML, exampleInfoBox.style.display, exampleInfoBox.scrollTop],
-        ['<p>Hello</p>', 'block', 0]);
+    assert.deepEqual([exampleInfoBox.innerHTML, exampleInfoBox.scrollTop], ['<p>Hello</p>', 0]);
 
-    const b = context.loadFile('shorts/b.js', false);
+    // a short with no block yet shows what the list says about it, so the box is never empty
+    const b = context.loadFile('shorts/b.js', false, 'About b');
     respond('shorts/b.js', 'let b;\n'); await b;
-    assert.deepEqual([exampleInfoBox.innerHTML, exampleInfoBox.style.display], ['', 'none'], 'no block, no box');
+    assert.equal(exampleInfoBox.innerHTML, '<p>About b</p>');
+
+    // and a short's own block is shown in place of that
+    const c = context.loadFile('shorts/c.js', false, 'About c');
+    respond('shorts/c.js', 'let c;\n/* info\nIts own\n*/\n'); await c;
+    assert.equal(exampleInfoBox.innerHTML, '<p>Its own</p>');
 });
 
-test('a short that fails to load does not keep the info of the one before it', async ()=>
+test('a short that fails to load shows the info the list has for it, not the short before it', async ()=>
 {
     const {context, errors, respond, exampleInfoBox} = load();
     const a = context.loadFile('shorts/a.js', false);
     respond('shorts/a.js', 'let a;\n/* info\nHello\n*/\n'); await a;
-    const gone = context.loadFile('shorts/gone.js', false);
+    const gone = context.loadFile('shorts/gone.js', false, 'About gone');
     respond('shorts/gone.js', '', false); await gone;
     assert.equal(errors.length, 1);
-    assert.deepEqual([exampleInfoBox.innerHTML, exampleInfoBox.style.display], ['', 'none']);
+    assert.equal(exampleInfoBox.innerHTML, '<p>About gone</p>');
 });
 
-test('a full example hides the info box of the short before it', async ()=>
+test('a full example shows the info the list has for it, not the short before it', async ()=>
 {
     const {context, respond, exampleInfoBox} = load();
     const a = context.loadFile('shorts/a.js', false);
     respond('shorts/a.js', 'let a;\n/* info\nHello\n*/\n'); await a;
-    await context.loadFile('platformer/index.html', true);
-    assert.deepEqual([exampleInfoBox.innerHTML, exampleInfoBox.style.display], ['', 'none']);
+    await context.loadFile('platformer/index.html', true, 'A platformer.\n\n## Controls\n- Jump');
+    assert.equal(exampleInfoBox.innerHTML, '<p>A platformer.</p><h3>Controls</h3><ul><li>Jump</li></ul>');
 });
