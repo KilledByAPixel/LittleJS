@@ -26,9 +26,9 @@ function gameUpdate()
     cameraPos = vec2(time*4 + look.x*.02, -look.y*.005);
 }
 
-function gameRender()
+function gameRenderPost()
 {
-    // the world itself, ground and posts 5 units apart, for comparison
+    // the world itself, ground and posts 5 units apart, in front of it all
     drawRect(vec2(cameraPos.x, -28), vec2(1e3, 40), hsl(.3,.4,.25));
     const first = floor(cameraPos.x/5 - 10)*5;
     for (let x = first; x < first + 105; x += 5)

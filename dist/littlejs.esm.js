@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.22.0';
+const engineVersion = '1.23.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -31107,7 +31107,7 @@ class Prefab3D extends EngineObject3D
                     rotation: level3DVector(object.rotation, vec3()).scale(PI / 180)};
                 const at = this.attached ? local : level3DPrefabPartTransform(this, object);
                 const part = level3DMakeAt(object, at.pos, at.rotation, at.scale);
-                if (!part || typeof part !== 'object') continue;
+                if (!part) continue; // level3DMakeAt gives an object or nothing
                 this.parts.push(part);
                 this.partObjects.push(object);
                 if (!this.attached || !(part instanceof EngineObject3D)) continue;
