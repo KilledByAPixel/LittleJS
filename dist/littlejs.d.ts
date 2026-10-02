@@ -8559,6 +8559,7 @@ declare module "littlejsengine" {
         /** @type {TextureInfo|undefined} */
         streamTileInfo: TextureInfo | undefined;
         streamState: any;
+        streamUnlit: boolean;
         /** @type {Mesh|undefined} */
         capture: Mesh | undefined;
         /** @type {Array<{distance: number, state: Object, draw: function(): void}>|undefined} */

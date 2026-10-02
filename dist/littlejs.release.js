@@ -22512,17 +22512,19 @@ function render3DInstance(mesh, matrix, tileInfo, color)
 // make room for one more instance of a mesh under a texture and the current draw state, flushing a batch that
 // differs first, and return where its 24 floats go in mesh.instanceData: the matrix, the tint and the uv rect
 // drawMesh passes whether its matrix mirrors, and its batch then culls by the mesh and winds by that at the flush,
-// so it never sets the draw state for them, which would move the state's version at every draw
-function render3DInstanceSlot(mesh, textureInfo, mirrored)
+// so it never sets the draw state for them, which would move the state's version at every draw; drawBillboard
+// passes that its batch is unlit, for the same reason
+function render3DInstanceSlot(mesh, textureInfo, mirrored, unlit=false)
 {
     const r = render3D;
     if (mesh.instanceCount && (mesh.instanceTextureInfo !== textureInfo || mesh.instanceMirrored !== mirrored
-        || render3DStateChanged(mesh.instanceState)))
+        || mesh.instanceUnlit !== unlit || render3DStateChanged(mesh.instanceState)))
         render3DFlushInstances(mesh);
     if (!mesh.instanceCount)
     {
         mesh.instanceTextureInfo = textureInfo;
         mesh.instanceMirrored = mirrored;
+        mesh.instanceUnlit = unlit;
         mesh.instanceState = render3DCaptureBatchState();
         r.instanceMeshes.push(mesh);
     }
@@ -22556,6 +22558,8 @@ function render3DFlushInstances(only)
         const state = mesh.instanceState;
         if (mesh.instanceMirrored !== undefined) // a drawMesh batch: culled by its mesh, wound by its matrices
             state.cullBackFaces = !mesh.doubleSided, state.mirrored = mesh.instanceMirrored;
+        if (mesh.instanceUnlit) // a batch of sprites
+            state.lighting = false;
         render3DDrawInstanced(mesh, buffer, count, mesh.instanceTextureInfo, state);
     }
     if (!only)
@@ -22912,6 +22916,7 @@ class Render3DPlugin
         /** @type {TextureInfo|undefined} */
         this.streamTileInfo = undefined;
         this.streamState = undefined; // captured state the pending batch was drawn under
+        this.streamUnlit = false;     // the pending batch is drawn unlit whatever that state says, billboards are
         /** @type {Mesh|undefined} */
         this.capture = undefined;     // the mesh a bake is filling
         /** @type {Array<{distance: number, state: Object, draw: function(): void}>|undefined} */
@@ -23302,6 +23307,8 @@ class Render3DPlugin
     {
         if (!this.streamCount || !render3DCanDraw()) return;
         const gl = glContext;
+        if (this.streamUnlit)
+            this.streamState.lighting = false; // its own copy of the state
         render3DSetDrawUniforms(RENDER3D_IDENTITY, this.streamTileInfo, WHITE, RENDER3D_FULL_UV_RECT, this.streamState);
         render3DBindVertexBuffer(this.streamBuffer);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.streamFloats, 0, this.streamCount * RENDER3D_VERTEX_FLOATS);
@@ -23536,13 +23543,34 @@ class Render3DPlugin
             return this.queueTransparent(p, ()=> this.drawBillboard(p, s, tileInfo, c, angle, upright));
         }
 
-        // the quad's six stream vertices written straight in with no vectors made, unlit, for sprites, and for
-        // particles when instancing is off
-        const lit = this.lighting;
-        this.lighting = this.shadowPass && lit; // unlit on screen, in the shadow map the object's flag decides
-        let uvRect;
-        try { uvRect = render3DBeginStrip(6, tileInfo); }
-        finally { this.lighting = lit; }
+        // unlit on screen, in the shadow map the object's flag decides; the batch is told, the draw state is not
+        // set, which would move its version at every sprite
+        const unlit = !this.shadowPass;
+        if (!this.blend && this.depthTest && this.instancing)
+        {
+            // an opaque sprite is one more instance of the shared quad, as a mesh's uses are: every sprite of a
+            // sheet is one instanced draw at the end of the stage, with nothing written per corner; the shader
+            // drops its see through texels, so it needs no sorting
+            if (!render3DCanDraw() || this.shadowPass && !this.lighting) return; // unlit things cast no shadow
+            if (this.frustumCulling && !render3DSphereVisible(pos.x, pos.y, pos.z, hypot(size.x, size.y) / 2))
+                return;
+            const quad = this.billboardMesh, cb = this.cameraBack, uv = render3DGetTileUVs(tileInfo);
+            render3DMeshUpload(quad);
+            // the quad's half axes, doubled for its unit square
+            const a = render3DBillboardAxes(size, angle, upright);
+            const k = render3DInstanceSlot(quad, render3DTextureOf(tileInfo), false, unlit), data = quad.instanceData;
+            data[k]    = a[0] * 2; data[k+1]  = a[1] * 2; data[k+2]  = a[2] * 2; data[k+3]  = 0;
+            data[k+4]  = a[3] * 2; data[k+5]  = a[4] * 2; data[k+6]  = a[5] * 2; data[k+7]  = 0;
+            data[k+8]  = cb.x;     data[k+9]  = cb.y;     data[k+10] = cb.z;     data[k+11] = 0;
+            data[k+12] = pos.x;    data[k+13] = pos.y;    data[k+14] = pos.z;    data[k+15] = 1;
+            data[k+16] = color.r;  data[k+17] = color.g;  data[k+18] = color.b;  data[k+19] = color.a;
+            data[k+20] = uv.x;     data[k+21] = uv.y;     data[k+22] = uv.w;     data[k+23] = uv.h;
+            return;
+        }
+
+        // one that blends is drawn in its sorted place: the quad's six stream vertices written straight in with no
+        // vectors made, for sprites that blend, and for particles when instancing is off
+        const uvRect = render3DBeginStrip(6, tileInfo, unlit);
         if (!uvRect) return;
         const a = render3DBillboardAxes(size, angle, upright);
         const rx = a[0], ry = a[1], rz = a[2], ux = a[3], uy = a[4], uz = a[5];
@@ -24654,8 +24682,9 @@ function render3DRenderDepth()
 // which way they face, so keeping the count even keeps every strip facing out.
 
 // make room in the stream for a strip of count vertices under the current state and texture, flushing a batch that
-// differs first; returns the uv rect to map the vertices with, or undefined when nothing can be drawn
-function render3DBeginStrip(count, tileInfo)
+// differs first; returns the uv rect to map the vertices with, or undefined when nothing can be drawn; unlit draws
+// the batch unlit whatever the state says, so a billboard does not set the state and set it back at every draw
+function render3DBeginStrip(count, tileInfo, unlit=false)
 {
     const r = render3D;
     if (!render3DCanDraw()) return;
@@ -24663,12 +24692,13 @@ function render3DBeginStrip(count, tileInfo)
     false&&ASSERT(count <= RENDER3D_MAX_STREAM_VERTS, 'strip is too large for the stream, bake it into a mesh');
     if (count > RENDER3D_MAX_STREAM_VERTS) return;
     const textureInfo = render3DTextureOf(tileInfo);
-    if (r.streamCount && (textureInfo !== r.streamTileInfo || render3DStateChanged(r.streamState)
-        || r.streamCount + count > RENDER3D_MAX_STREAM_VERTS))
+    if (r.streamCount && (textureInfo !== r.streamTileInfo || r.streamUnlit !== unlit
+        || render3DStateChanged(r.streamState) || r.streamCount + count > RENDER3D_MAX_STREAM_VERTS))
         r.flush();
     render3DFlushBeforeOverlay();
     if (!r.streamCount)
         r.streamState = render3DCaptureBatchState();
+    r.streamUnlit = unlit;
     r.streamTileInfo = textureInfo;
     return render3DGetTileUVs(tileInfo);
 }

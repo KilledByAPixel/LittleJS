@@ -1518,7 +1518,10 @@ render3D.billboardMesh                                    // a size 1 square fac
 render3D.drawMesh(mesh, matrix, tileInfo, color) // any mesh, batched with its other uses; tileInfo can be a TextureInfo
                                                  // for the whole texture, uvs past 1 repeat when it wraps
 render3D.drawBillboard(pos, size, tileInfo, color, angle, upright) // camera facing quad, unlit, size is a Vector2;
-                                                                   // upright stands on world up
+                                                                   // upright stands on world up; opaque ones,
+                                                                   // and sprite objects that are not transparent,
+                                                                   // are batched: a sheet's sprites are one
+                                                                   // instanced draw, its clear pixels cut out
 // list points counter clockwise as seen from the front, or the face points away and a culling mesh hides it
 render3D.drawQuad(a, b, c, d, tileInfo, color)            // corners in loop order, a is the texture's top left
 render3D.drawTriangle(a, b, c, color)

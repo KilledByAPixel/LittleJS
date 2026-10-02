@@ -8,7 +8,7 @@
 
 // the 3D plugin's shaders compile and its draws reach the screen: an object in its own color, a lit object, an
 // instanced set, a ground with the sun's shadow of a box on it, an object with a Shader of its own, a block of a
-// voxel map, a height map, 3D particles, and a 2D draw over them all
+// voxel map, a height map, an opaque sprite, 3D particles, and a 2D draw over them all
 // the camera is at z 10 looking at the origin, the view 11.5 units across at the origin, so a place (x, y) there is
 // at (.5 + x / 11.5, .5 + y / 11.5) of the canvas
 smokeRun(async ()=>
@@ -59,6 +59,13 @@ smokeRun(async ()=>
         const ramp = new HeightMap([[1, 1], [0, 0]], vec2(1.5), 1.5, undefined, vec3(-5, -1, 0));
         ramp.color = rgb(1, 1, 0);
         ramp.emissive = 1;
+
+        // a sprite, an object with a tile and no mesh, opaque: its left half orange, its right half see through
+        const half = new OffscreenCanvas(16, 16), halfContext = half.getContext('2d');
+        halfContext.fillStyle = '#f80';
+        halfContext.fillRect(0, 0, 8, 16);
+        const sprite = new EngineObject3D(vec3(-4.9, 3, 0), undefined, new TileInfo(vec2(), vec2(16), new TextureInfo(half)));
+        sprite.scale3D = vec3(1.4);
     }, ()=> {}, ()=> {}, ()=>
     {
         drawRect(vec2(-24, 24), vec2(8), rgb(1, 1, 0)); // 2D, over the 3D scene
@@ -78,6 +85,8 @@ smokeRun(async ()=>
     pixel('an object draws with its own Shader', at(0, 3.2), (p)=> smokeNear(p, [255, 0, 255, 255]));
     pixel('a voxel map draws its block with its tile', at(5.4, -.5), (p)=> smokeNear(p, [0, 255, 255, 255], 40));
     pixel('a height map draws', at(-5, -.3), (p)=> smokeNear(p, [255, 255, 0, 255], 40));
+    pixel('an opaque sprite draws its tile, unlit', at(-5.25, 3), (p)=> smokeNear(p, [255, 136, 0, 255], 40));
+    pixel('and nothing where its tile is see through', at(-4.55, 3), (p)=> smokeNear(p, [0, 0, 0, 255], 20));
     pixel('3D particles draw', at(3, 2.7), (p)=> p[0] > 40);
     pixel('a 2D draw goes over the 3D scene', [.125, .875], (p)=> smokeNear(p, [255, 255, 0, 255]));
     pixel('nothing draws where nothing is', [.5, .95], (p)=> smokeNear(p, [0, 0, 0, 255]));
