@@ -429,3 +429,32 @@ test('a tool added again under its name takes the place of the first, its key to
     run(`levelEditor.addTool('Dots', {key: 'p'}); levelEditor.addTool('Dots', {key: 'o'});`);
     assert.deepEqual(json(run, 'Object.keys(levelEditor.keys)'), ['o']);
 });
+
+test('saves are written in the order they were asked for, whatever order an async onSave answers in', async ()=>
+{
+    for (const is3D of [false, true])
+    {
+        const { run } = await loadGame(is3D);
+        run((is3D ? open3D : open2D) + `var writes = [], pending = [];
+            saveText = (text)=> writes.push(${is3D ? 'JSON.parse(text).objects[0].pos[0]' : 'JSON.parse(text).layers[0].data[0]'});
+            levelEditor.onSave = ()=> new Promise((resolve)=> pending.push(resolve));
+            var save = ()=> ${is3D ? 'editor3DSave()' : 'editorSave(editorRecord())'};
+            var first = save();
+            ${is3D ? 'level.objects[0].pos[0] = 7' : 'map.layers[0].data[0] = 7'};
+            var second = save();`);
+        await new Promise((resolve)=> setTimeout(resolve, 0));
+        assert.equal(run('pending.length'), 1, 'the second waits its turn');
+        run('pending[0](false)');
+        await run('first');
+        await new Promise((resolve)=> setTimeout(resolve, 0));
+        run('pending[1](false)');
+        await run('second');
+        assert.deepEqual(json(run, 'writes'), [is3D ? 0 : 1, 7], 'the older one first, the newer one last');
+        // a hook that fails fails its own save, and the next one is written
+        run(`levelEditor.onSave = ()=> Promise.reject(new Error('no')); var failed = save();`);
+        await assert.rejects(run('failed'));
+        run('levelEditor.onSave = ()=> false; var after = save();');
+        await run('after');
+        assert.equal(run('writes.length'), 3);
+    }
+});

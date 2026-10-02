@@ -30195,10 +30195,10 @@ class Prefab3D extends EngineObject3D
         {
             if (!(part instanceof EngineObject3D)) return; // what a function made is where it was made
             const to = level3DPrefabPartTransform(this, this.partObjects[i]);
-            part.pos3D = to.pos;
             part.rotation3D = to.rotation;
             part.scale3D = (level3DBaseScale.get(part) ?? vec3(1)).multiply(to.scale);
-            part instanceof Prefab3D && part.placeParts();
+            // a prefab inside this one goes by its origin, which is not where an attached one's handle is
+            part instanceof Prefab3D ? part.placeAt(to.pos) : part.pos3D = to.pos;
         });
     }
 
@@ -30237,10 +30237,14 @@ class Prefab3D extends EngineObject3D
                 // a child rides with its parent and has no collision of its own
                 part.setCollision(false, false, false);
                 children.push(part);
-                // its place is its middle, a prefab inside this one too by now
-                const half = part.size3D.multiply(part.scale3D).scale(.5);
-                for (const k of ['x', 'y', 'z'])
-                    low[k] = min(low[k], part.pos3D[k] - abs(half[k])), high[k] = max(high[k], part.pos3D[k] + abs(half[k]));
+                // the corners of its box as it is turned; its place is its middle, a prefab inside this one too
+                const box = buildMatrix(part.pos3D, part.rotation3D, part.size3D.multiply(part.scale3D));
+                for (let i = 8; i--;)
+                {
+                    const p = box.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
+                    for (const k of ['x', 'y', 'z'])
+                        low[k] = min(low[k], p[k]), high[k] = max(high[k], p[k]);
+                }
             }
             // an attached instance is the box around its parts, its handle at the middle of it as an object's
             // place is the middle of its body, so a game that makes it solid has it solid where it is seen

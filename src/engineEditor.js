@@ -742,8 +742,14 @@ async function editorSave(record, pickAgain=false)
     if (!record) return;
     editorStrokeEnd();
     const text = editorMapJSON(record); // the map as it is now, later edits wait for a later save
-    if (await editorCall('onSave', text, record.fileName) === true) return 'kept'; // the game kept it itself
-    const saved = (async ()=> { await record.saving; return editorSaveText(record, text, pickAgain); })();
+    // its place in line is taken now, and the game's hook is asked when its turn comes, so saves are written in
+    // the order they were asked for however long a hook takes
+    const saved = (async ()=>
+    {
+        await record.saving;
+        if (await editorCall('onSave', text, record.fileName) === true) return 'kept'; // the game kept it itself
+        return editorSaveText(record, text, pickAgain);
+    })();
     record.saving = saved.catch(()=> {});
     return saved;
 }

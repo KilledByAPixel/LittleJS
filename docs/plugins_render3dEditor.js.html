@@ -1872,19 +1872,31 @@ async function editor3DSave(pickAgain=false)
     {
         // inside a prefab, Save writes the prefab as a file of its own, or the game keeps it itself
         const text = editor3DLevelJSON(level), name = open.name + '.json';
-        const saved = JSON.stringify(editor3DObjects()); // as the file has it
-        const kept = await editorCall('onSave', text, name) === true;
-        kept || saveText(text, name, 'application/json');
-        editor3DPrefabDirty.delete(open.name);
-        open.saved = saved;
-        return kept ? 'kept' : 'downloaded';
+        const written = JSON.stringify(editor3DObjects()); // as the file has it
+        const saved = (async ()=>
+        {
+            await record.saving; // in the order asked for, as a level's saves are
+            const kept = await editorCall('onSave', text, name) === true;
+            kept || saveText(text, name, 'application/json');
+            editor3DPrefabDirty.delete(open.name);
+            open.saved = written;
+            return kept ? 'kept' : 'downloaded';
+        })();
+        record.saving = saved.catch(()=> {});
+        return saved;
     }
     // what is written, kept as it is now: the level can change while the file is picked and written, and those
     // edits are not in the file, so they stay in the autosave; the level and record are this one's, whichever is
     // open by then
     const text = editor3DLevelJSON(level);
-    if (await editorCall('onSave', text, record.fileName) === true) return 'kept'; // the game kept it itself
-    const saved = (async ()=> { await record.saving; return editor3DSaveText(level, record, text, pickAgain); })();
+    // its place in line is taken now, and the game's hook is asked when its turn comes, so saves are written in
+    // the order they were asked for however long a hook takes
+    const saved = (async ()=>
+    {
+        await record.saving;
+        if (await editorCall('onSave', text, record.fileName) === true) return 'kept'; // the game kept it itself
+        return editor3DSaveText(level, record, text, pickAgain);
+    })();
     record.saving = saved.catch(()=> {});
     return saved;
 }

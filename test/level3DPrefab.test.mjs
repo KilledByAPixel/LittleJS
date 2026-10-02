@@ -160,3 +160,35 @@ test('a level with an instance of a prefab nobody added loads the rest, with a w
     assert.ok(warnings.some((text)=> text.includes('Ghost')));
     made[0].destroy(true);
 });
+
+test('an attached prefab inside a prefab of separate parts is where the outer one puts its origin', ()=>
+{
+    // the inner one's handle is the middle of its body, 2 from its origin
+    level3DAddPrefab('Inner', {attached: true, objects: [{type: 'Box', pos: [2, 0, 0]}]});
+    level3DAddPrefab('Outer', {objects: [{type: 'Inner', pos: [3, 0, 0]}]});
+    const outer = level3DSpawn('Outer', vec3(10, 0, 0)), box = outer.parts[0].parts[0];
+    nearVec(box.getWorldPos3D(), 15, 0, 0);
+    outer.pos3D = vec3(20, 0, 0);
+    outer.update();
+    nearVec(box.getWorldPos3D(), 25, 0, 0);
+    outer.destroy(true);
+    // turned a quarter about y, +x goes to -z, and twice the size
+    const turned = level3DSpawn('Outer', vec3(), vec3(0, PI / 2, 0), vec3(2));
+    nearVec(turned.parts[0].parts[0].getWorldPos3D(), 0, 0, -10);
+    turned.destroy(true);
+});
+
+test('the body of an attached prefab is the box around its parts as they are turned', ()=>
+{
+    level3DAddPrefab('Beam', {attached: true, objects: [{type: 'Box', scale: [4, 1, 1], rotation: [0, 90, 0]}]});
+    const beam = level3DSpawn('Beam');
+    nearVec(beam.size3D, 1, 1, 4);
+    beam.destroy(true);
+    // and with a part off to a side, turned, the middle of the body is the middle of what is seen
+    level3DAddPrefab('Arm', {attached: true, objects: [{type: 'Box', pos: [0, 0, 0]},
+        {type: 'Box', pos: [3, 0, 0], scale: [1, 1, 4], rotation: [0, 90, 0]}]});
+    const arm = level3DSpawn('Arm');
+    nearVec(arm.size3D, 5.5, 1, 1); // from -.5 to 5
+    nearVec(arm.originOffset, 2.25, 0, 0);
+    arm.destroy(true);
+});

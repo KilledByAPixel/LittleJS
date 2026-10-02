@@ -31072,10 +31072,10 @@ class Prefab3D extends EngineObject3D
         {
             if (!(part instanceof EngineObject3D)) return; // what a function made is where it was made
             const to = level3DPrefabPartTransform(this, this.partObjects[i]);
-            part.pos3D = to.pos;
             part.rotation3D = to.rotation;
             part.scale3D = (level3DBaseScale.get(part) ?? vec3(1)).multiply(to.scale);
-            part instanceof Prefab3D && part.placeParts();
+            // a prefab inside this one goes by its origin, which is not where an attached one's handle is
+            part instanceof Prefab3D ? part.placeAt(to.pos) : part.pos3D = to.pos;
         });
     }
 
@@ -31114,10 +31114,14 @@ class Prefab3D extends EngineObject3D
                 // a child rides with its parent and has no collision of its own
                 part.setCollision(false, false, false);
                 children.push(part);
-                // its place is its middle, a prefab inside this one too by now
-                const half = part.size3D.multiply(part.scale3D).scale(.5);
-                for (const k of ['x', 'y', 'z'])
-                    low[k] = min(low[k], part.pos3D[k] - abs(half[k])), high[k] = max(high[k], part.pos3D[k] + abs(half[k]));
+                // the corners of its box as it is turned; its place is its middle, a prefab inside this one too
+                const box = buildMatrix(part.pos3D, part.rotation3D, part.size3D.multiply(part.scale3D));
+                for (let i = 8; i--;)
+                {
+                    const p = box.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
+                    for (const k of ['x', 'y', 'z'])
+                        low[k] = min(low[k], p[k]), high[k] = max(high[k], p[k]);
+                }
             }
             // an attached instance is the box around its parts, its handle at the middle of it as an object's
             // place is the middle of its body, so a game that makes it solid has it solid where it is seen
@@ -34189,8 +34193,14 @@ async function editorSave(record, pickAgain=false)
     if (!record) return;
     editorStrokeEnd();
     const text = editorMapJSON(record); // the map as it is now, later edits wait for a later save
-    if (await editorCall('onSave', text, record.fileName) === true) return 'kept'; // the game kept it itself
-    const saved = (async ()=> { await record.saving; return editorSaveText(record, text, pickAgain); })();
+    // its place in line is taken now, and the game's hook is asked when its turn comes, so saves are written in
+    // the order they were asked for however long a hook takes
+    const saved = (async ()=>
+    {
+        await record.saving;
+        if (await editorCall('onSave', text, record.fileName) === true) return 'kept'; // the game kept it itself
+        return editorSaveText(record, text, pickAgain);
+    })();
     record.saving = saved.catch(()=> {});
     return saved;
 }
@@ -38200,19 +38210,31 @@ async function editor3DSave(pickAgain=false)
     {
         // inside a prefab, Save writes the prefab as a file of its own, or the game keeps it itself
         const text = editor3DLevelJSON(level), name = open.name + '.json';
-        const saved = JSON.stringify(editor3DObjects()); // as the file has it
-        const kept = await editorCall('onSave', text, name) === true;
-        kept || saveText(text, name, 'application/json');
-        editor3DPrefabDirty.delete(open.name);
-        open.saved = saved;
-        return kept ? 'kept' : 'downloaded';
+        const written = JSON.stringify(editor3DObjects()); // as the file has it
+        const saved = (async ()=>
+        {
+            await record.saving; // in the order asked for, as a level's saves are
+            const kept = await editorCall('onSave', text, name) === true;
+            kept || saveText(text, name, 'application/json');
+            editor3DPrefabDirty.delete(open.name);
+            open.saved = written;
+            return kept ? 'kept' : 'downloaded';
+        })();
+        record.saving = saved.catch(()=> {});
+        return saved;
     }
     // what is written, kept as it is now: the level can change while the file is picked and written, and those
     // edits are not in the file, so they stay in the autosave; the level and record are this one's, whichever is
     // open by then
     const text = editor3DLevelJSON(level);
-    if (await editorCall('onSave', text, record.fileName) === true) return 'kept'; // the game kept it itself
-    const saved = (async ()=> { await record.saving; return editor3DSaveText(level, record, text, pickAgain); })();
+    // its place in line is taken now, and the game's hook is asked when its turn comes, so saves are written in
+    // the order they were asked for however long a hook takes
+    const saved = (async ()=>
+    {
+        await record.saving;
+        if (await editorCall('onSave', text, record.fileName) === true) return 'kept'; // the game kept it itself
+        return editor3DSaveText(level, record, text, pickAgain);
+    })();
     record.saving = saved.catch(()=> {});
     return saved;
 }
