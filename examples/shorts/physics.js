@@ -11,9 +11,10 @@ class Box extends EngineObject
     }
     update()
     {
-        // space pushes every box to the right
+        // space pushes every box toward the mouse
         if (keyWasPressed('Space'))
-            this.velocity.x += .3;
+            this.velocity = this.velocity.add(
+                mousePos.subtract(this.pos).normalize(.3));
     }
 }
 
@@ -90,7 +91,8 @@ function gameUpdate()
 function gameRender()
 {
     drawText('restitution 0, .5 and .9', vec2(-8, 6), .7);
-    drawText('friction .5, .8 and .97, space pushes', vec2(5, -4.5), .7);
+    drawText('friction .5, .8 and .97, space pushes toward the mouse',
+        vec2(5, -4.5), .7);
     drawText('sensor', vec2(-2, .5), .7);
     drawText('gravityScale -.3', vec2(12, 4.5), .7);
 }
@@ -122,8 +124,10 @@ below are all fields of the object, set once in a constructor.
   it at once. `.8` is the default. A pair uses the higher of the two
   frictions, so the floor is given 0 and each box's own number decides.
 
-`update` is called every frame, and the push from Space is .3 units a
-frame added to the velocity, which is in units per frame.
+`update` is called every frame. Space pushes each box toward the mouse:
+`mousePos.subtract(this.pos)` is the vector from the box to the mouse,
+`normalize(.3)` keeps its direction and makes its length .3, and that
+is added to the velocity, which is in units per frame.
 
 ### Balloon
 `gravityScale` multiplies gravity for one object. A negative one falls
