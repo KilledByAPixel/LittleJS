@@ -32,8 +32,19 @@ smokeRun(async ()=>
     near('the clear color shows', pixel(-16, -16), [0, 0, 255, 255]);
     near('a rectangle draws in its color', pixel(-16, 16), [255, 0, 0, 255]);
     near('a tile draws its texture', pixel(16, 16), [0, 255, 0, 255]);
-    // somewhere on the X there is yellow, its strokes cross in the middle
-    const middle = pixel(16, -16);
-    check('text draws', middle[0] > 150 && middle[1] > 150 && middle[2] < 100, middle);
+    // somewhere on the X there is yellow: any pixel of the square it is drawn in, since where its strokes are
+    // goes by the machine's font, and one place read on a thin stroke is half the background's
+    const size = 24, x0 = (.5 + 16 / 64) * mainCanvas.width - size / 2 | 0;
+    const y0 = (.5 + 16 / 64) * mainCanvas.height - size / 2 | 0;
+    const data = mainContext.getImageData(x0, y0, size, size).data;
+    let yellow = 0, most = [0, 0, 255];
+    for (let i = 0; i < data.length; i += 4)
+    {
+        if (data[i] > 150 && data[i + 1] > 150 && data[i + 2] < 100)
+            ++yellow;
+        if (data[i] - data[i + 2] > most[0] - most[2])
+            most = [data[i], data[i + 1], data[i + 2]];
+    }
+    check('text draws', yellow > 0, {yellow, most});
 });
 </script>
