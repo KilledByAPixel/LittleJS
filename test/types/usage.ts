@@ -77,3 +77,11 @@ levelEditor.edit2D.paint(vec2(), 5);
 const editing: boolean = levelEditor.isOpen && levelEditor.is3D;
 // @ts-expect-error
 levelEditor.addKey('k');
+
+// onSave may be async, set on the editor or as a method of a class of the game's own
+levelEditor.onSave = async (text, fileName)=> text.length > 0 && fileName.length > 0;
+class ServerEditor extends LevelEditor
+{
+    async onSave(text: string, fileName: string) { return text.length > 0 && fileName.length > 0; }
+}
+setLevelEditor(new ServerEditor);

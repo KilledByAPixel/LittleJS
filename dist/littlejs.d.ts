@@ -816,11 +816,11 @@ declare module "littlejsengine" {
          *  @param {HTMLElement} element */
         onPanel(element: HTMLElement): void;
         /** Called by Save with the text of the file and its name; return true when the game kept it itself, and the
-         *  editor writes no file, to set or override
+         *  editor writes no file, to set or override; it may be async
          *  @param {string} text
          *  @param {string} fileName
-         *  @return {boolean|void} */
-        onSave(text: string, fileName: string): boolean | void;
+         *  @return {boolean|void|Promise<boolean|void>} */
+        onSave(text: string, fileName: string): boolean | void | Promise<boolean | void>;
         /** True while the editor is open, the game is paused under it
          *  @return {boolean} */
         get isOpen(): boolean;

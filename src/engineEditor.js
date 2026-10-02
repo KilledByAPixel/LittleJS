@@ -181,10 +181,10 @@ class LevelEditor
     onPanel(element) {}
 
     /** Called by Save with the text of the file and its name; return true when the game kept it itself, and the
-     *  editor writes no file, to set or override
+     *  editor writes no file, to set or override; it may be async
      *  @param {string} text
      *  @param {string} fileName
-     *  @return {boolean|void} */
+     *  @return {boolean|void|Promise<boolean|void>} */
     onSave(text, fileName) { return false; }
 
     /** True while the editor is open, the game is paused under it

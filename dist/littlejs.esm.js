@@ -33632,10 +33632,10 @@ class LevelEditor
     onPanel(element) {}
 
     /** Called by Save with the text of the file and its name; return true when the game kept it itself, and the
-     *  editor writes no file, to set or override
+     *  editor writes no file, to set or override; it may be async
      *  @param {string} text
      *  @param {string} fileName
-     *  @return {boolean|void} */
+     *  @return {boolean|void|Promise<boolean|void>} */
     onSave(text, fileName) { return false; }
 
     /** True while the editor is open, the game is paused under it
@@ -38134,8 +38134,10 @@ function editor3DAutosave(level=editor3DLevel, known)
             if (known?.fromLevel && JSON.stringify(objects) !== frame.entered)
                 edits[frame.name] = known.attached ? {attached: true, objects} : {objects};
         });
-        if (root && Object.keys(edits).length)
-            editor3DAutosave({...root, prefabs: {...editor3DLevelPart('prefabs', root), ...edits}}, editor3DRecords.get(root));
+        // with nothing edited any more, an undo back to how the prefab was, the level's autosave is the level's own
+        // again, which takes away one of an edit that was undone and keeps the level's other edits
+        const prefabs = {...editor3DLevelPart('prefabs', root), ...edits};
+        root && editor3DAutosave(Object.keys(prefabs).length ? {...root, prefabs} : root, editor3DRecords.get(root));
         return;
     }
     const record = known ?? editor3DRecords.get(level);
@@ -38216,8 +38218,13 @@ async function editor3DSave(pickAgain=false)
             await record.saving; // in the order asked for, as a level's saves are
             const kept = await editorCall('onSave', text, name) === true;
             kept || saveText(text, name, 'application/json');
-            editor3DPrefabDirty.delete(open.name);
             open.saved = written;
+            // it is in its file when what it holds now is what was saved: edited again while the save was kept,
+            // or gone back from with more edits, it still waits
+            const at = editor3DPrefabStack.indexOf(open);
+            const now = at < 0 ? level3DPrefabs.get(open.name)?.objects :
+                (editor3DPrefabStack[at + 1]?.level ?? editor3DLevel).objects;
+            JSON.stringify(now) === written && editor3DPrefabDirty.delete(open.name);
             return kept ? 'kept' : 'downloaded';
         })();
         record.saving = saved.catch(()=> {});

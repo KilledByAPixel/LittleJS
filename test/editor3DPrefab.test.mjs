@@ -423,3 +423,39 @@ test('a file that is not a prefab, or a name that is taken, is not loaded, and t
     run('editor3DPrefabEnter(1)');
     assert.equal(typeof run(`editor3DPrefabLoad('Lamp', good)`), 'string', 'not while a prefab is open');
 });
+
+test('an edit inside a prefab that is undone there leaves no autosave of it, and a reload does not bring it back', async ()=>
+{
+    const storage = makeStorage();
+    let engine = await loadGame({ localStorage: storage });
+    engine.run(fileCode + 'editor3DPrefabEnter(1);' + liftPost + 'editor3DUndo(); editor3DPrefabBack();');
+    assert.deepEqual(JSON.parse(storage.items['LittleJS editor 3D /game/']), {}, 'the level is as its file has it');
+    engine = await loadGame({ localStorage: storage });
+    engine.run(fileCode);
+    assert.deepEqual(json(engine.run, 'level.prefabs.House.objects[1].pos'), [4, 1.5, 0]);
+});
+
+test('undoing a prefab edit keeps the level\'s other edits in its autosave', async ()=>
+{
+    const storage = makeStorage();
+    const { run } = await loadGame({ localStorage: storage });
+    run(fileCode + `editor3DChange((list)=> editor3DSetTransform(list[1], vec3(-30, .5, 0))); editor3DStrokeEnd();
+        editor3DPrefabEnter(1);` + liftPost + 'editor3DUndo();');
+    const saved = JSON.parse(storage.items['LittleJS editor 3D /game/'])['levels/town.json'];
+    assert.deepEqual([saved.objects[1].pos, saved.prefabs.House.objects[1].pos], [[-30, .5, 0], [4, 1.5, 0]]);
+});
+
+test('a prefab edited again while its save was still being kept stays marked as not in its file', async ()=>
+{
+    const { run } = await loadGame();
+    run(`level3DAddPrefab('Shop', ${house}); var finish, kept = [];
+        levelEditor.onSave = (text)=> new Promise((resolve)=> { kept.push(JSON.parse(text).objects[1].pos[1]); finish = resolve; });` +
+        fileCode.replace(`type: 'Box', pos: [-20, .5, 0]`, `type: 'Shop', pos: [-20, 0, 0]`) +
+        'editor3DPrefabEnter(2);' + liftPost + 'var saving = editor3DSave();');
+    await new Promise((resolve)=> setTimeout(resolve, 0));
+    run(`editor3DChange((list)=> editor3DSetTransform(list[1], vec3(4, 3.5, 0))); editor3DStrokeEnd();
+        editor3DPrefabBack(); finish(true);`);
+    assert.equal(await run('saving'), 'kept');
+    assert.deepEqual([json(run, 'kept'), run('editor3DPrefabDirty.has("Shop")')], [[2.5], true],
+        'what was kept is the first edit, the second is in no file');
+});
