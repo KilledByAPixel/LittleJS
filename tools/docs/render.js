@@ -150,8 +150,9 @@ function typeHtml(names, links)
     return names.map(one).join('<span class="sep">|</span>');
 }
 
-// the raw type text of each @param, @property, @type and @return tag in a
-// comment, by name, for the tags whose type jsdoc could not parse
+// each @param, @property, @type and @return tag of a comment by name, as
+// {type, optional, description} read from the text, for the tags whose type
+// jsdoc could not parse: it then drops the tag's optional flag and description too
 function tagTypes(comment)
 {
     const types = new Map();
@@ -163,12 +164,35 @@ function tagTypes(comment)
         for (; i < comment.length && depth; ++i)
             depth += comment[i] == '{' ? 1 : comment[i] == '}' ? -1 : 0;
         const type = comment.slice(re.lastIndex, i - 1).trim();
-        const rest = comment.slice(i);
-        const name = m[1] == 'type' ? '@type' : m[1].startsWith('return') ? '@return' : (rest.match(/^\s*\[?\s*(?:\.\.\.)?([\w$.]+)/) || [])[1];
-        if (name)
-            types.set(name, type);
+        let rest = comment.slice(i), name, optional = false;
+        if (m[1] == 'type')
+            name = '@type';
+        else if (m[1].startsWith('return'))
+            name = '@return';
+        else
+        {
+            // a default inside the brackets may be an array itself
+            const n = rest.match(/^\s*(\[)?\s*(?:\.\.\.)?([\w$.]+)(?:=(?:\[[^\]]*\]|[^\]])*)?\]?/);
+            if (!n)
+                continue;
+            name = n[2];
+            optional = !!n[1];
+            rest = rest.slice(n[0].length);
+        }
+        // the description runs to the next tag or the comment's end, over the star of each line
+        const description = rest.split(/\n\s*\*?\s*@|\*\/\s*$/)[0].replace(/\n\s*\*?/g, ' ').replace(/\s+/g, ' ').replace(/^\s*-?\s*/, '').trim();
+        types.set(name, { type, optional, description });
     }
     return types;
+}
+
+// the tags of a doclet, read once
+const tagCache = new WeakMap();
+function tagsOf(doclet)
+{
+    if (!tagCache.has(doclet))
+        tagCache.set(doclet, tagTypes(doclet.comment || ''));
+    return tagCache.get(doclet);
 }
 
 // a small highlighter for the examples: comments, strings, numbers, keywords
@@ -267,12 +291,179 @@ function homePage(model, options)
     return shell(model, options, { title: options.title, current: 'index.html', body: `<article class="readme">${readme}</article>`, outline });
 }
 
+const KIND_TITLES = { function: 'Functions', member: 'Members', constant: 'Constants', typedef: 'Typedefs' };
+
+// the link to a doclet's line on GitHub at the release tag
+function sourceLink(doclet, options)
+{
+    const meta = doclet.meta;
+    if (!meta || !meta.filename)
+        return '';
+    const root = String(options.root || '').replace(/\\/g, '/').replace(/\/$/, '');
+    const folder = String(meta.path || '').replace(/\\/g, '/').replace(root, '').replace(/^\//, '');
+    const file = (folder ? folder + '/' : '') + meta.filename;
+    const href = `${options.repo}/blob/v${options.version}/${file}#L${meta.lineno}`;
+    return `<a class="src" href="${href}" title="${esc(file)}">${esc(meta.filename)}:${meta.lineno}</a>`;
+}
+
+// the type of a param, property or doclet: what jsdoc parsed, or the tag's
+// text when it could not
+function typeOf(item, name, doclet, model)
+{
+    if (item.type && item.type.names && item.type.names.length)
+        return typeHtml(item.type.names, model.links);
+    const tag = tagsOf(doclet).get(name);
+    return tag && tag.type ? typeHtml([tag.type], model.links) : '';
+}
+
+// a param or property jsdoc parsed has its own fields, one whose type it
+// rejected is read back from the tag
+const isOptional = (p, doclet)=> p.optional || !p.type && !!(tagsOf(doclet).get(p.name) || {}).optional;
+function descriptionOf(p, doclet)
+{
+    if (p.description || p.type)
+        return p.description || '';
+    const tag = tagsOf(doclet).get(p.name);
+    return tag && tag.description ? `<p>${esc(tag.description)}</p>` : '';
+}
+
+// a list of params or properties as a definition list, dotted names nested
+function paramsHtml(items, doclet, model)
+{
+    if (!items || !items.length)
+        return '';
+    let html = '<dl class="params">';
+    for (const p of items)
+    {
+        if (!p.name)
+            continue;
+        const depth = (p.name.match(/\./g) || []).length;
+        const notes = [];
+        if (isOptional(p, doclet))
+            notes.push('optional');
+        if (p.defaultvalue !== undefined && p.defaultvalue !== null)
+            notes.push('default ' + esc(JSON.stringify(p.defaultvalue).replace(/^"(.*)"$/, '$1')));
+        const type = typeOf(p, p.name, doclet, model);
+        const note = notes.length ? ` <span class="opt">${notes.join(', ')}</span>` : '';
+        html += `<dt${depth ? ` class="d${depth}"` : ''}><code>${(p.variable ? '…' : '') + esc(p.name.split('.').pop())}</code>${type ? ' ' + type : ''}${note}</dt>`;
+        html += `<dd>${descriptionOf(p, doclet)}</dd>`;
+    }
+    return html + '</dl>';
+}
+
+// the signature line of a function: name(params) → returns
+function signatureHtml(entry, doclet, model)
+{
+    const params = (doclet.params || []).filter(p => p.name && !p.name.includes('.'))
+        .map(p => (p.variable ? '…' : '') + (isOptional(p, doclet) ? `<span class="opt">${esc(p.name)}</span>` : esc(p.name)));
+    let html = `<span class="name">${esc(entry.name)}</span>(${params.join(', ')})`;
+    const returns = doclet.returns && doclet.returns[0];
+    const type = returns ? typeOf(returns, '@return', doclet, model) : '';
+    if (type)
+        html += ` → ${type}`;
+    return html;
+}
+
+// jsdoc trims an example's first line and leaves one space on the lines after
+// it when the comment indents them past the star, so take the common indent
+// of the later lines off
+function dedent(code)
+{
+    const lines = code.replace(/\s+$/, '').split('\n');
+    const rest = lines.slice(1).filter(l => l.trim());
+    const indent = rest.length ? Math.min(...rest.map(l => l.match(/^ */)[0].length)) : 0;
+    return [lines[0].trim(), ...lines.slice(1).map(l => l.slice(indent))].join('\n');
+}
+
+// one entry: the top line, the description, params, returns, properties, example
+function entryHtml(entry, model, options)
+{
+    const d = entry.doclet;
+    const isFunction = d.kind == 'function' || d.kind == 'class' || (d.kind == 'typedef' && d.type && d.type.names && d.type.names[0] == 'function');
+    const badges = [];
+    if (entry.static)
+        badges.push('static');
+    if (d.async)
+        badges.push('async');
+    if (d.deprecated)
+        badges.push('deprecated');
+    let top;
+    if (isFunction)
+        top = signatureHtml(entry, d, model);
+    else
+    {
+        const type = typeOf(d, '@type', d, model);
+        const def = d.defaultvalue !== undefined && d.defaultvalue !== null ? ` <span class="opt">default ${esc(String(d.defaultvalue))}</span>` : '';
+        top = `<span class="name">${esc(entry.name)}</span>${type ? ' : ' + type : ''}${def}`;
+    }
+    // a member with @property and @type has no description, the text is in its one unnamed property
+    const unnamed = d.properties && d.properties.length == 1 && !d.properties[0].name;
+    const description = d.description || (unnamed && d.properties[0].description) || '';
+    let html = `<div class="entry" id="${entry.anchor}">`;
+    html += `<div class="top"><code class="sig">${top}</code>${badges.map(b => `<span class="badge ${b}">${b}</span>`).join('')}${sourceLink(d, options)}</div>`;
+    if (d.deprecated && d.deprecated !== true)
+        html += `<p class="deprecated">Deprecated ${d.deprecated}</p>`;
+    if (description)
+        html += `<div class="desc">${description}</div>`;
+    html += paramsHtml(d.params, d, model);
+    const returns = d.returns && d.returns[0];
+    if (returns && returns.description)
+        html += `<dl class="params"><dt>Returns</dt><dd class="returns">${returns.description}</dd></dl>`;
+    if (d.properties && !unnamed)
+        html += paramsHtml(d.properties, d, model);
+    for (const example of d.examples || [])
+    {
+        const m = example.match(/^\s*<caption>([\s\S]+?)<\/caption>\s*\n([\s\S]+)$/i);
+        const code = dedent(m ? m[2] : example);
+        html += (m ? `<p class="caption">${m[1]}</p>` : '') + `<pre><code>${highlight(code)}</code></pre>`;
+    }
+    return html + '</div><!-- /entry -->';
+}
+
+// the index of a page: a grid of links per section
+function indexHtml(sections)
+{
+    const parts = sections.filter(s => s.items.length).map(s =>
+        `<h3>${s.title}</h3><ul>${s.items.map(i => `<li><a href="${i.href}">${esc(i.text)}</a></li>`).join('')}</ul>`);
+    return parts.length ? `<section class="index">${parts.join('')}</section>` : '';
+}
+
+// the entries of one kind under a heading
+function entriesSection(entries, kind, model, options, outline)
+{
+    const list = entries.filter(e => e.kind == kind);
+    if (!list.length)
+        return '';
+    const id = KIND_TITLES[kind].toLowerCase();
+    outline.push({ href: '#' + id, text: KIND_TITLES[kind], depth: 0 });
+    for (const e of list)
+        outline.push({ href: '#' + e.anchor, text: e.name, depth: 1 });
+    return `<h2 id="${id}">${KIND_TITLES[kind]}</h2>` + list.map(e => entryHtml(e, model, options)).join('');
+}
+
+// a namespace page: title, description, index, then the entries by kind
+function namespacePage(ns, model, options)
+{
+    const outline = [];
+    let body = `<article><h1>${esc(ns.name)}</h1><div class="desc">${ns.doclet.description || ''}</div>`;
+    const sections = [{ title: 'Classes', items: ns.classes.map(c => ({ href: c.page, text: c.name })) }];
+    for (const kind of ['function', 'member', 'constant', 'typedef'])
+        sections.push({ title: KIND_TITLES[kind], items: ns.entries.filter(e => e.kind == kind).map(e => ({ href: '#' + e.anchor, text: e.name })) });
+    body += indexHtml(sections);
+    for (const kind of ['function', 'member', 'constant', 'typedef'])
+        body += entriesSection(ns.entries, kind, model, options, outline);
+    body += '</article>';
+    return shell(model, options, { title: `${ns.name} - ${options.title}`, current: ns.page, body, outline });
+}
+
 // everything: the pages by file name and the search rows
 function render(doclets, options)
 {
     const model = buildModel(doclets);
     const pages = { 'index.html': homePage(model, options) };
     const search = [];
+    for (const ns of model.namespaces)
+        pages[ns.page] = namespacePage(ns, model, options);
     return { pages, search, model };
 }
 

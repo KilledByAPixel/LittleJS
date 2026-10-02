@@ -141,10 +141,19 @@ test('tagTypes reads the braces of a tag jsdoc rejected, nested braces included'
      *  @param {[Vector2, Vector2, number]} [span] - a tuple
      *  @return {a is Array<any>} */`;
     const types = tagTypes(comment);
-    assert.equal(types.get('type'), 'number');
-    assert.equal(types.get('faces'), 'number|{top?: number, side: number}');
-    assert.equal(types.get('span'), '[Vector2, Vector2, number]');
-    assert.equal(types.get('@return'), 'a is Array<any>');
+    assert.deepEqual(types.get('type'), { type: 'number', optional: false, description: '1 to 255' });
+    assert.equal(types.get('faces').type, 'number|{top?: number, side: number}');
+    assert.deepEqual(types.get('span'), { type: '[Vector2, Vector2, number]', optional: true, description: 'a tuple' });
+    assert.deepEqual(types.get('@return'), { type: 'a is Array<any>', optional: false, description: '' });
+});
+
+test('tagTypes keeps a description that runs over lines and reads a default inside the brackets', ()=>
+{
+    const types = tagTypes(`/** x
+     *  @param {[number, number]} [range=[0, 1]] - low and high,
+     *    a pair
+     *  @return {void} */`);
+    assert.deepEqual(types.get('range'), { type: '[number, number]', optional: true, description: 'low and high, a pair' });
 });
 
 test('highlight marks comments, strings, numbers and keywords and escapes html', ()=>
@@ -175,4 +184,45 @@ test('the sidebar has both groups, each namespace with its classes, the current 
     assert.ok(home.includes('<h2>Plugins</h2>') && !home.includes('<h2>Engine</h2>'), 'an empty group has no heading');
     assert.ok(/<details[^>]*>\s*<summary><a href="Fixture.html">Fixture<\/a><\/summary>\s*<ul>\s*<li><a href="Fixture.BigThing.html">BigThing<\/a><\/li>\s*<li><a href="Fixture.Thing.html">Thing<\/a><\/li>/.test(home));
     assert.ok(!home.includes('<details open'), 'no namespace is open on the homepage');
+});
+
+test('a namespace page has the description, the index and the entries by kind', { skip }, ()=>
+{
+    const page = site.pages['Fixture.html'];
+    assert.ok(page.includes('<h1>Fixture</h1>'));
+    assert.ok(page.includes('<li>a bullet in the description</li>'), 'the description is the markdown html');
+    // the index: classes link to their pages, the rest to anchors on this page
+    assert.ok(/<section class="index">[\s\S]*<h3>Classes<\/h3>[\s\S]*<a href="Fixture.BigThing.html">BigThing<\/a>[\s\S]*<h3>Functions<\/h3>[\s\S]*<a href="#makeThing">makeThing<\/a>[\s\S]*<h3>Constants<\/h3>[\s\S]*<a href="#fixtureSize">fixtureSize<\/a>[\s\S]*<h3>Typedefs<\/h3>[\s\S]*<a href="#DoneCallback">DoneCallback<\/a>/.test(page));
+    assert.ok(page.includes('<h2 id="functions">Functions</h2>'));
+    assert.ok(page.includes('<details open><summary><a href="Fixture.html" class="current">Fixture</a>'), 'the sidebar opens the current namespace');
+});
+
+test('a function entry: signature, params with optional and default, the tuple type as text, returns, example, source', { skip }, ()=>
+{
+    const page = site.pages['Fixture.html'];
+    const entry = page.slice(page.indexOf('<div class="entry" id="makeThing">'), page.indexOf('</div><!-- /entry -->', page.indexOf('id="makeThing"')));
+    assert.ok(entry.includes('<span class="name">makeThing</span>(pos, <span class="opt">size</span>, <span class="opt">span</span>, …rest)'), entry);
+    assert.ok(entry.includes('→ <a href="Fixture.Thing.html">Thing</a>'), 'the return type links');
+    assert.ok(entry.includes('<dt><code>size</code> number <span class="opt">optional, default 1</span></dt><dd><p>how big</p></dd>'));
+    assert.ok(entry.includes('<dt><code>span</code> [Vector2, Vector2, number] <span class="opt">optional</span></dt><dd><p>a tuple jsdoc rejects</p></dd>'), 'the tuple jsdoc rejected is read from the comment, with its optional flag and description');
+    assert.ok(entry.includes('<dd class="returns"><p>the thing</p></dd>'));
+    assert.ok(entry.includes('<pre><code><span class="c">// make one</span>\n<span class="k">const</span> t = makeThing(vec2(<span class="n">1</span>), <span class="n">2</span>);</code></pre>'));
+    assert.ok(entry.includes('<a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v9.9.9/test/fixtures/docsFixture.js#L'), 'the source link goes to the tag');
+});
+
+test('a constant shows its type and default once, a typedef its properties, a callback its params', { skip }, ()=>
+{
+    const page = site.pages['Fixture.html'];
+    assert.ok(page.includes('<span class="name">fixtureSize</span> : number <span class="opt">default 3</span>'), page.slice(page.indexOf('id="fixtureSize"'), page.indexOf('id="fixtureSize"') + 400));
+    assert.ok(page.includes('<dt><code>speed</code> number</dt><dd><p>how fast</p></dd>'));
+    assert.ok(page.includes('<dt><code>tint</code> Color<span class="sep">|</span>undefined</dt>'));
+    assert.ok(page.includes('<span class="name">DoneCallback</span>(thing)'));
+    assert.ok(page.includes('<dt><code>thing</code> <a href="Fixture.Thing.html">Thing</a></dt>'));
+});
+
+test('a plugin namespace page links the other namespace\'s class in a nested type', { skip }, ()=>
+{
+    const page = site.pages['FixturePlugin.html'];
+    assert.ok(page.includes('<dt><code>table</code> Object&lt;string, {action: function(boolean): any}&gt;</dt>'));
+    assert.ok(page.includes('<dt><code>thing</code> <a href="Fixture.Thing.html">Thing</a></dt>'));
 });
