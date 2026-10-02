@@ -9308,7 +9308,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// ZzFXMicro - Zuper Zmall Zound Zynth - v1.4.0 by Frank Force
+// ZzFX - Zuper Zmall Zound Zynth - v1.4.0 by Frank Force
 
 /** Generate and play a ZzFX sound
  *
