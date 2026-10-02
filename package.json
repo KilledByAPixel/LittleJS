@@ -1,6 +1,6 @@
 {
   "name": "littlejsengine",
-  "version": "1.23.0",
+  "version": "1.23.1",
   "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
   "main": "dist/littlejs.esm.js",
   "types": "dist/littlejs.d.ts",
@@ -38,9 +38,6 @@
     "src/",
     "plugins/",
     "!plugins/box2d.wasm.*",
-    "!src/engineBuild.mjs",
-    "!**/jsconfig.json",
-    "!**/*.bat",
     "COPYRIGHT.txt",
     "FAQ.md",
     "REFERENCE.md",

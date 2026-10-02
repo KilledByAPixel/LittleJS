@@ -10685,7 +10685,8 @@ declare module "littlejsengine" {
     }
     /** How a level's block map is made: the sheet its blocks show tiles of, and a function to set it up
      *  - A level's voxels block makes a VoxelMap when the level loads, with texture 0 and the default tile size unless
-     *    a sheet is given here; a block's type shows that tile of the sheet on every face
+     *    a sheet is given here; a block's type shows that tile of the sheet on every face; a game that has loaded no
+     *    image gets plain blocks, a color for each type
      *  - setup is called with each map a level makes, to give block types their own faces or make them see-through
      *  - Call it before level3DLoad; with no arguments the defaults are back
      *  @param {TileInfo} [tileInfo] - The sheet's first tile, as for a VoxelMap

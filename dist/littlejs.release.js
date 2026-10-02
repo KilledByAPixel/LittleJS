@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.23.0';
+const engineVersion = '1.23.1';
 
 /** Frames per second to update
  *  @type {number}
@@ -29863,7 +29863,8 @@ let level3DVoxelTiles, level3DVoxelSetupMap, level3DVoxelMap;
 
 /** How a level's block map is made: the sheet its blocks show tiles of, and a function to set it up
  *  - A level's voxels block makes a VoxelMap when the level loads, with texture 0 and the default tile size unless
- *    a sheet is given here; a block's type shows that tile of the sheet on every face
+ *    a sheet is given here; a block's type shows that tile of the sheet on every face; a game that has loaded no
+ *    image gets plain blocks, a color for each type
  *  - setup is called with each map a level makes, to give block types their own faces or make them see-through
  *  - Call it before level3DLoad; with no arguments the defaults are back
  *  @param {TileInfo} [tileInfo] - The sheet's first tile, as for a VoxelMap
@@ -29925,7 +29926,7 @@ function level3DVoxelsMake(voxels)
 {
     const shape = level3DVoxelsShape(voxels);
     if (!shape || typeof VoxelMap == 'undefined') return;
-    const map = new VoxelMap(shape.pos, shape.size, level3DVoxelTiles || tile());
+    const map = new VoxelMap(shape.pos, shape.size, level3DVoxelTiles || level3DVoxelPlainTiles());
     level3DVoxelsDecode(voxels.blocks, map.data);
     level3DVoxelSetupMap?.(map);
     map.rebuild();
@@ -29985,6 +29986,31 @@ function level3DTerrainSetColors(map, terrain, paint=level3DTerrainPaint(terrain
     const palette = [base, ...paint.colors.map(level3DHexColor)];
     map.color = WHITE;
     map.colors = map.heights.map((row, r)=> row.map((v, c)=> palette[paint.cells[r * map.columns + c]] || base));
+}
+
+// the sheet a level's blocks show when the game gave none with level3DVoxelSetup: the game's first image, as a
+// VoxelMap takes it, or, for a game that has loaded no image, plain tiles made here, a color for each type, so a
+// block map in a game with no art can still be seen and painted
+let level3DVoxelPlain;
+function level3DVoxelPlainTiles()
+{
+    if (textureInfos[0]?.size.x || headlessMode || typeof OffscreenCanvas == 'undefined')
+        return tile();
+    if (!level3DVoxelPlain)
+    {
+        // 16 by 16 tiles of 16 pixels, each a color of its own with a darker edge, so the blocks read as blocks
+        const context = createCanvasContext(256);
+        for (let i = 0; i < 256; ++i)
+        {
+            const x = i % 16 * 16, y = (i / 16 | 0) * 16, hue = i * .618 % 1;
+            context.fillStyle = hsl(hue, .45, .4).toString();
+            context.fillRect(x, y, 16, 16);
+            context.fillStyle = hsl(hue, .5, .55).toString();
+            context.fillRect(x + 1, y + 1, 14, 14);
+        }
+        level3DVoxelPlain = new TextureInfo(context.canvas);
+    }
+    return tile(0, 16, level3DVoxelPlain, 0);
 }
 
 // the HeightMap of a level's terrain block, undefined when it has none or it is wrong

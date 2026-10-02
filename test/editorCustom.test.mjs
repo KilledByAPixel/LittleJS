@@ -45,7 +45,7 @@ const mouse3D = (x, z)=> `editor3DCamera.pos = vec3(${x}, 20, ${z}); editor3DCam
 test('the page marks its tested blocks, and each is here', ()=>
 {
     assert.deepEqual(Object.keys(blocks).sort(),
-        ['button3d', 'class', 'key2d', 'key3d', 'tool2d', 'tool3d', 'type2d', 'type3d']);
+        ['button3d', 'class', 'disklevel', 'key2d', 'key3d', 'tool2d', 'tool3d', 'type2d', 'type3d']);
 });
 
 test('3D: a type of the game\'s own is made from a level with its properties over its defaults', async ()=>
@@ -134,6 +134,19 @@ test('3D: the editor class of the page is the level editor, its methods the hook
     run('editor3DDrawGame(); levelEditor.buttons[0].onClick.call(levelEditor); editor3DRestart();');
     assert.deepEqual(json(run, '[drawnZones, levelEditor.showZones, level.objects.map((o)=> o.type), restarts]'),
         [1, false, ['Box'], 1]);
+});
+
+test('3D: the level of a game opened from disk is saved as a script that sets it', async ()=>
+{
+    const { run } = await loadGame(true);
+    run(`var files = [], level = {littlejs3D: 1, objects: [{id: 1, type: 'Box', pos: [0, .5, 0]}]};
+        saveText = (text, name, type)=> files.push([text, name, type]);` + blocks.disklevel + 'levelEditor.open();');
+    assert.equal(await run('editor3DSave()'), 'kept');
+    const [text, name, type] = json(run, 'files[0]');
+    assert.deepEqual([name, type, text.startsWith('var level = {'), text.endsWith('};\n')],
+        ['level.js', 'text/javascript', true, true]);
+    // the file is a script that makes the level again
+    assert.deepEqual(new Function(text + 'return level;')().objects, [{id: 1, type: 'Box', pos: [0, .5, 0]}]);
 });
 
 test('an ES module game has all of it: the class, the instance in use, and setLevelEditor', ()=>

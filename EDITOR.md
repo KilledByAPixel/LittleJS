@@ -296,6 +296,8 @@ setLevelEditor(new MyEditor);
   properties}]}`. Load with `level3DLoad(await fetchJSON('level.json'))`.
 - 2D: Tiled JSON. Load with `tileLayersLoad(map)` and `objectLayersLoad(map)`. Tiled itself can open the file.
 - A game that loads the same level object again, as a restart does, gets the edits.
+- A 3D level's block map shows the tiles of the sheet given to `level3DVoxelSetup`, or of the game's first image;
+  a game that has loaded no image gets plain colored blocks.
 - To keep levels somewhere of your own, a server or your own format, use `onSave`:
 
 ```javascript
@@ -307,6 +309,26 @@ levelEditor.onSave = (text, fileName)=>
 ```
 
 `onSave` may be an async function. In the 3D editor it is asked for a prefab too, when Save is pressed inside one.
+
+### A game opened from disk
+
+A page opened straight from a folder, with no server, can not `fetch` a JSON file. Keep the level as a script
+instead: a file that sets a variable, loaded with a script tag before the game. `onSave` writes it. Tested:
+
+<!-- test:disklevel -->
+```javascript
+// index.html has <script src="level.js"></script> before the game's own script, and level.js is one line:
+// var level = {"littlejs3D": 1, "objects": [...]};
+levelEditor.onSave = (text, fileName)=>
+{
+    saveText('var level = ' + text.trim() + ';\n', 'level.js', 'text/javascript');
+    return true; // kept, the editor writes no JSON file
+};
+level3DLoad(level); // the same object the script made, so the editor's changes are the game's
+```
+
+Save then downloads `level.js`, to put in place of the old one. The autosave still brings unsaved edits back
+after a reload.
 
 ## A checklist for a custom editor
 
@@ -327,8 +349,11 @@ levelEditor.onSave = (text, fileName)=>
 ## What it does not do
 
 - **It does not replace the editor's own tools.** Your keys, buttons and tools are added beside them; how the
-  built-in Move tool snaps, or how painting works, is not something a game changes. For that, copy
-  `src/engineEditor.js` or `plugins/render3dEditor.js` and edit it.
+  built-in Move tool snaps, or how painting works, is not something a game changes. That takes an engine build
+  of your own: get the LittleJS source at the version you use, edit `src/engineEditor.js` or
+  `plugins/render3dEditor.js`, run `npm run build`, and use the `dist/littlejs.js` it makes. A changed copy
+  of the file can not be loaded beside the engine, the debug build has the editor in it already, and a build of
+  your own has to be made again for each engine update.
 - **A tool has no handles of its own.** It has the press, the drag and the release, and it can draw.
 - **The editors' inner functions**, the ones named `editor...` and `editor3D...`, are not part of this. They can
   be reached in a script-tag debug build, but they change between versions.
