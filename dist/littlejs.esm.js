@@ -6692,9 +6692,12 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
     }
     else
     {
-        // copy to offscreen canvas
-        workReadCanvas.width = sWidth;
-        workReadCanvas.height = sHeight;
+        // copy to offscreen canvas, sized again only when the size changes: setting a size remakes the canvas even
+        // to the same one, and a game's tinted tiles are mostly of one size
+        if (workReadCanvas.width !== sWidth || workReadCanvas.height !== sHeight)
+            workReadCanvas.width = sWidth, workReadCanvas.height = sHeight;
+        else
+            workReadContext.clearRect(0, 0, sWidth, sHeight);
         workReadContext.drawImage(image, sx|0, sy|0, sWidth, sHeight, 0, 0, sWidth, sHeight);
 
         // tint image using offscreen work context
@@ -11878,6 +11881,9 @@ function glDrawUntextured(x, y, sizeX, sizeY, angle, rgba)
     glDraw(x, y, sizeX, sizeY, angle, 0, 0, 0, 0, 0, rgba);
 }
 
+// the list and the vectors glDrawPointsTransform writes its points into
+const glPointsOut = [], glPointsPool = [];
+
 /** Transform and add a polygon to the gl draw list
  *  @param {Array<Vector2>} points - Array of Vector2 points
  *  @param {number} rgba - Color of the polygon as a 32-bit integer
@@ -11890,15 +11896,21 @@ function glDrawUntextured(x, y, sizeX, sizeY, angle, rgba)
  *  @memberof WebGL */
 function glDrawPointsTransform(points, rgba, x, y, sx, sy, angle, tristrip=true)
 {
-    const pointsOut = [];
+    // written into vectors kept for this, a circle would make one for each of its sides at every draw; they are
+    // read into the batch before this returns
+    const pointsOut = glPointsOut, pool = glPointsPool, count = points.length;
+    pointsOut.length = count;
     const sa = sin(-angle);
     const ca = cos(-angle);
-    for (const p of points)
+    for (let i = 0; i < count; ++i)
     {
         // transform the point
+        const p = points[i], out = pool[i] ||= vec2();
         const px = p.x*sx;
         const py = p.y*sy;
-        pointsOut.push(vec2(x + ca*px - sa*py, y + sa*px + ca*py));
+        out.x = x + ca*px - sa*py;
+        out.y = y + sa*px + ca*py;
+        pointsOut[i] = out;
     }
     const drawPoints = tristrip ? glPolyStrip(pointsOut) : pointsOut;
     glDrawPoints(drawPoints, rgba);

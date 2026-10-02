@@ -167,3 +167,16 @@ test('a tween callback that throws leaves the tween system ready for the next up
     run('tweenStopAll(); new Tween(()=> ++calls, 0, 1, 1); calls = 0; tweenUpdate(.1, .1);');
     assert.equal(run('calls'), 1);
 });
+
+test('the points of a transformed polygon are written into vectors kept for the purpose, not made for each draw', async ()=>
+{
+    const { run } = await loadGame();
+    run(`var seen = [], made = new Set; glDrawPoints = (points)=>
+        { seen.push(points.map((p)=> [p.x, p.y])); for (const p of points) made.add(p); };
+        var triangle = [vec2(0, 1), vec2(1, 0), vec2(-1, 0)];
+        glDrawPointsTransform(triangle, 0, 10, 20, 2, 2, 0, false);
+        glDrawPointsTransform(triangle, 0, 0, 0, 1, 1, 0, false);
+        for (let i = 0; i < 50; ++i) glDrawPointsTransform(triangle, 0, i, 0, 1, 1, 0, false);`);
+    assert.deepEqual(json(run, 'seen.slice(0, 2)'), [[[10, 22], [12, 20], [8, 20]], [[0, 1], [1, 0], [-1, 0]]]);
+    assert.equal(run('made.size'), 3, 'the same three vectors each time');
+});

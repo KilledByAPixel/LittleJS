@@ -16,6 +16,7 @@ smokeRun(async ()=>
     setCanvasFixedSize(vec2(64));
     setCanvasClearColor(rgb(0, 0, 1));
     setGLEnable(false);
+    let halfClear;
 
     // the color at a place on the main canvas, y up, as smokePixel reads the WebGL one
     const pixel = (x, y)=>
@@ -25,13 +26,23 @@ smokeRun(async ()=>
         drawRect(vec2(-16, 16), vec2(16), rgb(1, 0, 0));
         drawTile(vec2(16, 16), vec2(16), tile(1, 16));
         drawText('X', vec2(16, -16), 24, rgb(1, 1, 0));
-    }, ()=> {}, [smokeSheet('#f00', '#0f0')]);
+        // a tinted tile, white made red, and after it a tinted texture of the same size with its left half clear
+        drawTile(vec2(0, 8), vec2(8), tile(2, 16), rgb(1, 0, 0));
+        drawTile(vec2(0, -8), vec2(8), halfClear, rgb(0, 1, 0));
+    }, ()=> {}, [smokeSheet('#f00', '#0f0', '#fff')]);
+    const canvas = new OffscreenCanvas(16, 16), context = canvas.getContext('2d');
+    context.fillStyle = '#fff';
+    context.fillRect(8, 0, 8, 16);
+    halfClear = new TileInfo(vec2(), vec2(16), new TextureInfo(canvas));
     check('WebGL is off', !glEnable);
     engineStep(2);
     const near = (name, p, color)=> check(name, smokeNear(p, color), p);
     near('the clear color shows', pixel(-16, -16), [0, 0, 255, 255]);
     near('a rectangle draws in its color', pixel(-16, 16), [255, 0, 0, 255]);
     near('a tile draws its texture', pixel(16, 16), [0, 255, 0, 255]);
+    near('a tinted tile draws in its tint', pixel(0, 8), [255, 0, 0, 255]);
+    near('a tinted texture draws where it has texels', pixel(2, -8), [0, 255, 0, 255]);
+    near('and leaves what is behind where it has none, nothing of the tile tinted before it', pixel(-2, -8), [0, 0, 255, 255]);
     // somewhere on the X there is yellow: any pixel of the square it is drawn in, since where its strokes are
     // goes by the machine's font, and one place read on a thin stroke is half the background's
     const size = 24, x0 = (.5 + 16 / 64) * mainCanvas.width - size / 2 | 0;

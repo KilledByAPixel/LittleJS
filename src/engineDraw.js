@@ -1701,9 +1701,12 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
     }
     else
     {
-        // copy to offscreen canvas
-        workReadCanvas.width = sWidth;
-        workReadCanvas.height = sHeight;
+        // copy to offscreen canvas, sized again only when the size changes: setting a size remakes the canvas even
+        // to the same one, and a game's tinted tiles are mostly of one size
+        if (workReadCanvas.width !== sWidth || workReadCanvas.height !== sHeight)
+            workReadCanvas.width = sWidth, workReadCanvas.height = sHeight;
+        else
+            workReadContext.clearRect(0, 0, sWidth, sHeight);
         workReadContext.drawImage(image, sx|0, sy|0, sWidth, sHeight, 0, 0, sWidth, sHeight);
 
         // tint image using offscreen work context
