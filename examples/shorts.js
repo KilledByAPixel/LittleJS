@@ -281,6 +281,7 @@ async function loadFile(filename, largeExample)
 
     if (largeExample)
     {
+        setExampleInfo(''); // a full example has no info block
 
         // Show message in code view that full examples can't be edited
         const text = 'Code view not available for large examples.';
@@ -303,9 +304,10 @@ async function loadFile(filename, largeExample)
         const response = await fetch(filename);
         if (!response.ok)
             throw new Error('Could not load file: ' + filename);
-        const text = await response.text();
+        const {code: text, info} = splitExampleInfo(await response.text());
         if (load !== loadFileCount)
             return; // another example was selected while this one loaded
+        setExampleInfo(info);
 
         // set the code in both code mirror and textarea
         codeIsJS = true;
@@ -322,8 +324,100 @@ async function loadFile(filename, largeExample)
     }
     catch (error)
     {
-        load === loadFileCount && setErrorMessage(error.message);
+        if (load !== loadFileCount)
+            return;
+        setExampleInfo('');
+        setErrorMessage(error.message);
     }
+}
+
+// a short ends with its write-up: a block comment whose first line is /* info, the last thing in the file.
+// The editor shows the code without it, and the box under the preview shows it. A block that is not last is
+// not one, and the file is shown whole
+function splitExampleInfo(text)
+{
+    const match = /(?:^|\n)\/\* info[ \t]*\r?\n([\s\S]*?)\*\/\s*$/.exec(text);
+    if (!match || match[1].includes('*/'))
+        return {code: text, info: ''};
+    const code = text.slice(0, match.index).replace(/\r\n/g, '\n').trimEnd() + '\n';
+    return {code, info: match[1].replace(/\r\n/g, '\n').trim()};
+}
+
+// the info's markdown as html: headings, paragraphs, lists of one level, code, bold, italic and links.
+// Everything is escaped first, so the text shows as written and can add no markup
+function renderExampleInfo(markdown)
+{
+    const escape = (s)=> s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const inline = (s)=>
+    {
+        // code spans are set aside first, so nothing inside one is read as markdown
+        const spans = [];
+        s = escape(s).replace(/`([^`]+)`/g, (m, code)=> '\0' + (spans.push(code) - 1) + '\0');
+        s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\*([^*]+)\*/g, '<i>$1</i>');
+        s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, text, url)=>
+            /^https?:\/\//.test(url) || !url.includes(':') ?
+                `<a href="${url}" target="_blank" rel="noopener">${text}</a>` : m);
+        return s.replace(/\0(\d+)\0/g, (m, i)=> '<code>' + spans[i] + '</code>');
+    }
+
+    let html = '', type = '', parts = [];
+    const flush = ()=>
+    {
+        if (type === 'p')
+            html += '<p>' + inline(parts.join(' ')) + '</p>';
+        else if (type)
+            html += `<${type}>` + parts.map((part)=> '<li>' + inline(part) + '</li>').join('') + `</${type}>`;
+        type = ''; parts = [];
+    }
+    const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+    for (let i = 0; i < lines.length; ++i)
+    {
+        const line = lines[i];
+        let match;
+        if (line.startsWith('```'))
+        {
+            flush();
+            const code = [];
+            while (++i < lines.length && !lines[i].startsWith('```'))
+                code.push(lines[i]);
+            html += '<pre>' + escape(code.join('\n')) + '</pre>';
+        }
+        else if (!line.trim())
+            flush();
+        else if (match = /^(#{1,3}) +(.*)/.exec(line))
+        {
+            flush();
+            const level = match[1].length + 1; // the page's title is the h1
+            html += `<h${level}>` + inline(match[2]) + `</h${level}>`;
+        }
+        else if (match = /^(-|\d+\.) +(.*)/.exec(line))
+        {
+            const listType = match[1] === '-' ? 'ul' : 'ol';
+            if (type !== listType)
+                flush();
+            type = listType;
+            parts.push(match[2]);
+        }
+        else if (type && type !== 'p' && /^\s/.test(line))
+            parts[parts.length-1] += ' ' + line.trim(); // a list item goes on
+        else
+        {
+            if (type !== 'p')
+                flush();
+            type = 'p';
+            parts.push(line.trim());
+        }
+    }
+    flush();
+    return html;
+}
+
+// show an example's info in its box, or hide the box when it has none
+function setExampleInfo(info)
+{
+    exampleInfoBox.innerHTML = info ? renderExampleInfo(info) : '';
+    exampleInfoBox.style.display = info ? 'block' : 'none';
+    exampleInfoBox.scrollTop = 0;
 }
 
 // go to the example before or after this one, in the list as the search has it, past the headings and around its
