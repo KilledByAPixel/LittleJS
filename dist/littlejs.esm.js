@@ -32417,6 +32417,11 @@ async function parseGLTF(data, baseUrl='')
     for (const name of json.extensionsRequired || [])
         if (name === 'KHR_draco_mesh_compression' || name === 'EXT_meshopt_compression')
             throw new Error(`glTF with ${name} is not read, export it uncompressed`);
+        else if (name === 'KHR_texture_basisu')
+            throw new Error('glTF with KHR_texture_basisu textures is not read, export them as png or jpeg');
+    // one that only may use them has other images to fall back on, or none: said, since it loads with them left out
+    if (json.extensionsUsed?.includes('KHR_texture_basisu') && !json.extensionsRequired?.includes('KHR_texture_basisu'))
+        console.warn('glTF: KHR_texture_basisu textures are not read and are left out, export them as png or jpeg');
 
     // the buffers: the GLB's own, a data uri, or a file beside the model
     const buffers = await Promise.all((json.buffers || []).map((buffer, i)=>
@@ -32570,17 +32575,25 @@ function gltfOpaqueImage(image)
 {
     const gl = glContext, {width, height} = image;
     if (gl.isContextLost()) return image; // nothing to read back through, it keeps its alpha
-    const texture = gl.createTexture(), framebuffer = gl.createFramebuffer(), bound = gl.getParameter(gl.FRAMEBUFFER_BINDING);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    // the room to read into first: for a huge image it can fail, and must not with the framebuffer bound
     const data = new Uint8ClampedArray(width * height * 4);
-    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data); // row 0 is the image's first row, as uploaded
-    gl.bindFramebuffer(gl.FRAMEBUFFER, bound);
-    gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
-    gl.deleteFramebuffer(framebuffer);
-    gl.deleteTexture(texture);
+    const texture = gl.createTexture(), framebuffer = gl.createFramebuffer(), bound = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+    try
+    {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data); // row 0 is the image's first row, as uploaded
+    }
+    finally
+    {
+        // the 2D renderer's own bindings back, whatever happened
+        gl.bindFramebuffer(gl.FRAMEBUFFER, bound);
+        gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+        gl.deleteFramebuffer(framebuffer);
+        gl.deleteTexture(texture);
+    }
     for (let i = 3; i < data.length; i += 4)
         data[i] = 255;
     image.close();
@@ -32717,7 +32730,7 @@ function gltfAccessor(json, buffers, index)
     }
     if (scale !== 1)
         for (let i = 0; i < out.length; ++i)
-            out[i] /= scale;
+            out[i] = max(out[i] / scale, -1); // a signed type's lowest value is -1 too, as the format says
     return {data: out, components, count: a.count};
 }
 
@@ -32781,8 +32794,10 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     const [er, eg, eb] = material.emissiveFactor || [0, 0, 0];
     if (er || eg || eb)
     {
+        // KHR_materials_emissive_strength makes it that many times brighter, emission above 1 in Blender
+        const strength = material.extensions?.KHR_materials_emissive_strength?.emissiveStrength ?? 1;
         part.emissiveMap = emissiveRef ? textures[emissiveRef.index] : gltfWhiteTexture();
-        part.emissiveMapColor = rgb(gltfSRGB(er), gltfSRGB(eg), gltfSRGB(eb));
+        part.emissiveMapColor = rgb(gltfSRGB(er) * strength, gltfSRGB(eg) * strength, gltfSRGB(eb) * strength);
     }
     return part;
 }

@@ -170,3 +170,34 @@ test('the normal and emissive textures are freed by dispose', async () =>
     assert.equal(counts.created, 3);
     assert.equal(counts.deleted, counts.created);
 });
+
+test('KHR_materials_emissive_strength makes the glow that many times brighter, as Blender exports emission above 1', async () =>
+{
+    const OffscreenCanvas = class { constructor(w, h) { this.width = w; this.height = h; }
+        getContext() { return {fillRect() {}}; } };
+    const {run} = textureEngine(materialJSON({emissiveFactor: [0, 1, 0],
+        extensions: {KHR_materials_emissive_strength: {emissiveStrength: 5}}}), {OffscreenCanvas});
+    assert.equal(await run('parseGLTF(gltfJSON).then(model=> model.parts[0].emissiveMapColor.g)'), 5);
+});
+
+test('a model that needs basis textures says so, and one that only may use them says its textures are left out', async () =>
+{
+    const needs = materialJSON({});
+    needs.extensionsRequired = ['KHR_texture_basisu'];
+    const {run} = textureEngine(needs);
+    await assert.rejects(run('parseGLTF(gltfJSON)'), /KHR_texture_basisu/);
+    const may = materialJSON({});
+    may.extensionsUsed = ['KHR_texture_basisu'];
+    const {run: run2} = textureEngine(may);
+    const said = await run2(`(async ()=> { const warn = console.warn, said = []; console.warn = (...t)=> said.push(t.join(' '));
+        try { await parseGLTF(gltfJSON); } finally { console.warn = warn; } return said.join('|'); })()`);
+    assert.ok(said.includes('KHR_texture_basisu'), said);
+});
+
+test('a signed normalized value at its lowest reads as -1, not a hair past it', async () =>
+{
+    const {run} = textureEngine({});
+    const read = run(`[...gltfAccessor({accessors: [{bufferView: 0, componentType: 5120, count: 2, type: 'SCALAR',
+        normalized: true}], bufferViews: [{buffer: 0}]}, [new Int8Array([-128, 127]).buffer], 0).data]`);
+    assert.deepEqual([...read], [-1, 1]);
+});
