@@ -3579,7 +3579,7 @@ declare module "littlejsengine" {
      * - 2D spatial audio based on camera position with distance-based falloff
      * - Sound instance management (pause, resume, stop)
      * - Speech synthesis for text-to-speech
-     * - Music playback with ZzFXM support
+     * - Music playback from audio files, looping by default
      * - Web Audio API integration with master gain control
      * - Sounds and the master bus can route through effects, see the audio effects plugin
      * @namespace Audio
@@ -5314,58 +5314,6 @@ declare module "littlejsengine" {
          *  called by LightSystemPlugin after the lightmap is applied */
         renderGlow(): void;
     }
-    /**
-     * LittleJS ZzFXM Plugin
-     * - A port of ZzFXM, the Zuper Zmall Zound Zynth music player, by Keith Clark and Frank Force, MIT licensed,
-     *   https://github.com/keithclark/ZzFXM; its notice is in COPYRIGHT.txt
-     * @namespace ZzFXM
-     */
-    /**
-     * Music Object - Stores a zzfx music track for later use
-     *
-     * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
-     * @extends Sound
-     * @memberof ZzFXM
-     * @example
-     * // create some music
-     * const music_example = new ZzFXMusic(
-     * [
-     *     [                         // instruments
-     *       [,0,400]                // simple note
-     *     ],
-     *     [                         // patterns
-     *         [                     // pattern 1
-     *             [                 // channel 0
-     *                 0, -1,        // instrument 0, left speaker
-     *                 1, 0, 9, 1    // channel notes
-     *             ],
-     *             [                 // channel 1
-     *                 0, 1,         // instrument 0, right speaker
-     *                 0, 12, 17, -1 // channel notes
-     *             ]
-     *         ],
-     *     ],
-     *     [0, 0, 0, 0], // sequence, play pattern 0 four times
-     *     90            // BPM
-     * ]);
-     *
-     * // play the music on a loop
-     * music_example.playMusic();
-     */
-    export class ZzFXMusic extends Sound {
-        /** Create a music object and cache the zzfx music samples for later use
-         *  @param {[Array, Array, Array, number?, ...any[]]} zzfxMusic - Array of zzfx music parameters: instruments, patterns, sequence, and an optional BPM; anything after it, like the tracker's metadata, is ignored
-         */
-        constructor(zzfxMusic: [any[], any[], any[], number?, ...any[]]);
-    }
-    /** Generate samples for a ZzFM song with given parameters
-     *  @param {Array} instruments - Array of ZzFX sound parameters
-     *  @param {Array} patterns - Array of pattern data
-     *  @param {Array} sequence - Array of pattern indexes
-     *  @param {number} [BPM] - Playback speed of the song in BPM
-     *  @return {Array} - Left and right channel sample data
-     *  @memberof ZzFXM */
-    export function zzfxM(instruments: any[], patterns: any[], sequence: any[], BPM?: number): any[];
     /**
      * LittleJS Audio Effects Plugin
      * - Web Audio effects with a wet/dry mix: filter, reverb, delay, distortion, compressor

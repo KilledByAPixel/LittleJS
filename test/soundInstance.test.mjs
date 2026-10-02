@@ -274,19 +274,6 @@ test('the master gain is at soundVolume from load', () =>
     assert.equal(LJS.audioMasterGain.gain.value, LJS.soundVolume);
 });
 
-test('ZzFXMusic is loaded as soon as it is made and plays as music', () =>
-{
-    // generated in place like a zzfx sound, so the loaded gate the music examples use passes
-    const music = new LJS.ZzFXMusic([[[,0,400]], [[[0,-1,1,0,9,1]]], [0], 90]);
-    assert.equal(music.isLoaded(), true);
-    assert.equal(music.loadedPercent, 1);
-    assert.ok(music.getDuration() > 0);
-    const instance = music.playMusic();
-    assert.equal(instance.isPlaying(), true);
-    assert.equal(instance.loop, true);
-    instance.stop();
-});
-
 test('play returns undefined when sound is disabled', () =>
 {
     LJS.setSoundEnable(false);

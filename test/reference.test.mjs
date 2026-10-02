@@ -38,7 +38,7 @@ const allowlist = new Set([
     'workCanvas', 'workContext', 'workReadCanvas', 'workReadContext',
     'drawCount', 'primitiveCount', 'engineImageFont',
     // low level audio internals
-    'audioDefaultSampleRate', 'zzfxG', 'zzfxM',
+    'audioDefaultSampleRate', 'zzfxG',
     // plugin internals
     'tweenUpdate',
 ]);

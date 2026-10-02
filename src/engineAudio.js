@@ -7,7 +7,7 @@
  * - 2D spatial audio based on camera position with distance-based falloff
  * - Sound instance management (pause, resume, stop)
  * - Speech synthesis for text-to-speech
- * - Music playback with ZzFXM support
+ * - Music playback from audio files, looping by default
  * - Web Audio API integration with master gain control
  * - Sounds and the master bus can route through effects, see the audio effects plugin
  * @namespace Audio

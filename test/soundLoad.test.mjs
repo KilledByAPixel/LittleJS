@@ -173,7 +173,7 @@ test('a failed load is reported, not thrown into the void', async () =>
 });
 
 // assigning new samples has to invalidate the buffer built from the old ones,
-// which is how plugins/zzfxm.js hands its generated music to a Sound
+// which is how generated samples are handed to a Sound
 test('assigning sampleChannels rebuilds the buffer', () =>
 {
     const custom = new LJS.Sound([1, 0, 220, 0, .5, .1]);

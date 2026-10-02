@@ -44,10 +44,6 @@ export
     LightSystemPlugin,
     Light,
 
-    // ZzFXMusic
-    ZzFXMusic,
-    zzfxM,
-
     // Audio Effects
     AudioEffect,
     AudioFilter,

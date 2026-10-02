@@ -71,15 +71,6 @@ test('audio effects can be made and set with no audio context, like a Node serve
     assert.equal(sound.play(), undefined);
 });
 
-test('ZzFXMusic hands its samples to an audio buffer when it is made', () =>
-{
-    // like a zzfx sound, so a long song does not sit in plain arrays until its first play
-    const music = new LJS.ZzFXMusic([[[,0,400]], [[[0,-1,1,0,9,1]]], [0], 90]);
-    assert.ok(music.sampleBuffer, 'the buffer is built at once');
-    assert.ok(music.getDuration() > 0);
-    assert.equal(music.isLoaded(), true);
-});
-
 test('mouse buttons 3 and 4 (back and forward) can be queried', () =>
 {
     // onMouseDown stores them, and the keyboard assert only rejects higher numbers now

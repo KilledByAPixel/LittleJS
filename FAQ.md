@@ -261,7 +261,6 @@ Plugins are self-contained features that live alongside the engine but aren't pa
 | `tweakables.js` | A debug panel to change values live while the game runs, press 9 with the debug overlay open |
 | `medalSystem.js` | Achievement / medal tracking with popup notifications |
 | `newgrounds.js` | Newgrounds.io integration (medals held on the server, scoreboards) |
-| `zzfxm.js` | Procedural chiptune music via the `ZzFXMusic` class |
 | `audioEffects.js` | Web Audio effects like filter, reverb, delay, distortion and compressor, for a group of sounds or everything |
 | `drawUtilities.js` | Higher-level drawing helpers like nine-slice and three-slice |
 
@@ -365,7 +364,7 @@ LittleJS has a dedicated [js13k branch](https://github.com/KilledByAPixel/Little
 
 - **Use Canvas2D instead of WebGL**: call `setGLEnable(false)` before `engineInit`. Stripping the WebGL renderer saves a significant chunk of bytes, and for most pixel-art and low-sprite-count games the visual difference is imperceptible. A nice side effect: once the jam is over, you can flip WebGL back on with a single setting change for a big performance boost when publishing the game elsewhere.
 - **Drop unused plugins**: every plugin is self-contained, so only include what you actually use. Skip `uiSystem.js`, `box2d.js`, `pathFinder.js`, etc. unless you need them.
-- **Lean on built-ins to avoid asset files**: `Sound` with ZzFX parameters generates sound effects from a tiny array, `ZzFXMusic` makes procedural chiptunes, and built-in shape drawing avoids shipping image assets.
+- **Lean on built-ins to avoid asset files**: `Sound` with ZzFX parameters generates sound effects from a tiny array, and built-in shape drawing avoids shipping image assets.
 - **Use a packer**: the js13k branch is set up to compress the final bundle with Roadroller or a similar packer. Check the branch's build script for the current toolchain.
 
 For normal production (non-13KB) builds, the engine ships `dist/littlejs.release.js` (asserts stripped) and `dist/littlejs.min.js` (minified) — both well under 100KB.
@@ -538,19 +537,15 @@ sound_click.play(pos, volume, pitch); // play a sound
 
 ### How do I play music?
 
-For procedural chiptune music, use the `ZzFXMusic` class from the [ZzFXM plugin](plugins/zzfxm.js). It extends `Sound` and accepts a ZzFXM-format song array — the music is generated on the fly so it adds essentially no bytes to your build. For longer scored music, load an mp3 or ogg file with the regular `Sound` class and play it with `playMusic`, which loops by default.
+Load an mp3 or ogg file with the regular `Sound` class and play it with `playMusic`, which loops by default.
 
 ```javascript
-// procedural ZzFXM music (tiny, generated at runtime)
-const song = new ZzFXMusic(zzfxmSongData);
-const songInstance = song.playMusic();
-
-// or load an mp3/ogg and loop it
+// load an mp3/ogg and loop it
 const track = new Sound('music.mp3');
 const trackInstance = track.playMusic(1, true); // volume, loop
 ```
 
-Both pause automatically when the tab loses focus (audio context suspends) and resume when it comes back. `playMusic` returns a `SoundInstance`; keep it and call `songInstance.stop()` to halt playback.
+Music pauses automatically when the tab loses focus (audio context suspends) and resumes when it comes back. `playMusic` returns a `SoundInstance`; keep it and call `trackInstance.stop()` to halt playback.
 
 ### Why doesn't my audio play until the user clicks something?
 

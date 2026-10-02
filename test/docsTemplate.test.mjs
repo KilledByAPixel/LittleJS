@@ -46,9 +46,9 @@ const make = (kind, longname, extra={}) =>
 
 test('namespaces sort into the Engine and Plugins groups, unknown ones last in Plugins', ()=>
 {
-    const model = buildModel(['Zed', 'Draw', 'ZzFXM', 'Engine', 'Alpha'].map(n => make('namespace', n)));
+    const model = buildModel(['Zed', 'Draw', 'Tweakables', 'Engine', 'Alpha'].map(n => make('namespace', n)));
     assert.deepEqual(model.groups.map(g => [g.name, g.namespaces.map(ns => ns.name)]),
-        [['Engine', ['Engine', 'Draw']], ['Plugins', ['ZzFXM', 'Alpha', 'Zed']]]);
+        [['Engine', ['Engine', 'Draw']], ['Plugins', ['Tweakables', 'Alpha', 'Zed']]]);
 });
 
 test('classes nest under their namespace, alphabetical, and entries under their owner', ()=>

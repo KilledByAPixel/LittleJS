@@ -403,7 +403,6 @@ glDraw(x, y, sizeX, sizeY, angle=0, uv0X, uv0Y, uv1X, uv1Y, rgba=-1, rgbaAdditiv
 - Ability to play mp3, ogg, and wave files
 - Route sounds or everything through effects with the audio effects plugin
 - [ZzFX Sound Effect Generator](https://killedbyapixel.github.io/ZzFX)
-- [ZzFXM Music System](https://keithclark.github.io/ZzFXM)
 
 ```javascript
 // Sound Object
@@ -434,10 +433,6 @@ SoundInstance.getCurrentTime()    // Where it is in the sound, in the sound's ow
 SoundInstance.getDuration()       // Length of the sound, the same at any rate; divide by rate for time to play
 SoundInstance.getSource()         // Get AudioBufferSourceNode
 SoundInstance.onendedCallback     // Called when it plays to its end, not on stop or pause; set it any time
-
-// ZzFXM - Tiny music playing system
-ZzFXMusic(zzfxMusic)                                 // Create a zzfx music object
-ZzFXMusic.playMusic(volume=1, loop=true, paused=false) // Play the music, it is a Sound so play and playLoop work too
 
 // Audio functions
 speak(text, volume=1, rate=1, pitch=1, language='')  // Speak text line
@@ -2308,6 +2303,10 @@ newgrounds.logView()                     // since 1.20, does nothing, the view i
 drawNineSliceScreen(pos, size, startTile, borderSize, extraSpace, angle) // since 1.20, the order is now
 drawThreeSliceScreen(pos, size, startTile, borderSize, extraSpace, angle) // (pos, size, startTile, color, ...)
 ```
+
+ZzFXM, the tracker music plugin, was removed in 1.24. A game with a song in that format includes
+[ZzFXM](https://github.com/keithclark/ZzFXM) itself and hands the samples it makes to a `Sound` through
+`sampleChannels`.
 
 [LittleJS Engine](https://github.com/KilledByAPixel/LittleJS) Copyright 2021 Frank Force
 

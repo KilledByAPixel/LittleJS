@@ -48,19 +48,6 @@ test('drawNineSlice samples the 3x3 block on the padded grid tile() lays out', (
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// ZzFXMusic takes a song with or without BPM and with the tracker's metadata
-
-test('ZzFXMusic takes a song of three or more parts in the typings', () =>
-{
-    const typings = read('dist/littlejs.d.ts');
-    const start = typings.indexOf('class ZzFXMusic');
-    assert.ok(start >= 0, 'ZzFXMusic is in the typings');
-    const constructor = typings.slice(start).match(/constructor\(zzfxMusic: ([^)]*)\)/);
-    assert.ok(constructor, 'ZzFXMusic has a constructor taking zzfxMusic');
-    assert.equal(constructor[1].replace(/\s/g, ''), '[any[],any[],any[],number?,...any[]]');
-});
-
-///////////////////////////////////////////////////////////////////////////////
 // REFERENCE.md signatures match the code
 
 // split a parameter list on its top level commas, defaults may hold calls
