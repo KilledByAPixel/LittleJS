@@ -40,7 +40,7 @@ test('a polygon with a side count that is not a whole number, or below zero, dra
         drawRegularPoly(vec2(), vec2(1), sides);
     setGLCircleSides(7.5);
     drawEllipse(vec2(), vec2(1));
-    setGLCircleSides(glCircleSides > 2.5 ? 32 : 32);
+    setGLCircleSides(glCircleSides); // as it was when the test began, the destructured copy
 });
 
 test('a sound made while sound is off says it is loaded, so a game waiting on its sounds goes on', ()=>
