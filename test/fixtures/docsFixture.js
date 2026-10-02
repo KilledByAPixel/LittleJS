@@ -46,6 +46,9 @@ class Thing
         /** @property {Vector2} - where it is
          *  @type {Vector2} */
         this.pos = pos;
+
+        /** @property {number} - how fast, a property with no @type */
+        this.speed = 1;
     }
 
     /** Move it

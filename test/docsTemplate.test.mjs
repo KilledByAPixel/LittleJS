@@ -253,6 +253,14 @@ test('a member with @property and @type shows the type once and the property tex
     assert.ok(!entry.includes('<dl'), 'no properties list repeating the type');
 });
 
+test('a member with @property and no @type takes the type from its one property', { skip }, ()=>
+{
+    const page = site.pages['Fixture.Thing.html'];
+    const entry = page.slice(page.indexOf('<div class="entry" id="speed">'), page.indexOf('</div><!-- /entry -->', page.indexOf('id="speed"')));
+    assert.ok(entry.includes('<span class="name">speed</span> : number'), entry);
+    assert.ok(entry.includes('<div class="desc"><p>how fast, a property with no @type</p></div>'));
+});
+
 test('a subclass page says what it extends and lists the inherited names as links to the parent', { skip }, ()=>
 {
     const page = site.pages['Fixture.BigThing.html'];

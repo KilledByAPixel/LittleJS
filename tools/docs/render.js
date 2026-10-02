@@ -387,20 +387,22 @@ function entryHtml(entry, model, options)
         badges.push('async');
     if (d.deprecated)
         badges.push('deprecated');
+    // a member with @property and @type has no description, the text is in its one unnamed property,
+    // and one with @property alone has its type there too
+    const unnamed = d.properties && d.properties.length == 1 && !d.properties[0].name;
     let top;
     if (isFunction)
         top = signatureHtml(entry, d, model);
     else
     {
-        const type = typeOf(d, '@type', d, model);
+        const typed = d.type && d.type.names && d.type.names.length ? d : unnamed && d.properties[0].type ? d.properties[0] : d;
+        const type = typeOf(typed, '@type', d, model);
         const def = d.defaultvalue !== undefined && d.defaultvalue !== null ? ` <span class="opt">default ${esc(String(d.defaultvalue))}</span>` : '';
         top = `<span class="name">${esc(entry.name)}</span>${type ? ' : ' + type : ''}${def}`;
     }
-    // a member with @property and @type has no description, the text is in its one unnamed property
-    const unnamed = d.properties && d.properties.length == 1 && !d.properties[0].name;
     const description = d.description || (unnamed && d.properties[0].description) || '';
     let html = `<div class="entry" id="${entry.anchor}">`;
-    html += `<div class="top"><code class="sig">${top}</code>${badges.map(b => `<span class="badge ${b}">${b}</span>`).join('')}${sourceLink(d, options)}</div>`;
+    html += `<div class="head"><code class="sig">${top}</code>${badges.map(b => `<span class="badge ${b}">${b}</span>`).join('')}${sourceLink(d, options)}</div>`;
     if (d.deprecated && d.deprecated !== true)
         html += `<p class="deprecated">Deprecated ${d.deprecated}</p>`;
     if (description)
