@@ -392,3 +392,34 @@ test('Save inside a prefab writes the prefab as a file of its own, and Export do
     assert.equal(run('editor3DPrefabDirty.size'), 0, 'saved, it waits for nothing');
     assert.deepEqual(JSON.parse(run(`editor3DPrefabJSON('Shop')`)).objects[1].pos, [4, 2.5, 0], 'what Export writes');
 });
+
+test('a prefab loaded from a file is the level\'s own, ready to place, as one undo', async ()=>
+{
+    const { run } = await loadGame();
+    const text = JSON.stringify({littlejs3D: 1, attached: true, objects: [{id: 1, type: 'Sphere', pos: [0, 1, 0]}]});
+    run(fileCode);
+    assert.equal(run(`editor3DPrefabLoad('Lamp', ${JSON.stringify(text)})`), true);
+    assert.deepEqual(json(run, 'level.prefabs.Lamp'), {attached: true, objects: [{id: 1, type: 'Sphere', pos: [0, 1, 0]}]});
+    assert.deepEqual([run(`level3DTypes.has('Lamp')`), run('editor3DBrush'), run('editor3DUndoList.length')],
+        [true, 'Lamp', 1], 'picked to place with the next click');
+    run('editor3DUndo()');
+    assert.deepEqual([run(`level3DTypes.has('Lamp')`), run(`'Lamp' in level.prefabs`)], [false, false]);
+});
+
+test('a file that is not a prefab, or a name that is taken, is not loaded, and the panel says why', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `level3DAddPrefab('Shop', {objects: []}); var good = '{"objects": []}';`);
+    for (const [name, text] of [['Lamp', '"not json'], ['Lamp', '{"width": 3}'], ['Box', '{"objects": []}'],
+        ['Shop', '{"objects": []}'], ['', '{"objects": []}']])
+    {
+        assert.equal(typeof run(`editor3DPrefabLoad(${JSON.stringify(name)}, ${JSON.stringify(text)})`), 'string', name + text);
+        assert.equal(run('editor3DPrefabMessage.length > 0'), true);
+    }
+    assert.equal(run('editor3DUndoList.length'), 0);
+    // one the level has already is replaced, as Make prefab does, and its instances follow
+    assert.equal(run(`editor3DPrefabLoad('House', '{"objects": [{"type": "Box"}]}')`), true);
+    assert.equal(run('live(1).parts.length'), 1);
+    run('editor3DPrefabEnter(1)');
+    assert.equal(typeof run(`editor3DPrefabLoad('Lamp', good)`), 'string', 'not while a prefab is open');
+});

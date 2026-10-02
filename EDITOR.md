@@ -84,7 +84,8 @@ objectLayersAddType('Coin', Coin, {value: 1});
   `EngineObject3D` would pass the properties as its mesh.
 - `level3DAddMesh('Tree', mesh, tileInfo)` is a 3D type with no class: a static prop with `color` and `solid`.
 - Changing a 3D object's property in the editor makes the object again, since its constructor takes them.
-- 3D prefabs, small levels placed many times, are types too: see "Prefabs" in [REFERENCE.md](REFERENCE.md).
+- 3D prefabs, small levels placed many times, are types too: see "Prefabs" in [REFERENCE.md](REFERENCE.md). The
+  panel's Load prefab button adds one from a file to the level being edited.
 
 ## A key of your own
 

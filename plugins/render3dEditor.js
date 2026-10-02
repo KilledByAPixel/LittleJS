@@ -1295,6 +1295,50 @@ function editor3DMakePrefab(name='')
     return true;
 }
 
+// add a prefab from the text of a file the editor saved, a level file, to the level's own prefabs under a name,
+// as one undo, and pick it to place; a name the level's prefabs have is replaced, as Make prefab does; true, or
+// why not, which the panel shows
+function editor3DPrefabLoad(name, text)
+{
+    const refuse = (why)=> editor3DPrefabMessage = why;
+    if (editor3DPrefabStack.length) return refuse('Go back to the level to load a prefab');
+    if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return refuse('The level can not be edited now');
+    name = String(name).trim();
+    if (!name) return refuse('The prefab needs a name');
+    let file;
+    try { file = JSON.parse(text); }
+    catch { return refuse(name + ' is not a JSON file'); }
+    if (!file || typeof file !== 'object' || !isArray(file.objects))
+        return refuse(name + ' is not a prefab, it has no objects');
+    const known = level3DPrefabs.get(name);
+    if (known ? !known.fromLevel : level3DTypes.has(name))
+        return refuse(name + ' is a type the game added, rename the file');
+    const objects = file.objects.filter((o)=> o && typeof o === 'object');
+    if (objects.some((o)=> editor3DPrefabHolds(o.type, name)))
+        return refuse(name + ' can not hold itself');
+    editor3DStrokeEnd();
+    editor3DChangePart('prefabs', (prefabs={})=> ({...prefabs, [name]: file.attached ? {attached: true, objects} : {objects}}));
+    editor3DStrokeEnd();
+    editor3DPickTool(editor3DTool); // a tool of the game's own is put down
+    editor3DBrush = name;
+    editor3DPrefabMessage = '';
+    return true;
+}
+
+// pick a prefab's file and load it, by its file name
+function editor3DPrefabPickFile()
+{
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async ()=>
+    {
+        const file = input.files?.[0];
+        file && editor3DPrefabLoad(file.name.replace(/\.json$/i, ''), await file.text());
+    };
+    input.click();
+}
+
 // turn the selected instances of prefabs into the objects they are made of, where they are, as one undo; false
 // with none selected
 function editor3DUnpack()
@@ -2799,6 +2843,7 @@ function editor3DPanelInit()
     // the types, a click picks one up to place, made again when types are added
     editorElement('div', panel, 'color:#aaa;margin-top:4px', 'Place');
     const types = row();
+    const prefabNote = editorElement('div', panel, 'color:#f86'); // why a prefab was not loaded
     const properties = editorElement('div', panel, box);
 
     // prefabs: the selection made one, or the selected instance's own
@@ -2850,7 +2895,7 @@ function editor3DPanelInit()
     const gameHelp = editorElement('div', help);
     button(help, 'Close', ()=> editor3DHelp = false, '?');
 
-    editor3DPanelParts = {game, gameHelp, restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox, prefabOpen, prefabName, prefabUnsaved,
+    editor3DPanelParts = {game, gameHelp, restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox, prefabOpen, prefabName, prefabUnsaved, prefabNote,
         properties, blocks, terrainBox, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
 }
 
@@ -2897,9 +2942,13 @@ function editor3DPanelUpdate()
             return b;
         });
         const label = editorElement('span', undefined, 'color:#aaa;width:100%', 'Prefabs');
-        p.types.replaceChildren(...p.typeButtons.slice(0, plain.length), ...(prefabs.length ? [label] : []),
-            ...p.typeButtons.slice(plain.length));
+        const load = editorElement('button', undefined, 'padding:3px 6px;cursor:pointer', 'Load prefab…');
+        load.title = 'Add a prefab from a file the editor saved, by its file name, to place in this level';
+        load.onclick = ()=> { editor3DPrefabPickFile(); load.blur(); };
+        p.types.replaceChildren(...p.typeButtons.slice(0, plain.length), label, ...p.typeButtons.slice(plain.length), load);
     }
+    p.prefabNote.style.display = editor3DPrefabMessage && !editor3DSelection.size ? '' : 'none';
+    p.prefabNote.textContent = editor3DPrefabMessage;
     names.forEach((name, i)=> p.typeButtons[i].style.outline = name === editor3DBrush ? lit : '');
     editor3DPropertiesUpdate(p.properties);
     editor3DPrefabBoxUpdate(p.prefabBox);
