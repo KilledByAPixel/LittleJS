@@ -16,7 +16,7 @@ function load()
     const pending = new Map, loaded = [], errors = [];
     const exampleInfoBox = {innerHTML: 'OLD', scrollTop: 50};
     const context = vm.createContext({
-        exampleInfoBox,
+        exampleInfoBox, exampleList: [],
         codeMirror: undefined, textareaCode: {value: '', disabled: false},
         codeIsJS: true, inputTimeout: undefined, clearTimeout() {},
         setFrameControlsEnabled(value) { context.controlsEnabled = value; },
@@ -95,7 +95,48 @@ test('the info markdown becomes html', ()=>
         '<pre>if (a &lt; b)\n    c();\n\n*x*</pre><p>After</p>');
     assert.equal(render('[docs](https://x.com/a?b=1) [short](?example=Shapes)'),
         '<p><a href="https://x.com/a?b=1" target="_blank" rel="noopener">docs</a> ' +
-        '<a href="?example=Shapes" target="_blank" rel="noopener">short</a></p>');
+        '<a href="?example=Shapes">short</a></p>', 'a link to another example stays in the page');
+});
+
+test('in See also an example name links to the example, the longest name first, and nowhere else', ()=>
+{
+    const {context} = load();
+    const names = ['Tile Layer', 'Box2D Tile Layer', 'Texture', 'Texture Sheet'];
+    const html = context.renderExampleInfo(
+        'Tile Layer is above.\n\n## See also\nBox2D Tile Layer and Tile Layer, Texture Sheet and `Texture`.', names);
+    assert.equal(html, '<p>Tile Layer is above.</p><h3>See also</h3><p>' +
+        '<a href="?example=Box2D%20Tile%20Layer">Box2D Tile Layer</a> and <a href="?example=Tile%20Layer">Tile Layer</a>, ' +
+        '<a href="?example=Texture%20Sheet">Texture Sheet</a> and <code>Texture</code>.</p>');
+});
+
+test('engine names in code link to their docs entry', ()=>
+{
+    const {context} = load();
+    const docs = context.buildDocsLinks([
+        {n: 'drawTile', k: 'function', p: 'Draw.html', a: 'drawTile', ns: 'Draw'},
+        {n: 'drawTile', k: 'function', p: 'TileLayers.TileLayer.html', a: 'drawTile', ns: 'TileLayers'},
+        {n: 'Light3D', k: 'class', p: 'Render3D.Light3D.html', a: '', ns: 'Render3D'},
+        {n: 'pos', k: 'member', p: 'Engine.EngineObject.html', a: 'pos', ns: 'Engine'},
+        {n: 'pos', k: 'member', p: 'Draw.TileInfo.html', a: 'pos', ns: 'Draw'},
+        {n: 'pick', k: 'function', p: 'Render3D.Render3DPlugin.html', a: 'pick', ns: 'Render3D'},
+        {n: 'render3D', k: 'constant', p: 'Render3D.html', a: 'render3D', ns: 'Render3D'},
+        {n: 'Draw', k: 'namespace', p: 'Draw.html', a: '', ns: 'Draw'},
+    ]);
+    assert.deepEqual(Object.fromEntries(docs), {
+        drawTile: '../docs/Draw.html#drawTile', Light3D: '../docs/Render3D.Light3D.html',
+        pick: '../docs/Render3D.Render3DPlugin.html#pick', render3D: '../docs/Render3D.html#render3D'},
+        'a name two classes share is not linked, and the one a namespace has wins over a class\'s');
+    const render = (s)=> context.renderExampleInfo(s, [], docs);
+    const a = (name)=> `<a href="${docs.get(name)}" target="_blank" rel="noopener">${name}</a>`;
+    assert.equal(render('`drawTile(pos, size)` and `new Light3D(vec3(), 12)` and `.pick()`'),
+        `<p><code>${a('drawTile')}(pos, size)</code> and <code>new ${a('Light3D')}(vec3(), 12)</code> ` +
+        `and <code>.${a('pick')}()</code></p>`);
+    assert.equal(render('`render3D.pick` and `o.pos` and `pos` and `x*2` and `render3D.shadows = true`'),
+        `<p><code>${a('render3D')}.${a('pick')}</code> and <code>o.pos</code> and <code>pos</code> and <code>x*2</code> ` +
+        `and <code>${a('render3D')}.shadows = true</code></p>`);
+    assert.equal(render("`'fire'` and `{scale: 3}` and `-.01`"),
+        "<p><code>'fire'</code> and <code>{scale: 3}</code> and <code>-.01</code></p>", 'not code that starts with no name');
+    assert.equal(context.renderExampleInfo('`drawTile`'), '<p><code>drawTile</code></p>', 'no docs, no links');
 });
 
 test('info text can not add markup or a script link', ()=>

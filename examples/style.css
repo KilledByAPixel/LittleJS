@@ -67,6 +67,7 @@ iframe
 #exampleInfoBox code { padding: 1px 4px; }
 #exampleInfoBox pre { padding: 6px 8px; overflow-x: auto; }
 #exampleInfoBox a { color: #70B7FD; }
+#exampleInfoBox code a { color: inherit; text-decoration: underline dotted; }
 @media (max-aspect-ratio: 1/1)
 {
     /* the stacked layout of a narrow window: the box has a height of its own */

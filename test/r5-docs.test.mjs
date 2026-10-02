@@ -179,15 +179,21 @@ test('every short and full example in the example browser has a write-up', () =>
     // the info box is never empty: a short listed in examples/shorts.js ends with an info block that says how
     // it works, and a full example, which is a folder, has its write-up in fullExampleInfo there
     const list = fs.readFileSync(new URL('../examples/shorts.js', import.meta.url), 'utf8');
-    const missing = [];
+    const names = [...list.matchAll(/new ExampleInfo\('([^']*)', '[^']+'/g)].map((m)=> m[1]);
+    const missing = [], unlinked = [];
     for (const [, file] of list.matchAll(/new ExampleInfo\('[^']*', '([\w-]+\.js)'/g))
     {
         const source = fs.readFileSync(new URL('../examples/shorts/' + file, import.meta.url), 'utf8');
         const block = /\n\/\* info\r?\n([\s\S]*)\*\//.exec(source);
         if (!block || !block[1].includes('\n## How it works'))
             missing.push(file);
+        // See also names other examples as the list has them, which is how the browser links to them
+        const seeAlso = block && block[1].split('## See also')[1];
+        if (seeAlso && !names.some((name)=> seeAlso.includes(name)))
+            unlinked.push(file);
     }
     assert.deepEqual(missing, [], 'shorts with no write-up, or one with no How it works');
+    assert.deepEqual(unlinked, [], 'shorts whose See also names no example in the list');
 
     const full = [...list.matchAll(/new ExampleInfo\('[^']*', '([\w-]+)', '[^']*', true, '[^']*'(, fullExampleInfo)?/g)];
     assert.ok(full.length > 5, 'the full examples are where the test looks for them');

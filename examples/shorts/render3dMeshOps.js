@@ -133,6 +133,6 @@ from an empty mesh.
 
 ## See also
 3D Shapes shows the builders on their own, and 3D Mesh makes a mesh
-from an OBJ or glTF model. `Mesh` in REFERENCE lists the other methods,
-`transform`, `setColor` and `scaleUVs` among them.
+from an OBJ or glTF model. `Mesh` has the other methods, `transform`,
+`setColor` and `scaleUVs` among them.
 */

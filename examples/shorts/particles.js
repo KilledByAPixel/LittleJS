@@ -59,6 +59,6 @@ the trail.
 
 ## See also
 Particle Effects shows every built-in effect, and Particle Options what
-each option does. For an effect of your own, REFERENCE has the full
-`ParticleEmitter` constructor.
+each option does. For an effect of your own, `ParticleEmitter` has
+every setting in its constructor.
 */

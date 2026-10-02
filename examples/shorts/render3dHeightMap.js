@@ -171,5 +171,5 @@ the mouse's screen position into a ray from the camera, and
 3D Racing Game drives on a height map, and 3D Plugin in the full
 examples is an island made of one. 3D Voxels is the other kind of
 level. Objects with collision stand on a `HeightMap` without any code:
-see `collideLevel` in REFERENCE.
+see `collideLevel` on `EngineObject3D`.
 */

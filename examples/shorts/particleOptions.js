@@ -106,6 +106,6 @@ the top.
 ## See also
 Particles has the basics, and Particle Effects shows every built-in
 effect. Tile Layer uses options to make sparks that bounce. Timers has
-more on `Timer`, and REFERENCE has the full `ParticleEmitter`
-constructor.
+more on `Timer`, and the `ParticleEmitter` underneath has every setting
+in its constructor.
 */

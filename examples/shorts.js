@@ -312,14 +312,9 @@ function initExampleBrowser()
     // load the examples into the list
     filterExamples();
 
-    // set the selected example from the URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const selectedExample = urlParams.get('example') || '';
-    let exampleIndex = exampleList.findIndex((example)=> example.name === selectedExample);
-    if (exampleIndex < 0)
-        exampleIndex = 1;
-    selectExample.selectedIndex = exampleIndex;
-    setExample();
+    // set the selected example from the URL parameters, or the first one
+    const name = new URLSearchParams(window.location.search).get('example');
+    selectExampleByName(name) || selectExampleByName(exampleList[1].name);
 
     // apply responsive layout
     addEventListener('resize', resizeWindow);
@@ -501,10 +496,23 @@ function splitExampleInfo(text)
 }
 
 // the info's markdown as html: headings, paragraphs, lists of one level, code, bold, italic and links.
-// Everything is escaped first, so the text shows as written and can add no markup
-function renderExampleInfo(markdown)
+// Everything is escaped first, so the text shows as written and can add no markup. In code, each name the docs
+// have links to its entry, and in See also the name of an example links to the example
+function renderExampleInfo(markdown, exampleNames=[], docsLinks)
 {
     const escape = (s)=> s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    // code that starts with a name, or a chain of them like render3D.pick, links each name the docs have;
+    // what follows them, the arguments of a call or an assignment, is left as it is
+    const codeLinks = (code)=>
+    {
+        const match = /^(new\s+|\.)?([A-Za-z_$][\w$]*(?:\.[\w$]+)*)(.*)$/.exec(code);
+        if (!docsLinks || !match)
+            return code;
+        const names = match[2].split('.').map((name)=> docsLinks.has(name) ?
+            `<a href="${docsLinks.get(name)}" target="_blank" rel="noopener">${name}</a>` : name);
+        return (match[1] || '') + names.join('.') + match[3];
+    };
     const inline = (s)=>
     {
         // code spans are set aside first, so nothing inside one is read as markdown
@@ -513,10 +521,11 @@ function renderExampleInfo(markdown)
         // a star opens or closes only against a word's outside, so the stars of a*b and 2 * 3 stay stars
         s = s.replace(/(?<![\w*])\*\*(?=\S)([^*]+)(?<=\S)\*\*(?![\w*])/g, '<b>$1</b>');
         s = s.replace(/(?<![\w*])\*(?=\S)([^*]+)(?<=\S)\*(?![\w*])/g, '<i>$1</i>');
+        // a link to another example, ?example=Name, stays in the page; any other opens a new tab
         s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, text, url)=>
             /^https?:\/\//.test(url) || !url.includes(':') ?
-                `<a href="${url}" target="_blank" rel="noopener">${text}</a>` : m);
-        return s.replace(/\0(\d+)\0/g, (m, i)=> '<code>' + spans[i] + '</code>');
+                `<a href="${url}"${url[0] == '?' ? '' : ' target="_blank" rel="noopener"'}>${text}</a>` : m);
+        return s.replace(/\0(\d+)\0/g, (m, i)=> '<code>' + codeLinks(spans[i]) + '</code>');
     }
 
     let html = '', type = '', parts = [];
@@ -568,14 +577,74 @@ function renderExampleInfo(markdown)
         }
     }
     flush();
+
+    // from See also on, the name of an example links to it: the longest names first, so Box2D Tile Layer is
+    // not read as Tile Layer, in the text only and not in code
+    const seeAlso = html.indexOf('<h3>See also</h3>');
+    if (seeAlso >= 0 && exampleNames.length)
+    {
+        const names = [...exampleNames].sort((a, b)=> b.length - a.length)
+            .map((name)=> name.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&'));
+        const pattern = new RegExp(`(^|[^A-Za-z0-9])(${names.join('|')})(?![A-Za-z0-9])`, 'g');
+        let inCode = false;
+        const linked = html.slice(seeAlso).split(/(<[^>]+>)/).map((part)=>
+        {
+            if (part[0] == '<')
+            {
+                part == '<code>' && (inCode = true);
+                part == '</code>' && (inCode = false);
+                return part;
+            }
+            return inCode ? part : part.replace(pattern, (m, before, name)=>
+                before + `<a href="?example=${encodeURIComponent(name)}">${name}</a>`);
+        });
+        html = html.slice(0, seeAlso) + linked.join('');
+    }
     return html;
 }
+
+// the docs' search index as a map from a name to its page and anchor, for the names that mean one thing: a
+// name on a namespace page, a function, a global or a class, wins over a class member of the same name, and a
+// name two classes share, like pos or update, is left out
+function buildDocsLinks(index)
+{
+    const rows = new Map;
+    for (const row of index)
+        if (row.k != 'namespace')
+            (rows.get(row.n) || rows.set(row.n, []).get(row.n)).push(row);
+    const links = new Map;
+    for (const [name, list] of rows)
+    {
+        const top = list.filter((row)=> row.p == row.ns + '.html');
+        const row = list.length == 1 ? list[0] : top.length == 1 ? top[0] : undefined;
+        row && links.set(name, '../docs/' + row.p + (row.a ? '#' + row.a : ''));
+    }
+    return links;
+}
+
+// that map, from the index the page loaded with the docs' own search.js
+const docsLinks = typeof docsSearchIndex == 'object' ? buildDocsLinks(docsSearchIndex) : undefined;
 
 // show an example's info in its box, from its top
 function setExampleInfo(info)
 {
-    exampleInfoBox.innerHTML = renderExampleInfo(info);
+    exampleInfoBox.innerHTML = renderExampleInfo(info, exampleList.map((example)=> example.name), docsLinks);
     exampleInfoBox.scrollTop = 0;
+}
+
+// select an example by its name, as a link in the info box does, and show it: true when there is one
+function selectExampleByName(name)
+{
+    const index = exampleList.findIndex((example)=> example.name === name);
+    if (index < 0 || exampleList[index].isHeading)
+        return false;
+
+    // a search may have left it out of the list: clear the search and it is back
+    const find = ()=> [...selectExample.options].find((option)=> option.originalIndex === index);
+    const option = find() || (filterExamples(1), find());
+    selectExample.selectedIndex = option.index;
+    setExample();
+    return true;
 }
 
 // go to the example before or after this one, in the list as the search has it, past the headings and around its
@@ -1086,6 +1155,15 @@ checkboxShowInfo.addEventListener('change', ()=>
     showExampleInfo();
     writeSaveData();
     codeMirror && codeMirror.refresh(); // the code's height changed
+});
+exampleInfoBox.addEventListener('click', (e)=>
+{
+    // a See also link switches the example in the page
+    const link = e.target.closest('a[href^="?example="]');
+    if (!link)
+        return;
+    e.preventDefault();
+    selectExampleByName(new URL(link.href).searchParams.get('example'));
 });
 textareaCode.addEventListener('input', codeInput);
 inputSearch.addEventListener('input', ()=> filterExamples());

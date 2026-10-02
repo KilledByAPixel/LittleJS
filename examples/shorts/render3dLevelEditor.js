@@ -166,6 +166,7 @@ since the editor opens with the game's view.
 ## See also
 3D Prefab Maker uses the editor to build one thing a game places many
 times. Level Editor is the 2D editor, and 3D First Person and 3D Voxels
-show the player and the blocks on their own. `EDITOR.md` in the repo
+show the player and the blocks on their own.
+[EDITOR.md](https://github.com/KilledByAPixel/LittleJS/blob/main/EDITOR.md)
 explains how a game adds its own keys, buttons and tools.
 */

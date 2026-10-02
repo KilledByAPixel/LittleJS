@@ -187,6 +187,7 @@ is within one unit.
 Platforming Game in the full examples uses the editor on a whole game,
 with a level loaded from a file. Tile Layer and Platformer Game cover
 the tile layer and the platforming. 3D Level Editor is the same idea
-in 3D, and EDITOR.md in the repository lists everything a game can add
-to the editor.
+in 3D, and
+[EDITOR.md](https://github.com/KilledByAPixel/LittleJS/blob/main/EDITOR.md)
+lists everything a game can add to the editor.
 */
