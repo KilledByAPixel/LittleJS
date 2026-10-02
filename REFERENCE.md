@@ -1895,6 +1895,7 @@ Light                   // color, radius (5), intensity (1); cone (0), degrees f
 
 ### 3D level editor
 Debug builds only. `0` on the debug overlay opens it for a level loaded with `level3DLoad`, the game pauses under it.
+To make it your own game's editor, with your own types, keys and panel buttons, see [EDITOR.md](EDITOR.md).
 The panel's Scene box edits the level's scene block: "Level sets the scene" starts one from what is on screen, and
 off leaves the sky, sun, fog and shadows to the game.
 
@@ -2206,6 +2207,7 @@ tweakEngineDefaults()      // Add gravity, timeScale, cameraScale and soundVolum
   right click picks, right drag box-selects, a selected object's properties show in the panel
 - The panel's Advanced section has Play from mouse, the level's size to resize it, and Reset to file
 - Debug builds only, release builds have none of its code
+- To make it your own game's editor, with your own types, keys and panel buttons, see [EDITOR.md](EDITOR.md)
 
 ```javascript
 levelEditor.isOpen         // Is the editor open? read only

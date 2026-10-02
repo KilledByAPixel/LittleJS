@@ -136,6 +136,7 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 - [Tutorial: Breakout](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) - Learn how to make a simple game from scratch
 - [Tutorial: Make a ski game](https://eoinmcgrath.com/little-ski/tutorial.html) - A tutorial by eoinmcg that shows how to make a pixel art style game
 - [LittleJS Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) - A reference sheet to help you get started
+- [Making Your Own Level Editor](https://github.com/KilledByAPixel/LittleJS/blob/main/EDITOR.md) - How to turn the built in 2D and 3D level editors into an editor for your own game
 - [LittleJS FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) - Answers to common questions about LittleJS
 - [JS13k Branch](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - A special branch for size coding events that builds to a 7KB zip
 

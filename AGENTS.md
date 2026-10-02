@@ -19,6 +19,7 @@ If anything in this doc conflicts with the actual repo behavior, follow the repo
 
 - `README.md` - Overview and getting started
 - `REFERENCE.md` - API quick reference
+- `EDITOR.md` - How a game makes the 2D and 3D level editors its own: the hooks, and the editors' own functions a script build can call. A goal of both editors is to be the base of a game's own editor, so a change to a name that page lists is a change to what games use: update the page with it. Its code blocks marked `<!-- test:name -->` are run from the file by [test/editorCustom.test.mjs](test/editorCustom.test.mjs)
 - `examples/` - Working examples demonstrating engine features
 
 ## Architecture overview
