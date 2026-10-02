@@ -154,3 +154,25 @@ test('highlight marks comments, strings, numbers and keywords and escapes html',
     assert.equal(highlight('f(1.5e3, "q")'), 'f(<span class="n">1.5e3</span>, <span class="s">"q"</span>)');
     assert.equal(highlight('/* a\nb */ x'), '<span class="c">/* a\nb */</span> x');
 });
+
+test('the homepage is the README under the shell, with the outline from its headings', { skip }, ()=>
+{
+    const home = site.pages['index.html'];
+    assert.ok(home.startsWith('<!DOCTYPE html>'));
+    assert.ok(home.includes('<title>LittleJS Docs</title>'));
+    assert.ok(home.includes('<img src="examples/logo.png">'), 'README html is kept as jsdoc made it');
+    assert.ok(home.includes('<a href="#start">Start</a>'), 'the outline lists the README headings');
+    assert.ok(home.includes('href="https://github.com/KilledByAPixel/LittleJS"'), 'the menu links');
+    assert.ok(home.includes('9.9.9'), 'the version shows');
+    assert.ok(home.includes('localStorage.getItem(\'theme\')'), 'the theme is set before the stylesheet');
+    assert.ok(!home.includes('src="http'), 'no external scripts');
+});
+
+test('the sidebar has both groups, each namespace with its classes, the current one open', { skip }, ()=>
+{
+    const home = site.pages['index.html'];
+    // both fixture namespaces are unknown to the order lists, so they are Plugins and the Engine group is empty
+    assert.ok(home.includes('<h2>Plugins</h2>') && !home.includes('<h2>Engine</h2>'), 'an empty group has no heading');
+    assert.ok(/<details[^>]*>\s*<summary><a href="Fixture.html">Fixture<\/a><\/summary>\s*<ul>\s*<li><a href="Fixture.BigThing.html">BigThing<\/a><\/li>\s*<li><a href="Fixture.Thing.html">Thing<\/a><\/li>/.test(home));
+    assert.ok(!home.includes('<details open'), 'no namespace is open on the homepage');
+});

@@ -187,10 +187,93 @@ function highlight(code)
     return out + escText(code.slice(last));
 }
 
-// the pages come in later tasks, this stub lets the test file load
-function render()
+// the sidebar tree: the two groups, each namespace a details holding its classes
+function sidebarHtml(model, current)
 {
-    return { pages: {}, search: [] };
+    let html = '<nav class="sidebar" id="sidebar"><input class="filter" type="search" placeholder="Filter" aria-label="Filter the tree">';
+    for (const group of model.groups)
+    {
+        if (!group.namespaces.length)
+            continue;
+        html += `<h2>${group.name}</h2>`;
+        for (const ns of group.namespaces)
+        {
+            const open = current == ns.page || ns.classes.some(c => c.page == current);
+            const cls = (page)=> page == current ? ' class="current"' : '';
+            html += `<details${open ? ' open' : ''}><summary><a href="${ns.page}"${cls(ns.page)}>${ns.name}</a></summary>`;
+            if (ns.classes.length)
+                html += '<ul>' + ns.classes.map(c => `<li><a href="${c.page}"${cls(c.page)}>${c.name}</a></li>`).join('') + '</ul>';
+            html += '</details>';
+        }
+    }
+    return html + '</nav>';
+}
+
+// the page outline for the right column
+function outlineHtml(outline)
+{
+    if (!outline.length)
+        return '';
+    const items = outline.map(o => `<li class="d${o.depth}"><a href="${o.href}">${esc(o.text)}</a></li>`).join('');
+    return `<aside class="outline"><h3>On this page</h3><ul>${items}</ul></aside>`;
+}
+
+const MENU_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const THEME_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.4A6 6 0 0 1 12 3z" fill="currentColor"/></svg>';
+
+// every page: head, header, sidebar, content, outline, footer
+function shell(model, options, page)
+{
+    const meta = (options.meta || []).map(m => `<meta ${Object.entries(m).map(([k, v]) => `${k}="${esc(v)}"`).join(' ')}>`).join('\n');
+    const menu = (options.menu || []).map(m => `<a href="${esc(m.link)}">${esc(m.title)}</a>`).join('');
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(page.title)}</title>
+${meta}
+<link rel="icon" href="favicon.png">
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+<button class="menu" aria-label="Menu">${MENU_ICON}</button>
+<a class="brand" href="index.html"><img src="favicon.png" alt="" width="24" height="24"> LittleJS <span class="ver">${esc(options.version)}</span></a>
+<nav class="links">${menu}</nav>
+<div class="search"><input type="search" placeholder="Search" aria-label="Search"><ul class="results" hidden></ul></div>
+<button class="theme" aria-label="Toggle theme">${THEME_ICON}</button>
+</header>
+${sidebarHtml(model, page.current)}
+<main class="content">
+${page.body}
+<footer>${options.footer || ''}</footer>
+</main>
+${outlineHtml(page.outline)}
+<script src="docs.js"></script>
+</body>
+</html>
+`;
+}
+
+// the homepage: the README's html, its headings the outline
+function homePage(model, options)
+{
+    const readme = options.readme || '';
+    const outline = [];
+    for (const m of readme.matchAll(/<h([23]) id="([^"]+)">(.*?)<\/h\1>/g))
+        outline.push({ href: '#' + m[2], text: m[3].replace(/<[^>]+>/g, ''), depth: m[1] - 2 });
+    return shell(model, options, { title: options.title, current: 'index.html', body: `<article class="readme">${readme}</article>`, outline });
+}
+
+// everything: the pages by file name and the search rows
+function render(doclets, options)
+{
+    const model = buildModel(doclets);
+    const pages = { 'index.html': homePage(model, options) };
+    const search = [];
+    return { pages, search, model };
 }
 
 module.exports = { render, buildModel, typeHtml, tagTypes, highlight, esc };
