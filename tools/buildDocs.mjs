@@ -2,7 +2,7 @@
  * LittleJS Documentation Build System
  * - Generates the JSDoc API site from src/ and plugins/
  * - Uses README.md as the documentation homepage
- * - Copies example images referenced by the homepage
+ * - Copies example images referenced by the homepage; the template in tools/docs/ copies its own static files
  * - Outputs to docs/ folder, which is published by GitHub Pages
  */
 
@@ -18,7 +18,6 @@ const ROOT_DIR = join(__dirname, '..');
 const DOCS_FOLDER = join(ROOT_DIR, 'docs');
 const EXAMPLE_FOLDER = join(ROOT_DIR, 'examples');
 const CONFIG_FILE = 'tools/jsdoc.config.json';
-const FAVICON_FILE = join(__dirname, 'static', 'favicon.png');
 
 // images referenced by README.md, which is used as the docs homepage
 const docsImageFiles =
@@ -78,13 +77,6 @@ try
     fs.mkdirSync(imageFolder, { recursive: true });
     for (const file of docsImageFiles)
         fs.copyFileSync(file, join(imageFolder, basename(file)));
-
-    // the theme mirrors its static_dir path into the output, which would bury
-    // the favicon under docs/tools/, so copy it to docs/static/ ourselves to
-    // match the href the theme writes into every page
-    const staticFolder = join(DOCS_FOLDER, 'static');
-    fs.mkdirSync(staticFolder, { recursive: true });
-    fs.copyFileSync(FAVICON_FILE, join(staticFolder, basename(FAVICON_FILE)));
 }
 catch (e) { handleError(e, 'Failed to copy static files!'); }
 
