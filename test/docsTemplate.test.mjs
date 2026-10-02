@@ -174,6 +174,7 @@ test('the homepage is the README under the shell, with the outline from its head
     assert.ok(home.includes('href="https://github.com/KilledByAPixel/LittleJS"'), 'the menu links');
     assert.ok(home.includes('9.9.9'), 'the version shows');
     assert.ok(home.includes('localStorage.getItem(\'theme\')'), 'the theme is set before the stylesheet');
+    assert.ok(home.includes("location.hash.indexOf('#.')==0"), 'an old #.name link is turned into #name before the page lays out');
     assert.ok(!home.includes('src="http'), 'no external scripts');
 });
 
@@ -251,6 +252,30 @@ test('a member with @property and @type shows the type once and the property tex
     assert.ok(entry.includes('<span class="name">pos</span> : Vector2'), entry);
     assert.ok(entry.includes('<div class="desc"><p>where it is</p></div>'));
     assert.ok(!entry.includes('<dl'), 'no properties list repeating the type');
+});
+
+test('a getter takes its type from its return', { skip }, ()=>
+{
+    const page = site.pages['Fixture.Thing.html'];
+    const entry = page.slice(page.indexOf('<div class="entry" id="size">'), page.indexOf('</div><!-- /entry -->', page.indexOf('id="size"')));
+    assert.ok(entry.includes('<span class="name">size</span> : number'), entry);
+    assert.ok(page.indexOf('id="size"') < page.indexOf('<h2 id="methods">'), 'a getter is a member, not a method');
+});
+
+test('an entry whose owner is not rendered goes under the nearest rendered one with its dotted name', ()=>
+{
+    const model = buildModel([make('namespace', 'TweenSystem'), make('constant', 'TweenSystem.Ease'),
+        make('member', 'TweenSystem.Ease.LINEAR'), make('member', 'TweenSystem.Ease.QUAD_IN'), make('function', 'TweenSystem~helper')]);
+    const ns = model.namespaces[0];
+    assert.deepEqual(ns.entries.map(e => [e.name, e.anchor, e.kind]), [['Ease', 'Ease', 'constant'], ['Ease.LINEAR', 'Ease.LINEAR', 'member'], ['Ease.QUAD_IN', 'Ease.QUAD_IN', 'member']]);
+    assert.deepEqual(model.warnings, []);
+});
+
+test('a name jsdoc built with # in it is a warning, since the tag that made it is wrong', ()=>
+{
+    const model = buildModel([make('namespace', 'UISystem'), { ...make('function', 'UISystem.destroyObjects'), name: 'UISystemPlugin#destroyObjects', longname: 'UISystem.UISystemPlugin#destroyObjects' }]);
+    assert.equal(model.warnings.length, 1);
+    assert.match(model.warnings[0], /UISystem.UISystemPlugin#destroyObjects/);
 });
 
 test('a member with @property and no @type takes the type from its one property', { skip }, ()=>

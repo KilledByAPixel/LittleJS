@@ -53,6 +53,13 @@
         });
     });
 
+    // an old #.name link is turned into #name by the head script on load, and here when the hash changes in place
+    addEventListener('hashchange', ()=>
+    {
+        if (location.hash.indexOf('#.') == 0)
+            location.replace('#' + location.hash.slice(2));
+    });
+
     // the current page's entry in the sidebar scrolls into view
     const current = $('.sidebar a.current');
     if (current)
@@ -138,7 +145,7 @@
                         a.classList.add('current');
                     break;
                 }
-        }, { rootMargin: '-60px 0px -70% 0px' });
+        }, { rootMargin: '-68px 0px -70% 0px' }); // the band starts under the scroll padding, so the entry above a deep link's target stays out of it
         links.forEach((a, id) => { const el = document.getElementById(id); if (el) observer.observe(el); });
     }
 })();

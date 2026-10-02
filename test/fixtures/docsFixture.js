@@ -51,6 +51,10 @@ class Thing
         this.speed = 1;
     }
 
+    /** How big it is, a getter whose type is its return
+     *  @return {number} */
+    get size() { return 1; }
+
     /** Move it
      *  @param {Vector2} delta - how far
      *  @return {Thing} */

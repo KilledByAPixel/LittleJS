@@ -54,13 +54,21 @@ function buildModel(doclets)
             namespace.classes.push(c);
         }
 
-    // one entry per longname, the one with a description when there are two
+    // one entry per longname, the one with a description when there are two;
+    // an entry whose owner is not rendered (Ease.LINEAR under the constant
+    // Ease) goes under the nearest rendered one with its dotted name, an
+    // inner one (~) is left out
+    const warnings = [];
     const seen = new Map();
     for (const d of docs)
     {
         if (!ENTRY_KINDS.includes(d.kind))
             continue;
-        const owner = classes.get(d.memberof) || namespaces.get(d.memberof);
+        if (d.name.includes('#'))
+            warnings.push(`${d.longname} has # in its name, a @memberof on a method names it under the namespace`);
+        let ownerName = d.memberof || '', owner;
+        while (ownerName && !(owner = classes.get(ownerName) || namespaces.get(ownerName)))
+            ownerName = ownerName.includes('~') ? '' : ownerName.slice(0, Math.max(ownerName.lastIndexOf('.'), 0));
         if (!owner)
             continue;
         const before = seen.get(d.longname);
@@ -70,7 +78,8 @@ function buildModel(doclets)
                 before.doclet = d;
             continue;
         }
-        const entry = { doclet: d, name: d.name, kind: d.kind, static: d.scope == 'static' && classes.has(d.memberof), owner, anchor: d.name };
+        const name = d.memberof == ownerName ? d.name : d.memberof.slice(ownerName.length + 1) + '.' + d.name;
+        const entry = { doclet: d, name, kind: d.kind, static: d.scope == 'static' && classes.has(d.memberof), owner, anchor: name };
         seen.set(d.longname, entry);
         owner.entries.push(entry);
     }
@@ -126,9 +135,10 @@ function buildModel(doclets)
         { name: 'Engine', namespaces: sorted.filter(ns => namespaceOrder(ns.name)[0] == 0) },
         { name: 'Plugins', namespaces: sorted.filter(ns => namespaceOrder(ns.name)[0] == 1) },
     ];
-    // kinds the site does not render are a warning, printed by publish.js
-    const warnings = docs.filter(d => ['module', 'event', 'mixin', 'interface', 'external'].includes(d.kind))
-        .map(d => `${d.kind} ${d.longname} is not rendered, the template has no page for it`);
+    // kinds the site does not render are a warning too, printed by publish.js
+    for (const d of docs)
+        if (['module', 'event', 'mixin', 'interface', 'external'].includes(d.kind))
+            warnings.push(`${d.kind} ${d.longname} is not rendered, the template has no page for it`);
     return { groups, namespaces: sorted, classes: [...classes.values()], links, warnings };
 }
 
@@ -258,7 +268,8 @@ function shell(model, options, page)
 <title>${esc(page.title)}</title>
 ${meta}
 <link rel="icon" href="favicon.png">
-<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -388,14 +399,15 @@ function entryHtml(entry, model, options)
     if (d.deprecated)
         badges.push('deprecated');
     // a member with @property and @type has no description, the text is in its one unnamed property,
-    // and one with @property alone has its type there too
+    // one with @property alone has its type there too, and a getter's type is its return
     const unnamed = d.properties && d.properties.length == 1 && !d.properties[0].name;
+    const hasType = (item)=> item && item.type && item.type.names && item.type.names.length;
     let top;
     if (isFunction)
         top = signatureHtml(entry, d, model);
     else
     {
-        const typed = d.type && d.type.names && d.type.names.length ? d : unnamed && d.properties[0].type ? d.properties[0] : d;
+        const typed = hasType(d) ? d : unnamed && hasType(d.properties[0]) ? d.properties[0] : d.returns && hasType(d.returns[0]) ? d.returns[0] : d;
         const type = typeOf(typed, '@type', d, model);
         const def = d.defaultvalue !== undefined && d.defaultvalue !== null ? ` <span class="opt">default ${esc(String(d.defaultvalue))}</span>` : '';
         top = `<span class="name">${esc(entry.name)}</span>${type ? ' : ' + type : ''}${def}`;

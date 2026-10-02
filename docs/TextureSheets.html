@@ -11,7 +11,8 @@
 <meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound">
 <meta property="og:type" content="website">
 <link rel="icon" href="favicon.png">
-<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -33,7 +34,7 @@
 <li>Animation frames keep layout and wrap across rows as needed</li>
 <li>WebGL textures upload once per batch of loads</li>
 <li>loadAtlas imports pre-packed atlases (TexturePacker and Aseprite json)</li>
-</ul></div><section class="index"><h3>Classes</h3><ul><li><a href="TextureSheets.TextureSheet.html">TextureSheet</a></li></ul><h3>Functions</h3><ul><li><a href="#loadAtlas">loadAtlas</a></li><li><a href="#loadSprite">loadSprite</a></li><li><a href="#parseAtlas">parseAtlas</a></li><li><a href="#spritesReady">spritesReady</a></li></ul><h3>Members</h3><ul><li><a href="#textureSheets">textureSheets</a></li></ul></section><h2 id="functions">Functions</h2><div class="entry" id="loadAtlas"><div class="head"><code class="sig"><span class="name">loadAtlas</span>(imageSrc, jsonSrc, <span class="opt">padding</span>) → Object&lt;string, <a href="Draw.TileInfo.html">TileInfo</a>&gt;</code><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.23.0/plugins/textureSheet.js#L274" title="plugins/textureSheet.js">textureSheet.js:274</a></div><div class="desc"><p>Load a pre-packed texture atlas and repack it onto texture sheets</p>
+</ul></div><section class="index"><h3>Classes</h3><ul><li><a href="TextureSheets.TextureSheet.html">TextureSheet</a></li></ul><h3>Functions</h3><ul><li><a href="#loadAtlas">loadAtlas</a></li><li><a href="#loadSprite">loadSprite</a></li><li><a href="#parseAtlas">parseAtlas</a></li><li><a href="#spritesReady">spritesReady</a></li></ul><h3>Members</h3><ul><li><a href="#textureSheets">textureSheets</a></li></ul><h3>Constants</h3><ul><li><a href="#loadAtlas.atlas">loadAtlas.atlas</a></li></ul></section><h2 id="functions">Functions</h2><div class="entry" id="loadAtlas"><div class="head"><code class="sig"><span class="name">loadAtlas</span>(imageSrc, jsonSrc, <span class="opt">padding</span>) → Object&lt;string, <a href="Draw.TileInfo.html">TileInfo</a>&gt;</code><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.23.0/plugins/textureSheet.js#L274" title="plugins/textureSheet.js">textureSheet.js:274</a></div><div class="desc"><p>Load a pre-packed texture atlas and repack it onto texture sheets</p>
 <ul>
 <li>Supports TexturePacker json (hash and array) and Aseprite json</li>
 <li>Returns an empty object which is filled with TileInfos when loaded</li>
@@ -62,10 +63,10 @@ source padding if not passed</p></dd><dt><code>padding</code> number <span class
     playerTile = loadSprite(<span class="s">'player.png'</span>);
     runTile = loadSprite(<span class="s">'run.png'</span>, vec2(<span class="n">16</span>));
     <span class="k">await</span> spritesReady();
-}</code></pre></div><!-- /entry --><h2 id="members">Members</h2><div class="entry" id="textureSheets"><div class="head"><code class="sig"><span class="name">textureSheets</span> : Array&lt;<a href="TextureSheets.TextureSheet.html">TextureSheet</a>&gt;</code><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.23.0/plugins/textureSheet.js#L30" title="plugins/textureSheet.js">textureSheet.js:30</a></div><div class="desc"><p>Array of texture sheets created by loadSprite</p></div></div><!-- /entry --></article>
+}</code></pre></div><!-- /entry --><h2 id="members">Members</h2><div class="entry" id="textureSheets"><div class="head"><code class="sig"><span class="name">textureSheets</span> : Array&lt;<a href="TextureSheets.TextureSheet.html">TextureSheet</a>&gt;</code><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.23.0/plugins/textureSheet.js#L30" title="plugins/textureSheet.js">textureSheet.js:30</a></div><div class="desc"><p>Array of texture sheets created by loadSprite</p></div></div><!-- /entry --><h2 id="constants">Constants</h2><div class="entry" id="loadAtlas.atlas"><div class="head"><code class="sig"><span class="name">loadAtlas.atlas</span> : Object&lt;string, <a href="Draw.TileInfo.html">TileInfo</a>&gt;</code><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.23.0/plugins/textureSheet.js#L282" title="plugins/textureSheet.js">textureSheet.js:282</a></div></div><!-- /entry --></article>
 <footer><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></footer>
 </main>
-<aside class="outline"><h3>On this page</h3><ul><li class="d0"><a href="#functions">Functions</a></li><li class="d1"><a href="#loadAtlas">loadAtlas</a></li><li class="d1"><a href="#loadSprite">loadSprite</a></li><li class="d1"><a href="#parseAtlas">parseAtlas</a></li><li class="d1"><a href="#spritesReady">spritesReady</a></li><li class="d0"><a href="#members">Members</a></li><li class="d1"><a href="#textureSheets">textureSheets</a></li></ul></aside>
+<aside class="outline"><h3>On this page</h3><ul><li class="d0"><a href="#functions">Functions</a></li><li class="d1"><a href="#loadAtlas">loadAtlas</a></li><li class="d1"><a href="#loadSprite">loadSprite</a></li><li class="d1"><a href="#parseAtlas">parseAtlas</a></li><li class="d1"><a href="#spritesReady">spritesReady</a></li><li class="d0"><a href="#members">Members</a></li><li class="d1"><a href="#textureSheets">textureSheets</a></li><li class="d0"><a href="#constants">Constants</a></li><li class="d1"><a href="#loadAtlas.atlas">loadAtlas.atlas</a></li></ul></aside>
 <script src="docs.js"></script>
 </body>
 </html>

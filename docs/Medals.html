@@ -11,7 +11,8 @@
 <meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound">
 <meta property="og:type" content="website">
 <link rel="icon" href="favicon.png">
-<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
