@@ -13556,6 +13556,8 @@ class Light extends EngineObject
 
 /**
  * LittleJS ZzFXM Plugin
+ * - A port of ZzFXM, the Zuper Zmall Zound Zynth music player, by Keith Clark and Frank Force, MIT licensed,
+ *   https://github.com/keithclark/ZzFXM; its notice is in COPYRIGHT.txt
  * @namespace ZzFXM
  */
 
