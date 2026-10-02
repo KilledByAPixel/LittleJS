@@ -24,11 +24,6 @@ function gameInit()
 
     // one line turns the flare on, it follows render3D.sunDirection
     flare = new LensFlare3D;
-
-    // a lamp with a flare of its own, in the lamp's color
-    const lamp = new Light3D(vec3(0, 3, 0), 16, hsl(.55,.9,.6));
-    lamp.glow = 1.5;
-    lamp.flare = true;
 }
 
 function gameUpdate()
@@ -41,7 +36,7 @@ function gameUpdate()
         flare.saturation = flare.saturation ? 0 : 1;
     keyWasPressed('KeyN') && ++flare.seed;
     if (keyWasPressed('KeyH'))
-        flare.shapes = flare.shapes ? undefined : ['hex', 'hex', 'streak'];
+        flare.shapes = flare.shapes ? undefined : ['hex'];
 }
 
 function gameRenderPost()
@@ -58,7 +53,7 @@ function gameRenderPost()
 The sun's lens flare: a glow at the sun and a row of discs and rings
 across the screen, which fades when a pillar hides the sun. Drag to look
 around; 1 to 3 set its size, C its count, S its colors, H its shapes and
-N picks another arrangement. The lamp in the middle has a flare too.
+N picks another arrangement.
 
 ## How it works
 `new LensFlare3D` is the whole effect. It is an object, so once made the
@@ -106,14 +101,8 @@ The text at the top shows `visible` as a percentage.
 - `seed` picks the arrangement. The ghosts' places, sizes and shapes are
   random numbers from the seed, so N gives a different flare each time.
 - `shapes` is the list the ghosts are picked from: `glow`, `disc`,
-  `ring`, `hex`, `streak` and `star`. H makes two in three a hexagon
-  and the rest streaks, or sets it back to discs, rings and glows.
-
-### The lamp
-A `Light3D` gets a flare with `lamp.flare = true`. It sits at the lamp,
-takes the lamp's color, and hides when a pillar is in front of the lamp.
-`lamp.flare` is then a `LensFlare3D` like the sun's, with the same
-fields, and it goes when the lamp is destroyed.
+  `ring`, `hex`, `streak` and `star`. H makes every ghost a hexagon,
+  or sets it back to discs, rings and glows.
 
 ## Try it
 - Make the flare with arguments, `(size, count, intensity, saturation)`:
@@ -123,8 +112,10 @@ fields, and it goes when the lamp is destroyed.
 - Make every pillar tall: `height = 3 + i%3*2` to `height = 8`.
 - No glow at the sun, only ghosts: `flare.glowSize = 0;`
 - Bigger ghosts: `flare.ghostSize = 2;`
-- A star on the lamp, after `lamp.flare = true;`:
-  `lamp.flare.shapes = ['star'];`
+- Hexagons with a few streaks among them, in place of `['hex']`:
+  `['hex', 'hex', 'streak']`
+- A lamp with a flare of its own, at the end of `gameInit`:
+  `new Light3D(vec3(0, 3, 0), 16, hsl(.55,.9,.6)).flare = true;`
 
 ## See also
 3D Lights for lamps with a glow of their own, and 3D Glow for bloom over
