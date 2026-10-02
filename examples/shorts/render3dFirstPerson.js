@@ -1,5 +1,3 @@
-// walk a small maze with a first person camera; at night the player's
-// flashlight, a spotlight, lights the way and casts the shadows
 const mazeData =
 [
     '##########',
@@ -111,3 +109,8 @@ function gameRenderPost()
     const color = night ? WHITE : BLACK;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, color);
 }
+
+/* info
+Walk a small maze with a first person camera. At night the player's
+flashlight, a spotlight, lights the way and casts the shadows.
+*/

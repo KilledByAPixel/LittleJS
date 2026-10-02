@@ -150,6 +150,30 @@ test('shorts stay within 80 columns and write their colors with hsl', () =>
     assert.deepEqual(rgbUses, [], 'rgb( in a short, use hsl');
 });
 
+test('a short starts with code and ends with its info block, when it has one', () =>
+{
+    // guards the write-up the example browser shows: a block comment that starts with the line /* info and
+    // is the last thing in the file, which is where the browser looks for it. What a short is about goes
+    // there, not in a comment at its top: one with a blank line after it, which a comment on the first
+    // declaration does not have
+    const dir = new URL('../examples/shorts/', import.meta.url);
+    const headers = [], badBlocks = [];
+    for (const file of fs.readdirSync(dir).filter(f=> f.endsWith('.js')))
+    {
+        const source = fs.readFileSync(new URL(file, dir), 'utf8').replace(/\r\n/g, '\n');
+        if (/^\s*(\/\/.*\n)+\n/.test(source))
+            headers.push(file);
+        const blocks = source.match(/\/\*/g) || [];
+        if (!blocks.length)
+            continue;
+        const match = /\n\/\* info\n([\s\S]*)\*\/\s*$/.exec(source);
+        if (blocks.length > 1 || !match || !match[1].trim() || match[1].includes('*/'))
+            badBlocks.push(file);
+    }
+    assert.deepEqual(headers, [], 'shorts that start with a comment: it belongs in the info block');
+    assert.deepEqual(badBlocks, [], 'a short has one block comment at most, its info block, the last thing in it');
+});
+
 test('the shorts that assigned undeclared globals now declare them, so they run under use strict', () =>
 {
     // guards the example browser's Use Strict box: these names were assigned without a declaration

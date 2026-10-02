@@ -1,7 +1,3 @@
-// particles with the built-in effects: each one line, placed, scaled
-// and moved like any object; the Particle Effects short shows every one,
-// and REFERENCE has the full ParticleEmitter constructor
-
 let comet;
 
 function gameInit()
@@ -22,3 +18,9 @@ function gameUpdate()
     // move the comet back and forth so it leaves a trail
     comet.pos = vec2(sin(time)*9, cos(time)*2 + 4);
 }
+
+/* info
+Particles with the built-in effects: each is one line, placed, scaled
+and moved like any object. The Particle Effects short shows every one,
+and REFERENCE has the full `ParticleEmitter` constructor.
+*/

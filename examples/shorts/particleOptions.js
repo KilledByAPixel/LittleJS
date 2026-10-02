@@ -1,8 +1,3 @@
-// one built-in effect, fire, with one option changed in each cell and
-// the line that does it under it; any effect setting can go in the
-// options too, like emitTime for a burst or speed; the Particle
-// Effects short shows every built-in effect
-
 let cells;
 const replay = new Timer;
 
@@ -51,3 +46,10 @@ function gameRender()
     drawText("particleEffect('fire', pos, options)", vec2(0, 5.2), .6,
         hsl(.1,.8,.7));
 }
+
+/* info
+One built-in effect, fire, with one option changed in each cell and the
+line that does it under it. Any effect setting can go in the options
+too, like `emitTime` for a burst or `speed`. The Particle Effects short
+shows every built-in effect.
+*/

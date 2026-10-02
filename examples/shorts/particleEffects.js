@@ -1,8 +1,3 @@
-// every built-in particle effect at scale 1, each fitting a one unit
-// box; the one-shots play again every few seconds and the trail moves
-// so it can be seen; click one to play it now, keys 1 to 3 set the
-// scale, H turns the hue, S takes the color out
-
 let scale = 1, hue = 0, saturation = 1, playing = [], replayTimes = [];
 
 // the effects in a grid of 8 by 3, 3 units apart
@@ -60,3 +55,10 @@ function gameRender()
         drawText(name, cellPos(i).add(vec2(0, -1.4)), .4, hsl(0,0,.8));
     });
 }
+
+/* info
+Every built-in particle effect at scale 1, each fitting a one unit box.
+The one-shots play again every few seconds and the trail moves so it can
+be seen. Click one to play it now, keys 1 to 3 set the scale, H turns
+the hue and S takes the color out.
+*/

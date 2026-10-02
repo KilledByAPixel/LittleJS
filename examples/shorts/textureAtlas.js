@@ -1,6 +1,3 @@
-// loadAtlas imports pre-packed atlases like TexturePacker and Aseprite exports
-// frames are looked up by name and grouped into animations automatically
-
 canvasClearColor = GRAY;
 let atlas;
 
@@ -29,3 +26,9 @@ function gameRender()
     // numbered frames like spin_0, spin_1 group into an animation automatically
     drawTile(vec2(0, -4), vec2(6), atlas.spin.frame(time*4%4|0));
 }
+
+/* info
+`loadAtlas` imports pre-packed atlases like TexturePacker and Aseprite
+exports. Frames are looked up by name and grouped into animations
+automatically.
+*/

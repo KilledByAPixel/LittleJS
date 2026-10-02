@@ -1,5 +1,3 @@
-// mesh operations: bevels, CSG, mirror and spin
-
 function show(pos, mesh, color)
 {
     const o = new EngineObject3D(pos, mesh, undefined, color);
@@ -57,3 +55,7 @@ function gameInit()
         .combine(buildSphere(.8, 16, 8), vec3(1, 0, 0));
     show(vec3(2, 1, 3), half.mirror(vec3(1, 0, 0)), hsl(.95, .6, .6));
 }
+
+/* info
+Mesh operations: bevels, CSG, mirror and spin.
+*/

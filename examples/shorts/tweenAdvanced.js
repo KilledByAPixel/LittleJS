@@ -1,7 +1,3 @@
-// every tween feature in rows: a property, a callback, a chain, loop,
-// pingPong, easing curves, real time, Vector2 and Color; press P to
-// pause, the real time row keeps moving
-
 const rows = [], left = -6, right = 8;
 let countdown = 10;
 
@@ -101,3 +97,9 @@ function gameRenderPost()
     drawTextScreen('Press P to pause, useRealTime keeps moving',
         vec2(mainCanvasSize.x/2, 30), 24);
 }
+
+/* info
+Every tween feature in rows: a property, a callback, a chain, loop,
+pingPong, easing curves, real time, Vector2 and Color. Press P to pause;
+the real time row keeps moving.
+*/

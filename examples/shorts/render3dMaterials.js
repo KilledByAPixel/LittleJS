@@ -1,7 +1,3 @@
-// materials: a brick wall and floor bumped by a normal map made in
-// code, a polished ball reflecting the sky, and a tower whose windows
-// glow from an emissive map, under a light that circles them
-
 let light, bumped = [], shiny, normalMap;
 
 // bricks with mortar between them and a few round dents, a height at
@@ -86,3 +82,9 @@ function gameRenderPost()
     const text = 'N: normal maps   R: reflection';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30);
 }
+
+/* info
+Materials: a brick wall and floor bumped by a normal map made in code, a
+polished ball reflecting the sky, and a tower whose windows glow from an
+emissive map, under a light that circles them.
+*/

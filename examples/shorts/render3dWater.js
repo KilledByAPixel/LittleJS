@@ -1,8 +1,3 @@
-// rain on a pool: the waves are a cellular automaton, each cell heads
-// for the average of its neighbors and overshoots; the water is a grid
-// mesh changed in place each frame, and a rain drop that reaches it
-// starts a ring there
-
 const poolSize = 24, samples = 128, waveHeight = 4;
 let water, rain, now, last;
 const vertices = []; // where each cell's vertex is in the mesh
@@ -100,3 +95,10 @@ function gameRenderPost()
     const text = 'right click: drop a stone';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30);
 }
+
+/* info
+Rain on a pool. The waves are a cellular automaton: each cell heads for
+the average of its neighbors and overshoots. The water is a grid mesh
+changed in place each frame, and a rain drop that reaches it starts a
+ring there.
+*/

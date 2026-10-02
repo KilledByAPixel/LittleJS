@@ -1,7 +1,3 @@
-// three ranges of mountains from the parallax plugin: each follows the
-// camera by its own amount and repeats across the view, so the far ones
-// pass slowly; the camera drifts along and the mouse looks around
-
 function gameInit()
 {
     canvasClearColor = hsl(.6,.4,.8);
@@ -34,3 +30,9 @@ function gameRenderPost()
     for (let x = first; x < first + 105; x += 5)
         drawRect(vec2(x, -7), vec2(.4, 2), hsl(.08,.5,.3));
 }
+
+/* info
+Three ranges of mountains from the parallax plugin. Each follows the
+camera by its own amount and repeats across the view, so the far ones
+pass slowly. The camera drifts along and the mouse looks around.
+*/

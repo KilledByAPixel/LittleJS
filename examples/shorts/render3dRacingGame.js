@@ -1,4 +1,3 @@
-// drive laps around a hilly track, hit every gate in order
 const trackSize = 160, roadWidth = 8, gateCount = 4;
 const engineSound = new Sound([.5,0,91,,.5,.01,2,,,,,,.14,1,,,,,,,-150]);
 let terrain, car, lapCount = 0, nextGate = 1, bestTime = 0;
@@ -192,3 +191,7 @@ function gameRenderPost()
     const speed = round(car.speed*180) + ' KPH';
     drawTextScreen(speed, vec2(mainCanvasSize.x - 120, 40), 44, WHITE, 6);
 }
+
+/* info
+Drive laps around a hilly track, and hit every gate in order.
+*/

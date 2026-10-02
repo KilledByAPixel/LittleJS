@@ -1,5 +1,3 @@
-// a UI styled with tile art: every widget draws a TileSlice in place of
-// its rectangle, tinted by the color for its state
 function gameInit()
 {
     new UISystemPlugin;
@@ -46,3 +44,8 @@ function gameInit()
     slider.onChange = ()=> setSoundVolume(slider.value);
     menu.addChild(slider);
 }
+
+/* info
+A UI styled with tile art: every widget draws a `TileSlice` in place of
+its rectangle, tinted by the color for its state.
+*/

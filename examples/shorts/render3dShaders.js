@@ -1,6 +1,3 @@
-// a Shader's mainImage gives the surface color and the engine lights it,
-// or with emissive set to 1 the snippet lights itself from the scene's lights
-
 // animated stripes, lit and shadowed like any surface
 const stripeShader = new Shader(`
 void mainImage(out vec4 c, vec2 uv)
@@ -68,3 +65,9 @@ function gameUpdate()
         if (o.shader)
             o.rotation3D = vec3(0, time*.5, 0);
 }
+
+/* info
+A `Shader`'s `mainImage` gives the surface color and the engine lights
+it, or with `emissive` set to 1 the snippet lights itself from the
+scene's lights.
+*/

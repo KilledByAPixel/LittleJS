@@ -1,6 +1,3 @@
-// a 2D game with 3D looks: 2D physics and tile collision move
-// everything, and sync2D copies each 2D position into its 3D object
-
 const levelMap = `
 ################################
 #                              #
@@ -79,3 +76,8 @@ function gameRenderPost()
     const text = 'arrows move, space jumps, push the crates';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30);
 }
+
+/* info
+A 2D game with 3D looks: 2D physics and tile collision move everything,
+and `sync2D` copies each 2D position into its 3D object.
+*/

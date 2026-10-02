@@ -1,7 +1,3 @@
-// a tiny platformer that starts in the level editor: paint ground, place
-// coins and the player start, then press Play or Escape to try it, and
-// Escape again to go back to editing; the level is autosaved as you go
-
 let player, playerStart, score = 0;
 
 // the level as a Tiled map, the editor edits it in place and saves it
@@ -102,3 +98,9 @@ function gameRenderPost()
 {
     drawTextScreen('Coins ' + score, vec2(mainCanvasSize.x / 2, 40), 40);
 }
+
+/* info
+A tiny platformer that starts in the level editor. Paint ground, place
+coins and the player start, then press Play or Escape to try it, and
+Escape again to go back to editing. The level is autosaved as you go.
+*/

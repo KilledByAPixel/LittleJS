@@ -1,8 +1,3 @@
-// the sun's lens flare: a glow at the sun and a row of discs and rings
-// across the screen, which fades when a pillar hides the sun
-// drag to look around; 1 to 3 set its size, C its count, S its colors
-// and N picks another arrangement
-
 let flare;
 
 function gameInit()
@@ -50,3 +45,10 @@ function gameRenderPost()
         ` / ${colors} (S) / N: new / sun ${sun}`;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 26);
 }
+
+/* info
+The sun's lens flare: a glow at the sun and a row of discs and rings
+across the screen, which fades when a pillar hides the sun. Drag to look
+around; 1 to 3 set its size, C its count, S its colors and N picks
+another arrangement.
+*/

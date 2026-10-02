@@ -1,4 +1,3 @@
-// dodge the tumbling boxes as long as you can
 const arenaSize = 40;
 const soundHit = new Sound([.5,,420,.02,,.3,,3,,-90,-50,,.1]);
 let player, trail, scoreObject, shown, best = 0;
@@ -133,3 +132,7 @@ function gameUpdatePost()
     const followPos = player.pos3D.add(vec3(0,1,0));
     render3D.camera.follow(followPos, vec3(0,9,16));
 }
+
+/* info
+Dodge the tumbling boxes as long as you can.
+*/

@@ -1,7 +1,3 @@
-// the built in post effects, one after another: click or press space
-// for the next; each is a piece of shader code with its settings in,
-// and postProcessEffects joins pieces into one shader
-
 const effects = [
     ['old TV', postProcessTV({curve: .1})],
     ['scanlines', postProcessScanlines(.4)],
@@ -47,3 +43,9 @@ function gameRenderPost()
     drawTextScreen(name + '  ·  click for the next',
         vec2(mainCanvasSize.x/2, y), 30, WHITE, 4);
 }
+
+/* info
+The built in post effects, one after another: click or press space for
+the next. Each is a piece of shader code with its settings in, and
+`postProcessEffects` joins pieces into one shader.
+*/

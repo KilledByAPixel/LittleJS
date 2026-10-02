@@ -1,8 +1,3 @@
-// the 3D level editor as a prefab maker: the level here is the prefab, a
-// little tower. Build with Box, Sphere, Cylinder and Light, then Save
-// writes a file a game adds with level3DLoadPrefab and places as many
-// times as it likes. Escape leaves the editor to look around
-
 const color = (h, s, l)=> hsl(h, s, l).toString(false);
 
 // a prefab is a level: objects about its own origin, the ground at 0
@@ -33,3 +28,10 @@ function gameInit()
     render3D.camera.lookAt(vec3(0, 1.5, 0));
     levelEditor.open();
 }
+
+/* info
+The 3D level editor as a prefab maker: the level here is the prefab, a
+little tower. Build with Box, Sphere, Cylinder and Light, then Save
+writes a file a game adds with `level3DLoadPrefab` and places as many
+times as it likes. Escape leaves the editor to look around.
+*/

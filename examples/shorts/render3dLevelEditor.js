@@ -1,7 +1,3 @@
-// a small 3D level that starts in the 3D level editor: place boxes, lights
-// and coins, paint blocks, then press Play or Escape to walk around, and
-// Escape again to go back to editing; the level is autosaved as you go
-
 let player, playerStart = vec3(0, 2, 6), score = 0;
 
 // the level as plain data, the editor edits it in place and saves it;
@@ -93,3 +89,9 @@ function gameRenderPost()
 {
     drawTextScreen('Coins ' + score, vec2(mainCanvasSize.x / 2, 40), 40);
 }
+
+/* info
+A small 3D level that starts in the 3D level editor. Place boxes, lights
+and coins, paint blocks, then press Play or Escape to walk around, and
+Escape again to go back to editing. The level is autosaved as you go.
+*/

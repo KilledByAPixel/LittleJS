@@ -1,6 +1,3 @@
-// each Shader is a mainImage snippet, the engine wraps it and then applies
-// the object's color like any other sprite
-
 // burn away by a noise threshold that rises and falls, with a glowing edge
 const dissolveShader = new Shader(`
 float noise(vec2 p) { return fract(sin(dot(p, vec2(12.9, 78.2)))*4e4); }
@@ -57,3 +54,8 @@ function gameRender()
     }
     setShader();
 }
+
+/* info
+Each `Shader` is a `mainImage` snippet. The engine wraps it and then
+applies the object's color like any other sprite.
+*/

@@ -1,4 +1,3 @@
-// push every block onto a pad, using an orthographic camera
 const levelData =
 [
     '#######',
@@ -178,3 +177,7 @@ function gameRenderPost()
     const isSolved = goals.every(g=> boxAt(g.cell.x, g.cell.y));
     isSolved && drawTextScreen('SOLVED!', solvedPos, 50, YELLOW);
 }
+
+/* info
+Push every block onto a pad, using an orthographic camera.
+*/

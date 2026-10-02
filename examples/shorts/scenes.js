@@ -1,6 +1,3 @@
-// three scenes switched with setScene: a title, the game and game over;
-// each switch clears the objects, but the stars are persistent and stay
-
 let score = 0, best = 0, lives = 0;
 
 class Star extends EngineObject
@@ -123,3 +120,8 @@ function gameUpdatePost()
     if (getScene() == gameScene && keyWasPressed('KeyP'))
         setPaused(!paused);
 }
+
+/* info
+Three scenes switched with `setScene`: a title, the game and game over.
+Each switch clears the objects, but the stars are persistent and stay.
+*/

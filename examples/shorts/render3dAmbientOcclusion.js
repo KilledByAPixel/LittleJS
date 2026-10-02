@@ -1,7 +1,3 @@
-// ambient occlusion from the depth texture: a post process darkens the
-// creases and corners, where nearby things block the light from around;
-// the left half is plain, the right half has it
-
 // for each pixel, pairs of depths on opposite sides a short way off;
 // when both are nearer, it sits in a crease, a flat face has one nearer
 // and one farther and stays lit; each pixel turns its pattern a little,
@@ -64,3 +60,9 @@ function gameRenderPost()
     drawTextScreen('plain', vec2(x, y), 30, WHITE, 4);
     drawTextScreen('ambient occlusion', vec2(x*3, y), 30, WHITE, 4);
 }
+
+/* info
+Ambient occlusion from the depth texture: a post process darkens the
+creases and corners, where nearby things block the light from around.
+The left half is plain, the right half has it.
+*/

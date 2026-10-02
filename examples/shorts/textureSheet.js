@@ -1,6 +1,3 @@
-// loadSprite packs images into a texture sheet as they load
-// it returns a tile info right away which is filled in when the image is ready
-
 let spriteTile, animTile;
 
 async function gameInit()
@@ -39,3 +36,8 @@ function gameRender()
     // animate by stepping through the first row of packed frames
     drawTile(vec2(6, -3), vec2(5), animTile.frame(time*8%16|0));
 }
+
+/* info
+`loadSprite` packs images into a texture sheet as they load. It returns
+a tile info right away, which is filled in when the image is ready.
+*/
