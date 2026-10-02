@@ -121,3 +121,36 @@ test('the fixture parses: two namespaces, two classes, an internal function left
     assert.equal(model.classes.find(c => c.name == 'BigThing').parent.name, 'Thing');
     assert.ok(!JSON.stringify(model.namespaces.map(ns => ns.entries.map(e => e.name))).includes('fixtureInternal'));
 });
+
+test('typeHtml links known names, escapes the rest, and drops the dot of Array.<T>', ()=>
+{
+    const links = new Map([['Vector2', 'Engine.Vector2.html'], ['EditorTool', 'Editor.html#EditorTool']]);
+    assert.equal(typeHtml(['Array.<Vector2>'], links), 'Array&lt;<a href="Engine.Vector2.html">Vector2</a>&gt;');
+    assert.equal(typeHtml(['Color', 'undefined'], links), 'Color<span class="sep">|</span>undefined');
+    assert.equal(typeHtml(['Object.<string, {action: function(boolean): any}>'], links),
+        'Object&lt;string, {action: function(boolean): any}&gt;');
+    assert.equal(typeHtml(['Object.<string, EditorTool>'], links), 'Object&lt;string, <a href="Editor.html#EditorTool">EditorTool</a>&gt;');
+    assert.equal(typeHtml([], links), '');
+});
+
+test('tagTypes reads the braces of a tag jsdoc rejected, nested braces included', ()=>
+{
+    const comment = `/** Give a block faces
+     *  @param {number} type - 1 to 255
+     *  @param {number|{top?: number, side: number}} faces - per face
+     *  @param {[Vector2, Vector2, number]} [span] - a tuple
+     *  @return {a is Array<any>} */`;
+    const types = tagTypes(comment);
+    assert.equal(types.get('type'), 'number');
+    assert.equal(types.get('faces'), 'number|{top?: number, side: number}');
+    assert.equal(types.get('span'), '[Vector2, Vector2, number]');
+    assert.equal(types.get('@return'), 'a is Array<any>');
+});
+
+test('highlight marks comments, strings, numbers and keywords and escapes html', ()=>
+{
+    assert.equal(highlight("const a = 'x<y'; // 2"),
+        '<span class="k">const</span> a = <span class="s">\'x&lt;y\'</span>; <span class="c">// 2</span>');
+    assert.equal(highlight('f(1.5e3, "q")'), 'f(<span class="n">1.5e3</span>, <span class="s">"q"</span>)');
+    assert.equal(highlight('/* a\nb */ x'), '<span class="c">/* a\nb */</span> x');
+});

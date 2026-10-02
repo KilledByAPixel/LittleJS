@@ -18,6 +18,8 @@ const ENTRY_KINDS = ['function', 'member', 'constant', 'typedef'];
 
 // escape text for html
 const esc = (s)=> String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// text inside an element needs no quote escaping, which keeps code readable in the source
+const escText = (s)=> String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const byName = (a, b)=> a.name.localeCompare(b.name);
 
 // which group a namespace is in and where
@@ -130,10 +132,65 @@ function buildModel(doclets)
     return { groups, namespaces: sorted, classes: [...classes.values()], links, warnings };
 }
 
+// a type as html: identifiers that name a documented class or typedef link to it
+function typeHtml(names, links)
+{
+    const one = (raw)=>
+    {
+        raw = raw.replace(/\.</g, '<');
+        let out = '', last = 0;
+        for (const m of raw.matchAll(/[A-Za-z_$][\w$]*/g))
+        {
+            out += esc(raw.slice(last, m.index));
+            out += links.has(m[0]) ? `<a href="${links.get(m[0])}">${m[0]}</a>` : esc(m[0]);
+            last = m.index + m[0].length;
+        }
+        return out + esc(raw.slice(last));
+    };
+    return names.map(one).join('<span class="sep">|</span>');
+}
+
+// the raw type text of each @param, @property, @type and @return tag in a
+// comment, by name, for the tags whose type jsdoc could not parse
+function tagTypes(comment)
+{
+    const types = new Map();
+    const re = /@(param|property|type|returns?)\s*\{/g;
+    let m;
+    while ((m = re.exec(comment)))
+    {
+        let depth = 1, i = re.lastIndex;
+        for (; i < comment.length && depth; ++i)
+            depth += comment[i] == '{' ? 1 : comment[i] == '}' ? -1 : 0;
+        const type = comment.slice(re.lastIndex, i - 1).trim();
+        const rest = comment.slice(i);
+        const name = m[1] == 'type' ? '@type' : m[1].startsWith('return') ? '@return' : (rest.match(/^\s*\[?\s*(?:\.\.\.)?([\w$.]+)/) || [])[1];
+        if (name)
+            types.set(name, type);
+    }
+    return types;
+}
+
+// a small highlighter for the examples: comments, strings, numbers, keywords
+const HIGHLIGHT_RE = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|('(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`)|\b(\d+\.?\d*(?:e[+-]?\d+)?)\b|\b(const|let|var|function|class|new|return|if|else|for|while|do|switch|case|break|continue|this|true|false|null|undefined|async|await|of|in|typeof|instanceof|import|export|from|extends|super|throw|try|catch|finally|static|get|set|yield|default|delete|void)\b/g;
+function highlight(code)
+{
+    let out = '', last = 0, m;
+    HIGHLIGHT_RE.lastIndex = 0;
+    while ((m = HIGHLIGHT_RE.exec(code)))
+    {
+        out += escText(code.slice(last, m.index));
+        const cls = m[1] ? 'c' : m[2] ? 's' : m[3] ? 'n' : 'k';
+        out += `<span class="${cls}">${escText(m[0])}</span>`;
+        last = HIGHLIGHT_RE.lastIndex;
+    }
+    return out + escText(code.slice(last));
+}
+
 // the pages come in later tasks, this stub lets the test file load
 function render()
 {
     return { pages: {}, search: [] };
 }
 
-module.exports = { render, buildModel, esc };
+module.exports = { render, buildModel, typeHtml, tagTypes, highlight, esc };
