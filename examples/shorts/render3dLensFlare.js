@@ -51,4 +51,63 @@ The sun's lens flare: a glow at the sun and a row of discs and rings
 across the screen, which fades when a pillar hides the sun. Drag to look
 around; 1 to 3 set its size, C its count, S its colors and N picks
 another arrangement.
+
+## How it works
+`new LensFlare3D` is the whole effect. It is an object, so once made the
+engine updates and draws it, and `flare.destroy()` would take it away.
+It finds the sun from `render3D.sunDirection`, which points toward the
+sun, and draws its parts along the line from the sun through the middle
+of the screen: a glow at the sun, then the smaller shapes, called
+ghosts. They are added onto the picture after the 3D scene is drawn, and
+it needs WebGL.
+
+### The scene
+- `setSky(top, horizon)` makes a blue sky that goes to orange at the
+  horizon.
+- `sunDirection = vec3(-.6, .35, -1)` is a low sun, so the camera can
+  look toward it. Any length works, only the direction counts.
+- `sunColor` tints the sunlight, and the flare takes that tint too.
+- `shadows = true` has the sun cast shadows. `shadowCenter` fixes the
+  shadowed area on the origin, where it would otherwise follow the
+  camera, and `shadowRange` is its width in world units.
+- `new CameraControl3D(target, distance, pitch, idleSpin)` looks at a
+  point 2 units up from 16 away, only .1 radians above the horizon, and
+  turns by .003 radians a frame when it is not being dragged. That slow
+  turn carries the sun behind the tallest pillars, one after another.
+
+The ground is `buildGrid` with one cell, 60 units wide. The twelve
+pillars are `render3D.boxMesh`, a box one unit across, stretched with
+`scale3D` to 3, 5 or 7 units tall and stood on a circle 9 units out.
+
+### Hiding the sun
+Each frame the flare sends a ray from the camera toward the sun and
+checks it against the objects in the scene, each one as the box around
+its mesh. `flare.visible` moves toward 1 while the sun is in view and
+toward 0 while something is in the way, over `flare.fadeTime`, .15
+seconds. That is why the flare fades in and out and does not blink.
+The text at the top shows `visible` as a percentage.
+
+### The keys
+`gameUpdate` changes the flare's fields, and the next frame shows it.
+
+- `flareSize` scales every part. Keys 1 to 3 set it to .6, 1 and 1.6.
+- `count` is the number of ghosts. C adds 4 until it is 12 or more, then
+  goes back to 3.
+- `saturation` is how colorful the ghosts are: 1 gives each its own hue,
+  and 0 makes them all the flare's color.
+- `seed` picks the arrangement. The ghosts' places, sizes and shapes are
+  random numbers from the seed, so N gives a different flare each time.
+
+## Try it
+- Make the flare with arguments, `(size, count, intensity, saturation)`:
+  `new LensFlare3D(1.5, 10, .7, 0)`.
+- Lower the sun: `vec3(-.6, .35, -1)` to `vec3(-.6, .1, -1)`.
+- A red sun: `render3D.sunColor = hsl(0,.8,.7);`
+- Make every pillar tall: `height = 3 + i%3*2` to `height = 8`.
+
+## See also
+3D Lights for lamps with a glow of their own, and 3D Glow for bloom over
+the whole picture. `flare.light` makes the flare belong to a `Light3D`
+in place of the sun, `flare.occlusion = false` stops things hiding it,
+and `flare.elements` takes a list of parts of your own.
 */

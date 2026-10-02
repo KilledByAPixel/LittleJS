@@ -179,5 +179,82 @@ function gameRenderPost()
 }
 
 /* info
-Push every block onto a pad, using an orthographic camera.
+Push every block onto a pad, using an orthographic camera. The arrow
+keys move the red ball one cell, and walking into a block pushes it if
+the cell behind it is free. Clicking a cell beside the ball steps there
+too. R starts the level again.
+
+## How it works
+The puzzle is a grid, and the rules only ever look at the grid: which
+cell the player is in, where the walls are, which cells hold a block.
+The 3D objects follow the grid, sliding to where their cell is.
+
+### The level
+`levelData` is the map as text, one string a row: `#` a wall, `.` floor,
+`B` a block, `G` a pad and `@` the player. A cell is `x` along a row and
+`z` for which row. `cellPos(x, z, y)` is a cell's center in the world,
+shifted by half the level so the board is centered on the origin.
+`isWall` reads the map, and `boxAt` finds the block in a cell, if any.
+
+### GridObject
+The player and the blocks are `GridObject`s, an `EngineObject3D` that
+also keeps its `cell`.
+
+`moveTo` does not move the object. It changes the cell, remembers where
+the object is now, and sets `moveTimer` to .12 seconds. `update` then
+places it each frame at `startPos.lerp(target, percent)`, where
+`getPercent()` goes from 0 to 1 over the timer's time. A timer that was
+never set gives 0, which leaves a new object at its start.
+
+### Goal
+A pad is a `GridObject` with a `Light3D` child. The light's color starts
+with an alpha of 0, which switches a light off. In `update`, `boxAt`
+says whether a block is on the pad. If so the pad takes its lit color,
+`emissive = 1` draws it at full brightness and the light's alpha is set
+to 1. An empty pad pulses its `emissive` with `sin(time*4)`. On the
+frame a block arrives, `particleEffect3D` plays the built in explosion
+at .6 of its size with two of its colors replaced.
+
+### tryMove
+The rules. The cell ahead must not be a wall. If a block is there, the
+cell beyond it must be free of walls and blocks, and the block moves
+there. Then the player moves. `render3D.playSound` plays the push
+sound at the block's place.
+
+### gameInit
+- `canvasClearColor` is the background, since there is no sky.
+- `shadowCenter` and `shadowRange` keep the shadow map on the board, 4
+  units wider than it, in place of following the camera.
+- The camera is put at `vec3(7,8,7)` and `lookAt` aims it at the board.
+  `camera.orthographic = levelSize` makes the view orthographic: there
+  is no perspective, and the number is the height of the view in world
+  units. 0 is a perspective camera.
+- The meshes are built once and shared. `buildBox` takes a full size,
+  and `buildGrid(size, segments, color)` is the checkered floor, one
+  segment a cell.
+
+### The mouse
+`render3D.pick(mousePosScreen, boxes)` finds the nearest of the given
+objects under the mouse, tested by the box around its mesh, and returns
+it as `object`, or nothing. `render3D.screenToGround(mousePosScreen)`
+is where the mouse meets the ground plane at height 0. The hovered cell
+is the picked block's cell, or else the ground point turned into a cell
+by `toCell`, and a wall cell is no hover. A click on a cell one step
+from the player calls `tryMove` with the offset.
+
+`drawHover` outlines the hovered cell with `render3D.drawRibbon(points,
+width)`. It is set as `render3D.onRenderTransparent` because 3D draws
+only work inside the 3D pass, and that callback runs in it.
+
+## Try it
+- Open up the level: change the row `'##..###'` to `'##...##'`.
+- Slide slowly: `this.moveTimer.set(.12)` to `this.moveTimer.set(.5)`.
+- Set `render3D.camera.orthographic` to `0` for a perspective view
+  from the same place.
+- Look from straight above: `vec3(7,8,7)` to `vec3(0,12,.1)`.
+
+## See also
+3D Collision shows picking on its own, and 3D Drawing the immediate
+mode draws like `drawRibbon`. Sliding Puzzle is a 2D game on a grid.
+Look up `Camera3D` for `orthographic`, and `render3D.pick`.
 */

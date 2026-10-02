@@ -57,8 +57,70 @@ function gameRender()
 }
 
 /* info
-Every built-in particle effect at scale 1, each fitting a one unit box.
-The one-shots play again every few seconds and the trail moves so it can
-be seen. Click one to play it now, keys 1 to 3 set the scale, H turns
-the hue and S takes the color out.
+Every built-in particle effect at scale 1, each made to fit an object
+one unit across, in a grid with its name under it. The one-shots play
+again every few seconds and the trail moves so it can be seen. Click
+one to play it now, keys 1 to 3 set the scale, H turns the hue and S
+takes the color out or puts it back.
+
+## How it works
+### The grid
+`particleEffectsBuiltIn` is the list of the built-in effects' names, 24
+of them. `cellPos(i)` is the middle of cell `i`: `i % 8` is its column
+and `i / 8 | 0` its row, with columns 3 units apart and rows 4.
+`cameraScale` is how many pixels a world unit takes, and 40 fits the
+grid in the view.
+
+### play
+`play(i)` starts the effect of one cell again.
+
+- `playing[i]?.destroy()` ends the emitter that was there, if there was
+  one. An emitter destroyed this way stops emitting and is removed when
+  its last particle is gone.
+- `particleEffect(name, pos, options)` makes the new emitter and
+  returns it. `{scale, hue, saturation}` is short for an object with
+  those three variables as its options.
+- `particleEffectsGet(name).settings` is the effect's own data, read
+  here to know how long it lasts. `emitTime` is the seconds it emits
+  for, and 0 means forever.
+
+An effect that emits forever needs no replay, so its replay time is
+`Infinity`. A one-shot is over when it has stopped emitting and its
+last particle is gone, and a particle lives up to
+`particleTime * (1 + randomness)` seconds. It plays again then, or
+after 2 seconds if that is later. `replayTimes[i]` is the engine
+`time` at which that happens.
+
+### gameUpdate
+`keyWasPressed` is true on the frame a key goes down. Keys are named by
+their place on the keyboard, `'Digit1'` or `'KeyH'`. The options only
+count when an emitter is made, so each key changes a variable and calls
+`playAll`.
+
+The loop plays a cell again when its replay time has passed, or on a
+click less than `1.5` units from its middle. `mousePos` is the mouse in
+world units.
+
+The trail effect's particles have no speed of their own, so its
+emitter is moved: its `pos` is set each frame to a point on a circle of
+radius `.8` around its cell.
+
+### gameRender
+`gameRender` runs before the engine draws its objects, so the faint one
+unit boxes and the names are behind the particles.
+
+## Try it
+- Change `scale = 1` at the top to `scale = 2` to start with every
+  effect twice the size.
+- Change `max(2, life)` to `max(.5, life)`: the short one-shots play
+  again sooner.
+- Change `hue + .25` to `hue + .1` for smaller steps of the H key.
+- Change `.scale(.8)` to `.scale(1.5)` for a wider circle under the
+  trail.
+
+## See also
+Particles is the place to start, and Particle Options shows what each
+option does to one effect. 3D Particles has emitters in 3D. Look up
+`particleEffect` and `particleEffectsAdd`, which adds effects of your
+own to play by name.
 */

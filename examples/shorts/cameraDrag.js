@@ -20,3 +20,53 @@ function gameUpdate()
     // zoom camera with mouse wheel
     cameraScale = clamp(cameraScale*(1-mouseWheel/5), 1, 1e3);
 }
+
+/* info
+A field of 500 colored rectangles to look around in. Hold the left mouse
+button and drag to move the camera, and turn the mouse wheel to zoom.
+
+## How it works
+### gameInit
+The loop makes 500 objects with
+`new EngineObject(pos, size, tileInfo, angle, color)`. The `0` for the
+tile means no tile, and an object with no tile draws as a rectangle of
+its size and color. The engine keeps and draws every object, so the
+example has no render function.
+
+- `randInCircle(100)` is a random point inside a circle with a radius of
+  100 units around `vec2(0,0)`.
+- `rand(2,9)` is a random number between 2 and 9, one for the width and
+  one for the height.
+- `randColor()` picks each of red, green and blue at random.
+- `rand(PI)` is a random angle between 0 and half a turn. Angles are in
+  radians.
+
+### gameUpdate
+The camera is two settings. `cameraPos` is the point in the world at the
+middle of the view, and `cameraScale` is how many pixels one world unit
+covers, 32 until it is changed.
+
+`mouseDelta` is how far the mouse moved this frame, in world units.
+Subtracting it from `cameraPos` while the button is held moves the
+camera the other way, so the point of the world under the mouse stays
+under it. That is what makes it feel like dragging the world. Because
+the delta is in world units it is right at any zoom.
+
+`mouseWheel` is how far the wheel turned this frame, 0 when it did not.
+Each step multiplies the scale by `1 - 1/5` or `1 + 1/5`, so zooming is
+by a fifth of the scale it has, not by a fixed amount, and feels the
+same close up and far out. `clamp` keeps the result between 1 and
+1000 pixels a unit.
+
+## Try it
+- Drag with the right button instead: `mouseIsDown(2)`.
+- Change `mouseWheel/5` to `mouseWheel/2` for bigger zoom steps.
+- Change the limits from `1, 1e3` to `10, 100` so the view can not zoom
+  as far in or out.
+- Make more objects: change `i=500` to `i=5000`.
+
+## See also
+Input shows the rest of the mouse and keyboard. Top Down Game, Platformer
+Game and Space Game set `cameraPos` to follow the player, and Light
+System uses `mouseWheel` to change a light's size.
+*/

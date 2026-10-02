@@ -174,6 +174,27 @@ test('a short starts with code and ends with its info block, when it has one', (
     assert.deepEqual(badBlocks, [], 'a short has one block comment at most, its info block, the last thing in it');
 });
 
+test('every short and full example in the example browser has a write-up', () =>
+{
+    // the info box is never empty: a short listed in examples/shorts.js ends with an info block that says how
+    // it works, and a full example, which is a folder, has its write-up in fullExampleInfo there
+    const list = fs.readFileSync(new URL('../examples/shorts.js', import.meta.url), 'utf8');
+    const missing = [];
+    for (const [, file] of list.matchAll(/new ExampleInfo\('[^']*', '([\w-]+\.js)'/g))
+    {
+        const source = fs.readFileSync(new URL('../examples/shorts/' + file, import.meta.url), 'utf8');
+        const block = /\n\/\* info\r?\n([\s\S]*)\*\//.exec(source);
+        if (!block || !block[1].includes('\n## How it works'))
+            missing.push(file);
+    }
+    assert.deepEqual(missing, [], 'shorts with no write-up, or one with no How it works');
+
+    const full = [...list.matchAll(/new ExampleInfo\('[^']*', '([\w-]+)', '[^']*', true, '[^']*'(, fullExampleInfo)?/g)];
+    assert.ok(full.length > 5, 'the full examples are where the test looks for them');
+    for (const [, folder, info] of full)
+        assert.ok(info && new RegExp(`\\n'?${folder}'?: \``).test(list), folder + ' has no write-up in fullExampleInfo');
+});
+
 test('the shorts that assigned undeclared globals now declare them, so they run under use strict', () =>
 {
     // guards the example browser's Use Strict box: these names were assigned without a declaration

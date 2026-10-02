@@ -134,5 +134,94 @@ function gameUpdatePost()
 }
 
 /* info
-Dodge the tumbling boxes as long as you can.
+Dodge the tumbling boxes as long as you can. The arrow keys move the
+red capsule around the arena, boxes fly in from every side more and
+more often, and one touch ends the round. The sign at the back shows
+the seconds survived and the best so far.
+
+## How it works
+The game is two classes, a few functions and the engine's 3D physics:
+objects move by `velocity3D`, gravity pulls the ones with a mass, and
+the engine tells an object when it touches another.
+
+### Player
+- The mesh is `buildCapsule(1.4, 2.6)`, a diameter and a total height.
+  It is centered on its position, so y is 1.3 to stand it on the ground.
+- The body that collides is not the mesh. `size3D = vec3(1)` with
+  `collideAsSphere3D` makes it a sphere one unit across, smaller than
+  the capsule, which forgives a near miss. `setCollision()` turns
+  collision on.
+- `keyDirection()` returns a `Vector2` from the arrow keys, x for left
+  and right and y for up and down. The ground is the x and z plane and
+  up on the screen is away from the camera, toward negative z, so the
+  move is `vec3(move.x, 0, -move.y)`. `clampLength(.3)` keeps the speed
+  at .3 units a frame, also on a diagonal.
+- `velocity3D` is added to `pos3D` by the engine each frame. `clamp`
+  then holds x and z inside the arena.
+- `rotation3D` is pitch, yaw and roll. Setting pitch from the z speed
+  and roll from the x speed leans the capsule the way it moves.
+- `collideWithObject` is called by the engine when a box touches the
+  player, and it ends the round.
+
+### Box
+A box uses the shared `render3D.boxMesh` at `scale3D = vec3(2)`, which
+scales its collision box too.
+
+- `mass = 1` makes it fall. A 3D object starts with a mass of 0, which
+  gravity does not pull.
+- Its velocity is the direction from where it starts to where the
+  player is now, `normalize(length)` giving it a length of .1 to .2
+  units a frame. `angleVelocity3D` makes it tumble.
+- `setCollision(true, false)` is collide with solid objects, but do not
+  be solid. Two objects that are both not solid pass through each
+  other, so boxes ignore boxes and still hit the solid player.
+- `update` bounces it: below a height of 1, half its size, it is put
+  back and its upward speed is made positive and cut to 80%. A box more
+  than `arenaSize` from the middle is destroyed.
+
+### Timers and the sign
+`new Timer(0)` is a timer that elapsed just now, and its `get()` is the
+seconds since then, so `roundTimer` is the round's clock. `spawnTimer`
+counts down to the next box. When it has `elapsed()`, it is set again
+to .4 to .8 seconds divided by `1 + t/20`, so boxes come twice as often
+after 20 seconds. A box starts 22 units out, 1 to 6 units up, turned to
+a random side with `rotateY`.
+
+The sign is an object with no mesh at first. `buildScoreText` makes a
+mesh of the text with `buildText3D(text, size, depth)` and `setMesh`
+swaps it in and frees the old one. That is only done when the whole
+second changes.
+
+### endRound
+`particleEffect3D('explosion', pos, {scale: 2})` plays a built in
+effect, and `render3D.playSound` plays the sound at a place in the
+world, quieter with distance from the camera. The boxes are destroyed,
+the trail is cleared and the next box waits 2 seconds.
+
+### The scene
+- `setSky` takes a third color here, for straight down, and `setFog`
+  fades the distance into the horizon color.
+- `shadowCenter` and `shadowRange` fix the shadowed area on the arena
+  and make it 1.5 times as wide, in place of following the camera.
+- `render3D.gravity.y = -.01` is added to a falling object's velocity
+  every frame.
+- `Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive)`
+  is a ribbon through where it has been. As a child of the player, one
+  unit below its center, it follows the feet. A `Light3D` child lights
+  the ground around the player.
+- `gameUpdatePost` runs after the objects have moved, so the camera is
+  set from the player's new position. `camera.follow(target, offset)`
+  puts the camera at the target plus the offset and looks at it.
+
+## Try it
+- Move faster: `clampLength(.3)` to `clampLength(.5)`.
+- Twice as many boxes: `rand(.4,.8)` to `rand(.2,.4)`.
+- Weak gravity, so boxes float in: `-.01` to `-.003`.
+- Look almost straight down: `vec3(0,9,16)` to `vec3(0,25,1)`.
+
+## See also
+3D Collision shows solid objects and bouncing on their own, 3D Trails
+and 3D Particles the effects, and 3D Text the sign. 3D Racing Game also
+uses a chase camera. Look up `EngineObject3D` for `setCollision`,
+`size3D` and `collideAsSphere3D`.
 */

@@ -86,5 +86,71 @@ function gameRenderPost()
 /* info
 Materials: a brick wall and floor bumped by a normal map made in code, a
 polished ball reflecting the sky, and a tower whose windows glow from an
-emissive map, under a light that circles them.
+emissive map, under a light that circles them. N turns the normal maps
+off and on, R the ball's reflection. Drag to turn the camera and roll
+the wheel to zoom.
+
+## How it works
+A material here is a few fields on an `EngineObject3D`. Each one is off
+until it is set, and the objects in this scene set different ones.
+
+### The normal map
+A normal map is an image that says which way the surface faces at each
+pixel. The mesh stays flat, but the light falls on it as if it had
+bumps and grooves.
+
+`normalMapFromHeight(size, heightFunction, strength)` makes one with no
+image file. It calls the function for every pixel, x across and y down,
+takes the slope from the heights of the pixels around, and returns a
+`TextureInfo` that wraps. `strength` is how steep the slopes are.
+
+`brickHeight` is that function. Rows are 16 pixels tall, `y >> 4` is
+the row number, and every other row is shifted 16 pixels. A brick is 32
+pixels wide, and its first 2 pixels each way are mortar, at height 0.
+Every 64 pixels there is a round dent 9 pixels in radius, taken off the
+height.
+
+The floor and the wall get the map in the loop, with `specular = .3`
+so the bumps catch a highlight. The map is read at the mesh's texture
+coordinates, which run once across the floor and once across each face
+of the box.
+
+### The ball
+- `specular = 1` gives it the highlight of the sun and the light at
+  full strength.
+- `shininess` is how small and sharp that highlight is: 16 by default,
+  100 for polished.
+- `reflectivity = .4` shows the sky in it, from the colors `setSky` was
+  given. Edges seen at a glancing angle reflect more.
+
+### The tower
+`windowTexture` paints a 64 pixel canvas black, then rows of rectangles
+for the windows. `new RandomGenerator(3)` gives the same numbers every run,
+so the same windows are lit: `random.float() < .4` leaves a window out,
+and `random.float(.4, .7)` picks how bright one is. A canvas takes its
+`fillStyle` as text, so each color is written with `toString()`.
+
+`emissiveMap` is a texture of where an object glows. It is added on top
+of the lit surface, so it shows where no light reaches, and
+`emissiveMapColor` multiplies it.
+
+### The light
+`setSky`'s fourth argument, `.3`, is how much of the sky lights the
+scene, and `sunColor` is dim, so the `Light3D` stands out. Its
+arguments are position, radius, color and intensity. `gameUpdate`
+moves it around a circle of radius 5 and reads the two keys with
+`keyWasPressed`.
+
+## Try it
+- Change the map's strength, the `3` after `brickHeight`, to `10`.
+- Set `shiny.shininess = 100` to `4` for a broad, dull highlight.
+- Change `reflectivity = .4` to `1` for a mirror of the sky.
+- Change `random.float() < .4` to `< .8` and most windows go dark.
+- Set `emissiveMapColor` to `hsl(.1,1,.2)` to dim the windows.
+
+## See also
+3D Lights has more about `Light3D`, and 3D Textures puts a color
+texture on shapes. 3D Water uses `reflectivity` on a moving surface,
+and 3D Glow makes bright things bloom. A glTF model's normal and
+emissive maps load into the same fields, see 3D Mesh.
 */

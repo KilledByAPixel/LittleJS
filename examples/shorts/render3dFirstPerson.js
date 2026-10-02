@@ -112,5 +112,79 @@ function gameRenderPost()
 
 /* info
 Walk a small maze with a first person camera. At night the player's
-flashlight, a spotlight, lights the way and casts the shadows.
+flashlight, a spotlight, lights the way and casts the shadows. Click to
+capture the mouse and look around, walk with WASD or the arrow keys,
+press F to fly and N to switch between night and day. Escape lets the
+mouse go.
+
+## How it works
+### The maze
+`mazeData` is the maze as rows of text, `#` for a wall. The function
+`cellPos(x, z, y)` turns a cell into a world position: cells are 2 units
+wide and the maze is centered on the origin, with the rows along z.
+
+- The floor is `buildGrid(size, segments, color)` with one grid cell for
+  each maze cell, colored by the `checker` function.
+- Each wall is the shared `render3D.boxMesh` with `scale3D` making it 2
+  by 3 by 2. `setCollision()` makes it solid, and its mass of 0 keeps it
+  still.
+- Each lamp is a small ball with `emissive = 1`, so it shows in its own
+  color with no shading, and a `Light3D` attached with `addChild`.
+  `new Light3D(pos3D, radius, color)` is a point light that fades to
+  nothing at its radius, 8 units here.
+
+### The player
+`new FirstPersonCamera3D(pos3D)` is an object that reads the mouse and
+keys, moves itself, and puts the camera where it is. It starts in cell
+`(1, 9)` at eye height. `size3D = vec3(1)` with `collideAsSphere3D` and
+`setCollision()` give it a round body one unit across that the walls
+push back out.
+
+`render3D.gravity` is left at zero, so the player stays at the height it
+has. With `fly` on, the keys move it the way it looks, up and down too,
+and when F turns flying off the code puts it back at eye height.
+
+### The flashlight
+A `Light3D` with a `coneAngle` is a spotlight. It shines along its own
+forward direction, which `rotation3D` turns.
+
+- `new Light3D(vec3(), 25, color, 3)` reaches 25 units at 3 times the
+  color's brightness.
+- `coneAngle = .45` is the angle in radians from the middle of the beam
+  to its edge, so the whole beam is .9 radians across.
+- `coneSoftness = .6` fades the outer 60% of the cone, where 0 would be
+  a hard edge.
+
+`gameUpdatePost` runs after the camera has moved. It puts the light .4
+to the camera's right and .3 down, and copies the camera's rotation, so
+the beam points where the player looks. The comment in the code says
+why it is not at the eye: seen from the light itself, every shadow is
+hidden behind the thing that casts it.
+
+### Night and day
+`render3D.shadows = true` turns shadows on, and by default the sun casts
+them. `render3D.shadowLight = flashlight` has the spotlight cast them in
+its place, and `undefined` gives them back to the sun.
+
+`setNight` changes the rest with it: the sky and ambient colors, the
+sun's color, almost black at night, and the flashlight's `intensity`,
+where 0 switches a light off. `setFog(8, 30)` starts the fog 8 units
+from the camera and makes it total at 30, in the sky's horizon color.
+
+`shadowCenter` and `shadowRange` are for the sun's shadows: the area
+they cover is centered on the origin and 33 units wide, one and a half
+times the maze's length, which covers it from any angle.
+
+## Try it
+- Narrow the beam: `coneAngle = .45` to `.2`.
+- Set `coneSoftness` to `0` for a hard edged circle of light.
+- Start in daylight: `night = true` to `night = false`.
+- Open a wall: change the row `'#.##.###.#'` to `'#........#'`.
+- Set `wallHeight` to `6`.
+
+## See also
+3D Voxels uses the same camera with gravity and jumping. 3D Lights has
+point lights and a directional light, and the `LensFlare3D` of 3D Lens
+Flare can be a light's flare through `flare.light`. Look up `Light3D`
+and `FirstPersonCamera3D`.
 */

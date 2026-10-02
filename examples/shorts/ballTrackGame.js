@@ -107,3 +107,97 @@ function gameRender()
     for (let i = 99; i--;)
         drawCircle(p.add(vec2((99-i)*s/1e3)), i*s/150, hsl(0,1,1-i/150));
 }
+
+/* info
+A ball rolls down a checkered track that runs off into the distance, in
+3D made from 2D draws. Move the mouse left and right to steer, and
+click to jump over the gaps. The ball speeds up as it goes. Fall off
+and a click starts again.
+
+## How it works
+The game is a few numbers and a list of rows. The ball has a sideways
+position and a height in `playerPos`, and `playerZ` is how far down the
+track the camera has come, in rows. The ball is always `cameraDistance`
+rows in front of the camera. All of the 3D is one small function.
+
+### project
+`project(px, py, dz)` turns a point in the track's space into a place
+on the screen, where `dz` is how many rows the point is in front of the
+camera.
+
+- `s` is the scale at that distance: the height of the view times
+  `focalLength`, divided by `dz`. Dividing by the distance is what
+  perspective is: twice as far is half as big.
+- `px - playerPos.x` puts the camera over the ball, and `py - 2` puts
+  it 2 units above the track.
+- `lift` raises a point by the square of its distance over 50, which
+  bends the far track upward.
+
+The 2D camera never moves from `vec2(0,0)`, so the result is a world
+position measured from the middle of the screen.
+
+### The track
+`trackRows` is a list of rows, each a list of 7 cells that are track or
+empty. `gameUpdate` adds rows until there are 50 beyond the camera, so
+the track is made as it is needed and never ends.
+
+- About the first 30 rows are full, a safe place to start.
+- After that a row is track from `trackX` for `trackWidth` cells. Each
+  row has one chance in ten to pick a new width of 2 to 4 and a new
+  place for it.
+- `trackGap` counts down by one each row and a row is only track while
+  it is below 0. Setting it to 2, 3 or 4 makes a gap that many rows
+  long, and a new gap needs it to be below -8 first, so gaps are never
+  close together.
+
+### The ball
+- `mousePos.x` is the mouse in world units, which here is its distance
+  from the middle of the screen. A hundredth of it is added to the
+  ball's `x` each frame, so the farther the mouse, the faster the ball
+  moves that way. `clamp` keeps it over the 7 cells.
+- `playerYSpeed` loses .006 each frame, which is gravity, and is added
+  to the height.
+- `playerZ` grows by .2 rows a frame at first, and by more the farther
+  the ball has gone, up to .5.
+
+The ball lands when its height is between -.3 and 0 and the cell under
+it is track. `playerZ + cameraDistance | 0` is its row and
+`round(playerPos.x + 3)` its cell, since cell `i` covers `x` from
+`i - 3.5` to `i - 2.5`. Then the height and the speed are both set to
+0, or to .1 on the frame of a click, which is the jump. A ball more
+than .3 under the track is past saving, and below -4 the game waits for
+a click and calls `gameInit`.
+
+### gameRender
+`drawRectGradient` fills the view with a sky from one color at the top
+to another at the bottom.
+
+The track is drawn from the farthest row to the nearest, so near cells
+cover far ones. For each cell, `project` gives the four corners of its
+top: `a` and `b` on the near edge, `e` and `f` on the far one.
+
+- `drawRect` draws a dark front face that hangs down from the near
+  edge. `color.scale(.2, 1)` is the cell's color at a fifth of its
+  brightness with its alpha kept.
+- `drawPoly([a, b, f, e], color)` fills the top. The lightness is .4 or
+  .9 by whether `r+i` is odd, which makes the checks.
+
+The shadow is a flat `drawEllipse` at the ball's place on the track,
+drawn only while the ball is at or above a cell. The ball is 99
+circles, from large and dark red to small and white, each moved a
+little up and to the right of the last, which shades it like a sphere
+with a highlight.
+
+## Try it
+- Zoom out: `focalLength = .7` to `focalLength = .4`.
+- Bend the track more: `dz**2 / 50` to `dz**2 / 20`.
+- Jump higher: `? .1 : 0` to `? .15 : 0`.
+- Lighten gravity: `playerYSpeed -= .006` to `playerYSpeed -= .003`.
+- Make the track blue: `hsl(.3, .7,` to `hsl(.6, .7,`.
+
+## See also
+FPS Game and Tilted View Game are other ways to fake depth in 2D, and
+Grapple Game also has a level that never ends. 3D Basics starts the
+engine's real 3D. Look up `drawPoly`, `drawRectGradient`
+and `getCameraSize`.
+*/

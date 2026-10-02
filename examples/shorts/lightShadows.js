@@ -66,3 +66,64 @@ function gameRender()
     for (let y = -7;  y <= 7;  y += 2)
         drawRect(vec2(x, y), vec2(1.8), hsl(0,0,.4));
 }
+
+/* info
+Lights that cast shadows: a room with a row of pillars, two panes of
+colored glass, a sprite, a coin and a lava brick, lit by two lamps and
+by a white light that follows the mouse.
+
+## How it works
+`new LightSystemPlugin()` makes the lights work, as in Light System: the
+scene is drawn at full brightness and multiplied by a lightmap the
+lights are added into. `lightSystem` is the plugin, and
+`lightSystem.shadows = true` turns shadows on. They are off by default.
+
+### What casts a shadow
+With shadows on, every engine object is drawn once more each frame, in
+black, into a *shadow map*, and each light's rays stop where they meet
+something drawn there. An object casts the shape it draws, so nothing
+has to be set up:
+
+- `Wall` is an `EngineObject` with a size and a color, and it blocks
+  light. The pillars and the top and bottom walls are made from it.
+- The green `Wall` has a tile. A draw blocks light by its alpha, so a
+  sprite casts the shape of its picture and not of its square.
+- The coin sets `castShadow = false`, which keeps an object out of the
+  shadow map. Use it for pickups, floors and backgrounds.
+- The floor is drawn in `gameRender` with `drawRect`. Those draws belong
+  to no object, so they are never in the shadow map.
+
+### Glass
+`Glass` has its own `render`, which draws its rectangle between two
+calls to `lightSystem.setShadowTransparent`. While the shadow map is
+being drawn, that call lets the draws after it keep their color where
+they would be black, so light that passes through is tinted and not
+stopped. Outside the shadow pass the call does nothing, which is why
+`render` can call it every time. It has to be set back to `false`
+afterwards.
+
+### Emissive
+`lava.emissive = 1` shows the lava brick at full brightness in its own
+colors, lit or not. At 0, the default, an object is lit only by the
+lights, and a number between is part way.
+
+### The lights
+`new Light(pos, radius, color)` is the same as without shadows. A light
+has `castShadow` too, where it means the light's rays stop at casters.
+A light inside a caster is blocked completely, which is what happens
+to the mouse light when the mouse is inside a pillar.
+
+## Try it
+- Set `coin.castShadow` to `true` and the coin casts a shadow.
+- Set `lava.emissive` to `0`: the brick is dark until a light reaches
+  it.
+- Make the red glass green: its `hsl(0, 1, .5)` to `hsl(.3, 1, .5)`.
+- Add `lightSystem.shadowSoftness = 0;` after the `shadows` line. It is
+  how much light bleeds into the side of a caster that faces the light,
+  `.5` by default.
+
+## See also
+Light System covers the lightmap, `glow` and `renderLight`. The plugin
+has more settings on `lightSystem`, like `shadowMapSize` and
+`ambientColor`.
+*/

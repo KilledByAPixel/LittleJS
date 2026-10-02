@@ -50,3 +50,69 @@ function gameRender()
     // frame math by hand still works for the simple cases
     drawTile(vec2(6, -3), vec2(4), tile(3).frame(time*4%2|0), hsl(0,1,.6));
 }
+
+/* info
+Four ways to animate a sprite whose frames sit side by side in the tile
+sheet: a looping walk on an object that crosses the screen, a ping pong,
+a clip that plays once, and frame math by hand. Click to play the
+one-shot again and to make the walker morph before it walks on.
+
+## How it works
+An animation here is a run of tiles next to each other in the sheet.
+`tileInfo.frame(n)` returns the tile `n` places along the row, and
+everything below is a way to pick `n` from the time.
+
+### SpriteAnimation
+`new SpriteAnimation(tileInfo, frameCount, frameTime)` takes the first
+frame, how many frames there are, and the seconds each one shows for.
+It works from the engine's `time`, so it has no update call and it
+pauses when the game does. Reading its `tileInfo` gives the tile of the
+frame showing now.
+
+A new one loops. Two methods change that, each starting over from the
+first frame and returning the animation, so they chain onto `new`:
+
+- `play()` runs through once and holds the last frame. `isDone` is true
+  from then on.
+- `pingPong()` runs there and back, forever.
+
+`sweep` has 7 frames from tile 5. `oneShot` has 4 frames from tile 8 at
+`.2` seconds each, so a play takes `.8` seconds. They are made in
+`gameInit` because `tile` needs the tile sheet to be loaded.
+
+### SpriteAnimator
+A `SpriteAnimator` holds several animations by name and shows one of
+them, the first to begin with, here `walk`. `hero.set(name, onEnd)`
+switches. It starts the clip over only when the clip changes or its play
+has ended, so a click in the middle of the morph does not start it
+again. `onEnd` is called once when a clip that plays once ends, and
+here it sets `walk` again.
+
+### Walker
+`EngineObject(pos, size, tileInfo, angle, color)` makes the sprite that
+moves. Its `velocity` is in world units per frame, so `.05` is 3 units a
+second. `update` is called once a frame: it copies `hero.tileInfo` into
+the object's own `tileInfo`, which is all it takes to animate an
+object, and it puts the walker back at x `-14` once it passes `14`.
+
+### gameUpdate and gameRender
+`mouseWasPressed(0)` is true on the frame the left button goes down.
+`gameRender` draws `sweep` and `oneShot` with `drawTile`, and the text
+under the one-shot says whether it has ended.
+
+The last draw needs no class. `time*4` counts 4 frames a second, `%2`
+wraps it to two frames and `|0` drops the fraction, so it is 0 or 1.
+
+## Try it
+- Change `.pingPong()` to `.loop()`: the sweep jumps back to its first
+  frame and does not return through the others.
+- Change the walk's `2, .15` to `2, .5` for slower steps.
+- Change `vec2(.05, 0)` to `vec2(.15, 0)`: the walker moves three times
+  as fast while its steps keep their pace.
+- Change `time*4%2` to `time*12%2` to speed up the one done by hand.
+
+## See also
+Sprite Atlas names the tiles of a sheet, Texture Sheet and Texture
+Atlas load frames from other images, and Tween animates numbers. Look
+up `SpriteAnimation`, `SpriteAnimator` and `TileInfo`.
+*/

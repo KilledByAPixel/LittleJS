@@ -98,3 +98,73 @@ function gameRenderPost()
         + modelName;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }
+
+/* info
+A model viewer. It starts with a small house written as OBJ text in the
+code, and shows any `.obj`, `.glb` or `.gltf` file dropped on the page.
+Space switches between flat and smooth shading. Drag to turn the camera
+and roll the wheel to zoom.
+
+## How it works
+### The OBJ text
+OBJ is a model format made of lines of text. A `v` line is a vertex, its
+x, y and z. An `f` line is a face, listing the vertices at its corners
+by number, counting from 1. The house has 10 vertices: four on the
+ground, four at the top of the walls and two along the ridge of the
+roof. Its faces are four walls, a floor, two roof slopes and two
+triangles for the gable ends.
+
+`parseOBJ(text)` reads that into a `Mesh`. Faces can have any number of
+corners, and they are listed counter clockwise seen from outside.
+
+### gameInit
+- `setSky` is given three greys, for the sky, the horizon and straight
+  down, so the light adds no hue to the model.
+- `render3D.shadows = true` has the sun cast shadows. The shadow map is
+  an image drawn from the sun, `shadowMapSize` pixels a side, that
+  covers `shadowRange` world units around `shadowCenter`. More pixels
+  over less of the world make a sharper shadow, so the range is set to
+  twice the model's size and the center to the middle of the model.
+  Without a center, the shadow area follows the camera.
+- The floor is a `buildGrid` whose color is a function, as in 3D
+  Basics.
+
+The rest is plain browser code: a `dragover` listener that lets a drop
+happen, and a `drop` listener that reads the file. An `.obj` is read as
+text for `parseOBJ`. Anything else is read as bytes for
+`parseGLTF(data)`, which returns a promise of a `GLTFModel`, so it is
+awaited. An error ends up in the text at the top of the screen.
+
+### setModel
+A file's model can be any size, anywhere. `center()` moves it so the
+middle of its box is on the origin, and `fit(modelSize)` scales it so
+its longest side is 5 units. Both exist on a `Mesh` and on a
+`GLTFModel`. `getBounds()` gives the box, and lifting the model by
+`-min.y` stands its lowest point on the floor.
+
+- A `Mesh` goes into one `EngineObject3D`, with a color.
+- A `GLTFModel` has parts, each with its own color and texture.
+  `createObject(pos3D)` makes an object with a child for each part, and
+  `play()` starts the model's first animation when it has one.
+
+`model?.destroy(true)` removes the model shown before. Destroying an
+object destroys its children too.
+
+### gameUpdate
+`render3D.smoothShading` is the default the mesh builders and
+`parseOBJ` use. Changing it does nothing to a mesh that is already made, so
+the loop calls `computeNormals(smooth)` on the model's mesh and on each
+child's. Flat normals give every face a hard edge, smooth ones round
+the light across the faces.
+
+## Try it
+- Change `modelSize = 5` to `2`. The shadow area shrinks with it.
+- Raise the roof: change both `2.2` in the OBJ text to `3.5`.
+- Change `shadowMapSize = 2048` to `128` to see a coarse shadow map.
+- Change `vec3(0, .005)` to `vec3(0, .05)` to spin the model faster.
+
+## See also
+3D Shapes and 3D Mesh Operations make meshes in code. 3D Textures and
+3D Materials cover what a glTF model's materials load into. Look up
+`loadOBJ` and `loadGLTF` to fetch a model from a file beside your game.
+*/

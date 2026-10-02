@@ -100,5 +100,83 @@ function gameRenderPost()
 Rain on a pool. The waves are a cellular automaton: each cell heads for
 the average of its neighbors and overshoots. The water is a grid mesh
 changed in place each frame, and a rain drop that reaches it starts a
-ring there.
+ring there. Right click the water to drop a stone. Drag with the left
+button to turn the camera and roll the wheel to zoom.
+
+## How it works
+The surface is kept as a grid of heights, `samples` cells a side. Each
+frame every cell gets a new height: half the sum of its four neighbors,
+less the height it had the frame before. A cell below its neighbors is
+pulled up and goes past them, and that overshoot is what carries a ring
+outward. Two grids hold it: `now` is this frame and `last` the one
+before. The new height is written over the old one in `last`, and then
+the two swap.
+
+`poolSize` is the pool's width in world units. `waveHeight` turns a
+grid value into a height in the world.
+
+### drop
+`drop(x, z, depth)` pushes the water down around a world position.
+`cell` turns a coordinate into a grid index: `v/poolSize + .5` is 0 to 1
+across the pool, and `clamp` keeps it 3 cells from the edge so the dent
+fits. The dent is 5 cells square, deepest in the middle and fading with
+`hypot(i, j)`, the distance from it. A round dent a few cells wide
+makes a smooth ring.
+
+### The scene
+- `render3D.setFog(fogStart, fogEnd)` sets the distances from the
+  camera where fog starts and where it is total. Its color is the
+  horizon color `setSky` was given.
+- The pool's floor is a one cell grid 2 units under the water.
+- The rain is the built-in `'rain'` effect, made with
+  `particleEffect3D` 14 units up. `flatten` makes the area the drops
+  start in a flat sheet, and `emitSize` makes it as wide as the pool.
+  `speed` is in world units per frame. `trailTime = .1` draws each drop
+  as a streak along the last tenth of a second of its path.
+- `particleUpdateCallback` is called with each particle every update,
+  after it moves. When a drop's `pos.y` is at the water or under it, the
+  callback starts a ring there and ends the drop with `p.destroy()`.
+
+### The water mesh
+`buildGrid(size, segments, color, heightFunction, smooth)` with
+`samples-1` cells a side has `samples` vertices a side, one for each
+cell of the automaton. The color's alpha is `.85`, and
+`transparent = true` has the object drawn blended, so the floor shows
+through. `reflectivity` adds the sky's colors, more where the surface
+is seen at a glancing angle.
+
+A mesh is uploaded to the GPU once. `dynamicDraw = true` says its
+values will change and its shape will not, so setting `mesh.dirty`
+only writes the vertices again.
+
+The builders make triangle strips, which list a vertex once for every
+strip that uses it. A smooth grid sets `mesh.vertexKeys`, a number for
+each entry that says which vertex it is: here its row times `samples`
+plus its column. `vertices` is that list turned around, from a cell to
+one of its entries. The entries of one vertex share the same point and
+normal objects, so changing one changes them all.
+
+### gameUpdate
+`mouseWasPressed(2)` is the right button.
+`render3D.screenToGround(mousePosScreen)` is where the mouse lands on
+the flat ground at height 0, or `undefined` when it misses.
+
+The loops then run the automaton over every cell but the border, which
+stays at 0. `*.985` takes a little off each wave so it dies down. Each
+cell's vertex gets its height, and its normal is leaned by the slope:
+the difference between the neighbors on each side, times `slope`, which
+is `waveHeight` over the width of two cells. The normals are what make
+the light and the reflection move with the waves.
+
+## Try it
+- Change `*.985` to `*.999` and the waves last much longer.
+- Set `emitRate: 60` to `5` for a light rain.
+- Drop a bigger stone: change `p.z, .3)` to `p.z, 1)`.
+- Change `waveHeight = 4` to `10` for taller waves.
+- Set `water.reflectivity` to `1` for a mirror of the sky.
+
+## See also
+3D Particles has more of the effects, and 3D Trails moves a mesh's
+points in place the same way. 3D Height Map makes terrain from a grid
+of heights, and 3D Materials shows `reflectivity` on a ball.
 */

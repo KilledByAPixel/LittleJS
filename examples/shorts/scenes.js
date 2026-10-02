@@ -124,4 +124,82 @@ function gameUpdatePost()
 /* info
 Three scenes switched with `setScene`: a title, the game and game over.
 Each switch clears the objects, but the stars are persistent and stay.
+
+Click to start, then move the mouse to catch the falling balls with the
+paddle. Three missed balls end the game, and a click goes back to the
+title. P pauses the game.
+
+## How it works
+A scene is a plain object with any of five functions: `enter`, `leave`,
+`update`, `render` and `renderPost`. `setScene(scene)` makes one the
+current scene, and the scene system calls the current scene's functions
+at the matching points of each frame. A title screen, the game and a
+game over screen then each keep their own code, with no `if` on a
+state variable in `gameUpdate`.
+
+### setScene
+A switch does three things, in this order:
+
+1. It calls the old scene's `leave`.
+2. It destroys every object that is not `persistent`.
+3. It makes the new scene current and calls its `enter`.
+
+So a scene starts with an empty world and never has to clean up after
+the one before. It happens at once and can be called from anywhere
+except a `leave`: here a click in a scene's `update` does it, and so
+does a ball's own `update` when the last life goes.
+
+### The scenes
+`titleScene` and `overScene` only wait for a click in `update` and draw
+text in `renderPost`.
+
+`gameScene` uses all five:
+
+- `enter` resets the score and lives. The functions are called as
+  methods, so `this` is the scene and it can keep its own values, like
+  `paddleX` and `spawnTime`.
+- `leave` keeps the best score.
+- `update` runs after `gameUpdate`, and not while paused. It moves the
+  paddle to the mouse and makes a `Ball` every .4 to .9 seconds, by
+  comparing `time`, the game's seconds, with the next spawn time.
+- `render` runs before the objects are drawn, so the paddle is under
+  the balls.
+- `renderPost` draws over everything, while paused too, which is how
+  the Paused text shows.
+
+`score`, `best` and `lives` are globals, not fields of a scene, since
+more than one scene reads them.
+
+### The objects
+`Star` sets `this.persistent = true`, which is the flag `setScene`
+looks at, so the 80 stars made in `gameInit` drift on through every
+switch. A star moves .02 units left each update and `mod` wraps it
+around the 40 unit width.
+
+`Ball` starts above the view with a speed downward, and
+`super.update()` moves it. It is caught when it is level with the
+paddle and within 3 units of its middle, and lost below the view. The
+paddle is not an object: the scene keeps its x and draws a rectangle.
+
+### gameInit and pausing
+The canvas is fixed at 1280 by 720, which at the default camera scale
+shows 40 by 22.5 world units, and the camera is put at the middle of
+the 40 by 23 the stars fill. The first `setScene` starts the title.
+
+P is read in `gameUpdatePost` because it still runs while the game is
+paused, when `gameUpdate` and the scene's `update` do not. `getScene()`
+returns the current scene, so P only works in the game.
+
+## Try it
+- Give one life: `lives = 3;` to `lives = 1;`.
+- Rain balls: `rand(.4, .9)` to `rand(.1, .2)`.
+- Set `this.persistent = true;` to `false`. The stars are gone before
+  the title shows, cleared by the first `setScene` in `gameInit`.
+- Change `setScene(overScene);` to `setScene(gameScene);`. Setting the
+  current scene again restarts it, with no game over screen.
+
+## See also
+Pong Game for a paddle and ball made of objects with collision. Timers
+for timing with `Timer`. `engineObjectsDestroy` is the engine function
+that clears the objects.
 */

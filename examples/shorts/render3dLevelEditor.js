@@ -94,4 +94,78 @@ function gameRenderPost()
 A small 3D level that starts in the 3D level editor. Place boxes, lights
 and coins, paint blocks, then press Play or Escape to walk around, and
 Escape again to go back to editing. The level is autosaved as you go.
+
+In the editor: click selects, W, E and R move, rotate and scale with
+handles, pick a type in the panel and click to place it, B paints
+blocks, the right button looks around and Ctrl+Z undoes. The `?` key
+lists every key. While playing: click to capture the mouse and look,
+WASD or the arrow keys walk, Space jumps.
+
+## How it works
+The game keeps its level as data, and the editor changes that same
+data. The code here is what any game needs for that: a level, the types
+of object it can hold, and a function that builds it.
+
+### The level
+`level` is a plain object in the format `level3DLoad` reads, the same
+that the editor's Save writes as a JSON file.
+
+- `objects` is the list. Each has an `id`, a `type` name, a `pos` of
+  `[x, y, z]`, and where they are not the default a `rotation` in
+  degrees, a `scale` and `properties`.
+- A color in a level is a hex string. The `color` helper at the top
+  writes one from `hsl` with `toString(false)`, which leaves the alpha
+  out.
+- `scene` sets the sky's three colors, the sun's direction and the
+  shadows when the level loads.
+- `voxels` is a map of blocks: its corner, its size in cells, and its
+  blocks as runs of a count and a type. Type 0 is empty.
+
+### Types
+`level3DAddType(name, make)` says what to make for each type name.
+`Box`, `Sphere`, `Cylinder` and `Light` are built in. A built in box is
+one unit across, so its `scale` is its size, and it is solid.
+
+- `'Coin'` is a class, made with `new Coin(pos3D, properties)`. Its
+  constructor takes the position and builds the coin: the shared sphere
+  squashed to a disc with `scale3D`. Its `update` turns it and destroys
+  it when the player is within 1 unit.
+- `'PlayerStart'` is an arrow function, which is called and not made
+  with `new`. It makes nothing and keeps the position.
+
+### loadLevel
+`engineObjectsDestroy()` removes everything, `level3DLoad(level)` makes
+every object in the level, and then the player is made at the start.
+The player is a `FirstPersonCamera3D`, an object that moves with the
+keys and puts the camera at its position. Giving it a `size3D` and
+calling `setCollision()` gives it a body the boxes and blocks stop.
+`eyeHeight` lifts the eye above the body's middle, and `jumpSpeed` is
+the speed of a jump in units per frame, which `render3D.gravity` then
+pulls back down.
+
+### The editor's hooks
+`levelEditor` is the editor. `open()` opens it and pauses the game.
+
+- `onRestart` is called to build the level again from what was edited.
+  Setting it gives the editor a Restart button.
+- `onPlayFrom` is given a position, and setting it gives the editor
+  Play from mouse. Here it puts the player 1 unit above that point.
+
+The two `render3D.camera` lines aim the game's camera at the level,
+since the editor opens with the game's view.
+
+## Try it
+- Press B and drag on the floor to paint blocks, then Escape to walk
+  on them.
+- Add an object in the code: after the `PlayerStart` line add
+  `{id: 8, type: 'Sphere', pos: [2, 1, 2], scale: [2, 2, 2]},`.
+- Jump higher: `player.jumpSpeed = .35;`.
+- Change `shadows: true` to `shadows: false` in the scene block.
+- Collect coins from farther away: `< 1` to `< 3` in `Coin`.
+
+## See also
+3D Prefab Maker uses the editor to build one thing a game places many
+times. Level Editor is the 2D editor, and 3D First Person and 3D Voxels
+show the player and the blocks on their own. `EDITOR.md` in the repo
+explains how a game adds its own keys, buttons and tools.
 */

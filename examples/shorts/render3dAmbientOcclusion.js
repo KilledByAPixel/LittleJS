@@ -64,5 +64,72 @@ function gameRenderPost()
 /* info
 Ambient occlusion from the depth texture: a post process darkens the
 creases and corners, where nearby things block the light from around.
-The left half is plain, the right half has it.
+The left half is plain, the right half has it. Drag to turn the camera
+and roll the wheel to zoom.
+
+## How it works
+Ambient light comes from every direction, so a point in a corner gets
+less of it than a point in the open. A post process can not see the
+scene, only the finished picture and how far away each pixel is. That
+is enough: for a pixel, look at two pixels a short way off on opposite
+sides. On a flat face seen at a slant one of them is nearer and the
+other farther. In a crease both are nearer. So the smaller of the two
+differences says how deep in a crease the pixel sits.
+
+### gameInit
+- `render3D.depthTexture = true` has the renderer draw the camera's
+  depth into a texture each frame, for a post process to read. It is
+  off by default.
+- The fourth argument of `setSky` is how much of the sky's colors
+  lights the scene as ambient light.
+- The scene is boxes: `box` makes an
+  `EngineObject3D(pos3D, mesh, tileInfo, color)` from the shared
+  `render3D.boxMesh`, with `undefined` for no texture, and sets its
+  `scale3D` to the size.
+- `buildTorus(size, tubeSize, sides, tubeSides)` is the ring. Its tube
+  is `.5` across and its center is at y `.25`, so it lies on the floor.
+- `new PostProcessPlugin(occlusion)` runs the shader over the screen.
+  It is made after `Render3DPlugin` because plugins draw in the order
+  they are made, and this one shades what is on the canvas when its
+  turn comes.
+
+### The shader
+`mainImage(out vec4 c, vec2 p)` is called for every pixel, with `p` its
+position in pixels, and writes the color `c`. `uv` is the position as
+0 to 1 across the screen. `iChannel0` is the picture, and
+`sceneDepth(uv)` is how far in front of the camera that point is, in
+world units.
+
+- `reach` is how far off the samples are. Dividing by `d` makes it
+  smaller in the distance, so it spans the same amount of the world
+  near and far.
+- The loop takes 16 pairs on a spiral. The angle `a` goes up by `2.4`
+  radians a step and the distance `s` is a square root, which spreads
+  the samples evenly over a disc.
+- `turn` is an angle that differs from one pixel to the next. Every
+  pixel turns its spiral by it, so what 16 samples miss shows as fine
+  grain and not as bands.
+- `near` is the smaller of the two differences, above 0 only when both
+  samples are nearer than the pixel. `clamp(near * 4., 0., 1.)` counts
+  it in full at a quarter of a unit. The `smoothstep` fades it out
+  again from `.3` to `1.`: something that much nearer is another object
+  in front, not a crease.
+- `shade` is 1 on the left half and `1. - ao / 16.` on the right. The
+  `step` at the end adds a white line down the middle.
+
+`gameRenderPost` draws the two labels with `drawTextScreen`, whose
+position and size are in screen pixels.
+
+## Try it
+- Change `uv.x > .5 ?` to `uv.x > 0. ?` to shade the whole picture.
+- Replace `texture(iChannel0, uv).rgb` with `vec3(1)` to see the shade
+  alone, on white.
+- Change `.35 *` in `reach` to `1. *` and the dark reaches farther from
+  each crease.
+- Take `+ turn` off the angle to see the bands it hides.
+
+## See also
+Post Processing explains `mainImage` shaders, and 3D Glow is another
+post process over a 3D scene. Look up `render3D.depthTexture` and
+`PostProcessPlugin`.
 */

@@ -87,3 +87,73 @@ function gameRenderPost()
     const text = 'hover: pick a ball / right click: toss it';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }
+
+/* info
+Twelve balls fall and bounce in an arena with a box and a cylinder in
+it, off the floor, the walls, the two shapes and each other. Move the
+mouse over a ball to pick it, and right click to toss it up. Drag to
+turn the camera and roll the wheel to zoom.
+
+## How it works
+The example collides in two ways. The engine does the balls against each
+other and against the box, because those are solid objects. The arena
+and the cylinder are done by hand in the ball's `update`, with helper
+functions from the 3D math plugin.
+
+### Solid objects
+- `setCollision()` on a 3D object makes it solid, and solid objects push
+  each other apart in 3D. Each one collides as a box of its `size3D`,
+  which starts at the size of its mesh and grows with `scale3D`.
+- `collideAsSphere3D = true` has a ball collide as the sphere that fits
+  that box.
+- `mass = 1` makes a ball dynamic: `render3D.gravity` is added to its
+  `velocity3D` every frame, and collisions move it. The box keeps the
+  mass of 0 a 3D object starts with, so it never moves.
+- `restitution = .6` is how much speed a ball keeps at a bounce.
+
+`randVector3(.1)` starts each ball with a speed of .1 units per frame in
+a random direction. `softShadow = 1` draws a soft disc on the floor
+under it, which grows with the ball's `scale3D`.
+
+### Collision by hand
+The helpers take plain positions and sizes, not objects, and each
+returns the vector that moves the sphere clear, or `undefined` when
+there is no touch. They take a radius where the builders take full
+sizes, so `Ball` keeps its `radius` and scales its mesh by twice that.
+
+- `collideSphereInBox(pos, radius, boxPos, boxSize)` keeps a sphere
+  inside a box. The arena is 16 units each way and centered 8 up, so its
+  bottom is the floor at y 0.
+- `collideSphereCylinder` takes the sphere, then the cylinder's center,
+  its radius and its full height, and pushes the sphere out of a
+  cylinder that stands on the y axis.
+
+`bounce` uses the push: it moves the ball by it, and reflects the
+velocity off the push's direction with `reflect(normal, restitution)`.
+`update` runs after the engine has moved and collided every object, so
+the ball is back out before it is drawn.
+
+The cylinder on screen is only a mesh from `buildCylinder`, which takes
+the diameter, hence `cylinderRadius*2`. It has no collision set.
+
+### Picking
+`render3D.pick(mousePosScreen, balls)` finds the nearest of the given
+objects under a screen position and returns `{object, distance}`, or
+`undefined`. Each object is tested as the box around its mesh.
+`debugSphere3D(pos, size, color)` draws a wire sphere for one frame, in
+debug builds only, and a right click sets the picked ball's velocity to
+.5 upward with a little sideways.
+
+## Try it
+- Set `restitution` to `.95` and the balls keep bouncing much longer.
+- Make 40 balls: `let i = 12` to `let i = 40`.
+- Weaken the gravity: `-.01` to `-.002`.
+- Stretch the box: `boxSize = vec3(3,2,3)` to `vec3(6,2,3)`. The
+  collision follows, since it comes from `scale3D`.
+
+## See also
+3D Puzzle Game uses picking in a game, and 3D First Person walks among
+solid walls. 3D Height Map and 3D Voxels are levels to collide with.
+Other helpers to look up: `collideSphereBox`, `collideSphereSphere`,
+`collideBoxBox3D` and `raycastSphere`.
+*/

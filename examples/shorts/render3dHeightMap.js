@@ -101,3 +101,75 @@ function gameRenderPost()
     const text = 'right click: move the ball / space: toggle shading';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
 }
+
+/* info
+Terrain made from two small images painted in code: one says how high
+the ground is and the other what color it is. Trees stand on the grass
+and a red ball rolls downhill. Right click the terrain to put the ball
+there, and press space to switch between smooth and flat shading. Drag
+to turn the camera and roll the wheel to zoom.
+
+## How it works
+A `HeightMap` is a grid of heights from 0 to 1 that draws itself as
+terrain and can be asked how high the ground is at any point.
+
+### The two images
+`makeTerrainImages` paints two canvases of 48 by 48 pixels, one pixel
+for each point of the grid. `createCanvasContext(size)` makes an
+offscreen canvas and returns its 2D context.
+
+- The height `h` is two layers of `noise2D`, wide hills and small bumps,
+  plus `edge*edge`, which grows away from the middle so the map's rim
+  rises. `noise2D` returns 0 to 1 and changes smoothly from one point to
+  the next. `clamp` keeps `h` from 0 to 1.
+- The height image gets the grey `hsl(0,0,h)`. A `HeightMap` reads the
+  red channel of an image as the height.
+- The color image gets grass below .5, rock below .7 and snow above.
+
+### The terrain
+`new HeightMap(heights, mapSize, height, colors)` builds the terrain: 50
+units along x and z, centered on the origin, and 12 units tall where the
+image is white. Each pixel is one vertex, so 48 pixels a side make 47
+cells a side. In place of the images it also takes arrays of rows.
+
+### Trees
+One tree mesh is made with `combine(mesh, pos, color)`, which appends a
+mesh, moved and tinted, to the one it is called on: a thin cylinder for
+the trunk and a cone on top. The loop tries 80 random places and asks
+`terrain.getHeight(x, z)` for the ground there. A tree is made only
+where that is below half the terrain's height, which is where the grass
+is. Every tree is an `EngineObject3D` using the same mesh.
+
+### The ball
+`getNormal(pos)` is the direction straight out of the ground, so on a
+slope it leans downhill. The ball adds the level part of it, scaled by
+.02, to its `velocity3D` every frame, then keeps 99% of the speed so it
+does not build up for ever. The engine moves it by `velocity3D`, and the
+last line sets its height to the ground's plus .5, the ball's radius.
+
+`softShadow = 2` draws a soft disc under the ball, and
+`render3D.softShadowHeight = terrain` has that disc follow the ground.
+
+### gameUpdate
+`smooth` is part of the terrain's mesh, so space sets `terrain.smooth`
+and calls `rebuild()` to make the mesh again.
+
+`mouseWasPressed(2)` is the right button. `render3D.screenToRay` turns
+the mouse's screen position into a ray from the camera, and
+`terrain.raycast(ray)` returns how far along it the ground is, or
+`undefined` for a miss. `ray.getPosition(distance)` is that point.
+
+## Try it
+- Set `terrainHeight` to `25` for steep mountains.
+- Set `terrainSamples` to `16` to see the grid the terrain is made of.
+- Change `h<.7` to `h<.55` for more snow.
+- Change `.scale(.02)` to `.scale(.1)` and the ball rolls much faster.
+- Bring the fog in with `render3D.setFog(5, 30);` and zoom in: the fog
+  is then total 30 units from the camera, nearer than the map's middle.
+
+## See also
+3D Racing Game drives on a height map, and 3D Plugin in the full
+examples is an island made of one. 3D Voxels is the other kind of
+level. Objects with collision stand on a `HeightMap` without any code:
+see `collideLevel` in REFERENCE.
+*/

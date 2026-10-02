@@ -193,5 +193,116 @@ function gameRenderPost()
 }
 
 /* info
-Drive laps around a hilly track, and hit every gate in order.
+Drive laps around a hilly track, and hit every gate in order. Up and
+down arrows speed up and brake or reverse, left and right steer. The
+grass is slow. The red posts are the finish line, and the screen shows
+the lap count, the best lap and the speed.
+
+## How it works
+Everything is made in code from one formula for the track. There is no
+physics engine in the driving: the car keeps a speed and a heading, and
+each frame moves itself and reads the ground's height under it.
+
+### The track
+The track's center line is a wobbly circle around the origin.
+`trackRadius(a)` is how far out the line is at angle `a`: 42 units, plus
+two sine waves that push it in and out. `trackPoint(a)` is that point on
+the ground, and `trackDistance(x, z)` is how far a place is from the
+line: its distance from the origin, less the radius at its angle. That
+one function shapes the hills, keeps trees off the road, and tells the
+car when it is on the grass.
+
+### The ground
+`HeightMap(heights, mapSize, height, colors, pos3D, smooth)` is terrain
+from a grid of heights, each 0 to 1. Here the grid is 81 by 81 samples
+over 160 units, and a full height is 18 units.
+
+- `noise2D(x, y)` gives a smooth noise value from 0 to 1, the hills.
+- Within `roadWidth` of the center line the height is a flat .3. Over
+  the next 12 units `smoothStep` blends it into the hills, so the
+  ground under the road is level and the hills rise or fall beside it.
+- Each sample's color is grass blended toward rock by its hill height.
+
+`terrain.getHeight(pos)` returns the ground's world height at a place.
+The road, the posts, the trees and the car all use it to sit on the
+ground.
+
+### Road, gates and trees
+- `buildRibbon(points, width, color, closed)` makes a flat strip along
+  a path. The path is 120 points of the center line, lifted .1 above
+  the ground, and `closed` joins the end to the start.
+- Each gate is two posts. `along` is the track's direction at the gate,
+  from two points close together, and `across` is that turned a quarter
+  turn on the ground, which puts a post on each side of the road.
+- The tree is one mesh: a trunk from `buildCylinder` with two cones
+  joined on by `combine(mesh, position, color)`. Up to 300 objects share
+  it, at random places more than 6 units off the road, each with a
+  random `scale3D`.
+
+### Car
+The body is three boxes joined with `combine`. It has to be built
+before `super`, which is why the constructor starts with it. The wheels
+are child objects, so their `pos3D` is an offset from the car, and each
+can turn on its own.
+
+In `update`:
+
+- `keyDirection()` is the arrow keys as a `Vector2`. Up adds .01 to the
+  speed each frame. The speed is then multiplied by .99 on the road or
+  .95 on grass, and clamped to .6 units a frame on the road, .3 off it
+  and .15 in reverse. On the road the clamp is the top speed. On grass
+  the .95 is: the speed settles near .19, where the .01 added equals
+  what is lost, and the .3 only slows a car that leaves the road fast.
+- Steering turns `yaw`. It is scaled by the speed so a still car can not
+  turn, and by the speed's sign so reversing steers the other way.
+- `vec3(0, 0, -1).rotateY(yaw)` is the way the car faces, since objects
+  face negative z. The car moves along it, then takes its height from
+  the terrain.
+- The pitch comes from the ground too: the height 1.5 units ahead less
+  the height 1.5 behind is the rise over 3 units, and `atan2(rise, 3)`
+  is the slope's angle.
+- A wheel is .8 across, so `speed/.4` is the distance moved divided by
+  the radius, the angle it rolls in a frame. The front wheels also take
+  the steering angle, eased with `lerp`.
+- The skid marks are `Trail3D` children at the rear wheels. Setting
+  `side` to a level direction lays the ribbon flat on the ground and
+  not facing the camera.
+- `render3D.playSoundLoop` starts the engine sound and returns its
+  `SoundInstance`. `setRate` changes its speed and pitch while it
+  plays, so the engine note follows the car's speed.
+
+### Laps
+The car's angle around the origin is cut into `gateCount` equal parts,
+four quarters here, and `nextGate` is the quarter it must enter next.
+Being in that quarter, within 3 units of the road, moves `nextGate` on.
+Entering quarter 0 is crossing the finish line: a lap is counted, the
+best time kept and `lapTimer` set again. Driving backward enters the
+wrong quarter, so it does not count.
+
+### Camera, shadows and text
+`gameUpdatePost` runs after the car has moved. `camera.follow(target,
+offset, percent)` moves the camera a fifth of the way toward a spot
+behind the car each frame, which makes it swing behind in turns, and
+looks at the target. `shadowCenter` is moved to the car so the 150 unit
+`shadowRange` covers what is near it, and `shadowMapSize = 2048` gives
+the shadow map more pixels than the default 1024 to cover it with.
+`gameRenderPost` draws the text with `drawTextScreen`, whose position
+and size are in screen space and whose fifth argument is an outline's
+width. `formatTime` writes seconds as minutes and seconds.
+
+## Try it
+- A faster car: change the top speed `.6` to `1`, in
+  `offRoad < 0 ? .6 : .3`.
+- Sharper steering: `input.x*.03` to `input.x*.06`.
+- Taller hills: the `18` in `new HeightMap` to `40`.
+- A wider road: `roadWidth = 8` to `roadWidth = 16`. The terrain, the
+  gates and the trees all follow.
+- Sit the camera high above the car: `vec3(0, 1, 6)` to
+  `vec3(0, 12, 14)`.
+
+## See also
+3D Height Map shows terrain from images, 3D Trails the ribbons, and 3D
+Dodge Game is a smaller game with the same chase camera. 3D Plugin in
+the full examples has a bigger terrain. Look up `HeightMap`,
+`buildRibbon` and `Camera3D`.
 */

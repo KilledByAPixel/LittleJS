@@ -102,4 +102,74 @@ function gameRenderPost()
 Every tween feature in rows: a property, a callback, a chain, loop,
 pingPong, easing curves, real time, Vector2 and Color. Press P to pause;
 the real time row keeps moving.
+
+## How it works
+Each row is a label and a square that a tween moves from `left` to
+`right`. `addRow` makes a row as a plain object, `{label, color, size,
+pos}`, each 1.2 units below the last, and `gameRender` draws them all.
+`cameraScale = 24` makes a world unit 24 pixels, down from 32, so the
+16 rows fit in the view.
+
+### Property and callback
+The two ways to make a tween. `tweenProperty(target, propertyPath,
+start, end, duration)` sets a field of an object: here the target is
+the row's `pos`, a `Vector2`, and the field is its `x`. `new
+Tween(callback, start, end, duration)` hands the value to a function,
+which keeps it in `countdown`. That row has a size of 0, so no square
+is drawn, and `gameRender` shows the number, rounded up, in its place.
+
+Durations are in seconds.
+
+### then, loop and pingPong
+- `.then(callback)` sets a function to call when the tween completes.
+  `startChain` uses it twice: the slide's `then` starts the shrink, and
+  the shrink's `then` calls `startChain` again, which puts the square
+  back and starts over. A tween that repeats for ever never completes.
+- `.loop()` starts the same tween again from its start value.
+- `.pingPong()` swaps the start and end each time, so it goes back the
+  way it came.
+
+Both take a count, and repeat for ever without one.
+
+### Easing
+An easing curve says how far along a tween is at each moment of its
+time. It can be given as the `ease` option or with `.setEase(curve)`,
+as here.
+
+- `Ease.LINEAR` is an even speed.
+- `Ease.SINE`, `Ease.POWER(n)`, `Ease.BACK`, `Ease.ELASTIC` and
+  `Ease.BOUNCE` are shapes. Each eases in as it is. `Ease.OUT(...)`
+  turns it around to ease out, and `Ease.IN_OUT(...)` does both, the
+  first half in and the second half out.
+- `Ease.BEZIER(x1, y1, x2, y2)` is a curve from two control points, as
+  `cubic-bezier` in CSS. These four numbers are the CSS `ease` curve.
+
+`BACK` and `ELASTIC` go past the end value before they settle on it.
+
+### Real time
+Tweens follow the game's `time`, which stands still while the game is
+paused. The option `{useRealTime: true}` has a tween follow real time
+instead, for a menu or a pause screen. The key is read in
+`gameUpdatePost`, since `gameUpdate` is not called while paused, and
+`setPaused(!getPaused())` flips the pause.
+
+### Vector2 and Color
+A tween's start and end can be two `Vector2`s or two `Color`s. The
+Vector2 row tweens the row's whole `pos`, from a point above its line
+to one below. The Color row tweens the row's `color` and stays in
+place.
+
+`gameRenderPost` draws the hint with `drawTextScreen`, whose position
+and size are in pixels.
+
+## Try it
+- Count down and back up: `10, 0, 5).loop()` to `10, 0, 5).pingPong()`.
+- Give the loop row a count, `1.5).loop();` to `1.5).loop(3);`. After
+  three passes it stops at the right.
+- Change the bezier to `Ease.BEZIER(.7, 0, .3, 1)`, slow at both ends.
+- Change `{useRealTime: true}` to `{}` and that row pauses too.
+
+## See also
+Tween is the short version. Timers shows `Timer`, which also has a real
+time option. `tweenStopAll()` stops every tween, for a change of level.
 */
