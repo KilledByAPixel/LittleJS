@@ -25,7 +25,7 @@ The code is very clean and well documented with many examples to get you started
 
 <div align='center' markdown='1'>
 
-## [Demos](https://killedbyapixel.github.io/LittleJS/examples) | [Arcade](https://killedbyapixel.github.io/LittleJSArcade) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe)  | [AI](https://github.com/KilledByAPixel/LittleJS-AI)
+## [Demos](https://killedbyapixel.github.io/LittleJS/examples) | [Arcade](https://killedbyapixel.github.io/LittleJSArcade) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Reference](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe)  | [AI](https://github.com/KilledByAPixel/LittleJS-AI)
 
 </div>
 
@@ -140,9 +140,10 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 - [Making Awesome Games With LittleJS](https://youtu.be/_dXKU0WgAj8) - A short talk about LittleJS with some tips on how to use it
 - [Tutorial: Breakout](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) - Learn how to make a simple game from scratch
 - [Tutorial: Make a ski game](https://eoinmcgrath.com/little-ski/tutorial.html) - A tutorial by eoinmcg that shows how to make a pixel art style game
-- [LittleJS Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) - A reference sheet to help you get started
+- [LittleJS Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) - The whole API in one file, made to be read by people and by AI coding tools
 - [Making Your Own Level Editor](https://github.com/KilledByAPixel/LittleJS/blob/main/EDITOR.md) - How to turn the built in 2D and 3D level editors into an editor for your own game
 - [LittleJS FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) - Answers to common questions about LittleJS
+- [Changelog](https://github.com/KilledByAPixel/LittleJS/blob/main/CHANGELOG.md) - What changed in each release
 - [JS13k Branch](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - A special branch for size coding events that builds to a 7KB zip
 
 ## Examples

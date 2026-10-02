@@ -18,6 +18,8 @@ If anything in this doc conflicts with the actual repo behavior, follow the repo
 ## Key resources
 
 - `README.md` - Overview and getting started
+- `CHANGELOG.md` - What changed in each release, newest first, with an Unreleased section on top: a change a user would notice gets a line there when it lands (New Changes, Breaking Changes, Fixes), and a release renames the section to its version and date and starts a new one. The GitHub release notes are that section
+- `index.html` at the root only sends the site's visitors on to `examples/`, the example browser, which is the site's front page
 - `REFERENCE.md` - API quick reference
 - `EDITOR.md` - How a game makes the 2D and 3D level editors its own: the hooks, and the editors' own functions a script build can call. A goal of both editors is to be the base of a game's own editor, so a change to a name that page lists is a change to what games use: update the page with it. Its code blocks marked `<!-- test:name -->` are run from the file by [test/editorCustom.test.mjs](test/editorCustom.test.mjs)
 - `examples/` - Working examples demonstrating engine features

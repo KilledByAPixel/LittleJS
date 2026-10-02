@@ -40,6 +40,7 @@
     "!plugins/box2d.wasm.*",
     "COPYRIGHT.txt",
     "FAQ.md",
+    "CHANGELOG.md",
     "REFERENCE.md",
     "EDITOR.md"
   ],
