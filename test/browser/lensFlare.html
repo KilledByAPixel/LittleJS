@@ -55,13 +55,13 @@ smokeRun(async ()=>
     check('a streak is lit along its length', smokePixel(.625, .5)[0] > 20, smokePixel(.625, .5));
     check('and dark above it', smokePixel(.5, .375)[0] < 10, smokePixel(.5, .375));
 
-    // a lamp tagged with a flare, ahead and left of the middle, the sun's flare gone
+    // a lamp with a flare, ahead and left of the middle, the sun's flare gone
     flare.destroy();
     const lamp = new Light3D(vec3(-2, 0, -10), 20);
-    lamp.flare = true;
+    lamp.addFlare();
     engineStep(3);
     const at = .5 - .2 / .577 / 2;
-    check('a light tagged with flare has its glow', smokePixel(at, .5)[0] > 150, smokePixel(at, .5));
+    check('a light with a flare has its glow', smokePixel(at, .5)[0] > 150, smokePixel(at, .5));
     checkGLError();
 });
 </script>

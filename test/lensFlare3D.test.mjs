@@ -189,32 +189,34 @@ test('a spotlight\'s flare shows from inside its beam only', ()=>
     assert.ok(run('flare.getScreenElements().length') > 0, 'turned to shine at the camera');
 });
 
-test('a light tagged with flare has a flare of its own, which goes with the light', ()=>
+test('addFlare gives a light a flare of its own, which goes with the light', ()=>
 {
     const run = load();
     run(`sun(1, 0, 0); var lamp = new Light3D(vec3(0, 0, -10), 10, rgb(1, 0, 0)); var count = engineObjects.length;`);
     assert.equal(run('lamp.flare'), undefined, 'no flare until asked for');
-    run('lamp.flare = true');
-    assert.deepEqual([run('lamp.flare instanceof LensFlare3D'), run('lamp.flare.light === lamp'),
-        run('engineObjects.length - count')], [true, true, 1]);
+    run('var made = lamp.addFlare(2, 3)');
+    assert.deepEqual([run('lamp.flare === made'), run('made instanceof LensFlare3D'), run('made.light === lamp'),
+        run('engineObjects.length - count'), run('made.flareSize'), run('made.count')], [true, true, true, 1, 2, 3]);
     assert.ok(run('lamp.flare.getScreenElements().length') > 0);
-    run('var made = lamp.flare; lamp.flare = true;');
-    assert.equal(run('lamp.flare === made'), true, 'tagged twice, still the one flare');
 
     // a flare of the game's own in its place: the old one goes
     run('var mine = new LensFlare3D(2, 3); lamp.flare = mine;');
     assert.deepEqual([run('lamp.flare === mine'), run('mine.light === lamp'), run('made.destroyed')], [true, true, true]);
-    run('lamp.flare = false');
+    run('lamp.flare = undefined');
     assert.deepEqual([run('lamp.flare'), run('mine.destroyed')], [undefined, true]);
 
-    run('lamp.flare = true; made = lamp.flare; lamp.destroy();');
+    run('made = lamp.addFlare(); var second = lamp.addFlare();');
+    assert.deepEqual([run('made.destroyed'), run('lamp.flare === second')], [true, true], 'another takes its place');
+    run('lamp.destroy();');
+    assert.equal(run('second.destroyed'), true, 'destroyed with its light');
+    run('made = second;');
     assert.equal(run('made.destroyed'), true, 'destroyed with its light');
 });
 
-test('a level\'s Light has a flare property', ()=>
+test('a level\'s Light has a lensFlare property', ()=>
 {
     const run = load();
-    run(`level3DLoad({objects: [{id: 1, type: 'Light', pos: [0, 0, -10], properties: {flare: true}},
+    run(`level3DLoad({objects: [{id: 1, type: 'Light', pos: [0, 0, -10], properties: {lensFlare: true}},
         {id: 2, type: 'Light', pos: [3, 0, -10]}]});
         var lights = engineObjects.filter((o)=> o instanceof Light3D);`);
     assert.deepEqual(json(run, 'lights.map((o)=> o.flare instanceof LensFlare3D)'), [true, false]);
@@ -261,20 +263,20 @@ test('every shape has a tile in the flare texture, and a name that is not a shap
 test('the flare of a persistent light stays with it through a scene change', ()=>
 {
     const run = load();
-    run(`var lamp = new Light3D(vec3(0, 0, -10), 10); lamp.persistent = true; lamp.flare = true;
-        var made = lamp.flare, other = new Light3D(vec3(3, 0, -10), 10); other.flare = true; var gone = other.flare;
+    run(`var lamp = new Light3D(vec3(0, 0, -10), 10); lamp.persistent = true;
+        var made = lamp.addFlare(), other = new Light3D(vec3(3, 0, -10), 10), gone = other.addFlare();
         setScene({});`);
     assert.deepEqual([run('made.destroyed'), run('lamp.flare === made'), run('engineObjects.includes(made)')],
         [false, true, true]);
     assert.deepEqual([run('other.destroyed'), run('gone.destroyed')], [true, true], 'a light that goes takes its flare');
 });
 
-test('a flare destroyed on its own is no longer the flare of its light, and true makes another', ()=>
+test('a flare destroyed on its own is no longer the flare of its light, and addFlare makes another', ()=>
 {
     const run = load();
-    run('var lamp = new Light3D(vec3(0, 0, -10), 10); lamp.flare = true; var made = lamp.flare; made.destroy();');
+    run('var lamp = new Light3D(vec3(0, 0, -10), 10); var made = lamp.addFlare(); made.destroy();');
     assert.equal(run('lamp.flare'), undefined);
-    run('lamp.flare = true');
+    run('lamp.addFlare()');
     assert.deepEqual([run('lamp.flare instanceof LensFlare3D'), run('lamp.flare !== made'), run('lamp.flare.destroyed')],
         [true, true, false]);
 });

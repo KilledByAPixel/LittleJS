@@ -1748,11 +1748,12 @@ flare.elements = [{at: .5, size: .1, color: hsl(.6,1,.6,.3), shape: 'disc'}] // 
                                   // tileInfo for a tile of your own; angle turns it
 flare.visible                     // how much of the sun shows, 0 to 1, eased over fadeTime, to read; what is not
                                   // see through hides it, flare.occlusion = false turns that off
-light.flare = true                // a Light3D's own flare: at the light, in its color, smaller from farther than
-                                  // its radius, hidden by what is in front of it, a spotlight's only from inside
-                                  // its beam; light.flare is then its LensFlare3D, the light's child, or set one
-                                  // of your own, as TypeScript must to change it; false takes it away, and it
-                                  // goes with the light; a level's Light has flare too
+light.addFlare(size, count, intensity, saturation) // gives a Light3D a flare of its own and returns it: at the
+                                  // light, in its color, smaller from farther than its radius, hidden by what is
+                                  // in front of it, a spotlight's only from inside its beam
+light.flare                       // the light's LensFlare3D, its child, or undefined; set one of your own, and
+                                  // destroy it to take it away; it goes with the light; a level's Light has a
+                                  // lensFlare property
 flare.light = lamp                // the same by hand, a flare made on its own and pointed at a light
 // Trails - a ribbon through where the object has been, parent it to something that moves
 new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over
@@ -1896,7 +1897,7 @@ prefab.originOffset                               // from the prefab's origin to
 Box, Sphere, Cylinder   // color, tile (-1 for none), solid (true); 1 unit across, the scale is the size
 Light                   // color, radius (5), intensity (1); cone (0), degrees from its forward to the edge of
                         // its beam, makes it a spotlight aimed by its rotation, softness (.2), shadows (false);
-                        // flare (false) gives it a lens flare
+                        // lensFlare (false) gives it a lens flare
 ```
 
 ### 3D level editor

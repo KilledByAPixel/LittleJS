@@ -1570,7 +1570,7 @@ function render3DFlareTile(shape)
  * sizes along the line from the sun through the middle of the screen
  * - Make one and it shows, over the 3D scene and under what the game draws after, a HUD; destroy it to take it away
  * - It follows render3D.sunDirection, and fades out as the sun leaves the screen or goes behind something
- * - A Light3D gets one of its own with light.flare = true
+ * - A Light3D gets one of its own with light.addFlare()
  * - flareSize, count, intensity and saturation set its look, seed picks another arrangement, and its color tints it,
  *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
  *   give it elements of your own, which may be tiles of the game's

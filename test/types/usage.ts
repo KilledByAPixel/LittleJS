@@ -87,13 +87,16 @@ class ServerEditor extends LevelEditor
 }
 setLevelEditor(new ServerEditor);
 
-// a light's flare: the tag, and a flare changed before it is set, which is how strict TypeScript changes one
+// a light's flare: addFlare hands it back to change, light.flare is the flare or undefined
 const lamp = new Light3D(vec3(), 10);
-lamp.flare = true;
-lamp.flare = false;
+lamp.addFlare().count = 5;
+lamp.addFlare(2, 3).shapes = ['hex'];
+if (lamp.flare)
+    lamp.flare.glowSize = 0;
 const lampFlare = new LensFlare3D(2, 3);
-lampFlare.shapes = ['hex'];
 lampFlare.elements = [{at: 1, size: vec2(.4, .1), color: hsl(0, 0, 1), tileInfo: tile(0), angle: 1}];
 lamp.flare = lampFlare;
-if (lamp.flare instanceof LensFlare3D)
-    lamp.flare.count = 5;
+lamp.flare.count = 5;
+lamp.flare?.destroy(); // takes it away
+// @ts-expect-error
+lamp.flare = true;

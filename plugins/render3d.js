@@ -4727,12 +4727,12 @@ class InstancedMesh3D extends EngineObject3D
  * - radius is a world distance, so scale3D does not change it
  * - An alpha, an intensity or a radius of 0 switches it off, and a light that is off takes none of those slots
  * - Draws nothing but its glow, when it has one; add a small emissive mesh if the lamp itself should be seen
- * - flare = true gives it a lens flare, see LensFlare3D
+ * - addFlare gives it a lens flare, see LensFlare3D
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
  * const torch = new Light3D(vec3(0, 3, 0), 10, hsl(.1, 1, .65));
- * torch.flare = true; // light in the lens when the torch is in view
+ * torch.addFlare();   // light in the lens when the torch is in view
  */
 class Light3D extends EngineObject3D
 {
@@ -4771,22 +4771,29 @@ class Light3D extends EngineObject3D
         this.flareObject = undefined;
     }
 
-    /** The light's lens flare, undefined for none: set it to true for a flare made for it, or to a LensFlare3D of
-     *  your own, and to false to take it away
-     *  - The flare is the light's, changed through light.flare.count and the like: it is attached to the light as
-     *    its child, so it stays through a scene change when the light does, and is destroyed with the light or
-     *    when another takes its place
-     *  - It reads back as the LensFlare3D, never as true or false, which are in its type only since they can be
-     *    set; in TypeScript make the flare, change it, and set it: light.flare = new LensFlare3D(2, 3)
-     *  @type {LensFlare3D|boolean|undefined} */
+    /** Give the light a lens flare, made with the arguments of LensFlare3D, in place of the one it had
+     *  @param {number} [size] - Scales every part of it
+     *  @param {number} [count] - How many ghosts there are, besides the glow at the light
+     *  @param {number} [intensity] - How bright it is
+     *  @param {number} [saturation] - How colorful the ghosts are
+     *  @return {LensFlare3D} - The flare, to change: light.addFlare().shapes = ['hex'] */
+    addFlare(size, count, intensity, saturation)
+    {
+        const flare = new LensFlare3D(size, count, intensity, saturation);
+        this.flare = flare;
+        return flare;
+    }
+
+    /** The light's lens flare, undefined for none: addFlare makes it, or set a LensFlare3D of your own, and
+     *  destroying the flare takes it away
+     *  - The flare is the light's: it is attached to the light as its child, so it stays through a scene change
+     *    when the light does, and is destroyed with the light or when another takes its place
+     *  @type {LensFlare3D|undefined} */
     get flare() { return this.flareObject && !this.flareObject.destroyed ? this.flareObject : undefined; }
 
-    set flare(value)
+    set flare(flare)
     {
-        // a flare that was destroyed on its own is no flare
-        const old = this.flareObject && !this.flareObject.destroyed ? this.flareObject : undefined;
-        if (value === true && old) return;
-        const flare = value === true ? new LensFlare3D : value || undefined;
+        const old = this.flare; // a flare that was destroyed on its own is no flare
         if (flare === old) return;
         old && old.destroy();
         if (flare)
@@ -4794,14 +4801,14 @@ class Light3D extends EngineObject3D
             flare.light = this;
             flare.parent || this.addChild(flare);
         }
-        this.flareObject = flare;
+        this.flareObject = flare || undefined;
     }
 
     /** Destroy the light, and its flare with it
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        this.flare = false;
+        this.flare = undefined;
         super.destroy(immediate);
     }
 

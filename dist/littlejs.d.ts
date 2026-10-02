@@ -9817,12 +9817,12 @@ declare module "littlejsengine" {
      * - radius is a world distance, so scale3D does not change it
      * - An alpha, an intensity or a radius of 0 switches it off, and a light that is off takes none of those slots
      * - Draws nothing but its glow, when it has one; add a small emissive mesh if the lamp itself should be seen
-     * - flare = true gives it a lens flare, see LensFlare3D
+     * - addFlare gives it a lens flare, see LensFlare3D
      * @extends EngineObject3D
      * @memberof Render3D
      * @example
      * const torch = new Light3D(vec3(0, 3, 0), 10, hsl(.1, 1, .65));
-     * torch.flare = true; // light in the lens when the torch is in view
+     * torch.addFlare();   // light in the lens when the torch is in view
      */
     export class Light3D extends EngineObject3D {
         /** Create a point light
@@ -9852,16 +9852,20 @@ declare module "littlejsengine" {
         glowFalloff: number;
         /** @type {LensFlare3D|undefined} */
         flareObject: LensFlare3D | undefined;
-        set flare(arg: boolean | LensFlare3D);
-        /** The light's lens flare, undefined for none: set it to true for a flare made for it, or to a LensFlare3D of
-         *  your own, and to false to take it away
-         *  - The flare is the light's, changed through light.flare.count and the like: it is attached to the light as
-         *    its child, so it stays through a scene change when the light does, and is destroyed with the light or
-         *    when another takes its place
-         *  - It reads back as the LensFlare3D, never as true or false, which are in its type only since they can be
-         *    set; in TypeScript make the flare, change it, and set it: light.flare = new LensFlare3D(2, 3)
-         *  @type {LensFlare3D|boolean|undefined} */
-        get flare(): boolean | LensFlare3D;
+        /** Give the light a lens flare, made with the arguments of LensFlare3D, in place of the one it had
+         *  @param {number} [size] - Scales every part of it
+         *  @param {number} [count] - How many ghosts there are, besides the glow at the light
+         *  @param {number} [intensity] - How bright it is
+         *  @param {number} [saturation] - How colorful the ghosts are
+         *  @return {LensFlare3D} - The flare, to change: light.addFlare().shapes = ['hex'] */
+        addFlare(size?: number, count?: number, intensity?: number, saturation?: number): LensFlare3D;
+        set flare(arg: LensFlare3D);
+        /** The light's lens flare, undefined for none: addFlare makes it, or set a LensFlare3D of your own, and
+         *  destroying the flare takes it away
+         *  - The flare is the light's: it is attached to the light as its child, so it stays through a scene change
+         *    when the light does, and is destroyed with the light or when another takes its place
+         *  @type {LensFlare3D|undefined} */
+        get flare(): LensFlare3D;
     }
     /**
      * DirectionalLight3D - A Light3D that shines from far away with no falloff, like sunlight
@@ -10174,7 +10178,7 @@ declare module "littlejsengine" {
      * sizes along the line from the sun through the middle of the screen
      * - Make one and it shows, over the 3D scene and under what the game draws after, a HUD; destroy it to take it away
      * - It follows render3D.sunDirection, and fades out as the sun leaves the screen or goes behind something
-     * - A Light3D gets one of its own with light.flare = true
+     * - A Light3D gets one of its own with light.addFlare()
      * - flareSize, count, intensity and saturation set its look, seed picks another arrangement, and its color tints it,
      *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
      *   give it elements of your own, which may be tiles of the game's

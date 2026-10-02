@@ -115,7 +115,7 @@ The text at the top shows `visible` as a percentage.
 - Hexagons with a few streaks among them, in place of `['hex']`:
   `['hex', 'hex', 'streak']`
 - A lamp with a flare of its own, at the end of `gameInit`:
-  `new Light3D(vec3(0, 3, 0), 16, hsl(.55,.9,.6)).flare = true;`
+  `new Light3D(vec3(0, 3, 0), 16, hsl(.55,.9,.6)).addFlare();`
 
 ## See also
 3D Lights for lamps with a glow of their own, and 3D Glow for bloom over
