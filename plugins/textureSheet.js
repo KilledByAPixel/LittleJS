@@ -303,6 +303,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
             for (const group of parseAtlas(data))
             {
                 // reserve a block of full size cells, one per frame
+                if (!group.frames.length) continue; // a tag with no frames, the groups after it still load
                 const sourceSize = group.frames[0].sourceSize;
                 const blockSize = vec2(sourceSize.x*group.frames.length, sourceSize.y);
                 const added = textureSheetAdd(blockSize, sourceSize, padding);

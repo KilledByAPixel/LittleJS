@@ -157,3 +157,13 @@ test('an object with no type in a map, a shape or a text, is passed by with no w
     assert.equal(said.length, 1);
     assert.ok(said[0].includes('Missing'));
 });
+
+test('a tween callback that throws leaves the tween system ready for the next update', async ()=>
+{
+    const { run } = await loadGame();
+    run(`var calls = 0; var n = 0; new Tween(()=> { if (n++) throw new Error('mine'); }, 0, 1, 1); new Tween(()=> ++calls, 0, 1, 1);`);
+    assert.throws(()=> run('tweenUpdate(.1, .1)'), /mine/);
+    assert.equal(run('tweenUpdateList.length'), 0, 'the list being walked is let go');
+    run('tweenStopAll(); new Tween(()=> ++calls, 0, 1, 1); calls = 0; tweenUpdate(.1, .1);');
+    assert.equal(run('calls'), 1);
+});

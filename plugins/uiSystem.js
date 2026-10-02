@@ -1882,7 +1882,10 @@ class UIVideo extends UIObject
         if (this.destroyed)
             return;
 
+        // let go of the media too, a paused video keeps what it has loaded
         this.video.pause();
+        this.video.removeAttribute?.('src');
+        this.video.load?.();
         this.video.remove();
         super.destroy();
     }

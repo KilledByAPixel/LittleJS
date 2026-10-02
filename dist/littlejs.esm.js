@@ -13333,8 +13333,11 @@ class PostProcessPlugin
             {
                 // copy main canvas to work canvas at the backing store size,
                 // mainCanvasSize is css pixels so it would lose resolution
-                workCanvas.width = mainCanvas.width;
-                workCanvas.height = mainCanvas.height;
+                // sized again only when the canvas changed, setting a size remakes the canvas even to the same one
+                if (workCanvas.width !== mainCanvas.width || workCanvas.height !== mainCanvas.height)
+                    workCanvas.width = mainCanvas.width, workCanvas.height = mainCanvas.height;
+                else
+                    workContext.clearRect(0, 0, workCanvas.width, workCanvas.height);
                 glCopyToContext(workContext);
                 workContext.drawImage(mainCanvas, 0, 0);
                 // clear the main canvas with clearRect, resizing it would also
@@ -16844,7 +16847,10 @@ class UIVideo extends UIObject
         if (this.destroyed)
             return;
 
+        // let go of the media too, a paused video keeps what it has loaded
         this.video.pause();
+        this.video.removeAttribute?.('src');
+        this.video.load?.();
         this.video.remove();
         super.destroy();
     }
@@ -20183,6 +20189,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
             for (const group of parseAtlas(data))
             {
                 // reserve a block of full size cells, one per frame
+                if (!group.frames.length) continue; // a tag with no frames, the groups after it still load
                 const sourceSize = group.frames[0].sourceSize;
                 const blockSize = vec2(sourceSize.x*group.frames.length, sourceSize.y);
                 const added = textureSheetAdd(blockSize, sourceSize, padding);
@@ -20968,45 +20975,50 @@ function tweenUpdate(gameDelta, realDelta)
     const list = tweenUpdateList.length ? [] : tweenUpdateList, pass = ++tweenUpdatePass;
     for (const t of tweenActive)
         list.push(t);
-    for (let i = list.length; i--;)
+    // the list is let go however the walk ends: a callback that throws must not leave it held, or every
+    // update after would take it for an update still going and make a list of its own
+    try
     {
-        const t = list[i];
-        // stopped, or started again by a callback this update, or during an update a callback ran inside it, which
-        // counts on from this one
-        if (!t.active || t.activePass >= pass) continue;
-        let dt;
-        if (enginePath)
+        for (let i = list.length; i--;)
         {
-            // a paused tween keeps count too, so it does not jump when resumed
-            dt = t.useRealTime ? timeReal - t.lastTimeReal : time - t.lastTime;
-            t.lastTime = time;
-            t.lastTimeReal = timeReal;
-        }
-        else
-            dt = t.useRealTime ? realDelta : gameDelta;
-        if (t.target?.destroyed) { t.stop(); continue; } // its object is gone, paused or not
-        if (t.paused || dt <= 0) continue;
+            const t = list[i];
+            // stopped, or started again by a callback this update, or during an update a callback ran inside it, which
+            // counts on from this one
+            if (!t.active || t.activePass >= pass) continue;
+            let dt;
+            if (enginePath)
+            {
+                // a paused tween keeps count too, so it does not jump when resumed
+                dt = t.useRealTime ? timeReal - t.lastTimeReal : time - t.lastTime;
+                t.lastTime = time;
+                t.lastTimeReal = timeReal;
+            }
+            else
+                dt = t.useRealTime ? realDelta : gameDelta;
+            if (t.target?.destroyed) { t.stop(); continue; } // its object is gone, paused or not
+            if (t.paused || dt <= 0) continue;
 
-        t.life -= dt;
-        if (t.life > 1e-9) // the engine's deltas add up a rounding error short of the duration
-        {
-            t.callback(t.interp(t.life));
-        }
-        else
-        {
-            // Completion: fire end value, remove from active, start the next iteration
-            // of a loop or pingPong, or when there is none it has completed, fire onComplete
-            t.callback(t.interp(0));
-            if (!t.active || t.activePass >= pass)
-                continue; // stopped or restarted by its own callback, the run it was on ends without completing
-            tweenDeactivate(t);
-            const next = t.thenCallback;
-            t.thenCallback = undefined;
-            if (!(next && next()) && t.onComplete)
-                t.onComplete();
+            t.life -= dt;
+            if (t.life > 1e-9) // the engine's deltas add up a rounding error short of the duration
+            {
+                t.callback(t.interp(t.life));
+            }
+            else
+            {
+                // Completion: fire end value, remove from active, start the next iteration
+                // of a loop or pingPong, or when there is none it has completed, fire onComplete
+                t.callback(t.interp(0));
+                if (!t.active || t.activePass >= pass)
+                    continue; // stopped or restarted by its own callback, the run it was on ends without completing
+                tweenDeactivate(t);
+                const next = t.thenCallback;
+                t.thenCallback = undefined;
+                if (!(next && next()) && t.onComplete)
+                    t.onComplete();
+            }
         }
     }
-    list.length = 0;
+    finally { list.length = 0; }
 }
 
 /** Stop every active tween, ending loops too, without calling their then-callbacks.

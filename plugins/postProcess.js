@@ -158,8 +158,11 @@ class PostProcessPlugin
             {
                 // copy main canvas to work canvas at the backing store size,
                 // mainCanvasSize is css pixels so it would lose resolution
-                workCanvas.width = mainCanvas.width;
-                workCanvas.height = mainCanvas.height;
+                // sized again only when the canvas changed, setting a size remakes the canvas even to the same one
+                if (workCanvas.width !== mainCanvas.width || workCanvas.height !== mainCanvas.height)
+                    workCanvas.width = mainCanvas.width, workCanvas.height = mainCanvas.height;
+                else
+                    workContext.clearRect(0, 0, workCanvas.width, workCanvas.height);
                 glCopyToContext(workContext);
                 workContext.drawImage(mainCanvas, 0, 0);
                 // clear the main canvas with clearRect, resizing it would also
