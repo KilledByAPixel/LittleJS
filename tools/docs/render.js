@@ -275,7 +275,7 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <body>
 <header class="top">
 <button class="menu" aria-label="Menu">${MENU_ICON}</button>
-<a class="brand" href="index.html"><img src="favicon.png" alt="" width="24" height="24"> LittleJS <span class="ver">${esc(options.version)}</span></a>
+<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">${esc(options.version)}</span></a>
 <nav class="links">${menu}</nav>
 <div class="search"><input type="search" placeholder="Search" aria-label="Search"><ul class="results" hidden></ul></div>
 <button class="theme" aria-label="Toggle theme">${THEME_ICON}</button>

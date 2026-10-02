@@ -615,8 +615,7 @@ class UISystemPlugin
         }
     }
 
-    /** Destroy and remove all objects
-    *  @memberof UISystem */
+    /** Destroy and remove all objects */
     destroyObjects()
     {
         for (const o of this.uiObjects)

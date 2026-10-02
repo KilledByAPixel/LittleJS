@@ -5751,8 +5751,7 @@ declare module "littlejsengine" {
          *  To end typing in a field, call its stopEditing(), which also fires its onChange and release sound
          *  @type {UIObject|undefined} */
         get keyInputObject(): UIObject;
-        /** Destroy and remove all objects
-        *  @memberof UISystem */
+        /** Destroy and remove all objects */
         destroyObjects(): void;
         /** Get all navigable UI objects sorted by navigationIndex
          *  @return {Array<UIObject>} */
