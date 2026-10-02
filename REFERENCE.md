@@ -1860,7 +1860,8 @@ level3DVoxelSetup(tileInfo, (map)=> {})           // The sheet a level's block m
            "sunDirection": [0.5, 1, 0.3], "sunColor": "#ffffff",
            "fog": [25, 70], "fogColor": "#d6ecff",    // start and end, an end of 0 for none; the horizon color
                                                       // when the level has a sky and no fogColor
-           "shadows": true},
+           "shadows": true,
+           "lensFlare": true},                        // the sun's lens flare, a LensFlare3D made for it
  "objects": []}
 
 // A level can hold a map of blocks, made a VoxelMap when it loads: its corner, its size in cells, and its blocks
@@ -1905,7 +1906,7 @@ Light                   // color, radius (5), intensity (1); cone (0), degrees f
 Debug builds only. `0` on the debug overlay opens it for a level loaded with `level3DLoad`, the game pauses under it.
 To make it your own game's editor, with your own types, keys and panel buttons, see [EDITOR.md](EDITOR.md).
 The panel's Scene box edits the level's scene block: "Level sets the scene" starts one from what is on screen, and
-off leaves the sky, sun, fog and shadows to the game.
+off leaves the sky, sun, fog, shadows and lens flare to the game.
 
 ```javascript
 // Tools, the keys Unity, Unreal and Godot use

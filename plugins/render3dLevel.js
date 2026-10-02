@@ -84,8 +84,9 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *    are added before its objects are made, one the game added itself keeps its place
  *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
  *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
- *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
- *    leaves out stays as the game set it, and a level with no block changes nothing
+ *    sunColor, fog, its start and end, fogColor, the horizon color when not given, shadows, and lensFlare, the
+ *    sun's lens flare; what the block leaves out stays as the game set it, and a level with no block changes
+ *    nothing
  *  @param {Object} level - The level, the level editor edits this same object
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */
@@ -310,7 +311,24 @@ function level3DSceneApply(scene)
     r.fogColor = color(scene.fogColor) || r.fogColor;
     if (typeof scene.shadows === 'boolean')
         r.shadows = scene.shadows;
+    if (typeof scene.lensFlare === 'boolean')
+        level3DSceneFlare(scene.lensFlare);
 }
+
+// the sun's lens flare as a scene sets it: on makes one unless the sun has a flare already, the game's own or an
+// earlier level's, and off takes away the one a scene made, never the game's
+let level3DSunFlare;
+function level3DSceneFlare(on)
+{
+    if (!on)
+    {
+        level3DSunFlare && !level3DSunFlare.destroyed && level3DSunFlare.destroy();
+        level3DSunFlare = undefined;
+    }
+    else if (!level3DSunHasFlare())
+        level3DSunFlare = new LensFlare3D;
+}
+const level3DSunHasFlare = ()=> engineObjects.some((o)=> o instanceof LensFlare3D && !o.destroyed && !o.light);
 
 // a vec3 of an array of three numbers, as the file has them, or the fallback
 function level3DVector(value, fallback)

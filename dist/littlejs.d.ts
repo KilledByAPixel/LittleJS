@@ -10619,8 +10619,9 @@ declare module "littlejsengine" {
      *    are added before its objects are made, one the game added itself keeps its place
      *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
      *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
-     *    sunColor, fog, its start and end, fogColor, the horizon color when not given, and shadows; what the block
-     *    leaves out stays as the game set it, and a level with no block changes nothing
+     *    sunColor, fog, its start and end, fogColor, the horizon color when not given, shadows, and lensFlare, the
+     *    sun's lens flare; what the block leaves out stays as the game set it, and a level with no block changes
+     *    nothing
      *  @param {Object} level - The level, the level editor edits this same object
      *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
      *  @memberof Level3D */

@@ -92,3 +92,27 @@ test('a second level replaces the first one\'s sky, and leaves a sky the game ma
     level3DLoad({scene: {sky: ['#0000ff', '#00ff00', '#ff0000']}});
     assert.notEqual(render3D.sky, first);
 });
+
+test('lensFlare in the scene block gives the sun a lens flare, one, and takes away only its own', ()=>
+{
+    gameSetup();
+    const flares = ()=> LJS.engineObjects.filter((o)=> o instanceof LJS.LensFlare3D && !o.destroyed);
+    level3DLoad({scene: {lensFlare: 'yes'}, objects: []});
+    assert.equal(flares().length, 0, 'a wrong value is no setting');
+    level3DLoad({scene: {lensFlare: true}, objects: []});
+    level3DLoad({scene: {lensFlare: true}, objects: []});
+    assert.equal(flares().length, 1, 'loaded twice, still one flare');
+    assert.equal(flares()[0].light, undefined, 'the sun\'s');
+    level3DLoad({scene: {fog: [1, 2]}, objects: []});
+    assert.equal(flares().length, 1, 'a block that does not say leaves it');
+    level3DLoad({scene: {lensFlare: false}, objects: []});
+    assert.equal(flares().length, 0);
+
+    // a flare the game made is the game's: the level adds none beside it and does not take it away
+    const own = new LJS.LensFlare3D;
+    level3DLoad({scene: {lensFlare: true}, objects: []});
+    assert.deepEqual(flares(), [own]);
+    level3DLoad({scene: {lensFlare: false}, objects: []});
+    assert.deepEqual(flares(), [own]);
+    own.destroy();
+});

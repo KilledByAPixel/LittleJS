@@ -369,6 +369,7 @@ function editor3DSceneRestore(state)
     r.sunDirection = state.sunDirection.copy();
     r.sunColor = state.sunColor.copy();
     r.shadows = state.shadows;
+    level3DSceneFlare(false); // the flare a scene gave the sun, the game's own stays
 }
 
 // the scene on screen as a block, to start a level's scene from: a sky only when the dome's colors are known
@@ -390,6 +391,7 @@ function editor3DSceneFromView()
     scene.fog = [editor3DRound(r.fogStart || 0), editor3DRound(r.fogEnd || 0)];
     scene.fogColor = editor3DHex(r.fogColor || canvasClearColor);
     scene.shadows = !!r.shadows;
+    scene.lensFlare = level3DSunHasFlare();
     return scene;
 }
 
@@ -3378,6 +3380,8 @@ function editor3DSceneUpdate(box)
     color('Fog color', 'The sky\'s horizon color when the level has a sky and no fog color',
         scene.fogColor ?? (sky ? sky[1] : view.fogColor), (hex)=> change('fogColor', hex));
     toggle('Shadows', 'The sun casts shadows', !!value('shadows'), (on)=> change('shadows', on));
+    toggle('Lens flare', 'The sun flares in the lens when it is in view', !!value('lensFlare'), (on)=>
+        change('lensFlare', on));
 }
 
 // the properties box: the position, rotation and scale of the one selected object and an input for each default

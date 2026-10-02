@@ -126,7 +126,7 @@ test('the scene on screen reads as a block, to start a level\'s scene from', asy
     run(fileCode() + `render3D.setSky(rgb(1, 0, 0), rgb(0, 1, 0), rgb(0, 0, 1), .25);
         render3D.sunDirection = vec3(0, 2, 0); render3D.shadows = true;`);
     assert.deepEqual(json(run, 'editor3DSceneFromView()'), {sky: ['#ff0000', '#00ff00', '#0000ff'], ambient: .25,
-        sunDirection: [0, 1, 0], sunColor: '#ffffff', fog: [3, 30], fogColor: '#00ff00', shadows: true});
+        sunDirection: [0, 1, 0], sunColor: '#ffffff', fog: [3, 30], fogColor: '#00ff00', shadows: true, lensFlare: false});
     run('render3D.sky = undefined');
     assert.equal(json(run, 'editor3DSceneFromView()').sky, undefined, 'no sky, no sky colors');
 });
@@ -140,4 +140,18 @@ test('the sun as two angles: around from +z toward +x, and its height over the h
     const back = json(run, 'editor3DSunDirection(90, 30)');
     near(back[0], .866), near(back[1], .5), near(back[2], 0);
     assert.deepEqual(json(run, 'editor3DSunAngles(editor3DSunDirection(200, 35))'), [200, 35]);
+});
+
+test('the lens flare of a scene comes and goes with the block, and a new block says whether the sun has one', async ()=>
+{
+    const { run } = await loadGame();
+    const flares = ()=> run('engineObjects.filter((o)=> o instanceof LensFlare3D && !o.destroyed).length');
+    run(fileCode() + 'editor3DChangeScene((scene={})=> ({...scene, lensFlare: true})); editor3DStrokeEnd();');
+    assert.deepEqual([flares(), json(run, 'level.scene')], [1, {lensFlare: true}]);
+    assert.equal(run('editor3DSceneFromView().lensFlare'), true);
+    run('setFog(10, 50); editor3DStrokeEnd();');
+    assert.equal(flares(), 1, 'another change of the scene leaves one flare');
+    run('editor3DUndo(); editor3DUndo();');
+    assert.equal(flares(), 0, 'the block gone, the flare is gone');
+    assert.equal(run('editor3DSceneFromView().lensFlare'), false);
 });
