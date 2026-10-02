@@ -6,7 +6,7 @@
  * - Produces TypeScript definition file (.d.ts)
  * - Includes plugin files in builds
  * - Validates code and checks for errors
- * - Outputs to dist/ folder
+ * - Outputs to dist/ folder, which is left as it was when a step fails
  */
 
 import fs from 'node:fs';
@@ -19,7 +19,9 @@ const __dirname = dirname(__filename);
 const ROOT_DIR = join(__dirname, '..');
 
 const ENGINE_NAME = 'littlejs';
-const BUILD_FOLDER = join(ROOT_DIR, 'dist');
+// built in a folder of its own and put in dist when all of it is there, so a step that fails leaves dist whole
+const OUTPUT_FOLDER = join(ROOT_DIR, 'dist');
+const BUILD_FOLDER = join(ROOT_DIR, 'dist.build');
 const SOURCE_FOLDER = join(ROOT_DIR, 'src');
 const PLUGIN_FOLDER = join(ROOT_DIR, 'plugins');
 const engineSourceFiles =
@@ -103,6 +105,19 @@ catch (e) { handleError(e, 'Failed to create build folder!'); }
 
 // Build all versions
 await buildAll();
+
+try
+{
+    // every step is done: dist is given what was built, and loses what is no longer built
+    fs.mkdirSync(OUTPUT_FOLDER, { recursive: true });
+    const built = fs.readdirSync(BUILD_FOLDER);
+    for (const file of built)
+        fs.copyFileSync(join(BUILD_FOLDER, file), join(OUTPUT_FOLDER, file));
+    for (const file of fs.readdirSync(OUTPUT_FOLDER))
+        built.includes(file) || fs.rmSync(join(OUTPUT_FOLDER, file), { recursive: true, force: true });
+    fs.rmSync(BUILD_FOLDER, { recursive: true, force: true });
+}
+catch (e) { handleError(e, 'Failed to put the build in dist!'); }
 
 console.log(`Engine built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds! ✨`);
 

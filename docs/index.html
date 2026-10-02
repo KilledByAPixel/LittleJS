@@ -52,7 +52,8 @@ The code is very clean and well documented with many examples to get you started
 <li>Blazing fast WebGL2 + Canvas2D hybrid rendering system</li>
 <li>Apply <a href="https://www.shadertoy.com">Shadertoy</a> style shaders for post-processing effects, or on any object or draw</li>
 <li>2D lights with soft shadows, tinted glass and emissive objects</li>
-<li>Robust particle effect system and <a href="https://killedbyapixel.github.io/LittleJS/examples/particles/">effect design tool</a></li>
+<li>Robust particle effect system with a library of ready made effects and an <a href="https://killedbyapixel.github.io/LittleJS/examples/particles/">effect design tool</a></li>
+<li>Parallax background layers that repeat across a level of any size</li>
 <li>Load sprites and animations into texture sheets at runtime, or import <a href="https://www.codeandweb.com/texturepacker">TexturePacker</a> and <a href="https://www.aseprite.org">Aseprite</a> atlases</li>
 </ul>
 <h3 id="%F0%9F%A7%8A-littlejs-3d">🧊 LittleJS 3D</h3>
@@ -60,8 +61,9 @@ The code is very clean and well documented with many examples to get you started
 <li>Built-in 3D renderer that shares the canvas with your 2D game</li>
 <li>3D objects with the same physics, children and timers as 2D</li>
 <li>Shape builders, extruded sprites and text, and OBJ and glTF model loading</li>
-<li>Height map terrain with collision and raycasts</li>
-<li>Shadow maps, colored lights, specular, emissive glow and fog</li>
+<li>Height map terrain and voxel maps with collision and raycasts</li>
+<li>3D levels and prefabs, built in the 3D level editor and loaded with one call</li>
+<li>Shadow maps, colored lights, spotlights, lens flares, specular, emissive glow and fog</li>
 <li>Particles, trails, billboards and instanced drawing</li>
 <li>Orbit, chase and first person cameras with mouse picking</li>
 <li>Custom shaders on any object</li>
@@ -78,6 +80,7 @@ The code is very clean and well documented with many examples to get you started
 <ul>
 <li>Comprehensive input handling for mouse, keyboard, gamepad, and touch</li>
 <li>Customizable on screen gamepad designed for mobile devices</li>
+<li>Pinch to zoom on touch screens, read the same way as the mouse wheel</li>
 </ul>
 <h3 id="%F0%9F%92%A5-physics">💥 Physics</h3>
 <ul>
@@ -97,9 +100,11 @@ The code is very clean and well documented with many examples to get you started
 <h3 id="%F0%9F%9B%A0%EF%B8%8F-developer-tools">🛠️ Developer Tools</h3>
 <ul>
 <li>Live example browser with code editor</li>
-<li>Import level editor data from <a href="https://github.com/mapeditor/tiled">Tiled</a> or other JSON</li>
+<li>Built-in 2D and 3D level editors that edit your game while it runs, with undo, autosave and prefabs</li>
+<li>Make the editors your own with your game's own object types, keys, buttons and tools, see the <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/EDITOR.md">editor guide</a></li>
+<li>2D levels load and save as <a href="https://github.com/mapeditor/tiled">Tiled</a> JSON, so Tiled can edit them too</li>
 <li>UI system with buttons, sliders, text input and nine-slice skins</li>
-<li>Tween system with easing curves</li>
+<li>Tween system with easing curves, and a scene system for titles, menus and game states</li>
 <li>Debug overlay and primitive rendering system</li>
 <li>Medal tracking system with <a href="https://www.newgrounds.com/">Newgrounds</a> support</li>
 <li>Node.js build system</li>
@@ -147,7 +152,7 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 <ul>
 <li><a href="https://killedbyapixel.github.io/LittleJS/examples/">Example Browser</a> - Live example browser with all examples and editable source</li>
 <li><a href="https://killedbyapixel.github.io/LittleJSArcade/">LittleJS Arcade</a> - Over 50 example games you can use as starter projects</li>
-<li><a href="https://github.com/KilledByAPixel/LittleJS/tree/main/examples/shorts">Short Examples</a> - 80+ single-file demos showing off individual engine features</li>
+<li><a href="https://github.com/KilledByAPixel/LittleJS/tree/main/examples/shorts">Short Examples</a> - 100+ single-file demos showing off individual engine features</li>
 <li><a href="https://killedbyapixel.github.io/LittleJS/examples/breakout/">Breakout</a> - Block breaking game with post-processing effects</li>
 <li><a href="https://killedbyapixel.github.io/LittleJS/examples/puzzle/">Puzzle Game</a> - Match 3 puzzle game with HD rendering and high score tracking</li>
 <li><a href="https://killedbyapixel.github.io/LittleJS/examples/platformer/">Platformer</a> - Platformer/shooter demo that loads level data</li>

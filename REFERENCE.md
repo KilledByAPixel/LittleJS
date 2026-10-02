@@ -2295,8 +2295,8 @@ debugWatermark       // Should watermark with FPS appear in debug mode?
 
 ## Deprecated
 
-Old names and argument orders that still work, marked `@deprecated` in the types; use the new ones, the old will be
-removed in a later release.
+Old names and argument orders that still work, marked `@deprecated` in the types; use the new ones, the old are
+kept until 1.25 at least.
 
 ```javascript
 obj.collideTiles                         // since 1.20, use obj.collideLevel, the same flag

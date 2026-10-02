@@ -15,7 +15,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT_DIR = join(__dirname, '..');
 
-const DOCS_FOLDER = join(ROOT_DIR, 'docs');
+// built in a folder of its own and put in docs when all of it is there, so a build that fails leaves the site whole
+const OUTPUT_FOLDER = join(ROOT_DIR, 'docs');
+const DOCS_FOLDER = join(ROOT_DIR, 'docs.build');
 const EXAMPLE_FOLDER = join(ROOT_DIR, 'examples');
 const CONFIG_FILE = 'tools/jsdoc.config.json';
 
@@ -47,7 +49,7 @@ process.chdir(ROOT_DIR);
 
 try
 {
-    // clear the docs folder so pages for removed symbols do not linger
+    // a fresh folder to build in, one left by a build that failed goes first
     fs.rmSync(DOCS_FOLDER, { recursive: true, force: true });
 }
 catch (e) { handleError(e, 'Failed to clear docs folder!'); }
@@ -58,7 +60,7 @@ try
 {
     // parsing progress stays live on stdout, the messages on stderr are captured
     // so the expected tag errors can be told apart from real ones
-    execSync(`npx jsdoc -c ${CONFIG_FILE}`, { stdio: ['ignore', 'inherit', 'pipe'] });
+    execSync(`npx jsdoc -c ${CONFIG_FILE} -d "${DOCS_FOLDER}"`, { stdio: ['ignore', 'inherit', 'pipe'] });
 }
 catch (e)
 {
@@ -79,6 +81,28 @@ try
         fs.copyFileSync(file, join(imageFolder, basename(file)));
 }
 catch (e) { handleError(e, 'Failed to copy static files!'); }
+
+try
+{
+    // all of it is there: the site is given every page built, and then loses the ones no longer built, so pages
+    // for removed symbols do not linger; copied, not renamed, since a folder just written may still be held open
+    fs.cpSync(DOCS_FOLDER, OUTPUT_FOLDER, { recursive: true, force: true });
+    const prune = (folder, built)=>
+    {
+        for (const name of fs.readdirSync(folder))
+        {
+            const path = join(folder, name), from = join(built, name);
+            if (!fs.existsSync(from))
+                fs.rmSync(path, { recursive: true, force: true });
+            else if (fs.statSync(path).isDirectory())
+                prune(path, from);
+        }
+    };
+    prune(OUTPUT_FOLDER, DOCS_FOLDER);
+}
+catch (e) { handleError(e, 'Failed to put the docs in place!'); }
+try { fs.rmSync(DOCS_FOLDER, { recursive: true, force: true }); }
+catch { console.warn('Build Docs -- docs.build could not be removed, the next build clears it'); }
 
 console.log(`Docs built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds! ✨`);
 

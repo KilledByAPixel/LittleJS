@@ -5,6 +5,10 @@ package-lock.json
 # local files
 local/
 
+# builds in progress, put in dist and docs when they are whole
+/dist.build
+/docs.build
+
 # release builds
 /LittleJS-*.zip
 

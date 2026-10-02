@@ -40,7 +40,8 @@ The code is very clean and well documented with many examples to get you started
 - Blazing fast WebGL2 + Canvas2D hybrid rendering system
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects, or on any object or draw
 - 2D lights with soft shadows, tinted glass and emissive objects
-- Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
+- Robust particle effect system with a library of ready made effects and an [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
+- Parallax background layers that repeat across a level of any size
 - Load sprites and animations into texture sheets at runtime, or import [TexturePacker](https://www.codeandweb.com/texturepacker) and [Aseprite](https://www.aseprite.org) atlases
 
 ### 🧊 LittleJS 3D
@@ -48,8 +49,9 @@ The code is very clean and well documented with many examples to get you started
 - Built-in 3D renderer that shares the canvas with your 2D game
 - 3D objects with the same physics, children and timers as 2D
 - Shape builders, extruded sprites and text, and OBJ and glTF model loading
-- Height map terrain with collision and raycasts
-- Shadow maps, colored lights, specular, emissive glow and fog
+- Height map terrain and voxel maps with collision and raycasts
+- 3D levels and prefabs, built in the 3D level editor and loaded with one call
+- Shadow maps, colored lights, spotlights, lens flares, specular, emissive glow and fog
 - Particles, trails, billboards and instanced drawing
 - Orbit, chase and first person cameras with mouse picking
 - Custom shaders on any object
@@ -66,6 +68,7 @@ The code is very clean and well documented with many examples to get you started
 
 - Comprehensive input handling for mouse, keyboard, gamepad, and touch
 - Customizable on screen gamepad designed for mobile devices
+- Pinch to zoom on touch screens, read the same way as the mouse wheel
 
 ### 💥 Physics
 
@@ -85,9 +88,11 @@ The code is very clean and well documented with many examples to get you started
 ### 🛠️ Developer Tools
 
 - Live example browser with code editor
-- Import level editor data from [Tiled](https://github.com/mapeditor/tiled) or other JSON
+- Built-in 2D and 3D level editors that edit your game while it runs, with undo, autosave and prefabs
+- Make the editors your own with your game's own object types, keys, buttons and tools, see the [editor guide](https://github.com/KilledByAPixel/LittleJS/blob/main/EDITOR.md)
+- 2D levels load and save as [Tiled](https://github.com/mapeditor/tiled) JSON, so Tiled can edit them too
 - UI system with buttons, sliders, text input and nine-slice skins
-- Tween system with easing curves
+- Tween system with easing curves, and a scene system for titles, menus and game states
 - Debug overlay and primitive rendering system
 - Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
 - Node.js build system
@@ -146,7 +151,7 @@ LittleJS comes with several demos both for learning and using as starter project
 
 - [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browser with all examples and editable source
 - [LittleJS Arcade](https://killedbyapixel.github.io/LittleJSArcade/) - Over 50 example games you can use as starter projects
-- [Short Examples](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/shorts) - 80+ single-file demos showing off individual engine features
+- [Short Examples](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/shorts) - 100+ single-file demos showing off individual engine features
 - [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post-processing effects
 - [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
 - [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data
