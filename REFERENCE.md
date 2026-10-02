@@ -2311,10 +2311,6 @@ drawNineSliceScreen(pos, size, startTile, borderSize, extraSpace, angle) // sinc
 drawThreeSliceScreen(pos, size, startTile, borderSize, extraSpace, angle) // (pos, size, startTile, color, ...)
 ```
 
-ZzFXM, the tracker music plugin, was removed in 1.24. A game with a song in that format includes
-[ZzFXM](https://github.com/keithclark/ZzFXM) itself and hands the samples it makes to a `Sound` through
-`sampleChannels`.
-
 [LittleJS Engine](https://github.com/KilledByAPixel/LittleJS) Copyright 2021 Frank Force
 
 ![LittleJS Logo](examples/favicon.png)
