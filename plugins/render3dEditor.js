@@ -1598,7 +1598,7 @@ function editor3DSetOpen(open)
         setDebugOverlay(false); // out of the way of the level
         editor3DIsOpen = true;
         editor3DRestore();
-        levelEditor.onOpen();
+        editorCall('onOpen');
         editorKeyClashes();
     }
     else
@@ -1610,7 +1610,7 @@ function editor3DSetOpen(open)
         editor3DToolHeld = false;
         editor3DIsOpen = false;
         setPaused(editor3DGamePaused);
-        levelEditor.onClose();
+        editorCall('onClose');
     }
     inputCapture(editor3DViewOn());
 }
@@ -1645,9 +1645,15 @@ function editor3DRestart()
     levelEditor.onRestart();
 }
 
-// a key as addKey spells it, as the 3D editor's tables have it, by its position: a letter, a digit, or its name
+// a key as addKey spells it, as the 3D editor's tables have it, by its position: a letter, a digit, a mark by the
+// key it is on, or its name
+const editor3DKeyMarks = {'?': 'Slash', '/': 'Slash', ',': 'Comma', '.': 'Period', ';': 'Semicolon', "'": 'Quote',
+    '[': 'BracketLeft', ']': 'BracketRight', '-': 'Minus', '=': 'Equal', '\\': 'Backslash', '`': 'Backquote'};
 function editor3DKeyCode(name)
-{ return name.length !== 1 ? name : name >= '0' && name <= '9' ? 'Digit' + name : 'Key' + name.toUpperCase(); }
+{
+    return name.length !== 1 ? name : editor3DKeyMarks[name] ??
+        (name >= '0' && name <= '9' ? 'Digit' + name : 'Key' + name.toUpperCase());
+}
 
 // the 3D editor's edit functions, what levelEditor.edit3D gives a game's own keys, buttons and tools
 const editor3DEdit =
@@ -1661,14 +1667,14 @@ const editor3DEdit =
     changePart(name, change) { return editor3DLevelPartNames.includes(name) && editor3DChangePart(name, change); },
     strokeEnd() { editor3DStrokeEnd(); },
     strokeCancel() { editor3DStrokeCancel(); },
-    place(type, pos3D) { return editor3DPlace(type, pos3D); },
+    place(type, pos3D) { return level3DTypes.has(type) ? editor3DPlace(type, pos3D) : undefined; },
     setTransform(object, pos3D, rotation, scale3D) { editor3DSetTransform(object, pos3D, rotation, scale3D); },
     setProperty(object, name, value)
     { editor3DSetProperty(object, name, value, level3DTypes.get(object.type)?.defaults[name]); },
     pos(object) { return editor3DPos(object); },
     rotation(object) { return editor3DRotation(object); },
     scale(object) { return editor3DScale(object); },
-    mousePoint() { return editor3DIsOpen ? editor3DWithView(editor3DMousePoint) : undefined; },
+    mousePoint() { return editor3DIsOpen && !editor3DMouseOnPanel ? editor3DWithView(editor3DMousePoint) : undefined; },
     undo(redo=false) { return editor3DUndo(redo); },
     toJSON() { return editor3DLevel ? editor3DLevelJSON() : ''; },
 };
@@ -1711,7 +1717,7 @@ function editor3DToolUpdate(ray, idle, shift, ctrl)
         return false;
     }
     const at = editor3DToolAt(ray, shift, ctrl);
-    editor3DHover = undefined;
+    editor3DHover = editor3DBlockHover = editor3DTerrainHover = undefined; // the editor's own cursors are put away
     if (editor3DToolHeld && mouseWasPressed(2))
     {
         editor3DStrokeCancel();
@@ -1734,8 +1740,10 @@ function editor3DToolUpdate(ray, idle, shift, ctrl)
 function editor3DDrawGame()
 {
     if (!editor3DIsOpen) return;
-    levelEditor.onDraw();
-    editorGameTool()?.onDraw?.(editor3DToolAt());
+    editorCall('onDraw');
+    const held = (...codes)=> inputCaptureRead(()=> codes.some((code)=> keyIsDown(code)));
+    editorGameTool()?.onDraw?.(editor3DToolAt(undefined, held('ShiftLeft', 'ShiftRight'),
+        held('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight')));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1860,17 +1868,20 @@ async function editor3DSave(pickAgain=false)
     const open = editor3DPrefabStack[editor3DPrefabStack.length - 1];
     if (open)
     {
-        // inside a prefab, Save writes the prefab as a file of its own
-        saveText(editor3DLevelJSON(level), open.name + '.json', 'application/json');
+        // inside a prefab, Save writes the prefab as a file of its own, or the game keeps it itself
+        const text = editor3DLevelJSON(level), name = open.name + '.json';
+        const saved = JSON.stringify(editor3DObjects()); // as the file has it
+        const kept = await editorCall('onSave', text, name) === true;
+        kept || saveText(text, name, 'application/json');
         editor3DPrefabDirty.delete(open.name);
-        open.saved = JSON.stringify(editor3DObjects()); // as the file has it now
-        return 'downloaded';
+        open.saved = saved;
+        return kept ? 'kept' : 'downloaded';
     }
     // what is written, kept as it is now: the level can change while the file is picked and written, and those
     // edits are not in the file, so they stay in the autosave; the level and record are this one's, whichever is
     // open by then
     const text = editor3DLevelJSON(level);
-    if (levelEditor.onSave(text, record.fileName) === true) return 'kept'; // the game kept it itself
+    if (await editorCall('onSave', text, record.fileName) === true) return 'kept'; // the game kept it itself
     const saved = (async ()=> { await record.saving; return editor3DSaveText(level, record, text, pickAgain); })();
     record.saving = saved.catch(()=> {});
     return saved;
@@ -2449,7 +2460,7 @@ function editor3DEditorUpdate(seconds)
 
     const ray = render3D.screenToRay(mouse), idle = !cameraDrag && !editor3DMouseOnPanel && !editor3DDrag;
     editor3DHover = idle ? editor3DHandleAt(mouse) : undefined;
-    levelEditor.onUpdate();
+    editorCall('onUpdate');
     if (editor3DToolUpdate(ray, idle, shift, ctrl)) return; // a tool of the game's own has the mouse
 
     // the Blocks tool takes the mouse while the level has a map: Shift removes, Ctrl repaints

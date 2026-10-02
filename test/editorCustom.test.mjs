@@ -96,7 +96,7 @@ test('3D: the button of the page places five as one undo', async ()=>
 test('3D: the tool of the page lays posts along a drag, one undo', async ()=>
 {
     const { run } = await loadGame(true);
-    run(open3D + blocks.tool3d + 'inputData[0].KeyP = 3;');
+    run(open3D + blocks.tool3d + 'inputData[0].KeyO = 3;');
     step(run);
     assert.equal(run('levelEditor.tool'), 'Posts');
     run(mouse3D(10, 10) + 'inputData[0][0] = 3;'); step(run);

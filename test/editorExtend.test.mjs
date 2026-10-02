@@ -322,3 +322,110 @@ test('3D: the hooks a game sets or overrides are the ones the 3D editor calls, a
     assert.equal(await run('editor3DSave()'), 'kept');
     assert.deepEqual([json(run, 'log'), run('files.length')], [['restart', '2 level3D.json'], 0]);
 });
+
+test('a moment the game takes away again is not called, in either editor', async ()=>
+{
+    for (const is3D of [false, true])
+    {
+        const { run } = await loadGame(is3D);
+        run((is3D ? open3D : open2D) + `saveText = ()=> {};
+            for (const name of ['onOpen', 'onClose', 'onUpdate', 'onDraw', 'onPanel', 'onSave'])
+                levelEditor[name] = name === 'onSave' ? null : undefined;`);
+        step(run);
+        run(is3D ? 'editor3DDrawGame()' : 'editorRenderGame()');
+        await run(is3D ? 'editor3DSave()' : 'editorSave(editorRecord())');
+        run('levelEditor.close(); levelEditor.open();');
+        assert.equal(run('levelEditor.isOpen'), true);
+    }
+});
+
+test('a key is spelled one way for both editors: names in any case, Space, and Ctrl in front', async ()=>
+{
+    const { run } = await loadGame();
+    run(`for (const key of ['DELETE', 'f2', ' ', 'Ctrl+K', 'pageup', 'K']) levelEditor.addKey(key, ()=> {});`);
+    assert.deepEqual(json(run, 'Object.keys(levelEditor.keys)'), ['Delete', 'F2', 'Space', 'ctrl+k', 'PageUp', 'k']);
+});
+
+test('a key the editors keep for themselves, or one with a modifier they do not have, is not taken, with a warning', async ()=>
+{
+    const { run } = await loadGame();
+    const said = warned(run, `for (const key of ['Escape', '0', 'shift+k', 'alt+x']) levelEditor.addKey(key, ()=> {});`);
+    assert.equal(said.length, 4);
+    assert.deepEqual(json(run, 'Object.keys(levelEditor.keys)'), []);
+});
+
+test('2D: a digit of the game\'s own takes the place of the layer it picked', async ()=>
+{
+    const { run } = await loadGame();
+    run(open2D + 'var mine = 0;');
+    const said = warned(run, `levelEditor.addKey('2', ()=> ++mine);`);
+    assert.equal(said.length, 1, '2 picks the second layer');
+    run(`typed('2'); inputData[0].Digit2 = 3;`);
+    step(run);
+    assert.deepEqual([run('mine'), run('editorObjectLayer')], [1, undefined], 'still on the tile layer');
+});
+
+test('3D: punctuation is spelled as it is typed, ? is the key it is on', async ()=>
+{
+    const { run } = await loadGame(true);
+    run(open3D + `var mine = 0, help = editor3DHelp; levelEditor.addKey('?', ()=> ++mine); inputData[0].Slash = 3;`);
+    step(run);
+    assert.deepEqual([run('mine'), run('editor3DHelp === help')], [1, true]);
+});
+
+test('2D: Escape takes a tool\'s held press back and stays in the editor, and keys wait for the press to end', async ()=>
+{
+    const { run } = await loadGame();
+    run(open2D + `var keyed = 0; levelEditor.addKey('k', ()=> ++keyed);
+        levelEditor.addTool('Dots', { key: 'p', onPress(at) { levelEditor.edit2D.paint(at.cell, 5); } });
+        levelEditor.tool = 'Dots';` + mouse2D(1, 0) + 'inputData[0][0] = 3;');
+    step(run);
+    run(`inputData[0][0] = 1; typed('k'); typed('p');`);
+    assert.deepEqual([run('keyed'), run('levelEditor.tool')], [0, 'Dots'], 'held, the keys do nothing');
+    run('inputData[0].Escape = 3;');
+    step(run);
+    assert.deepEqual([json(run, 'map.layers[0].data[4]'), run('editorUndoList.length'), run('levelEditor.isOpen')],
+        [0, 0, true]);
+});
+
+test('3D: the editor\'s own Blocks and Terrain cursors are put away while a tool of the game\'s is on', async ()=>
+{
+    const { run } = await loadGame(true);
+    run(open3D + `levelEditor.addTool('Posts', {}); levelEditor.tool = 'Posts';
+        editor3DBlockHover = {cell: vec3(), mode: 'place'}; editor3DTerrainHover = vec3();`);
+    step(run);
+    assert.deepEqual([run('editor3DBlockHover'), run('editor3DTerrainHover')], [undefined, undefined]);
+});
+
+test('onSave may be async, and Save inside an open prefab asks it too', async ()=>
+{
+    const { run } = await loadGame(true);
+    run(open3D + `var files = [], kept = []; saveText = (text, name)=> files.push(name);
+        levelEditor.onSave = async (text, name)=> { kept.push(name); return true; };
+        editor3DSelection.add(1); editor3DSelection.add(2); editor3DMakePrefab('Pair');`);
+    assert.equal(await run('editor3DSave()'), 'kept');
+    run('editor3DPrefabEnter()');
+    assert.equal(await run('editor3DSave()'), 'kept');
+    assert.deepEqual([json(run, 'kept'), run('files.length')], [['level3D.json', 'Pair.json'], 0]);
+});
+
+test('the edit functions say no where there is nothing to do', async ()=>
+{
+    const { run } = await loadGame(true);
+    run(open3D + 'var edit = levelEditor.edit3D; editor3DMouseOnPanel = true;');
+    assert.deepEqual([run(`edit.place('Nothing', vec3())`), run('level.objects.length'), run('edit.mousePoint()')],
+        [undefined, 2, undefined]);
+    const game = await loadGame();
+    game.run(open2D + 'var edit = levelEditor.edit2D;');
+    assert.equal(game.run('edit.paint(vec2(1, 0), 5, 7)'), true);
+    game.run('edit.strokeEnd(); editorHover = vec2(1, 0); editorSelectLayer(editorLayers().find((layer)=> layer.isObjects));');
+    assert.equal(game.run('edit.hover'), undefined, 'no cell on an object layer');
+    assert.equal(json(game.run, 'editorGidToTile(map.layers[0].data[4]).direction'), 3, 'a direction past 3 comes around');
+});
+
+test('a tool added again under its name takes the place of the first, its key too', async ()=>
+{
+    const { run } = await loadGame();
+    run(`levelEditor.addTool('Dots', {key: 'p'}); levelEditor.addTool('Dots', {key: 'o'});`);
+    assert.deepEqual(json(run, 'Object.keys(levelEditor.keys)'), ['o']);
+});

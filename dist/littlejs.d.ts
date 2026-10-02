@@ -273,6 +273,144 @@ declare module "littlejsengine" {
         onDraw?: (arg0: EditorToolAt) => any;
     };
     /**
+     * - The 2D level editor's edit functions, levelEditor.edit2D
+     */
+    export type EditorEdit2D = {
+        /**
+         * - The Tiled map of the selected layer
+         */
+        map: any | undefined;
+        /**
+         * - The selected tile layer, undefined on an object layer
+         */
+        layer: TileLayer | undefined;
+        /**
+         * - A copy of the selected object layer's objects, as Tiled has them
+         */
+        objects: Array<any>;
+        /**
+         * - The cell under the mouse on the selected tile layer
+         */
+        hover: Vector2 | undefined;
+        /**
+         * - The selected objects' ids
+         */
+        selection: Set<number>;
+        /**
+         * - Set a cell of the selected tile layer
+         * to a tile index, -1 erases, with a direction 0 to 3 and a mirror; false off the layer or with none
+         */
+        paint: (arg0: Vector2, arg1: number, ...args: any[]) => boolean;
+        /**
+         * - Edit a copy of the selected object
+         * layer's objects; false when nothing changed
+         */
+        changeObjects: (arg0: (arg0: Array<any>) => void) => boolean;
+        /**
+         * - End the edit: one undo step, and the autosave
+         */
+        strokeEnd: () => void;
+        /**
+         * - Take the edit being made back
+         */
+        strokeCancel: () => void;
+        /**
+         * - Many paints with one redraw a layer
+         */
+        bulk: (arg0: () => void) => void;
+        /**
+         * - Undo, or redo with true
+         */
+        undo: (...args: any[]) => any;
+        /**
+         * - The map as the text Save writes
+         */
+        toJSON: () => string;
+    };
+    /**
+     * - The 3D level editor's edit functions, levelEditor.edit3D; a position, a
+     *   rotation and a scale are Vector3, the rotation in degrees
+     */
+    export type EditorEdit3D = {
+        /**
+         * - The level object being edited
+         */
+        level: any | undefined;
+        /**
+         * - Its objects, the list in the level: read it, edit through change
+         */
+        objects: Array<any>;
+        /**
+         * - The selected objects' ids
+         */
+        selection: Set<number>;
+        /**
+         * - The selected objects
+         */
+        selected: () => Array<any>;
+        /**
+         * - What the game made for an object's id
+         */
+        made: (arg0: number) => any;
+        /**
+         * - Edit a copy of the object list; false
+         * when nothing changed
+         */
+        change: (arg0: (arg0: Array<any>) => void) => boolean;
+        /**
+         * - Edit the level's scene, voxels, terrain
+         * or prefabs block
+         */
+        changePart: (arg0: string, arg1: (arg0: any) => any) => boolean;
+        /**
+         * - End the edit: one undo step, and the autosave
+         */
+        strokeEnd: () => void;
+        /**
+         * - Take the edit being made back
+         */
+        strokeCancel: () => void;
+        /**
+         * - Add an object of a type at a position, selected;
+         * its id, undefined when there is no such type or the level can not be edited
+         */
+        place: (arg0: string, arg1: any) => number | undefined;
+        /**
+         * - Write a place, a rotation and a scale on an
+         * object of the list given to change; one left out is kept
+         */
+        setTransform: (arg0: any, ...args: any[]) => void;
+        /**
+         * - Write a property on an object of the list given
+         * to change, left out of the file when it is the type's default
+         */
+        setProperty: (arg0: any, arg1: string, arg2: any) => void;
+        /**
+         * - An object's position
+         */
+        pos: (arg0: any) => any;
+        /**
+         * - Its rotation, in degrees
+         */
+        rotation: (arg0: any) => any;
+        /**
+         * - Its scale
+         */
+        scale: (arg0: any) => any;
+        /**
+         * - Where the mouse is on the level or the ground, undefined over the panel
+         */
+        mousePoint: () => any;
+        /**
+         * - Undo, or redo with true
+         */
+        undo: (...args: any[]) => boolean;
+        /**
+         * - The level as the text Save writes
+         */
+        toJSON: () => string;
+    };
+    /**
      * LittleJS - The Tiny Fast JavaScript Game Engine
      * MIT License - Copyright 2021 Frank Force
      *
@@ -556,6 +694,52 @@ declare module "littlejsengine" {
      *  @memberof Editor
      */
     /**
+     *  @typedef {Object} EditorEdit2D - The 2D level editor's edit functions, levelEditor.edit2D
+     *  @property {Object|undefined} map - The Tiled map of the selected layer
+     *  @property {TileLayer|undefined} layer - The selected tile layer, undefined on an object layer
+     *  @property {Array<Object>} objects - A copy of the selected object layer's objects, as Tiled has them
+     *  @property {Vector2|undefined} hover - The cell under the mouse on the selected tile layer
+     *  @property {Set<number>} selection - The selected objects' ids
+     *  @property {function(Vector2, number, ...any): boolean} paint - Set a cell of the selected tile layer
+     *    to a tile index, -1 erases, with a direction 0 to 3 and a mirror; false off the layer or with none
+     *  @property {function(function(Array<Object>): void): boolean} changeObjects - Edit a copy of the selected object
+     *    layer's objects; false when nothing changed
+     *  @property {function(): void} strokeEnd - End the edit: one undo step, and the autosave
+     *  @property {function(): void} strokeCancel - Take the edit being made back
+     *  @property {function(function(): void): void} bulk - Many paints with one redraw a layer
+     *  @property {function(...any): any} undo - Undo, or redo with true
+     *  @property {function(): string} toJSON - The map as the text Save writes
+     *  @memberof Editor
+     */
+    /**
+     *  @typedef {Object} EditorEdit3D - The 3D level editor's edit functions, levelEditor.edit3D; a position, a
+     *    rotation and a scale are Vector3, the rotation in degrees
+     *  @property {Object|undefined} level - The level object being edited
+     *  @property {Array<Object>} objects - Its objects, the list in the level: read it, edit through change
+     *  @property {Set<number>} selection - The selected objects' ids
+     *  @property {function(): Array<Object>} selected - The selected objects
+     *  @property {function(number): any} made - What the game made for an object's id
+     *  @property {function(function(Array<Object>): void): boolean} change - Edit a copy of the object list; false
+     *    when nothing changed
+     *  @property {function(string, function(any): any): boolean} changePart - Edit the level's scene, voxels, terrain
+     *    or prefabs block
+     *  @property {function(): void} strokeEnd - End the edit: one undo step, and the autosave
+     *  @property {function(): void} strokeCancel - Take the edit being made back
+     *  @property {function(string, any): number|undefined} place - Add an object of a type at a position, selected;
+     *    its id, undefined when there is no such type or the level can not be edited
+     *  @property {function(Object, ...any): void} setTransform - Write a place, a rotation and a scale on an
+     *    object of the list given to change; one left out is kept
+     *  @property {function(Object, string, any): void} setProperty - Write a property on an object of the list given
+     *    to change, left out of the file when it is the type's default
+     *  @property {function(Object): any} pos - An object's position
+     *  @property {function(Object): any} rotation - Its rotation, in degrees
+     *  @property {function(Object): any} scale - Its scale
+     *  @property {function(): any} mousePoint - Where the mouse is on the level or the ground, undefined over the panel
+     *  @property {function(...any): boolean} undo - Undo, or redo with true
+     *  @property {function(): string} toJSON - The level as the text Save writes
+     *  @memberof Editor
+     */
+    /**
      * The level editor, open it to pause the game and edit its level, close it to play on with the changes
      * - One of it, levelEditor, 0 on the debug overlay opens and closes it too
      * - A game makes it its own: it sets the hooks, adds keys, panel buttons and tools, or extends this class and
@@ -647,16 +831,19 @@ declare module "littlejsengine" {
          *  the selected TileLayer; objects, a copy of the selected object layer's; hover, the cell under the mouse;
          *  selection, the selected objects' ids; paint(cell, tile, direction, mirror), a tile index, -1 erases;
          *  changeObjects((list)=> ...); strokeEnd() and strokeCancel(); bulk(()=> ...); undo(redo); toJSON()
-         *  @return {Object} */
-        get edit2D(): any;
+         *  @return {EditorEdit2D} */
+        get edit2D(): EditorEdit2D;
         /** The 3D editor's edit functions, undefined without the 3D plugins: level; objects; selection, a Set of ids;
          *  selected(); made(id); change((list)=> ...); changePart(name, (part)=> ...); strokeEnd() and strokeCancel();
          *  place(type, pos3D); setTransform(object, pos3D, rotationDegrees, scale3D); setProperty(object, name, value);
          *  pos(object), rotation(object) and scale(object); mousePoint(); undo(redo); toJSON()
-         *  @return {Object|undefined} */
-        get edit3D(): any;
+         *  @return {EditorEdit3D|undefined} */
+        get edit3D(): EditorEdit3D;
         /** Add a key of the game's own to the editor, the 2D and the 3D one
-         *  @param {string} key - A letter or digit, 'k', or a key's name, 'Delete' or 'F2'; 'ctrl+k' with Ctrl or Cmd
+         *  - Escape and 0 are the editor's own, to play and to exit, and Ctrl is the one modifier: Shift is given to
+         *    the action
+         *  @param {string} key - A letter or digit, 'k', or a key's name in any case, 'Delete', 'F2', 'Enter', 'Space';
+         *    'ctrl+k' with Ctrl or Cmd
          *  @param {function(boolean): any} action - Called with whether Shift is held; returning false says it did
          *    nothing, and the key is left to the browser
          *  @param {string} [helpLine] - A line for the editor's help */

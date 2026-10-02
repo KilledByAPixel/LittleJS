@@ -89,9 +89,14 @@ objectLayersAddType('Coin', Coin, {value: 1});
 
 ## A key of your own
 
-`addKey(key, action, helpLine)`. The key is a letter or digit (`'k'`), a key's name (`'Delete'`, `'F2'`), or
-either with `'ctrl+'` in front. The action is called with whether Shift is held. Return `false` when it did
-nothing. A key the editor already uses is replaced by yours, with a warning in the console.
+`addKey(key, action, helpLine)`. The key is a letter or digit (`'k'`), a key's name in any case (`'Delete'`,
+`'F2'`, `'Enter'`, `'Space'`), or either with `'ctrl+'` in front. The action is called with whether Shift is
+held. Return `false` when it did nothing.
+
+- A key the editor already uses is replaced by yours, with a warning in the console when the editor opens. The
+  two editors use different keys, so check the `?` help of the one your game uses.
+- `Escape` and `0` are the editor's own, to play and to exit, and are not taken.
+- Ctrl is the one modifier. For Shift, read the argument the action is given.
 
 3D, tested:
 
@@ -163,7 +168,7 @@ right button or Escape ends the press. Do not call `strokeEnd` in a tool.
 let lastPost;
 levelEditor.addTool('Posts',
 {
-    key: 'p',
+    key: 'o',
     hint: 'Posts: drag along the ground to lay a row',
     onPress(at)
     {
@@ -189,12 +194,21 @@ levelEditor.addTool('Water',
     hint: 'Water: drag to fill cells · Shift erases',
     onPress(at) { at.cell && levelEditor.edit2D.paint(at.cell, at.shift ? -1 : 7); },
     onDrag(at)  { at.cell && levelEditor.edit2D.paint(at.cell, at.shift ? -1 : 7); },
-    onDraw(at)  { at.cell && drawRect(at.cell.add(vec2(.5)), vec2(1), hsl(.55, 1, .5, .4)); },
+    onDraw(at)
+    {
+        // a cell is counted from its layer's corner, which is at the layer's pos in the world
+        const corner = levelEditor.edit2D.layer.pos;
+        at.cell && drawRect(corner.add(at.cell).add(vec2(.5)), vec2(1), hsl(.55, 1, .5, .4));
+    },
 });
 ```
 
 A tool is put down by its key or button again, or by picking one of the editor's own tools, layers or types.
 `levelEditor.tool` is the name of the one that is on.
+
+`onDraw`, a tool's and the editor's, draws in the level as the editor does: in the 2D editor with the 2D draws
+(`drawRect`, `drawLine`), and in the 3D editor inside the 3D pass, with `render3D.drawBox`, `render3D.drawLine`
+and the rest.
 
 ## An editor class of your own
 
@@ -232,6 +246,8 @@ setLevelEditor(new MyEditor);
 
 - Call `setLevelEditor` before the editor opens, and use `levelEditor` itself afterwards, not a copy of it
   taken earlier.
+- `keys`, `buttons`, `tools` and `tool` are fields the class keeps what you added in: do not name your own
+  fields those.
 - A method of your class is a hook the same as one you set: defining `onRestart` shows the Restart button.
 
 ## The edit functions
@@ -249,11 +265,11 @@ setLevelEditor(new MyEditor);
 | `changePart(name, (part)=> newPart)` | Edit the level's `scene`, `voxels`, `terrain` or `prefabs` block |
 | `strokeEnd()` | End the edit: one undo step, and the autosave |
 | `strokeCancel()` | Take the edit being made back |
-| `place(type, pos3D)` | Add an object of a type, selected; its id |
-| `setTransform(object, pos3D, rotation, scale3D)` | Write a place, a rotation in degrees and a scale; leave one out to keep it |
-| `setProperty(object, name, value)` | Write a property, left out of the file when it is the type's default |
+| `place(type, pos3D)` | Add an object of a type, selected; its id, or undefined when there is no such type or the level can not be edited |
+| `setTransform(object, pos3D, rotation, scale3D)` | Inside `change`, on an object of its list: write a place, a rotation in degrees and a scale; leave one out to keep it |
+| `setProperty(object, name, value)` | Inside `change`, on an object of its list: write a property, left out of the file when it is the type's default |
 | `pos(object)`, `rotation(object)`, `scale(object)` | Read them as vectors, the rotation in degrees |
-| `mousePoint()` | Where the mouse is on the level or the ground |
+| `mousePoint()` | Where the mouse is on the level or the ground, undefined while it is over the panel |
 | `undo(redo)` | Undo, or redo with true |
 | `toJSON()` | The level as the text Save writes |
 
@@ -289,6 +305,8 @@ levelEditor.onSave = (text, fileName)=>
     return true; // kept, the editor writes no file
 };
 ```
+
+`onSave` may be an async function. In the 3D editor it is asked for a prefab too, when Save is pressed inside one.
 
 ## A checklist for a custom editor
 
