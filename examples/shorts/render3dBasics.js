@@ -104,6 +104,6 @@ bulb follows because it is the light's child.
   sun and long shadows.
 
 ## See also
-3D Shapes shows more of the mesh builders. 3D Lights, 3D Collision and 3D Drawing
-each take one part of this further.
+3D Shapes shows more of the mesh builders. 3D Lights, 3D Collision and
+3D Drawing each take one part of this further.
 */
