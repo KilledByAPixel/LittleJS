@@ -288,9 +288,11 @@ const editor3DSelection = new Set; // the ids of the selected objects
 // the type a click places
 /** @type {string|undefined} */
 let editor3DBrush;
-// the copied objects
+// the copied objects, and the size and box offset each had when it was copied
 /** @type {Array<Object>|undefined} */
 let editor3DClipboard;
+/** @type {Map<Object, {size: Vector3, offset: Vector3}>} */
+let editor3DClipboardBoxes = new Map;
 // the level's, each entry its object list and its parts, the scene and the blocks, before and after an edit
 let editor3DUndoList = [], editor3DRedoList = [];
 // the edit being made, a drag is one: the objects and the parts as they were before it, and painted when blocks
@@ -1356,7 +1358,7 @@ function editor3DPrefabJSON(name)
 
 // the prefabs opened one inside the other, each with the level it was opened from, its name, the selection there
 // and the ids of that level's objects that had something made for them
-/** @type {Array<{level: Object, name: string, selection: Array<number>, made: Set<number>, entered?: string}>} */
+/** @type {Array<{level: Object, name: string, selection: Array<number>, made: Set<number>, entered?: string, saved?: string}>} */
 const editor3DPrefabStack = [];
 // the levels that are a prefab being edited, they have no autosave of their own
 const editor3DPrefabLevels = new WeakSet;
@@ -1416,7 +1418,10 @@ function editor3DPrefabBack()
         // the prefab as it is now, for whatever is made next; one of the game's own waits to be saved to its file
         const prefab = known?.attached ? {attached: true, objects} : {objects}, fromLevel = !!known?.fromLevel;
         level3DPrefabSet(frame.name, prefab, fromLevel);
-        fromLevel ? editor3DPrefabEdits[frame.name] = prefab : editor3DPrefabDirty.add(frame.name);
+        if (fromLevel)
+            editor3DPrefabEdits[frame.name] = prefab;
+        else if (JSON.stringify(objects) !== frame.saved)
+            editor3DPrefabDirty.add(frame.name); // not what Save wrote while it was open
     }
 
     // the level it was opened from is the editor's again, with its own undo
@@ -1467,6 +1472,9 @@ function editor3DCopySelection()
     const selected = editor3DSelected();
     if (!selected.length) return false;
     editor3DClipboard = editor3DCopy(selected);
+    // how big each was and where its box was about its place: what is cut has nothing left to measure
+    editor3DClipboardBoxes = new Map(editor3DClipboard.map((copy, i)=>
+        [copy, {size: editor3DSize(selected[i]), offset: editor3DBoxOffset(selected[i])}]));
 }
 
 // copy the selected objects and remove them
@@ -1518,9 +1526,11 @@ function editor3DRestore()
     {
         const type = level3DTypes.get(object.type), made = editor3DInstances.get(object.id);
         if (!type) continue;
-        if (made instanceof EngineObject3D && !made.destroyed)
+        // a prefab's instance that play took a part of is made again, whole
+        const broken = (p)=> p instanceof Prefab3D && p.parts.some((part)=> part?.destroyed || broken(part));
+        if (made instanceof EngineObject3D && !made.destroyed && !broken(made))
             editor3DPlaceInstance(made, object);
-        else if (type.make.prototype && (!made || made.destroyed))
+        else if (type.make.prototype && (!made || made.destroyed || broken(made)))
             editor3DMakeInstance(object);
     }
     // the blocks and the terrain as the level has them: what play dug, raised or destroyed is not the level's,
@@ -1721,6 +1731,7 @@ async function editor3DSave(pickAgain=false)
         // inside a prefab, Save writes the prefab as a file of its own
         saveText(editor3DLevelJSON(level), open.name + '.json', 'application/json');
         editor3DPrefabDirty.delete(open.name);
+        open.saved = JSON.stringify(editor3DObjects()); // as the file has it now
         return 'downloaded';
     }
     // what is written, kept as it is now: the level can change while the file is picked and written, and those
@@ -2168,12 +2179,12 @@ function editor3DPasteAtMouse()
     if (!copied?.length) return false;
     if (!point) return editor3DPaste();
     const center = copied.reduce((sum, o)=> sum.add(editor3DPos(o)), vec3()).scale(1 / copied.length);
-    const bottom = copied.reduce((low, o)=>
-        min(low, editor3DPos(o).y + editor3DBoxOffset(o).y - editor3DSize(o).y / 2), Infinity);
-    const first = copied[0], was = editor3DPos(first).add(editor3DBoxOffset(first)); // the middle of its box
-    const snapped = editor3DSnapPos(was.add(vec3(point.x - center.x, 0, point.z - center.z)), editor3DSize(first),
+    const box = (o)=> editor3DClipboardBoxes.get(o) ?? {size: editor3DSize(o), offset: editor3DBoxOffset(o)};
+    const bottom = copied.reduce((low, o)=> min(low, editor3DPos(o).y + box(o).offset.y - box(o).size.y / 2), Infinity);
+    const first = copied[0], size = box(first).size, was = editor3DPos(first).add(box(first).offset); // its box's middle
+    const snapped = editor3DSnapPos(was.add(vec3(point.x - center.x, 0, point.z - center.z)), size,
         editor3DGrid ? editor3DMoveStep : 0, editor3DTurned(first));
-    const land = editor3DLand(snapped.x, snapped.z, point.y, editor3DSize(first)) - editor3DSize(first).y / 2;
+    const land = editor3DLand(snapped.x, snapped.z, point.y, size) - size.y / 2;
     return editor3DPaste(vec3(snapped.x - was.x, land - bottom, snapped.z - was.z));
 }
 

@@ -349,3 +349,46 @@ test('a prefab being edited is autosaved with its level, as the level would be o
     engine.run(fileCode);
     assert.deepEqual(json(engine.run, '[level.prefabs.House.objects[1].pos, live(1).parts[1].pos3D.y]'), [[4, 2.5, 0], 2.5]);
 });
+
+// the mouse over the ground at a place, for a paste
+const mouseAt = (x, z)=> `editor3DMousePoint = ()=> vec3(${x}, 0, ${z}); editor3DMouseOnPanel = false;`;
+
+test('an instance pasted at the mouse stands on the ground there, copied or cut', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + mouseAt(0, 20) + 'editor3DSelection.add(1); editor3DCopySelection(); editor3DPasteAtMouse();');
+    assert.deepEqual(json(run, '[list()[2].type, list()[2].pos[1]]'), ['House', 0]);
+    run(mouseAt(0, 40) + 'editor3DCut(); editor3DPasteAtMouse();');
+    assert.deepEqual(json(run, '[list()[2].type, list()[2].pos[1]]'), ['House', 0], 'what was cut is as big as it was');
+    run(mouseAt(50, 50) + `editor3DSelection.clear(); editor3DSelection.add(2); editor3DCut(); editor3DPasteAtMouse();`);
+    assert.deepEqual(json(run, 'list()[2].pos[1]'), .5, 'a plain box too');
+});
+
+test('an instance placed from the list stands with its bottom on what is under the mouse', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `editor3DPlaceAt('House', down(0, 9, 20));`);
+    assert.deepEqual(json(run, '[list()[2].type, list()[2].pos[1], live(list()[2].id).parts[0].pos3D.y]'),
+        ['House', 0, .5]);
+});
+
+test('an instance with a part destroyed in play is whole again when the editor opens', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + 'live(1).parts[1].destroy(); editor3DRestore();');
+    assert.deepEqual(json(run, 'live(1).parts.map((p)=> p.destroyed)'), [false, false]);
+});
+
+test('Save inside a prefab writes the prefab as a file of its own, and Export does from the level', async ()=>
+{
+    const { run } = await loadGame();
+    run(`var files = []; saveText = (text, name)=> files.push([name, JSON.parse(text)]);
+        level3DAddPrefab('Shop', ${house});` + fileCode + `editor3DChange((list)=>
+        { list.push({id: 3, type: 'Shop', pos: [0, 0, 30]}); }); editor3DStrokeEnd(); editor3DPrefabEnter(3);` + liftPost);
+    await run('editor3DSave()');
+    const [name, file] = JSON.parse(run('JSON.stringify(files[0])'));
+    assert.deepEqual([name, file.littlejs3D, file.objects[1].pos], ['Shop.json', 1, [4, 2.5, 0]]);
+    run('editor3DPrefabBack()');
+    assert.equal(run('editor3DPrefabDirty.size'), 0, 'saved, it waits for nothing');
+    assert.deepEqual(JSON.parse(run(`editor3DPrefabJSON('Shop')`)).objects[1].pos, [4, 2.5, 0], 'what Export writes');
+});

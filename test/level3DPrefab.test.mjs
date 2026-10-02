@@ -151,3 +151,12 @@ test('a prefab inside an attached prefab is attached too, its parts ride along',
     nearVec(house.parts[0].getWorldPos3D(), 102, .5, 5);
     train.destroy(true);
 });
+
+test('a level with an instance of a prefab nobody added loads the rest, with a warning', ()=>
+{
+    let made;
+    const warnings = said(()=> made = level3DLoad({objects: [{id: 1, type: 'Ghost'}, {id: 2, type: 'Box'}]}));
+    assert.equal(made.length, 1);
+    assert.ok(warnings.some((text)=> text.includes('Ghost')));
+    made[0].destroy(true);
+});
