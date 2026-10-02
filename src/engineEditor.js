@@ -551,7 +551,7 @@ function editorMapRestore(map)
     if (!map.layers || data.some((layer)=> !Array.isArray(layer))) return map;
     const objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
     const url = editorFetchedURLs.get(map), hash = editorMapHash(data, objects, editorMapLayout(map));
-    const fileName = url?.split(/[?#]/)[0].split('/').pop() || 'level.json';
+    const fileName = editorFileName(url, 'level.json');
     const record = {map, url, fileName, key: editorMapKey(map, url, hash), hash,
         original: data.map((layer)=> [...layer]), originalObjects: editorObjectsCopy(objects),
         originalSize: {width: map.width, height: map.height}, layers: []};
@@ -582,6 +582,8 @@ function editorMapRestore(map)
         editorRestoreObjects(map, saved);
         console.warn(`LittleJS editor: brought back unsaved edits to ${record.fileName}, ` +
             'Save in the editor (Esc then 0) writes them to the file');
+        saved.stale && console.warn(`LittleJS editor: they are older than the last edits to ${record.fileName}, ` +
+            'which storage had no room for');
     }
     return map;
 }
@@ -783,6 +785,7 @@ async function editorSaveText(record, text, pickAgain)
             if (error?.name === 'AbortError') return; // the picker was closed, nothing saved
             record.fileHandle = undefined; // a file it could not write, a download instead, and not kept
             editorFileStore.set(editorFileKey(record), undefined);
+            console.warn(`LittleJS editor: ${record.fileName} could not be written, downloaded instead`, error);
         }
     }
     saveText(text, record.fileName, 'application/json');
@@ -799,15 +802,35 @@ const editorSaves = ()=> readSaveData(editorSaveName(), {});
 // if the last autosave did not fit in storage, the panel says so
 let editorSaveFailed = false;
 
-// write the autosaves, noting whether storage took them
-function editorWriteSaves(saves)
+// write the autosaves, noting whether storage took them; when it did not, the autosave it still has of this map
+// is an older one, and is marked so, for the reload that brings it back to say so
+function editorWriteSaves(saves, key, name=editorSaveName())
 {
     try
     {
-        localStorage.setItem(editorSaveName(), JSON.stringify(saves));
-        editorSaveFailed = false;
+        localStorage.setItem(name, JSON.stringify(saves));
+        return editorSaveFailed = false;
     }
     catch { editorSaveFailed = true; }
+    try
+    {
+        const kept = readSaveData(name, {});
+        if (!kept[key] || kept[key].stale) return true;
+        kept[key].stale = true;
+        localStorage.setItem(name, JSON.stringify(kept));
+    }
+    catch {} // no room for the mark either
+    return true;
+}
+
+// the name of the file a level was fetched from, as it is on disk: without its folder and query, and with what
+// the url spells with a percent as it is written, so it is the name a picked file has
+function editorFileName(url, fallback)
+{
+    const name = url?.split(/[?#]/)[0].split('/').pop();
+    if (!name) return fallback;
+    try { return decodeURIComponent(name); }
+    catch { return name; }
 }
 
 // a map's name for its autosave, the file it was fetched from without a query, or its size, layer names and data as loaded; a map with
@@ -863,7 +886,7 @@ function editorAutosave(record)
     else
         saves[record.key] = {hash: record.hash, savedHash: record.savedHash, width: map.width, height: map.height,
             layers: data, objects, nextobjectid: map.nextobjectid};
-    editorWriteSaves(saves);
+    editorWriteSaves(saves, record.key);
 }
 
 // paint every cell of a map's layers from a list of tile data, the tile layers of the map in order, and set its
@@ -1015,8 +1038,7 @@ function editorClearSelections()
 function editorMapChanged(record, before)
 {
     const stroke = [{resize: record, before, after: editorMapSnapshot(record)}];
-    editorUndoList.push(stroke);
-    editorRedoList.length = 0;
+    editorUndoPush(stroke);
     editorChanged(stroke);
 }
 
@@ -1093,12 +1115,20 @@ function editorPaint(layer, pos, gid)
     (editorStroke ||= []).push({layer, pos: pos.copy(), before, after: gid});
 }
 
+// an edit goes on the undo list, which keeps the last 100, as the 3D editor's does: a fill of a large layer is
+// an entry for every cell, and a session of them would hold millions
+function editorUndoPush(stroke)
+{
+    editorUndoList.push(stroke);
+    editorUndoList.length > 100 && editorUndoList.shift();
+    editorRedoList.length = 0;
+}
+
 // the stroke is done, it can be undone as one
 function editorStrokeEnd()
 {
     if (!editorStroke) return;
-    editorUndoList.push(editorStroke);
-    editorRedoList.length = 0;
+    editorUndoPush(editorStroke);
     editorChanged(editorStroke);
     editorStroke = undefined;
 }

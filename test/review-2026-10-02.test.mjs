@@ -93,3 +93,67 @@ test('a release build\'s level editor has the lists a game\'s own editor may rea
     const { run } = loadEngine({}, '', 'littlejs.release.js');
     assert.deepEqual(json(run, '[levelEditor.keys, levelEditor.buttons, levelEditor.tools]'), [{}, [], {}]);
 });
+
+// a small Tiled map from a file, and what console.warn said while code ran
+const fileMap = (url)=> `var map = { width: 2, height: 1, tilewidth: 16, tileheight: 16, layers: [
+        { type: 'tilelayer', id: 1, name: 'ground', width: 2, height: 1, data: [1, 0] }] };
+    editorJSONFetched('${url}', map); var layers = tileLayersLoad(map, undefined, 0, 0);
+    var ground = editorLayerRecord(layers[0]);`;
+const warned = (run, code)=> json(run, `(()=> { const warn = console.warn, said = []; console.warn = (...text)=> said.push(text.join(' '));
+    try { ${code} } finally { console.warn = warn; } return said; })()`);
+
+test('2D editor: the undo list keeps the last 100 edits, as the 3D editor\'s does', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileMap('levels/a.json') + `for (let i = 0; i < 130; ++i)
+        { editorPaint(ground, vec2(0, 0), 1 + i % 2 + 1); editorStrokeEnd(); }`);
+    assert.equal(run('editorUndoList.length'), 100);
+});
+
+test('a level\'s file name is read as it is written on disk, not as its url spells it, in both editors', async ()=>
+{
+    const { run } = await loadGame(true);
+    run(fileMap('levels/my%20level.json') + `var level = {objects: []};
+        editorJSONFetched('levels/my%203d%20level.json?v=2', level); level3DLoad(level);`);
+    assert.deepEqual([run('ground.record.fileName'), run('editor3DRecords.get(level).fileName')],
+        ['my level.json', 'my 3d level.json']);
+});
+
+test('2D editor: an autosave that storage would not take is marked, and a reload that brings back the older one says so', async ()=>
+{
+    // a storage that takes the first autosave and is full for a larger one after it
+    const items = {};
+    let full = false;
+    const storage = { getItem: (k)=> items[k] ?? null,
+        setItem(k, v) { if (full && v.length > (items[k] ?? '').length + 20) throw new Error('quota'); items[k] = String(v); } };
+    const load = async ()=>
+    {
+        const engine = loadEngine({ localStorage: storage, location: { pathname: '/game/' } });
+        engine.run('setHeadlessMode(true)');
+        await engine.run('setEngineManualStep(true); engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+        return engine;
+    };
+    let { run } = await load();
+    const big = `var map = { width: 40, height: 1, tilewidth: 16, tileheight: 16, layers: [
+            { type: 'tilelayer', id: 1, name: 'ground', width: 40, height: 1, data: Array(40).fill(1) }] };
+        editorJSONFetched('levels/a.json', map); var layers = tileLayersLoad(map, undefined, 0, 0);
+        var ground = editorLayerRecord(layers[0]);`;
+    run(big + 'editorPaint(ground, vec2(0, 0), 2); editorStrokeEnd();');
+    full = true;
+    run('for (let x = 1; x < 40; ++x) editorPaint(ground, vec2(x, 0), 123456); editorStrokeEnd();');
+    assert.equal(run('editorSaveFailed'), true);
+    const kept = JSON.parse(items['LittleJS editor /game/'])['levels/a.json'];
+    assert.deepEqual([kept.stale, kept.layers[0][0], kept.layers[0][1]], [true, 2, 1], 'the older autosave, marked');
+    ({ run } = await load());
+    const said = warned(run, big);
+    assert.ok(said.some((text)=> text.includes('older')), said.join(' | '));
+});
+
+test('an object with no type in a map, a shape or a text, is passed by with no warning', async ()=>
+{
+    const { run } = await loadGame();
+    const said = warned(run, `objectLayersLoad({ width: 1, height: 1, layers: [{ type: 'objectgroup', name: 'o', objects: [
+        { id: 1, x: 0, y: 0 }, { id: 2, x: 0, y: 0, type: 'Missing' }] }] });`);
+    assert.equal(said.length, 1);
+    assert.ok(said[0].includes('Missing'));
+});

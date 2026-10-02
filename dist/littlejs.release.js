@@ -8920,7 +8920,8 @@ function objectLayersMake(tileMapData, object)
     const name = object.type || object.class, type = objectLayersTypes.get(name);
     if (!type)
     {
-        debug && console.warn(`objectLayersLoad: no type added for ${name}, skipped`);
+        // an object with no type, a shape or a text someone drew in Tiled, is not one a game makes
+        debug && name && console.warn(`objectLayersLoad: no type added for ${name}, skipped`);
         return;
     }
     const {height=0, tilewidth=1, tileheight=1} = tileMapData;

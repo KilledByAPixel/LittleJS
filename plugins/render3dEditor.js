@@ -528,7 +528,7 @@ function editor3DLevelLoaded(level)
     const original = editor3DCopy(editor3DObjects()), originalParts = editor3DLevelParts();
     const hash = editor3DContentHash(original, originalParts);
     // sceneBase is the scene the game set, taken before the level's own block is applied
-    const record = {fileName: url ? url.split('/').pop() : 'level3D.json', key: url ?? 'level #' + hash, original,
+    const record = {fileName: editorFileName(url, 'level3D.json'), key: url ?? 'level #' + hash, original,
         originalParts, sceneBase: render3D ? editor3DSceneState() : undefined, hash, pending: undefined,
         fileHandle: undefined, undo: [], redo: []};
     editor3DRecords.set(level, record);
@@ -1835,12 +1835,9 @@ function editor3DAutosave(level=editor3DLevel, known)
     else
         saves[record.key] = {hash: record.hash, savedHash: record.savedHash, objects: editor3DCopy(objects),
             ...parts};
-    try
-    {
-        localStorage.setItem(editor3DSaveName(), JSON.stringify(saves));
-        editor3DSaveFailed = false;
-    }
-    catch { editor3DSaveFailed = true; }
+    const failed = editorSaveFailed; // the 2D editor's own flag is its own
+    editor3DSaveFailed = editorWriteSaves(saves, record.key, editor3DSaveName());
+    editorSaveFailed = failed;
 }
 
 // put the autosaved edits of a file that changed into the level, as one undo
