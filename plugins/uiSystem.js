@@ -1136,8 +1136,10 @@ class UIObject
                             return void inputClearKey(0, 0, false, true, false);
                     }
                 }
+                // the object that was the active one going into this update: one pressed and let go inside a
+                // frame is clicked on the next, with its release, not on both
                 if (!uiSystem.activateOnPress)
-                if (!mouseDown && this.isActiveObject() && this.interactive)
+                if (!mouseDown && isActive && this.isActiveObject() && this.interactive)
                     this.click();
                 if (this.destroyed) return;
             }

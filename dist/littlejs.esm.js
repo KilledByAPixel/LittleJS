@@ -3250,7 +3250,7 @@ class Timer
     getPercent()
     {
         if (!this.isSet()) return 0;
-        if (!this.setTime) return 1;
+        if (!(this.setTime > 0)) return 1;
         return 1 - percent(this.time - this.getGlobalTime(), 0, this.setTime);
     }
 
@@ -5934,7 +5934,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
     // build regular polygon points
     const points = [];
     const sizeX = size.x/2, sizeY = size.y/2;
-    for (let i=sides; i--;)
+    for (let i=sides; i-- > 0;) // a count that is not whole, or below zero, still ends
     {
         const a = (i/sides)*PI*2;
         points.push(vec2(sin(a)*sizeX, cos(a)*sizeY));
@@ -6045,7 +6045,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
         if (!ring)
         {
             const points = [];
-            for (let i=sides; i--;)
+            for (let i=sides; i-- > 0;)
             {
                 const a = (i/sides)*PI*2;
                 points.push(vec2(sin(a), cos(a)));
@@ -6145,7 +6145,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
         const startA = (offset%sides)/sides*PI*2;
         const points = [rim(startA)];
         const colors = [outerInt];
-        for (let i=sides; i--;)
+        for (let i=sides; i-- > 0;)
         {
             const a = ((i+offset)%sides)/sides*PI*2;
             points.push(pos);
@@ -6568,7 +6568,8 @@ function isOnScreen(pos, size=0)
 function setAdditiveBlendMode(additive=true)
 {
     glAdditive = additive;
-    drawContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    if (drawContext) // none headless
+        drawContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
 /** Set the Shader that 2D draws use from now on, none for the engine's own
@@ -8639,7 +8640,13 @@ class Sound
      */
     constructor(asset, randomness, range, taper=soundDefaultTaper, onloadCallback)
     {
-        if (!soundEnable || headlessMode) return;
+        if (!soundEnable || headlessMode)
+        {
+            // no sound is made: it counts as loaded, so a game that waits for its sounds goes on
+            this.loadedPercent = 1;
+            onloadCallback?.(this);
+            return;
+        }
         const rangeIsDefault = range === undefined;
         if (rangeIsDefault)
             range = soundDefaultRange;
@@ -16088,8 +16095,10 @@ class UIObject
                             return void inputClearKey(0, 0, false, true, false);
                     }
                 }
+                // the object that was the active one going into this update: one pressed and let go inside a
+                // frame is clicked on the next, with its release, not on both
                 if (!uiSystem.activateOnPress)
-                if (!mouseDown && this.isActiveObject() && this.interactive)
+                if (!mouseDown && isActive && this.isActiveObject() && this.interactive)
                     this.click();
                 if (this.destroyed) return;
             }
@@ -32405,7 +32414,8 @@ async function parseGLTF(data, baseUrl='')
             const bitmap = normalTextures.has(index) ?
                 await createImageBitmap(blob, {colorSpaceConversion: 'none', premultiplyAlpha: 'none'}) :
                 opaque ? await createImageBitmap(blob, {premultiplyAlpha: 'none'}).then(gltfOpaqueImage) : await createImageBitmap(blob);
-            return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497]); // REPEAT by default
+            // REPEAT by default, and hard edged only when its sampler says NEAREST, not as the game's tiles are
+            return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497], sampler.magFilter === 9728);
         }
         catch (e) { LOG('glTF image not loaded', e); }
     }));
@@ -34318,7 +34328,7 @@ function editorAutosave(record)
 
 // paint every cell of a map's layers from a list of tile data, the tile layers of the map in order, and set its
 // object layers' objects from a list of them; data of another size resizes the map, which needs the Restart hook
-function editorPaintData(record, data, objects, width=record.map.width, height=record.map.height)
+function editorPaintData(record, data, objects, width=record.map.width, height=record.map.height, keepUnknown=false)
 {
     editorStrokeEnd();
     if (width !== record.map.width || height !== record.map.height)
@@ -34338,7 +34348,9 @@ function editorPaintData(record, data, objects, width=record.map.width, height=r
             if (gids?.length === width * height)
                 gids.forEach((gid, i)=> editorPaint(layer, vec2(i % width, height - 1 - (i / width | 0)), gid));
         }
-        editorObjectLayers(record).forEach((layer, i)=> objects &&
+        // an autosave from before the file had an object layer leaves that layer as the file has it; Reset to file
+        // empties a layer the file did not have
+        editorObjectLayers(record).forEach((layer, i)=> objects && !(keepUnknown && i >= objects.length) &&
             editorChangeObjects(layer, (list)=> list.splice(0, list.length, ...editorObjectsCopy(objects[i] ?? []))));
     });
     editorStroke ? editorStrokeEnd() : editorAutosave(record);
@@ -34358,7 +34370,7 @@ function editorApplyPending(record)
         return false;
     }
     record.pending = record.pendingUnfit = undefined;
-    editorPaintData(record, saved.layers, saved.objects, saved.width, saved.height);
+    editorPaintData(record, saved.layers, saved.objects, saved.width, saved.height, true);
     return true;
 }
 
@@ -34956,7 +34968,7 @@ function editorUpdateObjects(space)
             if (!editorObjectSelection.has(hit.id))
                 editorObjectSelection = new Set([hit.id]);
             editorObjectDrag = {start: snap(mouse), from: new Map(editorSelectedObjects().map((object)=>
-                [object.id, editorObjectPos(record, object)]))};
+                [object.id, {x: object.x, y: object.y}]))};
         }
         else if (editorObjectSelection.size)
             editorObjectSelection.clear();
@@ -34971,8 +34983,10 @@ function editorUpdateObjects(space)
         {
             for (const object of list)
             {
-                const from = drag.from.get(object.id);
-                from && editorObjectSetPos(record, object, from.add(delta));
+                // from the numbers it had, in the map's own units: through cells and back they pick up a hair
+                const from = drag.from.get(object.id), {tilewidth=1, tileheight=1} = record.map;
+                if (from)
+                    object.x = from.x + delta.x * tilewidth, object.y = from.y - delta.y * tileheight;
             }
         });
     }
@@ -36968,6 +36982,7 @@ function editor3DChange(change)
     const before = editor3DCopy(editor3DObjects()), after = editor3DCopy(before);
     change(after);
     if (editor3DSame(before, after)) return false;
+    editor3DFixIds(after); // an object added with no id, or with one in use, gets one of its own
     editor3DSetObjects(after);
     editor3DStroke ||= {before, parts: editor3DLevelParts()};
     return true;
@@ -37741,7 +37756,7 @@ function editor3DPrefabJSON(name)
 
 // the prefabs opened one inside the other, each with the level it was opened from, its name, the selection there
 // and the ids of that level's objects that had something made for them
-/** @type {Array<{level: Object, name: string, selection: Array<number>, made: Set<number>, entered?: string, saved?: string}>} */
+/** @type {Array<{level: Object, name: string, selection: Array<number>, made: Set<number>, entered?: string}>} */
 const editor3DPrefabStack = [];
 // the levels that are a prefab being edited, they have no autosave of their own
 const editor3DPrefabLevels = new WeakSet;
@@ -37750,6 +37765,28 @@ const editor3DPrefabLevels = new WeakSet;
 let editor3DPrefabEdits = {};
 // the prefabs of the game's own that were edited and are not in a file yet
 const editor3DPrefabDirty = new Set;
+// what is known of each prefab's file, by its name, so it outlasts the prefab being closed and opened again: the
+// save being written, for the next to wait on, what the file has since a Save, and what the prefab holds now
+/** @type {Map<string, {saving?: Promise<any>, saved?: string, content?: string}>} */
+const editor3DPrefabFiles = new Map;
+function editor3DPrefabFile(name)
+{
+    editor3DPrefabFiles.has(name) || editor3DPrefabFiles.set(name, {});
+    return editor3DPrefabFiles.get(name);
+}
+
+// say if a prefab of the game's own is in its file, now that it holds this: once a Save has written it, it is
+// when what it holds is what was written; before any Save it is not once it was edited
+function editor3DPrefabFileCheck(name, content, edited=false)
+{
+    const file = editor3DPrefabFile(name);
+    file.content = content;
+    if (level3DPrefabs.get(name)?.fromLevel) return; // one of the level's own is saved with the level
+    if (file.saved !== undefined)
+        content === file.saved ? editor3DPrefabDirty.delete(name) : editor3DPrefabDirty.add(name);
+    else if (edited)
+        editor3DPrefabDirty.add(name);
+}
 
 // destroy what the level being edited has in the world, its objects' and its maps'
 function editor3DPrefabClear()
@@ -37803,9 +37840,10 @@ function editor3DPrefabBack()
         level3DPrefabSet(frame.name, prefab, fromLevel);
         if (fromLevel)
             editor3DPrefabEdits[frame.name] = prefab;
-        else if (JSON.stringify(objects) !== frame.saved)
-            editor3DPrefabDirty.add(frame.name); // not what Save wrote while it was open
     }
+    // one of the game's own is in its file or not by what it holds now, edited here or not: undone back to how it
+    // was opened after a Save, it is not what the file has
+    editor3DPrefabFileCheck(frame.name, JSON.stringify(objects), changed);
 
     // the level it was opened from is the editor's again, with its own undo
     const level = editor3DLevel = frame.level, record = editor3DRecords.get(level);
@@ -38212,21 +38250,23 @@ async function editor3DSave(pickAgain=false)
         // inside a prefab, Save writes the prefab as a file of its own, or the game keeps it itself
         const text = editor3DLevelJSON(level), name = open.name + '.json';
         const written = JSON.stringify(editor3DObjects()); // as the file has it
+        // its place in line is the prefab's, by its name: closed and opened again it is a new level here, and its
+        // saves still go in the order they were asked for
+        const file = editor3DPrefabFile(open.name), before = file.saving;
         const saved = (async ()=>
         {
-            await record.saving; // in the order asked for, as a level's saves are
+            await before;
             const kept = await editorCall('onSave', text, name) === true;
             kept || saveText(text, name, 'application/json');
-            open.saved = written;
-            // it is in its file when what it holds now is what was saved: edited again while the save was kept,
-            // or gone back from with more edits, it still waits
+            file.saved = written;
+            // it is in its file when what it holds now is what was written: edited again while the save was
+            // kept, or gone back from with more edits, it still waits
             const at = editor3DPrefabStack.indexOf(open);
-            const now = at < 0 ? level3DPrefabs.get(open.name)?.objects :
-                (editor3DPrefabStack[at + 1]?.level ?? editor3DLevel).objects;
-            JSON.stringify(now) === written && editor3DPrefabDirty.delete(open.name);
+            const now = at < 0 ? file.content : JSON.stringify((editor3DPrefabStack[at + 1]?.level ?? editor3DLevel).objects);
+            editor3DPrefabFileCheck(open.name, now ?? written);
             return kept ? 'kept' : 'downloaded';
         })();
-        record.saving = saved.catch(()=> {});
+        file.saving = saved.catch(()=> {});
         return saved;
     }
     // what is written, kept as it is now: the level can change while the file is picked and written, and those

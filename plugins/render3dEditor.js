@@ -629,6 +629,7 @@ function editor3DChange(change)
     const before = editor3DCopy(editor3DObjects()), after = editor3DCopy(before);
     change(after);
     if (editor3DSame(before, after)) return false;
+    editor3DFixIds(after); // an object added with no id, or with one in use, gets one of its own
     editor3DSetObjects(after);
     editor3DStroke ||= {before, parts: editor3DLevelParts()};
     return true;
@@ -1402,7 +1403,7 @@ function editor3DPrefabJSON(name)
 
 // the prefabs opened one inside the other, each with the level it was opened from, its name, the selection there
 // and the ids of that level's objects that had something made for them
-/** @type {Array<{level: Object, name: string, selection: Array<number>, made: Set<number>, entered?: string, saved?: string}>} */
+/** @type {Array<{level: Object, name: string, selection: Array<number>, made: Set<number>, entered?: string}>} */
 const editor3DPrefabStack = [];
 // the levels that are a prefab being edited, they have no autosave of their own
 const editor3DPrefabLevels = new WeakSet;
@@ -1411,6 +1412,28 @@ const editor3DPrefabLevels = new WeakSet;
 let editor3DPrefabEdits = {};
 // the prefabs of the game's own that were edited and are not in a file yet
 const editor3DPrefabDirty = new Set;
+// what is known of each prefab's file, by its name, so it outlasts the prefab being closed and opened again: the
+// save being written, for the next to wait on, what the file has since a Save, and what the prefab holds now
+/** @type {Map<string, {saving?: Promise<any>, saved?: string, content?: string}>} */
+const editor3DPrefabFiles = new Map;
+function editor3DPrefabFile(name)
+{
+    editor3DPrefabFiles.has(name) || editor3DPrefabFiles.set(name, {});
+    return editor3DPrefabFiles.get(name);
+}
+
+// say if a prefab of the game's own is in its file, now that it holds this: once a Save has written it, it is
+// when what it holds is what was written; before any Save it is not once it was edited
+function editor3DPrefabFileCheck(name, content, edited=false)
+{
+    const file = editor3DPrefabFile(name);
+    file.content = content;
+    if (level3DPrefabs.get(name)?.fromLevel) return; // one of the level's own is saved with the level
+    if (file.saved !== undefined)
+        content === file.saved ? editor3DPrefabDirty.delete(name) : editor3DPrefabDirty.add(name);
+    else if (edited)
+        editor3DPrefabDirty.add(name);
+}
 
 // destroy what the level being edited has in the world, its objects' and its maps'
 function editor3DPrefabClear()
@@ -1464,9 +1487,10 @@ function editor3DPrefabBack()
         level3DPrefabSet(frame.name, prefab, fromLevel);
         if (fromLevel)
             editor3DPrefabEdits[frame.name] = prefab;
-        else if (JSON.stringify(objects) !== frame.saved)
-            editor3DPrefabDirty.add(frame.name); // not what Save wrote while it was open
     }
+    // one of the game's own is in its file or not by what it holds now, edited here or not: undone back to how it
+    // was opened after a Save, it is not what the file has
+    editor3DPrefabFileCheck(frame.name, JSON.stringify(objects), changed);
 
     // the level it was opened from is the editor's again, with its own undo
     const level = editor3DLevel = frame.level, record = editor3DRecords.get(level);
@@ -1873,21 +1897,23 @@ async function editor3DSave(pickAgain=false)
         // inside a prefab, Save writes the prefab as a file of its own, or the game keeps it itself
         const text = editor3DLevelJSON(level), name = open.name + '.json';
         const written = JSON.stringify(editor3DObjects()); // as the file has it
+        // its place in line is the prefab's, by its name: closed and opened again it is a new level here, and its
+        // saves still go in the order they were asked for
+        const file = editor3DPrefabFile(open.name), before = file.saving;
         const saved = (async ()=>
         {
-            await record.saving; // in the order asked for, as a level's saves are
+            await before;
             const kept = await editorCall('onSave', text, name) === true;
             kept || saveText(text, name, 'application/json');
-            open.saved = written;
-            // it is in its file when what it holds now is what was saved: edited again while the save was kept,
-            // or gone back from with more edits, it still waits
+            file.saved = written;
+            // it is in its file when what it holds now is what was written: edited again while the save was
+            // kept, or gone back from with more edits, it still waits
             const at = editor3DPrefabStack.indexOf(open);
-            const now = at < 0 ? level3DPrefabs.get(open.name)?.objects :
-                (editor3DPrefabStack[at + 1]?.level ?? editor3DLevel).objects;
-            JSON.stringify(now) === written && editor3DPrefabDirty.delete(open.name);
+            const now = at < 0 ? file.content : JSON.stringify((editor3DPrefabStack[at + 1]?.level ?? editor3DLevel).objects);
+            editor3DPrefabFileCheck(open.name, now ?? written);
             return kept ? 'kept' : 'downloaded';
         })();
-        record.saving = saved.catch(()=> {});
+        file.saving = saved.catch(()=> {});
         return saved;
     }
     // what is written, kept as it is now: the level can change while the file is picked and written, and those

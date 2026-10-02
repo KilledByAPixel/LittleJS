@@ -3647,6 +3647,7 @@ declare module "littlejsengine" {
          *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
          */
         constructor(asset?: string | URL | any[], randomness?: number, range?: number, taper?: number, onloadCallback?: SoundLoadCallback);
+        loadedPercent: number;
         set range(arg: number);
         /** World space max range of sound, 0 for no limit; a range that is set is the sound's own, in 3D too
          *  @type {number} */
@@ -3669,9 +3670,6 @@ declare module "littlejsengine" {
         /** @ignore
          *  @type {Array<Array<number>|Float32Array>|undefined} */
         _sampleChannels: Array<Array<number> | Float32Array> | undefined;
-        /** @property {number} - Percentage of this sound currently loaded, sounds
-         *  fetched from a url stay at 0 until decoding completes */
-        loadedPercent: number;
         /** @property {SoundLoadCallback|undefined} - function to call when sound is loaded
          *  @type {SoundLoadCallback|undefined} */
         onloadCallback: SoundLoadCallback | undefined;

@@ -582,3 +582,20 @@ test('a level of objects alone is listed beside a tile map, and steps aside when
     run('engineObjectsDestroy(); var next = level(); objectLayersLoad(next);');
     assert.deepEqual([...run('editorLayers().map((layer)=> layer.record.map === next)')], [true]);
 });
+
+test('a click on an object leaves its place as it is written, with nothing to undo', async () =>
+{
+    // 24 pixel tiles, where a place turned into cells and back is off by a hair
+    const engine = await loadGame(), { run } = engine;
+    run(editCode.replace('tilewidth: 16, tileheight: 16', 'tilewidth: 24, tileheight: 24')
+        .replace('x: 8, y: 8', 'x: 7, y: 7') + 'editorSelectLayer(objects);');
+    const x = 7 / 24, y = 2 - 7 / 24;
+    click(engine, x, y);
+    click(engine, x, y);
+    assert.deepEqual([run('list()[0].x'), run('list()[0].y'), run('editorUndoList.length')], [7, 7, 0]);
+    // dragged two cells, past the other coin, and back it is where it was, to the last digit
+    drag(engine, [x, y], [x + 2, y]);
+    assert.equal(run('list()[0].x'), 7 + 48);
+    drag(engine, [x + 2, y], [x, y]);
+    assert.deepEqual([run('list()[0].x'), run('list()[0].y')], [7, 7]);
+});

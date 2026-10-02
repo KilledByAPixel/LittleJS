@@ -222,7 +222,13 @@ class Sound
      */
     constructor(asset, randomness, range, taper=soundDefaultTaper, onloadCallback)
     {
-        if (!soundEnable || headlessMode) return;
+        if (!soundEnable || headlessMode)
+        {
+            // no sound is made: it counts as loaded, so a game that waits for its sounds goes on
+            this.loadedPercent = 1;
+            onloadCallback?.(this);
+            return;
+        }
         const rangeIsDefault = range === undefined;
         if (rangeIsDefault)
             range = soundDefaultRange;

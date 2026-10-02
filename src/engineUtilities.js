@@ -81,7 +81,7 @@ class Timer
     getPercent()
     {
         if (!this.isSet()) return 0;
-        if (!this.setTime) return 1;
+        if (!(this.setTime > 0)) return 1;
         return 1 - percent(this.time - this.getGlobalTime(), 0, this.setTime);
     }
 

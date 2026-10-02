@@ -868,7 +868,7 @@ function editorAutosave(record)
 
 // paint every cell of a map's layers from a list of tile data, the tile layers of the map in order, and set its
 // object layers' objects from a list of them; data of another size resizes the map, which needs the Restart hook
-function editorPaintData(record, data, objects, width=record.map.width, height=record.map.height)
+function editorPaintData(record, data, objects, width=record.map.width, height=record.map.height, keepUnknown=false)
 {
     editorStrokeEnd();
     if (width !== record.map.width || height !== record.map.height)
@@ -888,7 +888,9 @@ function editorPaintData(record, data, objects, width=record.map.width, height=r
             if (gids?.length === width * height)
                 gids.forEach((gid, i)=> editorPaint(layer, vec2(i % width, height - 1 - (i / width | 0)), gid));
         }
-        editorObjectLayers(record).forEach((layer, i)=> objects &&
+        // an autosave from before the file had an object layer leaves that layer as the file has it; Reset to file
+        // empties a layer the file did not have
+        editorObjectLayers(record).forEach((layer, i)=> objects && !(keepUnknown && i >= objects.length) &&
             editorChangeObjects(layer, (list)=> list.splice(0, list.length, ...editorObjectsCopy(objects[i] ?? []))));
     });
     editorStroke ? editorStrokeEnd() : editorAutosave(record);
@@ -908,7 +910,7 @@ function editorApplyPending(record)
         return false;
     }
     record.pending = record.pendingUnfit = undefined;
-    editorPaintData(record, saved.layers, saved.objects, saved.width, saved.height);
+    editorPaintData(record, saved.layers, saved.objects, saved.width, saved.height, true);
     return true;
 }
 
@@ -1506,7 +1508,7 @@ function editorUpdateObjects(space)
             if (!editorObjectSelection.has(hit.id))
                 editorObjectSelection = new Set([hit.id]);
             editorObjectDrag = {start: snap(mouse), from: new Map(editorSelectedObjects().map((object)=>
-                [object.id, editorObjectPos(record, object)]))};
+                [object.id, {x: object.x, y: object.y}]))};
         }
         else if (editorObjectSelection.size)
             editorObjectSelection.clear();
@@ -1521,8 +1523,10 @@ function editorUpdateObjects(space)
         {
             for (const object of list)
             {
-                const from = drag.from.get(object.id);
-                from && editorObjectSetPos(record, object, from.add(delta));
+                // from the numbers it had, in the map's own units: through cells and back they pick up a hair
+                const from = drag.from.get(object.id), {tilewidth=1, tileheight=1} = record.map;
+                if (from)
+                    object.x = from.x + delta.x * tilewidth, object.y = from.y - delta.y * tileheight;
             }
         });
     }

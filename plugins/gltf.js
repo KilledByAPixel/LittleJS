@@ -447,7 +447,8 @@ async function parseGLTF(data, baseUrl='')
             const bitmap = normalTextures.has(index) ?
                 await createImageBitmap(blob, {colorSpaceConversion: 'none', premultiplyAlpha: 'none'}) :
                 opaque ? await createImageBitmap(blob, {premultiplyAlpha: 'none'}).then(gltfOpaqueImage) : await createImageBitmap(blob);
-            return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497]); // REPEAT by default
+            // REPEAT by default, and hard edged only when its sampler says NEAREST, not as the game's tiles are
+            return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497], sampler.magFilter === 9728);
         }
         catch (e) { LOG('glTF image not loaded', e); }
     }));

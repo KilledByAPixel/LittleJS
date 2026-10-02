@@ -4,8 +4,7 @@
   "include": [
     "./src/*.js",
     "./plugins/*.js",
-    "./examples/**/*.js",
-    "./shortExamples/**/*.js",
+    "./examples/**/*.js"
   ],
   "exclude": [
   ]

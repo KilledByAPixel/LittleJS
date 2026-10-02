@@ -54,7 +54,11 @@ function tweakDivider(){}
 function tweakEngineDefaults(){}
 class LevelEditor
 {
-    constructor() { this.paletteTiles = this.use3D = this.tool = undefined; }
+    constructor()
+    {
+        this.paletteTiles = this.use3D = this.tool = undefined;
+        this.keys = {}, this.buttons = [], this.tools = {};
+    }
     get isOpen() { return false; }
     get is3D() { return false; }
     get edit2D() { return undefined; }

@@ -943,7 +943,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
     // build regular polygon points
     const points = [];
     const sizeX = size.x/2, sizeY = size.y/2;
-    for (let i=sides; i--;)
+    for (let i=sides; i-- > 0;) // a count that is not whole, or below zero, still ends
     {
         const a = (i/sides)*PI*2;
         points.push(vec2(sin(a)*sizeX, cos(a)*sizeY));
@@ -1054,7 +1054,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
         if (!ring)
         {
             const points = [];
-            for (let i=sides; i--;)
+            for (let i=sides; i-- > 0;)
             {
                 const a = (i/sides)*PI*2;
                 points.push(vec2(sin(a), cos(a)));
@@ -1154,7 +1154,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
         const startA = (offset%sides)/sides*PI*2;
         const points = [rim(startA)];
         const colors = [outerInt];
-        for (let i=sides; i--;)
+        for (let i=sides; i-- > 0;)
         {
             const a = ((i+offset)%sides)/sides*PI*2;
             points.push(pos);
@@ -1577,7 +1577,8 @@ function isOnScreen(pos, size=0)
 function setAdditiveBlendMode(additive=true)
 {
     glAdditive = additive;
-    drawContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    if (drawContext) // none headless
+        drawContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
 /** Set the Shader that 2D draws use from now on, none for the engine's own

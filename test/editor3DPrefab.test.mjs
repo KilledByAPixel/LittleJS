@@ -459,3 +459,49 @@ test('a prefab edited again while its save was still being kept stays marked as 
     assert.deepEqual([json(run, 'kept'), run('editor3DPrefabDirty.has("Shop")')], [[2.5], true],
         'what was kept is the first edit, the second is in no file');
 });
+
+// a level with one Shop, a prefab of the game's own, and the post of the Shop lifted to a height
+const shopCode = `level3DAddPrefab('Shop', ${house});` +
+    fileCode.replace(`type: 'Box', pos: [-20, .5, 0]`, `type: 'Shop', pos: [-20, 0, 0]`);
+const postTo = (y)=> `editor3DChange((list)=> editor3DSetTransform(list[1], vec3(4, ${y}, 0))); editor3DStrokeEnd();`;
+
+test('saves of a prefab opened twice are kept in the order they were asked for, and it is in its file at the end', async ()=>
+{
+    const { run } = await loadGame();
+    run(shopCode + `var kept = [], finish = [];
+        levelEditor.onSave = (text)=> new Promise((resolve)=>
+            finish.push(()=> { kept.push(JSON.parse(text).objects[1].pos[1]); resolve(true); }));
+        editor3DPrefabEnter(2);` + postTo(3) + `var first = editor3DSave(); editor3DPrefabBack();
+        editor3DPrefabEnter(2);` + postTo(4) + 'var second = editor3DSave(); editor3DPrefabBack();');
+    await new Promise((resolve)=> setTimeout(resolve, 0));
+    assert.equal(run('finish.length'), 1, 'the second save waits for the first, though the prefab was opened again');
+    run('finish[0]()');
+    await run('first');
+    assert.equal(run('editor3DPrefabDirty.has("Shop")'), true, 'what is kept so far is the older one');
+    await new Promise((resolve)=> setTimeout(resolve, 0));
+    run('finish[1]()');
+    await run('second');
+    assert.deepEqual([json(run, 'kept'), run('editor3DPrefabDirty.has("Shop")')], [[3, 4], false]);
+});
+
+test('a prefab saved and then undone back to how it was opened is not what its file has', async ()=>
+{
+    const { run } = await loadGame();
+    run(shopCode + 'levelEditor.onSave = ()=> true; editor3DPrefabEnter(2);' + postTo(3));
+    await run('editor3DSave()');
+    run('editor3DUndo(); editor3DPrefabBack();');
+    assert.equal(run('editor3DPrefabDirty.has("Shop")'), true);
+    // opened again and saved as it is, it is in its file
+    run('editor3DPrefabEnter(2);');
+    await run('editor3DSave()');
+    run('editor3DPrefabBack()');
+    assert.equal(run('editor3DPrefabDirty.has("Shop")'), false);
+});
+
+test('a prefab that was not in its file when it was opened still is not after an edit there is undone', async ()=>
+{
+    const { run } = await loadGame();
+    run(shopCode + 'editor3DPrefabEnter(2);' + postTo(3) + 'editor3DPrefabBack(); editor3DPrefabEnter(2);' +
+        postTo(4) + 'editor3DUndo(); editor3DPrefabBack();');
+    assert.equal(run('editor3DPrefabDirty.has("Shop")'), true);
+});

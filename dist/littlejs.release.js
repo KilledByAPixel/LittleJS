@@ -984,7 +984,11 @@ function tweakDivider(){}
 function tweakEngineDefaults(){}
 class LevelEditor
 {
-    constructor() { this.paletteTiles = this.use3D = this.tool = undefined; }
+    constructor()
+    {
+        this.paletteTiles = this.use3D = this.tool = undefined;
+        this.keys = {}, this.buttons = [], this.tools = {};
+    }
     get isOpen() { return false; }
     get is3D() { return false; }
     get edit2D() { return undefined; }
@@ -2373,7 +2377,7 @@ class Timer
     getPercent()
     {
         if (!this.isSet()) return 0;
-        if (!this.setTime) return 1;
+        if (!(this.setTime > 0)) return 1;
         return 1 - percent(this.time - this.getGlobalTime(), 0, this.setTime);
     }
 
@@ -5057,7 +5061,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
     // build regular polygon points
     const points = [];
     const sizeX = size.x/2, sizeY = size.y/2;
-    for (let i=sides; i--;)
+    for (let i=sides; i-- > 0;) // a count that is not whole, or below zero, still ends
     {
         const a = (i/sides)*PI*2;
         points.push(vec2(sin(a)*sizeX, cos(a)*sizeY));
@@ -5168,7 +5172,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
         if (!ring)
         {
             const points = [];
-            for (let i=sides; i--;)
+            for (let i=sides; i-- > 0;)
             {
                 const a = (i/sides)*PI*2;
                 points.push(vec2(sin(a), cos(a)));
@@ -5268,7 +5272,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
         const startA = (offset%sides)/sides*PI*2;
         const points = [rim(startA)];
         const colors = [outerInt];
-        for (let i=sides; i--;)
+        for (let i=sides; i-- > 0;)
         {
             const a = ((i+offset)%sides)/sides*PI*2;
             points.push(pos);
@@ -5691,7 +5695,8 @@ function isOnScreen(pos, size=0)
 function setAdditiveBlendMode(additive=true)
 {
     glAdditive = additive;
-    drawContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    if (drawContext) // none headless
+        drawContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
 /** Set the Shader that 2D draws use from now on, none for the engine's own
@@ -7762,7 +7767,13 @@ class Sound
      */
     constructor(asset, randomness, range, taper=soundDefaultTaper, onloadCallback)
     {
-        if (!soundEnable || headlessMode) return;
+        if (!soundEnable || headlessMode)
+        {
+            // no sound is made: it counts as loaded, so a game that waits for its sounds goes on
+            this.loadedPercent = 1;
+            onloadCallback?.(this);
+            return;
+        }
         const rangeIsDefault = range === undefined;
         if (rangeIsDefault)
             range = soundDefaultRange;
@@ -15211,8 +15222,10 @@ class UIObject
                             return void inputClearKey(0, 0, false, true, false);
                     }
                 }
+                // the object that was the active one going into this update: one pressed and let go inside a
+                // frame is clicked on the next, with its release, not on both
                 if (!uiSystem.activateOnPress)
-                if (!mouseDown && this.isActiveObject() && this.interactive)
+                if (!mouseDown && isActive && this.isActiveObject() && this.interactive)
                     this.click();
                 if (this.destroyed) return;
             }
@@ -31528,7 +31541,8 @@ async function parseGLTF(data, baseUrl='')
             const bitmap = normalTextures.has(index) ?
                 await createImageBitmap(blob, {colorSpaceConversion: 'none', premultiplyAlpha: 'none'}) :
                 opaque ? await createImageBitmap(blob, {premultiplyAlpha: 'none'}).then(gltfOpaqueImage) : await createImageBitmap(blob);
-            return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497]); // REPEAT by default
+            // REPEAT by default, and hard edged only when its sampler says NEAREST, not as the game's tiles are
+            return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497], sampler.magFilter === 9728);
         }
         catch (e) { false&&LOG('glTF image not loaded', e); }
     }));
