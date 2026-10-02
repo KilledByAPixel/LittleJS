@@ -660,7 +660,8 @@ level3DAddType('Cylinder', function(pos, properties)
     { return level3DMakeShape(pos, properties, level3DCylinderMesh ||= buildCylinder()); },
     {color: WHITE, tile: -1, solid: true});
 // a light, a spotlight with a cone: cone is the angle in degrees from its forward out to the edge of its beam, the
-// object's rotation aims it, softness is how much of the cone fades, and shadows makes it the one that casts them
+// object's rotation aims it, softness is how much of the cone fades, shadows makes it the one that casts them, and
+// flare gives it a lens flare
 level3DAddType('Light', function(pos, properties)
 {
     const light = new Light3D(pos, properties.radius, properties.color, properties.intensity);
@@ -668,5 +669,6 @@ level3DAddType('Light', function(pos, properties)
     light.coneSoftness = properties.softness;
     if (properties.shadows && render3D)
         render3D.shadowLight = light;
+    light.flare = !!properties.flare;
     return light;
-}, {color: WHITE, radius: 5, intensity: 1, cone: 0, softness: .2, shadows: false});
+}, {color: WHITE, radius: 5, intensity: 1, cone: 0, softness: .2, shadows: false, flare: false});

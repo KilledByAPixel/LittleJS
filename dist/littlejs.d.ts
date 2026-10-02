@@ -195,6 +195,36 @@ declare module "littlejsengine" {
      */
     export type Particle3DCollideCallback = (particle: Particle3D, level: EngineObject3D, pos: Vector3) => boolean | void;
     /**
+     * A part of a lens flare
+     */
+    export type LensFlareElement = {
+        /**
+         * - Where along the line: 0 the sun, 1 the middle of the screen, 2 as far past it
+         */
+        at: number;
+        /**
+         * - How big across, as a part of the screen's height, a vector for a part wider
+         * than it is tall
+         */
+        size: number | Vector2;
+        /**
+         * - Its color, the alpha how bright
+         */
+        color: Color;
+        /**
+         * - glow, disc, ring, hex, streak or star, a glow when left out
+         */
+        shape?: string;
+        /**
+         * - A tile of the game's own to draw in place of a shape, best white on clear
+         */
+        tileInfo?: TileInfo;
+        /**
+         * - How far it is turned, in radians
+         */
+        angle?: number;
+    };
+    /**
      * What VoxelMap.raycast finds: how far along the ray, the block's cell and type, and the normal of the face it comes in
      * through
      */
@@ -9787,10 +9817,12 @@ declare module "littlejsengine" {
      * - radius is a world distance, so scale3D does not change it
      * - An alpha, an intensity or a radius of 0 switches it off, and a light that is off takes none of those slots
      * - Draws nothing but its glow, when it has one; add a small emissive mesh if the lamp itself should be seen
+     * - flare = true gives it a lens flare, see LensFlare3D
      * @extends EngineObject3D
      * @memberof Render3D
      * @example
      * const torch = new Light3D(vec3(0, 3, 0), 10, hsl(.1, 1, .65));
+     * torch.flare = true; // light in the lens when the torch is in view
      */
     export class Light3D extends EngineObject3D {
         /** Create a point light
@@ -9818,6 +9850,15 @@ declare module "littlejsengine" {
         /** @property {number} - How fast the glow fades from its middle: 1 by default, .5 a wide haze, 2 a tight
          *  bright core */
         glowFalloff: number;
+        /** @type {LensFlare3D|undefined} */
+        flareObject: LensFlare3D | undefined;
+        set flare(arg: boolean | LensFlare3D);
+        /** The light's lens flare, undefined for none: set it to true for a flare made for it, or to a LensFlare3D of
+         *  your own, and to false to take it away; the flare is the light's, changed through light.flare.count and the
+         *  like, and destroyed with the light or when another takes its place; it reads back as the LensFlare3D, never
+         *  as true or false, which are in its type only since they can be set
+         *  @type {LensFlare3D|boolean|undefined} */
+        get flare(): boolean | LensFlare3D;
     }
     /**
      * DirectionalLight3D - A Light3D that shines from far away with no falloff, like sunlight
@@ -10114,12 +10155,26 @@ declare module "littlejsengine" {
         worldPos3D: Vector3;
     }
     /**
+     * A part of a lens flare
+     * @typedef {Object} LensFlareElement
+     * @property {number} at - Where along the line: 0 the sun, 1 the middle of the screen, 2 as far past it
+     * @property {number|Vector2} size - How big across, as a part of the screen's height, a vector for a part wider
+     *  than it is tall
+     * @property {Color} color - Its color, the alpha how bright
+     * @property {string} [shape] - glow, disc, ring, hex, streak or star, a glow when left out
+     * @property {TileInfo} [tileInfo] - A tile of the game's own to draw in place of a shape, best white on clear
+     * @property {number} [angle] - How far it is turned, in radians
+     * @memberof Render3D
+     */
+    /**
      * LensFlare3D - The sun's lens flare, the old kind: a glow at the sun and a row of discs and rings of different
      * sizes along the line from the sun through the middle of the screen
      * - Make one and it shows, over the 3D scene and under what the game draws after, a HUD; destroy it to take it away
      * - It follows render3D.sunDirection, and fades out as the sun leaves the screen or goes behind something
+     * - A Light3D gets one of its own with light.flare = true
      * - flareSize, count, intensity and saturation set its look, seed picks another arrangement, and its color tints it,
-     *   with the sun's own color; or give it elements of your own
+     *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
+     *   give it elements of your own, which may be tiles of the game's
      * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read
      * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
      *   through, each as the box around its mesh, see render3D.pick; turn it off with occlusion
@@ -10148,17 +10203,19 @@ declare module "littlejsengine" {
         saturation: number;
         /** @property {number} - Picks the arrangement of the ghosts, another seed is another flare */
         seed: number;
-        /** @property {Array<{at: number, size: number, color: Color, shape: string}>|undefined} - The parts of the
-         *  flare, to set your own in place of the ones made from count, seed and saturation: at is where along the
-         *  line, 0 the sun, 1 the middle of the screen, 2 as far past it; size is across, as a part of the screen's
-         *  height; shape is glow, disc or ring
-         *  @type {Array<{at: number, size: number, color: Color, shape: string}>|undefined} */
-        elements: {
-            at: number;
-            size: number;
-            color: Color;
-            shape: string;
-        }[];
+        /** @property {Array<string>|undefined} - The shapes the ghosts are picked from, glow, disc, ring, hex,
+         *  streak or star: ['hex'] makes every ghost a hexagon, and a shape listed twice is picked twice as often;
+         *  discs, rings and glows when not set
+         *  @type {Array<string>|undefined} */
+        shapes: Array<string> | undefined;
+        /** @property {number} - Scales the glow at the sun, 0 for none */
+        glowSize: number;
+        /** @property {number} - Scales the ghosts */
+        ghostSize: number;
+        /** @property {Array<LensFlareElement>|undefined} - The parts of the flare, to set your own in place of the
+         *  ones made from count, seed, saturation, shapes, glowSize and ghostSize
+         *  @type {Array<LensFlareElement>|undefined} */
+        elements: Array<LensFlareElement> | undefined;
         /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
          *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
          *  in front of the light, and a spotlight's shows from inside its beam only
@@ -10171,22 +10228,12 @@ declare module "littlejsengine" {
         /** @property {number} - How much of the sun shows, 0 hidden or behind the camera to 1 in plain view, eased */
         visible: number;
         madeKey: string;
-        /** @type {Array<{at: number, size: number, color: Color, shape: string}>} */
-        made: {
-            at: number;
-            size: number;
-            color: Color;
-            shape: string;
-        }[];
-        /** The parts of the flare: the elements set by hand, or the ones made from count, seed and saturation, a glow
-         *  and a core at the sun and the ghosts, made again when one of those changes
-         *  @return {Array<{at: number, size: number, color: Color, shape: string}>} */
-        getElements(): Array<{
-            at: number;
-            size: number;
-            color: Color;
-            shape: string;
-        }>;
+        /** @type {Array<LensFlareElement>} */
+        made: Array<LensFlareElement>;
+        /** The parts of the flare: the elements set by hand, or the ones made from count, seed, saturation, shapes,
+         *  glowSize and ghostSize, a glow and a core at the sun and the ghosts, made again when one of those changes
+         *  @return {Array<LensFlareElement>} */
+        getElements(): Array<LensFlareElement>;
         flareSource(): {
             direction: Vector3;
             distance: number;
@@ -10196,14 +10243,17 @@ declare module "littlejsengine" {
          *  behind the camera
          *  @return {Vector2|undefined} */
         getSunScreenPos(): Vector2 | undefined;
-        /** The parts of the flare as they are drawn now: each one's place on the screen, its size in pixels and its
-         *  color, dimmed by how much of the sun shows; empty when there is nothing to draw
-         *  @return {Array<{pos: Vector2, size: number, color: Color, shape: string}>} */
+        /** The parts of the flare as they are drawn now: each one's place on the screen, its size in pixels, a vector
+         *  when the element's is, and its color, dimmed by how much of the sun shows; empty when there is nothing to draw
+         *  @return {Array<{pos: Vector2, size: number|Vector2, color: Color, shape: string|undefined,
+         *      tileInfo: TileInfo|undefined, angle: number}>} */
         getScreenElements(): Array<{
             pos: Vector2;
-            size: number;
+            size: number | Vector2;
             color: Color;
-            shape: string;
+            shape: string | undefined;
+            tileInfo: TileInfo | undefined;
+            angle: number;
         }>;
         /** Is something between the camera and the sun, or the flare's light: the level, or an object that is not see
          *  through

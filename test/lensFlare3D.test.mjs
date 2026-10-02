@@ -188,3 +188,72 @@ test('a spotlight\'s flare shows from inside its beam only', ()=>
     run('lamp.rotation3D = vec3(0, PI, 0)');
     assert.ok(run('flare.getScreenElements().length') > 0, 'turned to shine at the camera');
 });
+
+test('a light tagged with flare has a flare of its own, which goes with the light', ()=>
+{
+    const run = load();
+    run(`sun(1, 0, 0); var lamp = new Light3D(vec3(0, 0, -10), 10, rgb(1, 0, 0)); var count = engineObjects.length;`);
+    assert.equal(run('lamp.flare'), undefined, 'no flare until asked for');
+    run('lamp.flare = true');
+    assert.deepEqual([run('lamp.flare instanceof LensFlare3D'), run('lamp.flare.light === lamp'),
+        run('engineObjects.length - count')], [true, true, 1]);
+    assert.ok(run('lamp.flare.getScreenElements().length') > 0);
+    run('var made = lamp.flare; lamp.flare = true;');
+    assert.equal(run('lamp.flare === made'), true, 'tagged twice, still the one flare');
+
+    // a flare of the game's own in its place: the old one goes
+    run('var mine = new LensFlare3D(2, 3); lamp.flare = mine;');
+    assert.deepEqual([run('lamp.flare === mine'), run('mine.light === lamp'), run('made.destroyed')], [true, true, true]);
+    run('lamp.flare = false');
+    assert.deepEqual([run('lamp.flare'), run('mine.destroyed')], [undefined, true]);
+
+    run('lamp.flare = true; made = lamp.flare; lamp.destroy();');
+    assert.equal(run('made.destroyed'), true, 'destroyed with its light');
+});
+
+test('a level\'s Light has a flare property', ()=>
+{
+    const run = load();
+    run(`level3DLoad({objects: [{id: 1, type: 'Light', pos: [0, 0, -10], properties: {flare: true}},
+        {id: 2, type: 'Light', pos: [3, 0, -10]}]});
+        var lights = engineObjects.filter((o)=> o instanceof Light3D);`);
+    assert.deepEqual(json(run, 'lights.map((o)=> o.flare instanceof LensFlare3D)'), [true, false]);
+});
+
+test('the made flare takes its ghosts from shapes, and glowSize and ghostSize scale its parts', ()=>
+{
+    const run = load();
+    run('var flare = new LensFlare3D;');
+    const before = json(run, 'flare.getElements()');
+    run(`flare.shapes = ['hex']`);
+    const hex = json(run, 'flare.getElements()');
+    assert.ok(hex.slice(2).every((e)=> e.shape === 'hex'));
+    assert.deepEqual(hex.map((e)=> [e.at, e.size]), before.map((e)=> [e.at, e.size]), 'the same arrangement');
+    run(`flare.shapes = ['ring', 'streak']`);
+    const shapes = new Set(json(run, 'flare.getElements()').slice(2).map((e)=> e.shape));
+    assert.deepEqual([...shapes].sort(), ['ring', 'streak']);
+    run('flare.shapes = undefined; flare.ghostSize = 2; flare.glowSize = .5;');
+    const scaled = json(run, 'flare.getElements()');
+    near(scaled[0].size, before[0].size / 2, undefined, 1e-9);
+    near(scaled[5].size, before[5].size * 2, undefined, 1e-9);
+    run('flare.glowSize = 0');
+    assert.equal(run('flare.getElements().length'), 7, 'no glow at the sun, the ghosts alone');
+});
+
+test('an element may be a tile of the game\'s own, turned, and wider than it is tall', ()=>
+{
+    const run = load();
+    run(`var flare = new LensFlare3D, art = tile(3, 16);
+        flare.elements = [{at: 0, size: vec2(.4, .1), color: WHITE, tileInfo: art, angle: 1}];
+        sun(0, 0, -1);`);
+    const [e] = json(run, 'flare.getScreenElements()');
+    assert.deepEqual([e.size.x, e.size.y, e.angle, run('flare.getScreenElements()[0].tileInfo === art')],
+        [400, 100, 1, true]);
+    run('lamp = new Light3D(vec3(0, 0, -10), 5); flare.light = lamp;');
+    assert.deepEqual(json(run, 'flare.getScreenElements()[0].size'), {x: 200, y: 50}, 'a vector size scales as a number does');
+});
+
+test('every shape has a tile in the flare texture, and a name that is not a shape is the glow', ()=>
+{
+    assert.deepEqual(json(load(), 'render3DFlareShapes'), ['glow', 'disc', 'ring', 'hex', 'streak', 'star']);
+});

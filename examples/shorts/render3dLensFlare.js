@@ -24,6 +24,11 @@ function gameInit()
 
     // one line turns the flare on, it follows render3D.sunDirection
     flare = new LensFlare3D;
+
+    // a lamp with a flare of its own, in the lamp's color
+    const lamp = new Light3D(vec3(0, 3, 0), 16, hsl(.55,.9,.6));
+    lamp.glow = 1.5;
+    lamp.flare = true;
 }
 
 function gameUpdate()
@@ -35,22 +40,25 @@ function gameUpdate()
     if (keyWasPressed('KeyS'))
         flare.saturation = flare.saturation ? 0 : 1;
     keyWasPressed('KeyN') && ++flare.seed;
+    if (keyWasPressed('KeyH'))
+        flare.shapes = flare.shapes ? undefined : ['hex', 'hex', 'streak'];
 }
 
 function gameRenderPost()
 {
     const sun = (flare.visible * 100 | 0) + '%';
     const colors = flare.saturation ? 'colors' : 'one color';
+    const shapes = flare.shapes ? 'hexagons' : 'discs';
     const text = `size ${flare.flareSize} (1-3) / ${flare.count} ghosts (C)` +
-        ` / ${colors} (S) / N: new / sun ${sun}`;
+        ` / ${colors} (S) / ${shapes} (H) / N: new / sun ${sun}`;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 26);
 }
 
 /* info
 The sun's lens flare: a glow at the sun and a row of discs and rings
 across the screen, which fades when a pillar hides the sun. Drag to look
-around; 1 to 3 set its size, C its count, S its colors and N picks
-another arrangement.
+around; 1 to 3 set its size, C its count, S its colors, H its shapes and
+N picks another arrangement. The lamp in the middle has a flare too.
 
 ## How it works
 `new LensFlare3D` is the whole effect. It is an object, so once made the
@@ -97,6 +105,15 @@ The text at the top shows `visible` as a percentage.
   and 0 makes them all the flare's color.
 - `seed` picks the arrangement. The ghosts' places, sizes and shapes are
   random numbers from the seed, so N gives a different flare each time.
+- `shapes` is the list the ghosts are picked from: `glow`, `disc`,
+  `ring`, `hex`, `streak` and `star`. H makes two in three a hexagon
+  and the rest streaks, or sets it back to discs, rings and glows.
+
+### The lamp
+A `Light3D` gets a flare with `lamp.flare = true`. It sits at the lamp,
+takes the lamp's color, and hides when a pillar is in front of the lamp.
+`lamp.flare` is then a `LensFlare3D` like the sun's, with the same
+fields, and it goes when the lamp is destroyed.
 
 ## Try it
 - Make the flare with arguments, `(size, count, intensity, saturation)`:
@@ -104,10 +121,14 @@ The text at the top shows `visible` as a percentage.
 - Lower the sun: `vec3(-.6, .35, -1)` to `vec3(-.6, .1, -1)`.
 - A red sun: `render3D.sunColor = hsl(0,.8,.7);`
 - Make every pillar tall: `height = 3 + i%3*2` to `height = 8`.
+- No glow at the sun, only ghosts: `flare.glowSize = 0;`
+- Bigger ghosts: `flare.ghostSize = 2;`
+- A star on the lamp, after `lamp.flare = true;`:
+  `lamp.flare.shapes = ['star'];`
 
 ## See also
 3D Lights for lamps with a glow of their own, and 3D Glow for bloom over
-the whole picture. `flare.light` makes the flare belong to a `Light3D`
-in place of the sun, `flare.occlusion = false` stops things hiding it,
-and `flare.elements` takes a list of parts of your own.
+the whole picture. `flare.occlusion = false` stops things hiding it,
+and `flare.elements` takes a list of parts of your own, each a shape or
+a tile of your own with `tileInfo`.
 */

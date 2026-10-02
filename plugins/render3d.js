@@ -4697,10 +4697,12 @@ class InstancedMesh3D extends EngineObject3D
  * - radius is a world distance, so scale3D does not change it
  * - An alpha, an intensity or a radius of 0 switches it off, and a light that is off takes none of those slots
  * - Draws nothing but its glow, when it has one; add a small emissive mesh if the lamp itself should be seen
+ * - flare = true gives it a lens flare, see LensFlare3D
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
  * const torch = new Light3D(vec3(0, 3, 0), 10, hsl(.1, 1, .65));
+ * torch.flare = true; // light in the lens when the torch is in view
  */
 class Light3D extends EngineObject3D
 {
@@ -4735,6 +4737,35 @@ class Light3D extends EngineObject3D
          *  bright core */
         this.glowFalloff = 1;
         this.additive = true; // the glow is added on, in the transparent stage; a light with none draws nothing
+        /** @type {LensFlare3D|undefined} */
+        this.flareObject = undefined;
+    }
+
+    /** The light's lens flare, undefined for none: set it to true for a flare made for it, or to a LensFlare3D of
+     *  your own, and to false to take it away; the flare is the light's, changed through light.flare.count and the
+     *  like, and destroyed with the light or when another takes its place; it reads back as the LensFlare3D, never
+     *  as true or false, which are in its type only since they can be set
+     *  @type {LensFlare3D|boolean|undefined} */
+    get flare() { return this.flareObject; }
+
+    set flare(value)
+    {
+        const old = this.flareObject;
+        if (value === true && old) return;
+        const flare = value === true ? new LensFlare3D : value || undefined;
+        if (flare === old) return;
+        old && old.destroy();
+        if (flare)
+            flare.light = this;
+        this.flareObject = flare;
+    }
+
+    /** Destroy the light, and its flare with it
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        this.flare = false;
+        super.destroy(immediate);
     }
 
     /** Draw the glow, a quad facing the camera with a soft round glow on it, pulled toward the camera by half its

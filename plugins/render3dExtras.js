@@ -1476,31 +1476,74 @@ class Trail3D extends EngineObject3D
 // lens flare
 
 // the shapes a flare is made of, white on clear on one smooth texture made the first time it is asked for: a soft
-// glow, a flat disc with a brighter rim, and a ring; undefined headless or without a canvas
+// glow, a flat disc with a brighter rim, a ring, a hexagon like the blades of a lens, a streak across, and a star
+// of six rays; undefined headless or without a canvas
+const render3DFlareShapes = ['glow', 'disc', 'ring', 'hex', 'streak', 'star'];
 let render3DFlareTiles;
 function render3DFlareTile(shape)
 {
     if (!render3DFlareTiles)
     {
         if (headlessMode || !glContext || typeof OffscreenCanvas == 'undefined') return;
-        const cell = 128, shapes = ['glow', 'disc', 'ring'], context = createCanvasContext(cell * shapes.length, cell);
+        const cell = 128, shapes = render3DFlareShapes, context = createCanvasContext(cell * shapes.length, cell);
         // each shape is how see-through it is from its middle out
         const alpha =
         {
             glow: (t)=> engineGlowAlpha(t, 1),
             disc: (t)=> t < .8 ? .4 + .1 * t : t < .92 ? .48 + (t - .8) * 3 : (1 - t) / .08 * .84,
             ring: (t)=> max(0, 1 - abs(t - .86) / .12),
+            hex: (t)=> t < .8 ? .4 + .1 * t : t < .92 ? .48 + (t - .8) * 3 : (1 - t) / .08 * .84,
+            streak: (t)=> (1 - t) ** 1.5,
         };
-        shapes.forEach((shape, i)=>
+        // a round gradient from the middle of the cell out, squashed for a ray and cut to a path for the hexagon
+        const fill = (shape, r, path)=>
         {
-            const x = i * cell + cell / 2, y = cell / 2, r = cell / 2 - 2, steps = 32;
-            const gradient = context.createRadialGradient(x, y, 0, x, y, r);
+            const steps = 32, gradient = context.createRadialGradient(0, 0, 0, 0, 0, r);
             for (let k = 0; k <= steps; ++k)
                 gradient.addColorStop(k / steps, 'rgba(255,255,255,' + clamp(alpha[shape](k / steps)).toFixed(4) + ')');
             context.fillStyle = gradient;
             context.beginPath();
-            context.arc(x, y, r, 0, 2 * PI);
+            path ? path() : context.arc(0, 0, r, 0, 2 * PI);
             context.fill();
+        };
+        const ray = (r, angle)=>
+        {
+            context.save();
+            context.rotate(angle);
+            context.scale(1, .07);
+            fill('streak', r);
+            context.restore();
+        };
+        shapes.forEach((shape, i)=>
+        {
+            const r = cell / 2 - 2;
+            context.save();
+            context.translate(i * cell + cell / 2, cell / 2);
+            if (shape == 'hex')
+            {
+                // a gradient is round, so the hexagon is set pixel by pixel, by how far each is toward a side
+                const image = context.createImageData(cell, cell), data = image.data, apothem = r * cos(PI / 6);
+                for (let k = 0; k < cell * cell; ++k)
+                {
+                    const x = abs(k % cell + .5 - cell / 2), y = abs((k / cell | 0) + .5 - cell / 2);
+                    const t = max(y, x * cos(PI / 6) + y / 2) / apothem;
+                    data[k * 4] = data[k * 4 + 1] = data[k * 4 + 2] = 255;
+                    data[k * 4 + 3] = t < 1 ? clamp(alpha.hex(t)) * 255 : 0;
+                }
+                context.putImageData(image, i * cell, 0);
+            }
+            else if (shape == 'streak')
+                ray(r, 0);
+            else if (shape == 'star')
+            {
+                for (let k = 3; k--;)
+                    ray(r, k * PI / 3 + PI / 2);
+                context.scale(.3, .3);
+                fill('glow', r);
+            }
+            else
+                fill(shape, r);
+            context.restore();
         });
         const texture = new TextureInfo(context.canvas, true, false, false); // smooth even in a pixel art game
         render3DFlareTiles = new Map(shapes.map((shape, i)=>
@@ -1510,12 +1553,27 @@ function render3DFlareTile(shape)
 }
 
 /**
+ * A part of a lens flare
+ * @typedef {Object} LensFlareElement
+ * @property {number} at - Where along the line: 0 the sun, 1 the middle of the screen, 2 as far past it
+ * @property {number|Vector2} size - How big across, as a part of the screen's height, a vector for a part wider
+ *  than it is tall
+ * @property {Color} color - Its color, the alpha how bright
+ * @property {string} [shape] - glow, disc, ring, hex, streak or star, a glow when left out
+ * @property {TileInfo} [tileInfo] - A tile of the game's own to draw in place of a shape, best white on clear
+ * @property {number} [angle] - How far it is turned, in radians
+ * @memberof Render3D
+ */
+
+/**
  * LensFlare3D - The sun's lens flare, the old kind: a glow at the sun and a row of discs and rings of different
  * sizes along the line from the sun through the middle of the screen
  * - Make one and it shows, over the 3D scene and under what the game draws after, a HUD; destroy it to take it away
  * - It follows render3D.sunDirection, and fades out as the sun leaves the screen or goes behind something
+ * - A Light3D gets one of its own with light.flare = true
  * - flareSize, count, intensity and saturation set its look, seed picks another arrangement, and its color tints it,
- *   with the sun's own color; or give it elements of your own
+ *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
+ *   give it elements of your own, which may be tiles of the game's
  * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read
  * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
  *   through, each as the box around its mesh, see render3D.pick; turn it off with occlusion
@@ -1548,11 +1606,18 @@ class LensFlare3D extends EngineObject3D
         this.saturation = saturation;
         /** @property {number} - Picks the arrangement of the ghosts, another seed is another flare */
         this.seed = 1;
-        /** @property {Array<{at: number, size: number, color: Color, shape: string}>|undefined} - The parts of the
-         *  flare, to set your own in place of the ones made from count, seed and saturation: at is where along the
-         *  line, 0 the sun, 1 the middle of the screen, 2 as far past it; size is across, as a part of the screen's
-         *  height; shape is glow, disc or ring
-         *  @type {Array<{at: number, size: number, color: Color, shape: string}>|undefined} */
+        /** @property {Array<string>|undefined} - The shapes the ghosts are picked from, glow, disc, ring, hex,
+         *  streak or star: ['hex'] makes every ghost a hexagon, and a shape listed twice is picked twice as often;
+         *  discs, rings and glows when not set
+         *  @type {Array<string>|undefined} */
+        this.shapes = undefined;
+        /** @property {number} - Scales the glow at the sun, 0 for none */
+        this.glowSize = 1;
+        /** @property {number} - Scales the ghosts */
+        this.ghostSize = 1;
+        /** @property {Array<LensFlareElement>|undefined} - The parts of the flare, to set your own in place of the
+         *  ones made from count, seed, saturation, shapes, glowSize and ghostSize
+         *  @type {Array<LensFlareElement>|undefined} */
         this.elements = undefined;
         /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
          *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
@@ -1567,29 +1632,32 @@ class LensFlare3D extends EngineObject3D
         this.visible = 1;
         this.renderOrder = 1e9; // over the game's sprites, it is light in the lens
         this.madeKey = '';
-        /** @type {Array<{at: number, size: number, color: Color, shape: string}>} */
+        /** @type {Array<LensFlareElement>} */
         this.made = [];
     }
 
-    /** The parts of the flare: the elements set by hand, or the ones made from count, seed and saturation, a glow
-     *  and a core at the sun and the ghosts, made again when one of those changes
-     *  @return {Array<{at: number, size: number, color: Color, shape: string}>} */
+    /** The parts of the flare: the elements set by hand, or the ones made from count, seed, saturation, shapes,
+     *  glowSize and ghostSize, a glow and a core at the sun and the ghosts, made again when one of those changes
+     *  @return {Array<LensFlareElement>} */
     getElements()
     {
         if (this.elements) return this.elements;
-        const key = [this.count, this.seed, this.saturation].join();
+        const shapes = this.shapes?.length ? this.shapes : undefined, glow = this.glowSize, ghost = this.ghostSize;
+        const key = [this.count, this.seed, this.saturation, glow, ghost, shapes?.length, shapes].join();
         if (key !== this.madeKey)
         {
             const random = new RandomGenerator(this.seed * 7919 + 1), s = clamp(this.saturation);
-            const made = this.made = [
-                {at: 0, size: .7, color: hsl(0, 0, 1, .5), shape: 'glow'},
-                {at: 0, size: .25, color: hsl(0, 0, 1, .9), shape: 'glow'}];
+            /** @type {Array<LensFlareElement>} */
+            const made = this.made = glow > 0 ? [
+                {at: 0, size: .7 * glow, color: hsl(0, 0, 1, .5), shape: 'glow'},
+                {at: 0, size: .25 * glow, color: hsl(0, 0, 1, .9), shape: 'glow'}] : [];
             for (let i = 0; i < this.count; ++i)
             {
                 // spread along the line, each a place of its own, the far ones bigger
                 const at = (i + random.float(.2, .8)) / max(this.count, 1) * 1.9 + .2;
-                const pick = random.float(), shape = pick < .5 ? 'disc' : pick < .8 ? 'ring' : 'glow';
-                made.push({at, size: random.float(.04, .1) * (1 + at), shape,
+                const pick = random.float(), shape = shapes ? shapes[min(pick * shapes.length | 0, shapes.length - 1)] :
+                    pick < .5 ? 'disc' : pick < .8 ? 'ring' : 'glow';
+                made.push({at, size: random.float(.04, .1) * (1 + at) * ghost, shape,
                     color: hsl(random.float(), s * .9, .6, random.float(.15, .4))});
             }
             this.madeKey = key;
@@ -1623,9 +1691,10 @@ class LensFlare3D extends EngineObject3D
         return source && render3D.worldToScreen(source.pos);
     }
 
-    /** The parts of the flare as they are drawn now: each one's place on the screen, its size in pixels and its
-     *  color, dimmed by how much of the sun shows; empty when there is nothing to draw
-     *  @return {Array<{pos: Vector2, size: number, color: Color, shape: string}>} */
+    /** The parts of the flare as they are drawn now: each one's place on the screen, its size in pixels, a vector
+     *  when the element's is, and its color, dimmed by how much of the sun shows; empty when there is nothing to draw
+     *  @return {Array<{pos: Vector2, size: number|Vector2, color: Color, shape: string|undefined,
+     *      tileInfo: TileInfo|undefined, angle: number}>} */
     getScreenElements()
     {
         const sun = this.getSunScreenPos(), center = mainCanvasSize.scale(.5);
@@ -1651,8 +1720,9 @@ class LensFlare3D extends EngineObject3D
         {
             const c = e.color.multiply(tint);
             // along the line and past the middle, a lerp would stop there
-            return {pos: sun.add(center.subtract(sun).scale(e.at)), size: e.size * height, shape: e.shape,
-                color: rgb(c.r, c.g, c.b, c.a * strength)};
+            const size = typeof e.size == 'number' ? e.size * height : e.size.scale(height);
+            return {pos: sun.add(center.subtract(sun).scale(e.at)), size, shape: e.shape, tileInfo: e.tileInfo,
+                angle: e.angle || 0, color: rgb(c.r, c.g, c.b, c.a * strength)};
         });
     }
 
@@ -1702,8 +1772,9 @@ class LensFlare3D extends EngineObject3D
         setAdditiveBlendMode(true);
         for (const e of elements)
         {
-            const tileInfo = render3DFlareTile(e.shape);
-            tileInfo && drawTile(e.pos, vec2(e.size), tileInfo, e.color, 0, false, undefined, true, true);
+            const tileInfo = e.tileInfo || render3DFlareTile(e.shape);
+            const size = typeof e.size == 'number' ? vec2(e.size) : e.size;
+            tileInfo && drawTile(e.pos, size, tileInfo, e.color, e.angle, false, undefined, true, true);
         }
         setAdditiveBlendMode(false);
     }

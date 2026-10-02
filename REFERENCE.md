@@ -1739,14 +1739,19 @@ new LensFlare3D(size=1, count=7, intensity=1, saturation=1, color) // the sun's 
                                   // screen; it fades as the sun leaves the screen or goes behind something
 flare.flareSize = 1.5             // scales every part; count is how many ghosts, intensity how bright, saturation
                                   // how colorful, 0 all its own color; seed picks another arrangement
-flare.elements = [{at: .5, size: .1, color: hsl(.6,1,.6,.3), shape: 'disc'}] // or parts of your own: at 0 the sun,
-                                  // 1 the middle, 2 as far past it; size a part of the screen's height; shape
-                                  // glow, disc or ring
+flare.shapes = ['hex', 'streak']  // what the ghosts are picked from: glow, disc, ring, hex, streak or star; glowSize
+                                  // scales the glow at the sun, 0 for none, and ghostSize the ghosts
+flare.elements = [{at: .5, size: .1, color: hsl(.6,1,.6,.3), shape: 'disc'}] // or parts of your own, each a
+                                  // LensFlareElement: at 0 the sun, 1 the middle, 2 as far past it; size a part of
+                                  // the screen's height, or a vec2 for a wide one; shape one of the six, or
+                                  // tileInfo for a tile of your own; angle turns it
 flare.visible                     // how much of the sun shows, 0 to 1, eased over fadeTime, to read; what is not
                                   // see through hides it, flare.occlusion = false turns that off
-flare.light = lamp                // the flare of a Light3D in place of the sun's: at the light, in its color,
-                                  // smaller from farther than its radius, hidden by what is in front of it; a
-                                  // spotlight's shows from inside its beam only
+light.flare = true                // a Light3D's own flare: at the light, in its color, smaller from farther than
+                                  // its radius, hidden by what is in front of it, a spotlight's only from inside
+                                  // its beam; light.flare is then its LensFlare3D, or set one of your own; false
+                                  // takes it away, and it goes with the light; a level's Light has flare too
+flare.light = lamp                // the same by hand, a flare made on its own and pointed at a light
 // Trails - a ribbon through where the object has been, parent it to something that moves
 new Trail3D(pos3D, lifeTime, width, tileInfo, color, colorEnd, additive) // thins and fades from head to tail over
                                                                          // lifeTime seconds; Infinity keeps every
@@ -1888,7 +1893,8 @@ prefab.originOffset                               // from the prefab's origin to
 // Built-in types and their properties
 Box, Sphere, Cylinder   // color, tile (-1 for none), solid (true); 1 unit across, the scale is the size
 Light                   // color, radius (5), intensity (1); cone (0), degrees from its forward to the edge of
-                        // its beam, makes it a spotlight aimed by its rotation, softness (.2), shadows (false)
+                        // its beam, makes it a spotlight aimed by its rotation, softness (.2), shadows (false);
+                        // flare (false) gives it a lens flare
 ```
 
 ### 3D level editor
