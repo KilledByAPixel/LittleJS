@@ -29,8 +29,46 @@ iframe
 }
 #selectExample
 {
-    flex-grow: 1;
+    flex: 1 1 0;
     min-height: 100px;
+}
+#exampleInfoBox
+{
+    display: none;
+    flex: 1 1 0;
+    min-height: 100px;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 2px 12px;
+    border: 1px solid #555;
+    background: #111;
+    color: #ddd;
+    font: 15px/1.45 sans-serif;
+}
+#exampleInfoBox h2, #exampleInfoBox h3, #exampleInfoBox h4
+{
+    margin: 14px 0 4px;
+    color: #fff;
+}
+#exampleInfoBox h2 { font-size: 20px; }
+#exampleInfoBox h3 { font-size: 17px; }
+#exampleInfoBox h4 { font-size: 15px; }
+#exampleInfoBox p { margin: 8px 0; }
+#exampleInfoBox ul, #exampleInfoBox ol { margin: 8px 0; padding-left: 22px; }
+#exampleInfoBox li { margin: 3px 0; }
+#exampleInfoBox code, #exampleInfoBox pre
+{
+    font: 13px monospace;
+    color: #aef;
+    background: #000;
+}
+#exampleInfoBox code { padding: 1px 4px; }
+#exampleInfoBox pre { padding: 6px 8px; overflow-x: auto; }
+#exampleInfoBox a { color: #70B7FD; }
+@media (max-aspect-ratio: 1/1)
+{
+    /* the stacked layout of a narrow window: the box has a height of its own */
+    #exampleInfoBox { flex: none; max-height: 40vh; }
 }
 #divTextareas
 {
