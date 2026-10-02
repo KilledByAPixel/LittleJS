@@ -1576,7 +1576,7 @@ function render3DFlareTile(shape)
  *   give it elements of your own, which may be tiles of the game's
  * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read
  * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
- *   through, each as the box around its mesh, see render3D.pick; turn it off with occlusion
+ *   through, each on the triangles of its mesh, see render3D.pick; turn it off with occlusion
  * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
  * @extends EngineObject3D
  * @memberof Render3D
@@ -1727,7 +1727,8 @@ class LensFlare3D extends EngineObject3D
     }
 
     /** Is something between the camera and the sun, or the flare's light: the level, or an object that is not see
-     *  through
+     *  through, hit on its triangles as render3D.pick hits it, so a mesh the camera is inside hides nothing unless
+     *  it is doubleSided
      *  @return {boolean} */
     isSunHidden()
     {
@@ -1743,14 +1744,18 @@ class LensFlare3D extends EngineObject3D
         for (const map of maps)
             if (map.raycast(ray, reach, (type)=> !map.blockType(type).seeThrough))
                 return true;
-        // an object is hit by its box, and a box the camera is inside, a room, a wide floor or the player's own
-        // body, says nothing of what is in the way: the ray the other way hits it too, and it is left out; so is
-        // one the light is inside, its lamp
-        const backward = ray.direction.scale(-1), back = new Ray3D(ray.origin, backward);
-        const lamp = this.light && [new Ray3D(source.pos, ray.direction), new Ray3D(source.pos, backward)];
-        const hits = (r, o)=> render3DRaycastObject(r, o) !== undefined;
-        const around = (o)=> !(o instanceof HeightMap) && (hits(back, o) || lamp && hits(lamp[0], o) && hits(lamp[1], o));
-        const hit = render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o) && !around(o)));
+        // a light's lamp, the mesh the light is inside, does not hide it: one whose box, in its own space, the light
+        // is in
+        const lamp = (o)=>
+        {
+            if (!this.light || !o.mesh || o instanceof HeightMap) return false;
+            const matrix = render3DObjectMatrix(o);
+            if (!matrix.determinant()) return false;
+            const p = matrix.copy().invert().transformPoint(source.pos), b = o.mesh.bounds || o.mesh.getBounds();
+            return p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y &&
+                p.z >= b.min.z && p.z <= b.max.z;
+        };
+        const hit = render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o) && !lamp(o)));
         return !!hit && hit.distance < reach;
     }
 

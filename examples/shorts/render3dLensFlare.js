@@ -89,8 +89,8 @@ pillars are `render3D.boxMesh`, a box one unit across, stretched with
 
 ### Hiding the sun
 Each frame the flare sends a ray from the camera toward the sun and
-checks it against the objects in the scene, each one as the box around
-its mesh. `flare.visible` moves toward 1 while the sun is in view and
+checks it against the objects in the scene, each one on the triangles
+of its mesh. `flare.visible` moves toward 1 while the sun is in view and
 toward 0 while something is in the way, over `flare.fadeTime`, .15
 seconds. That is why the flare fades in and out and does not blink.
 The text at the top shows `visible` as a percentage.

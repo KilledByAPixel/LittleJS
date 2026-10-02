@@ -3074,8 +3074,9 @@ test('pick takes a screen position as well as a ray', () =>
     render3D.camera.rotation = vec3();
     render3D.updateMatrices(1);
 
-    // a shape around the camera is hit by any ray, so neither road can miss it by accident
+    // a shape around the camera, seen from inside, is hit by any ray, so neither road can miss it by accident
     const around = new EngineObject3D(vec3(), buildBox(100));
+    around.mesh.doubleSided = true;
     const screen = vec2(123, 45);
     assert.equal(render3D.pick(screen)?.object, around, 'a screen position picks');
     assert.equal(render3D.pick(render3D.screenToRay(screen))?.object, around, 'and so does the ray it makes');

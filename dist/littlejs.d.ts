@@ -8660,8 +8660,8 @@ declare module "littlejsengine" {
          *  @return {Vector3|undefined} - undefined when the ray misses the plane */
         screenToGround(screenPos: Vector2, groundHeight?: number, canvasSize?: Vector2): Vector3 | undefined;
         /** Find the nearest object under a screen position or along a ray, for clicking on things
-         *  - Each object is tested as the box around its mesh in its own space, or a sprite as the quad it draws,
-         *    not triangle by triangle
+         *  - A mesh is hit on its triangles, the ones that face the ray as they are drawn, both sides of a doubleSided
+         *    mesh; a sprite is hit as the quad it draws, and a height map or a voxel map on its surface
          *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
          *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
          *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
@@ -10177,7 +10177,7 @@ declare module "littlejsengine" {
      *   give it elements of your own, which may be tiles of the game's
      * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read
      * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
-     *   through, each as the box around its mesh, see render3D.pick; turn it off with occlusion
+     *   through, each on the triangles of its mesh, see render3D.pick; turn it off with occlusion
      * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
      * @extends EngineObject3D
      * @memberof Render3D
@@ -10256,7 +10256,8 @@ declare module "littlejsengine" {
             angle: number;
         }>;
         /** Is something between the camera and the sun, or the flare's light: the level, or an object that is not see
-         *  through
+         *  through, hit on its triangles as render3D.pick hits it, so a mesh the camera is inside hides nothing unless
+         *  it is doubleSided
          *  @return {boolean} */
         isSunHidden(): boolean;
     }

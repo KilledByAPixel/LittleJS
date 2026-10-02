@@ -139,7 +139,7 @@ the diameter, hence `cylinderRadius*2`. It has no collision set.
 ### Picking
 `render3D.pick(mousePosScreen, balls)` finds the nearest of the given
 objects under a screen position and returns `{object, distance}`, or
-`undefined`. Each object is tested as the box around its mesh.
+`undefined`. Each object is tested on the triangles of its mesh.
 `debugSphere3D(pos, size, color)` draws a wire sphere for one frame, in
 debug builds only, and a right click sets the picked ball's velocity to
 .5 upward with a little sideways.

@@ -235,7 +235,7 @@ sound at the block's place.
 
 ### The mouse
 `render3D.pick(mousePosScreen, boxes)` finds the nearest of the given
-objects under the mouse, tested by the box around its mesh, and returns
+objects under the mouse, tested on its mesh's triangles, and returns
 it as `object`, or nothing. `render3D.screenToGround(mousePosScreen)`
 is where the mouse meets the ground plane at height 0. The hovered cell
 is the picked block's cell, or else the ground point turned into a cell

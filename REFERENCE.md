@@ -1258,8 +1258,9 @@ render3D.screenToRay(screenPos, canvasSize)  // Ray3D under a screen point, alwa
                                      // date for it, so worldToScreen keeps agreeing with them
 render3D.screenToGround(screenPos, groundHeight=0, canvasSize) // where that ray meets a flat ground plane, or
                                                    // undefined; terrain has HeightMap.raycast
-render3D.pick(screenPos or ray, objects)           // {object, distance} of the nearest object hit, the box of its mesh
-                                                   // or a sprite's size3D; a screen position goes through screenToRay
+render3D.pick(screenPos or ray, objects)           // {object, distance} of the nearest object hit, on its mesh's
+                                                   // triangles, the faces that show, both sides when doubleSided,
+                                                   // or a sprite's quad; a screen position goes through screenToRay
 render3D.soundDefaultRange = 100      // how far a sound with no range of its own is heard in 3D, the 2D
                                       // soundDefaultRange is 40; a Sound made with a range keeps it
 render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop, paused) // like sound.play(pos): quieter with

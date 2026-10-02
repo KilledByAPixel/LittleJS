@@ -104,7 +104,7 @@ test('an ImageFont keeps its tile, so a loadSprite tile filled in later is seen;
     assert.throws(()=> new TileLayer(vec2(), vec2(4), empty), /Assert failed/);
 });
 
-test('3D picking from inside a mesh\'s box finds what stands inside it first', () =>
+test('3D picking from inside a mesh finds what stands inside it first', () =>
 {
     const room = new EngineObject3D(vec3(), LJS.buildBox(vec3(20, 4, 20)));
     const crate = new EngineObject3D(vec3(0, .5, -8), LJS.buildBox());
@@ -112,9 +112,9 @@ test('3D picking from inside a mesh\'s box finds what stands inside it first', (
     {
         const eye = vec3(0, 1.7, 0), ray = new Ray3D(eye, crate.pos3D.subtract(eye));
         assert.equal(LJS.render3D.pick(ray)?.object, crate, 'the crate, not the room around the eye');
-        const hits = LJS.engineObjectsRaycast3D(ray);
-        assert.equal(hits[0], crate);
-        assert.ok(hits.includes(room), 'the room\'s far wall after it');
+        assert.deepEqual(LJS.engineObjectsRaycast3D(ray), [crate], 'a box is not drawn from inside, and not hit');
+        room.mesh.doubleSided = true; // a room whose walls show from inside
+        assert.deepEqual(LJS.engineObjectsRaycast3D(ray), [crate, room], 'its far wall after the crate');
     }
     finally { clearObjects(); }
 });

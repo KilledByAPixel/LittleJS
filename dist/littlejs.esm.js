@@ -23865,8 +23865,8 @@ class Render3DPlugin
     }
 
     /** Find the nearest object under a screen position or along a ray, for clicking on things
-     *  - Each object is tested as the box around its mesh in its own space, or a sprite as the quad it draws,
-     *    not triangle by triangle
+     *  - A mesh is hit on its triangles, the ones that face the ray as they are drawn, both sides of a doubleSided
+     *    mesh; a sprite is hit as the quad it draws, and a height map or a voxel map on its surface
      *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
      *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
      *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
@@ -27233,8 +27233,8 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
     return collected;
 }
 
-// how far along a ray an object is hit, or undefined for a miss; each one is tested as the box around its mesh in
-// its own space, or a sprite as the quad it draws, not triangle by triangle
+// how far along a ray an object is hit, or undefined for a miss; a mesh is hit on its triangles, in its own space,
+// and a sprite as the quad it draws
 function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D)) return;
@@ -27251,25 +27251,55 @@ function render3DRaycastObject(ray, o)
     const distance = raycastSphere(ray, center, radius);
     if (distance === undefined) return;
 
-    // the sphere is a quick reject, a mesh is hit where the ray meets its box in its own space, since a wide floor's
-    // sphere reaches far above it; the direction is not made unit length, so the distance holds in the world;
+    // the sphere and then the box in the mesh's own space are quick rejects, and a ray that meets the box is tested
+    // against the triangles; the direction is not made unit length, so the distance holds in the world;
     // a mesh flattened to nothing on an axis has no inverse, it is hit as a disc like a sprite
     if (!matrix.determinant()) return render3DRaycastDisc(ray, center, radius);
     const inverse = matrix.copy().invert(), bounds = mesh.bounds || mesh.getBounds();
     const local = new Ray3D(inverse.transformPoint(ray.origin), inverse.transformDirection(ray.direction));
     const hit = raycastBox(local, bounds.min.add(bounds.max).scale(.5), bounds.max.subtract(bounds.min));
-    if (hit !== 0) return hit;
+    if (hit === undefined || !ray.direction.lengthSquared())
+        return hit; // a ray of no length is where it starts, inside the box
+    return render3DRaycastMesh(local, mesh);
+}
 
-    // it starts inside the box, like a camera on terrain or in a room, so it is hit where it leaves, and what stands
-    // inside comes first
-    let exit = Infinity;
-    for (const k of ['x', 'y', 'z'])
+// how far along a ray, in the mesh's own space, its nearest triangle is hit, or undefined: the triangles that face
+// the ray as the pass draws them, clockwise from the front, and the back faces too of a doubleSided mesh; a strip's
+// triangle i is (i-2, i-1, i), the odd ones read the other way, and a join between its pieces has no area and is
+// never hit; nothing is kept between calls, so a mesh that changed is hit as it is now
+function render3DRaycastMesh(ray, mesh)
+{
+    const points = mesh.points, indices = mesh.indices, both = mesh.doubleSided;
+    const ox = ray.origin.x, oy = ray.origin.y, oz = ray.origin.z;
+    const dx = ray.direction.x, dy = ray.direction.y, dz = ray.direction.z;
+    const count = indices ? indices.length / 3 | 0 : points.length - 2;
+    let nearest;
+    for (let i = 0; i < count; ++i)
     {
-        const d = local.direction[k];
-        if (d)
-            exit = min(exit, ((d > 0 ? bounds.max[k] : bounds.min[k]) - local.origin[k]) / d);
+        // the corners clockwise from the front: an indexed list is written the other way round
+        let a, b, c;
+        if (indices)
+            a = points[indices[i*3]], b = points[indices[i*3+2]], c = points[indices[i*3+1]];
+        else
+            a = points[i & 1 ? i + 1 : i], b = points[i & 1 ? i : i + 1], c = points[i + 2];
+
+        // Moller and Trumbore: the determinant is the ray along the face's normal, below zero from the front
+        const e1x = b.x - a.x, e1y = b.y - a.y, e1z = b.z - a.z;
+        const e2x = c.x - a.x, e2y = c.y - a.y, e2z = c.z - a.z;
+        const hx = dy * e2z - dz * e2y, hy = dz * e2x - dx * e2z, hz = dx * e2y - dy * e2x;
+        const det = e1x * hx + e1y * hy + e1z * hz;
+        if (both ? !det : !(det < 0)) continue;
+        const sx = ox - a.x, sy = oy - a.y, sz = oz - a.z;
+        const u = (sx * hx + sy * hy + sz * hz) / det;
+        if (!(u >= 0 && u <= 1)) continue;
+        const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
+        const v = (dx * qx + dy * qy + dz * qz) / det;
+        if (!(v >= 0 && u + v <= 1)) continue;
+        const t = (e2x * qx + e2y * qy + e2z * qz) / det;
+        if (t >= 0 && !(t >= nearest))
+            nearest = t;
     }
-    return exit === Infinity ? 0 : exit; // a ray of no length is where it starts
+    return nearest;
 }
 
 // a sprite is the quad drawBillboard draws, its size3D grown by the x and y scale as the draw does, facing the camera
@@ -29334,7 +29364,7 @@ function render3DFlareTile(shape)
  *   give it elements of your own, which may be tiles of the game's
  * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read
  * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
- *   through, each as the box around its mesh, see render3D.pick; turn it off with occlusion
+ *   through, each on the triangles of its mesh, see render3D.pick; turn it off with occlusion
  * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
  * @extends EngineObject3D
  * @memberof Render3D
@@ -29485,7 +29515,8 @@ class LensFlare3D extends EngineObject3D
     }
 
     /** Is something between the camera and the sun, or the flare's light: the level, or an object that is not see
-     *  through
+     *  through, hit on its triangles as render3D.pick hits it, so a mesh the camera is inside hides nothing unless
+     *  it is doubleSided
      *  @return {boolean} */
     isSunHidden()
     {
@@ -29501,14 +29532,18 @@ class LensFlare3D extends EngineObject3D
         for (const map of maps)
             if (map.raycast(ray, reach, (type)=> !map.blockType(type).seeThrough))
                 return true;
-        // an object is hit by its box, and a box the camera is inside, a room, a wide floor or the player's own
-        // body, says nothing of what is in the way: the ray the other way hits it too, and it is left out; so is
-        // one the light is inside, its lamp
-        const backward = ray.direction.scale(-1), back = new Ray3D(ray.origin, backward);
-        const lamp = this.light && [new Ray3D(source.pos, ray.direction), new Ray3D(source.pos, backward)];
-        const hits = (r, o)=> render3DRaycastObject(r, o) !== undefined;
-        const around = (o)=> !(o instanceof HeightMap) && (hits(back, o) || lamp && hits(lamp[0], o) && hits(lamp[1], o));
-        const hit = render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o) && !around(o)));
+        // a light's lamp, the mesh the light is inside, does not hide it: one whose box, in its own space, the light
+        // is in
+        const lamp = (o)=>
+        {
+            if (!this.light || !o.mesh || o instanceof HeightMap) return false;
+            const matrix = render3DObjectMatrix(o);
+            if (!matrix.determinant()) return false;
+            const p = matrix.copy().invert().transformPoint(source.pos), b = o.mesh.bounds || o.mesh.getBounds();
+            return p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y &&
+                p.z >= b.min.z && p.z <= b.max.z;
+        };
+        const hit = render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o) && !lamp(o)));
         return !!hit && hit.distance < reach;
     }
 
