@@ -226,3 +226,52 @@ test('a plugin namespace page links the other namespace\'s class in a nested typ
     assert.ok(page.includes('<dt><code>table</code> Object&lt;string, {action: function(boolean): any}&gt;</dt>'));
     assert.ok(page.includes('<dt><code>thing</code> <a href="Fixture.Thing.html">Thing</a></dt>'));
 });
+
+test('a class page: crumb, description, inheritance, constructor first, index, members then methods, badges', { skip }, ()=>
+{
+    const page = site.pages['Fixture.Thing.html'];
+    assert.ok(page.includes('<p class="crumb"><a href="Fixture.html">Fixture</a></p><h1>Thing</h1>'));
+    assert.ok(page.includes('<div class="desc"><p>A thing in the fixture</p></div>'), 'classdesc is the class description');
+    assert.ok(page.includes('<p class="inherit">Extended by <a href="Fixture.BigThing.html">BigThing</a></p>'));
+    assert.ok(page.indexOf('<h2 id="constructor">Constructor</h2>') < page.indexOf('<section class="index">'), 'the constructor comes first');
+    assert.ok(page.includes('<span class="name">new Thing</span>(pos)'));
+    assert.ok(page.includes('<p>Create a thing</p>'), 'the constructor description is the doclet description');
+    assert.ok(page.indexOf('<h2 id="members">Members</h2>') < page.indexOf('<h2 id="methods">Methods</h2>'));
+    assert.ok(page.includes('<span class="badge static">static</span>'));
+    assert.ok(page.includes('<span class="badge deprecated">deprecated</span>'));
+    assert.ok(page.includes('<p class="deprecated">Deprecated since 1.0, use move</p>'));
+    assert.ok(!page.includes('Deprecated true'), 'a bare @deprecated has no text');
+    assert.ok(page.includes('id="move-static"'), 'the static twin has its own anchor');
+});
+
+test('a member with @property and @type shows the type once and the property text as its description', { skip }, ()=>
+{
+    const page = site.pages['Fixture.Thing.html'];
+    const entry = page.slice(page.indexOf('<div class="entry" id="pos">'), page.indexOf('</div><!-- /entry -->', page.indexOf('id="pos"')));
+    assert.ok(entry.includes('<span class="name">pos</span> : Vector2'), entry);
+    assert.ok(entry.includes('<div class="desc"><p>where it is</p></div>'));
+    assert.ok(!entry.includes('<dl'), 'no properties list repeating the type');
+});
+
+test('a subclass page says what it extends and lists the inherited names as links to the parent', { skip }, ()=>
+{
+    const page = site.pages['Fixture.BigThing.html'];
+    assert.ok(page.includes('<p class="inherit">Extends <a href="Fixture.Thing.html">Thing</a></p>'));
+    assert.ok(/<h3>Inherited from <a href="Fixture.Thing.html">Thing<\/a><\/h3><ul class="inherited">(<li><a href="Fixture.Thing.html#[\w-]+">\w+<\/a><\/li>)+<\/ul>/.test(page));
+    assert.ok(page.includes('href="Fixture.Thing.html#move">move</a>') && page.includes('href="Fixture.Thing.html#pos">pos</a>'));
+});
+
+test('the search rows cover every page and entry with their namespace, and no internal name', { skip }, ()=>
+{
+    const rows = site.search;
+    assert.deepEqual(rows.find(r => r.n == 'Thing'), { n: 'Thing', k: 'class', p: 'Fixture.Thing.html', a: '', ns: 'Fixture' });
+    assert.deepEqual(rows.find(r => r.n == 'move' && r.k == 'function'), { n: 'move', k: 'function', p: 'Fixture.Thing.html', a: 'move', ns: 'Fixture' });
+    assert.deepEqual(rows.find(r => r.n == 'makeThing'), { n: 'makeThing', k: 'function', p: 'Fixture.html', a: 'makeThing', ns: 'Fixture' });
+    assert.ok(rows.some(r => r.n == 'FixturePlugin' && r.k == 'namespace' && r.p == 'FixturePlugin.html'));
+    assert.ok(!rows.some(r => r.n == 'fixtureInternal'));
+});
+
+test('every page is emitted: the home, two namespaces, two classes, nothing else', { skip }, ()=>
+{
+    assert.deepEqual(Object.keys(site.pages).sort(), ['Fixture.BigThing.html', 'Fixture.Thing.html', 'Fixture.html', 'FixturePlugin.html', 'index.html']);
+});

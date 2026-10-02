@@ -456,6 +456,48 @@ function namespacePage(ns, model, options)
     return shell(model, options, { title: `${ns.name} - ${options.title}`, current: ns.page, body, outline });
 }
 
+// a class page: crumb, description, inheritance, constructor, index, members, methods
+function classPage(c, model, options)
+{
+    const d = c.doclet;
+    const outline = [];
+    let body = `<article><p class="crumb"><a href="${c.namespace.page}">${esc(c.namespace.name)}</a></p><h1>${esc(c.name)}</h1>`;
+    body += `<div class="desc">${d.classdesc || ''}</div>`;
+    if (c.parent)
+        body += `<p class="inherit">Extends <a href="${c.parent.page}">${esc(c.parent.name)}</a></p>`;
+    if (c.children.length)
+        body += `<p class="inherit">Extended by ${c.children.map(k => `<a href="${k.page}">${esc(k.name)}</a>`).join(', ')}</p>`;
+
+    // the constructor is the class doclet itself
+    outline.push({ href: '#constructor', text: 'Constructor', depth: 0 });
+    body += '<h2 id="constructor">Constructor</h2>';
+    body += entryHtml({ doclet: d, name: 'new ' + c.name, kind: 'function', static: false, owner: c, anchor: 'new' }, model, options);
+
+    const members = c.entries.filter(e => e.kind != 'function');
+    const methods = c.entries.filter(e => e.kind == 'function');
+    body += indexHtml([
+        { title: 'Members', items: members.map(e => ({ href: '#' + e.anchor, text: e.name })) },
+        { title: 'Methods', items: methods.map(e => ({ href: '#' + e.anchor, text: e.name })) },
+    ]);
+    // what the parents have, by name, so an object's whole surface is on its page
+    for (let p = c.parent; p; p = p.parent)
+        if (p.entries.length)
+            body += `<h3>Inherited from <a href="${p.page}">${esc(p.name)}</a></h3><ul class="inherited">`
+                + p.entries.map(e => `<li><a href="${p.page}#${e.anchor}">${esc(e.name)}</a></li>`).join('') + '</ul>';
+
+    const section = (list, id, title)=>
+    {
+        if (!list.length)
+            return '';
+        outline.push({ href: '#' + id, text: title, depth: 0 });
+        for (const e of list)
+            outline.push({ href: '#' + e.anchor, text: e.name, depth: 1 });
+        return `<h2 id="${id}">${title}</h2>` + list.map(e => entryHtml(e, model, options)).join('');
+    };
+    body += section(members, 'members', 'Members') + section(methods, 'methods', 'Methods') + '</article>';
+    return shell(model, options, { title: `${c.name} - ${options.title}`, current: c.page, body, outline });
+}
+
 // everything: the pages by file name and the search rows
 function render(doclets, options)
 {
@@ -464,6 +506,20 @@ function render(doclets, options)
     const search = [];
     for (const ns of model.namespaces)
         pages[ns.page] = namespacePage(ns, model, options);
+    for (const c of model.classes)
+        pages[c.page] = classPage(c, model, options);
+    for (const ns of model.namespaces)
+    {
+        search.push({ n: ns.name, k: 'namespace', p: ns.page, a: '', ns: ns.name });
+        for (const e of ns.entries)
+            search.push({ n: e.name, k: e.kind, p: ns.page, a: e.anchor, ns: ns.name });
+        for (const c of ns.classes)
+        {
+            search.push({ n: c.name, k: 'class', p: c.page, a: '', ns: ns.name });
+            for (const e of c.entries)
+                search.push({ n: e.name, k: e.kind, p: c.page, a: e.anchor, ns: ns.name });
+        }
+    }
     return { pages, search, model };
 }
 
