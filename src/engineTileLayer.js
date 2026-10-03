@@ -380,7 +380,13 @@ function tileLayersFromLDtk(ldtk, level=0)
         }
         // its tiles, those with a place, from the first layer's tileset
         const tiles = [...(instance.autoLayerTiles || []), ...(instance.gridTiles || [])].filter((t)=> isArray(t.px));
-        if (!tiles.length) continue;
+        if (!tiles.length)
+        {
+            // a tile layer with none yet is an empty layer, to paint in the editor, and a level of one still loads
+            values || map.layers.push({id, name, type: 'tilelayer', width, height, data: empty(), opacity,
+                visible: instance.visible !== false, x: 0, y: 0});
+            continue;
+        }
         if (tileset && (instance.__tilesetDefUid !== tileset.uid || tileset.tileGridSize !== grid))
         {
             console.warn(`tileLayersFromLDtk: the tiles of layer ${name} are on another tileset, left out`);

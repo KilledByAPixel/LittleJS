@@ -83,8 +83,8 @@ class PathFinderNode
  *  const path = pf.findPath(player.pos, mousePos);
  *
  *  // Bare grid with custom walkability:
- *  const pf = new PathFinder(vec2(50, 50));
- *  pf.isWalkable = (x, y) => myGrid[y*50 + x] === 0;
+ *  const gridFinder = new PathFinder(vec2(50, 50));
+ *  gridFinder.isWalkable = (x, y) => myGrid[y*50 + x] === 0;
  */
 class PathFinder
 {

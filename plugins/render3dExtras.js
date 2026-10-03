@@ -1847,9 +1847,10 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
     // OBJ indices count from 1, and a negative one counts back from the end of the list so far
     const index = (s, list)=> { const i = parseInt(s); return i < 0 ? list.length + i : i - 1; };
     const lookup = (s, list)=> list[index(s, list)];
-    for (const line of text.split('\n'))
+    // any line end, a line carried on by a backslash at its end, and a comment after what a line holds
+    for (const line of text.replace(/\\\r?\n/g, ' ').split(/\r\n?|\n/))
     {
-        const parts = line.trim().split(/\s+/);
+        const parts = line.replace(/#.*/, '').trim().split(/\s+/);
         switch (parts[0])
         {
             case 'v':  positions.push(vec3(+parts[1], +parts[2], +parts[3])); break;
@@ -1861,6 +1862,7 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
                 if (corners.length < 3) break;
                 const facePoints = corners.map(c=> lookup(c[0], positions));
                 ASSERT(facePoints.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
+                if (!facePoints.every(isVector3)) break; // a release build leaves the face out
                 const hasNormals = corners.every(c=> c[2]);
                 missingNormals ||= !hasNormals;
                 const faceNormal = hasNormals ? undefined : render3DFaceNormal(facePoints[0], facePoints[1], facePoints[2], facePoints[3]);

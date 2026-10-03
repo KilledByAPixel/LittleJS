@@ -468,7 +468,7 @@ function parseAtlas(data)
                 tagged.add(i);
         }
         frames.forEach((f, i)=> tagged.has(i) || groups.push({name: f.name, frames: [f]}));
-        return groups;
+        return parseAtlasNamesCheck(groups);
     }
 
     // group frames that share a name stem with contiguous trailing numbers
@@ -497,6 +497,17 @@ function parseAtlas(data)
         else
             list.forEach(f=> groups.push({name: f.name, frames: [f]}));
     }
+    return parseAtlasNamesCheck(groups);
+}
+
+// an atlas's groups, with a warning for each name two of them have, as a sprite is looked up by name and the second
+// takes the first's place
+function parseAtlasNamesCheck(groups)
+{
+    const names = new Set;
+    for (const {name} of groups)
+        names.has(name) ? console.warn(`parseAtlas: two sprites are named ${name}, the second takes the first's place`) :
+            names.add(name);
     return groups;
 }
 

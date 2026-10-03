@@ -200,11 +200,15 @@ function smoothStep(percent)
  *  @memberof Math */
 function isPowerOfTwo(value) { return value > 0 && value % 1 === 0 && 2**round(log2(value)) === value; } // any size, not only 32 bits
 
-/** Returns the nearest power of two not less than the value
+/** Returns the nearest whole power of two not less than the value, 1 for a value of 1 or less
  *  @param {number} value
  *  @return {number}
  *  @memberof Math */
-function nearestPowerOfTwo(value) { return 2**ceil(log2(value)); }
+function nearestPowerOfTwo(value)
+{
+    const power = 2**ceil(log2(max(value, 1)));
+    return power < value ? power * 2 : power; // log2 of a value just above a power can round down to it
+}
 
 /** Returns true if two axis aligned bounding boxes are overlapping
  *  this can be used for simple collision detection between objects

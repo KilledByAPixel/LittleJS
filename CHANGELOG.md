@@ -24,6 +24,12 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A `UISlider` let go in the frame it moves takes that last place
 - A gamepad of fewer buttons put in the slot of another holds none of the other's buttons; a gamepad axis that reads NaN is centered, where it failed an assert in debug builds
 - `UITextInput` takes a keydown with no key, as autofill sends, where it threw
+- `parseOBJ` reads a comment after a face, carriage return line ends and a line carried on with a backslash, and a release build leaves out a face of a vertex the file does not have
+- `tileLayersFromLDtk` keeps a tile layer with no tiles as an empty layer, so a level of one loads and the editor can paint it
+- Level editor: a property set in the box keeps its place and a `file` or `object` property its type; a save leaves out the object layer made for a first object that was undone; a new object layer's id is past every layer's
+- 3D editor: taking a prefab out of the level takes its instances out of the game; a level's parts are saved in one order, so a level reloaded from its autosave saves the same
+- `writeSaveData` asserts its data is an object, which `readSaveData` reads back, and returns whether it was written, false when storage is full or unavailable
+- `parseAtlas` warns of two sprites with one name; `nearestPowerOfTwo` is never less than its value and is 1 for a value of 1 or less; a particle effect's name cut to 60 characters ends with no space
 - A tile layer's raycast toward a point far beyond the layer walks only across the layer, where a ray to a far constant took seconds
 - `debugShowErrors` shows a message as text, so a file name with markup in it can not add elements to the page
 - Canvas2D tints clamp the color to 0 to 1, as WebGL does

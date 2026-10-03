@@ -96,3 +96,20 @@ test('a 3D level\'s colors are strings, and its numbers finite, or they keep wha
     assert.deepEqual(JSON.parse(run(`JSON.stringify([render3D.sunColor.g, render3D.sunDirection.y, render3D.fogStart, render3D.fogEnd,
         made.length, made[0].color.r, made[0].pos3D.x, made[1].pos3D.z])`)), [1, 1, 1, 9, 2, 1, 0, 3]);
 });
+
+test('an atlas with two groups of one name says so, where the second took the first\'s place unseen', () =>
+{
+    const frame = (filename)=> ({filename, frame: {x: 0, y: 0, w: 8, h: 8}});
+    const warnings = [], warn = console.warn;
+    console.warn = (...a)=> warnings.push(a.join(' '));
+    try
+    {
+        parseAtlas({frames: [frame('run'), frame('jump')], meta: {frameTags: [{name: 'run', from: 1, to: 1}]}});
+        parseAtlas({frames: [frame('coin.png'), frame('coin.gif')]});
+        parseAtlas({frames: [frame('a'), frame('b')]});
+    }
+    finally { console.warn = warn; }
+    assert.equal(warnings.length, 2);
+    assert.match(warnings[0], /run/);
+    assert.match(warnings[1], /coin/);
+});

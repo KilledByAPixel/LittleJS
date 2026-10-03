@@ -664,17 +664,27 @@ function editor3DSetPart(name, part)
 function editor3DPrefabsShow()
 {
     if (editor3DPrefabLevels.has(editor3DLevel)) return; // inside a prefab, the prefabs are the level's
-    const prefabs = editor3DLevelPart('prefabs') ?? {};
+    const prefabs = editor3DLevelPart('prefabs') ?? {}, removed = new Set;
     for (const [name, prefab] of level3DPrefabs)
     {
         if (!prefab.fromLevel || prefabs[name]) continue;
         level3DPrefabs.delete(name);
         level3DTypes.delete(name);
+        removed.add(name);
     }
     level3DPrefabsAdd(prefabs);
-    // every object of a prefab's type, one whose type was not there when the objects were set too
+    // every object of a prefab's type, one whose type was not there when the objects were set too; an instance of a
+    // prefab taken out leaves the game, its object waiting in the level for the prefab to come back
     for (const object of editor3DObjects())
-        level3DPrefabs.has(object.type) && editor3DMakeInstance(object);
+    {
+        if (level3DPrefabs.has(object.type))
+            editor3DMakeInstance(object);
+        else if (removed.has(object.type))
+        {
+            editor3DInstances.get(object.id)?.destroy?.();
+            editor3DInstances.delete(object.id);
+        }
+    }
     editor3DShadowLight();
 }
 
@@ -1793,10 +1803,12 @@ function editor3DJSON(value)
 // a level as the file has it: its version, what else it holds, and its objects, one to a line
 function editor3DLevelJSON(level=editor3DLevel)
 {
+    // the level's parts after the rest, in one order, so the same level is the same file however its parts were made
     const {littlejs3D, objects, ...rest} = level;
     const lines = [`"littlejs3D": ${LEVEL3D_VERSION}`];
-    for (const [key, value] of Object.entries(rest))
-        lines.push(JSON.stringify(key) + ': ' + editor3DJSON(value));
+    const keys = Object.keys(rest).filter((key)=> !editor3DLevelPartNames.includes(key));
+    for (const key of [...keys, ...editor3DLevelPartNames.filter((name)=> name in rest)])
+        lines.push(JSON.stringify(key) + ': ' + editor3DJSON(rest[key]));
     const list = (isArray(objects) ? objects : []).map((o)=> '    ' + editor3DJSON(o));
     lines.push('"objects": [' + (list.length ? '\n' + list.join(',\n') + '\n  ]' : ']'));
     return '{\n  ' + lines.join(',\n  ') + '\n}\n';

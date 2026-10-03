@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadEngine } from './vmEngine.mjs';
+import { parseOBJ } from '../dist/littlejs.esm.js';
 
 // The seventh pass of 2026-10-03: a press outside the canvas, a second confirm dialog, a slider let go as it moves.
 
@@ -168,4 +169,34 @@ test('a regular polygon draws the same points with no new vectors after its firs
     const few = run('made');
     draw(30); draw(30);
     assert.equal(run('made'), few, 'no more for more sides');
+});
+
+test('an OBJ file reads a comment after a face, old Mac line ends, and a line carried on with a backslash', () =>
+{
+    const square = (end)=> ['v 0 0 0', 'v 1 0 0', 'v 1 1 0', 'v 0 1 0', 'f 1 2 3 4 # the square'].join(end);
+    const triangles = (text)=> parseOBJ(text, false).indices.length / 3;
+    assert.equal(triangles(square('\n')), 2);
+    assert.equal(triangles(square('\r')), 2, 'carriage returns alone');
+    assert.equal(triangles(square('\r\n')), 2);
+    assert.equal(triangles(square('\n').replace('f 1 2 3 4', 'f 1 2 \\\n3 4')), 2, 'carried on');
+});
+
+test('writeSaveData takes an object, the kind readSaveData gives back, and says whether it was written', () =>
+{
+    const items = {}, full = { getItem: ()=> null, setItem: ()=> { throw new Error('QuotaExceededError'); } };
+    let { run } = loadEngine({ localStorage: { getItem: (k)=> items[k] ?? null, setItem: (k, v)=> { items[k] = v; } } });
+    assert.equal(run(`writeSaveData('game', {best: 3})`), true);
+    assert.equal(run(`readSaveData('game').best`), 3);
+    for (const value of ['[1, 2]', `'text'`, 'undefined'])
+        assert.throws(()=> run(`writeSaveData('game', ${value})`), /Assert failed/, value);
+    ({ run } = loadEngine({ localStorage: full }));
+    assert.equal(run(`writeSaveData('game', {best: 3})`), false, 'storage full');
+});
+
+test('a particle effect name cut at 60 characters loses the space it ends on, so sanitizing again changes nothing', () =>
+{
+    const { run } = loadEngine();
+    run(`var once = particleEffectSanitize({name: 'a'.repeat(59) + ' b'}), twice = particleEffectSanitize(once);`);
+    assert.equal(run('once.name'), 'a'.repeat(59));
+    assert.equal(run('twice.name'), run('once.name'));
 });

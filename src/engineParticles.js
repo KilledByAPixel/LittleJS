@@ -43,7 +43,7 @@
  *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
  *     1, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
  *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate
- *     .5, 1                // randomness, collide
+ *     .5, true             // randomness, collide
  * );
  */
 class ParticleEmitter extends EngineObject

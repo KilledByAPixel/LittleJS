@@ -232,3 +232,12 @@ test('a margin or spacing is counted from where the game\'s sheet starts, as in 
     const [layer] = tileLayersLoad(map, atlas, 0, undefined, false);
     assert.deepEqual(sheetPos(layer, 5), [64 + 2 + 18, 32 + 2 + 18]);
 });
+
+test('an empty tile layer is kept as an empty layer, so a level that has only one still loads', ()=>
+{
+    const file = ldtk();
+    file.levels[1].layerInstances[0].gridTiles = [];
+    const map = tileLayersFromLDtk(file, 1);
+    assert.deepEqual(map.layers.map((l)=> [l.name, l.type, l.data.join()]), [['Ground', 'tilelayer', '0']]);
+    assert.equal(tileLayersLoad(map, sheet(169, 33), 0, undefined, false).length, 1);
+});

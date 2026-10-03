@@ -213,13 +213,13 @@ function audioParamRamp(param, value, fadeTime=0)
  * @memberof Audio
  * @example
  * // load an audio asset file
- * const sound_example = new Sound('sound.mp3');
+ * const music = new Sound('sound.mp3');
  *
  * // create a zzfx sound
- * const sound_example = new Sound([.5,.5]);
+ * const blip = new Sound([.5,.5]);
  *
  * // play a sound
- * sound_example.play();
+ * blip.play();
  */
 class Sound
 {

@@ -670,7 +670,17 @@ function editorJSONFetched(url, json)
 { json && typeof json === 'object' && editorFetchedURLs.set(json, String(url)); }
 
 // a map as Tiled JSON, everything it was loaded with kept, the tile data as the editor left it
-function editorMapJSON(record) { return JSON.stringify(record.map); }
+function editorMapJSON(record)
+{
+    // an object layer the editor made for a first object, every object of which was taken back, is left out
+    const map = record.map, made = map.layers.find((layer)=> editorMadeGroups.has(layer) && !layer.objects.length);
+    if (!made) return JSON.stringify(map);
+    return JSON.stringify({...map, layers: map.layers.filter((layer)=> layer !== made),
+        ...(map.nextlayerid === made.id + 1 && {nextlayerid: made.id})});
+}
+
+// the object layers the editor made in a map, for a map that had none
+const editorMadeGroups = new WeakSet;
 
 // the files picked to save maps to, kept across reloads in IndexedDB by page and map, which is where a browser
 // lets a page keep them; each resolves to undefined when the store can not be used
@@ -1223,13 +1233,15 @@ function editorObjectLayers(record)
     return record.objectLayers;
 }
 
-// a new Tiled object layer named Objects, on top of a map
+// a new Tiled object layer named Objects, on top of a map, with an id past every layer's, in groups too
 function editorNewObjectGroup(map)
 {
-    const id = map.nextlayerid ?? map.layers.length + 1, group = {draworder: 'topdown', id, name: 'Objects',
+    const ids = (layers)=> (layers || []).flatMap((layer)=> [(layer.id | 0) + 1, ...ids(layer.layers)]);
+    const id = max(map.nextlayerid ?? 1, ...ids(map.layers)), group = {draworder: 'topdown', id, name: 'Objects',
         objects: [], opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0};
     map.nextlayerid = id + 1;
     map.layers.push(group);
+    editorMadeGroups.add(group);
     return group;
 }
 
@@ -1336,15 +1348,21 @@ function editorObjectSetProperty(object, name, value, defaultValue)
 {
     if (Number.isInteger(defaultValue) && isNumber(value))
         value = round(value); // an integer stays one, as Tiled keeps an int
-    const properties = (object.properties ?? []).filter((property)=> property.name !== name);
+    const list = object.properties ?? [], at = list.findIndex((property)=> property.name === name), old = list[at];
+    const properties = list.filter((property)=> property.name !== name);
     const text = (v)=> isColor(v) ? v.toString() : isVector2(v) ? v.x + ',' + v.y : JSON.stringify(v);
     if (text(value) !== text(defaultValue))
     {
         const hex = isColor(value) && value.toString();
-        properties.push(hex ? {name, type: 'color', value: '#' + hex.slice(7, 9) + hex.slice(1, 7)} :
+        const property = hex ? {name, type: 'color', value: '#' + hex.slice(7, 9) + hex.slice(1, 7)} :
             isVector2(value) ? {name, type: 'string', value: text(value)} :
             {name, type: typeof value === 'boolean' ? 'bool' : typeof value === 'string' ? 'string' :
-            Number.isInteger(defaultValue) ? 'int' : 'float', value});
+            Number.isInteger(defaultValue) ? 'int' : 'float', value};
+
+        // one the map had keeps its place and its kind where the value fits it, a file stays a file, an object an object
+        if (old?.type === 'file' && property.type === 'string' || old?.type === 'object' && property.type === 'int')
+            property.type = old.type;
+        at < 0 ? properties.push(property) : properties.splice(at, 0, property);
     }
     if (properties.length)
         object.properties = properties;

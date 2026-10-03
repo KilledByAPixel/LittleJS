@@ -647,3 +647,28 @@ test('a stamp\'s objects are put down to the digit', async () =>
         editorChangeObjects(objects, (l)=> l.splice(0)); editorPlaceStampObjects(editorLayer, vec2(0), editorBrush);`);
     assert.deepEqual(positions(engine), [[3, 10, 37], [4, 100, 77.7]]);
 });
+
+test('a property set in the box keeps its place in the list, and a file stays a file and an object an object', async () =>
+{
+    const { run } = await loadGame();
+    run(`var o = { properties: [{ name: 'art', type: 'file', value: 'a.png' }, { name: 'door', type: 'object', value: 3 },
+        { name: 'value', type: 'int', value: 5 }] };
+        editorObjectSetProperty(o, 'art', 'b.png', ''); editorObjectSetProperty(o, 'door', 4, 0);`);
+    assert.deepEqual(JSON.parse(run('JSON.stringify(o.properties)')), [{ name: 'art', type: 'file', value: 'b.png' },
+        { name: 'door', type: 'object', value: 4 }, { name: 'value', type: 'int', value: 5 }]);
+});
+
+test('a save leaves out the object layer made for a first object that was undone, and a new layer\'s id is unused', async () =>
+{
+    const { run } = await loadGame();
+    run(objectCode.replace(/,\s*\{ type: 'objectgroup'[\s\S]*?\] \}\] \};/, '] };')
+        .replace('nextobjectid: 3, nextlayerid: 3,', '').replace("{ type: 'tilelayer', id: 1,", "{ type: 'tilelayer', id: 4,")
+        .replace('var list = ()=> map.layers[1].objects;', '') + `
+        editorChangeObjects(objects, (l)=> l.push({ id: editorNextObjectId(map), type: 'Coin', x: 8, y: 8 }));
+        editorStrokeEnd();`);
+    assert.equal(run('map.layers[1].id'), 5, 'past the tile layer\'s 4, where the count of layers gave 2');
+    run('editorUndo()');
+    const saved = JSON.parse(run('editorMapJSON(ground.record)'));
+    assert.deepEqual(saved.layers.map((layer)=> layer.name), ['ground']);
+    assert.equal(saved.nextlayerid, 5);
+});

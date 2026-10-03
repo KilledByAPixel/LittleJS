@@ -505,3 +505,22 @@ test('a prefab that was not in its file when it was opened still is not after an
         postTo(4) + 'editor3DUndo(); editor3DPrefabBack();');
     assert.equal(run('editor3DPrefabDirty.has("Shop")'), true);
 });
+
+test('taking a prefab out of the level takes its instances out of the game, and undo brings them back', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `var parts = ()=> engineObjects.filter((o)=> !o.destroyed && o.size3D && o.pos3D.x > 5).length;
+        var before = parts(); editor3DChangePart('prefabs', ()=> undefined); editor3DStrokeEnd();`);
+    assert.ok(run('before') > 0);
+    assert.deepEqual([run('parts()'), run('editor3DInstances.has(1)')], [0, false]);
+    run('editor3DUndo()');
+    assert.deepEqual([run('parts()'), run('editor3DInstances.has(1)')], [run('before'), true]);
+});
+
+test('a level\'s parts are saved in one order, whatever order they were added in', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `level.name = 'town'; level.scene = {fog: .1};`);
+    const keys = run('editor3DLevelJSON()').match(/^  "\w+"/gm).map((key)=> key.trim());
+    assert.deepEqual(keys, ['"littlejs3D"', '"name"', '"scene"', '"prefabs"', '"objects"']);
+});

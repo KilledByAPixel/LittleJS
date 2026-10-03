@@ -144,7 +144,7 @@ fetchJSON(url)                        // Fetch and parse a JSON file (async)
 shareURL(title, url, callback)        // Share a URL via the navigator share API
 readSaveData(saveName, defaultSaveData) // Read game save data from localStorage, default must be an object
                                       // the result has the default's type in TypeScript
-writeSaveData(saveName, saveData)     // Write game save data to localStorage; give medalsInit a different name
+writeSaveData(saveName, saveData)     // Write a save data object to localStorage, false if it could not; give medalsInit a different name
 
 // Random functions
 rand(valueA=1, valueB=0)             // Random float between values

@@ -245,16 +245,19 @@ function readSaveData(saveName, defaultSaveData)
     return { .../** @type {object} */ (defaultSaveData), ...loadedData };
 }
 
-/** Write save data to local storage
+/** Write save data to local storage, an object as readSaveData gives it back
  *  @param {string} saveName - unique name for the game/save
  *  @param {object} saveData - object containing data to be saved
+ *  @return {boolean} - Whether it was written, false when storage is unavailable or full
  *  @memberof Utilities */
 function writeSaveData(saveName, saveData)
 {
     ASSERT(isStringLike(saveName), 'writeSaveData requires saveName string');
+    ASSERT(typeof saveData === 'object' && saveData !== null && !isArray(saveData),
+        'writeSaveData: save data must be an object, readSaveData reads it back into one');
     // tolerate localStorage being unavailable or quota exceeded
-    try { localStorage.setItem(saveName, JSON.stringify(saveData)); }
-    catch { LOG('writeSaveData: failed to write', saveName); }
+    try { localStorage.setItem(saveName, JSON.stringify(saveData)); return true; }
+    catch { LOG('writeSaveData: failed to write', saveName); return false; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

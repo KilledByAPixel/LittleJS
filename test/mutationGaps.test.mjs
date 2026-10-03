@@ -215,3 +215,12 @@ test('PathFinder: a maxLoop of just the expansions needed still finds the goal',
     assert.equal(pf.aStarSearch(pf.getNode(0, 0), pf.getNode(5, 3)), true);
     assert.equal(pf.searchGaveUp, false);
 });
+
+test('nearestPowerOfTwo is a whole power of two not less than the value, 1 for a value of 1 or less', async () =>
+{
+    const { nearestPowerOfTwo } = await import('../dist/littlejs.esm.js');
+    assert.equal(nearestPowerOfTwo(67108864.00000006), 134217728, 'just above a power, where log2 rounds to it');
+    assert.deepEqual([nearestPowerOfTwo(5), nearestPowerOfTwo(64), nearestPowerOfTwo(.3), nearestPowerOfTwo(0)],
+        [8, 64, 1, 1]);
+    assert.equal(isPowerOfTwo(nearestPowerOfTwo(.3)), true);
+});
