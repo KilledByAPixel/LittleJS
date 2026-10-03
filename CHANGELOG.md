@@ -9,7 +9,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 - Tile sets from separate images: `loadTiles(['grass.png', 'brick.png', 'props.png'], 16)` packs tile images, or several tile sheets, into the texture sheets as one tile set, numbered in the order given, for `tileLayersLoad`, tile layers and the level editor's palette; an image that is not whole tiles gives the whole tiles in it, and a map's tileset margin or spacing does not replace the set
 - Spotlight gels: `light.gel` is a picture the shadow casting spotlight shines through, cast along its beam in its colors, like a slide or stained glass; with none a scene draws exactly as before. The 3D First Person flashlight has one on G
-- Less garbage each frame: objects are sorted only when one is out of render order and the destroyed taken out only when there are some, an object with mass that collides with nothing copies no position, and outlines and regular polygons are made into kept vectors, about 98 fewer for each outlined circle
+- Less garbage each frame: objects are sorted only when one is out of render order and the destroyed taken out only when there are some, an object with mass that collides with nothing copies no position, and outlines and regular polygons are made into kept vectors, about 98 fewer for each outlined circle; a 3D pick makes no vectors for an object it misses
 
 ### Fixes
 

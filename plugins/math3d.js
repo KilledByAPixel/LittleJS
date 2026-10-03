@@ -931,15 +931,16 @@ function collideOrientedBoxes3D(posA, sizeA, axesA, posB, sizeB, axesB)
  */
 function raycastSphere(ray, pos, radius)
 {
+    // in numbers, as a pick runs it for every object
     const {origin, direction} = ray;
-    const oc = origin.subtract(pos);
-    const c = oc.dot(oc) - radius*radius;
+    const x = origin.x - pos.x, y = origin.y - pos.y, z = origin.z - pos.z;
+    const c = x*x + y*y + z*z - radius*radius;
     if (c < 0)
         return 0; // origin is inside the sphere, even for a ray of no length, as raycastBox gives
     const a = direction.dot(direction);
     if (!a)
         return undefined;
-    const b = 2*oc.dot(direction);
+    const b = 2*(x*direction.x + y*direction.y + z*direction.z);
     const discriminant = b*b - 4*a*c;
     if (discriminant < 0)
         return undefined;

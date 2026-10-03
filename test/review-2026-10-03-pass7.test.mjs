@@ -200,3 +200,20 @@ test('a particle effect name cut at 60 characters loses the space it ends on, so
     assert.equal(run('once.name'), 'a'.repeat(59));
     assert.equal(run('twice.name'), run('once.name'));
 });
+
+test('a ray that misses an object\'s sphere makes no vectors, and raycastSphere gives what it gave', async () =>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true)');
+    await run(`setEngineManualStep(true); engineInit(()=> { new Render3DPlugin }, ()=> {}, ()=> {}, ()=> {}, ()=> {})`);
+    run(`var box = new EngineObject3D(vec3(5, 0, 0), render3D.boxMesh); render3DObjectMatrix(box); box.mesh.computeRadius();
+        var made = 0; // the methods that make a vector, counted
+        for (const [type, name] of [[Vector3, 'subtract'], [Vector3, 'add'], [Vector3, 'scale'], [Vector3, 'copy'],
+            [Matrix4, 'getTranslation']])
+        { const f = type.prototype[name]; type.prototype[name] = function(...a) { ++made; return f.apply(this, a); }; }
+        var miss = new Ray3D(vec3(0, 10, 0), vec3(1, 0, 0)); made = 0; var result = render3DRaycastObject(miss, box);`);
+    assert.deepEqual([run('result'), run('made')], [undefined, 0]);
+    assert.equal(run('raycastSphere(new Ray3D(vec3(0, 0, 0), vec3(1, 0, 0)), vec3(5, 0, 0), 1)'), 4);
+    assert.equal(run('raycastSphere(new Ray3D(vec3(5, .5, 0), vec3(1, 0, 0)), vec3(5, 0, 0), 1)'), 0, 'from inside');
+    assert.equal(run('raycastSphere(new Ray3D(vec3(0, 2, 0), vec3(1, 0, 0)), vec3(5, 0, 0), 1)'), undefined);
+});

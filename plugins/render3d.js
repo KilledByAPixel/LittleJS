@@ -4308,6 +4308,7 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
 
 // how far along a ray an object is hit, or undefined for a miss; a mesh is hit on its triangles, in its own space,
 // and a sprite as the quad it draws
+const render3DRaycastCenter = vec3();
 function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D)) return;
@@ -4320,7 +4321,8 @@ function render3DRaycastObject(ray, o)
     // a mesh that changed since it was measured is measured again, an upload may not have come yet
     const radius = (mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius) * render3DMaxStretch(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
-    const center = matrix.getTranslation();
+    // its place read from the matrix into a vector kept for this, a pick tests every object and most miss
+    const m = matrix.m, center = render3DRaycastCenter.set(m[12], m[13], m[14]);
     const distance = raycastSphere(ray, center, radius);
     if (distance === undefined) return;
 
