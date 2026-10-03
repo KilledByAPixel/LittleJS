@@ -673,7 +673,7 @@ function gltfFetch(uri, baseUrl, files)
         const parts = [];
         for (const part of (baseUrl + name).replace(/\\/g, '/').split('/'))
             part === '..' ? parts.pop() : part && part !== '.' && parts.push(part);
-        const path = parts.join('/'), lower = path.toLowerCase(), file = parts.at(-1)?.toLowerCase();
+        const path = parts.join('/'), lower = path.toLowerCase(), file = parts[parts.length - 1]?.toLowerCase();
         const keys = [...files.keys()], found = files.get(path) ?? files.get(keys.find((k)=> k.toLowerCase() === lower));
         if (found)
             return Promise.resolve(new Response(found));

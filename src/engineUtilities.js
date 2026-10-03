@@ -141,6 +141,7 @@ function saveText(text, filename='text', type='text/plain')
 
 /** Create an offscreen canvas to draw into, and return its 2D context
  *  - The canvas is context.canvas, which is what TextureInfo and the like take
+ *  - A browser with no OffscreenCanvas, Safari before 16.4, gets a canvas element that is not on the page
  *  @param {number} width - In pixels
  *  @param {number} [height] - In pixels, defaults to the width for a square
  *  @param {boolean} [willReadFrequently] - Keep it in software, faster when getImageData is called on it often
@@ -149,7 +150,9 @@ function saveText(text, filename='text', type='text/plain')
 function createCanvasContext(width, height=width, willReadFrequently=false)
 {
     ASSERT(isNumber(width) && isNumber(height), 'canvas width and height must be numbers', width, height);
-    return new OffscreenCanvas(width, height).getContext('2d', {willReadFrequently});
+    const canvas = typeof OffscreenCanvas != 'undefined' ? new OffscreenCanvas(width, height) :
+        Object.assign(document.createElement('canvas'), {width, height});
+    return /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext('2d', {willReadFrequently}));
 }
 
 /** Save a canvas to disk
@@ -159,7 +162,7 @@ function createCanvasContext(width, height=width, willReadFrequently=false)
  *  @memberof Utilities */
 function saveCanvas(canvas, filename='screenshot', type='image/png')
 {
-    if (canvas instanceof OffscreenCanvas)
+    if (typeof OffscreenCanvas != 'undefined' && canvas instanceof OffscreenCanvas)
     {
         // copy to temporary canvas and save
         const saveCanvas = document.createElement('canvas');
@@ -169,7 +172,7 @@ function saveCanvas(canvas, filename='screenshot', type='image/png')
         saveDataURL(saveCanvas.toDataURL(type), filename);
     }
     else
-        saveDataURL(canvas.toDataURL(type), filename);
+        saveDataURL(/** @type {HTMLCanvasElement} */ (canvas).toDataURL(type), filename);
 }
 
 /** Save a data url to disk

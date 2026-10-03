@@ -2612,7 +2612,7 @@ function editor3DSetSelectedProperty(name, value)
 {
     const selected = editor3DSelected(), id = selected[0]?.id;
     const defaults = selected[0] && level3DTypes.get(selected[0].type)?.defaults;
-    const d = defaults && Object.hasOwn(defaults, name) ? defaults[name] : undefined;
+    const d = defaults && Object.prototype.hasOwnProperty.call(defaults, name) ? defaults[name] : undefined;
     const sameType = isColor(d) ? isColor(value) : isVector3(d) ? isVector3(value) :
         isVector2(d) ? isVector2(value) : typeof value === typeof d;
     if (selected.length !== 1 || !editor3DPropertyEditable(d) || !sameType) return false;

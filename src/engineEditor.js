@@ -453,7 +453,7 @@ function editorSetOpen(open)
         // the layer edited last, when it is still there, or the collision layer
         const layers = editorLayers();
         layers.includes(editorLayer) || (editorLayer = layers.find((layer)=> layer.live?.isSolid) ??
-            layers.filter((layer)=> !layer.isObjects).at(-1));
+            layers.filter((layer)=> !layer.isObjects).pop());
         layers.includes(editorObjectLayer) || (editorObjectLayer = editorLayer ? undefined :
             layers.find((layer)=> layer.isObjects)); // a level of objects alone
         editorCall('onOpen');
@@ -882,7 +882,7 @@ function editorAutosave(record)
     const saves = editorSaves(), map = record.map, data = editorTileLayerData(map.layers);
     const objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
     const original = record.originalObjects ?? [], kept = objects.slice();
-    while (kept.length > original.length && !kept.at(-1).length)
+    while (kept.length > original.length && !kept[kept.length - 1].length)
         kept.pop(); // an Objects layer the editor made, empty again, is not an edit
     const size = record.originalSize, sameSize = map.width === size.width && map.height === size.height;
     // the map as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it
@@ -1321,7 +1321,7 @@ function editorChangeObjects(layer, change)
     change(after);
     if (editorSameData(before, after)) return false;
     editorSetObjects(layer, after);
-    const last = editorStroke?.at(-1);
+    const last = editorStroke?.[editorStroke.length - 1];
     if (last?.objectLayer === layer)
         last.after = after;
     else
@@ -1612,12 +1612,8 @@ function editorCellClamped(live, worldPos)
 function editorArea(a, b)
 { return {min: vec2(min(a.x, b.x), min(a.y, b.y)), max: vec2(max(a.x, b.x), max(a.y, b.y))}; }
 
-// the tile info a layer draws a tile with, as TileLayer.drawTileData picks it
-function editorTileInfo(live, tile)
-{
-    const t = live.tileInfo;
-    return t && (t.tiles ? t.tiles[tile] : t.columns ? t.frame(tile) : t.index(tile));
-}
+// the tile info a layer draws a tile with, as TileLayer.drawTileData picks it, undefined past the end of its sheet
+function editorTileInfo(live, tile) { return tileLayerTileInfo(live.tileInfo, tile); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // stamps
@@ -2181,8 +2177,9 @@ function editorPaletteTiles(layer)
     const live = layer?.live, image = live?.tileInfo?.textureInfo?.image, list = levelEditor.paletteTiles;
     if (list && live)
     {
-        if (layer.palette?.list !== list)
-            layer.palette = {list, tiles: list.map((tile)=> ({tile, tileInfo: editorTileInfo(live, tile)}))
+        if (layer.palette?.list !== list || layer.palette.count !== live.tileInfo?.tiles?.length)
+            layer.palette = {list, count: live.tileInfo?.tiles?.length, // a tile set fills in as it loads
+                tiles: list.map((tile)=> ({tile, tileInfo: editorTileInfo(live, tile)}))
                 .filter((t)=> t.tileInfo || !live.tileInfo?.tiles)}; // a tile set has only so many
         return layer.palette.tiles;
     }
@@ -2219,7 +2216,7 @@ function editorPaletteTiles(layer)
                 size.y).data.buffer);
             return pixels.every((p)=> p === pixels[0]);
         };
-        while (tiles.length > 1 && blank(tiles.at(-1)))
+        while (tiles.length > 1 && blank(tiles[tiles.length - 1]))
             tiles.pop();
     }
     catch {}
@@ -2595,7 +2592,7 @@ function editorPropertiesUpdate(box)
                 {
                     // both checked before a vector is made of them, an emptied or half typed field shows its value again
                     const px = parseFloat(input.value), py = parseFloat(y.value);
-                    if (isNumber(px) && isNumber(py))
+                    if (isFinite(px) && isFinite(py))
                         set(vec2(px, py));
                     else
                         input.value = String(value.x), y.value = String(value.y);

@@ -1779,7 +1779,7 @@ class LensFlare3D extends EngineObject3D
         };
         const near = this.light && reach < Infinity ? min(2, this.light.radius * .4) : 0;
         let candidates = blockers.filter((o)=> !maps.some((map)=> map === o));
-        for (let tries = 4; tries--;)
+        for (let tries = 5; tries--;)
         {
             const hit = render3D.pick(ray, candidates);
             if (!hit || hit.distance >= reach) return false;

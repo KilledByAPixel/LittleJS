@@ -600,7 +600,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     }
 
     // the splash first, the images load under it, then the loading screen for the rest
-    showSplashScreen && await promises.at(-1);
+    showSplashScreen && await promises[promises.length - 1];
     return startEngine(promises);
 
     // gameInit runs once the images are in, and the game loop starts once it and everything loaded while it ran are

@@ -58,6 +58,10 @@ function audioInit()
 {
     if (!soundEnable || headlessMode) return;
 
+    // on an iPhone the silent switch mutes the page's sound unless it plays as media, Safari 16.4 and up
+    const session = /** @type {any} */ (navigator).audioSession;
+    if (session)
+        session.type = 'playback';
     document.addEventListener('visibilitychange', audioVisibilityChange);
 }
 

@@ -576,9 +576,9 @@ function glSetTextureData(texture, image, pixelated=tilesPixelated)
     {
         // WebGL ignores the unpack flag below for a bitmap and uploads it as it was made, so it is drawn onto a
         // canvas first, which reads either kind of bitmap right and uploads as the flag says
-        const canvas = new OffscreenCanvas(image.width, image.height);
-        canvas.getContext('2d').drawImage(image, 0, 0);
-        image = canvas;
+        const context = createCanvasContext(image.width, image.height);
+        context.drawImage(image, 0, 0);
+        image = context.canvas;
     }
     // smooth filtering mixes a texel with its see through neighbors, right only for premultiplied color, or the
     // edges go dark; pixel art is sampled a texel at a time, and uploads straight color as it always has

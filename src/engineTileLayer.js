@@ -124,6 +124,19 @@ function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnl
 // Tiled's flip flags, horizontal, vertical and diagonal as bits 2, 1 and 0, as [direction, mirror]
 const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [1,1]];
 
+// the tile info a layer's tile info gives a tile: a tile set's tile, a frame of a sheet read by its columns, or a
+// tile of its grid; undefined past the end of a tile set, or of a sheet read by its columns, as values kept only for
+// collision can be, which the level editor reads the same way
+function tileLayerTileInfo(t, tile)
+{
+    if (!t) return;
+    if (t.tiles) return t.tiles[tile];
+    if (!t.columns) return t.index(tile);
+    if (t.textureInfo && t.pos.y + (tile / t.columns | 0) * (t.size.y + t.padding*2) + t.size.y > t.textureInfo.size.y)
+        return;
+    return t.frame(tile);
+}
+
 /**
  * Load tile layers from exported data
  * - Tiled maps come in as they are, flipped and turned tiles included, from one tileset image (a second tileset's
@@ -877,12 +890,8 @@ class TileLayer extends CanvasLayer
 
         // a tile set from loadTiles has each tile where it was packed, a tileset packed by loadSprite keeps its own
         // columns, counted from its first tile, not the sheet's grid
-        const t = this.tileInfo;
-        if (t?.columns && !t.tiles && t.textureInfo && t.pos.y + (d.tile / t.columns | 0) * (t.size.y + t.padding*2) +
-            t.size.y > t.textureInfo.size.y)
-            return; // past the end of the sheet, as values kept only for collision can be
-        const tileInfo = t && (t.tiles ? t.tiles[d.tile] : t.columns ? t.frame(d.tile) : t.index(d.tile));
-        if (t && !tileInfo) return; // past the end of a tile set, or loading
+        const t = this.tileInfo, tileInfo = tileLayerTileInfo(t, d.tile);
+        if (t && !tileInfo) return; // past the end of the sheet or the tile set, or loading
         this.drawLayerTile(drawPos, cellPixels, tileInfo, d.color, d.direction*PI/2, d.mirror);
     }
 

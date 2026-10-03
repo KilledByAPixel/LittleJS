@@ -467,8 +467,11 @@ function renderExampleInfo(markdown, exampleNames=[], docsLinks)
         const spans = [];
         s = escape(s).replace(/`([^`]+)`/g, (m, code)=> '\0' + (spans.push(code) - 1) + '\0');
         // a star opens or closes only against a word's outside, so the stars of a*b and 2 * 3 stay stars
-        s = s.replace(/(?<![\w*])\*\*(?=\S)([^*]+)(?<=\S)\*\*(?![\w*])/g, '<b>$1</b>');
-        s = s.replace(/(?<![\w*])\*(?=\S)([^*]+)(?<=\S)\*(?![\w*])/g, '<i>$1</i>');
+        // the character before is matched and put back, as Safari before 16.4 has no lookbehind
+        const pair = (tag)=> (m, before, text)=>
+            /\S$/.test(text) ? `${before}<${tag}>${text}</${tag}>` : m; // no space inside the closing star
+        s = s.replace(/(^|[^\w*])\*\*(?=\S)([^*]+)\*\*(?![\w*])/g, pair('b'));
+        s = s.replace(/(^|[^\w*])\*(?=\S)([^*]+)\*(?![\w*])/g, pair('i'));
         // a link to another example, ?example=Name, stays in the page; any other opens a new tab
         s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, text, url)=>
             /^https?:\/\//.test(url) || !url.includes(':') ?

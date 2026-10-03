@@ -107,7 +107,7 @@ test('an ImageBitmap uploads through a canvas, so the premultiply flag applies t
 {
     const ImageBitmap = class { constructor() { this.width = this.height = 4; } };
     const OffscreenCanvas = class { constructor(width, height) { this.width = width; this.height = height; }
-        getContext() { return { drawImage: (image)=> this.drawn = image }; } };
+        getContext() { return { canvas: this, drawImage: (image)=> this.drawn = image }; } };
     const { run } = loadEngine({ ImageBitmap, OffscreenCanvas });
     const uploaded = run(`
         const uploaded = [];

@@ -1301,7 +1301,7 @@ light.coneAngle = .5              // a spotlight: the angle in radians from its 
                                   // cone, 0 by default for a light that shines every way; it shines along its
                                   // own forward, so rotation3D or what it is attached to aims it
 light.coneSoftness = .2           // how much of the cone is its fading edge: 0 a hard edge, 1 fading from the middle
-light.gel = textureInfo           // a picture the light shines through, cast along its cone in its colors, upright
+light.gel = textureInfo           // or a TileInfo's whole texture: a picture the light shines through, cast along its cone in its colors, upright
                                   // as the light looks out, like a slide or stained glass; only the spotlight that
                                   // casts the shadows has one, render3D.shadows on and it as render3D.shadowLight
 light.glow = 1                    // a soft hazy glow over the light this big, like a lamp at night; 0 by default,

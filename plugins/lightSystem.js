@@ -151,7 +151,7 @@ class LightSystemPlugin
             }
 
             // where Canvas2D draws go during the shadow and emissive passes
-            lightSystem.shadowContext ||= new OffscreenCanvas(1, 1).getContext('2d');
+            lightSystem.shadowContext ||= createCanvasContext(1);
 
             // resolve texture size default at init time (mainCanvasSize may
             // not be set yet at the moment the constructor first ran), and
