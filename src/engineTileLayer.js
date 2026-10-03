@@ -213,7 +213,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     {
         const name = collisionLayer;
         collisionLayer = layers.findIndex((l)=> l.color && l.dataLayer.name === name);
-        ASSERT(collisionLayer >= 0, 'no tile layer named ' + name);
+        collisionLayer < 0 && console.error('tileLayersLoad: no tile layer is named ' + name + ', none is solid');
     }
 
     // create tile layers and fill with data
@@ -226,7 +226,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         if (!layerColor)
             continue;
         const tiles = dataLayer.data; // a list of gids, or a typed array of them
-        if (!(isArray(tiles) || ArrayBuffer.isView(tiles)) || tiles.length !== levelSize.area())
+        if (!(isArray(tiles) || ArrayBuffer.isView(tiles)) || dataLayer.data.length !== levelSize.area())
             throw new Error(`tileLayersLoad: layer ${dataLayer.name ?? layerIndex} has ${dataLayer.data?.length} tiles for a map of ` +
                 `${levelSize.area()}; infinite maps and compressed layers are not read`);
 
@@ -310,6 +310,8 @@ function tileLayersFromLDtk(ldtk, level=0)
     const first = instances.find((l)=> tiled(l) && l.__tilesetDefUid != undefined) || instances.find(tiled) || instances[0];
     const grid = first?.__gridSize || 16;
     const width = first?.__cWid || ceil(data.pxWid / grid), height = first?.__cHei || ceil(data.pxHei / grid);
+    if (!(width > 0 && height > 0 && width * height <= 1 << 22))
+        throw new Error('tileLayersFromLDtk: level ' + data.identifier + ' is ' + width + ' by ' + height + ' cells');
     const map = {width, height, tilewidth: grid, tileheight: grid, orientation: 'orthogonal', renderorder: 'right-down',
         infinite: false, layers: [], nextlayerid: 1, nextobjectid: 1};
 
@@ -327,7 +329,7 @@ function tileLayersFromLDtk(ldtk, level=0)
         const instance = instances[i], name = instance.__identifier, id = map.nextlayerid++;
         if (!tiled(instance))
         {
-            const objects = (instance.entityInstances || []).map((entity)=>
+            const objects = (instance.entityInstances || []).filter((entity)=> isArray(entity.px)).map((entity)=>
             {
                 // an entity is placed by its pivot, an object here by its middle
                 const [pivotX=0, pivotY=0] = entity.__pivot || [], w = entity.width || 0, h = entity.height || 0;
@@ -343,12 +345,9 @@ function tileLayersFromLDtk(ldtk, level=0)
             map.layers.push({id, name, type: 'objectgroup', objects, opacity: 1, visible: true, x: 0, y: 0});
             continue;
         }
-        const tiles = [...(instance.autoLayerTiles || []), ...(instance.gridTiles || [])];
-        const ownTiles = !tiles.length || !tileset ||
-            instance.__tilesetDefUid === tileset.uid && tileset.tileGridSize === grid;
-        if (instance.__gridSize !== grid || instance.__cWid !== width || instance.__cHei !== height || !ownTiles)
+        if (instance.__gridSize !== grid || instance.__cWid !== width || instance.__cHei !== height)
         {
-            debug && console.warn(`tileLayersFromLDtk: layer ${name} has another grid or tileset, left out`);
+            console.warn(`tileLayersFromLDtk: layer ${name} has another grid, left out`);
             continue;
         }
         // an IntGrid layer's values, hidden, under its own name, for collision whatever its tiles do
@@ -359,7 +358,14 @@ function tileLayersFromLDtk(ldtk, level=0)
             const data = empty();
             (instance.intGridCsv || []).forEach((value, k)=> k < data.length && (data[k] = value));
             map.layers.push({id, name, type: 'tilelayer', width, height, data, opacity, visible: false, x: 0, y: 0});
-            if (!tiles.length) continue;
+        }
+        // its tiles, those with a place, from the first layer's tileset
+        const tiles = [...(instance.autoLayerTiles || []), ...(instance.gridTiles || [])].filter((t)=> isArray(t.px));
+        if (!tiles.length) continue;
+        if (tileset && (instance.__tilesetDefUid !== tileset.uid || tileset.tileGridSize !== grid))
+        {
+            console.warn(`tileLayersFromLDtk: the tiles of layer ${name} are on another tileset, left out`);
+            continue;
         }
 
         // a layer for each depth in a cell and each opacity, the first tiles drawn solid first

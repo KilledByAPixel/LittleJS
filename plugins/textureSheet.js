@@ -457,8 +457,10 @@ function parseAtlas(data)
         const tagged = new Set;
         for (const tag of tags)
         {
-            groups.push({name: tag.name, frames: frames.slice(tag.from, tag.to + 1)});
-            for (let i = tag.from; i <= tag.to; ++i)
+            // a tag reaches only frames there are, whatever its numbers say
+            const from = max(0, floor(tag.from) || 0), to = min(frames.length - 1, floor(tag.to) || 0);
+            groups.push({name: tag.name, frames: frames.slice(from, to + 1)});
+            for (let i = from; i <= to; ++i)
                 tagged.add(i);
         }
         frames.forEach((f, i)=> tagged.has(i) || groups.push({name: f.name, frames: [f]}));

@@ -460,9 +460,13 @@ async function parseGLTF(data, baseUrl='')
 
     // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it;
     // each node's parent and resting place are kept, so an animation can move a part from where it rests
-    const parts = [], parents = [], restInverse = [], restPose = [];
+    const parts = [], parents = [], restInverse = [], restPose = [], visited = new Set;
     const visit = (index, parentMatrix, parentIndex, parentRest)=>
     {
+        // nodes are trees, so one reached again is a cycle or a node with two parents, a file problem
+        if (visited.has(index))
+            throw new Error('glTF node ' + index + ' is reached twice, nodes must form trees');
+        visited.add(index);
         const node = json.nodes[index], local = gltfNodeMatrix(node);
         let matrix = parentMatrix ? parentMatrix.copy().multiply(local) : local;
         let rest = parentRest && parentRest.copy().multiply(local); // where it rests, when that is not where it is baked
@@ -692,6 +696,10 @@ function gltfAccessor(json, buffers, index)
     const size = Type.BYTES_PER_ELEMENT;
     const scales = /** @type {Array<[Object, number]>} */ ([[Int8Array, 127], [Uint8Array, 255], [Int16Array, 32767], [Uint16Array, 65535]]);
     const scale = a.normalized ? new Map(scales).get(Type) || 1 : 1;
+    // with a buffer under it the count is bounded by the buffer, without one it is all zeros and a sparse few,
+    // which no real model makes millions of
+    if (!view && !(a.count <= 1 << 20))
+        throw new Error('glTF accessor ' + index + ' has no buffer and a count of ' + a.count);
     const out = new Float32Array(a.count * components);
     if (view)
     {

@@ -198,18 +198,21 @@ function level3DTerrainShape(terrain)
 {
     if (!terrain || typeof terrain !== 'object') return;
     const size = terrain.size, rows = terrain.heights, n = LEVEL3D_TERRAIN_SAMPLES;
-    if (!isArray(size) || size.length !== 2 || !size.every((v)=> isNumber(v) && v > 0)) return;
+    if (!isArray(size) || size.length !== 2 || !size.every((v)=> level3DFinite(v) && v > 0)) return;
     if (!isArray(rows) || rows.length < 2 || rows.length > n || !isArray(rows[0])) return;
     const columns = rows[0].length;
     if (columns < 2 || columns > n || !rows.every((row)=> isArray(row) && row.length === columns)) return;
-    const heights = rows.map((row)=> row.map((v)=> isNumber(v) ? clamp(v) : 0));
+    const heights = rows.map((row)=> row.map((v)=> level3DFinite(v) ? clamp(v) : 0));
     return {pos: level3DVector(terrain.pos, vec3()), size: vec2(size[0], size[1]),
-        height: isNumber(terrain.height) && terrain.height > 0 ? terrain.height : 1, heights};
+        height: level3DFinite(terrain.height) && terrain.height > 0 ? terrain.height : 1, heights};
 }
 
 // a hex color of a level as a Color, undefined when it is not one
 function level3DHexColor(hex)
-{ return /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(hex) ? new Color().setHex(hex) : undefined; }
+{ return typeof hex === 'string' && /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(hex) ? new Color().setHex(hex) : undefined; }
+
+// a number of a level that is a real one, not NaN or Infinity, which JSON writes as 1e999
+const level3DFinite = (v)=> typeof v === 'number' && isFinite(v);
 
 // the paint of a level's terrain block, for a terrain of so many samples: its colors as they are written and a
 // color for each sample, row after row, 0 for none and 1 the first of the colors; undefined when it has none or
@@ -289,12 +292,12 @@ function level3DSceneApply(scene)
 {
     const r = render3D;
     if (!r || !scene || typeof scene !== 'object') return;
-    const color = (value)=> /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) ? new Color().setHex(value) : undefined;
+    const color = level3DHexColor;
     const sky = isArray(scene.sky) && scene.sky.length === 3 ? scene.sky.map(color) : [];
     if (sky.length && sky.every((c)=> c))
     {
         // as setSky does, without disposing a dome that is the game's own
-        const [top, horizon, bottom] = sky, ambient = isNumber(scene.ambient) ? scene.ambient : .5;
+        const [top, horizon, bottom] = sky, ambient = level3DFinite(scene.ambient) ? scene.ambient : .5;
         level3DSkies.has(r.sky) && r.sky.dispose();
         level3DSkies.add(r.sky = buildSky(top, horizon, bottom));
         r.fogColor = horizon.copy();
@@ -306,7 +309,7 @@ function level3DSceneApply(scene)
         r.sunDirection = sun;
     r.sunColor = color(scene.sunColor) || r.sunColor;
     const fog = scene.fog;
-    if (isArray(fog) && fog.length === 2 && fog.every((v)=> isNumber(v)))
+    if (isArray(fog) && fog.length === 2 && fog.every(level3DFinite))
         r.fogStart = fog[0], r.fogEnd = fog[1];
     r.fogColor = color(scene.fogColor) || r.fogColor;
     if (typeof scene.shadows === 'boolean')
@@ -333,7 +336,7 @@ const level3DSunHasFlare = ()=> engineObjects.some((o)=> o instanceof LensFlare3
 // a vec3 of an array of three numbers, as the file has them, or the fallback
 function level3DVector(value, fallback)
 {
-    return isArray(value) && value.length === 3 && value.every((v)=> isNumber(v)) ?
+    return isArray(value) && value.length === 3 && value.every(level3DFinite) ?
         vec3(value[0], value[1], value[2]) : fallback;
 }
 
@@ -349,12 +352,14 @@ function level3DProperties(type, object)
     {
         const d = type.defaults[key];
         if (isColor(d))
-            /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) && (properties[key] = new Color().setHex(value));
+            level3DHexColor(value) && (properties[key] = level3DHexColor(value));
         else if (isVector3(d))
             properties[key] = level3DVector(value, properties[key]);
         else if (isVector2(d))
-            isArray(value) && value.length === 2 && value.every((v)=> isNumber(v)) &&
+            isArray(value) && value.length === 2 && value.every(level3DFinite) &&
                 (properties[key] = vec2(value[0], value[1]));
+        else if (typeof d === 'number')
+            level3DFinite(value) && (properties[key] = value);
         else if (d === undefined || typeof value === typeof d)
             properties[key] = value;
     }

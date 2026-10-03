@@ -13,6 +13,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ### Fixes
 
 - A level whose prefab holds itself, several times over, loads at once with that prefab left out where it holds itself, in place of making thousands of objects
+- Small malformed files no longer make a loader run on: an Aseprite tag past its frames keeps to them, a glTF node reached twice and an accessor of millions with no buffer are refused, an LDtk level of millions of cells is refused and a tile or entity with no place is passed by
+- LDtk: an IntGrid layer whose rule tiles are on another tileset keeps its values for collision, its tiles left out with a warning
+- A collision layer named that no layer has says so in release builds too
+- 3D levels: a color that is not a string, and a number that is NaN or Infinity (1e999 in JSON), are read as the default, in place of an assert or a NaN
 - `tileLayersLoad` says so when a map is not a whole number of cells across and down, or a layer's tiles do not fill it, in release builds too, in place of running on
 
 ### New Demos
