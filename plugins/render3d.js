@@ -2705,17 +2705,63 @@ const render3DMeshBuffers = typeof FinalizationRegistry == 'undefined' ? undefin
         glContext.deleteBuffer(indexBuffer);
     });
 
-// the place a point is at, to a hundred thousandth, which smooth normals are summed by
-function render3DPlaceKey(p) { return `${round(p.x * 1e5)},${round(p.y * 1e5)},${round(p.z * 1e5)}`; }
-
-// add a face normal to the sum at a triangle's corner a, weighted by the angle there, so a cube corner averages its
-// three faces evenly however it is cut into triangles
-function render3DAddCornerNormal(sums, a, b, c, normal)
+// the points at one place, to a hundred thousandth, which smooth normals are summed by: each point's group, numbered
+// from 0, found by a number made from its place and checked against the place, so no text is made for a point
+function render3DPlaceGroups(points)
 {
-    const u = b.subtract(a), v = c.subtract(a);
-    const angle = Math.acos(clamp(u.dot(v) / (u.length() * v.length() || 1), -1, 1));
-    const k = render3DPlaceKey(a);
-    sums.set(k, (sums.get(k) || vec3()).add(normal.scale(angle)));
+    const groups = new Int32Array(points.length), first = new Map, next = [], places = [];
+    for (let i = 0; i < points.length; ++i)
+    {
+        const p = points[i], x = round(p.x * 1e5), y = round(p.y * 1e5), z = round(p.z * 1e5);
+        const hash = Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791);
+        let group = first.get(hash);
+        while (group !== undefined && !(places[group*3] === x && places[group*3+1] === y && places[group*3+2] === z))
+            group = next[group];
+        if (group === undefined)
+        {
+            group = next.length;
+            next.push(first.get(hash));
+            first.set(hash, group);
+            places.push(x, y, z);
+        }
+        groups[i] = group;
+    }
+    return {groups, count: next.length};
+}
+
+// the face normals meeting at each place added up, each weighted by its corner angle so a cube corner averages its
+// three faces evenly however they are cut into triangles; of a strip, every other triangle turned back, with no
+// indices, or of the index list; in numbers, with no vector made for a triangle or a corner
+function render3DSmoothNormalSums(points, indices)
+{
+    const strip = !indices, triangles = strip ? max(points.length - 2, 0) : indices.length / 3 | 0;
+    const {groups, count} = render3DPlaceGroups(points);
+    const sums = new Float64Array(count * 3), touched = new Uint8Array(count);
+    let nx = 0, ny = 0, nz = 0;
+    const addCorner = (a, b, c, group)=>
+    {
+        // the angle at corner a, then the face normal scaled by it added to the sum at a's place
+        const ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z, vx = c.x - a.x, vy = c.y - a.y, vz = c.z - a.z;
+        const dot = ux*vx + uy*vy + uz*vz, lengths = (ux**2 + uy**2 + uz**2)**.5 * (vx**2 + vy**2 + vz**2)**.5;
+        const angle = Math.acos(clamp(dot / (lengths || 1), -1, 1)), s = group * 3;
+        sums[s] += nx * angle, sums[s+1] += ny * angle, sums[s+2] += nz * angle;
+        touched[group] = 1;
+    };
+    for (let t = 0; t < triangles; ++t)
+    {
+        const i0 = strip ? t : indices[t*3], i1 = strip ? t + 1 : indices[t*3+1], i2 = strip ? t + 2 : indices[t*3+2];
+        const a = points[i0], b = points[i1], c = points[i2];
+        const ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z, vx = c.x - a.x, vy = c.y - a.y, vz = c.z - a.z;
+        const cx = uy*vz - uz*vy, cy = uz*vx - ux*vz, cz = ux*vy - uy*vx;
+        const lengthSquared = cx**2 + cy**2 + cz**2;
+        if (!lengthSquared) continue; // no area, like a triangle joining two strips
+        const k = (strip && !(t & 1) ? -1 : 1) / lengthSquared**.5;
+        nx = cx * k, ny = cy * k, nz = cz * k;
+        addCorner(a, b, c, groups[i0]);
+        addCorner(b, c, a, groups[i1]);
+        addCorner(c, a, b, groups[i2]);
+    }
+    return {groups, sums, touched};
 }
 
 /**
@@ -3100,42 +3146,52 @@ class Mesh
             // the triangles are listed: smooth normals add up around each position, weighted by the corner angle
             // like the strip's, so vertices split apart at one place smooth back together and a mesh can go flat and
             // smooth again; flat ones need a vertex per corner, so the vertices are split up first
-            if (!smooth)
+            if (smooth)
             {
-                const split = (a)=> this.indices.map(i=> a[i]);
-                this.points = split(this.points), this.normals = split(this.normals);
-                this.uvs = split(this.uvs), this.colors = split(this.colors);
-                this.indices = this.indices.map((_, i)=> i);
+                const {groups, sums, touched} = render3DSmoothNormalSums(this.points, this.indices);
+                this.normals = this.points.map((p, i)=>
+                {
+                    const s = groups[i] * 3, x = sums[s], y = sums[s+1], z = sums[s+2];
+                    const lengthSquared = x**2 + y**2 + z**2, k = 1 / lengthSquared**.5;
+                    return touched[groups[i]] && lengthSquared ? vec3(x * k, y * k, z * k) : RENDER3D_DEFAULT_NORMAL;
+                });
+                this.dirty = true;
+                return this;
             }
-            const points = this.points, indices = this.indices, sums = new Map;
+            const split = (a)=> this.indices.map(i=> a[i]);
+            this.points = split(this.points), this.normals = split(this.normals);
+            this.uvs = split(this.uvs), this.colors = split(this.colors);
+            this.indices = this.indices.map((_, i)=> i);
+            const points = this.points, indices = this.indices;
             const normals = points.map(()=> RENDER3D_DEFAULT_NORMAL);
             for (let t = 0; t < indices.length; t += 3)
             {
                 const a = points[indices[t]], b = points[indices[t+1]], c = points[indices[t+2]];
                 const cross = b.subtract(a).cross(c.subtract(a));
-                if (!cross.lengthSquared()) continue;
-                const normal = cross.normalize();
-                if (!smooth)
-                {
-                    // its own three corners
-                    normals[indices[t]] = normals[indices[t+1]] = normals[indices[t+2]] = normal;
-                    continue;
-                }
-                for (let j = 0; j < 3; ++j)
-                    render3DAddCornerNormal(sums, points[indices[t+j]], points[indices[t+(j+1)%3]],
-                        points[indices[t+(j+2)%3]], normal);
+                if (cross.lengthSquared()) // its own three corners
+                    normals[indices[t]] = normals[indices[t+1]] = normals[indices[t+2]] = cross.normalize();
             }
-            this.normals = !smooth ? normals : points.map(p=>
+            this.normals = normals;
+            this.dirty = true;
+            return this;
+        }
+
+        // smooth normals are the sums at each place made unit length, or straight up for a place with none
+        const points = this.points, n = points.length;
+        if (smooth)
+        {
+            const {groups, sums, touched} = render3DSmoothNormalSums(points);
+            this.normals = points.map((p, i)=>
             {
-                const s = sums.get(render3DPlaceKey(p));
-                return s && s.lengthSquared() ? s.normalize() : RENDER3D_DEFAULT_NORMAL;
+                const s = groups[i] * 3, x = sums[s], y = sums[s+1], z = sums[s+2], l = (x**2 + y**2 + z**2)**.5;
+                return !touched[groups[i]] ? vec3(0, 1, 0) : l ? vec3(x * (1/l), y * (1/l), z * (1/l)) : vec3();
             });
+            this.vertexKeys = undefined;
             this.dirty = true;
             return this;
         }
 
         // the outward normal of each triangle in the strip
-        const points = this.points, n = points.length;
         const faceNormals = [];
         for (let i = 0; i + 2 < n; ++i)
         {
@@ -3146,22 +3202,10 @@ class Mesh
             faceNormals.push(normal.lengthSquared() ? normal.normalize(i & 1 ? 1 : -1) : undefined);
         }
 
-        // then hand those to the vertices, shared around a position or kept per face
+        // then hand those to the vertices: every triangle writes its own three corners, so the only vertices left
+        // with the default are the repeats at the ends of a strip, which no triangle with any area uses
         const normals = points.map(()=> RENDER3D_DEFAULT_NORMAL);
-        if (smooth)
-        {
-            // add up the face normals meeting at each position, each weighted by its corner angle so a cube
-            // corner averages its three faces evenly however the strips cut them, then normalize
-            const sums = new Map;
-            faceNormals.forEach((f, i)=> f && [0, 1, 2].forEach(j=>
-                render3DAddCornerNormal(sums, points[i+j], points[i+(j+1)%3], points[i+(j+2)%3], f)));
-            for (let i = 0; i < n; ++i)
-                normals[i] = (sums.get(render3DPlaceKey(points[i])) || RENDER3D_DEFAULT_NORMAL).normalize();
-        }
-        else
-            // every triangle writes its own three corners, so the only vertices left with the default
-            // are the repeats at the ends of a strip, which no triangle with any area uses
-            faceNormals.forEach((f, i)=> f && (normals[i] = normals[i+1] = normals[i+2] = f));
+        faceNormals.forEach((f, i)=> f && (normals[i] = normals[i+1] = normals[i+2] = f));
 
         this.normals = normals;
         this.vertexKeys = undefined; // flat normals tell entries at one place apart
