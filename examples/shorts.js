@@ -240,6 +240,7 @@ const exampleList =
     new ExampleInfo('Light Shadows', 'lightShadows.js', 'Lights blocked by walls and tinted by glass', false, 'webgl, visual, lighting, shadow, shadows, glass, castShadow, emissive'),
     new ExampleInfo('Tweakables', 'tweakables.js', 'Change values live from a debug panel', false, 'debug, tweak, slider, tuning, panel'),
     new ExampleInfo('Level Editor', 'levelEditor.js', 'Paint a level and place objects, then play it', false, 'debug, editor, tiled, tile layer, objects, level, map'),
+    new ExampleInfo('Custom Editor', 'customEditor.js', 'A level editor made for one game: a room tool, a button, a key', false, 'debug, editor, LevelEditor, setLevelEditor, addTool, addButton, addKey, custom, tool, dungeon'),
     new ExampleInfo('Box2D physics'),
     new ExampleInfo('Box2D Demo', 'box2d.js', 'Box2D physics plugin', false, 'objects, mouse'),
     new ExampleInfo('Box2D Car', 'box2dCar.js', 'Drivable car with Box2D physics', false, 'objects, vehicle, suspension, wheels'),

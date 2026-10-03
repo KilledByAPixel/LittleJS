@@ -341,6 +341,8 @@ after a reload.
 
 ## Where the working examples are
 
+- `examples/shorts/customEditor.js`: a 2D editor class of a game's own, with a tool that lays out rooms by a
+  drag, a button, a key and an overlay drawn in `onDraw`.
 - `examples/shorts/render3dLevelEditor.js`: a 3D level with its own Coin and PlayerStart types and both hooks.
 - `examples/shorts/render3dPrefab.js`: the 3D editor used as a prefab maker.
 - `examples/shorts/levelEditor.js` and `examples/platformer/`: the 2D editor with a game's own types, palette

@@ -5,7 +5,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### New Demos
+
+- [Custom Editor](https://killedbyapixel.github.io/LittleJS/examples/?example=Custom%20Editor) - A level editor made for one game: a class of its own with a tool that lays out rooms by a drag, a button, a key and an overlay
 
 ## 1.24.1 - 2026-10-02
 
