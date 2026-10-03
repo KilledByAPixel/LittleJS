@@ -379,7 +379,7 @@ function tweakNumber(parent, axis, get, set, options, save)
     const change = (input)=>
     {
         const v = parseFloat(input.value);
-        if (!isNumber(v)) return; // a box part way through typing
+        if (!isFinite(v)) return; // a box part way through typing, or 1e999
         set(v);
         save();
     };

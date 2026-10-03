@@ -100,7 +100,7 @@ test('a light\'s flare looks past four lamps around it, and counts a fifth as hi
         var lamps = (n)=> { for (let i = 0; i < n; ++i) { const o = new EngineObject3D(vec3(0, 0, -10), render3D.boxMesh);
             o.scale3D = vec3(1 + i * .2); } flare.visible = .5; for (let i = 20; i--;) flare.update(); return flare.visible; };`);
     assert.equal(run('lamps(4)'), 1, 'four nested shades');
-    assert.equal(run('lamps(1)'), 0, 'five');
+    assert.equal(run('lamps(1)'), 0, 'one more, five in all');
 });
 
 test('a palette list names only tiles the sheet has, a sheet read by its columns as a tile set', ()=>
@@ -109,4 +109,25 @@ test('a palette list names only tiles the sheet has, a sheet read by its columns
     run(`var sheet = new TileInfo(vec2(), vec2(16), new TextureInfo({width: 17, height: 16}, false), .5, 0, 1);
         var layer = new TileLayer(vec2(), vec2(2, 1), sheet); levelEditor.paletteTiles = [0, 99];`);
     assert.deepEqual(json(run, 'editorPaletteTiles({live: layer}).map((t)=> t.tile)'), [0]);
+});
+
+test('a ray toward a point far beyond a tile layer ends at the layer, and hits as an unclipped walk does', ()=>
+{
+    const run = load();
+    run(`var layer = new TileCollisionLayer(vec2(2, 3), vec2(20, 10));
+        for (let x = 0; x < 20; ++x) layer.setCollisionData(vec2(x, x % 7), 1);
+        var walk = (a, b)=> { const n = vec2(), hit = lineTest(a.subtract(layer.pos), b.subtract(layer.pos),
+            (p)=> layer.getCollisionData(p) > 0, n); return hit && [hit.x + layer.pos.x, hit.y + layer.pos.y, n.x, n.y]; };
+        var cast = (a, b)=> { const n = vec2(), hit = layer.collisionRaycast(a, b, undefined, n); return hit && [hit.x, hit.y, n.x, n.y]; };
+        var random = new RandomGenerator(5), differ = [];
+        for (let i = 0; i < 300; ++i)
+        {
+            const a = vec2(random.float(-10, 35), random.float(-10, 25)), b = vec2(random.float(-10, 35), random.float(-10, 25));
+            const p = walk(a, b), q = cast(a, b);
+            if (!p !== !q || p && p.some((v, k)=> Math.abs(v - q[k]) > 1e-6)) differ.push([a, b, p, q]);
+        }`);
+    assert.deepEqual(json(run, 'differ.length'), 0, 'every ray as the walk has it: ' + run('JSON.stringify(differ[0])'));
+    run('var far = layer.collisionRaycast(vec2(3.5, 3.5), vec2(1e9, 3.5)), none = layer.collisionRaycast(vec2(-50, -50), vec2(-1e9, 5e8));');
+    assert.equal(run('none'), undefined, 'a ray that never crosses the layer, at once');
+    assert.ok(run('!!far'), 'and one that does still hits');
 });

@@ -670,14 +670,24 @@ function gltfFetch(uri, baseUrl, files)
     {
         let name = uri.replace(/[?#].*$/, '');
         try { name = decodeURIComponent(name); } catch {}
-        const parts = [];
-        for (const part of (baseUrl + name).replace(/\\/g, '/').split('/'))
-            part === '..' ? parts.pop() : part && part !== '.' && parts.push(part);
-        const path = parts.join('/'), lower = path.toLowerCase(), file = parts[parts.length - 1]?.toLowerCase();
-        const keys = [...files.keys()], found = files.get(path) ?? files.get(keys.find((k)=> k.toLowerCase() === lower));
+        // a path with its . and .. steps taken, the same for the keys, which may start with ./ or / or use \
+        const clean = (text)=>
+        {
+            const parts = [];
+            for (const part of text.replace(/\\/g, '/').split('/'))
+                if (part === '..' ? !parts.pop() : part && part !== '.' && !parts.push(part))
+                    return; // above the top of the files
+            return parts.join('/');
+        };
+        const path = clean(baseUrl + name);
+        if (path === undefined)
+            return Promise.reject(new Error('glTF needs ' + name + ', which is above the files given'));
+        const lower = path.toLowerCase(), file = path.slice(path.lastIndexOf('/') + 1);
+        const byPath = new Map([...files].map(([key, value])=> [clean(key)?.toLowerCase(), value]));
+        const found = files.get(path) ?? byPath.get(lower), keys = [...byPath.keys()];
         if (found)
             return Promise.resolve(new Response(found));
-        const named = new Set(keys.filter((k)=> k.slice(k.lastIndexOf('/') + 1).toLowerCase() === file).map((k)=> files.get(k)));
+        const named = new Set(keys.filter((k)=> k?.slice(k.lastIndexOf('/') + 1) === file).map((k)=> byPath.get(k)));
         if (named.size === 1)
             return Promise.resolve(new Response([...named][0]));
         return Promise.reject(new Error('glTF needs ' + path + (named.size ? ', and more than one file has its name' :
@@ -732,11 +742,14 @@ function gltfAccessor(json, buffers, index)
     // which no real model makes millions of
     if (!view && !(a.count <= 1 << 20))
         throw new Error('glTF accessor ' + index + ' has no buffer and a count of ' + a.count);
+    // its elements must lie in its buffer before so many floats are made for them
+    const viewEnd = view && (buffers[view.buffer]?.byteLength ?? 0), stride = view?.byteStride || components * size;
+    if (view && !((view.byteOffset || 0) + (a.byteOffset || 0) + (a.count - 1) * stride + components * size <= viewEnd))
+        throw new Error('glTF accessor ' + index + ' reaches past its buffer');
     const out = new Float32Array(a.count * components);
     if (view)
     {
         const buffer = buffers[view.buffer], offset = (view.byteOffset || 0) + (a.byteOffset || 0);
-        const stride = view.byteStride || components * size;
         if (stride === components * size)
             out.set(new Type(buffer, offset, a.count * components)); // packed, one view over all of it
         else

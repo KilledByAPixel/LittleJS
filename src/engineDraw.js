@@ -1635,7 +1635,7 @@ function tintImageData(data, color, additiveColor)
     if (additiveColor && !isBlack(additiveColor))
     {
         // multiply + additive (slower), color.a is baked into the alpha channel here
-        const colorMultiply = [color.r, color.g, color.b, color.a];
+        const colorMultiply = [clamp(color.r), clamp(color.g), clamp(color.b), clamp(color.a)];
         const colorAdd = [additiveColor.r * 255, additiveColor.g * 255,
                           additiveColor.b * 255, additiveColor.a * 255];
         for (let i = 0; i < data.length; ++i)
@@ -1646,9 +1646,9 @@ function tintImageData(data, color, additiveColor)
     // RGB only, faster — alpha left intact for the caller
     for (let i = 0; i < data.length; i+=4)
     {
-        data[i  ] *= color.r;
-        data[i+1] *= color.g;
-        data[i+2] *= color.b;
+        data[i  ] *= clamp(color.r);
+        data[i+1] *= clamp(color.g);
+        data[i+2] *= clamp(color.b);
     }
     return false;
 }

@@ -269,7 +269,10 @@ function debugShowErrors()
     {
         // replace entire page with error message
         document.body.style.cssText = 'background-color:#111;margin:8px';
-        document.body.innerHTML = `<pre style=color:#f00;font-size:28px;white-space:pre-wrap>` + message;
+        const pre = document.createElement('pre'); // the message as text, a file name in it never markup
+        pre.style.cssText = 'color:#f00;font-size:28px;white-space:pre-wrap';
+        pre.textContent = String(message);
+        document.body.replaceChildren(pre);
     }
     
     const originalAssert = console.assert;

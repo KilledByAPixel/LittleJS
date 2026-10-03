@@ -16,6 +16,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - On an iPhone the silent switch no longer mutes the game's sound, where Safari has `navigator.audioSession` (16.4 and up)
 - Level editor: the brush, its ghost and the palette read a tile past the end of a sheet as nothing, as the layer draws it, where a collision value picked up with the right button asserted every frame; the palette of a tile set filled in after it was first shown shows its tiles
 - A light's flare looks past four lamps around it to what is behind them, where the fourth counted as hidden
+- A tile layer's raycast toward a point far beyond the layer walks only across the layer, where a ray to a far constant took seconds
+- `debugShowErrors` shows a message as text, so a file name with markup in it can not add elements to the page
+- Canvas2D tints clamp the color to 0 to 1, as WebGL does
+- glTF: the keys of the files given may start with ./ or / or use , a uri above them is refused, and an accessor that reaches past its buffer is refused before its floats are made
 - A level whose prefab holds itself, several times over, loads at once with that prefab left out where it holds itself, in place of making thousands of objects
 - Small malformed files no longer make a loader run on: an Aseprite tag past its frames keeps to them, a glTF node reached twice and an accessor of millions with no buffer are refused, an LDtk level of millions of cells is refused and a tile or entity with no place is passed by
 - LDtk: an IntGrid layer whose rule tiles are on another tileset keeps its values for collision, its tiles left out with a warning

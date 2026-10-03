@@ -1166,7 +1166,23 @@ class TileCollisionLayer extends TileLayer
             const tileData = this.getCollisionData(pos);
             return tileData && collisionTest(tileData, vec2(pos.x + offset.x, pos.y + offset.y));
         }
-        const hitPos = lineTest(posStart.subtract(offset), posEnd.subtract(offset), testFunction, normal);
+        // only the part of the line over the layer, and a cell around it, can meet a tile, so a ray toward a point
+        // far beyond is walked across the layer and no farther; the cell around keeps the step into the layer as it was
+        const a = posStart.subtract(offset), d = posEnd.subtract(posStart);
+        let t0 = 0, t1 = 1;
+        for (const [p, q, high] of [[a.x, d.x, this.size.x + 1], [a.y, d.y, this.size.y + 1]])
+        {
+            if (!q)
+            {
+                if (p < -1 || p > high) return;
+                continue;
+            }
+            const u = (-1 - p) / q, v = (high - p) / q;
+            t0 = max(t0, min(u, v)), t1 = min(t1, max(u, v));
+        }
+        if (t0 > t1) return;
+        const hitPos = lineTest(t0 ? a.add(d.scale(t0)) : a, t1 < 1 ? a.add(d.scale(t1)) : posEnd.subtract(offset),
+            testFunction, normal);
         if (hitPos)
             hitPos.x += offset.x, hitPos.y += offset.y;
         if (debugRaycast && hitPos)

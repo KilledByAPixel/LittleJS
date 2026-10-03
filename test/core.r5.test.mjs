@@ -112,13 +112,16 @@ test('debugShowErrors shows a promise rejected with nothing instead of throwing 
 {
     // debugShowErrors replaces console.assert and sets the window's error handlers, all put back after
     const savedAssert = console.assert, savedDocument = globalThis.document;
-    globalThis.document = { body: { style: {} } };
+    globalThis.document = { createElement: ()=> ({ style: {} }), body: { style: {}, replaceChildren(pre) { this.shown = pre; } } };
     globalThis.onunhandledrejection = globalThis.onerror = null;
     try
     {
         debugShowErrors();
         globalThis.onunhandledrejection({ reason: undefined });
-        assert.match(globalThis.document.body.innerHTML, /undefined/);
+        assert.match(globalThis.document.body.shown.textContent, /undefined/);
+        // a message is shown as text, so a file name with markup in it is never made into elements
+        globalThis.onunhandledrejection({ reason: 'Failed to fetch JSON from <img src=x onerror=alert(1)>' });
+        assert.equal(globalThis.document.body.shown.textContent.includes('<img src=x'), true);
     }
     finally
     {

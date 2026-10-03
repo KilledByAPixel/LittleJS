@@ -166,13 +166,15 @@ corners, and they are listed counter clockwise seen from outside.
 The rest is plain browser code: a `dragover` listener that lets a drop
 happen, and a `drop` listener that reads the files. `droppedFiles`
 gathers every file of the drop into a `Map`, the files inside a dropped
-folder too, each by its path in that folder and by its name. The first
-model among them is shown. An `.obj` is read as text for `parseOBJ`.
-Anything else is read as bytes for `parseGLTF(data, '', files)`, which
-returns a promise of a `GLTFModel`, so it is awaited. A `.glb` holds
-everything, while a `.gltf` names its `.bin` and image files, and the
-third argument is where it finds them. An error, such as a file it
-needs that was not dropped, ends up in the text at the top.
+folder too, each by its path in that folder. The first model among them
+is shown, and the model it replaces is disposed of. An `.obj` is read as
+text for `parseOBJ`. Anything else is read as bytes for
+`parseGLTF(data, folder, files)`, which returns a promise of a
+`GLTFModel`, so it is awaited. A `.glb` holds everything, while a
+`.gltf` names its `.bin` and image files: they are found in `files`
+from its own `folder`, or by their names when only one file has it. An
+error, such as a file it needs that was not dropped, ends up in the
+text at the top.
 
 ### setModel
 A file's model can be any size, anywhere. `center()` moves it so the
