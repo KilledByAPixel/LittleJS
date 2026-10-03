@@ -625,7 +625,11 @@ function setGLEnable(enable)
 /** Set how many sided polygons to use when drawing circles and ellipses with WebGL
  *  @param {number} sides
  *  @memberof Settings */
-function setGLCircleSides(sides) { glCircleSides = sides; }
+function setGLCircleSides(sides)
+{
+    ASSERT(isNumber(sides) && sides >= 3, 'circles need at least 3 sides');
+    glCircleSides = sides;
+}
 
 /** Set default size of tiles in pixels
  *  @param {Vector2} size

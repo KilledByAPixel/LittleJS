@@ -288,3 +288,12 @@ test('a closed loop of computed points makes a polygon, the repeated point count
         o.destroy();
     }
 });
+
+test('an addRegularPoly with a side count that is not a whole number makes a shape and returns', () =>
+{
+    // the loop counted down to exactly 0, so 4.5 went past it and never stopped
+    const o = new Box2dObject(vec2(540, 20));
+    o.addRegularPoly(1, 4.5);
+    assert.equal(o.getFixtureList().length, 1);
+    o.destroy();
+});

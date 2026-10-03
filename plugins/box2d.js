@@ -414,7 +414,7 @@ class Box2dObject extends EngineObject
 
         const points = [];
         const radius = diameter/2;
-        for (let i=sides; i--;)
+        for (let i=sides; i-- > 0;) // a count that is not a whole number still ends
             points.push(vec2(radius,0).rotate((i+.5)/sides*PI*2));
         return this.addPoly(points, density, friction, restitution, isSensor);
     }

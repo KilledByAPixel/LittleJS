@@ -13,6 +13,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- Box2D: `addRegularPoly` with a side count that is not a whole number no longer hangs, as the engine's own polygons do not since 1.23.1
 - The level editor's tile palette no longer asserts on a Tiled tileset with a margin or a spacing
 - LDtk: a see-through tile keeps its opacity, in a layer of its own
 
