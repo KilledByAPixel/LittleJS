@@ -4290,7 +4290,9 @@ declare module "littlejsengine" {
     /**
      * Make a Tiled map of a level of an LDtk project, to load with tileLayersLoad and objectLayersLoad
      * - Each Tiles, AutoLayer and IntGrid layer is a tile layer, the bottom one first as in Tiled, so the last layer
-     *   of the LDtk file is layer 0; where LDtk stacks tiles in a cell the top one is kept
+     *   of the LDtk file is layer 0; where LDtk stacks tiles in a cell, an edge over a fill, each tile over another
+     *   goes in a layer of its own just above, named with (2), (3) and so on, so a layer of the first tiles has one
+     *   wherever the LDtk layer has any, which makes it the one for collision
      * - An IntGrid layer with no tiles is a hidden layer of its values, for collision: pass its index as collisionLayer
      * - An Entities layer is an object layer: an entity's name is its type for objectLayersAddType, it is placed at
      *   its middle, and its Int, Float, Bool, String, Color and FilePath fields are its properties (an enum is a string)

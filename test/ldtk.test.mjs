@@ -125,3 +125,15 @@ test('entities are the objects of an object layer, each at its middle, with its 
     assert.deepEqual([door.pos.x, door.pos.y], [2.5, 1], 'a door two cells tall standing on the floor');
     coin.destroy(); door.destroy();
 });
+
+test('tiles LDtk stacks in one cell, an edge over a fill, each go in a layer of their own above the first', ()=>
+{
+    const project = ldtk(), ground = project.levels[0].layerInstances[2];
+    ground.autoLayerTiles = [{px: [0, 0], src: [0, 0], f: 0, t: 4}, {px: [16, 0], src: [0, 0], f: 0, t: 4}];
+    ground.gridTiles = [{px: [0, 0], src: [0, 0], f: 0, t: 5}, {px: [0, 0], src: [0, 0], f: 2, t: 6}];
+    const map = tileLayersFromLDtk(project);
+    assert.deepEqual(map.layers.map((l)=> l.name), ['Ground', 'Ground (2)', 'Ground (3)', 'Walls', 'Things']);
+    assert.deepEqual(map.layers.slice(0, 3).map((l)=> l.data.slice(0, 2)), [[5, 5], [6, 0], [(7 | 0x40000000) >>> 0, 0]],
+        'the first tile of each cell at the bottom, in the order LDtk draws them');
+    assert.equal(new Set(map.layers.map((l)=> l.id)).size, 5, 'each layer its own id');
+});

@@ -9725,7 +9725,9 @@ const tileLayersLDtkTypes = {Int: 'int', Float: 'float', Bool: 'bool', String: '
 /**
  * Make a Tiled map of a level of an LDtk project, to load with tileLayersLoad and objectLayersLoad
  * - Each Tiles, AutoLayer and IntGrid layer is a tile layer, the bottom one first as in Tiled, so the last layer
- *   of the LDtk file is layer 0; where LDtk stacks tiles in a cell the top one is kept
+ *   of the LDtk file is layer 0; where LDtk stacks tiles in a cell, an edge over a fill, each tile over another
+ *   goes in a layer of its own just above, named with (2), (3) and so on, so a layer of the first tiles has one
+ *   wherever the LDtk layer has any, which makes it the one for collision
  * - An IntGrid layer with no tiles is a hidden layer of its values, for collision: pass its index as collisionLayer
  * - An Entities layer is an object layer: an entity's name is its type for objectLayersAddType, it is placed at
  *   its middle, and its Int, Float, Bool, String, Color and FilePath fields are its properties (an enum is a string)
@@ -9793,22 +9795,26 @@ function tileLayersFromLDtk(ldtk, level=0)
             debug && console.warn(`tileLayersFromLDtk: layer ${name} has another grid or tileset, left out`);
             continue;
         }
-        const layerData = new Array(width * height).fill(0);
+        const empty = ()=> new Array(width * height).fill(0), stacks = [empty()];
         if (tiles.length)
         {
             // a tile's place in pixels, its tile in the sheet, and its flips: bit 0 across, bit 1 down, which are
-            // Tiled's two top bits; a later tile in a cell is drawn over an earlier one, so it is the one kept
+            // Tiled's two top bits; LDtk lists them in the order it draws them, so the first in a cell is the
+            // bottom one and each after it goes a layer higher
+            const depth = new Uint16Array(width * height);
             for (const t of tiles)
             {
-                const x = floor(t.px[0] / grid), y = floor(t.px[1] / grid);
+                const x = floor(t.px[0] / grid), y = floor(t.px[1] / grid), cell = x + y * width;
                 if (x >= 0 && x < width && y >= 0 && y < height)
-                    layerData[x + y * width] = (t.t + 1 | (t.f & 1 ? 0x80000000 : 0) | (t.f & 2 ? 0x40000000 : 0)) >>> 0;
+                    (stacks[depth[cell]++] ||= empty())[cell] =
+                        (t.t + 1 | (t.f & 1 ? 0x80000000 : 0) | (t.f & 2 ? 0x40000000 : 0)) >>> 0;
             }
         }
         else
-            (instance.intGridCsv || []).forEach((value, k)=> k < layerData.length && (layerData[k] = value));
-        map.layers.push({id, name, type: 'tilelayer', width, height, data: layerData, opacity: instance.__opacity ?? 1,
-            visible: instance.__type === 'IntGrid' && !tiles.length ? false : instance.visible !== false, x: 0, y: 0});
+            (instance.intGridCsv || []).forEach((value, k)=> k < stacks[0].length && (stacks[0][k] = value));
+        const visible = instance.__type === 'IntGrid' && !tiles.length ? false : instance.visible !== false;
+        stacks.forEach((data, k)=> map.layers.push({id: k ? map.nextlayerid++ : id, name: k ? `${name} (${k + 1})` : name,
+            type: 'tilelayer', width, height, data, opacity: instance.__opacity ?? 1, visible, x: 0, y: 0}));
     }
     return map;
 }

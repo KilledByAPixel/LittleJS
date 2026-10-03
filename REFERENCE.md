@@ -725,8 +725,9 @@ tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw
                                                     // its tiles are
 tileLayersFromLDtk(ldtk, level=0)                   // A Tiled map of an LDtk level, by index or identifier, to give
                                                     // tileLayersLoad and objectLayersLoad: its layers bottom first, an
-                                                    // IntGrid layer with no tiles a hidden layer for collision, its
-                                                    // entities objects with their fields as properties
+                                                    // IntGrid layer with no tiles a hidden layer for collision, tiles
+                                                    // stacked in a cell in layers above, named (2), (3); its entities
+                                                    // objects with their fields as properties
 objectLayersAddType(name, make, defaults={}, tileInfo) // Name a type of object in a Tiled map: a class made
                                                     // with new make(pos), or an arrow function called make(pos),
                                                     // defaults set on what it made; tileInfo is an editor icon
