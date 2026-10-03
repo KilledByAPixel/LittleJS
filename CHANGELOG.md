@@ -10,6 +10,11 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Tile sets from separate images: `loadTiles(['grass.png', 'brick.png', 'props.png'], 16)` packs tile images, or several tile sheets, into the texture sheets as one tile set, numbered in the order given, for `tileLayersLoad`, tile layers and the level editor's palette
 - Spotlight gels: `light.gel` is a picture the shadow casting spotlight shines through, cast along its beam in its colors, like a slide or stained glass; with none a scene draws exactly as before. The 3D First Person flashlight has one on G
 
+### Fixes
+
+- A level whose prefab holds itself, several times over, loads at once with that prefab left out where it holds itself, in place of making thousands of objects
+- `tileLayersLoad` says so when a map is not a whole number of cells across and down, or a layer's tiles do not fill it, in release builds too, in place of running on
+
 ### New Demos
 
 - [Custom Editor](https://killedbyapixel.github.io/LittleJS/examples/?example=Custom%20Editor) - A level editor made for one game: a class of its own with a tool that lays out rooms by a drag, a button, a key and an overlay

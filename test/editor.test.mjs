@@ -923,7 +923,7 @@ test('an infinite map gets the loader\'s own message, and typed array data saves
 {
     const { run } = await loadGame();
     assert.throws(()=> run(`tileLayersLoad({ width: 2, height: 1, infinite: true,
-        layers: [{ type: 'tilelayer', width: 2, height: 1, chunks: [] }] })`), /Assert failed/);
+        layers: [{ type: 'tilelayer', width: 2, height: 1, chunks: [] }] })`), /infinite maps/);
     const saved = JSON.parse(run(`const [typed] = tileLayersLoad({ width: 2, height: 1,
         layers: [{ type: 'tilelayer', width: 2, height: 1, data: new Uint32Array([1, 0]) }] }, undefined, 0, 0, false);
         editorMapJSON(editorLayerRecord(typed).record)`));

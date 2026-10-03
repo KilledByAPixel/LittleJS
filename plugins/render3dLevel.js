@@ -439,6 +439,8 @@ const level3DPrefabs = new Map;
 // how many prefabs deep an instance being made is, a prefab that holds itself is stopped; and how many of those
 // are attached: a prefab inside an attached one is attached too, or its parts would be left behind in the world
 let level3DPrefabDepth = 0, level3DPrefabAttached = 0;
+// the prefabs being made, one inside the next, so one that holds itself is caught where it does, however many times
+const level3DPrefabMaking = [];
 
 /** Add a prefab: a small level, its objects placed about its own origin, to place many times under one name
  *  - It is a type from then on: a level's object of that type, the level editor's Place list and level3DSpawn make
@@ -580,11 +582,12 @@ class Prefab3D extends EngineObject3D
     {
         const prefab = level3DPrefabs.get(this.prefabName);
         if (!prefab) return;
-        if (level3DPrefabDepth >= 8)
+        if (level3DPrefabMaking.includes(this.prefabName) || level3DPrefabDepth >= 8)
         {
             debug && console.error(`level3DLoad: the prefab ${this.prefabName} holds itself, left out there`);
             return;
         }
+        level3DPrefabMaking.push(this.prefabName);
         ++level3DPrefabDepth;
         this.attached && ++level3DPrefabAttached;
         try
@@ -628,6 +631,7 @@ class Prefab3D extends EngineObject3D
         finally
         {
             --level3DPrefabDepth;
+            level3DPrefabMaking.pop();
             this.attached && --level3DPrefabAttached;
         }
     }

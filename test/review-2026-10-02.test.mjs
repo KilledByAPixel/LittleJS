@@ -249,3 +249,25 @@ test('3D editor: an autosave older than the last edits, which storage had no roo
     assert.equal(run('level.objects[0].pos[0]'), 3, 'its edits are back');
     assert.ok(said.some((text)=> text.includes('older')), said.join(' | '));
 });
+
+// the third pass, 2026-10-03: small files that made a loader run on and on
+
+test('a prefab that holds itself, many times over, is made once and left out where it holds itself', async ()=>
+{
+    const { run } = await loadGame(true);
+    warned(run, `globalThis.made = level3DLoad({prefabs: {A: {objects: [{type: 'Box'}, {type: 'A'}, {type: 'A'}, {type: 'A'}]},
+        B: {objects: [{type: 'C'}, {type: 'C'}]}, C: {objects: [{type: 'B'}, {type: 'Sphere'}]}},
+        objects: [{id: 1, type: 'A'}, {id: 2, type: 'B'}]});`);
+    assert.ok(run('engineObjects.length') < 40, 'not thousands: ' + run('engineObjects.length'));
+    assert.equal(run('made.length'), 2);
+});
+
+test('a map whose size is not whole cells, or whose tiles do not fill it, says so instead of running on', ()=>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true)');
+    for (const [width, height, data] of [[-3, 1, [1, 2, 3]], [1.5, 2, [1, 2, 3]], [1e300, 1, [1]], [3000, 3000, [1, 2, 3]]])
+        assert.throws(()=> run(`tileLayersLoad({width: ${width}, height: ${height}, layers: [{data: ${JSON.stringify(data)}}]},
+            undefined, 0, undefined, false)`), /tileLayersLoad/, width + ' x ' + height);
+    assert.equal(run(`tileLayersLoad({width: 2, height: 1, layers: [{data: [1, 0]}]}, undefined, 0, undefined, false).length`), 1);
+});

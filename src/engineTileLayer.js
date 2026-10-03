@@ -160,8 +160,11 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     // the editor, in debug builds, keeps the map as the source of its edits and brings back autosaved ones
     tileMapData = editorMapRestore(tileMapData);
 
-    // validate the tile map data
-    ASSERT(tileMapData.width && tileMapData.height);
+    // validate the tile map data: a size that is not whole cells, or tiles that do not fill it, is said in any build,
+    // since the layers and their loops are made from that size
+    const {width: mapWidth, height: mapHeight} = tileMapData;
+    if (!(Number.isInteger(mapWidth) && Number.isInteger(mapHeight) && mapWidth > 0 && mapHeight > 0))
+        throw new Error(`tileLayersLoad: a map is a whole number of cells across and down, not ${mapWidth} by ${mapHeight}`);
     ASSERT(tileMapData.layers && tileMapData.layers.length);
 
     // a sheet with a margin around its tiles or a spacing between them: the first tile is at the margin and each
@@ -222,8 +225,10 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         const {dataLayer, color: layerColor, visible} = layers[layerIndex];
         if (!layerColor)
             continue;
-        ASSERT(dataLayer.data && dataLayer.data.length, 'tile layer has no data, infinite maps and compressed layers are not supported');
-        ASSERT(levelSize.area() === dataLayer.data.length);
+        const tiles = dataLayer.data; // a list of gids, or a typed array of them
+        if (!(isArray(tiles) || ArrayBuffer.isView(tiles)) || tiles.length !== levelSize.area())
+            throw new Error(`tileLayersLoad: layer ${dataLayer.name ?? layerIndex} has ${dataLayer.data?.length} tiles for a map of ` +
+                `${levelSize.area()}; infinite maps and compressed layers are not read`);
 
         const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
@@ -232,8 +237,8 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         if (!visible)
             tileLayer.render = ()=> {}; // a hidden layer keeps its tiles and collision but is not drawn
 
-        for (let x=levelSize.x; x--;)
-        for (let y=levelSize.y; y--;)
+        for (let x=0; x<levelSize.x; ++x)
+        for (let y=0; y<levelSize.y; ++y)
         {
             const pos = vec2(x, levelSize.y-1-y);
             const data = dataLayer.data[x + y*levelSize.x];
