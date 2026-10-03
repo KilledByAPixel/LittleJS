@@ -1,173 +1,402 @@
+/* LittleJS example browser: the docs site's dark palette, the demo first, the chrome out of the way */
+
+:root
+{
+    --bg: #1b1b1f;
+    --panel: #232328;
+    --panel2: #2a2a30;
+    --line: #35353c;
+    --text: #e6e6ea;
+    --muted: #9a9aa5;
+    --accent: #5db2ff;
+    --pink: #f8366e;
+    --yellow: #ffd733;
+    --top: 44px;
+    --gap: 8px;
+    --radius: 6px;
+    color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
 html, body
 {
     height: 100%;
+    margin: 0;
+}
+body
+{
     display: flex;
     flex-direction: column;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    overflow: hidden;
 }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+label { cursor: pointer; user-select: none; }
+.nowrap { white-space: nowrap; }
+.spacer { flex: 1; }
+
+/* the top bar: the brand, the example's name, and the links out */
+#topBar
+{
+    flex: none;
+    height: var(--top);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 12px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+}
+.brand
+{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 16px;
+    white-space: nowrap;
+}
+.brand:hover { text-decoration: none; }
+.brand img { width: 28px; height: 28px; }
+.brand span { color: var(--muted); font-weight: 400; }
+#titleInfo
+{
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted);
+}
+#titleInfo b { color: var(--text); font-weight: 600; }
+#exampleInfo { margin-left: 6px; }
+body.listOpen { overflow: hidden; }
+.links { display: flex; gap: 16px; white-space: nowrap; }
+.links a { color: var(--muted); }
+.links a:hover { color: var(--text); text-decoration: none; }
+
+/* the two columns: the editor and the preview with the list under it */
 #container1
 {
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     display: flex;
-    gap: 4px;
+    gap: var(--gap);
+    padding: var(--gap);
 }
-#container2
+#container3, #container2
 {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--gap);
 }
+
+/* the preview, 16:9, no taller than leaves room for the list */
 #iframeContainer
 {
-    border: 2px solid;
+    flex: none;
+    width: min(100%, calc((100vh - 290px) * 16 / 9));
+    aspect-ratio: 16 / 9;
+    margin: 0 auto;
     background: #000;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
 }
 iframe
 {
+    display: block;
     width: 100%;
     height: 100%;
     border: none;
 }
-#selectExample
+
+/* buttons, inputs and selects */
+button, select, input[type=search]
 {
-    flex-grow: 1;
-    min-height: 100px;
+    font: inherit;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 5px 10px;
+    margin: 0;
 }
+button { cursor: pointer; white-space: nowrap; }
+button:hover:not(:disabled) { background: var(--panel2); border-color: #4a4a54; }
+button:active:not(:disabled) { background: var(--line); }
+button:disabled { color: var(--muted); opacity: .5; cursor: default; }
+select { padding: 4px 6px; }
+input[type=checkbox] { accent-color: var(--accent); margin: 0 6px 0 0; vertical-align: -2px; }
+input[type=checkbox]:disabled { opacity: .5; }
+input[type=search]
+{
+    width: 100%;
+    min-width: 0;
+    padding: 6px 10px;
+}
+input[type=search]:focus { outline: none; border-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* the controls under the preview: Prev, the example's name on a phone, Next, and the running example's own */
+#divControls
+{
+    flex: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+#buttonExamples { display: none; }
+
+/* the example list: groups with a heading that stays while its examples scroll */
+#listPanel
+{
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+#listHeader
+{
+    flex: none;
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    border-bottom: 1px solid var(--line);
+}
+#listHeader input { background: var(--bg); }
+#buttonListClose { display: none; }
+#listExamples
+{
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 6px;
+}
+#listExamples:focus { outline: none; }
+#listExamples h4
+{
+    position: sticky;
+    top: 0;
+    margin: 0;
+    padding: 7px 12px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: var(--muted);
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+}
+#listExamples .item
+{
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 4px 12px 4px 14px;
+    background: none;
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 0;
+    color: var(--text);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#listExamples .item:hover { background: var(--panel2); }
+#listExamples .item span { color: var(--muted); }
+#listExamples .item.selected
+{
+    background: var(--panel2);
+    border-left-color: var(--accent);
+}
+#listExamples:focus-visible .item.selected { outline: 2px solid var(--accent); outline-offset: -2px; }
+#listExamples .empty { padding: 12px; color: var(--muted); }
+
+/* the editor column: its options, the code, the drag handle and the info box */
+#divCodeOptions
+{
+    flex: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    color: var(--muted);
+}
+#divCodeOptions label { white-space: nowrap; }
+#divCodeOptions select { margin-left: 4px; }
+#divEditor
+{
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+#divTextareas
+{
+    flex: 1 0 80px; /* the code keeps a few lines whatever the box asks */
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+.CodeMirror,
+#textareaCode
+{
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
+    resize: none;
+    border: 0;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+    color: #fff;
+    background: #000;
+}
+#textareaCode { padding: 8px; }
+#textareaConsole,
+#textareaError
+{
+    flex: 0 0 auto;
+    max-height: 30%;
+    min-height: 60px;
+    resize: none;
+    display: none;
+    padding: 6px 8px;
+    border: 0;
+    border-top: 1px solid var(--line);
+    font: 12px/1.4 ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+    color: #ff5c7a;
+    background: #141416;
+}
+#textareaConsole { color: var(--yellow); }
+
+/* the handle between the code and the info box: drag it to give one the other's space */
+#infoSplitter
+{
+    flex: none;
+    height: 12px;
+    position: relative;
+    cursor: row-resize;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    touch-action: none;
+}
+#infoSplitter::before
+{
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 4px;
+    width: 40px;
+    height: 2px;
+    margin-left: -20px;
+    border-radius: 1px;
+    background: var(--muted);
+}
+#infoSplitter:hover::before, #infoSplitter.dragging::before, #infoSplitter:focus-visible::before
+{
+    background: var(--pink);
+}
+#infoSplitter:focus-visible { outline: none; }
 #exampleInfoBox
 {
-    /* under the code, a quarter of the column's height */
-    flex: none;
+    /* under the code, a quarter of the editor's height; a drag of the handle sets it */
+    flex: 0 1 auto;
     height: 25%;
-    min-height: 100px;
+    min-height: 60px;
     contain: size; /* its text does not count toward the page's height, or a long one would grow the page */
     overflow-y: auto;
-    box-sizing: border-box;
-    padding: 2px 12px;
-    border: 1px solid #555;
-    background: #111;
-    color: #ddd;
-    font: 15px/1.45 sans-serif;
+    padding: 2px 14px 8px;
+    background: var(--panel);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
 }
 #exampleInfoBox h2, #exampleInfoBox h3, #exampleInfoBox h4
 {
     margin: 14px 0 4px;
     color: #fff;
 }
-#exampleInfoBox h2 { font-size: 20px; }
-#exampleInfoBox h3 { font-size: 17px; }
-#exampleInfoBox h4 { font-size: 15px; }
+#exampleInfoBox h2 { font-size: 18px; }
+#exampleInfoBox h3 { font-size: 15px; }
+#exampleInfoBox h4 { font-size: 14px; }
 #exampleInfoBox p { margin: 8px 0; }
 #exampleInfoBox ul, #exampleInfoBox ol { margin: 8px 0; padding-left: 22px; }
 #exampleInfoBox li { margin: 3px 0; }
 #exampleInfoBox code, #exampleInfoBox pre
 {
-    font: 13px monospace;
+    font: 12.5px/1.5 ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
     color: #aef;
-    background: #000;
+    background: #141416;
+    border-radius: 3px;
 }
-#exampleInfoBox code { padding: 1px 4px; }
-#exampleInfoBox pre { padding: 6px 8px; overflow-x: auto; }
-#exampleInfoBox a { color: #70B7FD; }
+#exampleInfoBox code { padding: 1px 5px; }
+#exampleInfoBox pre { padding: 6px 10px; overflow-x: auto; }
 #exampleInfoBox code a { color: inherit; text-decoration: underline dotted; }
-@media (max-aspect-ratio: 1/1)
+#exampleInfoBox code a:hover { text-decoration: underline; }
+.error-line { background-color: #f004 !important; }
+
+/* a narrow window: the columns stack, the preview first, and the list is a sheet over the page */
+@media (max-aspect-ratio: 1/1), (max-width: 720px)
 {
-    /* the stacked layout of a narrow window: the box has a height of its own */
-    #exampleInfoBox { height: auto; max-height: 40vh; contain: none; }
+    body { overflow: auto; }
+    #container1 { flex-direction: column; flex: none; }
+    #container3, #container2 { flex: none; }
+    #container2 { order: -1; }
+    #topBar { gap: 10px; }
+    #titleInfo { display: none; }
+    #iframeContainer { width: 100%; }
+    #divControls { gap: 6px 4px; }
+    #buttonExamples
+    {
+        display: block;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 600;
+    }
+    #buttonExamples::after { content: ' \25BE'; color: var(--muted); font-weight: 400; }
+    #divControls .spacer { flex-basis: 100%; }
+    #divEditor { flex: none; height: 85vh; }
+    #exampleInfoBox { height: 35%; }
+    #listPanel
+    {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: none;
+        border: 0;
+        border-radius: 0;
+    }
+    #listPanel.open { display: flex; }
+    #listHeader { padding: 10px; }
+    #buttonListClose { display: block; }
+    #listExamples .item { padding: 9px 14px; }
 }
-#divTextareas
+@media (max-width: 420px)
 {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 300px;
-}
-.CodeMirror,
-#textareaCode
-{
-    flex-grow: 1;
-    resize: none;
-    color: #fff;
-    background: #000;
-}
-#textareaConsole,
-#textareaError
-{
-    flex-grow: .3;
-    resize: none;
-    display: none;
-    color:#f22;
-    background: #111;
-}
-#textareaConsole
-{
-    color: #ff0;
-}
-#container3
-{
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-#titleInfo
-{
-    margin: 5px;
-    text-align: center;
-    font-size: 40px;
-    font-weight: bold;
-}
-#exampleInfo
-{
-    margin: 0px;
-    text-align: center;
-    font-size: 20px;
-}
-#exampleLink
-{
-    margin: 0px;
-    text-align: center;
-    font-size: 15px;
-    display: inline-block;
-    align-self: center;
-    font-style: italic;
-}
-select
-{
-    color:#fff;
-    background-color: #111;
-    width:100%;
-}
-hr
-{
-    border: 1px solid #555;
-    margin:9px;
-}
-button
-{
-    color:#fff;
-    background-color: #111;
-    border: 1px solid #555;
-    margin:0px 4px;
-    padding: 2px 8px;
-    cursor: pointer;
-}
-button:disabled
-{
-    color: #aaa;
-    background-color: #666;
-    border-color: #666;
-}
-input[type='checkbox']:disabled
-{
-    opacity: 0.5;
-}
-.error-line
-{
-    background-color: #f004 !important;
-}
-.nowrap
-{
-    white-space:nowrap;
+    .links { gap: 10px; }
+    .links a:not(#exampleLink) { display: none; }
 }
 
 /*  LittleJS CodeMirror Theme */
@@ -187,5 +416,5 @@ input[type='checkbox']:disabled
 .cm-s-littlejs .cm-number { color: #e15; }
 .cm-s-littlejs .cm-comment { color:#888; font-style:italic; }
 .cm-s-littlejs .cm-string,
-.cm-s-littlejs .cm-string-2 { color:#fda; } 
+.cm-s-littlejs .cm-string-2 { color:#fda; }
 .cm-s-littlejs .CodeMirror-matchingbracket { background-color: #381 !important; }
