@@ -717,7 +717,8 @@ tileCollisionRaycast(posStart, posEnd, object, normal, solidOnly=true) // Where 
                                                     // or undefined; a normal vec2 passed in is set to the surface's
 tileCollisionLayers                                 // List of all tile collision layers
 tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true) // collisionLayer is the index
-                                                    // of the layer that gets collision, no tile when no image is loaded
+                                                    // or the name of the layer that gets collision, no tile when no
+                                                    // image is loaded
                                                     // Load tile layers from exported data, Tiled flips and turns included;
                                                     // groups are flattened and layer indices count that flat list,
                                                     // hidden layers load with collision but are not drawn; a
@@ -725,7 +726,8 @@ tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw
                                                     // its tiles are
 tileLayersFromLDtk(ldtk, level=0)                   // A Tiled map of an LDtk level, by index or identifier, to give
                                                     // tileLayersLoad and objectLayersLoad: its layers bottom first, an
-                                                    // IntGrid layer with no tiles a hidden layer for collision, tiles
+                                                    // IntGrid layer a hidden layer of its values under its name, for
+                                                    // collisionLayer, its rule tiles over it as name tiles, tiles
                                                     // stacked in a cell in layers above, named (2), (3), and a
                                                     // see-through tile in a layer of its opacity; its entities
                                                     // objects with their fields as properties

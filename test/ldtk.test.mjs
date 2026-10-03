@@ -164,3 +164,71 @@ test('a see-through LDtk tile keeps its opacity, times the layer\'s, in a layer 
     assert.deepEqual([layers[0].getData(vec2(0, 2)).color.a, layers[1].getData(vec2(1, 2)).color.a], [.5, .125]);
     for (const layer of layers) layer?.destroy();
 });
+
+test('an IntGrid layer with tiles keeps its values in a hidden layer of its own name, its tiles over it', ()=>
+{
+    const project = ldtk(), walls = project.levels[0].layerInstances[1];
+    walls.intGridCsv = [1,1,1,1, 1,0,0,1, 2,2,2,2];
+    walls.__tilesetDefUid = 7;
+    walls.autoLayerTiles = [{px: [0, 0], src: [0, 0], f: 0, t: 3}, {px: [0, 0], src: [0, 0], f: 0, t: 4},
+        {px: [16, 0], src: [0, 0], f: 0, t: 5, a: .5}];
+    const map = tileLayersFromLDtk(project), names = map.layers.map((l)=> l.name);
+    assert.deepEqual(names, ['Ground', 'Walls', 'Walls tiles', 'Walls tiles .5', 'Walls tiles (2)', 'Things']);
+    const values = map.layers[1];
+    assert.deepEqual([values.visible, values.data], [false, [1,1,1,1, 1,0,0,1, 2,2,2,2]], 'every painted cell');
+    assert.deepEqual(map.layers[2].data.slice(0, 2), [4, 0]);
+});
+
+test('collisionLayer may be a layer\'s name, which stays the same when tiles stack or fade', ()=>
+{
+    const project = ldtk(), walls = project.levels[0].layerInstances[1], ground = project.levels[0].layerInstances[2];
+    ground.gridTiles = [{px: [0, 0], src: [0, 0], f: 0, t: 0}, {px: [0, 0], src: [0, 0], f: 0, t: 1},
+        {px: [16, 0], src: [0, 0], f: 0, t: 2, a: .25}];
+    walls.autoLayerTiles = [{px: [16, 16], src: [0, 0], f: 0, t: 3, a: .25}];
+    walls.__tilesetDefUid = 7;
+    const map = tileLayersFromLDtk(project);
+    const layers = tileLayersLoad(map, sheet(169, 33), 0, 'Walls', false);
+    const solid = layers.filter((l)=> l?.isSolid);
+    assert.equal(solid.length, 1);
+    assert.deepEqual([solid[0].getCollisionData(vec2(0, 1)), solid[0].getCollisionData(vec2(1, 1)),
+        solid[0].getCollisionData(vec2(0, 0))], [1, 0, 1], 'the painted values, whatever the tiles over them do');
+    for (const layer of layers) layer?.destroy();
+});
+
+test('a project with no tileset entry keeps its tiles, one whose tiles are another size leaves them out', ()=>
+{
+    const bare = ldtk();
+    bare.defs.tilesets = [];
+    const map = tileLayersFromLDtk(bare);
+    assert.deepEqual([map.tilesets, map.layers[0].name, map.layers[0].data[0]], [undefined, 'Ground', 1]);
+
+    const odd = ldtk();
+    odd.defs.tilesets[0].tileGridSize = 8;
+    const warn = console.warn, said = [];
+    console.warn = (...a)=> said.push(a.join(' '));
+    try { assert.deepEqual(tileLayersFromLDtk(odd).layers.map((l)=> l.name), ['Walls', 'Things']); }
+    finally { console.warn = warn; }
+    assert.ok(said.some((s)=> s.includes('Ground')), said.join(' / '));
+});
+
+test('levels of a project with several worlds are found, and a level not found says so', ()=>
+{
+    const project = ldtk(), [first, second] = project.levels;
+    project.levels = [];
+    project.worlds = [{identifier: 'World', levels: [first]}, {identifier: 'Other', levels: [second]}];
+    assert.equal(tileLayersFromLDtk(project, 'Level_1').width, 1);
+    assert.equal(tileLayersFromLDtk(project, 1).width, 1);
+    assert.throws(()=> tileLayersFromLDtk(project, 'Nowhere'), /Nowhere/);
+    const external = ldtk();
+    external.levels[0].layerInstances = null;
+    assert.throws(()=> tileLayersFromLDtk(external), /separate/);
+});
+
+test('a margin or spacing is counted from where the game\'s sheet starts, as in a shared atlas', ()=>
+{
+    const atlas = new TileInfo(vec2(64, 32), vec2(16), new TextureInfo({width: 256, height: 128}, false), 0, 0);
+    const map = {width: 1, height: 1, tilewidth: 16, tileheight: 16,
+        tilesets: [{firstgid: 1, margin: 2, spacing: 2, columns: 4}], layers: [{type: 'tilelayer', data: [1]}]};
+    const [layer] = tileLayersLoad(map, atlas, 0, undefined, false);
+    assert.deepEqual(sheetPos(layer, 5), [64 + 2 + 18, 32 + 2 + 18]);
+});

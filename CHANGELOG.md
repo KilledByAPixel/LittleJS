@@ -9,13 +9,16 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 - A VoxelMap's transparent blocks, like water and glass, show from both sides, so the surface of water shows from under it
 - 3D Voxels: the player goes under water and walks on the bottom, in place of floating at the surface
+- `tileLayersLoad`'s `collisionLayer` may be a layer's name
+- LDtk: an IntGrid layer is always a hidden layer of its values under its own name, its rule tiles in layers over it named with tiles, so `tileLayersLoad(map, tileInfo, 0, 'Collisions')` is solid where the values say, whatever the tiles stack or fade; a project of several worlds loads; a project with no tileset entry keeps its tiles
 - The example browser has a new look, in the dark colors of the docs site: a slim top bar in place of the title, the demo at 16:9, and the example list as rows under their headings. A handle between the code and its write-up drags to give one the other's space, by touch and the arrow keys too, and is remembered; a double click puts the quarter back. On a phone the example's name, between Prev and Next, opens a full screen picker with the search. The Screenshot button is gone
 
 ### Fixes
 
 - Box2D: `addRegularPoly` with a side count that is not a whole number no longer hangs, as the engine's own polygons do not since 1.23.1
 - The level editor's tile palette no longer asserts on a Tiled tileset with a margin or a spacing
-- LDtk: a see-through tile keeps its opacity, in a layer of its own
+- LDtk: a see-through tile keeps its opacity, in a layer of its own; a layer whose tileset is another size is left out with a warning, in place of being read as stacks; a missing level says so in release builds too
+- A Tiled tileset's margin and spacing count from where the game's sheet starts, so a sheet inside an atlas keeps its place
 
 ## 1.24.0 - 2026-10-02
 

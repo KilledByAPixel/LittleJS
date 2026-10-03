@@ -141,7 +141,7 @@ const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [
  *  @param {Object}   tileMapData - Level data from exported data
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
  *  @param {number}   [renderOrder] - Render order of the top layer
- *  @param {number}   [collisionLayer] - Layer to use for collision if any
+ *  @param {number|string} [collisionLayer] - Layer to use for collision if any, by its index or its name
  *  @param {boolean}  [draw] - Should the layer be drawn automatically
  *  @return {Array<TileCollisionLayer>}
  *  @memberof TileLayers */
@@ -173,7 +173,8 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         const margin = tileset.margin || 0, spacing = tileset.spacing || 0, size = tileInfo.size;
         const width = tileInfo.textureInfo?.size.x || 0;
         const columns = tileset.columns || max(1, floor((width - margin*2 + spacing) / (size.x + spacing)));
-        tileInfo = new TileInfo(vec2(margin), size, tileInfo.textureInfo, spacing / 2, tileInfo.bleed, columns);
+        const origin = tileInfo.pos.subtract(vec2(tileInfo.padding)); // where the sheet starts, in an atlas too
+        tileInfo = new TileInfo(origin.add(vec2(margin)), size, tileInfo.textureInfo, spacing / 2, tileInfo.bleed, columns);
     }
 
     // flatten group layers in order, a group's color and visibility carry to the layers inside it
@@ -203,6 +204,14 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         }
     };
     addLayers(tileMapData.layers, WHITE, true);
+
+    // a layer named for collision is the first tile layer of that name, which stays the same when layers are added
+    if (typeof collisionLayer === 'string')
+    {
+        const name = collisionLayer;
+        collisionLayer = layers.findIndex((l)=> l.color && l.dataLayer.name === name);
+        ASSERT(collisionLayer >= 0, 'no tile layer named ' + name);
+    }
 
     // create tile layers and fill with data
     const tileLayers = [];
@@ -259,32 +268,38 @@ const tileLayersLDtkTypes = {Int: 'int', Float: 'float', Bool: 'bool', String: '
 
 /**
  * Make a Tiled map of a level of an LDtk project, to load with tileLayersLoad and objectLayersLoad
- * - Each Tiles, AutoLayer and IntGrid layer is a tile layer, the bottom one first as in Tiled, so the last layer
- *   of the LDtk file is layer 0; where LDtk stacks tiles in a cell, an edge over a fill, each tile over another
- *   goes in a layer of its own just above, named with (2), (3) and so on, so a layer of the first tiles has one
- *   wherever the LDtk layer has any, which makes it the one for collision
- * - A tile LDtk draws see-through goes in a layer of its own with that opacity, times the layer's, named with it
- * - An IntGrid layer with no tiles is a hidden layer of its values, for collision: pass its index as collisionLayer
+ * - Each Tiles, AutoLayer and IntGrid layer is a tile layer, the bottom one first as in Tiled; where LDtk stacks
+ *   tiles in a cell, an edge over a fill, each tile over another goes in a layer of its own just above, named with
+ *   (2), (3) and so on, and a tile LDtk draws see-through goes in one of its own with that opacity, times the
+ *   layer's, named with it, like Ground .25
+ * - An IntGrid layer is a hidden layer of its values under its own name, for collision, whatever tiles its rules
+ *   make, which are layers over it named with tiles, like Collisions tiles; pass the name as collisionLayer, since
+ *   the stacked and see-through layers change the indices from level to level:
+ *   tileLayersLoad(map, tile(0, 16), 0, 'Collisions')
  * - An Entities layer is an object layer: an entity's name is its type for objectLayersAddType, it is placed at
  *   its middle, and its Int, Float, Bool, String, Color and FilePath fields are its properties (an enum is a string)
  * - The tileset is the first tile layer's, with its padding and spacing; give tileLayersLoad a tile info of its image
  * - The level is in the project file (not saved as separate level files), its layers of one grid size; a layer of
- *   another grid size or another tileset is left out, with a warning in debug builds
+ *   another grid size or another tileset is left out, with a warning in debug builds, and a project with no tileset
+ *   keeps its tiles for the tile info the game gives; a project of several worlds has its levels counted in order
+ * - Layer offsets are not read
  * - The level editor edits the map this returns, and saves it as a Tiled map
  * @param {Object} ldtk - The LDtk project, its JSON
  * @param {number|string} [level] - Which level, by its index or its identifier
  * @return {Object} - A Tiled map: width, height, tilewidth, tileheight, tilesets and layers
  * @example
  * const map = tileLayersFromLDtk(await fetchJSON('world.ldtk'), 'Level_0');
- * const layers = tileLayersLoad(map, tile(0, 16), 0, 1); // layer 1 is solid
+ * const layers = tileLayersLoad(map, tile(0, 16), 0, 'Collisions'); // its IntGrid layer is solid
  * objectLayersLoad(map);
  * @memberof TileLayers */
 function tileLayersFromLDtk(ldtk, level=0)
 {
-    const levels = ldtk?.levels || [];
+    const levels = ldtk?.levels?.length ? ldtk.levels : (ldtk?.worlds || []).flatMap((w)=> w.levels || []);
     const data = typeof level === 'string' ? levels.find((l)=> l.identifier === level) : levels[level];
-    ASSERT(data, 'LDtk level not found', level);
-    ASSERT(isArray(data.layerInstances), 'LDtk level has no layers: levels saved as separate files are not read');
+    if (!data)
+        throw new Error('tileLayersFromLDtk: no level ' + level);
+    if (!isArray(data.layerInstances))
+        throw new Error('tileLayersFromLDtk: level ' + data.identifier + ' has no layers, levels saved as separate files are not read');
     const instances = data.layerInstances;
     const tiled = (l)=> l.__type !== 'Entities';
     const first = instances.find((l)=> tiled(l) && l.__tilesetDefUid != undefined) || instances.find(tiled) || instances[0];
@@ -324,22 +339,32 @@ function tileLayersFromLDtk(ldtk, level=0)
             continue;
         }
         const tiles = [...(instance.autoLayerTiles || []), ...(instance.gridTiles || [])];
-        const usable = instance.__gridSize === grid && instance.__cWid === width && instance.__cHei === height &&
-            (!tiles.length || instance.__tilesetDefUid === tileset?.uid);
-        if (!usable)
+        const ownTiles = !tiles.length || !tileset ||
+            instance.__tilesetDefUid === tileset.uid && tileset.tileGridSize === grid;
+        if (instance.__gridSize !== grid || instance.__cWid !== width || instance.__cHei !== height || !ownTiles)
         {
             debug && console.warn(`tileLayersFromLDtk: layer ${name} has another grid or tileset, left out`);
             continue;
         }
-        // a layer for each depth in a cell and each opacity, the first tiles drawn solid first
+        // an IntGrid layer's values, hidden, under its own name, for collision whatever its tiles do
         const empty = ()=> new Array(width * height).fill(0), opacity = instance.__opacity ?? 1;
+        const values = instance.__type === 'IntGrid';
+        if (values)
+        {
+            const data = empty();
+            (instance.intGridCsv || []).forEach((value, k)=> k < data.length && (data[k] = value));
+            map.layers.push({id, name, type: 'tilelayer', width, height, data, opacity, visible: false, x: 0, y: 0});
+            if (!tiles.length) continue;
+        }
+
+        // a layer for each depth in a cell and each opacity, the first tiles drawn solid first
+        const tilesName = values ? name + ' tiles' : name;
         const stacks = [{depth: 0, alpha: 1, data: empty()}], stack = (depth, alpha)=>
         {
             let s = stacks.find((s)=> s.depth === depth && s.alpha === alpha);
             s || stacks.push(s = {depth, alpha, data: empty()});
             return s.data;
         };
-        if (tiles.length)
         {
             // a tile's place in pixels, its tile in the sheet, its flips, bit 0 across and bit 1 down, which are
             // Tiled's two top bits, and its opacity; LDtk lists them in the order it draws them, so the first in a
@@ -353,15 +378,13 @@ function tileLayersFromLDtk(ldtk, level=0)
                         (t.t + 1 | (t.f & 1 ? 0x80000000 : 0) | (t.f & 2 ? 0x40000000 : 0)) >>> 0;
             }
         }
-        else
-            (instance.intGridCsv || []).forEach((value, k)=> k < stacks[0].data.length && (stacks[0].data[k] = value));
-        const visible = instance.__type === 'IntGrid' && !tiles.length ? false : instance.visible !== false;
+        const visible = instance.visible !== false;
         stacks.sort((a, b)=> a.depth - b.depth || b.alpha - a.alpha);
         for (const {depth, alpha, data} of stacks)
         {
-            const layerName = name + (depth ? ` (${depth + 1})` : '') + (alpha < 1 ? ' ' + String(alpha).replace(/^0/, '') : '');
-            map.layers.push({id: depth || alpha < 1 ? map.nextlayerid++ : id, name: layerName, type: 'tilelayer', width,
-                height, data, opacity: opacity * alpha, visible, x: 0, y: 0});
+            const layerName = tilesName + (depth ? ` (${depth + 1})` : '') + (alpha < 1 ? ' ' + String(alpha).replace(/^0/, '') : '');
+            map.layers.push({id: values || depth || alpha < 1 ? map.nextlayerid++ : id, name: layerName, type: 'tilelayer',
+                width, height, data, opacity: opacity * alpha, visible, x: 0, y: 0});
         }
     }
     return map;
