@@ -13,6 +13,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- Medals: the save keeps the unlock of a medal the game has not made this time, and a medal made after `medalsInit` reads its unlock, so a medal made late or behind a flag is never lost; `medalsReset` locks those too
 - Older browsers: the engine starts with no `OffscreenCanvas` (Safari before 16.4), drawing into a canvas element in its place, and so do the textures it makes itself (normal maps from heights, particle shapes, light glows, lens flares, glTF's white texture), and uses neither `Array.prototype.at` nor `Object.hasOwn` (Safari before 15.4); the example browser's markdown has no lookbehind, which Safari before 16.4 could not read
 - On an iPhone the silent switch mutes the game, as it does a ringtone, and the player's music plays on beside it; `setSoundIgnoreSilentSwitch(true)` has the game play through the switch as media does (Safari 16.4 and up)
 - Level editor: the brush, its ghost and the palette read a tile past the end of a sheet as nothing, as the layer draws it, where a collision value picked up with the right button asserted every frame; the palette of a tile set filled in after it was first shown shows its tiles

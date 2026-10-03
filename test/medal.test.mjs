@@ -60,18 +60,32 @@ test('medalsInit refreshes metadata when code changes a medal name/icon', () =>
     assert.equal(stored['1'].unlocked, true);
 });
 
-test('medalsInit prunes medals that no longer exist in code', () =>
+test('medalsInit keeps the unlocks of medals not made yet, and a medal made later has its unlock', () =>
 {
+    // a medal made late, or behind a flag, keeps what the player earned: an extra medal is better than a lost one
     globalThis.localStorage[SAVE] = JSON.stringify({
         '1': { name: 'Keep', description: '', icon: '🏆', unlocked: true },
-        '2': { name: 'Drop', description: '', icon: '🏆', unlocked: true },
+        '2': { name: 'Later', description: '', icon: '🏆', unlocked: true },
     });
     new Medal(1, 'Keep', '', '🏆');
+    const third = new Medal(3, 'Third', '', '🏆');
     medalsInit(SAVE);
+    third.unlock(); // a save written with medal 2 not made
+    assert.equal(JSON.parse(globalThis.localStorage[SAVE])['2'].unlocked, true);
+    assert.equal(new Medal(2, 'Later', '', '🏆').unlocked, true);
+});
 
+test('medalsReset locks the saved medals not made yet too', () =>
+{
+    globalThis.localStorage[SAVE] = JSON.stringify({
+        '1': { name: 'One', description: '', icon: '🏆', unlocked: true },
+        '2': { name: 'Later', description: '', icon: '🏆', unlocked: true },
+    });
+    new Medal(1, 'One', '', '🏆');
+    medalsInit(SAVE);
+    medalsReset();
     const stored = JSON.parse(globalThis.localStorage[SAVE]);
-    assert.equal('1' in stored, true);
-    assert.equal('2' in stored, false);
+    assert.deepEqual([stored['1'].unlocked, stored['2'].unlocked], [false, false]);
 });
 
 test('medalsInit recovers from corrupt JSON without throwing', () =>
@@ -154,11 +168,10 @@ test('a medal a service holds is neither loaded nor written, its stored entry st
         '1': { name: 'Held', description: 'old', icon: '🏆', unlocked: true },
         '2': { name: 'Two', description: '', icon: '🏆', unlocked: true },
     });
-    const held = new Medal(1, 'One', 'new');
-    held.isLocal = ()=> false;
+    class HeldMedal extends Medal { isLocal() { return false; } } // as a service's medal class says
+    const held = new HeldMedal(1, 'One', 'new');
     const m2 = new Medal(2, 'Two');
-    const m3 = new Medal(3, 'Three');
-    m3.isLocal = ()=> false;
+    new HeldMedal(3, 'Three');
     medalsInit(SAVE);
     assert.equal(held.unlocked, false, 'not loaded');
     assert.equal(m2.unlocked, true);
