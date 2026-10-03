@@ -2181,9 +2181,13 @@ function editorPaletteTiles(layer)
     if (!image) return [];
     if (layer.palette?.image === image) return layer.palette.tiles;
 
-    const tiles = [];
+    // a sheet read by its columns, a tileset with a margin or a spacing, is read with frame(), which asserts the
+    // frame is inside the image, so a row past the image's end is found before its frame is made
+    const tiles = [], base = live.tileInfo, columns = base.columns;
     for (let i = 0; i < 4096; ++i)
     {
+        if (columns && base.pos.y + (i / columns | 0) * (base.size.y + base.padding*2) + base.size.y > image.height)
+            break;
         const t = editorTileInfo(live, i);
         if (t.pos.x + t.size.x > image.width || t.pos.y + t.size.y > image.height) break;
         tiles.push({tile: i, tileInfo: t});

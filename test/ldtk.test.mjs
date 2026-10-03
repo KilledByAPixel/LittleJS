@@ -137,3 +137,30 @@ test('tiles LDtk stacks in one cell, an edge over a fill, each go in a layer of 
         'the first tile of each cell at the bottom, in the order LDtk draws them');
     assert.equal(new Set(map.layers.map((l)=> l.id)).size, 5, 'each layer its own id');
 });
+
+test('the level editor\'s palette of a sheet with a spacing lists its tiles and stops at its last row', async ()=>
+{
+    const { loadEngine } = await import('./vmEngine.mjs');
+    const { run } = loadEngine();
+    run(`setHeadlessMode(true);
+        var map = {width: 1, height: 1, tilewidth: 16, tileheight: 16,
+            tilesets: [{firstgid: 1, margin: 0, spacing: 1, columns: 10}], layers: [{type: 'tilelayer', data: [1]}]};
+        var sheet = new TileInfo(vec2(), vec2(16), new TextureInfo({width: 169, height: 33}, false), 0, 0);
+        var layer = tileLayersLoad(map, sheet, 0, undefined, false)[0];`);
+    // headless there is no reading the image back, so no empty tiles are trimmed from the end
+    assert.equal(run('editorPaletteTiles({live: layer}).length'), 20);
+});
+
+test('a see-through LDtk tile keeps its opacity, times the layer\'s, in a layer of its own', ()=>
+{
+    const project = ldtk(), ground = project.levels[0].layerInstances[2];
+    ground.gridTiles = [{px: [0, 0], src: [0, 0], f: 0, t: 0, a: 1}, {px: [16, 0], src: [0, 0], f: 0, t: 1, a: .25},
+        {px: [16, 0], src: [0, 0], f: 0, t: 2, a: 1}, {px: [32, 0], src: [0, 0], f: 0, t: 3, a: .25}];
+    const map = tileLayersFromLDtk(project);
+    assert.deepEqual(map.layers.slice(0, 3).map((l)=> [l.name, l.opacity, l.data.slice(0, 4)]),
+        [['Ground', .5, [1, 0, 0, 0]], ['Ground .25', .125, [0, 2, 4, 0]], ['Ground (2)', .5, [0, 3, 0, 0]]],
+        'the second tile in a cell is still drawn over the first');
+    const layers = tileLayersLoad(map, sheet(169, 33), 0, undefined, false);
+    assert.deepEqual([layers[0].getData(vec2(0, 2)).color.a, layers[1].getData(vec2(1, 2)).color.a], [.5, .125]);
+    for (const layer of layers) layer?.destroy();
+});

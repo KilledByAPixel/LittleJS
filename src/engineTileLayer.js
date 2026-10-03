@@ -263,6 +263,7 @@ const tileLayersLDtkTypes = {Int: 'int', Float: 'float', Bool: 'bool', String: '
  *   of the LDtk file is layer 0; where LDtk stacks tiles in a cell, an edge over a fill, each tile over another
  *   goes in a layer of its own just above, named with (2), (3) and so on, so a layer of the first tiles has one
  *   wherever the LDtk layer has any, which makes it the one for collision
+ * - A tile LDtk draws see-through goes in a layer of its own with that opacity, times the layer's, named with it
  * - An IntGrid layer with no tiles is a hidden layer of its values, for collision: pass its index as collisionLayer
  * - An Entities layer is an object layer: an entity's name is its type for objectLayersAddType, it is placed at
  *   its middle, and its Int, Float, Bool, String, Color and FilePath fields are its properties (an enum is a string)
@@ -330,26 +331,38 @@ function tileLayersFromLDtk(ldtk, level=0)
             debug && console.warn(`tileLayersFromLDtk: layer ${name} has another grid or tileset, left out`);
             continue;
         }
-        const empty = ()=> new Array(width * height).fill(0), stacks = [empty()];
+        // a layer for each depth in a cell and each opacity, the first tiles drawn solid first
+        const empty = ()=> new Array(width * height).fill(0), opacity = instance.__opacity ?? 1;
+        const stacks = [{depth: 0, alpha: 1, data: empty()}], stack = (depth, alpha)=>
+        {
+            let s = stacks.find((s)=> s.depth === depth && s.alpha === alpha);
+            s || stacks.push(s = {depth, alpha, data: empty()});
+            return s.data;
+        };
         if (tiles.length)
         {
-            // a tile's place in pixels, its tile in the sheet, and its flips: bit 0 across, bit 1 down, which are
-            // Tiled's two top bits; LDtk lists them in the order it draws them, so the first in a cell is the
-            // bottom one and each after it goes a layer higher
+            // a tile's place in pixels, its tile in the sheet, its flips, bit 0 across and bit 1 down, which are
+            // Tiled's two top bits, and its opacity; LDtk lists them in the order it draws them, so the first in a
+            // cell is the bottom one and each after it goes a layer higher
             const depth = new Uint16Array(width * height);
             for (const t of tiles)
             {
                 const x = floor(t.px[0] / grid), y = floor(t.px[1] / grid), cell = x + y * width;
                 if (x >= 0 && x < width && y >= 0 && y < height)
-                    (stacks[depth[cell]++] ||= empty())[cell] =
+                    stack(depth[cell]++, round(clamp(t.a ?? 1) * 1e3) / 1e3)[cell] =
                         (t.t + 1 | (t.f & 1 ? 0x80000000 : 0) | (t.f & 2 ? 0x40000000 : 0)) >>> 0;
             }
         }
         else
-            (instance.intGridCsv || []).forEach((value, k)=> k < stacks[0].length && (stacks[0][k] = value));
+            (instance.intGridCsv || []).forEach((value, k)=> k < stacks[0].data.length && (stacks[0].data[k] = value));
         const visible = instance.__type === 'IntGrid' && !tiles.length ? false : instance.visible !== false;
-        stacks.forEach((data, k)=> map.layers.push({id: k ? map.nextlayerid++ : id, name: k ? `${name} (${k + 1})` : name,
-            type: 'tilelayer', width, height, data, opacity: instance.__opacity ?? 1, visible, x: 0, y: 0}));
+        stacks.sort((a, b)=> a.depth - b.depth || b.alpha - a.alpha);
+        for (const {depth, alpha, data} of stacks)
+        {
+            const layerName = name + (depth ? ` (${depth + 1})` : '') + (alpha < 1 ? ' ' + String(alpha).replace(/^0/, '') : '');
+            map.layers.push({id: depth || alpha < 1 ? map.nextlayerid++ : id, name: layerName, type: 'tilelayer', width,
+                height, data, opacity: opacity * alpha, visible, x: 0, y: 0});
+        }
     }
     return map;
 }

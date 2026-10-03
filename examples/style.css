@@ -119,6 +119,9 @@ iframe
     width: 100%;
     height: 100%;
     border: none;
+    /* the page is dark but the frame's own page is not, and Chrome paints a frame whose color scheme differs from
+       the page's on opaque white: the same scheme on the frame keeps the black behind it until the example draws */
+    color-scheme: light;
 }
 
 /* buttons, inputs and selects */

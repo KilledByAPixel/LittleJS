@@ -21,11 +21,12 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ### New Changes
 
 - Every short example has a write-up in the example browser: what it shows, how its code works, things to try in the editor and where to look next, with links to the docs and to other examples
+- The example browser has a new look: the docs site's dark colors, a slim top bar, the examples as a list under headings, a handle that drags between the code and its write-up, and on a phone a full screen picker with search between Prev and Next
 - Lens flares on lights: `light.addFlare()` gives a `Light3D` a lens flare of its own and returns it, `light.flare` is the flare, and it goes with the light; a `DirectionalLight3D` can have one too, far away like the sun's
 - Lens flares in the 3D level editor: a level's Light has a `lensFlare` property, and the Scene box has a Lens flare checkbox for the sun's, saved in the level's scene block
 - Lens flares have three more shapes, `hex`, `streak` and `star`; `flare.shapes` says what the ghosts are picked from, `glowSize` and `ghostSize` scale its parts, and an element may be a tile of the game's own (`tileInfo`), turned (`angle`) and wider than tall
 - 3D picking is triangle accurate: `render3D.pick`, `engineObjectsRaycast3D` and clicks in the 3D level editor hit a mesh on its triangles, not the box around it
-- LDtk levels load: `tileLayersFromLDtk(ldtk, level)` makes a level of an LDtk project a Tiled map for `tileLayersLoad` and `objectLayersLoad`, with its tile, auto and IntGrid layers, its entities as objects and their fields as properties
+- LDtk levels load: `tileLayersFromLDtk(ldtk, level)` makes a level of an LDtk project a Tiled map for `tileLayersLoad` and `objectLayersLoad`, with its tile, auto and IntGrid layers, tiles stacked in a cell and see-through tiles, its entities as objects and their fields as properties
 - A Tiled tileset with a margin or a spacing, a sheet with gaps between its tiles, is read where its tiles are
 - The 3D Example has lens flares, on the sun and on each orb
 - CHANGELOG.md lists what changed in each release, and the site's root goes to the example browser
